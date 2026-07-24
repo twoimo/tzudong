@@ -1069,7 +1069,7 @@ def test_terminalization_verifies_transient_then_revokes_and_reads_terminal_cata
 
 def _restore_authority_catalog(
     memberships=adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-    schema_acl=adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+    schema_acl=adapter.RESTORE_WINDOW_SCHEMA_ACL,
     function_acls=adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
     *,
     database="postgres",
@@ -1177,7 +1177,7 @@ def test_restore_authority_rejects_session_owner_membership_schema_and_grantor_d
         adapter.LocalCloneOps._validate_restore_authority_catalog(
             json.dumps(catalog),
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+            adapter.RESTORE_WINDOW_SCHEMA_ACL,
             adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres",
             expected_schema_usage=True,
@@ -1198,7 +1198,7 @@ def test_restore_authority_rejects_per_function_acl_swap():
         adapter.LocalCloneOps._validate_restore_authority_catalog(
             json.dumps(catalog),
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+            adapter.RESTORE_WINDOW_SCHEMA_ACL,
             adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
             database="postgres",
             expected_schema_usage=True,
@@ -1230,7 +1230,7 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
             else:
                 catalog = _restore_authority_catalog(
                     adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-                    adapter.RESTORE_TRANSIENT_SCHEMA_ACL,
+                    adapter.RESTORE_WINDOW_SCHEMA_ACL,
                     adapter.RESTORE_BASELINE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                     schema_usage=True,
                 )
@@ -1301,6 +1301,36 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
             ("supabase_admin", "supabase_admin", "EXECUTE", False),
         ),
     }
+    assert adapter.RESTORE_BASELINE_SCHEMA_ACL == (
+        ("postgres", "anon", "USAGE", False),
+        ("postgres", "authenticated", "USAGE", False),
+        ("postgres", "dashboard_user", "CREATE", False),
+        ("postgres", "dashboard_user", "USAGE", False),
+        ("postgres", "postgres", "CREATE", False),
+        ("postgres", "postgres", "USAGE", False),
+        ("postgres", "service_role", "USAGE", False),
+    )
+    assert adapter.RESTORE_WINDOW_SCHEMA_ACL == (
+        ("postgres", "anon", "USAGE", False),
+        ("postgres", "authenticated", "USAGE", False),
+        ("postgres", "dashboard_user", "CREATE", False),
+        ("postgres", "dashboard_user", "USAGE", False),
+        ("postgres", "postgres", "CREATE", False),
+        ("postgres", "postgres", "USAGE", False),
+        ("postgres", "privacy_workflow_owner", "USAGE", False),
+        ("postgres", "service_role", "USAGE", False),
+    )
+    assert adapter.RESTORE_SOURCE_RESTORED_SCHEMA_ACL == (
+        ("postgres", "anon", "USAGE", False),
+        ("postgres", "authenticated", "USAGE", False),
+        ("postgres", "dashboard_user", "CREATE", False),
+        ("postgres", "dashboard_user", "USAGE", False),
+        ("postgres", "postgres", "CREATE", False),
+        ("postgres", "postgres", "USAGE", False),
+        ("postgres", "service_role", "USAGE", False),
+        ("postgres", "supabase_admin", "CREATE", False),
+        ("postgres", "supabase_admin", "USAGE", False),
+    )
     assert adapter.RESTORE_TERMINAL_SCHEMA_ACL == (
         ("postgres", "anon", "USAGE", False),
         ("postgres", "authenticated", "USAGE", False),
@@ -1311,7 +1341,6 @@ def test_restore_authority_baseline_and_restore_window_are_exact_before_restore(
         ("postgres", "privacy_workflow_owner", "USAGE", False),
         ("postgres", "service_role", "USAGE", False),
     )
-    assert adapter.RESTORE_TRANSIENT_SCHEMA_ACL == adapter.RESTORE_TERMINAL_SCHEMA_ACL
 
 
 def test_restore_authority_terminalization_revokes_only_temporary_grants_and_asserts():
@@ -1331,7 +1360,7 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
         if catalog_reads == 0:
             catalog = _restore_authority_catalog(
                 adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-                adapter.RESTORE_BASELINE_SCHEMA_ACL,
+                adapter.RESTORE_SOURCE_RESTORED_SCHEMA_ACL,
                 adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
                 database=adapter.DATABASE,
                 schema_usage=False,
@@ -1349,26 +1378,32 @@ def test_restore_authority_terminalization_revokes_only_temporary_grants_and_ass
 
     ops.command = command
     ops.terminalize_restore_authority({"container": "clone"})
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert "json_build_object" in calls[0]
     assert calls[1].strip() == (
         "GRANT USAGE ON SCHEMA extensions TO privacy_workflow_owner\n"
         "  GRANTED BY postgres;"
     )
     assert calls[2].strip() == (
+        "REVOKE USAGE, CREATE ON SCHEMA extensions FROM supabase_admin\n"
+        "  GRANTED BY postgres;"
+    )
+    assert calls[3].strip() == (
         "REVOKE supabase_admin, supabase_auth_admin, supabase_storage_admin\n"
         "  FROM postgres GRANTED BY supabase_admin;"
     )
-    assert "json_build_object" in calls[3]
-    assert " TO PUBLIC" not in "\n".join(calls)
-    assert "GRANT EXECUTE" not in "\n".join(calls)
-    assert "REVOKE USAGE" not in "\n".join(calls)
-    assert "gen_random_uuid" not in "\n".join(calls[1:3])
-    assert "digest" not in "\n".join(calls[1:3])
+    assert "json_build_object" in calls[4]
+    combined = "\n".join(calls)
+    mutations = "\n".join(calls[1:4])
+    assert " TO PUBLIC" not in combined
+    assert "GRANT EXECUTE" not in combined
+    assert "REVOKE ALL" not in combined
+    assert "gen_random_uuid" not in mutations
+    assert "digest" not in mutations
     assert "pg_catalog.has_schema_privilege" in calls[0]
     assert "pg_catalog.has_function_privilege" in calls[0]
-    assert "pg_catalog.has_schema_privilege" in calls[3]
-    assert "pg_catalog.has_function_privilege" in calls[3]
+    assert "pg_catalog.has_schema_privilege" in calls[4]
+    assert "pg_catalog.has_function_privilege" in calls[4]
 
 def test_restore_authority_terminalization_validates_source_acl_before_mutation():
     ops = object.__new__(adapter.LocalCloneOps)
@@ -1382,7 +1417,7 @@ def test_restore_authority_terminalization_validates_source_acl_before_mutation(
         calls.append(sql)
         catalog = _restore_authority_catalog(
             adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
-            adapter.RESTORE_BASELINE_SCHEMA_ACL,
+            adapter.RESTORE_SOURCE_RESTORED_SCHEMA_ACL,
             {
                 identity: (
                     ("supabase_admin", "privacy_workflow_owner", "EXECUTE", False),
@@ -1402,6 +1437,73 @@ def test_restore_authority_terminalization_validates_source_acl_before_mutation(
     assert "json_build_object" in calls[0]
     assert "GRANT USAGE" not in calls[0]
     assert "REVOKE " not in calls[0]
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda acl: acl.pop(),
+        lambda acl: acl.append(["postgres", "attacker", "USAGE", False]),
+    ],
+)
+def test_restore_authority_terminalization_rejects_missing_or_extra_source_schema_acl(
+    mutate,
+):
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    calls = []
+
+    def command(argv, **kwargs):
+        sql = kwargs.get("input_text", "")
+        calls.append(sql)
+        catalog = _restore_authority_catalog(
+            adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+            adapter.RESTORE_SOURCE_RESTORED_SCHEMA_ACL,
+            adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
+            database=adapter.DATABASE,
+            schema_usage=False,
+        )
+        mutate(catalog["extensions"]["acl"])
+        return completed(json.dumps(catalog))
+
+    ops.command = command
+    with pytest.raises(adapter.LocalCloneError, match="restore_authority"):
+        ops.terminalize_restore_authority({"container": "clone"})
+
+    assert len(calls) == 1
+    assert "GRANT USAGE" not in calls[0]
+    assert "REVOKE " not in calls[0]
+
+
+@pytest.mark.parametrize("failed_call", [3, 4])
+def test_restore_authority_terminalization_stops_on_revoke_failure(failed_call):
+    ops = object.__new__(adapter.LocalCloneOps)
+    ops.inputs = type("Inputs", (), {
+        "docker": "docker", "deadline_monotonic": time.monotonic() + 60,
+    })()
+    calls = []
+
+    def command(argv, **kwargs):
+        sql = kwargs.get("input_text", "")
+        calls.append(sql)
+        if len(calls) == 1:
+            catalog = _restore_authority_catalog(
+                adapter.RESTORE_TRANSIENT_MEMBERSHIP_ROWS,
+                adapter.RESTORE_SOURCE_RESTORED_SCHEMA_ACL,
+                adapter.RESTORE_SOURCE_EXTENSION_DEPENDENCY_FUNCTION_ACLS,
+                database=adapter.DATABASE,
+                schema_usage=False,
+            )
+            return completed(json.dumps(catalog))
+        return completed(returncode=1 if len(calls) == failed_call else 0)
+
+    ops.command = command
+    with pytest.raises(adapter.LocalCloneError, match="role_protocol"):
+        ops.terminalize_restore_authority({"container": "clone"})
+
+    assert len(calls) == failed_call
+    assert "json_build_object" not in calls[-1]
 
 
 def test_each_clone_bootstraps_before_restore_and_terminalizes_before_observation():
