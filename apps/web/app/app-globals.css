@@ -432,7 +432,7 @@
 /* Storyboard admin layout is fixed by data-attribute CSS so local Turbopack
    dev and production builds do not diverge on Tailwind arbitrary utilities. */
 [data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"] {
-  height: calc(var(--full-height, 100vh) - 2rem);
+  height: 100%;
   max-height: 100%;
   min-height: 0;
 }
@@ -614,8 +614,39 @@
     overflow-y: auto !important;
   }
 
+  [data-admin-console-content="true"][data-admin-console-active-module="storyboard"]
+    [data-admin-console-inline-module-frame="true"][data-admin-console-inline-module-id="storyboard"] {
+    height: auto;
+    min-height: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+
+  [data-admin-console-content="true"][data-admin-console-active-module="storyboard"]
+    [data-admin-console-inline-module-frame="true"][data-admin-console-inline-module-id="storyboard"]
+    > [data-admin-console-inline-module-panel="true"] {
+    flex: none;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
   [data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"] {
     height: auto !important;
+    max-height: none;
+    overflow: visible;
+  }
+  [data-admin-embedded-module-id="storyboard"] {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  [data-admin-embedded-module-id="storyboard"]
+    > [data-admin-module-content="bounded"] {
+    flex: none;
+    height: auto;
     max-height: none;
     overflow: visible;
   }

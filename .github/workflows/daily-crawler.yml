@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     # [PERF] 안전 타임아웃: 최대 90분 (월 3000분 한도 보호)
     timeout-minutes: 90
-    if: ${{ github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch) && vars.G037_WRITE_FREEZE != 'active' }}
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
     steps:

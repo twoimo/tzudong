@@ -741,7 +741,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 .limit(10);
 
             if (error) throw error;
-            setSearchResults(data || []);
+            setSearchResults(
+                (data ?? []).filter(
+                    (row): row is RestaurantNameRow => typeof row.name === 'string' && row.name.length > 0,
+                ),
+            );
         } catch (error) {
             console.error('맛집 검색 실패:', error);
             setSearchResults([]);
@@ -760,8 +764,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             .eq('approved_name', receiptStoreName)
             .limit(1);
 
-        if (!exactError && exactRestaurants?.length) {
-            return exactRestaurants[0] as RestaurantNameRow;
+        const exactRestaurant = exactRestaurants?.[0];
+        if (!exactError && exactRestaurant && typeof exactRestaurant.name === 'string') {
+            return { id: exactRestaurant.id, name: exactRestaurant.name };
         }
 
         const fallbackResults = await Promise.all(
@@ -771,7 +776,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     .select('id, name:approved_name')
                     .ilike('approved_name', `%${candidate}%`)
                     .limit(5);
-                return (data ?? []) as RestaurantNameRow[];
+                return (data ?? []).filter(
+                    (row): row is RestaurantNameRow => typeof row.name === 'string' && row.name.length > 0,
+                );
             })
         );
 

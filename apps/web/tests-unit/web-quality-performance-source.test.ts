@@ -1912,7 +1912,7 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelIndex).toBeGreaterThan(0);
     expect(
       overlayPanelSource.lastIndexOf(
-        '"w-[min(400px,calc(100vw-1rem))]"',
+        '"max-w-[min(400px,calc(100vw-1rem))]"',
         userProfilePanelIndex,
       ),
     ).toBeGreaterThan(0);
@@ -2752,24 +2752,23 @@ describe("web quality performance source contracts", () => {
     }
 
     expect(shortenSource).toContain("function getAllowedShortUrlTarget");
-    expect(shortenSource).toContain("function isRateLimited");
-    expect(shortenSource).toContain("SHORTEN_RATE_LIMIT_MAX_REQUESTS = 20");
-    expect(shortenSource).toContain("{ status: 429 }");
+    expect(shortenSource).toContain(".rpc('allocate_short_url'");
+    expect(shortenSource).toContain("allocation.rate_limited");
+    expect(shortenSource).toContain("'Retry-After'");
     expect(shortenSource).toContain("export const runtime = 'nodejs';");
-    expect(shortenSource).toContain("import { randomInt } from 'node:crypto';");
-    expect(shortenSource).toContain("randomInt(chars.length)");
+    expect(shortenSource).toContain("import { createHmac, randomInt } from 'node:crypto';");
+    expect(shortenSource).toContain("randomInt(SHORT_CODE_ALPHABET.length)");
     expect(shortenSource).not.toContain("Math.random() * chars.length");
     expect(shortenSource).toContain("trimmedTargetUrl.startsWith('//')");
     expect(shortenSource).toContain("function isValidReviewId");
     expect(shortenSource).toContain(".from('reviews')");
     expect(shortenSource).toContain(".maybeSingle();");
     expect(shortenSource).toContain(
-      "target_url: allowedTarget.canonicalTargetUrl",
+      "p_target_url: allowedTarget.canonicalTargetUrl",
     );
-    expect(shortenSource).toContain("restaurant_id: review.restaurant_id");
-    expect(shortenSource).toContain("restaurant_name: null");
-    expect(shortenSource).not.toContain("restaurantId || null");
-    expect(shortenSource).not.toContain("restaurantName || null");
+    expect(shortenSource).toContain("p_restaurant_id: review.restaurant_id");
+    expect(shortenSource).toContain("p_client_bucket: getRequesterBucket(request)");
+    expect(shortenSource).not.toContain(".from('short_urls').insert");
     expect(shortenSource).not.toContain(
       "SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY",
     );

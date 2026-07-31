@@ -1906,7 +1906,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         mirror_script = textwrap.dedent(
             f"""
             set -euo pipefail
-            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' '{_to_bash_path(RUN_DAILY_SOURCE)}' | sed '$d')
+            eval "$(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' '{_to_bash_path(RUN_DAILY_SOURCE)}' | sed '$d')"
             mirror_data_root '{_to_bash_path(source)}' '{_to_bash_path(target)}'
             """
         )

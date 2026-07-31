@@ -133,7 +133,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 return { reviews: [], nextCursor: null };
             }
 
-            const typedReviewsData = (reviewsData || []) as ReviewRow[];
+            const typedReviewsData = (reviewsData || []) as unknown as ReviewRow[];
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 

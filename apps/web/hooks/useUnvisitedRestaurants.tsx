@@ -69,7 +69,7 @@ export function useUnvisitedRestaurants() {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data as Tables<"restaurants">[];
+            return data as unknown as Tables<"restaurants">[];
         },
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
     });

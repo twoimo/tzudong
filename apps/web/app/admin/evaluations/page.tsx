@@ -35,7 +35,7 @@ import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
-import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-routing';
+import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
@@ -976,7 +976,6 @@ function AdminEvaluationPage({
 
       setIsSearching(true);
       try {
-        // @ts-expect-error Supabase RPC inference is stale in the local generated client types.
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           max_results: 100,
@@ -1393,7 +1392,6 @@ function AdminEvaluationPage({
 
         const { error: autoDeleteError } = await supabase
           .from('restaurants')
-          // @ts-expect-error Supabase update inference is stale in the local generated client types.
           .update({
             status: 'deleted',
             db_error_message: MISSING_EVALUATION_AUTO_DELETE_MESSAGE,
@@ -1637,7 +1635,6 @@ function AdminEvaluationPage({
         assertLegacyBrowserAdminMutationEnabled('restaurant_record', 'record duplicate error update');
         await supabase
           .from('restaurants')
-          // @ts-expect-error Supabase update inference is stale in the local generated client types.
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -1692,7 +1689,6 @@ function AdminEvaluationPage({
     const updatedAt = new Date().toISOString();
     const { data: updatedData, error } = await supabase
       .from('restaurants')
-      // @ts-expect-error Supabase update inference is stale in the local generated client types.
       .update({
         status: 'approved',
         approved_name: approvedName,
@@ -1757,7 +1753,6 @@ function AdminEvaluationPage({
       // Soft Delete: 휴지통 아이콘 클릭 즉시 status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'deleted',
           updated_by_admin_id: adminUserId,
@@ -1830,7 +1825,6 @@ function AdminEvaluationPage({
       // status를 'pending'으로 업데이트
       const { error } = await supabase
         .from('restaurants')
-        // @ts-expect-error Supabase update inference is stale in the local generated client types.
         .update({
           status: 'pending',
           updated_by_admin_id: adminUserId,
@@ -1884,7 +1878,7 @@ function AdminEvaluationPage({
       if (submissionsError) throw submissionsError;
       if (!submissionsData?.length) return [];
 
-      const typedSubmissions = submissionsData as SubmissionRow[];
+      const typedSubmissions = submissionsData as unknown as SubmissionRow[];
       const submissionIds = typedSubmissions.map(s => s.id);
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
@@ -1902,7 +1896,7 @@ function AdminEvaluationPage({
       ]);
 
       const typedProfilesData = (profilesData || []) as ProfileNicknameRow[];
-      const typedItemsData = (itemsData || []) as SubmissionItem[];
+      const typedItemsData = (itemsData || []) as unknown as SubmissionItem[];
 
       const profilesMap = new Map(typedProfilesData.map((profile) => [profile.user_id, profile.nickname]));
       const itemsMap = new Map<string, SubmissionItem[]>();
@@ -2115,7 +2109,7 @@ function AdminEvaluationPage({
       if (reviewsError) throw reviewsError;
       if (!reviewsData?.length) return [];
 
-      const typedReviewsData = reviewsData as Review[];
+      const typedReviewsData = reviewsData as unknown as Review[];
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
@@ -2853,14 +2847,24 @@ function AdminEvaluationPage({
     ? getRestaurantIdentityWarnings(pendingRecordAction.record)
     : [];
 
+  const embeddedModuleId: Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> = showSubmissionView
+    ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
+    : 'restaurants';
+
   return (
     <div
       ref={scrollContainerRef}
       className="flex h-full min-h-0 flex-col overflow-auto"
       id="scroll-container"
+      data-admin-embedded-module-shell={embedded ? "true" : undefined}
+      data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}
     >
       {/* Header */}
-      <div className={embedded ? "border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}>
+      <div
+        className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
+        data-admin-module-header={embedded ? "compact" : undefined}
+        data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
+      >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -2897,7 +2901,7 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"}>
+            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
               {pendingQueueSummaryContent}
             </div>
           </div>
@@ -2909,7 +2913,7 @@ function AdminEvaluationPage({
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right">
+              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
                 {canSwitchEvaluationView && (
                   <>
                     <Button
@@ -2982,7 +2986,7 @@ function AdminEvaluationPage({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
         {pendingRecordAction && (
           <section
             role="region"

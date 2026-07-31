@@ -639,7 +639,6 @@ export function AdminRestaurantModal({
                     assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant_link");
                     const { error: deleteError } = await supabase
                         .from('restaurants')
-                        // @ts-expect-error - Supabase 자동 생성 타입 문제
                         .update({
                             status: 'deleted',
                             updated_at: new Date().toISOString(),
@@ -774,7 +773,7 @@ export function AdminRestaurantModal({
                     .in("id", existingIds);
 
                 if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {
-                    const typedUpdatedRestaurants = allUpdatedRestaurants as Restaurant[];
+                    const typedUpdatedRestaurants = allUpdatedRestaurants as unknown as Restaurant[];
                     const primaryRestaurant = typedUpdatedRestaurants.find((updatedRestaurant) => updatedRestaurant.id === restaurant.id);
                     const mergedChildren = typedUpdatedRestaurants.filter((updatedRestaurant) => updatedRestaurant.id !== restaurant.id);
 

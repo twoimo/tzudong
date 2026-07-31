@@ -146,7 +146,7 @@ export default function EditSubmissionsPage() {
         .range(pageParam, pageParam + PAGE_SIZE - 1);
 
       if (error) throw error;
-      const typedSubmissions = (submissions ?? []) as Submission[];
+      const typedSubmissions = (submissions ?? []) as unknown as Submission[];
       if (typedSubmissions.length === 0) {
         return { data: [], nextCursor: null };
       }
@@ -161,7 +161,7 @@ export default function EditSubmissionsPage() {
         .order("created_at", { ascending: true });
 
       if (itemsError) throw itemsError;
-      const typedItems = (items ?? []) as SubmissionItem[];
+      const typedItems = (items ?? []) as unknown as SubmissionItem[];
 
       // 아이템에서 target_restaurant_id 추출
       const targetRestaurantIds = [

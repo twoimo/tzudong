@@ -106,7 +106,7 @@ function writePythonShim(commandPath: string, markerPath: string, stdoutJson: un
 [
   cwdPath ? `pwd > ${JSON.stringify(cwdPath)}` : undefined,
   `printf 'called\n' > ${JSON.stringify(markerPath)}`,
-  `printf '%s\\n' ${JSON.stringify(stdoutJson)}`,
+  `printf '%s\n' ${JSON.stringify(JSON.stringify(stdoutJson))}`,
 ].filter(Boolean) as string[],
 [
   cwdPath ? `cd > ${JSON.stringify(cwdPath)}` : undefined,

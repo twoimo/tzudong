@@ -139,7 +139,8 @@ export default function NewSubmissionsPage() {
         return { data: [], nextCursor: null };
       }
 
-      const submissionIds = submissions.map((s: { id: string }) => s.id);
+      const typedSubmissions = submissions as unknown as Submission[];
+      const submissionIds = typedSubmissions.map((submission) => submission.id);
 
       const { data: items, error: itemsError } = await supabase
         .from("restaurant_submission_items")
@@ -149,8 +150,7 @@ export default function NewSubmissionsPage() {
 
       if (itemsError) throw itemsError;
 
-      const typedSubmissions = submissions as Submission[];
-      const typedItems = (items || []) as SubmissionItem[];
+      const typedItems = (items || []) as unknown as SubmissionItem[];
 
       const submissionsWithItems: Submission[] = typedSubmissions.map(
         (submission) => ({

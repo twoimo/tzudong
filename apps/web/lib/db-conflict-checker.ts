@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { debugLog } from '@/lib/debug-log';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 
@@ -346,13 +347,13 @@ export async function mergeRestaurantData(params: {
   existingRestaurant: {
     id: string;
     youtube_link: string | null;
-    youtube_meta: Record<string, unknown> | null;
+    youtube_meta: Json | null;
     tzuyang_review: string | null;
     categories: string[] | string;
     updated_at: string;
   };
   newYoutubeLink: string;
-  newYoutubeMeta?: Record<string, unknown>;
+  newYoutubeMeta?: Json;
   newTzuyangReview?: string;
   newCategory?: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -382,7 +383,6 @@ export async function mergeRestaurantData(params: {
     // Optimistic Locking으로 업데이트
     const { error: updateError } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
         youtube_link: updatedYoutubeLink,
         youtube_meta: updatedYoutubeMeta,

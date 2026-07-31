@@ -81,6 +81,7 @@ import type {
   ThumbnailGenerationResult as ContractThumbnailGenerationResult,
   ThumbnailGeneratorPayload,
 } from "@/lib/admin/youtube-thumbnail-generator/types";
+import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 
 type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
@@ -6530,19 +6531,32 @@ export function AdminYoutubeThumbnailGenerator() {
       </div>
     );
   }
+  const thumbnailModuleSummary = isGenerating
+    ? `이미지 생성 중 · ${thumbnailImageApiRouterView.label}`
+    : isChatAgentStreaming
+      ? "도우미 응답 중 · 캔버스 편집 맥락 반영"
+      : `상태 ${thumbnailChatStatusLabel} · 기록 ${historyRuns.length}개 · ${thumbnailImageApiRouterView.label}`;
+
 
   return (
-    <main
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
-      aria-label="유튜브 썸네일 생성기"
-      data-admin-youtube-thumbnail-generator="true"
-      data-thumbnail-initial-preview-source={initialPreviewSource}
-      onKeyDown={handleThumbnailEditorShellKeyDown}
+    <AdminEmbeddedModuleShell
+      moduleId="youtube-thumbnail-generator"
+      titleId="admin-youtube-thumbnail-generator-title"
+      title="유튜브 썸네일 생성"
+      icon={Wand2}
+      summary={thumbnailModuleSummary}
     >
-      <div
-        className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
-        data-thumbnail-chat-right-layout="true"
+      <main
+        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
+        aria-label="유튜브 썸네일 생성기"
+        data-admin-youtube-thumbnail-generator="true"
+        data-thumbnail-initial-preview-source={initialPreviewSource}
+        onKeyDown={handleThumbnailEditorShellKeyDown}
       >
+        <div
+          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+          data-thumbnail-chat-right-layout="true"
+        >
         <Card
           className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
           aria-label="요구사항 채팅"
@@ -7189,7 +7203,8 @@ export function AdminYoutubeThumbnailGenerator() {
 
           </CardContent>
         </Card>
-      </div>
-    </main>
+        </div>
+      </main>
+    </AdminEmbeddedModuleShell>
   );
 }

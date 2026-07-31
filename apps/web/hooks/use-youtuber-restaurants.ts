@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface YoutuberRestaurant {
     id: string;
@@ -67,6 +68,17 @@ interface UseYoutuberRestaurantsReturn {
     totalCount: number;
 }
 
+function normalizeYoutubeMeta(value: Json | null): YoutuberRestaurant['youtube_meta'] {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+
+    const title = typeof value.title === 'string' ? value.title : undefined;
+    const publishedAt = typeof value.publishedAt === 'string' ? value.publishedAt : undefined;
+    const duration = typeof value.duration === 'number' ? value.duration : undefined;
+
+    if (title === undefined && publishedAt === undefined && duration === undefined) return null;
+    return { title, publishedAt, duration };
+}
+
 export function useYoutuberRestaurants(
     options: UseYoutuberRestaurantsOptions = {}
 ): UseYoutuberRestaurantsReturn {
@@ -120,31 +132,7 @@ export function useYoutuberRestaurants(
                 throw fetchError;
             }
 
-            const mapped = (data || []).map((row: {
-                id: string;
-                trace_id: string | null;
-                approved_name: string | null;
-                origin_name: string | null;
-                naver_name: string | null;
-                google_name: string | null;
-                phone: string | null;
-                categories: string[] | null;
-                status: string;
-                source_type: string;
-                channel_name: string | null;
-                youtube_link: string | null;
-                youtube_meta: { title?: string; publishedAt?: string; duration?: number } | null;
-                reasoning_basis: string | null;
-                tzuyang_review: string | null;
-                origin_address: Record<string, unknown> | null;
-                road_address: string | null;
-                jibun_address: string | null;
-                lat: number | null;
-                lng: number | null;
-                geocoding_success: boolean | null;
-                created_at: string;
-                updated_at: string;
-            }): YoutuberRestaurant => ({
+            const mapped = (data || []).map((row): YoutuberRestaurant => ({
                 id: row.id,
                 unique_id: row.trace_id || '',
                 name: row.approved_name || row.origin_name || '이름 없음',
@@ -157,7 +145,7 @@ export function useYoutuberRestaurants(
                 youtuber_name: row.channel_name || '알수없음',
                 youtuber_channel: row.channel_name,
                 youtube_link: row.youtube_link,
-                youtube_meta: row.youtube_meta,
+                youtube_meta: normalizeYoutubeMeta(row.youtube_meta),
                 reasoning_basis: row.reasoning_basis,
                 tzuyang_review: row.tzuyang_review,
                 youtuber_review: null,

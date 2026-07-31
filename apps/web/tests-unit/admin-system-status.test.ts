@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, realpathSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import type {
@@ -570,7 +570,7 @@ describe('admin system status helper', () => {
             expect(payload.frameCaption.configured).toBe(false);
             expect(payload.frameCaption.localPathConfigured).toBe(false);
             expect(payload.frameCaption.localPathAvailable).toBe(true);
-            expect(payload.frameCaption.localPath).toBe(path.resolve(fallbackPath));
+            expect(payload.frameCaption.localPath).toBe(realpathSync(fallbackPath));
             expect(payload.frameCaption.gdrivePathConfigured).toBe(false);
             expect(payload.frameCaption.reachable).toBe(true);
             expect(payload.checklist.some((entry) => entry.id === 'frame-caption-path-missing')).toBe(false);

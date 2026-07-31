@@ -170,13 +170,20 @@ describe("mypage CRUD QA/QC source contracts", () => {
     }
   });
 
-  test("permanent account delete cleans the same bookmark table used by the mypage bookmark feature", () => {
+  test("permanent account delete keeps owner-scoped server deletion workflow and avoids destructive retry patterns", () => {
     const accountDeleteRouteSource = source("app/api/account/delete/route.ts");
 
-    expect(accountDeleteRouteSource).toContain(".from('user_bookmarks')");
-    expect(accountDeleteRouteSource).not.toContain(".from('restaurant_bookmarks')");
-    expect(accountDeleteRouteSource).toContain("supabaseAdmin.auth.admin.deleteUser");
-    expect(accountDeleteRouteSource).toContain("targetUserId !== user.id");
-    expect(accountDeleteRouteSource).toContain("requireAdmin()");
+    expect(accountDeleteRouteSource).toContain("function parseBearerToken");
+    expect(accountDeleteRouteSource).toContain("async function verifySelfBearer");
+    expect(accountDeleteRouteSource).toContain("supabaseAdmin.auth.getUser(bearerToken)");
+    expect(accountDeleteRouteSource).toContain("supabaseAdmin.auth.getClaims(bearerToken)");
+    expect(accountDeleteRouteSource).toContain("user?.id === targetUserId");
+    expect(accountDeleteRouteSource).toContain("sub === targetUserId");
+    expect(accountDeleteRouteSource).toContain(".rpc('preview_account_deletion'");
+    expect(accountDeleteRouteSource).toContain(".rpc('begin_account_deletion_apply_with_reauth'");
+    expect(accountDeleteRouteSource).toContain("begin.status !== 'APPLY_STARTED'");
+    expect(accountDeleteRouteSource).not.toContain("auth.admin.deleteUser");
+    expect(accountDeleteRouteSource).not.toContain(".from('user_bookmarks')");
+    expect(accountDeleteRouteSource).not.toContain("indexedDB.deleteDatabase");
   });
 });

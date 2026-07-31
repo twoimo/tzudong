@@ -26,6 +26,23 @@ function getTrustedRedirectOrigin(requestOrigin: string) {
 }
 
 
+function isPrivacyProfileStatusAllowed(status: unknown) {
+    return status === "eligible" || status === "guardian_verified";
+}
+
+const isPrivacyProfileCompleteForUser = async (supabase: Awaited<ReturnType<typeof createClient>>, userId: string) => {
+    const { data, error } = await (supabase
+        .from('privacy_age_profiles' as never)
+        .select('status')
+        .eq('owner', userId)
+        .maybeSingle() as unknown as Promise<{ data: { status: string | null } | null; error: unknown }>);
+
+    if (error) return false;
+
+    const status = data?.status ?? null;
+    return isPrivacyProfileStatusAllowed(status);
+};
+
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get('code');
@@ -33,9 +50,19 @@ export async function GET(request: Request) {
 
     if (code) {
         const supabase = await createClient();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
-            return NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${next}`);
+        try {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!error) {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+                if (!userError && user && await isPrivacyProfileCompleteForUser(supabase, user.id)) {
+                    return NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${next}`);
+                }
+            }
+
+            await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
         }
     }
 

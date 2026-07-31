@@ -30,6 +30,13 @@ import {
   resolveDeviceLocationStateUpdatePlan,
   type DeviceMapLocation,
 } from "@/lib/device-location-map";
+import {
+  DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED,
+  DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED,
+  LOCATION_READINESS_STATUS_AVAILABLE,
+  LOCATION_READINESS_STATUS_UNAVAILABLE,
+  type DeviceLocationReadiness,
+} from "@/lib/privacy/location-readiness";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import {
   buildHomeDetailState,
@@ -124,12 +131,77 @@ const requestDesktopDetailReturnCapture = () => {
   window.dispatchEvent(new Event(HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT));
 };
 
+const DEVICE_LOCATION_READINESS_BLOCKED_TOAST =
+  "현재 위치 기능은 운영자 근거가 확보될 때까지 활성화되지 않습니다. 지도 표시를 일시 중단합니다.";
+const LOCATION_READINESS_ENDPOINT = "/api/privacy/location-readiness";
+const LOCATION_READINESS_TIMEOUT_MS = 1200;
+const DEVICE_LOCATION_DISCLOSURE =
+  "현재 위치는 지도에 표시하기 위해 이 기기 메모리에서만 사용하며, 지도 SDK 화면 이동·타일 로딩은 지도 제공자 네트워크 경계를 통해 처리됩니다. 브라우저 위치 권한을 요청할까요?";
+const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
+  "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
+
+
+const isDeviceLocationReadinessResponse = (
+  value: unknown,
+): value is DeviceLocationReadiness => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+  const candidate = value as Record<string, unknown>;
+  if (Object.keys(candidate).length !== 2) return false;
+
+  const status = candidate.status;
+  const reasonCode = candidate.reasonCode;
+  return (
+    (status === LOCATION_READINESS_STATUS_AVAILABLE ||
+      status === LOCATION_READINESS_STATUS_UNAVAILABLE) &&
+    (reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED ||
+      reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED)
+  );
+};
+
+const buildUnavailableDeviceLocationReadiness = (): DeviceLocationReadiness => ({
+  status: LOCATION_READINESS_STATUS_UNAVAILABLE,
+  reasonCode: DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED,
+});
+
+const fetchDeviceLocationReadiness = async (): Promise<DeviceLocationReadiness> => {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), LOCATION_READINESS_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(LOCATION_READINESS_ENDPOINT, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Cache-Control": "no-store",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return buildUnavailableDeviceLocationReadiness();
+    }
+
+    const payload: unknown = await response.json().catch(() => null);
+    if (!isDeviceLocationReadinessResponse(payload)) {
+      return buildUnavailableDeviceLocationReadiness();
+    }
+
+    return payload;
+  } catch {
+    return buildUnavailableDeviceLocationReadiness();
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
 const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
-
   const currentUrl = new URL(window.location.href);
   if (
     currentUrl.pathname !== "/" ||
@@ -204,6 +276,7 @@ export default function HomeClient() {
   const deviceLocationFocusRequestIdRef = useRef(0);
   const deviceLocationWatchIdRef = useRef<number | null>(null);
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
+  const isDeviceLocationModeActiveRef = useRef(false);
   const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
   const openDetailPanelRef = useRef<
     (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => void
@@ -715,7 +788,14 @@ export default function HomeClient() {
       mode: "position" | "heading",
       options: { shouldFocus: boolean },
     ) => {
+      if (!isDeviceLocationModeActiveRef.current) return;
+
       const nextHeading = resolveGeolocationHeading(position.coords.heading);
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
       const nextFocusRequestId = options.shouldFocus
         ? deviceLocationFocusRequestIdRef.current + 1
         : deviceLocationFocusRequestIdRef.current;
@@ -726,8 +806,8 @@ export default function HomeClient() {
 
       setDeviceLocation((previous) => {
         const nextLocation: DeviceMapLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+          lat: latitude,
+          lng: longitude,
           accuracy: Number.isFinite(position.coords.accuracy)
             ? position.coords.accuracy
             : null,
@@ -760,8 +840,26 @@ export default function HomeClient() {
     deviceOrientationCleanupRef.current = null;
   }, []);
 
+  const clearDeviceLocationRuntimeState = useCallback(() => {
+    isDeviceLocationModeActiveRef.current = false;
+    stopDeviceHeadingWatchers();
+  }, [stopDeviceHeadingWatchers]);
+
+  const deactivateDeviceLocationSession = useCallback(() => {
+    clearDeviceLocationRuntimeState();
+    setIsDeviceHeadingMode(false);
+    setDeviceLocation(null);
+    setIsDeviceLocationPending(false);
+    deviceLocationFocusRequestIdRef.current = 0;
+  }, [clearDeviceLocationRuntimeState]);
+
   const startDeviceOrientationTracking = useCallback(async () => {
-    if (typeof window === "undefined") return false;
+    if (
+      typeof window === "undefined" ||
+      !isDeviceLocationModeActiveRef.current
+    ) {
+      return false;
+    }
 
     const OrientationEvent = window.DeviceOrientationEvent as
       | (typeof DeviceOrientationEvent & {
@@ -794,6 +892,8 @@ export default function HomeClient() {
     const handleOrientation = (
       event: DeviceOrientationEvent & { webkitCompassHeading?: number | null },
     ) => {
+      if (!isDeviceLocationModeActiveRef.current) return;
+
       const heading = resolveDeviceOrientationHeading(event);
       if (heading === null) return;
 
@@ -830,6 +930,7 @@ export default function HomeClient() {
   const startDeviceLocationWatch = useCallback(
     (mode: "position" | "heading") => {
       if (
+        !isDeviceLocationModeActiveRef.current ||
         typeof navigator === "undefined" ||
         !navigator.geolocation ||
         deviceLocationWatchIdRef.current !== null
@@ -854,21 +955,40 @@ export default function HomeClient() {
       return;
     }
 
-    const nextMode: "position" | "heading" = deviceLocation
+    const isSessionActive = isDeviceLocationModeActiveRef.current && Boolean(deviceLocation);
+    if (isSessionActive && isDeviceHeadingMode) {
+      deactivateDeviceLocationSession();
+      return;
+    }
+
+    const nextMode: "position" | "heading" = isSessionActive
       ? "heading"
       : "position";
+
     setIsDeviceLocationPending(true);
+    const preserveSession = isSessionActive;
 
     try {
-      const position = await new Promise<GeolocationPosition>(
-        (resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            maximumAge: 3000,
-            timeout: 12000,
-          });
-        },
-      );
+      const readiness = await fetchDeviceLocationReadiness();
+      if (
+        readiness.status !== LOCATION_READINESS_STATUS_AVAILABLE ||
+        readiness.reasonCode !== DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED
+      ) {
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED_TOAST);
+        return;
+      }
+
+      if (!preserveSession) {
+        isDeviceLocationModeActiveRef.current = true;
+      }
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          maximumAge: 3000,
+          timeout: 12000,
+        });
+      });
 
       if (nextMode === "heading") {
         setIsDeviceHeadingMode(true);
@@ -883,23 +1003,43 @@ export default function HomeClient() {
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
     } catch {
+      if (!preserveSession) {
+        deactivateDeviceLocationSession();
+      }
       toast.error(DEVICE_LOCATION_ENABLE_TOAST);
     } finally {
       setIsDeviceLocationPending(false);
     }
   }, [
     applyDevicePosition,
+    deactivateDeviceLocationSession,
     deviceLocation,
+    isDeviceHeadingMode,
     startDeviceLocationWatch,
     startDeviceOrientationTracking,
     stopDeviceHeadingWatchers,
   ]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        deactivateDeviceLocationSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [deactivateDeviceLocationSession]);
+
   useEffect(
     () => () => {
-      stopDeviceHeadingWatchers();
+      clearDeviceLocationRuntimeState();
     },
-    [stopDeviceHeadingWatchers],
+    [clearDeviceLocationRuntimeState],
   );
 
   const shouldRenderSidePanels = Boolean(

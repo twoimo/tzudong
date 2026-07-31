@@ -17,6 +17,7 @@ type SupabaseMockState = {
   roleError?: unknown;
   accountStatus?: { account_status: string } | null;
   accountStatusError?: unknown;
+  privacyProfile?: { status: string } | null;
 };
 
 let supabaseMockState: SupabaseMockState = { userId: null };
@@ -54,6 +55,13 @@ mock.module('@supabase/ssr', () => ({
           return {
             data: supabaseMockState.accountStatus ?? null,
             error: supabaseMockState.accountStatusError ?? null,
+          };
+        }
+
+        if (tableName === 'privacy_age_profiles') {
+          return {
+            data: supabaseMockState.privacyProfile ?? null,
+            error: null,
           };
         }
 
@@ -141,6 +149,7 @@ describe('admin middleware login redirect', () => {
     supabaseMockState = {
       userId: 'regular-user-id',
       role: null,
+      privacyProfile: { status: 'eligible' },
     };
 
     const { updateSession } = await loadMiddleware();
@@ -156,6 +165,7 @@ describe('admin middleware login redirect', () => {
       userId: 'admin-user-id',
       role: { role: 'admin' },
       accountStatus: { account_status: 'active' },
+      privacyProfile: { status: 'eligible' },
     };
 
     const { updateSession } = await loadMiddleware();

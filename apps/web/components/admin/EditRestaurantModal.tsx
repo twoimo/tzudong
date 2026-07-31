@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, RefreshCw, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -504,7 +505,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -562,7 +562,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
       english_address: selectedResult.english_address,
-      address_elements: selectedResult.address_elements,
+      address_elements: selectedResult.address_elements as Json,
       lat: parseFloat(selectedResult.y),
       lng: parseFloat(selectedResult.x),
       phone: trimmedPhone || null,
@@ -583,7 +583,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     const { error: updateError } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update(updateData)
       .eq('id', record.id); // restaurants 테이블의 ID로 업데이트
 
@@ -706,7 +705,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         if (canAutoSoftDeleteDuplicateSource(record)) {
           await supabase
             .from('restaurants')
-            // @ts-expect-error - Supabase 자동 생성 타입 문제
             .update({
               status: 'deleted',
               db_error_message: conflictMessage,
@@ -735,7 +733,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: conflictMessage,
             db_error_details: errorDetails,
@@ -758,7 +755,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       // 수정 사항만 업데이트 (status는 변경하지 않음)
-      const updateData: Record<string, unknown> = {
+      const updateData: TablesUpdate<'restaurants'> = {
         approved_name: trimmedName,
         phone: trimmedPhone || null,
         youtube_link: trimmedYoutubeLink || null,
@@ -776,7 +773,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updateData.road_address = selectedResult.road_address;
         updateData.jibun_address = selectedResult.jibun_address;
         updateData.english_address = selectedResult.english_address;
-        updateData.address_elements = selectedResult.address_elements;
+        updateData.address_elements = selectedResult.address_elements as Json;
         updateData.lat = parseFloat(selectedResult.y);
         updateData.lng = parseFloat(selectedResult.x);
         updateData.geocoding_success = true;
@@ -786,7 +783,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       const { error: updateError } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update(updateData)
         .eq('id', record.id);
 
