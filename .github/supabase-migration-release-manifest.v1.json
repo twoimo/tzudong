@@ -18,6 +18,23 @@
           "restaurant_refresh_history_terminal_state": true
         }
       }
+    },
+    {
+      "id": "g016_privacy_audit_owner_policy",
+      "path": "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
+      "sha256": "d6590461679265e2bd09f45d7d04b5be4a6fb087683951df2500e6037aea4cfc",
+      "expectedPriorState": {
+        "query": "SELECT json_build_object(\n  'g016_policy_absent', NOT EXISTS (\n    SELECT 1 FROM pg_policy p\n    JOIN pg_class c ON c.oid = p.polrelid\n    JOIN pg_namespace n ON n.oid = c.relnamespace\n    WHERE n.nspname = 'privacy_retention'\n      AND c.relname = 'privacy_audit_events'\n      AND p.polname = 'g016_privacy_workflow_owner_access'\n  )\n)::text;\n",
+        "expected": {
+          "g016_policy_absent": true
+        }
+      },
+      "terminalReadback": {
+        "query": "SELECT json_build_object(\n  'g016_privacy_audit_owner_policy_terminal_state',\n  EXISTS (\n    SELECT 1 FROM pg_policy p\n    JOIN pg_class c ON c.oid = p.polrelid\n    JOIN pg_namespace n ON n.oid = c.relnamespace\n    WHERE n.nspname = 'privacy_retention'\n      AND c.relname = 'privacy_audit_events'\n      AND p.polname = 'g016_privacy_workflow_owner_access'\n      AND p.polcmd = '*'\n      AND p.polpermissive\n      AND pg_get_expr(p.polqual, p.polrelid) = 'true'\n      AND pg_get_expr(p.polwithcheck, p.polrelid) = 'true'\n      AND (SELECT oid FROM pg_roles WHERE rolname = 'privacy_workflow_owner') = ANY (p.polroles)\n  )\n  AND EXISTS (\n    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace\n    WHERE n.nspname = 'privacy_retention' AND c.relname = 'privacy_audit_events'\n      AND pg_get_userbyid(c.relowner) = 'privacy_workflow_owner'\n      AND c.relrowsecurity AND c.relforcerowsecurity\n  )\n  AND NOT COALESCE(has_table_privilege('anon', 'privacy_retention.privacy_audit_events', 'select,insert,update,delete'), false)\n  AND NOT COALESCE(has_table_privilege('authenticated', 'privacy_retention.privacy_audit_events', 'select,insert,update,delete'), false)\n  AND NOT COALESCE(has_table_privilege('service_role', 'privacy_retention.privacy_audit_events', 'select,insert,update,delete'), false)\n  AND NOT COALESCE(has_table_privilege('public', 'privacy_retention.privacy_audit_events', 'select,insert,update,delete'), false)\n)::text;\n",
+        "expected": {
+          "g016_privacy_audit_owner_policy_terminal_state": true
+        }
+      }
     }
   ]
 }
