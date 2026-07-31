@@ -90,7 +90,7 @@ async function getYouTubeChannelSnapshotFallback(
   try {
     return await getLatestYouTubeChannelSnapshot(period);
   } catch (error) {
-    console.warn("YouTube channel snapshot fallback unavailable:", error);
+    console.warn("YouTube channel snapshot fallback unavailable:");
     return null;
   }
 }
@@ -227,7 +227,7 @@ export async function GET(request: Request) {
       },
     );
   } catch (error) {
-    console.error("YouTube channel statistics fetch error:", error);
+    console.error("YouTube channel statistics fetch error:");
     return respondWithYouTubeChannelSnapshotFallback(
       period,
       "Failed to fetch YouTube channel statistics",

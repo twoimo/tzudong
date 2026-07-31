@@ -14,7 +14,6 @@ import {
     Edit,
     Copy,
     ChevronDown,
-    Youtube,
     Settings,
     Store,
     Quote,
@@ -25,6 +24,7 @@ import {
     ChevronRight,
     ChevronLeft
 } from "lucide-react";
+import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -45,23 +45,17 @@ import {
 import { collectRestaurantMergedMedia } from "@/lib/restaurant-merged-media";
 import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
 import { buildRestaurantAddressDisplayEntries, type RestaurantAddressEntryType } from "@/lib/restaurant-address-presenter";
+import {
+    buildCanonicalYouTubeWatchUrl,
+    extractCanonicalYouTubeVideoId,
+} from "@/lib/youtube-url";
+import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
 
-interface CreateUserNotificationArgs {
-    p_user_id: string;
-    p_type: string;
-    p_title: string;
-    p_message: string;
-    p_data: Record<string, unknown>;
-}
-
-type SupabaseRpcClient = {
-    rpc: (fn: 'create_user_notification', args: CreateUserNotificationArgs) => Promise<{ error: unknown | null }>;
-};
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -239,11 +233,24 @@ export function RestaurantDetailPanel({
             : [];
     const mergedMedia = useMemo(() => collectRestaurantMergedMedia(restaurant), [restaurant]);
     const youtubeLinks = mergedMedia.youtubeLinks;
+    const youtubeVideos = useMemo(
+        () => youtubeLinks.flatMap((youtubeLink) => {
+            const videoId = extractCanonicalYouTubeVideoId(youtubeLink);
+            const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
+            if (!videoId || !watchUrl) return [];
+
+            return [{
+                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                watchUrl,
+            }];
+        }),
+        [youtubeLinks],
+    );
     const tzuyangReviews = mergedMedia.tzuyangReviews;
     const youtubeMetas = mergedMedia.youtubeMetas;
     const youtubeCopy = useMemo(
-        () => buildRestaurantDetailMediaCopy('youtube', youtubeLinks.length, isYoutubeExpanded),
-        [isYoutubeExpanded, youtubeLinks.length],
+        () => buildRestaurantDetailMediaCopy('youtube', youtubeVideos.length, isYoutubeExpanded),
+        [isYoutubeExpanded, youtubeVideos.length],
     );
     const reviewCopy = useMemo(
         () => buildRestaurantDetailMediaCopy('review', tzuyangReviews.length, isReviewExpanded),
@@ -290,6 +297,16 @@ export function RestaurantDetailPanel({
             }),
         };
     }, [restaurant]);
+    const mapDestinationUrls = useMemo(
+        () => restaurant
+            ? buildRestaurantMapDestinationUrls({
+                name: restaurant.name,
+                lat: restaurant.lat,
+                lng: restaurant.lng,
+            })
+            : null,
+        [restaurant],
+    );
 
     // [데이터 조회] 리뷰 무한 스크롤 (성능 최적화: 15개씩 페이징)
     const {
@@ -456,7 +473,7 @@ export function RestaurantDetailPanel({
                 const nextCursor = reviewsPageData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { restaurantId: restaurant.id, reviews, nextCursor };
             } catch (error) {
-                console.error('❌ 리뷰 데이터 조회 중 오류:', error);
+                console.error('❌ 리뷰 데이터 조회 중 오류:');
                 return { restaurantId: restaurant?.id ?? null, reviews: [], nextCursor: null };
             }
         },
@@ -538,7 +555,7 @@ export function RestaurantDetailPanel({
             setCopiedAddress(type);
             setTimeout(() => setCopiedAddress(null), 2000);
         } catch (err) {
-            console.error('주소 복사 실패:', err);
+            console.error('주소 복사 실패:');
         }
     }, []);
 
@@ -708,7 +725,7 @@ export function RestaurantDetailPanel({
             setTimeout(() => setIsShareCopied(false), 2000);
             toast.success('공유 링크가 복사되었습니다');
         } catch (err) {
-            console.warn('URL 복사 실패:', err);
+            console.warn('URL 복사 실패:');
 
             // 포커스 문제 등으로 실패 시 처리
             if (!document.hasFocus()) {
@@ -719,46 +736,38 @@ export function RestaurantDetailPanel({
         }
     }, [restaurant]);
 
-    // [유틸] 유튜브 비디오 ID 추출
-    const extractYouTubeVideoId = useCallback((url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    }, []);
-
-    // [유틸] 유튜브 썸네일 URL 생성
-    const getYouTubeThumbnailUrl = useCallback((url: string) => {
-        const videoId = extractYouTubeVideoId(url);
-        return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-    }, [extractYouTubeVideoId]);
-
     // [예외 처리] restaurant가 없으면 null 반환 (모든 Hook 호출 후)
     if (!restaurant) return null;
 
     // [핸들러] 길찾기 시트 열기
     const handleGetDirections = () => {
+        if (!mapDestinationUrls) return;
+
         onOpenDirectionSheet?.();
         setIsDirectionSheetOpen(true);
     };
 
     // [핸들러] 네이버 지도 열기
     const handleNaverMap = () => {
-        const url = `https://map.naver.com/v5/search/${encodeURIComponent(restaurant.name)}`;
-        openExternalUrl(url);
+        if (!mapDestinationUrls) return;
+
+        openExternalUrl(mapDestinationUrls.naver);
         setIsDirectionSheetOpen(false);
     };
 
     // [핸들러] 구글 지도 열기
     const handleGoogleMap = () => {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
-        openExternalUrl(url);
+        if (!mapDestinationUrls) return;
+
+        openExternalUrl(mapDestinationUrls.google);
         setIsDirectionSheetOpen(false);
     };
 
     // [핸들러] 카카오맵 열기
     const handleKakaoMap = () => {
-        const url = `https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`;
-        openExternalUrl(url);
+        if (!mapDestinationUrls) return;
+
+        openExternalUrl(mapDestinationUrls.kakao);
         setIsDirectionSheetOpen(false);
     };
 
@@ -821,32 +830,18 @@ export function RestaurantDetailPanel({
 
                 if (error) throw error;
 
-                // 리뷰 작성자에게 알림 전송 (자기 자신 제외)
-                const targetReview = safeReviewsData.find(r => r.id === reviewId);
-                if (targetReview && targetReview.userId && targetReview.userId !== user.id) {
-                    try {
-                        // 현재 사용자의 닉네임 가져오기
-                        const { data: profileData } = await supabase
-                            .from('profiles' as never)
-                            .select('nickname')
-                            .eq('user_id', user.id)
-                            .single();
+                try {
+                    const notificationResponse = await fetch('/api/notifications/review-like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reviewId }),
+                    });
 
-                        const typedProfileData = profileData as { nickname: string } | null;
-                        const likerName = typedProfileData?.nickname || '누군가';
-
-                        const rpcClient = supabase as unknown as SupabaseRpcClient;
-                        await rpcClient.rpc('create_user_notification', {
-                            p_user_id: targetReview.userId,
-                            p_type: 'review_like',
-                            p_title: '리뷰에 좋아요가 눌렸어요!',
-                            p_message: `${likerName}님이 ${restaurant.name}에 대한 리뷰에 좋아요를 눌렀습니다.`,
-                            p_data: { reviewId, restaurantId: restaurant.id, restaurantName: restaurant.name }
-                        });
-                    } catch (notifError) {
-                        console.error('알림 생성 실패:', notifError);
-                        // 알림 실패는 좋아요 처리에 영향을 주지 않음
+                    if (!notificationResponse.ok) {
+                        // 알림 실패는 이미 적용된 좋아요를 되돌리지 않는다.
                     }
+                } catch {
+                    // 네트워크 오류는 이미 적용된 좋아요를 되돌리지 않는다.
                 }
             }
 
@@ -856,7 +851,7 @@ export function RestaurantDetailPanel({
             });
 
         } catch (error) {
-            console.error('좋아요 처리 중 오류:', error);
+            console.error('좋아요 처리 중 오류:');
 
             // 실패 시 원래 상태로 롤백
             setLikedReviews(previousState);
@@ -1146,21 +1141,21 @@ export function RestaurantDetailPanel({
                                 </div>
 
                                 {/* 유튜브 링크 */}
-                                {youtubeLinks.length > 0 ? (
+                                {youtubeVideos.length > 0 ? (
                                     <>
                                     <Separator />
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between gap-2">
                                             <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
-                                                <Youtube className="h-4 w-4 text-red-500" />
+                                                <YouTubeIcon className="h-4 w-4 text-red-500" />
                                                 {youtubeCopy.title}
-                                                {youtubeLinks.length > 1 && (
+                                                {youtubeVideos.length > 1 && (
                                                     <Badge variant="outline" className="ml-1 text-xs">
                                                         {youtubeCopy.countLabel}
                                                     </Badge>
                                                 )}
                                             </h3>
-                                            {youtubeLinks.length > 1 && (
+                                            {youtubeVideos.length > 1 && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -1186,59 +1181,55 @@ export function RestaurantDetailPanel({
                                             <button
                                                 type="button"
                                                 className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                onClick={() => openExternalUrl(youtubeLinks[0])}
+                                                onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
                                                 aria-label={youtubeCopy.openAriaLabel(1)}
                                             >
-                                                {getYouTubeThumbnailUrl(youtubeLinks[0]) && (
-                                                    <Image
-                                                        src={getYouTubeThumbnailUrl(youtubeLinks[0])!}
-                                                        alt=""
-                                                        fill
-                                                        className="object-cover"
-                                                        sizes="(max-width: 400px) 100vw, 400px"
-                                                        priority
-                                                    />
-                                                )}
-                                                {youtubeLinks.length > 1 && (
+                                                <Image
+                                                    src={youtubeVideos[0].thumbnailUrl}
+                                                    alt=""
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="(max-width: 400px) 100vw, 400px"
+                                                    priority
+                                                />
+                                                {youtubeVideos.length > 1 && (
                                                     <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
                                                         {youtubeCopy.itemBadge(1)}
                                                     </span>
                                                 )}
                                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                    <Youtube className="h-12 w-12 text-white" />
+                                                    <YouTubeIcon className="h-12 w-12 text-white" />
                                                 </div>
                                             </button>
 
-                                            {youtubeLinks.length > 1 && !isYoutubeExpanded && (
+                                            {youtubeVideos.length > 1 && !isYoutubeExpanded && (
                                                 <p className="text-xs text-muted-foreground">
                                                     {youtubeCopy.collapsedHint}
                                                 </p>
                                             )}
 
-                                            {youtubeLinks.length > 1 && isYoutubeExpanded && (
+                                            {youtubeVideos.length > 1 && isYoutubeExpanded && (
                                                 <div className="space-y-2">
-                                                    {youtubeLinks.slice(1).map((link, index) => (
+                                                    {youtubeVideos.slice(1).map((video, index) => (
                                                         <button
                                                             type="button"
-                                                            key={link}
+                                                            key={video.watchUrl}
                                                             className="relative w-full cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                            onClick={() => openExternalUrl(link)}
+                                                            onClick={() => openExternalUrl(video.watchUrl)}
                                                             aria-label={youtubeCopy.openAriaLabel(index + 2)}
                                                         >
-                                                            {getYouTubeThumbnailUrl(link) && (
-                                                                <Image
-                                                                    src={getYouTubeThumbnailUrl(link)!}
-                                                                    alt=""
-                                                                    fill
-                                                                    className="object-cover"
-                                                                    sizes="(max-width: 400px) 100vw, 400px"
-                                                                />
-                                                            )}
+                                                            <Image
+                                                                src={video.thumbnailUrl}
+                                                                alt=""
+                                                                fill
+                                                                className="object-cover"
+                                                                sizes="(max-width: 400px) 100vw, 400px"
+                                                            />
                                                             <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
                                                                 {youtubeCopy.itemBadge(index + 2)}
                                                             </span>
                                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                                <Youtube className="h-12 w-12 text-white" />
+                                                                <YouTubeIcon className="h-12 w-12 text-white" />
                                                             </div>
                                                         </button>
                                                     ))}
@@ -1434,7 +1425,7 @@ export function RestaurantDetailPanel({
                         )}
                     >
                         {/* Direction Options - 확장 시 표시 */}
-                        {isDirectionSheetOpen && (
+                        {isDirectionSheetOpen && mapDestinationUrls && (
                             <div
                                 className={cn(
                                     "border-b border-border bg-muted/30 space-y-2 animate-in slide-in-from-bottom-2 duration-200",
@@ -1522,7 +1513,12 @@ export function RestaurantDetailPanel({
                         {/* Main Action Buttons */}
                         {(!isDirectionSheetOpen || !isMobile) && (
                             <div className={cn("p-4", isDirectionSheetOpen && isMobile && "pt-2")}>
-                                <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
+                                <div
+                                    className="grid gap-2"
+                                    style={{
+                                        gridTemplateColumns: mapDestinationUrls ? '2fr 3fr 2fr' : '1fr 1fr',
+                                    }}
+                                >
                                     <Button
                                         onClick={handleRequestEditRestaurant}
                                         variant="outline"
@@ -1533,13 +1529,15 @@ export function RestaurantDetailPanel({
                                         <span className="truncate">수정 요청</span>
                                     </Button>
 
-                                    <Button
-                                        onClick={handleGetDirections}
-                                        className="h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-3 text-sm font-bold shadow-sm hover:opacity-90"
-                                    >
-                                        <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
-                                        <span className="truncate">길찾기</span>
-                                    </Button>
+                                    {mapDestinationUrls ? (
+                                        <Button
+                                            onClick={handleGetDirections}
+                                            className="h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-3 text-sm font-bold shadow-sm hover:opacity-90"
+                                        >
+                                            <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                            <span className="truncate">길찾기</span>
+                                        </Button>
+                                    ) : null}
 
                                     <Button
                                         onClick={handleWriteReview}

@@ -1,6 +1,7 @@
 import type { CSSProperties, RefObject } from 'react';
 
 import { NaverMapOverlayStack } from '@/components/map/naver-map-overlay-stack';
+import { cn } from '@/lib/utils';
 
 export function NaverMapSurface({
     announcementToastTitle,
@@ -45,7 +46,7 @@ export function NaverMapSurface({
 }) {
     return (
         <div
-            className={className}
+            className={cn('relative h-full min-h-0 min-w-0 w-full overflow-hidden', className)}
             data-layout-primitives="overlay-stack frame"
             data-scroll-owner="map-canvas-none"
             data-map-layer-signature="naver-map-surface"

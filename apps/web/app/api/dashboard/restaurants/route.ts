@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(data);
     } catch (error) {
-        console.error('[dashboard/restaurants] failed:', error);
+        console.error('[dashboard/restaurants] failed:');
         return NextResponse.json(
             { error: 'Failed to build dashboard restaurants.' },
             { status: 500 },

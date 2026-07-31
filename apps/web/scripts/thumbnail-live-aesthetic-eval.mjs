@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile, appendFile, copyFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logCliError, safeCliErrorName } from './privacy-safe-cli-log.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,67 @@ const ISSUE_TAGS = ['blank_space', 'synthetic_host', 'weak_focus', 'text_conflic
 const ASSIGNED_BY = ['script', 'human-vision-adjudication', 'script+human-vision-adjudication'];
 const DEFAULT_TIMEOUT_MS = 12 * 60 * 1000;
 const DEFAULT_RETRY_CAP = 0;
+const OPERATION_CODE = 'thumbnail_live_aesthetic_evaluation';
+const SAFE_OPERATION_ERROR_CODES = new Set([
+  'thumbnail_exact_provenance_unavailable',
+  'thumbnail_invalid_response',
+  'thumbnail_live_aesthetic_failed',
+  'thumbnail_provider_failed',
+  'thumbnail_provider_quota',
+  'thumbnail_provider_timeout',
+  'thumbnail_readiness_failed',
+]);
+const SAFE_RETRIEVAL_STATUSES = new Set(['disabled', 'fallback', 'partial', 'used']);
+const SAFE_RETRIEVAL_FALLBACK_CODES = new Set([
+  'disabled',
+  'empty_result',
+  'invalid_json',
+  'missing_dependency',
+  'missing_supabase_env',
+  'rpc_unavailable',
+  'timeout',
+  'unknown_error',
+  'unsafe_reference',
+]);
+
+function createOperationError(code) {
+  const error = new Error(code);
+  error.name = 'thumbnail_live_aesthetic_error';
+  error.code = code;
+  return error;
+}
+
+function safeOperationErrorCode(error) {
+  try {
+    if (error === null || (typeof error !== 'object' && typeof error !== 'function')) {
+      return 'thumbnail_live_aesthetic_failed';
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(error, 'code');
+    const code = descriptor && 'value' in descriptor ? descriptor.value : null;
+    return typeof code === 'string' && SAFE_OPERATION_ERROR_CODES.has(code)
+      ? code
+      : 'thumbnail_live_aesthetic_failed';
+  } catch {
+    return 'thumbnail_live_aesthetic_failed';
+  }
+}
+
+function boundedCount(value, maximum = 10_000) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+    ? Math.min(value, maximum)
+    : 0;
+}
+
+function safeBaseUrlScope(baseUrl) {
+  try {
+    const parsed = new URL(baseUrl);
+    const localHosts = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+    if (!localHosts.has(parsed.hostname)) return 'non_local';
+    return parsed.protocol === 'https:' ? 'local_https' : parsed.protocol === 'http:' ? 'local_http' : 'unsupported';
+  } catch {
+    return 'invalid';
+  }
+}
 
 const subjects = [
   {
@@ -186,9 +248,16 @@ function cookieHeaderFromResponse(response) {
 
 async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (timedOut) throw createOperationError('thumbnail_provider_timeout');
+    throw error;
   } finally {
     clearTimeout(timer);
   }
@@ -202,7 +271,7 @@ async function bootstrapSession(args) {
   bootstrapUrl.searchParams.set('token', token);
   bootstrapUrl.searchParams.set('next', nextPath);
   const response = await fetchWithTimeout(bootstrapUrl, { redirect: 'manual' }, 20_000);
-  if (!response.ok) throw new Error(`Bootstrap failed: HTTP ${response.status}`);
+  if (!response.ok) throw createOperationError('thumbnail_readiness_failed');
   return cookieHeaderFromResponse(response);
 }
 
@@ -211,7 +280,7 @@ async function preflight(args, cookie) {
     headers: { cookie },
   }, 30_000);
   const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(`Readiness GET failed: HTTP ${response.status} ${JSON.stringify(body)}`);
+  if (!response.ok) throw createOperationError('thumbnail_readiness_failed');
   const localCodex = body?.providers?.localCodex;
   const exactReady = Boolean(
     localCodex?.available === true &&
@@ -220,10 +289,15 @@ async function preflight(args, cookie) {
     localCodex?.modelProvenance === EXACT_PROVIDER.modelProvenance &&
     localCodex?.strictExactModelRequired === true
   );
-  if (!exactReady) {
-    throw new Error(`Exact gpt-image-2 provenance preflight failed: ${JSON.stringify(localCodex)}`);
-  }
-  return body;
+  if (!exactReady) throw createOperationError('thumbnail_exact_provenance_unavailable');
+  return {
+    target: TARGET,
+    localCodex: {
+      available: true,
+      ...EXACT_PROVIDER,
+      strictExactModelRequired: true,
+    },
+  };
 }
 
 function makeRuns(samplesPerSubject) {
@@ -253,6 +327,17 @@ function payloadForRun(run) {
     textLayers: run.subject.textLayers,
   };
 }
+function safeRequestSummary(run) {
+  return {
+    operationCode: 'thumbnail_generation_request',
+    subjectId: run.subject.id,
+    repeat: run.repeat,
+    providerId: EXACT_PROVIDER.providerId,
+    generationMode: 'direct_provider',
+    target: TARGET,
+    textLayerCount: run.subject.textLayers.length,
+  };
+}
 
 function decodeDataUrl(dataUrl) {
   const match = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/i.exec(dataUrl || '');
@@ -261,13 +346,22 @@ function decodeDataUrl(dataUrl) {
 }
 
 function assertExactBaseImage(baseImage) {
-  if (!baseImage) throw new Error('Missing baseImage.');
-  const violations = [];
-  if (baseImage.providerId !== EXACT_PROVIDER.providerId) violations.push(`providerId=${baseImage.providerId}`);
-  if (baseImage.model !== EXACT_PROVIDER.model) violations.push(`model=${baseImage.model}`);
-  if (baseImage.modelProvenance !== EXACT_PROVIDER.modelProvenance) violations.push(`modelProvenance=${baseImage.modelProvenance}`);
-  if (baseImage.targetWidth !== TARGET.width || baseImage.targetHeight !== TARGET.height) violations.push(`target=${baseImage.targetWidth}x${baseImage.targetHeight}`);
-  if (violations.length) throw new Error(`Non-exact baseImage rejected: ${violations.join(', ')}`);
+  if (
+    !baseImage ||
+    baseImage.providerId !== EXACT_PROVIDER.providerId ||
+    baseImage.model !== EXACT_PROVIDER.model ||
+    baseImage.modelProvenance !== EXACT_PROVIDER.modelProvenance ||
+    baseImage.targetWidth !== TARGET.width ||
+    baseImage.targetHeight !== TARGET.height
+  ) {
+    throw createOperationError('thumbnail_exact_provenance_unavailable');
+  }
+}
+
+function responseFailureCode(status) {
+  if (status === 429) return 'thumbnail_provider_quota';
+  if (status === 408 || status === 504) return 'thumbnail_provider_timeout';
+  return 'thumbnail_provider_failed';
 }
 
 async function postRun(args, cookie, run) {
@@ -282,33 +376,66 @@ async function postRun(args, cookie, run) {
   }, args.timeoutMs);
   const text = await response.text();
   const elapsedMs = Date.now() - startedAt;
+  if (!response.ok) throw createOperationError(responseFailureCode(response.status));
   let body;
-  try { body = JSON.parse(text); } catch { body = { raw: text.slice(0, 1200) }; }
-  if (!response.ok) throw new Error(`POST HTTP ${response.status}: ${JSON.stringify(body).slice(0, 1200)}`);
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw createOperationError('thumbnail_invalid_response');
+  }
   assertExactBaseImage(body.baseImage);
   const image = decodeDataUrl(body.baseImage.dataUrl);
-  if (image.mime !== 'image/png') throw new Error(`Expected image/png data URL, got ${image.mime}`);
-  return { payload, body, imageBytes: image.bytes, elapsedMs };
+  if (image.mime !== 'image/png') throw createOperationError('thumbnail_invalid_response');
+  return { body, imageBytes: image.bytes, elapsedMs };
+}
+
+function safeWarningSummary(value) {
+  const warningCount = Array.isArray(value) ? Math.min(value.length, 100) : 0;
+  return {
+    warningCount,
+    warnings: warningCount > 0 ? ['provider_warning'] : [],
+  };
+}
+
+function safeRetrievalDiagnostics(value) {
+  const diagnostics = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const status = SAFE_RETRIEVAL_STATUSES.has(diagnostics.status) ? diagnostics.status : 'unknown';
+  const fallbackCode = SAFE_RETRIEVAL_FALLBACK_CODES.has(diagnostics.fallbackReason)
+    ? diagnostics.fallbackReason
+    : null;
+  const operations = diagnostics.operations && typeof diagnostics.operations === 'object' && !Array.isArray(diagnostics.operations)
+    ? diagnostics.operations
+    : {};
+  return {
+    status,
+    fallbackCode,
+    candidateCount: boundedCount(diagnostics.candidateCount),
+    denseSparseHybrid: operations.denseSparseHybrid === true,
+    mmrApplied: operations.mmrApplied === true,
+    rerankerApplied: operations.rerankerApplied === true,
+    captionEnrichmentApplied: operations.captionEnrichmentApplied === true,
+    localVectorSearch: operations.localVectorSearch === true,
+    lexicalRerank: operations.lexicalRerank === true,
+  };
 }
 
 function summarizeResponse(body) {
+  const warningSummary = safeWarningSummary(body.warnings);
   return {
     baseImage: body.baseImage ? {
-      mime: body.baseImage.mime,
-      width: body.baseImage.width,
-      height: body.baseImage.height,
-      targetWidth: body.baseImage.targetWidth,
-      targetHeight: body.baseImage.targetHeight,
-      providerId: body.baseImage.providerId,
-      model: body.baseImage.model,
-      modelProvenance: body.baseImage.modelProvenance,
+      mime: 'image/png',
+      width: TARGET.width,
+      height: TARGET.height,
+      targetWidth: TARGET.width,
+      targetHeight: TARGET.height,
+      ...EXACT_PROVIDER,
     } : null,
-    warnings: Array.isArray(body.warnings) ? body.warnings : [],
+    ...warningSummary,
     retrieval: body.retrieval ? {
-      diagnostics: body.retrieval.diagnostics,
-      evidenceCount: Array.isArray(body.retrieval.evidence) ? body.retrieval.evidence.length : 0,
+      diagnostics: safeRetrievalDiagnostics(body.retrieval.diagnostics),
+      evidenceCount: Array.isArray(body.retrieval.evidence) ? Math.min(body.retrieval.evidence.length, 100) : 0,
     } : null,
-    promptDigest: typeof body.prompt === 'string' ? createHash('sha256').update(body.prompt).digest('hex') : null,
+    promptRecorded: false,
   };
 }
 
@@ -318,6 +445,7 @@ async function runOne(args, cookie, dirs, run) {
     const attemptStartedAt = new Date().toISOString();
     try {
       const result = await postRun(args, cookie, run);
+      const responseSummary = summarizeResponse(result.body);
       const pngPath = join(dirs.generated, `${run.id}.png`);
       const responsePath = join(dirs.responses, `${run.id}.json`);
       await writeFile(pngPath, result.imageBytes);
@@ -327,8 +455,8 @@ async function runOne(args, cookie, dirs, run) {
         repeat: run.repeat,
         startedAt: attemptStartedAt,
         elapsedMs: result.elapsedMs,
-        payload: result.payload,
-        response: summarizeResponse(result.body),
+        payload: safeRequestSummary(run),
+        response: responseSummary,
       }, null, 2), 'utf8');
       return {
         id: run.id,
@@ -346,7 +474,8 @@ async function runOne(args, cookie, dirs, run) {
         providerId: EXACT_PROVIDER.providerId,
         model: EXACT_PROVIDER.model,
         modelProvenance: EXACT_PROVIDER.modelProvenance,
-        warnings: summarizeResponse(result.body).warnings,
+        warnings: responseSummary.warnings,
+        warningCount: responseSummary.warningCount,
       };
     } catch (error) {
       lastError = error;
@@ -360,12 +489,13 @@ async function runOne(args, cookie, dirs, run) {
     status: 'failed',
     attempts: args.retryCap + 1,
     completedAt: new Date().toISOString(),
-    error: lastError instanceof Error ? lastError.message : String(lastError),
+    errorName: safeCliErrorName(lastError),
+    errorCode: safeOperationErrorCode(lastError),
   };
 }
 
 function technicalScore(run) {
-  if (run.status !== 'passed') return { score: 0, status: 'failed', reasons: [run.error || 'generation_failed'] };
+  if (run.status !== 'passed') return { score: 0, status: 'failed', reasons: [run.errorCode || 'thumbnail_provider_failed'] };
   const reasons = [];
   let score = 0;
   score += 25; reasons.push('exact local-codex provider passed');
@@ -673,14 +803,22 @@ async function syncReadbackHistory(artifactRoot, runs) {
       model: EXACT_PROVIDER.model,
       modelProvenance: EXACT_PROVIDER.modelProvenance,
       generationMode: 'direct_provider',
-      topic: responseJson.payload?.topic || run.subjectId,
-      headline: responseJson.payload?.headline || '',
-      warnings: Array.isArray(run.warnings) ? run.warnings.slice(0, 20) : [],
+      topic: run.subjectId,
+      headline: OPERATION_CODE,
+      warnings: safeWarningSummary(run.warnings).warnings,
+      warningCount: safeWarningSummary(run.warnings).warningCount,
       imagePath: `/qa-history/youtube-thumbnail-generator/generated/live-aesthetic/${fileName}`,
       rawPath: `./runs/${rawFileName}`,
       releaseCandidate: run.releaseCandidate === true,
       visual: run.visual || null,
-      ...(responseJson.response?.retrieval?.diagnostics ? { retrieval: responseJson.response.retrieval.diagnostics } : {}),
+      ...(responseJson.response?.retrieval ? {
+        retrieval: {
+          diagnostics: safeRetrievalDiagnostics(responseJson.response.retrieval.diagnostics),
+          evidenceCount: Array.isArray(responseJson.response.retrieval.evidence)
+            ? Math.min(responseJson.response.retrieval.evidence.length, 100)
+            : boundedCount(responseJson.response.retrieval.evidenceCount, 100),
+        },
+      } : {}),
     };
     const rawPayload = {
       ...historyRun,
@@ -695,10 +833,24 @@ async function syncReadbackHistory(artifactRoot, runs) {
       visual: run.visual || null,
       releaseCandidate: run.releaseCandidate === true,
       baseImage: {
-        ...responseJson.response?.baseImage,
+        ...(responseJson.response?.baseImage ? {
+          mime: 'image/png',
+          width: TARGET.width,
+          height: TARGET.height,
+          targetWidth: TARGET.width,
+          targetHeight: TARGET.height,
+          ...EXACT_PROVIDER,
+        } : {}),
         dataUrl: '[stored separately as imagePath]',
       },
-      payload: responseJson.payload,
+      payload: {
+        operationCode: 'thumbnail_generation_request',
+        subjectId: run.subjectId,
+        repeat: boundedCount(run.repeat, 3),
+        providerId: EXACT_PROVIDER.providerId,
+        generationMode: 'direct_provider',
+        target: TARGET,
+      },
     };
     await writeJson(join(runsRoot, rawFileName), rawPayload);
     syncedRuns.push(historyRun);
@@ -822,7 +974,7 @@ async function writeReport(artifactRoot, payload) {
     `- technical/aesthetic gate: ${payload.summary.technicalPassed ? 'passed' : 'failed'} / ${payload.summary.aestheticPassed ? 'passed' : 'watch'}`,
     `- exact model: ${EXACT_PROVIDER.model}`,
     `- provenance policy: exact local-codex gpt-image-2 only; no imagegen tool, no OPENAI_API_KEY fallback, no alternate image model fallback`,
-    `- command: ${payload.execution.command}`,
+    `- operation: ${payload.execution.operationCode}`,
     `- timeoutMs: ${payload.execution.timeoutMs}`,
     `- retryCap: ${payload.execution.retryCap}`,
     `- artifactRoot: ${relative(repoRoot, artifactRoot)}`,
@@ -836,7 +988,7 @@ async function writeReport(artifactRoot, payload) {
     '',
     '| id | status | technical | visual | issueTags | release | elapsedMs | artifact |',
     '| --- | --- | ---: | ---: | --- | --- | ---: | --- |',
-    ...payload.runs.map((run) => `| ${run.id} | ${run.status} | ${run.technicalScore?.score ?? 0} | ${run.visual?.score ?? run.visualAestheticScore?.score ?? ''} | ${(run.visual?.issueTags || []).join(',') || ''} | ${run.releaseCandidate === true ? 'yes' : 'no'} | ${run.elapsedMs ?? ''} | ${run.imagePath ?? run.error ?? ''} |`),
+    ...payload.runs.map((run) => `| ${run.id} | ${run.status} | ${run.technicalScore?.score ?? 0} | ${run.visual?.score ?? run.visualAestheticScore?.score ?? ''} | ${(run.visual?.issueTags || []).join(',') || ''} | ${run.releaseCandidate === true ? 'yes' : 'no'} | ${run.elapsedMs ?? ''} | ${run.imagePath ?? run.errorCode ?? 'thumbnail_provider_failed'} |`),
     '',
     '## Next visual adjudication',
     '',
@@ -857,9 +1009,9 @@ async function main() {
 
   const runList = makeRuns(args.samplesPerSubject);
   const execution = {
+    operationCode: OPERATION_CODE,
     startedAt: new Date().toISOString(),
-    command: `node apps/web/scripts/thumbnail-live-aesthetic-eval.mjs --base-url ${args.baseUrl} --artifact-root ${relative(repoRoot, artifactRoot)} --timeout-ms ${args.timeoutMs} --retry-cap ${args.retryCap} --samples-per-subject ${args.samplesPerSubject}${args.baselineRoot ? ` --baseline-root ${relative(repoRoot, args.baselineRoot)}` : ''}${args.compareOut ? ` --compare-out ${relative(repoRoot, args.compareOut)}` : ''}${args.runLabel ? ` --run-label ${args.runLabel}` : ''}`,
-    baseUrl: args.baseUrl,
+    baseUrlScope: safeBaseUrlScope(args.baseUrl),
     timeoutMs: args.timeoutMs,
     retryCap: args.retryCap,
     samplesPerSubject: args.samplesPerSubject,
@@ -884,9 +1036,10 @@ async function main() {
     const cookie = await bootstrapSession(args);
     const readiness = await preflight(args, cookie);
     await writeJson(join(artifactRoot, 'readiness.json'), {
+      operationCode: 'thumbnail_readiness_check',
       checkedAt: new Date().toISOString(),
       target: readiness.target,
-      localCodex: readiness.providers.localCodex,
+      localCodex: readiness.localCodex,
     });
 
     runs = [];
@@ -949,12 +1102,14 @@ main().catch(async (error) => {
   await mkdir(artifactRoot, { recursive: true });
   const failure = {
     status: 'blocked',
+    operationCode: OPERATION_CODE,
     failedAt: new Date().toISOString(),
-    error: error instanceof Error ? error.message : String(error),
+    errorName: safeCliErrorName(error),
+    errorCode: safeOperationErrorCode(error),
     exactProvider: EXACT_PROVIDER,
-    policy: 'fail closed: exact local-codex gpt-image-2 provenance required',
+    policy: 'fail_closed_exact_local_codex_gpt_image_2_provenance_required',
   };
   await writeJson(join(artifactRoot, 'failure.json'), failure).catch(() => {});
-  console.error(`[thumbnail-live-aesthetic] ${failure.error}`);
+  logCliError({ name: failure.errorName, code: failure.errorCode }, (line) => process.stderr.write(`[thumbnail-live-aesthetic] ${line}`));
   process.exit(1);
 });

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
-import { basename, extname, join, resolve } from 'node:path';
+import { constants, existsSync, type Stats } from 'node:fs';
+import { lstat, open, opendir, realpath } from 'node:fs/promises';
+import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { getYoutubeThumbnailUrl } from '@/lib/youtube-thumbnail';
 
@@ -28,6 +28,18 @@ export const THUMBNAIL_RETRIEVAL_DEFAULT_COMMAND =
 const THUMBNAIL_RETRIEVAL_COMMAND_TIMEOUT_MS = 8_000;
 const DEFAULT_THUMBNAIL_RETRIEVAL_PYTHON = process.platform === 'win32' ? 'python' : 'python3';
 const TZUYANG_CREATOR_PATTERN = /(쯔양|tzuyang)/i;
+const MAX_LOCAL_POOL_DIRECTORY_ENTRIES = 600;
+const MAX_LOCAL_POOL_FILE_BYTES = 16 * 1024;
+const MAX_LOCAL_POOL_FIRST_LINE_BYTES = 8 * 1024;
+const MAX_LOCAL_POOL_JSON_DEPTH = 8;
+const MAX_LOCAL_POOL_JSON_FIELDS = 32;
+const MAX_LOCAL_POOL_JSON_ARRAY_ITEMS = 64;
+const MAX_LOCAL_POOL_JSON_KEY_CHARS = 128;
+const MAX_LOCAL_POOL_JSON_STRING_CHARS = 1_024;
+const LOCAL_POOL_DIRECTORY_BUFFER_SIZE = 16;
+const MAX_LOCAL_POOL_VIDEO_ID_CHARS = 128;
+const MAX_LOCAL_POOL_PATH_CHARS = 1_024;
+const MAX_LOCAL_POOL_ENTRY_NAME_CHARS = 255;
 
 type ThumbnailRetrievalEnv = NodeJS.ProcessEnv;
 
@@ -122,20 +134,204 @@ export function canShowThumbnailRetrievalModelLabel(
     && diagnostics.operations?.rerankerApplied === true;
 }
 
-async function readJsonlFirstObject(path: string) {
-  const content = await readFile(path, 'utf8');
-  const line = content.split(/\r?\n/).find((item) => item.trim());
-  if (!line) return null;
+function isPathInsideRoot(root: string, candidate: string) {
+  const relativePath = relative(root, candidate);
+  return relativePath !== ''
+    && relativePath !== '..'
+    && !relativePath.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
+    && !isAbsolute(relativePath);
+}
+
+function hasSameFileIdentity(expected: Stats, actual: Stats) {
+  return expected.dev === actual.dev
+    && expected.ino === actual.ino
+    && expected.size === actual.size;
+}
+
+function isSafeLocalPoolFile(stat: Stats) {
+  return stat.isFile()
+    && !stat.isSymbolicLink()
+    && stat.nlink === 1
+    && stat.size > 0
+    && stat.size <= MAX_LOCAL_POOL_FILE_BYTES;
+}
+
+function hasBoundedJsonSyntax(input: string) {
+  let depth = 0;
+  let fieldCount = 0;
+  let inString = false;
+  let escaped = false;
+  let stringLength = 0;
+
+  for (const character of input) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        stringLength += 1;
+      } else if (character === '\\') {
+        escaped = true;
+        stringLength += 1;
+      } else if (character === '"') {
+        inString = false;
+      } else {
+        stringLength += 1;
+      }
+      if (stringLength > MAX_LOCAL_POOL_JSON_STRING_CHARS) return false;
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+      stringLength = 0;
+      continue;
+    }
+    if (character === '{' || character === '[') {
+      depth += 1;
+      if (depth > MAX_LOCAL_POOL_JSON_DEPTH) return false;
+      continue;
+    }
+    if (character === '}' || character === ']') {
+      depth -= 1;
+      if (depth < 0) return false;
+      continue;
+    }
+    if (character === ':') {
+      fieldCount += 1;
+      if (fieldCount > MAX_LOCAL_POOL_JSON_FIELDS) return false;
+    }
+  }
+
+  return !inString && depth === 0;
+}
+
+function hasBoundedJsonValue(
+  value: unknown,
+  depth = 0,
+  fieldCount: { value: number } = { value: 0 },
+): boolean {
+  if (depth > MAX_LOCAL_POOL_JSON_DEPTH) return false;
+  if (typeof value === 'string') return value.length <= MAX_LOCAL_POOL_JSON_STRING_CHARS;
+  if (value === null || typeof value === 'boolean' || typeof value === 'number') return true;
+
+  if (Array.isArray(value)) {
+    return value.length <= MAX_LOCAL_POOL_JSON_ARRAY_ITEMS
+      && value.every((item) => hasBoundedJsonValue(item, depth + 1, fieldCount));
+  }
+
+  if (typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) return false;
+  const entries = Object.entries(value);
+  fieldCount.value += entries.length;
+  if (fieldCount.value > MAX_LOCAL_POOL_JSON_FIELDS) return false;
+  return entries.every(([key, item]) => key.length <= MAX_LOCAL_POOL_JSON_KEY_CHARS
+    && hasBoundedJsonValue(item, depth + 1, fieldCount));
+}
+
+async function readJsonlFirstObject(root: string, fileName: string) {
+  if (fileName.length === 0
+    || fileName.length > MAX_LOCAL_POOL_ENTRY_NAME_CHARS
+    || fileName.includes('/')
+    || fileName.includes('\\')) {
+    return null;
+  }
+
+  const candidatePath = join(root, fileName);
+  if (!isPathInsideRoot(root, candidatePath)) return null;
+
+  let initialStat: Stats;
   try {
-    const parsed = JSON.parse(line);
-    return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : null;
+    initialStat = await lstat(candidatePath);
+    if (!isSafeLocalPoolFile(initialStat)) return null;
+
+    const resolvedCandidate = await realpath(candidatePath);
+    if (!isPathInsideRoot(root, resolvedCandidate)) return null;
+  } catch {
+    return null;
+  }
+
+  let handle;
+  try {
+    const flags = constants.O_RDONLY
+      | (process.platform === 'win32' ? 0 : constants.O_NOFOLLOW);
+    handle = await open(candidatePath, flags);
+
+    const openedStat = await handle.stat();
+    if (!isSafeLocalPoolFile(openedStat) || !hasSameFileIdentity(initialStat, openedStat)) {
+      return null;
+    }
+
+    const currentStat = await lstat(candidatePath);
+    const currentResolvedCandidate = await realpath(candidatePath);
+    if (!isSafeLocalPoolFile(currentStat)
+      || !hasSameFileIdentity(openedStat, currentStat)
+      || !isPathInsideRoot(root, currentResolvedCandidate)) {
+      return null;
+    }
+
+    const bytesToRead = Math.min(
+      MAX_LOCAL_POOL_FIRST_LINE_BYTES + 1,
+      openedStat.size,
+    );
+    const buffer = Buffer.allocUnsafe(bytesToRead);
+    const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
+    const finalStat = await handle.stat();
+    if (bytesRead !== bytesToRead || !hasSameFileIdentity(openedStat, finalStat)) return null;
+
+    const firstLineEnd = buffer.subarray(0, bytesRead).indexOf(0x0a);
+    const lineByteLength = firstLineEnd === -1 ? bytesRead : firstLineEnd;
+    if (lineByteLength > MAX_LOCAL_POOL_FIRST_LINE_BYTES
+      || (firstLineEnd === -1 && bytesRead > MAX_LOCAL_POOL_FIRST_LINE_BYTES)) {
+      return null;
+    }
+
+    const lineBytes = buffer.subarray(
+      0,
+      lineByteLength > 0 && buffer[lineByteLength - 1] === 0x0d
+        ? lineByteLength - 1
+        : lineByteLength,
+    );
+    if (lineBytes.length === 0) return null;
+
+    let line: string;
+    try {
+      line = new TextDecoder('utf-8', { fatal: true }).decode(lineBytes);
+    } catch {
+      return null;
+    }
+    if (!hasBoundedJsonSyntax(line)) return null;
+
+    const parsed: unknown = JSON.parse(line);
+    return hasBoundedJsonValue(parsed) && parsed !== null && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  } finally {
+    if (handle) await handle.close().catch(() => undefined);
+  }
+}
+
+async function resolveTrustedLocalTzuyangMetaRoot(env: ThumbnailRetrievalEnv) {
+  const root = resolveLocalTzuyangMetaRoot(env);
+  try {
+    const initialStat = await lstat(root);
+    if (!initialStat.isDirectory() || initialStat.isSymbolicLink()) return null;
+
+    const resolvedRoot = await realpath(root);
+    const resolvedStat = await lstat(resolvedRoot);
+    return resolvedStat.isDirectory() && hasSameFileIdentity(initialStat, resolvedStat)
+      ? resolvedRoot
+      : null;
   } catch {
     return null;
   }
 }
 
 function resolveLocalTzuyangMetaRoot(env: ThumbnailRetrievalEnv) {
-  const configured = env[THUMBNAIL_RETRIEVAL_LOCAL_POOL_ENV]?.trim();
+  const configuredValue = env[THUMBNAIL_RETRIEVAL_LOCAL_POOL_ENV];
+  const configured = typeof configuredValue === 'string'
+    && configuredValue.length <= MAX_LOCAL_POOL_PATH_CHARS
+    ? configuredValue.trim()
+    : '';
   if (configured) return resolve(process.cwd(), configured);
 
   const candidates = [
@@ -147,26 +343,34 @@ function resolveLocalTzuyangMetaRoot(env: ThumbnailRetrievalEnv) {
 }
 
 async function loadLocalTzuyangMetaCandidates(env: ThumbnailRetrievalEnv) {
-  const root = resolveLocalTzuyangMetaRoot(env);
-  let files: string[] = [];
-  try {
-    files = (await readdir(root))
-      .filter((file) => file.endsWith('.jsonl'))
-      .slice(0, 600);
-  } catch {
-    return [];
-  }
+  const root = await resolveTrustedLocalTzuyangMetaRoot(env);
+  if (!root) return [];
 
   const candidates: TzuyangMetaCandidate[] = [];
-  for (const file of files) {
-    const path = join(root, file);
-    const parsed = await readJsonlFirstObject(path);
-    const youtubeLink = typeof parsed?.youtube_link === 'string' ? parsed.youtube_link : '';
-    const videoId = extractVideoIdFromYoutubeLink(youtubeLink) || basename(file, '.jsonl');
-    const title = typeof parsed?.title === 'string' ? parsed.title : '';
-    const thumbnailUrl = getYoutubeThumbnailUrl(videoId, 'maxresdefault');
-    if (!videoId || !title || !thumbnailUrl) continue;
-    candidates.push({ videoId, title, youtubeLink, thumbnailUrl });
+  try {
+    const directory = await opendir(root, { bufferSize: LOCAL_POOL_DIRECTORY_BUFFER_SIZE });
+    let entryCount = 0;
+    for await (const entry of directory) {
+      entryCount += 1;
+      if (entryCount > MAX_LOCAL_POOL_DIRECTORY_ENTRIES) break;
+      if (entry.name.length > MAX_LOCAL_POOL_ENTRY_NAME_CHARS || !entry.name.endsWith('.jsonl')) continue;
+
+      try {
+        const parsed = await readJsonlFirstObject(root, entry.name);
+        const youtubeLink = typeof parsed?.youtube_link === 'string' ? parsed.youtube_link : '';
+        const videoId = extractVideoIdFromYoutubeLink(youtubeLink) || basename(entry.name, '.jsonl');
+        const title = typeof parsed?.title === 'string' ? parsed.title : '';
+        if (!videoId || videoId.length > MAX_LOCAL_POOL_VIDEO_ID_CHARS || !title) continue;
+
+        const thumbnailUrl = getYoutubeThumbnailUrl(videoId, 'maxresdefault');
+        if (!thumbnailUrl) continue;
+        candidates.push({ videoId, title, youtubeLink, thumbnailUrl });
+      } catch {
+        continue;
+      }
+    }
+  } catch {
+    return candidates;
   }
   return candidates;
 }

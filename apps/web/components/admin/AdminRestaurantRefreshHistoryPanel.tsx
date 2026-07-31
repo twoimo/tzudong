@@ -767,20 +767,31 @@ export function AdminRestaurantRefreshHistoryPanel() {
 
   return (
     <section
-      aria-label="맛집 최신화 기록관리"
+      aria-labelledby="admin-restaurant-refresh-history-title"
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
       data-admin-restaurant-refresh-history="true"
-      data-admin-restaurant-refresh-headerless="true"
       data-admin-restaurant-refresh-management-structure="header-list-detail"
+      data-admin-embedded-module-shell="true"
+      data-admin-embedded-module-id="restaurant-refresh-history"
     >
       <div
-        className="border-b border-border bg-card px-2 py-1.5 sm:px-3 sm:py-2"
+        className="shrink-0 border-b border-border bg-card px-2 py-1.5"
         aria-label="맛집 최신화 필터 및 상태 도구"
-        data-admin-restaurant-refresh-toolbar="headerless-management"
+        data-admin-module-header="compact"
+        data-admin-module-header-module="restaurant-refresh-history"
       >
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="grid w-full min-w-0 grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Store className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <h2
+                id="admin-restaurant-refresh-history-title"
+                className="whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent"
+              >
+                맛집 최신화 기록관리
+              </h2>
+            </div>
+            <div className="mt-1 grid w-full min-w-0 grid-cols-2 gap-1.5 sm:flex sm:flex-wrap sm:items-center">
               <Badge
                 variant="outline"
                 className="min-w-0 shrink-0 justify-center gap-1 truncate border-primary/30 text-primary sm:justify-start"
@@ -810,7 +821,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
                 <span className="hidden sm:inline">guarded apply · readback/recrawl</span>
               </Badge>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm" data-admin-module-summary="true">
               필터링: {filteredCandidates.length}개 | 검토 필요{" "}
               {summary?.needs_review ?? 0}개 | 최근 점검{" "}
               {formatDate(summary?.last_checked_at)}
@@ -825,7 +836,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
             </p>
           </div>
 
-          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center lg:justify-end">
+          <div className="flex w-full flex-col gap-2 lg:w-auto lg:flex-row lg:items-center lg:justify-end" data-admin-module-actions="top-right">
             <ManagementStatusSummary items={statusSummaryItems} />
             <div className="flex w-full flex-col gap-1.5 sm:flex-row lg:w-auto">
               <label className="relative block min-w-0 flex-1 lg:w-60">
@@ -874,7 +885,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden [&::-webkit-scrollbar]:hidden" data-admin-module-content="bounded">
         {error || decisionMessage ? (
           <div className="space-y-2 lg:col-span-2">
             {error ? (

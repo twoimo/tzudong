@@ -1,8 +1,14 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { shouldRenderSpeedInsights } from "../app/app-speed-insights";
+import { shouldEnableRootSpeedInsights } from "../app/root-speed-insights";
+import {
+  ADMIN_SIDEBAR_MARKER,
+  HOME_ROUTE_CSS_MAX_BYTES,
+} from "../scripts/verify-route-css-boundaries.mjs";
 
 const appRoot = resolve(import.meta.dir, "..");
 const tempDirs: string[] = [];
@@ -16,34 +22,33 @@ const criticalDisplayUtilities = [
 ] as const;
 
 const criticalAdminConsoleLayoutUtilities = [
-  "lg:m-0",
-  "lg:px-1.5",
-  "lg:w-14",
-  "lg:w-56",
+  "lg:border-r",
   "lg:grid",
-  "lg:place-items-center",
+  "lg:overflow-y-auto",
+  "lg:px-0",
+  "lg:sticky",
 ] as const;
 
 const criticalKpiDashboardProductionUtilities = [
   {
     utility: "font-extrabold",
-    declarations: ["font-weight:800"],
+    declarations: ["font-weight:var(--font-weight-extrabold)"],
   },
   {
     utility: "font-black",
-    declarations: ["font-weight:900"],
+    declarations: ["font-weight:var(--font-weight-black)"],
   },
   {
     utility: "md:p-4",
-    declarations: ["padding:1rem"],
+    declarations: ["padding:calc(var(--spacing)*4)"],
   },
   {
     utility: "md:border-y-0",
-    declarations: ["border-top-width:0px", "border-bottom-width:0px"],
+    declarations: ["border-block-width:0px"],
   },
   {
     utility: "gap-0",
-    declarations: ["gap:0px"],
+    declarations: ["gap:0"],
   },
   {
     utility: "tracking-[0.01em]",
@@ -108,9 +113,7 @@ afterAll(() => {
 });
 
 function escapeCssClass(className: string) {
-  return className
-    .replace(/,/g, "\\2c ")
-    .replace(/([:.[\]()+/%])/g, "\\$1");
+  return className.replace(/([:,.[\]()+/%])/g, "\\$1");
 }
 
 function compactCss(value: string) {
@@ -162,20 +165,19 @@ describe("admin responsive CSS guard", () => {
     const workDir = mkdtempSync(join(tmpdir(), "tzudong-admin-css-"));
     tempDirs.push(workDir);
 
-    const inputPath = join(workDir, "input.css");
+    const inputPath = join(appRoot, "app", "app-globals.css");
     const outputPath = join(workDir, "output.css");
-    writeFileSync(inputPath, "@tailwind utilities;\n");
 
     execFileSync(
       "node",
       [
-        "./node_modules/tailwindcss/lib/cli.js",
+        "./node_modules/@tailwindcss/cli/dist/index.mjs",
         "-i",
         inputPath,
         "-o",
         outputPath,
-        "--config",
-        "./tailwind.config.ts",
+        "--cwd",
+        appRoot,
       ],
       {
         cwd: appRoot,
@@ -189,6 +191,9 @@ describe("admin responsive CSS guard", () => {
     );
 
     const css = readFileSync(outputPath, "utf8");
+    expect(compactCss(css)).toContain("--spacing:0.25rem");
+    expect(compactCss(css)).toContain("--font-weight-extrabold:800");
+    expect(compactCss(css)).toContain("--font-weight-black:900");
 
     for (const [utility, displayValue] of criticalDisplayUtilities) {
       const escapedClass = escapeCssClass(utility);
@@ -236,4 +241,91 @@ describe("admin responsive CSS guard", () => {
       ).toBe(true);
     }
   }, 20_000);
+  test("keeps generated Tailwind output out of the root CSS boundary", () => {
+    const workDir = mkdtempSync(join(tmpdir(), "tzudong-route-css-boundary-"));
+    tempDirs.push(workDir);
+
+    const rootOutputPath = join(workDir, "root.css");
+    const homeOutputPath = join(workDir, "home.css");
+    const appOutputPath = join(workDir, "app.css");
+    const deferredOutputPath = join(workDir, "deferred.css");
+    const detailOutputPath = join(workDir, "detail.css");
+    const compile = (inputPath: string, outputPath: string) => {
+      execFileSync(
+        "node",
+        [
+          "./node_modules/@tailwindcss/cli/dist/index.mjs",
+          "-i",
+          inputPath,
+          "-o",
+          outputPath,
+          "--cwd",
+          appRoot,
+          "--minify",
+        ],
+        {
+          cwd: appRoot,
+          env: {
+            ...process.env,
+            BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA: "true",
+            BROWSERSLIST_IGNORE_OLD_DATA: "true",
+          },
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+    };
+
+    const homeEntrySource = readFileSync(join(appRoot, "app", "home-app-globals.css"), "utf8");
+    const homeSourcePaths = [...homeEntrySource.matchAll(/^@source "([^"]+)";$/gm)].map(
+      (match) => match[1],
+    );
+    expect(homeSourcePaths.length).toBeGreaterThan(0);
+    for (const sourcePath of homeSourcePaths) {
+      expect(
+        existsSync(resolve(appRoot, "app", sourcePath)),
+        `home @source path should exist: ${sourcePath}`,
+      ).toBe(true);
+    }
+
+    compile(join(appRoot, "app", "globals.css"), rootOutputPath);
+    compile(join(appRoot, "app", "home-app-globals.css"), homeOutputPath);
+    compile(join(appRoot, "app", "home-deferred-globals.css"), deferredOutputPath);
+    compile(join(appRoot, "app", "home-detail-globals.css"), detailOutputPath);
+    compile(join(appRoot, "app", "app-globals.css"), appOutputPath);
+
+    const rootCss = readFileSync(rootOutputPath, "utf8");
+    const homeCss = readFileSync(homeOutputPath, "utf8");
+    const deferredCss = readFileSync(deferredOutputPath, "utf8");
+    const detailCss = readFileSync(detailOutputPath, "utf8");
+    const appCss = readFileSync(appOutputPath, "utf8");
+    expect(Buffer.byteLength(rootCss)).toBeLessThanOrEqual(16 * 1024);
+    expect(rootCss).toContain("--background:");
+    expect(rootCss).not.toContain("--tw-");
+    expect(rootCss).not.toContain(".md\\:");
+    expect(homeCss).not.toContain(ADMIN_SIDEBAR_MARKER);
+    expect(Buffer.byteLength(homeCss)).toBeLessThanOrEqual(HOME_ROUTE_CSS_MAX_BYTES);
+    expect(deferredCss).toContain(".scrollbar-hide");
+    expect(detailCss.length).toBeGreaterThan(0);
+    expect(appCss).toContain("--tw-");
+    expect(appCss).toContain(ADMIN_SIDEBAR_MARKER);
+    expect(appCss).toContain(".md\\:hidden");
+    expect(Buffer.byteLength(appCss)).toBeGreaterThan(Buffer.byteLength(rootCss));
+  }, 30_000);
+});
+
+
+describe("Speed Insights runtime gate", () => {
+  test("activates the deferred client module only for an enabled production root gate", () => {
+    expect(shouldEnableRootSpeedInsights({ VERCEL: "1" })).toBe(true);
+    expect(
+      shouldEnableRootSpeedInsights({
+        NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS: "true",
+      }),
+    ).toBe(true);
+    expect(shouldEnableRootSpeedInsights({})).toBe(false);
+
+    expect(shouldRenderSpeedInsights(true, "production")).toBe(true);
+    expect(shouldRenderSpeedInsights(true, "development")).toBe(false);
+    expect(shouldRenderSpeedInsights(false, "production")).toBe(false);
+  });
 });

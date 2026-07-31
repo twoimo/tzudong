@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI, type ThinkingLevel } from '@google/genai';
 import {
   extractJsonObject,
   normalizeReceiptOcrData,
@@ -7,7 +7,7 @@ import {
   type ReceiptOcrResult,
 } from '@/lib/ocr/types';
 
-export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.5-flash';
+export const GEMINI_OCR_FALLBACK_MODEL = 'gemini-3.6-flash';
 export const GEMINI_OCR_DEFAULT_THINKING_LEVEL = 'MEDIUM';
 export type GeminiOcrThinkingLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -44,6 +44,9 @@ export function getGeminiOcrThinkingLevel(env: NodeJS.ProcessEnv = process.env):
     ? configured
     : GEMINI_OCR_DEFAULT_THINKING_LEVEL;
 }
+export function toGeminiThinkingLevel(thinkingLevel: GeminiOcrThinkingLevel): ThinkingLevel {
+  return thinkingLevel as ThinkingLevel;
+}
 
 export function buildGeminiReceiptOcrParts(input: {
   prompt: string;
@@ -69,24 +72,37 @@ function parseTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
   return 12_000;
 }
 
+export function buildGeminiReceiptOcrRequest(input: {
+  model: string;
+  thinkingLevel: GeminiOcrThinkingLevel;
+  parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
+  signal?: AbortSignal;
+}) {
+  return {
+    model: input.model,
+    contents: [{ role: 'user' as const, parts: input.parts }],
+    config: {
+      temperature: 0,
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: toGeminiThinkingLevel(input.thinkingLevel) },
+      abortSignal: input.signal,
+    },
+  };
+}
+
 async function generateWithSdk(input: {
   apiKey: string;
   model: string;
   thinkingLevel: GeminiOcrThinkingLevel;
   parts: ReturnType<typeof buildGeminiReceiptOcrParts>;
+  signal?: AbortSignal;
 }) {
-  const genAI = new GoogleGenerativeAI(input.apiKey);
-  const generationConfig = {
-    temperature: 0,
-    responseMimeType: 'application/json',
-    thinkingConfig: { thinkingLevel: input.thinkingLevel },
-  };
-  const model = genAI.getGenerativeModel({
-    model: input.model,
-    generationConfig,
-  });
-  const result = await model.generateContent(input.parts);
-  return result.response.text();
+  const genAI = new GoogleGenAI({ apiKey: input.apiKey });
+  const response = await genAI.models.generateContent(buildGeminiReceiptOcrRequest(input));
+  if (typeof response.text !== 'string') {
+    throw new Error('Gemini OCR 응답 텍스트가 없습니다.');
+  }
+  return response.text;
 }
 
 export async function callGeminiReceiptOcr(input: {
@@ -122,7 +138,7 @@ export async function callGeminiReceiptOcr(input: {
       });
       const text = await (input.generateContentImpl
         ? input.generateContentImpl({ model, thinkingLevel, parts, signal: controller.signal })
-        : generateWithSdk({ apiKey, model, thinkingLevel, parts }));
+        : generateWithSdk({ apiKey, model, thinkingLevel, parts, signal: controller.signal }));
       const data: ReceiptOcrData = normalizeReceiptOcrData(extractJsonObject(text));
       attempts.push({ model, ok: true, elapsedMs: Date.now() - startedAt });
       return { data, model, attempts };
@@ -133,7 +149,7 @@ export async function callGeminiReceiptOcr(input: {
         elapsedMs: Date.now() - startedAt,
         error: error instanceof Error && error.name === 'AbortError'
           ? `timeout ${timeoutMs}ms`
-          : error instanceof Error ? error.message : String(error),
+          : 'provider_request_failed',
       });
     } finally {
       clearTimeout(timeout);

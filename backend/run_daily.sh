@@ -30,9 +30,6 @@ if [ -f "$RUNTIME_PATHS_SH" ]; then
     if declare -f tzudong_runtime_paths_init >/dev/null 2>&1; then
         tzudong_runtime_paths_init "$PROJECT_ROOT"
     fi
-    if declare -f tzudong_runtime_paths_ensure >/dev/null 2>&1; then
-        tzudong_runtime_paths_ensure
-    fi
 fi
 
 # 환경 변수 로드 (Node, Python 경로 등)
@@ -54,6 +51,21 @@ RUN_DAILY_VERIFY_OPTIONAL_SCENARIO="${RUN_DAILY_VERIFY_OPTIONAL_SCENARIO:-}"
 RUN_DAILY_VERIFY_REQUIRED_SCENARIO="${RUN_DAILY_VERIFY_REQUIRED_SCENARIO:-}"
 RUN_DAILY_TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
 RUN_DAILY_EXECUTION_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-}"
+RUN_DAILY_WORKFLOW_COMPUTE="${RUN_DAILY_WORKFLOW_COMPUTE:-0}"
+RUN_DAILY_EXECUTION_SHA="${RUN_DAILY_EXECUTION_SHA:-}"
+RUN_DAILY_PUBLICATION_BASE_SHA="${RUN_DAILY_PUBLICATION_BASE_SHA:-}"
+RUN_DAILY_PUBLICATION_BASE_TREE="${RUN_DAILY_PUBLICATION_BASE_TREE:-}"
+RUN_DAILY_PUBLICATION_DIR="${RUN_DAILY_PUBLICATION_DIR:-}"
+WORKFLOW_COMPUTE_MODE=false
+case "$RUN_DAILY_WORKFLOW_COMPUTE" in
+    0|false|FALSE|no|NO|"") ;;
+    1|true|TRUE|yes|YES) WORKFLOW_COMPUTE_MODE=true ;;
+    *)
+        echo "[ERROR] RUN_DAILY_WORKFLOW_COMPUTE must be a boolean value." >&2
+        exit 1
+        ;;
+esac
+PUBLICATION_DATA_SEEDED=false
 EXECUTION_BRANCH=""
 SPLIT_SYNC_BRANCH_MODE=false
 SYNC_WORKTREE_DIR=""
@@ -109,19 +121,53 @@ if ! command -v deno &> /dev/null; then
     unset _DENO_DIR
 fi
 
-# 로그 디렉토리 생성 (shared path 우선)
+# 로그 경로는 Python helper가 operator-owned canonical root 아래에서만 생성합니다.
 LOG_DIR="${RUN_DAILY_LOG_DIR:-$PROJECT_ROOT/backend/log/cron}"
 LOG_ARCHIVE_DIR="${RUN_DAILY_ARCHIVE_DIR:-$LOG_DIR/archive}"
 CURRENT_LOG_LINK="${RUN_DAILY_CURRENT_LOG_LINK:-$LOG_DIR/current.log}"
 RUN_DAILY_MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-$LOG_DIR/current-summary.json}"
-mkdir -p "$LOG_DIR" "$LOG_ARCHIVE_DIR"
+case "$LOG_ARCHIVE_DIR" in
+    "$LOG_DIR"/*) LOG_ARCHIVE_REL="${LOG_ARCHIVE_DIR#"$LOG_DIR"/}" ;;
+    *)
+        echo "[ERROR] RUN_DAILY_ARCHIVE_DIR must be inside RUN_DAILY_LOG_DIR" >&2
+        exit 1
+        ;;
+esac
+case "$CURRENT_LOG_LINK" in
+    "$LOG_DIR"/*) CURRENT_LOG_REL="${CURRENT_LOG_LINK#"$LOG_DIR"/}" ;;
+    *)
+        echo "[WARN] current.log 링크 경로가 로그 루트 밖으로 해석되어 기본 경로를 사용합니다." >&2
+        CURRENT_LOG_REL="current.log"
+        ;;
+esac
+
 
 # [TimeZone] 기본 로그 기준 시간대를 KST로 고정 (이미 TZ가 있으면 존중)
 export TZ="${TZ:-Asia/Seoul}"
 
 DATE=$(date +%Y-%m-%d)
-LOG_FILE="$LOG_DIR/daily_$DATE.log"
+LOG_FILE_NAME="daily_$DATE.log"
+LOG_FILE="$LOG_DIR/$LOG_FILE_NAME"
 ARCHIVED_LOG=""
+if ! LOG_PREPARE_OUTPUT="$(
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" prepare-daily-log \
+        --log-root "$LOG_DIR" \
+        --archive-relative "$LOG_ARCHIVE_REL" \
+        --current-log-relative "$CURRENT_LOG_REL" \
+        --date "$DATE"
+)"; then
+    echo "[ERROR] 안전한 일일 로그 생성 실패: $LOG_DIR" >&2
+    exit 1
+fi
+ARCHIVED_LOG_REL="${LOG_PREPARE_OUTPUT%%|*}"
+LOG_ROOT_ID_PAIR="${LOG_PREPARE_OUTPUT#*|}"
+LOG_ROOT_DEVICE="${LOG_ROOT_ID_PAIR%%|*}"
+LOG_ROOT_INODE="${LOG_ROOT_ID_PAIR#*|}"
+case "$LOG_ROOT_DEVICE" in ''|*[!0-9]*) echo "[ERROR] 안전한 일일 로그 루트 식별자 오류" >&2; exit 1 ;; esac
+case "$LOG_ROOT_INODE" in ''|*[!0-9]*) echo "[ERROR] 안전한 일일 로그 루트 식별자 오류" >&2; exit 1 ;; esac
+if [ -n "$ARCHIVED_LOG_REL" ]; then
+    ARCHIVED_LOG="$LOG_DIR/$ARCHIVED_LOG_REL"
+fi
 # [Safety] 기본값은 force-push 비활성화 (필요 시 ALLOW_DATA_FORCE_PUSH=1로 명시적 허용)
 ALLOW_DATA_FORCE_PUSH="${ALLOW_DATA_FORCE_PUSH:-0}"
 # 로그 모드: compact(기본) | debug
@@ -131,23 +177,6 @@ export CRAWL_LOG_VERBOSITY="${CRAWL_LOG_VERBOSITY:-normal}"
 
 # [PERF] 파이프라인 시작 시간 기록 (전체 실행 시간 측정)
 PIPELINE_START=$(date +%s)
-
-# [Reliability] 같은 날짜 재실행 시 이전 로그를 archive로 이동해
-# 현재 실행 집계를 오염시키지 않도록 분리합니다.
-if [ -f "$LOG_FILE" ] && [ -s "$LOG_FILE" ]; then
-    mkdir -p "$LOG_ARCHIVE_DIR"
-    ARCHIVED_LOG="$LOG_ARCHIVE_DIR/daily_${DATE}_$(date +%H%M%S).log"
-    mv "$LOG_FILE" "$ARCHIVED_LOG"
-fi
-touch "$LOG_FILE"
-
-# monitor 데몬이 최신 로그를 안정적으로 찾도록 current.log 갱신
-# 실패 시 warn-only (파이프라인 중단 금지)
-if ! (cd "$LOG_DIR" && ln -sfn "$(basename "$LOG_FILE")" "$(basename "$CURRENT_LOG_LINK")") 2>/dev/null; then
-    if ! ln -sfn "$LOG_FILE" "$CURRENT_LOG_LINK" 2>/dev/null; then
-        echo "[WARN] current.log 링크 갱신 실패 (warn-only): $CURRENT_LOG_LINK"
-    fi
-fi
 
 # [Stability] 비대화형(non-tty) 환경에서 stdout pipe 역압으로 tee가 정체되는 문제 방지
 # - auto(기본): TTY 또는 CI=true에서만 stdout 유지, 그 외에는 /dev/null로 전환
@@ -178,6 +207,23 @@ fi
 # 유틸리티 함수
 # ============================================================
 
+append_daily_log() {
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" append-daily-log \
+        --log-root "$LOG_DIR" \
+        --log-name "$LOG_FILE_NAME" \
+        --root-device "$LOG_ROOT_DEVICE" \
+        --root-inode "$LOG_ROOT_INODE"
+}
+
+append_daily_log_quiet() {
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" append-daily-log \
+        --log-root "$LOG_DIR" \
+        --log-name "$LOG_FILE_NAME" \
+        --root-device "$LOG_ROOT_DEVICE" \
+        --root-inode "$LOG_ROOT_INODE" \
+        --no-stdout
+}
+
 # 로그 출력 함수 (화면 + 파일 동시 출력)
 log() {
   local LEVEL=$1
@@ -188,7 +234,7 @@ log() {
     "INFO"|"WARN"|"ERROR"|"OK") ;;
     *) LEVEL="INFO" ;;
   esac
-  echo "[$TIMESTAMP] [$LEVEL] $MESSAGE" | tee -a "$LOG_FILE"
+  echo "[$TIMESTAMP] [$LEVEL] $MESSAGE" | append_daily_log
 }
 
 # ANSI 색상 코드 제거 함수
@@ -269,9 +315,30 @@ ensure_split_sync_worktree() {
     rmdir "$temp_dir"
 
     log "INFO" "동기화 전용 worktree 준비: $sync_branch"
+    if [ "$WORKFLOW_COMPUTE_MODE" = "true" ]; then
+        if [ "$sync_branch" != "data" ] || [ -z "$RUN_DAILY_PUBLICATION_BASE_SHA" ]; then
+            log "ERROR" "workflow compute mode requires the immutable data branch base."
+            return 1
+        fi
+        if ! git show-ref --verify --quiet "refs/remotes/origin/$sync_branch"; then
+            log "ERROR" "workflow binding did not fetch the immutable data branch."
+            return 1
+        fi
+        if [ "$(git rev-parse "origin/$sync_branch")" != "$RUN_DAILY_PUBLICATION_BASE_SHA" ]; then
+            log "ERROR" "데이터 브랜치 base SHA가 workflow binding과 일치하지 않습니다."
+            return 1
+        fi
+        if ! git worktree add --detach "$temp_dir" "$RUN_DAILY_PUBLICATION_BASE_SHA" 2>&1 | append_daily_log; then
+            log "ERROR" "읽기 전용 데이터 worktree 생성 실패: $sync_branch"
+            return 1
+        fi
+        SYNC_WORKTREE_DIR="$temp_dir"
+        log "INFO" "읽기 전용 데이터 worktree 준비 완료: $SYNC_WORKTREE_DIR"
+        return 0
+    fi
     if run_git_with_timeout "$network_timeout" git ls-remote --exit-code --heads origin "$sync_branch" >/dev/null 2>&1; then
         remote_branch_exists=true
-        if ! run_git_with_timeout "$network_timeout" git fetch origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git fetch origin "$sync_branch" 2>&1 | append_daily_log; then
             log "ERROR" "동기화 브랜치 fetch 실패: $sync_branch"
             return 1
         fi
@@ -281,17 +348,17 @@ ensure_split_sync_worktree() {
     fi
 
     if git show-ref --verify --quiet "refs/heads/$sync_branch"; then
-        if ! git worktree add --force "$temp_dir" "$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+        if ! git worktree add --force "$temp_dir" "$sync_branch" 2>&1 | append_daily_log; then
             log "ERROR" "동기화 전용 worktree 생성 실패: $sync_branch"
             return 1
         fi
     elif [ "$remote_branch_exists" = "true" ]; then
-        if ! git worktree add --force -b "$sync_branch" "$temp_dir" "origin/$sync_branch" 2>&1 | tee -a "$LOG_FILE"; then
+        if ! git worktree add --force -b "$sync_branch" "$temp_dir" "origin/$sync_branch" 2>&1 | append_daily_log; then
             log "ERROR" "원격 동기화 브랜치 worktree 생성 실패: $sync_branch"
             return 1
         fi
     else
-        if ! git worktree add --force -b "$sync_branch" "$temp_dir" HEAD 2>&1 | tee -a "$LOG_FILE"; then
+        if ! git worktree add --force -b "$sync_branch" "$temp_dir" HEAD 2>&1 | append_daily_log; then
             log "ERROR" "동기화 브랜치 초기 worktree 생성 실패: $sync_branch"
             return 1
         fi
@@ -301,7 +368,7 @@ ensure_split_sync_worktree() {
     if [ "$remote_branch_exists" = "true" ]; then
         if ! (
             cd "$SYNC_WORKTREE_DIR" || exit 1
-            run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
+            run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$sync_branch" 2>&1 | append_daily_log
         ); then
             log "WARN" "동기화 전용 worktree 최신화 실패. rebase 상태를 정리합니다."
             (
@@ -313,7 +380,7 @@ ensure_split_sync_worktree() {
     else
         if ! (
             cd "$SYNC_WORKTREE_DIR" || exit 1
-            run_git_with_timeout "$network_timeout" git push -u origin "$sync_branch" 2>&1 | tee -a "$LOG_FILE"
+            run_git_with_timeout "$network_timeout" git push -u origin "$sync_branch" 2>&1 | append_daily_log
         ); then
             log "ERROR" "동기화 브랜치 초기 push 실패: $sync_branch"
             return 1
@@ -325,87 +392,9 @@ ensure_split_sync_worktree() {
 }
 
 mirror_data_root() {
-    local source_root="$1"
-    local target_root="$2"
-    local source_list target_list rel source_file target_file
-
-    if ! mkdir -p "$target_root"; then
-        echo "[ERROR] 데이터 미러링 대상 디렉터리 생성 실패: $target_root" >&2
-        return 1
-    fi
-
-    source_list="$(mktemp)" || return 1
-    target_list="$(mktemp)" || {
-        rm -f "$source_list"
-        return 1
-    }
-
-    if [ -d "$source_root" ]; then
-        if ! (
-            cd "$source_root" || exit 1
-            find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
-        ) > "$source_list"; then
-            echo "[ERROR] 데이터 미러링 소스 목록 생성 실패: $source_root" >&2
-            rm -f "$source_list" "$target_list"
-            return 1
-        fi
-    else
-        : > "$source_list" || {
-            rm -f "$source_list" "$target_list"
-            return 1
-        }
-    fi
-
-    if [ -d "$target_root" ]; then
-        if ! (
-            cd "$target_root" || exit 1
-            find . -type f \( -name "*.jsonl" -o -name "*.txt" -o -name "*.json" \) ! -name "credentials.json" ! -name "cookies.txt" | sed 's#^\./##' | sort
-        ) > "$target_list"; then
-            echo "[ERROR] 데이터 미러링 대상 목록 생성 실패: $target_root" >&2
-            rm -f "$source_list" "$target_list"
-            return 1
-        fi
-    else
-        : > "$target_list" || {
-            rm -f "$source_list" "$target_list"
-            return 1
-        }
-    fi
-
-    while IFS= read -r rel; do
-        [ -z "$rel" ] && continue
-        source_file="$source_root/$rel"
-        target_file="$target_root/$rel"
-        if ! mkdir -p "$(dirname "$target_file")"; then
-            echo "[ERROR] 데이터 미러링 하위 디렉터리 생성 실패: $(dirname "$target_file")" >&2
-            rm -f "$source_list" "$target_list"
-            return 1
-        fi
-
-        # [PERF] split-sync no-op runs can scan thousands of JSONL files.
-        # Avoid rewriting identical files so repeated sync checkpoints do not
-        # spend time and disk I/O copying the full data tree.
-        if [ -f "$target_file" ] && cmp -s "$source_file" "$target_file"; then
-            continue
-        fi
-
-        if ! cp "$source_file" "$target_file"; then
-            echo "[ERROR] 데이터 미러링 파일 복사 실패: $source_file -> $target_file" >&2
-            rm -f "$source_list" "$target_list"
-            return 1
-        fi
-    done < "$source_list"
-
-    while IFS= read -r rel; do
-        [ -z "$rel" ] && continue
-        if ! rm -f "$target_root/$rel"; then
-            echo "[ERROR] 데이터 미러링 stale 파일 제거 실패: $target_root/$rel" >&2
-            rm -f "$source_list" "$target_list"
-            return 1
-        fi
-    done < <(comm -13 "$source_list" "$target_list")
-
-    rm -f "$source_list" "$target_list"
+    "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" mirror-data-root \
+        --source-root "$1" \
+        --target-root "$2"
 }
 
 mirror_data_files_to_sync_worktree() {
@@ -424,6 +413,65 @@ seed_execution_data_from_sync_worktree() {
     mirror_data_root \
         "$SYNC_WORKTREE_DIR/backend/restaurant-evaluation/data" \
         "$PROJECT_ROOT/backend/restaurant-evaluation/data"
+}
+write_workflow_publication_bundle() {
+    local bundle_dir="$RUN_DAILY_PUBLICATION_DIR"
+    local manifest_path bundle_path sidecar_path manifest_digest
+
+    if [ "$WORKFLOW_COMPUTE_MODE" != "true" ] || [ "$PUBLICATION_DATA_SEEDED" != "true" ]; then
+        return 0
+    fi
+    if [ -z "$bundle_dir" ] || [ -z "$RUN_DAILY_EXECUTION_SHA" ] || [ -z "$RUN_DAILY_PUBLICATION_BASE_SHA" ] || [ -z "$RUN_DAILY_PUBLICATION_BASE_TREE" ]; then
+        log "ERROR" "workflow compute publication binding is incomplete."
+        return 1
+    fi
+    mkdir -p "$bundle_dir" || return 1
+    manifest_path="$bundle_dir/publication-manifest.json"
+    bundle_path="$bundle_dir/daily-data-publication.tar"
+    sidecar_path="$bundle_dir/publication-manifest.sha256"
+    rm -f "$manifest_path" "$bundle_path" "$sidecar_path" "$bundle_dir/.ready"
+
+    if ! "$PYTHON_CMD" "$PROJECT_ROOT/backend/utils/run_daily_helpers.py" \
+        write-daily-publication-bundle \
+        --project-root "$PROJECT_ROOT" \
+        --output-dir "$bundle_dir" \
+        --repository "${GITHUB_REPOSITORY:-}" \
+        --execution-sha "$RUN_DAILY_EXECUTION_SHA" \
+        --base-sha "$RUN_DAILY_PUBLICATION_BASE_SHA" \
+        --base-tree "$RUN_DAILY_PUBLICATION_BASE_TREE" \
+        --target-branch "$RUN_DAILY_TARGET_BRANCH" > /dev/null; then
+        log "ERROR" "data-only publication bundle creation failed."
+        return 1
+    fi
+    manifest_digest="$("$PYTHON_CMD" - "$manifest_path" <<'PY'
+import hashlib
+import sys
+with open(sys.argv[1], "rb") as source:
+    print(hashlib.sha256(source.read()).hexdigest())
+PY
+)"
+    if [ "${#manifest_digest}" -ne 64 ]; then
+        log "ERROR" "publication manifest digest is invalid."
+        return 1
+    fi
+    printf '%s  publication-manifest.json\n' "$manifest_digest" > "$sidecar_path"
+    touch "$bundle_dir/.ready"
+    log "INFO" "data-only publication bundle is ready for the separate publisher."
+}
+
+
+workflow_compute_exit() {
+    local exit_code=$?
+    local publication_exit=0
+    trap - EXIT
+    if ! write_workflow_publication_bundle; then
+        publication_exit=1
+    fi
+    cleanup_split_sync_worktree
+    if [ "$exit_code" -eq 0 ] && [ "$publication_exit" -ne 0 ]; then
+        return "$publication_exit"
+    fi
+    return "$exit_code"
 }
 
 # 데이터 경로 변경 여부를 빠르게 판별 (status 스캔 정체 회피)
@@ -959,7 +1007,7 @@ has_supabase_migration_credentials() {
         return 1
     fi
 
-    [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY SUPABASE_KEY
+    [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]
 }
 
 has_supabase_insert_credentials() {
@@ -967,7 +1015,7 @@ has_supabase_insert_credentials() {
         return 1
     fi
 
-    [ -n "${SUPABASE_URL:-}" ] && has_any_env SUPABASE_SERVICE_ROLE_KEY VITE_SUPABASE_PUBLISHABLE_KEY
+    [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]
 }
 
 has_youtube_api_key() {
@@ -1065,9 +1113,9 @@ run_parallel() {
 
     # 로그 순서대로 출력 (섞임 방지)
     log "INFO" "--- [$LABEL_A] ---"
-    cat "$TEMP_LOG_A" | strip_ansi | filter_step_log | tee -a "$LOG_FILE"
+    cat "$TEMP_LOG_A" | strip_ansi | filter_step_log | append_daily_log
     log "INFO" "--- [$LABEL_B] ---"
-    cat "$TEMP_LOG_B" | strip_ansi | filter_step_log | tee -a "$LOG_FILE"
+    cat "$TEMP_LOG_B" | strip_ansi | filter_step_log | append_daily_log
 
     rm -f "$TEMP_LOG_A" "$TEMP_LOG_B"
 
@@ -1139,7 +1187,7 @@ commit_and_push_current_repo_data() {
 
     # 데이터 파일 추가 (git ls-files 기반으로 매우 빠르고 효율적으로 staging)
     if ! run_git_with_timeout "$stage_timeout" \
-        bash -c 'git ls-files --others --modified --exclude-standard backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ | grep -E "\.(jsonl|txt|json)$" | xargs -r git add' 2>&1 | tee -a "$LOG_FILE"; then
+        bash -c 'git ls-files --others --modified --exclude-standard backend/restaurant-crawling/data/ backend/restaurant-evaluation/data/ | grep -E "\.(jsonl|txt|json)$" | xargs -r git add' 2>&1 | append_daily_log; then
         log "ERROR" "데이터 파일 stage 실패 (timeout=${stage_timeout}s)"
         return 1
     fi
@@ -1162,27 +1210,27 @@ commit_and_push_current_repo_data() {
     fi
 
     log "INFO" "Committing changes..."
-    if ! git commit -q -m "$COMMIT_MSG" 2>&1 | tee -a "$LOG_FILE"; then
+    if ! git commit -q -m "$COMMIT_MSG" 2>&1 | append_daily_log; then
         log "ERROR" "Commit failed"
         return 1
     fi
 
     # 원격 변경사항 동기화 (충돌 방지)
     log "INFO" "원격 변경사항 확인 및 Rebase..."
-    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+    if ! run_git_with_timeout "$network_timeout" git pull --rebase --autostash origin "$SYNC_BRANCH" 2>&1 | append_daily_log; then
         local LOCAL_HEAD REMOTE_HEAD DIVERGENCE_STATE
         log "WARN" "Rebase 실패 - rebase 중단 후 안전 동기화 전략으로 전환"
         git rebase --abort 2>/dev/null || true
 
         # 네트워크/일시 오류 가능성을 고려해 일반 push를 한 번 더 시도
         log "INFO" "Rebase 실패 후 일반 push 재시도..."
-        if run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+        if run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | append_daily_log; then
             log "OK" "$SYNC_BRANCH 브랜치 업데이트 완료 ($STEP_NAME)"
             return 0
         fi
 
         # push 실패 시 로컬/원격 관계를 로그로 남겨 원인 파악 용이하게 함
-        if ! run_git_with_timeout "$network_timeout" git fetch origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git fetch origin "$SYNC_BRANCH" 2>&1 | append_daily_log; then
             log "WARN" "원격 상태 재조회(fetch) 실패 - divergence 판별 정확도가 낮을 수 있습니다."
         fi
 
@@ -1199,7 +1247,7 @@ commit_and_push_current_repo_data() {
 
         if is_truthy "$ALLOW_DATA_FORCE_PUSH"; then
             log "WARN" "ALLOW_DATA_FORCE_PUSH=$ALLOW_DATA_FORCE_PUSH 감지 - force-with-lease를 명시적으로 수행합니다."
-            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+            if ! run_git_with_timeout "$network_timeout" git push --force-with-lease origin "$SYNC_BRANCH" 2>&1 | append_daily_log; then
                 log "ERROR" "force-with-lease push 실패"
                 return 1
             fi
@@ -1210,7 +1258,7 @@ commit_and_push_current_repo_data() {
         fi
     else
         log "INFO" "Pushing to remote..."
-        if ! run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
+        if ! run_git_with_timeout "$network_timeout" git push origin "$SYNC_BRANCH" 2>&1 | append_daily_log; then
             log "ERROR" "Failed to push to $SYNC_BRANCH branch"
             return 1
         fi
@@ -1225,6 +1273,10 @@ sync_data_to_remote() {
     local SYNC_BRANCH="${TARGET_BRANCH:-$RUN_DAILY_TARGET_BRANCH}"
     log "INFO" "------------------------------------------------------------"
     log "INFO" "데이터 동기화 시작 (Trigger: $STEP_NAME, Branch: $SYNC_BRANCH)"
+    if [ "$WORKFLOW_COMPUTE_MODE" = "true" ]; then
+        log "INFO" "workflow compute mode defers data publication to the validated publisher."
+        return 0
+    fi
 
     if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ] && [ -n "${EXECUTION_BRANCH:-}" ] && [ "$SYNC_BRANCH" != "$EXECUTION_BRANCH" ]; then
         if ! ensure_split_sync_worktree "$SYNC_BRANCH"; then
@@ -1253,63 +1305,92 @@ log "INFO" "일일 데이터 수집 파이프라인 시작"
 log "INFO" "============================================================"
 
 # [Branch Check] 실행 브랜치/동기화 브랜치 확인
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 TARGET_BRANCH="${RUN_DAILY_TARGET_BRANCH:-data}"
-DESIRED_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-$TARGET_BRANCH}"
-EXECUTION_BRANCH="$DESIRED_BRANCH"
 
-if [ -n "${RUN_DAILY_EXECUTION_BRANCH:-}" ] && [ "$DESIRED_BRANCH" != "$TARGET_BRANCH" ]; then
-    SPLIT_SYNC_BRANCH_MODE=true
-    trap cleanup_split_sync_worktree EXIT
-fi
-
-log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
-
-if [ "$CURRENT_BRANCH" != "$DESIRED_BRANCH" ]; then
-    log "WARN" "현재 브랜치가 '$DESIRED_BRANCH'가 아닙니다. (현재: $CURRENT_BRANCH)"
-
-    if [ "${FORCE_BRANCH_SWITCH:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
-        log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$DESIRED_BRANCH'로 전환을 시도합니다."
-        git fetch origin
-
-        if git show-ref --verify --quiet "refs/heads/$DESIRED_BRANCH"; then
-            if ! git checkout "$DESIRED_BRANCH"; then
-                log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."
-                fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 브랜치 전환 실패"
-            fi
-        else
-            if ! git checkout -b "$DESIRED_BRANCH" "origin/$DESIRED_BRANCH"; then
-                log "ERROR" "원격 브랜치 체크아웃 실패."
-                fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 원격 브랜치 체크아웃 실패"
-            fi
-        fi
-
-        log "OK" "브랜치 전환 완료: $DESIRED_BRANCH"
-    else
-        log "ERROR" "안전 모드: FORCE_BRANCH_SWITCH=1 환경변수 없이 자동으로 브랜치를 전환하지 않습니다."
-        log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $DESIRED_BRANCH' 후 다시 실행해주세요."
-        fail_run_daily_before_pipeline "Branch Check" "현재 브랜치 '$CURRENT_BRANCH'가 요구 브랜치 '$DESIRED_BRANCH'와 다르고 FORCE_BRANCH_SWITCH가 비활성화됨"
+if [ "$WORKFLOW_COMPUTE_MODE" = "true" ]; then
+    CURRENT_BRANCH="$(git rev-parse HEAD)"
+    if [ "$TARGET_BRANCH" != "data" ] || [ -z "$RUN_DAILY_EXECUTION_SHA" ] || [ -z "$RUN_DAILY_PUBLICATION_BASE_SHA" ] || [ -z "$RUN_DAILY_PUBLICATION_BASE_TREE" ]; then
+        log "ERROR" "workflow compute mode requires exact execution and data publication bindings."
+        fail_run_daily_before_pipeline "Workflow Compute Binding" "immutable execution/data binding missing"
     fi
-fi
-
-# 충돌 방지를 위해 최신 코드/데이터 변경사항 Pull
-log "INFO" "'$DESIRED_BRANCH' 브랜치 최신화 (Pull)..."
-if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}" git pull --rebase --autostash origin "$DESIRED_BRANCH" 2>&1 | tee -a "$LOG_FILE"; then
-    log "WARN" "Pull 실패. 충돌 상태 복구(abort) 후 진행합니다."
-    git rebase --abort 2>/dev/null || true
-fi
-
-EXECUTION_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ]; then
+    if [ "$CURRENT_BRANCH" != "$RUN_DAILY_EXECUTION_SHA" ]; then
+        log "ERROR" "checked out HEAD does not match RUN_DAILY_EXECUTION_SHA."
+        fail_run_daily_before_pipeline "Workflow Compute Binding" "checked out SHA mismatch"
+    fi
+    if [ "$(git rev-parse "${RUN_DAILY_PUBLICATION_BASE_SHA}^{tree}")" != "$RUN_DAILY_PUBLICATION_BASE_TREE" ]; then
+        log "ERROR" "publication base tree does not match RUN_DAILY_PUBLICATION_BASE_SHA."
+        fail_run_daily_before_pipeline "Workflow Compute Binding" "data base tree mismatch"
+    fi
+    EXECUTION_BRANCH="$RUN_DAILY_EXECUTION_SHA"
+    SPLIT_SYNC_BRANCH_MODE=true
+    trap workflow_compute_exit EXIT
     if ! ensure_split_sync_worktree "$TARGET_BRANCH"; then
-        log "ERROR" "실행용 코드와 데이터 동기화 브랜치 분리 준비 실패"
-        fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 동기화 worktree 준비 실패"
+        log "ERROR" "읽기 전용 데이터 worktree 준비 실패"
+        fail_run_daily_before_pipeline "Workflow Compute Binding" "$TARGET_BRANCH data worktree preparation failed"
     fi
     if ! seed_execution_data_from_sync_worktree; then
-        log "ERROR" "실행 워크스페이스에 최신 데이터 브랜치를 반영하지 못했습니다."
-        fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 데이터 seed 실패"
+        log "ERROR" "실행 워크스페이스에 검증된 데이터 base를 반영하지 못했습니다."
+        fail_run_daily_before_pipeline "Workflow Compute Binding" "$TARGET_BRANCH data seed failed"
     fi
-    log "INFO" "코드는 '$EXECUTION_BRANCH' 브랜치에서 실행하고 데이터는 '$TARGET_BRANCH' 브랜치로 동기화합니다."
+    PUBLICATION_DATA_SEEDED=true
+    log "INFO" "workflow compute runs exact SHA '$EXECUTION_BRANCH'; publication is deferred to the separate publisher."
+else
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    DESIRED_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-$TARGET_BRANCH}"
+    EXECUTION_BRANCH="$DESIRED_BRANCH"
+
+    if [ -n "${RUN_DAILY_EXECUTION_BRANCH:-}" ] && [ "$DESIRED_BRANCH" != "$TARGET_BRANCH" ]; then
+        SPLIT_SYNC_BRANCH_MODE=true
+        trap cleanup_split_sync_worktree EXIT
+    fi
+
+    log "INFO" "현재 브랜치 확인: $CURRENT_BRANCH"
+
+    if [ "$CURRENT_BRANCH" != "$DESIRED_BRANCH" ]; then
+        log "WARN" "현재 브랜치가 '$DESIRED_BRANCH'가 아닙니다. (현재: $CURRENT_BRANCH)"
+
+        if [ "${FORCE_BRANCH_SWITCH:-0}" = "1" ] || [ "${CI:-false}" = "true" ]; then
+            log "INFO" "FORCE_BRANCH_SWITCH=1 또는 CI 환경 감지됨. '$DESIRED_BRANCH'로 전환을 시도합니다."
+            git fetch origin
+
+            if git show-ref --verify --quiet "refs/heads/$DESIRED_BRANCH"; then
+                if ! git checkout "$DESIRED_BRANCH"; then
+                    log "ERROR" "브랜치 전환 실패. 변경사항을 커밋하거나 스태시하세요."
+                    fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 브랜치 전환 실패"
+                fi
+            else
+                if ! git checkout -b "$DESIRED_BRANCH" "origin/$DESIRED_BRANCH"; then
+                    log "ERROR" "원격 브랜치 체크아웃 실패."
+                    fail_run_daily_before_pipeline "Branch Check" "$DESIRED_BRANCH 원격 브랜치 체크아웃 실패"
+                fi
+            fi
+
+            log "OK" "브랜치 전환 완료: $DESIRED_BRANCH"
+        else
+            log "ERROR" "안전 모드: FORCE_BRANCH_SWITCH=1 환경변수 없이 자동으로 브랜치를 전환하지 않습니다."
+            log "ERROR" "작업 중인 파일이 유실될 수 있으므로 직접 'git checkout $DESIRED_BRANCH' 후 다시 실행해주세요."
+            fail_run_daily_before_pipeline "Branch Check" "현재 브랜치 '$CURRENT_BRANCH'가 요구 브랜치 '$DESIRED_BRANCH'와 다르고 FORCE_BRANCH_SWITCH가 비활성화됨"
+        fi
+    fi
+
+    log "INFO" "'$DESIRED_BRANCH' 브랜치 최신화 (Pull)..."
+    if ! run_git_with_timeout "${RUN_DAILY_GIT_NETWORK_TIMEOUT_SEC:-300}" git pull --rebase --autostash origin "$DESIRED_BRANCH" 2>&1 | append_daily_log; then
+        log "WARN" "Pull 실패. 충돌 상태 복구(abort) 후 진행합니다."
+        git rebase --abort 2>/dev/null || true
+    fi
+
+    EXECUTION_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+    if [ "$SPLIT_SYNC_BRANCH_MODE" = "true" ]; then
+        if ! ensure_split_sync_worktree "$TARGET_BRANCH"; then
+            log "ERROR" "실행용 코드와 데이터 동기화 브랜치 분리 준비 실패"
+            fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 동기화 worktree 준비 실패"
+        fi
+        if ! seed_execution_data_from_sync_worktree; then
+            log "ERROR" "실행 워크스페이스에 최신 데이터 브랜치를 반영하지 못했습니다."
+            fail_run_daily_before_pipeline "Split Data Sync Worktree" "$TARGET_BRANCH 데이터 seed 실패"
+        fi
+        log "INFO" "코드는 '$EXECUTION_BRANCH' 브랜치에서 실행하고 데이터는 '$TARGET_BRANCH' 브랜치로 동기화합니다."
+    fi
 fi
 log "INFO" "현재 작업 브랜치: $EXECUTION_BRANCH"
 
@@ -1325,7 +1406,7 @@ if ! has_youtube_api_key; then
 else
     log "INFO" "[Step 1] URL 수집 중..."
     STEP_1_LOG="$(mktemp)"
-    $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee "$STEP_1_LOG" | tee -a "$LOG_FILE"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang 2>&1 | tee "$STEP_1_LOG" | append_daily_log
     STEP_1_EXIT=${PIPESTATUS[0]}
     record_youtube_api_exit "Step 1 (URL Collection)" "$STEP_1_EXIT" "$STEP_1_LOG"
     rm -f "$STEP_1_LOG"
@@ -1370,7 +1451,7 @@ if ! has_youtube_api_key; then
 else
     log "INFO" "[Step 2] 메타데이터 수집 및 스케줄링..."
     STEP_2_LOG="$(mktemp)"
-    $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee "$STEP_2_LOG" | tee -a "$LOG_FILE"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang 2>&1 | tee "$STEP_2_LOG" | append_daily_log
     STEP_2_EXIT=${PIPESTATUS[0]}
     record_youtube_api_exit "Step 2 (Metadata)" "$STEP_2_EXIT" "$STEP_2_LOG"
     rm -f "$STEP_2_LOG"
@@ -1385,16 +1466,16 @@ log "INFO" "[Step 2.1+2.5] Meta Migration + Orphan Cleanup (병렬 실행)..."
 if has_supabase_migration_credentials; then
     run_parallel \
         "Step 2.1 Meta Migration" \
-        "$PYTHON_CMD backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py --channel tzuyang" \
+        "$PYTHON_CMD backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py --channel tzuyang" \
         "Step 2.5 Orphan Cleanup" \
-        "$PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang"
+        "$PYTHON_CMD backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py --channel tzuyang"
     STEP_21_EXIT=$?
     if [ $STEP_21_EXIT -ne 0 ]; then
         record_required_failure "Step 2.1+2.5 (Migration+Cleanup)" "parallel step 중 하나 이상 실패"
     fi
 else
     record_external_dependency_issue "Step 2.1 (Meta Migration)" "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 미설정으로 실행 생략"
-    $PYTHON_CMD backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py --channel tzuyang 2>&1 | append_daily_log
     STEP_25_EXIT=${PIPESTATUS[0]}
     record_exit_if_failed "Step 2.5 (Orphan Cleanup)" "$STEP_25_EXIT"
 fi
@@ -1450,7 +1531,7 @@ else
     STEP3_END_TIME=$(date +%s)
     step_duration_from "Step 3 (Transcript)" "$STEP3_START_TIME" "$STEP3_END_TIME"
     log "INFO" "--- [Step 3 Transcript] ---"
-    cat "$TEMP_LOG_3" | tee -a "$LOG_FILE"
+    cat "$TEMP_LOG_3" | append_daily_log
     if [ $EXIT_3 -ne 0 ]; then
         log "WARN" "[Step 3] Transcript 비정상 종료 (exit: $EXIT_3)"
         record_required_failure "Step 3 (Transcript)" "exit=$EXIT_3"
@@ -1480,7 +1561,7 @@ else
     else
         log "INFO" "Context Generation Limit: Unlimited"
     fi
-    $PYTHON_CMD backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | tee -a "$LOG_FILE"
+    $PYTHON_CMD backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py --max-videos "$MAX_VIDEOS" 2>&1 | append_daily_log
     STEP_31_EXIT=${PIPESTATUS[0]}
     record_exit_if_failed "Step 3.1 (Context Generation)" "$STEP_31_EXIT"
 fi
@@ -1498,7 +1579,7 @@ if [ -n "$TEMP_LOG_4" ]; then
     step_duration_from "Step 4 (Heatmap & Frames)" "$STEP4_START_TIME" "$STEP4_END_TIME"
     sleep 1
     kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
-    cat "$TEMP_LOG_4" >> "$LOG_FILE"
+    cat "$TEMP_LOG_4" | append_daily_log_quiet
     if [ $EXIT_4 -ne 0 ]; then
         log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
         record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
@@ -1541,7 +1622,7 @@ if [ "${SKIP_PHASE3:-false}" != "true" ]; then
 echo "::group::[Step 6.1] Enrich Subtitles"
 step_start
 log "INFO" "[Step 6.1] 자막 문서 메타데이터 추가 중..."
-$PYTHON_CMD backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+$PYTHON_CMD backend/restaurant-crawling/scripts/06-1-transcript-document-with-meta.py --channel tzuyang 2>&1 | append_daily_log
 STEP_61_EXIT=${PIPESTATUS[0]}
 record_exit_if_failed "Step 6.1 (Enrich)" "$STEP_61_EXIT"
 step_end "Step 6.1 (Enrich)"
@@ -1551,7 +1632,7 @@ echo "::endgroup::"
 # echo "::group::[Step 7] Gemini Data Analysis"
 # step_start
 # log "INFO" "[Step 7] Gemini 데이터 분석 중..."
-# bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | tee -a "$LOG_FILE"
+# bash backend/restaurant-crawling/scripts/07-gemini-crawling.sh --channel tzuyang 2>&1 | append_daily_log
 # step_end "Step 7 (Gemini)"
 # echo "::endgroup::"
 log "INFO" "[Step 7] 비활성화됨 → Step 08 (Chunk Multimodal)이 전담 처리"
@@ -1575,7 +1656,7 @@ else
         CHUNK_EXIT_CODE=42
     else
         set +o pipefail
-        bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | tee -a "$LOG_FILE"
+        bash backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh --channel tzuyang 2>&1 | filter_step_log | append_daily_log
         CHUNK_EXIT_CODE=${PIPESTATUS[0]}
         set -o pipefail
     fi
@@ -1607,7 +1688,7 @@ step_start
 log "INFO" "[Step 09] Target Selection..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/09-target-selection.py --channel tzuyang \
   --crawling-path backend/restaurant-crawling/data/tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | append_daily_log
 STEP_09_EXIT=${PIPESTATUS[0]}
 STEP_09_OK=true
 if ! record_exit_if_failed "Step 09 (Target Selection)" "$STEP_09_EXIT"; then
@@ -1624,7 +1705,7 @@ echo "::group::[Step 10] Rule Evaluation"
 step_start
 log "INFO" "[Step 10] Rule Evaluation..."
 $PYTHON_CMD backend/restaurant-evaluation/scripts/10-rule-evaluation.py --channel tzuyang \
-  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | append_daily_log
 STEP_10_EXIT=${PIPESTATUS[0]}
 grep "Rule 평가 완료!" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
 STEP_10_OK=true
@@ -1656,7 +1737,7 @@ if [ "${STEP_10_OK}" = "true" ]; then
     log "INFO" "[Step 11] LAAJ Evaluation..."
     bash backend/restaurant-evaluation/scripts/11-laaj-evaluation.sh --channel tzuyang \
       --crawling-path backend/restaurant-crawling/data/tzuyang \
-      --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+      --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | append_daily_log
     STEP_11_EXIT=${PIPESTATUS[0]}
     grep "LAAJ 평가 완료" -A 5 "$LOG_FILE" | tail -n 6 | strip_ansi | while read -r line; do echo "::notice::$line"; done
     if ! record_exit_if_failed "Step 11 (LAAJ Evaluation)" "$STEP_11_EXIT"; then
@@ -1675,7 +1756,7 @@ if [ "${STEP_10_OK}" = "true" ]; then
         log "INFO" "[Step 12] Transform Results..."
         $PYTHON_CMD backend/restaurant-evaluation/scripts/12-transform.py --channel tzuyang \
           --crawling-path backend/restaurant-crawling/data/tzuyang \
-          --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+          --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | append_daily_log
         STEP_12_EXIT=${PIPESTATUS[0]}
         STEP_12_OK=true
         if ! record_exit_if_failed "Step 12 (Transform Results)" "$STEP_12_EXIT"; then
@@ -1690,11 +1771,11 @@ if [ "${STEP_10_OK}" = "true" ]; then
             echo "::group::[Step 13] Insert to Supabase"
             step_start
             if ! has_supabase_insert_credentials; then
-                record_external_dependency_issue "Step 13 (Supabase)" "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY 미설정으로 실행 생략"
+                record_external_dependency_issue "Step 13 (Supabase)" "SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY 미설정으로 실행 생략"
             else
                 log "INFO" "[Step 13] Insert to Supabase..."
                 $PYTHON_CMD backend/restaurant-evaluation/scripts/13-supabase-insert.py --channel tzuyang \
-                  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | tee -a "$LOG_FILE"
+                  --evaluation-path backend/restaurant-evaluation/data/tzuyang 2>&1 | append_daily_log
                 STEP_13_EXIT=${PIPESTATUS[0]}
                 record_exit_if_failed "Step 13 (Supabase)" "$STEP_13_EXIT"
                 if [ $STEP_13_EXIT -eq 0 ]; then
@@ -1708,7 +1789,7 @@ if [ "${STEP_10_OK}" = "true" ]; then
                     node backend/restaurant-evaluation/scripts/admin-data-quality-audit.mjs \
                       --output "$ADMIN_DATA_QUALITY_JSON" \
                       --markdown "$ADMIN_DATA_QUALITY_MD" \
-                      --fail-on-exact 2>&1 | tee -a "$LOG_FILE"
+                      --fail-on-exact 2>&1 | append_daily_log
                     STEP_13_QUALITY_EXIT=${PIPESTATUS[0]}
                     record_exit_if_failed "Step 13.1 (Admin Data Quality Gate)" "$STEP_13_QUALITY_EXIT"
                 fi

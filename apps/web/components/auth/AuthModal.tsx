@@ -24,6 +24,11 @@ import {
   isAdminAuthRedirect,
 } from "@/lib/auth/auth-redirect";
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
+import {
+  getCurrentPrivacyEligibility,
+  privacyEligibilityGuidance,
+  signOutRejectedPrivacySession,
+} from "@/lib/privacy/eligibility";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -75,6 +80,133 @@ const GoogleIcon = memo(() => (
   </svg>
 ));
 GoogleIcon.displayName = "GoogleIcon";
+type AgeBand = "" | "age_14_plus" | "under_14";
+type MarketingConsent = {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+  night_email: boolean;
+  night_sms: boolean;
+  night_push: boolean;
+};
+
+const EMPTY_MARKETING_CONSENT: MarketingConsent = {
+  email: false,
+  sms: false,
+  push: false,
+  night_email: false,
+  night_sms: false,
+  night_push: false,
+};
+const UNDER_14_SIGNUP_UNAVAILABLE_CODE = "UNDER_14_SIGNUP_UNAVAILABLE";
+const UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE = "만 14세 미만 이용자의 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.";
+const POLICY_VERSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const POLICY_CONTENT_SHA256_PATTERN = /^[a-f0-9]{64}$/;
+
+function OnboardingConsentFields({
+  ageBand,
+  onAgeBandChange,
+  privacyAgreed,
+  onPrivacyAgreedChange,
+  onPrivacyPolicyOpen,
+  marketingConsent,
+  onMarketingConsentChange,
+  policyVersionReady,
+}: {
+  ageBand: AgeBand;
+  onAgeBandChange: (value: AgeBand) => void;
+  privacyAgreed: boolean;
+  onPrivacyAgreedChange: (value: boolean) => void;
+  onPrivacyPolicyOpen: () => void;
+  marketingConsent: MarketingConsent;
+  onMarketingConsentChange: (key: keyof MarketingConsent, value: boolean) => void;
+  policyVersionReady: boolean;
+}) {
+  const marketingControls: Array<{ key: keyof MarketingConsent; label: string }> = [
+    { key: "email", label: "이메일 마케팅 수신" },
+    { key: "sms", label: "문자 마케팅 수신" },
+    { key: "push", label: "푸시 마케팅 수신" },
+    { key: "night_email", label: "야간 이메일 마케팅 수신" },
+    { key: "night_sms", label: "야간 문자 마케팅 수신" },
+    { key: "night_push", label: "야간 푸시 마케팅 수신" },
+  ];
+
+  return (
+    <div className="space-y-4 rounded-lg border p-3">
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">연령대 확인 (필수)</legend>
+        <p className="text-xs text-muted-foreground">
+          생년월일이나 주민등록번호를 받지 않습니다. 만 14세 미만 가입은 운영자 승인 보호자 확인 경로가 배포되고 읽기검증될 때까지 이용할 수 없습니다.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="signup-age-band"
+            value="age_14_plus"
+            checked={ageBand === "age_14_plus"}
+            onChange={() => onAgeBandChange("age_14_plus")}
+          />
+          만 14세 이상입니다
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name="signup-age-band"
+            value="under_14"
+            checked={ageBand === "under_14"}
+            onChange={() => onAgeBandChange("under_14")}
+          />
+          만 14세 미만입니다
+        </label>
+      </fieldset>
+
+      <div className="flex items-start space-x-2">
+        <Checkbox
+          id="privacy-agree"
+          checked={privacyAgreed}
+          onCheckedChange={(checked) => onPrivacyAgreedChange(checked === true)}
+        />
+        <div className="grid gap-1.5 leading-none">
+          <label
+            htmlFor="privacy-agree"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            <button
+              type="button"
+              className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
+              onClick={onPrivacyPolicyOpen}
+            >
+              개인정보 처리방침
+            </button>
+            에 동의합니다 (필수)
+          </label>
+          {!policyVersionReady && (
+            <p className="text-xs text-muted-foreground" role="status">
+              최신 개인정보 처리방침을 확인하는 중입니다.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">마케팅 수신 동의 (선택)</legend>
+        <p className="text-xs text-muted-foreground">
+          일반 수신과 야간 수신은 각각 선택할 수 있으며, 선택하지 않아도 가입할 수 있습니다.
+        </p>
+        {marketingControls.map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-2 text-sm">
+            <Checkbox
+              id={`marketing-${key}`}
+              checked={marketingConsent[key]}
+              onCheckedChange={(checked) => onMarketingConsentChange(key, checked === true)}
+            />
+            {label}
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
 
 const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
@@ -85,6 +217,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [ageBand, setAgeBand] = useState<AgeBand>("");
+  const [marketingConsent, setMarketingConsent] = useState<MarketingConsent>(EMPTY_MARKETING_CONSENT);
+  const [policyVersion, setPolicyVersion] = useState<string | null>(null);
+  const [policyContentSha256, setPolicyContentSha256] = useState<string | null>(null);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
@@ -92,30 +228,118 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
   const safeRedirectTo = getSafeAuthNextPath(redirectTo);
   const isAdminRedirect = isAdminAuthRedirect(reason, safeRedirectTo);
 
-  // 이전에 동의한 적 있으면 localStorage에서 불러오기 + 랜덤 닉네임 설정
   useEffect(() => {
     if (!isOpen) return;
-    const hasAgreed = localStorage.getItem('privacy_policy_agreed');
-    if (hasAgreed === 'true') {
-      setPrivacyAgreed(true);
-    }
-    // 모달이 열릴 때 랜덤 닉네임 설정 (비어있을 경우)
-    if (!username) {
-      setUsername(generateRandomNickname());
-    }
-  }, [isOpen, username]);
+
+    setUsername((currentUsername) => currentUsername || generateRandomNickname());
+
+    let cancelled = false;
+    void fetch("/api/privacy/onboarding", { cache: "no-store" })
+      .then(async (response) => {
+        const payload: unknown = await response.json().catch(() => null);
+        if (!response.ok || typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+
+        const policy = payload as { id?: unknown; contentSha256?: unknown };
+        if (
+          typeof policy.id !== "string"
+          || !POLICY_VERSION_ID_PATTERN.test(policy.id)
+          || typeof policy.contentSha256 !== "string"
+          || !POLICY_CONTENT_SHA256_PATTERN.test(policy.contentSha256)
+        ) {
+          return null;
+        }
+
+        return { id: policy.id, contentSha256: policy.contentSha256 };
+      })
+      .then((currentPolicy) => {
+        if (!cancelled) {
+          setPolicyVersion(currentPolicy?.id ?? null);
+          setPolicyContentSha256(currentPolicy?.contentSha256 ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPolicyVersion(null);
+          setPolicyContentSha256(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const resetForm = useCallback(() => {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
     setUsername(generateRandomNickname());
+    setPrivacyAgreed(false);
+    setAgeBand("");
+    setMarketingConsent(EMPTY_MARKETING_CONSENT);
   }, []);
 
-  // 랜덤 닉네임 새로고침
   const refreshNickname = useCallback(() => {
     setUsername(generateRandomNickname());
   }, []);
+
+  const startOnboardingChallenge = useCallback(async (intent: "password" | "oauth") => {
+    if (!privacyAgreed || !ageBand || !policyVersion || !policyContentSha256) {
+      toast.error("연령대와 최신 개인정보 처리방침 동의를 확인해주세요");
+      return null;
+    }
+
+    try {
+      const response = await fetch("/api/privacy/onboarding", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          policyVersion,
+          ageBand,
+          intent,
+          policyAcknowledged: true,
+          marketing: {
+            email: marketingConsent.email,
+            sms: marketingConsent.sms,
+            push: marketingConsent.push,
+            nightByChannel: {
+              email: marketingConsent.night_email,
+              sms: marketingConsent.night_sms,
+              push: marketingConsent.night_push,
+            },
+          },
+        }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+        toast.error("가입 정보를 확인할 수 없습니다. 다시 시도해주세요.");
+        return null;
+      }
+
+      const result = payload as { code?: unknown; oauthNonce?: unknown };
+      if (result.code === UNDER_14_SIGNUP_UNAVAILABLE_CODE) {
+        toast.error(UNDER_14_SIGNUP_UNAVAILABLE_MESSAGE);
+        return null;
+      }
+      if (!response.ok) {
+        toast.error("가입 정보를 확인할 수 없습니다. 다시 시도해주세요.");
+        return null;
+      }
+      if (intent === "oauth" && (typeof result.oauthNonce !== "string" || !/^[0-9a-f]{64}$/i.test(result.oauthNonce))) {
+        toast.error("가입 정보를 확인할 수 없습니다. 다시 시도해주세요.");
+        return null;
+      }
+      return {
+        oauthNonce: typeof result.oauthNonce === "string" ? result.oauthNonce : null,
+        policyVersionId: policyVersion,
+        contentSha256: policyContentSha256,
+      };
+    } catch {
+      toast.error("가입 정보를 확인할 수 없습니다. 다시 시도해주세요.");
+      return null;
+    }
+  }, [ageBand, marketingConsent, policyContentSha256, policyVersion, privacyAgreed]);
 
   const handleGoogleLogin = useCallback(async () => {
     setIsGoogleLoading(true);
@@ -126,17 +350,42 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: { redirectTo: callbackUrl.toString() },
       });
-      if (error) throw error;
-    } catch (error) {
-      console.error("Google login error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Google 로그인에 실패했습니다";
-      toast.error(errorMessage);
+      if (error) throw new Error("oauth_start_failed");
+    } catch {
+      toast.error("Google 로그인에 실패했습니다");
       setIsGoogleLoading(false);
     }
   }, [isAdminRedirect, safeRedirectTo]);
+
+  const handleGoogleSignup = useCallback(async () => {
+    setIsGoogleLoading(true);
+    const challenge = await startOnboardingChallenge("oauth");
+    if (!challenge?.oauthNonce) {
+      setIsGoogleLoading(false);
+      return;
+    }
+
+    try {
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("onboarding", "1");
+      callbackUrl.searchParams.set("onboarding_nonce", challenge.oauthNonce);
+      if (isAdminRedirect) {
+        callbackUrl.searchParams.set("next", safeRedirectTo);
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: callbackUrl.toString() },
+      });
+      if (error) throw new Error("oauth_start_failed");
+    } catch {
+      toast.error("Google 가입을 시작할 수 없습니다");
+      setIsGoogleLoading(false);
+    }
+  }, [isAdminRedirect, safeRedirectTo, startOnboardingChallenge]);
 
   const redirectAfterAdminLogin = useCallback(() => {
     if (!isAdminRedirect) return false;
@@ -150,7 +399,15 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
     }
     onClose();
   }, [onAuthSuccess, onClose]);
-
+  const rejectPrivacyIneligibleSession = useCallback(async (userId: string) => {
+    await signOutRejectedPrivacySession(supabase);
+    try {
+      const { clearBrowserDraftsForUser } = await import("@/lib/privacy/browser-draft-cleanup");
+      await clearBrowserDraftsForUser(userId);
+    } catch {
+      // Rejecting an ineligible session must not retain published auth state.
+    }
+  }, []);
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,25 +419,35 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      const signedInUserId = data.session?.user?.id;
+      if (error || !signedInUserId) {
+        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
+        throw new Error("password_login_failed");
+      }
+
+      const eligibility = await getCurrentPrivacyEligibility(supabase);
+      if (!eligibility.eligible) {
+        await rejectPrivacyIneligibleSession(signedInUserId);
+        toast.error(privacyEligibilityGuidance(eligibility.reasonCode));
+        return;
+      }
+
       toast.success("로그인 성공!");
       dispatchHomeAuthSessionUpdated({
-        hasSession: Boolean(data.session),
+        hasSession: true,
         source: 'auth-modal-password-login',
       });
       resetForm();
-      if (data.session?.user?.id && redirectAfterAdminLogin()) {
+      if (redirectAfterAdminLogin()) {
         return;
       }
       closeAfterAuthSuccess();
-    } catch (error) {
-      console.error("Login error:", error);
-      const errorMessage = error instanceof Error ? error.message : "로그인에 실패했습니다";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("로그인에 실패했습니다");
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess]);
+  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess, rejectPrivacyIneligibleSession]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,8 +455,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       toast.error("모든 필드를 입력해주세요");
       return;
     }
-    if (!privacyAgreed) {
-      toast.error("개인정보 처리방침에 동의해주세요");
+    if (!privacyAgreed || !ageBand || !policyVersion || !policyContentSha256) {
+      toast.error("연령대와 최신 개인정보 처리방침 동의를 확인해주세요");
       return;
     }
     if (username.length < 2 || username.length > 20) {
@@ -207,7 +474,6 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
     setIsLoading(true);
     try {
-      // 닉네임 중복 체크
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('nickname')
@@ -216,36 +482,68 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
       if (existingProfile) {
         toast.error("이미 사용 중인 닉네임입니다. 다른 닉네임을 선택해주세요.");
-        setIsLoading(false);
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nickname: username } },
+      const challenge = await startOnboardingChallenge("password");
+      if (!challenge) return;
+
+      const response = await fetch("/api/privacy/onboarding", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "password_signup",
+          email,
+          password,
+          nickname: username.trim(),
+        }),
       });
-      if (error) throw error;
-      const session = data.session;
-      if (session) {
-        toast.success("회원가입 완료! 환영합니다.");
-        dispatchHomeAuthSessionUpdated({
-          hasSession: true,
-          source: 'auth-modal-signup',
-        });
-      } else {
-        toast.success("회원가입 완료! 이메일을 확인해주세요.");
+      if (!response.ok) {
+        toast.error("회원가입을 완료할 수 없습니다. 다시 시도해주세요.");
+        return;
       }
+      const onboardingResult = await response.json().catch(() => null) as {
+        emailConfirmationRequired?: unknown;
+      } | null;
+      if (onboardingResult?.emailConfirmationRequired === true) {
+        toast.success("회원가입이 완료되었습니다. 이메일의 확인 링크를 열어주세요.");
+        resetForm();
+        closeAfterAuthSuccess();
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const signedInUserId = data.session?.user?.id;
+      if (error || !signedInUserId) {
+        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
+        toast.error("가입은 완료되었지만 로그인에 실패했습니다. 로그인 탭에서 다시 시도해주세요.");
+        return;
+      }
+
+      const eligibility = await getCurrentPrivacyEligibility(supabase);
+      if (!eligibility.eligible) {
+        await rejectPrivacyIneligibleSession(signedInUserId);
+        toast.error(privacyEligibilityGuidance(eligibility.reasonCode));
+        return;
+      }
+
+      toast.success("회원가입 완료! 환영합니다.");
+      dispatchHomeAuthSessionUpdated({
+        hasSession: true,
+        source: 'auth-modal-signup',
+      });
       resetForm();
+      if (redirectAfterAdminLogin()) {
+        return;
+      }
       closeAfterAuthSuccess();
-    } catch (error) {
-      console.error("Signup error:", error);
-      const errorMessage = error instanceof Error ? error.message : "회원가입에 실패했습니다";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("회원가입을 완료할 수 없습니다. 다시 시도해주세요.");
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, username, confirmPassword, privacyAgreed, resetForm, closeAfterAuthSuccess]);
+  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterAdminLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,14 +556,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
         redirectTo: `${window.location.origin}/auth/reset-password`,
       });
-      if (error) throw error;
+      if (error) throw new Error("password_reset_failed");
       toast.success("비밀번호 재설정 링크를 이메일로 발송했습니다");
       setShowForgotPassword(false);
       setForgotPasswordEmail("");
-    } catch (error) {
-      console.error("Reset password error:", error);
-      const errorMessage = error instanceof Error ? error.message : "이메일 발송에 실패했습니다";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("이메일 발송에 실패했습니다");
     } finally {
       setIsSendingReset(false);
     }
@@ -273,18 +569,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
   const handlePrivacyAgree = useCallback(() => {
     setPrivacyAgreed(true);
-    localStorage.setItem('privacy_policy_agreed', 'true');
     setIsPrivacyModalOpen(false);
   }, []);
 
-  const handleGoogleWithPrivacyCheck = useCallback(() => {
-    if (!privacyAgreed) {
-      setIsPrivacyModalOpen(true);
-      toast.info("처음 이용하시는 경우 개인정보 처리방침 동의가 필요합니다");
-      return;
-    }
-    handleGoogleLogin();
-  }, [privacyAgreed, handleGoogleLogin]);
+  const handleMarketingConsentChange = useCallback((key: keyof MarketingConsent, value: boolean) => {
+    setMarketingConsent((current) => ({ ...current, [key]: value }));
+  }, []);
 
   // 모달이 닫혀있으면 아무것도 렌더링하지 않음 (성능 최적화)
   if (!isOpen) return null;
@@ -383,14 +673,14 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 type="button"
                 variant="outline"
                 className="w-full h-10 sm:h-11"
-                onClick={handleGoogleWithPrivacyCheck}
+                onClick={handleGoogleLogin}
                 disabled={isGoogleLoading}
               >
                 <GoogleIcon />
                 {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
               </Button>
               <p className="text-xs text-center text-muted-foreground mt-2">
-                처음 이용하시는 경우 회원가입이 진행됩니다
+                기존 Google 계정으로 로그인합니다
               </p>
             </TabsContent>
 
@@ -467,33 +757,21 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                   />
                 </div>
 
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="privacy-agree"
-                    checked={privacyAgreed}
-                    onCheckedChange={(checked) => setPrivacyAgreed(checked === true)}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                      htmlFor="privacy-agree"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      <button
-                        type="button"
-                        className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
-                        onClick={() => setIsPrivacyModalOpen(true)}
-                      >
-                        개인정보 처리방침
-                      </button>
-                      에 동의합니다 (필수)
-                    </label>
-                  </div>
-                </div>
+                <OnboardingConsentFields
+                  ageBand={ageBand}
+                  onAgeBandChange={setAgeBand}
+                  privacyAgreed={privacyAgreed}
+                  onPrivacyAgreedChange={setPrivacyAgreed}
+                  onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
+                  marketingConsent={marketingConsent}
+                  onMarketingConsentChange={handleMarketingConsentChange}
+                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                />
 
                 <Button
                   type="submit"
                   className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
-                  disabled={isLoading || !privacyAgreed}
+                  disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
                 </Button>
@@ -514,14 +792,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 type="button"
                 variant="outline"
                 className="w-full h-10 sm:h-11"
-                onClick={() => {
-                  if (!privacyAgreed) {
-                    toast.error("개인정보 처리방침에 동의해주세요");
-                    return;
-                  }
-                  handleGoogleLogin();
-                }}
-                disabled={isGoogleLoading || !privacyAgreed}
+                onClick={handleGoogleSignup}
+                disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
                 <GoogleIcon />
                 {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
@@ -625,14 +897,14 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 type="button"
                 variant="outline"
                 className="w-full h-10 sm:h-11"
-                onClick={handleGoogleWithPrivacyCheck}
+                onClick={handleGoogleLogin}
                 disabled={isGoogleLoading}
               >
                 <GoogleIcon />
                 {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
               </Button>
               <p className="text-xs text-center text-muted-foreground mt-2">
-                처음 이용하시는 경우 회원가입이 진행됩니다
+                기존 Google 계정으로 로그인합니다
               </p>
             </TabsContent>
 
@@ -706,33 +978,21 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                   />
                 </div>
 
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    id="privacy-agree"
-                    checked={privacyAgreed}
-                    onCheckedChange={(checked) => setPrivacyAgreed(checked === true)}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                      htmlFor="privacy-agree"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      <button
-                        type="button"
-                        className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
-                        onClick={() => setIsPrivacyModalOpen(true)}
-                      >
-                        개인정보 처리방침
-                      </button>
-                      에 동의합니다 (필수)
-                    </label>
-                  </div>
-                </div>
+                <OnboardingConsentFields
+                  ageBand={ageBand}
+                  onAgeBandChange={setAgeBand}
+                  privacyAgreed={privacyAgreed}
+                  onPrivacyAgreedChange={setPrivacyAgreed}
+                  onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
+                  marketingConsent={marketingConsent}
+                  onMarketingConsentChange={handleMarketingConsentChange}
+                  policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+                />
 
                 <Button
                   type="submit"
                   className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
-                  disabled={isLoading || !privacyAgreed}
+                  disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
                 </Button>
@@ -753,14 +1013,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 type="button"
                 variant="outline"
                 className="w-full h-10 sm:h-11"
-                onClick={() => {
-                  if (!privacyAgreed) {
-                    toast.error("개인정보 처리방침에 동의해주세요");
-                    return;
-                  }
-                  handleGoogleLogin();
-                }}
-                disabled={isGoogleLoading || !privacyAgreed}
+                onClick={handleGoogleSignup}
+                disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
                 <GoogleIcon />
                 {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
