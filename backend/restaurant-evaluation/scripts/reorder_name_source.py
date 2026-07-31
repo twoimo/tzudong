@@ -7,6 +7,14 @@ import json
 import sys
 from pathlib import Path
 from collections import OrderedDict
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
 
 
 def reorder_evaluation_results(data: dict) -> dict:
@@ -47,8 +55,12 @@ def migrate_folder(folder_path: Path) -> int:
                 file.write(json.dumps(data, ensure_ascii=False) + "\n")
 
             updated += 1
-        except Exception as e:
-            print(f"[WARN] 오류: {f.name} - {e}")
+        except Exception as error:
+            print(
+                f"[WARN] operation=evaluation_name_source_reordering_file_failed "
+                f"error={safe_error_name(error)} "
+                "code=EVALUATION_NAME_SOURCE_FILE_REORDER_FAILED"
+            )
 
     return updated
 

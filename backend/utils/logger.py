@@ -28,6 +28,7 @@ from enum import Enum
 from functools import wraps
 import time
 from contextlib import contextmanager
+from .privacy_log import redact_log_text, sanitize_log_value
 
 
 # 한국 시간대 (KST, UTC+9)
@@ -85,7 +86,7 @@ class PipelineLogger:
             log_level: 최소 로그 레벨
             save_to_file: 파일 저장 여부
         """
-        self.phase = phase
+        self.phase = redact_log_text(phase)
         self.log_level = log_level
         self.save_to_file = save_to_file
         
@@ -124,13 +125,13 @@ class PipelineLogger:
         self.log_dir = self.report_dir
         
         # 로그 파일 경로 (날짜는 폴더에 있으므로 파일명에서 제거)
-        self.log_file = self.text_dir / f"{phase}.log"
-        self.json_log_file = self.structured_dir / f"{phase}.jsonl"
-        self.summary_file = self.report_dir / f"{phase}_summary.json"
+        self.log_file = self.text_dir / f"{self.phase}.log"
+        self.json_log_file = self.structured_dir / f"{self.phase}.jsonl"
+        self.summary_file = self.report_dir / f"{self.phase}_summary.json"
         
         # 통계 수집
         self.stats = {
-            "phase": phase,
+            "phase": self.phase,
             "start_time": self.start_timestamp,
             "end_time": None,
             "duration_seconds": None,
@@ -149,7 +150,7 @@ class PipelineLogger:
         
         # 시작 로그
         self._log(LogLevel.INFO, f"{'='*60}")
-        self._log(LogLevel.INFO, f"[{phase.upper()}] 파이프라인 시작")
+        self._log(LogLevel.INFO, f"[{self.phase.upper()}] 파이프라인 시작")
         self._log(LogLevel.INFO, f"시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
         self._log(LogLevel.INFO, f"로그 저장: {self.log_base_dir}")
         self._log(LogLevel.INFO, f"  text: {self.text_dir}")
@@ -176,19 +177,22 @@ class PipelineLogger:
         
         timestamp = datetime.now(KST)
         color, tag = LOG_STYLES.get(level, (Colors.ENDC, ""))
+        safe_message = redact_log_text(message)
+        safe_data = sanitize_log_value(data)
+        safe_step = redact_log_text(step) if step is not None else None
         
         # 터미널 출력
         time_str = timestamp.strftime("%H:%M:%S")
-        print(f"{Colors.GRAY}[{time_str}]{Colors.ENDC} {color}{tag} {message}{Colors.ENDC}")
+        print(f"{Colors.GRAY}[{time_str}]{Colors.ENDC} {color}{tag} {safe_message}{Colors.ENDC}")
         
         # 로그 엔트리 생성
         entry = {
             "timestamp": timestamp.isoformat(),
             "level": level.value,
             "phase": self.phase,
-            "step": step,
-            "message": message,
-            "data": data
+            "step": safe_step,
+            "message": safe_message,
+            "data": safe_data
         }
         self.log_entries.append(entry)
         
@@ -196,9 +200,9 @@ class PipelineLogger:
         if self.save_to_file:
             # 텍스트 로그
             with open(self.log_file, "a", encoding="utf-8") as f:
-                log_line = f"[{timestamp.isoformat()}] [{level.value}] {message}"
-                if data:
-                    log_line += f" | {json.dumps(data, ensure_ascii=False)}"
+                log_line = f"[{timestamp.isoformat()}] [{level.value}] {safe_message}"
+                if safe_data:
+                    log_line += f" | {json.dumps(safe_data, ensure_ascii=False)}"
                 f.write(log_line + "\n")
             
             # JSON 로그
@@ -223,18 +227,28 @@ class PipelineLogger:
     def warning(self, message: str, data: Optional[Dict] = None, step: Optional[str] = None):
         """WARNING 레벨 로그"""
         self._log(LogLevel.WARNING, message, data, step)
-        self.stats["warnings"].append({"message": message, "data": data})
+        self.stats["warnings"].append({
+            "message": redact_log_text(message),
+            "data": sanitize_log_value(data),
+        })
     
     def error(self, message: str, data: Optional[Dict] = None, step: Optional[str] = None):
         """ERROR 레벨 로그"""
         self._log(LogLevel.ERROR, message, data, step)
         self.stats["error_count"] += 1
-        self.stats["errors"].append({"message": message, "data": data})
+        self.stats["errors"].append({
+            "message": redact_log_text(message),
+            "data": sanitize_log_value(data),
+        })
     
     def critical(self, message: str, data: Optional[Dict] = None, step: Optional[str] = None):
         """CRITICAL 레벨 로그"""
         self._log(LogLevel.CRITICAL, message, data, step)
-        self.stats["errors"].append({"message": message, "data": data, "critical": True})
+        self.stats["errors"].append({
+            "message": redact_log_text(message),
+            "data": sanitize_log_value(data),
+            "critical": True,
+        })
     
     # === 진행 상황 로그 ===
     
@@ -245,11 +259,13 @@ class PipelineLogger:
         filled = int(bar_length * current / total) if total > 0 else 0
         bar = "=" * filled + ">" + " " * (bar_length - filled - 1)
         
+        safe_item = redact_log_text(item) if item is not None else ""
+        safe_extra = redact_log_text(extra) if extra is not None else ""
         status = f"[{bar}] {percent:.1f}% ({current}/{total})"
-        if item:
-            status += f" | {item}"
-        if extra:
-            status += f" | {extra}"
+        if safe_item:
+            status += f" | {safe_item}"
+        if safe_extra:
+            status += f" | {safe_extra}"
         
         # 같은 줄에 업데이트 (터미널)
         print(f"\r{Colors.OKCYAN}{status}{Colors.ENDC}", end="", flush=True)
@@ -267,24 +283,25 @@ class PipelineLogger:
     @contextmanager
     def timer(self, name: str):
         """시간 측정 컨텍스트 매니저"""
+        safe_name = redact_log_text(name)
         start = time.time()
-        self.debug(f"[{name}] 시작...")
+        self.debug(f"[{safe_name}] 시작...")
         try:
             yield
         finally:
             elapsed = time.time() - start
-            self.debug(f"[{name}] 완료: {elapsed:.2f}초")
+            self.debug(f"[{safe_name}] 완료: {elapsed:.2f}초")
             
             # 타이머 통계 저장
-            if name not in self.stats["timers"]:
-                self.stats["timers"][name] = {
+            if safe_name not in self.stats["timers"]:
+                self.stats["timers"][safe_name] = {
                     "count": 0,
                     "total_seconds": 0,
                     "min_seconds": float('inf'),
                     "max_seconds": 0
                 }
             
-            timer = self.stats["timers"][name]
+            timer = self.stats["timers"][safe_name]
             timer["count"] += 1
             timer["total_seconds"] += elapsed
             timer["min_seconds"] = min(timer["min_seconds"], elapsed)
@@ -304,7 +321,7 @@ class PipelineLogger:
     
     def add_stat(self, key: str, value: Any):
         """커스텀 통계 추가"""
-        self.stats["custom_stats"][key] = value
+        self.stats["custom_stats"].update(sanitize_log_value({key: value}))
     
     # add_statistic은 add_stat의 별칭
     def add_statistic(self, key: str, value: Any):
@@ -313,9 +330,10 @@ class PipelineLogger:
     
     def increment_stat(self, key: str, amount: int = 1):
         """커스텀 통계 증가"""
-        if key not in self.stats["custom_stats"]:
-            self.stats["custom_stats"][key] = 0
-        self.stats["custom_stats"][key] += amount
+        safe_key = redact_log_text(key)
+        if safe_key not in self.stats["custom_stats"]:
+            self.stats["custom_stats"][safe_key] = 0
+        self.stats["custom_stats"][safe_key] += amount
     
     def set_processed(self, count: int):
         """처리 개수 설정"""
@@ -375,7 +393,7 @@ class PipelineLogger:
                     "formatted": self._format_duration(timer["total_seconds"])
                 }
         
-        return {
+        summary = {
             "phase": self.phase,
             "started_at": self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
             "ended_at": end_time.strftime('%Y-%m-%d %H:%M:%S'),
@@ -387,10 +405,11 @@ class PipelineLogger:
             "error_count": self.stats["error_count"],
             "skip_count": self.stats["skip_count"]
         }
+        return sanitize_log_value(summary)
     
     def save_json_log(self):
         """JSON 형식 로그 파일 저장 (report 폴더에)"""
-        summary = self.get_summary()
+        summary = sanitize_log_value(self.get_summary())
         
         # 파일명: phase_HHMMSS.json (날짜는 폴더에 있으므로 제거)
         timestamp_str = self.start_time.strftime("%H%M%S")
@@ -405,21 +424,24 @@ class PipelineLogger:
     
     def print_section(self, title: str):
         """섹션 구분선 출력"""
+        safe_title = redact_log_text(title)
         print()
         print(f"{Colors.BOLD}{Colors.HEADER}{'─'*60}{Colors.ENDC}")
-        print(f"{Colors.BOLD}{Colors.HEADER}  {title}{Colors.ENDC}")
+        print(f"{Colors.BOLD}{Colors.HEADER}  {safe_title}{Colors.ENDC}")
         print(f"{Colors.BOLD}{Colors.HEADER}{'─'*60}{Colors.ENDC}")
     
     def print_stats_table(self, title: str, stats: Dict[str, Any]):
         """통계 테이블 출력"""
-        print(f"\n{Colors.BOLD}{title}{Colors.ENDC}")
-        for key, value in stats.items():
-            if isinstance(value, float):
+        safe_title = redact_log_text(title)
+        safe_stats = sanitize_log_value(stats)
+        print(f"\n{Colors.BOLD}{safe_title}{Colors.ENDC}")
+        for key, value in safe_stats.items():
+            if type(value) is float:
                 value_str = f"{value:.2f}"
-            elif isinstance(value, dict):
-                value_str = json.dumps(value, ensure_ascii=False)
-            else:
+            elif value is None or type(value) in (bool, int, str):
                 value_str = str(value)
+            else:
+                value_str = json.dumps(value, ensure_ascii=False)
             print(f"  {key}: {Colors.OKCYAN}{value_str}{Colors.ENDC}")
     
     def save_summary(self) -> Dict:
@@ -446,6 +468,10 @@ class PipelineLogger:
         if total > 0:
             self.stats["success_rate"] = round(self.stats["success_count"] / total * 100, 2)
             self.stats["error_rate"] = round(self.stats["error_count"] / total * 100, 2)
+        self.stats = {
+            key: sanitize_log_value(value)
+            for key, value in self.stats.items()
+        }
         
         # 요약 출력
         self.print_section(f"[{self.phase.upper()}] 실행 결과 요약")

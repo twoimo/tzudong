@@ -7,6 +7,8 @@ import {
   buildMutationAuditReceipt,
 } from "@/lib/admin/audit-contract";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
+import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
 
 export const runtime = "nodejs";
 
@@ -41,10 +43,13 @@ type ReviewRpcResult = {
   message: string;
   audit_id: string | null;
 };
+type ReviewRpcResults = ReviewRpcResult[];
 
 
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_NOTE_LENGTH = 500;
+const MAX_REVIEW_REQUEST_BYTES = 4 * 1024;
 const REQUEST_SELECT = [
   "id",
   "user_id",
@@ -73,6 +78,52 @@ const REQUEST_SELECT = [
 function normalizeId(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRestaurantRequestStatus(value: unknown): value is RestaurantRequestReviewRow["status"] {
+  return value === null || value === "pending" || value === "approved" || value === "rejected";
+}
+
+function isRestaurantRequestReviewRow(value: unknown): value is RestaurantRequestReviewRow {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.user_id === "string"
+    && typeof value.restaurant_name === "string"
+    && (value.origin_address === null || typeof value.origin_address === "string")
+    && (value.road_address === null || typeof value.road_address === "string")
+    && (value.jibun_address === null || typeof value.jibun_address === "string")
+    && (value.english_address === null || typeof value.english_address === "string")
+    && (value.phone === null || typeof value.phone === "string")
+    && (value.categories === null || isStringArray(value.categories))
+    && (value.recommendation_reason === null || typeof value.recommendation_reason === "string")
+    && (value.youtube_link === null || typeof value.youtube_link === "string")
+    && (value.lat === null || typeof value.lat === "number")
+    && (value.lng === null || typeof value.lng === "number")
+    && (value.geocoding_success === null || typeof value.geocoding_success === "boolean")
+    && isRestaurantRequestStatus(value.status)
+    && (value.reviewed_by_admin_id === null || typeof value.reviewed_by_admin_id === "string")
+    && (value.reviewed_at === null || typeof value.reviewed_at === "string")
+    && (value.admin_note === null || typeof value.admin_note === "string")
+    && (value.rejection_reason === null || typeof value.rejection_reason === "string")
+    && (value.review_audit_id === null || (typeof value.review_audit_id === "string" && UUID_PATTERN.test(value.review_audit_id)))
+    && typeof value.created_at === "string"
+    && (value.updated_at === null || typeof value.updated_at === "string");
+}
+
+function parseReviewRpcResults(value: unknown): ReviewRpcResults | null {
+  if (!Array.isArray(value) || value.length !== 1) return null;
+  const [result] = value;
+  if (!isRecord(result)) return null;
+  if (typeof result.success !== "boolean" || typeof result.message !== "string") return null;
+  if (result.audit_id !== null && (typeof result.audit_id !== "string" || !UUID_PATTERN.test(result.audit_id))) return null;
+  return [{ success: result.success, message: result.message, audit_id: result.audit_id }];
+}
 
 function normalizeText(value: unknown) {
   if (typeof value !== "string") return null;
@@ -90,6 +141,12 @@ function normalizeAction(value: unknown): ReviewAction | null {
 function conflict(message: string) {
   return NextResponse.json({ success: false, message }, { status: 409 });
 }
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+  const response = NextResponse.json(body, init);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
 
 function getSafeReviewSuccessMessage(action: ReviewAction) {
   return action === "approve"
@@ -107,7 +164,17 @@ function getSafeReviewFailureMessage(message: string) {
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) {
+      auth.response.headers.set("Cache-Control", "no-store");
+      return auth.response;
+    }
+
+    if (!isTrustedSameOriginMutation(request)) {
+      return noStoreJson(
+        { success: false, message: "요청을 처리할 수 없습니다." },
+        { status: 403 },
+      );
+    }
 
     const { requestId } = await context.params;
     const id = normalizeId(decodeURIComponent(requestId || ""));
@@ -118,8 +185,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const action = normalizeAction(body?.action);
+    const requestBody = await readBoundedJsonRequest(request, MAX_REVIEW_REQUEST_BYTES);
+    if (!requestBody.ok) {
+      return noStoreJson(
+        { success: false, message: "승인 또는 반려 중 하나를 선택해 주세요." },
+        { status: 400 },
+      );
+    }
+
+    const rawBody = requestBody.value;
+    const body = isRecord(rawBody) ? rawBody : {};
+    const action = normalizeAction(body.action);
     if (!action) {
       return NextResponse.json(
         { success: false, message: "승인 또는 반려 중 하나를 선택해 주세요." },
@@ -127,9 +203,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const adminNote = normalizeText(body?.adminNote ?? body?.admin_note);
+    const adminNote = normalizeText(body.adminNote ?? body.admin_note);
     const rejectionReason = normalizeText(
-      body?.rejectionReason ?? body?.rejection_reason,
+      body.rejectionReason ?? body.rejection_reason,
     );
     if (action === "reject" && !rejectionReason) {
       return NextResponse.json(
@@ -140,20 +216,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const supabase = createSupabaseServiceRoleClient();
     const { data: reviewResultData, error: reviewError } = await supabase
-      .rpc("review_restaurant_request" as never, {
+      .rpc("review_restaurant_request", {
         p_request_id: id,
         p_admin_user_id: auth.userId,
         p_action: action,
         p_admin_note: adminNote,
         p_rejection_reason: action === "reject" ? rejectionReason : null,
-      } as never)
-      .returns<ReviewRpcResult>();
+      })
+      .overrideTypes<ReviewRpcResults, { merge: false }>();
 
     if (reviewError) throw reviewError;
 
-    const reviewResult = Array.isArray(reviewResultData)
-      ? reviewResultData[0]
-      : reviewResultData;
+    const [reviewResult] = parseReviewRpcResults(reviewResultData) ?? [];
     if (!reviewResult?.success || !reviewResult.audit_id) {
       const safeFailure = getSafeReviewFailureMessage(reviewResult?.message ?? "");
       if (safeFailure.status === 404) {
@@ -164,14 +238,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const auditId = reviewResult.audit_id;
     const { data: reviewedRequest, error: readbackError } = await supabase
-      .from("restaurant_requests" as never)
+      .from("restaurant_requests")
       .select(REQUEST_SELECT)
       .eq("id", id)
       .maybeSingle()
-      .returns<RestaurantRequestReviewRow>();
+      .overrideTypes<RestaurantRequestReviewRow, { merge: false }>();
 
     if (readbackError) throw readbackError;
-    if (!reviewedRequest || reviewedRequest.review_audit_id !== auditId) {
+    if (!isRestaurantRequestReviewRow(reviewedRequest) || reviewedRequest.review_audit_id !== auditId) {
       return conflict("검토 상태를 확인하지 못했습니다. 새로고침 후 다시 확인해 주세요.");
     }
 

@@ -31,7 +31,7 @@ export async function GET(_request: Request, context: Context) {
 
         return NextResponse.json(data);
     } catch (error) {
-        console.error('[dashboard/video] failed:', error);
+        console.error('[dashboard/video] failed:');
         return NextResponse.json(
             { error: 'Failed to build dashboard video detail.' },
             { status: 500 },

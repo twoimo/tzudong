@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "changeroa/StyleGallery",
+    "commit": "775430bbaf4ee208a642220f440f6926d79c90a3",
+    "licenseStatus": "unlicensed",
+    "usageBoundary": "High-level spatial questions only; no upstream code, CSS, prose, names, tests, assets, screenshots, labels, or distinctive sequences copied or translated."
+  },
+  "entries": [
+    {
+      "sourcePath": "guides/layout-brief.md",
+      "sourceUse": "Question only: which region owns height and scrolling?",
+      "targetSurface": "public home map, mobile controls, detail/list sheets",
+      "targetPaths": [
+        "apps/web/components/home/home-map-container.tsx",
+        "apps/web/components/home/MobileControlOverlay.tsx",
+        "apps/web/components/home/SubmissionFloatingButton.tsx",
+        "apps/web/components/map/naver-map-surface.tsx"
+      ],
+      "rationale": "Prevent overlapping map, sheet, and fixed-control regions from competing for viewport and scroll ownership.",
+      "adaptation": "Tzudong-local map-canvas-none and explicit desktop/mobile task owners, safe-area offsets, focus transfer/restore, and one intentional horizontal category reel.",
+      "ownershipBoundary": "Tzudong public map runtime; parent selection, privacy location gate, map lifecycle, and dynamic imports remain authoritative.",
+      "rejectedAlternatives": ["global body scroll", "eager map loading", "new layout vocabulary"],
+      "verification": ["stylegallery-primitive-taxonomy test", "320px shrink contract", "public/admin separation source contract"]
+    },
+    {
+      "sourcePath": "recipes/index.md",
+      "sourceUse": "Question only: what is the workspace task and which pane owns overflow?",
+      "targetSurface": "shared application shell and admin module workspace",
+      "targetPaths": [
+        "apps/web/components/layout/MainLayout.tsx",
+        "apps/web/components/layout/OverlayLayout.tsx",
+        "apps/web/components/admin/AdminConsoleOverview.tsx",
+        "apps/web/components/admin/AdminEmbeddedModuleShell.tsx"
+      ],
+      "rationale": "Keep skip navigation, sidebar, active canvas, and module actions reachable without nested document overflow.",
+      "adaptation": "Focusable local skip targets, bounded grid rows, shrink-safe flex children, one admin-canvas task owner, and existing module owner handoff.",
+      "ownershipBoundary": "Tzudong admin routing/auth/query state and lazy module registry remain unchanged.",
+      "rejectedAlternatives": ["global admin scroll owner", "visual DOM reordering", "new design-system dependency"],
+      "verification": ["admin-console-uiux source test", "dynamic import/source-order contracts"]
+    },
+    {
+      "sourcePath": "recipes/index.md",
+      "sourceUse": "Question only: how should list/detail and two-pane work reflow under stress?",
+      "targetSurface": "admin overview, trend proposal list/detail, overlay panel",
+      "targetPaths": [
+        "apps/web/components/admin/AdminOverviewDashboard.tsx",
+        "apps/web/components/admin/TrendProposalQueue.tsx",
+        "apps/web/components/layout/OverlayPagePanel.tsx"
+      ],
+      "rationale": "Long Korean evidence, hashes, and dense proposal lists must not create hidden nested scroll owners or horizontal document overflow.",
+      "adaptation": "Local minmax and min-width guards, bounded desktop/mobile task owners, anywhere wrapping, and preserved guarded action order.",
+      "ownershipBoundary": "Tzudong map ownership, route/query contracts, and Preview-Confirm-Apply-Readback-Audit workflow remain authoritative.",
+      "rejectedAlternatives": ["fixed nonshrinking pane widths", "nested list/detail scrolling", "workflow reordering"],
+      "verification": ["admin-evaluation-responsive-css test", "guarded workflow source-order contract"]
+    },
+    {
+      "sourcePath": "guides/layout-brief.md",
+      "sourceUse": "Question only: how do chat, canvas, and readback divide responsibility across widths?",
+      "targetSurface": "admin storyboard chat/canvas/readback workspace",
+      "targetPaths": [
+        "apps/web/components/admin/storyboard/AdminStoryboardGenerator.tsx",
+        "apps/web/components/admin/storyboard/StoryboardCanvasShell.tsx"
+      ],
+      "rationale": "Preserve readable long RAG traces and a logical chat-before-canvas focus path while retaining desktop productivity.",
+      "adaptation": "Tzudong-local split/stack primitives, narrow parent-owned scrolling, shrink/wrap guards, keyboard-visible horizontal tool rails, and reduced-motion complete text.",
+      "ownershipBoundary": "Tzudong async jobs, RAG steer/trace, provider provenance, auth, APIs, and lazy loading remain unchanged.",
+      "rejectedAlternatives": ["eager storyboard loading", "API lifecycle redesign", "CSS visual reorder of semantic DOM"],
+      "verification": ["admin-storyboard-generator test", "admin-console storyboard source contract"]
+    }
+  ]
+}

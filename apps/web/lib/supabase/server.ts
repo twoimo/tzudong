@@ -1,16 +1,30 @@
-'use server';
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/integrations/supabase/types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+type CookieStore = {
+    getAll(): { name: string; value: string }[];
+    set(name: string, value: string, options: CookieOptions): void;
+};
 
-export async function createClient() {
-    const cookieStore = await cookies();
+export function getSupabaseServerConfig(env: NodeJS.ProcessEnv = process.env) {
+    const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-    return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    if (!url || !anonKey) {
+        throw new Error('Supabase server configuration is required.');
+    }
+
+    return { url, anonKey };
+}
+
+export function createClientForCookieStore(
+    cookieStore: CookieStore,
+    env: NodeJS.ProcessEnv = process.env,
+) {
+    const { url, anonKey } = getSupabaseServerConfig(env);
+
+    return createServerClient<Database>(url, anonKey, {
         cookies: {
             getAll() {
                 return cookieStore.getAll();
@@ -26,4 +40,8 @@ export async function createClient() {
             },
         },
     });
+}
+
+export async function createClient() {
+    return createClientForCookieStore(await cookies());
 }

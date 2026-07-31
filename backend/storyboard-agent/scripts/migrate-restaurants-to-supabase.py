@@ -6,12 +6,23 @@ Usage:
     python migrate-restaurants-to-supabase.py
 """
 
-import os
 import sys
 import json
-from pathlib import Path
 from datetime import datetime
 from decimal import Decimal
+from pathlib import Path
+
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(CANONICAL_BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from supabase import create_client, Client
@@ -33,10 +44,6 @@ LOCAL_DB = {
     "user": "postgres",
     "password": "password",
 }
-
-# Supabase 설정
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 
 def get_local_data():
@@ -142,13 +149,13 @@ def create_supabase_table(supabase: Client):
         result = supabase.table("restaurants").select("id").limit(1).execute()
         print("✅ restaurants 테이블이 이미 존재합니다")
         return True
-    except Exception as e:
-        if "does not exist" in str(e) or "relation" in str(e).lower():
+    except Exception as error:
+        if "does not exist" in str(error) or "relation" in str(error).lower():
             print("❌ restaurants 테이블이 없습니다. 위 SQL을 먼저 실행해주세요.")
             return False
         else:
             # 다른 에러 (권한 등) - 테이블은 존재할 수 있음
-            print(f"⚠️ 테이블 확인 중 오류: {e}")
+            print("⚠️ 테이블 확인 중 오류")
             return True
 
 
@@ -173,8 +180,8 @@ def migrate_data(supabase: Client, rows: list):
                 .execute()
             )
             success += len(batch)
-        except Exception as e:
-            print(f"\n⚠️ 배치 오류 (인덱스 {i}): {e}")
+        except Exception:
+            print(f"\n⚠️ 배치 오류 (인덱스 {i})")
             errors += len(batch)
 
             # 개별 삽입 시도
@@ -185,8 +192,8 @@ def migrate_data(supabase: Client, rows: list):
                     ).execute()
                     success += 1
                     errors -= 1
-                except Exception as e2:
-                    print(f"  - 개별 오류 (trace_id={row.get('trace_id')}): {e2}")
+                except Exception:
+                    print(f"  - 개별 오류 (trace_id={row.get('trace_id')})")
 
     print(f"\n✅ 마이그레이션 완료: {success}개 성공, {errors}개 실패")
 
@@ -216,8 +223,8 @@ def verify_migration(supabase: Client, original_count: int):
                 f"  - {row.get('approved_name') or row.get('origin_name')}: {row.get('status')}"
             )
 
-    except Exception as e:
-        print(f"❌ 검증 오류: {e}")
+    except Exception:
+        print("❌ 검증 오류")
 
 
 def main():
@@ -226,12 +233,17 @@ def main():
     print("=" * 60)
 
     # Supabase 클라이언트 초기화
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("❌ Supabase REST configuration invalid.")
         return
 
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}")
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(credentials.url, credentials.service_role_key)
+    except Exception:
+        print("❌ Supabase REST client initialization failed.")
+        return
 
     # 1. 테이블 생성 확인
     if not create_supabase_table(supabase):
@@ -258,4 +270,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        print("❌ Migration failed.")
+        raise SystemExit(1)

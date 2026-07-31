@@ -8,6 +8,14 @@ import json
 import sys
 from pathlib import Path
 from collections import OrderedDict
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
 
 
 def reorder_category_item(item: dict) -> dict:
@@ -41,7 +49,10 @@ def migrate_rule_results(data_path: Path):
     rule_dir = data_path / "evaluation" / "rule_results"
 
     if not rule_dir.exists():
-        print(f"[ERROR] rule_results 폴더 없음: {rule_dir}")
+        print(
+            "[ERROR] operation=rule_key_reordering_input_unavailable "
+            "code=RULE_RESULTS_DIRECTORY_MISSING"
+        )
         return
 
     files = list(rule_dir.glob("*.jsonl"))
@@ -84,8 +95,11 @@ def migrate_rule_results(data_path: Path):
             if updated % 100 == 0:
                 print(f"  {updated}개 업데이트...")
 
-        except Exception as e:
-            print(f"[WARN] 오류: {f.name} - {e}")
+        except Exception as error:
+            print(
+                f"[WARN] operation=rule_key_reordering_file_failed "
+                f"error={safe_error_name(error)} code=RULE_RESULTS_FILE_REORDER_FAILED"
+            )
 
     print(f"\n[OK] 키 순서 정리 완료!")
     print(f"   업데이트: {updated}개")

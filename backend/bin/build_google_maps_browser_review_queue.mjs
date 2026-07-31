@@ -11,7 +11,8 @@ import { config } from 'dotenv';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { createVerifiedPgClient } from '../utils/verified-pg-client.mjs';
+import { logSafeError } from '../utils/privacy-log.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const BACKEND_ROOT = path.resolve(path.dirname(__filename), '..');
@@ -76,22 +77,6 @@ function parseArgs(argv) {
   return args;
 }
 
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
-
-function getPgClient() {
-  return new pg.Client({
-    host: requireEnv('SUPABASE_DB_HOST'),
-    port: Number(requireEnv('SUPABASE_DB_PORT')),
-    database: requireEnv('SUPABASE_DB_NAME'),
-    user: requireEnv('SUPABASE_DB_USER'),
-    password: requireEnv('SUPABASE_DB_PASSWORD'),
-    ssl: { rejectUnauthorized: false },
-  });
-}
 
 function truthy(value) {
   return value === true || value === 'true' || value === 1 || value === '1';
@@ -209,7 +194,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   await fs.mkdir(args.out, { recursive: true });
 
-  const client = getPgClient();
+  const client = await createVerifiedPgClient({ applicationName: 'tzudong-google-maps-review-queue' });
   await client.connect();
   let rows;
   try {
@@ -258,4 +243,8 @@ async function main() {
   else console.log(`Wrote ${args.out}\nreviewQueue=${summary.review_queue_count_written}/${summary.review_queue_count_unbounded} googleApiUsed=false`);
 }
 
-main().catch((error) => { console.error(error.stack || error.message || String(error)); process.exitCode = 1; });
+main().catch((error) => {
+  process.stderr.write('build_google_maps_browser_review_queue failed: ');
+  logSafeError(error);
+  process.exitCode = 1;
+});

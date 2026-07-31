@@ -16,7 +16,7 @@ export default function GlobalMapError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error('[GlobalMapError]', error);
+        console.error('[GlobalMapError]');
     }, [error]);
 
     return (

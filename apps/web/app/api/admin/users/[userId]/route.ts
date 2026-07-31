@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { buildAdminUserAuditRequestContext, recordAdminUserAuditEvent } from '@/lib/admin/user-audit';
+import {
+  ADMIN_USER_AUDIT_REASON_CODES,
+  buildAdminUserAuditRequestContext,
+  recordAdminUserAuditEvent,
+  type AdminUserAuditPayload,
+} from '@/lib/admin/user-audit';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { isBannedUntilActive, validateAdminUserConfirmation } from '@/lib/admin/user-management-guards';
 import {
@@ -9,21 +14,92 @@ import {
   buildMutationAuditReceipt,
 } from '@/lib/admin/audit-contract';
 
-import { getAdminSafeErrorCode, getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
+import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 export const runtime = 'nodejs';
 
 const DISABLE_BAN_DURATION = '876600h';
+const MAX_ADMIN_USER_MUTATION_REQUEST_BYTES = 64 * 1024;
 
 type RouteContext = {
   params: Promise<{ userId: string }>;
 };
+type AdminUserMutationBody = {
+  accountStatus?: unknown;
+  confirmation?: unknown;
+  profile?: {
+    avatarUrl?: unknown;
+    nickname?: unknown;
+    username?: unknown;
+  } | null;
+  role?: unknown;
+};
 
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
+}
 function toStringValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function toAuditErrorCode(error: unknown) {
-  return getAdminSafeErrorCode(error, 'admin-user-update-failed');
+type AdminUserMutationAction = Exclude<AdminUserAuditPayload['action'], 'admin_user_created'>;
+type AdminUserAuditStatus = NonNullable<AdminUserAuditPayload['status']>;
+type CanonicalAdminUserAuditPayload = Omit<
+  AdminUserAuditPayload,
+  'action' | 'status' | 'reasonCode' | 'errorCode'
+> & {
+  action: AdminUserMutationAction;
+  status: AdminUserAuditStatus;
+};
+
+const ADMIN_USER_AUDIT_REASON_CODES_BY_ACTION = {
+  admin_user_profile_updated: {
+    intent: 'ADMIN_USER_PROFILE_UPDATE_INTENT',
+    applied: 'ADMIN_USER_PROFILE_UPDATE_APPLIED',
+    failed: 'ADMIN_USER_PROFILE_UPDATE_FAILED',
+  },
+  admin_user_role_granted: {
+    intent: 'ADMIN_USER_ROLE_GRANT_INTENT',
+    applied: 'ADMIN_USER_ROLE_GRANT_APPLIED',
+    failed: 'ADMIN_USER_ROLE_GRANT_FAILED',
+  },
+  admin_user_role_revoked: {
+    intent: 'ADMIN_USER_ROLE_REVOKE_INTENT',
+    applied: 'ADMIN_USER_ROLE_REVOKE_APPLIED',
+    failed: 'ADMIN_USER_ROLE_REVOKE_FAILED',
+  },
+  admin_user_disabled: {
+    intent: 'ADMIN_USER_DISABLE_INTENT',
+    applied: 'ADMIN_USER_DISABLE_APPLIED',
+    failed: 'ADMIN_USER_DISABLE_FAILED',
+  },
+  admin_user_reactivated: {
+    intent: 'ADMIN_USER_REACTIVATE_INTENT',
+    applied: 'ADMIN_USER_REACTIVATE_APPLIED',
+    failed: 'ADMIN_USER_REACTIVATE_FAILED',
+  },
+} satisfies Record<
+  AdminUserMutationAction,
+  Record<AdminUserAuditStatus, AdminUserAuditPayload['reasonCode']>
+>;
+
+function buildCanonicalAdminUserAuditPayload(
+  payload: CanonicalAdminUserAuditPayload,
+): AdminUserAuditPayload {
+  const reasonCode = ADMIN_USER_AUDIT_REASON_CODES_BY_ACTION[payload.action][payload.status];
+
+  if (!ADMIN_USER_AUDIT_REASON_CODES.includes(reasonCode)) {
+    throw new Error('관리자 사용자 감사 사유 코드가 유효하지 않습니다.');
+  }
+
+  if (payload.status === 'failed') {
+    return { ...payload, reasonCode, errorCode: reasonCode };
+  }
+
+  return { ...payload, reasonCode };
 }
 
 async function recordFailedAuditEvent(
@@ -32,35 +108,22 @@ async function recordFailedAuditEvent(
   payload: {
     actorUserId: string;
     targetUserId: string;
-    action: 'admin_user_profile_updated' | 'admin_user_role_granted' | 'admin_user_role_revoked' | 'admin_user_disabled' | 'admin_user_reactivated';
+    action: AdminUserMutationAction;
     preflightAuditId: string;
-    error: unknown;
-    afterState: Record<string, unknown>;
   },
 ) {
-  try {
-    const failedAuditId = await recordAdminUserAuditEvent(supabase, request, {
+  return recordAdminUserAuditEvent(
+    supabase,
+    request,
+    buildCanonicalAdminUserAuditPayload({
       actorUserId: payload.actorUserId,
       targetUserId: payload.targetUserId,
       action: payload.action,
-      reason: 'failed-admin-user-mutation',
-      beforeState: { preflightAuditId: payload.preflightAuditId },
-      afterState: payload.afterState,
       status: 'failed',
       correlationId: payload.preflightAuditId,
-      errorCode: toAuditErrorCode(payload.error),
-    });
-    return failedAuditId;
-  } catch (auditError) {
-    console.error('[admin/users] failed to record failed audit event', {
-      domain: 'admin_user_management',
-      action: payload.action,
-      step: 'failed-audit-record',
-      correlationId: payload.preflightAuditId,
-      errorName: getAdminSafeErrorName(auditError),
-    });
-    return null;
-  }
+      counts: { failed: 1 },
+    }),
+  );
 }
 
 async function getAllAdminUserIds(supabase: ReturnType<typeof createSupabaseServiceRoleClient>) {
@@ -98,16 +161,20 @@ async function applyAdminUserDbMutation(
   payload: {
     actorUserId: string;
     targetUserId: string;
-    action: 'admin_user_profile_updated' | 'admin_user_role_granted' | 'admin_user_role_revoked' | 'admin_user_disabled' | 'admin_user_reactivated';
-    reason: string;
-    beforeState: Record<string, unknown>;
-    afterState: Record<string, unknown>;
+    action: AdminUserMutationAction;
     correlationId: string;
     profile?: { username: string; nickname: string; avatarUrl: string | null } | null;
     nextRole?: 'admin' | 'user' | null;
     nextAccountStatus?: 'active' | 'disabled' | null;
   },
 ) {
+  const auditPayload = buildCanonicalAdminUserAuditPayload({
+    actorUserId: payload.actorUserId,
+    targetUserId: payload.targetUserId,
+    action: payload.action,
+    status: 'applied',
+    correlationId: payload.correlationId,
+  });
   const auditContext = buildAdminUserAuditRequestContext(request);
 
   const { data, error } = await supabase
@@ -115,9 +182,9 @@ async function applyAdminUserDbMutation(
       p_actor_user_id: payload.actorUserId,
       p_target_user_id: payload.targetUserId,
       p_action: payload.action,
-      p_reason: payload.reason,
-      p_before_state: payload.beforeState,
-      p_after_state: payload.afterState,
+      p_reason: auditPayload.reasonCode,
+      p_before_state: {},
+      p_after_state: {},
       p_correlation_id: payload.correlationId,
       p_profile: payload.profile
         ? {
@@ -140,17 +207,32 @@ async function applyAdminUserDbMutation(
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) {
+      auth.response.headers.set('Cache-Control', 'no-store');
+      return auth.response;
+    }
+
+    if (!isTrustedSameOriginMutation(request)) {
+      return noStoreJson({ error: '요청을 처리할 수 없습니다.' }, { status: 403 });
+    }
 
     const { userId } = await context.params;
     const targetUserId = decodeURIComponent(userId || '').trim();
     if (!targetUserId) {
-      return NextResponse.json({ error: '사용자 ID가 필요합니다.' }, { status: 400 });
+      return noStoreJson({ error: '사용자 ID가 필요합니다.' }, { status: 400 });
     }
 
-    const body = await request.json().catch(() => null);
+    const requestBody = await readBoundedJsonRequest(
+      request,
+      MAX_ADMIN_USER_MUTATION_REQUEST_BYTES,
+    );
+    if (!requestBody.ok) {
+      return noStoreJson({ error: '변경할 사용자 정보가 필요합니다.' }, { status: 400 });
+    }
+
+    const body = requestBody.value as AdminUserMutationBody | null;
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: '변경할 사용자 정보가 필요합니다.' }, { status: 400 });
+      return noStoreJson({ error: '변경할 사용자 정보가 필요합니다.' }, { status: 400 });
     }
 
     const nextRole = body.role === 'admin' || body.role === 'user' ? body.role : undefined;
@@ -171,33 +253,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     });
 
     if (confirmationError) {
-      return NextResponse.json({ error: confirmationError }, { status: 400 });
+      return noStoreJson({ error: confirmationError }, { status: 400 });
     }
 
     if (isSelfTarget && nextRole === 'user') {
-      return NextResponse.json({ error: '자기 자신의 관리자 권한은 회수할 수 없습니다.' }, { status: 400 });
+      return noStoreJson({ error: '자기 자신의 관리자 권한은 회수할 수 없습니다.' }, { status: 400 });
     }
 
     if (isSelfTarget && nextAccountStatus === 'disabled') {
-      return NextResponse.json({ error: '자기 자신의 계정은 비활성화할 수 없습니다.' }, { status: 400 });
+      return noStoreJson({ error: '자기 자신의 계정은 비활성화할 수 없습니다.' }, { status: 400 });
     }
 
     if (targetIsActiveAdmin && activeAdminUserIds.size <= 1 && (nextRole === 'user' || nextAccountStatus === 'disabled')) {
-      return NextResponse.json({ error: '마지막 활성 관리자 계정은 권한 회수 또는 비활성화할 수 없습니다.' }, { status: 400 });
+      return noStoreJson({ error: '마지막 활성 관리자 계정은 권한 회수 또는 비활성화할 수 없습니다.' }, { status: 400 });
     }
 
     if (!body.profile && !nextRole && !nextAccountStatus) {
-      return NextResponse.json({ error: '적용할 변경 사항이 없습니다.' }, { status: 400 });
+      return noStoreJson({ error: '적용할 변경 사항이 없습니다.' }, { status: 400 });
     }
 
-    const beforeState = {
-      isAdmin: targetIsAdmin,
-      isActiveAdmin: targetIsActiveAdmin,
-      activeAdminCount: activeAdminUserIds.size,
-      requestedProfileChange: Boolean(body.profile),
-      requestedRole: nextRole ?? null,
-      requestedAccountStatus: nextAccountStatus ?? null,
-    };
     const auditIds: string[] = [];
     let latestPreflightAuditId: string | null = null;
 
@@ -208,18 +282,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const avatarUrl = profile.avatarUrl === null ? null : toStringValue(profile.avatarUrl);
 
       if (!nickname || !username) {
-        return NextResponse.json({ error: '닉네임과 사용자명을 모두 입력해 주세요.' }, { status: 400 });
+        return noStoreJson({ error: '닉네임과 사용자명을 모두 입력해 주세요.' }, { status: 400 });
       }
 
-      const auditId = await recordAdminUserAuditEvent(supabase, request, {
-        actorUserId: auth.userId,
-        targetUserId,
-        action: 'admin_user_profile_updated',
-        reason: toStringValue(body.reason) || 'preflight-profile-update',
-        beforeState,
-        afterState: { nickname, username, avatarUrl: avatarUrl || null },
-        status: 'intent',
-      });
+      const auditId = await recordAdminUserAuditEvent(
+        supabase,
+        request,
+        buildCanonicalAdminUserAuditPayload({
+          actorUserId: auth.userId,
+          targetUserId,
+          action: 'admin_user_profile_updated',
+          status: 'intent',
+          counts: { requested: 1 },
+          flags: { profileChanged: true },
+        }),
+      );
       auditIds.push(auditId);
       latestPreflightAuditId = auditId;
 
@@ -228,9 +305,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           actorUserId: auth.userId,
           targetUserId,
           action: 'admin_user_profile_updated',
-          reason: 'applied-profile-update',
-          beforeState: { preflightAuditId: auditId },
-          afterState: { nickname, username, avatarUrl: avatarUrl || null },
           correlationId: auditId,
           profile: { nickname, username, avatarUrl: avatarUrl || null },
         });
@@ -241,25 +315,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           targetUserId,
           action: 'admin_user_profile_updated',
           preflightAuditId: auditId,
-          error: mutationError,
-          afterState: { nickname, username, avatarUrl: avatarUrl || null },
         });
-        if (failedAuditId) auditIds.push(failedAuditId);
+        auditIds.push(failedAuditId);
         throw mutationError;
       }
     }
 
     if (nextRole) {
       const action = nextRole === 'admin' ? 'admin_user_role_granted' : 'admin_user_role_revoked';
-      const auditId = await recordAdminUserAuditEvent(supabase, request, {
-        actorUserId: auth.userId,
-        targetUserId,
-        action,
-        reason: toStringValue(body.reason) || 'preflight-role-change',
-        beforeState,
-        afterState: { role: nextRole, confirmation },
-        status: 'intent',
-      });
+      const auditId = await recordAdminUserAuditEvent(
+        supabase,
+        request,
+        buildCanonicalAdminUserAuditPayload({
+          actorUserId: auth.userId,
+          targetUserId,
+          action,
+          status: 'intent',
+          counts: { requested: 1 },
+          flags: { roleAdmin: nextRole === 'admin' },
+        }),
+      );
       auditIds.push(auditId);
       latestPreflightAuditId = auditId;
 
@@ -268,9 +343,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           actorUserId: auth.userId,
           targetUserId,
           action,
-          reason: 'applied-role-change',
-          beforeState: { preflightAuditId: auditId },
-          afterState: { role: nextRole },
           correlationId: auditId,
           nextRole,
         });
@@ -281,25 +353,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           targetUserId,
           action,
           preflightAuditId: auditId,
-          error: mutationError,
-          afterState: { role: nextRole },
         });
-        if (failedAuditId) auditIds.push(failedAuditId);
+        auditIds.push(failedAuditId);
         throw mutationError;
       }
     }
 
     if (nextAccountStatus) {
       const action = nextAccountStatus === 'disabled' ? 'admin_user_disabled' : 'admin_user_reactivated';
-      const auditId = await recordAdminUserAuditEvent(supabase, request, {
-        actorUserId: auth.userId,
-        targetUserId,
-        action,
-        reason: toStringValue(body.reason) || 'preflight-account-status-change',
-        beforeState,
-        afterState: { accountStatus: nextAccountStatus, confirmation },
-        status: 'intent',
-      });
+      const auditId = await recordAdminUserAuditEvent(
+        supabase,
+        request,
+        buildCanonicalAdminUserAuditPayload({
+          actorUserId: auth.userId,
+          targetUserId,
+          action,
+          status: 'intent',
+          counts: { requested: 1 },
+          flags: { accountDisabled: nextAccountStatus === 'disabled' },
+        }),
+      );
       auditIds.push(auditId);
       latestPreflightAuditId = auditId;
 
@@ -314,9 +387,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             actorUserId: auth.userId,
             targetUserId,
             action,
-            reason: 'applied-account-status-change',
-            beforeState: { preflightAuditId: auditId },
-            afterState: { accountStatus: nextAccountStatus },
             correlationId: auditId,
             nextAccountStatus,
           });
@@ -341,10 +411,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           targetUserId,
           action,
           preflightAuditId: auditId,
-          error: mutationError,
-          afterState: { accountStatus: nextAccountStatus },
         });
-        if (failedAuditId) auditIds.push(failedAuditId);
+        auditIds.push(failedAuditId);
         throw mutationError;
       }
     }
@@ -352,7 +420,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const preflightAuditId = latestPreflightAuditId ?? auditIds[0] ?? null;
     const readbackAuditId = auditIds[auditIds.length - 1] ?? preflightAuditId;
 
-    return NextResponse.json({
+    return noStoreJson({
       success: true,
       auditIds,
       audit: buildMutationAuditReceipt({
@@ -375,6 +443,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       step: 'unexpected',
       errorName: getAdminSafeErrorName(error),
     });
-    return NextResponse.json({ error: '사용자 계정 변경 중 오류가 발생했습니다.' }, { status: 500 });
+    return noStoreJson({ error: '사용자 계정 변경 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

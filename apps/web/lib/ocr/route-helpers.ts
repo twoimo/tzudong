@@ -1,20 +1,9 @@
-import type { OcrAiRuntimeConfigCandidate, OcrCredentialCandidate, OcrRoutingMode, OcrRoutingProvider } from '@/lib/ocr/runtime-config';
-import {
-  buildReceiptOcrEnvelope,
-  flattenReceiptOcrEnvelope,
-  type ReceiptOcrEnvelope,
-} from '@/lib/ocr/receipt-normalization';
-import { findOcrRestaurantMatches, type OcrRestaurantLookupStats, type RestaurantMatchRow, type SelectedRestaurantContext } from '@/lib/ocr/restaurant-matching';
-import {
-  isLegacyRawOcrCacheMetadata,
-  RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-  RECEIPT_OCR_RAW_CACHE_KIND,
-  type OcrCacheMetadata,
-} from '@/lib/ocr/cache-version';
-import type { ReceiptOcrAttempt, ReceiptOcrData } from '@/lib/ocr/types';
+import type { OcrAiRuntimeConfigCandidate, OcrCredentialCandidate, OcrRoutingMode } from '@/lib/ocr/runtime-config';
+import type { ReceiptOcrEnvelope } from '@/lib/ocr/receipt-normalization';
+import type { OcrRestaurantLookupStats, RestaurantMatchRow, SelectedRestaurantContext } from '@/lib/ocr/restaurant-matching';
+import { RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION } from '@/lib/ocr/cache-version';
 
 export type OcrSuccessLogMetadata = {
-  cache_kind: typeof RECEIPT_OCR_RAW_CACHE_KIND;
   file_size: number;
   compressed_size: number;
   savings: string;
@@ -26,15 +15,12 @@ export type OcrSuccessLogMetadata = {
   extraction_schema_version: typeof RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION;
   routing_mode: OcrRoutingMode;
   normalization_version: string;
-  credential_source: string;
   fallback_used: boolean;
   force_refresh: boolean;
-  model_attempts: ReceiptOcrEnvelope['raw']['attempts'];
-  raw_ocr_result: ReceiptOcrEnvelope['raw']['fields'];
-  normalized_ocr_result: ReceiptOcrEnvelope['normalized'];
-  field_trust: ReceiptOcrEnvelope['field_trust'];
+  attempt_count: number;
+  confidence: number;
+  needs_review: ReceiptOcrEnvelope['needs_review'];
   restaurant_lookup: OcrRestaurantLookupStats;
-  ocr_result: unknown;
 };
 
 function getFormString(formData: FormData, key: string): string {
@@ -127,15 +113,12 @@ export function buildOcrSuccessLogMetadata(input: {
   routingMode: OcrRoutingMode;
   normalizationVersion: string;
   extractionSchemaVersion?: typeof RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION;
-  credentialSource: string;
   fallbackUsed: boolean;
   forceRefresh: boolean;
   envelope: ReceiptOcrEnvelope;
-  ocrResult: unknown;
   restaurantLookupStats: OcrRestaurantLookupStats;
 }): OcrSuccessLogMetadata {
   return {
-    cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
     file_size: input.fileSize,
     compressed_size: input.compressedSize,
     savings: input.savings,
@@ -147,69 +130,11 @@ export function buildOcrSuccessLogMetadata(input: {
     extraction_schema_version: input.extractionSchemaVersion ?? RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
     routing_mode: input.routingMode,
     normalization_version: input.normalizationVersion,
-    credential_source: input.credentialSource,
     fallback_used: input.fallbackUsed,
     force_refresh: input.forceRefresh,
-    model_attempts: input.envelope.raw.attempts,
-    raw_ocr_result: input.envelope.raw.fields,
-    normalized_ocr_result: input.envelope.normalized,
-    field_trust: input.envelope.field_trust,
+    attempt_count: input.envelope.raw.attempts.length,
+    confidence: input.envelope.confidence,
+    needs_review: input.envelope.needs_review,
     restaurant_lookup: input.restaurantLookupStats,
-    ocr_result: input.ocrResult,
-  };
-}
-
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
-
-function isReceiptOcrData(value: unknown): value is ReceiptOcrData {
-  return isObject(value);
-}
-
-function isReceiptOcrAttempts(value: unknown): value is ReceiptOcrAttempt[] {
-  return Array.isArray(value);
-}
-
-function isOcrRoutingProvider(value: unknown): value is OcrRoutingProvider {
-  return value === 'gemini';
-}
-
-export async function buildOcrResponseFromRawCache(input: {
-  metadata: OcrCacheMetadata | null | undefined;
-  selectedRestaurantContext?: SelectedRestaurantContext | null;
-  lookupCallbacks?: ReturnType<typeof createRestaurantLookupCallbacks>;
-}): Promise<{
-  responsePayload: ReceiptOcrData & ReceiptOcrEnvelope;
-  envelope: ReceiptOcrEnvelope;
-  restaurantLookupStats: OcrRestaurantLookupStats;
-} | null> {
-  const metadata = input.metadata;
-  if (!metadata) return null;
-  const isRawV1 = metadata.cache_kind === RECEIPT_OCR_RAW_CACHE_KIND;
-  const isLegacyWithRaw = isLegacyRawOcrCacheMetadata(metadata);
-  if (!isRawV1 && !isLegacyWithRaw) return null;
-  if (!isOcrRoutingProvider(metadata.provider) || typeof metadata.model !== 'string') return null;
-  if (!isReceiptOcrData(metadata.raw_ocr_result)) return null;
-
-  const restaurantMatches = await findOcrRestaurantMatches({
-    receiptStoreName: typeof metadata.raw_ocr_result.store_name === 'string'
-      ? metadata.raw_ocr_result.store_name
-      : undefined,
-    selectedRestaurant: input.selectedRestaurantContext,
-    ...input.lookupCallbacks,
-  });
-  const envelope = buildReceiptOcrEnvelope({
-    provider: metadata.provider,
-    model: metadata.model,
-    attempts: isReceiptOcrAttempts(metadata.model_attempts) ? metadata.model_attempts : [],
-    data: metadata.raw_ocr_result,
-    matchedRestaurantCandidates: restaurantMatches.candidates,
-  });
-  return {
-    responsePayload: flattenReceiptOcrEnvelope(envelope),
-    envelope,
-    restaurantLookupStats: restaurantMatches.stats,
   };
 }

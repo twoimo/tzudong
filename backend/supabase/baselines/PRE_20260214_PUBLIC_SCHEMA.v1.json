@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "pre-20260214-public-schema",
+  "source": {
+    "repository": "twoimo/tzudong",
+    "commit": "c8503fcb479da047bfdedf52e50d1730753020cb",
+    "path": "backend/supabase/.temp/remote_public_schema.before_20260214.sql",
+    "sha256": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
+    "dumpedFromDatabaseVersion": "17.6",
+    "pgDumpVersion": "18.1"
+  },
+  "applicationTransform": {
+    "removeExactRawLines": [
+      {
+        "line": 5,
+        "text": "\\restrict CFkUqswlnIOxGIipA4VAbdNrwJZOQL0n0ud8ggBuRxMk3QqgorIxPnrRTjeg9VD"
+      },
+      {
+        "line": 13,
+        "text": "SET transaction_timeout = 0;"
+      },
+      {
+        "line": 26,
+        "text": "CREATE SCHEMA public;"
+      },
+      {
+        "line": 6374,
+        "text": "\\unrestrict CFkUqswlnIOxGIipA4VAbdNrwJZOQL0n0ud8ggBuRxMk3QqgorIxPnrRTjeg9VD"
+      }
+    ],
+    "expectedRemovalCount": 4,
+    "sha256": "e7295b8b4b429e8a1ce526eca5b00c0fd7d79e53d561ca27f8c9f554b87724ae",
+    "preservesPsqlDirectives": false
+  }
+}
