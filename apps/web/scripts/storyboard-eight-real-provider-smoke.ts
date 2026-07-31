@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
+import { safeCliErrorName } from './privacy-safe-cli-log.mjs';
 
 const SMOKE_FLAG = 'STORYBOARD_EIGHT_PRESET_REAL_PROVIDER_SMOKE';
 const CI_OVERRIDE_FLAG = 'STORYBOARD_ALLOW_CI_REAL_PROVIDER_SMOKE';
@@ -212,5 +213,5 @@ async function main() {
 }
 
 main().catch((error) => {
-  fail(error instanceof Error ? error.message : String(error));
+  fail(safeCliErrorName(error));
 });

@@ -19,6 +19,11 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Iterable
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
 
 try:
     import numpy as np
@@ -39,16 +44,29 @@ def read_input() -> dict[str, Any]:
     stdin = sys.stdin.read().strip() if not sys.stdin.closed else ""
     raw = stdin or os.environ.get("THUMBNAIL_RETRIEVAL_JSON", "").strip()
     if not raw:
-        raise ValueError("missing THUMBNAIL_RETRIEVAL_JSON payload")
-    parsed = json.loads(raw)
+        raise ValueError("thumbnail_retrieval_payload_missing")
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        raise ValueError("thumbnail_retrieval_payload_invalid") from None
     if not isinstance(parsed, dict):
-        raise ValueError("retrieval payload must be an object")
+        raise ValueError("thumbnail_retrieval_payload_invalid")
     return parsed
 
 
 def normalize(value: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w가-힣\s]", " ", value.lower())).strip()
 
+
+
+def classify_retrieval_failure(error: BaseException) -> str:
+    """Return an allowlisted fallback reason without exposing diagnostics."""
+    error_name = safe_error_name(error)
+    if error_name in {"ValueError", "TypeError", "JSONDecodeError"}:
+        return "invalid_json"
+    if error_name in {"ImportError", "ModuleNotFoundError"}:
+        return "missing_dependency"
+    return "unknown_error"
 
 def tokenize(value: str) -> list[str]:
     return [token for token in normalize(value).split() if len(token) >= 2]
@@ -254,7 +272,11 @@ def main() -> int:
             "Tzuyang host face expression reaction creator cutout mukbang thumbnail",
             query,
         ])
-    limit = max(1, min(int(payload.get("limit") or REFERENCE_LIMIT), 8))
+    try:
+        requested_limit = int(payload.get("limit") or REFERENCE_LIMIT)
+    except (TypeError, ValueError):
+        raise ValueError("thumbnail_retrieval_limit_invalid") from None
+    limit = max(1, min(requested_limit, 8))
     pool = Path(os.environ.get("THUMBNAIL_RETRIEVAL_LOCAL_POOL") or DEFAULT_POOL).resolve()
     candidates = load_candidates(pool)
     if not candidates:
@@ -298,9 +320,12 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except Exception as exc:
+    except Exception as error:
         print(json.dumps({
             "evidence": [],
-            "diagnostics": {"candidateCount": 0, "fallbackReason": "unknown_error", "error": str(exc)[:160]},
+            "diagnostics": {
+                "candidateCount": 0,
+                "fallbackReason": classify_retrieval_failure(error),
+            },
         }, ensure_ascii=False))
         raise SystemExit(0)

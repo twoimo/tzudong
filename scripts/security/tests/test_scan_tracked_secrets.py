@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for high-confidence tracked secret patterns."""
+"""Regression tests for high-confidence repository secret patterns."""
 from __future__ import annotations
 
 import importlib.util
@@ -29,6 +29,11 @@ class SecretPatternTests(unittest.TestCase):
             "JWT-like token": "SUPABASE_SERVICE_ROLE_KEY=" + "ey" + "J" + "a" * 20 + "." + "b" * 20 + "." + "c" * 20,
             "Google API key": "GEMINI_API_KEY=" + "AI" + "za" + "a" * 35,
             "OpenAI API key": "OPENAI_API_KEY=" + "sk" + "-" + "a" * 40,
+            "Anthropic API key": "ANTHROPIC_API_KEY=" + "sk" + "-ant-" + "a" * 40,
+            "AWS access key": "AWS_ACCESS_KEY_ID=" + "AK" + "IA" + "A" * 16,
+            "npm access token": "NPM_TOKEN=" + "npm" + "_" + "a" * 36,
+            "Google OAuth client secret": "GOOGLE_CLIENT_SECRET=" + "GOCSPX" + "-" + "a" * 28,
+            "SendGrid API key": "SENDGRID_API_KEY=" + "SG" + "." + "a" * 22 + "." + "b" * 43,
             "Slack token": "SLACK_BOT_TOKEN=" + "xox" + "b-" + "1" * 20,
             "Stripe webhook secret": "STRIPE_WEBHOOK_SECRET=" + "wh" + "sec_" + "a" * 24,
             "Private key block": "-----BEGIN " + "PRIVATE KEY-----",

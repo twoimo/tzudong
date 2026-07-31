@@ -1,0 +1,193 @@
+name: TS7 release evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id: { description: Sanitized release identifier, required: true, type: string }
+      main_sha: { description: Exact 40-character current main commit SHA, required: true, type: string }
+      release_tree: { description: Exact Git tree shared by main, develop, and data, required: true, type: string }
+      manifest_url: { description: Content-addressed canonical immutable release manifest URL, required: true, type: string }
+      manifest_sha256: { description: Detached SHA-256 of exact canonical manifest bytes, required: true, type: string }
+
+concurrency:
+  group: ts7-release-evidence-${{ inputs.release_id }}-${{ inputs.main_sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify-release-evidence:
+    if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && github.event_name == 'workflow_dispatch'
+    name: Verify exact release evidence
+    runs-on: ubuntu-latest
+    environment: production-release-evidence
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      initial_reason: ${{ steps.initial.outputs.reason }}
+      terminal_reason: ${{ steps.terminal.outputs.reason }}
+      initial_outcome: ${{ steps.initial.outcome }}
+      terminal_outcome: ${{ steps.terminal.outcome }}
+      release_id: ${{ steps.terminal.outputs.release_id }}
+      release_tree: ${{ steps.terminal.outputs.release_tree }}
+      receipt_sha256: ${{ steps.terminal.outputs.receipt_sha256 }}
+      bundle_sha256: ${{ steps.terminal.outputs.bundle_sha256 }}
+      expires_at: ${{ steps.terminal.outputs.expires_at }}
+      production_deployment_id: ${{ steps.terminal.outputs.production_deployment_id }}
+      immutable_host: ${{ steps.terminal.outputs.immutable_host }}
+      upload_outcome: ${{ steps.upload.outcome }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: initial
+        name: Independently validate initial public release state
+        env:
+          RELEASE_ID: ${{ inputs.release_id }}
+          EXPECTED_SHA: ${{ inputs.main_sha }}
+          EXPECTED_TREE: ${{ inputs.release_tree }}
+          MANIFEST_URL: ${{ inputs.manifest_url }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          DISPATCH_REF: ${{ github.ref }}
+          DISPATCH_SHA: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          REPOSITORY: ${{ github.repository }}
+          VERCEL_API_TOKEN: ${{ secrets.TS7_VERCEL_API_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.TS7_VERCEL_AUTOMATION_BYPASS_SECRET }}
+          TS7_TRANSITION_HMAC: ${{ secrets.TS7_TRANSITION_HMAC }}
+          TS7_TRANSITION_JOURNAL_ROOT: ${{ secrets.TS7_TRANSITION_JOURNAL_ROOT }}
+          SUPABASE_REVOCATION_RPC_URL: https://aqlcofblfxdrjhhdmarw.supabase.co/rest/v1/rpc/read_release_auth_revocation_by_operation
+          SUPABASE_REVOCATION_READ_CAPABILITY: ${{ secrets.TS7_SUPABASE_REVOCATION_READ_CAPABILITY }}
+          SUPABASE_REVOCATION_PUBLISHABLE_GATEWAY_KEY: ${{ vars.TS7_SUPABASE_REVOCATION_PUBLISHABLE_GATEWAY_KEY }}
+        run: node apps/web/scripts/verify-final-release-evidence.mjs
+      - id: terminal
+        name: Independently revalidate terminal public release state
+        if: steps.initial.outcome == 'success'
+        env:
+          RELEASE_ID: ${{ inputs.release_id }}
+          EXPECTED_SHA: ${{ inputs.main_sha }}
+          EXPECTED_TREE: ${{ inputs.release_tree }}
+          MANIFEST_URL: ${{ inputs.manifest_url }}
+          MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+          DISPATCH_REF: ${{ github.ref }}
+          DISPATCH_SHA: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          REPOSITORY: ${{ github.repository }}
+          VERCEL_API_TOKEN: ${{ secrets.TS7_VERCEL_API_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.TS7_VERCEL_AUTOMATION_BYPASS_SECRET }}
+          TS7_TRANSITION_HMAC: ${{ secrets.TS7_TRANSITION_HMAC }}
+          TS7_TRANSITION_JOURNAL_ROOT: ${{ secrets.TS7_TRANSITION_JOURNAL_ROOT }}
+          SUPABASE_REVOCATION_RPC_URL: https://aqlcofblfxdrjhhdmarw.supabase.co/rest/v1/rpc/read_release_auth_revocation_by_operation
+          SUPABASE_REVOCATION_READ_CAPABILITY: ${{ secrets.TS7_SUPABASE_REVOCATION_READ_CAPABILITY }}
+          SUPABASE_REVOCATION_PUBLISHABLE_GATEWAY_KEY: ${{ vars.TS7_SUPABASE_REVOCATION_PUBLISHABLE_GATEWAY_KEY }}
+          FINAL_BUNDLE_PATH: ${{ runner.temp }}/ts7-release-evidence.json
+        run: node apps/web/scripts/verify-final-release-evidence.mjs
+      - id: verify-bundle-digest
+        name: Verify final bundle digest before retention
+        if: steps.terminal.outcome == 'success'
+        env:
+          BUNDLE_PATH: ${{ runner.temp }}/ts7-release-evidence.json
+          BUNDLE_SHA256: ${{ steps.terminal.outputs.bundle_sha256 }}
+        run: |
+          test -f "$BUNDLE_PATH"
+          printf '%s *%s\n' "$BUNDLE_SHA256" "$(basename "$BUNDLE_PATH")" > "$BUNDLE_PATH.sha256"
+          (
+            cd "$(dirname "$BUNDLE_PATH")"
+            sha256sum --check --status "$(basename "$BUNDLE_PATH").sha256"
+          )
+      - id: upload
+        name: Upload strictly validated final bundle only
+        if: steps.verify-bundle-digest.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ts7-release-evidence-final-bundle
+          path: |
+            ${{ runner.temp }}/ts7-release-evidence.json
+            ${{ runner.temp }}/ts7-release-evidence.json.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  protected-final-live-health:
+    name: Strict protected final live health
+    needs: verify-release-evidence
+    if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success'
+    runs-on: ubuntu-latest
+    environment: production-release-evidence
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      outcome: ${{ steps.protected.outcome }}
+      reason: ${{ steps.protected.outputs.reason }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - id: protected
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          INITIAL_OUTCOME: ${{ needs.verify-release-evidence.outputs.initial_outcome }}
+          INITIAL_REASON: ${{ needs.verify-release-evidence.outputs.initial_reason }}
+          TERMINAL_OUTCOME: ${{ needs.verify-release-evidence.outputs.terminal_outcome }}
+          TERMINAL_REASON: ${{ needs.verify-release-evidence.outputs.terminal_reason }}
+          RELEASE_ID: ${{ needs.verify-release-evidence.outputs.release_id }}
+          RECEIPT_SHA256: ${{ needs.verify-release-evidence.outputs.receipt_sha256 }}
+          BUNDLE_SHA256: ${{ needs.verify-release-evidence.outputs.bundle_sha256 }}
+          EXPIRES_AT: ${{ needs.verify-release-evidence.outputs.expires_at }}
+          PRODUCTION_DEPLOYMENT_ID: ${{ needs.verify-release-evidence.outputs.production_deployment_id }}
+          IMMUTABLE_HOST: ${{ needs.verify-release-evidence.outputs.immutable_host }}
+          VERIFY_JOB_RESULT: ${{ needs.verify-release-evidence.result }}
+          UPLOAD_OUTCOME: ${{ needs.verify-release-evidence.outputs.upload_outcome }}
+          DISPATCH_SHA: ${{ github.sha }}
+          RELEASE_TREE: ${{ needs.verify-release-evidence.outputs.release_tree }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.TS7_VERCEL_AUTOMATION_BYPASS_SECRET }}
+        with:
+          script: |
+            const { verifyProtectedFinalHealth } = await import(`${process.env.GITHUB_WORKSPACE}/apps/web/scripts/verify-final-release-evidence.mjs`);
+            const result = await verifyProtectedFinalHealth({ env: process.env });
+            core.setOutput('reason', result.reason);
+            if (!result.passed) core.setFailed(`RELEASE_EVIDENCE_${result.reason}`);
+
+  publish-final-receipt:
+    name: Publish exact-head final receipt check
+    needs: [verify-release-evidence, protected-final-live-health]
+    if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success' && needs.protected-final-live-health.result == 'success' && needs.protected-final-live-health.outputs.outcome == 'success' && needs.protected-final-live-health.outputs.reason == 'VERIFIED'
+    # External prerequisite: restrict this environment's deployment branches to protected main only.
+    environment: protected-main-check-publisher
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          INITIAL_OUTCOME: ${{ needs.verify-release-evidence.outputs.initial_outcome }}
+          INITIAL_REASON: ${{ needs.verify-release-evidence.outputs.initial_reason }}
+          TERMINAL_OUTCOME: ${{ needs.verify-release-evidence.outputs.terminal_outcome }}
+          TERMINAL_REASON: ${{ needs.verify-release-evidence.outputs.terminal_reason }}
+          RELEASE_ID: ${{ needs.verify-release-evidence.outputs.release_id }}
+          RECEIPT_SHA256: ${{ needs.verify-release-evidence.outputs.receipt_sha256 }}
+          BUNDLE_SHA256: ${{ needs.verify-release-evidence.outputs.bundle_sha256 }}
+          EXPIRES_AT: ${{ needs.verify-release-evidence.outputs.expires_at }}
+          PRODUCTION_DEPLOYMENT_ID: ${{ needs.verify-release-evidence.outputs.production_deployment_id }}
+          IMMUTABLE_HOST: ${{ needs.verify-release-evidence.outputs.immutable_host }}
+          VERIFY_JOB_RESULT: ${{ needs.verify-release-evidence.result }}
+          UPLOAD_OUTCOME: ${{ needs.verify-release-evidence.outputs.upload_outcome }}
+          PROTECTED_LIVE_OUTCOME: ${{ needs.protected-final-live-health.outputs.outcome }}
+          PROTECTED_LIVE_REASON: ${{ needs.protected-final-live-health.outputs.reason }}
+          DISPATCH_SHA: ${{ github.sha }}
+          RELEASE_TREE: ${{ needs.verify-release-evidence.outputs.release_tree }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const { verifyFinalReceiptCheck } = await import(`${process.env.GITHUB_WORKSPACE}/apps/web/scripts/verify-final-release-evidence.mjs`);
+            await verifyFinalReceiptCheck({ env: process.env, github, context });

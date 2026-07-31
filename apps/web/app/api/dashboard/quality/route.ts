@@ -13,7 +13,7 @@ export async function GET() {
     const data = await getDashboardQuality(false);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('[dashboard/quality] failed:', error);
+    console.error('[dashboard/quality] failed:');
     return NextResponse.json(
       { error: 'Failed to build dashboard quality.' },
       { status: 500 },

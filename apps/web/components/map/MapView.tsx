@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import type { Restaurant } from "@/types/restaurant";
@@ -82,6 +82,32 @@ interface GoogleMarkerLike {
 interface MapMarkerEntry {
   marker: GoogleMarkerLike;
   restaurantId: string;
+}
+function normalizeMapViewError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  if (typeof error === "string") {
+    return new Error(error);
+  }
+
+  if (typeof error === "object" && error !== null) {
+    try {
+      const message = JSON.stringify(error);
+      if (message) {
+        return new Error(message);
+      }
+    } catch {
+      // Fall through to the safe generic message.
+    }
+  }
+
+  return new Error("알 수 없는 오류가 발생했습니다.");
+}
+
+function MapViewErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  return <MapViewErrorState error={normalizeMapViewError(error)} resetErrorBoundary={resetErrorBoundary} />;
 }
 
 interface MapViewProps {
@@ -199,7 +225,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         zoom: 14,
       });
     } catch (error) {
-      console.error('MapView: Error moving to restaurant position:', error);
+      console.error('MapView: Error moving to restaurant position:');
     }
   }, []);
 
@@ -258,7 +284,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         onRestaurantSelect(searchedRestaurant);
       }
     } catch (error) {
-      console.error('MapView: Error moving to searched restaurant position:', error);
+      console.error('MapView: Error moving to searched restaurant position:');
     }
   }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
 
@@ -305,7 +331,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       // 이동 완료 표시
       lastCenteredRestaurantId.current = selectedRestaurant.id;
     } catch (error) {
-      console.error('MapView: Error moving to selected restaurant:', error);
+      console.error('MapView: Error moving to selected restaurant:');
     }
   }, [selectedRestaurant, isLoaded, effectivePanelWidth]);
 
@@ -324,7 +350,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     try {
       setSafeBoundsQuery(buildMapViewBoundsQuery(mapBounds));
     } catch (error) {
-      console.warn('MapView: keeping previous valid bounds after bounds query failure', error);
+      console.warn('MapView: keeping previous valid bounds after bounds query failure');
     }
   }, [mapBounds]);
 
@@ -432,7 +458,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         }
       });
     } catch (error) {
-      console.error("Error creating Google Map:", error);
+      console.error("Error creating Google Map:");
     }
   }, [isLoaded]);
 
@@ -512,8 +538,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           content: markerElement,
           title: restaurant.name,
         });
-      } catch (error) {
-        console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id, error });
+      } catch {
+        console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id });
         return;
       }
 
@@ -608,7 +634,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }
 
   return (
-    <ErrorBoundary FallbackComponent={MapViewErrorState}>
+    <ErrorBoundary FallbackComponent={MapViewErrorFallback}>
       <div className="relative w-full h-full flex">
         <MapViewSurface
           isLoadingRestaurants={isLoadingRestaurants}

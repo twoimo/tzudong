@@ -16,7 +16,7 @@ export default function RootError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error('[RootError]', error);
+        console.error('[RootError]');
     }, [error]);
 
     return (

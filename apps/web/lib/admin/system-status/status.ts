@@ -101,9 +101,11 @@ async function probeReachability(
     }
 
     return { reachable: false, detail: `HTTP ${response.status}` };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown_error';
-    return { reachable: false, detail: message };
+  } catch {
+    return {
+      reachable: false,
+      detail: timeout.signal.aborted ? 'TIMEOUT' : 'REQUEST_FAILED',
+    };
   } finally {
     timeout.clear();
   }

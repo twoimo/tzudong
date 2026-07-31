@@ -1,3 +1,4 @@
+import { resolveAdBannerDestinationUrl, resolveAdBannerMediaUrl } from '@/lib/ad-banner-url';
 import type { AdBanner } from '@/types/ad-banner';
 
 export type PopupBannerCarouselSlide = {
@@ -13,6 +14,25 @@ export function hasPopupBannerPosterMedia(banner: AdBanner) {
 
 export function filterPopupBannersWithPosterMedia(banners: AdBanner[]) {
     return banners.filter(hasPopupBannerPosterMedia);
+}
+export function resolvePopupBannerForDisplay(banner: AdBanner): AdBanner | null {
+    const videoUrl = resolveAdBannerMediaUrl(banner.video_url);
+    const imageUrl = resolveAdBannerMediaUrl(banner.image_url);
+
+    if (!videoUrl && !imageUrl) return null;
+
+    return {
+        ...banner,
+        video_url: videoUrl,
+        image_url: imageUrl,
+        link_url: resolveAdBannerDestinationUrl(banner.link_url),
+    };
+}
+
+export function filterPopupBannersWithTrustedPosterMedia(banners: AdBanner[]) {
+    return banners
+        .map(resolvePopupBannerForDisplay)
+        .filter((banner): banner is AdBanner => banner !== null);
 }
 
 export function getPopupBannerInitialTrackIndex(count: number) {

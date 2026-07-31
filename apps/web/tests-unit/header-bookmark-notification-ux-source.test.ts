@@ -205,17 +205,25 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileOverlaySource).toContain('w-[min(calc(100vw-1rem),22rem)]');
   });
 
-  test('notification context exposes loading/error without breaking static no-op provider', () => {
+  test('notification context exposes owner-scoped loading/error snapshots', () => {
     const typeSource = source('types/notification.ts');
     const contextSource = source('contexts/NotificationContext.tsx');
-    const baseSource = source('contexts/NotificationContextBase.tsx');
 
     expect(typeSource).toContain('isLoading: boolean;');
     expect(typeSource).toContain('isError: boolean;');
-    expect(contextSource).toContain('const [isLoading, setIsLoading] = useState(false);');
-    expect(contextSource).toContain('const [isError, setIsError] = useState(false);');
-    expect(contextSource).toContain('setIsError(!isMissingNotificationsTable);');
-    expect(baseSource).toContain('isLoading: false');
-    expect(baseSource).toContain('isError: false');
+    expect(contextSource).toContain(
+      'const [notificationSnapshot, setNotificationSnapshot] = useState<NotificationSnapshot>(() => ({',
+    );
+    expect(contextSource).toContain('ownerId: userId,');
+    expect(contextSource).toContain('isLoading: Boolean(userId),');
+    expect(contextSource).toContain('notificationSnapshot.ownerId === userId');
+    expect(contextSource).toContain('commitOwnerSnapshot(scope');
+    expect(contextSource).toContain(
+      'const isLoading = currentOwnerSnapshot.isLoading;',
+    );
+    expect(contextSource).toContain(
+      'const isError = currentOwnerSnapshot.isError;',
+    );
+    expect(contextSource).not.toContain('isMissingNotificationsTable');
   });
 });

@@ -82,7 +82,7 @@ export function useAnnouncementsAdmin(enabled = true) {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('관리자 공지사항 조회 실패:', error);
+                console.error('관리자 공지사항 조회 실패:');
                 throw error;
             }
 
@@ -109,13 +109,13 @@ export function useActiveAnnouncements(enabled = true) {
                     .order('created_at', { ascending: false });
 
                 if (error) {
-                    console.error('활성 공지사항 조회 실패:', error);
+                    console.error('활성 공지사항 조회 실패:');
                     return getFallbackActiveAnnouncements();
                 }
 
                 return parseAnnouncements(data as AnnouncementRow[]);
             } catch (error) {
-                console.error('활성 공지사항 조회 중 오류:', error);
+                console.error('활성 공지사항 조회 중 오류:');
                 return getFallbackActiveAnnouncements();
             }
         },
@@ -142,13 +142,13 @@ export function useBannerAnnouncements() {
                     .order('created_at', { ascending: false });
 
                 if (error) {
-                    console.error('배너 공지사항 조회 실패:', error);
+                    console.error('배너 공지사항 조회 실패:');
                     return getFallbackBannerAnnouncements();
                 }
 
                 return parseAnnouncements(data as AnnouncementRow[]);
             } catch (error) {
-                console.error('배너 공지사항 조회 중 오류:', error);
+                console.error('배너 공지사항 조회 중 오류:');
                 return getFallbackBannerAnnouncements();
             }
         },
@@ -186,8 +186,8 @@ export function useCreateAnnouncement() {
             toast.success('공지사항이 작성되었습니다');
         },
         onError: (error: Error) => {
-            console.error('공지사항 작성 실패:', error);
-            toast.error(error.message || '공지사항 작성에 실패했습니다');
+            console.error('공지사항 작성 실패:');
+            toast.error('공지사항 작성에 실패했습니다');
         },
     });
 }
@@ -218,8 +218,8 @@ export function useUpdateAnnouncement() {
             toast.success('공지사항이 수정되었습니다');
         },
         onError: (error: Error) => {
-            console.error('공지사항 수정 실패:', error);
-            toast.error(error.message || '공지사항 수정에 실패했습니다');
+            console.error('공지사항 수정 실패:');
+            toast.error('공지사항 수정에 실패했습니다');
         },
     });
 }
@@ -246,8 +246,8 @@ export function useDeleteAnnouncement() {
             toast.success('공지사항이 삭제되었습니다');
         },
         onError: (error: Error) => {
-            console.error('공지사항 삭제 실패:', error);
-            toast.error(error.message || '공지사항 삭제에 실패했습니다');
+            console.error('공지사항 삭제 실패:');
+            toast.error('공지사항 삭제에 실패했습니다');
         },
     });
 }
@@ -278,8 +278,8 @@ export function useToggleAnnouncementActive() {
             toast.success(variables.isActive ? '공지사항이 활성화되었습니다' : '공지사항이 비활성화되었습니다');
         },
         onError: (error: Error) => {
-            console.error('공지사항 활성 상태 변경 실패:', error);
-            toast.error(error.message || '공지사항 상태 변경에 실패했습니다');
+            console.error('공지사항 활성 상태 변경 실패:');
+            toast.error('공지사항 상태 변경에 실패했습니다');
         },
     });
 }
@@ -310,8 +310,8 @@ export function useToggleAnnouncementBanner() {
             toast.success(variables.showOnBanner ? '배너 노출이 설정되었습니다' : '배너 노출이 해제되었습니다');
         },
         onError: (error: Error) => {
-            console.error('공지사항 배너 상태 변경 실패:', error);
-            toast.error(error.message || '배너 노출 상태 변경에 실패했습니다');
+            console.error('공지사항 배너 상태 변경 실패:');
+            toast.error('배너 노출 상태 변경에 실패했습니다');
         },
     });
 }

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "scope": "first-party backend executable path corrections",
+  "entries": [
+    {
+      "oldPath": "backend/storyboard-agent/scripts/02-video-caption-store-supbase.py",
+      "newPath": "backend/storyboard-agent/scripts/02-video-caption-store-supabase.py",
+      "rationale": "Correct the misspelled Supabase provider name without changing the stage or behavior.",
+      "contractClassification": ["internal-path", "test-loader-contract", "operator-cli-contract"],
+      "verification": ["old path absent", "canonical path unique", "vision-captioning unit suite 16/16"]
+    },
+    {
+      "oldPath": "backend/restaurant-crawling/scripts/02.1-migrate-meta-to-supabase.py",
+      "newPath": "backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py",
+      "rationale": "Use one extension dot and a hyphenated substage prefix while preserving Step 2.1 ordering.",
+      "contractClassification": ["runner-contract", "test-loader-contract", "operator-cli-contract"],
+      "verification": ["old path absent", "canonical path unique", "14 passed, 5 platform-gated skips (19 collected) on Windows"]
+    },
+    {
+      "oldPath": "backend/restaurant-crawling/scripts/02.5-cleanup-orphans.py",
+      "newPath": "backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py",
+      "rationale": "Use one extension dot and a hyphenated substage prefix while preserving Step 2.5 ordering.",
+      "contractClassification": ["runner-contract", "test-loader-contract", "operator-cli-contract"],
+      "verification": ["old path absent", "canonical path unique", "14 passed, 5 platform-gated skips (19 collected) on Windows"]
+    },
+    {
+      "oldPath": "backend/restaurant-crawling/scripts/03.1-generate-transcript-context.py",
+      "newPath": "backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py",
+      "rationale": "Remove the ambiguous embedded extension separator while preserving Step 3.1 semantics.",
+      "contractClassification": ["runner-contract", "regression-fixture-contract", "operator-cli-contract"],
+      "verification": ["old path absent", "canonical path unique", "15 passed, 2 platform-gated skips (17 collected) on Windows"]
+    },
+    {
+      "oldPath": "backend/restaurant-crawling/scripts/06.1-transcript-document-with-meta.py",
+      "newPath": "backend/restaurant-crawling/scripts/06-1-transcript-document-with-meta.py",
+      "rationale": "Remove the ambiguous embedded extension separator while preserving Step 6.1 semantics.",
+      "contractClassification": ["runner-contract", "test-loader-contract", "operator-cli-contract"],
+      "verification": ["old path absent", "canonical path unique", "15 passed, 2 platform-gated skips (17 collected) on Windows"]
+    }
+  ],
+  "nonGoals": [
+    "public route or API renames",
+    "applied migration renames",
+    "persisted data-path renames",
+    "aliases or compatibility wrappers",
+    "broad numbered-script churn"
+  ]
+}
