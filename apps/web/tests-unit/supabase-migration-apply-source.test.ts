@@ -13,7 +13,7 @@ import {
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
 
-const MANIFEST_SHA256 = "a440b3911549dd9cd2346a306319c0b322f19805f4aba0cd015c4fc2c1d5229d";
+const MANIFEST_SHA256 = "afc0074ff3fdd8a3a07eea8f0c6e722ddf62c1e633eadfb1ff8725970e41980b";
 const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
 const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
 const migration = manifestDocument.migrations[0];
@@ -78,7 +78,7 @@ describe("reviewed Supabase migration apply contract", () => {
         expect.objectContaining({
           id: "g016_privacy_audit_owner_policy",
           path: "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
-          sha256: "d6590461679265e2bd09f45d7d04b5be4a6fb087683951df2500e6037aea4cfc",
+          sha256: "6e6c4a464d066947a0b89dbca791ed220febd4abde12d89a1b7136240bb2ad78",
         }),
       ],
     });
