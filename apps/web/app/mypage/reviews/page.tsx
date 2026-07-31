@@ -174,7 +174,7 @@ export default function ReviewsPage() {
           .returns<ReviewData[]>();
 
         if (reviewsError) {
-          console.error("리뷰 조회 실패:", reviewsError);
+          console.error("리뷰 조회 실패:");
           return { reviews: [], nextCursor: null };
         }
 
@@ -259,7 +259,7 @@ export default function ReviewsPage() {
           reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };
       } catch (error) {
-        console.error("리뷰 데이터 조회 중 오류:", error);
+        console.error("리뷰 데이터 조회 중 오류:");
         return { reviews: [], nextCursor: null };
       }
     },

@@ -3,10 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { normalizeAdminDashboardWidgetOrder } from "@/lib/admin/dashboard-widget-order";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
 
 export const runtime = "nodejs";
 
 const DASHBOARD_WIDGET_ORDER_KEY = "admin_dashboard_widget_order";
+const MAX_DASHBOARD_WIDGET_ORDER_REQUEST_BYTES = 4 * 1024;
 
 type PreferenceRow = {
   value: unknown;
@@ -50,10 +53,7 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error(
-      "[admin/preferences/dashboard-widget-order] failed to read widget order:",
-      error,
-    );
+    console.error("[admin/preferences/dashboard-widget-order] failed to read widget order:");
     return NextResponse.json(
       { error: "KPI 카드 순서를 불러오지 못했습니다." },
       { status: 500 },
@@ -65,16 +65,24 @@ export async function PATCH(request: NextRequest) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isTrustedSameOriginMutation(request)) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const requestBody = await readBoundedJsonRequest(
+      request,
+      MAX_DASHBOARD_WIDGET_ORDER_REQUEST_BYTES,
+    );
+    const body = requestBody.ok ? requestBody.value : null;
     if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
-      const body = await request.json().catch(() => null);
       return NextResponse.json(
         { order: normalizeAdminDashboardWidgetOrder(isRecord(body) ? body.order : null) },
         { headers: { "Cache-Control": "no-store" } },
       );
     }
-
-
-    const body = await request.json().catch(() => null);
     const order = normalizeAdminDashboardWidgetOrder(
       isRecord(body) ? body.order : null,
     );
@@ -100,10 +108,7 @@ export async function PATCH(request: NextRequest) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error(
-      "[admin/preferences/dashboard-widget-order] failed to save widget order:",
-      error,
-    );
+    console.error("[admin/preferences/dashboard-widget-order] failed to save widget order:");
     return NextResponse.json(
       { error: "KPI 카드 순서를 저장하지 못했습니다." },
       { status: 500 },
@@ -111,10 +116,16 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
+    if (!isTrustedSameOriginMutation(request)) {
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+    }
     if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
       return NextResponse.json(
         { order: normalizeAdminDashboardWidgetOrder(null) },
@@ -136,10 +147,7 @@ export async function DELETE() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error(
-      "[admin/preferences/dashboard-widget-order] failed to reset widget order:",
-      error,
-    );
+    console.error("[admin/preferences/dashboard-widget-order] failed to reset widget order:");
     return NextResponse.json(
       { error: "KPI 카드 순서를 초기화하지 못했습니다." },
       { status: 500 },

@@ -1,6 +1,24 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+import { join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import postcss from "postcss";
+import tailwindcssPostcss from "@tailwindcss/postcss";
+import {
+  ADMIN_ROUTE_CSS_MAX_BYTES,
+  ADMIN_ROUTE_CSS_MAX_TRANSFER_BYTES,
+  DEFERRED_ROUTE_CSS_MAX_BYTES,
+  DEFERRED_ROUTE_CSS_MAX_TRANSFER_BYTES,
+  GENERAL_APP_ROUTE_CSS_MAX_BYTES,
+  GENERAL_APP_ROUTE_CSS_MAX_TRANSFER_BYTES,
+  HOME_ROUTE_CSS_MAX_BYTES,
+  HOME_ROUTE_CSS_MAX_TRANSFER_BYTES,
+  hasCssDeclaration,
+  hasCssDeclarationInMedia,
+  parseClientReferenceManifest,
+  verifyBuildRouteCssBoundaries,
+} from "../scripts/verify-route-css-boundaries.mjs";
 
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
@@ -21,6 +39,278 @@ const sourceFilesUnder = (relativeDir: string): string[] => {
 };
 const countSourceMatches = (contents: string, pattern: RegExp) =>
   contents.match(pattern)?.length ?? 0;
+
+const tailwindEntries = {
+  "app/app-globals.css": {
+    sources: ['"../app"', '"../components"', '"../pages"', '"../lib"'],
+    exclusions: [
+      'not "../**/*.{test,spec}.{js,jsx,ts,tsx}"',
+      'not "../**/*.{stories,story}.{js,jsx,ts,tsx}"',
+      'not "../{tests-unit,test,tests,fixtures}/**"',
+    ],
+  },
+  "app/home-app-globals.css": {
+    sources: [
+      '"./page.tsx"', '"./home-runtime-shell.tsx"', '"./home-client.tsx"',
+      '"./home-client-effects.tsx"', '"./app-providers.tsx"', '"./providers.tsx"',
+      '"../hooks"', '"../contexts"', '"../components/home"', '"../components/layout"',
+      '"../components/map"', '"../components/search"', '"../components/filters"',
+      '"../components/region"', '"../components/skeletons"', '"../components/ui"',
+    ],
+    exclusions: [],
+  },
+  "app/home-deferred-globals.css": {
+    sources: ['"./home-client-sidepanels.tsx"', '"../components/admin"', '"../components/announcement"', '"../components/modals"', '"../components/ui"'],
+    exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
+  },
+  "app/home-detail-globals.css": {
+    sources: ['"../components/restaurant"', '"../components/reviews"', '"../components/auth"', '"../components/ui"'],
+    exclusions: ['not "../**/*.test.*"', 'not "../tests-unit"'],
+  },
+} as const;
+
+const escapedClassSelector = (utility: string) =>
+  `.${[...utility].map((character) => /[A-Za-z0-9_-]/.test(character) ? character : `\\${character}`).join("")}`;
+
+describe("Tailwind v4 source contracts", () => {
+  test("parses exact source directives and compiles all production entries with retained utilities", async () => {
+    const retainedUtilities: string[] = [];
+    const compiledEntries = new Map<string, string>();
+    for (const [entry, contract] of Object.entries(tailwindEntries)) {
+      const entrySource = source(entry);
+      const root = postcss.parse(entrySource, { from: join(import.meta.dir, "..", entry) });
+      const directives = root.nodes
+        .filter((node) => node.type === "atrule")
+        .map((node) => ({ name: node.name, params: node.params }));
+
+      expect(directives.filter((directive) =>
+        directive.name === "import" && directive.params === '"tailwindcss" source(none)',
+      )).toHaveLength(1);
+      expect(directives.filter((directive) => directive.name === "source" && !directive.params.startsWith("inline("))
+        .map((directive) => directive.params)).toEqual([...contract.sources, ...contract.exclusions]);
+      expect(directives.filter((directive) => directive.name === "source" && directive.params.startsWith("inline("))
+        .every((directive) => /^inline\("[^"]+"\)$/.test(directive.params))).toBe(true);
+
+      for (const directive of directives.filter((directive) => directive.name === "source" && directive.params.startsWith("inline("))) {
+        retainedUtilities.push(...directive.params.slice('inline("'.length, -2).split(/\s+/).filter(Boolean));
+      }
+
+      const compiled = await postcss([tailwindcssPostcss()]).process(entrySource, {
+        from: join(import.meta.dir, "..", entry),
+      });
+      compiledEntries.set(entry, compiled.css);
+      const compiledRoot = postcss.parse(compiled.css);
+      expect(compiledRoot.nodes.some((node) => node.type === "rule")).toBe(true);
+    }
+
+    expect(retainedUtilities.length).toBeGreaterThan(0);
+    expect(new Set(retainedUtilities).size).toBe(retainedUtilities.length);
+    const compiledAppRoot = postcss.parse(compiledEntries.get("app/app-globals.css")!);
+    const selectors: string[] = [];
+    compiledAppRoot.walkRules((rule) => {
+      selectors.push(rule.selector);
+    });
+    for (const utility of retainedUtilities) {
+      const selector = escapedClassSelector(utility);
+      expect(selectors.some((value) => value.includes(selector))).toBe(true);
+    }
+
+    const tailwindConfigSource = source("tailwind.config.ts");
+    expect(source("app/globals.css")).not.toMatch(/@import\s+["']tailwindcss["'];?/);
+    expect(tailwindConfigSource).not.toMatch(/\bcontent\s*:/);
+    expect(tailwindConfigSource).not.toContain("SAFELIST");
+    expect(tailwindConfigSource).not.toContain("_CLASSES");
+  }, 60_000);
+});
+const wrapClientReferenceManifest = (routeKey: string, serialized: string) =>
+  `globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST[${JSON.stringify(routeKey)}]=${serialized};`;
+
+const routeCssFixture = (overrides: Partial<Record<"home" | "general" | "admin" | "deferred", string>> = {}) => {
+  const nextDirectory = mkdtempSync(join(tmpdir(), "tzudong-route-css-"));
+  const cssDirectory = join(nextDirectory, "static", "css");
+  mkdirSync(cssDirectory, { recursive: true });
+  const css = {
+    shared: ":root{--shared-route-css:1}",
+    home: ".bg-background{background-color:hsl(var(--background))}.scrollbar-hide{scrollbar-width:none}@media (min-width:1024px){.lg\\:grid{display:grid}}",
+    general: ':root{--admin-sidebar-expanded-max-width:min(17.5rem,27vw)}@media (min-width:768px){[data-admin-console-layout="sidebar-content"]{grid-template-columns:minmax(0,1fr)}}.feed-card{display:grid;grid-template-columns:minmax(0,1fr)}.feed-toolbar{display:flex;align-items:center;justify-content:space-between}.feed-panel{min-height:12rem}',
+    admin: ':root{--admin-sidebar-expanded-max-width:min(17.5rem,27vw)}@media (min-width:768px){[data-admin-console-layout="sidebar-content"]{grid-template-columns:minmax(0,1fr)}}',
+    deferred: ".scrollbar-hide{scrollbar-width:none}@media (max-width:767px){:where(.scrollbar-hide-mobile,[data-mobile-scrollbarless=true],[class*=overflow-y-auto],[class*=overflow-x-auto],[class*=overflow-auto]){scrollbar-width:none}}",
+    ...overrides,
+  };
+  for (const [name, contents] of Object.entries(css)) writeFileSync(join(cssDirectory, `${name}.css`), contents);
+  const manifests = [
+    ["page_client-reference-manifest.js", "/page", ["shared.css", "home.css"]],
+    ["feed/page_client-reference-manifest.js", "/feed/page", ["shared.css", "general.css"]],
+    ["admin/page_client-reference-manifest.js", "/admin/page", ["shared.css", "admin.css"]],
+    ["home-frame/page_client-reference-manifest.js", "/home-frame/page", ["shared.css", "deferred.css"]],
+  ] as const;
+  const fixtureRoot = "C:\\fixture\\apps\\web";
+  const routeOwners = {
+    "/page": `${fixtureRoot}\\app\\page`,
+    "/feed/page": `${fixtureRoot}\\app\\feed\\layout`,
+    "/admin/page": `${fixtureRoot}\\app\\admin\\layout`,
+    "/home-frame/page": `${fixtureRoot}\\app\\home-frame\\page`,
+  } as const;
+  for (const [manifestPath, routeKey, assets] of manifests) {
+    const manifestFile = join(nextDirectory, "server", "app", manifestPath);
+    mkdirSync(resolve(manifestFile, ".."), { recursive: true });
+    const toAsset = (asset: string) => ({ inlined: false, path: `static/css/${asset}` });
+    const entryCSSFiles = {
+      [`${fixtureRoot}\\app\\layout`]: [toAsset(assets[0])],
+      [routeOwners[routeKey]]: assets.slice(1).map(toAsset),
+    };
+    const manifest = {
+      moduleLoading: { prefix: "/_next/" },
+      ssrModuleMapping: {},
+      edgeSSRModuleMapping: {},
+      clientModules: {},
+      entryCSSFiles,
+      rscModuleMapping: {},
+      edgeRscModuleMapping: {},
+    };
+    writeFileSync(manifestFile, wrapClientReferenceManifest(routeKey, JSON.stringify(manifest)));
+  }
+  return nextDirectory;
+};
+
+const withRouteCssFixture = (overrides: Partial<Record<"home" | "general" | "admin" | "deferred", string>>, assertion: (nextDirectory: string) => void) => {
+  const nextDirectory = routeCssFixture(overrides);
+  try {
+    assertion(nextDirectory);
+  } finally {
+    rmSync(nextDirectory, { recursive: true, force: true });
+  }
+};
+const routeCssBases = {
+  home: ".bg-background{background-color:hsl(var(--background))}.scrollbar-hide{scrollbar-width:none}@media (min-width:1024px){.lg\\:grid{display:grid}}",
+  general: ':root{--admin-sidebar-expanded-max-width:min(17.5rem,27vw)}@media (min-width:768px){[data-admin-console-layout="sidebar-content"]{grid-template-columns:minmax(0,1fr)}}',
+  admin: ':root{--admin-sidebar-expanded-max-width:min(17.5rem,27vw)}@media (min-width:768px){[data-admin-console-layout="sidebar-content"]{grid-template-columns:minmax(0,1fr)}}',
+  deferred: ".scrollbar-hide{scrollbar-width:none}@media (max-width:767px){:where(.scrollbar-hide-mobile,[data-mobile-scrollbarless=true],[class*=overflow-y-auto],[class*=overflow-x-auto],[class*=overflow-auto]){scrollbar-width:none}}",
+} as const;
+const sharedCss = ":root{--shared-route-css:1}";
+const gzipBytes = (css: string) => gzipSync(css).byteLength;
+const padToRawBytes = (css: string, targetBytes: number) => {
+  const paddingBytes = targetBytes - Buffer.byteLength(css);
+  if (paddingBytes < 4) throw new Error("raw padding target is too small");
+  return `${css}/*${"x".repeat(paddingBytes - 4)}*/`;
+};
+const deterministicPayload = (length: number) => {
+  const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let state = 0x9e3779b9;
+  let payload = "";
+  for (let index = 0; index < length; index += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    payload += alphabet[(state >>> 0) % alphabet.length];
+  }
+  return payload;
+};
+const padToTransferBytes = (css: string, targetBytes: number) => {
+  const candidate = (length: number) => `${css}/*${deterministicPayload(length)}*/`;
+  let low = 0;
+  let high = Math.max(targetBytes * 2, 1);
+  while (gzipBytes(candidate(high)) < targetBytes) high *= 2;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (gzipBytes(candidate(middle)) < targetBytes) low = middle;
+    else high = middle - 1;
+  }
+  for (let length = Math.max(0, low - 64); length <= low + 512; length += 1) {
+    const padded = candidate(length);
+    if (gzipBytes(padded) === targetBytes) return padded;
+  }
+  throw new Error(`cannot construct deterministic CSS at ${targetBytes} gzip bytes`);
+};
+
+
+describe("route CSS boundary verifier fixtures", () => {
+  test("inventories shared and exclusive home, general, admin, and deferred assets", () => {
+    withRouteCssFixture({}, (nextDirectory) => {
+      const result = verifyBuildRouteCssBoundaries({ nextDirectory });
+      expect(result.sharedAssetPaths).toEqual(["static/css/shared.css"]);
+      expect(result.exclusiveAssetPaths).toEqual({
+        home: ["static/css/home.css"],
+        generalApp: ["static/css/general.css"],
+        admin: ["static/css/admin.css"],
+        deferred: ["static/css/deferred.css"],
+      });
+    });
+  });
+
+  test("rejects malformed, decoy, negated-media, and budget-bypass CSS", () => {
+    expect(hasCssDeclaration('.bg-background{--probe:background-color}a{content:"}"}', ".bg-background", "background-color")).toBe(false);
+    expect(hasCssDeclaration(".bg-background{background-color:red}", ".bg-background", "background-color")).toBe(true);
+    expect(hasCssDeclarationInMedia("@media not all and (min-width:1024px){.lg\\:grid{display:grid}}", ["min-width:1024px"], ".lg\\:grid", "display:grid")).toBe(false);
+    expect(hasCssDeclarationInMedia("@media (min-width:1024px){@media not all{.lg\\:grid{display:grid}}}", ["min-width:1024px"], ".lg\\:grid", "display:grid")).toBe(false);
+    expect(hasCssDeclarationInMedia("@media (min-width:1024pxx){.lg\\:grid{display:grid}}", ["min-width:1024px"], ".lg\\:grid", "display:grid")).toBe(false);
+    expect(hasCssDeclarationInMedia("@media screen and (min-width:1024px){.lg\\:grid{display:grid}}", ["min-width:1024px"], ".lg\\:grid", "display:grid")).toBe(false);
+    expect(hasCssDeclaration("@supports (display: decoy){.bg-background{background-color:red}}", ".bg-background", "background-color")).toBe(false);
+    expect(hasCssDeclarationInMedia("@media (min-width:1024px){@media (min-width:1024px){.lg\\:grid{display:grid}}}", ["min-width:1024px"], ".lg\\:grid", "display:grid")).toBe(false);
+    expect(() => parseClientReferenceManifest(
+      wrapClientReferenceManifest(
+        "/page",
+        '{"moduleLoading":{},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{},"entryCSSFiles":{"owner":[{"inlined":false,"path":"static/css/home.css"}]},"rscModuleMapping":{},"edgeRscModuleMapping":{}}',
+      ),
+      "/page",
+    )).toThrow("duplicate key");
+    expect(hasCssDeclaration(".bg-background{background-color:red", ".bg-background", "background-color")).toBe(false);
+    withRouteCssFixture({ home: ".bg-background{background-color:hsl(var(--background))}" }, (nextDirectory) => {
+      expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("scrollbar-hide");
+    });
+    withRouteCssFixture({ general: padToRawBytes(routeCssBases.general, GENERAL_APP_ROUTE_CSS_MAX_BYTES - Buffer.byteLength(sharedCss) + 1) }, (nextDirectory) => {
+      expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("raw ceiling");
+    });
+    withRouteCssFixture({ deferred: padToRawBytes(routeCssBases.deferred, DEFERRED_ROUTE_CSS_MAX_BYTES - Buffer.byteLength(sharedCss) + 1) }, (nextDirectory) => {
+      expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("raw ceiling");
+    });
+    withRouteCssFixture({ admin: ':root{--admin-sidebar-expanded-max-width:1}@media (max-width:767px){[data-admin-console-layout="sidebar-content"]{grid-template-columns:minmax(0,1fr)}}' }, (nextDirectory) => {
+      expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("media-scoped selector");
+    });
+  });
+});
+describe("route CSS ceiling boundaries", () => {
+  test("enforces exact and one-over raw and transfer ceilings for every route", () => {
+    const ceilings = [
+      { route: "home", raw: HOME_ROUTE_CSS_MAX_BYTES, transfer: HOME_ROUTE_CSS_MAX_TRANSFER_BYTES, resultKey: "homeBytes", transferResultKey: "homeTransferBytes" },
+      { route: "general", raw: GENERAL_APP_ROUTE_CSS_MAX_BYTES, transfer: GENERAL_APP_ROUTE_CSS_MAX_TRANSFER_BYTES, resultKey: "generalAppBytes", transferResultKey: "generalAppTransferBytes" },
+      { route: "admin", raw: ADMIN_ROUTE_CSS_MAX_BYTES, transfer: ADMIN_ROUTE_CSS_MAX_TRANSFER_BYTES, resultKey: "adminBytes", transferResultKey: "adminTransferBytes" },
+      { route: "deferred", raw: DEFERRED_ROUTE_CSS_MAX_BYTES, transfer: DEFERRED_ROUTE_CSS_MAX_TRANSFER_BYTES, resultKey: "deferredBytes", transferResultKey: "deferredTransferBytes" },
+    ] as const;
+
+    for (const ceiling of ceilings) {
+      const rawExact = padToRawBytes(
+        routeCssBases[ceiling.route],
+        ceiling.raw - Buffer.byteLength(sharedCss),
+      );
+      withRouteCssFixture({ [ceiling.route]: rawExact }, (nextDirectory) => {
+        expect(verifyBuildRouteCssBoundaries({ nextDirectory })[ceiling.resultKey]).toBe(ceiling.raw);
+      });
+      const rawOneOver = padToRawBytes(
+        routeCssBases[ceiling.route],
+        ceiling.raw - Buffer.byteLength(sharedCss) + 1,
+      );
+      withRouteCssFixture({ [ceiling.route]: rawOneOver }, (nextDirectory) => {
+        expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("raw ceiling");
+      });
+
+      const exactTransfer = padToTransferBytes(
+        routeCssBases[ceiling.route],
+        ceiling.transfer - gzipBytes(sharedCss),
+      );
+      withRouteCssFixture({ [ceiling.route]: exactTransfer }, (nextDirectory) => {
+        expect(verifyBuildRouteCssBoundaries({ nextDirectory })[ceiling.transferResultKey]).toBe(ceiling.transfer);
+      });
+      const oneOverTransfer = padToTransferBytes(
+        routeCssBases[ceiling.route],
+        ceiling.transfer - gzipBytes(sharedCss) + 1,
+      );
+      withRouteCssFixture({ [ceiling.route]: oneOverTransfer }, (nextDirectory) => {
+        expect(() => verifyBuildRouteCssBoundaries({ nextDirectory })).toThrow("transfer ceiling");
+      });
+    }
+  }, 60_000);
+});
 
 describe("web quality performance source contracts", () => {
   test("map marker HTML keeps image markers with WebP delivery and PNG fallback", () => {
@@ -113,7 +403,7 @@ describe("web quality performance source contracts", () => {
     expect(popupSource).toContain(
       "shouldLoadMedia={Math.abs(index - trackSlide) <= 1}",
     );
-    expect(popupSource).toContain("filterPopupBannersWithPosterMedia(banners)");
+    expect(popupSource).toContain("filterPopupBannersWithTrustedPosterMedia(banners)");
     expect(popupSource).toContain("getPopupBannerLoopResetIndex");
     expect(popupSource).toContain("getPopupBannerNavigationTarget");
     expect(popupSource).toContain("getPopupBannerTrackIndexForSourceIndex");
@@ -264,8 +554,8 @@ describe("web quality performance source contracts", () => {
       "NextResponse.rewrite(new URL('/home-static.html', request.url))",
     );
     expect(source("proxy.ts")).not.toContain("isRootPageRequest");
-    expect(source("proxy.ts")).toContain("'/'");
-    expect(source("proxy.ts")).toContain("'/home-frame'");
+    expect(source("lib/auth/public-eligibility-session.ts")).toContain("'/'");
+    expect(source("lib/auth/public-eligibility-session.ts")).toContain("'/home-frame'");
     expect(exists("app/home-initial-shell.tsx")).toBe(false);
     expect(exists("public/home-static.html")).toBe(false);
     expect(homeClientSource).toContain("<HomeMapContainer");
@@ -806,8 +1096,9 @@ describe("web quality performance source contracts", () => {
     expect(popularRestaurantsSource).toContain("attachPopularRankTrends");
     expect(popularRestaurantsSource).toContain("hasSnapshotPeriod");
     expect(popularRestaurantsSource).toContain(
-      "console.warn('인기 맛집 순위 스냅샷 조회 실패:', error);",
+      "console.warn('인기 맛집 순위 스냅샷 조회 실패:');",
     );
+    expect(popularRestaurantsSource).not.toContain("스냅샷 조회 실패:', error");
     expect(popularRestaurantsSource).toContain("? 'unknown'");
     expect(popularRestaurantsSource).toContain(
       "POPULAR_RANK_SNAPSHOTS_QUERY_KEY",
@@ -824,7 +1115,7 @@ describe("web quality performance source contracts", () => {
     expect(popularRestaurantsSource).toContain("attachPopularRankTrends");
     expect(popularRestaurantsSource).toContain("hasSnapshotPeriod");
     expect(popularRestaurantsSource).toContain(
-      "console.warn('인기 맛집 순위 스냅샷 조회 실패:', error);",
+      "console.warn('인기 맛집 순위 스냅샷 조회 실패:');",
     );
     expect(popularRestaurantsSource).toContain("? 'unknown'");
     expect(popularRestaurantsSource).toContain(
@@ -1446,34 +1737,30 @@ describe("web quality performance source contracts", () => {
       "style={desktopMapFloatingControlStyle}",
     );
     expect(homeDesktopControlPanelSource).toContain(
+      "const DESKTOP_MAP_MENU_ITEMS = [",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "] as const satisfies ReadonlyArray<DesktopMapMenuItem>;",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const handleDesktopMapMenuItemSelect = useCallback",
+    );
+    expect(homeDesktopControlPanelSource).toContain('case "profile":');
+    expect(homeDesktopControlPanelSource).toContain("handleAccountClick();");
+    expect(homeDesktopControlPanelSource).toContain('case "bookmarks":');
+    expect(homeDesktopControlPanelSource).toContain("handleBookmarkClick();");
+    expect(homeDesktopControlPanelSource).toContain('case "notifications":');
+    expect(homeDesktopControlPanelSource).toContain("handleNotificationClick();");
+    expect(homeDesktopControlPanelSource).toContain("handleShortcutClick(id);");
+    expect(homeDesktopControlPanelSource).toContain(
+      "DESKTOP_MAP_MENU_ITEMS.map((item) =>",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onClick={() => handleDesktopMapMenuItemSelect(item.id)}",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
       "const desktopMapMenuItems = useMemo",
     );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleAccountClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleBookmarkClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleNotificationClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("feed")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("stamp")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("leaderboard")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "desktopMapMenuItems.map((item) =>",
-    );
-    expect(homeDesktopControlPanelSource).toContain("onClick={item.onSelect}");
-    expect(homeDesktopControlPanelSource).not.toContain(
-      "const handleDesktopMapMenuClick = useCallback",
-    );
-    expect(homeDesktopControlPanelSource).not.toContain("DESKTOP_MAP_MENU_ITEMS");
     expect(homeDesktopControlPanelSource).toContain(
       "The hamburger menu intentionally lives in the expanded desktop search slot.",
     );
@@ -2217,7 +2504,7 @@ describe("web quality performance source contracts", () => {
       "text-[10px] font-bold leading-none tabular-nums",
     );
     expect(feedContentSource).toContain(
-      "onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount, review.userId)}",
+      "onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount)}",
     );
     expect(restaurantDetailSource).toContain(
       "const handleLikeReview = async (reviewId: string, currentIsLiked?: boolean)",
@@ -2556,7 +2843,10 @@ describe("web quality performance source contracts", () => {
       'label: "알림"',
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
-      "onSelect: handleNotificationClick",
+      'case "notifications":',
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "handleNotificationClick();",
     );
     expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
       'router.push("/?panel=notifications", { scroll: false })',
@@ -2675,13 +2965,18 @@ describe("web quality performance source contracts", () => {
     expect(middlewareSource).toContain(
       "pathname === '/mypage' || pathname.startsWith('/mypage/')",
     );
-    expect(middlewareSource).toContain("getRequestedPathWithSearch(request)");
+    expect(middlewareSource).toMatch(
+      /const getCanonicalSameOriginNextPath = \(request: NextRequest\) => \{[\s\S]*?const requestedPath = `\$\{pathname\}\$\{search\}`;[\s\S]*?decodeURIComponent\(requestedPath\);[\s\S]*?return getSafeAuthNextPath\(requestedPath\);/,
+    );
     expect(middlewareSource).toContain(
       "redirectMyPageAuthRequiredWithSessionCookies",
     );
     expect(globalMapSource).toContain(
-      "defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}",
+      'defaultSize={panelRestaurant && isPanelOpen ? "75%" : "100%"}',
     );
+    expect(globalMapSource).toContain('minSize="40%"');
+    expect(globalMapSource).toContain('maxSize="100%"');
+    expect(globalMapSource).toContain('data-global-map-panel="map"');
     expect(globalMapSource).toContain(
       'aria-label={isGridMode ? "단일 지도 보기" : "국가별 지도 보기"}',
     );
@@ -2707,10 +3002,10 @@ describe("web quality performance source contracts", () => {
       "const restaurant = restaurantsById.get(restaurantId);",
     );
     expect(mapViewSource).toContain(
-      "console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id, error });",
+      "console.warn('MapView: Advanced marker creation skipped', { restaurantId: restaurant.id });",
     );
     expect(mapViewSource).toContain(
-      "console.warn('MapView: keeping previous valid bounds after bounds query failure', error);",
+      "console.warn('MapView: keeping previous valid bounds after bounds query failure');",
     );
     expect(source("lib/map-view-state-helpers.ts")).toContain(
       "throw new Error('Google Maps bounds contain non-finite coordinates')",
@@ -2729,10 +3024,11 @@ describe("web quality performance source contracts", () => {
     const authRedirectSource = source("lib/auth/auth-redirect.ts");
     const shortenSource = source("app/api/shorten/route.ts");
     const shortRedirectSource = source("app/s/[code]/page.tsx");
+    const publicEligibilitySource = source("lib/auth/public-eligibility-session.ts");
 
     expect(proxySource).not.toContain("'/api/naver-'");
     expect(proxySource).not.toContain("'/api/youtube-meta'");
-    expect(proxySource).toContain("'/api/shorten'");
+    expect(publicEligibilitySource).toContain("'/api/shorten'");
     for (const routeSource of [
       naverSearchSource,
       naverGeocodeSource,
@@ -2742,32 +3038,31 @@ describe("web quality performance source contracts", () => {
         "import { requireAdmin } from '@/lib/auth/require-admin';",
       );
       expect(routeSource).toContain("const auth = await requireAdmin();");
-      expect(
-        routeSource.indexOf("const auth = await requireAdmin();"),
-      ).toBeLessThan(
-        routeSource.indexOf("request.json") === -1
-          ? routeSource.indexOf("new URL(request.url)")
-          : routeSource.indexOf("request.json"),
-      );
+      const authIndex = routeSource.indexOf("const auth = await requireAdmin();");
+      const requestParseIndex = routeSource.indexOf("readBoundedJsonRequest(request");
+      expect(requestParseIndex).toBeGreaterThanOrEqual(0);
+      expect(authIndex).toBeLessThan(requestParseIndex);
     }
 
     expect(shortenSource).toContain("function getAllowedShortUrlTarget");
-    expect(shortenSource).toContain("function isRateLimited");
-    expect(shortenSource).toContain("SHORTEN_RATE_LIMIT_MAX_REQUESTS = 20");
-    expect(shortenSource).toContain("{ status: 429 }");
+    expect(shortenSource).toContain("function getRequesterBucket");
+    expect(shortenSource).toContain("createHmac('sha256', privacyHashKey)");
+    expect(shortenSource).toContain(".rpc('allocate_short_url', {");
+    expect(shortenSource).toContain("if (allocation.rate_limited) {");
+    expect(shortenSource).toContain("'Retry-After': String(Math.max(1, allocation.retry_after_seconds))");
     expect(shortenSource).toContain("export const runtime = 'nodejs';");
-    expect(shortenSource).toContain("import { randomInt } from 'node:crypto';");
-    expect(shortenSource).toContain("randomInt(chars.length)");
+    expect(shortenSource).toContain("import { createHmac, randomInt } from 'node:crypto';");
+    expect(shortenSource).toContain("randomInt(SHORT_CODE_ALPHABET.length)");
     expect(shortenSource).not.toContain("Math.random() * chars.length");
     expect(shortenSource).toContain("trimmedTargetUrl.startsWith('//')");
     expect(shortenSource).toContain("function isValidReviewId");
     expect(shortenSource).toContain(".from('reviews')");
     expect(shortenSource).toContain(".maybeSingle();");
     expect(shortenSource).toContain(
-      "target_url: allowedTarget.canonicalTargetUrl",
+      "p_target_url: allowedTarget.canonicalTargetUrl,",
     );
-    expect(shortenSource).toContain("restaurant_id: review.restaurant_id");
-    expect(shortenSource).toContain("restaurant_name: null");
+    expect(shortenSource).toContain("p_restaurant_id: review.restaurant_id,");
+    expect(shortenSource).toContain("p_review_id: allowedTarget.reviewId,");
     expect(shortenSource).not.toContain("restaurantId || null");
     expect(shortenSource).not.toContain("restaurantName || null");
     expect(shortenSource).not.toContain(
@@ -2886,7 +3181,7 @@ describe("web quality performance source contracts", () => {
     const myPageSectionSkeletonSource = source(
       "components/mypage/MyPageSectionSkeleton.tsx",
     );
-    const myPageProfileSource = source("app/mypage/profile/page.tsx");
+    const myPageProfileSource = source("app/mypage/profile/page.tsx").replace(/\r\n/g, "\n");
     const myPageSectionSources = [
       source("app/mypage/bookmarks/page.tsx"),
       source("app/mypage/reviews/page.tsx"),
@@ -3200,7 +3495,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-danger-zone-guidance="compact"',
     );
     expect(myPageProfileSource).toContain(
-      "비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.",
+      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
     );
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
@@ -3377,7 +3672,7 @@ describe("web quality performance source contracts", () => {
       'className="group rounded-2xl border border-border/70 bg-background p-3 md:flex md:flex-1 md:flex-col lg:p-2.5"',
     );
     expect(myPageProfileSource).toContain("<details\n              open");
-    expect(myPageProfileSource).toContain("비활성화·삭제 옵션 보기");
+    expect(myPageProfileSource).toContain("계정 삭제 옵션 보기");
     expect(myPageProfileSource).toContain(
       'className="mt-3 grid gap-2 md:flex-1"',
     );
@@ -3845,7 +4140,6 @@ describe("web quality performance source contracts", () => {
     const mobileBottomNavSource = source(
       "components/layout/MobileBottomNav.tsx",
     );
-    const tailwindConfigSource = source("tailwind.config.ts");
     const nextConfigSource = source("next.config.mjs");
     const nextConfig = (await importWebConfig()).default;
     const configuredHeaders = await nextConfig.headers();
@@ -3865,8 +4159,26 @@ describe("web quality performance source contracts", () => {
           key: "Permissions-Policy",
           value: "camera=(), microphone=(), geolocation=(self)",
         },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+        { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        { key: "Origin-Agent-Cluster", value: "?1" },
+        { key: "X-DNS-Prefetch-Control", value: "off" },
+        { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       ]),
     );
+    const proxySecuritySource = source("proxy.ts");
+    const middlewareSecuritySource = source("lib/supabase/middleware.ts");
+    expect(proxySecuritySource).toContain("const nonce = btoa(crypto.randomUUID())");
+    expect(proxySecuritySource).toContain("requestHeaders.set('x-nonce', nonce)");
+    expect(proxySecuritySource).toContain("response.headers.set('Content-Security-Policy', policy)");
+    expect(proxySecuritySource).toContain("\"object-src 'none'\"");
+    expect(proxySecuritySource).toContain("\"base-uri 'none'\"");
+    expect(proxySecuritySource).toContain("\"form-action 'self'\"");
+    expect(proxySecuritySource).toContain("\"frame-ancestors 'none'\"");
+    expect(proxySecuritySource).toContain("'strict-dynamic'");
+    expect(middlewareSecuritySource).toContain("request: { headers: forwardedRequestHeaders }");
+    expect(layoutSource).toContain('import Script from "next/script"');
+    expect(layoutSource).toContain('<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />');
     for (const staticRoute of [
       "/images/:path*",
       "/fonts/:path*",
@@ -3941,10 +4253,10 @@ describe("web quality performance source contracts", () => {
     expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
     expect(layoutSource).toContain('href="//static.naver.net"');
     expect(layoutSource).toContain(
-      '<script src="/scripts/viewport-height-fix.js" defer />',
+      '<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />',
     );
-    expect(layoutSource).not.toContain("next/script");
-    expect(layoutSource).not.toContain('strategy="beforeInteractive"');
+    expect(layoutSource).toContain('import Script from "next/script"');
+    expect(layoutSource).toContain('strategy="beforeInteractive"');
     expect(layoutSource).toContain('import localFont from "next/font/local"');
     expect(layoutSource).toContain(
       'import { Noto_Serif_KR } from "next/font/google"',
@@ -4103,11 +4415,14 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).toContain(
       "shouldBootstrapAuthOnGeneralInteraction",
     );
-    expect(authContextSource).toContain("AUTH_USER_STATE_CACHE_TTL_MS");
-    expect(authContextSource).toContain("authUserStateRequests");
-    expect(authContextSource).toContain("loadAuthUserState");
+    expect(authContextSource).not.toContain("AUTH_USER_STATE_CACHE_TTL_MS");
+    expect(authContextSource).not.toContain("authUserStateRequests");
+    expect(authContextSource).not.toContain("loadAuthUserState");
+    expect(authContextSource).toContain("const state = await fetchAuthUserState(userId);");
     expect(authContextSource).toContain("activeAuthUserIdRef");
-    expect(authContextSource).toContain("window.setTimeout(() =>");
+    expect(authContextSource).toContain(
+      "window.setTimeout(startOnce, HOME_AUTH_BOOTSTRAP_DELAY_MS)",
+    );
     expect(authContextSource).toContain("signOut({ scope: 'local' })");
     expect(authContextSource).toContain("dispatchHomeAuthSessionUpdated");
     expect(authContextSource).toContain(
@@ -4262,17 +4577,6 @@ describe("web quality performance source contracts", () => {
       "'text-[12px] font-medium leading-none tracking-normal'",
     );
     expect(mobileBottomNavSource).toContain("isActive && 'font-semibold'");
-    expect(tailwindConfigSource).toContain("MOBILE_BOTTOM_NAV_CLASSES");
-    expect(tailwindConfigSource).toContain('"text-red-800"');
-    expect(tailwindConfigSource).toContain('"fill-red-800/20"');
-    expect(tailwindConfigSource).toContain('"-z-10"');
-    expect(tailwindConfigSource).toContain('"text-foreground/65"');
-    expect(tailwindConfigSource).toContain('"text-[12px]"');
-    expect(tailwindConfigSource).toContain('"leading-none"');
-    expect(tailwindConfigSource).toContain('"tracking-normal"');
-    expect(tailwindConfigSource).toContain("LEADERBOARD_RANK_ICON_CLASSES");
-    expect(tailwindConfigSource).toContain('"text-yellow-500"');
-    expect(tailwindConfigSource).toContain('"text-amber-600"');
     expect(viewportFixSource).toContain(
       "if (window.CSS?.supports?.('height', '100dvh'))",
     );
@@ -4286,12 +4590,30 @@ describe("web quality performance source contracts", () => {
       "source: '/:icon(favicon-32x32|apple-touch-icon).png'",
     );
     expect(nextConfigSource).toContain("source: '/scripts/:path*'");
+    const rootGlobalsSource = source("app/globals.css");
+    const appGlobalsSource = source("app/app-globals.css");
+
     expect(source("tailwind.config.ts")).not.toContain("tailwindcss-animate");
-    expect(source("app/globals.css")).not.toContain("@tailwind utilities");
-    expect(source("app/globals.css")).toContain("Minimal home-first root CSS");
-    expect(source("app/app-globals.css")).toContain("@tailwind utilities");
-    expect(source("app/app-globals.css")).toContain("@keyframes tz-enter");
-    expect(source("app/app-globals.css")).toContain(
+    expect(layoutSource).toContain('import "./globals.css"');
+    expect(layoutSource).not.toContain('import "./app-globals.css"');
+    expect(appRuntimeShellSource).toContain("import './app-globals.css'");
+    expect(homeRuntimeShellSource).not.toContain("import './app-globals.css'");
+    expect(rootGlobalsSource).not.toMatch(
+      /@import\s+["']tailwindcss["'];?/,
+    );
+    expect(rootGlobalsSource).not.toContain("@config");
+    expect(rootGlobalsSource).toContain(":root {");
+    expect(rootGlobalsSource).toContain("box-sizing: border-box");
+    expect(rootGlobalsSource).toContain("html {");
+    expect(rootGlobalsSource).toContain("body {");
+    expect(rootGlobalsSource).toContain("margin: 0;");
+    expect(countSourceMatches(appGlobalsSource, /@import\s+["']tailwindcss["'];?/g)).toBe(1);
+    expect(countSourceMatches(appGlobalsSource, /@config\s+["']\.\.\/tailwind\.config\.ts["'];?/g)).toBe(1);
+    expect(appGlobalsSource).toContain(
+      "General-runtime Tailwind v4 owner",
+    );
+    expect(appGlobalsSource).toContain("@keyframes tz-enter");
+    expect(appGlobalsSource).toContain(
       ".slide-in-from-top-\\[48\\%\\]",
     );
   });
@@ -4341,7 +4663,7 @@ describe("web quality performance source contracts", () => {
       '? "min-h-full border-y px-4 py-6"',
     );
     expect(searchHistorySource).toContain("const MAX_HISTORY = 12");
-    expect(searchHistorySource).toContain("최대 12개 유지");
+    expect(countSourceMatches(searchHistorySource, /\.slice\(0, MAX_HISTORY\)/g)).toBe(2);
     expect(restaurantSearchSource).toContain(
       "focus-visible:ring-2 focus-visible:ring-primary",
     );

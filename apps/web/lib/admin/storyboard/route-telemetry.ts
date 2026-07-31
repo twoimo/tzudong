@@ -1,3 +1,4 @@
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 const utf8Encoder = new TextEncoder();
 
 export const STORYBOARD_ROUTE_NO_STORE_HEADERS = {
@@ -41,14 +42,13 @@ export function getStoryboardJsonPayloadBytes(value: unknown) {
 export async function readStoryboardRouteJson(
   request: Request,
   telemetry: StoryboardRouteTelemetry,
+  maximumBytes: number,
 ) {
-  try {
-    const bodyText = await request.text();
-    telemetry.requestBytes = getStoryboardUtf8Bytes(bodyText);
-    return bodyText.trim() ? JSON.parse(bodyText) as unknown : null;
-  } catch {
-    return null;
+  const result = await readBoundedJsonRequest(request, maximumBytes);
+  if (result.ok) {
+    telemetry.requestBytes = getStoryboardJsonPayloadBytes(result.value);
   }
+  return result;
 }
 
 export function buildStoryboardRouteHeaders(

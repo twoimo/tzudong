@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, User, Mail, Lock, Trash2, X } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -49,8 +48,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Account deletion
-    const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
 
     const loadProfile = useCallback(async () => {
         if (!user) return;
@@ -73,17 +70,14 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 setProfile(null);
                 setNewNickname(user.email?.split('@')[0] || "사용자");
             }
-        } catch (error) {
+        } catch {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
-            console.error('Profile load error:', error);
         }
     }, [user]);
 
     useEffect(() => {
         if (isOpen && user) {
             void loadProfile();
-            // 모달이 열릴 때 삭제 확인 이메일 초기화
-            setDeleteConfirmationEmail("");
         }
     }, [isOpen, user, loadProfile]);
 
@@ -111,9 +105,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
             setProfile({ ...profile, nickname: newNickname.trim() });
             toast.success('닉네임이 성공적으로 변경되었습니다');
-        } catch (error) {
-            const err = error as { message?: string };
-            toast.error(err.message || '닉네임 변경에 실패했습니다');
+        } catch {
+            toast.error('닉네임 변경에 실패했습니다');
         } finally {
             setLoading(false);
         }
@@ -149,69 +142,16 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             setNewPassword("");
             setConfirmPassword("");
             toast.success('비밀번호가 성공적으로 변경되었습니다');
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다';
-            toast.error(errorMessage);
+        } catch {
+            toast.error('비밀번호 변경에 실패했습니다');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAccountDelete = async () => {
-        if (!user) return;
-
-        // 이메일 확인
-        if (deleteConfirmationEmail !== user.email) {
-            toast.error('이메일이 일치하지 않습니다');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // 1. 프로필 익명화 (삭제 대신 닉네임 변경)
-            const { error: profileError } = await supabase
-                .from('profiles' as never)
-                .update({ nickname: '탈퇴한 사용자' } as never)
-                .eq('user_id', user.id);
-
-            if (profileError) {
-                console.warn('프로필 익명화 실패:', profileError);
-                // 프로필 익명화 실패해도 계속 진행
-            }
-
-            // 2. user_stats 정보 삭제
-            const { error: statsError } = await supabase
-                .from('user_stats')
-                .delete()
-                .eq('user_id', user.id);
-
-            if (statsError) {
-                console.warn('통계 정보 삭제 실패:', statsError);
-                // 통계 삭제 실패해도 계속 진행
-            }
-
-            // 3. 계정 탈퇴 처리 완료
-            toast.success('계정 탈퇴가 완료되었습니다. 잠시 후 로그아웃됩니다.');
-
-            // 로그아웃
-            onClose();
-            setTimeout(async () => {
-                try {
-                    await supabase.auth.signOut();
-                    window.location.reload();
-                } catch (signOutError) {
-                    console.warn('로그아웃 실패:', signOutError);
-                    // 로그아웃 실패해도 페이지 리로드
-                    window.location.reload();
-                }
-            }, 2000);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '계정 삭제 중 오류가 발생했습니다';
-            toast.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
+    const openSafeAccountDeletion = () => {
+        onClose();
+        window.location.assign('/mypage/profile#account-deletion');
     };
 
     if (!user) return null;
@@ -406,54 +346,13 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 계정 삭제
                             </CardTitle>
                             <CardDescription>
-                                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                                삭제 범위 미리보기, 최근 로그인 확인, 정확한 확인 문구, 적용 후 읽기검증을 거쳐야 합니다.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-4 pt-2">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full">
-                                        계정 삭제
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            계정을 탈퇴하면:
-                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                                            <br />• 프로필이 익명화됩니다
-                                            <br />• 랭킹에서 제외됩니다
-                                            <br />• 자동으로 로그아웃됩니다
-                                            <br />
-                                            <br />계속하시려면 아래에 계정 이메일을 입력해주세요.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <div className="py-4">
-                                        <Input
-                                            value={deleteConfirmationEmail}
-                                            onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
-                                            placeholder={user.email}
-                                            className="text-center"
-                                        />
-                                        {deleteConfirmationEmail && deleteConfirmationEmail !== user.email && (
-                                            <p className="text-sm text-destructive mt-2 text-center">
-                                                이메일이 일치하지 않습니다
-                                            </p>
-                                        )}
-                                    </div>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>취소</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleAccountDelete}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            disabled={loading || deleteConfirmationEmail !== user.email}
-                                        >
-                                            {loading ? "삭제 중..." : "영구 삭제"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button variant="destructive" className="w-full" onClick={openSafeAccountDeletion}>
+                                삭제 범위 확인
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
@@ -644,54 +543,13 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 계정 삭제
                             </CardTitle>
                             <CardDescription>
-                                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                                삭제 범위 미리보기, 최근 로그인 확인, 정확한 확인 문구, 적용 후 읽기검증을 거쳐야 합니다.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full">
-                                        계정 삭제
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            계정을 탈퇴하면:
-                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                                            <br />• 프로필이 익명화됩니다
-                                            <br />• 랭킹에서 제외됩니다
-                                            <br />• 자동으로 로그아웃됩니다
-                                            <br />
-                                            <br />계속하시려면 아래에 계정 이메일을 입력해주세요.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <div className="py-4">
-                                        <Input
-                                            value={deleteConfirmationEmail}
-                                            onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
-                                            placeholder={user.email}
-                                            className="text-center"
-                                        />
-                                        {deleteConfirmationEmail && deleteConfirmationEmail !== user.email && (
-                                            <p className="text-sm text-destructive mt-2 text-center">
-                                                이메일이 일치하지 않습니다
-                                            </p>
-                                        )}
-                                    </div>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>취소</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleAccountDelete}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            disabled={loading || deleteConfirmationEmail !== user.email}
-                                        >
-                                            {loading ? "삭제 중..." : "영구 삭제"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button variant="destructive" className="w-full" onClick={openSafeAccountDeletion}>
+                                삭제 범위 확인
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

@@ -58,13 +58,13 @@ export async function mergeAdminReviewRestaurant(params: MergeAdminReviewRestaur
   });
 
   if (error) {
-    throw new Error(error.message || '병합 RPC 호출에 실패했습니다.');
+    throw new Error('병합 RPC 호출에 실패했습니다.');
   }
 
   const result = Array.isArray(data) ? data[0] : data;
 
   if (!result?.success) {
-    throw new Error(result?.message || '병합에 실패했습니다.');
+    throw new Error('병합에 실패했습니다.');
   }
 
   return result;

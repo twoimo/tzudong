@@ -251,14 +251,16 @@ ENV_FILES=(
     "$PROJECT_ROOT/../.env"
 )
 
-for env_file in "${ENV_FILES[@]}"; do
-    if [ -f "$env_file" ]; then
-        set -a
-        source "$env_file"
-        set +a
-        break
-    fi
-done
+if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ]; then
+    for env_file in "${ENV_FILES[@]}"; do
+        if [ -f "$env_file" ]; then
+            set -a
+            source "$env_file"
+            set +a
+            break
+        fi
+    done
+fi
 
 # API Key 정리 (Windows 호환성)
 if [ -n "$GEMINI_API_KEY" ]; then
@@ -269,7 +271,7 @@ fi
 # ========================================================
 # WSL 환경 특화: Windows의 OAuth 인증 파일 자동 연동
 # ========================================================
-if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ] && grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
     if [ ! -f "$HOME/.gemini/oauth_creds.json" ]; then
         # cmd.exe를 통해 Windows의 USERPROFILE 환경변수 추출
         WIN_USER_PROFILE=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r\n' || true)
@@ -339,8 +341,8 @@ fi
 
 # Gemini API 키 및 모델 설정
 export GEMINI_API_KEY="${GEMINI_API_KEY:-$GEMINI_API_KEY_BYEON}"
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"
-export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3-flash-preview}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"
+export FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.5-flash}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
 export LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-HIGH}"

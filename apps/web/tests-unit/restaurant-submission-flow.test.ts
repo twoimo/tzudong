@@ -12,6 +12,10 @@ import {
     normalizeRestaurantSubmissionPhone,
     restaurantSubmissionRequestReadbackMatches,
 } from '../lib/restaurant-submission-submit-contract';
+import {
+    PrivacyUnsafeValueError,
+    assertPrivacySafe,
+} from '../lib/privacy/sanitize';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
@@ -20,7 +24,7 @@ const completeForm: RestaurantSubmissionFormData = {
     address: '서울 중구 명동길 123',
     phone: '02-1234-5678',
     categories: ['중식'],
-    youtube_link: 'https://youtube.com/watch?v=abc',
+    youtube_link: 'https://www.youtube.com/watch?v=abc123DEF45',
     description: '쯔양이 소개한 리뷰 내용입니다.',
 };
 
@@ -44,7 +48,7 @@ describe('restaurant submission flow validation', () => {
         })).toBe('맛집 이름, 주소, 카테고리는 필수입니다');
     });
 
-    test('new submission step 2 requires a recognized http(s) youtube link', () => {
+    test('new submission step 2 requires a canonical HTTPS YouTube link', () => {
         expect(validateRestaurantSubmissionStep(2, 'new', {
             ...completeForm,
             youtube_link: '',
@@ -62,7 +66,7 @@ describe('restaurant submission flow validation', () => {
 
         expect(validateRestaurantSubmissionStep(2, 'new', {
             ...completeForm,
-            youtube_link: 'https://youtu.be/abc',
+            youtube_link: 'https://youtu.be/abc123DEF45',
         })).toBeNull();
 
         expect(validateRestaurantSubmissionStep(2, 'new', completeForm)).toBeNull();
@@ -152,7 +156,7 @@ describe('restaurant submission submit contract', () => {
             restaurant_name: '  명동 짜장면  ',
             address: ' 서울 중구 명동길 123 ',
             phone: ' 02-1234-5678 ',
-            youtube_link: ' https://youtube.com/watch?v=abc ',
+            youtube_link: ' https://www.youtube.com/watch?v=abc123DEF45 ',
             description: ' 쯔양이 소개한 리뷰 내용입니다. ',
         });
         const second = getRestaurantSubmissionPayloadFingerprint('request', completeForm);
@@ -184,6 +188,73 @@ describe('restaurant submission submit contract', () => {
     });
 });
 
+describe('restaurant submission privacy boundaries', () => {
+    test('rejects sensitive values while preserving Korean business submissions and approved coordinates', () => {
+        for (const unsafePayload of [
+            { description: '주민번호 900101-1234567' },
+            { description: '연락처 owner@example.com' },
+            { description: 'api_key=secret-value' },
+            { description: 'Bearer access-token-value' },
+            { description: 'cookie=session-value' },
+            { lat: 37.5665, lng: 126.978 },
+        ]) {
+            expect(() => assertPrivacySafe(unsafePayload)).toThrow(PrivacyUnsafeValueError);
+        }
+
+        expect(() => assertPrivacySafe({
+            restaurant_name: '성수 국밥집',
+            description: '국물이 진하고 혼밥하기 좋아 추천합니다.',
+            lat: 37.5446,
+            lng: 127.0557,
+        }, { locationClass: 'business' })).not.toThrow();
+    });
+
+    test('guards raw and canonical business-submission sinks before persistence without raw diagnostics', () => {
+        const submitSource = source('app/api/mypage/submissions/submit/route.ts');
+        const deleteSource = source('app/api/mypage/submissions/delete/route.ts');
+        const draftSource = source('lib/submissionDraftDB.ts');
+        const adminSource = source('app/admin/evaluations/page.tsx');
+        const submitNewSource = submitSource.slice(
+            submitSource.indexOf('async function submitNew('),
+            submitSource.indexOf('async function submitRequest('),
+        );
+        const submitRequestSource = submitSource.slice(submitSource.indexOf('async function submitRequest('));
+
+        expect(submitSource).toContain('function assertPrivacySafeRawSubmission(body: SubmitBody)');
+        expect(submitSource).toContain('function assertPrivacySafeCanonicalSubmission(expected: CanonicalRestaurantSubmissionPayload)');
+        expect(submitSource).toContain('const { phone: _phone, ...payload } = body.payload;');
+        expect(submitSource).toContain('const { phone: _phone, ...payload } = expected;');
+        expect(submitSource).toContain('assertPrivacySafe(payload, { locationClass: "business" });');
+        expect(submitSource.indexOf('assertPrivacySafeRawSubmission(body)')).toBeGreaterThan(
+            submitSource.indexOf('if (!isExactSubmitBody(body))'),
+        );
+        expect(submitNewSource.indexOf('assertPrivacySafeCanonicalSubmission(expected)')).toBeLessThan(
+            submitNewSource.indexOf('.rpc('),
+        );
+        expect(submitRequestSource.indexOf('assertPrivacySafeCanonicalSubmission(expected)')).toBeLessThan(
+            submitRequestSource.indexOf('.insert('),
+        );
+        expect(deleteSource.indexOf('assertPrivacySafe(body)')).toBeLessThan(deleteSource.indexOf('.rpc('));
+        expect(deleteSource.indexOf('assertPrivacySafe(body)')).toBeLessThan(deleteSource.indexOf('.from('));
+        expect(submitSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
+        expect(deleteSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
+        expect(draftSource).toContain('PRIVACY_UNSAFE_VALUE_REASON');
+        expect(draftSource.indexOf('assertPrivacySafe(draft)')).toBeLessThan(
+            draftSource.indexOf('transaction.store.put(normalizedDraft)'),
+        );
+        expect(adminSource.indexOf("assertPrivacySafe(restaurantData, { locationClass: 'business' })")).toBeLessThan(
+            adminSource.indexOf('approve_submission_item'),
+        );
+
+        for (const sourceText of [submitSource, deleteSource, draftSource, adminSource]) {
+            expect(sourceText).not.toContain('console.');
+            expect(sourceText).not.toContain('error.message');
+        }
+        expect(adminSource).not.toContain('debugLog(');
+        expect(adminSource).not.toContain("originalData:', originalData");
+        expect(adminSource).not.toContain("restaurantData:', restaurantData");
+    });
+});
 describe('restaurant submission modal source contract', () => {
     test('posts submissions to the server route instead of browser-side submission inserts', () => {
         const modalSource = source('components/modals/RestaurantSubmissionModal.tsx');
@@ -228,14 +299,22 @@ describe('restaurant submission modal source contract', () => {
         expect(modalSource).toContain('if (pendingDraft) return;');
     });
 
-    test('server route and migration own idempotency atomicity and bounded readback contracts', () => {
+    test('server route validates an exact bounded schema before canonicalization and persistence', () => {
         const routeSource = source('app/api/mypage/submissions/submit/route.ts');
         const migrationSource = source('../../backend/supabase/migrations/20260704000100_restaurant_submission_submit_contract.sql');
 
         expect(routeSource).toContain('createServerClient');
         expect(routeSource).toContain('createSupabaseServiceRoleClient');
-        expect(routeSource).toContain('validateRestaurantSubmission(mode, formPayload)');
-        expect(routeSource).toContain('.filter(Boolean)');
+        expect(routeSource).toContain('isExactSubmitBody(body)');
+        expect(routeSource).toContain('hasExactKeys(value, SUBMISSION_BODY_KEYS)');
+        expect(routeSource).toContain('hasExactKeys(value, SUBMISSION_PAYLOAD_KEYS[mode])');
+        expect(routeSource).toContain('hasExactCategories(value.categories)');
+        expect(routeSource).toContain('isBusinessPhone(value.phone)');
+        expect(routeSource).toContain('canonicalCategories.has(canonicalCategory)');
+        expect(routeSource).not.toContain('.filter(Boolean)');
+        expect(routeSource.indexOf('isExactSubmitBody(body)')).toBeLessThan(
+            routeSource.indexOf('canonicalizeRestaurantSubmissionPayload(mode, formPayload)'),
+        );
         expect(routeSource).toContain('submit_restaurant_submission');
         expect(routeSource).toContain('restaurantSubmissionRequestReadbackMatches');
         expect(routeSource).toContain('return jsonError("제출 처리 중 오류가 발생했습니다. 다시 시도해주세요.", 500)');

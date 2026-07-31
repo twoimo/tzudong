@@ -55,7 +55,7 @@ describe('mergeAdminReviewRestaurant', () => {
     expect(result.success).toBe(true);
   });
 
-  test('throws the RPC message when the merge contract reports a handled failure', async () => {
+  test('replaces handled RPC details with a fixed failure message', async () => {
     rpc.mockResolvedValueOnce({
       data: {
         success: false,
@@ -69,11 +69,11 @@ describe('mergeAdminReviewRestaurant', () => {
     const { mergeAdminReviewRestaurant } = await loadMergeModule();
 
     await expect(mergeAdminReviewRestaurant(baseParams)).rejects.toThrow(
-      '다른 관리자가 이미 데이터를 수정했습니다. 다시 시도해주세요.'
+      '병합에 실패했습니다.'
     );
   });
 
-  test('throws the transport error when Supabase rejects the RPC call', async () => {
+  test('replaces transport details with a fixed failure message', async () => {
     rpc.mockResolvedValueOnce({
       data: null,
       error: {
@@ -83,6 +83,6 @@ describe('mergeAdminReviewRestaurant', () => {
 
     const { mergeAdminReviewRestaurant } = await loadMergeModule();
 
-    await expect(mergeAdminReviewRestaurant(baseParams)).rejects.toThrow('permission denied');
+    await expect(mergeAdminReviewRestaurant(baseParams)).rejects.toThrow('병합 RPC 호출에 실패했습니다.');
   });
 });

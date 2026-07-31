@@ -1,8 +1,12 @@
 @config "../tailwind.home.detail.config.ts";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source(none);
+@source "../components/restaurant";
+@source "../components/reviews";
+@source "../components/auth";
+@source "../components/ui";
+@source not "../**/*.test.*";
+@source not "../tests-unit";
 
 /* ============================================
    모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)

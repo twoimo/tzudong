@@ -199,14 +199,14 @@ async function fetchGitHubWorkflowLogs() {
       latestJobs,
       error: null,
     };
-  } catch (error) {
+  } catch {
     return {
       available: false,
       repository,
       workflowId: getGitHubWorkflowId(),
       runs: [],
       latestJobs: [],
-      error: error instanceof Error ? error.message : "github-runs-unavailable",
+      error: "GITHUB_RUNS_UNAVAILABLE",
     };
   }
 }
@@ -224,7 +224,7 @@ async function fetchLatestSnapshotStatus() {
       .maybeSingle<ChannelSnapshotRow>();
 
     if (error) {
-      return { available: false, error: error.message };
+      return { available: false, error: "SNAPSHOT_QUERY_FAILED" };
     }
 
     if (!data) {
@@ -254,13 +254,12 @@ async function fetchLatestSnapshotStatus() {
       viewDelta: toFiniteNumber(data.view_delta),
       videoDelta: toFiniteNumber(data.video_delta),
       videoSnapshotCount: countError ? null : (count ?? 0),
-      error: countError?.message ?? null,
+      error: countError ? "SNAPSHOT_COUNT_FAILED" : null,
     };
-  } catch (error) {
+  } catch {
     return {
       available: false,
-      error:
-        error instanceof Error ? error.message : "snapshot-status-unavailable",
+      error: "SNAPSHOT_STATUS_UNAVAILABLE",
     };
   }
 }

@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bookmark, Trash2, MapPin, ExternalLink } from "lucide-react";
 import { useBookmarks, useToggleBookmark } from "@/hooks/use-bookmarks";
+import {
+  extractCanonicalYouTubeVideoId,
+  normalizeCanonicalYouTubeWatchUrl,
+} from "@/lib/youtube-url";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -64,23 +68,6 @@ export default function BookmarksPage() {
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  // [최적화] 유틸 함수 메모이제이션
-  const extractYouTubeVideoId = useCallback((url: string) => {
-    const regExp =
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return match && match[2].length === 11 ? match[2] : null;
-  }, []);
-
-  const getYouTubeThumbnailUrl = useCallback(
-    (url: string) => {
-      const videoId = extractYouTubeVideoId(url);
-      return videoId
-        ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-        : null;
-    },
-    [extractYouTubeVideoId],
-  );
 
   const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
@@ -144,17 +131,18 @@ export default function BookmarksPage() {
               (bookmark.restaurant.youtube_link
                 ? [bookmark.restaurant.youtube_link]
                 : [])
-            ).filter(
-              (link): link is string =>
-                typeof link === "string" && link.length > 0,
-            );
+            )
+              .map(normalizeCanonicalYouTubeWatchUrl)
+              .filter((link): link is string => link !== null);
 
-            // 첫 번째 유효한 썸네일 찾기
+            const canonicalYouTubeWatchUrl = normalizeCanonicalYouTubeWatchUrl(
+              bookmark.restaurant.youtube_link,
+            );
             let thumbnailUrl = null;
             for (const link of youtubeLinks) {
-              const url = getYouTubeThumbnailUrl(link);
-              if (url) {
-                thumbnailUrl = url;
+              const videoId = extractCanonicalYouTubeVideoId(link);
+              if (videoId) {
+                thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
                 break;
               }
             }
@@ -226,9 +214,9 @@ export default function BookmarksPage() {
                           리뷰 {bookmark.restaurant.review_count || 0}개
                         </div>
                         <div>저장일: {formatDate(bookmark.created_at)}</div>
-                        {bookmark.restaurant.youtube_link && (
+                        {canonicalYouTubeWatchUrl && (
                           <a
-                            href={bookmark.restaurant.youtube_link}
+                            href={canonicalYouTubeWatchUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={myPageInlineLinkClass}

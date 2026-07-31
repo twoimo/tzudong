@@ -1,6 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+export function shouldRenderSpeedInsights(
+    enabled: boolean,
+    nodeEnv = process.env.NODE_ENV,
+) {
+    return enabled && nodeEnv === 'production';
+}
+
 
 const SpeedInsights = dynamic(
     () => import('@vercel/speed-insights/next').then((mod) => ({ default: mod.SpeedInsights })),
@@ -8,7 +15,7 @@ const SpeedInsights = dynamic(
 );
 
 export function AppSpeedInsights({ enabled }: { enabled: boolean }) {
-    if (!enabled || process.env.NODE_ENV !== 'production') return null;
+    if (!shouldRenderSpeedInsights(enabled)) return null;
 
     return <SpeedInsights />;
 }

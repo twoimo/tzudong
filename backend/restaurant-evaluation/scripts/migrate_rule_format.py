@@ -7,6 +7,14 @@ location_match_TF에서 naver_name 유무로 name_source 결정
 import json
 import sys
 from pathlib import Path
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
 
 
 def migrate_rule_results(data_path: Path):
@@ -14,7 +22,10 @@ def migrate_rule_results(data_path: Path):
     rule_dir = data_path / "evaluation" / "rule_results"
 
     if not rule_dir.exists():
-        print(f"[ERROR] rule_results 폴더 없음: {rule_dir}")
+        print(
+            "[ERROR] operation=rule_format_migration_input_unavailable "
+            "code=RULE_FORMAT_DIRECTORY_MISSING"
+        )
         return
 
     files = list(rule_dir.glob("*.jsonl"))
@@ -69,8 +80,11 @@ def migrate_rule_results(data_path: Path):
             if updated % 100 == 0:
                 print(f"  {updated}개 업데이트...")
 
-        except Exception as e:
-            print(f"[WARN] 오류: {f.name} - {e}")
+        except Exception as error:
+            print(
+                f"[WARN] operation=rule_format_migration_file_failed "
+                f"error={safe_error_name(error)} code=RULE_FORMAT_FILE_MIGRATION_FAILED"
+            )
 
     print(f"\n[OK] 마이그레이션 완료!")
     print(f"   업데이트: {updated}개")
