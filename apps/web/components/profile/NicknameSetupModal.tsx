@@ -104,9 +104,9 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
                 // UNIQUE constraint violation
                 toast.error('이미 사용 중인 닉네임입니다');
             } else {
-                toast.error(err.message || '닉네임 설정에 실패했습니다');
+                toast.error('닉네임 설정에 실패했습니다');
             }
-            console.error('Nickname setup error:', error);
+            console.error('Nickname setup error:');
         } finally {
             setLoading(false);
         }

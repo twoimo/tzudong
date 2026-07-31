@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "kind": "g038-local-sandbox-profile",
+  "environmentClass": "LOCAL_DISPOSABLE_ONLY",
+  "independent": false,
+  "operatorCount": 1,
+  "phase": "2b",
+  "note": "Authored during Phase 2a. NOT executed in Phase 2a. Consumed by H1 (g038_local_sandbox.sh) only after a separate Phase 2b manifest earns its own Architect CLEAR/APPROVE, Critic OKAY, and explicit execution approval.",
+  "boundAuthorities": {
+    "governingPlan": "457d6914c5ff26922b71f60de816044992f1c14c297dfa74350ce16e08fc6531",
+    "technicalAuthority": "d99ceb632c976bc7c2388b1c7f95571c8b7429a14e7915a9cc09d8aaa99842a4",
+    "inventorySource": "18b473ebc39da27845a1a88664ed191b90f613a7a90255da03e1aafb2c1e1b8a",
+    "phase1Manifest": "edb9ed0f637249581587e8703086a90954459b735a0e4821997acbc423756089"
+  },
+  "container": {
+    "image": "supabase/postgres:17.6.1.147",
+    "imageDigest": "sha256:ac581882596ed0e46937ea6dd53a627d09f53e005d7264c2082a7ff7b62eaaca",
+    "imagePullPolicy": "never",
+    "imagePullPolicyRationale": "The digest above was observed already present in the local image cache. A registry pull would be outbound egress, which this profile forbids. If the image is absent at Phase 2b time, the launcher must fail closed rather than pull.",
+    "network": "none",
+    "networkRationale": "--network none gives the container an empty Linux network namespace enforced by the Docker daemon, outside the candidate. This is the mechanism that replaces the unenforceable macOS per-process egress-deny predicate. No -p publish, so no loopback port is bound and port reuse, 0.0.0.0 binding, and hosts/resolver aliasing are structurally impossible.",
+    "mounts": [],
+    "mountsRationale": "Zero mounts. The repository is never mounted. P1 and H3 reach the container only via `docker cp` of two literal allowlisted paths, so no .env file, credential helper, agent socket, keychain, cloud config, or browser profile is reachable from inside.",
+    "environmentVariables": {
+      "POSTGRES_DB": "g009_local",
+      "POSTGRES_PASSWORD": "<ephemeral-generated-per-run>"
+    },
+    "environmentRationale": "POSTGRES_DB is set explicitly so the target database exists at first boot; the Phase-1 review found that a bare container would never create it. The password is generated per run from /dev/urandom and is never written to any file on the host and never logged. It is NOT unpersisted: passing it via --env records it in the container's own Config.Env, where `docker inspect` can read it for the container's lifetime. The earlier claim that it is 'never persisted' was false and is withdrawn. This is accepted rather than mitigated: the value is single-use, the container is removed at teardown, and the database it guards has no network path at all under --network none, so the recorded value grants nothing beyond what host docker access already grants. `unset ephemeral_pw` in the launcher clears only the host shell variable, not Config.Env.",
+    "capDropAll": false,
+    "capDropRationale": "--cap-drop ALL is deliberately NOT applied. The supabase/postgres entrypoint performs initdb chown/setuid work that requires those capabilities, so dropping them would fail at first boot. This profile declines to claim hardening it cannot achieve rather than asserting a predicate that would fail closed.",
+    "user": null,
+    "userRationale": "No --user override, for the same initdb reason as capDropAll. Recorded as an accepted limitation, not as a satisfied predicate."
+  },
+  "denyPredicates": [
+    {
+      "id": "no-network",
+      "predicate": "Container network mode is exactly `none`.",
+      "enforcedBy": "docker daemon (Linux network namespace, fixed at container creation by the --network none argv)",
+      "provenBeforeCandidateStart": true,
+      "provenBy": "docker create materializes the container and its HostConfig without starting any process; the inspect below therefore runs strictly before the candidate executes, and docker start follows only after every predicate passes.",
+      "proof": "After `docker create --network none`, `docker inspect -f '{{.HostConfig.NetworkMode}}' <id>` must return exactly `none`, before `docker start`."
+    },
+    {
+      "id": "no-mounts",
+      "predicate": "Container has zero bind mounts and zero named volumes, and no anonymous volume.",
+      "enforcedBy": "docker daemon (no -v/--mount argv is present)",
+      "provenBeforeCandidateStart": true,
+      "provenBy": "Same pre-start window: proven on the created-but-not-started container. A VOLUME declaration in the image would attach an anonymous volume at create time and make .Mounts nonzero, which would abort the launcher. Verified against the pinned image on this host: `docker image inspect --format '{{json .Config.Volumes}}'` returns `null`, so the pinned image declares no VOLUME and the zero-mounts assertion is achievable rather than fail-closed-by-accident. Teardown additionally passes -v so that any future anonymous volume cannot outlive the run.",
+      "proof": "After `docker create`, `docker inspect -f '{{len .Mounts}}' <id>` must return exactly 0, before `docker start`."
+    },
+    {
+      "id": "no-published-ports",
+      "predicate": "Container publishes no host port.",
+      "enforcedBy": "docker daemon (no -p/--publish argv is present)",
+      "provenBeforeCandidateStart": true,
+      "provenBy": "Same pre-start window. HostConfig.PortBindings is the authoritative field here: NetworkSettings.Ports is only populated once a container is running, so inspecting it pre-start would be vacuous rather than probative.",
+      "proof": "After `docker create`, `docker inspect -f '{{len .HostConfig.PortBindings}}' <id>` must return exactly 0, before `docker start`."
+    },
+    {
+      "id": "no-registry-egress",
+      "predicate": "The pinned image digest is already present in the local cache before the container is created; no pull occurs.",
+      "enforcedBy": "launcher precondition check, before `docker create`",
+      "provenBeforeCandidateStart": true,
+      "provenBy": "Two independent catalog fields must agree, and both are read before `docker create`. RepoDigests entries are TAGLESS (`name@sha256:...`), verified on this host as [\"supabase/postgres@sha256:ac581882...\"]; matching a tag-bearing form can never succeed and would abort the launcher before it reached `docker create`. The launcher therefore matches the tagless repository form and independently requires the image `Id` to equal the pinned digest.",
+      "proof": "`docker image inspect <image> --format '{{join .RepoDigests \"\\n\"}}'` must contain exactly `<repo-without-tag>@<pinned-digest>`, AND `--format '{{.Id}}'` must equal the pinned digest. Both are checked before `docker create`; `docker run` is not used anywhere in the launcher."
+    },
+    {
+      "id": "no-repo-reachable-structural",
+      "predicate": "No host filesystem path is reachable from inside the container.",
+      "enforcedBy": "docker daemon (zero mounts, zero volumes)",
+      "provenBeforeCandidateStart": true,
+      "provenBy": "This is the pre-start half, and it is the load-bearing one. With zero mounts proven on the created-but-not-started container, the container has no view of the host filesystem at all, so no repository path, no .env file, and no credential store is reachable regardless of what happens later. Proven in the same pre-start window as no-mounts.",
+      "proof": "After `docker create`, `docker inspect -f '{{len .Mounts}}' <id>` must return exactly 0, before `docker start`."
+    },
+    {
+      "id": "no-repo-reachable-argv",
+      "predicate": "Exactly two files enter the container, and the source of each copy can only be produced by the launcher's own resolver, not named by a caller.",
+      "enforcedBy": "launcher copy-source producer (resolve_copy_source), plus a post-copy in-container digest assertion against the host source",
+      "provenBeforeCandidateStart": false,
+      "provenBy": "Stated honestly, including three withdrawals and one residual limit that is NOT fixed. This half is NOT proven before candidate start: the resolver runs after `docker start` and after the readiness gate, immediately before each `docker cp`, so a pre-start temporal claim would be false. WITHDRAWAL 1: the mechanism previously named here was `assert_copy_source_allowed`, which compared its argument against the two allowlisted literals -- but its only callers passed those very literals, so it could never fail. It read as enforcement while enforcing nothing: the same vacuity class as the H3 A9 privilege check fixed in pass 3. Crediting it as `enforcedBy` was an overclaim and is withdrawn. WITHDRAWAL 2: when the replacement producer was first written, this field claimed 'a symlink aimed outside the repo is rejected instead of silently copied in'. That was FALSE as implemented -- the canonicalization used `cd -P` on the path's DIRECTORY only, never traversing the final component, so a symlink AT the leaf pointing outside the repository passed the containment test. Proven by executable test: a symlink at sub/evil.sql aimed at ../outside/secret.sql was ACCEPTED and read SECRET-OUTSIDE-REPO. Now canonicalized in full via os.path.realpath, returning the CANONICAL path rather than the original; the same test now rejects it. WITHDRAWAL 3: the eight rejected probes were previously presented as adversarial path-injection evidence. They are not. `resolve_copy_source` takes an INDEX, so probes like `../../../etc/passwd` and `$(id)` are rejected merely for not being 1 or 2 -- that is index-domain rejection, and listing OS paths among them invited a stronger reading than the evidence supports. Only the symlink-at-leaf case is genuine path-resolution evidence. RESIDUAL LIMIT, not fixed: the producer relocates vacuity rather than eliminating it. Its `*) fail` arm is unreachable from the launcher's own two callsites (`resolve_copy_source 1` and `resolve_copy_source 2`), which is structurally the same 'cannot fail from its callers' property as the checker withdrawn above. What genuinely improved is expressibility -- a caller supplies no path at all, and the leaf-canonicalization plus canonical-value return are real checks the checker never had. But WHICH files enter the container still rests entirely on ALLOWED_COPY_1 and ALLOWED_COPY_2 being the correct literals, and no executed check verifies that; it rests on step-4 gate review of the H5-bound launcher bytes. That residual trust is stated rather than papered over.",
+      "proof": "`resolve_copy_source` is the only thing in the launcher that emits a cp source; no `docker cp` names a path literal. After each copy, `verify_copied_file` compares `sha256sum` of the file INSIDE the container against `shasum -a 256` of the exact host path the resolver emitted, and fails on mismatch. This asserts content identity, not mere presence: the previous `ls -1 ... | wc -l` count proved only that two names resolved and would have passed on a wrong-source or truncated copy. CORRECTION: this field previously said the check 'fails on any mismatch or empty digest', crediting an empty-digest guard as a catcher. Under the launcher's own `set -o pipefail` that guard could never fire -- a missing file or absent `sha256sum` makes the pipeline exit nonzero and `|| fail` fires first, so the guard was never evaluated. The pipes have since been removed so each command substitution holds a single command whose exit status propagates directly to `|| fail`, and the residual checks now assert what no exit status reports: non-empty output, and a first field matching ^[0-9a-f]{64}$. Those are reachable and were verified executably -- empty output and both non-hex and 63-hex inputs each trigger their own failure. In-image `sha256sum` availability is unverified at authoring time and fails closed if absent."
+    }
+  ],
+  "fileAllowlist": {
+    "copyIntoContainer": [
+      "backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql",
+      "backend/supabase/tests/g038_catalog_assertions.sql"
+    ],
+    "copyOutOfContainer": [],
+    "copyOutRationale": "No container-to-host copy exists. Evidence leaves the container only as launcher stdout captured on the host."
+  },
+  "migrationDenyList": {
+    "literals": [
+      "20260713002500",
+      "20260713002600",
+      "20260713002700"
+    ],
+    "enforcement": "H4 (g038_exclusion_scan.py) must exit 0 over P1 and H3 before any SQL is applied. Independently, the launcher's `-f` operand allowlist admits exactly the two files above, so no directory glob and no migration runner can reach any other migration. Verified structural support: zero glob-based migration runners exist anywhere under backend/, scripts/, or apps/web/scripts/.",
+    "rationale": "Two untracked completed migrations are physically present in the worktree (20260713000100_g013_short_url_security.sql and 20260713002700_g028_account_deletion_reauth_proof.sql). Neither may be replayed."
+  },
+  "teardown": {
+    "deletionAllowlist": [
+      "the single container created by this run, addressed by the container id the run captured",
+      "any anonymous volume attached to that same container at create time"
+    ],
+    "commands": [
+      "docker rm -f -v <container-id-captured-by-this-run>"
+    ],
+    "prohibited": [
+      "docker system prune",
+      "docker volume prune",
+      "any docker rm targeting a container this run did not create",
+      "any docker volume rm targeting a named or pre-existing volume",
+      "deleting, reverting, stashing, or committing any unrelated user work"
+    ]
+  },
+  "incidentPredicates": [
+    "any protected credential, hosted origin, or provider reference observed in any authored byte or any output",
+    "any egress attempt from the container",
+    "any path written outside the manifest's Class P/H/W",
+    "any deny predicate that cannot be positively proven before candidate start",
+    "any docker cp source outside the two-literal allowlist",
+    "any exclusion-scan hit",
+    "sandbox or hash drift against the H5 binding receipt",
+    "incomplete teardown"
+  ],
+  "incidentResponse": "Any incident is a hard stop, never a retry-as-success. Stop the candidate, remove only the container this run created, preserve redacted evidence, and return to planning. Any protected contact is an incident and a hard failure, never a success.",
+  "limitations": [
+    "Solo-operator lane cannot self-certify isolation; the second review gate relocates rather than escapes that circularity.",
+    "Container PostgreSQL major (17) diverges from the shared stack pin (15.8.1.085) and from the unverifiable hosted major, so results transfer to neither.",
+    "The docker client is a privileged host client; whoever can run the launcher can run arbitrary docker commands. Argv allowlisting is the only control and it is self-enforced.",
+    "No hosted, provider, legal, deployment, or independent-durability evidence is produced.",
+    "Catalog assertions verify shape, ownership, attributes and ACLs only. Runtime behaviour, replay equality, TTL fencing, and durability remain unqualified."
+  ]
+}

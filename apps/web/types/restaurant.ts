@@ -1,7 +1,7 @@
-import { Tables } from "@/integrations/supabase/types";
+import type { RestaurantDatabaseRow, ReviewDatabaseRow } from "@/integrations/supabase/types";
 
 // DB에서 가져온 기본 Restaurant 타입
-type BaseRestaurant = Tables<"restaurants">;
+type BaseRestaurant = RestaurantDatabaseRow;
 
 // YouTube Meta 타입 정의 (DB에 저장된 실제 구조)
 export interface YoutubeMeta {
@@ -40,7 +40,7 @@ export interface Restaurant extends BaseRestaurant {
     mergedRestaurants?: BaseRestaurant[]; // 병합된 모든 레스토랑 레코드
 }
 
-export type Review = Tables<"reviews">;
+export type Review = ReviewDatabaseRow;
 // categories는 배열 타입
 export type RestaurantCategory = string[];
 

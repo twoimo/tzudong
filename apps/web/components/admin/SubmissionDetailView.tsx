@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/lib/no-toast';
 import {
-    Youtube,
     User,
     RefreshCw,
     Loader2,
@@ -19,11 +18,12 @@ import {
     Sparkles,
     Check,
 } from 'lucide-react';
+import { YouTubeIcon } from '@/components/icons/YouTubeIcon';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { formatCategoryText } from '@/lib/category-utils';
 import { supabase } from '@/integrations/supabase/client';
-import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { extractCanonicalYouTubeVideoId, normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { getYoutubeThumbnailUrl } from '@/lib/youtube-thumbnail';
 
 // ==================== 타입 정의 ====================
@@ -237,8 +237,8 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
 
 
     if (error) {
-        console.error('❌ Edge Function 에러:', error);
-        throw new Error(error.message || JSON.stringify(error));
+        console.error('❌ Edge Function 에러:');
+        throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
     }
 
     const geocodeData = data as NaverGeocodeResponse | null;
@@ -249,8 +249,8 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
     }
 
     if (geocodeData.error) {
-        console.error('❌ API 에러:', geocodeData.error);
-        throw new Error(geocodeData.error);
+        console.error('❌ API 에러:');
+        throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
     }
 
     if (!geocodeData.addresses || geocodeData.addresses.length === 0) {
@@ -275,16 +275,19 @@ async function fetchYoutubeMetadata(youtubeLink: string): Promise<{
     is_shorts: boolean;
     ads_info: { is_ads: boolean; what_ads: string[] | null };
 } | null> {
+    const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(youtubeLink);
+    if (!canonicalYoutubeUrl) return null;
+
     try {
         const response = await fetch('/api/youtube-meta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ youtube_link: youtubeLink }),
+            body: JSON.stringify({ youtube_link: canonicalYoutubeUrl }),
         });
         if (!response.ok) throw new Error('Failed to fetch metadata');
         return await response.json();
     } catch (error) {
-        console.error('YouTube metadata fetch error:', error);
+        console.error('YouTube metadata fetch error:');
         return null;
     }
 }
@@ -786,7 +789,7 @@ export function SubmissionDetailView({
                 {/* 제보 항목 */}
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <Youtube className="h-4 w-4 text-red-500" />
+                        <YouTubeIcon className="h-4 w-4 text-red-500" />
                         <Label className="text-sm">제보 항목</Label>
                         <Badge variant="outline" className="text-xs">
                             {submission.items.length}개 중{' '}
@@ -798,8 +801,11 @@ export function SubmissionDetailView({
                     </div>
 
                     {submission.items.map((item) => {
-                        const videoId = extractVideoIdFromYoutubeLink(itemDecisions[item.id]?.youtube_link || item.youtube_link);
                         const decision = itemDecisions[item.id];
+                        const submittedYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(
+                            decision?.youtube_link || item.youtube_link,
+                        );
+                        const videoId = extractCanonicalYouTubeVideoId(submittedYoutubeUrl);
                         const isPending = item.item_status === 'pending';
                         const metaData = decision?.metaData;
                         const isSelected = decision?.approved;
@@ -859,8 +865,8 @@ export function SubmissionDetailView({
                                                 "h-7 px-3 text-xs",
                                                 decision?.metaFetched && "bg-green-600 hover:bg-green-700"
                                             )}
-                                            onClick={() => handleFetchMetadata(item.id, decision?.youtube_link || item.youtube_link)}
-                                            disabled={fetchingMeta === item.id}
+                                            onClick={() => handleFetchMetadata(item.id, submittedYoutubeUrl ?? '')}
+                                            disabled={fetchingMeta === item.id || !submittedYoutubeUrl}
                                         >
                                             {fetchingMeta === item.id ? (
                                                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -897,9 +903,9 @@ export function SubmissionDetailView({
 
                                     {/* YouTube 썸네일 + 메타데이터 */}
                                     <div className="flex gap-3 mb-3">
-                                        {videoId && (
+                                        {videoId && submittedYoutubeUrl && (
                                             <a
-                                                href={decision?.youtube_link || item.youtube_link}
+                                                href={submittedYoutubeUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="flex-shrink-0"
@@ -973,13 +979,16 @@ export function SubmissionDetailView({
 
                                         {/* 기존 YouTube 썸네일 + 메타데이터 */}
                                         {(() => {
-                                            const originalVideoId = extractVideoIdFromYoutubeLink(item.original_restaurant?.youtube_link || undefined);
+                                            const originalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(
+                                                item.original_restaurant?.youtube_link,
+                                            );
+                                            const originalVideoId = extractCanonicalYouTubeVideoId(originalYoutubeUrl);
                                             const originalMeta = item.original_restaurant?.youtube_meta;
                                             return (
                                                 <div className="flex gap-3 mb-3">
-                                                    {originalVideoId && (
+                                                    {originalVideoId && originalYoutubeUrl && (
                                                         <a
-                                                            href={item.original_restaurant?.youtube_link || ''}
+                                                            href={originalYoutubeUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="flex-shrink-0"
@@ -1019,14 +1028,14 @@ export function SubmissionDetailView({
                                                         ) : (
                                                             <div>
                                                                 <p className="text-xs text-gray-500 mb-1">기존 등록된 영상</p>
-                                                                {item.original_restaurant?.youtube_link ? (
+                                                                {originalYoutubeUrl ? (
                                                                     <a
-                                                                        href={item.original_restaurant.youtube_link}
+                                                                        href={originalYoutubeUrl}
                                                                         target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="text-blue-500 hover:underline text-xs break-all"
                                                                     >
-                                                                        {item.original_restaurant.youtube_link}
+                                                                        {originalYoutubeUrl}
                                                                     </a>
                                                                 ) : <span className="text-gray-400 text-xs">기존 YouTube 링크 없음</span>}
                                                                 <p className="text-[10px] text-gray-400 mt-1">메타데이터 없음</p>

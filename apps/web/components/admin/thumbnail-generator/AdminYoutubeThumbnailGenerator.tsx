@@ -81,6 +81,7 @@ import type {
   ThumbnailGenerationResult as ContractThumbnailGenerationResult,
   ThumbnailGeneratorPayload,
 } from "@/lib/admin/youtube-thumbnail-generator/types";
+import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 
 type ProviderId = "local-codex" | "openai-gpt-image-2";
 type GenerationMode = "direct_provider" | "backend_agent";
@@ -474,7 +475,6 @@ type ProviderAvailability = {
   reason?: string;
   command?: string;
   strictExactModelRequired?: boolean;
-  browserKeyStorage?: "browser_local_storage_only";
 };
 
 type ThumbnailReadiness = {
@@ -534,27 +534,10 @@ const DEFAULT_LIMITS: ThumbnailReadiness["limits"] = {
   mimeTypes: ["image/png", "image/jpeg", "image/webp"],
 };
 
-const THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY = "tzudong.admin.youtubeThumbnail.modelKeys.v1";
-const THUMBNAIL_BROWSER_MODEL_KEYS_VERSION = 1;
-const THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY = "tzudong.admin.youtubeThumbnail.localBridge.v1" as const;
 const THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD = "thumbnailSessionOpenaiApiKey";
 const THUMBNAIL_SESSION_API_KEY_MAX_LENGTH = 512;
 const THUMBNAIL_BROWSER_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
 
-type ThumbnailBrowserModelKeysCache = {
-  version: typeof THUMBNAIL_BROWSER_MODEL_KEYS_VERSION;
-  openAIApiKey: string;
-  savedAt: string;
-  storage: "browser_local_storage_only";
-};
-
-type ThumbnailLocalBridgeSessionCache = {
-  version: 1;
-  bridgeUrl: string;
-  token: string;
-  savedAt: string;
-  storage: "browser_session_storage_only";
-};
 
 type ThumbnailLocalBridgeUiStatus =
   | ThumbnailLocalBridgeStatus
@@ -646,7 +629,7 @@ const providerReadinessKey: Record<ProviderId, keyof ThumbnailReadiness["provide
 const thumbnailErrorActions: Record<string, string> = {
   required_ack: "안전 확인 체크박스를 직접 확인한 뒤 다시 생성하세요.",
   provider_unavailable: "현재 이미지 생성 준비가 끝나지 않았습니다. 설정을 확인한 뒤 다시 시도하세요.",
-  invalid_session_api_key: "설정에 저장한 이미지 만들기 키를 확인하세요.",
+  invalid_session_api_key: "이 탭에 적용한 이미지 만들기 키를 확인하세요.",
   unsupported_model: "이미지 만들기 설정을 확인하세요.",
   invalid_text: "주제/문구 길이와 금지 문자를 줄이고 다시 시도하세요.",
   unsafe_instruction: "비밀 정보나 설정을 보여 달라는 요청은 빼 주세요.",
@@ -692,7 +675,7 @@ function createThumbnailLocalBridgeHelperSessionId() {
 }
 
 function getThumbnailLocalBridgeReconnectRequiredMessage() {
-  return "이 탭은 pairing 설정만 복원했습니다. “로컬 브릿지 연결”을 눌러 helper 창을 다시 연결해 주세요.";
+  return "고급 로컬 브릿지를 사용하려면 이 탭에서 pairing token을 적용한 뒤 연결해 주세요.";
 }
 
 function getThumbnailLocalBridgeHelperClosedMessage() {
@@ -787,114 +770,17 @@ function isValidThumbnailBrowserOpenAIApiKey(value: string) {
 
 function maskThumbnailBrowserOpenAIApiKey(value: string | null) {
   if (!value) return "";
-  if (value.length <= 14) return "저장됨";
+  if (value.length <= 14) return "적용됨";
   return `${value.slice(0, 7)}…${value.slice(-4)}`;
 }
 
-function readThumbnailBrowserModelKeysCache(): ThumbnailBrowserModelKeysCache | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ThumbnailBrowserModelKeysCache>;
-    if (
-      parsed.version !== THUMBNAIL_BROWSER_MODEL_KEYS_VERSION ||
-      parsed.storage !== "browser_local_storage_only" ||
-      typeof parsed.openAIApiKey !== "string" ||
-      !isValidThumbnailBrowserOpenAIApiKey(parsed.openAIApiKey)
-    ) {
-      window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
-      return null;
-    }
-    return {
-      version: THUMBNAIL_BROWSER_MODEL_KEYS_VERSION,
-      openAIApiKey: parsed.openAIApiKey,
-      savedAt: typeof parsed.savedAt === "string" ? parsed.savedAt : new Date().toISOString(),
-      storage: "browser_local_storage_only",
-    };
-  } catch {
-    window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
-    return null;
-  }
-}
-
-function writeThumbnailBrowserModelKeysCache(openAIApiKey: string) {
-  if (typeof window === "undefined") return null;
-  const cache: ThumbnailBrowserModelKeysCache = {
-    version: THUMBNAIL_BROWSER_MODEL_KEYS_VERSION,
-    openAIApiKey,
-    savedAt: new Date().toISOString(),
-    storage: "browser_local_storage_only",
-  };
-  window.localStorage.setItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY, JSON.stringify(cache));
-  return cache;
-}
-
-function clearThumbnailBrowserModelKeysCache() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY);
-}
 
 function maskThumbnailLocalBridgeToken(value: string | null) {
   if (!value) return "";
+  if (value.length <= 8) return "적용됨";
   return `${value.slice(0, 4)}…${value.slice(-4)}`;
 }
 
-function readThumbnailLocalBridgeSessionCache(): ThumbnailLocalBridgeSessionCache | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ThumbnailLocalBridgeSessionCache>;
-    if (
-      parsed.version !== 1 ||
-      parsed.storage !== "browser_session_storage_only" ||
-      typeof parsed.bridgeUrl !== "string" ||
-      typeof parsed.token !== "string" ||
-      typeof parsed.savedAt !== "string"
-    ) {
-      window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
-      return null;
-    }
-    const bridgeUrl = normalizeThumbnailLocalBridgeUrl(parsed.bridgeUrl);
-    const token = normalizeThumbnailLocalBridgeToken(parsed.token);
-    if (!token) return null;
-    return {
-      version: 1,
-      bridgeUrl,
-      token,
-      savedAt: parsed.savedAt,
-      storage: "browser_session_storage_only",
-    };
-  } catch {
-    window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
-    return null;
-  }
-}
-
-function writeThumbnailLocalBridgeSessionCache(
-  bridgeUrl: string,
-  token: string,
-) {
-  if (typeof window === "undefined") return null;
-  const cache: ThumbnailLocalBridgeSessionCache = {
-    version: 1,
-    bridgeUrl: normalizeThumbnailLocalBridgeUrl(bridgeUrl),
-    token,
-    savedAt: new Date().toISOString(),
-    storage: "browser_session_storage_only",
-  };
-  window.sessionStorage.setItem(
-    THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY,
-    JSON.stringify(cache),
-  );
-  return cache;
-}
-
-function clearThumbnailLocalBridgeSessionCache() {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY);
-}
 
 function getProviderIdForThumbnailImageRouteChoice(routeChoice: ThumbnailImageRouteChoice): ProviderId {
   return routeChoice === "browser-openai-api-key" ? "openai-gpt-image-2" : "local-codex";
@@ -960,13 +846,14 @@ async function getThumbnailLocalBridgeStatusRequest(
   bridgeUrl: string,
   token: string | null,
   invokeHelper: ThumbnailLocalBridgeHelperInvoke,
+  signal: AbortSignal,
 ): Promise<{ status: ThumbnailLocalBridgeUiStatus; message: string }> {
   const baseUrl = normalizeThumbnailLocalBridgeUrl(bridgeUrl);
   const normalizedToken = normalizeThumbnailLocalBridgeToken(token);
   if (!normalizedToken) {
     return {
       status: "unpaired",
-      message: "고급 로컬 브릿지 pairing 설정을 먼저 저장해 주세요.",
+      message: "고급 로컬 브릿지 pairing 설정을 먼저 적용해 주세요.",
     };
   }
   try {
@@ -979,6 +866,7 @@ async function getThumbnailLocalBridgeStatusRequest(
         bridgeUrl: baseUrl,
         token: normalizedToken,
       },
+      { signal },
     );
     const helperPayload = isObjectRecord(responsePayload)
       ? responsePayload as Partial<ThumbnailLocalBridgeHelperStatusPayload>
@@ -2126,7 +2014,7 @@ function formatThumbnailProviderBlockReason(reason: string | null | undefined) {
     return "현재 페이지에서는 별도 API 키 방식으로 이미지를 만들지 않습니다.";
   }
   if (reason === "openai_api_key_required") {
-    return "오른쪽 위 톱니바퀴에서 이미지 만들기 키를 저장해 주세요.";
+    return "오른쪽 위 톱니바퀴에서 이미지 만들기 키를 적용해 주세요.";
   }
   if (reason === "openai_model_not_allowed") {
     return "현재 이미지 만들기 설정을 사용할 수 없습니다.";
@@ -2184,11 +2072,11 @@ function getThumbnailImageApiRouterView(
         : openAIApiKeyAvailability?.available
           ? "사용 중"
           : sessionKeyBackedOpenAIAvailable
-            ? "키 저장됨"
+            ? "키 적용됨"
           : readiness
             ? "확인 필요"
             : "확인 중",
-      summary: "이 브라우저에 저장한 키로 gpt-image-2를 호출합니다.",
+      summary: "이 탭 메모리에 적용한 키로 gpt-image-2를 호출합니다.",
       codexOAuthStatus: "api-key-active",
     };
   }
@@ -2740,6 +2628,11 @@ export function AdminYoutubeThumbnailGenerator() {
   const guidedExampleVariantIndexRef = useRef(0);
   const generationAbortControllerRef = useRef<AbortController | null>(null);
   const activeGenerationAssistantMessageIdRef = useRef<string | null>(null);
+  const thumbnailLocalBridgeStatusAbortControllerRef = useRef<AbortController | null>(null);
+  const browserOpenAIApiKeyRef = useRef<string | null>(null);
+  const browserOpenAIApiKeyInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbnailLocalBridgeTokenRef = useRef<string | null>(null);
+  const thumbnailLocalBridgeTokenInputRef = useRef<HTMLInputElement | null>(null);
   const chatTranscriptRef = useRef<HTMLDivElement | null>(null);
   const chatComposerImeRef = useRef(false);
   const referenceFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -2782,16 +2675,16 @@ export function AdminYoutubeThumbnailGenerator() {
   const [initialPreviewSource, setInitialPreviewSource] = useState<ThumbnailInitialPreviewSource>("bundled");
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [isChatSettingsOpen, setIsChatSettingsOpen] = useState(false);
-  const [browserOpenAIApiKey, setBrowserOpenAIApiKey] = useState<string | null>(null);
-  const [browserOpenAIApiKeyDraft, setBrowserOpenAIApiKeyDraft] = useState("");
-  const [browserOpenAIApiKeySavedAt, setBrowserOpenAIApiKeySavedAt] = useState<string | null>(null);
+  const [isBrowserOpenAIApiKeyApplied, setIsBrowserOpenAIApiKeyApplied] = useState(false);
+  const [maskedBrowserOpenAIApiKey, setMaskedBrowserOpenAIApiKey] = useState<string | null>(null);
+  const [browserOpenAIApiKeyAppliedAt, setBrowserOpenAIApiKeyAppliedAt] = useState<string | null>(null);
   const [browserOpenAIApiKeyMessage, setBrowserOpenAIApiKeyMessage] = useState<string | null>(null);
   const [thumbnailImageRouteChoice, setThumbnailImageRouteChoice] = useState<ThumbnailImageRouteChoice>("local-codex-oauth");
   const [thumbnailLocalBridgeUrl, setThumbnailLocalBridgeUrl] = useState<string>(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
   const [thumbnailLocalBridgeUrlDraft, setThumbnailLocalBridgeUrlDraft] = useState<string>(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
-  const [thumbnailLocalBridgeToken, setThumbnailLocalBridgeToken] = useState<string | null>(null);
-  const [thumbnailLocalBridgeTokenDraft, setThumbnailLocalBridgeTokenDraft] = useState("");
-  const [thumbnailLocalBridgeSavedAt, setThumbnailLocalBridgeSavedAt] = useState<string | null>(null);
+  const [isThumbnailLocalBridgePaired, setIsThumbnailLocalBridgePaired] = useState(false);
+  const [maskedThumbnailLocalBridgeToken, setMaskedThumbnailLocalBridgeToken] = useState<string | null>(null);
+  const [thumbnailLocalBridgeAppliedAt, setThumbnailLocalBridgeAppliedAt] = useState<string | null>(null);
   const [thumbnailLocalBridgeStatus, setThumbnailLocalBridgeStatus] = useState<ThumbnailLocalBridgeUiStatus>("unpaired");
   const [thumbnailLocalBridgeMessage, setThumbnailLocalBridgeMessage] = useState<string | null>(null);
   const [thumbnailLocalBridgeError, setThumbnailLocalBridgeError] = useState<string | null>(null);
@@ -2857,6 +2750,49 @@ export function AdminYoutubeThumbnailGenerator() {
     if (options?.nextMessage !== undefined) setThumbnailLocalBridgeMessage(options.nextMessage);
     if (options?.nextError !== undefined) setThumbnailLocalBridgeError(options.nextError);
   }, [clearThumbnailLocalBridgeHelperCloseWatch, rejectThumbnailLocalBridgeHelperPendingRequests]);
+  const clearThumbnailBrowserOpenAIApiKeySecret = useCallback(() => {
+    browserOpenAIApiKeyRef.current = null;
+    if (browserOpenAIApiKeyInputRef.current) browserOpenAIApiKeyInputRef.current.value = "";
+    setIsBrowserOpenAIApiKeyApplied(false);
+    setMaskedBrowserOpenAIApiKey(null);
+    setBrowserOpenAIApiKeyAppliedAt(null);
+  }, []);
+
+  const clearThumbnailLocalBridgeTokenSecret = useCallback(() => {
+    thumbnailLocalBridgeTokenRef.current = null;
+    if (thumbnailLocalBridgeTokenInputRef.current) thumbnailLocalBridgeTokenInputRef.current.value = "";
+    setIsThumbnailLocalBridgePaired(false);
+    setMaskedThumbnailLocalBridgeToken(null);
+    setThumbnailLocalBridgeAppliedAt(null);
+  }, []);
+
+  const abortThumbnailCredentialWork = useCallback(() => {
+    if (!chatAbortControllerRef.current?.signal.aborted) chatAbortControllerRef.current?.abort();
+    if (!generationAbortControllerRef.current?.signal.aborted) generationAbortControllerRef.current?.abort();
+    if (!thumbnailLocalBridgeStatusAbortControllerRef.current?.signal.aborted) {
+      thumbnailLocalBridgeStatusAbortControllerRef.current?.abort();
+    }
+    chatAbortControllerRef.current = null;
+    generationAbortControllerRef.current = null;
+    thumbnailLocalBridgeStatusAbortControllerRef.current = null;
+    resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
+    setIsChatAgentStreaming(false);
+    setIsGenerating(false);
+  }, [resetThumbnailLocalBridgeHelperTransport]);
+
+  const clearThumbnailCredentialLifecycle = useCallback(() => {
+    abortThumbnailCredentialWork();
+    clearThumbnailBrowserOpenAIApiKeySecret();
+    clearThumbnailLocalBridgeTokenSecret();
+    setBrowserOpenAIApiKeyMessage(null);
+    setThumbnailLocalBridgeStatus("unpaired");
+    setThumbnailLocalBridgeMessage(null);
+    setThumbnailLocalBridgeError(null);
+  }, [
+    abortThumbnailCredentialWork,
+    clearThumbnailBrowserOpenAIApiKeySecret,
+    clearThumbnailLocalBridgeTokenSecret,
+  ]);
 
   const invokeThumbnailLocalBridgeHelper = useCallback<ThumbnailLocalBridgeHelperInvoke>((request, options) => {
     const port = thumbnailLocalBridgeHelperPortRef.current;
@@ -2912,12 +2848,20 @@ export function AdminYoutubeThumbnailGenerator() {
   }, [resetThumbnailLocalBridgeHelperTransport]);
 
   const handleConnectThumbnailLocalBridgeHelper = useCallback(async () => {
-    const normalizedToken = normalizeThumbnailLocalBridgeToken(thumbnailLocalBridgeToken);
+    if (!thumbnailLocalBridgeStatusAbortControllerRef.current?.signal.aborted) {
+      thumbnailLocalBridgeStatusAbortControllerRef.current?.abort();
+    }
+    const controller = new AbortController();
+    thumbnailLocalBridgeStatusAbortControllerRef.current = controller;
+    const normalizedToken = normalizeThumbnailLocalBridgeToken(thumbnailLocalBridgeTokenRef.current);
     if (!normalizedToken) {
-      const message = "먼저 저장을 눌러 pairing 설정을 이 탭 sessionStorage에 저장해 주세요.";
+      const message = "먼저 적용을 눌러 pairing 설정을 이 탭 메모리에 적용해 주세요.";
       setThumbnailLocalBridgeStatus("unpaired");
       setThumbnailLocalBridgeMessage(message);
       setThumbnailLocalBridgeError(message);
+      if (thumbnailLocalBridgeStatusAbortControllerRef.current === controller) {
+        thumbnailLocalBridgeStatusAbortControllerRef.current = null;
+      }
       return false;
     }
     try {
@@ -2929,14 +2873,19 @@ export function AdminYoutubeThumbnailGenerator() {
       setThumbnailLocalBridgeError(null);
       const helperOrigin = new URL(normalizedUrl).origin;
       const helperUrl = buildThumbnailLocalBridgeHelperUrl(normalizedUrl, sessionId);
-      let popup: Window | null = null;
       const port = await new Promise<MessagePort>((resolve, reject) => {
-        const timeoutId = window.setTimeout(() => {
+        let timeoutId: number | null = null;
+        function cleanup() {
+          if (timeoutId !== null) window.clearTimeout(timeoutId);
+          window.removeEventListener("message", onMessage);
+          controller.signal.removeEventListener("abort", abortHandler);
+        }
+        function abortHandler() {
           cleanup();
-          reject(new Error("로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요."));
-        }, 10_000);
-        const onMessage = (event: MessageEvent<unknown>) => {
-          if (!isThumbnailLocalBridgeHelperReadyMessage(event.data)) return;
+          reject(new Error("thumbnail_local_bridge_status_aborted"));
+        }
+        function onMessage(event: MessageEvent<unknown>) {
+          if (event.origin !== helperOrigin || !isThumbnailLocalBridgeHelperReadyMessage(event.data)) return;
           if (event.data.sessionId !== sessionId) return;
           if (!event.ports[0]) {
             cleanup();
@@ -2945,13 +2894,18 @@ export function AdminYoutubeThumbnailGenerator() {
           }
           cleanup();
           resolve(event.ports[0]);
-        };
-        const cleanup = () => {
-          window.clearTimeout(timeoutId);
-          window.removeEventListener("message", onMessage);
-        };
+        }
+        timeoutId = window.setTimeout(() => {
+          cleanup();
+          reject(new Error("로컬 브릿지 helper 창이 응답하지 않습니다. helper 창이 열렸는지 확인한 뒤 다시 연결해 주세요."));
+        }, 10_000);
+        if (controller.signal.aborted) {
+          abortHandler();
+          return;
+        }
+        controller.signal.addEventListener("abort", abortHandler, { once: true });
         window.addEventListener("message", onMessage);
-        popup = window.open(
+        const popup = window.open(
           helperUrl,
           "tzudong-thumbnail-local-bridge-helper",
           "popup=yes,width=560,height=720,resizable=yes,scrollbars=yes",
@@ -2961,9 +2915,10 @@ export function AdminYoutubeThumbnailGenerator() {
           reject(new Error(getThumbnailLocalBridgePopupBlockedMessage()));
           return;
         }
+        thumbnailLocalBridgeHelperPopupRef.current = popup;
         popup.focus();
       });
-      thumbnailLocalBridgeHelperPopupRef.current = popup;
+      if (controller.signal.aborted) return false;
       thumbnailLocalBridgeHelperPortRef.current = port;
       thumbnailLocalBridgeHelperSessionIdRef.current = sessionId;
       port.onmessage = (event) => {
@@ -3002,26 +2957,32 @@ export function AdminYoutubeThumbnailGenerator() {
         normalizedUrl,
         normalizedToken,
         invokeThumbnailLocalBridgeHelper,
+        controller.signal,
       );
+      if (controller.signal.aborted) return false;
       setThumbnailLocalBridgeStatus(status.status);
       setThumbnailLocalBridgeMessage(status.message);
       setThumbnailLocalBridgeError(status.status === "connected" ? null : status.message);
       return status.status === "connected";
     } catch (error) {
+      if (controller.signal.aborted) return false;
       const message = redactThumbnailLocalBridgeSecretText(
         error instanceof Error ? error.message : "로컬 브릿지 helper 연결을 시작하지 못했습니다.",
-        thumbnailLocalBridgeToken,
+        normalizedToken,
       );
       setThumbnailLocalBridgeStatus(message === getThumbnailLocalBridgePopupBlockedMessage() ? "popup_blocked" : "error");
       setThumbnailLocalBridgeMessage(message);
       setThumbnailLocalBridgeError(message);
       return false;
+    } finally {
+      if (thumbnailLocalBridgeStatusAbortControllerRef.current === controller) {
+        thumbnailLocalBridgeStatusAbortControllerRef.current = null;
+      }
     }
   }, [
     clearThumbnailLocalBridgeHelperCloseWatch,
     invokeThumbnailLocalBridgeHelper,
     resetThumbnailLocalBridgeHelperTransport,
-    thumbnailLocalBridgeToken,
     thumbnailLocalBridgeUrl,
   ]);
 
@@ -3071,22 +3032,19 @@ export function AdminYoutubeThumbnailGenerator() {
     [canvasContextLayer, lastCanvasActionLabel],
   );
   const shouldShowThumbnailCanvasContext = canvasContextState !== "idle";
-  const isBrowserOpenAIApiKeySaved = Boolean(browserOpenAIApiKey);
-  const isThumbnailLocalBridgePaired = Boolean(thumbnailLocalBridgeToken);
   const isThumbnailLocalBridgeConnected = thumbnailLocalBridgeStatus === "connected";
   const shouldShowThumbnailLocalBridgeSettings = thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID;
   const thumbnailImageApiRouterView = getThumbnailImageApiRouterView(
     readiness,
     thumbnailImageRouteChoice,
-    isBrowserOpenAIApiKeySaved,
+    isBrowserOpenAIApiKeyApplied,
     isThumbnailLocalBridgePaired,
     thumbnailLocalBridgeStatus,
   );
-  const maskedThumbnailLocalBridgeToken = maskThumbnailLocalBridgeToken(thumbnailLocalBridgeToken);
   const sessionKeyBackedProviderAvailableForChatStatus = canUseSessionApiKeyForProvider(
     providerId,
     selectedProviderAvailability,
-    isBrowserOpenAIApiKeySaved,
+    isBrowserOpenAIApiKeyApplied,
   );
   const thumbnailChatStatusState = isGenerating
     ? "generating"
@@ -3146,38 +3104,19 @@ export function AdminYoutubeThumbnailGenerator() {
     resultRef.current = result;
   }, [result]);
 
-  useEffect(() => {
-    const cachedKeys = readThumbnailBrowserModelKeysCache();
-    if (!cachedKeys) return;
-    setBrowserOpenAIApiKey(cachedKeys.openAIApiKey);
-    setBrowserOpenAIApiKeyDraft("");
-    setBrowserOpenAIApiKeySavedAt(cachedKeys.savedAt);
-    setBrowserOpenAIApiKeyMessage("이 브라우저에 저장된 OpenAI 키를 사용할 준비가 됐습니다.");
-    setProviderId("openai-gpt-image-2");
-    setThumbnailImageRouteChoice("browser-openai-api-key");
-  }, []);
 
   useEffect(() => {
-    const cachedBridge = readThumbnailLocalBridgeSessionCache();
-    if (!cachedBridge) return;
-    setThumbnailLocalBridgeUrl(cachedBridge.bridgeUrl);
-    setThumbnailLocalBridgeUrlDraft(cachedBridge.bridgeUrl);
-    setThumbnailLocalBridgeToken(cachedBridge.token);
-    setThumbnailLocalBridgeTokenDraft("");
-    setThumbnailLocalBridgeSavedAt(cachedBridge.savedAt);
-    setThumbnailLocalBridgeStatus("needs_reconnect");
-    setThumbnailLocalBridgeMessage(getThumbnailLocalBridgeReconnectRequiredMessage());
-    setThumbnailLocalBridgeError(null);
-    setProviderId("local-codex");
-    setGenerationMode("direct_provider");
-    setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
+    const clearForPageLifecycle = () => {
+      clearThumbnailCredentialLifecycle();
     };
-  }, [resetThumbnailLocalBridgeHelperTransport]);
+    window.addEventListener("pagehide", clearForPageLifecycle);
+    window.addEventListener("pageshow", clearForPageLifecycle);
+    return () => {
+      window.removeEventListener("pagehide", clearForPageLifecycle);
+      window.removeEventListener("pageshow", clearForPageLifecycle);
+      clearThumbnailCredentialLifecycle();
+    };
+  }, [clearThumbnailCredentialLifecycle]);
 
   const loadReadiness = useCallback(async () => {
     try {
@@ -4446,7 +4385,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
       providerId,
       selectedProviderAvailability,
-      Boolean(browserOpenAIApiKey),
+      isBrowserOpenAIApiKeyApplied,
     );
     const progressState = isGenerating
       ? "이미지를 만드는 중"
@@ -5544,7 +5483,7 @@ export function AdminYoutubeThumbnailGenerator() {
     const sessionKeyBackedProviderAvailable = canUseSessionApiKeyForProvider(
       submittedProviderId,
       providerAvailability,
-      Boolean(browserOpenAIApiKey),
+      isBrowserOpenAIApiKeyApplied,
     );
     const chatGenerationRequirement = chatAssistantMessageId
       ? pendingChatGenerationRequirementRef.current
@@ -5665,21 +5604,22 @@ export function AdminYoutubeThumbnailGenerator() {
       if (isLocalBridgeRoute) {
         const bridgeStatus = await getThumbnailLocalBridgeStatusRequest(
           thumbnailLocalBridgeUrl,
-          thumbnailLocalBridgeToken,
+          thumbnailLocalBridgeTokenRef.current,
           invokeThumbnailLocalBridgeHelper,
+          controller.signal,
         );
         setThumbnailLocalBridgeStatus(bridgeStatus.status);
         setThumbnailLocalBridgeMessage(bridgeStatus.message);
         setThumbnailLocalBridgeError(bridgeStatus.status === "connected" ? null : bridgeStatus.message);
         if (bridgeStatus.status !== "connected") {
-          throw new Error(bridgeStatus.message);
+          throw new Error("THUMBNAIL_LOCAL_BRIDGE_UNAVAILABLE");
         }
         const localBridgeReferences = await buildThumbnailLocalBridgeReferenceImages(files, referenceImageRoles);
         const nextResult = await postThumbnailLocalBridgeImagesRequest(
           generationPayload,
           localBridgeReferences,
           thumbnailLocalBridgeUrl,
-          thumbnailLocalBridgeToken,
+          thumbnailLocalBridgeTokenRef.current,
           controller.signal,
           invokeThumbnailLocalBridgeHelper,
         );
@@ -5703,12 +5643,13 @@ export function AdminYoutubeThumbnailGenerator() {
         JSON.stringify(generationPayload),
       );
       files.forEach((file) => formData.append("referenceImages", file));
-      if (submittedProviderId === "openai-gpt-image-2" && browserOpenAIApiKey) {
-        formData.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, browserOpenAIApiKey);
+      if (submittedProviderId === "openai-gpt-image-2" && browserOpenAIApiKeyRef.current) {
+        formData.append(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD, browserOpenAIApiKeyRef.current);
       }
 
       const response = await fetch("/api/admin/youtube-thumbnail-generator", {
         method: "POST",
+        cache: "no-store",
         signal: controller.signal,
         body: formData,
       });
@@ -5878,8 +5819,9 @@ export function AdminYoutubeThumbnailGenerator() {
     if (open) void loadThumbnailHistory({ replaceInitialPreview: false });
   }
 
-  function handleSaveThumbnailBrowserOpenAIApiKey() {
-    const normalizedKey = normalizeThumbnailBrowserOpenAIApiKeyInput(browserOpenAIApiKeyDraft);
+  function handleApplyThumbnailBrowserOpenAIApiKey() {
+    const keyInput = browserOpenAIApiKeyInputRef.current;
+    const normalizedKey = normalizeThumbnailBrowserOpenAIApiKeyInput(keyInput?.value ?? "");
     if (!isValidThumbnailBrowserOpenAIApiKey(normalizedKey)) {
       const message = "OpenAI API 키 형식이 올바르지 않습니다. sk-로 시작하는 키를 붙여 넣어 주세요.";
       setBrowserOpenAIApiKeyMessage(message);
@@ -5891,51 +5833,51 @@ export function AdminYoutubeThumbnailGenerator() {
       return;
     }
 
-    const cache = writeThumbnailBrowserModelKeysCache(normalizedKey);
-    setBrowserOpenAIApiKey(normalizedKey);
-    setBrowserOpenAIApiKeyDraft("");
-    setBrowserOpenAIApiKeySavedAt(cache?.savedAt ?? new Date().toISOString());
-    setBrowserOpenAIApiKeyMessage("저장했어요. 이 브라우저에서만 gpt-image-2 생성 요청에 사용합니다.");
+    abortThumbnailCredentialWork();
+    browserOpenAIApiKeyRef.current = normalizedKey;
+    if (keyInput) keyInput.value = "";
+    setIsBrowserOpenAIApiKeyApplied(true);
+    setMaskedBrowserOpenAIApiKey(maskThumbnailBrowserOpenAIApiKey(normalizedKey));
+    setBrowserOpenAIApiKeyAppliedAt(new Date().toISOString());
+    setBrowserOpenAIApiKeyMessage(
+      "적용했어요. 이 탭에서만 gpt-image-2 생성 요청에 사용하며, 화면을 닫으면 키가 제거됩니다.",
+    );
     setProviderId("openai-gpt-image-2");
     setThumbnailImageRouteChoice("browser-openai-api-key");
     toast({
-      title: "OpenAI 키 저장 완료",
-      description: "DB나 계정에는 저장하지 않고, 이 브라우저 캐시에만 저장했습니다.",
+      title: "OpenAI 키 적용 완료",
+      description: "Web Storage, DB, 계정에는 저장하지 않고 이 탭 메모리에서만 사용합니다.",
     });
   }
 
   function handleClearThumbnailBrowserOpenAIApiKey() {
-    clearThumbnailBrowserModelKeysCache();
-    setBrowserOpenAIApiKey(null);
-    setBrowserOpenAIApiKeyDraft("");
-    setBrowserOpenAIApiKeySavedAt(null);
-    setBrowserOpenAIApiKeyMessage("저장된 OpenAI 키를 이 브라우저에서 삭제했습니다.");
+    abortThumbnailCredentialWork();
+    clearThumbnailBrowserOpenAIApiKeySecret();
+    setBrowserOpenAIApiKeyMessage("이 탭 메모리의 OpenAI 키를 삭제했습니다.");
     if (thumbnailImageRouteChoice === "browser-openai-api-key") {
       setThumbnailImageRouteChoice("local-codex-oauth");
     }
     setProviderId("local-codex");
     toast({
       title: "OpenAI 키 삭제 완료",
-      description: "이 브라우저 캐시에서만 삭제했습니다.",
+      description: "이 탭 메모리에서 삭제했습니다.",
     });
   }
 
-  async function handleSaveThumbnailLocalBridgeSession() {
+  async function handleApplyThumbnailLocalBridge() {
+    const tokenInput = thumbnailLocalBridgeTokenInputRef.current;
+    const tokenCandidate = tokenInput?.value || thumbnailLocalBridgeTokenRef.current;
     try {
-      const normalizedUrl = normalizeThumbnailLocalBridgeUrl(thumbnailLocalBridgeUrlDraft);
-      const normalizedToken = requireThumbnailLocalBridgeToken(
-        thumbnailLocalBridgeTokenDraft || thumbnailLocalBridgeToken,
-      );
-      const cache = writeThumbnailLocalBridgeSessionCache(normalizedUrl, normalizedToken);
-      if (!cache) {
-        throw new Error("브라우저 sessionStorage를 사용할 수 없습니다.");
-      }
-      resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
-      setThumbnailLocalBridgeUrl(cache.bridgeUrl);
-      setThumbnailLocalBridgeUrlDraft(cache.bridgeUrl);
-      setThumbnailLocalBridgeToken(cache.token);
-      setThumbnailLocalBridgeTokenDraft("");
-      setThumbnailLocalBridgeSavedAt(cache.savedAt);
+      const bridgeUrl = normalizeThumbnailLocalBridgeUrl(thumbnailLocalBridgeUrlDraft);
+      const token = requireThumbnailLocalBridgeToken(tokenCandidate);
+      abortThumbnailCredentialWork();
+      setThumbnailLocalBridgeUrl(bridgeUrl);
+      setThumbnailLocalBridgeUrlDraft(bridgeUrl);
+      thumbnailLocalBridgeTokenRef.current = token;
+      if (tokenInput) tokenInput.value = "";
+      setIsThumbnailLocalBridgePaired(true);
+      setMaskedThumbnailLocalBridgeToken(maskThumbnailLocalBridgeToken(token));
+      setThumbnailLocalBridgeAppliedAt(new Date().toISOString());
       setThumbnailLocalBridgeStatus("needs_reconnect");
       setThumbnailLocalBridgeMessage(getThumbnailLocalBridgeReconnectRequiredMessage());
       setThumbnailLocalBridgeError(null);
@@ -5943,34 +5885,31 @@ export function AdminYoutubeThumbnailGenerator() {
       setGenerationMode("direct_provider");
       setThumbnailImageRouteChoice(THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID);
       appendThumbnailChatAssistantNotice(
-        "고급 로컬 브릿지 설정을 이 탭 sessionStorage에 저장했어요. pairing token은 앱 서버나 비-loopback 네트워크로 보내지 않습니다.",
+        "고급 로컬 브릿지 설정을 이 탭 메모리에 적용했어요. pairing token은 Web Storage, 앱 서버, 비-loopback 네트워크에 저장하거나 보내지 않습니다.",
       );
     } catch (error) {
       const message = redactThumbnailLocalBridgeSecretText(
-        error instanceof Error ? error.message : "로컬 브릿지 설정을 저장하지 못했습니다.",
-        thumbnailLocalBridgeTokenDraft || thumbnailLocalBridgeToken,
+        error instanceof Error ? error.message : "로컬 브릿지 설정을 적용하지 못했습니다.",
+        tokenCandidate,
       );
       setThumbnailLocalBridgeStatus("error");
       setThumbnailLocalBridgeMessage(message);
       setThumbnailLocalBridgeError(message);
       toast({
         variant: "destructive",
-        title: "고급 로컬 브릿지 저장",
+        title: "고급 로컬 브릿지 적용",
         description: message,
       });
     }
   }
 
-  function handleClearThumbnailLocalBridgeSession() {
-    resetThumbnailLocalBridgeHelperTransport({ closePopup: true });
-    clearThumbnailLocalBridgeSessionCache();
+  function handleClearThumbnailLocalBridge() {
+    abortThumbnailCredentialWork();
     setThumbnailLocalBridgeUrl(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
     setThumbnailLocalBridgeUrlDraft(THUMBNAIL_LOCAL_BRIDGE_DEFAULT_URL);
-    setThumbnailLocalBridgeToken(null);
-    setThumbnailLocalBridgeTokenDraft("");
-    setThumbnailLocalBridgeSavedAt(null);
+    clearThumbnailLocalBridgeTokenSecret();
     setThumbnailLocalBridgeStatus("unpaired");
-    setThumbnailLocalBridgeMessage("로컬 브릿지 설정을 이 탭에서 삭제했습니다.");
+    setThumbnailLocalBridgeMessage("로컬 브릿지 설정을 이 탭 메모리에서 삭제했습니다.");
     setThumbnailLocalBridgeError(null);
     if (thumbnailImageRouteChoice === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
       setThumbnailImageRouteChoice("local-codex-oauth");
@@ -5978,7 +5917,7 @@ export function AdminYoutubeThumbnailGenerator() {
       setGenerationMode("direct_provider");
     }
     appendThumbnailChatAssistantNotice(
-      "고급 로컬 브릿지 URL과 pairing 설정을 이 탭에서 삭제했어요. 기본 OAuth로 돌아갑니다.",
+      "고급 로컬 브릿지 URL과 pairing 설정을 이 탭 메모리에서 삭제했어요. 기본 OAuth로 돌아갑니다.",
     );
   }
 
@@ -5989,25 +5928,25 @@ export function AdminYoutubeThumbnailGenerator() {
     if (nextRoute === THUMBNAIL_LOCAL_BRIDGE_ROUTE_ID) {
       setGenerationMode("direct_provider");
       setThumbnailLocalBridgeStatus(
-        thumbnailLocalBridgeToken
+        isThumbnailLocalBridgePaired
           ? (thumbnailLocalBridgeStatus === "connected" ? "connected" : "needs_reconnect")
           : "unpaired",
       );
       setThumbnailLocalBridgeMessage(
-        thumbnailLocalBridgeToken
+        isThumbnailLocalBridgePaired
           ? (thumbnailLocalBridgeStatus === "connected"
               ? "로컬 브릿지 helper가 연결되어 있습니다. 이 경로는 앱 서버 relay 없이 loopback에서만 동작합니다."
               : getThumbnailLocalBridgeReconnectRequiredMessage())
-          : "고급 로컬 브릿지는 pairing 설정을 저장한 뒤 helper 연결을 눌러 사용할 수 있습니다.",
+          : "고급 로컬 브릿지는 pairing 설정을 이 탭에 적용한 뒤 helper 연결을 눌러 사용할 수 있습니다.",
       );
       setBrowserOpenAIApiKeyMessage(null);
       return;
     }
     if (nextRoute === "browser-openai-api-key") {
       setBrowserOpenAIApiKeyMessage(
-        browserOpenAIApiKey
+        isBrowserOpenAIApiKeyApplied
           ? "OpenAI API 키를 사용하도록 선택했어요."
-          : "API Key를 선택했어요. 먼저 키를 저장해 주세요.",
+          : "API Key를 선택했어요. 먼저 키를 적용해 주세요.",
       );
       setThumbnailLocalBridgeMessage(null);
       return;
@@ -6095,7 +6034,7 @@ export function AdminYoutubeThumbnailGenerator() {
             <span className="block text-[10px] opacity-80">
               {formatThumbnailLocalBridgeStatusLabel(
                 thumbnailLocalBridgeStatus,
-                Boolean(thumbnailLocalBridgeToken),
+                isThumbnailLocalBridgePaired,
               )}
             </span>
           </button>
@@ -6116,7 +6055,7 @@ export function AdminYoutubeThumbnailGenerator() {
           >
             <span className="block text-[11px] font-bold">API Key</span>
             <span className="block text-[10px] opacity-80">
-              {isBrowserOpenAIApiKeySaved ? "저장됨" : "키 필요"}
+              {isBrowserOpenAIApiKeyApplied ? "이 탭 사용" : "키 필요"}
             </span>
           </button>
         </div>
@@ -6164,12 +6103,12 @@ export function AdminYoutubeThumbnailGenerator() {
 
         <div
           className="grid gap-1.5"
-          data-thumbnail-api-key-settings="local-storage-only"
-          data-thumbnail-browser-api-key-settings="local-storage-only"
-          data-thumbnail-api-key-storage="browser-local-storage-only"
+          data-thumbnail-api-key-settings="memory-only"
+          data-thumbnail-browser-api-key-settings="memory-only"
+          data-thumbnail-api-key-persistence="none"
           data-thumbnail-api-key-db-storage="forbidden"
-          data-thumbnail-openai-api-key-scope="browser-local-storage"
-          data-thumbnail-browser-api-key-storage-key={THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY}
+          data-thumbnail-openai-api-key-scope="component-memory"
+          data-thumbnail-browser-api-key-lifetime="component"
         >
           <div className="flex items-center justify-between gap-2">
             <Label
@@ -6198,61 +6137,60 @@ export function AdminYoutubeThumbnailGenerator() {
           </div>
           <div className="flex gap-2">
             <Input
+              ref={browserOpenAIApiKeyInputRef}
               id="thumbnail-browser-openai-api-key"
               type="password"
-              value={browserOpenAIApiKeyDraft}
-              onChange={(event) => {
-                setBrowserOpenAIApiKeyDraft(event.target.value);
+              onChange={() => {
                 if (browserOpenAIApiKeyMessage) setBrowserOpenAIApiKeyMessage(null);
               }}
               placeholder={
-                browserOpenAIApiKey
-                  ? `${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)} 저장됨`
+                isBrowserOpenAIApiKeyApplied && maskedBrowserOpenAIApiKey
+                  ? `${maskedBrowserOpenAIApiKey} 이 탭 적용됨`
                   : "sk-..."
               }
               autoComplete="off"
               spellCheck={false}
               className="h-8 text-xs"
-              aria-label="브라우저에만 저장할 OpenAI API 키"
+              aria-label="이 탭에서만 사용할 OpenAI API 키"
               data-thumbnail-browser-api-key-input="true"
             />
             <Button
               type="button"
               size="sm"
               className="h-8 shrink-0 px-2 text-xs"
-              onClick={handleSaveThumbnailBrowserOpenAIApiKey}
-              data-thumbnail-api-key-save="true"
-              data-thumbnail-browser-api-key-save="true"
+              onClick={handleApplyThumbnailBrowserOpenAIApiKey}
+              data-thumbnail-api-key-apply="true"
+              data-thumbnail-browser-api-key-apply="true"
             >
-              저장
+              적용
             </Button>
           </div>
           <p
             className="text-[10px] leading-4 text-muted-foreground"
-            data-thumbnail-api-key-browser-only-copy="true"
-            data-thumbnail-browser-api-key-browser-only-copy="true"
+            data-thumbnail-api-key-memory-only-copy="true"
+            data-thumbnail-browser-api-key-memory-only-copy="true"
             data-thumbnail-api-key-model-policy="gpt-image-2-only"
             data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"
           >
-            OAuth가 안 될 때만 사용 · 브라우저 저장 · DB 저장 없음 · gpt-image-2 전용
+            OAuth가 안 될 때만 사용 · 이 탭 메모리만 사용 · Web Storage·DB 저장 안 함 · gpt-image-2 전용
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <p
               className="min-w-0 flex-1 text-[11px] text-muted-foreground"
               data-thumbnail-api-key-session-status="true"
               data-thumbnail-browser-api-key-status={
-                isBrowserOpenAIApiKeySaved ? "saved" : "empty"
+                isBrowserOpenAIApiKeyApplied ? "memory-active" : "empty"
               }
             >
-              {browserOpenAIApiKey
-                ? `저장됨 · ${maskThumbnailBrowserOpenAIApiKey(browserOpenAIApiKey)}${
-                    browserOpenAIApiKeySavedAt
-                      ? ` · ${new Date(browserOpenAIApiKeySavedAt).toLocaleString("ko-KR")}`
+              {isBrowserOpenAIApiKeyApplied
+                ? `이 탭에서 사용 중 · ${maskedBrowserOpenAIApiKey ?? "적용됨"}${
+                    browserOpenAIApiKeyAppliedAt
+                      ? ` · ${new Date(browserOpenAIApiKeyAppliedAt).toLocaleString("ko-KR")}`
                       : ""
                   }`
-                : "저장된 키 없음"}
+                : "적용된 키 없음"}
             </p>
-            {browserOpenAIApiKey ? (
+            {isBrowserOpenAIApiKeyApplied ? (
               <Button
                 type="button"
                 variant="outline"
@@ -6280,12 +6218,11 @@ export function AdminYoutubeThumbnailGenerator() {
         {shouldShowThumbnailLocalBridgeSettings ? (
           <div
             className="grid gap-1.5 rounded-xl border border-dashed border-primary/25 bg-primary/5 p-2"
-            data-thumbnail-local-bridge-settings="session-only"
+            data-thumbnail-local-bridge-settings="memory-only"
             data-thumbnail-local-bridge-settings-visibility="advanced-selected"
-            data-thumbnail-local-bridge-storage="browser-session-storage-only"
+            data-thumbnail-local-bridge-persistence="none"
             data-thumbnail-local-bridge-server-relay="forbidden"
-            data-thumbnail-local-bridge-token-persistence="session-only"
-            data-thumbnail-local-bridge-storage-key={THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY}
+            data-thumbnail-local-bridge-token-lifetime="component"
             data-thumbnail-local-bridge-transport="helper-window"
           >
             <div className="flex items-center justify-between gap-2">
@@ -6302,7 +6239,7 @@ export function AdminYoutubeThumbnailGenerator() {
               >
                 {formatThumbnailLocalBridgeStatusLabel(
                   thumbnailLocalBridgeStatus,
-                  Boolean(thumbnailLocalBridgeToken),
+                  isThumbnailLocalBridgePaired,
                 )}
               </Badge>
             </div>
@@ -6310,7 +6247,7 @@ export function AdminYoutubeThumbnailGenerator() {
               className="text-[10px] leading-4 text-muted-foreground"
               data-thumbnail-local-bridge-guidance="true"
             >
-              pairing token은 이 탭에만 저장합니다. 실제 bridge 호출은 loopback helper 창에서 처리하며 앱 서버 relay는 사용하지 않습니다.
+              pairing token은 이 화면 메모리에만 있고 Web Storage에 저장되지 않으며, 화면을 닫으면 제거됩니다. 실제 bridge 호출은 loopback helper 창에서 처리하며 앱 서버 relay는 사용하지 않습니다.
             </p>
             <div className="grid gap-1">
               <Input
@@ -6328,16 +6265,15 @@ export function AdminYoutubeThumbnailGenerator() {
                 data-thumbnail-local-bridge-url-input="true"
               />
               <Input
+                ref={thumbnailLocalBridgeTokenInputRef}
                 id="thumbnail-local-bridge-token"
                 type="password"
-                value={thumbnailLocalBridgeTokenDraft}
-                onChange={(event) => {
-                  setThumbnailLocalBridgeTokenDraft(event.target.value);
+                onChange={() => {
                   setThumbnailLocalBridgeError(null);
                 }}
                 placeholder={
-                  thumbnailLocalBridgeToken
-                    ? `${maskedThumbnailLocalBridgeToken} 저장됨`
+                  isThumbnailLocalBridgePaired && maskedThumbnailLocalBridgeToken
+                    ? `${maskedThumbnailLocalBridgeToken} 이 탭 적용됨`
                     : "브릿지 터미널 pairing_token"
                 }
                 autoComplete="off"
@@ -6352,10 +6288,10 @@ export function AdminYoutubeThumbnailGenerator() {
                 type="button"
                 size="sm"
                 className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                onClick={() => void handleSaveThumbnailLocalBridgeSession()}
-                data-thumbnail-local-bridge-save="true"
+                onClick={() => void handleApplyThumbnailLocalBridge()}
+                data-thumbnail-local-bridge-apply="true"
               >
-                저장
+                적용
               </Button>
               <Button
                 type="button"
@@ -6367,13 +6303,13 @@ export function AdminYoutubeThumbnailGenerator() {
               >
                 {thumbnailLocalBridgeStatus === "connected" ? "다시 확인" : "로컬 브릿지 연결"}
               </Button>
-              {thumbnailLocalBridgeToken ? (
+              {isThumbnailLocalBridgePaired ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="h-7 shrink-0 rounded-full px-2 text-[11px]"
-                  onClick={handleClearThumbnailLocalBridgeSession}
+                  onClick={handleClearThumbnailLocalBridge}
                   data-thumbnail-local-bridge-clear="true"
                 >
                   삭제
@@ -6387,9 +6323,9 @@ export function AdminYoutubeThumbnailGenerator() {
               >
                 {thumbnailLocalBridgeError ??
                   thumbnailLocalBridgeMessage ??
-                  (thumbnailLocalBridgeSavedAt
-                    ? `sessionStorage 저장됨 · ${new Date(thumbnailLocalBridgeSavedAt).toLocaleString("ko-KR")}`
-                    : "bun run storyboard:local-bridge 실행 후 token을 저장하고 로컬 브릿지 연결을 눌러 주세요.")}
+                  (thumbnailLocalBridgeAppliedAt
+                    ? `이 탭에서 사용 중 · ${new Date(thumbnailLocalBridgeAppliedAt).toLocaleString("ko-KR")}`
+                    : "bun run storyboard:local-bridge 실행 후 token을 이 탭에 적용하고 로컬 브릿지 연결을 눌러 주세요.")}
               </p>
             </div>
           </div>
@@ -6530,19 +6466,32 @@ export function AdminYoutubeThumbnailGenerator() {
       </div>
     );
   }
+  const thumbnailModuleSummary = isGenerating
+    ? `이미지 생성 중 · ${thumbnailImageApiRouterView.label}`
+    : isChatAgentStreaming
+      ? "도우미 응답 중 · 캔버스 편집 맥락 반영"
+      : `상태 ${thumbnailChatStatusLabel} · 기록 ${historyRuns.length}개 · ${thumbnailImageApiRouterView.label}`;
+
 
   return (
-    <main
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
-      aria-label="유튜브 썸네일 생성기"
-      data-admin-youtube-thumbnail-generator="true"
-      data-thumbnail-initial-preview-source={initialPreviewSource}
-      onKeyDown={handleThumbnailEditorShellKeyDown}
+    <AdminEmbeddedModuleShell
+      moduleId="youtube-thumbnail-generator"
+      titleId="admin-youtube-thumbnail-generator-title"
+      title="유튜브 썸네일 생성"
+      icon={Wand2}
+      summary={thumbnailModuleSummary}
     >
-      <div
-        className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
-        data-thumbnail-chat-right-layout="true"
+      <main
+        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
+        aria-label="유튜브 썸네일 생성기"
+        data-admin-youtube-thumbnail-generator="true"
+        data-thumbnail-initial-preview-source={initialPreviewSource}
+        onKeyDown={handleThumbnailEditorShellKeyDown}
       >
+        <div
+          className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+          data-thumbnail-chat-right-layout="true"
+        >
         <Card
           className="order-2 flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
           aria-label="요구사항 채팅"
@@ -7189,7 +7138,8 @@ export function AdminYoutubeThumbnailGenerator() {
 
           </CardContent>
         </Card>
-      </div>
-    </main>
+        </div>
+      </main>
+    </AdminEmbeddedModuleShell>
   );
 }

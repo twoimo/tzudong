@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ADMIN_MODAL_ACTION,
@@ -50,6 +51,7 @@ export function DbConflictResolutionPanel({
   const conflictInfo = record.db_conflict_info;
   const existing = conflictInfo.existing_restaurant;
   const newInfo = conflictInfo.new_restaurant;
+  const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
 
   const handleUpdateExisting = async () => {
     try {
@@ -74,7 +76,7 @@ export function DbConflictResolutionPanel({
         sourceRestaurantId: record.id,
         adminUserId,
         expectedTargetUpdatedAt: existingRestaurantData.updated_at,
-        incomingYoutubeLink: record.youtube_link || null,
+        incomingYoutubeLink: canonicalYoutubeUrl,
         incomingYoutubeMeta:
           record.youtube_meta && typeof record.youtube_meta === 'object' && !Array.isArray(record.youtube_meta)
             ? (record.youtube_meta as Record<string, unknown>)
@@ -98,7 +100,7 @@ export function DbConflictResolutionPanel({
       onOpenChange(false);
 
     } catch (error) {
-      console.error('병합 실패:', error);
+      console.error('병합 실패:');
       const errorMessage = error instanceof Error ? error.message : '병합에 실패했습니다';
       toast({
         variant: 'destructive',
@@ -139,7 +141,7 @@ export function DbConflictResolutionPanel({
       onOpenChange(false);
 
     } catch (error) {
-      console.error('보류 처리 실패:', error);
+      console.error('보류 처리 실패:');
       const errorMessage = error instanceof Error ? error.message : '보류 처리에 실패했습니다';
       toast({
         variant: 'destructive',
@@ -255,14 +257,16 @@ export function DbConflictResolutionPanel({
 
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">YouTube 링크</p>
-                  <a
-                    href={record.youtube_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline block truncate"
-                  >
-                    {record.youtube_link}
-                  </a>
+                  {canonicalYoutubeUrl && (
+                    <a
+                      href={canonicalYoutubeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline block truncate"
+                    >
+                      {canonicalYoutubeUrl}
+                    </a>
+                  )}
                 </div>
 
                 <div>
@@ -291,7 +295,7 @@ export function DbConflictResolutionPanel({
             <p className="text-sm font-medium mb-2">병합 결과 미리보기</p>
             <ul className="text-sm space-y-1 text-muted-foreground">
               <li>• 카테고리: {Array.from(new Set([...existing.category, newInfo.category])).join(', ')}</li>
-              <li>• YouTube 링크: {existing.youtube_links.length + 1}개 (기존 {existing.youtube_links.length} + 새로운 1)</li>
+              <li>• YouTube 링크: {existing.youtube_links.length + (canonicalYoutubeUrl ? 1 : 0)}개 (기존 {existing.youtube_links.length} + 새로운 {canonicalYoutubeUrl ? 1 : 0})</li>
               <li>• 츄양 리뷰: 새 리뷰 1개 추가</li>
             </ul>
           </div>

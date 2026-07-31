@@ -10,9 +10,12 @@ import {
   normalizeAdminMapOverlayPreviewRequest,
   type AdminRestaurantMapOverlayRow,
 } from '@/lib/admin-map-overlays';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const MAX_MAP_OVERLAY_PREVIEW_REQUEST_BYTES = 64 * 1024;
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
@@ -51,9 +54,18 @@ export async function POST(request: NextRequest) {
     return admin.response;
   }
 
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const requestBody = await readBoundedJsonRequest(request, MAX_MAP_OVERLAY_PREVIEW_REQUEST_BYTES);
+  if (!requestBody.ok) {
+    return noStoreJson({ error: 'Invalid map overlay request' }, { status: 400 });
+  }
+
   let normalized: ReturnType<typeof normalizeAdminMapOverlayPreviewRequest>;
   try {
-    normalized = normalizeAdminMapOverlayPreviewRequest(await request.json());
+    normalized = normalizeAdminMapOverlayPreviewRequest(requestBody.value);
   } catch {
     return noStoreJson({ error: 'Invalid map overlay request' }, { status: 400 });
   }

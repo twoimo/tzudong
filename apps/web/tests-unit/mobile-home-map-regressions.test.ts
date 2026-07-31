@@ -325,16 +325,23 @@ describe('mobile home map regression guards', () => {
         expect(desktopPanelSource).toContain('onCategoryChange={onCategoryChange}');
     });
 
-    test('G002 detail-active safe area owns mobile bottom-right floating actions', () => {
+    test('G012 mobile sheets and details own fixed map-control safe area', () => {
         const overlaySource = source('components/home/MobileControlOverlay.tsx');
 
         expect(overlaySource).toContain(
             'const doesDetailOwnBottomRightSafeArea = isPanelOpen && Boolean(panelRestaurant);'
         );
         expect(overlaySource).toContain(
-            "activeSheet !== 'search' && !doesDetailOwnBottomRightSafeArea"
+            "const doesMobileSheetOwnFixedControlSpace =\n        doesDetailOwnBottomRightSafeArea || activeSheet !== 'none';"
+        );
+        expect(overlaySource).toContain(
+            'const shouldRenderMobileBottomControls = !doesMobileSheetOwnFixedControlSpace;'
+        );
+        expect(overlaySource).toContain(
+            'const shouldRenderMobileFloatingActions = !doesMobileSheetOwnFixedControlSpace;'
         );
         expect(overlaySource).toContain('data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"');
+        expect(overlaySource).toContain('data-fixed-control-region="mobile-map-actions"');
         expect(overlaySource).toContain('{shouldRenderMobileFloatingActions && (');
     });
     test('home detail route history uses app-owned list/detail states and browser back restoration contracts', () => {

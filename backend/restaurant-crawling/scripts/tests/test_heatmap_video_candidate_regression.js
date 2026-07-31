@@ -47,11 +47,10 @@ test('sortVideoCandidates prefers full containers over yt-dlp fragments', async 
     });
 
     const sorted = sortVideoCandidates(
-        ['abc123.f251.webm', 'abc123.webm', 'abc123.mp4', 'abc123.f303.webm'],
-        'abc123'
+        ['Abc123Def45.f251.webm', 'Abc123Def45.webm', 'Abc123Def45.mp4', 'Abc123Def45.f303.webm'],
+        'Abc123Def45'
     );
-
-    assert.deepEqual(sorted, ['abc123.mp4', 'abc123.webm', 'abc123.f251.webm', 'abc123.f303.webm']);
+    assert.deepEqual(sorted, ['Abc123Def45.mp4', 'Abc123Def45.webm', 'Abc123Def45.f251.webm', 'Abc123Def45.f303.webm']);
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -65,19 +64,19 @@ test('pickUsableLocalVideoCandidate skips unusable fragment and returns next val
         FRAMES_ROOT_DIR: framesDir,
     });
 
-    for (const fileName of ['abc123.f251.webm', 'abc123.f303.webm']) {
+    for (const fileName of ['Abc123Def45.f251.webm', 'Abc123Def45.f303.webm']) {
         fs.writeFileSync(path.join(cacheDir, fileName), 'stub', 'utf8');
     }
 
     const selectedPath = await pickUsableLocalVideoCandidate(
-        'abc123',
-        ['abc123.f251.webm', 'abc123.f303.webm'],
+        'Abc123Def45',
+        ['Abc123Def45.f251.webm', 'Abc123Def45.f303.webm'],
         cacheDir,
         'Test',
         async mediaPath => !mediaPath.endsWith('f251.webm')
     );
 
-    assert.equal(path.basename(selectedPath), 'abc123.f303.webm');
+    assert.equal(path.basename(selectedPath), 'Abc123Def45.f303.webm');
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -93,8 +92,8 @@ test('fetchUsableGDriveVideo retries with the next candidate after audio-only do
     });
 
     const fetched = [];
-    const resultPath = await fetchUsableGDriveVideo('abc123', 'gdrive:archive', outputDir, {
-        listCandidates: async () => ['abc123.f251.webm', 'abc123.f303.webm'],
+    const resultPath = await fetchUsableGDriveVideo('Abc123Def45', 'gdrive:archive', outputDir, {
+        listCandidates: async () => ['Abc123Def45.f251.webm', 'Abc123Def45.f303.webm'],
         fetchCandidate: async (_remotePath, fileName, targetDir) => {
             fetched.push(fileName);
             const targetPath = path.join(targetDir, fileName);
@@ -104,10 +103,10 @@ test('fetchUsableGDriveVideo retries with the next candidate after audio-only do
         validateMediaPath: async mediaPath => !mediaPath.endsWith('f251.webm'),
     });
 
-    assert.deepEqual(fetched, ['abc123.f251.webm', 'abc123.f303.webm']);
-    assert.equal(path.basename(resultPath), 'abc123.f303.webm');
-    assert.equal(fs.existsSync(path.join(outputDir, 'abc123.f251.webm')), false);
-    assert.equal(fs.existsSync(path.join(outputDir, 'abc123.f303.webm')), true);
+    assert.deepEqual(fetched, ['Abc123Def45.f251.webm', 'Abc123Def45.f303.webm']);
+    assert.equal(path.basename(resultPath), 'Abc123Def45.f303.webm');
+    assert.equal(fs.existsSync(path.join(outputDir, 'Abc123Def45.f251.webm')), false);
+    assert.equal(fs.existsSync(path.join(outputDir, 'Abc123Def45.f303.webm')), true);
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -118,7 +117,7 @@ test('downloadVideo reuses the first cache candidate that actually has a video s
     const cacheDir = makeTempDir('heatmap-cache-');
     const framesDir = makeTempDir('heatmap-frames-');
     const outputDir = makeTempDir('heatmap-output-');
-    for (const fileName of ['abc123.f251.webm', 'abc123.f303.webm']) {
+    for (const fileName of ['Abc123Def45.f251.webm', 'Abc123Def45.f303.webm']) {
         fs.writeFileSync(path.join(cacheDir, fileName), 'stub', 'utf8');
     }
 
@@ -128,11 +127,11 @@ test('downloadVideo reuses the first cache candidate that actually has a video s
         GDRIVE_REMOTE_PATH: undefined,
     });
 
-    const selectedPath = await downloadVideo('abc123', outputDir, '360p', {
+    const selectedPath = await downloadVideo('Abc123Def45', outputDir, '360p', {
         validateMediaPath: async mediaPath => !mediaPath.endsWith('f251.webm'),
     });
 
-    assert.equal(path.basename(selectedPath), 'abc123.f303.webm');
+    assert.equal(path.basename(selectedPath), 'Abc123Def45.f303.webm');
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -144,7 +143,7 @@ test('processSingleVideo re-extracts when reused segments miss a requested forma
     const framesDir = makeTempDir('heatmap-frames-');
     const channel = `heatmap-partial-reuse-${Date.now()}`;
     const channelDir = path.join(DATA_ROOT, channel);
-    const videoId = 'abc123';
+    const videoId = 'Abc123Def45';
     fs.mkdirSync(path.join(channelDir, 'meta'), { recursive: true });
     fs.writeFileSync(
         path.join(channelDir, 'meta', `${videoId}.jsonl`),
@@ -172,7 +171,7 @@ test('processSingleVideo re-extracts when reused segments miss a requested forma
             buffer: 0.0,
             quality: ['360p'],
             ext: ['jpg', 'webp'],
-            url: 'https://www.youtube.com/watch?v=abc123',
+            url: 'https://www.youtube.com/watch?v=Abc123Def45',
         },
         {
             loadSegments: async () => [{ startSec: 1, endSec: 2, peakSec: 1.5 }],
@@ -214,14 +213,14 @@ test('processSingleVideo fails closed when no usable media fallback exists', asy
 
     await assert.rejects(
         processSingleVideo(
-            'abc123',
+            'Abc123Def45',
             {
                 channel,
                 fps: 1.0,
                 buffer: 0.0,
                 quality: ['360p'],
                 ext: ['jpg'],
-                url: 'https://www.youtube.com/watch?v=abc123',
+                url: 'https://www.youtube.com/watch?v=Abc123Def45',
             },
             {
                 loadSegments: async () => [{ startSec: 1, endSec: 2, peakSec: 1.5 }],
@@ -229,12 +228,12 @@ test('processSingleVideo fails closed when no usable media fallback exists', asy
                 extractFramesFn: async () => ({ totalSegments: 1, failedSegments: 0, totalFrames: 1 }),
             }
         ),
-        /one or more quality\/extension jobs failed/
+        /FRAME_VIDEO_PROCESSING_FAILED/
     );
 
     const failedUrlsPath = path.join(channelDir, 'failed_urls.txt');
     assert.equal(fs.existsSync(failedUrlsPath), true);
-    assert.match(fs.readFileSync(failedUrlsPath, 'utf8'), /abc123/);
+    assert.match(fs.readFileSync(failedUrlsPath, 'utf8'), /Abc123Def45/);
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -250,9 +249,9 @@ test('processBatch stops scheduling after heatmap 429 storm limit and logs faile
     fs.writeFileSync(
         path.join(channelDir, 'urls.txt'),
         [
-            'https://www.youtube.com/watch?v=storm001',
-            'https://www.youtube.com/watch?v=storm002',
-            'https://www.youtube.com/watch?v=storm003',
+            'https://www.youtube.com/watch?v=Storm000001',
+            'https://www.youtube.com/watch?v=Storm000002',
+            'https://www.youtube.com/watch?v=Storm000003',
         ].join('\n') + '\n',
         'utf8'
     );
@@ -290,21 +289,21 @@ test('processBatch stops scheduling after heatmap 429 storm limit and logs faile
                     },
                 }
             ),
-            /heatmap rate-limit storm breaker tripped after 2 global block error/
+            /FRAME_BATCH_RATE_LIMIT_BREAKER_TRIPPED/
         );
     } finally {
         if (previousMaxJobs === undefined) delete process.env.MAX_JOBS; else process.env.MAX_JOBS = previousMaxJobs;
         if (previousStormLimit === undefined) delete process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT; else process.env.HEATMAP_RATE_LIMIT_STORM_LIMIT = previousStormLimit;
     }
 
-    assert.deepEqual(attempted, ['storm001', 'storm002']);
+    assert.deepEqual(attempted, ['Storm000001', 'Storm000002']);
 
     const failedUrlsPath = path.join(channelDir, 'failed_urls.txt');
     assert.equal(fs.existsSync(failedUrlsPath), true);
     const failedUrls = fs.readFileSync(failedUrlsPath, 'utf8');
-    assert.match(failedUrls, /storm001/);
-    assert.match(failedUrls, /storm002/);
-    assert.doesNotMatch(failedUrls, /storm003/);
+    assert.match(failedUrls, /Storm000001/);
+    assert.match(failedUrls, /Storm000002/);
+    assert.doesNotMatch(failedUrls, /Storm000003/);
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
@@ -339,7 +338,7 @@ test('downloadVideo gives up when yt-dlp exceeds the configured per-attempt time
     let selectedPath;
     const startedAt = Date.now();
     try {
-        selectedPath = await downloadVideo('abc123', outputDir, '360p', {
+        selectedPath = await downloadVideo('Abc123Def45', outputDir, '360p', {
             validateMediaPath: async () => true,
         });
     } finally {
@@ -355,6 +354,92 @@ test('downloadVideo gives up when yt-dlp exceeds the configured per-attempt time
     fs.rmSync(framesDir, { recursive: true, force: true });
     fs.rmSync(outputDir, { recursive: true, force: true });
     fs.rmSync(binDir, { recursive: true, force: true });
+});
+test('hostile command, video, remote, and provider filename inputs never reach a child process or write target', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const outputDir = makeTempDir('heatmap-output-');
+    const sentinelPath = path.join(outputDir, 'spawned-sentinel');
+    const { downloadVideo, fetchUsableGDriveVideo, sortVideoCandidates } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+    });
+    const previous = new Map([
+        ['YT_DLP_CMD', process.env.YT_DLP_CMD],
+        ['PYTHON_CMD', process.env.PYTHON_CMD],
+        ['GDRIVE_REMOTE_PATH', process.env.GDRIVE_REMOTE_PATH],
+    ]);
+
+    try {
+        process.env.YT_DLP_CMD = `yt-dlp;${sentinelPath}`;
+        delete process.env.PYTHON_CMD;
+        delete process.env.GDRIVE_REMOTE_PATH;
+        await assert.rejects(
+            downloadVideo('Abc123Def45', outputDir, '360p'),
+            /FRAME_INVALID_YT_DLP_CMD/
+        );
+
+        delete process.env.YT_DLP_CMD;
+        process.env.PYTHON_CMD = `python3;${sentinelPath}`;
+        await assert.rejects(
+            downloadVideo('Abc123Def45', outputDir, '360p'),
+            /FRAME_INVALID_PYTHON_CMD/
+        );
+
+        delete process.env.PYTHON_CMD;
+        process.env.GDRIVE_REMOTE_PATH = 'C:archive';
+        await assert.rejects(
+            downloadVideo('Abc123Def45', outputDir, '360p'),
+            /FRAME_INVALID_GDRIVE_REMOTE_PATH/
+        );
+        process.env.GDRIVE_REMOTE_PATH = `gdrive:archive;${sentinelPath}`;
+        await assert.rejects(
+            downloadVideo('Abc123Def45', outputDir, '360p'),
+            /FRAME_INVALID_GDRIVE_REMOTE_PATH/
+        );
+
+        delete process.env.GDRIVE_REMOTE_PATH;
+        await assert.rejects(
+            downloadVideo('../Abc123Def45', outputDir, '360p'),
+            /FRAME_INVALID_VIDEO_ID/
+        );
+
+        const fetchedCandidates = [];
+        const validCandidate = 'Abc123Def45.mp4';
+        const result = await fetchUsableGDriveVideo('Abc123Def45', 'gdrive:archive', outputDir, {
+            listCandidates: async () => [
+                '../Abc123Def45.mp4',
+                `Abc123Def45;${sentinelPath}.mp4`,
+                '\\\\server\\share.mp4',
+                'C:provider.mp4',
+                'NUL.mp4',
+                validCandidate,
+            ],
+            fetchCandidate: async (_remotePath, fileName, targetDir) => {
+                fetchedCandidates.push(fileName);
+                const targetPath = path.join(targetDir, fileName);
+                fs.writeFileSync(targetPath, 'stub', 'utf8');
+                return targetPath;
+            },
+            validateMediaPath: async () => true,
+        });
+
+        assert.equal(result, path.join(outputDir, validCandidate));
+        assert.deepEqual(fetchedCandidates, [validCandidate]);
+        assert.deepEqual(
+            sortVideoCandidates(['../Abc123Def45.mp4', 'Abc123Def45;touch.mp4', validCandidate], 'Abc123Def45'),
+            [validCandidate]
+        );
+        assert.equal(fs.existsSync(sentinelPath), false);
+    } finally {
+        for (const [key, value] of previous.entries()) {
+            if (value === undefined) delete process.env[key]; else process.env[key] = value;
+        }
+    }
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(outputDir, { recursive: true, force: true });
 });
 
 test('yt-dlp timeout helpers prefer explicit millisecond override', async () => {
@@ -372,6 +457,7 @@ test('yt-dlp timeout helpers prefer explicit millisecond override', async () => 
         timeout: 321,
         killSignal: 'SIGTERM',
         maxBuffer: 20 * 1024 * 1024,
+        shell: false,
     });
 
     fs.rmSync(cacheDir, { recursive: true, force: true });

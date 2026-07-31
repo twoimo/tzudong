@@ -19,19 +19,21 @@ import {
   serializePgVector,
 } from '@/lib/admin/storyboard/rag-worker-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
+const MAX_STORYBOARD_RAG_DOCUMENTS_REQUEST_BYTES = 2 * 1024 * 1024;
 
 const documentSchema = z.object({
   externalId: z.string().trim().min(1).max(200),
   title: z.string().trim().min(1).max(200),
   content: z.string().trim().min(1).max(20_000),
-  metadata: z.record(z.unknown()).optional().default({}),
-});
+  metadata: z.record(z.string(), z.unknown()).optional().default({}),
+}).strict();
 
 const upsertDocumentsSchema = z.object({
   documents: z.array(documentSchema).min(1).max(20),
-});
+}).strict();
 
 function failClosed(
   error: unknown,
@@ -71,10 +73,40 @@ export async function POST(request: NextRequest) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-rag-documents');
   const auth = await authenticateStoryboardRagAction(request, traceId);
   if (!auth.ok) return auth.response;
+  if (!isTrustedSameOriginMutation(request)) {
+    return NextResponse.json(
+      { error: 'invalid_storyboard_rag_documents_request', traceId },
+      {
+        status: 403,
+        headers: buildStoryboardRouteHeaders(
+          telemetry,
+          STORYBOARD_ROUTE_NO_STORE_HEADERS,
+          { error: 'invalid_storyboard_rag_documents_request', traceId },
+        ),
+      },
+    );
+  }
 
   try {
-    const rawBody = await readStoryboardRouteJson(request, telemetry);
-    const parsed = upsertDocumentsSchema.safeParse(rawBody);
+    const bodyResult = await readStoryboardRouteJson(
+      request,
+      telemetry,
+      MAX_STORYBOARD_RAG_DOCUMENTS_REQUEST_BYTES,
+    );
+    if (!bodyResult.ok) {
+      return NextResponse.json(
+        { error: 'invalid_storyboard_rag_documents_request', traceId },
+        {
+          status: 400,
+          headers: buildStoryboardRouteHeaders(
+            telemetry,
+            STORYBOARD_ROUTE_NO_STORE_HEADERS,
+            { error: 'invalid_storyboard_rag_documents_request', traceId },
+          ),
+        },
+      );
+    }
+    const parsed = upsertDocumentsSchema.safeParse(bodyResult.value);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'invalid_storyboard_rag_documents_request', traceId },

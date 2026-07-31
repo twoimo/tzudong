@@ -3,6 +3,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { logSafeError } from '../../utils/privacy-log.mjs';
 
 dotenv.config();
 puppeteer.use(StealthPlugin());
@@ -36,7 +37,7 @@ export function findMapUrl(description) {
  * @returns {Promise<{name: string, address: string, lat: string, lng: string, type: string}|null>}
  */
 export async function extractDataFromUrl(url) {
-    console.log(`[URL Extractor] Processing URL: ${url}`);
+    console.log('[URL Extractor] Processing URL');
 
     let browser = null;
     try {
@@ -53,7 +54,7 @@ export async function extractDataFromUrl(url) {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
         const finalUrl = page.url();
-        console.log(`[URL Extractor] Resolved URL: ${finalUrl}`);
+        console.log('[URL Extractor] Resolved map URL');
 
         // 네이버 지도 처리
         if (finalUrl.includes('map.naver.com') || finalUrl.includes('place.naver.com')) {
@@ -67,7 +68,7 @@ export async function extractDataFromUrl(url) {
         return null;
 
     } catch (error) {
-        console.error(`[URL Extractor] Crawling failed: ${error.message}`);
+        logSafeError(error, (line) => console.error(`[URL Extractor] Crawling failed: ${line.trim()}`));
         // 크롤링 실패 시 API Fallback 시도
         console.log(`[URL Extractor] Attempting API Fallback...`);
         return await fallbackToApi(url);
@@ -126,7 +127,7 @@ async function extractNaverMap(page, url) {
 
         return null;
     } catch (e) {
-        console.error(`[Naver Extraction Error] ${e.message}`);
+        logSafeError(e, (line) => console.error(`[Naver Extraction Error] ${line.trim()}`));
         return null;
     }
 }
@@ -159,7 +160,7 @@ async function extractKakaoMap(page, url) {
         }
         return null; // 실패
     } catch (e) {
-        console.error(`[Kakao Extraction Error] ${e.message}`);
+        logSafeError(e, (line) => console.error(`[Kakao Extraction Error] ${line.trim()}`));
         return null;
     }
 }
@@ -189,7 +190,7 @@ export async function searchNaverApi(query) {
             };
         }
     } catch (e) {
-        console.error(`[Naver API Error] ${e.message}`);
+        logSafeError(e, (line) => console.error(`[Naver API Error] ${line.trim()}`));
     }
     return null;
 }
@@ -215,7 +216,7 @@ export async function searchKakaoApi(query) {
             };
         }
     } catch (e) {
-        console.error(`[Kakao API Error] ${e.message}`);
+        logSafeError(e, (line) => console.error(`[Kakao API Error] ${line.trim()}`));
     }
     return null;
 }
@@ -231,7 +232,7 @@ async function fallbackToApi(originalUrl, knownName = '') {
         return null;
     }
 
-    console.log(`[API Fallback] Searching for '${query}' via APIs...`);
+    console.log('[API Fallback] Searching via APIs...');
 
     // 네이버 검색 우선
     const naverResult = await searchNaverApi(query);

@@ -14,6 +14,12 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set
 
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
+
 # ==============================================================================
 # [CMD] scan: Pending Logic
 # ==============================================================================
@@ -74,7 +80,7 @@ def scan_pending(args: argparse.Namespace) -> None:
     urls_file = channel_dir / "urls.txt"
     
     if not urls_file.exists():
-        print(f"[ERROR] URLs file not found: {urls_file}", file=sys.stderr)
+        print("op=pending_urls_missing", file=sys.stderr)
         return
 
     # 1. URLs 로드
@@ -94,7 +100,7 @@ def scan_pending(args: argparse.Namespace) -> None:
     # 3. 상태 확인
     pending_urls: List[str] = []
     
-    print(f"Scanning {len(urls)} videos for channel '{args.channel}'...", file=sys.stderr)
+    print(f"op=pending_scan_started urls={len(urls)}", file=sys.stderr)
     
     for url in urls:
         vid = extract_video_id(url)
@@ -150,7 +156,7 @@ def scan_pending(args: argparse.Namespace) -> None:
         # 여기까지 오면 pending
         pending_urls.append(url)
 
-    print(f"Found {len(pending_urls)} pending videos.", file=sys.stderr)
+    print(f"op=pending_scan_complete pending={len(pending_urls)}", file=sys.stderr)
     
     # stdout으로 URL 출력 (Bash 배열로 로드됨)
     for url in pending_urls:
@@ -187,48 +193,45 @@ def parse_gemini_response(response_text: str) -> Optional[Dict[str, Any]]:
 
         data = json.loads(json_text)
         return data
-    except json.JSONDecodeError as e:
-        print(f"[ERROR] JSON 파싱 실패: {e}", file=sys.stderr)
+    except json.JSONDecodeError as error:
+        print(f"op=gemini_response_json_invalid error={safe_error_name(error)}", file=sys.stderr)
         return None
-    except Exception as e:
-        print(f"[ERROR] 예상치 못한 오류: {e}", file=sys.stderr)
+    except Exception as error:
+        print(f"op=gemini_response_parse_failed error={safe_error_name(error)}", file=sys.stderr)
         return None
 
 
 def validate_restaurant_data(data: Dict[str, Any]) -> bool:
     """음식점 데이터 유효성 검증"""
     if not isinstance(data, dict):
-        print("[ERROR] 최상위 객체가 dict가 아닙니다", file=sys.stderr)
+        print("[ERROR] op=restaurant_payload_not_object", file=sys.stderr)
         return False
 
     if "restaurants" not in data:
-        print("[ERROR] 'restaurants' 필드가 없습니다", file=sys.stderr)
+        print("[ERROR] op=restaurant_list_missing", file=sys.stderr)
         return False
 
     if not isinstance(data["restaurants"], list):
-        print("[ERROR] 'restaurants'가 배열이 아닙니다", file=sys.stderr)
+        print("[ERROR] op=restaurant_list_not_array", file=sys.stderr)
         return False
 
     if len(data["restaurants"]) == 0:
         reason = data.get("no_restaurant_reason")
         if reason:
-            print(f"[INFO] 음식점 없음 (사유: {reason})", file=sys.stderr)
+            print("[INFO] op=restaurant_absence_confirmed", file=sys.stderr)
             return True
-        print("[ERROR] 'restaurants'가 빈 배열입니다 (재시도 대상)", file=sys.stderr)
+        print("[ERROR] op=restaurant_list_empty", file=sys.stderr)
         return False
 
     required_fields = ["origin_name", "address", "category"]
     for idx, restaurant in enumerate(data["restaurants"]):
         for field in required_fields:
             if field not in restaurant:
-                print(f"[ERROR] restaurants[{idx}]에 '{field}' 필드가 없습니다", file=sys.stderr)
+                print("[ERROR] op=restaurant_required_field_missing", file=sys.stderr)
                 return False
         unsupported_reason = detect_unsupported_identity_inference(restaurant)
         if unsupported_reason:
-            print(
-                f"[ERROR] restaurants[{idx}] 상호명 추론 근거가 불충분합니다: {unsupported_reason}",
-                file=sys.stderr,
-            )
+            print("[ERROR] op=restaurant_identity_evidence_invalid", file=sys.stderr)
             return False
     return True
 
@@ -277,8 +280,8 @@ def load_manual_place_correction(youtube_url: str) -> Optional[Dict[str, Any]]:
 
     try:
         corrections = json.loads(corrections_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        print(f"[WARN] 수동 장소 보정 파일 로드 실패: {exc}", file=sys.stderr)
+    except Exception as error:
+        print(f"op=manual_place_correction_load_failed error={safe_error_name(error)}", file=sys.stderr)
         return None
 
     return corrections.get(youtube_url)
@@ -291,7 +294,7 @@ def apply_manual_place_correction(youtube_url: str, data: Dict[str, Any]) -> Dic
 
     restaurants = correction.get("restaurants")
     if not isinstance(restaurants, list):
-        print(f"[WARN] 수동 장소 보정 restaurants 형식 오류: {youtube_url}", file=sys.stderr)
+        print("[WARN] op=manual_place_correction_invalid", file=sys.stderr)
         return data
 
     corrected = dict(data)
@@ -300,7 +303,7 @@ def apply_manual_place_correction(youtube_url: str, data: Dict[str, Any]) -> Dic
         "source": correction.get("source", "manual_verified"),
         "reason": correction.get("reason"),
     }
-    print(f"[INFO] 수동 검증 장소 보정 적용: {youtube_url}", file=sys.stderr)
+    print("[INFO] op=manual_place_correction_applied", file=sys.stderr)
     return corrected
 
 
@@ -329,7 +332,7 @@ def save_to_jsonl(
     with open(output_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    print(f"[OK] 저장 완료: {len(restaurants)}개 음식점")
+    print(f"[OK] op=restaurant_records_saved count={len(restaurants)}")
 
 
 def parse_result(args: argparse.Namespace) -> None:
@@ -341,7 +344,7 @@ def parse_result(args: argparse.Namespace) -> None:
     output_file = Path(args.output_file)
 
     if not response_file.exists():
-        print(f"[ERROR] 응답 파일 없음: {response_file}", file=sys.stderr)
+        print("[ERROR] op=gemini_response_missing", file=sys.stderr)
         sys.exit(1)
 
     with open(response_file, "r", encoding="utf-8") as f:
@@ -364,9 +367,9 @@ def parse_result(args: argparse.Namespace) -> None:
             transcript_recollect_id=args.trans_id,
             channel_name=args.channel,
         )
-        print(f"[OK] 완료: {youtube_url}")
-    except Exception as e:
-        print(f"[ERROR] 저장 실패: {e}", file=sys.stderr)
+        print("[OK] op=gemini_response_saved")
+    except Exception as error:
+        print(f"[ERROR] op=gemini_response_save_failed error={safe_error_name(error)}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -397,4 +400,8 @@ def main():
     args.func(args)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as error:
+        print(f"[ERROR] op=gemini_result_failed error={safe_error_name(error)}", file=sys.stderr)
+        sys.exit(1)

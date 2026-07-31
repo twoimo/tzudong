@@ -220,9 +220,10 @@ export function buildDeviceLocationMarkerHtml(location: Pick<DeviceMapLocation, 
     const heading = normalizeCompassHeading(location.heading);
     const showHeading = location.mode === 'heading' && heading !== null;
     const markerHeading = heading === null ? null : Math.round(heading * 10) / 10;
-    const accuracyLabel = typeof location.accuracy === 'number' && Number.isFinite(location.accuracy)
-        ? `${Math.round(location.accuracy)}m`
-        : '현재 위치';
+    const accuracyRadius = resolveDeviceLocationAccuracyRadius(location.accuracy);
+    const accuracyLabel = accuracyRadius === null
+        ? '현재 위치'
+        : `${Math.round(accuracyRadius)}m`;
 
     return `
         <div style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;pointer-events:none;">

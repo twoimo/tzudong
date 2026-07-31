@@ -1,8 +1,13 @@
 @config "../tailwind.home.deferred.config.ts";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss" source(none);
+@source "./home-client-sidepanels.tsx";
+@source "../components/admin";
+@source "../components/announcement";
+@source "../components/modals";
+@source "../components/ui";
+@source not "../**/*.test.*";
+@source not "../tests-unit";
 
 /* ============================================
    모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
