@@ -1,4 +1,4 @@
-/* Minimal home-first root CSS. Full Tailwind/app globals are loaded with AppRuntimeShell. */
+/* Minimal home-first root CSS. Full Tailwind utilities load only with AppRuntimeShell. */
 
 :root {
   --vh: 1vh;

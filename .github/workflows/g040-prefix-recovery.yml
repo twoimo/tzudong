@@ -1,0 +1,87 @@
+name: G040 prefix recovery source validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Exact protected main commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: g040-prefix-recovery-source-validation
+  cancel-in-progress: false
+
+jobs:
+  source-validate:
+    if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.sha == inputs.commit_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact detached protected main revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify detached SHA binding
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git branch --show-current)" = ""
+      - name: Verify recovery source and produce bounded receipt
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+          PYTHONPATH: backend/supabase/scripts
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p -- "$RUNNER_TEMP/g040-receipts"
+          python - "$RUNNER_TEMP/g040-receipts/receipt.json" <<'PY'
+          import os
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          import g040_recovery_source
+
+          EXPECTED_SHA = os.environ["EXPECTED_SHA"]
+          binding = g040_recovery_source.verify_recovery_source(Path.cwd(), EXPECTED_SHA)
+          if (
+              type(binding) is not g040_recovery_source.SourceBinding
+              or binding.final_commit != EXPECTED_SHA
+              or re.fullmatch(r"[0-9a-f]{64}", binding.runtime_source_root) is None
+          ):
+              raise SystemExit(2)
+          with open(sys.argv[1], "x", encoding="ascii") as receipt:
+              json.dump(
+                  {
+                      "schema": "g040-prefix-recovery-source-receipt-v1",
+                      "status": "source-verified",
+                      "runtime_source_root": binding.runtime_source_root,
+                  },
+                  receipt,
+                  sort_keys=True,
+                  separators=(",", ":"),
+              )
+              receipt.write("\n")
+          PY
+      - name: Upload bounded sanitized source receipt
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        with:
+          name: g040-prefix-recovery-source-receipt
+          path: ${{ runner.temp }}/g040-receipts/receipt.json
+          if-no-files-found: error
+      - name: Remove temporary source receipt
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/g040-receipts/receipt.json"

@@ -12,7 +12,7 @@ export async function GET() {
         const data = await getDashboardFailures(false);
         return NextResponse.json(data);
     } catch (error) {
-        console.error('[dashboard/failures] failed:', error);
+        console.error('[dashboard/failures] failed:');
         return NextResponse.json(
             { error: 'Failed to build dashboard failures.' },
             { status: 500 },

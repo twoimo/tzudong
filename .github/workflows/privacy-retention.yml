@@ -1,0 +1,173 @@
+name: Privacy Retention
+
+on:
+  schedule:
+    # Daily at 03:17 UTC; the runner uses the UTC day boundary as its cutoff.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview retention eligibility without applying changes.
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: privacy-retention-production
+  cancel-in-progress: false
+
+jobs:
+  retain:
+    if: >-
+      (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == true))
+      && github.ref_name == github.event.repository.default_branch
+      && vars.G037_WRITE_FREEZE != 'active'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    environment:
+      name: production-retention
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NODE_ENV: production
+      PRIVACY_RETENTION_SCHEDULED_RUN: 'true'
+      PRIVACY_RETENTION_ENDPOINT: https://internal.tzudong.app/api/internal/privacy-retention
+      PRIVACY_RETENTION_CLASS_CODES: ${{ vars.PRIVACY_RETENTION_CLASS_CODES }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Run scheduled privacy retention
+        if: github.event_name == 'schedule'
+        env:
+          PRIVACY_RETENTION_INTERNAL_CAPABILITY: ${{ secrets.PRIVACY_RETENTION_INTERNAL_CAPABILITY }}
+        run: node scripts/run-privacy-retention-schedule.mjs
+
+      - name: Run manual privacy retention dry run
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        env:
+          PRIVACY_RETENTION_INTERNAL_CAPABILITY: ${{ secrets.PRIVACY_RETENTION_INTERNAL_CAPABILITY }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {
+            canonicalUtcCutoff,
+            parseScheduleConfig,
+            PRIVACY_RETENTION_BATCH_SIZE,
+            PRIVACY_RETENTION_REQUEST_TIMEOUT_MS,
+          } from './scripts/run-privacy-retention-schedule.mjs';
+
+          const MAX_RESPONSE_BYTES = 16 * 1024;
+          const DRY_RUN_DIAGNOSTIC_CODES = new Set([
+            'config_invalid',
+            'http_401',
+            'http_403',
+            'http_4xx',
+            'http_5xx',
+            'http_other',
+            'redirected',
+            'response_url_invalid',
+            'content_type_invalid',
+            'response_content_length_invalid',
+            'response_body_invalid',
+            'response_json_invalid',
+            'response_shape_invalid',
+            'transport_error',
+          ]);
+          const fail = (reason) => {
+            throw new Error(reason);
+          };
+          const responseDiagnostic = (response, endpoint) => {
+            if (response.redirected === true) return 'redirected';
+            if (response.url !== endpoint) return 'response_url_invalid';
+            if (response.status === 401) return 'http_401';
+            if (response.status === 403) return 'http_403';
+            if (response.status >= 500) return 'http_5xx';
+            if (response.status >= 400) return 'http_4xx';
+            if (response.status !== 200) return 'http_other';
+            if (!response.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return 'content_type_invalid';
+            return null;
+          };
+          const readBoundedJson = async (response) => {
+            const contentLength = response.headers.get('content-length');
+            if (contentLength !== null && (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_RESPONSE_BYTES)) fail('response_content_length_invalid');
+            const reader = response.body?.getReader?.();
+            if (!reader) fail('response_body_invalid');
+            const chunks = [];
+            let size = 0;
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (!(value instanceof Uint8Array)) fail('response_body_invalid');
+                size += value.byteLength;
+                if (size > MAX_RESPONSE_BYTES) fail('response_body_invalid');
+                chunks.push(value);
+              }
+            } finally {
+              reader.releaseLock();
+            }
+            try {
+              return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks, size)));
+            } catch {
+              fail('response_json_invalid');
+            }
+          };
+
+          try {
+            const config = parseScheduleConfig(process.env);
+            const cutoff = canonicalUtcCutoff();
+            for (const classCode of config.classCodes) {
+              const response = await fetch(config.endpoint, {
+                method: 'POST',
+                redirect: 'error',
+                credentials: 'omit',
+                referrerPolicy: 'no-referrer',
+                signal: AbortSignal.timeout(PRIVACY_RETENTION_REQUEST_TIMEOUT_MS),
+                headers: {
+                  accept: 'application/json',
+                  'content-type': 'application/json',
+                  'x-privacy-retention-capability': config.capability,
+                },
+                body: JSON.stringify({
+                  action: 'preview',
+                  classCode,
+                  asOf: cutoff,
+                  batchSize: PRIVACY_RETENTION_BATCH_SIZE,
+                }),
+              });
+              const diagnostic = responseDiagnostic(response, config.endpoint);
+              if (diagnostic) fail(diagnostic);
+              const value = await readBoundedJson(response);
+              const summary = value?.preview?.summary;
+              if (
+                value?.ok !== true
+                || value?.preview?.requiredConfirmation !== '보존·분리 적용'
+                || summary?.cutoff !== cutoff
+                || ![summary?.eligible, summary?.held, summary?.scanned].every((count) => Number.isSafeInteger(count) && count >= 0)
+                || summary.scanned !== summary.eligible + summary.held
+              ) fail('response_shape_invalid');
+              console.log(JSON.stringify({
+                classCode,
+                status: 'previewed',
+                eligible: summary.eligible,
+                held: summary.held,
+                scanned: summary.scanned,
+              }));
+            }
+          } catch (error) {
+            const diagnostic = DRY_RUN_DIAGNOSTIC_CODES.has(error?.message) ? error.message : 'transport_error';
+            console.error(`PRIVACY_RETENTION_DRY_RUN_FAILED diagnostic=${diagnostic}`);
+            process.exitCode = 1;
+          }
+          NODE

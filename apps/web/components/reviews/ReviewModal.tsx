@@ -56,7 +56,7 @@ const prepareReceiptImage = async (file: File): Promise<File> => {
             });
             return new File([resizedBlob], safeFileName, { type: file.type });
         } catch (error) {
-            console.warn("영수증 리사이즈 실패, 원본 사용:", error);
+            console.warn("영수증 리사이즈 실패, 원본 사용:");
         }
     }
 
@@ -71,7 +71,7 @@ const compressFoodImage = async (file: File): Promise<File> => {
         const safeFileName = generateSafeFilename(".webp");
         return new File([compressedBlob], safeFileName, { type: "image/webp" });
     } catch (error) {
-        console.warn("음식 사진 압축 실패, 원본 사용:", error);
+        console.warn("음식 사진 압축 실패, 원본 사용:");
         return file;
     }
 };
@@ -232,6 +232,39 @@ type OcrQuotaPayload = {
 interface RestaurantNameRow {
     id: string;
     name: string;
+}
+
+interface RestaurantNameQueryRow {
+    id: string;
+    name: string | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isRestaurantNameQueryRow(value: unknown): value is RestaurantNameQueryRow {
+    return isRecord(value)
+        && typeof value.id === 'string'
+        && (value.name === null || typeof value.name === 'string');
+}
+
+function normalizeRestaurantNameRow(value: unknown): RestaurantNameRow | null {
+    if (!isRestaurantNameQueryRow(value)) return null;
+
+    const id = value.id.trim();
+    const name = value.name?.trim();
+    if (!id || !name) return null;
+    return { id, name };
+}
+
+function mapRestaurantNameRows(rows: readonly unknown[] | null): RestaurantNameRow[] {
+    if (!rows) return [];
+
+    return rows.flatMap((row) => {
+        const normalized = normalizeRestaurantNameRow(row);
+        return normalized ? [normalized] : [];
+    });
 }
 
 
@@ -736,14 +769,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         try {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name:approved_name') // [수정] approved_name을 name으로 사용
-                .ilike('approved_name', `%${query}%`) // [수정] approved_name 기준 검색
-                .limit(10);
+                .select('id, name:approved_name')
+                .ilike('approved_name', `%${query}%`)
+                .limit(10)
+                .overrideTypes<RestaurantNameQueryRow[], { merge: false }>();
 
             if (error) throw error;
-            setSearchResults(data || []);
+            setSearchResults(mapRestaurantNameRows(data));
         } catch (error) {
-            console.error('맛집 검색 실패:', error);
+            console.error('맛집 검색 실패:');
             setSearchResults([]);
         } finally {
             setIsSearching(false);
@@ -758,10 +792,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             .from('restaurants')
             .select('id, name:approved_name')
             .eq('approved_name', receiptStoreName)
-            .limit(1);
+            .limit(1)
+            .overrideTypes<RestaurantNameQueryRow[], { merge: false }>();
 
-        if (!exactError && exactRestaurants?.length) {
-            return exactRestaurants[0] as RestaurantNameRow;
+        const exactMatches = mapRestaurantNameRows(exactRestaurants);
+        if (!exactError && exactMatches.length > 0) {
+            return exactMatches[0];
         }
 
         const fallbackResults = await Promise.all(
@@ -770,9 +806,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     .from('restaurants')
                     .select('id, name:approved_name')
                     .ilike('approved_name', `%${candidate}%`)
-                    .limit(5);
-                return (data ?? []) as RestaurantNameRow[];
-            })
+                    .limit(5)
+                    .overrideTypes<RestaurantNameQueryRow[], { merge: false }>();
+                return mapRestaurantNameRows(data);
+            }),
         );
 
         const deduped = new Map<string, RestaurantNameRow>();
@@ -1253,7 +1290,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 });
 
             if (verificationUploadError) {
-                throw new Error(`인증 사진 업로드 실패: ${verificationUploadError.message}`);
+                throw new Error('REVIEW_VERIFICATION_UPLOAD_FAILED');
             }
 
             // 3. 음식 사진 병렬 업로드 (성능 최적화)
@@ -1268,7 +1305,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     });
 
                 if (foodUploadError) {
-                    throw new Error(`음식 사진 업로드 실패: ${foodUploadError.message}`);
+                    throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
                 }
 
                 return photoPath;
@@ -1304,7 +1341,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
 
             const { error: insertError } = await supabase
-                .from('reviews' as never)
+                .from('reviews')
                 .insert({
                     user_id: user.id,
                     restaurant_id: targetRestaurant.id,
@@ -1313,12 +1350,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
                     food_photos: uploadedFoodPhotoPaths,
-                    categories: categories,
-                    is_verified: false, // 관리자 검토 대기
-                } as never);
+                    categories,
+                    is_verified: false,
+                });
 
             if (insertError) {
-                throw new Error(`리뷰 등록 실패: ${insertError.message}`);
+                throw new Error('REVIEW_CREATE_FAILED');
             }
 
             // 임시 저장 데이터 삭제
@@ -1337,7 +1374,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
             handleClose();
         } catch (error) {
-            console.error('리뷰 제출 오류:', error);
+            console.error('리뷰 제출 오류:');
             const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다";
             toast({
                 title: "리뷰 등록 실패",
@@ -1440,7 +1477,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 setLastSavedAt(new Date(draft.savedAt));
             }
         } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:', error);
+            console.error('임시 저장 데이터 로드 실패:');
         }
     }, [user?.id, selectedRestaurant?.id, restaurant?.id, replaceVerificationPhoto]);
 
@@ -1471,7 +1508,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             });
             setLastSavedAt(new Date());
         } catch (error) {
-            console.error('자동 저장 실패:', error);
+            console.error('자동 저장 실패:');
         } finally {
             setIsSaving(false);
         }
@@ -1486,7 +1523,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             await deleteDraft(user.id, targetRestaurantId);
             setLastSavedAt(null);
         } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:', error);
+            console.error('임시 저장 데이터 삭제 실패:');
         }
     }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
 

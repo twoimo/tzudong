@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { checkDbConflict } from '@/lib/db-conflict-checker';
 import { mergeAdminReviewRestaurant } from '@/lib/admin-review-merge';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -104,6 +105,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
     return user.id;
   };
+  const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record?.youtube_link);
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -223,7 +225,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const conflictCheck = await checkDbConflict({
         jibunAddress: geocodingResult.data!.jibun_address,
         restaurantName: trimmedName,
-        youtubeLink: record.youtube_link || '',
+        youtubeLink: canonicalYoutubeUrl || '',
       });
 
       const geocodingData = geocodingResult.data;
@@ -267,7 +269,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       await registerNewRestaurant(geocodingData, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
 
     } catch (error: unknown) {
-      console.error('레스토랑 등록 실패:', error);
+      console.error('레스토랑 등록 실패:');
       toast({
         variant: 'destructive',
         title: '등록 실패',
@@ -307,7 +309,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         sourceRestaurantId: record!.id,
         adminUserId,
         expectedTargetUpdatedAt: mergeTargetRestaurant.updated_at,
-        incomingYoutubeLink: record!.youtube_link || null,
+        incomingYoutubeLink: canonicalYoutubeUrl,
         incomingYoutubeMeta: normalizedNewYoutubeMeta ?? null,
         incomingTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
         incomingCategory: trimmedCategory || null,
@@ -356,7 +358,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           phone: trimmedPhone || null,
           categories: trimmedCategory ? [trimmedCategory] : [],
           updated_by_admin_id: adminUserId,
-          youtube_link: record!.youtube_link || null,
+          youtube_link: canonicalYoutubeUrl,
           youtube_meta: record!.youtube_meta ?? null,
           tzuyang_review: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review || null,
           status: 'approved',
@@ -428,7 +430,12 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string
   }> => {
     try {
-      const response = await fetch(`/api/naver-geocode?query=${encodeURIComponent(address)}`);
+      const response = await fetch('/api/naver-geocode', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: address }),
+      });
 
       const data: NaverGeocodingResponse & { error?: string } = await response.json();
 
@@ -497,14 +504,16 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
               {record && (
                 <div className="rounded-lg bg-muted p-3">
                   <Label className="text-sm text-muted-foreground">YouTube 링크</Label>
-                  <a
-                    href={record.youtube_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline block mt-1"
-                  >
-                    {record.youtube_link}
-                  </a>
+                  {canonicalYoutubeUrl && (
+                    <a
+                      href={canonicalYoutubeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline block mt-1"
+                    >
+                      {canonicalYoutubeUrl}
+                    </a>
+                  )}
                   {record.youtube_meta && (
                     <p className="text-sm mt-1">{record.youtube_meta.title}</p>
                   )}
@@ -678,7 +687,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
                     <ul className="text-sm space-y-1 ml-4">
                       <li>• 음식점명: <span className="font-medium">{formData.name}</span></li>
                       <li>• 주소: <span className="font-medium">{formData.address}</span></li>
-                      <li>• YouTube: <span className="font-medium text-xs">{record?.youtube_link}</span></li>
+                      <li>• YouTube: <span className="font-medium text-xs">{canonicalYoutubeUrl || '영상 링크 없음'}</span></li>
                     </ul>
                   </div>
 

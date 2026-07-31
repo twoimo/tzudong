@@ -1,15 +1,18 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, useTransition } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode, useTransition } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
+import { Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/public-insights/treemap';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { cn } from '@/lib/utils';
 
 
 type ViewMode = 'all' | 'category' | 'change';
@@ -1204,6 +1207,8 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         ? '개별 영상'
         : `${formatClusterValueByMode(metricMode, clusterStep)} 단위 클러스터`;
     const treemapContextText = `트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}`;
+    const moduleSummaryText = `${selectedCount.toLocaleString()}개 영상 · ${metricLabel} · ${periodLabel} · ${modeLabel} · ${clusterContextText}`;
+
     const treemapLegendText = viewMode === 'change'
         ? `색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.`
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
@@ -1258,11 +1263,31 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     }, [treemapQuery]);
 
 
+    const renderEmbeddedShell = (children: ReactNode, summary: ReactNode = moduleSummaryText) => (
+        <AdminEmbeddedModuleShell
+            moduleId="insights"
+            titleId="admin-insights-title"
+            title="핵심 인사이트"
+            icon={Lightbulb}
+            summary={summary}
+            contentClassName="p-2"
+        >
+            {children}
+        </AdminEmbeddedModuleShell>
+    );
+
     if (isLoading && !canRender) {
+        if (embedded) {
+            return renderEmbeddedShell(
+                <InsightsClientLoadingSkeleton />,
+                '데이터를 불러오는 중입니다.',
+            );
+        }
+
         return <InsightsClientLoadingSkeleton />;
     }
     if (treemapQuery.isError || !treemapQuery.data) {
-        return (
+        const errorContent = (
             <div className="flex min-h-0 items-center justify-center p-6 h-full">
                 <div className="text-center max-w-md w-full px-4">
                     <div className="text-4xl mb-4">⚠️</div>
@@ -1290,16 +1315,20 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                 </div>
             </div>
         );
+
+        if (embedded) {
+            return renderEmbeddedShell(errorContent, '데이터를 불러오지 못했습니다.');
+        }
+
+        return errorContent;
     }
 
 
-    return (
-        <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
-            <div className="p-2 md:p-4 flex-1 min-h-0 overflow-hidden">
+    const insightsContent = (
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
                     <div className="border-b border-border p-2 md:p-3">
-                        <div className="overflow-x-auto pb-2">
-                            <div className="flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3 min-w-max">
+                        <div className={cn(embedded ? "pb-2" : "overflow-x-auto pb-2")}>
+                            <div className={cn("flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3", embedded ? "min-w-0" : "min-w-max")}>
                                 <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
 
                                 <div className="inline-flex items-center gap-1 sm:gap-2 shrink-0">
@@ -1486,6 +1515,16 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         </div>
                     </CardContent>
                 </Card>
+    );
+
+    if (embedded) {
+        return renderEmbeddedShell(insightsContent);
+    }
+
+    return (
+        <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden p-2 md:p-4">
+                {insightsContent}
             </div>
         </div>
     );

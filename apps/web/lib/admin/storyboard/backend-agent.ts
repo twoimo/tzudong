@@ -1,8 +1,16 @@
 import { accessSync, constants, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import net from "node:net";
+import { randomBytes } from "node:crypto";
+import { gzipSync } from "node:zlib";
 
 import { buildStoryboardAgentGraphFidelity } from "./agent-graph-fidelity";
+import {
+  createBoundStoryboardAgentTestCommandCapability,
+  getStoryboardAgentTestCommandBinding,
+  type StoryboardAgentTestCommandCapability,
+} from "./test-command-capability";
 import {
   generateLocalStoryboard,
   normalizeStoryboardExportMarkdown,
@@ -40,6 +48,8 @@ const BACKEND_AGENT_NOTEBOOKS = [
 ];
 const BACKEND_AGENT_GRAPH = "src/graph.py";
 const BACKEND_AGENT_RUNNER = "scripts/run-storyboard-agent.py";
+const STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY =
+  "checked-in-langgraph-runner-fixture-v1";
 const APP_WEB_MARKER = "app/api/admin/storyboard/route.ts";
 const REQUIRED_PYTHON_MODULES = [
   "langgraph",
@@ -58,6 +68,14 @@ const REQUIRED_AUTO_RUNNER_PYTHON_MODULES = [
 ];
 const DEFAULT_STORYBOARD_AGENT_TIMEOUT_MS = 120_000;
 const MIN_STORYBOARD_AGENT_TIMEOUT_MS = 5_000;
+const MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES = 64 * 1024;
+const DEFAULT_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 5_000;
+const MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 25;
+const MAX_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS = 15_000;
+const WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS = 5_000;
+const WINDOWS_JOB_SUPERVISOR_CLEANUP_GRACE_MS = 5_000;
+const WINDOWS_JOB_SUPERVISOR_FINAL_CLOSE_TIMEOUT_MS = 5_000;
+const LINUX_NAMESPACE_TERMINATION_TIMEOUT_MS = 10_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
 function getRuntimeCwd() {
   const cwd = Reflect.get(process, "cwd");
@@ -77,7 +95,57 @@ const DEFAULT_STORYBOARD_AGENT_CODEX_EFFORT = "low";
 const DEFAULT_STORYBOARD_CHAT_SEGMENT_COUNT = 10;
 const STORYBOARD_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
 const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 280;
-const UNSAFE_COMMAND_PATTERN = /[\s;&|`$<>()[\]{}!#\n\r]/;
+const UNSAFE_COMMAND_PATTERN = /[\u0000-\u001f\u007f"';&|`$<>()[\]{}!#%^?*]/;
+const WINDOWS_UNSAFE_COMMAND_TEXT_PATTERN = /[%^&|<>()!"]/;
+const STORYBOARD_AGENT_ENV_ALLOWLIST = [
+  "HOME",
+  "LANG",
+  "LC_ALL",
+  "PATH",
+  "PATHEXT",
+  "PYTHONHOME",
+  "PYTHONPATH",
+  "SystemRoot",
+  "TEMP",
+  "TMP",
+  "USERPROFILE",
+  "WINDIR",
+] as const;
+
+function buildStoryboardAgentEnvironment(
+  payload: Record<string, unknown>,
+  scopedEnvironment?: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform,
+  inheritEnvironment = true,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    NODE_ENV: scopedEnvironment?.NODE_ENV ?? process.env.NODE_ENV,
+  };
+  for (const key of STORYBOARD_AGENT_ENV_ALLOWLIST) {
+    if (platform === "win32" && key === "PATH") continue;
+    const value =
+      scopedEnvironment?.[key] ??
+      (inheritEnvironment ? process.env[key] : undefined);
+    if (typeof value === "string" && value) env[key] = value;
+  }
+
+  const inheritedPath = inheritEnvironment
+    ? process.env.PATH ?? process.env.Path
+    : undefined;
+  const pathValue =
+    platform === "win32"
+      ? scopedEnvironment?.PATH ?? scopedEnvironment?.Path ?? inheritedPath
+      : scopedEnvironment?.PATH ?? inheritedPath;
+  if (typeof pathValue === "string" && pathValue) {
+    env[platform === "win32" ? "Path" : "PATH"] = pathValue;
+  }
+  env.STORYBOARD_AGENT_JSON = JSON.stringify(payload);
+  return env;
+}
+
+function hasUnsafeWindowsCommandText(value: string) {
+  return WINDOWS_UNSAFE_COMMAND_TEXT_PATTERN.test(value);
+}
 
 type CommandResult = {
   ok: boolean;
@@ -85,6 +153,16 @@ type CommandResult = {
   timedOut: boolean;
   stdout: string;
   stderr: string;
+  lifecycleReason:
+    | "exit"
+    | "signal"
+    | "timeout"
+    | "stream_drain"
+    | "spawn_error"
+    | "cleanup_error";
+  cleanupVerified: boolean | null;
+  stdoutTruncated: boolean;
+  stderrTruncated: boolean;
 };
 
 type ParsedStoryboardAgentOutput = Partial<StoryboardGenerationResult> & {
@@ -178,8 +256,8 @@ export function resolveStoryboardAgentPythonForPlatform(
   return env.STORYBOARD_AGENT_PYTHON?.trim() || getDefaultStoryboardAgentPython(platform);
 }
 
-function resolveStoryboardAgentPython() {
-  return resolveStoryboardAgentPythonForPlatform(process.env, process.platform);
+function resolveStoryboardAgentPython(env: NodeJS.ProcessEnv = process.env) {
+  return resolveStoryboardAgentPythonForPlatform(env, process.platform);
 }
 
 function getPathEnvironmentValue(env: NodeJS.ProcessEnv = process.env) {
@@ -215,17 +293,2270 @@ function resolveWindowsCommandFromPath(command: string, env: NodeJS.ProcessEnv =
   return command;
 }
 
-function resolveStoryboardAgentPythonCommand() {
-  return resolveWindowsCommandFromPath(resolveStoryboardAgentPython());
+function resolveStoryboardAgentPythonCommand(env: NodeJS.ProcessEnv = process.env) {
+  return resolveWindowsCommandFromPath(resolveStoryboardAgentPython(env), env);
 }
 
 function shouldRunThroughWindowsCommandShell(command: string) {
   return process.platform === "win32" && /\.(?:cmd|bat)$/i.test(command.trim());
 }
+function getWindowsCommandShell() {
+  const windowsRoot =
+    process.env.SystemRoot?.trim() || process.env.WINDIR?.trim() || "C:\\Windows";
+  return path.win32.join(windowsRoot, "System32", "cmd.exe");
+}
+function quoteWindowsCommandArgument(value: string) {
+  if (/[\u0000\r\n]/.test(value)) {
+    throw new Error("unsafe Windows command argument");
+  }
+  return `"${value.replace(/"/g, '""')}"`;
+}
+function buildWindowsCommandShellSpec(command: string, args: string[]) {
+  // cmd parses exactly once. CALL would reparse percent escapes and must not be used.
+  const commandLine = `"${[quoteWindowsCommandArgument(path.win32.resolve(command)), ...args.map(quoteWindowsCommandArgument)].join(" ")}"`;
+  return {
+    executable: getWindowsCommandShell(),
+    args: ["/d", "/s", "/v:off", "/c", commandLine],
+    windowsVerbatimArguments: true,
+  };
+}
+export function __buildWindowsCommandShellSpecForTests(command: string, args: string[]) {
+  return buildWindowsCommandShellSpec(command, args);
+}
+const WINDOWS_JOB_SUPERVISOR_SCRIPT = String.raw`
+$ErrorActionPreference = 'Stop'
+$source = @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.IO;
+using System.IO.Pipes;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security.AccessControl;
+using System.Security.Cryptography;
+using System.Security.Principal;
 
-function resolveStoryboardAgentRuntime() {
+public static class TzudongWindowsJobSupervisor
+{
+    private const uint CREATE_NO_WINDOW = 0x08000000;
+    private const uint EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+    private const uint CREATE_UNICODE_ENVIRONMENT = 0x00000400;
+    private const uint DISABLE_MAX_PRIVILEGE = 0x1;
+    private const uint TOKEN_ASSIGN_PRIMARY = 0x0001;
+    private const uint TOKEN_DUPLICATE = 0x0002;
+    private const uint TOKEN_QUERY = 0x0008;
+    private const uint TOKEN_ADJUST_DEFAULT = 0x0080;
+    private const uint SE_GROUP_INTEGRITY = 0x00000020;
+    private const int TokenIntegrityLevel = 25;
+    private const uint SE_FILE_OBJECT = 1;
+    private const uint LABEL_SECURITY_INFORMATION = 0x00000010;
+    private const uint SDDL_REVISION_1 = 1;
+    private const uint OWNER_SECURITY_INFORMATION = 0x00000001;
+    private const uint DACL_SECURITY_INFORMATION = 0x00000004;
+    private const uint PROTECTED_DACL_SECURITY_INFORMATION = 0x80000000;
+    private const uint FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
+    private const uint FILE_ATTRIBUTE_REPARSE_POINT = 0x00000400;
+    private const uint INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF;
+    private const int ERROR_FILE_NOT_FOUND = 2;
+    private const int ERROR_PATH_NOT_FOUND = 3;
+    private const uint FILE_READ_ATTRIBUTES = 0x00000080;
+    private const uint READ_CONTROL = 0x00020000;
+    private const uint WRITE_DAC = 0x00040000;
+    private const uint WRITE_OWNER = 0x00080000;
+    private const uint DELETE = 0x00010000;
+    private const uint FILE_SHARE_READ = 0x00000001;
+    private const uint FILE_SHARE_WRITE = 0x00000002;
+    private const uint FILE_SHARE_DELETE = 0x00000004;
+    private const uint OPEN_EXISTING = 3;
+    private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+    private const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+    private static readonly IntPtr PROC_THREAD_ATTRIBUTE_JOB_LIST =
+        new IntPtr(0x0002000D);
+    private static readonly IntPtr PROC_THREAD_ATTRIBUTE_HANDLE_LIST =
+        new IntPtr(0x00020002);
+    private const uint STARTF_USESTDHANDLES = 0x00000100;
+    private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
+    private const int JobObjectExtendedLimitInformation = 9;
+    private const int JobObjectBasicAccountingInformation = 1;
+    private const int STD_INPUT_HANDLE = -10;
+    private const int STD_OUTPUT_HANDLE = -11;
+    private const int STD_ERROR_HANDLE = -12;
+    private const uint WAIT_OBJECT_0 = 0;
+    private const uint WAIT_TIMEOUT = 258;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct STARTUPINFO
+    {
+        public int cb;
+        public string lpReserved;
+        public string lpDesktop;
+        public string lpTitle;
+        public uint dwX;
+        public uint dwY;
+        public uint dwXSize;
+        public uint dwYSize;
+        public uint dwXCountChars;
+        public uint dwYCountChars;
+        public uint dwFillAttribute;
+        public uint dwFlags;
+        public short wShowWindow;
+        public short cbReserved2;
+        public IntPtr lpReserved2;
+        public IntPtr hStdInput;
+        public IntPtr hStdOutput;
+        public IntPtr hStdError;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct STARTUPINFOEX
+    {
+        public STARTUPINFO StartupInfo;
+        public IntPtr lpAttributeList;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_INFORMATION
+    {
+        public IntPtr hProcess;
+        public IntPtr hThread;
+        public uint dwProcessId;
+        public uint dwThreadId;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SID_AND_ATTRIBUTES
+    {
+        public IntPtr Sid;
+        public uint Attributes;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TOKEN_MANDATORY_LABEL
+    {
+        public SID_AND_ATTRIBUTES Label;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JOBOBJECT_BASIC_LIMIT_INFORMATION
+    {
+        public long PerProcessUserTimeLimit;
+        public long PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public UIntPtr MinimumWorkingSetSize;
+        public UIntPtr MaximumWorkingSetSize;
+        public uint ActiveProcessLimit;
+        public UIntPtr Affinity;
+        public uint PriorityClass;
+        public uint SchedulingClass;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IO_COUNTERS
+    {
+        public ulong ReadOperationCount;
+        public ulong WriteOperationCount;
+        public ulong OtherOperationCount;
+        public ulong ReadTransferCount;
+        public ulong WriteTransferCount;
+        public ulong OtherTransferCount;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+    {
+        public JOBOBJECT_BASIC_LIMIT_INFORMATION BasicLimitInformation;
+        public IO_COUNTERS IoInfo;
+        public UIntPtr ProcessMemoryLimit;
+        public UIntPtr JobMemoryLimit;
+        public UIntPtr PeakProcessMemoryUsed;
+        public UIntPtr PeakJobMemoryUsed;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct JOBOBJECT_BASIC_ACCOUNTING_INFORMATION
+    {
+        public long TotalUserTime;
+        public long TotalKernelTime;
+        public long ThisPeriodTotalUserTime;
+        public long ThisPeriodTotalKernelTime;
+        public uint TotalPageFaultCount;
+        public uint TotalProcesses;
+        public uint ActiveProcesses;
+        public uint TotalTerminatedProcesses;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BY_HANDLE_FILE_INFORMATION
+    {
+        public uint FileAttributes;
+        public uint CreationTimeLow;
+        public uint CreationTimeHigh;
+        public uint LastAccessTimeLow;
+        public uint LastAccessTimeHigh;
+        public uint LastWriteTimeLow;
+        public uint LastWriteTimeHigh;
+        public uint VolumeSerialNumber;
+        public uint FileSizeHigh;
+        public uint FileSizeLow;
+        public uint NumberOfLinks;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+    private struct ScratchDirectoryIdentity
+    {
+        public uint VolumeSerialNumber;
+        public uint FileIndexHigh;
+        public uint FileIndexLow;
+    }
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CreateProcessAsUserW(
+        IntPtr token,
+        string applicationName,
+        StringBuilder commandLine,
+        IntPtr processAttributes,
+        IntPtr threadAttributes,
+        bool inheritHandles,
+        uint creationFlags,
+        IntPtr environment,
+        string currentDirectory,
+        ref STARTUPINFOEX startupInfo,
+        out PROCESS_INFORMATION processInformation);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr CreateJobObject(
+        IntPtr jobAttributes,
+        string name);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool SetInformationJobObject(
+        IntPtr job,
+        int informationClass,
+        IntPtr information,
+        uint informationLength);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool QueryInformationJobObject(
+        IntPtr job,
+        int informationClass,
+        IntPtr information,
+        uint informationLength,
+        IntPtr returnLength);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool TerminateJobObject(IntPtr job, uint exitCode);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CreateDirectoryW(string pathName, IntPtr securityAttributes);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CreateFileW(
+        string fileName,
+        uint desiredAccess,
+        uint shareMode,
+        IntPtr securityAttributes,
+        uint creationDisposition,
+        uint flagsAndAttributes,
+        IntPtr templateFile);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern uint GetFileAttributesW(string fileName);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetFileInformationByHandle(
+        IntPtr file,
+        out BY_HANDLE_FILE_INFORMATION fileInformation);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool InitializeProcThreadAttributeList(
+        IntPtr attributeList,
+        int attributeCount,
+        int flags,
+        ref IntPtr size);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool UpdateProcThreadAttribute(
+        IntPtr attributeList,
+        uint flags,
+        IntPtr attribute,
+        IntPtr value,
+        IntPtr size,
+        IntPtr previousValue,
+        IntPtr returnSize);
+
+    [DllImport("kernel32.dll")]
+    private static extern void DeleteProcThreadAttributeList(
+        IntPtr attributeList);
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool OpenProcessToken(
+        IntPtr process,
+        uint desiredAccess,
+        out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool CreateRestrictedToken(
+        IntPtr existingToken,
+        uint flags,
+        uint disableSidCount,
+        IntPtr sidsToDisable,
+        uint deletePrivilegeCount,
+        IntPtr privilegesToDelete,
+        uint restrictedSidCount,
+        IntPtr sidsToRestrict,
+        out IntPtr newToken);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool SetTokenInformation(
+        IntPtr token,
+        int tokenInformationClass,
+        IntPtr tokenInformation,
+        uint tokenInformationLength);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool ConvertStringSidToSid(
+        string stringSid,
+        out IntPtr sid);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern int GetLengthSid(IntPtr sid);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(
+        string stringSecurityDescriptor,
+        uint stringSDRevision,
+        out IntPtr securityDescriptor,
+        out uint securityDescriptorSize);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool GetSecurityDescriptorSacl(
+        IntPtr securityDescriptor,
+        out bool saclPresent,
+        out IntPtr sacl,
+        out bool saclDefaulted);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool GetSecurityDescriptorOwner(
+        IntPtr securityDescriptor,
+        out IntPtr owner,
+        out bool ownerDefaulted);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern bool GetSecurityDescriptorDacl(
+        IntPtr securityDescriptor,
+        out bool daclPresent,
+        out IntPtr dacl,
+        out bool daclDefaulted);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    private static extern uint SetSecurityInfo(
+        IntPtr handle,
+        uint objectType,
+        uint securityInformation,
+        IntPtr owner,
+        IntPtr group,
+        IntPtr dacl,
+        IntPtr sacl);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint SetNamedSecurityInfo(
+        string objectName,
+        uint objectType,
+        uint securityInformation,
+        IntPtr owner,
+        IntPtr group,
+        IntPtr dacl,
+        IntPtr sacl);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode)]
+    private static extern uint GetNamedSecurityInfo(
+        string objectName,
+        uint objectType,
+        uint securityInformation,
+        out IntPtr owner,
+        out IntPtr group,
+        out IntPtr dacl,
+        out IntPtr sacl,
+        out IntPtr securityDescriptor);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ConvertSecurityDescriptorToStringSecurityDescriptor(
+        IntPtr securityDescriptor,
+        uint requestedStringSDRevision,
+        uint securityInformation,
+        out IntPtr stringSecurityDescriptor,
+        out uint stringSecurityDescriptorLen);
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr LocalFree(IntPtr memory);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern uint WaitForSingleObject(
+        IntPtr handle,
+        uint milliseconds);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetExitCodeProcess(
+        IntPtr process,
+        out uint exitCode);
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetStdHandle(int standardHandle);
+    [DllImport("kernel32.dll")]
+    private static extern bool CloseHandle(IntPtr handle);
+    private static void ThrowLastError(string operation)
+    {
+        throw new Win32Exception(
+            Marshal.GetLastWin32Error(),
+            operation + " failed");
+    }
+    private static void WriteLifecycle(Stream lifecycle, string message)
+    {
+        byte[] bytes = Encoding.ASCII.GetBytes(message + "\n");
+        lifecycle.Write(bytes, 0, bytes.Length);
+        lifecycle.Flush();
+    }
+    private static IntPtr CreateRestrictedLowIntegrityToken()
+    {
+        IntPtr currentToken = IntPtr.Zero;
+        IntPtr restrictedToken = IntPtr.Zero;
+        IntPtr lowIntegritySid = IntPtr.Zero;
+        IntPtr mandatoryLabel = IntPtr.Zero;
+        try
+        {
+            if (!OpenProcessToken(
+                GetCurrentProcess(),
+                TOKEN_ASSIGN_PRIMARY | TOKEN_DUPLICATE | TOKEN_QUERY |
+                TOKEN_ADJUST_DEFAULT,
+                out currentToken))
+            {
+                ThrowLastError("OpenProcessToken");
+            }
+            if (!CreateRestrictedToken(
+                currentToken,
+                DISABLE_MAX_PRIVILEGE,
+                0,
+                IntPtr.Zero,
+                0,
+                IntPtr.Zero,
+                0,
+                IntPtr.Zero,
+                out restrictedToken))
+            {
+                ThrowLastError("CreateRestrictedToken");
+            }
+            if (!ConvertStringSidToSid("S-1-16-4096", out lowIntegritySid))
+            {
+                ThrowLastError("ConvertStringSidToSid(low integrity)");
+            }
+            TOKEN_MANDATORY_LABEL label = new TOKEN_MANDATORY_LABEL();
+            label.Label.Sid = lowIntegritySid;
+            label.Label.Attributes = SE_GROUP_INTEGRITY;
+            int labelSize = Marshal.SizeOf(typeof(TOKEN_MANDATORY_LABEL)) +
+                GetLengthSid(lowIntegritySid);
+            mandatoryLabel = Marshal.AllocHGlobal(labelSize);
+            Marshal.StructureToPtr(label, mandatoryLabel, false);
+            if (!SetTokenInformation(
+                restrictedToken,
+                TokenIntegrityLevel,
+                mandatoryLabel,
+                (uint)labelSize))
+            {
+                ThrowLastError("SetTokenInformation(TokenIntegrityLevel)");
+            }
+            IntPtr result = restrictedToken;
+            restrictedToken = IntPtr.Zero;
+            return result;
+        }
+        finally
+        {
+            if (mandatoryLabel != IntPtr.Zero) Marshal.FreeHGlobal(mandatoryLabel);
+            if (lowIntegritySid != IntPtr.Zero) LocalFree(lowIntegritySid);
+            if (restrictedToken != IntPtr.Zero) CloseHandle(restrictedToken);
+            if (currentToken != IntPtr.Zero) CloseHandle(currentToken);
+        }
+    }
+    private static bool WaitForJobDrainUntil(IntPtr job, long deadlineMilliseconds)
+    {
+        IntPtr accounting = IntPtr.Zero;
+        try
+        {
+            int size = Marshal.SizeOf(typeof(JOBOBJECT_BASIC_ACCOUNTING_INFORMATION));
+            accounting = Marshal.AllocHGlobal(size);
+            while (true)
+            {
+                if (!QueryInformationJobObject(
+                    job,
+                    JobObjectBasicAccountingInformation,
+                    accounting,
+                    (uint)size,
+                    IntPtr.Zero))
+                {
+                    return false;
+                }
+                JOBOBJECT_BASIC_ACCOUNTING_INFORMATION info =
+                    (JOBOBJECT_BASIC_ACCOUNTING_INFORMATION)Marshal.PtrToStructure(
+                        accounting,
+                        typeof(JOBOBJECT_BASIC_ACCOUNTING_INFORMATION));
+                if (info.ActiveProcesses == 0) return true;
+                long remaining = deadlineMilliseconds -
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                if (remaining <= 0) return false;
+                System.Threading.Thread.Sleep((int)Math.Min(remaining, 10));
+            }
+        }
+        finally
+        {
+            if (accounting != IntPtr.Zero) Marshal.FreeHGlobal(accounting);
+        }
+    }
+    private static readonly string[] ScratchSubdirectories = new string[]
+    {
+        "tmp", "cache", "config", "home", "data", "state", "pycache",
+        "appdata", "localappdata", "pip", "hf", "transformers",
+        "matplotlib", "numba", "npm", "bun", "codex", "python-user",
+        "ipython", "jupyter", "cuda", "torch"
+    };
+    private static void SetLowIntegrityScratchLabel(string scratchRoot)
+    {
+        IntPtr descriptor = IntPtr.Zero;
+        try
+        {
+            uint descriptorSize;
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
+                "S:(ML;OICI;NW;;;LW)",
+                SDDL_REVISION_1,
+                out descriptor,
+                out descriptorSize))
+            {
+                ThrowLastError("ConvertStringSecurityDescriptorToSecurityDescriptor");
+            }
+            bool saclPresent;
+            bool saclDefaulted;
+            IntPtr sacl;
+            if (!GetSecurityDescriptorSacl(
+                descriptor,
+                out saclPresent,
+                out sacl,
+                out saclDefaulted) ||
+                !saclPresent || sacl == IntPtr.Zero)
+            {
+                ThrowLastError("GetSecurityDescriptorSacl");
+            }
+            uint status = SetNamedSecurityInfo(
+                scratchRoot,
+                SE_FILE_OBJECT,
+                LABEL_SECURITY_INFORMATION,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                IntPtr.Zero,
+                sacl);
+            if (status != 0)
+            {
+                throw new Win32Exception(
+                    unchecked((int)status),
+                    "SetNamedSecurityInfo(low-integrity scratch label) failed");
+            }
+        }
+        finally
+        {
+            if (descriptor != IntPtr.Zero) LocalFree(descriptor);
+        }
+    }
+    private static string ReadLowIntegrityScratchLabel(string scratchRoot)
+    {
+        IntPtr descriptor = IntPtr.Zero;
+        IntPtr owner;
+        IntPtr group;
+        IntPtr dacl;
+        IntPtr sacl;
+        uint status = GetNamedSecurityInfo(
+            scratchRoot,
+            SE_FILE_OBJECT,
+            LABEL_SECURITY_INFORMATION,
+            out owner,
+            out group,
+            out dacl,
+            out sacl,
+            out descriptor);
+        if (status != 0)
+        {
+            throw new Win32Exception(
+                unchecked((int)status),
+                "GetNamedSecurityInfo(low-integrity scratch label) failed");
+        }
+        try
+        {
+            IntPtr label = IntPtr.Zero;
+            try
+            {
+                uint labelLength;
+                if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
+                    descriptor,
+                    SDDL_REVISION_1,
+                    LABEL_SECURITY_INFORMATION,
+                    out label,
+                    out labelLength))
+                {
+                    ThrowLastError(
+                        "ConvertSecurityDescriptorToStringSecurityDescriptor");
+                }
+                return Marshal.PtrToStringUni(label) ?? String.Empty;
+            }
+            finally
+            {
+                if (label != IntPtr.Zero) LocalFree(label);
+            }
+        }
+        finally
+        {
+            if (descriptor != IntPtr.Zero) LocalFree(descriptor);
+        }
+    }
+    private static string BuildLowIntegrityScratchDaclSddl(
+        SecurityIdentifier owner)
+    {
+        return "O:" + owner.Value + "D:P(A;OICI;FA;;;" + owner.Value + ")";
+    }
+    private static void ConfigureLowIntegrityScratchDirectory(
+        string scratchRoot,
+        SecurityIdentifier owner)
+    {
+        DirectorySecurity security = new DirectorySecurity();
+        security.SetSecurityDescriptorSddlForm(
+            BuildLowIntegrityScratchDaclSddl(owner),
+            AccessControlSections.Owner | AccessControlSections.Access);
+        new DirectoryInfo(scratchRoot).SetAccessControl(security);
+        SetLowIntegrityScratchLabel(scratchRoot);
+    }
+    private static void VerifyLowIntegrityScratchDirectory(
+        string scratchRoot,
+        SecurityIdentifier owner)
+    {
+        DirectorySecurity security = new DirectoryInfo(scratchRoot).GetAccessControl(
+            AccessControlSections.Owner | AccessControlSections.Access);
+        SecurityIdentifier actualOwner = security.GetOwner(
+            typeof(SecurityIdentifier)) as SecurityIdentifier;
+        if (actualOwner == null || !actualOwner.Equals(owner) ||
+            !security.AreAccessRulesProtected)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch owner or ACL protection verification failed");
+        }
+        AuthorizationRuleCollection rules = security.GetAccessRules(
+            true,
+            true,
+            typeof(SecurityIdentifier));
+        if (rules.Count != 1)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch ACL grants an unexpected principal");
+        }
+        FileSystemAccessRule rule = rules[0] as FileSystemAccessRule;
+        SecurityIdentifier ruleIdentity = rule == null
+            ? null
+            : rule.IdentityReference as SecurityIdentifier;
+        InheritanceFlags requiredInheritance =
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit;
+        if (rule == null || ruleIdentity == null || !ruleIdentity.Equals(owner) ||
+            rule.IsInherited || rule.AccessControlType != AccessControlType.Allow ||
+            rule.FileSystemRights != FileSystemRights.FullControl ||
+            rule.InheritanceFlags != requiredInheritance ||
+            rule.PropagationFlags != PropagationFlags.None)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch ACL verification failed");
+        }
+        string label = ReadLowIntegrityScratchLabel(scratchRoot);
+        if (label.IndexOf("ML;", StringComparison.OrdinalIgnoreCase) < 0 ||
+            label.IndexOf("OICI", StringComparison.OrdinalIgnoreCase) < 0 ||
+            label.IndexOf(";NW;;;LW", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch label verification failed");
+        }
+    }
+    private static void VerifyLowIntegrityScratchSubdirectory(
+        string scratchSubdirectory)
+    {
+        uint attributes = GetFileAttributesW(scratchSubdirectory);
+        if (attributes == INVALID_FILE_ATTRIBUTES)
+        {
+            ThrowLastError("GetFileAttributesW(low-integrity scratch subdirectory)");
+        }
+        if ((attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+            (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch subdirectory verification failed");
+        }
+        string label = ReadLowIntegrityScratchLabel(scratchSubdirectory);
+        if (label.IndexOf("ML;", StringComparison.OrdinalIgnoreCase) < 0 ||
+            label.IndexOf(";NW;;;LW", StringComparison.OrdinalIgnoreCase) < 0)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch inheritance verification failed");
+        }
+    }
+    private static bool IsInvalidFileHandle(IntPtr handle)
+    {
+        return handle == IntPtr.Zero || handle == new IntPtr(-1);
+    }
+    private static IntPtr OpenTrustedScratchDirectoryHandle(string scratchRoot)
+    {
+        IntPtr handle = CreateFileW(
+            scratchRoot,
+            FILE_READ_ATTRIBUTES |
+                READ_CONTROL |
+                WRITE_DAC |
+                WRITE_OWNER |
+                DELETE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            IntPtr.Zero,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            IntPtr.Zero);
+        if (IsInvalidFileHandle(handle))
+        {
+            ThrowLastError("CreateFileW(low-integrity scratch)");
+        }
+        return handle;
+    }
+    private static ScratchDirectoryIdentity ReadScratchDirectoryIdentity(
+        IntPtr scratchDirectoryHandle)
+    {
+        BY_HANDLE_FILE_INFORMATION information;
+        if (!GetFileInformationByHandle(
+            scratchDirectoryHandle,
+            out information))
+        {
+            ThrowLastError("GetFileInformationByHandle(low-integrity scratch)");
+        }
+        if ((information.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+            (information.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch handle is not the original directory");
+        }
+        ScratchDirectoryIdentity identity = new ScratchDirectoryIdentity();
+        identity.VolumeSerialNumber = information.VolumeSerialNumber;
+        identity.FileIndexHigh = information.FileIndexHigh;
+        identity.FileIndexLow = information.FileIndexLow;
+        return identity;
+    }
+    private static bool HasScratchDirectoryIdentity(
+        ScratchDirectoryIdentity actual,
+        ScratchDirectoryIdentity expected)
+    {
+        return actual.VolumeSerialNumber == expected.VolumeSerialNumber &&
+            actual.FileIndexHigh == expected.FileIndexHigh &&
+            actual.FileIndexLow == expected.FileIndexLow;
+    }
+    private static void VerifyTrustedScratchDirectoryIdentity(
+        IntPtr scratchDirectoryHandle,
+        ScratchDirectoryIdentity expectedIdentity)
+    {
+        if (!HasScratchDirectoryIdentity(
+            ReadScratchDirectoryIdentity(scratchDirectoryHandle),
+            expectedIdentity))
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch trusted handle identity changed");
+        }
+    }
+    private static bool IsExactScratchPathAbsent(string scratchRoot)
+    {
+        uint attributes = GetFileAttributesW(scratchRoot);
+        if (attributes != INVALID_FILE_ATTRIBUTES) return false;
+        int error = Marshal.GetLastWin32Error();
+        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
+        {
+            return true;
+        }
+        throw new Win32Exception(
+            error,
+            "GetFileAttributesW(low-integrity scratch) failed");
+    }
+    private static bool VerifyScratchPathIdentity(
+        string scratchRoot,
+        ScratchDirectoryIdentity expectedIdentity)
+    {
+        if (IsExactScratchPathAbsent(scratchRoot)) return false;
+        uint attributes = GetFileAttributesW(scratchRoot);
+        if ((attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+            (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+        {
+            throw new InvalidOperationException(
+                "low-integrity scratch path is not the original directory");
+        }
+        IntPtr pathHandle = CreateFileW(
+            scratchRoot,
+            FILE_READ_ATTRIBUTES,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            IntPtr.Zero,
+            OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+            IntPtr.Zero);
+        if (IsInvalidFileHandle(pathHandle))
+        {
+            ThrowLastError("CreateFileW(low-integrity scratch identity)");
+        }
+        try
+        {
+            if (!HasScratchDirectoryIdentity(
+                ReadScratchDirectoryIdentity(pathHandle),
+                expectedIdentity))
+            {
+                throw new InvalidOperationException(
+                    "low-integrity scratch path identity changed");
+            }
+        }
+        finally
+        {
+            CloseHandle(pathHandle);
+        }
+        return true;
+    }
+    private static bool CloseTrustedScratchDirectoryHandle(
+        ref IntPtr scratchDirectoryHandle,
+        ref bool scratchDirectoryHandleCloseAttempted)
+    {
+        if (scratchDirectoryHandleCloseAttempted ||
+            IsInvalidFileHandle(scratchDirectoryHandle))
+        {
+            return false;
+        }
+        scratchDirectoryHandleCloseAttempted = true;
+        if (!CloseHandle(scratchDirectoryHandle)) return false;
+        scratchDirectoryHandle = IntPtr.Zero;
+        return true;
+    }
+    private static void RestoreLowIntegrityScratchSecurity(
+        IntPtr scratchDirectoryHandle,
+        SecurityIdentifier owner)
+    {
+        IntPtr descriptor = IntPtr.Zero;
+        try
+        {
+            uint descriptorSize;
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
+                BuildLowIntegrityScratchDaclSddl(owner),
+                SDDL_REVISION_1,
+                out descriptor,
+                out descriptorSize))
+            {
+                ThrowLastError(
+                    "ConvertStringSecurityDescriptorToSecurityDescriptor");
+            }
+            IntPtr ownerSid;
+            bool ownerDefaulted;
+            if (!GetSecurityDescriptorOwner(
+                descriptor,
+                out ownerSid,
+                out ownerDefaulted) ||
+                ownerSid == IntPtr.Zero)
+            {
+                ThrowLastError("GetSecurityDescriptorOwner");
+            }
+            IntPtr dacl;
+            bool daclPresent;
+            bool daclDefaulted;
+            if (!GetSecurityDescriptorDacl(
+                descriptor,
+                out daclPresent,
+                out dacl,
+                out daclDefaulted) ||
+                !daclPresent || dacl == IntPtr.Zero)
+            {
+                ThrowLastError("GetSecurityDescriptorDacl");
+            }
+            uint status = SetSecurityInfo(
+                scratchDirectoryHandle,
+                SE_FILE_OBJECT,
+                OWNER_SECURITY_INFORMATION |
+                    DACL_SECURITY_INFORMATION |
+                    PROTECTED_DACL_SECURITY_INFORMATION,
+                ownerSid,
+                IntPtr.Zero,
+                dacl,
+                IntPtr.Zero);
+            if (status != 0)
+            {
+                throw new Win32Exception(
+                    unchecked((int)status),
+                    "SetSecurityInfo(low-integrity scratch owner and DACL) failed");
+            }
+        }
+        finally
+        {
+            if (descriptor != IntPtr.Zero) LocalFree(descriptor);
+        }
+    }
+    private static string CreateLowIntegrityScratchDirectory()
+    {
+        WindowsIdentity identity = WindowsIdentity.GetCurrent();
+        SecurityIdentifier owner = identity == null ? null : identity.User;
+        if (owner == null)
+        {
+            throw new InvalidOperationException(
+                "current trusted supervisor identity is unavailable");
+        }
+        string tempRoot = Path.GetFullPath(Path.GetTempPath());
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            byte[] nonce = new byte[32];
+            using (RandomNumberGenerator random = RandomNumberGenerator.Create())
+            {
+                random.GetBytes(nonce);
+            }
+            string scratchRoot = Path.Combine(
+                tempRoot,
+                "tzudong-storyboard-low-" +
+                    BitConverter.ToString(nonce).Replace("-", String.Empty)
+                        .ToLowerInvariant());
+            if (!CreateDirectoryW(scratchRoot, IntPtr.Zero))
+            {
+                int error = Marshal.GetLastWin32Error();
+                if (error == 183) continue;
+                ThrowLastError("CreateDirectoryW(low-integrity scratch)");
+            }
+            try
+            {
+                ConfigureLowIntegrityScratchDirectory(scratchRoot, owner);
+                foreach (string name in ScratchSubdirectories)
+                {
+                    Directory.CreateDirectory(Path.Combine(scratchRoot, name));
+                }
+                VerifyLowIntegrityScratchDirectory(scratchRoot, owner);
+                foreach (string name in ScratchSubdirectories)
+                {
+                    VerifyLowIntegrityScratchSubdirectory(
+                        Path.Combine(scratchRoot, name));
+                }
+                return scratchRoot;
+            }
+            catch
+            {
+                TryRemovePreLaunchScratchDirectory(scratchRoot);
+                throw;
+            }
+        }
+        throw new IOException(
+            "could not allocate a cryptographically random low-integrity scratch directory");
+    }
+    private static IntPtr BuildLowIntegrityScratchEnvironment(string scratchRoot)
+    {
+        SortedDictionary<string, string> environment =
+            new SortedDictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
+        IDictionary inherited = Environment.GetEnvironmentVariables();
+        foreach (DictionaryEntry entry in inherited)
+        {
+            string key = entry.Key as string;
+            string value = entry.Value as string;
+            if (String.IsNullOrEmpty(key) || String.IsNullOrEmpty(value) ||
+                key[0] == '=' ||
+                key.StartsWith("TZUDONG_JOB_", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            environment[key] = value;
+        }
+        string tmp = Path.Combine(scratchRoot, "tmp");
+        string cache = Path.Combine(scratchRoot, "cache");
+        string config = Path.Combine(scratchRoot, "config");
+        string home = Path.Combine(scratchRoot, "home");
+        environment["TEMP"] = tmp;
+        environment["TMP"] = tmp;
+        environment["TMPDIR"] = tmp;
+        environment["HOME"] = home;
+        environment["USERPROFILE"] = home;
+        string homeRoot = Path.GetPathRoot(home);
+        if (!String.IsNullOrEmpty(homeRoot) &&
+            homeRoot.Length >= 2 && homeRoot[1] == ':')
+        {
+            environment["HOMEDRIVE"] = homeRoot.Substring(0, 2);
+            environment["HOMEPATH"] = home.Substring(2);
+        }
+        else
+        {
+            environment["HOMEDRIVE"] = home;
+            environment["HOMEPATH"] = String.Empty;
+        }
+        environment["HOMESHARE"] = home;
+        environment["APPDATA"] = Path.Combine(scratchRoot, "appdata");
+        environment["LOCALAPPDATA"] = Path.Combine(
+            scratchRoot,
+            "localappdata");
+        environment["XDG_CACHE_HOME"] = cache;
+        environment["XDG_CONFIG_HOME"] = config;
+        environment["XDG_DATA_HOME"] = Path.Combine(scratchRoot, "data");
+        environment["XDG_STATE_HOME"] = Path.Combine(scratchRoot, "state");
+        environment["XDG_RUNTIME_DIR"] = tmp;
+        environment["PIP_CACHE_DIR"] = Path.Combine(scratchRoot, "pip");
+        environment["PYTHONPYCACHEPREFIX"] = Path.Combine(
+            scratchRoot,
+            "pycache");
+        environment["HF_HOME"] = Path.Combine(scratchRoot, "hf");
+        environment["TRANSFORMERS_CACHE"] = Path.Combine(
+            scratchRoot,
+            "transformers");
+        environment["MPLCONFIGDIR"] = Path.Combine(
+            scratchRoot,
+            "matplotlib");
+        environment["NUMBA_CACHE_DIR"] = Path.Combine(
+            scratchRoot,
+            "numba");
+        environment["NPM_CONFIG_CACHE"] = Path.Combine(scratchRoot, "npm");
+        environment["YARN_CACHE_FOLDER"] = Path.Combine(scratchRoot, "npm");
+        environment["BUN_INSTALL_CACHE_DIR"] = Path.Combine(scratchRoot, "bun");
+        environment["CODEX_HOME"] = Path.Combine(scratchRoot, "codex");
+        environment["PYTHONUSERBASE"] = Path.Combine(
+            scratchRoot,
+            "python-user");
+        environment["IPYTHONDIR"] = Path.Combine(scratchRoot, "ipython");
+        environment["JUPYTER_CONFIG_DIR"] = Path.Combine(
+            scratchRoot,
+            "jupyter");
+        environment["JUPYTER_DATA_DIR"] = Path.Combine(
+            scratchRoot,
+            "jupyter");
+        environment["CUDA_CACHE_PATH"] = Path.Combine(scratchRoot, "cuda");
+        environment["TORCH_HOME"] = Path.Combine(scratchRoot, "torch");
+        StringBuilder block = new StringBuilder();
+        foreach (KeyValuePair<string, string> entry in environment)
+        {
+            block.Append(entry.Key);
+            block.Append("=");
+            block.Append(entry.Value);
+            block.Append('\0');
+        }
+        block.Append('\0');
+        byte[] bytes = Encoding.Unicode.GetBytes(block.ToString());
+        IntPtr result = Marshal.AllocHGlobal(bytes.Length);
+        Marshal.Copy(bytes, 0, result, bytes.Length);
+        return result;
+    }
+    private static void EnsureScratchCleanupDeadline(long deadlineMilliseconds)
+    {
+        if (deadlineMilliseconds > 0 &&
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >
+                deadlineMilliseconds)
+        {
+            throw new TimeoutException("low-integrity scratch cleanup deadline exceeded");
+        }
+    }
+    private static void RemoveLowIntegrityScratchContents(
+        string directory,
+        long deadlineMilliseconds)
+    {
+        EnsureScratchCleanupDeadline(deadlineMilliseconds);
+        foreach (string entry in Directory.GetFileSystemEntries(directory))
+        {
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            FileAttributes attributes = File.GetAttributes(entry);
+            bool isDirectory =
+                (attributes & FileAttributes.Directory) != 0;
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                if (isDirectory) Directory.Delete(entry, false);
+                else File.Delete(entry);
+                continue;
+            }
+            if (isDirectory)
+            {
+                RemoveLowIntegrityScratchContents(entry, deadlineMilliseconds);
+                EnsureScratchCleanupDeadline(deadlineMilliseconds);
+                Directory.Delete(entry, false);
+            }
+            else
+            {
+                File.Delete(entry);
+            }
+        }
+    }
+    private static bool TryRemovePreLaunchScratchDirectory(string scratchRoot)
+    {
+        if (String.IsNullOrEmpty(scratchRoot)) return false;
+        try
+        {
+            if (IsExactScratchPathAbsent(scratchRoot)) return true;
+            uint rootAttributes = GetFileAttributesW(scratchRoot);
+            if ((rootAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+                (rootAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0)
+            {
+                return false;
+            }
+            RemoveLowIntegrityScratchContents(scratchRoot, 0);
+            Directory.Delete(scratchRoot, false);
+            return IsExactScratchPathAbsent(scratchRoot);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    private static bool TryRemoveLowIntegrityScratchDirectory(
+        string scratchRoot,
+        ref IntPtr scratchDirectoryHandle,
+        ref bool scratchDirectoryHandleCloseAttempted,
+        ScratchDirectoryIdentity expectedIdentity,
+        SecurityIdentifier owner,
+        long deadlineMilliseconds)
+    {
+        if (String.IsNullOrEmpty(scratchRoot) ||
+            IsInvalidFileHandle(scratchDirectoryHandle) ||
+            owner == null)
+        {
+            return false;
+        }
+        try
+        {
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            VerifyTrustedScratchDirectoryIdentity(
+                scratchDirectoryHandle,
+                expectedIdentity);
+            if (!VerifyScratchPathIdentity(scratchRoot, expectedIdentity))
+            {
+                return false;
+            }
+            RestoreLowIntegrityScratchSecurity(
+                scratchDirectoryHandle,
+                owner);
+            VerifyTrustedScratchDirectoryIdentity(
+                scratchDirectoryHandle,
+                expectedIdentity);
+            if (!VerifyScratchPathIdentity(scratchRoot, expectedIdentity))
+            {
+                return false;
+            }
+            SetLowIntegrityScratchLabel(scratchRoot);
+            VerifyLowIntegrityScratchDirectory(scratchRoot, owner);
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            RemoveLowIntegrityScratchContents(
+                scratchRoot,
+                deadlineMilliseconds);
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            VerifyTrustedScratchDirectoryIdentity(
+                scratchDirectoryHandle,
+                expectedIdentity);
+            if (!VerifyScratchPathIdentity(scratchRoot, expectedIdentity))
+            {
+                return false;
+            }
+            if (!CloseTrustedScratchDirectoryHandle(
+                ref scratchDirectoryHandle,
+                ref scratchDirectoryHandleCloseAttempted))
+            {
+                return false;
+            }
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            Directory.Delete(scratchRoot, false);
+            EnsureScratchCleanupDeadline(deadlineMilliseconds);
+            return IsExactScratchPathAbsent(scratchRoot);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static int Run(
+        string executable,
+        string commandLine,
+        string currentDirectory,
+        long deadlineMilliseconds,
+        long cleanupDeadlineMilliseconds,
+        Stream lifecycle,
+        Stream parentLifetime)
+    {
+        IntPtr job = IntPtr.Zero;
+        IntPtr information = IntPtr.Zero;
+        IntPtr attributeList = IntPtr.Zero;
+        IntPtr jobListValue = IntPtr.Zero;
+        IntPtr inheritedHandleList = IntPtr.Zero;
+        IntPtr restrictedToken = IntPtr.Zero;
+        IntPtr targetEnvironment = IntPtr.Zero;
+        IntPtr scratchDirectoryHandle = IntPtr.Zero;
+        bool scratchDirectoryHandleCloseAttempted = false;
+        ScratchDirectoryIdentity scratchDirectoryIdentity =
+            new ScratchDirectoryIdentity();
+        SecurityIdentifier scratchOwner = null;
+        int parentDisconnected = 0;
+        int supervisorStopping = 0;
+        bool completed = false;
+        bool jobDrained = false;
+        bool scratchCleanupAttempted = false;
+        bool attributeListInitialized = false;
+        string scratchRoot = null;
+        System.Threading.Thread parentLifetimeMonitor = null;
+        PROCESS_INFORMATION process = new PROCESS_INFORMATION();
+        try
+        {
+            job = CreateJobObject(IntPtr.Zero, null);
+            if (job == IntPtr.Zero) ThrowLastError("CreateJobObject");
+
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits =
+                new JOBOBJECT_EXTENDED_LIMIT_INFORMATION();
+            limits.BasicLimitInformation.LimitFlags =
+                JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            int informationSize =
+                Marshal.SizeOf(typeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            information = Marshal.AllocHGlobal(informationSize);
+            Marshal.StructureToPtr(limits, information, false);
+            if (!SetInformationJobObject(
+                job,
+                JobObjectExtendedLimitInformation,
+                information,
+                (uint)informationSize))
+            {
+                ThrowLastError("SetInformationJobObject");
+            }
+
+            IntPtr attributeListSize = IntPtr.Zero;
+            InitializeProcThreadAttributeList(
+                IntPtr.Zero,
+                2,
+                0,
+                ref attributeListSize);
+            if (attributeListSize == IntPtr.Zero)
+            {
+                ThrowLastError("InitializeProcThreadAttributeList(size)");
+            }
+            attributeList = Marshal.AllocHGlobal(attributeListSize);
+            if (!InitializeProcThreadAttributeList(
+                attributeList,
+                2,
+                0,
+                ref attributeListSize))
+            {
+                ThrowLastError("InitializeProcThreadAttributeList");
+            }
+            attributeListInitialized = true;
+            jobListValue = Marshal.AllocHGlobal(IntPtr.Size);
+            Marshal.WriteIntPtr(jobListValue, job);
+            if (!UpdateProcThreadAttribute(
+                attributeList,
+                0,
+                PROC_THREAD_ATTRIBUTE_JOB_LIST,
+                jobListValue,
+                new IntPtr(IntPtr.Size),
+                IntPtr.Zero,
+                IntPtr.Zero))
+            {
+                ThrowLastError("UpdateProcThreadAttribute");
+            }
+
+            STARTUPINFOEX startup = new STARTUPINFOEX();
+            startup.StartupInfo.cb =
+                Marshal.SizeOf(typeof(STARTUPINFOEX));
+            startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+            startup.StartupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+            startup.StartupInfo.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+            startup.StartupInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+            startup.lpAttributeList = attributeList;
+            inheritedHandleList = Marshal.AllocHGlobal(IntPtr.Size * 3);
+            Marshal.WriteIntPtr(inheritedHandleList, 0 * IntPtr.Size, startup.StartupInfo.hStdInput);
+            Marshal.WriteIntPtr(inheritedHandleList, 1 * IntPtr.Size, startup.StartupInfo.hStdOutput);
+            Marshal.WriteIntPtr(inheritedHandleList, 2 * IntPtr.Size, startup.StartupInfo.hStdError);
+            if (!UpdateProcThreadAttribute(
+                attributeList,
+                0,
+                PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+                inheritedHandleList,
+                new IntPtr(IntPtr.Size * 3),
+                IntPtr.Zero,
+                IntPtr.Zero))
+            {
+                ThrowLastError("UpdateProcThreadAttribute(handle list)");
+            }
+
+            restrictedToken = CreateRestrictedLowIntegrityToken();
+            WindowsIdentity trustedIdentity = WindowsIdentity.GetCurrent();
+            scratchOwner = trustedIdentity == null ? null : trustedIdentity.User;
+            if (scratchOwner == null)
+            {
+                throw new InvalidOperationException(
+                    "current trusted supervisor identity is unavailable");
+            }
+            scratchRoot = CreateLowIntegrityScratchDirectory();
+            try
+            {
+                scratchDirectoryHandle =
+                    OpenTrustedScratchDirectoryHandle(scratchRoot);
+                scratchDirectoryIdentity = ReadScratchDirectoryIdentity(
+                    scratchDirectoryHandle);
+            }
+            catch
+            {
+                if (IsInvalidFileHandle(scratchDirectoryHandle) ||
+                    CloseTrustedScratchDirectoryHandle(
+                        ref scratchDirectoryHandle,
+                        ref scratchDirectoryHandleCloseAttempted))
+                {
+                    TryRemovePreLaunchScratchDirectory(scratchRoot);
+                }
+                scratchRoot = null;
+                throw;
+            }
+            targetEnvironment = BuildLowIntegrityScratchEnvironment(scratchRoot);
+            parentLifetimeMonitor =
+                new System.Threading.Thread(delegate()
+                {
+                    try
+                    {
+                        if (parentLifetime.ReadByte() == -1 &&
+                            System.Threading.Interlocked.CompareExchange(
+                                ref supervisorStopping,
+                                0,
+                                0) == 0)
+                        {
+                            System.Threading.Interlocked.Exchange(
+                                ref parentDisconnected,
+                                1);
+                            TerminateJobObject(job, 125);
+                        }
+                    }
+                    catch
+                    {
+                        if (System.Threading.Interlocked.CompareExchange(
+                            ref supervisorStopping,
+                            0,
+                            0) == 0)
+                        {
+                            System.Threading.Interlocked.Exchange(
+                                ref parentDisconnected,
+                                1);
+                            TerminateJobObject(job, 125);
+                        }
+                    }
+                });
+            parentLifetimeMonitor.IsBackground = true;
+            parentLifetimeMonitor.Start();
+            if (!CreateProcessAsUserW(
+                restrictedToken,
+                executable,
+                new StringBuilder(commandLine),
+                IntPtr.Zero,
+                IntPtr.Zero,
+                true,
+                CREATE_NO_WINDOW |
+                    EXTENDED_STARTUPINFO_PRESENT |
+                    CREATE_UNICODE_ENVIRONMENT,
+                targetEnvironment,
+                currentDirectory,
+                ref startup,
+                out process))
+            {
+                ThrowLastError("CreateProcessAsUserW(restricted low-integrity token)");
+            }
+
+            if (process.hThread != IntPtr.Zero)
+            {
+                CloseHandle(process.hThread);
+                process.hThread = IntPtr.Zero;
+            }
+            while (true)
+            {
+                long remaining = deadlineMilliseconds -
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                if (remaining <= 0) throw new TimeoutException("Job deadline exceeded");
+                if (System.Threading.Interlocked.CompareExchange(
+                    ref parentDisconnected,
+                    0,
+                    0) != 0)
+                    throw new InvalidOperationException("Job parent lifetime channel closed");
+                uint wait = WaitForSingleObject(
+                    process.hProcess,
+                    (uint)Math.Min(remaining, 50));
+                if (wait == WAIT_OBJECT_0) break;
+                if (wait != WAIT_TIMEOUT) ThrowLastError("WaitForSingleObject(process)");
+            }
+            uint exitCode;
+            if (!GetExitCodeProcess(process.hProcess, out exitCode))
+            {
+                ThrowLastError("GetExitCodeProcess");
+            }
+            if (!TerminateJobObject(job, 0))
+            {
+                ThrowLastError("TerminateJobObject(drain)");
+            }
+            if (!WaitForJobDrainUntil(job, deadlineMilliseconds))
+            {
+                throw new TimeoutException("Job drain deadline exceeded");
+            }
+            jobDrained = true;
+            scratchCleanupAttempted = true;
+            if (!TryRemoveLowIntegrityScratchDirectory(
+                scratchRoot,
+                ref scratchDirectoryHandle,
+                ref scratchDirectoryHandleCloseAttempted,
+                scratchDirectoryIdentity,
+                scratchOwner,
+                deadlineMilliseconds))
+            {
+                throw new IOException(
+                    "low-integrity scratch cleanup could not be verified");
+            }
+            scratchRoot = null;
+            completed = true;
+            WriteLifecycle(lifecycle, "COMPLETE");
+            return unchecked((int)exitCode);
+        }
+        finally
+        {
+            if (job != IntPtr.Zero && !completed)
+            {
+                try
+                {
+                    if (!jobDrained)
+                    {
+                        if (!TerminateJobObject(job, 125))
+                        {
+                            ThrowLastError("TerminateJobObject(cleanup)");
+                        }
+                        jobDrained = WaitForJobDrainUntil(
+                            job,
+                            cleanupDeadlineMilliseconds);
+                    }
+                    if (jobDrained && scratchRoot != null &&
+                        !scratchCleanupAttempted)
+                    {
+                        scratchCleanupAttempted = true;
+                        if (TryRemoveLowIntegrityScratchDirectory(
+                            scratchRoot,
+                            ref scratchDirectoryHandle,
+                            ref scratchDirectoryHandleCloseAttempted,
+                            scratchDirectoryIdentity,
+                            scratchOwner,
+                            cleanupDeadlineMilliseconds))
+                        {
+                            scratchRoot = null;
+                            WriteLifecycle(lifecycle, "DRAIN");
+                        }
+                    }
+                }
+                catch
+                {
+                    // Cleanup proof remains absent when Job drain or scratch removal fails.
+                }
+            }
+            System.Threading.Interlocked.Exchange(ref supervisorStopping, 1);
+            try { lifecycle.Dispose(); } catch { }
+            try { parentLifetime.Dispose(); } catch { }
+            if (parentLifetimeMonitor != null) parentLifetimeMonitor.Join(100);
+            if (targetEnvironment != IntPtr.Zero) Marshal.FreeHGlobal(targetEnvironment);
+            if (!scratchDirectoryHandleCloseAttempted &&
+                !IsInvalidFileHandle(scratchDirectoryHandle))
+            {
+                scratchDirectoryHandleCloseAttempted = true;
+                if (CloseHandle(scratchDirectoryHandle))
+                {
+                    scratchDirectoryHandle = IntPtr.Zero;
+                }
+            }
+            if (inheritedHandleList != IntPtr.Zero) Marshal.FreeHGlobal(inheritedHandleList);
+            if (restrictedToken != IntPtr.Zero) CloseHandle(restrictedToken);
+            if (process.hThread != IntPtr.Zero) CloseHandle(process.hThread);
+            if (process.hProcess != IntPtr.Zero) CloseHandle(process.hProcess);
+            if (attributeListInitialized)
+            {
+                DeleteProcThreadAttributeList(attributeList);
+            }
+            if (jobListValue != IntPtr.Zero) Marshal.FreeHGlobal(jobListValue);
+            if (attributeList != IntPtr.Zero) Marshal.FreeHGlobal(attributeList);
+            if (information != IntPtr.Zero) Marshal.FreeHGlobal(information);
+            if (job != IntPtr.Zero) CloseHandle(job);
+        }
+    }
+}
+'@
+Add-Type -TypeDefinition $source -Language CSharp
+$executable = [Text.Encoding]::UTF8.GetString(
+  [Convert]::FromBase64String($env:TZUDONG_JOB_EXECUTABLE_B64))
+$commandLine = [Text.Encoding]::UTF8.GetString(
+  [Convert]::FromBase64String($env:TZUDONG_JOB_COMMAND_LINE_B64))
+$currentDirectory = [Text.Encoding]::UTF8.GetString(
+  [Convert]::FromBase64String($env:TZUDONG_JOB_CWD_B64))
+$pipeName = $env:TZUDONG_JOB_PIPE_NAME
+$parentLifetimePipeName = $env:TZUDONG_JOB_PARENT_LIFETIME_PIPE_NAME
+$deadlineMilliseconds = 0
+$cleanupDeadlineMilliseconds = 0
+if ($pipeName -notmatch '^tzudong-storyboard-proof-[0-9a-f]{64}$') { exit 125 }
+if ($parentLifetimePipeName -notmatch '^tzudong-storyboard-parent-[0-9a-f]{64}$') { exit 125 }
+if (-not [int64]::TryParse($env:TZUDONG_JOB_DEADLINE_MS, [ref]$deadlineMilliseconds)) { exit 125 }
+if (-not [int64]::TryParse($env:TZUDONG_JOB_CLEANUP_DEADLINE_MS, [ref]$cleanupDeadlineMilliseconds)) { exit 125 }
+if ($cleanupDeadlineMilliseconds -le $deadlineMilliseconds) { exit 125 }
+$remaining = $deadlineMilliseconds - [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+if ($remaining -le 0) { exit 125 }
+$proofPipe = [IO.Pipes.NamedPipeClientStream]::new(
+  '.', $pipeName, [IO.Pipes.PipeDirection]::Out, [IO.Pipes.PipeOptions]::None)
+$parentLifetimePipe = [IO.Pipes.NamedPipeClientStream]::new(
+  '.', $parentLifetimePipeName, [IO.Pipes.PipeDirection]::In, [IO.Pipes.PipeOptions]::None)
+try {
+  $proofPipe.Connect([int][Math]::Min($remaining, 5000))
+  $parentLifetimePipe.Connect([int][Math]::Min($remaining, 5000))
+  Get-ChildItem Env: | Where-Object { $_.Name -like 'TZUDONG_JOB_*' } |
+    ForEach-Object { Remove-Item "Env:$($_.Name)" -ErrorAction SilentlyContinue }
+  $exitCode = [TzudongWindowsJobSupervisor]::Run(
+    $executable,
+    $commandLine,
+    $currentDirectory,
+    $deadlineMilliseconds,
+    $cleanupDeadlineMilliseconds,
+    $proofPipe,
+    $parentLifetimePipe)
+  exit $exitCode
+} catch {
+  exit 125
+} finally {
+  $proofPipe.Dispose()
+  $parentLifetimePipe.Dispose()
+}
+`;
+
+const WINDOWS_JOB_SUPERVISOR_BOOTSTRAP = String.raw`
+$ErrorActionPreference = 'Stop'
+$encoded = $env:TZUDONG_JOB_SCRIPT_GZIP_B64
+Remove-Item Env:TZUDONG_JOB_SCRIPT_GZIP_B64 -ErrorAction SilentlyContinue
+if (-not $encoded) { exit 125 }
+$compressed = [Convert]::FromBase64String($encoded)
+$inputStream = [IO.MemoryStream]::new($compressed, $false)
+$gzip = [IO.Compression.GzipStream]::new(
+  $inputStream,
+  [IO.Compression.CompressionMode]::Decompress)
+$reader = [IO.StreamReader]::new($gzip, [Text.Encoding]::UTF8, $true)
+try {
+  $script = $reader.ReadToEnd()
+} finally {
+  $reader.Dispose()
+  $gzip.Dispose()
+  $inputStream.Dispose()
+}
+& ([ScriptBlock]::Create($script))
+`;
+
+function quoteWindowsCreateProcessArgument(value: string) {
+  if (!value || /[\s"]/.test(value)) {
+    let quoted = '"';
+    let backslashes = 0;
+    for (const character of value) {
+      if (character === "\\") {
+        backslashes += 1;
+        continue;
+      }
+      if (character === '"') {
+        quoted += `${"\\".repeat(backslashes * 2 + 1)}"`;
+        backslashes = 0;
+        continue;
+      }
+      quoted += `${"\\".repeat(backslashes)}${character}`;
+      backslashes = 0;
+    }
+    return `${quoted}${"\\".repeat(backslashes * 2)}"`;
+  }
+  return value;
+}
+
+function resolveTrustedWindowsPowerShell() {
+  const windowsRoot =
+    process.env.SystemRoot?.trim() ||
+    process.env.WINDIR?.trim() ||
+    "C:\\Windows";
+  const executable = path.win32.join(
+    windowsRoot,
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe",
+  );
+  if (!path.win32.isAbsolute(executable) || !existsSync(executable)) {
+    throw new Error("trusted Windows PowerShell is unavailable");
+  }
+  return executable;
+}
+
+function buildWindowsJobSupervisorSpec({
+  executable,
+  args,
+  cwd,
+  env,
+  windowsVerbatimArguments,
+  deadline,
+  cleanupDeadline,
+  pipeName,
+  parentLifetimePipeName,
+}: {
+  executable: string;
+  args: string[];
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  windowsVerbatimArguments: boolean;
+  deadline: number;
+  cleanupDeadline: number;
+  pipeName: string;
+  parentLifetimePipeName: string;
+}) {
+  const commandLine = [
+    quoteWindowsCreateProcessArgument(executable),
+    windowsVerbatimArguments
+      ? args.join(" ")
+      : args.map(quoteWindowsCreateProcessArgument).join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return {
+    executable: resolveTrustedWindowsPowerShell(),
+    args: [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-EncodedCommand",
+      Buffer.from(WINDOWS_JOB_SUPERVISOR_BOOTSTRAP, "utf16le").toString("base64"),
+    ],
+    env: {
+      ...env,
+      TZUDONG_JOB_SCRIPT_GZIP_B64: gzipSync(
+        Buffer.from(WINDOWS_JOB_SUPERVISOR_SCRIPT, "utf8"),
+      ).toString("base64"),
+      TZUDONG_JOB_EXECUTABLE_B64: Buffer.from(executable, "utf8").toString(
+        "base64",
+      ),
+      TZUDONG_JOB_COMMAND_LINE_B64: Buffer.from(commandLine, "utf8").toString(
+        "base64",
+      ),
+      TZUDONG_JOB_CWD_B64: Buffer.from(cwd, "utf8").toString("base64"),
+      TZUDONG_JOB_PIPE_NAME: pipeName,
+      TZUDONG_JOB_PARENT_LIFETIME_PIPE_NAME: parentLifetimePipeName,
+      TZUDONG_JOB_DEADLINE_MS: String(deadline),
+      TZUDONG_JOB_CLEANUP_DEADLINE_MS: String(cleanupDeadline),
+    },
+  };
+}
+
+type DiagnosticCapture = {
+  value: string;
+  byteCount: number;
+  truncated: boolean;
+};
+type WindowsLifecycleChannel = {
+  pipeName: string;
+  socket: Promise<net.Socket>;
+  close: () => void;
+};
+
+function createWindowsLifecycleChannel(
+  purpose: "proof" | "parent",
+): WindowsLifecycleChannel {
+  const pipeName = `tzudong-storyboard-${purpose}-${randomBytes(32).toString("hex")}`;
+  let resolveSocket!: (socket: net.Socket) => void;
+  let activeSocket: net.Socket | null = null;
+  const server = net.createServer((socket) => {
+    if (activeSocket) {
+      socket.destroy();
+      return;
+    }
+    activeSocket = socket;
+    server.close();
+    resolveSocket(socket);
+  });
+  server.once("error", () => {
+    // An unconnected lifecycle channel fails closed at the absolute deadline.
+  });
+  const socket = new Promise<net.Socket>((resolve) => {
+    resolveSocket = resolve;
+  });
+  server.listen(`\\\\.\\pipe\\${pipeName}`);
+  return {
+    pipeName,
+    socket,
+    close: () => {
+      server.close();
+      activeSocket?.destroy();
+    },
+  };
+}
+function appendCommandDiagnostic(capture: DiagnosticCapture, chunk: unknown, budget: number) {
+  const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), "utf8");
+  capture.byteCount += bytes.length;
+  const remaining = Math.max(0, budget - Buffer.byteLength(capture.value, "utf8"));
+  if (bytes.length > remaining) capture.truncated = true;
+  if (remaining > 0) {
+    // Buffer decoding keeps only complete UTF-8 sequences; never manufacture a marker
+    // from untrusted output or use one as state.
+    capture.value += bytes.subarray(0, remaining).toString("utf8");
+  }
+}
+function appendTrustedLifecycleDiagnostic(current: string, diagnostic: string) {
+  const trusted = `\n[trusted lifecycle: ${diagnostic.slice(0, 240)}]`;
+  const prefixBudget = Math.max(
+    0,
+    MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES - Buffer.byteLength(trusted),
+  );
+  const prefix = Buffer.from(current, "utf8")
+    .subarray(0, prefixBudget)
+    .toString("utf8");
+  return `${prefix}${trusted}`;
+}
+
+type WindowsHelperResult = {
+  status: "success" | "failed" | "timed_out";
+  stdout: string;
+  truncated: boolean;
+};
+
+type ProcessControl = {
+  platform: NodeJS.Platform;
+  spawnProcess: typeof spawn;
+  commandTimeoutMs?: number;
+  helperTimeoutMs?: number;
+  streamDrainTimeoutMs?: number;
+};
+
+const defaultProcessControl: ProcessControl = {
+  platform: process.platform,
+  spawnProcess: spawn,
+};
+
+const MAX_WINDOWS_CAPTURED_PROCESS_COUNT = 4096;
+
+function remainingCleanupMs(deadline: number) {
+  return Math.max(0, deadline - Date.now());
+}
+
+function runWindowsHelper(
+  command: string,
+  args: string[],
+  processControl: ProcessControl,
+  deadline: number,
+) {
+  return new Promise<WindowsHelperResult>((resolve) => {
+    const remaining = remainingCleanupMs(deadline);
+    if (remaining === 0) {
+      resolve({ status: "timed_out", stdout: "", truncated: false });
+      return;
+    }
+    let settled = false;
+    let stdout = "";
+    let truncated = false;
+    let helper: ReturnType<typeof spawn> | null = null;
+    const settle = (status: WindowsHelperResult["status"]) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ status, stdout, truncated });
+    };
+    const timer = setTimeout(() => {
+      helper?.kill("SIGKILL");
+      settle("timed_out");
+    }, Math.min(processControl.helperTimeoutMs ?? WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS, remaining));
+    try {
+      helper = processControl.spawnProcess(command, args, {
+        shell: false,
+        stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
+      });
+      helper.stdout?.on("data", (chunk) => {
+        if (Buffer.byteLength(stdout) + Buffer.byteLength(String(chunk)) > MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES) {
+          truncated = true;
+          return;
+        }
+        stdout += String(chunk);
+      });
+      helper.once("error", () => settle("failed"));
+      helper.once("close", (code) => settle(code === 0 ? "success" : "failed"));
+    } catch {
+      settle("failed");
+    }
+  });
+}
+
+async function captureWindowsProcessTree(
+  pid: number,
+  processControl: ProcessControl,
+  deadline: number,
+) {
+  const result = await runWindowsHelper(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      `$root = ${pid}; $all = Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId; $live = @{}; foreach ($process in $all) { $live[[int]$process.ProcessId] = $true }; $seen = @{}; $pending = @($root); while ($pending.Count) { $current = [int]$pending[0]; if ($seen.ContainsKey($current)) { $pending = @($pending | Select-Object -Skip 1); continue }; $seen[$current] = $true; if ($seen.Count -gt ${MAX_WINDOWS_CAPTURED_PROCESS_COUNT}) { exit 91 }; $pending = @($pending | Select-Object -Skip 1) + @($all | Where-Object { [int]$_.ParentProcessId -eq $current } | ForEach-Object { [int]$_.ProcessId }) }; $seen.Keys | Where-Object { $live.ContainsKey([int]$_) } | Sort-Object | ForEach-Object { $_ }`,
+    ],
+    processControl,
+    deadline,
+  );
+  if (result.status !== "success" || result.truncated) return null;
+  const values = result.stdout.trim().split(/\r?\n/);
+  if (!values.length || values.some((value) => !/^(?:0|[1-9]\d*)$/.test(value))) return null;
+  const pids = new Set(values.map(Number));
+  return pids.size <= MAX_WINDOWS_CAPTURED_PROCESS_COUNT ? [...pids] : null;
+}
+
+function runWindowsTaskkill(pid: number, processControl: ProcessControl, deadline: number) {
+  return runWindowsHelper(
+    "taskkill.exe",
+    ["/PID", String(pid), "/T", "/F"],
+    processControl,
+    deadline,
+  ).then((result) => result.status);
+}
+
+async function verifyWindowsProcessTreeGone(
+  pids: number[],
+  processControl: ProcessControl,
+  deadline: number,
+) {
+  const survivors = new Set<number>();
+  for (const pid of pids) {
+    const result = await runWindowsHelper(
+      "tasklist.exe",
+      ["/FI", `PID eq ${pid}`, "/NH"],
+      processControl,
+      deadline,
+    );
+    if (result.status !== "success" || result.truncated) return null;
+    if (new RegExp(`\\b${pid}\\b`).test(result.stdout)) survivors.add(pid);
+  }
+  return survivors;
+}
+
+async function terminateWindowsProcessTree(
+  pid: number,
+  processControl: ProcessControl,
+  knownPids: number[] = [],
+) {
+  const helperTimeoutMs =
+    processControl.helperTimeoutMs ?? WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS;
+  const deadline = Date.now() + helperTimeoutMs * 4;
+  let pids: number[] | null = null;
+
+  for (let attempt = 0; attempt < 2 && !pids; attempt += 1) {
+    const captureDeadline = Math.min(deadline, Date.now() + helperTimeoutMs);
+    pids = await captureWindowsProcessTree(pid, processControl, captureDeadline);
+  }
+
+  const primary = await runWindowsTaskkill(pid, processControl, deadline);
+  const capturedLiveDescendant = Boolean(
+    pids?.some((capturedPid) => capturedPid !== pid),
+  );
+  const knownLiveDescendant = knownPids.some((knownPid) => knownPid !== pid);
+  const captureSucceeded = Boolean(pids || knownLiveDescendant);
+  const trackedPids = [...new Set([pid, ...knownPids, ...(pids ?? [])])];
+  let survivors = await verifyWindowsProcessTreeGone(
+    trackedPids,
+    processControl,
+    deadline,
+  );
+  if (survivors?.size) {
+    for (const survivor of survivors) {
+      await runWindowsTaskkill(survivor, processControl, deadline);
+    }
+    survivors = await verifyWindowsProcessTreeGone(
+      trackedPids,
+      processControl,
+      deadline,
+    );
+  }
+
+  const gone = Boolean(
+    captureSucceeded &&
+      (primary === "success" ||
+        capturedLiveDescendant ||
+        knownLiveDescendant) &&
+      survivors?.size === 0,
+  );
+  return {
+    gone,
+    diagnostic: gone
+      ? ""
+      : !pids
+        ? `windows process-tree capture failed; taskkill fallback=${primary}`
+        : `windows process-tree cleanup incomplete (primary=${primary})`,
+  };
+}
+export function __terminateWindowsProcessTreeForTests(
+  pid: number,
+  processControl: ProcessControl,
+) {
+  return terminateWindowsProcessTree(pid, processControl);
+}
+type LinuxNamespaceContainment = {
+  available: boolean;
+  launcher?: string;
+  python?: string;
+  diagnostic: string;
+};
+
+const LINUX_NAMESPACE_INIT_SUPERVISOR = String.raw`
+import base64, ctypes, json, os, select, signal, sys, time
+libc = ctypes.CDLL(None)
+event_fd = int(os.environ["TZUDONG_NS_EVENT_FD"])
+command_fd = int(os.environ["TZUDONG_NS_COMMAND_FD"])
+nonce = os.environ["TZUDONG_NS_NONCE"].encode("ascii")
+if len(nonce) != 64 or any(character not in b"0123456789abcdef" for character in nonce):
+    raise RuntimeError("protocol nonce rejected")
+os.set_inheritable(event_fd, False)
+os.set_inheritable(command_fd, False)
+if libc.prctl(4, 0, 0, 0, 0) != 0 or libc.prctl(38, 1, 0, 0, 0) != 0:
+    raise RuntimeError("target hardening failed")
+class CapHeader(ctypes.Structure):
+    _fields_ = [("version", ctypes.c_uint), ("pid", ctypes.c_int)]
+class CapData(ctypes.Structure):
+    _fields_ = [("effective", ctypes.c_uint), ("permitted", ctypes.c_uint), ("inheritable", ctypes.c_uint)]
+header = CapHeader(0x20080522, 0)
+caps = (CapData * 2)()
+if libc.capset(ctypes.byref(header), ctypes.byref(caps)) != 0:
+    raise RuntimeError("capset failed")
+for capability in range(64):
+    libc.prctl(24, capability, 0, 0, 0)
+target = json.loads(base64.b64decode(os.environ["TZUDONG_NS_TARGET_B64"]))
+def send(message):
+    data = (message + "\n").encode("ascii")
+    if len(data) > 128:
+        raise RuntimeError("protocol overflow")
+    os.write(event_fd, data)
+def receive_line(deadline):
+    buffer = b""
+    while time.monotonic() < deadline:
+        readable, _, _ = select.select([command_fd], [], [], min(.05, max(0, deadline - time.monotonic())))
+        if not readable:
+            continue
+        data = os.read(command_fd, 64)
+        if not data:
+            raise RuntimeError("protocol closed")
+        buffer += data
+        if len(buffer) > 64:
+            raise RuntimeError("protocol overflow")
+        if b"\n" in buffer:
+            line, remainder = buffer.split(b"\n", 1)
+            if remainder:
+                raise RuntimeError("protocol trailing data")
+            return line
+    raise RuntimeError("protocol timeout")
+def members():
+    own = os.stat("/proc/self/ns/pid").st_ino
+    result = []
+    for name in os.listdir("/proc"):
+        if name.isdigit():
+            try:
+                if os.stat("/proc/" + name + "/ns/pid").st_ino == own:
+                    result.append(int(name))
+            except OSError:
+                pass
+    return sorted(result)
+send("READY " + nonce.decode("ascii"))
+if receive_line(time.monotonic() + 5.0) != b"ACK " + nonce:
+    raise RuntimeError("protocol acknowledgement rejected")
+target_environment = {
+    key: value
+    for key, value in os.environ.items()
+    if not key.startswith("TZUDONG_NS_")
+}
+target_pid = os.fork()
+if target_pid == 0:
+    os.close(event_fd)
+    os.close(command_fd)
+    os.execvpe(target[0], target, target_environment)
+target_status = None
+cleaning = False
+cleanup_started = None
+control = b""
+while True:
+    while True:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            break
+        if pid == 0:
+            break
+        if pid == target_pid and target_status is None:
+            target_status = status
+            cleaning = True
+    readable, _, _ = select.select([command_fd], [], [], .02)
+    if readable:
+        data = os.read(command_fd, 64)
+        if not data:
+            cleaning = True
+        else:
+            control += data
+            if len(control) > 64:
+                send("FAIL protocol")
+                sys.exit(125)
+            while b"\n" in control:
+                line, control = control.split(b"\n", 1)
+                if line != b"STOP":
+                    send("FAIL protocol")
+                    sys.exit(125)
+                cleaning = True
+    if cleaning:
+        if cleanup_started is None:
+            cleanup_started = time.monotonic()
+        elapsed = time.monotonic() - cleanup_started
+        cleanup_signal = signal.SIGTERM if elapsed < 4.0 else signal.SIGKILL
+        for pid in members():
+            if pid != 1:
+                try:
+                    os.kill(pid, cleanup_signal)
+                except ProcessLookupError:
+                    pass
+        if target_status is not None and members() == [1]:
+            code = os.waitstatus_to_exitcode(target_status)
+            normalized = code if code >= 0 else 128 - code
+            send("DONE " + nonce.decode("ascii") + " " + str(normalized))
+            os.close(event_fd)
+            os.close(command_fd)
+            sys.exit(normalized)
+        if elapsed >= 6.0:
+            send("FAIL cleanup")
+            sys.exit(125)
+`;
+const LINUX_NAMESPACE_OUTER_SUPERVISOR = String.raw`
+import base64, ctypes, os, select, signal, subprocess, sys, time
+libc = ctypes.CDLL(None)
+node_parent_pid = os.getppid()
+outer_pid = os.getpid()
+nonce = os.environ["TZUDONG_NS_NONCE"].encode("ascii")
+if len(nonce) != 64 or any(character not in b"0123456789abcdef" for character in nonce):
+    sys.exit(125)
+if libc.prctl(1, signal.SIGKILL, 0, 0, 0) != 0 or libc.prctl(36, 1, 0, 0, 0) != 0 or os.getppid() != node_parent_pid:
+    sys.exit(125)
+lifetime_fd = os.environ.get("TZUDONG_NS_NODE_LIFETIME_FD")
+if lifetime_fd is not None:
+    lifetime_fd = int(lifetime_fd)
+    os.set_inheritable(lifetime_fd, False)
+deadline = time.monotonic() + float(os.environ["TZUDONG_NS_DEADLINE_MILLISECONDS"]) / 1000.0
+def child_pdeath():
+    if libc.prctl(1, signal.SIGKILL, 0, 0, 0) != 0 or os.getppid() != outer_pid:
+        os._exit(125)
+launcher = os.environ["TZUDONG_NS_UNSHARE"]
+python = os.environ["TZUDONG_NS_PYTHON"]
+inner = base64.b64decode(os.environ["TZUDONG_NS_INNER_B64"]).decode("utf-8")
+event_read, event_write = os.pipe2(os.O_CLOEXEC)
+command_read, command_write = os.pipe2(os.O_CLOEXEC)
+os.set_inheritable(event_write, True)
+os.set_inheritable(command_read, True)
+environment = os.environ.copy()
+environment["TZUDONG_NS_EVENT_FD"] = str(event_write)
+environment["TZUDONG_NS_COMMAND_FD"] = str(command_read)
+proc = subprocess.Popen(
+    [launcher, "--user", "--map-root-user", "--pid", "--fork", "--kill-child=SIGKILL", "--mount-proc", "--", python, "-c", inner],
+    env=environment,
+    pass_fds=(event_write, command_read),
+    preexec_fn=child_pdeath,
+)
+try:
+    pidfd = os.pidfd_open(proc.pid, 0)
+except (AttributeError, OSError):
+    proc.kill()
+    sys.exit(125)
+os.close(event_write)
+os.close(command_read)
+ready = False
+done = False
+done_code = None
+failed = False
+stop_requested = False
+stop_sent = False
+stop_deadline = None
+buffer = b""
+def request_stop(*_):
+    global stop_requested, stop_deadline
+    stop_requested = True
+    if stop_deadline is None:
+        stop_deadline = time.monotonic() + 7.0
+signal.signal(signal.SIGTERM, request_stop)
+signal.signal(signal.SIGINT, request_stop)
+while True:
+    if time.monotonic() >= deadline and not stop_requested:
+        request_stop()
+    if stop_requested and ready and not stop_sent:
+        try:
+            os.write(command_write, b"STOP\n")
+            stop_sent = True
+        except OSError:
+            failed = True
+    if stop_deadline is not None and time.monotonic() >= stop_deadline:
+        failed = True
+        break
+    watched_fds = [event_read]
+    if lifetime_fd is not None:
+        watched_fds.append(lifetime_fd)
+    readable, _, _ = select.select(watched_fds, [], [], .05)
+    if lifetime_fd is not None and lifetime_fd in readable:
+        if not os.read(lifetime_fd, 1):
+            request_stop()
+        readable.remove(lifetime_fd)
+    if readable:
+        data = os.read(event_read, 128)
+        if not data:
+            if proc.poll() is None:
+                failed = True
+            break
+        buffer += data
+        if len(buffer) > 256:
+            failed = True
+            break
+        while b"\n" in buffer:
+            line, buffer = buffer.split(b"\n", 1)
+            if line == b"READY " + nonce and not ready and not done:
+                ready = True
+                os.write(command_write, b"ACK " + nonce + b"\n")
+            elif line.startswith(b"DONE " + nonce + b" ") and ready and not done:
+                encoded_code = line[len(b"DONE ") + len(nonce) + 1:]
+                if not encoded_code.isdigit():
+                    failed = True
+                    break
+                done_code = int(encoded_code)
+                if done_code < 0 or done_code > 255:
+                    failed = True
+                    break
+                done = True
+            elif line.startswith(b"FAIL "):
+                failed = True
+                break
+            else:
+                failed = True
+                break
+    if failed or done:
+        break
+    if proc.poll() is not None:
+        break
+if (failed or not done) and ready and not stop_sent:
+    try:
+        os.write(command_write, b"STOP\n")
+        stop_sent = True
+    except OSError:
+        pass
+try:
+    os.close(command_write)
+except OSError:
+    pass
+try:
+    os.close(event_read)
+except OSError:
+    pass
+if done and not failed:
+    try:
+        return_code = proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        failed = True
+else:
+    try:
+        return_code = proc.wait(timeout=7)
+    except subprocess.TimeoutExpired:
+        proc.terminate()
+        try:
+            return_code = proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            return_code = proc.wait()
+if done and not failed and return_code == done_code:
+    ready_pidfd, _, _ = select.select([pidfd], [], [], 0)
+    os.close(pidfd)
+    if ready_pidfd:
+        os.write(3, b"COMPLETE " + nonce + b"\n")
+        sys.exit(return_code)
+sys.exit(125)
+`;
+
+let linuxNamespaceContainmentProbe: LinuxNamespaceContainment | undefined;
+
+function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
+  if (linuxNamespaceContainmentProbe) return linuxNamespaceContainmentProbe;
+  const launcher = ["/usr/bin/unshare", "/bin/unshare"].find((candidate) => {
+    try {
+      accessSync(candidate, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  const python = ["/usr/bin/python3", "/bin/python3"].find((candidate) => {
+    try {
+      accessSync(candidate, constants.X_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (!launcher || !python) {
+    return (linuxNamespaceContainmentProbe = {
+      available: false,
+      diagnostic: "linux namespace containment supervisor is unavailable",
+    });
+  }
+  const nonce = "0".repeat(64);
+  try {
+    const probe = spawnSync(
+      python,
+      ["-c", LINUX_NAMESPACE_OUTER_SUPERVISOR],
+      {
+        env: {
+          NODE_ENV: process.env.NODE_ENV,
+          TZUDONG_NS_NONCE: nonce,
+          TZUDONG_NS_UNSHARE: launcher,
+          TZUDONG_NS_PYTHON: python,
+          TZUDONG_NS_INNER_B64: Buffer.from(
+            LINUX_NAMESPACE_INIT_SUPERVISOR,
+            "utf8",
+          ).toString("base64"),
+          TZUDONG_NS_TARGET_B64: Buffer.from(JSON.stringify(["/bin/true"]), "utf8").toString("base64"),
+          TZUDONG_NS_DEADLINE_MILLISECONDS: "1500",
+          TZUDONG_NS_NODE_LIFETIME_FD: "4",
+        },
+        stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"],
+        timeout: 3_000,
+        shell: false,
+      },
+    );
+    if (
+      probe.status === 0 &&
+      !probe.error &&
+      !probe.signal &&
+      probe.output[3]?.equals(Buffer.from(`COMPLETE ${nonce}\n`, "ascii"))
+    ) {
+      return (linuxNamespaceContainmentProbe = {
+        available: true,
+        launcher,
+        python,
+        diagnostic: "",
+      });
+    }
+  } catch {
+    // Fall through to the bounded, trusted diagnostic below.
+  }
+  return (linuxNamespaceContainmentProbe = {
+    available: false,
+    diagnostic: "linux namespace containment preflight failed",
+  });
+}
+
+export function __probeLinuxNamespaceContainmentForTests() {
+  return probeLinuxNamespaceContainment();
+}
+
+async function terminateLinuxNamespaceScope(
+  child: ReturnType<typeof spawn> | null,
+  hasExited: () => boolean,
+) {
+  if (!child) {
+    return { gone: false, diagnostic: "linux namespace containment handle is unavailable" };
+  }
+  if (hasExited()) return { gone: true, diagnostic: "" };
+
+  const deadline = Date.now() + LINUX_NAMESPACE_TERMINATION_TIMEOUT_MS;
+  const waitForExit = async (until: number) => {
+    while (!hasExited() && remainingCleanupMs(until) > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS),
+      );
+    }
+    return hasExited();
+  };
+
+  try {
+    child.kill("SIGTERM");
+  } catch {
+    return { gone: false, diagnostic: "linux namespace supervisor termination failed" };
+  }
+  if (await waitForExit(deadline)) {
+    return { gone: true, diagnostic: "" };
+  }
+  // A forced outer-supervisor exit cannot establish that PID 1 reaped every
+  // namespace member, so it is deliberately reported as incomplete.
+  try {
+    child.kill("SIGKILL");
+  } catch {
+    return { gone: false, diagnostic: "linux namespace supervisor escalation failed" };
+  }
+  await waitForExit(deadline);
+  return { gone: false, diagnostic: "linux namespace containment cleanup incomplete" };
+}
+
+function resolveStoryboardAgentRuntime(env: NodeJS.ProcessEnv = process.env) {
   const runtime = (
-    process.env.STORYBOARD_AGENT_RUNTIME?.trim() ||
+    env.STORYBOARD_AGENT_RUNTIME?.trim() ||
     DEFAULT_STORYBOARD_AGENT_RUNTIME
   );
   return runtime === "codex_cli_oauth" || runtime === "codex"
@@ -259,6 +2590,14 @@ function resolveStoryboardAgentTimeoutMs() {
   return Math.min(
     MAX_STORYBOARD_AGENT_TIMEOUT_MS,
     Math.max(MIN_STORYBOARD_AGENT_TIMEOUT_MS, Math.floor(parsed)),
+  );
+}
+function resolveStoryboardAgentStreamDrainTimeoutMs() {
+  const parsed = Number(process.env.STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS);
+  if (!Number.isFinite(parsed)) return DEFAULT_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS;
+  return Math.min(
+    MAX_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS,
+    Math.max(MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS, Math.floor(parsed)),
   );
 }
 
@@ -295,11 +2634,12 @@ function resolveStoryboardAgentCommand(
 
 function resolveDefaultStoryboardAgentRunnerCommand(
   runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
+  env: NodeJS.ProcessEnv = process.env,
 ): ResolvedStoryboardAgentCommand {
   if (runtime !== "langgraph") {
     return { ok: false, reason: "auto-runner-runtime-disabled" };
   }
-  if (process.env.STORYBOARD_AGENT_DISABLE_AUTO_RUNNER === "1") {
+  if (env.STORYBOARD_AGENT_DISABLE_AUTO_RUNNER === "1") {
     return { ok: false, reason: "auto-runner-disabled" };
   }
   const executable = backendAgentPath(BACKEND_AGENT_RUNNER);
@@ -317,10 +2657,11 @@ function resolveDefaultStoryboardAgentRunnerCommand(
 function resolveEffectiveStoryboardAgentCommand(
   rawCommand?: string | null,
   runtime: StoryboardBackendAgentStatus["runtime"] = resolveStoryboardAgentRuntime(),
+  env: NodeJS.ProcessEnv = process.env,
 ): ResolvedStoryboardAgentCommand {
   const configured = resolveStoryboardAgentCommand(rawCommand);
   if (configured.ok || rawCommand?.trim()) return configured;
-  return resolveDefaultStoryboardAgentRunnerCommand(runtime);
+  return resolveDefaultStoryboardAgentRunnerCommand(runtime, env);
 }
 function resolveWindowsShellScriptRunner() {
   return firstExistingPath(
@@ -335,7 +2676,7 @@ function resolveWindowsShellScriptRunner() {
   );
 }
 
-function isPythonRuntimeUnavailableText(value: string | null | undefined) {
+export function isPythonRuntimeUnavailableDiagnostic(value: string | null | undefined) {
   return /enoent|executable not found in \$path|is not recognized as an internal or external command|cannot find the file specified|no such file or directory|python was not found|no python at|unable to create process/i.test(
     value ?? "",
   );
@@ -346,74 +2687,148 @@ type PythonModuleProbeResult = {
   runtimeAvailable: boolean;
   runtimeError?: string;
 };
+function buildPythonProbeEnvironment(
+  env: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const allowed = new Set([
+    "COMSPEC",
+    "HOME",
+    "PATH",
+    "PATHEXT",
+    "PYTHONHOME",
+    "SYSTEMROOT",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "VIRTUAL_ENV",
+    "WINDIR",
+  ]);
+  const probeEnvironment: NodeJS.ProcessEnv = {
+    NODE_ENV: env.NODE_ENV,
+  };
+  for (const [key, value] of Object.entries(env)) {
+    if (allowed.has(key.toUpperCase()) && typeof value === "string" && value) {
+      probeEnvironment[key] = value;
+    }
+  }
+  return probeEnvironment;
+}
 
-function probePythonModules(
+async function probePythonModules(
   modules: string[] = REQUIRED_PYTHON_MODULES,
-): PythonModuleProbeResult {
-  const script = [
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<PythonModuleProbeResult> {
+  const probeSource = [
     "import importlib.util, json",
     `mods = ${JSON.stringify(modules)}`,
     "missing = [mod for mod in mods if importlib.util.find_spec(mod) is None]",
     "print(json.dumps(missing))",
   ].join("\n");
-  const pythonCommand = resolveStoryboardAgentPythonCommand();
-  const result = spawnSync(pythonCommand, ["-c", script], {
-    cwd: BACKEND_AGENT_ROOT,
-    encoding: "utf8",
-    timeout: 15_000,
-    shell: shouldRunThroughWindowsCommandShell(pythonCommand),
-    env: {
-      ...process.env,
-      PYTHONPATH: [backendAgentPath("src"), process.env.PYTHONPATH]
-        .filter(Boolean)
-        .join(path.delimiter),
+  const script = `import base64;exec(base64.b64decode('${Buffer.from(probeSource, "utf8").toString("base64")}'))`;
+  const pythonCommand = resolveStoryboardAgentPythonCommand(env);
+  const result = await runStoryboardAgentCommand(
+    {
+      ok: true,
+      executable: pythonCommand,
+      args: ["-c", script],
+      source: "configured",
     },
-  });
-  if (result.error) {
+    {},
+    {
+      ...defaultProcessControl,
+      commandTimeoutMs: 15_000,
+    },
+    {
+      cwd: BACKEND_AGENT_ROOT,
+      inheritEnv: false,
+      env: {
+        ...buildPythonProbeEnvironment(env),
+        PYTHONPATH: [backendAgentPath("src"), env.PYTHONPATH]
+          .filter(Boolean)
+          .join(path.delimiter),
+      },
+    },
+  );
+  if (!result.ok) {
+    const probeText = `${result.stdout}\n${result.stderr}`.trim();
+    const fallbackMessage = result.timedOut
+      ? "python dependency probe timed out"
+      : isPythonRuntimeUnavailableDiagnostic(probeText)
+        ? "python runtime is unavailable"
+        : "python dependency probe failed closed";
     return {
       missingModules: [],
       runtimeAvailable: false,
-      runtimeError: String(result.error),
-    };
-  }
-  if (result.status !== 0) {
-    const probeText = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-    if (isPythonRuntimeUnavailableText(probeText)) {
-      return {
-        missingModules: [],
-        runtimeAvailable: false,
-        runtimeError: probeText.trim() || `python exited with status ${result.status}`,
-      };
-    }
-    return {
-      missingModules: modules,
-      runtimeAvailable: true,
+      runtimeError: sanitizePublicAgentDiagnostic(
+        probeText || fallbackMessage,
+        600,
+      ),
     };
   }
   try {
     const parsed = JSON.parse(result.stdout.trim()) as unknown;
+    if (
+      !Array.isArray(parsed) ||
+      parsed.some(
+        (item) => typeof item !== "string" || !modules.includes(item),
+      ) ||
+      new Set(parsed).size !== parsed.length
+    ) {
+      return {
+        missingModules: [],
+        runtimeAvailable: false,
+        runtimeError: "python dependency probe returned invalid output",
+      };
+    }
     return {
-      missingModules: Array.isArray(parsed)
-        ? parsed.filter((item): item is string => typeof item === "string")
-        : modules,
+      missingModules: parsed as string[],
       runtimeAvailable: true,
     };
   } catch {
     return {
-      missingModules: modules,
-      runtimeAvailable: true,
+      missingModules: [],
+      runtimeAvailable: false,
+      runtimeError: "python dependency probe returned invalid output",
     };
   }
 }
+let pythonModuleProbeCache:
+  | {
+      key: string;
+      result: Promise<PythonModuleProbeResult>;
+    }
+  | undefined;
 
-export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus {
+function probePythonModulesCached(
+  modules: string[],
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const key = JSON.stringify({
+    modules,
+    python: resolveStoryboardAgentPythonCommand(env),
+    path: getPathEnvironmentValue(env),
+    pythonPath: env.PYTHONPATH ?? "",
+    root: BACKEND_AGENT_ROOT,
+  });
+  if (pythonModuleProbeCache?.key === key) {
+    return pythonModuleProbeCache.result;
+  }
+  const result = probePythonModules(modules, env);
+  pythonModuleProbeCache = { key, result };
+  return result;
+}
+
+export async function getStoryboardBackendAgentStatus(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<StoryboardBackendAgentStatus> {
   const commandConfigured = Boolean(
-    process.env.STORYBOARD_AGENT_COMMAND?.trim(),
+    env.STORYBOARD_AGENT_COMMAND?.trim(),
   );
-  const runtime = resolveStoryboardAgentRuntime();
+  const runtime = resolveStoryboardAgentRuntime(env);
   const commandResolution = resolveEffectiveStoryboardAgentCommand(
-    process.env.STORYBOARD_AGENT_COMMAND,
+    env.STORYBOARD_AGENT_COMMAND,
     runtime,
+    env,
   );
   const notebooks = BACKEND_AGENT_NOTEBOOKS.filter((notebook) =>
     existsSync(backendAgentPath(notebook)),
@@ -423,10 +2838,11 @@ export function getStoryboardBackendAgentStatus(): StoryboardBackendAgentStatus 
     : null;
   const pythonProbe =
     commandResolution.ok && runtime !== "codex_cli_oauth_legacy"
-      ? probePythonModules(
+      ? await probePythonModulesCached(
           commandResolution.source === "auto_runner"
             ? REQUIRED_AUTO_RUNNER_PYTHON_MODULES
             : REQUIRED_PYTHON_MODULES,
+          env,
         )
       : null;
   const missingPythonModules = pythonProbe
@@ -1508,7 +3924,7 @@ export async function generateStoryboardChatWithBackendAgent(
     isUnavailableNavigation
       ? ""
       : focusText;
-  const status = getStoryboardBackendAgentStatus();
+  const status = await getStoryboardBackendAgentStatus()
   const isSafetyConversation =
     isRawSafetyConversation ||
     hasUnsafeStoryboardInstructionRequest(normalizedMessage);
@@ -1681,96 +4097,823 @@ export async function generateStoryboardChatWithBackendAgent(
   };
 }
 
+type StoryboardCommandRunOptions = {
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+  inheritEnv?: boolean;
+  testCommandCapability?: StoryboardAgentTestCommandCapability;
+};
+
+export type StoryboardBackendAgentExecutionOptions = {
+  env?: NodeJS.ProcessEnv;
+  testCommandCapability?: StoryboardAgentTestCommandCapability;
+};
+
+
+export function createStoryboardAgentTestCommandCapability(
+  commandPath: string,
+  fixture: string,
+): StoryboardAgentTestCommandCapability {
+  const command = resolveStoryboardAgentCommand(commandPath);
+  if (!command.ok || !fixture.trim()) {
+    throw new Error("invalid storyboard test fixture command binding");
+  }
+
+  return createBoundStoryboardAgentTestCommandCapability({
+    executable: path.resolve(command.executable),
+    args: [...command.args],
+    fixture,
+  });
+}
+
+function isTrustedLangGraphFixtureCommand(
+  command: Extract<ResolvedStoryboardAgentCommand, { ok: true }>,
+  capability: StoryboardAgentTestCommandCapability | undefined,
+) {
+  const binding = capability
+    ? getStoryboardAgentTestCommandBinding(capability)
+    : undefined;
+  if (!binding || !binding.fixture) return false;
+  if (binding.executable !== path.resolve(command.executable)) return false;
+  if (binding.args.length !== command.args.length) return false;
+  return binding.args.every((arg, index) => arg === command.args[index]);
+}
+
+
 function runStoryboardAgentCommand(
   command: Extract<ResolvedStoryboardAgentCommand, { ok: true }>,
   payload: Record<string, unknown>,
+  processControl: ProcessControl = defaultProcessControl,
+  options: StoryboardCommandRunOptions = {},
 ): Promise<CommandResult> {
   return new Promise((resolve) => {
-    const timeoutMs = resolveStoryboardAgentTimeoutMs();
-    const shouldUseConfiguredPython = command.executable.endsWith(".py");
+    const timeoutMs =
+      processControl.commandTimeoutMs ?? resolveStoryboardAgentTimeoutMs();
+    const streamDrainTimeoutMs =
+      processControl.streamDrainTimeoutMs ??
+      resolveStoryboardAgentStreamDrainTimeoutMs();
+    const fixtureBinding = options.testCommandCapability
+      ? getStoryboardAgentTestCommandBinding(options.testCommandCapability)
+      : undefined;
+    const effectiveCommand = command;
+    const shouldUseConfiguredPython = effectiveCommand.executable.endsWith(".py");
     const shouldUseShellScriptOnWindows =
-      process.platform === "win32" && command.executable.endsWith(".sh");
+      processControl.platform === "win32" && effectiveCommand.executable.endsWith(".sh");
     const shellScriptRunner = shouldUseShellScriptOnWindows
       ? resolveWindowsShellScriptRunner()
       : null;
+    const executable = shouldUseConfiguredPython
+      ? resolveStoryboardAgentPythonCommand(options.env)
+      : shellScriptRunner ?? effectiveCommand.executable;
+    const args =
+      shouldUseConfiguredPython || shouldUseShellScriptOnWindows
+        ? [effectiveCommand.executable, ...effectiveCommand.args]
+        : effectiveCommand.args;
     const shouldUseWindowsCommandShell =
-      !shouldUseConfiguredPython &&
-      !shouldUseShellScriptOnWindows &&
-      shouldRunThroughWindowsCommandShell(command.executable);
-    const child = spawn(
-      shouldUseConfiguredPython
-        ? resolveStoryboardAgentPythonCommand()
-        : shellScriptRunner
-          ? shellScriptRunner
-          : command.executable,
-      shouldUseConfiguredPython
-        ? [command.executable, ...command.args]
-        : shouldUseShellScriptOnWindows
-          ? [command.executable, ...command.args]
-          : command.args,
-    {
-      cwd: existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT) ? BACKEND_AGENT_ROOT : getRuntimeCwd(),
-      shell: shouldUseConfiguredPython
-        ? shouldRunThroughWindowsCommandShell(resolveStoryboardAgentPythonCommand())
-        : shouldUseWindowsCommandShell,
-      stdio: ["pipe", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        STORYBOARD_AGENT_JSON: JSON.stringify(payload),
-      },
-    });
+      processControl.platform === "win32" &&
+      /\.(?:cmd|bat)$/i.test(executable.trim());
+    const windowsCommandSpec = shouldUseWindowsCommandShell
+      ? buildWindowsCommandShellSpec(executable, args)
+      : null;
+    const commandCwd =
+      options.cwd ??
+      (existsSync(/* turbopackIgnore: true */ BACKEND_AGENT_ROOT)
+        ? BACKEND_AGENT_ROOT
+        : getRuntimeCwd());
+    const commandEnv = buildStoryboardAgentEnvironment(
+      payload,
+      options.env,
+      processControl.platform,
+      options.inheritEnv !== false,
+    );
+    const deadlineEpochMs = Date.now() + timeoutMs;
+    const windowsSupervisorCleanupDeadlineEpochMs =
+      deadlineEpochMs + WINDOWS_JOB_SUPERVISOR_CLEANUP_GRACE_MS;
+    const remainingDeadlineMs = () => Math.max(0, deadlineEpochMs - Date.now());
+    const unsafeWindowsLaunch =
+      processControl.platform === "win32" &&
+      [executable, commandCwd, ...args].some(hasUnsafeWindowsCommandText);
+    const isNativeProcessControl =
+      processControl.platform === process.platform &&
+      processControl.spawnProcess === spawn;
+    const trustedLangGraphFixture = isTrustedLangGraphFixtureCommand(
+      effectiveCommand,
+      options.testCommandCapability,
+    );
+    if (trustedLangGraphFixture && fixtureBinding) {
+      commandEnv.STORYBOARD_AGENT_LANGGRAPH_FIXTURE = fixtureBinding.fixture;
+      commandEnv.STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY =
+        STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY;
+    }
+    const useWindowsJobSupervisor =
+      processControl.platform === "win32" && isNativeProcessControl;
+    const useLinuxNamespaceSupervisor =
+      processControl.platform === "linux" &&
+      isNativeProcessControl &&
+      !trustedLangGraphFixture;
+    const linuxSupervisorNonce = useLinuxNamespaceSupervisor
+      ? randomBytes(32).toString("hex")
+      : "";
+
+    let child: ReturnType<typeof spawn> | null = null;
+    const stdoutCapture: DiagnosticCapture = { value: "", byteCount: 0, truncated: false };
+    const stderrCapture: DiagnosticCapture = { value: "", byteCount: 0, truncated: false };
     let stdout = "";
     let stderr = "";
     let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      child.kill("SIGTERM");
-      resolve({
-        ok: false,
-        exitCode: null,
-        timedOut: true,
-        stdout,
-        stderr,
-      });
-    }, timeoutMs);
+    let exitObserved = false;
+    let exitCode: number | null = null;
+    let exitSignal: NodeJS.Signals | null = null;
+    let stdoutClosed = false;
+    let stderrClosed = false;
+    let drainTimer: ReturnType<typeof setTimeout> | undefined;
+    let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+    let samplerTimer: ReturnType<typeof setInterval> | undefined;
+    let samplerInFlight = false;
+    let cleanupPromise: Promise<void> | null = null;
+    const streamWaiters = new Set<() => void>();
+    const trackedWindowsPids = new Set<number>();
+    let windowsJobContained = false;
+    let windowsSupervisorComplete = false;
+    let windowsSupervisorDrain = false;
+    let windowsSupervisorControlClosed = !useWindowsJobSupervisor;
+    let windowsSupervisorProtocolInvalid = false;
+    let windowsSupervisorControlBuffer = Buffer.alloc(0);
+    let linuxSupervisorComplete = false;
+    let linuxSupervisorControlClosed = !useLinuxNamespaceSupervisor;
+    let linuxSupervisorProtocolInvalid = false;
+    let linuxSupervisorControlBuffer = Buffer.alloc(0);
+    let windowsLifecycle: WindowsLifecycleChannel | null = null;
+    let windowsParentLifetime: WindowsLifecycleChannel | null = null;
 
-    child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
-    child.on("close", (exitCode) => {
+    const notifyStreamWaiters = () => {
+      if (!stdoutClosed || !stderrClosed) return;
+      for (const waiter of streamWaiters) waiter();
+      streamWaiters.clear();
+    };
+    const settle = (
+      result: Omit<CommandResult, "stdoutTruncated" | "stderrTruncated">,
+    ) => {
       if (settled) return;
+      const deadlineExpired = Date.now() >= deadlineEpochMs;
+      const finalResult =
+        deadlineExpired
+          ? {
+              ...result,
+              ok: false,
+              timedOut: true,
+              stderr: appendTrustedLifecycleDiagnostic(
+                result.stderr,
+                "command completion arrived after the absolute deadline",
+              ),
+              lifecycleReason: "timeout" as const,
+            }
+          : result;
       settled = true;
-      clearTimeout(timer);
+      windowsLifecycle?.close();
+      windowsParentLifetime?.close();
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      if (drainTimer) clearTimeout(drainTimer);
+      if (samplerTimer) clearInterval(samplerTimer);
+      for (const waiter of streamWaiters) waiter();
+      streamWaiters.clear();
       resolve({
-        ok: exitCode === 0,
-        exitCode,
-        timedOut: false,
-        stdout,
-        stderr,
+        ...finalResult,
+        stdoutTruncated: stdoutCapture.truncated,
+        stderrTruncated: stderrCapture.truncated,
       });
-    });
-    child.on("error", (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve({
+    };
+    const waitForStreams = () =>
+      new Promise<void>((resolveDrain) => {
+        if (stdoutClosed && stderrClosed) {
+          resolveDrain();
+          return;
+        }
+        let finished = false;
+        const finish = () => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timer);
+          streamWaiters.delete(finish);
+          resolveDrain();
+        };
+        const timer = setTimeout(() => {
+          appendCommandDiagnostic(
+            stderrCapture,
+            "\n[diagnostic stream drain deadline exceeded]",
+            MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES,
+          );
+          stderr = stderrCapture.value;
+          finish();
+        }, streamDrainTimeoutMs);
+        streamWaiters.add(finish);
+      });
+    const terminateTree = async (awaitWindowsCleanupGrace = false) => {
+      if (windowsJobContained && child?.pid) {
+        const cleanupDeadline = awaitWindowsCleanupGrace
+          ? windowsSupervisorCleanupDeadlineEpochMs
+          : Date.now();
+        while (!exitObserved && Date.now() < cleanupDeadline) {
+          await new Promise((resolveWait) =>
+            setTimeout(resolveWait, MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS),
+          );
+        }
+        if (!exitObserved) child.kill("SIGKILL");
+        const finalCloseDeadline =
+          Date.now() + WINDOWS_JOB_SUPERVISOR_FINAL_CLOSE_TIMEOUT_MS;
+        while (
+          (!exitObserved || !windowsSupervisorControlClosed) &&
+          Date.now() < finalCloseDeadline
+        ) {
+          await new Promise((resolveWait) =>
+            setTimeout(resolveWait, MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS),
+          );
+        }
+        const complete =
+          exitObserved &&
+          windowsSupervisorControlClosed &&
+          (windowsSupervisorComplete || windowsSupervisorDrain) &&
+          !windowsSupervisorProtocolInvalid;
+        return {
+          gone: complete,
+          diagnostic: complete
+            ? ""
+            : "Windows Job Object private lifecycle completion proof is missing",
+        };
+      }
+      if (processControl.platform === "win32" && child?.pid) {
+        return terminateWindowsProcessTree(
+          child.pid,
+          processControl,
+          [...trackedWindowsPids],
+        );
+      }
+      if (useLinuxNamespaceSupervisor) {
+        return terminateLinuxNamespaceScope(
+          child,
+          () =>
+            exitObserved &&
+            linuxSupervisorControlClosed &&
+            linuxSupervisorComplete &&
+            !linuxSupervisorProtocolInvalid,
+        );
+      }
+      if (trustedLangGraphFixture && exitObserved) {
+        return { gone: true, diagnostic: "" };
+      }
+      child?.kill("SIGTERM");
+      return {
+        gone: false,
+        diagnostic: "process containment verification unavailable",
+      };
+    };
+    const cleanupAndSettle = (
+      timedOut: boolean,
+      diagnostic: string,
+      resultExitCode: number | null = exitCode,
+    ) => {
+      if (cleanupPromise || settled) return cleanupPromise;
+      cleanupPromise = (async () => {
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        if (drainTimer) clearTimeout(drainTimer);
+        const termination = await terminateTree(timedOut);
+        const lifecycleReason = timedOut
+          ? "timeout"
+          : diagnostic.startsWith("diagnostic stream drain")
+            ? "stream_drain"
+            : diagnostic.startsWith("spawn error")
+              ? "spawn_error"
+              : "cleanup_error";
+        const lifecycleDiagnostic = [
+          diagnostic,
+          termination.diagnostic,
+          termination.gone ? "" : "process cleanup incomplete",
+        ]
+          .filter(Boolean)
+          .join("; ");
+        await waitForStreams();
+        settle({
+          ok: false,
+          exitCode: resultExitCode,
+          timedOut,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            lifecycleDiagnostic || "command cleanup failed closed",
+          ),
+          lifecycleReason,
+          cleanupVerified: termination.gone,
+        });
+      })().catch((error) => {
+        settle({
+          ok: false,
+          exitCode: resultExitCode,
+          timedOut,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            `process cleanup failed: ${sanitizePublicAgentDiagnostic(String(error), 160)}`,
+          ),
+          lifecycleReason: "cleanup_error",
+          cleanupVerified: false,
+        });
+      });
+      return cleanupPromise;
+    };
+    const cleanupPosixExitAndSettle = () => {
+      if (cleanupPromise || settled) return cleanupPromise;
+      cleanupPromise = (async () => {
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        if (drainTimer) clearTimeout(drainTimer);
+        const termination = await terminateTree();
+        if (!termination.gone) {
+          settle({
+            ok: false,
+            exitCode,
+            timedOut: false,
+            stdout,
+            stderr: appendTrustedLifecycleDiagnostic(
+              stderr,
+              [termination.diagnostic, "process cleanup incomplete"]
+                .filter(Boolean)
+                .join("; "),
+            ),
+            lifecycleReason: "cleanup_error",
+            cleanupVerified: false,
+          });
+          return;
+        }
+        settle({
+          ok: exitCode === 0 && exitSignal === null,
+          exitCode,
+          timedOut: false,
+          stdout,
+          stderr: exitSignal
+            ? appendTrustedLifecycleDiagnostic(
+                stderr,
+                `process exited by ${exitSignal}`,
+              )
+            : stderr,
+          lifecycleReason: exitSignal ? "signal" : "exit",
+          cleanupVerified: true,
+        });
+      })().catch((error) => {
+        settle({
+          ok: false,
+          exitCode,
+          timedOut: false,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            `process cleanup failed: ${sanitizePublicAgentDiagnostic(String(error), 160)}`,
+          ),
+          lifecycleReason: "cleanup_error",
+          cleanupVerified: false,
+        });
+      });
+      return cleanupPromise;
+    };
+    const settleAfterDrain = () => {
+      if (settled || cleanupPromise || !exitObserved) return;
+      if (
+        stdoutClosed &&
+        stderrClosed &&
+        linuxSupervisorControlClosed &&
+        windowsSupervisorControlClosed
+      ) {
+        if (processControl.platform !== "win32") {
+          if (
+            child?.pid &&
+            Number.isSafeInteger(child.pid) &&
+            child.pid > 0
+          ) {
+            void cleanupPosixExitAndSettle();
+            return;
+          }
+          settle({
+            ok: false,
+            exitCode,
+            timedOut: false,
+            stdout,
+            stderr: appendTrustedLifecycleDiagnostic(
+              stderr,
+              "POSIX containment cleanup could not be verified",
+            ),
+            lifecycleReason: "cleanup_error",
+            cleanupVerified: false,
+          });
+          return;
+        }
+        if (exitSignal) {
+          stderr = appendTrustedLifecycleDiagnostic(
+            stderr,
+            `process exited by ${exitSignal}`,
+          );
+        }
+        const windowsProofRequired = windowsJobContained;
+        const windowsProofValid =
+          !windowsProofRequired ||
+          ((windowsSupervisorComplete || windowsSupervisorDrain) &&
+            !windowsSupervisorProtocolInvalid);
+        settle({
+          ok: exitCode === 0 && exitSignal === null && windowsProofValid,
+          exitCode,
+          timedOut: false,
+          stdout,
+          stderr: windowsProofValid
+            ? stderr
+            : appendTrustedLifecycleDiagnostic(
+                stderr,
+                "Windows Job Object private lifecycle completion proof is missing",
+              ),
+          lifecycleReason: exitSignal ? "signal" : "exit",
+          cleanupVerified: windowsProofValid,
+        });
+        return;
+      }
+      if (!drainTimer) {
+        drainTimer = setTimeout(() => {
+          void cleanupAndSettle(
+            false,
+            "diagnostic stream drain deadline exceeded",
+            exitCode,
+          );
+        }, streamDrainTimeoutMs);
+      }
+    };
+
+    timeoutTimer = setTimeout(() => {
+      void cleanupAndSettle(true, "command timeout exceeded", null);
+    }, remainingDeadlineMs());
+
+    try {
+      const linuxContainment = useLinuxNamespaceSupervisor
+        ? probeLinuxNamespaceContainment()
+        : null;
+      if (
+        isNativeProcessControl &&
+        processControl.platform !== "win32" &&
+        processControl.platform !== "linux"
+      ) {
+        settle({
+          ok: false,
+          exitCode: null,
+          timedOut: false,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            "unsupported POSIX platform: Linux namespace containment is required",
+          ),
+          lifecycleReason: "spawn_error",
+          cleanupVerified: false,
+        });
+        return;
+      }
+      if (
+        isNativeProcessControl &&
+        processControl.platform === "linux" &&
+        useLinuxNamespaceSupervisor &&
+        (!linuxContainment?.available || !linuxContainment.launcher)
+      ) {
+        settle({
+          ok: false,
+          exitCode: null,
+          timedOut: false,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            linuxContainment?.diagnostic ?? "Linux containment boundary is unavailable",
+          ),
+          lifecycleReason: "spawn_error",
+          cleanupVerified: false,
+        });
+        return;
+      }
+      if (unsafeWindowsLaunch) {
+        settle({
+          ok: false,
+          exitCode: null,
+          timedOut: false,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            "Windows command executable, root, or argument contains a cmd metacharacter",
+          ),
+          lifecycleReason: "spawn_error",
+          cleanupVerified: false,
+        });
+        return;
+      }
+      const commandExecutable = windowsCommandSpec?.executable ?? executable;
+      const commandArgs = windowsCommandSpec?.args ?? args;
+      const commandWindowsVerbatimArguments =
+        windowsCommandSpec?.windowsVerbatimArguments ?? false;
+      windowsLifecycle = useWindowsJobSupervisor
+        ? createWindowsLifecycleChannel("proof")
+        : null;
+      windowsParentLifetime = useWindowsJobSupervisor
+        ? createWindowsLifecycleChannel("parent")
+        : null;
+      const supervisorSpec =
+        useWindowsJobSupervisor && windowsLifecycle && windowsParentLifetime
+          ? buildWindowsJobSupervisorSpec({
+              executable: commandExecutable,
+              args: commandArgs,
+              cwd: commandCwd,
+              env: commandEnv,
+              windowsVerbatimArguments: commandWindowsVerbatimArguments,
+              deadline: deadlineEpochMs,
+              cleanupDeadline: windowsSupervisorCleanupDeadlineEpochMs,
+              pipeName: windowsLifecycle.pipeName,
+              parentLifetimePipeName: windowsParentLifetime.pipeName,
+            })
+          : null;
+      windowsJobContained = Boolean(supervisorSpec);
+      const linuxSpawnBudgetMs = useLinuxNamespaceSupervisor
+        ? remainingDeadlineMs()
+        : null;
+      if (linuxSpawnBudgetMs !== null && linuxSpawnBudgetMs <= 0) {
+        settle({
+          ok: false,
+          exitCode: null,
+          timedOut: true,
+          stdout,
+          stderr: appendTrustedLifecycleDiagnostic(
+            stderr,
+            "Linux containment deadline exhausted before supervisor spawn",
+          ),
+          lifecycleReason: "timeout",
+          cleanupVerified: false,
+        });
+        return;
+      }
+      const linuxSupervisorSpec =
+        linuxContainment?.launcher && linuxContainment.python
+          ? {
+              executable: linuxContainment.python,
+              args: ["-c", LINUX_NAMESPACE_OUTER_SUPERVISOR],
+              env: {
+                ...commandEnv,
+                TZUDONG_NS_NONCE: linuxSupervisorNonce,
+                TZUDONG_NS_UNSHARE: linuxContainment.launcher,
+                TZUDONG_NS_PYTHON: linuxContainment.python,
+                TZUDONG_NS_INNER_B64: Buffer.from(
+                  LINUX_NAMESPACE_INIT_SUPERVISOR,
+                  "utf8",
+                ).toString("base64"),
+                TZUDONG_NS_TARGET_B64: Buffer.from(
+                  JSON.stringify([commandExecutable, ...commandArgs]),
+                  "utf8",
+                ).toString("base64"),
+                TZUDONG_NS_DEADLINE_MILLISECONDS: String(linuxSpawnBudgetMs),
+                TZUDONG_NS_NODE_LIFETIME_FD: "4",
+              },
+            }
+          : null;
+      child = processControl.spawnProcess(
+        supervisorSpec?.executable ??
+          linuxSupervisorSpec?.executable ??
+          commandExecutable,
+        supervisorSpec?.args ?? linuxSupervisorSpec?.args ?? commandArgs,
+        {
+          cwd: commandCwd,
+          shell: false,
+          windowsVerbatimArguments: supervisorSpec
+            ? false
+            : commandWindowsVerbatimArguments,
+          windowsHide: useWindowsJobSupervisor,
+          detached:
+            processControl.platform !== "win32" && !useLinuxNamespaceSupervisor,
+          stdio: useLinuxNamespaceSupervisor
+            ? ["pipe", "pipe", "pipe", "pipe", "pipe"]
+            : ["pipe", "pipe", "pipe"],
+          env: supervisorSpec?.env ?? linuxSupervisorSpec?.env ?? commandEnv,
+        },
+      );
+    } catch (error) {
+      settle({
         ok: false,
         exitCode: null,
         timedOut: false,
         stdout,
-        stderr: `${stderr}\n${String(error)}`,
+        stderr: appendTrustedLifecycleDiagnostic(
+          stderr,
+          `spawn failed: ${sanitizePublicAgentDiagnostic(String(error), 160)}`,
+        ),
+        lifecycleReason: "spawn_error",
+        cleanupVerified: false,
+      });
+      return;
+    }
+
+    const spawned = child;
+    if (!spawned) return;
+    stdoutClosed = !spawned.stdout;
+    stderrClosed = !spawned.stderr;
+    if (spawned.pid) trackedWindowsPids.add(spawned.pid);
+
+    if (
+      processControl.platform === "win32" &&
+      isNativeProcessControl &&
+      !windowsJobContained &&
+      spawned.pid
+    ) {
+      const sampleTree = async () => {
+        if (settled || samplerInFlight || !spawned.pid) return;
+        samplerInFlight = true;
+        try {
+          const sampleDeadline =
+            Date.now() +
+            (processControl.helperTimeoutMs ??
+              WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS);
+          const pids = await captureWindowsProcessTree(
+            spawned.pid,
+            processControl,
+            sampleDeadline,
+          );
+          for (const pid of pids ?? []) trackedWindowsPids.add(pid);
+        } finally {
+          samplerInFlight = false;
+        }
+      };
+      void sampleTree();
+      samplerTimer = setInterval(
+        () => void sampleTree(),
+        Math.max(
+          MIN_STORYBOARD_AGENT_STREAM_DRAIN_TIMEOUT_MS,
+          Math.min(
+            250,
+            (processControl.helperTimeoutMs ??
+              WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS) / 2,
+          ),
+        ),
+      );
+    }
+
+    if (useWindowsJobSupervisor && (!windowsLifecycle || !windowsParentLifetime)) {
+      windowsSupervisorProtocolInvalid = true;
+      windowsSupervisorControlClosed = true;
+    }
+    void windowsLifecycle?.socket.then((windowsSupervisorControl) => {
+      windowsSupervisorControl.on("data", (chunk) => {
+        if (windowsSupervisorComplete || windowsSupervisorDrain || windowsSupervisorProtocolInvalid) {
+          windowsSupervisorProtocolInvalid = true;
+          return;
+        }
+        windowsSupervisorControlBuffer = Buffer.concat([
+          windowsSupervisorControlBuffer,
+          Buffer.from(chunk),
+        ]);
+        if (
+          windowsSupervisorControlBuffer.length > 16 ||
+          (windowsSupervisorControlBuffer.includes(10) &&
+            windowsSupervisorControlBuffer.indexOf(10) !==
+              windowsSupervisorControlBuffer.length - 1)
+        ) {
+          windowsSupervisorProtocolInvalid = true;
+          return;
+        }
+        if (windowsSupervisorControlBuffer.at(-1) !== 10) return;
+        if (windowsSupervisorControlBuffer.equals(Buffer.from("COMPLETE\n", "ascii"))) {
+          windowsSupervisorComplete = true;
+        } else if (windowsSupervisorControlBuffer.equals(Buffer.from("DRAIN\n", "ascii"))) {
+          windowsSupervisorDrain = true;
+        } else {
+          windowsSupervisorProtocolInvalid = true;
+        }
+      });
+      windowsSupervisorControl.once("error", () => {
+        windowsSupervisorProtocolInvalid = true;
+        windowsSupervisorControlClosed = true;
+        settleAfterDrain();
+      });
+      windowsSupervisorControl.once("close", () => {
+        windowsSupervisorControlClosed = true;
+        if (!windowsSupervisorComplete && !windowsSupervisorDrain) {
+          windowsSupervisorProtocolInvalid = true;
+        }
+        settleAfterDrain();
       });
     });
-    child.stdin.on("error", () => {
-      // The command may exit before it consumes stdin. Keep failure handling on
-      // the process close/error events so fallback diagnostics remain stable.
+    const linuxSupervisorControl = useLinuxNamespaceSupervisor
+      ? spawned.stdio?.[3]
+      : null;
+    if (useLinuxNamespaceSupervisor && !linuxSupervisorControl) {
+      linuxSupervisorProtocolInvalid = true;
+      linuxSupervisorControlClosed = true;
+    }
+    linuxSupervisorControl?.on("data", (chunk) => {
+      if (linuxSupervisorComplete || linuxSupervisorProtocolInvalid) {
+        linuxSupervisorProtocolInvalid = true;
+        return;
+      }
+      linuxSupervisorControlBuffer = Buffer.concat([
+        linuxSupervisorControlBuffer,
+        Buffer.from(chunk),
+      ]);
+      if (
+        linuxSupervisorControlBuffer.length > 80 ||
+        (linuxSupervisorControlBuffer.includes(10) &&
+          linuxSupervisorControlBuffer.indexOf(10) !==
+            linuxSupervisorControlBuffer.length - 1)
+      ) {
+        linuxSupervisorProtocolInvalid = true;
+        return;
+      }
+      if (linuxSupervisorControlBuffer.at(-1) !== 10) return;
+      if (
+        linuxSupervisorControlBuffer.equals(
+          Buffer.from(`COMPLETE ${linuxSupervisorNonce}\n`, "ascii"),
+        )
+      ) {
+        linuxSupervisorComplete = true;
+      } else {
+        linuxSupervisorProtocolInvalid = true;
+      }
     });
-    child.stdin.end(JSON.stringify(payload));
+    linuxSupervisorControl?.once("error", () => {
+      linuxSupervisorProtocolInvalid = true;
+      linuxSupervisorControlClosed = true;
+      settleAfterDrain();
+    });
+    linuxSupervisorControl?.once("close", () => {
+      linuxSupervisorControlClosed = true;
+      if (!linuxSupervisorComplete) linuxSupervisorProtocolInvalid = true;
+      settleAfterDrain();
+    });
+    spawned.stdout?.on("data", (chunk) => {
+      appendCommandDiagnostic(
+        stdoutCapture,
+        chunk,
+        Math.max(0, MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES - Buffer.byteLength(stderrCapture.value, "utf8")),
+      );
+      stdout = stdoutCapture.value;
+    });
+    spawned.stderr?.on("data", (chunk) => {
+      appendCommandDiagnostic(
+        stderrCapture,
+        chunk,
+        Math.max(0, MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES - Buffer.byteLength(stdoutCapture.value, "utf8")),
+      );
+      stderr = stderrCapture.value;
+    });
+    spawned.stdout?.once("close", () => {
+      stdoutClosed = true;
+      notifyStreamWaiters();
+      settleAfterDrain();
+    });
+    spawned.stderr?.once("close", () => {
+      stderrClosed = true;
+      notifyStreamWaiters();
+      settleAfterDrain();
+    });
+    spawned.once("exit", (code, signal) => {
+      exitObserved = true;
+      exitCode = code;
+      exitSignal = signal;
+      settleAfterDrain();
+    });
+    spawned.once("close", (code, signal) => {
+      if (!exitObserved) {
+        exitObserved = true;
+        exitCode = code;
+        exitSignal = signal;
+      }
+      settleAfterDrain();
+    });
+    spawned.once("error", (error) => {
+      if (spawned.pid) {
+        void cleanupAndSettle(false, `spawn error: ${String(error)}`);
+        return;
+      }
+      settle({
+        ok: false,
+        exitCode: null,
+        timedOut: false,
+        stdout,
+        stderr: appendTrustedLifecycleDiagnostic(
+          stderr,
+          `spawn failed: ${sanitizePublicAgentDiagnostic(String(error), 160)}`,
+        ),
+        lifecycleReason: "spawn_error",
+        cleanupVerified: false,
+      });
+    });
+    spawned.stdin?.on("error", () => {
+      // The command may exit before it consumes stdin. Process lifecycle events
+      // remain authoritative and cleanup is serialized above.
+    });
+    spawned.stdin?.end(JSON.stringify(payload));
   });
+}
+
+export function __runStoryboardAgentCommandForTests(
+  command: Extract<ResolvedStoryboardAgentCommand, { ok: true }>,
+  payload: Record<string, unknown>,
+  processControl: ProcessControl = defaultProcessControl,
+  options: StoryboardCommandRunOptions = {},
+) {
+  return runStoryboardAgentCommand(command, payload, processControl, options);
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -1783,8 +4926,45 @@ function toStringArray(value: unknown) {
     : [];
 }
 
+const SENSITIVE_DIAGNOSTIC_KEY_PATTERN = /(?:api[_-]?key|token|secret|password|credential|authorization|service[_-]?role|database[_-]?url|private[_-]?key|access[_-]?key|session(?:[_-]?key)?|cookie)/i;
+
+function redactSensitiveAgentDiagnostic(value: string) {
+  let redacted = value;
+  const configuredSecrets = Object.entries(process.env)
+    .flatMap(([key, configuredValue]) =>
+      SENSITIVE_DIAGNOSTIC_KEY_PATTERN.test(key) &&
+      typeof configuredValue === "string" &&
+      configuredValue.length > 0
+        ? [configuredValue]
+        : [],
+    )
+    .sort((left, right) => right.length - left.length);
+  for (const configuredValue of configuredSecrets) {
+    redacted = redacted.split(configuredValue).join("[REDACTED]");
+  }
+  return redacted
+    .replace(
+      /((?:[A-Z][A-Z0-9_]*?(?:API_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTHORIZATION|SERVICE_ROLE|DATABASE_URL|PRIVATE_KEY|ACCESS_KEY|SESSION(?:_KEY)?|COOKIE)[A-Z0-9_]*)\s*=\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s\r\n]+)/gi,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /("(?:api[_-]?key|token|secret|password|credential|authorization|service[_-]?role|database[_-]?url|private[_-]?key|access[_-]?key|session(?:[_-]?key)?|cookie)"\s*:\s*)"[^"\r\n]*"/gi,
+      "$1\"[REDACTED]\"",
+    )
+    .replace(/\b(authorization\s*:\s*)[^\r\n]*/gi, "$1[REDACTED]")
+    .replace(/\b(cookie\s*:\s*)[^\r\n]*/gi, "$1[REDACTED]")
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\/\s:@]+:[^\/\s@]+@/gi, "$1[REDACTED]@");
+}
+function sanitizePublicAgentOutput(value: string) {
+  return sanitizePublicAgentText(redactSensitiveAgentDiagnostic(value));
+}
+
+
 function sanitizePublicAgentDiagnostic(value: string, maxLength = 300) {
-  return sanitizePublicAgentText(value).slice(0, maxLength);
+  return sanitizePublicAgentOutput(value).slice(0, maxLength);
+}
+export function __sanitizePublicAgentDiagnosticForTests(value: string) {
+  return sanitizePublicAgentDiagnostic(value, 1200);
 }
 
 function sanitizeCommandOutput(value: string, maxLength = 1200) {
@@ -1808,10 +4988,17 @@ function sanitizePublicJson(value: unknown, depth = 0): unknown {
   return Object.fromEntries(
     Object.entries(value)
       .slice(0, 80)
-      .map(([key, item]) => [
-        sanitizePublicAgentDiagnostic(key, 120),
-        sanitizePublicJson(item, depth + 1),
-      ])
+      .map(([key, item]) => {
+        // Inspect original keys before recursion so key sanitization cannot erase
+        // the context which makes a nested value secret.
+        if (SENSITIVE_DIAGNOSTIC_KEY_PATTERN.test(key)) {
+          return [sanitizePublicAgentDiagnostic(key, 120), "[REDACTED]"];
+        }
+        return [
+          sanitizePublicAgentDiagnostic(key, 120),
+          sanitizePublicJson(item, depth + 1),
+        ];
+      })
       .filter(([, item]) => item !== undefined),
   );
 }
@@ -2116,7 +5303,7 @@ function mapCommandFailureToFallbackReason(
   }
   if (command?.timedOut) return "graph_timeout";
   const text = `${command?.stdout ?? ""}\n${command?.stderr ?? ""}`;
-  if (isPythonRuntimeUnavailableText(text)) {
+  if (isPythonRuntimeUnavailableDiagnostic(text)) {
     return "unsupported_runtime";
   }
   if (/ModuleNotFoundError|ImportError|No module named/i.test(text)) {
@@ -2659,10 +5846,26 @@ function applyBackendAdapterMode(result: StoryboardGenerationResult) {
 function parseStoryboardAgentOutput(
   command: CommandResult,
 ): ParsedStoryboardAgentOutput | null {
+  if (command.stdoutTruncated || command.stderrTruncated) return null;
   const raw = command.stdout.trim();
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ParsedStoryboardAgentOutput;
+    const parsed: unknown = JSON.parse(raw);
+    if (!isObjectRecord(parsed)) return null;
+    const typed = parsed as ParsedStoryboardAgentOutput;
+    const storyboard = isObjectRecord(parsed.storyboard) ? parsed.storyboard : null;
+    const output =
+      storyboard?.exportMarkdown ?? parsed.markdown ?? parsed.final_output;
+    if (typeof output === "string" && output.trim()) return typed;
+    const graph =
+      normalizeGraphDiagnostics(typed.backendAgent?.graph) ??
+      normalizeGraphDiagnostics(typed.diagnostics?.graph);
+    const hasPendingResumableInterrupt =
+      graph?.status === "interrupted_needs_resume" &&
+      graph.interrupts?.some(
+        (interrupt) => interrupt.resumable && !interrupt.outputReady,
+      );
+    return hasPendingResumableInterrupt ? typed : null;
   } catch {
     return null;
   }
@@ -2681,50 +5884,38 @@ function isParsedStoryboardMetadataAuthoritative(
 
 function applyBackendCommandOutput(
   result: StoryboardGenerationResult,
-  command: CommandResult,
-  parsed: ParsedStoryboardAgentOutput | null,
+  parsed: ParsedStoryboardAgentOutput,
 ) {
   result.mode = "backend_agent_command";
   result.request.generationMode = "backend_agent";
   result.sourceSummary.dataModeLabel = "백엔드 에이전트 명령 실행";
-  const raw = command.stdout.trim();
-  if (parsed) {
-    const storyboardMetadataAuthoritative =
-      isParsedStoryboardMetadataAuthoritative(parsed);
-    if (typeof parsed.storyboard?.exportMarkdown === "string") {
-      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.storyboard.exportMarkdown);
-    } else if (typeof parsed.markdown === "string") {
-      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.markdown);
-    } else if (typeof parsed.final_output === "string") {
-      result.storyboard.exportMarkdown = sanitizePublicAgentText(parsed.final_output);
-    }
-    if (
-      storyboardMetadataAuthoritative &&
-      typeof parsed.storyboard?.title === "string"
-    ) {
-      result.storyboard.title = sanitizePublicAgentText(parsed.storyboard.title);
-    }
-    if (
-      storyboardMetadataAuthoritative &&
-      typeof parsed.storyboard?.logline === "string"
-    ) {
-      result.storyboard.logline = sanitizePublicAgentText(parsed.storyboard.logline);
-    }
-    if (
-      storyboardMetadataAuthoritative &&
-      typeof parsed.storyboard?.operatorBrief === "string"
-    ) {
-      result.storyboard.operatorBrief = sanitizePublicAgentText(parsed.storyboard.operatorBrief);
-    } else if (storyboardMetadataAuthoritative) {
-      result.storyboard.operatorBrief =
-        "백엔드 storyboard-agent 명령 실행 결과를 회의용 Markdown에 반영했습니다.";
-    }
-    return;
+  const storyboardMetadataAuthoritative =
+    isParsedStoryboardMetadataAuthoritative(parsed);
+  const commandOutput =
+    parsed.storyboard?.exportMarkdown ?? parsed.markdown ?? parsed.final_output;
+  if (typeof commandOutput === "string" && commandOutput.trim()) {
+    result.storyboard.exportMarkdown = sanitizePublicAgentOutput(commandOutput);
   }
-  if (raw) {
-    result.storyboard.exportMarkdown = sanitizePublicAgentText(raw);
+  if (
+    storyboardMetadataAuthoritative &&
+    typeof parsed.storyboard?.title === "string"
+  ) {
+    result.storyboard.title = sanitizePublicAgentOutput(parsed.storyboard.title);
+  }
+  if (
+    storyboardMetadataAuthoritative &&
+    typeof parsed.storyboard?.logline === "string"
+  ) {
+    result.storyboard.logline = sanitizePublicAgentOutput(parsed.storyboard.logline);
+  }
+  if (
+    storyboardMetadataAuthoritative &&
+    typeof parsed.storyboard?.operatorBrief === "string"
+  ) {
+    result.storyboard.operatorBrief = sanitizePublicAgentOutput(parsed.storyboard.operatorBrief);
+  } else if (storyboardMetadataAuthoritative) {
     result.storyboard.operatorBrief =
-      "백엔드 storyboard-agent 명령의 텍스트 출력을 회의용 Markdown으로 반영했습니다.";
+      "백엔드 storyboard-agent 명령 실행 결과를 회의용 Markdown에 반영했습니다.";
   }
 }
 
@@ -2739,12 +5930,14 @@ function extractGraphDiagnosticsFromParsedOutput(
 
 export async function generateStoryboardWithBackendAgent(
   input?: Partial<StoryboardGenerateRequest> | null,
+  options: StoryboardBackendAgentExecutionOptions = {},
 ): Promise<StoryboardGenerationResult> {
   const sanitizedInput =
     input && typeof input.prompt === "string"
       ? { ...input, prompt: sanitizePublicAgentText(input.prompt) }
       : input;
-  const status = getStoryboardBackendAgentStatus();
+  const env = options.env ?? process.env;
+  const status = await getStoryboardBackendAgentStatus(env)
   const base = generateLocalStoryboard({
     ...sanitizedInput,
     generationMode: "backend_agent",
@@ -2752,8 +5945,9 @@ export async function generateStoryboardWithBackendAgent(
   applyBackendAdapterMode(base);
 
   const command = resolveEffectiveStoryboardAgentCommand(
-    process.env.STORYBOARD_AGENT_COMMAND,
+    env.STORYBOARD_AGENT_COMMAND,
     status.runtime,
+    env,
   );
   if (command.ok) {
     const commandResult = await runStoryboardAgentCommand(command, {
@@ -2761,9 +5955,17 @@ export async function generateStoryboardWithBackendAgent(
       backendAgentRoot: status.rootPath,
       graphEntrypoint: status.graphEntrypoint,
       localStoryboard: base,
+    }, defaultProcessControl, {
+      env,
+      testCommandCapability: options.testCommandCapability,
     });
     if (commandResult.ok) {
       const parsed = parseStoryboardAgentOutput(commandResult);
+      if (!parsed) {
+        throw new Error(
+          "required_storyboard_backend_output_invalid: command output must be non-empty, untruncated JSON with a storyboard export.",
+        );
+      }
       const graph = status.runtime === "codex_cli_oauth_legacy"
         ? createLegacyGraphDiagnostics(commandResult)
         : extractGraphDiagnosticsFromParsedOutput(parsed);
@@ -2772,7 +5974,7 @@ export async function generateStoryboardWithBackendAgent(
           "required_storyboard_backend_graph_unavailable: LangGraph command did not return usable required RAG diagnostics.",
         );
       }
-      applyBackendCommandOutput(base, commandResult, parsed);
+      applyBackendCommandOutput(base, parsed);
       normalizeStoryboardExportMarkdown(base, base.storyboard.exportMarkdown);
       appendBackendAgentAnalysis(
         base,
@@ -2790,6 +5992,13 @@ export async function generateStoryboardWithBackendAgent(
       [
         "required_storyboard_backend_graph_failed",
         mapCommandFailureToFallbackReason(status, commandResult),
+        `lifecycle=${commandResult.lifecycleReason};cleanup=${
+          commandResult.cleanupVerified === null
+            ? "not-required"
+            : commandResult.cleanupVerified
+              ? "verified"
+              : "incomplete"
+        }`,
         sanitizeCommandOutput(commandResult.stdout, 600),
         sanitizeCommandOutput(commandResult.stderr, 600),
       ]

@@ -16,7 +16,7 @@ export default function FeedError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error('[FeedError]', error);
+        console.error('[FeedError]');
     }, [error]);
 
     return (

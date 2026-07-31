@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "policyId": "g002-external-package-local-structural",
+  "policyVersion": 1,
+  "policyAuthority": "local-structural-only",
+  "canEstablishAuthenticity": false,
+  "canonicalClasses": [
+    "outside_rooted_signature_key_registry",
+    "hmac_verifier_provisioning",
+    "target_stack_measurement",
+    "induced_event_durability_receipt",
+    "authorization_scope_issuer"
+  ],
+  "algorithms": {
+    "signature": ["Ed25519", "ECDSA-P256-SHA256"],
+    "hmac": ["HMAC-SHA256"]
+  },
+  "rootReferenceTypes": [
+    "provider_control_plane",
+    "independent_transparency_log",
+    "organization_key_registry"
+  ],
+  "keyStatuses": ["active"],
+  "targetClasses": ["protected_target"],
+  "audience": "g038-protected-successor",
+  "requiredScopes": ["g038:deploy", "g038:durability:observe", "g038:verify"],
+  "authorizationWindowSeconds": 86400,
+  "limits": {
+    "maxFiles": 64,
+    "maxFileBytes": 4194304,
+    "maxTotalBytes": 16777216,
+    "maxDepth": 16,
+    "maxScalars": 2048,
+    "maxStringLength": 4096,
+    "maxDiagnostics": 100
+  },
+  "statuses": ["empty", "locally_consistent_unverified", "invalid"],
+  "exitCodes": {"empty": 1, "locally_consistent_unverified": 1, "invalid": 2}
+}

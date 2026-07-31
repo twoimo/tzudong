@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle } from 'lucide-react';
 import { RestaurantErrorAlert } from './RestaurantErrorAlert';
 import { EvaluationDetailView } from './EvaluationDetailView';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 
 interface EvaluationRowDetailsProps {
   record: EvaluationRecord;
@@ -34,6 +35,7 @@ function isDuplicateErrorDetails(value: EvaluationRecord['db_error_details']): v
 
 export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
   const { youtube_meta, restaurant_info, missing_message } = record;
+  const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
 
   // 🔥 중복 에러 알림 표시
   const duplicateErrorDetails = isDuplicateErrorDetails(record.db_error_details) ? record.db_error_details : null;
@@ -65,10 +67,15 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
             <div className="space-y-2">
               <p><strong>메시지:</strong> {missing_message}</p>
               <p><strong>영상 제목:</strong> {youtube_meta?.title}</p>
-              <p><strong>YouTube 링크:</strong>
-                <a href={record.youtube_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
-                  {record.youtube_link}
-                </a>
+              <p>
+                <strong>YouTube 링크:</strong>
+                {canonicalYoutubeUrl ? (
+                  <a href={canonicalYoutubeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
+                    {canonicalYoutubeUrl}
+                  </a>
+                ) : (
+                  ' 영상 링크 없음'
+                )}
               </p>
               <p className="text-sm text-muted-foreground">
                 이 음식점은 evaluation_target에는 있지만 restaurants 배열에서 누락되었습니다.
@@ -95,10 +102,15 @@ export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record,
             <div className="space-y-2">
               <p><strong>사유:</strong> {record.geocoding_fail_reason || '주소 정보 없음'}</p>
               <p><strong>영상 제목:</strong> {youtube_meta?.title}</p>
-              <p><strong>YouTube 링크:</strong>
-                <a href={record.youtube_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
-                  {record.youtube_link}
-                </a>
+              <p>
+                <strong>YouTube 링크:</strong>
+                {canonicalYoutubeUrl ? (
+                  <a href={canonicalYoutubeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
+                    {canonicalYoutubeUrl}
+                  </a>
+                ) : (
+                  ' 영상 링크 없음'
+                )}
               </p>
               {restaurant_info && (
                 <>

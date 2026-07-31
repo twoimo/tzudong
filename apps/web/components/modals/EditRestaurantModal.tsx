@@ -172,7 +172,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
             onClose();
         } catch (error: unknown) {
-            console.error('제출 실패:', error);
+            console.error('제출 실패:');
             const message = error instanceof Error ? error.message : '제출에 실패했습니다. 다시 시도해주세요.';
             toast.error(message);
         } finally {
@@ -206,7 +206,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 });
             }
         } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:', error);
+            console.error('임시 저장 데이터 로드 실패:');
         }
     }, [restaurant?.id]);
 
@@ -235,7 +235,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             });
             setLastSavedAt(new Date());
         } catch (error) {
-            console.error('자동 저장 실패:', error);
+            console.error('자동 저장 실패:');
         } finally {
             setIsSaving(false);
         }
@@ -250,7 +250,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
             await deleteDraft(user.id, restaurant.id);
             setLastSavedAt(null);
         } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:', error);
+            console.error('임시 저장 데이터 삭제 실패:');
         }
     }, [restaurant?.id]);
 

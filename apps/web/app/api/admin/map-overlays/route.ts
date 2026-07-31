@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import {
-  mapAdminRestaurantMapOverlayRow,
   isAdminMapOverlayActiveAt,
   parseAdminMapOverlayQuery,
   type AdminMapOverlaysResponse,
   type AdminRestaurantMapOverlayRow,
 } from '@/lib/admin-map-overlays';
+import type { Json } from '@/integrations/supabase/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +17,39 @@ function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
   response.headers.set('Cache-Control', 'no-store');
   return response;
+}
+type SelectedAdminMapOverlayRow = Pick<
+  AdminRestaurantMapOverlayRow,
+  'restaurant_id' | 'overlay_type' | 'label' | 'description' | 'active_from' | 'active_until' | 'evidence' | 'is_active' | 'created_at' | 'updated_at'
+>;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+
+function isJson(value: unknown): value is Json {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.every(isJson);
+  if (!isRecord(value)) return false;
+  return Object.values(value).every((entry) => entry === undefined || isJson(entry));
+}
+
+function isSelectedAdminMapOverlayRow(value: unknown): value is SelectedAdminMapOverlayRow {
+  if (!isRecord(value)) return false;
+
+  const row = value;
+  return typeof row.restaurant_id === 'string'
+    && (row.overlay_type === 'trend' || row.overlay_type === 'seasonal')
+    && typeof row.label === 'string'
+    && (row.description === null || typeof row.description === 'string')
+    && (row.active_from === null || typeof row.active_from === 'string')
+    && (row.active_until === null || typeof row.active_until === 'string')
+    && isJson(row.evidence)
+    && typeof row.is_active === 'boolean'
+    && typeof row.created_at === 'string'
+    && typeof row.updated_at === 'string';
 }
 
 export async function GET(request: NextRequest) {
@@ -61,9 +94,21 @@ export async function GET(request: NextRequest) {
       return noStoreJson({ error: 'Map overlays unavailable' }, { status: 502 });
     }
 
-    const overlays = (data ?? [])
+    const rows = Array.isArray(data) ? data.filter(isSelectedAdminMapOverlayRow) : [];
+    const overlays = rows
       .filter((row) => isAdminMapOverlayActiveAt(row, queryOptions.activeAt))
-      .map(mapAdminRestaurantMapOverlayRow);
+      .map((row) => ({
+        restaurantId: row.restaurant_id,
+        overlayType: row.overlay_type,
+        label: row.label,
+        description: row.description,
+        activeFrom: row.active_from,
+        activeUntil: row.active_until,
+        evidence: row.evidence,
+        isActive: row.is_active,
+        updatedAt: row.updated_at,
+        createdAt: row.created_at,
+      }));
 
     const body: AdminMapOverlaysResponse = {
       overlays,

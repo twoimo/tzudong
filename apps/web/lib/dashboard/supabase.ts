@@ -126,7 +126,7 @@ async function fetchRestaurantPage(
     const { data, error } = await scopedQuery.range(from, to);
 
     if (error) {
-        throw new Error(`Failed to fetch restaurants: ${error.message}`);
+        throw new Error('Failed to fetch restaurants');
     }
 
     return ((data as DashboardRestaurantRow[]) || []).map((row) => ({
@@ -168,7 +168,7 @@ export async function getDashboardRestaurantRowsPage(
     const { data, error, count } = await query;
 
     if (error) {
-        throw new Error(`Failed to fetch dashboard restaurant page: ${error.message}`);
+        throw new Error('Failed to fetch dashboard restaurant page');
     }
 
     return {

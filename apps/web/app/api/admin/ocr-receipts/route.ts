@@ -14,6 +14,8 @@ import {
     getGuardedMutationErrorName,
     isGuardedMutationConfirmationValid,
 } from '@/lib/admin/guarded-mutation-contract';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +23,8 @@ export const runtime = 'nodejs';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN!;
 const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
+
+const MAX_OCR_RECEIPT_REQUEST_BYTES = 4 * 1024;
 
 function hasGuardedMutationConfirmation(
     request: Request,
@@ -32,18 +36,46 @@ function hasGuardedMutationConfirmation(
     );
 }
 
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+    const response = NextResponse.json(body, init);
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+}
+
 // POST: GitHub Actions 워크플로우 트리거
 export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
-        if (!auth.ok) return auth.response;
+        if (!auth.ok) {
+            auth.response.headers.set('Cache-Control', 'no-store');
+            return auth.response;
+        }
 
-        const body = await request.json().catch(() => ({})) as {
+        if (!isTrustedSameOriginMutation(request)) {
+            return noStoreJson(
+                { error: '요청을 처리할 수 없습니다.' },
+                { status: 403 }
+            );
+        }
+
+        const requestBody = await readBoundedJsonRequest(request, MAX_OCR_RECEIPT_REQUEST_BYTES);
+        if (
+            !requestBody.ok ||
+            !requestBody.value ||
+            typeof requestBody.value !== 'object' ||
+            Array.isArray(requestBody.value)
+        ) {
+            return noStoreJson(
+                { error: '요청 본문이 올바르지 않습니다.' },
+                { status: 400 }
+            );
+        }
+        const body = requestBody.value as {
             guardedMutationConfirmation?: string;
         };
 
         if (!hasGuardedMutationConfirmation(request, body)) {
-            return NextResponse.json(
+            return noStoreJson(
                 buildGuardedMutationRequiredResponse('ocr_receipt', 'dispatch_workflow'),
                 { status: 400 }
             );

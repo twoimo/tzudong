@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdmin } from "@/lib/auth/require-admin";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  ADMIN_USER_AUDIT_ACTIONS,
+  ADMIN_USER_AUDIT_COUNT_KEYS,
+  ADMIN_USER_AUDIT_FLAG_KEYS,
+  ADMIN_USER_AUDIT_STATUSES,
+  isAdminUserAuditReasonCode,
+} from "@/lib/admin/user-audit";
 import {
   ADMIN_AUDIT_PRIMARY_SOURCE,
   getAdminAuditCoverage,
 } from "@/lib/admin/audit-contract";
+import { requireAdmin } from "@/lib/auth/require-admin";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const runtime = "nodejs";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const MAX_AUDIT_COUNT = 1_000_000_000;
+const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+type AuditCounts = Partial<Record<(typeof ADMIN_USER_AUDIT_COUNT_KEYS)[number], number>>;
+type AuditFlags = Partial<Record<(typeof ADMIN_USER_AUDIT_FLAG_KEYS)[number], boolean>>;
 
 function normalizeLimit(value: string | null) {
   const parsed = Number(value ?? DEFAULT_LIMIT);
@@ -18,20 +30,89 @@ function normalizeLimit(value: string | null) {
   return Math.min(Math.max(Math.trunc(parsed), 1), MAX_LIMIT);
 }
 
-function toSafeString(value: unknown) {
-  return typeof value === "string" ? value : null;
+function toSafeIdentifier(value: unknown) {
+  return typeof value === "string" && SAFE_IDENTIFIER_PATTERN.test(value) ? value : null;
 }
 
-function toSafeObject(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+function toSafeDateTime(value: unknown) {
+  if (typeof value !== "string" || value.length > 40) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-function getDatabaseErrorCode(error: unknown) {
-  return error && typeof error === "object" && "code" in error
-    ? toSafeString((error as { code?: unknown }).code)
+function toBoundedRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null
+    ? value as Record<string, unknown>
     : null;
+}
+
+function toSafeCounts(value: unknown): AuditCounts {
+  const record = toBoundedRecord(value);
+  if (!record) return {};
+
+  const counts: AuditCounts = {};
+  for (const key of Object.keys(record).slice(0, ADMIN_USER_AUDIT_COUNT_KEYS.length)) {
+    if (!(ADMIN_USER_AUDIT_COUNT_KEYS as readonly string[]).includes(key)) continue;
+    const entry = record[key];
+    if (
+      typeof entry === "number"
+      && Number.isSafeInteger(entry)
+      && entry >= 0
+      && entry <= MAX_AUDIT_COUNT
+    ) {
+      counts[key as (typeof ADMIN_USER_AUDIT_COUNT_KEYS)[number]] = entry;
+    }
+  }
+  return counts;
+}
+
+function toSafeFlags(value: unknown): AuditFlags {
+  const record = toBoundedRecord(value);
+  if (!record) return {};
+
+  const flags: AuditFlags = {};
+  for (const key of Object.keys(record).slice(0, ADMIN_USER_AUDIT_FLAG_KEYS.length)) {
+    if (!(ADMIN_USER_AUDIT_FLAG_KEYS as readonly string[]).includes(key)) continue;
+    const entry = record[key];
+    if (typeof entry === "boolean") {
+      flags[key as (typeof ADMIN_USER_AUDIT_FLAG_KEYS)[number]] = entry;
+    }
+  }
+  return flags;
+}
+
+function toAuditEvent(value: unknown) {
+  const row = toBoundedRecord(value);
+  if (!row) return null;
+
+  const id = toSafeIdentifier(row.id);
+  const action = typeof row.action === "string"
+    && (ADMIN_USER_AUDIT_ACTIONS as readonly string[]).includes(row.action)
+    ? row.action
+    : null;
+  const status = typeof row.status === "string"
+    && (ADMIN_USER_AUDIT_STATUSES as readonly string[]).includes(row.status)
+    ? row.status
+    : null;
+
+  if (!id || !action || !status || !isAdminUserAuditReasonCode(row.reason)) return null;
+
+  return {
+    id,
+    actorUserId: toSafeIdentifier(row.actor_user_id),
+    targetUserId: toSafeIdentifier(row.target_user_id),
+    action,
+    status,
+    reasonCode: row.reason,
+    errorCode: isAdminUserAuditReasonCode(row.error_code) ? row.error_code : null,
+    correlationId: toSafeIdentifier(row.correlation_id),
+    counts: toSafeCounts(row.audit_counts),
+    flags: toSafeFlags(row.audit_flags),
+    appliedAt: toSafeDateTime(row.applied_at),
+    createdAt: toSafeDateTime(row.created_at),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -45,32 +126,16 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from("admin_audit_events")
       .select(
-        "id,actor_user_id,target_user_id,action,reason,status,correlation_id,applied_at,error_code,created_at,after_state",
+        "id,actor_user_id,target_user_id,action,reason,status,correlation_id,applied_at,error_code,created_at,audit_counts,audit_flags",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
 
     if (error) throw error;
 
-    const events = (data ?? []).map((event) => {
-      const row = event as Record<string, unknown>;
-      return {
-        id: String(row.id ?? ""),
-        domain: "admin_user_management",
-        source: ADMIN_AUDIT_PRIMARY_SOURCE,
-        readbackId: String(row.id ?? ""),
-        actorUserId: toSafeString(row.actor_user_id),
-        targetUserId: toSafeString(row.target_user_id),
-        action: toSafeString(row.action) ?? "unknown",
-        reason: toSafeString(row.reason),
-        status: toSafeString(row.status) ?? "unknown",
-        correlationId: toSafeString(row.correlation_id),
-        appliedAt: toSafeString(row.applied_at),
-        errorCode: toSafeString(row.error_code),
-        createdAt: toSafeString(row.created_at),
-        afterState: toSafeObject(row.after_state),
-      };
-    });
+    const events = (data ?? [])
+      .map(toAuditEvent)
+      .filter((event): event is NonNullable<typeof event> => event !== null);
 
     return NextResponse.json(
       {
@@ -82,9 +147,10 @@ export async function GET(request: NextRequest) {
       },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch (error) {
-    console.error("[admin/audit-events] failed to read admin audit events", {
-      code: getDatabaseErrorCode(error),
+  } catch {
+    console.error("[admin/audit-events] admin audit read failed", {
+      domain: "admin_user_management",
+      code: "ADMIN_AUDIT_EVENTS_READ_FAILED",
     });
     return NextResponse.json(
       {
@@ -93,7 +159,7 @@ export async function GET(request: NextRequest) {
         events: [],
         unavailable: {
           reason: "admin-audit-events-read-failed",
-          message: "감사 로그를 읽지 못했습니다. 데이터베이스 권한과 admin_audit_events 마이그레이션 상태를 확인해 주세요.",
+          message: "감사 로그를 읽지 못했습니다. 관리자 권한과 감사 기록 상태를 확인해 주세요.",
         },
         coverage: getAdminAuditCoverage(),
       },

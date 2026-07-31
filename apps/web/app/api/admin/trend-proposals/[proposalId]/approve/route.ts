@@ -12,6 +12,8 @@ import {
   buildTrendProposalPreviewHash,
   buildTrendProposalPreviewPayloadHash,
 } from '@/lib/admin/trend-proposals';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +24,7 @@ type TrendProposalRouteContext = {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const MAX_TREND_PROPOSAL_APPROVAL_REQUEST_BYTES = 64 * 1024;
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
@@ -82,19 +85,23 @@ export async function POST(request: NextRequest, context: TrendProposalRouteCont
     admin.response.headers.set('Cache-Control', 'no-store');
     return admin.response;
   }
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ ok: false, error: 'Forbidden' }, { status: 403 });
+  }
+
 
   const { proposalId } = await context.params;
   if (!UUID_PATTERN.test(proposalId)) {
     return noStoreJson({ ok: false, error: 'trend_proposal_not_found' }, { status: 404 });
   }
 
-  let body: Record<string, unknown>;
-  try {
-    const parsed = await request.json();
-    const record = readRecord(parsed);
-    if (!record) throw new Error('invalid-request');
-    body = record;
-  } catch {
+  const requestBody = await readBoundedJsonRequest(request, MAX_TREND_PROPOSAL_APPROVAL_REQUEST_BYTES);
+  if (!requestBody.ok) {
+    return noStoreJson({ ok: false, error: 'invalid_trend_proposal_approval_request' }, { status: 400 });
+  }
+
+  const body = readRecord(requestBody.value);
+  if (!body) {
     return noStoreJson({ ok: false, error: 'invalid_trend_proposal_approval_request' }, { status: 400 });
   }
 
