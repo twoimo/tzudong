@@ -9,10 +9,21 @@ Usage:
     python migrate-embeddings-to-supabase.py
 """
 
-import os
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(CANONICAL_BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from supabase import create_client, Client
@@ -34,10 +45,6 @@ LOCAL_DB = {
     "user": "postgres",
     "password": "password",
 }
-
-# Supabase 설정
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # Supabase에서 실행해야 할 CREATE TABLE SQL
 CREATE_TABLE_SQL = """
@@ -141,7 +148,7 @@ def check_supabase_table(supabase: Client) -> bool:
             print("=" * 60)
             return False
         else:
-            print(f"⚠️ 테이블 확인 중 오류: {e}")
+            print("⚠️ 테이블 확인 중 오류")
             return True
 
 
@@ -184,8 +191,8 @@ def migrate_data(supabase: Client, total_count: int):
                 .execute()
             )
             success += len(rows)
-        except Exception as e:
-            print(f"\n⚠️ 배치 오류 (offset {offset}): {e}")
+        except Exception:
+            print(f"\n⚠️ 배치 오류 (offset {offset})")
             errors += len(rows)
 
             # 개별 삽입 시도
@@ -196,9 +203,9 @@ def migrate_data(supabase: Client, total_count: int):
                     ).execute()
                     success += 1
                     errors -= 1
-                except Exception as e2:
+                except Exception:
                     print(
-                        f"  - 개별 오류 (video_id={row.get('video_id')}, chunk={row.get('chunk_index')}): {str(e2)[:100]}"
+                        f"  - 개별 오류 (video_id={row.get('video_id')}, chunk={row.get('chunk_index')})"
                     )
 
         pbar.update(len(rows))
@@ -239,8 +246,8 @@ def verify_migration(supabase: Client, original_count: int):
                 f"  - {row.get('video_id')} [chunk {row.get('chunk_index')}]: {content_preview}..."
             )
 
-    except Exception as e:
-        print(f"❌ 검증 오류: {e}")
+    except Exception:
+        print("❌ 검증 오류")
 
 
 def main():
@@ -248,12 +255,17 @@ def main():
     print("Docker PostgreSQL → Supabase 마이그레이션 (document_embeddings)")
     print("=" * 60)
 
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("❌ Supabase REST configuration invalid.")
         return
 
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}")
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(credentials.url, credentials.service_role_key)
+    except Exception:
+        print("❌ Supabase REST client initialization failed.")
+        return
 
     # 1. 테이블 확인
     if not check_supabase_table(supabase):
@@ -279,4 +291,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        print("❌ Migration failed.")
+        raise SystemExit(1)

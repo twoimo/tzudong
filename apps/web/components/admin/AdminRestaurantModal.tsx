@@ -31,6 +31,7 @@ import {
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "@/lib/no-toast";
 import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
 import { RESTAURANT_DESTRUCTIVE_ACTION_CONFIRMATIONS } from "@/lib/admin/restaurant-destructive-action-contract";
@@ -52,7 +53,7 @@ import {
 const fetchYouTubeMeta = async (youtubeLink: string) => {
     const videoId = extractVideoIdFromYoutubeLink(youtubeLink);
     if (!videoId) {
-        console.error('Invalid YouTube URL:', youtubeLink);
+        console.error('Invalid YouTube URL');
         return null;
     }
 
@@ -71,8 +72,8 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
         }
 
         return response.json();
-    } catch (error) {
-        console.error('Error fetching YouTube metadata:', error, videoId);
+    } catch {
+        console.error('Error fetching YouTube metadata:');
         return null;
     }
 };
@@ -144,6 +145,161 @@ const getDesktopAdminRestaurantPanelFocusableElements = (container: HTMLElement 
 
 type AddressElement = Record<string, unknown>;
 type AddressElementsValue = AddressElement | AddressElement[] | null;
+type RestaurantMergeQueryRow = Pick<
+    Restaurant,
+    | "id"
+    | "approved_name"
+    | "phone"
+    | "categories"
+    | "status"
+    | "source_type"
+    | "youtube_meta"
+    | "evaluation_results"
+    | "reasoning_basis"
+    | "tzuyang_review"
+    | "trace_id"
+    | "origin_address"
+    | "road_address"
+    | "jibun_address"
+    | "english_address"
+    | "address_elements"
+    | "geocoding_success"
+    | "geocoding_false_stage"
+    | "is_missing"
+    | "is_not_selected"
+    | "lat"
+    | "lng"
+    | "youtube_link"
+    | "review_count"
+    | "created_by"
+    | "updated_by_admin_id"
+    | "db_error_message"
+    | "db_error_details"
+    | "search_count"
+    | "weekly_search_count"
+    | "origin_name"
+    | "naver_name"
+    | "google_name"
+    | "trace_id_name_source"
+    | "channel_name"
+    | "description_map_url"
+    | "recollect_version"
+    | "created_at"
+    | "updated_at"
+> & {
+    name: string;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isNullableString = (value: unknown): value is string | null =>
+    typeof value === "string" || value === null;
+
+const isNullableNumber = (value: unknown): value is number | null =>
+    (typeof value === "number" && Number.isFinite(value)) || value === null;
+
+const isStringArray = (value: unknown): value is string[] =>
+    Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isJsonValue = (value: unknown): value is Json => {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return true;
+    if (typeof value === "number") return Number.isFinite(value);
+    if (Array.isArray(value)) return value.every(isJsonValue);
+    if (!isRecord(value)) return false;
+    return Object.values(value).every(isJsonValue);
+};
+
+const parseRestaurantMergeQueryRow = (value: unknown): RestaurantMergeQueryRow | null => {
+    if (
+        !isRecord(value)
+        || typeof value.id !== "string"
+        || typeof value.name !== "string"
+        || !isNullableString(value.approved_name)
+        || !isNullableString(value.phone)
+        || !isStringArray(value.categories)
+        || typeof value.status !== "string"
+        || typeof value.source_type !== "string"
+        || !isJsonValue(value.youtube_meta)
+        || !isJsonValue(value.evaluation_results)
+        || !isNullableString(value.reasoning_basis)
+        || !isNullableString(value.tzuyang_review)
+        || !isNullableString(value.trace_id)
+        || !isJsonValue(value.origin_address)
+        || !isNullableString(value.road_address)
+        || !isNullableString(value.jibun_address)
+        || !isNullableString(value.english_address)
+        || !isJsonValue(value.address_elements)
+        || typeof value.geocoding_success !== "boolean"
+        || !isNullableNumber(value.geocoding_false_stage)
+        || typeof value.is_missing !== "boolean"
+        || typeof value.is_not_selected !== "boolean"
+        || !isNullableNumber(value.lat)
+        || !isNullableNumber(value.lng)
+        || !isNullableString(value.youtube_link)
+        || !isNullableNumber(value.review_count)
+        || !isNullableString(value.created_by)
+        || !isNullableString(value.updated_by_admin_id)
+        || !isNullableString(value.db_error_message)
+        || !isJsonValue(value.db_error_details)
+        || !isNullableNumber(value.search_count)
+        || !isNullableNumber(value.weekly_search_count)
+        || !isNullableString(value.origin_name)
+        || !isNullableString(value.naver_name)
+        || !isNullableString(value.google_name)
+        || !isNullableString(value.trace_id_name_source)
+        || !isNullableString(value.channel_name)
+        || !isNullableString(value.description_map_url)
+        || !isJsonValue(value.recollect_version)
+        || typeof value.created_at !== "string"
+        || typeof value.updated_at !== "string"
+    ) {
+        return null;
+    }
+
+    return {
+        id: value.id,
+        name: value.name,
+        approved_name: value.approved_name,
+        phone: value.phone,
+        categories: value.categories,
+        status: value.status,
+        source_type: value.source_type,
+        youtube_meta: value.youtube_meta,
+        evaluation_results: value.evaluation_results,
+        reasoning_basis: value.reasoning_basis,
+        tzuyang_review: value.tzuyang_review,
+        trace_id: value.trace_id,
+        origin_address: value.origin_address,
+        road_address: value.road_address,
+        jibun_address: value.jibun_address,
+        english_address: value.english_address,
+        address_elements: value.address_elements,
+        geocoding_success: value.geocoding_success,
+        geocoding_false_stage: value.geocoding_false_stage,
+        is_missing: value.is_missing,
+        is_not_selected: value.is_not_selected,
+        lat: value.lat,
+        lng: value.lng,
+        youtube_link: value.youtube_link,
+        review_count: value.review_count,
+        created_by: value.created_by,
+        updated_by_admin_id: value.updated_by_admin_id,
+        db_error_message: value.db_error_message,
+        db_error_details: value.db_error_details,
+        search_count: value.search_count,
+        weekly_search_count: value.weekly_search_count,
+        origin_name: value.origin_name,
+        naver_name: value.naver_name,
+        google_name: value.google_name,
+        trace_id_name_source: value.trace_id_name_source,
+        channel_name: value.channel_name,
+        description_map_url: value.description_map_url,
+        recollect_version: value.recollect_version,
+        created_at: value.created_at,
+        updated_at: value.updated_at,
+    };
+};
 
 interface GeocodingResultItem {
     road_address: string;
@@ -205,6 +361,24 @@ export function AdminRestaurantModal({
         lat: "",
         lng: "",
     });
+    const resetForm = useCallback(() => {
+        setFormData({
+            name: "",
+            searchAddress: "",
+            road_address: "",
+            jibun_address: "",
+            english_address: "",
+            address_elements: null,
+            phone: "",
+            categories: [],
+            youtube_reviews: [],
+            lat: "",
+            lng: "",
+        });
+        setIsGeocoded(false);
+        setGeocodingResults([]);
+        setSelectedGeocodingIndex(null);
+    }, []);
 
     useEffect(() => {
         if (isOpen && restaurant) {
@@ -280,7 +454,7 @@ export function AdminRestaurantModal({
         } else if (isOpen && !restaurant) {
             resetForm();
         }
-    }, [restaurant, isOpen]);
+    }, [restaurant, isOpen, resetForm]);
 
     useEffect(() => {
         if (!isOpen || !isMobileOrTablet) return;
@@ -436,24 +610,6 @@ export function AdminRestaurantModal({
         return () => window.cancelAnimationFrame(frame);
     }, [isOpen, shouldRenderMapPanel]);
 
-    const resetForm = () => {
-        setFormData({
-            name: "",
-            searchAddress: "",
-            road_address: "",
-            jibun_address: "",
-            english_address: "",
-            address_elements: null,
-            phone: "",
-            categories: [],
-            youtube_reviews: [],
-            lat: "",
-            lng: "",
-        });
-        setIsGeocoded(false);
-        setGeocodingResults([]);
-        setSelectedGeocodingIndex(null);
-    };
 
     // 시/군/구까지만 추출
     const extractCityDistrictGu = (address: string): string | null => {
@@ -489,8 +645,8 @@ export function AdminRestaurantModal({
             });
             const geocodeData = data as NaverGeocodeResponse | null;
 
-            if (error) throw new Error(error.message || JSON.stringify(error));
-            if (!geocodeData || geocodeData.error) throw new Error(geocodeData?.error || '지오코딩 실패');
+            if (error) throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
+            if (!geocodeData || geocodeData.error) throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
             if (!geocodeData.addresses || geocodeData.addresses.length === 0) return [];
 
             return geocodeData.addresses.slice(0, limit).map((addr) => ({
@@ -502,7 +658,7 @@ export function AdminRestaurantModal({
                 y: addr.y,
             }));
         } catch (error) {
-            console.error('지오코딩 에러:', error);
+            console.error('지오코딩 에러:');
             throw error;
         }
     };
@@ -550,7 +706,7 @@ export function AdminRestaurantModal({
                 toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
-            console.error('Naver Geocoding error:', error);
+            console.error('Naver Geocoding error:');
             toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
             setIsGeocodingNaver(false);
@@ -639,7 +795,6 @@ export function AdminRestaurantModal({
                     assertLegacyBrowserAdminMutationEnabled("restaurant_record", "delete_restaurant_link");
                     const { error: deleteError } = await supabase
                         .from('restaurants')
-                        // @ts-expect-error - Supabase 자동 생성 타입 문제
                         .update({
                             status: 'deleted',
                             updated_at: new Date().toISOString(),
@@ -647,7 +802,7 @@ export function AdminRestaurantModal({
                         .in('id', deletedReviewIds);
 
                     if (deleteError) {
-                        console.error('소프트 삭제 실패:', deleteError);
+                        console.error('소프트 삭제 실패:');
                         toast.error('일부 항목 삭제에 실패했습니다');
                     } else {
 
@@ -677,7 +832,7 @@ export function AdminRestaurantModal({
                         .eq("id", review.id);
 
                     if (reviewError) {
-                        console.error(`레코드 ${review.id} 업데이트 실패:`, reviewError);
+                        console.error(`레코드 ${review.id} 업데이트 실패:`);
                     }
                 }
 
@@ -744,13 +899,13 @@ export function AdminRestaurantModal({
                         } as never);
 
                     if (insertError) {
-                        console.error('신규 레코드 추가 실패:', insertError);
+                        console.error('신규 레코드 추가 실패:');
                         if (isRestaurantIdentityDuplicateError(insertError)) {
                             toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 동일 영상 레코드가 이미 존재합니다.`);
                             hasError = true;
                             break;
                         }
-                        toast.error(`신규 유튜브 링크 추가 실패: ${insertError.message}`);
+                        toast.error('신규 유튜브 링크 추가에 실패했습니다');
                         hasError = true;
                         break;
                     } else {
@@ -768,22 +923,38 @@ export function AdminRestaurantModal({
                 toast.success("맛집이 수정되었습니다");
 
                 // [BUG FIX] 병합된 레스토랑 정보가 손실되지 않도록 전체 그룹 재조회 및 구성
-                const { data: allUpdatedRestaurants } = await supabase
+                const { data: allUpdatedRestaurantRows } = await supabase
                     .from("restaurants")
                     .select(RESTAURANT_MERGE_SELECT)
-                    .in("id", existingIds);
+                    .in("id", existingIds)
+                    .overrideTypes<RestaurantMergeQueryRow[], { merge: false }>();
 
-                if (allUpdatedRestaurants && allUpdatedRestaurants.length > 0) {
-                    const typedUpdatedRestaurants = allUpdatedRestaurants as Restaurant[];
+                if (allUpdatedRestaurantRows && allUpdatedRestaurantRows.length > 0) {
+                    const typedUpdatedRestaurants = allUpdatedRestaurantRows.flatMap((updatedRestaurant) => {
+                        const parsedRestaurant = parseRestaurantMergeQueryRow(updatedRestaurant);
+                        return parsedRestaurant ? [parsedRestaurant] : [];
+                    });
                     const primaryRestaurant = typedUpdatedRestaurants.find((updatedRestaurant) => updatedRestaurant.id === restaurant.id);
-                    const mergedChildren = typedUpdatedRestaurants.filter((updatedRestaurant) => updatedRestaurant.id !== restaurant.id);
+                    const mergedRestaurantUpdates = new Map<string, RestaurantMergeQueryRow>();
+                    for (const updatedRestaurant of typedUpdatedRestaurants) {
+                        if (updatedRestaurant.id !== restaurant.id) {
+                            mergedRestaurantUpdates.set(updatedRestaurant.id, updatedRestaurant);
+                        }
+                    }
+                    const mergedChildren = (restaurant.mergedRestaurants || []).map((mergedRestaurant) => {
+                        const updatedRestaurant = mergedRestaurantUpdates.get(mergedRestaurant.id);
+                        return updatedRestaurant
+                            ? { ...mergedRestaurant, ...updatedRestaurant }
+                            : mergedRestaurant;
+                    });
 
                     if (primaryRestaurant) {
-                        const finalRestaurant = {
+                        const finalRestaurant: Restaurant = {
+                            ...restaurant,
                             ...primaryRestaurant,
-                            mergedRestaurants: mergedChildren.length > 0 ? mergedChildren : (restaurant.mergedRestaurants || [])
+                            mergedRestaurants: mergedChildren.length > 0 ? mergedChildren : (restaurant.mergedRestaurants || []),
                         };
-                        onSuccess(finalRestaurant as unknown as Restaurant);
+                        onSuccess(finalRestaurant);
                     } else {
                         onSuccess(undefined);
                     }
@@ -849,10 +1020,9 @@ export function AdminRestaurantModal({
 
             resetForm();
             onClose();
-        } catch (error) {
-            console.error("Restaurant submission error:", error);
-            const errorMessage = error instanceof Error ? error.message : "작업에 실패했습니다";
-            toast.error(errorMessage);
+        } catch {
+            console.error("Restaurant submission error:");
+            toast.error("맛집 작업에 실패했습니다");
         } finally {
             setIsSubmitting(false);
         }
@@ -887,7 +1057,7 @@ export function AdminRestaurantModal({
             } | null;
 
             if (!response.ok || !result) {
-                throw new Error(result?.error || "삭제에 실패했습니다");
+                throw new Error("RESTAURANT_DELETE_FAILED");
             }
 
             const auditSuffix = result.audit?.id && result.correlationId
@@ -898,10 +1068,9 @@ export function AdminRestaurantModal({
             setDeleteConfirmation("");
             onSuccess();
             onClose();
-        } catch (error) {
-            console.error("Restaurant deletion error:", error);
-            const errorMessage = error instanceof Error ? error.message : "삭제에 실패했습니다";
-            toast.error(errorMessage);
+        } catch {
+            console.error("Restaurant deletion error:");
+            toast.error("맛집 삭제에 실패했습니다");
         } finally {
             setIsSubmitting(false);
         }

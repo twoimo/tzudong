@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bundleAnalyzer from '@next/bundle-analyzer';
+import { resolveConfiguredSupabaseOrigin } from './lib/profile-avatar-url.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,7 +11,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const isNextBuildCommand = process.argv.some((arg) => arg === 'build');
-const shouldUseStandaloneOutput = process.env.NODE_ENV === 'production' && isNextBuildCommand && process.env.VERCEL !== '1';
+const shouldUseStandaloneOutput = isNextBuildCommand && process.env.VERCEL !== '1';
 
 const securityHeaders = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -18,17 +19,57 @@ const securityHeaders = [
     { key: 'X-Frame-Options', value: 'DENY' },
     { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+    { key: 'Origin-Agent-Cluster', value: '?1' },
+    { key: 'X-DNS-Prefetch-Control', value: 'off' },
+    { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
 ];
 
-const supabaseStorageHostname = (() => {
-    try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        if (!supabaseUrl) return null;
-        return new URL(supabaseUrl).hostname;
-    } catch {
-        return null;
-    }
-})();
+const SUPABASE_STORAGE_IMAGE_BUCKETS = ['profile-avatars', 'review-photos'];
+const SUPABASE_CONFIGURATION_ERROR = 'NEXT_PUBLIC_SUPABASE_URL must be a canonical HTTPS *.supabase.co origin without credentials, an explicit port, path, query, or fragment.';
+
+export function getValidatedSupabaseImageOrigin(value = process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    if (value === undefined) return null;
+
+    const origin = resolveConfiguredSupabaseOrigin(value);
+    if (!origin) throw new Error(SUPABASE_CONFIGURATION_ERROR);
+    return origin;
+}
+
+export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    const supabaseImageOrigin = getValidatedSupabaseImageOrigin(configuredSupabaseUrl);
+    const supabaseStoragePatterns = supabaseImageOrigin
+        ? SUPABASE_STORAGE_IMAGE_BUCKETS.map((bucket) => ({
+            protocol: 'https',
+            hostname: new URL(supabaseImageOrigin).hostname,
+            port: '',
+            pathname: `/storage/v1/object/public/${bucket}/**`,
+        }))
+        : [];
+
+    return [
+        {
+            protocol: 'https',
+            hostname: 'lh3.googleusercontent.com',
+            port: '',
+            pathname: '/a/**',
+        },
+        {
+            protocol: 'https',
+            hostname: 'img.youtube.com',
+            port: '',
+            pathname: '/vi/**',
+        },
+        {
+            protocol: 'https',
+            hostname: 'i.ytimg.com',
+            port: '',
+            pathname: '/vi/**',
+        },
+        ...supabaseStoragePatterns,
+    ];
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -38,38 +79,8 @@ const nextConfig = {
         deviceSizes: [640, 750, 828, 1080, 1200, 1920], // 반응형 이미지 크기
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
         minimumCacheTTL: 2678400, // [PERF] 31일 캐시 (이미지가 자주 변경되지 않음)
-        dangerouslyAllowSVG: true, // SVG 허용
-        // 로컬 개발 환경(WSL/NAT64)에서 Supabase CDN이 private IP로 해석되는 경우가 있어 dev에서만 허용
-        dangerouslyAllowLocalIP: process.env.NODE_ENV !== 'production',
-        contentDispositionType: 'attachment', // SVG 보안
-        contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-        remotePatterns: [
-            {
-                protocol: 'https',
-                hostname: 'maps.googleapis.com',
-            },
-            {
-                protocol: 'https',
-                hostname: 'lh3.googleusercontent.com',
-            },
-            // [OPTIMIZATION] YouTube 썸네일 도메인 - Next/Image 최적화 지원
-            {
-                protocol: 'https',
-                hostname: 'img.youtube.com',
-            },
-            {
-                protocol: 'https',
-                hostname: 'i.ytimg.com',
-            },
-            // [OPTIMIZATION] Supabase 스토리지 도메인 (현재 프로젝트 URL 기준)
-            ...(supabaseStorageHostname ? [
-                {
-                    protocol: 'https',
-                    hostname: supabaseStorageHostname,
-                    pathname: '/storage/v1/object/public/**',
-                },
-            ] : []),
-        ],
+        dangerouslyAllowSVG: false,
+        remotePatterns: buildImageRemotePatterns(),
     },
     env: {
         NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -184,7 +195,6 @@ const nextConfig = {
             'lucide-react',
             'date-fns',
             'recharts',
-            'lodash',
             '@radix-ui/react-accordion',
             '@radix-ui/react-alert-dialog',
             '@radix-ui/react-dialog',
@@ -197,7 +207,6 @@ const nextConfig = {
             'framer-motion',
             'react-hook-form',
             'zod',
-            'sonner',
             'cmdk',
         ],
         staleTimes: {

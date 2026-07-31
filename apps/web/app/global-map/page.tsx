@@ -22,7 +22,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
 import { toast } from "@/lib/no-toast";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -175,6 +175,7 @@ export default function GlobalMapPage() {
                 const restaurant = JSON.parse(storedRestaurant);
                 setSelectedRestaurant(restaurant);
                 setPanelRestaurant(restaurant);
+                setIsPanelOpen(true);
 
                 // 사용 후 스토리지 클리어
                 sessionStorage.removeItem('selectedRestaurant');
@@ -225,7 +226,6 @@ export default function GlobalMapPage() {
                 .returns<Restaurant[]>();
 
             if (error) {
-                console.error('글로벌 맛집 데이터 조회 실패:', error);
                 return [];
             }
             // 병합 로직 적용하여 중복 제거
@@ -293,20 +293,30 @@ export default function GlobalMapPage() {
 
     // ResizeObserver로 패널 너비 추적
     useEffect(() => {
-        if (!detailPanelRef.current) return;
+        const detailPanel = detailPanelRef.current;
+        if (!isPanelOpen || !panelRestaurant || !detailPanel) {
+            setPanelWidth(0);
+            return;
+        }
+
+        const updatePanelWidth = (width: number) => {
+            if (Number.isFinite(width) && width > 0) {
+                setPanelWidth(width);
+            }
+        };
+        updatePanelWidth(detailPanel.getBoundingClientRect().width);
 
         const resizeObserver = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                setPanelWidth(entry.contentRect.width);
+                updatePanelWidth(entry.contentRect.width);
             }
         });
-
-        resizeObserver.observe(detailPanelRef.current);
+        resizeObserver.observe(detailPanel);
 
         return () => {
             resizeObserver.disconnect();
         };
-    }, []);
+    }, [isPanelOpen, panelRestaurant]);
 
     const handleFilterChange = useCallback((newFilters: FilterState) => {
         setFilters(newFilters);
@@ -514,7 +524,7 @@ export default function GlobalMapPage() {
             setIsEditModalOpen(false);
             setRestaurantToEdit(null);
         } catch (error) {
-            console.error('맛집 수정 요청 제출 실패:', error);
+            console.error('맛집 수정 요청 제출 실패:');
             toast.error("맛집 수정 요청 제출에 실패했습니다. 다시 시도해주세요.");
         }
     };
@@ -532,16 +542,14 @@ export default function GlobalMapPage() {
                         }}
                     >
                         <SelectTrigger className="w-full">
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <SelectValue placeholder="국가를 선택하세요" />
-                            </div>
+                            <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <SelectValue>{selectedCountry || "튀르키예"}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {GLOBAL_COUNTRIES.map((country) => {
                                 const count = countryCounts[country] || 0;
                                 return (
-                                    <SelectItem key={country} value={country}>
+                                    <SelectItem key={country} value={country} textValue={country}>
                                         <div className="flex items-center justify-between w-full">
                                             <span className="whitespace-nowrap">{country}</span>
                                             <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
@@ -614,8 +622,19 @@ export default function GlobalMapPage() {
             ) : (
                 // 단일 지도 모드
                 <Suspense fallback={null}>
-                    <PanelGroup direction="horizontal" className="w-full h-full">
-                        <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={100}>
+                    <Group
+                        orientation="horizontal"
+                        className="w-full h-full"
+                        data-global-map-panel-group="true"
+                        data-global-map-observed-detail-width={Math.round(panelWidth)}
+                    >
+                        <Panel
+                            id="map-panel"
+                            defaultSize={panelRestaurant && isPanelOpen ? "75%" : "100%"}
+                            minSize="40%"
+                            maxSize="100%"
+                            data-global-map-panel="map"
+                        >
                             <div className="relative h-full w-full">
                                 <MapView
                                     filters={filters}
@@ -698,14 +717,24 @@ export default function GlobalMapPage() {
 
                         {/* Resize Handle */}
                         {panelRestaurant && isPanelOpen && (
-                            <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                            <Separator
+                                className="w-2 bg-border hover:bg-primary/20 transition-colors relative"
+                                aria-label="글로벌 지도 상세 패널 너비 조절"
+                                data-global-map-resize-handle="true"
+                            >
                                 <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-                            </PanelResizeHandle>
+                            </Separator>
                         )}
 
                         {/* Restaurant Detail Panel */}
                         {panelRestaurant && isPanelOpen && (
-                            <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
+                            <Panel
+                                id="detail-panel"
+                                defaultSize="25%"
+                                minSize="20%"
+                                maxSize="33%"
+                                data-global-map-panel="detail"
+                            >
                                 <div ref={detailPanelRef} className="h-full">
                                     <RestaurantDetailPanel
                                         restaurant={panelRestaurant}
@@ -723,7 +752,7 @@ export default function GlobalMapPage() {
                                 </div>
                             </Panel>
                         )}
-                    </PanelGroup>
+                    </Group>
                 </Suspense>
             )}
 

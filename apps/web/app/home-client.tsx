@@ -30,6 +30,15 @@ import {
   resolveDeviceLocationStateUpdatePlan,
   type DeviceMapLocation,
 } from "@/lib/device-location-map";
+import {
+  acquireDeviceLocationUseAuthorization,
+  createDeviceLocationTrackingLifecycle,
+  DEVICE_LOCATION_NETWORK_SINK,
+  evaluateLocationUse,
+  revokeDeviceLocationUseAuthorization,
+  type DeviceLocationTrackingLifecycle,
+  type DeviceLocationUseAuthorization,
+} from "@/lib/privacy/location-gate";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import {
   buildHomeDetailState,
@@ -126,6 +135,12 @@ const requestDesktopDetailReturnCapture = () => {
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
 const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
+const DEVICE_LOCATION_READINESS_BLOCKED =
+  "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.";
+const DEVICE_LOCATION_DISCLOSURE =
+  "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
+const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
+  "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
@@ -204,6 +219,14 @@ export default function HomeClient() {
   const deviceLocationFocusRequestIdRef = useRef(0);
   const deviceLocationWatchIdRef = useRef<number | null>(null);
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
+  const deviceLocationTrackingLifecycleRef =
+    useRef<DeviceLocationTrackingLifecycle | null>(null);
+  const deviceLocationAuthorizationRef =
+    useRef<DeviceLocationUseAuthorization | null>(null);
+  const deviceLocationMountedRef = useRef(true);
+  const deviceLocationAuthorizationExpiryTimerRef = useRef<
+    ReturnType<typeof globalThis.setTimeout> | null
+  >(null);
   const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
   const openDetailPanelRef = useRef<
     (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => void
@@ -715,6 +738,51 @@ export default function HomeClient() {
       mode: "position" | "heading",
       options: { shouldFocus: boolean },
     ) => {
+      const authorization = deviceLocationAuthorizationRef.current;
+      const memoryUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "memory",
+        authorization,
+      });
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization,
+      });
+
+      if (!memoryUse.allowed || !networkUse.allowed) {
+        const lifecycle = deviceLocationTrackingLifecycleRef.current;
+        deviceLocationTrackingLifecycleRef.current = null;
+        lifecycle?.dispose();
+
+        if (!lifecycle) {
+          const watchId = deviceLocationWatchIdRef.current;
+          deviceLocationWatchIdRef.current = null;
+          if (
+            watchId !== null &&
+            typeof navigator !== "undefined" &&
+            navigator.geolocation
+          ) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          deviceOrientationCleanupRef.current?.();
+          deviceOrientationCleanupRef.current = null;
+        }
+
+        revokeDeviceLocationUseAuthorization(authorization);
+        const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+        if (expiryTimer !== null) {
+          globalThis.clearTimeout(expiryTimer);
+          deviceLocationAuthorizationExpiryTimerRef.current = null;
+        }
+        deviceLocationAuthorizationRef.current = null;
+        setDeviceLocation(null);
+        setIsDeviceHeadingMode(false);
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+        return;
+      }
+
       const nextHeading = resolveGeolocationHeading(position.coords.heading);
       const nextFocusRequestId = options.shouldFocus
         ? deviceLocationFocusRequestIdRef.current + 1
@@ -747,21 +815,54 @@ export default function HomeClient() {
   );
 
   const stopDeviceHeadingWatchers = useCallback(() => {
+    const watchId = deviceLocationWatchIdRef.current;
+    deviceLocationWatchIdRef.current = null;
+
     if (
-      deviceLocationWatchIdRef.current !== null &&
+      watchId !== null &&
       typeof navigator !== "undefined" &&
       navigator.geolocation
     ) {
-      navigator.geolocation.clearWatch(deviceLocationWatchIdRef.current);
-      deviceLocationWatchIdRef.current = null;
+      navigator.geolocation.clearWatch(watchId);
     }
 
     deviceOrientationCleanupRef.current?.();
     deviceOrientationCleanupRef.current = null;
   }, []);
 
+  const stopDeviceLocationTracking = useCallback(() => {
+    const lifecycle = deviceLocationTrackingLifecycleRef.current;
+    deviceLocationTrackingLifecycleRef.current = null;
+
+    if (lifecycle) {
+      lifecycle.dispose();
+      return;
+    }
+
+    stopDeviceHeadingWatchers();
+  }, [stopDeviceHeadingWatchers]);
+  const clearDeviceLocationState = useCallback(() => {
+    const authorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(authorization);
+    deviceLocationAuthorizationRef.current = null;
+    stopDeviceLocationTracking();
+    setDeviceLocation(null);
+    setIsDeviceHeadingMode(false);
+  }, [stopDeviceLocationTracking]);
+  useEffect(() => {
+    if (mapMode === "overseas") {
+      clearDeviceLocationState();
+    }
+  }, [clearDeviceLocationState, mapMode]);
+
   const startDeviceOrientationTracking = useCallback(async () => {
     if (typeof window === "undefined") return false;
+    if (!deviceLocationAuthorizationRef.current) return false;
 
     const OrientationEvent = window.DeviceOrientationEvent as
       | (typeof DeviceOrientationEvent & {
@@ -794,6 +895,17 @@ export default function HomeClient() {
     const handleOrientation = (
       event: DeviceOrientationEvent & { webkitCompassHeading?: number | null },
     ) => {
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization: deviceLocationAuthorizationRef.current,
+      });
+      if (!networkUse.allowed) {
+        clearDeviceLocationState();
+        return;
+      }
+
       const heading = resolveDeviceOrientationHeading(event);
       if (heading === null) return;
 
@@ -825,32 +937,110 @@ export default function HomeClient() {
     };
 
     return true;
-  }, []);
+  }, [clearDeviceLocationState]);
 
   const startDeviceLocationWatch = useCallback(
     (mode: "position" | "heading") => {
+      const authorization = deviceLocationAuthorizationRef.current;
       if (
         typeof navigator === "undefined" ||
         !navigator.geolocation ||
+        !authorization ||
         deviceLocationWatchIdRef.current !== null
       )
         return;
 
-      deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
-        (position) =>
-          applyDevicePosition(position, mode, { shouldFocus: false }),
-        () => {
-          // watchPosition은 보조 갱신용이므로 실패해도 첫 위치 표시를 유지한다.
-        },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      deviceLocationTrackingLifecycleRef.current?.dispose();
+      const lifecycle = createDeviceLocationTrackingLifecycle(
+        stopDeviceHeadingWatchers,
+        authorization,
       );
+      deviceLocationTrackingLifecycleRef.current = lifecycle;
+
+      try {
+        deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
+          (position) =>
+            applyDevicePosition(position, mode, { shouldFocus: false }),
+          () => {
+            lifecycle.dispose();
+            if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+              clearDeviceLocationState();
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+        );
+      } catch {
+        lifecycle.dispose();
+        if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+          clearDeviceLocationState();
+        }
+      }
     },
-    [applyDevicePosition],
+    [applyDevicePosition, clearDeviceLocationState, stopDeviceHeadingWatchers],
   );
 
   const handleDeviceLocationClick = useCallback(async () => {
+    if (isDeviceHeadingMode) {
+      deviceLocationTrackingLifecycleRef.current?.onModeChange(false);
+      clearDeviceLocationState();
+      toast.info("현재 위치와 방향 표시를 껐어요");
+      return;
+    }
+
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (!authorization) {
+      clearDeviceLocationState();
+      toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+      return;
+    }
+
+    if (
+      !deviceLocationMountedRef.current ||
+      (typeof document !== "undefined" &&
+        document.visibilityState === "hidden")
+    ) {
+      revokeDeviceLocationUseAuthorization(authorization);
+      clearDeviceLocationState();
+      return;
+    }
+
+    const previousAuthorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(previousAuthorization);
+    deviceLocationAuthorizationRef.current = authorization;
+    const expiresIn = authorization.expiresAt - authorization.grantedAt;
+    deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
+      if (deviceLocationAuthorizationRef.current === authorization) {
+        clearDeviceLocationState();
+      }
+    }, expiresIn);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      clearDeviceLocationState();
       toast.error(DEVICE_LOCATION_ENABLE_TOAST);
+      return;
+    }
+
+    try {
+      if (
+        typeof window === "undefined" ||
+        !window.confirm(DEVICE_LOCATION_DISCLOSURE)
+      ) {
+        clearDeviceLocationState();
+        toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
+        return;
+      }
+    } catch {
+      clearDeviceLocationState();
+      toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
+      return;
+    }
+
+    if (deviceLocationAuthorizationRef.current !== authorization) {
+      clearDeviceLocationState();
       return;
     }
 
@@ -869,38 +1059,74 @@ export default function HomeClient() {
           });
         },
       );
+      if (
+        !deviceLocationMountedRef.current ||
+        (typeof document !== "undefined" &&
+          document.visibilityState === "hidden")
+      ) {
+        clearDeviceLocationState();
+        return;
+      }
 
       if (nextMode === "heading") {
         setIsDeviceHeadingMode(true);
         await startDeviceOrientationTracking();
+
+        if (
+          !deviceLocationMountedRef.current ||
+          (typeof document !== "undefined" &&
+            document.visibilityState === "hidden")
+        ) {
+          clearDeviceLocationState();
+          return;
+        }
+
         startDeviceLocationWatch("heading");
         toast.success("현재 위치와 방향 표시를 켰어요");
       } else {
-        stopDeviceHeadingWatchers();
+        stopDeviceLocationTracking();
         setIsDeviceHeadingMode(false);
         toast.success("현재 위치를 지도에 표시했어요");
       }
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
     } catch {
+      clearDeviceLocationState();
       toast.error(DEVICE_LOCATION_ENABLE_TOAST);
     } finally {
-      setIsDeviceLocationPending(false);
+      if (deviceLocationMountedRef.current) {
+        setIsDeviceLocationPending(false);
+      }
     }
   }, [
     applyDevicePosition,
+    clearDeviceLocationState,
     deviceLocation,
+    isDeviceHeadingMode,
     startDeviceLocationWatch,
     startDeviceOrientationTracking,
-    stopDeviceHeadingWatchers,
+    stopDeviceLocationTracking,
   ]);
 
-  useEffect(
-    () => () => {
-      stopDeviceHeadingWatchers();
-    },
-    [stopDeviceHeadingWatchers],
-  );
+  useEffect(() => {
+    deviceLocationMountedRef.current = true;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "hidden") return;
+
+      deviceLocationTrackingLifecycleRef.current?.onVisibilityChange(
+        document.visibilityState,
+      );
+      clearDeviceLocationState();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      deviceLocationMountedRef.current = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearDeviceLocationState();
+    };
+  }, [clearDeviceLocationState]);
 
   const shouldRenderSidePanels = Boolean(
     isAnnouncementSheetOpen ||
@@ -982,7 +1208,7 @@ export default function HomeClient() {
         desktopPanelSide={desktopPanelSide}
         isMapFullscreen={isMapFullscreen}
         onMapFullscreenChange={setIsMapFullscreen}
-        deviceLocation={deviceLocation}
+        deviceLocation={mapMode === "domestic" ? deviceLocation : null}
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
         onContextualRestaurantsChange={setContextualRestaurantsPayload}
         onMapInteraction={handleMapInteraction}

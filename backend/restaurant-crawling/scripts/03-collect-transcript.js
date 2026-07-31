@@ -13,33 +13,42 @@
  *   node 03-collect-transcript.js  # 모든 채널
  */
 
-import { exec } from 'child_process';
-import util from 'util';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
-import { config } from 'dotenv';
-import yaml from 'js-yaml';
+import { logSafeError } from '../../utils/privacy-log.mjs';
+import {
+    buildTranscriptYtDlpInvocation,
+    extractTrustedYoutubeVideoId,
+    isTrustedYoutubeVideoId,
+    runTranscriptYtDlp,
+} from './transcript-command.mjs';
+const TRANSCRIPT_YTDLP_TREE_CLEANUP_FAILED = 'TRANSCRIPT_YTDLP_TREE_CLEANUP_FAILED';
 
-const execPromise = util.promisify(exec);
+function isTranscriptYtDlpTreeCleanupFailure(error) {
+    return error?.code === TRANSCRIPT_YTDLP_TREE_CLEANUP_FAILED;
+}
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// .env 로드
-const envPath = path.resolve(__dirname, '../.env');
-if (fs.existsSync(envPath)) {
+async function loadEnvironment() {
+    const envPath = path.resolve(__dirname, '../.env');
+    if (!fs.existsSync(envPath)) return;
+    const { config } = await import('dotenv');
     config({ path: envPath });
 }
 
 // config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
-function loadChannelsConfig() {
+async function loadChannelsConfig() {
     const configName = process.env.CHANNELS_CONFIG || 'channels.yaml';
     const configPath = path.resolve(__dirname, '../../config', configName);
     if (!fs.existsSync(configPath)) {
         throw new Error(`설정 파일 없음: ${configPath}`);
     }
+    const yaml = await import('js-yaml');
     return yaml.load(fs.readFileSync(configPath, 'utf-8'));
 }
 
@@ -72,19 +81,15 @@ function log(level, msg) {
     };
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
+function logFailure(level, reason, error) {
+    log(level, reason);
+    logSafeError(error, line => process.stderr.write(`${reason} ${line}`));
+}
+
 
 // URL에서 video_id 추출
 function extractVideoId(url) {
-    const patterns = [
-        /youtube\.com\/watch\?v=([^&]+)/,
-        /youtu\.be\/([^?]+)/,
-        /youtube\.com\/embed\/([^?]+)/,
-    ];
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    return null;
+    return extractTrustedYoutubeVideoId(url);
 }
 
 // urls.txt에서 video_id 목록 로드
@@ -218,31 +223,42 @@ function parseVtt(content) {
 /**
  * yt-dlp를 사용하여 자막 수집 (1차: 쿠키, 2차: 스텔스 모드)
  */
-async function fetchTranscriptYtDlp(videoId) {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const tempPrefix = path.join(__dirname, `temp_${videoId}`);
-    const cookiesPath = path.resolve(__dirname, '../data/cookies.txt');
-
-    // ============================================================
-    // 1단계: 쿠키 기반 시도 (기존 방식)
-    // ============================================================
-    if (fs.existsSync(cookiesPath)) {
-        const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
-            cookies: cookiesPath,
-            mode: 'cookies'
-        });
-        if (result) return result;
-        log('debug', `    → 쿠키 기반 실패, 스텔스 모드 시도...`);
+async function fetchTranscriptYtDlp(videoId, {
+    runYtDlp = runTranscriptYtDlp,
+    tempRoot = os.tmpdir(),
+    cookiesPath = path.resolve(__dirname, '../data/cookies.txt'),
+} = {}) {
+    if (!isTrustedYoutubeVideoId(videoId)) {
+        throw new Error('TRANSCRIPT_VIDEO_ID_INVALID');
     }
+    const tempDir = fs.mkdtempSync(path.join(tempRoot, 'tzudong-transcript-'));
+    const tempPrefix = path.join(tempDir, `temp_${videoId}`);
+    let preserveTempRoot = false;
 
-    // ============================================================
-    // 2단계: 스텔스 모드 (쿠키/세션 없이, IP 차단 우회 시도)
-    // ============================================================
-    const result = await tryYtDlpWithOptions(videoId, url, tempPrefix, {
-        cookies: null,
-        mode: 'stealth'
-    });
-    return result;
+    try {
+        if (fs.existsSync(cookiesPath)) {
+            const result = await tryYtDlpWithOptions(videoId, tempPrefix, {
+                cookies: cookiesPath,
+                mode: 'cookies'
+            }, runYtDlp);
+            if (result) return result;
+            log('debug', `    → 쿠키 기반 실패, 스텔스 모드 시도...`);
+        }
+
+        return await tryYtDlpWithOptions(videoId, tempPrefix, {
+            cookies: null,
+            mode: 'stealth'
+        }, runYtDlp);
+    } catch (error) {
+        preserveTempRoot = isTranscriptYtDlpTreeCleanupFailure(error);
+        throw error;
+    } finally {
+        if (preserveTempRoot) {
+            log('warning', 'TRANSCRIPT_YTDLP_TREE_CLEANUP_FAILED_TEMP_ROOT_PRESERVED');
+        } else {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    }
 }
 
 /**
@@ -252,66 +268,30 @@ async function fetchTranscriptYtDlp(videoId) {
  * @param {string} tempPrefix - 임시 파일 경로 프리픽스
  * @param {object} options - 옵션 { cookies: string|null, mode: 'cookies'|'stealth' }
  */
-async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
+async function tryYtDlpWithOptions(videoId, tempPrefix, options, runYtDlp = runTranscriptYtDlp) {
     const { cookies, mode } = options;
-
-    // 스텔스 모드에서 사용할 랜덤 User-Agent
-    const STEALTH_USER_AGENTS = [
+    const stealthUserAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
         'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
     ];
-
-    // [수정] Python 모듈 사용 (봇 탐지 우회 - 04-extract-frames-with-heatmap.js 패턴 적용)
-    // 1. Python 모듈 사용 (최신 버전 보장)
-    // 2. Node.js 경로 명시 (n-challenge 해결 필수)
-    // 3. Remote Solver 허용 (최신 yt-dlp 정책 대응)
-    let pythonPath = process.env.PYTHON_CMD || "python";
-    // [보완] 만약 환경변수가 없고 기본 python 명령어가 실패할 경우를 대비한 폴백 로직 등은 생략하거나 추가할 수 있습니다.
-    // 여기서는 환경 변수나 기본 명령어 사용
-
-    const nodePath = process.execPath;
-    const runtimesArg = `--js-runtimes "node:${nodePath}"`;
-
-    let cmdParts = [`"${pythonPath}" -m yt_dlp`];
-
-    // 봇 탐지 우회 옵션 (공통)
-    cmdParts.push(runtimesArg);
-    cmdParts.push('--remote-components ejs:github');
-
-    // 쿠키 모드: 쿠키 파일 사용
-    if (mode === 'cookies' && cookies) {
-        cmdParts.push(`--cookies "${cookies}"`);
-    }
-
-    // 스텔스 모드: 쿠키 없이, 세션 초기화, 랜덤 User-Agent
-    if (mode === 'stealth') {
-        const randomUA = STEALTH_USER_AGENTS[Math.floor(Math.random() * STEALTH_USER_AGENTS.length)];
-        cmdParts.push(
-            '--no-cache-dir',                    // 캐시 사용 안 함
-            `--user-agent "${randomUA}"`,        // 랜덤 User-Agent
-            '--extractor-args "youtube:player_client=web"',  // android 클라이언트 대신 web 사용
-            '--sleep-requests 1',                // 요청 간 1초 대기 (rate limit 방지)
-        );
-    }
-
-    // 공통 옵션: 자동 자막, 한국어, VTT 변환
-    cmdParts.push(
-        '--write-auto-sub',
-        '--write-sub',
-        '--sub-lang ko',
-        '--skip-download',
-        '--convert-subs vtt',
-        `--output "${tempPrefix}"`,
-        `"${url}"`
-    );
-
-    const cmd = cmdParts.join(' ');
+    const invocation = buildTranscriptYtDlpInvocation({
+        videoId,
+        outputPrefix: tempPrefix,
+        cookiesPath: cookies,
+        mode,
+        userAgent: mode === 'stealth'
+            ? stealthUserAgents[Math.floor(Math.random() * stealthUserAgents.length)]
+            : undefined,
+        pythonCommand: process.env.PYTHON_CMD || 'python',
+        nodePath: process.execPath,
+    });
 
     try {
-        await execPromise(cmd);
-
+        await runYtDlp(invocation, {
+            timeoutMs: Number(process.env.TRANSCRIPT_YTDLP_TIMEOUT_MS || 120_000),
+        });
         const dir = path.dirname(tempPrefix);
         const files = fs.readdirSync(dir);
         // temp_{videoId}로 시작하고 .vtt로 끝나는 파일 찾기
@@ -336,10 +316,13 @@ async function tryYtDlpWithOptions(videoId, url, tempPrefix, options) {
             source_mode: mode  // 어떤 모드로 성공했는지 기록
         };
 
-    } catch (e) {
+    } catch (error) {
+        if (isTranscriptYtDlpTreeCleanupFailure(error)) {
+            throw error;
+        }
         // 스텔스 모드에서 실패 시 에러 로그
         if (mode === 'stealth') {
-            log('debug', `    → 스텔스 모드 실패: ${e.message?.slice(0, 100) || 'unknown'}`);
+            logFailure('debug', 'TRANSCRIPT_YTDLP_STEALTH_FAILED', error);
         }
         return null;
     }
@@ -369,7 +352,7 @@ function loadPermanentSkipUrls() {
                 log('warning', `영구 스킵 URL: ${skipUrls.size}개 (retry_num >= 3)`);
             }
         } catch (error) {
-            log('warning', `no_transcript_permanent.json 로드 실패: ${error.message}`);
+            logFailure('warning', 'TRANSCRIPT_PERMANENT_SKIP_LOAD_FAILED', error);
         }
     }
 
@@ -403,7 +386,7 @@ function updateNoTranscriptPermanent(youtubeUrl) {
 
         fs.writeFileSync(NO_TRANSCRIPT_PERMANENT, JSON.stringify(entries, null, 2), 'utf-8');
     } catch (error) {
-        log('warning', `no_transcript 업데이트 실패: ${error.message}`);
+        logFailure('warning', 'TRANSCRIPT_PERMANENT_SKIP_UPDATE_FAILED', error);
     }
 }
 
@@ -541,7 +524,7 @@ async function getTranscriptViaPuppeteer(videoId) {
         }
         return null;
     } catch (error) {
-        log('debug', `Puppeteer 오류: ${error.message}`);
+        logFailure('debug', 'TRANSCRIPT_PUPPETEER_FAILED', error);
         return null;
     }
 }
@@ -751,23 +734,29 @@ async function collectFromTubeTranscript(page, videoId) {
 /**
  * 자막 수집 메인 함수 (yt-dlp -> Puppeteer)
  */
-async function getTranscript(videoId) {
+async function getTranscript(videoId, {
+    fetchYtDlpTranscript = fetchTranscriptYtDlp,
+    getTranscriptFromPuppeteer = getTranscriptViaPuppeteer,
+} = {}) {
     // 1. yt-dlp 시도 (빠름)
     try {
-        const ytResult = await fetchTranscriptYtDlp(videoId);
+        const ytResult = await fetchYtDlpTranscript(videoId);
         if (ytResult) {
             return {
                 source: 'yt-dlp',
                 ...ytResult
             };
         }
-    } catch (e) {
-        log('debug', `yt-dlp 실패: ${e.message}`);
+    } catch (error) {
+        if (isTranscriptYtDlpTreeCleanupFailure(error)) {
+            throw error;
+        }
+        logFailure('debug', 'TRANSCRIPT_YTDLP_FALLBACK_FAILED', error);
     }
 
     // 2. Puppeteer 시도 (느림, 폴백)
     log('info', `    → yt-dlp 실패, Puppeteer 시도...`);
-    const puppeteerResult = await getTranscriptViaPuppeteer(videoId);
+    const puppeteerResult = await getTranscriptFromPuppeteer(videoId);
     if (puppeteerResult) {
         return {
             source: 'puppeteer',
@@ -781,8 +770,13 @@ async function getTranscript(videoId) {
 /**
  * 채널 자막 수집 (recollect_id 기반)
  */
-async function collectChannelTranscripts(channelName, channelConfig) {
-    const dataPath = path.resolve(__dirname, '../../', channelConfig.data_path);
+async function collectChannelTranscripts(channelName, channelConfig, {
+    dataPath = path.resolve(__dirname, '../../', channelConfig.data_path),
+    getTranscriptForVideo = getTranscript,
+    acquireSlot = acquirePuppeteerSlot,
+    releaseSlot = releasePuppeteerSlot,
+    waitForDelay = (duration) => new Promise(resolve => setTimeout(resolve, duration)),
+} = {}) {
     const transcriptDir = path.join(dataPath, 'transcript');
 
     // const channelDataPath = path.join(DATA_DIR, channelName); // ERROR
@@ -862,16 +856,17 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
     for (let i = 0; i < toCollect.length; i++) {
         const { videoId, recollectVars, metaRecollectId } = toCollect[i];
+        let treeCleanupFailure = null;
 
         // Puppeteer 슬롯 확보 (yt-dlp만 쓸 수도 있지만, 폴백 때문에 미리 확보하거나 로직 분리 가능)
         // 하지만 getTranscript 내부에서 폴백 시 Puppeteer를 쓰므로, 여기서 확보하는 것이 안전함.
         // 다만 yt-dlp만 성공할 경우 낭비일 수 있으나, 복잡도 줄이기 위해 유지.
-        await acquirePuppeteerSlot();
+        await acquireSlot();
 
         try {
             log('info', `  [${i + 1}/${toCollect.length}] ${videoId} (${recollectVars.join(', ') || 'new'})`);
 
-            const result = await getTranscript(videoId);
+            const result = await getTranscriptForVideo(videoId);
 
             if (result) {
                 // 결과 저장
@@ -898,22 +893,30 @@ async function collectChannelTranscripts(channelName, channelConfig) {
                 log('debug', `    → 자막 없음 (All failed)`);
             }
         } catch (error) {
-            stats.failed++;
-            log('warning', `    → 실패: ${error.message}`);
+            if (isTranscriptYtDlpTreeCleanupFailure(error)) {
+                treeCleanupFailure = error;
+            } else {
+                stats.failed++;
+                logFailure('warning', 'TRANSCRIPT_COLLECTION_FAILED', error);
+            }
         } finally {
-            releasePuppeteerSlot();
+            releaseSlot();
+        }
+
+        if (treeCleanupFailure) {
+            throw treeCleanupFailure;
         }
 
         // 100개마다 3분 휴식 (rate limit 방지)
         if ((i + 1) % REST_INTERVAL === 0 && i < toCollect.length - 1) {
             log('warning', `${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
-            await new Promise(resolve => setTimeout(resolve, REST_DURATION));
+            await waitForDelay(REST_DURATION);
             log('success', `휴식 끝 - 수집 재개`);
         }
 
         // 영상별 딜레이 (마지막 제외)
         if (i < toCollect.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
+            await waitForDelay(getRandomDelay());
         }
     }
 
@@ -931,6 +934,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
  * 메인 실행
  */
 async function main() {
+    await loadEnvironment();
     const args = process.argv.slice(2);
     let channelFilter = null;
 
@@ -944,7 +948,7 @@ async function main() {
     log('info', '  자막 수집 (recollect_id 기반)');
     log('info', '='.repeat(60));
 
-    const config = loadChannelsConfig();
+    const config = await loadChannelsConfig();
     const channels = config.channels;
     const channelNames = channelFilter ? [channelFilter] : Object.keys(channels);
 
@@ -974,8 +978,11 @@ async function main() {
     log('info', '='.repeat(60));
 }
 
-main().catch(error => {
-    log('error', `치명적 오류: ${error.message}`);
-    console.error(error);
-    process.exit(1);
-});
+export { collectChannelTranscripts, fetchTranscriptYtDlp, getTranscript };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+    main().catch(error => {
+        logFailure('error', 'TRANSCRIPT_COLLECTION_FATAL', error);
+        process.exit(1);
+    });
+}

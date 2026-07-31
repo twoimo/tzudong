@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import unittest
+from contextlib import redirect_stdout
 from copy import deepcopy
 from pathlib import Path
 
@@ -78,6 +80,10 @@ class FakeTableQuery:
             return FakeResponse()
 
         if self.action == "select":
+            if self.parent.select_behaviors:
+                behavior = self.parent.select_behaviors.pop(0)
+                if isinstance(behavior, Exception):
+                    raise behavior
             self.parent.select_calls.append(
                 {
                     "table": self.table_name,
@@ -91,9 +97,17 @@ class FakeTableQuery:
 
 
 class FakeSupabase:
-    def __init__(self, *, upsert_behaviors=None, update_behaviors=None, select_data=None):
+    def __init__(
+        self,
+        *,
+        upsert_behaviors=None,
+        update_behaviors=None,
+        select_behaviors=None,
+        select_data=None,
+    ):
         self.upsert_behaviors = list(upsert_behaviors or [])
         self.update_behaviors = list(update_behaviors or [])
+        self.select_behaviors = list(select_behaviors or [])
         self.select_data = list(select_data or [])
         self.upsert_calls = []
         self.update_calls = []
@@ -101,6 +115,122 @@ class FakeSupabase:
 
     def table(self, table_name: str):
         return FakeTableQuery(self, table_name)
+class StatefulCasTableQuery:
+    def __init__(self, parent, table_name: str):
+        self.parent = parent
+        self.table_name = table_name
+        self.action = None
+        self.columns = None
+        self.in_filter = None
+        self.filters = []
+        self.payload = None
+
+    def select(self, columns):
+        self.action = "select"
+        self.columns = columns
+        return self
+
+    def in_(self, field, values):
+        self.in_filter = (field, list(values))
+        return self
+
+    def eq(self, field, value):
+        self.filters.append(("eq", field, value))
+        return self
+
+    def is_(self, field, value):
+        self.filters.append(("is", field, value))
+        return self
+
+    def update(self, payload):
+        self.action = "update"
+        self.payload = deepcopy(payload)
+        return self
+
+    def insert(self, payload):
+        self.action = "insert"
+        self.payload = deepcopy(payload)
+        return self
+
+    def execute(self):
+        return self.parent.execute(self)
+
+
+class StatefulCasSupabase:
+    def __init__(self, rows, *, before_update=None, insert_behaviors=None, update_behaviors=None):
+        self.rows = deepcopy(rows)
+        self.before_update = before_update
+        self.insert_behaviors = list(insert_behaviors or [])
+        self.update_behaviors = list(update_behaviors or [])
+        self.update_attempts = []
+        self.applied_updates = []
+        self.insert_attempts = []
+
+    def table(self, table_name: str):
+        self.assertEqualTable(table_name)
+        return StatefulCasTableQuery(self, table_name)
+
+    def assertEqualTable(self, table_name: str):
+        if table_name != "restaurants":
+            raise AssertionError(f"unexpected table: {table_name}")
+
+    def filter_matches(self, row, query):
+        if query.in_filter is not None:
+            field, values = query.in_filter
+            if row.get(field) not in values:
+                return False
+
+        for kind, field, expected in query.filters:
+            actual = row.get(field)
+            if kind == "is":
+                if actual is not expected:
+                    return False
+            elif field in supabase_insert.RESTAURANT_CAS_TEXT_ARRAY_FIELDS:
+                if supabase_insert.text_array_filter_value(actual) != expected:
+                    return False
+            elif field in supabase_insert.RESTAURANT_CAS_JSONB_FIELDS:
+                if supabase_insert.json_filter_value(actual) != expected:
+                    return False
+            elif actual != expected:
+                return False
+        return True
+
+    def execute(self, query):
+        if query.action == "select":
+            return FakeResponse([deepcopy(row) for row in self.rows if self.filter_matches(row, query)])
+
+        if query.action == "update":
+            self.update_attempts.append({"payload": deepcopy(query.payload), "filters": list(query.filters)})
+            if self.before_update is not None:
+                before_update = self.before_update
+                self.before_update = None
+                before_update(self.rows[0])
+            if self.update_behaviors:
+                behavior = self.update_behaviors.pop(0)
+                if isinstance(behavior, Exception):
+                    raise behavior
+            affected = [row for row in self.rows if self.filter_matches(row, query)]
+            for row in affected:
+                row.update(deepcopy(query.payload))
+            self.applied_updates.extend(deepcopy(affected))
+            return FakeResponse(deepcopy(affected))
+
+        if query.action == "insert":
+            self.insert_attempts.append(deepcopy(query.payload))
+            if self.insert_behaviors:
+                behavior = self.insert_behaviors.pop(0)
+                if isinstance(behavior, Exception):
+                    raise behavior
+            row = deepcopy(query.payload)
+            if any(existing.get("trace_id") == row.get("trace_id") for existing in self.rows):
+                raise RuntimeError("trace_id conflict")
+            row["id"] = row.get("id") or f"row-{len(self.rows) + 1}"
+            self.rows.append(row)
+            return FakeResponse([deepcopy(row)])
+
+        raise AssertionError(f"unsupported action: {query.action}")
+
+
 
 
 class SupabaseInsertAdminLockTests(unittest.TestCase):
@@ -150,6 +280,36 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         }
         data.update(overrides)
         return data
+    def make_cas_existing(self, **overrides):
+        data = {
+            "id": "row-1",
+            "trace_id": "trace-new",
+            "updated_at": "2025-01-01T00:00:00Z",
+            "created_at": "2024-01-01T00:00:00Z",
+            "review_count": 7,
+            "status": "pending",
+            "approved_name": None,
+            "phone": None,
+            "categories": ["한식"],
+            "tzuyang_review": "기존 검토",
+            "road_address": "서울 기존 도로명",
+            "jibun_address": "서울 기존 지번",
+            "english_address": "Existing English Address",
+            "address_elements": {"roadName": "기존도로"},
+            "lat": 37.11,
+            "lng": 127.11,
+            "geocoding_success": True,
+            "geocoding_false_stage": None,
+            "updated_by_admin_id": None,
+            "is_missing": False,
+            "is_not_selected": False,
+            "evaluation_results": {"score": 10},
+            "youtube_link": "https://youtube.com/watch?v=abc123",
+            "origin_name": "기존 이름",
+        }
+        data.update(overrides)
+        return data
+
 
     def test_build_record_flattens_transform_category_lists(self):
         incoming = self.make_incoming(
@@ -322,7 +482,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual([], upserts)
         self.assertEqual(1, len(rebinds))
-        row_id, payload = rebinds[0]
+        row_id, payload, snapshot = rebinds[0]
         self.assertEqual("row-4", row_id)
         self.assertEqual("trace-new", payload["trace_id"])
         self.assertEqual("새 이름", payload["approved_name"])
@@ -335,6 +495,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         )
         self.assertTrue(payload["evaluation_results"]["category_TF"]["eval_value"])
         self.assertIsNone(payload["evaluation_results"]["category_TF"]["category_revision"])
+        self.assertEqual(reviewed_row, snapshot)
         self.assertEqual(1, stats["trace_rebinds"])
         self.assertEqual(0, stats["ambiguous_rebind_skips"])
 
@@ -367,7 +528,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual([], upserts)
         self.assertEqual(1, len(rebinds))
-        row_id, payload = rebinds[0]
+        row_id, payload, _snapshot = rebinds[0]
         self.assertEqual("row-approved", row_id)
         self.assertEqual("trace-new", payload["trace_id"])
         self.assertEqual("행복한고기집", payload["approved_name"])
@@ -402,7 +563,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual([], upserts)
         self.assertEqual(1, len(rebinds))
-        row_id, payload = rebinds[0]
+        row_id, payload, _snapshot = rebinds[0]
         self.assertEqual("row-short-url", row_id)
         self.assertEqual("trace-new", payload["trace_id"])
         self.assertEqual(1, stats["trace_rebinds"])
@@ -435,7 +596,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual([], upserts)
         self.assertEqual(1, len(rebinds))
-        row_id, payload = rebinds[0]
+        row_id, payload, _snapshot = rebinds[0]
         self.assertEqual("row-failed-actions-key", row_id)
         self.assertEqual("trace-new-failed-actions-key", payload["trace_id"])
         self.assertEqual(1, stats["trace_rebinds"])
@@ -480,6 +641,41 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
             _, lookup_links = call["in"]
             self.assertLessEqual(len(lookup_links), 2)
 
+
+    def test_process_and_upsert_aborts_before_write_when_trace_prerequisite_read_fails(self):
+        supabase = FakeSupabase(select_behaviors=[RuntimeError("private provider detail")])
+        stats = self.make_stats()
+
+        with self.assertRaisesRegex(RuntimeError, "^existing_trace_id_prerequisite_read_failed$"):
+            supabase_insert.process_and_upsert(
+                supabase,
+                [self.make_incoming(trace_id="trace-fail-closed")],
+                False,
+                stats,
+            )
+
+        self.assertEqual([], supabase.upsert_calls)
+        self.assertEqual([], supabase.update_calls)
+
+    def test_process_and_upsert_aborts_before_write_when_review_prerequisite_read_fails(self):
+        supabase = FakeSupabase(
+            select_behaviors=[None, RuntimeError("private provider detail")],
+        )
+        stats = self.make_stats()
+
+        with self.assertRaisesRegex(RuntimeError, "^review_rebind_prerequisite_read_failed$"):
+            supabase_insert.process_and_upsert(
+                supabase,
+                [self.make_incoming(
+                    trace_id="trace-fail-closed",
+                    youtube_link="https://www.youtube.com/watch?v=abc123",
+                )],
+                False,
+                stats,
+            )
+
+        self.assertEqual([], supabase.upsert_calls)
+        self.assertEqual([], supabase.update_calls)
     def test_duplicate_resolved_identity_candidates_skip_without_upsert(self):
         incoming = self.make_incoming(trace_id="trace-new")
         candidate_map = supabase_insert.build_review_rebind_candidate_map([
@@ -560,41 +756,96 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
 
         self.assertEqual("https://www.youtube.com/watch?v=abc123", record["youtube_link"])
 
+    def test_exact_snapshot_compare_and_set_refuses_concurrent_admin_change(self):
+        existing = self.make_cas_existing()
+        incoming = self.make_incoming()
+        stats = self.make_stats()
+
+        def concurrent_admin_change(row):
+            row.update(
+                {
+                    "status": "approved",
+                    "updated_by_admin_id": "admin-7",
+                    "updated_at": "2025-01-03T00:00:00Z",
+                }
+            )
+
+        supabase = StatefulCasSupabase([existing], before_update=concurrent_admin_change)
+        output = io.StringIO()
+        with redirect_stdout(output):
+            with self.assertRaisesRegex(RuntimeError, "^compare_and_set_conflict$"):
+                supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
+
+        self.assertEqual([], supabase.applied_updates)
+        self.assertEqual("기존 이름", supabase.rows[0]["origin_name"])
+        self.assertEqual("approved", supabase.rows[0]["status"])
+        self.assertEqual("admin-7", supabase.rows[0]["updated_by_admin_id"])
+        self.assertEqual("2025-01-03T00:00:00Z", supabase.rows[0]["updated_at"])
+        self.assertEqual(
+            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+            {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
+        )
+        self.assertIn("[ERROR] restaurants compare-and-set conflict; batch aborted.", output.getvalue())
+
+    def test_exact_snapshot_compare_and_set_updates_once_and_reads_back_payload(self):
+        existing = self.make_cas_existing()
+        incoming = self.make_incoming()
+        stats = self.make_stats()
+        supabase = StatefulCasSupabase([existing])
+
+        supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
+
+        self.assertEqual(1, stats["inserted"])
+        self.assertEqual(1, len(supabase.applied_updates))
+        self.assertEqual("새 이름", supabase.rows[0]["origin_name"])
+        self.assertEqual(["분식"], supabase.rows[0]["categories"])
+        self.assertEqual("pending", supabase.rows[0]["status"])
+        self.assertEqual(
+            {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
+            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+        )
+
     def test_execute_upsert_rows_retries_without_optional_google_name_field(self):
         stats = self.make_stats()
         rows = [self.make_incoming(trace_id="trace-new")]
-        supabase = FakeSupabase(
-            upsert_behaviors=[
+        supabase = StatefulCasSupabase(
+            [],
+            insert_behaviors=[
                 Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
-                None,
-            ]
+            ],
         )
 
         supabase_insert.execute_upsert_rows(supabase, rows, False, stats)
 
         self.assertEqual(1, stats["inserted"])
         self.assertEqual(0, stats["errors"])
-        self.assertEqual(2, len(supabase.upsert_calls))
-        self.assertIn("google_name", supabase.upsert_calls[0]["rows"][0])
-        self.assertNotIn("google_name", supabase.upsert_calls[1]["rows"][0])
+        self.assertEqual(2, len(supabase.insert_attempts))
+        self.assertIn("google_name", supabase.insert_attempts[0])
+        self.assertNotIn("google_name", supabase.insert_attempts[1])
+
 
     def test_execute_rebind_updates_retries_without_optional_google_name_field(self):
         stats = self.make_stats()
         payload = self.make_incoming(trace_id="trace-new")
-        supabase = FakeSupabase(
+        existing = self.make_cas_existing(id="row-9", trace_id="trace-old")
+        supabase = StatefulCasSupabase(
+            [existing],
             update_behaviors=[
                 Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
-                None,
-            ]
+            ],
         )
 
-        supabase_insert.execute_rebind_updates(supabase, [("row-9", payload)], False, stats)
+        supabase_insert.execute_rebind_updates(supabase, [("row-9", payload, existing)], False, stats)
 
         self.assertEqual(1, stats["inserted"])
         self.assertEqual(0, stats["errors"])
-        self.assertEqual(2, len(supabase.update_calls))
-        self.assertIn("google_name", supabase.update_calls[0]["payload"])
-        self.assertNotIn("google_name", supabase.update_calls[1]["payload"])
+        self.assertEqual(2, len(supabase.update_attempts))
+        self.assertIn("google_name", supabase.update_attempts[0]["payload"])
+        self.assertNotIn("google_name", supabase.update_attempts[1]["payload"])
+        self.assertEqual(
+            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+            {field for _kind, field, _value in supabase.update_attempts[1]["filters"]},
+        )
 
 
 if __name__ == "__main__":

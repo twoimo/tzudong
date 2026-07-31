@@ -272,8 +272,8 @@ class DataPathManager:
                         stripped = line.strip()
                         if stripped:
                             all_data.add(stripped)
-            except Exception as e:
-                print(f"[WARN] 파일 읽기 실패 ({file_path}): {e}")
+            except Exception:
+                print("[WARN] op=data_file_read_failed")
         
         return all_data
     
@@ -294,8 +294,8 @@ class DataPathManager:
         try:
             with open(latest_path, 'r', encoding='utf-8') as f:
                 return [line.strip() for line in f if line.strip()]
-        except Exception as e:
-            print(f"[WARN] 파일 읽기 실패 ({latest_path}): {e}")
+        except Exception:
+            print("[WARN] op=latest_data_file_read_failed")
             return []
 
 

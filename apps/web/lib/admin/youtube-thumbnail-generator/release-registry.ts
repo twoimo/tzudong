@@ -12,6 +12,7 @@ import {
 } from './release-candidates';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import type { AdminProviderReadiness as ProviderReadiness } from '@/types/admin-system-status';
+import type { Json } from '@/integrations/supabase/types';
 
 export const THUMBNAIL_RELEASE_KEY = 'youtube-thumbnail-generator/current';
 export const THUMBNAIL_RELEASE_STORAGE_BUCKET = 'youtube-thumbnail-releases';
@@ -123,10 +124,10 @@ type ReleaseRow = {
   model: string;
   model_provenance: string;
   score: number | string;
-  issue_tags: unknown;
-  text_layers: unknown;
-  canvas: unknown;
-  source_quality_gate: unknown;
+  issue_tags: Json;
+  text_layers: Json;
+  canvas: Json;
+  source_quality_gate: Json;
   published_at: string;
   updated_at: string;
 };
@@ -177,6 +178,53 @@ export type ThumbnailReleaseRegistryOptions = ThumbnailReleaseOptions & {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+function isJson(value: unknown): value is Json {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJson);
+  return isRecord(value) && Object.values(value).every(isJson);
+}
+
+function isReleaseRow(value: unknown): value is ReleaseRow {
+  if (!isRecord(value)) return false;
+
+  const score = value.score;
+  return typeof value.id === 'string'
+    && typeof value.release_key === 'string'
+    && typeof value.status === 'string'
+    && typeof value.candidate_id === 'string'
+    && typeof value.source_manifest_id === 'string'
+    && typeof value.source_image_id === 'string'
+    && typeof value.storage_bucket === 'string'
+    && typeof value.storage_object_path === 'string'
+    && typeof value.browser_image_path === 'string'
+    && typeof value.sha256 === 'string'
+    && typeof value.width === 'number'
+    && Number.isFinite(value.width)
+    && typeof value.height === 'number'
+    && Number.isFinite(value.height)
+    && typeof value.mime_type === 'string'
+    && typeof value.provider_id === 'string'
+    && typeof value.model === 'string'
+    && typeof value.model_provenance === 'string'
+    && ((typeof score === 'number' && Number.isFinite(score))
+      || (typeof score === 'string' && score.trim().length > 0 && Number.isFinite(Number(score))))
+    && isJson(value.issue_tags)
+    && isJson(value.text_layers)
+    && isJson(value.canvas)
+    && isJson(value.source_quality_gate)
+    && typeof value.published_at === 'string'
+    && typeof value.updated_at === 'string';
+}
+
+function requireJson(value: unknown): Json {
+  if (!isJson(value)) throw new Error('thumbnail_durable_release_invalid_json');
+  return value;
+}
+
+function parseReleaseRow(value: unknown): ReleaseRow | null {
+  return isReleaseRow(value) ? value : null;
 }
 
 function toString(value: unknown, maxLength: number) {
@@ -590,9 +638,14 @@ function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
         .eq('status', 'active')
         .order('published_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle()
+        .overrideTypes<ReleaseRow | null, { merge: false }>();
       if (error) throw error;
-      return data as ReleaseRow | null;
+      if (data === null) return null;
+
+      const row = parseReleaseRow(data);
+      if (!row) throw new Error('thumbnail_durable_release_invalid_row');
+      return row;
     },
     async publishRelease(row: InsertReleaseRow) {
       const { data, error } = await supabase
@@ -607,15 +660,19 @@ function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
           p_browser_image_path: row.browser_image_path,
           p_sha256: row.sha256,
           p_score: row.score,
-          p_issue_tags: row.issue_tags,
-          p_text_layers: row.text_layers,
-          p_canvas: row.canvas,
-          p_source_quality_gate: row.source_quality_gate,
+          p_issue_tags: requireJson(row.issue_tags),
+          p_text_layers: requireJson(row.text_layers),
+          p_canvas: requireJson(row.canvas),
+          p_source_quality_gate: requireJson(row.source_quality_gate),
           p_published_by: row.published_by ?? null,
           p_published_at: row.published_at,
-        });
+        })
+        .overrideTypes<ReleaseRow, { merge: false }>();
       if (error) throw error;
-      return data as ReleaseRow;
+
+      const published = parseReleaseRow(data);
+      if (!published) throw new Error('thumbnail_durable_release_invalid_publish_result');
+      return published;
     },
     async uploadReleaseAsset(bucket: string, objectPath: string, bytes: Buffer) {
       const { error } = await supabase.storage.from(bucket).upload(objectPath, bytes, {

@@ -1,42 +1,111 @@
-/**
- * 단일 리뷰 OCR 직접 처리 API (전처리 포함)
- * 
- * POST /api/admin/ocr-receipts/process
- * - Python 전처리 → Supabase 업로드 → Gemini OCR → DB 저장
- * 
- * Note: Python 및 opencv-python이 서버에 설치되어 있어야 합니다.
- * 서버리스 환경에서는 GitHub Actions 사용을 권장합니다.
- */
-
-import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { spawn } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { fileURLToPath } from 'url';
-import sharp from 'sharp';
+import { NextResponse } from 'next/server';
+
+import {
+    PRIVACY_UNSAFE_VALUE_REASON,
+    PrivacyUnsafeValueError,
+    assertPrivacySafe,
+} from '@/lib/privacy/sanitize';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
-import { getGeminiOcrModels, getGeminiOcrThinkingLevel } from '@/lib/ocr/gemini';
 import {
     GUARDED_MUTATION_CONFIRMATION,
     buildGuardedMutationRequiredResponse,
-    getGuardedMutationErrorName,
     isGuardedMutationConfirmationValid,
     isInlineOcrProcessEnabled,
+    getGuardedMutationErrorName,
 } from '@/lib/admin/guarded-mutation-contract';
+import {
+    AdminReceiptImageSecurityError,
+    canonicalizeReceiptImage,
+    cleanupAdminReceiptTempRun,
+    createAdminReceiptTempRun,
+    createPrivateReceiptTempDirectory,
+    downloadPrivateReceiptObject,
+    getReceiptImageMimeTypeFromSignature,
+    readContainedPrivateReceiptFile,
+    writeExclusivePrivateReceiptFile,
+} from '@/lib/ocr/admin-receipt-image-security';
+import { callGeminiReceiptOcr } from '@/lib/ocr/gemini';
+import type { ReceiptOcrData } from '@/lib/ocr/types';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
 
-// 환경 변수
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+const MAX_REQUEST_BYTES = 4 * 1024;
+const MAX_PREPROCESS_RESULT_BYTES = 16 * 1024;
+const PREPROCESS_DEADLINE_MS = 30_000;
+const MAX_RECEIPT_TEXT_LENGTH = 120;
+const MAX_RECEIPT_ITEMS = 30;
+const MAX_RECEIPT_AMOUNT = 10_000_000;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+const PHONE_LIKE_PATTERN = /(?:\+?82[-.\s]?)?0?1[0-9][-.\s]?\d{3,4}[-.\s]?\d{4}|0[2-6][-.\s]?\d{3,4}[-.\s]?\d{4}/;
+const RECEIPT_SCHEMA_VERSION = 'receipt_summary_v1';
+const SAFE_OCR_FAILURE_CODES = new Set([
+    'not_receipt',
+    'unreadable',
+    'low_quality',
+    'low_confidence',
+    'ocr_failed',
+]);
+const OCR_ERROR_MESSAGES = {
+    INVALID_REQUEST: 'OCR 요청 정보를 확인할 수 없습니다.',
+    OCR_PROCESSING_FAILED: 'OCR 처리에 실패했습니다.',
+    OCR_PROVIDER_UNAVAILABLE: 'OCR 제공자를 사용할 수 없습니다.',
+    OCR_READBACK_FAILED: 'OCR 처리 결과를 확인하지 못했습니다.',
+    PRIVACY_UNSAFE_VALUE: '민감정보가 포함된 OCR 결과는 저장할 수 없습니다.',
+    RECEIPT_NOT_FOUND: '영수증 사진이 없는 리뷰입니다.',
+    REVIEW_NOT_FOUND: '리뷰를 찾을 수 없습니다.',
+} as const;
+
+type OcrErrorCode = keyof typeof OCR_ERROR_MESSAGES;
+type InlineOcrProcessBody = {
+    reviewId: string;
+    guardedMutationConfirmation: string;
+};
+type ReceiptItem = {
+    name: string;
+    price: number | null;
+};
+type ReceiptPersistenceData = {
+    schema_version: typeof RECEIPT_SCHEMA_VERSION;
+    status: 'processed';
+    store_name?: string;
+    date?: string;
+    time?: string;
+    total_amount?: number;
+    category?: string;
+    items?: ReceiptItem[];
+    item_count: number;
+    confidence?: number;
+    duplicate_of?: string;
+};
+type ReceiptFailureData = {
+    schema_version: typeof RECEIPT_SCHEMA_VERSION;
+    status: 'failed';
+    failure_code: string;
+};
+type OcrReviewUpdate = {
+    receipt_hash: string | null;
+    receipt_data: ReceiptPersistenceData | ReceiptFailureData;
+    is_duplicate: boolean;
+    ocr_processed_at: string;
+};
+
+class OcrPersistenceError extends Error {}
+class OcrUnsafeReceiptValueError extends Error {}
 
 const routeDirname = path.dirname(fileURLToPath(import.meta.url));
 const preprocessScriptPath = path.resolve(
     /* turbopackIgnore: true */ routeDirname,
-    '../../../../../../../backend/geminiCLI-ocr-receipts/preprocess_receipt.py'
+    '../../../../../../../backend/geminiCLI-ocr-receipts/preprocess_receipt.py',
 );
 
 const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
@@ -44,203 +113,64 @@ const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가
 ## 핵심 지침
 
 ### 1. 가게명 추출 (가장 중요!)
-- **배달앱(쿠팡이츠, 배달의민족, 요기요 등) 영수증**:
-  - 가게명은 앱 로고 바로 아래가 아닌, "주문매장:", "가맹점:", "상호:" 필드에서 확인하세요.
-  - 상단에 보이는 이상한 문자열(예: OUVPZE, XKPQE 등)은 OCR 오류일 가능성이 높습니다.
-  - 하단의 "주문매장: 스시로이" 같은 명확한 텍스트를 우선 참조하세요.
-- **일반 영수증**: 상단 로고/상호명 영역에서 추출
-- **알 수 없는 문자열이 가게명으로 보이면**: 영수증 전체를 다시 살펴보고 "주문매장", "상호", "가맹점" 필드를 찾으세요.
+- 배달앱(쿠팡이츠, 배달의민족, 요기요 등) 영수증은 "주문매장", "가맹점", "상호" 필드를 우선 참조하세요.
+- 일반 영수증은 상단 로고/상호명 영역에서 추출하세요.
 
-### 2. 한글 음식명 정확 인식 (필수!)
-- 흐릿하거나 작은 글씨도 문맥상 추론하세요.
-- 자주 등장하는 메뉴 예시:
-  - 우동 (절대 "무동"이 아님), 라멘, 소바
-  - 육회, 육회초밥, 육사시미
-  - 초밥, 스시, 사시미, 롤
-  - 불초밥, 소고기불초밥, 연어초밥
-  - 콜라, 사이다, 음료, 맥주
-  - 우동/소바 세트, 덮밥, 카레
-- "ㅜ"와 "ㅁ"을 혼동하지 마세요: "우동"이 "무동"으로 보여도 "우동"입니다.
+### 2. 메뉴 항목 완전 추출
+- 모든 주문 항목을 items 배열에 이름과 가격으로 포함하세요.
+- 옵션, 변경사항, 이벤트와 0원 서비스 항목도 포함하세요.
 
-### 3. 메뉴 항목 완전 추출 (하나도 빠뜨리지 말 것!)
-- 모든 주문 항목을 items 배열에 포함
-- **각 항목은 이름과 가격을 함께 추출**: { "name": "메뉴명", "price": 가격 }
-- 옵션/변경사항도 포함: "육회초밥 소고기불초밥으로 변경"
-- 이벤트/서비스 항목도 포함: "리뷰이벤트 참여", "서비스 음료"
-- 0원이어도 기록: { "name": "콜라", "price": 0 }
-- 수량이 있으면 이름에 포함: "우동 x2" 또는 "우동(2)"
-- 가격을 읽을 수 없으면 price를 null로 설정
+### 3. 금액 및 시간 추출
+- 총결제금액, 합계, 결제금액 필드를 우선 참조하세요.
+- date는 YYYY-MM-DD, time은 HH:MM 형식으로 반환하세요.
 
-### 4. 금액 추출
-- "총결제금액", "합계", "결제금액" 필드 우선
-- 쉼표 제거하여 숫자만: "27,500원" → 27500
-
-### 5. 날짜/시간 추출
-- "거래일시", "주문일시" 필드에서 추출
-- 형식: date="YYYY-MM-DD", time="HH:MM"
-
-### 6. 저품질/멀리 찍힌 이미지 처리
-- 글씨가 작거나 흐려도 최대한 추론하세요.
-- 확신이 낮으면 confidence를 낮게 설정하되, 가능한 모든 정보를 추출하세요.
-- 완전히 읽을 수 없는 경우에만 error를 반환하세요.
-
-## 응답 형식 (JSON만 반환, 추가 텍스트 금지)
-
-성공 시:
-{
-  "store_name": "가게명 (무의미한 문자열 금지)",
-  "date": "YYYY-MM-DD",
-  "time": "HH:MM",
-  "total_amount": 금액(숫자만),
-  "items": [
-    { "name": "메뉴명1", "price": 15000 },
-    { "name": "메뉴명2 (옵션)", "price": 8000 },
-    { "name": "서비스 음료", "price": 0 }
-  ],
-  "confidence": 0.0~1.0
-}
-
-실패 시:
-{
-  "error": "not_receipt / unreadable / low_quality",
-  "confidence": 0.0
-}`;
+## 응답 형식 (JSON만 반환)
+성공 시: { "store_name": "가게명", "date": "YYYY-MM-DD", "time": "HH:MM", "total_amount": 0, "items": [{ "name": "메뉴명", "price": 0 }], "confidence": 0.0 }
+실패 시: { "error": "not_receipt / unreadable / low_quality", "confidence": 0.0 }`;
 
 function getSupabaseAdmin() {
     return createSupabaseServiceRoleClient();
 }
 
-/**
- * Python 전처리 스크립트 실행
- */
-function runPythonPreprocess(inputPath: string, outputDir: string): Promise<Record<string, string>> {
-    return new Promise((resolve, reject) => {
-        const python = process.platform === 'win32' ? 'python' : 'python3';
-
-        const proc = spawn(python, [/* turbopackIgnore: true */ preprocessScriptPath, inputPath, outputDir]);
-        let stdout = '';
-
-        proc.stdout.on('data', (data) => {
-            stdout += data.toString();
-        });
-
-        proc.stderr.on('data', () => {
-            // Drain stderr so the child process cannot block, but do not store or
-            // log raw OCR/preprocess output that may include user-provided image text.
-        });
-
-        proc.on('close', (code) => {
-            if (code !== 0) {
-                reject(new Error(`Python 스크립트 실패 (code ${code})`));
-                return;
-            }
-            try {
-                const result = JSON.parse(stdout.trim());
-                resolve(result);
-            } catch {
-                reject(new Error('Python 출력 파싱 실패'));
-            }
-        });
-    });
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
-/**
- * 로컬 파일을 Supabase Storage에 업로드
- */
-async function uploadToStorage(localPath: string, storagePath: string): Promise<string | null> {
-    if (!localPath || !fs.existsSync(/* turbopackIgnore: true */ localPath)) {
-        return null;
-    }
-
-    const supabase = getSupabaseAdmin();
-    const fileBuffer = fs.readFileSync(/* turbopackIgnore: true */ localPath);
-    const { error } = await supabase.storage
-        .from('review-photos')
-        .upload(storagePath, fileBuffer, {
-            contentType: 'image/jpeg',
-            upsert: true,
-        });
-
-    if (error) {
-        console.error('[admin/ocr-receipts/process] storage upload failed', {
-            domain: 'ocr_receipt',
-            action: 'inline_process',
-            step: 'storage-upload',
-            bucket: 'review-photos',
-            errorName: getGuardedMutationErrorName(error),
-        });
-        return null;
-    }
-
-    const { data: urlData } = supabase.storage
-        .from('review-photos')
-        .getPublicUrl(storagePath);
-
-    return urlData?.publicUrl || null;
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+    const response = NextResponse.json(body, init);
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
 }
 
-/**
- * 영수증 해시 생성
- */
-function generateReceiptHash(data: { store_name?: string; date?: string; time?: string; total_amount?: number }): string {
-    const hashInput = `${data.store_name}|${data.date}|${data.time}|${data.total_amount}`;
-    return crypto.createHash('sha256').update(hashInput).digest('hex');
-}
-
-/**
- * OCR 응답 파싱
- */
-function parseOCRResponse(responseText: string): Record<string, unknown> {
-    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
-        || responseText.match(/\{[\s\S]*\}/);
-
-    if (!jsonMatch) {
-        return { error: 'parse_failed', confidence: 0 };
-    }
-
-    try {
-        const jsonStr = jsonMatch[1] || jsonMatch[0];
-        return JSON.parse(jsonStr);
-    } catch {
-        return { error: 'json_parse_error', confidence: 0 };
-    }
-}
-
-/**
- * 임시 디렉토리 정리
- */
-function cleanupTempDir(dirPath: string) {
-    try {
-        if (fs.existsSync(/* turbopackIgnore: true */ dirPath)) {
-            fs.rmSync(/* turbopackIgnore: true */ dirPath, { recursive: true, force: true });
-        }
-    } catch (e) {
-        console.error('[admin/ocr-receipts/process] temp cleanup failed', {
-            domain: 'ocr_receipt',
-            action: 'inline_process',
-            step: 'temp-cleanup',
-            errorName: getGuardedMutationErrorName(e),
-        });
-    }
-}
-
-type InlineOcrProcessBody = {
-    reviewId?: unknown;
-    guardedMutationConfirmation?: unknown;
-};
-
-function hasGuardedMutationConfirmation(
-    request: Request,
-    body: InlineOcrProcessBody,
-): boolean {
-    return (
-        isGuardedMutationConfirmationValid(
-            typeof body.guardedMutationConfirmation === 'string'
-                ? body.guardedMutationConfirmation
-                : undefined,
-        ) ||
-        isGuardedMutationConfirmationValid(request.headers.get('x-admin-guarded-mutation-confirmation'))
+function errorResponse(code: OcrErrorCode, status: number) {
+    return noStoreJson(
+        { code, error: OCR_ERROR_MESSAGES[code] },
+        { status },
     );
+}
+
+function parseInlineOcrProcessBody(value: unknown): InlineOcrProcessBody | null {
+    if (!isRecord(value)) return null;
+
+    const keys = Object.keys(value);
+    if (
+        keys.length !== 2
+        || keys.some((key) => key !== 'reviewId' && key !== 'guardedMutationConfirmation')
+        || typeof value.reviewId !== 'string'
+        || typeof value.guardedMutationConfirmation !== 'string'
+    ) {
+        return null;
+    }
+
+    return {
+        reviewId: value.reviewId.trim(),
+        guardedMutationConfirmation: value.guardedMutationConfirmation,
+    };
+}
+
+
+function hasGuardedMutationConfirmation(body: InlineOcrProcessBody): boolean {
+    return isGuardedMutationConfirmationValid(body.guardedMutationConfirmation);
 }
 
 function buildInlineOcrGuardedMutation(
@@ -260,307 +190,586 @@ function buildInlineOcrGuardedMutation(
 }
 
 function getSafeOcrFailureCode(value: unknown): string {
-    if (typeof value !== 'string') return 'low_confidence';
-    const trimmed = value.trim();
-    if (!/^[a-z0-9_-]{1,64}$/i.test(trimmed)) return 'ocr_failed';
-    return trimmed;
+    return typeof value === 'string' && SAFE_OCR_FAILURE_CODES.has(value)
+        ? value
+        : 'ocr_failed';
+}
+
+function normalizeReceiptText(value: unknown, maxLength = MAX_RECEIPT_TEXT_LENGTH): string | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'string') throw new OcrUnsafeReceiptValueError();
+
+    const normalized = value
+        .replace(/[\u0000-\u001F\u007F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!normalized || normalized.length > maxLength || PHONE_LIKE_PATTERN.test(normalized)) {
+        throw new OcrUnsafeReceiptValueError();
+    }
+    return normalized;
+}
+
+function normalizeReceiptAmount(value: unknown): number | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > MAX_RECEIPT_AMOUNT) {
+        throw new OcrUnsafeReceiptValueError();
+    }
+    return value;
+}
+
+function normalizeReceiptItems(value: unknown): ReceiptItem[] | undefined {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value) || value.length > MAX_RECEIPT_ITEMS) {
+        throw new OcrUnsafeReceiptValueError();
+    }
+
+    return value.map((item) => {
+        if (!isRecord(item)) throw new OcrUnsafeReceiptValueError();
+        const name = normalizeReceiptText(item.name);
+        const price = item.price === null ? null : normalizeReceiptAmount(item.price);
+        if (!name || price === undefined) {
+            throw new OcrUnsafeReceiptValueError();
+        }
+        return { name, price };
+    });
+}
+
+function normalizeReceiptConfidence(value: unknown): number | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+        throw new OcrUnsafeReceiptValueError();
+    }
+    return Math.round(value * 100) / 100;
+}
+
+function buildReceiptPersistenceData(ocrData: ReceiptOcrData): ReceiptPersistenceData {
+    const storeName = normalizeReceiptText(ocrData.store_name);
+    const date = normalizeReceiptText(ocrData.date, 10);
+    const time = normalizeReceiptText(ocrData.time, 5);
+    const totalAmount = normalizeReceiptAmount(ocrData.total_amount);
+    const category = normalizeReceiptText(ocrData.category, 32);
+    const items = normalizeReceiptItems(ocrData.items);
+    const confidence = normalizeReceiptConfidence(ocrData.confidence);
+
+    if ((date && !DATE_PATTERN.test(date)) || (time && !TIME_PATTERN.test(time))) {
+        throw new OcrUnsafeReceiptValueError();
+    }
+
+    const receiptData: ReceiptPersistenceData = {
+        schema_version: RECEIPT_SCHEMA_VERSION,
+        status: 'processed',
+        item_count: items?.length ?? 0,
+    };
+    if (storeName) receiptData.store_name = storeName;
+    if (date) receiptData.date = date;
+    if (time) receiptData.time = time;
+    if (totalAmount !== undefined) receiptData.total_amount = totalAmount;
+    if (category) receiptData.category = category;
+    if (items?.length) receiptData.items = items;
+    if (confidence !== undefined) receiptData.confidence = confidence;
+
+    assertPrivacySafe(receiptData);
+    return receiptData;
+}
+
+function buildReceiptFailureData(errorCode: string): ReceiptFailureData {
+    const receiptData: ReceiptFailureData = {
+        schema_version: RECEIPT_SCHEMA_VERSION,
+        status: 'failed',
+        failure_code: errorCode,
+    };
+    assertPrivacySafe(receiptData);
+    return receiptData;
+}
+
+function assertOcrInputSafe(ocrData: ReceiptOcrData): void {
+    assertPrivacySafe({
+        store_name: ocrData.store_name,
+        date: ocrData.date,
+        time: ocrData.time,
+        total_amount: ocrData.total_amount,
+        category: ocrData.category,
+        review_draft: ocrData.review_draft,
+        items: ocrData.items,
+        confidence: ocrData.confidence,
+    });
+}
+
+function generateReceiptHash(data: ReceiptPersistenceData): string {
+    const hashInput = `${data.store_name}|${data.date}|${data.time}|${data.total_amount}`;
+    return crypto.createHash('sha256').update(hashInput).digest('hex');
+}
+
+function hasExpectedReceiptData(
+    value: unknown,
+    expected: ReceiptPersistenceData | ReceiptFailureData,
+): boolean {
+    if (!isRecord(value)) return false;
+    assertPrivacySafe(value);
+
+    const expectedEntries = Object.entries(expected);
+    const actualKeys = Object.keys(value);
+    return actualKeys.length === expectedEntries.length
+        && expectedEntries.every(
+            ([key, expectedValue]) => Object.prototype.hasOwnProperty.call(value, key)
+                && JSON.stringify(value[key]) === JSON.stringify(expectedValue),
+        );
+}
+
+function hasExpectedReviewReadback(
+    value: unknown,
+    reviewId: string,
+    expected: OcrReviewUpdate,
+): boolean {
+    return isRecord(value)
+        && value.id === reviewId
+        && value.receipt_hash === expected.receipt_hash
+        && value.is_duplicate === expected.is_duplicate
+        && typeof value.ocr_processed_at === 'string'
+        && Date.parse(value.ocr_processed_at) === Date.parse(expected.ocr_processed_at)
+        && hasExpectedReceiptData(value.receipt_data, expected.receipt_data);
+}
+
+async function persistOcrResult(
+    supabase: ReturnType<typeof getSupabaseAdmin>,
+    reviewId: string,
+    update: OcrReviewUpdate,
+): Promise<void> {
+    assertPrivacySafe(update);
+
+    const { data: readback, error } = await supabase
+        .from('reviews')
+        .update(update)
+        .eq('id', reviewId)
+        .select('id, receipt_hash, receipt_data, is_duplicate, ocr_processed_at')
+        .maybeSingle();
+
+    if (error || !hasExpectedReviewReadback(readback, reviewId, update)) {
+        throw new OcrPersistenceError();
+    }
+}
+
+type PreprocessResult = {
+    warped?: string;
+};
+
+function runPythonPreprocess(inputPath: string, outputDir: string): Promise<PreprocessResult> {
+    return new Promise((resolve, reject) => {
+        const python = process.platform === 'win32' ? 'python' : 'python3';
+        const proc = spawn(python, [/* turbopackIgnore: true */ preprocessScriptPath, inputPath, outputDir]);
+        const stdoutChunks: Buffer[] = [];
+        let stdoutBytes = 0;
+        let settled = false;
+
+        const fail = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            reject(new OcrPersistenceError());
+        };
+        const succeed = (result: PreprocessResult) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeout);
+            resolve(result);
+        };
+        const timeout = setTimeout(() => {
+            try {
+                proc.kill();
+            } catch {
+                // The fixed preprocessing deadline has already failed closed.
+            }
+            fail();
+        }, PREPROCESS_DEADLINE_MS);
+
+        proc.stdout.on('data', (chunk: Buffer) => {
+            if (settled) return;
+            const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+            stdoutBytes += bytes.byteLength;
+            if (stdoutBytes > MAX_PREPROCESS_RESULT_BYTES) {
+                try {
+                    proc.kill();
+                } catch {
+                    // The bounded stdout rejection is already final.
+                }
+                fail();
+                return;
+            }
+            stdoutChunks.push(bytes);
+        });
+        proc.stderr.on('data', () => {
+            // Drain stderr without retaining potentially sensitive receipt text.
+        });
+        proc.on('error', fail);
+        proc.on('close', (code) => {
+            if (settled) return;
+            if (code !== 0) {
+                fail();
+                return;
+            }
+            try {
+                const result = JSON.parse(Buffer.concat(stdoutChunks, stdoutBytes).toString('utf8').trim()) as unknown;
+                if (!isRecord(result) || Object.keys(result).some((key) => key !== 'warped')) {
+                    fail();
+                    return;
+                }
+                if (result.warped === undefined) {
+                    succeed({});
+                    return;
+                }
+                if (
+                    typeof result.warped !== 'string'
+                    || result.warped.length === 0
+                    || result.warped.length > 1_024
+                ) {
+                    fail();
+                    return;
+                }
+                succeed({ warped: result.warped });
+            } catch {
+                fail();
+            }
+        });
+    });
+}
+
+function assertSafeReceiptObjectPath(value: unknown): asserts value is string {
+    if (
+        typeof value !== 'string'
+        || value.length === 0
+        || value.length > 1_024
+        || value.startsWith('/')
+        || value.includes('\\')
+        || value.includes('\u0000')
+        || value.split('/').some((segment) => !segment || segment === '.' || segment === '..')
+    ) {
+        throw new OcrPersistenceError();
+    }
+}
+
+function buildReplacementReceiptObjectPath(oldObjectPath: string): string {
+    const separatorIndex = oldObjectPath.lastIndexOf('/');
+    const directory = separatorIndex === -1 ? '' : oldObjectPath.slice(0, separatorIndex);
+    const newObjectPath = `${directory ? `${directory}/` : ''}ocr-${crypto.randomUUID()}.jpg`;
+    assertSafeReceiptObjectPath(newObjectPath);
+    return newObjectPath;
+}
+
+function hasExpectedReplacementReadback(
+    value: unknown,
+    reviewId: string,
+    expectedObjectPath: string,
+): boolean {
+    return isRecord(value)
+        && value.id === reviewId
+        && value.verification_photo === expectedObjectPath;
+}
+
+async function removeReplacementObject(
+    supabase: ReturnType<typeof getSupabaseAdmin>,
+    objectPath: string,
+): Promise<boolean> {
+    try {
+        const { error } = await supabase.storage.from('review-photos').remove([objectPath]);
+        return !error;
+    } catch {
+        return false;
+    }
+}
+
+async function replaceReceiptWithCompressedObject(
+    supabase: ReturnType<typeof getSupabaseAdmin>,
+    reviewId: string,
+    oldObjectPath: string,
+    canonicalImage: Buffer,
+): Promise<string> {
+    const newObjectPath = buildReplacementReceiptObjectPath(oldObjectPath);
+    const storage = supabase.storage.from('review-photos');
+    let databaseUpdated = false;
+    let replacementRemoved = false;
+    let replacementStateIndeterminate = false;
+
+    try {
+        const { data: uploadData, error: uploadError } = await storage.upload(newObjectPath, canonicalImage, {
+            cacheControl: '3600',
+            contentType: 'image/jpeg',
+            upsert: false,
+        });
+        if (uploadError || uploadData?.path !== newObjectPath) throw new OcrPersistenceError();
+
+        const uploadedImage = await downloadPrivateReceiptObject(() => storage.download(newObjectPath));
+        if (
+            uploadedImage.mimeType !== 'image/jpeg'
+            || uploadedImage.bytes.byteLength !== canonicalImage.byteLength
+            || !uploadedImage.bytes.equals(canonicalImage)
+        ) {
+            throw new OcrPersistenceError();
+        }
+
+        const { data: updateReadback, error: updateError } = await supabase
+            .from('reviews')
+            .update({ verification_photo: newObjectPath })
+            .eq('id', reviewId)
+            .eq('verification_photo', oldObjectPath)
+            .select('id, verification_photo')
+            .maybeSingle();
+
+        if (updateError || !hasExpectedReplacementReadback(updateReadback, reviewId, newObjectPath)) {
+            const { data: currentReadback, error: currentReadbackError } = await supabase
+                .from('reviews')
+                .select('id, verification_photo')
+                .eq('id', reviewId)
+                .maybeSingle();
+
+            if (!currentReadbackError && hasExpectedReplacementReadback(currentReadback, reviewId, newObjectPath)) {
+                databaseUpdated = true;
+            } else if (
+                !currentReadbackError
+                && hasExpectedReplacementReadback(currentReadback, reviewId, oldObjectPath)
+            ) {
+                if (!(await removeReplacementObject(supabase, newObjectPath))) {
+                    throw new OcrPersistenceError();
+                }
+                replacementRemoved = true;
+            } else {
+                replacementStateIndeterminate = true;
+            }
+            throw new OcrPersistenceError();
+        }
+
+        databaseUpdated = true;
+        const { error: removeOldObjectError } = await storage.remove([oldObjectPath]);
+        if (removeOldObjectError) throw new OcrPersistenceError();
+        return newObjectPath;
+    } catch {
+        if (
+            !databaseUpdated
+            && !replacementRemoved
+            && !replacementStateIndeterminate
+            && !(await removeReplacementObject(supabase, newObjectPath))
+        ) {
+            throw new OcrPersistenceError();
+        }
+        throw new OcrPersistenceError();
+    }
 }
 
 export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
+    if (!isTrustedSameOriginMutation(request)) {
+        return noStoreJson(
+            { code: 'INVALID_REQUEST', error: OCR_ERROR_MESSAGES.INVALID_REQUEST },
+            { status: 403 },
+        );
+    }
+
     if (!isInlineOcrProcessEnabled()) {
-        return NextResponse.json(
+        return noStoreJson(
             buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process'),
-            { status: 403 }
+            { status: 403 },
         );
     }
 
-    const body = await request.json().catch(() => null) as InlineOcrProcessBody | null;
+    const parsedBody = await readBoundedJsonRequest(request, MAX_REQUEST_BYTES);
+    if (!parsedBody.ok) {
+        return errorResponse(
+            'INVALID_REQUEST',
+            parsedBody.code === 'BODY_TOO_LARGE' ? 413 : 400,
+        );
+    }
+
+    const body = parseInlineOcrProcessBody(parsedBody.value);
+    if (!body || !UUID_PATTERN.test(body.reviewId)) {
+        return errorResponse('INVALID_REQUEST', 400);
+    }
+
+    if (!hasGuardedMutationConfirmation(body)) {
+        return noStoreJson(
+            buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process'),
+            { status: 400 },
+        );
+    }
+
     const correlationId = `ocr-inline-${crypto.randomUUID()}`;
-
-    if (!hasGuardedMutationConfirmation(request, body ?? {})) {
-        return NextResponse.json(
-            buildGuardedMutationRequiredResponse('ocr_receipt', 'inline_process'),
-            { status: 400 }
-        );
-    }
-
-    const reviewId = typeof body?.reviewId === 'string' ? body.reviewId.trim() : '';
-    if (!reviewId) {
-        return NextResponse.json(
-            { error: '리뷰 ID가 필요합니다.' },
-            { status: 400 }
-        );
-    }
 
     if (!GEMINI_API_KEY?.trim()) {
         return NextResponse.json(
             {
-                error: 'OCR provider is not configured.',
+                code: 'OCR_PROVIDER_UNAVAILABLE',
+                error: OCR_ERROR_MESSAGES.OCR_PROVIDER_UNAVAILABLE,
                 guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
-                    reviewId,
-                    providerConfigured: false,
+                    reviewId: body.reviewId,
                     applied: false,
+                    providerConfigured: false,
                 }),
             },
-            { status: 503 }
+            { status: 503, headers: { 'Cache-Control': 'no-store' } },
         );
     }
 
-    const tempDir = path.join(os.tmpdir(), `ocr-${Date.now()}`);
     const supabase = getSupabaseAdmin();
+    let tempRun: ReturnType<typeof createAdminReceiptTempRun> | null = null;
 
     try {
-        // 1. 리뷰 조회
         const { data: review, error: fetchError } = await supabase
             .from('reviews')
             .select('id, verification_photo')
-            .eq('id', reviewId)
+            .eq('id', body.reviewId)
             .single();
 
-        if (fetchError || !review) {
-            return NextResponse.json(
-                { error: '리뷰를 찾을 수 없습니다.' },
-                { status: 404 }
+        if (fetchError || !review) return errorResponse('REVIEW_NOT_FOUND', 404);
+        if (!review.verification_photo) return errorResponse('RECEIPT_NOT_FOUND', 400);
+        assertSafeReceiptObjectPath(review.verification_photo);
+
+        const storage = supabase.storage.from('review-photos');
+        const downloadedImage = await downloadPrivateReceiptObject(
+            () => storage.download(review.verification_photo),
+        );
+        const canonicalStorageImage = await canonicalizeReceiptImage(
+            downloadedImage.bytes,
+            downloadedImage.mimeType,
+        );
+        if (canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength) {
+            await replaceReceiptWithCompressedObject(
+                supabase,
+                body.reviewId,
+                review.verification_photo,
+                canonicalStorageImage.bytes,
             );
         }
 
-        if (!review.verification_photo) {
-            return NextResponse.json(
-                { error: '영수증 사진이 없는 리뷰입니다.' },
-                { status: 400 }
-            );
-        }
+        tempRun = createAdminReceiptTempRun();
+        const tempInputPath = writeExclusivePrivateReceiptFile(
+            tempRun,
+            'input.jpg',
+            canonicalStorageImage.bytes,
+        );
+        const preprocessOutputDir = createPrivateReceiptTempDirectory(tempRun, 'stages');
 
-        // 2. 이미지 다운로드
-        const { data: urlData } = supabase.storage
-            .from('review-photos')
-            .getPublicUrl(review.verification_photo);
-
-        if (!urlData?.publicUrl) {
-            throw new Error('이미지 URL 생성 실패');
-        }
-
-        fs.mkdirSync(/* turbopackIgnore: true */ tempDir, { recursive: true });
-        const tempInputPath = path.join(tempDir, 'input.jpg');
-        const preprocessOutputDir = path.join(tempDir, 'stages');
-
-        const imageResponse = await fetch(urlData.publicUrl);
-        if (!imageResponse.ok) {
-            throw new Error(`이미지 다운로드 실패: ${imageResponse.status}`);
-        }
-        const arrayBuffer = await imageResponse.arrayBuffer();
-        fs.writeFileSync(/* turbopackIgnore: true */ tempInputPath, Buffer.from(arrayBuffer));
-
-        // 3. Python 전처리 실행
-        let preprocessResult: Record<string, string>;
+        let preprocessResult: PreprocessResult;
         try {
             preprocessResult = await runPythonPreprocess(tempInputPath, preprocessOutputDir);
-        } catch (preprocessError) {
-            console.warn('[admin/ocr-receipts/process] preprocess fallback used', {
-                domain: 'ocr_receipt',
-                action: 'inline_process',
-                step: 'preprocess',
-                correlationId,
-                errorName: getGuardedMutationErrorName(preprocessError),
-            });
-            preprocessResult = { warped: tempInputPath };
+        } catch {
+            preprocessResult = {};
         }
 
-        // 4. Gemini OCR provider preparation happens before debug-stage storage writes.
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const geminiOcrModel = getGeminiOcrModels(process.env)[0];
-        const geminiOcrThinkingLevel = getGeminiOcrThinkingLevel(process.env);
-        const generationConfig = {
-            temperature: 0,
-            responseMimeType: 'application/json',
-            thinkingConfig: { thinkingLevel: geminiOcrThinkingLevel },
-        };
-        const model = genAI.getGenerativeModel({
-            model: geminiOcrModel,
-            generationConfig,
+        let providerImage = canonicalStorageImage;
+        if (preprocessResult.warped) {
+            const preprocessedBytes = readContainedPrivateReceiptFile(tempRun, preprocessResult.warped);
+            const preprocessedMimeType = getReceiptImageMimeTypeFromSignature(preprocessedBytes);
+            if (!preprocessedMimeType) throw new OcrPersistenceError();
+            providerImage = await canonicalizeReceiptImage(preprocessedBytes, preprocessedMimeType);
+        }
+
+        const imageBase64 = providerImage.bytes.toString('base64');
+        const ocrResult = await callGeminiReceiptOcr({
+            apiKey: GEMINI_API_KEY,
+            imageBase64,
+            mimeType: 'image/jpeg',
+            prompt: OCR_PROMPT,
+            signal: request.signal,
         });
+        const ocrData = ocrResult.data;
 
-        // 5. 중간 단계 이미지 업로드
-        const stages: Record<string, string> = {};
-        const stageNames = ['warped'];  // 최종 이미지만 저장 (스토리지 최적화)
+        assertOcrInputSafe(ocrData);
+        const receiptData = buildReceiptPersistenceData(ocrData);
+        const confidence = receiptData.confidence ?? 0;
 
-        for (const stageName of stageNames) {
-            const localPath = preprocessResult[stageName];
-            if (localPath) {
-                const storagePath = `ocr-debug/${reviewId}/${stageName}.jpg`;
-                const publicUrl = await uploadToStorage(localPath, storagePath);
-                if (publicUrl) {
-                    stages[stageName] = publicUrl;
-                }
-            }
-        }
+        if (ocrData.error || confidence < 0.5) {
+            const failureData = buildReceiptFailureData(
+                ocrData.error ? getSafeOcrFailureCode(ocrData.error) : 'low_confidence',
+            );
+            await persistOcrResult(supabase, body.reviewId, {
+                receipt_hash: null,
+                receipt_data: failureData,
+                is_duplicate: false,
+                ocr_processed_at: new Date().toISOString(),
+            });
 
-        // 6. Gemini OCR 실행
-        const finalImagePath = preprocessResult.warped || tempInputPath;
-        const finalImageBuffer = fs.readFileSync(/* turbopackIgnore: true */ finalImagePath);
-        const imageBase64 = finalImageBuffer.toString('base64');
-
-        const result = await model.generateContent([
-            OCR_PROMPT,
-            {
-                inlineData: {
-                    mimeType: 'image/jpeg',
-                    data: imageBase64,
-                },
-            },
-        ]);
-
-        const responseText = result.response.text();
-        const ocrData = parseOCRResponse(responseText) as Record<string, unknown>;
-        const stageKeys = Object.keys(stages);
-
-        // 7. OCR 실패 처리
-        if (ocrData.error || (ocrData.confidence as number) < 0.5) {
-            const errorCode = getSafeOcrFailureCode(ocrData.error || 'low_confidence');
-            await supabase
-                .from('reviews')
-                .update({
-                    receipt_data: {
-                        error: errorCode,
-                        raw: ocrData,
-                        stages: stageKeys.length > 0 ? stages : undefined
-                    },
-                    ocr_processed_at: new Date().toISOString(),
-                })
-                .eq('id', reviewId);
-
-            return NextResponse.json({
-                success: false,
-                message: 'OCR 처리 실패',
-                error: errorCode,
-                stageKeys,
-                stageCount: stageKeys.length,
-                guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
-                    reviewId,
-                    applied: true,
+            return NextResponse.json(
+                {
                     success: false,
-                    ocrProcessed: true,
-                    stageKeys,
-                    stageCount: stageKeys.length,
-                }),
-            });
+                    code: failureData.failure_code,
+                    message: 'OCR 처리 실패',
+                    guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
+                        reviewId: body.reviewId,
+                        applied: true,
+                        readbackVerified: true,
+                        status: 'failed',
+                    }),
+                },
+                { headers: { 'Cache-Control': 'no-store' } },
+            );
         }
 
-        // 8. 해시 및 중복 검사
-        const receiptHash = generateReceiptHash(ocrData as { store_name?: string; date?: string; time?: string; total_amount?: number });
+        const hasHashInputs = receiptData.store_name
+            && receiptData.date
+            && receiptData.time
+            && receiptData.total_amount !== undefined;
+        const receiptHash = hasHashInputs ? generateReceiptHash(receiptData) : null;
+        let duplicateOfId: string | null = null;
 
-        const { data: existingReviews } = await supabase
-            .from('reviews')
-            .select('id')
-            .eq('receipt_hash', receiptHash)
-            .neq('id', reviewId);
+        if (receiptHash) {
+            const { data: existingReviews, error: duplicateLookupError } = await supabase
+                .from('reviews')
+                .select('id')
+                .eq('receipt_hash', receiptHash)
+                .neq('id', body.reviewId)
+                .limit(1);
+            if (duplicateLookupError) throw new OcrPersistenceError();
 
-        const isDuplicate = existingReviews && existingReviews.length > 0;
-        const duplicateOfId = isDuplicate ? existingReviews[0].id : null;
-
-        // 9. DB 업데이트
-        const updateData = {
-            receipt_hash: isDuplicate ? null : receiptHash,
-            receipt_data: isDuplicate
-                ? { ...ocrData, duplicate_of: duplicateOfId, stages }
-                : { ...ocrData, stages },
-            is_duplicate: isDuplicate,
-            ocr_processed_at: new Date().toISOString(),
-        };
-
-        const { error: updateError } = await supabase
-            .from('reviews')
-            .update(updateData)
-            .eq('id', reviewId);
-
-        if (updateError) {
-            throw new Error('DB 업데이트 실패');
-        }
-
-        // 10. OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
-        let compressionResult = '원본 유지';
-        try {
-            const originalStoragePath = review.verification_photo;
-            const warpedPath = preprocessResult.warped || tempInputPath;
-
-            // sharp로 WebP 변환 (품질 85%, 최대 1200px)
-            const compressedBuffer = await sharp(warpedPath)
-                .resize(1200, undefined, { withoutEnlargement: true })
-                .webp({ quality: 85 })
-                .toBuffer();
-
-            // 새 파일명 생성 (확장자 변경: .jpg -> .webp)
-            const webpStoragePath = originalStoragePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
-
-            // 기존 파일 삭제
-            await supabase.storage
-                .from('review-photos')
-                .remove([originalStoragePath]);
-
-            // WebP 이미지 업로드
-            const { error: webpUploadError } = await supabase.storage
-                .from('review-photos')
-                .upload(webpStoragePath, compressedBuffer, {
-                    contentType: 'image/webp',
-                    upsert: true,
-                });
-
-            if (!webpUploadError) {
-                // DB에 새 파일 경로 업데이트
-                await supabase
-                    .from('reviews')
-                    .update({ verification_photo: webpStoragePath })
-                    .eq('id', reviewId);
-
-                const originalSize = fs.statSync(/* turbopackIgnore: true */ warpedPath).size;
-                const compressedSize = compressedBuffer.length;
-                const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
-                compressionResult = `WebP 압축 완료 (${savings}% 절약, ${Math.round(compressedSize / 1024)}KB)`;
+            const candidateId = existingReviews?.[0]?.id;
+            if (candidateId !== undefined) {
+                if (typeof candidateId !== 'string' || !UUID_PATTERN.test(candidateId)) {
+                    throw new OcrPersistenceError();
+                }
+                duplicateOfId = candidateId;
             }
-        } catch (compressError) {
-            console.warn('[admin/ocr-receipts/process] image compression skipped', {
-                domain: 'ocr_receipt',
-                action: 'inline_process',
-                step: 'compression',
-                correlationId,
-                errorName: getGuardedMutationErrorName(compressError),
-            });
         }
 
-        return NextResponse.json({
-            success: true,
-            message: isDuplicate ? 'OCR 처리 완료 (중복 의심)' : 'OCR 처리 완료',
-            isDuplicate,
-            stageKeys,
-            stageCount: stageKeys.length,
-            compression: compressionResult,
-            guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
-                reviewId,
-                applied: true,
-                success: true,
-                isDuplicate,
-                ocrProcessed: true,
-                stageKeys,
-                stageCount: stageKeys.length,
-            }),
+        if (duplicateOfId) receiptData.duplicate_of = duplicateOfId;
+        assertPrivacySafe(receiptData);
+
+        await persistOcrResult(supabase, body.reviewId, {
+            receipt_hash: duplicateOfId ? null : receiptHash,
+            receipt_data: receiptData,
+            is_duplicate: Boolean(duplicateOfId),
+            ocr_processed_at: new Date().toISOString(),
         });
 
-    } catch (err) {
+        return NextResponse.json(
+            {
+                success: true,
+                isDuplicate: Boolean(duplicateOfId),
+                message: duplicateOfId ? 'OCR 처리 완료 (중복 의심)' : 'OCR 처리 완료',
+                guardedMutation: buildInlineOcrGuardedMutation(correlationId, {
+                    reviewId: body.reviewId,
+                    applied: true,
+                    readbackVerified: true,
+                    status: 'processed',
+                    isDuplicate: Boolean(duplicateOfId),
+                }),
+            },
+            { headers: { 'Cache-Control': 'no-store' } },
+        );
+    } catch (error) {
         console.error('[admin/ocr-receipts/process] inline process failed', {
             domain: 'ocr_receipt',
             action: 'inline_process',
             step: 'unexpected',
             correlationId,
-            errorName: getGuardedMutationErrorName(err),
+            errorName: getGuardedMutationErrorName(error),
         });
-        return NextResponse.json(
-            { error: 'OCR 처리에 실패했습니다.' },
-            { status: 500 }
-        );
+        if (error instanceof PrivacyUnsafeValueError || error instanceof OcrUnsafeReceiptValueError) {
+            return errorResponse(PRIVACY_UNSAFE_VALUE_REASON, 422);
+        }
+        if (error instanceof AdminReceiptImageSecurityError || error instanceof OcrPersistenceError) {
+            return errorResponse('OCR_READBACK_FAILED', 503);
+        }
+        return errorResponse('OCR_PROCESSING_FAILED', 500);
     } finally {
-        cleanupTempDir(tempDir);
+        if (tempRun) cleanupAdminReceiptTempRun(tempRun);
     }
 }

@@ -28,6 +28,15 @@ import time
 from pathlib import Path
 from typing import Any
 
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+try:
+    sys.path.remove(str(CANONICAL_BACKEND_ROOT))
+except ValueError:
+    pass
+sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import redact_log_text, safe_error_name
+
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parents[1]
 APP_WEB_ROOT = REPO_ROOT / "apps" / "web"
@@ -35,24 +44,10 @@ DEFAULT_CODEX_MODEL = "gpt-5.5"
 DEFAULT_CODEX_EFFORT = "low"
 DEFAULT_TIMEOUT_SECONDS = 120
 GRAPH_ENTRYPOINT = "backend/storyboard-agent/src/graph.py"
-SECRET_PATTERNS = [
-    re.compile(r"sk-[A-Za-z0-9_\-]{12,}"),
-    re.compile(r"sk-proj-[A-Za-z0-9_\-]{12,}"),
-    re.compile(r"eyJ[A-Za-z0-9_\-.]{20,}"),
-    re.compile(r"(?i)(OPENAI[_A-Z]*|SERVICE[_A-Z]*|SUPABASE[_A-Z]*|API[_A-Z]*KEY|TOKEN|SECRET)\s*[:=]\s*[^\s,;]+"),
-    re.compile(r"https://[^\s]+(?:token|key|secret)[^\s]*", re.I),
-]
-
-
-def redact(value: Any) -> str:
-    text = str(value or "")
-    for pattern in SECRET_PATTERNS:
-        text = pattern.sub("[REDACTED]", text)
-    return text
 
 
 def eprint(message: str) -> None:
-    print(redact(message), file=sys.stderr)
+    print(redact_log_text(message), file=sys.stderr)
 
 
 def load_dotenv_file(path: Path) -> None:
@@ -70,8 +65,6 @@ def load_dotenv_file(path: Path) -> None:
 
 
 def apply_safe_env_aliases(runtime: str) -> None:
-    if not os.environ.get("PUBLIC_SUPABASE_URL") and os.environ.get("NEXT_PUBLIC_SUPABASE_URL"):
-        os.environ["PUBLIC_SUPABASE_URL"] = os.environ["NEXT_PUBLIC_SUPABASE_URL"]
     if runtime != "codex_cli_oauth" and not os.environ.get("OPENAI_API_KEY") and os.environ.get("NEXT_OPENAI_API_KEY_BYEON"):
         # Only for optional LangGraph/API-key mode. The default Codex CLI path
         # does not require this variable.
@@ -293,9 +286,9 @@ def make_graph_diagnostics(
         "retrieval": retrieval or {"status": "not_used"},
     }
     if fallback_reason:
-        graph["fallbackReason"] = fallback_reason
+        graph["fallbackReason"] = "fallback"
     if fallback_detail:
-        graph["fallbackDetail"] = redact(fallback_detail)[:600]
+        graph["fallbackDetail"] = "[SUPPRESSED]"
     return graph
 
 
@@ -611,7 +604,7 @@ def run_search_scene_data_probe(payload: dict[str, Any], timeout: float) -> tupl
         return {
             "status": "failed",
             "caption": {"lookupStatus": "unavailable", "fallbackReason": "search_scene_data_failed"},
-            "failureReason": redact(completed.stderr[-500:] or completed.stdout[-500:] or "search_scene_data_failed"),
+            "failureReason": "search_scene_data_failed",
         }, [], ["search_scene_data"]
     try:
         parsed = json.loads(completed.stdout)
@@ -619,7 +612,7 @@ def run_search_scene_data_probe(payload: dict[str, Any], timeout: float) -> tupl
         return {
             "status": "failed",
             "caption": {"lookupStatus": "unavailable", "fallbackReason": "invalid_tool_json"},
-            "failureReason": f"invalid_tool_json:{type(exc).__name__}",
+            "failureReason": f"invalid_tool_json:{safe_error_name(exc)}",
         }, [], ["search_scene_data"]
     transcripts = parsed.get("transcripts") if isinstance(parsed, dict) else []
     if not isinstance(transcripts, list) or not transcripts:
@@ -834,10 +827,7 @@ def run_local_orchestrated_langgraph(payload: dict[str, Any]) -> dict[str, Any]:
     def researcher_node(state: dict[str, Any]) -> dict[str, Any]:
         retrieval, transcripts, tools = run_search_scene_data_probe(payload, timeout)
         if retrieval.get("status") != "used" or not transcripts:
-            raise RuntimeError(
-                "required_storyboard_rag_failed:"
-                + redact(json.dumps(retrieval, ensure_ascii=False)[:800])
-            )
+            raise RuntimeError("required_storyboard_rag_failed")
         scene_data = transcripts
         return {
             "tools_called": tools,
@@ -964,10 +954,10 @@ def summarize_interrupts(snapshot: Any, final_output: str) -> list[dict[str, Any
             node = getattr(task, "name", None) or getattr(item, "ns", None) or "unknown"
             interrupts.append(
                 {
-                    "node": str(node),
+                    "node": redact_log_text(node, max_length=128),
                     "resumable": True,
                     "outputReady": bool(final_output.strip()),
-                    "summary": redact(getattr(item, "value", "") or "LangGraph interrupt")[:300],
+                    "summary": "LangGraph interrupt",
                 }
             )
     if not interrupts and next_nodes:
@@ -1084,13 +1074,9 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
             timeout=timeout,
             check=False,
         )
-        stdout = redact(completed.stdout[-3000:])
-        stderr = redact(completed.stderr[-3000:])
         answer = answer_path.read_text(encoding="utf-8", errors="ignore") if answer_path.exists() else ""
         if completed.returncode != 0:
-            raise RuntimeError(
-                f"codex_cli_oauth_failed exit={completed.returncode} model={model} stdout={stdout[-800:]} stderr={stderr[-1200:]}"
-            )
+            raise RuntimeError("codex_cli_oauth_failed")
         parsed = parse_codex_answer(answer or completed.stdout, model, effort)
         parsed.setdefault("diagnostics", {})
         parsed["diagnostics"].update(
@@ -1100,8 +1086,8 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
                 "effort": effort,
                 "threadId": thread_id,
                 "timeoutSeconds": timeout,
-                "stdoutPreview": stdout[-800:],
-                "stderrPreview": stderr[-800:],
+                "stdoutPreview": "[SUPPRESSED]",
+                "stderrPreview": "[SUPPRESSED]",
             }
         )
         return parsed
@@ -1125,10 +1111,10 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except subprocess.TimeoutExpired as exc:
-        eprint(f"storyboard_agent_timeout: {exc}")
+        eprint(f"storyboard_agent_timeout: {safe_error_name(exc)}")
         return 124
     except Exception as exc:
-        eprint(f"storyboard_agent_error: {exc}")
+        eprint(f"storyboard_agent_error: {safe_error_name(exc)}")
         return 1
 
 

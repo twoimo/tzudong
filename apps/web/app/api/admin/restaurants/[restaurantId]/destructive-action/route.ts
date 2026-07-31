@@ -2,12 +2,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
+  type RestaurantDestructiveActionRequest,
   validateRestaurantDestructiveActionRequest,
 } from '@/lib/admin/restaurant-destructive-action-contract';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
+const MAX_DESTRUCTIVE_ACTION_REQUEST_BYTES = 4 * 1024;
 
 type RouteContext = {
   params: Promise<{ restaurantId: string }>;
@@ -47,13 +51,26 @@ function buildRequestMetadata(request: NextRequest) {
   };
 }
 
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'no-store');
+  return response;
+}
+
 function safeErrorResponse(message = '맛집 삭제 작업에 실패했습니다.') {
-  return NextResponse.json({ error: message }, { status: 500 });
+  return noStoreJson({ error: message }, { status: 500 });
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const auth = await requireAdmin();
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+    auth.response.headers.set('Cache-Control', 'no-store');
+    return auth.response;
+  }
+
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ error: 'Forbidden' }, { status: 403 });
+  }
 
   const { restaurantId } = await context.params;
   const targetRouteRestaurantId = decodeURIComponent(restaurantId || '').trim();
@@ -61,9 +78,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: '맛집 ID가 필요합니다.' }, { status: 400 });
   }
 
-  const body = await request.json().catch(() => null);
+  const requestBody = await readBoundedJsonRequest(request, MAX_DESTRUCTIVE_ACTION_REQUEST_BYTES);
+  if (!requestBody.ok) {
+    return noStoreJson({ error: '삭제 요청 정보가 필요합니다.' }, { status: 400 });
+  }
+
+  const body = requestBody.value as RestaurantDestructiveActionRequest | null;
   if (!body || typeof body !== 'object') {
-    return NextResponse.json({ error: '삭제 요청 정보가 필요합니다.' }, { status: 400 });
+    return noStoreJson({ error: '삭제 요청 정보가 필요합니다.' }, { status: 400 });
   }
 
   const supabase = createSupabaseServiceRoleClient();

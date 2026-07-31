@@ -16,7 +16,6 @@ Supabase의 pgvector에 저장합니다.
 """
 
 import json
-import os
 import sys
 import re
 
@@ -28,16 +27,40 @@ print("🚀 프로그램 초기화 중... (1/2)", flush=True)
 import subprocess
 import argparse
 from pathlib import Path
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 from collections import defaultdict
 from datetime import datetime
-from tqdm import tqdm
-from supabase import create_client, Client
-from dotenv import load_dotenv
+
+try:
+    from tqdm import tqdm
+    from supabase import create_client, Client
+    from dotenv import load_dotenv
+except Exception as error:
+    print(
+        f"❌ 런타임 의존성 로드 실패: runtime_dependency_missing ({safe_error_name(error)})",
+        flush=True,
+    )
+    raise SystemExit(1) from None
 
 # 무거운 라이브러리는 메시지 출력 후 로딩
 print("🚀 라이브러리(Torch/BGE) 로딩 중... (2/2)", flush=True)
-from FlagEmbedding import BGEM3FlagModel
-import torch
+try:
+    from FlagEmbedding import BGEM3FlagModel
+    import torch
+except Exception as error:
+    print(
+        f"❌ 임베딩 의존성 로드 실패: embedding_dependency_missing ({safe_error_name(error)})",
+        flush=True,
+    )
+    raise SystemExit(1) from None
 
 
 # .env 로드
@@ -47,9 +70,31 @@ load_dotenv()
 EMBEDDING_MODEL = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
 
-# Supabase 설정 (Lazy Load)
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+def classify_provider_failure(error: BaseException, fallback: str) -> str:
+    """Classify provider failures without retaining their diagnostics."""
+    try:
+        status = next(
+            (
+                value
+                for attribute in ("status", "status_code", "code")
+                if type(value := getattr(error, attribute, None)) is int
+            ),
+            None,
+        )
+        details = "\n".join(value for value in error.args if type(value) is str).lower()
+    except Exception:
+        return fallback
+
+    if status == 429 or any(marker in details for marker in ("quota", "resource_exhausted", "rate limit", "429")):
+        return "provider_quota_exhausted"
+    if status in (401, 403) or any(
+        marker in details
+        for marker in ("unauthenticated", "unauthorized", "forbidden", "api key", "permission denied")
+    ):
+        return "provider_auth_failed"
+    return fallback
+
 
 
 # 경로 설정
@@ -63,15 +108,27 @@ INPUT_DIR = (
 print("🚀 BGE-M3 모델 로딩 중...", flush=True)
 
 device = "cpu"
-if torch.backends.mps.is_available():
-    device = "mps"
-elif torch.cuda.is_available():
-    device = "cuda"
+try:
+    if torch.backends.mps.is_available():
+        device = "mps"
+    elif torch.cuda.is_available():
+        device = "cuda"
+except Exception as error:
+    print(
+        f"❌ 임베딩 장치 확인 실패: embedding_device_unavailable ({safe_error_name(error)})",
+        flush=True,
+    )
+    raise SystemExit(1) from None
 
 print(f"🚀 Using device: {device}", flush=True)
 
 # use_fp16=True: 메모리 절약 및 속도 향상
-bge_model = BGEM3FlagModel(EMBEDDING_MODEL, use_fp16=True, device=device)
+try:
+    bge_model = BGEM3FlagModel(EMBEDDING_MODEL, use_fp16=True, device=device)
+except Exception as error:
+    reason = classify_provider_failure(error, "embedding_model_unavailable")
+    print(f"❌ 임베딩 모델 로드 실패: {reason} ({safe_error_name(error)})", flush=True)
+    raise SystemExit(1) from None
 
 
 def extract_video_id_from_youtube_link(youtube_link: str) -> str | None:
@@ -118,16 +175,18 @@ def fetch_data_from_git(branch: str, target_path: Path):
         )
         print(f"✅ 데이터 체크아웃 완료: {rel_path}", flush=True)
 
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError as error:
         print(
-            f"⚠️ 데이터 가져오기 실패: {e.output.decode() if e.output else str(e)}",
+            f"⚠️ 데이터 가져오기 실패: git_checkout_failed ({safe_error_name(error)})",
             flush=True,
         )
         # 실패하더라도 일단 진행 (로컬 데이터 사용)하거나 종료할 수 있음.
         # 여기서는 경고만 하고 진행.
-    except Exception as e:
-        print(f"⚠️ 데이터 가져오기 중 오류: {e}", flush=True)
-
+    except Exception as error:
+        print(
+            f"⚠️ 데이터 가져오기 중 오류: git_checkout_failed ({safe_error_name(error)})",
+            flush=True,
+        )
 
 def get_existing_embeddings(supabase: Client) -> dict[tuple, dict]:
     """
@@ -291,8 +350,9 @@ def update_metadata_only(supabase: Client, documents: list[dict]):
                     "recollect_id", doc["recollect_id"]
                 ).execute()
                 success += 1
-            except Exception as e:
-                print(f"⚠️ 메타데이터 업데이트 실패: {e}", flush=True)
+            except Exception as error:
+                reason = classify_provider_failure(error, "metadata_update_failed")
+                print(f"⚠️ 메타데이터 업데이트 실패: {reason} ({safe_error_name(error)})", flush=True)
                 errors += 1
 
     print(f"✅ 메타데이터 업데이트 완료: {success}개 성공, {errors}개 실패", flush=True)
@@ -348,8 +408,9 @@ def embed_and_store(supabase: Client, documents: list[dict], batch_size: int = 5
 
             inserted += len(batch)
 
-        except Exception as e:
-            print(f"\n⚠️ 배치 오류: {e}", flush=True)
+        except Exception as error:
+            reason = classify_provider_failure(error, "embedding_batch_failed")
+            print(f"\n⚠️ 배치 오류: {reason} ({safe_error_name(error)})", flush=True)
             errors += len(batch)
 
     print(f"\n✅ 임베딩 완료: {inserted}개 성공, {errors}개 실패", flush=True)
@@ -371,17 +432,12 @@ def verify_embeddings(supabase: Client):
     # 샘플 데이터 확인
     sample = (
         supabase.table("transcript_embeddings_bge")
-        .select("video_id, page_content, metadata")
+        .select("id")
         .limit(3)
         .execute()
     )
 
-    print("\n📋 샘플 데이터:", flush=True)
-    for row in sample.data:
-        content_preview = row.get("page_content", "")[:60]
-        restaurants = row.get("metadata", {}).get("restaurants", [])
-        print(f"  - {row.get('video_id')}: {content_preview}...", flush=True)
-        print(f"    음식점: {restaurants}", flush=True)
+    print(f"\n📋 샘플 데이터 확인: {len(sample.data)}개", flush=True)
 
 
 def main():
@@ -397,20 +453,23 @@ def main():
     print("=" * 60, flush=True)
 
     # 1. Supabase 연결
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다", flush=True)
+    print("\n🔌 Supabase 연결 준비됨", flush=True)
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("❌ Supabase REST configuration invalid.", flush=True)
         return
-
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}", flush=True)
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    supabase = create_client(credentials.url, credentials.service_role_key)
     print("✅ 연결 성공", flush=True)
 
     # 3. 기존 임베딩 조회
     try:
         existing = get_existing_embeddings(supabase)
-    except Exception:
+    except Exception as error:
+        reason = classify_provider_failure(error, "existing_embeddings_lookup_failed")
         print(
-            "⚠️ 기존 테이블 조회 실패(아마도 첫 실행). 빈 상태로 시작합니다.", flush=True
+            f"⚠️ 기존 테이블 조회 실패: {reason} ({safe_error_name(error)}). 빈 상태로 시작합니다.",
+            flush=True,
         )
         existing = {}
 
@@ -450,4 +509,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as error:
+        reason = classify_provider_failure(error, "embedding_run_failed")
+        print(f"❌ 임베딩 실행 실패: {reason} ({safe_error_name(error)})", flush=True)
+        raise SystemExit(1) from None
