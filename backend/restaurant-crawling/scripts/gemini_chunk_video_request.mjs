@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server';
+import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
     const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
@@ -43,12 +44,49 @@ function buildApiKeyPool() {
 
     return pool;
 }
+function errorText(error) {
+    try {
+        return typeof error?.message === 'string' ? error.message : '';
+    } catch {
+        return '';
+    }
+}
+
+function errorCode(error) {
+    try {
+        return typeof error?.code === 'string' ? error.code : '';
+    } catch {
+        return '';
+    }
+}
+
+function createReasonError(code) {
+    const error = new Error(code);
+    error.code = code;
+    return error;
+}
+
+function isQuotaError(error) {
+    const message = errorText(error);
+    return errorCode(error) === 'GEMINI_QUOTA_EXHAUSTED'
+        || message.includes('[QUOTA_ERROR]')
+        || message.includes('429')
+        || message.includes('RESOURCE_EXHAUSTED');
+}
+
+function isTransientServerError(error) {
+    const message = errorText(error);
+    return message.includes('503')
+        || message.includes('500')
+        || message.includes('Service Unavailable');
+}
+
 
 /** API 호출 타임아웃 래퍼 */
 async function fetchWithTimeout(fn, timeoutMs = 60000) {
     let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(`API 호출 타임아웃 (${timeoutMs}ms)`)), timeoutMs);
+        timeoutId = setTimeout(() => reject(createReasonError('GEMINI_API_TIMEOUT')), timeoutMs);
     });
     return Promise.race([fn(), timeoutPromise]).finally(() => clearTimeout(timeoutId));
 }
@@ -64,17 +102,17 @@ async function waitForProcessing(fileManager, fileName) {
 
     for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
         try {
-            console.log(`  [상태 확인 요청] ${fileName} 상태 확인 중... (${i + 1}/${MAX_POLL_ATTEMPTS})`);
+            console.log(`GEMINI_FILE_STATUS_CHECK attempt=${i + 1}/${MAX_POLL_ATTEMPTS}`);
             const file = await fetchWithTimeout(() => fileManager.getFile(fileName), 30000);
-            console.log(`  [상태 응답] ${fileName} 상태: ${file.state}`);
+            console.log('GEMINI_FILE_STATUS_RECEIVED');
             if (file.state === FileState.ACTIVE) return file;
-            if (file.state === FileState.FAILED) throw new Error(`파일 처리 실패: ${fileName}`);
+            if (file.state === FileState.FAILED) throw createReasonError('GEMINI_FILE_PROCESSING_FAILED');
         } catch (error) {
             // 구글 서버가 비정상 응답(HTML 등)을 보낼 경우 catch됨
-            console.log(`  [경고] 상태 확인 중 통신 에러 (재시도 예정): ${error.message}`);
+            logSafeError(error, line => console.warn(`GEMINI_FILE_STATUS_RETRY ${line.trim()}`));
             // [Quota Error 감지] 500 에러나 429 에러가 반복될 경우, 쿼타/내부 서버 문제로 판단하고 즉시 중단
-            if (error.message.includes('500 Internal Server Error') || error.message.includes('429') || error.message.includes('403')) {
-                throw new Error(`[QUOTA_ERROR] ${error.message}`);
+            if (errorText(error).includes('500 Internal Server Error') || errorText(error).includes('429') || errorText(error).includes('403')) {
+                throw createReasonError('GEMINI_QUOTA_EXHAUSTED');
             }
         }
         
@@ -83,7 +121,7 @@ async function waitForProcessing(fileManager, fileName) {
             await new Promise(r => setTimeout(r, 1000));
         }
     }
-    throw new Error(`파일 처리 타임아웃: ${fileName}`);
+    throw createReasonError('GEMINI_FILE_PROCESSING_TIMEOUT');
 }
 
 async function runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile) {
@@ -101,19 +139,19 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         else if (ext === '.mpeg' || ext === '.mpg') mimeType = 'video/mpeg';
         else if (ext === '.wmv') mimeType = 'video/x-ms-wmv';
         
-        console.log(`[업로드] Gemini File API에 비디오 업로드 중 (${displayName}, Mime: ${mimeType})...`);
+        console.log('GEMINI_FILE_UPLOAD_STARTED');
         uploadedFile = await fetchWithTimeout(() => fileManager.uploadFile(videoPath, {
             mimeType: mimeType,
             displayName: displayName,
         }), 60000);
-        console.log(`[업로드] 완료: ${uploadedFile.file.name}`);
+        console.log('GEMINI_FILE_UPLOAD_COMPLETED');
 
         console.log('[대기] 비디오 처리 상태 확인 중...');
         const processedFile = await waitForProcessing(fileManager, uploadedFile.file.name);
-        console.log(`[준비] 비디오 처리 완료: ${processedFile.uri}`);
+        console.log('GEMINI_FILE_READY');
 
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_CHUNK_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
-        console.log(`[생성] Gemini API 호출 중 (모델: ${modelName}, thinkingLevel: ${thinkingLevel})...`);
+        console.log('GEMINI_GENERATION_STARTED');
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
@@ -133,20 +171,19 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
 
         const response = await result.response;
         const text = response.text();
-        if (!text) throw new Error('Gemini 응답이 비어있음');
+        if (!text) throw createReasonError('GEMINI_EMPTY_RESPONSE');
 
         fs.writeFileSync(outputFile, text);
-        console.log(`[완료] 응답 저장됨: ${outputFile}`);
+        console.log('GEMINI_OUTPUT_WRITTEN');
         return true;
     } catch (error) {
-        const msg = error.message || '';
         // 503 (Service Unavailable)은 일시적인 과부하임. QUOTA_ERROR로 분류하지 않고 상위에서 재시도하게 함.
-        if (msg.includes('503') || msg.includes('Service Unavailable')) {
+        if (isTransientServerError(error)) {
             throw error; // 일반 에러로 던져서 메인 루프에서 재시도 유도
         }
-        
-        if (error.message.includes('429') || error.message.includes('QUOTA_ERROR') || error.message.includes('RESOURCE_EXHAUSTED')) {
-             throw new Error(`[QUOTA_ERROR] ${error.message}`);
+
+        if (isQuotaError(error)) {
+             throw createReasonError('GEMINI_QUOTA_EXHAUSTED');
         }
         throw error;
     } finally {
@@ -155,7 +192,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
                 await fetchWithTimeout(() => fileManager.deleteFile(uploadedFile.file.name), 15000);
                 console.log('[정리] 업로드된 파일 삭제 완료');
             } catch (e) {
-                console.warn(`[경고] 파일 정리 실패: ${e.message}`);
+                logSafeError(e, line => console.warn(`GEMINI_FILE_CLEANUP_FAILED ${line.trim()}`));
             }
         }
     }
@@ -172,17 +209,17 @@ async function main() {
     const apiKeys = buildApiKeyPool();
 
     if (apiKeys.length === 0) {
-        console.error('오류: GEMINI_API_KEY / GEMINI_API_FALLBACK_KEYS 환경변수가 설정되지 않음');
+        console.error('GEMINI_API_KEY_UNAVAILABLE');
         process.exit(1);
     }
 
     if (!fs.existsSync(videoPath)) {
-        console.error(`비디오 파일을 찾을 수 없음: ${videoPath}`);
+        console.error('GEMINI_CHUNK_VIDEO_MISSING');
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
-    console.log(`[Gemini] 모델: ${modelName}, 비디오: ${path.basename(videoPath)}`);
+    const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
+    console.log('GEMINI_CHUNK_REQUEST_STARTED');
 
     const promptText = fs.readFileSync(promptFile, 'utf8');
 
@@ -195,13 +232,12 @@ async function main() {
                 const success = await runSingleAttempt(apiKey, modelName, promptText, videoPath, outputFile);
                 if (success) return;
             } catch (error) {
-                const msg = error.message || '';
-                const isQuotaError = msg.includes('[QUOTA_ERROR]') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
+                const quotaError = isQuotaError(error);
                 lastError = error;
-                console.error(`[시도 ${retry + 1}/${MAX_PROCESS_RETRIES}] 키 ${keyIndex + 1}/${apiKeys.length} 오류: ${msg}`);
+                logSafeError(error, line => console.error(`GEMINI_CHUNK_ATTEMPT_FAILED retry=${retry + 1}/${MAX_PROCESS_RETRIES} key=${keyIndex + 1}/${apiKeys.length} ${line.trim()}`));
 
-                if (isQuotaError && keyIndex < apiKeys.length - 1) {
-                    console.warn(`  [키 로테이션] 현재 키 할당량 소진. 다음 API 키로 전환합니다. (${keyIndex + 2}/${apiKeys.length})`);
+                if (quotaError && keyIndex < apiKeys.length - 1) {
+                    console.warn(`GEMINI_CHUNK_KEY_ROTATION next_key=${keyIndex + 2}/${apiKeys.length}`);
                     continue;
                 }
 
@@ -209,38 +245,35 @@ async function main() {
             }
         }
 
-        const msg = lastError?.message || '';
-        const isQuotaError = msg.includes('[QUOTA_ERROR]') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED');
-        const isTransientServerError = msg.includes('503') || msg.includes('500') || msg.includes('Service Unavailable');
+        const quotaError = isQuotaError(lastError);
+        const transientServerError = isTransientServerError(lastError);
 
-        if (isQuotaError && retry === MAX_PROCESS_RETRIES - 1) {
-            console.error('[치명적 오류] 사용 가능한 모든 API 키의 할당량(Quota)을 소진했습니다.');
+        if (quotaError && retry === MAX_PROCESS_RETRIES - 1) {
+            console.error('GEMINI_CHUNK_QUOTA_EXHAUSTED');
             process.exit(42);
         }
 
-        if (!isQuotaError && retry === MAX_PROCESS_RETRIES - 1) {
-            if (isTransientServerError) {
-                console.error('[치명적 오류] Gemini 서버 과부하/일시 오류가 지속됩니다. 상위 스크립트가 웹 폴백으로 전환할 수 있도록 종료합니다.');
+        if (!quotaError && retry === MAX_PROCESS_RETRIES - 1) {
+            if (transientServerError) {
+                console.error('GEMINI_CHUNK_TRANSIENT_EXHAUSTED');
                 process.exit(43);
             }
-            console.error('모든 재시도 실패.');
+            console.error('GEMINI_CHUNK_RETRIES_EXHAUSTED');
             process.exit(1);
         }
 
-        if (isTransientServerError) {
-            console.warn('  [서버 에러] 구글 Gemini 서버 일시적 과부하 또는 오류 감지. 잠시 후 재시도합니다.');
+        if (transientServerError) {
+            console.warn('GEMINI_CHUNK_TRANSIENT_RETRY');
         }
 
-        if (lastError) {
-            console.error('=== 상세 에러 로그 ===');
-            console.error(lastError);
-            console.error('======================');
-        }
 
         const waitSec = 30 * (retry + 1);
-        console.log(`  ${waitSec}초 후 재시도 시작 (처음부터 다시 업로드)...`);
+        console.log(`GEMINI_CHUNK_RETRY_DELAY seconds=${waitSec}`);
         await new Promise(r => setTimeout(r, waitSec * 1000));
     }
 }
 
-main();
+main().catch(error => {
+    logSafeError(error, line => console.error(`GEMINI_CHUNK_REQUEST_FATAL ${line.trim()}`));
+    process.exit(1);
+});

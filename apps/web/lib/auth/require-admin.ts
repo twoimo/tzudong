@@ -75,19 +75,6 @@ async function getE2EAdminApiBypassUserId(options: RequireAdminOptions = {}) {
   return null;
 }
 
-function isMissingOptionalAdminStatusStoreError(error: unknown) {
-  if (!error || typeof error !== 'object') return false;
-
-  const code = 'code' in error ? String(error.code) : '';
-  if (code === 'PGRST205' || code === '42P01') return true;
-
-  const message = 'message' in error ? String(error.message).toLowerCase() : '';
-  return message.includes('user_account_status') && (
-    message.includes('could not find the table') ||
-    message.includes('does not exist') ||
-    message.includes('schema cache')
-  );
-}
 
 export async function requireAdmin(options: RequireAdminOptions = {}): Promise<RequireAdminOk | RequireAdminFail> {
   const e2eAdminUserId = await getE2EAdminApiBypassUserId(options);
@@ -99,6 +86,16 @@ export async function requireAdmin(options: RequireAdminOptions = {}): Promise<R
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
+  }
+  const { data: activeSession, error: activeSessionError } = await supabase
+    .rpc('is_current_auth_session_active' as never)
+    .returns<boolean>();
+
+  if (activeSessionError || activeSession !== true) {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
@@ -127,14 +124,7 @@ export async function requireAdmin(options: RequireAdminOptions = {}): Promise<R
     .maybeSingle()
     .returns<{ account_status: string }>();
 
-  if (accountStatus?.account_status === 'disabled') {
-    return {
-      ok: false,
-      response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
-    };
-  }
-
-  if (accountStatusError && !isMissingOptionalAdminStatusStoreError(accountStatusError)) {
+  if (accountStatusError || accountStatus?.account_status !== 'active') {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),

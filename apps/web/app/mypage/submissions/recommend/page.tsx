@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   ExternalLink,
-  Youtube,
   MapPin,
   Store,
   Phone,
@@ -27,7 +26,9 @@ import {
   XCircle,
   Trash2,
 } from "lucide-react";
+import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
+import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -79,6 +80,65 @@ const RESTAURANT_REQUEST_SELECT = [
   "created_at",
 ].join(", ");
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function parseValidatedRows<Row>(
+  values: readonly unknown[],
+  isRow: (value: unknown) => value is Row,
+): Row[] {
+  const rows: Row[] = [];
+
+  for (const value of values) {
+    if (isRow(value)) {
+      rows.push(value);
+    }
+  }
+
+  return rows;
+}
+
+function getResponseErrorMessage(value: unknown): string | null {
+  return isRecord(value) && typeof value.error === "string" ? value.error : null;
+}
+
+
+function isNullableString(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
+}
+
+function isNullableStringArray(value: unknown): value is string[] | null {
+  return value === null || (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
+function isNullableNumber(value: unknown): value is number | null {
+  return typeof value === "number" || value === null;
+}
+
+function isRestaurantRequest(value: unknown): value is RestaurantRequest {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string"
+    && typeof value.user_id === "string"
+    && typeof value.restaurant_name === "string"
+    && isNullableString(value.origin_address)
+    && isNullableString(value.road_address)
+    && isNullableString(value.jibun_address)
+    && isNullableString(value.english_address)
+    && isNullableString(value.phone)
+    && isNullableStringArray(value.categories)
+    && typeof value.recommendation_reason === "string"
+    && isNullableString(value.youtube_link)
+    && isNullableNumber(value.lat)
+    && isNullableNumber(value.lng)
+    && typeof value.geocoding_success === "boolean"
+    && typeof value.created_at === "string"
+  );
+}
+
 export default function RecommendSubmissionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -104,12 +164,14 @@ export default function RecommendSubmissionsPage() {
         .select(RESTAURANT_REQUEST_SELECT)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .range(pageParam, pageParam + PAGE_SIZE - 1);
+        .range(pageParam, pageParam + PAGE_SIZE - 1)
+        .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
       if (error) throw error;
 
+      const requests = parseValidatedRows(data ?? [], isRestaurantRequest);
       return {
-        data: data as RestaurantRequest[],
+        data: requests,
         nextCursor:
           data && data.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null,
       };
@@ -153,10 +215,10 @@ export default function RecommendSubmissionsPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error || "쯔양 맛집 제보 삭제에 실패했습니다.");
+        const payload: unknown = await response.json().catch(() => null);
+        throw new Error(
+          getResponseErrorMessage(payload) || "쯔양 맛집 제보 삭제에 실패했습니다.",
+        );
       }
     },
     onSuccess: async () => {
@@ -198,6 +260,7 @@ export default function RecommendSubmissionsPage() {
   const renderRequestCard = (request: RestaurantRequest) => {
     const displayAddress =
       request.road_address || request.jibun_address || request.origin_address;
+    const youtubeUrl = normalizeCanonicalYouTubeWatchUrl(request.youtube_link);
 
     return (
       <Card key={request.id} className={myPageListCardClass}>
@@ -298,12 +361,11 @@ export default function RecommendSubmissionsPage() {
             </div>
           </div>
 
-          {/* 관련 유튜브 영상 */}
-          {request.youtube_link && (
+          {youtubeUrl && (
             <div className="flex items-center gap-2">
-              <Youtube className="h-4 w-4 text-red-500" />
+              <YouTubeIcon className="h-4 w-4 text-red-500" />
               <a
-                href={request.youtube_link}
+                href={youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={myPageInlineLinkClass}

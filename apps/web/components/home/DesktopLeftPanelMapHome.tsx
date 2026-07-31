@@ -139,8 +139,7 @@ export default function DesktopLeftPanelMapHome({
           selectedRegion,
           isKoreanOnly,
         });
-      } catch (error) {
-        console.warn('좌측 패널 인기 맛집 조회 실패:', error);
+      } catch {
         return [];
       }
     },
@@ -165,8 +164,7 @@ export default function DesktopLeftPanelMapHome({
           selectedRegion,
           isKoreanOnly,
         });
-      } catch (error) {
-        console.warn('좌측 패널 최신 맛집 조회 실패:', error);
+      } catch {
         return {
           restaurants: [],
           nextOffset: null,
@@ -306,7 +304,7 @@ export default function DesktopLeftPanelMapHome({
   const handleRestaurantOpen = useCallback(
     (restaurant: Restaurant) => {
       incrementSearchCount(restaurant.id).catch((error) => {
-        console.warn('좌측 패널 인기 맛집 검색 집계 실패:', error);
+        console.warn('좌측 패널 인기 맛집 검색 집계 실패:');
       });
       queryClient.invalidateQueries({ queryKey: POPULAR_RESTAURANTS_QUERY_KEY });
       queryClient.invalidateQueries({

@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatCategoryText } from '@/lib/category-utils';
 import { openExternalUrl } from '@/lib/open-external-url';
-import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { extractCanonicalYouTubeVideoId, normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 import {
     explainAddressConsistency,
@@ -248,8 +248,14 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         setThumbnailCandidateIndex(0);
     }, [record?.id]);
 
-    // videoId 메모이제이션
-    const videoId = useMemo(() => extractVideoIdFromYoutubeLink(record?.youtube_link), [record?.youtube_link]);
+    const canonicalYoutubeUrl = useMemo(
+        () => normalizeCanonicalYouTubeWatchUrl(record?.youtube_link),
+        [record?.youtube_link],
+    );
+    const videoId = useMemo(
+        () => extractCanonicalYouTubeVideoId(canonicalYoutubeUrl),
+        [canonicalYoutubeUrl],
+    );
     const thumbnailCandidates = useMemo(() => getYoutubeThumbnailCandidates(videoId), [videoId]);
 
     // YouTube 임베드 가능 여부 확인 (noembed.com 프록시 사용 - CORS 지원)
@@ -286,8 +292,8 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
     // 비디오 URL 생성 로직
     useEffect(() => {
-        if (record?.youtube_link && !embedError) {
-            const vidId = extractVideoIdFromYoutubeLink(record.youtube_link);
+        if (canonicalYoutubeUrl && !embedError) {
+            const vidId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
             if (vidId) {
                 const origin = typeof window !== 'undefined' ? window.location.origin : '';
                 const url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
@@ -298,13 +304,13 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
         } else {
             setVideoUrl(null);
         }
-    }, [record?.youtube_link, record?.id, embedError]);
+    }, [canonicalYoutubeUrl, record?.id, embedError]);
 
     const openYoutubeLink = useCallback(() => {
-        if (record?.youtube_link) {
-            openExternalUrl(record.youtube_link);
+        if (canonicalYoutubeUrl) {
+            openExternalUrl(canonicalYoutubeUrl);
         }
-    }, [record?.youtube_link]);
+    }, [canonicalYoutubeUrl]);
 
     if (!record) {
         return (
@@ -693,14 +699,16 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 </InfoItem>
                             </div>
                             <InfoItem label="링크">
-                                <a
-                                    href={record.youtube_link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="overflow-wrap-anywhere text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                                >
-                                    {record.youtube_link || '-'}
-                                </a>
+                                {canonicalYoutubeUrl ? (
+                                    <a
+                                        href={canonicalYoutubeUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="overflow-wrap-anywhere text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                    >
+                                        {canonicalYoutubeUrl}
+                                    </a>
+                                ) : '-'}
                             </InfoItem>
                         </dl>
                     </SectionPanel>

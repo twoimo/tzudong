@@ -337,7 +337,7 @@ export type StoryboardSceneGeneratedImage = {
 
 export type StoryboardGeneratedImageProvenance = {
   providerId: 'local-codex' | 'browser-openai-api-key';
-  authMode: 'codex_oauth' | 'browser_local_storage_api_key';
+  authMode: 'codex_oauth' | 'browser_memory_only_api_key';
   endpoint:
     | 'https://chatgpt.com/backend-api/codex/responses'
     | 'https://api.openai.com/v1/images/generations';

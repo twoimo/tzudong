@@ -24,6 +24,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
+import {
+  classifyProfileAvatarUrl,
+  getProfileAvatarDeletionKey,
+  resolveProfileAvatarUrl,
+} from "@/lib/profile-avatar-url";
 import { cn } from "@/lib/utils";
 
 interface SidebarItemProps {
@@ -107,9 +112,8 @@ export function MyPageSidebar() {
       setIsNicknameEditing(false);
       router.refresh();
       toast.success("닉네임이 변경되었습니다");
-    } catch (error) {
-      const err = error as { message?: string };
-      toast.error(err.message || "닉네임 변경에 실패했습니다");
+    } catch {
+      toast.error("닉네임 변경에 실패했습니다");
     } finally {
       setNicknameSaving(false);
     }
@@ -135,15 +139,14 @@ export function MyPageSidebar() {
       const compressedBlob = await compressImage(file);
       const filePath = `${user.id}/avatar.jpg`;
 
-      const oldAvatarUrl = profile?.avatarUrl;
-      if (oldAvatarUrl?.includes("profile-avatars")) {
-        const oldPath = oldAvatarUrl
-          .split("profile-avatars/")
-          .pop()
-          ?.split("?")[0];
-        if (oldPath) {
-          await supabase.storage.from("profile-avatars").remove([oldPath]);
-        }
+      const oldAvatarDeletionKey = getProfileAvatarDeletionKey(
+        profile?.avatarUrl,
+        user.id,
+      );
+      if (oldAvatarDeletionKey) {
+        await supabase.storage
+          .from("profile-avatars")
+          .remove([oldAvatarDeletionKey]);
       }
 
       const { error: uploadError } = await supabase.storage
@@ -158,8 +161,8 @@ export function MyPageSidebar() {
       const baseUrl = supabase.storage
         .from("profile-avatars")
         .getPublicUrl(filePath).data.publicUrl;
-      const publicUrl = `${baseUrl}?t=${Date.now()}`;
-
+      const publicUrl = resolveProfileAvatarUrl(baseUrl, user.id);
+      if (!publicUrl) throw new Error("profile_avatar_url_unavailable");
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl } as never)
@@ -176,9 +179,8 @@ export function MyPageSidebar() {
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
       router.refresh();
       toast.success("프로필 사진이 변경되었습니다");
-    } catch (error) {
+    } catch {
       toast.error("이미지 업로드에 실패했습니다");
-      console.error(error);
     } finally {
       setAvatarUploading(false);
       e.target.value = "";
@@ -191,14 +193,16 @@ export function MyPageSidebar() {
 
     setAvatarUploading(true);
     try {
-      if (profile.avatarUrl.includes("profile-avatars")) {
-        const oldPath = profile.avatarUrl
-          .split("profile-avatars/")
-          .pop()
-          ?.split("?")[0];
-        if (oldPath) {
-          await supabase.storage.from("profile-avatars").remove([oldPath]);
-        }
+      const avatar = classifyProfileAvatarUrl(profile.avatarUrl, user.id);
+      if (avatar.kind === "invalid") {
+        throw new Error("profile_avatar_delete_key_unavailable");
+      }
+
+      if (avatar.kind === "owned_storage") {
+        const { error: removeError } = await supabase.storage
+          .from("profile-avatars")
+          .remove([avatar.storageKey]);
+        if (removeError) throw removeError;
       }
 
       const { error: updateError } = await supabase
@@ -217,9 +221,8 @@ export function MyPageSidebar() {
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
       router.refresh();
       toast.success("프로필 사진이 삭제되었습니다");
-    } catch (error) {
+    } catch {
       toast.error("프로필 사진 삭제에 실패했습니다");
-      console.error(error);
     } finally {
       setAvatarUploading(false);
     }
@@ -231,8 +234,7 @@ export function MyPageSidebar() {
       queryClient.clear();
       toast.success("로그아웃되었습니다");
       router.push("/");
-    } catch (error) {
-      console.error("로그아웃 실패:", error);
+    } catch {
       toast.error("로그아웃에 실패했습니다");
     }
   };
@@ -282,6 +284,7 @@ export function MyPageSidebar() {
 
   if (!user) return null;
 
+  const avatarUrl = resolveProfileAvatarUrl(profile?.avatarUrl, user.id);
   const isNicknameUnchanged = nicknameInput.trim() === displayName;
 
   return (
@@ -303,9 +306,9 @@ export function MyPageSidebar() {
               overflow: "hidden",
             }}
           >
-            {profile?.avatarUrl ? (
+            {avatarUrl ? (
               <NextImage
-                src={profile.avatarUrl}
+                src={avatarUrl}
                 alt={displayName}
                 fill
                 sizes="80px"
@@ -341,7 +344,7 @@ export function MyPageSidebar() {
             />
           </label>
 
-          {profile?.avatarUrl && (
+          {avatarUrl && (
             <button
               type="button"
               onClick={(e) => {

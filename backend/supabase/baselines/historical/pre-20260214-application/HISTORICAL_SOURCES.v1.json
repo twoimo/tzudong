@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "repository": "twoimo/tzudong",
+  "commit": "a15558368ac86c86835d8f105746cf553c18ddf9",
+  "tree": "f96999e1653c39f68dfc6833a70f9de2a4577c7e",
+  "archiveSha256": "1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11",
+  "status": "inventory_only",
+  "reconstructionAuthorized": false,
+  "unresolvedGaps": [
+    "migration_order",
+    "overlap",
+    "platform_history"
+  ],
+  "entries": [
+    {
+      "path": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "blobSha1": "b286fb1589b46203a0010d44c29ce65a39188fbc",
+      "byteLength": 79793,
+      "sha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33",
+      "classification": "candidate_baseline"
+    },
+    {
+      "path": "supabase/migrations/temp/20251111_youtube_title_search.sql",
+      "blobSha1": "873809736ef3affca5c829d9946442d7a997b2db",
+      "byteLength": 3914,
+      "sha256": "e8a5deeffebb43900447b703b9cfdd860382aff256732d49675e89ad5a049b8e",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251112_restaurant_name_search.sql",
+      "blobSha1": "7d2ef1d028a9d3419124e30c1728b1bf8a1661c9",
+      "byteLength": 3622,
+      "sha256": "60854b47cd54b938413d75c8a2fe89e80b54fb1348eac2c611b3aeb621ce229a",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251114_add_deleted_status.sql",
+      "blobSha1": "68065f10e940686a2fbc43e135d54d8a2e0d5704",
+      "byteLength": 1171,
+      "sha256": "321cbb8f0f130bf91a0528b34a9512ba0ab4d4b72032139ee67036ea85917b04",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251114_add_duplicate_error_fields.sql",
+      "blobSha1": "34408d244e473cf7c1ccea73b7dbdeaadc147a21",
+      "byteLength": 564,
+      "sha256": "7970817ce2e3c7bdd9a33a45680e5f212d9ac34f1b108dc116eb634d7fc95ec5",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251115_simplify_youtube_review_columns.sql",
+      "blobSha1": "8b9c9fad0dc581a87ad85a81d026e87d7bc38481",
+      "byteLength": 1202,
+      "sha256": "f274974734ac870c852779bce5a82bfea9cd75ac78d4cd6b5281ba75d5226ef8",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251117_advanced_restaurant_search.sql",
+      "blobSha1": "78a9fe78f5b7da57bcf178856b84fc95941ebd81",
+      "byteLength": 14397,
+      "sha256": "494a3108b195970891efc175be1d6f912a6a0d50defdbfae464d8eef6aafecc8",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251117_redesign_submissions.sql",
+      "blobSha1": "e47de92458ea4b86ee57a841f86295e9b87d09fb",
+      "byteLength": 16459,
+      "sha256": "9654da6521d1d037d3ec197d8b44534a1879a923cd0f55a9ac2a17f06e66aab9",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251123_add_admin_source_type.sql",
+      "blobSha1": "e3bd5766a4c1a0609ff66eeaa030e40f17a5d697",
+      "byteLength": 770,
+      "sha256": "fae6b756b98d9aa9746ed9eb0a7d150086fc462a619df6de44cdf5d877d735ce",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251128_add_geminicli_source_type.sql",
+      "blobSha1": "24415f22b10e8f9237b89ecc57cca0361c60dd72",
+      "byteLength": 826,
+      "sha256": "16ed0029b3b9f75316d4f73bf0242787297327cc75b504143018949488b4b393",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251205_allow_null_name.sql",
+      "blobSha1": "bcb4f30869bba6c7fa2ee9e43b71a00d3150a0f1",
+      "byteLength": 411,
+      "sha256": "cfd2d314cfaae06fb26e5bef66df30de54dcc83b4fbca7438150c9d69300ccaa",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251210_approval_functions_v2.sql",
+      "blobSha1": "93244933e021cf36b75eb7bb60f075c4e7cef1e6",
+      "byteLength": 17687,
+      "sha256": "a22a92332a067863ba9484b2d48fe4f1412cad8cc84f1e3f4aef559eb3b8e28b",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251210_redesign_submissions_v2.sql",
+      "blobSha1": "254765d14e47bc2754fcbbcecc1365153f944505",
+      "byteLength": 16452,
+      "sha256": "3e5bf820c508f24f02b3a81843707758642a53c1d90084f201bb60f7836bb674",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251210_update_restaurant_requests_address.sql",
+      "blobSha1": "867a9535d4215aa0aaf06ff772193c3e62367592",
+      "byteLength": 2228,
+      "sha256": "e3e4111be776632f3c48fd99d821d6447779da5a7705093143d7f913f04587bc",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251211_add_receipt_ocr_columns.sql",
+      "blobSha1": "d892f0fc6767bc0582fb492672eb1cfebaf5b341",
+      "byteLength": 1924,
+      "sha256": "7539f090678aea7ee68fa07548219f251b921758511c7e2df48b4b91e767aaf8",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251211_add_target_restaurant_id_to_items.sql",
+      "blobSha1": "b8843724d9c510880814af6e0d30723dd77d8019",
+      "byteLength": 1181,
+      "sha256": "2afb326916ed2dc76a6b6eb2c237b860d700f2d075c4a1f467d4477c2b358d88",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251211_remove_submission_target_restaurant_id.sql",
+      "blobSha1": "7b52864f83d8fa9845e8df729b9a51b401bb1599",
+      "byteLength": 7762,
+      "sha256": "d506782ca056108ed9426f114702c8b8e777a9eb2aa3878a1e42228ac043159e",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251211_schema_fix.sql",
+      "blobSha1": "b3bd146053bbdbb89cbebae05cec330ee470ec9e",
+      "byteLength": 4053,
+      "sha256": "6ae5694d56f45679e6dbab2c8b202d0b44d8eefd3fa160251714aad8393251ef",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251211_schema_improvements.sql",
+      "blobSha1": "09aa1533e1c5d117535cc62eefd1b718857ef9df",
+      "byteLength": 5301,
+      "sha256": "4f06ee67209b4c4810f0a1ff85129601634142b7756449c7afdcc64ac5c83e6b",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251216_update_approval_functions_v2.sql",
+      "blobSha1": "a503ad1929f80a789b23110f287b995892b61e4b",
+      "byteLength": 16814,
+      "sha256": "433b3bf08f604ef89e1f56498f2b2ef93d29935dacb26c88974fe08df7df88b1",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251216_update_approval_functions_v3.sql",
+      "blobSha1": "795728864032fd11a2f8f39c641444ea41e64623",
+      "byteLength": 13222,
+      "sha256": "e0e0455d51e9e48af16943f6b04bf89cd3596cd7a734720e708e2d12022246ab",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251219_add_fk_indexes.sql",
+      "blobSha1": "47f6d7c4530432ecb730fec0b3ed29c636010715",
+      "byteLength": 886,
+      "sha256": "432be6c78533edca621d1234ae209d5a0e6846fa20c80e805bbd93918523e8d4",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251219_consolidate_rls_policies.sql",
+      "blobSha1": "e8ce99d4ff097715b2819fa9f0d78f1dca9c7986",
+      "byteLength": 6407,
+      "sha256": "013d2f2a2ac0b0b270a0e4191ede6aa05220f69ae364153493ded19441f0fd7f",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251219_db_performance_optimization.sql",
+      "blobSha1": "a9a402574d992eaac1ec9fed8ec93b366fe61873",
+      "byteLength": 10413,
+      "sha256": "2370b1b5faa838ae39ad6d87d6a54cbce9a2dac384e5e5e3854b2cbb1f5b77bc",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251226_user_bookmarks.sql",
+      "blobSha1": "1dd4894d0367a2ab1b5791bba28dc982be801c0e",
+      "byteLength": 1708,
+      "sha256": "accd6b079af87270a4768211a93a224e285b778c661b8d2b3e30b2c40806598d",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251228_fix_function_search_path.sql",
+      "blobSha1": "4f4f17e2a3e0c49058ad19d86b5d3f0ad854659f",
+      "byteLength": 605,
+      "sha256": "f7f3cdca64872820b0ece913f7a79fabefe48a801b16f6e22878ebd8304729d2",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251228_optimize_bookmarks_rls.sql",
+      "blobSha1": "4f1d93c459cb8d913ac77d97a2368b32c9a66beb",
+      "byteLength": 964,
+      "sha256": "8511223534223bea02023c240cfbc8c4bf613dfd8c525e89c9bd2e1f6bfea76b",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251228_remove_truly_unused_index.sql",
+      "blobSha1": "d93864cc72f8c7665184f2506a92419b0679e592",
+      "byteLength": 387,
+      "sha256": "fd515db41fcb1807ea2f310745ce1d911b6b99a642160bac87cbbe38a86529ef",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251228_remove_unused_indexes.sql",
+      "blobSha1": "41148957b6ddeaf9a49f0b41e723c577269fb205",
+      "byteLength": 2408,
+      "sha256": "0d3732100e13e83b84c8da22fb4deca405723ad55fa68ecc696442ee302287e2",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251228_weekly_search_count_and_abuse_prevention.sql",
+      "blobSha1": "5597a8234ee736e00eb7a319ef4458416e18cb7e",
+      "byteLength": 6309,
+      "sha256": "b66f94ef7458ded7ad0eca14b4b3dae041357194568e671c4f1d1b127bb9669d",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251229_create_ad_banners_table.sql",
+      "blobSha1": "60a07a9cd9aa7c5e78147e35d31989fc1fb8a516",
+      "byteLength": 3049,
+      "sha256": "dc4631c104dab83add16b459ab72f509bbf3647565f320dc942d76f64d4af7d4",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20251230_create_youtuber_restaurants_table.sql",
+      "blobSha1": "31a23a40a189d6be1576cf8ef8c5ae7a4b74ba07",
+      "byteLength": 3946,
+      "sha256": "015974c5ce297bda2d968a6c4af8adbb4cb41f8bb0b96b97a6389500a3b9744c",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/20260101_tzuyang_random_nickname.sql",
+      "blobSha1": "5b4ec262a3e93217bba1499b25f470a926e8557e",
+      "byteLength": 3044,
+      "sha256": "ed2ec99644e5cc085ded4ee4c5236a79c016843b82ddcd41585a58e3495d7ba4",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/add_increment_search_count_function.sql",
+      "blobSha1": "422899d8e4dc174a8581da623050b310c33d80aa",
+      "byteLength": 482,
+      "sha256": "4f8b648e46727e232d943434ea2a6b486f8eb6ec50e26c9d04360c753f89a215",
+      "classification": "candidate_unordered"
+    },
+    {
+      "path": "supabase/migrations/temp/add_search_count.sql",
+      "blobSha1": "71834c87383999fb8236b1f13653498da9a9110f",
+      "byteLength": 391,
+      "sha256": "e6678c34f37e81d5fc6f1803a8500bee20c929069598cef13ab5dd9c1217984f",
+      "classification": "candidate_unordered"
+    }
+  ]
+}

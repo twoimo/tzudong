@@ -2,6 +2,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logSafeError, redactLogText } from '../../utils/privacy-log.mjs';
+import { resolvePrivilegedSupabaseRestCredentials } from '../../utils/supabase-rest.mjs';
+
+const DIAGNOSTIC_TEXT_LIMIT = 256;
+
+function redactDiagnosticText(value) {
+  return redactLogText(value, DIAGNOSTIC_TEXT_LIMIT);
+}
 
 const DEFAULT_SELECT_COLUMNS = [
   'id',
@@ -245,13 +253,21 @@ function identityWarningsForRow(row, rows) {
 
   if (originName && candidateName && !compatible) {
     const severity = getBooleanEvalValue(row, 'location_match_TF') === true ? 'block' : 'warn';
-    warnings.push({ rule: 'provider_name_mismatch', severity, message: `origin=${originName}, candidate=${candidateName}` });
+    warnings.push({
+      rule: 'provider_name_mismatch',
+      severity,
+      message: redactDiagnosticText(`origin=${originName}, candidate=${candidateName}`),
+    });
   }
 
   if (originName && candidateName && compatible) {
     const missing = missingBranchTokens(originName, candidateName);
     if (missing.length > 0) {
-      warnings.push({ rule: 'missing_branch_context', severity: 'warn', message: `missing=${missing.join(',')}` });
+      warnings.push({
+        rule: 'missing_branch_context',
+        severity: 'warn',
+        message: redactDiagnosticText(`missing=${missing.join(',')}`),
+      });
     }
   }
 
@@ -269,13 +285,12 @@ function identityWarningsForRow(row, rows) {
 
 function summarizeRow(row) {
   return {
-    id: row.id,
-    name: displayName(row),
-    status: row.status,
+    id: redactDiagnosticText(row.id),
+    name: redactDiagnosticText(displayName(row)),
+    status: redactDiagnosticText(row.status),
     adminTouched: Boolean(row.updated_by_admin_id),
-    address: addressText(row) || null,
-    youtubeVideoId: extractVideoId(row.youtube_link),
-    updatedAt: row.updated_at || null,
+    youtubeVideoId: redactDiagnosticText(extractVideoId(row.youtube_link)),
+    updatedAt: redactDiagnosticText(row.updated_at),
   };
 }
 
@@ -305,11 +320,11 @@ export function auditRestaurantRows(rows, { sampleLimit = 20 } = {}) {
         const evidence = pairEvidence(group[i], group[j]);
         if (evidence) {
           pairEdges.push({
-            videoId,
-            leftId: group[i].id,
-            rightId: group[j].id,
-            leftName: displayName(group[i]),
-            rightName: displayName(group[j]),
+            videoId: redactDiagnosticText(videoId),
+            leftId: redactDiagnosticText(group[i].id),
+            rightId: redactDiagnosticText(group[j].id),
+            leftName: redactDiagnosticText(displayName(group[i])),
+            rightName: redactDiagnosticText(displayName(group[j])),
             evidence: {
               ...evidence,
               nameSimilarity: Number(bestNameSimilarity(group[i], group[j]).best.toFixed(3)),
@@ -323,8 +338,8 @@ export function auditRestaurantRows(rows, { sampleLimit = 20 } = {}) {
   const exactDuplicateGroups = [...exactGroups.values()]
     .filter((group) => group.rows.length > 1)
     .map((group) => ({
-      videoId: group.videoId,
-      identity: group.identity,
+      videoId: redactDiagnosticText(group.videoId),
+      identity: redactDiagnosticText(group.identity),
       rows: group.rows.map(summarizeRow),
     }))
     .sort((left, right) => right.rows.length - left.rows.length || left.videoId.localeCompare(right.videoId));
@@ -385,7 +400,7 @@ export function renderAuditMarkdown(report) {
   if (report.samples.exactDuplicateGroups.length > 0) {
     lines.push('#### Exact duplicate groups requiring action', '');
     for (const group of report.samples.exactDuplicateGroups) {
-      lines.push(`- video=${group.videoId}, identity=${group.identity}, rows=${group.rows.map((row) => `${row.name}(${row.id})`).join(', ')}`);
+      lines.push(`- video=${redactDiagnosticText(group.videoId)}, identity=${redactDiagnosticText(group.identity)}, rows=${group.rows.map((row) => `${redactDiagnosticText(row.name)}(${redactDiagnosticText(row.id)})`).join(', ')}`);
     }
     lines.push('');
   }
@@ -393,7 +408,7 @@ export function renderAuditMarkdown(report) {
   if (report.samples.fuzzyCandidatePairs.length > 0) {
     lines.push('#### Fuzzy duplicate candidates for operator review', '');
     for (const edge of report.samples.fuzzyCandidatePairs) {
-      lines.push(`- video=${edge.videoId}, rule=${edge.evidence.rule}, confidence=${edge.evidence.confidence}: ${edge.leftName}(${edge.leftId}) ↔ ${edge.rightName}(${edge.rightId})`);
+      lines.push(`- video=${redactDiagnosticText(edge.videoId)}, rule=${redactDiagnosticText(edge.evidence.rule)}, confidence=${edge.evidence.confidence}: ${redactDiagnosticText(edge.leftName)}(${redactDiagnosticText(edge.leftId)}) ↔ ${redactDiagnosticText(edge.rightName)}(${redactDiagnosticText(edge.rightId)})`);
     }
     lines.push('');
   }
@@ -401,7 +416,7 @@ export function renderAuditMarkdown(report) {
   if (report.samples.identityWarningRows.length > 0) {
     lines.push('#### Identity and provider-name warnings', '');
     for (const row of report.samples.identityWarningRows) {
-      lines.push(`- video=${row.youtubeVideoId}, row=${row.name}(${row.id}), rules=${row.warnings.map((warning) => `${warning.severity}:${warning.rule}`).join(', ')}`);
+      lines.push(`- video=${redactDiagnosticText(row.youtubeVideoId)}, row=${redactDiagnosticText(row.name)}(${redactDiagnosticText(row.id)}), rules=${row.warnings.map((warning) => `${redactDiagnosticText(warning.severity)}:${redactDiagnosticText(warning.rule)}`).join(', ')}`);
     }
     lines.push('');
   }
@@ -409,10 +424,10 @@ export function renderAuditMarkdown(report) {
   if (report.samples.categoryTFFalseRows.length > 0 || report.samples.categoryValidityFalseRows.length > 0) {
     lines.push('#### Category consistency rows to review', '');
     for (const row of report.samples.categoryTFFalseRows) {
-      lines.push(`- category_TF=false: ${row.name}(${row.id}) video=${row.youtubeVideoId}`);
+      lines.push(`- category_TF=false: ${redactDiagnosticText(row.name)}(${redactDiagnosticText(row.id)}) video=${redactDiagnosticText(row.youtubeVideoId)}`);
     }
     for (const row of report.samples.categoryValidityFalseRows) {
-      lines.push(`- category_validity_TF=false: ${row.name}(${row.id}) video=${row.youtubeVideoId}`);
+      lines.push(`- category_validity_TF=false: ${redactDiagnosticText(row.name)}(${redactDiagnosticText(row.id)}) video=${redactDiagnosticText(row.youtubeVideoId)}`);
     }
     lines.push('');
   }
@@ -438,14 +453,14 @@ function parseArgs(argv) {
   return args;
 }
 
+function auditFetchError() {
+  const error = new Error('SUPABASE_AUDIT_FETCH_FAILED');
+  error.code = 'SUPABASE_AUDIT_FETCH_FAILED';
+  return error;
+}
+
 async function fetchRowsFromSupabase() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for live audit');
-  }
-
+  const { url: supabaseUrl, serviceRoleKey: supabaseKey } = resolvePrivilegedSupabaseRestCredentials(process.env);
   const rows = [];
   const pageSize = 1000;
   for (let offset = 0; ; offset += pageSize) {
@@ -455,19 +470,27 @@ async function fetchRowsFromSupabase() {
     endpoint.searchParams.set('limit', String(pageSize));
     endpoint.searchParams.set('order', 'created_at.desc,id.asc');
 
-    const response = await fetch(endpoint, {
-      headers: {
-        apikey: supabaseKey,
-        authorization: `Bearer ${supabaseKey}`,
-      },
-    });
-
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Supabase REST restaurants audit failed: ${response.status} ${body}`.trim());
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        headers: {
+          apikey: supabaseKey,
+          authorization: `Bearer ${supabaseKey}`,
+        },
+      });
+    } catch {
+      throw auditFetchError();
     }
 
-    const data = await response.json();
+    if (!response.ok) throw auditFetchError();
+
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw auditFetchError();
+    }
+    if (!Array.isArray(data)) throw auditFetchError();
     rows.push(...data);
     if (data.length < pageSize) break;
   }
@@ -508,7 +531,7 @@ async function main() {
 const currentFile = fileURLToPath(import.meta.url);
 if (process.argv[1] && path.resolve(process.argv[1]) === currentFile) {
   main().catch((error) => {
-    console.error(error);
+    logSafeError(error);
     process.exit(1);
   });
 }

@@ -222,11 +222,11 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (!hasMounted) {
     return (
-      <div className="min-h-[var(--full-height,100vh)] bg-background">
+      <div className="min-h-[var(--full-height,100vh)] min-w-0 bg-background">
         <a href="#main-content" className="skip-link">
           본문 바로가기
         </a>
-        <main id="main-content" className="h-full w-full">
+        <main id="main-content" tabIndex={-1} className="h-full min-h-0 min-w-0 w-full">
           {children}
         </main>
       </div>
@@ -249,7 +249,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     // h-screen 대신 CSS 변수(--full-height)로 모바일 브라우저 UI 고려
     // dvh/svh 지원 브라우저에서는 동적 뷰포트, 미지원은 JS fallback
     <div
-      className="flex overflow-hidden"
+      className="flex min-h-0 min-w-0 overflow-hidden"
       style={{ height: "var(--full-height, 100vh)" }}
     >
       <NavigationPrefetcher />
@@ -261,7 +261,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
       <div
         className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-[margin] duration-300",
+          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300",
         )}
         style={{
           transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
@@ -274,12 +274,13 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         </a>
         <main
           id="main-content"
-          className="flex-1 relative overflow-hidden transition-[margin] duration-300"
+          tabIndex={-1}
+          className="relative min-h-0 min-w-0 flex-1 overflow-hidden transition-[margin] duration-300"
           style={{
             marginTop: "calc(-1 * var(--mobile-sheet-header-offset, 0px))",
           }}
         >
-          <div className="h-full w-full">{children}</div>
+          <div className="h-full min-h-0 min-w-0 w-full">{children}</div>
         </main>
       </div>
 

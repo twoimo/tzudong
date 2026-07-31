@@ -21,6 +21,24 @@ describe("mobile and desktop parity source contracts", () => {
       "admin route responsive cases will be skipped",
     );
   });
+  test("responsive runner emits only fixed failure codes and allowlisted library facts", () => {
+    const runner = source("scripts/run-responsive-tests.mjs");
+
+    expect(runner).toContain("import { logCliError } from './privacy-safe-cli-log.mjs';");
+    expect(runner).toContain("const SAFE_LIBRARY_NAME_PATTERN = /^lib[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$/;");
+    expect(runner).toContain("const MISSING_LIBRARY_LINE_PATTERN = /^([A-Za-z0-9][A-Za-z0-9._+-]{0,127})\\s+=>\\s+not found$/;");
+    expect(runner).toContain("stdio: 'ignore'");
+    expect(runner).toContain("RESPONSIVE_TEST_LIBRARY_INSPECTION_FAILED");
+    expect(runner).toContain("logMissingLibraryFacts(libraryCheck.missingLibraries, console.error)");
+    expect(runner).not.toMatch(/console\.(?:log|warn|error)\([^)]*(?:stdout|stderr|output)/);
+    for (const unsafeSink of [
+      "stdio: 'inherit'",
+      'ldd failed: ${',
+      'ldd.stderr',
+      'error.message',
+      'console.error(`- ${lib}`)',
+    ]) expect(runner).not.toContain(unsafeSink);
+  });
 
   test("admin console exposes both mobile-width and desktop-width navigation affordances", () => {
     const adminPageSource = source("app/admin/page.tsx");
@@ -347,7 +365,11 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
     expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
-    expect(mobileOverlaySource).toContain("aria-expanded={activeSheet ===");
+    expect(mobileOverlaySource).toContain('aria-expanded={false}');
+    expect(mobileOverlaySource).toContain('data-mobile-map-sheet-trigger="region"');
+    expect(mobileOverlaySource).toContain('data-mobile-map-sheet-trigger="category"');
+    expect(mobileOverlaySource).toContain('mobileSheetTriggerRef');
+    expect(mobileOverlaySource).toContain('`[data-mobile-map-sheet-trigger="${trigger}"]`');
     expect(mobileOverlaySource).toContain('role="dialog"');
     expect(mobileOverlaySource).toContain(
       '<span className="font-medium">대한민국</span>',
@@ -776,34 +798,30 @@ describe("mobile and desktop parity source contracts", () => {
       'showDesktopLeftPanelAuthToast("notifications");',
     );
     expect(homeDesktopControlPanelSource).toContain(
+      "const DESKTOP_MAP_MENU_ITEMS = [",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "] as const satisfies ReadonlyArray<DesktopMapMenuItem>;",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "const handleDesktopMapMenuItemSelect = useCallback",
+    );
+    expect(homeDesktopControlPanelSource).toContain('case "profile":');
+    expect(homeDesktopControlPanelSource).toContain("handleAccountClick();");
+    expect(homeDesktopControlPanelSource).toContain('case "bookmarks":');
+    expect(homeDesktopControlPanelSource).toContain("handleBookmarkClick();");
+    expect(homeDesktopControlPanelSource).toContain('case "notifications":');
+    expect(homeDesktopControlPanelSource).toContain("handleNotificationClick();");
+    expect(homeDesktopControlPanelSource).toContain("handleShortcutClick(id);");
+    expect(homeDesktopControlPanelSource).toContain(
+      "DESKTOP_MAP_MENU_ITEMS.map((item) =>",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "onClick={() => handleDesktopMapMenuItemSelect(item.id)}",
+    );
+    expect(homeDesktopControlPanelSource).not.toContain(
       "const desktopMapMenuItems = useMemo",
     );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleAccountClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleBookmarkClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleNotificationClick",
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("feed")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("stamp")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      'onSelect: () => handleShortcutClick("leaderboard")',
-    );
-    expect(homeDesktopControlPanelSource).toContain(
-      "desktopMapMenuItems.map((item) =>",
-    );
-    expect(homeDesktopControlPanelSource).toContain("onClick={item.onSelect}");
-    expect(homeDesktopControlPanelSource).not.toContain(
-      "const handleDesktopMapMenuClick = useCallback",
-    );
-    expect(homeDesktopControlPanelSource).not.toContain("DESKTOP_MAP_MENU_ITEMS");
     expect(homeDesktopControlPanelSource).toContain(
       "The hamburger menu intentionally lives in the expanded desktop search slot.",
     );
@@ -1017,9 +1035,8 @@ describe("mobile and desktop parity source contracts", () => {
       'router.push("/?panel=bookmarks", { scroll: false })',
     );
     expect(homeDesktopControlPanelSource).toContain('label: "알림"');
-    expect(homeDesktopControlPanelSource).toContain(
-      "onSelect: handleNotificationClick",
-    );
+    expect(homeDesktopControlPanelSource).toContain('case "notifications":');
+    expect(homeDesktopControlPanelSource).toContain("handleNotificationClick();");
     expect(homeDesktopControlPanelSource).toContain(
       'router.push("/?panel=notifications", { scroll: false })',
     );
@@ -1076,7 +1093,12 @@ describe("mobile and desktop parity source contracts", () => {
     expect(source("components/home/MobileControlOverlay.tsx")).toContain(
       "toast.error('로그인 후 알림을 확인할 수 있어요');",
     );
-    expect(source("components/home/MobileControlOverlay.tsx")).toContain("z-[90] flex flex-col gap-2");
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain(
+      'data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"',
+    );
+    expect(source("components/home/MobileControlOverlay.tsx")).toContain(
+      'data-fixed-control-region="mobile-map-actions"',
+    );
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("event.stopPropagation();");
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("onDeviceLocationClick?.();");
     expect(source("components/home/MobileControlOverlay.tsx")).toContain("activeSheet !== 'search'");

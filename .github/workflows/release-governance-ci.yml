@@ -1,0 +1,59 @@
+name: Release governance contract
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop, data]
+
+concurrency:
+  group: release-governance-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance-contract:
+    name: Release governance contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Bind checkout to the triggering commit and tree
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse "$EXPECTED_SHA^{tree}")"
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.2.16'
+      - name: Pin npm authority
+        run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
+      - run: npm ci
+      - name: Exercise the protected-map scorer rerun and independent validator
+        env:
+          GOVERNANCE_CI_OUTPUT_DIR: ${{ runner.temp }}/performance-governance
+        run: bun test tests-unit/performance-backlog-governance.test.ts
+      - name: Check governance workflow source contracts
+        run: bun test tests-unit/release-workflow-governance-source.test.ts
+      - name: Retain sanitized scored governance artifact only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: performance-governance-scored-backlog
+          path: |
+            ${{ runner.temp }}/performance-governance/backlog.scored.json
+            ${{ runner.temp }}/performance-governance/backlog.scored.json.sha256
+          if-no-files-found: error
+          retention-days: 7

@@ -91,10 +91,14 @@ apps/web/tests/temp-*.spec.ts
 .agents/
 .gemini/
 AGENTS.md
+!/AGENTS.md
 OMX_MODERNIZATION_WORKLOG.md
 # Local AI/browser helper state and packaged agent drops
 .antigravitycli/
 .tmp-gjc-*/
+.tmp-g034-*/
+.tmp-g035-*.json
+.tmp-g036-*.json
 .venv-storyboard-rag/
 gajae-code-coding-agent-*.tgz
 
