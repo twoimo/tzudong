@@ -16,7 +16,7 @@ export default function MyPageError({
     reset: () => void;
 }) {
     useEffect(() => {
-        console.error('[MyPageError]', error);
+        console.error('[MyPageError]');
     }, [error]);
 
     return (

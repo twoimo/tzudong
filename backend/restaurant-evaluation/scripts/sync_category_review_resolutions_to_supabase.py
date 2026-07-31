@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -27,6 +26,10 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.runtime_paths import load_backend_env, resolve_backend_root
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 
 try:
     from supabase import create_client
@@ -42,6 +45,16 @@ DEFAULT_CHANGES_PATH = Path(
 )
 DEFAULT_REPORT_ROOT = Path("../.omx/reports/refined-data")
 LOCKED_STATUSES = {"approved", "deleted"}
+COMPARE_AND_SET_CONFLICT = "compare_and_set_conflict"
+CATEGORY_REVIEW_FIELDS = (
+    "id",
+    "status",
+    "updated_by_admin_id",
+    "updated_at",
+    "categories",
+    "evaluation_results",
+)
+CATEGORY_READBACK_FIELDS = "id,status,updated_by_admin_id,updated_at,categories,evaluation_results"
 
 
 def utc_now() -> str:
@@ -81,6 +94,112 @@ def merge_evaluation_results(existing: Any, category_validity: dict[str, Any]) -
     return merged
 
 
+def is_review_locked(row: dict[str, Any]) -> bool:
+    return row.get("status") in LOCKED_STATUSES or bool(row.get("updated_by_admin_id"))
+
+
+def reviewed_fields(row: dict[str, Any]) -> dict[str, Any]:
+    return {field: row.get(field) for field in CATEGORY_REVIEW_FIELDS}
+
+
+def json_filter_value(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def text_array_filter_value(value: list[Any]) -> str:
+    entries = []
+    for item in value:
+        if item is None:
+            entries.append("NULL")
+        else:
+            entries.append('"' + str(item).replace("\\", "\\\\").replace('"', '\\"') + '"')
+    return "{" + ",".join(entries) + "}"
+
+
+def bind_exact_value(query: Any, column: str, value: Any, *, text_array: bool = False, jsonb: bool = False) -> Any:
+    if value is None:
+        return query.is_(column, None)
+    if text_array:
+        return query.eq(column, text_array_filter_value(value))
+    if jsonb:
+        return query.eq(column, json_filter_value(value))
+    return query.eq(column, value)
+
+
+def bind_category_compare_and_set(query: Any, reviewed: dict[str, Any]) -> Any:
+    query = bind_exact_value(query, "id", reviewed["id"])
+    query = bind_exact_value(query, "status", reviewed["status"])
+    query = bind_exact_value(query, "updated_by_admin_id", reviewed["updated_by_admin_id"])
+    query = bind_exact_value(query, "updated_at", reviewed["updated_at"])
+    query = bind_exact_value(query, "categories", reviewed["categories"], text_array=True)
+    return bind_exact_value(query, "evaluation_results", reviewed["evaluation_results"], jsonb=True)
+
+
+def category_row_matches_reviewed(row: dict[str, Any], reviewed: dict[str, Any]) -> bool:
+    return all(row.get(field) == reviewed[field] for field in CATEGORY_REVIEW_FIELDS)
+
+
+def category_readback_matches_payload(row: dict[str, Any], reviewed: dict[str, Any], payload: dict[str, Any]) -> bool:
+    return (
+        all(row.get(field) == reviewed[field] for field in ("id", "status", "updated_by_admin_id"))
+        and row.get("categories") == payload["categories"]
+        and row.get("evaluation_results") == payload["evaluation_results"]
+    )
+
+
+def conflict_record(row: dict[str, Any], stage: str) -> dict[str, Any]:
+    return {
+        "id": row.get("id"),
+        "trace_id": row.get("trace_id"),
+        "origin_name": row.get("origin_name"),
+        "source_line": row.get("source_line"),
+        "skip_reason": COMPARE_AND_SET_CONFLICT,
+        "conflict_stage": stage,
+    }
+
+
+def apply_category_compare_and_set(client: Any, row: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
+    reviewed = row["reviewed"]
+    recheck = (
+        client.table("restaurants")
+        .select(CATEGORY_READBACK_FIELDS)
+        .eq("id", reviewed["id"])
+        .execute()
+        .data
+        or []
+    )
+    if len(recheck) != 1:
+        return False, conflict_record(row, "recheck_not_exactly_one")
+    current = recheck[0]
+    if is_review_locked(current):
+        return False, conflict_record(row, "protective_lock_changed")
+    if not category_row_matches_reviewed(current, reviewed):
+        return False, conflict_record(row, "reviewed_values_changed")
+
+    affected = bind_category_compare_and_set(
+        client.table("restaurants").update(row["payload"]),
+        reviewed,
+    ).execute().data or []
+    if len(affected) != 1:
+        return False, conflict_record(row, "affected_row_count_not_one")
+
+    readback = (
+        client.table("restaurants")
+        .select(CATEGORY_READBACK_FIELDS)
+        .eq("id", reviewed["id"])
+        .execute()
+        .data
+        or []
+    )
+    if len(readback) != 1 or not category_readback_matches_payload(readback[0], reviewed, row["payload"]):
+        return False, conflict_record(row, "readback_not_exactly_one_or_mismatched")
+    return True, None
+
+
+def public_eligible_row(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in row.items() if key != "reviewed"}
+
+
 def classify_updates(changes: list[dict[str, Any]], db_rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     db_by_trace = {row.get("trace_id"): row for row in db_rows}
     eligible: list[dict[str, Any]] = []
@@ -102,7 +221,7 @@ def classify_updates(changes: list[dict[str, Any]], db_rows: list[dict[str, Any]
             continue
         status = db_row.get("status")
         admin_locked = bool(db_row.get("updated_by_admin_id"))
-        if status in LOCKED_STATUSES or admin_locked:
+        if is_review_locked(db_row):
             skipped.append({**base, "skip_reason": "review_locked", "status": status, "admin_locked": admin_locked})
             continue
         eligible.append(
@@ -114,6 +233,7 @@ def classify_updates(changes: list[dict[str, Any]], db_rows: list[dict[str, Any]
                     "categories": categories,
                     "evaluation_results": merge_evaluation_results(db_row.get("evaluation_results"), category_validity),
                 },
+                "reviewed": reviewed_fields(db_row),
             }
         )
     return eligible, skipped
@@ -124,7 +244,7 @@ def fetch_rows(client: Any, trace_ids: list[str]) -> list[dict[str, Any]]:
     for i in range(0, len(trace_ids), 100):
         response = (
             client.table("restaurants")
-            .select("id,trace_id,status,categories,evaluation_results,updated_by_admin_id,origin_name,approved_name")
+            .select("id,trace_id,status,categories,evaluation_results,updated_by_admin_id,updated_at,origin_name,approved_name")
             .in_("trace_id", trace_ids[i : i + 100])
             .execute()
         )
@@ -140,14 +260,10 @@ def sync_to_supabase(changes_path: Path, output_dir: Path, *, apply: bool) -> di
     if legacy_env.exists() and load_dotenv is not None:
         load_dotenv(legacy_env)
     load_backend_env(backend_root, prefer_local=False)
-    url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_PUBLISHABLE_KEY")
-    if not url or not key:
-        raise RuntimeError("SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY missing")
-
+    credentials = resolve_privileged_supabase_rest_credentials()
     changes = load_jsonl(changes_path)
     trace_ids = [change["trace_id"] for change in changes]
-    client = create_client(url, key)
+    client = create_client(credentials.url, credentials.service_role_key)
     db_rows = fetch_rows(client, trace_ids)
     eligible, skipped = classify_updates(changes, db_rows)
 
@@ -155,7 +271,11 @@ def sync_to_supabase(changes_path: Path, output_dir: Path, *, apply: bool) -> di
     applied: list[dict[str, Any]] = []
     if apply:
         for row in eligible:
-            client.table("restaurants").update(row["payload"]).eq("id", row["id"]).execute()
+            applied_exactly_once, conflict = apply_category_compare_and_set(client, row)
+            if not applied_exactly_once:
+                assert conflict is not None
+                skipped.append(conflict)
+                continue
             applied.append({k: row[k] for k in ("id", "trace_id", "origin_name", "source_line", "categories", "status")})
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -163,7 +283,7 @@ def sync_to_supabase(changes_path: Path, output_dir: Path, *, apply: bool) -> di
     skipped_path = output_dir / f"supabase-category-review-{mode}-skipped.jsonl"
     applied_path = output_dir / f"supabase-category-review-{mode}-applied.jsonl"
     summary_path = output_dir / f"supabase-category-review-{mode}-summary.json"
-    write_jsonl(eligible_path, eligible)
+    write_jsonl(eligible_path, [public_eligible_row(row) for row in eligible])
     write_jsonl(skipped_path, skipped)
     write_jsonl(applied_path, applied)
     summary = {
@@ -200,7 +320,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     output_dir = args.output_dir or DEFAULT_REPORT_ROOT / f"supabase-category-review-sync-{timestamp_slug()}"
-    summary = sync_to_supabase(args.changes, output_dir, apply=args.apply)
+    try:
+        summary = sync_to_supabase(args.changes, output_dir, apply=args.apply)
+    except SupabaseRestConfigurationError:
+        print("[ERROR] Supabase REST configuration invalid.")
+        sys.exit(1)
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
 
 

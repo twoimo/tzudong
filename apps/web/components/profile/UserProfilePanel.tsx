@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { Restaurant } from "@/types/restaurant";
+import { resolveProfileAvatarUrl } from "@/lib/profile-avatar-url";
 
 // [최적화] 빈 상태 컴포넌트 - memo로 래핑
 interface EmptyStateProps {
@@ -181,6 +182,10 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
     const { data: leaderboard = [] } = useLeaderboard();
+    const profileAvatarUrl = useMemo(
+        () => resolveProfileAvatarUrl(profile?.avatarUrl, profile?.userId),
+        [profile?.avatarUrl, profile?.userId],
+    );
 
     const [activeTab, setActiveTab] = useState<UserProfileTab>('stamps');
     const [thumbnailIndices, setThumbnailIndices] = useState<Record<string, number>>({});
@@ -268,7 +273,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
             // 쿼리 무효화로 UI 업데이트
             queryClient.invalidateQueries({ queryKey: ['user-reviews', userId] });
         } catch (error) {
-            console.error('좋아요 토글 실패:', error);
+            console.error('좋아요 토글 실패:');
             toast({
                 title: '오류 발생',
                 description: '좋아요 처리 중 문제가 발생했습니다.',
@@ -390,7 +395,9 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         )}
                         {/* 프로필 아바타 */}
                         <Avatar className="h-12 w-12 ring-2 ring-primary/10 shadow-sm flex-shrink-0">
-                            <AvatarImage src={profile.avatarUrl} alt={profile.nickname} className="object-cover" />
+                            {profileAvatarUrl && (
+                                <AvatarImage src={profileAvatarUrl} alt={profile.nickname} className="object-cover" />
+                            )}
                             <AvatarFallback className="bg-primary/10">
                                 <User className="h-6 w-6 text-primary" />
                             </AvatarFallback>

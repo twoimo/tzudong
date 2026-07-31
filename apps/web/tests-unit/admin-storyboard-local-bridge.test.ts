@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { Server } from 'node:http';
+import { spawn, type ChildProcess } from 'node:child_process';
 
 import {
   STORYBOARD_LOCAL_BRIDGE_MAX_BODY_BYTES,
@@ -18,7 +19,10 @@ import {
   buildThumbnailLocalBridgeImagesRequest,
   normalizeThumbnailLocalBridgeImagesResponse,
 } from '../lib/admin/youtube-thumbnail-generator/local-bridge-contract';
-import { createStoryboardLocalBridgeServer } from '../lib/admin/storyboard/local-bridge-server.mts';
+import {
+  createStoryboardLocalBridgeServer,
+  startStoryboardLocalBridgeServer,
+} from '../lib/admin/storyboard/local-bridge-server.mts';
 import {
   LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM,
   LOCAL_BRIDGE_HELPER_ROUTE,
@@ -32,6 +36,11 @@ const allowedOrigin = 'https://www.tzudong.app';
 const token = 'test-local-bridge-token-1234567890';
 const tinyPngBase64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/l9ggGQAAAABJRU5ErkJggg==';
+const oversizedPngBase64 = Buffer.from(
+  '89504e470d0a1a0a0000000d49484452000020000000000108060000000000000000000049454e4400000000',
+  'hex',
+).toString('base64');
+const FAST_PROVIDER_TEST_TIMEOUT_MS = 5_000;
 
 const request: StoryboardGenerateRequest = {
   prompt: '로컬 브릿지 테스트 스토리보드',
@@ -77,12 +86,15 @@ function sha256(value: string | Buffer) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function writeFakeProvider(dir: string, mode: 'success' | 'misleading-failure' | 'path-mismatch' = 'success') {
+function writeFakeProvider(
+  dir: string,
+  mode: 'success' | 'misleading-failure' | 'path-mismatch' | 'wrong-format' | 'hash-mismatch' | 'bytes-mismatch' | 'symlink-output' | 'environment-probe' = 'success',
+) {
   const markerPath = join(dir, `provider-${mode}.marker`);
   const providerPath = join(dir, `fake-provider-${mode}.mjs`);
   writeFileSync(providerPath, `
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, symlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 let input = {};
 try {
@@ -90,16 +102,30 @@ try {
   input = rawInput ? JSON.parse(rawInput) : {};
 } catch {}
 if (process.argv[2]) input.output = process.argv[2];
-writeFileSync(${JSON.stringify(markerPath)}, 'invoked');
+const observedEnvironment = ${JSON.stringify('environment-probe')} === ${JSON.stringify(mode)}
+  ? ['OPENAI_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'TZUDONG_LOCAL_BRIDGE_TEST_SECRET', 'AUTHORIZATION'].reduce((observed, key) => ({
+    ...observed,
+    [key]: Object.prototype.hasOwnProperty.call(process.env, key),
+  }), {})
+  : undefined;
+writeFileSync(${JSON.stringify(markerPath)}, observedEnvironment ? JSON.stringify(observedEnvironment) : 'invoked');
 if (${JSON.stringify(mode)} === 'misleading-failure') {
   console.log(JSON.stringify({ ok: true, error: 'SUCCESS but failed with Bearer secret-token' }));
   process.exit(7);
 }
-const png = Buffer.from(${JSON.stringify(tinyPngBase64)}, 'base64');
+const png = ${JSON.stringify('wrong-format')} === ${JSON.stringify(mode)}
+  ? Buffer.from('not-a-png', 'utf8')
+  : Buffer.from(${JSON.stringify(tinyPngBase64)}, 'base64');
 const outputPath = input.outputPath || input.output;
 if (!outputPath) throw new Error('missing output path');
 mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(outputPath, png);
+if (${JSON.stringify(mode)} === 'symlink-output') {
+  const symlinkTarget = outputPath + '.target';
+  writeFileSync(symlinkTarget, png);
+  symlinkSync(symlinkTarget, outputPath);
+} else {
+  writeFileSync(outputPath, png);
+}
 const reportedOutputPath = ${JSON.stringify(mode)} === 'path-mismatch'
   ? ${JSON.stringify(join('__TEMP_DIR__', 'outside-provider-output.png'))}.replace('__TEMP_DIR__', ${JSON.stringify(dir)})
   : outputPath;
@@ -124,27 +150,45 @@ console.log(JSON.stringify({
   generatedImageItemTypes: ['image_generation_call'],
   rawImageItemTypes: ['image_generation_call'],
   mime: 'image/png',
-  bytes: png.length,
+  bytes: png.length + (${JSON.stringify(mode)} === 'bytes-mismatch' ? 1 : 0),
   outputPath: reportedOutputPath,
   durableOutputPath: reportedOutputPath,
   requestHash: ${JSON.stringify(sha256('request'))},
   responseHash,
   hasOpenAIAPIKey: false,
+  outputHash: ${JSON.stringify(mode)} === 'hash-mismatch' ? '0'.repeat(64) : undefined,
   generatedAt: new Date().toISOString()
 }));
 `);
   return { providerPath, markerPath };
 }
 
-function writeHangingProvider(dir: string) {
-  const markerPath = join(dir, 'provider-hanging.marker');
-  const providerPath = join(dir, 'fake-provider-hanging.mjs');
-  writeFileSync(providerPath, `
+
+function writeProcessTreeProvider(
+  dir: string,
+  mode: 'hanging' | 'overflow',
+) {
+  const directPidPath = join(dir, `provider-tree-${mode}-direct.pid`);
+  const grandchildPidPath = join(dir, `provider-tree-${mode}-grandchild.pid`);
+  const heartbeatPath = join(dir, `provider-tree-${mode}.heartbeat`);
+  const grandchildPath = join(dir, `provider-tree-${mode}-grandchild.mjs`);
+  const providerPath = join(dir, `provider-tree-${mode}.mjs`);
+  writeFileSync(grandchildPath, `
 import { writeFileSync } from 'node:fs';
-writeFileSync(${JSON.stringify(markerPath)}, 'invoked');
-setTimeout(() => {}, 10_000);
+writeFileSync(${JSON.stringify(grandchildPidPath)}, String(process.pid));
+process.on('SIGTERM', () => undefined);
+setInterval(() => writeFileSync(${JSON.stringify(heartbeatPath)}, 'alive'), 25);
 `);
-  return { providerPath, markerPath };
+  writeFileSync(providerPath, `
+import { spawn } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+writeFileSync(${JSON.stringify(directPidPath)}, String(process.pid));
+process.on('SIGTERM', () => undefined);
+spawn(process.execPath, [${JSON.stringify(grandchildPath)}], { stdio: 'ignore', windowsHide: true });
+if (${JSON.stringify(mode)} === 'overflow') setTimeout(() => process.stdout.write('x'.repeat(4 * 1024 * 1024)), 100);
+setInterval(() => {}, 1_000);
+`);
+  return { providerPath, directPidPath, grandchildPidPath };
 }
 
 function writeDefaultPythonProviderShim(dir: string) {
@@ -213,7 +257,7 @@ async function listenBridge(options: { providerPath: string; outputDir: string; 
     thumbnailProviderArgs: [options.thumbnailProviderPath ?? options.providerPath, '{output}'],
     outputDir: options.outputDir,
     fakeAuthReady: true,
-    commandTimeoutMs: options.commandTimeoutMs ?? 2000,
+    commandTimeoutMs: options.commandTimeoutMs ?? FAST_PROVIDER_TEST_TIMEOUT_MS,
   });
   await new Promise<void>((resolveListen, rejectListen) => {
     bridge.server.once('error', rejectListen);
@@ -223,9 +267,198 @@ async function listenBridge(options: { providerPath: string; outputDir: string; 
   if (!address || typeof address === 'string') throw new Error('bridge did not bind to a TCP port');
   return { ...bridge, baseUrl: `http://127.0.0.1:${address.port}` };
 }
+async function listenBridgeInNode(options: {
+  providerPath: string;
+  outputDir: string;
+  commandTimeoutMs?: number;
+}) {
+  const encodedConfig = Buffer.from(JSON.stringify({
+    moduleUrl: new URL('../lib/admin/storyboard/local-bridge-server.mts', import.meta.url).href,
+    token,
+    allowedOrigin,
+    providerPath: options.providerPath,
+    outputDir: options.outputDir,
+    commandTimeoutMs: options.commandTimeoutMs ?? FAST_PROVIDER_TEST_TIMEOUT_MS,
+  }), 'utf8').toString('base64');
+  const child = spawn('node', ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '-e', `
+    (async () => {
+      const config = JSON.parse(Buffer.from(process.env.BRIDGE_SERVER_CONFIG, 'base64').toString('utf8'));
+      const { createStoryboardLocalBridgeServer } = await import(config.moduleUrl);
+      const bridge = createStoryboardLocalBridgeServer({
+        token: config.token,
+        allowedOrigins: [config.allowedOrigin],
+        providerCommand: process.execPath,
+        providerArgs: [config.providerPath],
+        outputDir: config.outputDir,
+        fakeAuthReady: true,
+        commandTimeoutMs: config.commandTimeoutMs,
+      });
+      bridge.server.listen(0, '127.0.0.1', () => {
+        const address = bridge.server.address();
+        process.stdout.write('READY:' + address.port + '\\n');
+      });
+      const stop = () => bridge.server.close(() => process.exit(0));
+      process.once('SIGTERM', stop);
+      process.once('SIGINT', stop);
+    })().catch(() => process.exit(2));
+  `], {
+    stdio: ['ignore', 'pipe', 'ignore'],
+    windowsHide: true,
+    env: { ...process.env, BRIDGE_SERVER_CONFIG: encodedConfig },
+  });
+  return new Promise<{ process: ChildProcess; baseUrl: string }>((resolveReady, rejectReady) => {
+    let output = '';
+    child.stdout?.setEncoding('utf8');
+    child.stdout?.on('data', (chunk) => {
+      output += chunk;
+      const match = output.match(/READY:(\d+)/);
+      if (match?.[1]) resolveReady({ process: child, baseUrl: `http://127.0.0.1:${match[1]}` });
+    });
+    child.once('error', rejectReady);
+    child.once('exit', (code) => {
+      if (!output.includes('READY:')) rejectReady(new Error(`node bridge exited before listen: ${code}`));
+    });
+  });
+}
+
+async function stopNodeBridge(child: ChildProcess) {
+  if (child.exitCode !== null) return;
+  const exited = new Promise<void>((resolveExited) => child.once('exit', () => resolveExited()));
+  child.kill('SIGTERM');
+  await Promise.race([
+    exited,
+    new Promise<void>((resolveTimeout) => setTimeout(resolveTimeout, 1_000)),
+  ]);
+  if (child.exitCode === null) {
+    child.kill('SIGKILL');
+    await exited;
+  }
+}
+let localBridgeSessionSequence = 0;
+
+async function openLocalBridgeSession(
+  baseUrl: string,
+  surface: 'storyboard' | 'thumbnail' = 'storyboard',
+) {
+  const sessionId = `test-session-${++localBridgeSessionSequence}`;
+  const helperUrl = new URL(`${baseUrl}${LOCAL_BRIDGE_HELPER_ROUTE}`);
+  helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_ORIGIN_QUERY_PARAM, allowedOrigin);
+  helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_SESSION_QUERY_PARAM, sessionId);
+  helperUrl.searchParams.set(LOCAL_BRIDGE_HELPER_SURFACE_QUERY_PARAM, surface);
+  const response = await fetch(helperUrl);
+  if (!response.ok) throw new Error(`helper session failed with ${response.status}`);
+  const html = await response.text();
+  const bindingMatch = html.match(/"sessionBinding":"([A-Za-z0-9_-]{32,128})"/);
+  if (!bindingMatch?.[1]) throw new Error('helper session binding is missing');
+  return {
+    'X-Tzudong-Local-Bridge-Session': sessionId,
+    'X-Tzudong-Local-Bridge-Binding': bindingMatch[1],
+    'X-Tzudong-Local-Bridge-Nonce': sha256(`nonce-${sessionId}`),
+  };
+}
 
 function closeServer(server: Server) {
   return new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+}
+async function waitForCondition(condition: () => boolean, attempts = 120) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (condition()) return true;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 25));
+  }
+  return condition();
+}
+
+async function startAbortableBridgeRequest(
+  url: string,
+  headers: Record<string, string>,
+  body: string,
+) {
+  const target = new URL(url);
+  const requestHeaders = {
+    Host: target.host,
+    Connection: 'close',
+    ...headers,
+    'Content-Length': String(Buffer.byteLength(body, 'utf8')),
+  };
+  const wireRequest = [
+    `POST ${target.pathname}${target.search} HTTP/1.1`,
+    ...Object.entries(requestHeaders).map(([name, value]) => `${name}: ${value}`),
+    '',
+    body,
+  ].join('\r\n');
+  const encodedConfig = Buffer.from(JSON.stringify({
+    host: target.hostname,
+    port: Number(target.port),
+    request: wireRequest,
+  }), 'utf8').toString('base64');
+  const client = spawn('node', ['-e', `
+    const { createConnection } = require('node:net');
+    const config = JSON.parse(Buffer.from(process.env.BRIDGE_ABORT_CONFIG, 'base64').toString('utf8'));
+    const socket = createConnection({ host: config.host, port: config.port });
+    socket.on('error', () => process.exit(2));
+    socket.on('connect', () => {
+      socket.write(config.request);
+      process.stdout.write('READY\\n');
+    });
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (command) => {
+      if (command.includes('ABORT')) socket.end();
+    });
+    setInterval(() => {}, 1_000);
+  `], {
+    stdio: ['pipe', 'pipe', 'ignore'],
+    windowsHide: true,
+    env: { ...process.env, BRIDGE_ABORT_CONFIG: encodedConfig },
+  });
+  await new Promise<void>((resolveReady, rejectReady) => {
+    let output = '';
+    client.stdout?.setEncoding('utf8');
+    client.stdout?.on('data', (chunk) => {
+      output += chunk;
+      if (output.includes('READY\n')) resolveReady();
+    });
+    client.once('error', rejectReady);
+    client.once('exit', (code) => {
+      if (!output.includes('READY\n')) rejectReady(new Error(`abort fixture exited before connect: ${code}`));
+    });
+  });
+  return client;
+}
+
+function isProviderProcessAlive(pidPath: string) {
+  if (!existsSync(pidPath)) return false;
+  const pid = Number(readFileSync(pidPath, 'utf8'));
+  if (!Number.isSafeInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function expectProviderTreeCleanup(
+  outputDir: string,
+  directPidPath: string,
+  grandchildPidPath: string,
+) {
+  const cleaned = await waitForCondition(() => (
+    existsSync(outputDir) &&
+    readdirSync(outputDir).length === 0 &&
+    !isProviderProcessAlive(directPidPath) &&
+    !isProviderProcessAlive(grandchildPidPath)
+  ));
+  expect({
+    cleaned,
+    outputEntries: existsSync(outputDir) ? readdirSync(outputDir) : ['<missing>'],
+    directAlive: isProviderProcessAlive(directPidPath),
+    grandchildAlive: isProviderProcessAlive(grandchildPidPath),
+  }).toEqual({
+    cleaned: true,
+    outputEntries: [],
+    directAlive: false,
+    grandchildAlive: false,
+  });
 }
 
 describe('storyboard local bridge contract', () => {
@@ -382,6 +615,44 @@ describe('storyboard local bridge server', () => {
     expect(html).toContain('Local bridge helper ready');
     expect(html).toContain('storyboard-session-1');
     expect(html).toContain(allowedOrigin);
+    expect(html).toMatch(/"sessionBinding":"[A-Za-z0-9_-]{32,128}"/);
+    expect(html).not.toContain(token);
+    expect(html).toContain("redirect: 'error'");
+    expect(html).toContain('url.origin === HELPER_CONFIG.bridgeOrigin');
+    expect(html).not.toContain('message.bridgeUrl +');
+  });
+  test('rejects helper query confusion and one-time session nonce replays before provider invocation', async () => {
+    const { providerPath, markerPath } = writeFakeProvider(tempDir);
+    const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
+    activeServer = bridge.server;
+    const malformedHelper = await fetch(
+      `${bridge.baseUrl}${LOCAL_BRIDGE_HELPER_ROUTE}?origin=${encodeURIComponent(allowedOrigin)}&session=replay-test&surface=storyboard&extra=1`,
+    );
+    expect(malformedHelper.status).toBe(400);
+    const session = await openLocalBridgeSession(bridge.baseUrl);
+    const headers = {
+      Origin: allowedOrigin,
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...session,
+    };
+    const first = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers,
+      body: '{not-json',
+    });
+    expect(first.status).toBe(400);
+    const replay = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers,
+      body: '{not-json',
+    });
+    expect(replay.status).toBe(403);
+    const queriedRoute = await fetch(`${bridge.baseUrl}/health?unexpected=1`, {
+      headers: { Origin: allowedOrigin },
+    });
+    expect(queriedRoute.status).toBe(404);
+    expect(existsSync(markerPath)).toBe(false);
   });
 
   test('rejects missing token and wrong origin before provider invocation', async () => {
@@ -415,6 +686,8 @@ describe('storyboard local bridge server', () => {
     const { providerPath, markerPath } = writeFakeProvider(tempDir);
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
     activeServer = bridge.server;
+    const malformedSession = await openLocalBridgeSession(bridge.baseUrl);
+    const oversizedSession = await openLocalBridgeSession(bridge.baseUrl);
 
     const malformed = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
       method: 'POST',
@@ -422,6 +695,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...malformedSession,
       },
       body: '{not-json',
     });
@@ -433,6 +707,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...oversizedSession,
       },
       body: JSON.stringify({
         ...buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene]),
@@ -442,11 +717,146 @@ describe('storyboard local bridge server', () => {
     expect(oversized.status).toBe(400);
     expect(() => readFileSync(markerPath, 'utf8')).toThrow();
   });
+  test('rejects path-like, non-integer, duplicate, and inherited storyboard scenes before provider work', async () => {
+    const { providerPath, markerPath } = writeFakeProvider(tempDir);
+    const outputDir = join(tempDir, 'out');
+    const outsidePath = join(tempDir, 'scene-controlled-outside.png');
+    const bridge = await listenBridge({ providerPath, outputDir });
+    activeServer = bridge.server;
+    const basePayload = buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene]);
+    const invalidSceneNos: Array<{ label: string; sceneNo: unknown }> = [
+      { label: 'POSIX traversal', sceneNo: '../../scene-controlled-outside' },
+      { label: 'Windows traversal', sceneNo: '..\\..\\scene-controlled-outside' },
+      { label: 'drive path', sceneNo: 'C:\\scene-controlled-outside' },
+      { label: 'UNC path', sceneNo: '\\\\server\\share\\scene-controlled-outside' },
+      { label: 'numeric string', sceneNo: '1' },
+      { label: 'non-number null', sceneNo: null },
+      { label: 'float', sceneNo: 1.5 },
+      { label: 'below range', sceneNo: 0 },
+      { label: 'above range', sceneNo: 13 },
+    ];
 
-  test('returns trusted image for valid paired fake provider request', async () => {
+    for (const { label, sceneNo } of invalidSceneNos) {
+      const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(await openLocalBridgeSession(bridge.baseUrl)),
+        },
+        body: JSON.stringify({
+          ...basePayload,
+          scenes: [{ ...scene, sceneNo }],
+        }),
+      });
+      expect(response.status, label).toBe(400);
+    }
+    const nanBody = JSON.stringify({
+      ...basePayload,
+      scenes: [{ ...scene, sceneNo: null }],
+    }).replace('"sceneNo":null', '"sceneNo":NaN');
+    const nanResponse = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(await openLocalBridgeSession(bridge.baseUrl)),
+      },
+      body: nanBody,
+    });
+    expect(nanResponse.status).toBe(400);
+
+    const inheritedScene = Object.create({ ...scene });
+    inheritedScene.sceneNo = scene.sceneNo;
+    for (const invalidScene of [
+      { ...scene, unexpected: 'reject-extra-scene-key' },
+      inheritedScene,
+    ]) {
+      const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(await openLocalBridgeSession(bridge.baseUrl)),
+        },
+        body: JSON.stringify({
+          ...basePayload,
+          scenes: [invalidScene],
+        }),
+      });
+      expect(response.status).toBe(400);
+    }
+
+    const duplicate = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(await openLocalBridgeSession(bridge.baseUrl)),
+      },
+      body: JSON.stringify({
+        ...basePayload,
+        scenes: [scene, { ...scene }],
+      }),
+    });
+    expect(duplicate.status).toBe(400);
+    expect(existsSync(markerPath)).toBe(false);
+    expect(existsSync(outputDir)).toBe(false);
+    expect(existsSync(outsidePath)).toBe(false);
+  });
+
+  test('generates only for valid, unique integer storyboard scene numbers', async () => {
     const { providerPath, markerPath } = writeFakeProvider(tempDir);
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
     activeServer = bridge.server;
+
+    const session = await openLocalBridgeSession(bridge.baseUrl);
+    const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...session,
+      },
+      body: JSON.stringify({
+        ...buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene]),
+        scenes: [scene, { ...scene, sceneNo: 2 }],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const payload = normalizeStoryboardLocalBridgeImagesResponse(await response.json());
+    expect(payload.images.map((image) => image.sceneNo)).toEqual([1, 2]);
+    expect(new Set(payload.images.map((image) => image.sceneNo)).size).toBe(2);
+    expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
+  });
+
+  test('emits only a fixed readiness code without the pairing token', async () => {
+    const logs: string[] = [];
+    const bridge = await startStoryboardLocalBridgeServer({
+      host: '127.0.0.1',
+      port: 0,
+      token,
+      fakeAuthReady: true,
+      log: (message) => logs.push(message),
+    });
+    activeServer = bridge.server;
+
+    expect(logs).toEqual(['code=storyboard_local_bridge_ready']);
+    expect(logs.join('\n')).not.toContain(token);
+  });
+
+  test('returns trusted image for valid paired fake provider request', async () => {
+    const { providerPath, markerPath } = writeFakeProvider(tempDir);
+    const outputDir = join(tempDir, 'out');
+    const bridge = await listenBridge({ providerPath, outputDir });
+    activeServer = bridge.server;
+    const session = await openLocalBridgeSession(bridge.baseUrl);
 
     const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
       method: 'POST',
@@ -454,6 +864,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...session,
       },
       body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
     });
@@ -463,6 +874,55 @@ describe('storyboard local bridge server', () => {
     expect(payload.images[0].image.providerId).toBe('local-codex');
     expect(payload.images[0].image.dataUrl).toStartWith('data:image/png;base64,');
     expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
+    expect(readdirSync(outputDir)).toEqual([]);
+  });
+  test('does not inherit API, Supabase, or authorization secrets into provider environment or response', async () => {
+    const environmentKeys = [
+      'OPENAI_API_KEY',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'TZUDONG_LOCAL_BRIDGE_TEST_SECRET',
+      'AUTHORIZATION',
+    ] as const;
+    const previousEnvironment = Object.fromEntries(
+      environmentKeys.map((key) => [key, process.env[key]]),
+    );
+    Object.assign(process.env, {
+      OPENAI_API_KEY: 'test-openai-secret',
+      SUPABASE_SERVICE_ROLE_KEY: 'test-supabase-secret',
+      TZUDONG_LOCAL_BRIDGE_TEST_SECRET: 'test-provider-secret',
+      AUTHORIZATION: 'Bearer test-authorization-secret',
+    });
+    try {
+      const { providerPath, markerPath } = writeFakeProvider(tempDir, 'environment-probe');
+      const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out-env') });
+      activeServer = bridge.server;
+      const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(await openLocalBridgeSession(bridge.baseUrl)),
+        },
+        body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+      });
+      expect(response.status).toBe(200);
+      const serializedResponse = JSON.stringify(await response.json());
+      const observedEnvironment = JSON.parse(readFileSync(markerPath, 'utf8')) as Record<string, boolean>;
+      for (const key of environmentKeys) {
+        expect(observedEnvironment[key]).toBe(false);
+      }
+      expect(serializedResponse).not.toContain('test-openai-secret');
+      expect(serializedResponse).not.toContain('test-supabase-secret');
+      expect(serializedResponse).not.toContain('test-provider-secret');
+      expect(serializedResponse).not.toContain('test-authorization-secret');
+    } finally {
+      for (const key of environmentKeys) {
+        const value = previousEnvironment[key];
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
   });
 
   test('accepts loopback helper origins for status and generation routes', async () => {
@@ -471,6 +931,8 @@ describe('storyboard local bridge server', () => {
     activeServer = bridge.server;
     const localhostOrigin = bridge.baseUrl.replace('127.0.0.1', 'localhost');
 
+    const authSession = await openLocalBridgeSession(bridge.baseUrl);
+    const storyboardSession = await openLocalBridgeSession(bridge.baseUrl);
     const health = await fetch(`${bridge.baseUrl}/health`, { headers: { Origin: bridge.baseUrl } });
     expect(health.status).toBe(200);
     const healthPayload = await health.json() as { endpoints?: { helper?: string } };
@@ -480,6 +942,7 @@ describe('storyboard local bridge server', () => {
       headers: {
         Origin: localhostOrigin,
         Authorization: `Bearer ${token}`,
+        ...authSession,
       },
     });
     expect(authStatus.status).toBe(200);
@@ -490,6 +953,7 @@ describe('storyboard local bridge server', () => {
         Origin: bridge.baseUrl,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...storyboardSession,
       },
       body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
     });
@@ -524,12 +988,15 @@ describe('storyboard local bridge server', () => {
       const address = bridge.server.address();
       if (!address || typeof address === 'string') throw new Error('bridge did not bind to a TCP port');
 
-      const response = await fetch(`http://127.0.0.1:${address.port}/v1/storyboard/images`, {
+      const baseUrl = `http://127.0.0.1:${address.port}`;
+      const session = await openLocalBridgeSession(baseUrl);
+      const response = await fetch(`${baseUrl}/v1/storyboard/images`, {
         method: 'POST',
         headers: {
           Origin: allowedOrigin,
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...session,
         },
         body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
       });
@@ -573,6 +1040,8 @@ describe('storyboard local bridge server', () => {
     const address = bridge.server.address();
     if (!address || typeof address === 'string') throw new Error('bridge did not bind to a TCP port');
     const baseUrl = `http://127.0.0.1:${address.port}`;
+    const storyboardSession = await openLocalBridgeSession(baseUrl);
+    const thumbnailSession = await openLocalBridgeSession(baseUrl, 'thumbnail');
 
     const storyboardResponse = await fetch(`${baseUrl}/v1/storyboard/images`, {
       method: 'POST',
@@ -580,6 +1049,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...storyboardSession,
       },
       body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
     });
@@ -591,6 +1061,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...thumbnailSession,
       },
       body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest({
         providerId: 'local-codex',
@@ -635,12 +1106,14 @@ describe('storyboard local bridge server', () => {
     const healthPayload = await health.json() as { endpoints?: { thumbnailImages?: string } };
     expect(healthPayload.endpoints?.thumbnailImages).toBe('/v1/youtube-thumbnail/images');
 
+    const session = await openLocalBridgeSession(bridge.baseUrl, 'thumbnail');
     const response = await fetch(`${bridge.baseUrl}/v1/youtube-thumbnail/images`, {
       method: 'POST',
       headers: {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...session,
       },
       body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest({
         providerId: 'local-codex',
@@ -673,11 +1146,43 @@ describe('storyboard local bridge server', () => {
     ]));
     expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
   });
+  test('rejects non-canonical, MIME-mismatched, or oversized-dimension thumbnail references before provider invocation', async () => {
+    const { providerPath, markerPath } = writeFakeProvider(tempDir);
+    const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
+    activeServer = bridge.server;
+    const payload = {
+      providerId: 'local-codex' as const,
+      generationMode: 'direct_provider' as const,
+      topic: '안전한 참조 이미지 검증',
+      headline: '참조 검증',
+      acknowledgedSafety: true,
+      textLayers: [],
+    };
+    for (const referenceImage of [
+      { name: 'noncanonical.png', mime: 'image/png' as const, role: 'host' as const, dataBase64: `${tinyPngBase64}\n` },
+      { name: 'mismatch.jpg', mime: 'image/jpeg' as const, role: 'host' as const, dataBase64: tinyPngBase64 },
+      { name: 'oversized-dimensions.png', mime: 'image/png' as const, role: 'host' as const, dataBase64: oversizedPngBase64 },
+    ]) {
+      const response = await fetch(`${bridge.baseUrl}/v1/youtube-thumbnail/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(await openLocalBridgeSession(bridge.baseUrl, 'thumbnail')),
+        },
+        body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest(payload, [referenceImage])),
+      });
+      expect(response.status).toBe(400);
+    }
+    expect(existsSync(markerPath)).toBe(false);
+  });
 
   test('fails closed when thumbnail provider reports an output path outside the expected run output', async () => {
     const { providerPath, markerPath } = writeFakeProvider(tempDir, 'path-mismatch');
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
     activeServer = bridge.server;
+    const session = await openLocalBridgeSession(bridge.baseUrl, 'thumbnail');
 
     const response = await fetch(`${bridge.baseUrl}/v1/youtube-thumbnail/images`, {
       method: 'POST',
@@ -685,6 +1190,7 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...session,
       },
       body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest({
         providerId: 'local-codex',
@@ -711,11 +1217,56 @@ describe('storyboard local bridge server', () => {
     expect(text).toContain('exact gpt-image-2 provenance');
     expect(text).not.toContain('outside-provider-output');
   });
+  test('rejects wrong-format, byte-mismatched, and hash-mismatched provider files before disclosure and removes run artifacts', async () => {
+    for (const mode of ['wrong-format', 'bytes-mismatch', 'hash-mismatch'] as const) {
+      const { providerPath, markerPath } = writeFakeProvider(tempDir, mode);
+      const outputDir = join(tempDir, `out-${mode}`);
+      const bridge = await listenBridge({ providerPath, outputDir });
+      activeServer = bridge.server;
+      const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+        method: 'POST',
+        headers: {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...(await openLocalBridgeSession(bridge.baseUrl)),
+        },
+        body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+      });
+      expect(response.status, mode).toBe(502);
+      expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
+      expect(readdirSync(outputDir), mode).toEqual([]);
+      await closeServer(bridge.server);
+      activeServer = null;
+    }
+  });
+
+  test('rejects provider symlink outputs on POSIX before disclosure', async () => {
+    if (process.platform === 'win32') return;
+    const { providerPath, markerPath } = writeFakeProvider(tempDir, 'symlink-output');
+    const outputDir = join(tempDir, 'out-symlink');
+    const bridge = await listenBridge({ providerPath, outputDir });
+    activeServer = bridge.server;
+    const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(await openLocalBridgeSession(bridge.baseUrl)),
+      },
+      body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
+    });
+    expect(response.status).toBe(502);
+    expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
+    expect(readdirSync(outputDir)).toEqual([]);
+  });
 
   test('fails closed on misleading provider success output with non-zero exit', async () => {
     const { providerPath } = writeFakeProvider(tempDir, 'misleading-failure');
     const bridge = await listenBridge({ providerPath, outputDir: join(tempDir, 'out') });
     activeServer = bridge.server;
+    const session = await openLocalBridgeSession(bridge.baseUrl);
 
     const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
       method: 'POST',
@@ -723,37 +1274,113 @@ describe('storyboard local bridge server', () => {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...session,
       },
       body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
     });
     expect(response.status).toBe(502);
     const text = await response.text();
     expect(text).not.toContain('secret-token');
-    expect(text).toContain('[redacted_bridge_token]');
+    expect(text).not.toContain(token);
+    expect(text).toContain('Provider execution failed.');
   });
 
-  test('times out a hanging provider and redacts the pairing token', async () => {
-    const { providerPath, markerPath } = writeHangingProvider(tempDir);
+  test('removes direct-child and grandchild provider trees before returning a timeout response', async () => {
+    const outputDir = join(tempDir, 'out-timeout-tree');
+    const { providerPath, directPidPath, grandchildPidPath } = writeProcessTreeProvider(tempDir, 'hanging');
     const bridge = await listenBridge({
       providerPath,
-      outputDir: join(tempDir, 'out'),
-      commandTimeoutMs: 2000,
+      outputDir,
+      commandTimeoutMs: 500,
     });
     activeServer = bridge.server;
-
-    const response = await fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
+    const pending = fetch(`${bridge.baseUrl}/v1/storyboard/images`, {
       method: 'POST',
       headers: {
         Origin: allowedOrigin,
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...(await openLocalBridgeSession(bridge.baseUrl)),
       },
       body: JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene])),
     });
+    expect(await waitForCondition(() => (
+      existsSync(directPidPath) && existsSync(grandchildPidPath)
+    ))).toBe(true);
+
+    const response = await pending;
     expect(response.status).toBe(504);
-    expect(readFileSync(markerPath, 'utf8')).toBe('invoked');
-    const text = await response.text();
-    expect(text).toContain('timed out');
-    expect(text).not.toContain(token);
+    expect((await response.text())).toContain('timed out');
+    await expectProviderTreeCleanup(outputDir, directPidPath, grandchildPidPath);
+  });
+
+  test('removes direct-child and grandchild thumbnail provider trees after output overflow', async () => {
+    const outputDir = join(tempDir, 'out-overflow-tree');
+    const { providerPath, directPidPath, grandchildPidPath } = writeProcessTreeProvider(tempDir, 'overflow');
+    const bridge = await listenBridge({
+      providerPath,
+      thumbnailProviderPath: providerPath,
+      outputDir,
+      commandTimeoutMs: 5_000,
+    });
+    activeServer = bridge.server;
+    const pending = fetch(`${bridge.baseUrl}/v1/youtube-thumbnail/images`, {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(await openLocalBridgeSession(bridge.baseUrl, 'thumbnail')),
+      },
+      body: JSON.stringify(buildThumbnailLocalBridgeImagesRequest({
+        providerId: 'local-codex',
+        generationMode: 'direct_provider',
+        topic: '프로세스 트리 오버플로 테스트',
+        headline: '출력 제한',
+        acknowledgedSafety: true,
+        textLayers: [],
+      }, [])),
+    });
+    expect(await waitForCondition(() => (
+      existsSync(directPidPath) && existsSync(grandchildPidPath)
+    ))).toBe(true);
+
+    const response = await pending;
+    expect(response.status).toBe(502);
+    await expectProviderTreeCleanup(outputDir, directPidPath, grandchildPidPath);
+  });
+
+  test('removes private run artifacts and direct-child/grandchild trees when the client aborts', async () => {
+    const outputDir = join(tempDir, 'out-abort-tree');
+    const { providerPath, directPidPath, grandchildPidPath } = writeProcessTreeProvider(tempDir, 'hanging');
+    const bridge = await listenBridgeInNode({
+      providerPath,
+      outputDir,
+      commandTimeoutMs: 5_000,
+    });
+    let pending: Awaited<ReturnType<typeof startAbortableBridgeRequest>> | undefined;
+    try {
+      const sessionHeaders = await openLocalBridgeSession(bridge.baseUrl);
+      const body = JSON.stringify(buildStoryboardLocalBridgeImagesRequest(sourceResult, [scene]));
+      pending = await startAbortableBridgeRequest(
+        `${bridge.baseUrl}/v1/storyboard/images`,
+        {
+          Origin: allowedOrigin,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          ...sessionHeaders,
+        },
+        body,
+      );
+      expect(await waitForCondition(() => (
+        existsSync(directPidPath) && existsSync(grandchildPidPath)
+      ))).toBe(true);
+
+      pending.stdin?.end('ABORT\n');
+      await expectProviderTreeCleanup(outputDir, directPidPath, grandchildPidPath);
+    } finally {
+      pending?.kill('SIGKILL');
+      await stopNodeBridge(bridge.process);
+    }
   });
 });

@@ -8,6 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import {
+    buildReviewPhotoObjectPath,
+    cleanupCanonicalReviewPhotoObjects,
+    getCanonicalReviewPhotoObjectPath,
+    getCanonicalReviewPhotoObjectPaths,
+    resolveReviewPhotoUrl,
+    type ReviewPhotoOwnership,
+} from "@/lib/review-photo-url";
 import imageCompression from "browser-image-compression";
 import {
     Dialog,
@@ -60,10 +68,77 @@ const compressFoodImage = async (file: File): Promise<File> => {
         const safeFileName = generateSafeFilename(".webp");
         return new File([compressedBlob], safeFileName, { type: "image/webp" });
     } catch (error) {
-        console.warn("Food photo compression failed, using original:", error);
+        console.warn("Food photo compression failed, using original:");
         return file;
     }
 };
+const MAX_FOOD_PHOTOS = 10;
+const SUPPORTED_FOOD_PHOTO_MIME_TYPES = new Set([
+    "image/avif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+]);
+
+function getFoodPhotoOwnership(
+    ownerId: string | undefined,
+    reviewId: string | undefined,
+): ReviewPhotoOwnership | null {
+    if (!ownerId || !reviewId) return null;
+
+    return {
+        ownerId,
+        reviewId,
+        purpose: "food",
+    };
+}
+
+function getOwnedFoodPhotoPaths(
+    values: unknown,
+    ownership: ReviewPhotoOwnership | null,
+): string[] {
+    return getCanonicalReviewPhotoObjectPaths(values, ownership);
+}
+
+function mergeOwnedFoodPhotoPaths(
+    currentPaths: string[],
+    additionalPaths: string[],
+    ownership: ReviewPhotoOwnership | null,
+): string[] {
+    return getOwnedFoodPhotoPaths([...currentPaths, ...additionalPaths], ownership);
+}
+
+async function cleanupOwnedFoodPhotos(
+    paths: string[],
+    ownership: ReviewPhotoOwnership,
+) {
+    return cleanupCanonicalReviewPhotoObjects(
+        paths,
+        ownership,
+        supabase.storage.from("review-photos"),
+    );
+}
+
+function getSafeReviewEditFailureMessage(error: unknown): string {
+    switch (error instanceof Error ? error.message : "") {
+        case "REVIEW_PHOTO_UPLOAD_FAILED":
+            return "사진 업로드에 실패했습니다. 다시 시도해 주세요.";
+        case "REVIEW_PHOTO_UPLOAD_COMPENSATION_FAILED":
+            return "새 사진 정리에 실패했습니다. 사진 정리가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.";
+        case "REVIEW_PHOTO_CLEANUP_FAILED":
+            return "사진 정리에 실패했습니다. 리뷰는 변경되지 않았으며 다시 시도할 수 있습니다.";
+        case "REVIEW_UPDATE_FAILED":
+            return "리뷰 저장에 실패했습니다. 사진 정리 상태를 유지한 채 다시 시도해 주세요.";
+        case "REVIEW_DELETE_FAILED":
+            return "리뷰 삭제에 실패했습니다. 사진 정리 상태를 유지한 채 다시 시도해 주세요.";
+        default:
+            return "요청을 완료하지 못했습니다. 다시 시도해 주세요.";
+    }
+}
+
+function isSupportedFoodPhotoFile(file: File): boolean {
+    return SUPPORTED_FOOD_PHOTO_MIME_TYPES.has(file.type);
+}
 
 interface ReviewEditModalProps {
     isOpen: boolean;
@@ -112,6 +187,20 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+    const [cleanupFailureMessage, setCleanupFailureMessage] = useState<string | null>(null);
+    const foodPhotoOwnership = useMemo(
+        () => getFoodPhotoOwnership(user?.id, review?.id),
+        [review?.id, user?.id],
+    );
+    const existingFoodPhotoPreviews = useMemo(() => {
+        return getOwnedFoodPhotoPaths(existingFoodPhotos, foodPhotoOwnership).reduce<
+            Array<{ path: string; url: string }>
+        >((previews, path) => {
+            const url = resolveReviewPhotoUrl(path, foodPhotoOwnership);
+            if (url) previews.push({ path, url });
+            return previews;
+        }, []);
+    }, [existingFoodPhotos, foodPhotoOwnership]);
 
     // Refs
     const foodPhotosDropRef = useRef<HTMLDivElement>(null);
@@ -120,17 +209,16 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     // Drag states
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
 
-    // Preview URLs for new photos
-    const newFoodPhotoUrls = useMemo(() => {
-        return newFoodPhotos.map(photo => URL.createObjectURL(photo));
-    }, [newFoodPhotos]);
-
-    // Cleanup URLs on unmount
+    // Preview URLs for new photos are created only after commit and revoked on every change.
+    const [newFoodPhotoUrls, setNewFoodPhotoUrls] = useState<string[]>([]);
     useEffect(() => {
+        const urls = newFoodPhotos.map((photo) => URL.createObjectURL(photo));
+        setNewFoodPhotoUrls(urls);
+
         return () => {
-            newFoodPhotoUrls.forEach(url => URL.revokeObjectURL(url));
+            urls.forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [newFoodPhotoUrls]);
+    }, [newFoodPhotos]);
 
     // Load review data when opened
     useEffect(() => {
@@ -152,12 +240,12 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             }
 
             setCategories(puredCategories);
-
-            setExistingFoodPhotos(review.foodPhotos || []);
+            setExistingFoodPhotos(getOwnedFoodPhotoPaths(review.foodPhotos, foodPhotoOwnership));
             setNewFoodPhotos([]);
             setRemovedPhotos([]);
+            setCleanupFailureMessage(null);
         }
-    }, [isOpen, review]);
+    }, [foodPhotoOwnership, isOpen, review]);
 
     // Auto-save to IndexedDB
     useEffect(() => {
@@ -167,6 +255,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         const saveTimer = setTimeout(async () => {
             try {
                 // Use review ID as draft key
+                const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
+                    existingFoodPhotos,
+                    foodPhotoOwnership,
+                );
+                const ownedRemovedPhotos = getOwnedFoodPhotoPaths(
+                    removedPhotos,
+                    foodPhotoOwnership,
+                );
                 await saveEditDraft({
                     userId: user.id,
                     restaurantId: `edit_${review.id}`,
@@ -175,18 +271,18 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     categories: categories,
                     content: content,
                     verificationPhoto: null,
-                    foodPhotos: newFoodPhotos,
-                    existingFoodPhotos,
-                    removedPhotos,
+                    foodPhotos: [],
+                    existingFoodPhotos: ownedExistingFoodPhotos,
+                    removedPhotos: ownedRemovedPhotos,
                 });
                 setLastSavedAt(new Date());
             } catch (error) {
-                console.error('Edit draft 저장 실패:', error);
+                console.error('Edit draft 저장 실패:');
             }
         }, 2000); // Save after 2 seconds of inactivity
 
         return () => clearTimeout(saveTimer);
-    }, [isOpen, review, user, content, categories, newFoodPhotos, existingFoodPhotos, removedPhotos]);
+    }, [isOpen, review, user, content, categories, existingFoodPhotos, removedPhotos, foodPhotoOwnership]);
 
     // Load draft on open
     useEffect(() => {
@@ -206,34 +302,44 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     if (draft.categories && draft.categories.length > 0) {
                         setCategories(draft.categories as Category[]);
                     }
-                    if (Array.isArray(draft.foodPhotos) && draft.foodPhotos.length > 0) {
-                        setNewFoodPhotos(draft.foodPhotos);
-                    }
                     if (Array.isArray(draft.existingFoodPhotos)) {
-                        setExistingFoodPhotos(draft.existingFoodPhotos);
+                        setExistingFoodPhotos(
+                            getOwnedFoodPhotoPaths(draft.existingFoodPhotos, foodPhotoOwnership),
+                        );
                     }
                     if (Array.isArray(draft.removedPhotos)) {
-                        setRemovedPhotos(draft.removedPhotos);
+                        setRemovedPhotos(
+                            getOwnedFoodPhotoPaths(draft.removedPhotos, foodPhotoOwnership),
+                        );
                     }
                 }
             } catch (error) {
-                console.error('Edit draft 로드 실패:', error);
+                console.error('Edit draft 로드 실패:');
             }
         };
         loadDraft();
-    }, [isOpen, review, user]);
+    }, [foodPhotoOwnership, isOpen, review, user]);
+
+    const appendNewFoodPhotos = useCallback((files: File[]) => {
+        const supportedFiles = files.filter(isSupportedFoodPhotoFile);
+        if (supportedFiles.length === 0) return;
+
+        setNewFoodPhotos((previousPhotos) => {
+            const availableSlots = Math.max(
+                0,
+                MAX_FOOD_PHOTOS - existingFoodPhotos.length - previousPhotos.length,
+            );
+            return availableSlots > 0
+                ? [...previousPhotos, ...supportedFiles.slice(0, availableSlots)]
+                : previousPhotos;
+        });
+    }, [existingFoodPhotos.length]);
 
     // Handler for new food photos
     const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
-
-        requestAnimationFrame(() => {
-            setNewFoodPhotos(prev => [...prev, ...files]);
-        });
-
+        appendNewFoodPhotos(Array.from(e.target.files || []));
         e.target.value = '';
-    }, []);
+    }, [appendNewFoodPhotos]);
 
     // Remove new photo
     const removeNewFoodPhoto = useCallback((index: number) => {
@@ -242,9 +348,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Remove existing photo
     const removeExistingFoodPhoto = useCallback((photoPath: string) => {
-        setExistingFoodPhotos(prev => prev.filter(p => p !== photoPath));
-        setRemovedPhotos(prev => [...prev, photoPath]);
-    }, []);
+        const ownedPhotoPath = getCanonicalReviewPhotoObjectPath(photoPath, foodPhotoOwnership);
+        if (!ownedPhotoPath) return;
+
+        setExistingFoodPhotos(prev => prev.filter(p => p !== ownedPhotoPath));
+        setRemovedPhotos(prev => (
+            prev.includes(ownedPhotoPath) ? prev : [...prev, ownedPhotoPath]
+        ));
+    }, [foodPhotoOwnership]);
 
     // Drag and drop handlers
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -269,13 +380,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         e.stopPropagation();
         setIsFoodPhotosDragging(false);
 
-        const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-        if (imageFiles.length > 0) {
-            setNewFoodPhotos(prev => [...prev, ...imageFiles]);
-        }
-    }, []);
+        appendNewFoodPhotos(Array.from(e.dataTransfer.files));
+    }, [appendNewFoodPhotos]);
 
     const openFoodPhotosFileDialog = useCallback(() => {
         foodPhotosFileInputRef.current?.click();
@@ -283,9 +389,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Submit edit
     const handleSubmit = async () => {
-        if (!review || !user) return;
+        if (!review || !user || !foodPhotoOwnership) return;
 
-        // Validate content length (min 20 chars)
         if (content.trim().length < 20) {
             toast({
                 title: "리뷰 내용이 너무 짧습니다",
@@ -295,7 +400,6 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             return;
         }
 
-        // Validate categories
         if (categories.length === 0) {
             toast({
                 title: "카테고리를 선택해주세요",
@@ -304,9 +408,16 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             return;
         }
 
-        // Validate at least one food photo
-        const totalPhotos = existingFoodPhotos.length + newFoodPhotos.length;
-        if (totalPhotos === 0) {
+        const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
+            existingFoodPhotos,
+            foodPhotoOwnership,
+        );
+        const ownedRemovedPhotos = getOwnedFoodPhotoPaths(
+            removedPhotos,
+            foodPhotoOwnership,
+        );
+
+        if (ownedExistingFoodPhotos.length + newFoodPhotos.length === 0) {
             toast({
                 title: "음식 사진이 필요합니다",
                 description: "최소 1장 이상의 음식 사진을 업로드해주세요",
@@ -316,57 +427,94 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }
 
         setIsSubmitting(true);
+        setCleanupFailureMessage(null);
+        const uploadedNewPhotoPaths: string[] = [];
+        let reviewUpdateCommitted = false;
+
+        const compensateUploadedPhotos = async (): Promise<boolean> => {
+            if (uploadedNewPhotoPaths.length === 0) return true;
+
+            const compensation = await cleanupOwnedFoodPhotos(
+                uploadedNewPhotoPaths,
+                foodPhotoOwnership,
+            );
+            if (compensation.success) return true;
+
+            setRemovedPhotos((currentPaths) => mergeOwnedFoodPhotoPaths(
+                currentPaths,
+                compensation.paths,
+                foodPhotoOwnership,
+            ));
+            setCleanupFailureMessage(
+                "새로 업로드한 사진을 정리하지 못했습니다. 사진 정리가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
+            );
+            return false;
+        };
 
         try {
-            // 1. Upload new food photos if any
-            let uploadedNewPhotoPaths: string[] = [];
-            if (newFoodPhotos.length > 0) {
-                const uploadTimestamp = Date.now();
-                const uploadPromises = newFoodPhotos.map(async (photo, i) => {
-                    const compressedPhoto = await compressFoodImage(photo);
-                    const photoPath = `${user.id}/${uploadTimestamp}_food_edit_${i}_${compressedPhoto.name}`;
-                    const { error: uploadError } = await supabase.storage
-                        .from('review-photos')
-                        .upload(photoPath, compressedPhoto, {
-                            cacheControl: '3600',
-                            upsert: false
-                        });
+            const uploadTimestamp = Date.now();
+            for (const [index, photo] of newFoodPhotos.entries()) {
+                const compressedPhoto = await compressFoodImage(photo);
+                const photoPath = buildReviewPhotoObjectPath(
+                    foodPhotoOwnership,
+                    `${uploadTimestamp}_food_edit_${index}_${compressedPhoto.name}`,
+                );
+                if (!photoPath) {
+                    throw new Error("REVIEW_PHOTO_UPLOAD_FAILED");
+                }
 
-                    if (uploadError) {
-                        throw new Error(`음식 사진 업로드 실패: ${uploadError.message}`);
-                    }
-                    return photoPath;
-                });
+                const { error: uploadError } = await supabase.storage
+                    .from("review-photos")
+                    .upload(photoPath, compressedPhoto, {
+                        cacheControl: "3600",
+                        upsert: false,
+                    });
+                if (uploadError) {
+                    throw new Error("REVIEW_PHOTO_UPLOAD_FAILED");
+                }
 
-                uploadedNewPhotoPaths = await Promise.all(uploadPromises);
+                uploadedNewPhotoPaths.push(photoPath);
             }
 
-            // 2. Combine existing and new photo paths
-            const finalFoodPhotos = [...existingFoodPhotos, ...uploadedNewPhotoPaths];
+            const removedCleanup = await cleanupOwnedFoodPhotos(
+                ownedRemovedPhotos,
+                foodPhotoOwnership,
+            );
+            if (!removedCleanup.success) {
+                setCleanupFailureMessage(
+                    "기존 사진 정리에 실패했습니다. 리뷰는 변경되지 않았으며 다시 시도할 수 있습니다.",
+                );
+                throw new Error("REVIEW_PHOTO_CLEANUP_FAILED");
+            }
 
-            // 3. Update review in database
-            const { error: updateError } = await supabase
-                .from('reviews')
+            const finalFoodPhotos = getOwnedFoodPhotoPaths(
+                [...ownedExistingFoodPhotos, ...uploadedNewPhotoPaths],
+                foodPhotoOwnership,
+            );
+            const { data: updatedReview, error: updateError } = await supabase
+                .from("reviews")
                 .update({
                     content: content.trim(),
-                    categories: categories,
+                    categories,
                     food_photos: finalFoodPhotos,
-                    is_verified: false, // Require re-verification
-                    admin_note: null, // Clear previous admin note
+                    is_verified: false,
+                    admin_note: null,
                     updated_at: new Date().toISOString(),
                 } as never)
-                .eq('id', review.id);
+                .eq("id", review.id)
+                .eq("user_id", user.id)
+                .select("id")
+                .maybeSingle();
 
-            if (updateError) {
-                throw new Error(`리뷰 수정 실패: ${updateError.message}`);
+            if (updateError || !updatedReview) {
+                if (ownedRemovedPhotos.length > 0) {
+                    setCleanupFailureMessage(
+                        "사진 정리는 완료되었지만 리뷰 저장에 실패했습니다. 저장이 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
+                    );
+                }
+                throw new Error("REVIEW_UPDATE_FAILED");
             }
-
-            // 4. Delete removed photos from storage (optional, for cleanup)
-            if (removedPhotos.length > 0) {
-                await supabase.storage
-                    .from('review-photos')
-                    .remove(removedPhotos);
-            }
+            reviewUpdateCommitted = true;
 
             toast({
                 title: "리뷰 수정 완료",
@@ -375,20 +523,30 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
             try {
                 await deleteEditDraft(user.id, `edit_${review.id}`);
-            } catch (e) {
-                console.error('Draft cleanup failed:', e);
+            } catch {
+                console.error("REVIEW_EDIT_DRAFT_CLEANUP_FAILED");
             }
 
             if (onSuccess) {
-                onSuccess();
+                try {
+                    onSuccess();
+                } catch {
+                    console.error("REVIEW_EDIT_SUCCESS_CALLBACK_FAILED");
+                }
             }
-            handleClose();
+            handleClose(true);
         } catch (error) {
-            console.error('리뷰 수정 오류:', error);
-            const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다";
+            if (reviewUpdateCommitted) {
+                console.error("REVIEW_EDIT_POST_COMMIT_UI_FAILED");
+                return;
+            }
+            const compensationSucceeded = await compensateUploadedPhotos();
+            const failure = compensationSucceeded
+                ? error
+                : new Error("REVIEW_PHOTO_UPLOAD_COMPENSATION_FAILED");
             toast({
                 title: "리뷰 수정 실패",
-                description: errorMessage,
+                description: getSafeReviewEditFailureMessage(failure),
                 variant: "destructive",
             });
         } finally {
@@ -398,35 +556,45 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
 
     // Delete review handler
     const handleDeleteReview = async () => {
-        if (!review || !user) return;
+        if (!review || !user || !foodPhotoOwnership) return;
 
+        const allPhotos = getOwnedFoodPhotoPaths(
+            [...existingFoodPhotos, ...removedPhotos],
+            foodPhotoOwnership,
+        );
         setIsDeleting(true);
+        setCleanupFailureMessage(null);
 
         try {
-            // Delete review from database
-            const { error: deleteError } = await supabase
-                .from('reviews')
+            const cleanup = await cleanupOwnedFoodPhotos(allPhotos, foodPhotoOwnership);
+            if (!cleanup.success) {
+                setCleanupFailureMessage(
+                    "사진 정리에 실패했습니다. 리뷰는 삭제되지 않았으며 다시 시도할 수 있습니다.",
+                );
+                throw new Error("REVIEW_PHOTO_CLEANUP_FAILED");
+            }
+
+            const { data: deletedReview, error: deleteError } = await supabase
+                .from("reviews")
                 .delete()
-                .eq('id', review.id)
-                .eq('user_id', user.id); // Ensure user owns the review
+                .eq("id", review.id)
+                .eq("user_id", user.id)
+                .select("id")
+                .maybeSingle();
 
-            if (deleteError) {
-                throw new Error(`리뷰 삭제 실패: ${deleteError.message}`);
+            if (deleteError || !deletedReview) {
+                if (allPhotos.length > 0) {
+                    setCleanupFailureMessage(
+                        "사진 정리는 완료되었지만 리뷰 삭제에 실패했습니다. 삭제가 완료될 때까지 이 창을 닫지 말고 다시 시도해 주세요.",
+                    );
+                }
+                throw new Error("REVIEW_DELETE_FAILED");
             }
 
-            // Delete all photos from storage
-            const allPhotos = [...existingFoodPhotos];
-            if (allPhotos.length > 0) {
-                await supabase.storage
-                    .from('review-photos')
-                    .remove(allPhotos);
-            }
-
-            // Delete draft from IndexedDB
             try {
                 await deleteEditDraft(user.id, `edit_${review.id}`);
-            } catch (e) {
-                console.error('Draft deletion failed:', e);
+            } catch {
+                console.error("REVIEW_EDIT_DRAFT_DELETE_FAILED");
             }
 
             toast({
@@ -435,15 +603,17 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
             });
 
             if (onSuccess) {
-                onSuccess();
+                try {
+                    onSuccess();
+                } catch {
+                    console.error("REVIEW_DELETE_SUCCESS_CALLBACK_FAILED");
+                }
             }
-            handleClose();
+            handleClose(true);
         } catch (error) {
-            console.error('리뷰 삭제 오류:', error);
-            const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다";
             toast({
                 title: "리뷰 삭제 실패",
-                description: errorMessage,
+                description: getSafeReviewEditFailureMessage(error),
                 variant: "destructive",
             });
         } finally {
@@ -451,21 +621,35 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         }
     };
 
-    const handleClose = useCallback(() => {
+    const handleClose = useCallback((force = false) => {
+        if (!force && cleanupFailureMessage) {
+            toast({
+                title: "사진 정리 재시도 필요",
+                description: cleanupFailureMessage,
+                variant: "destructive",
+            });
+            return;
+        }
+
         setCategories([]);
         setContent("");
         setNewFoodPhotos([]);
         setExistingFoodPhotos([]);
         setRemovedPhotos([]);
+        setCleanupFailureMessage(null);
         setLastSavedAt(null);
         onClose();
-    }, [onClose]);
+    }, [cleanupFailureMessage, onClose]);
 
     // Form validation
     const isFormValid = useMemo(() => {
-        const totalPhotos = existingFoodPhotos.length + newFoodPhotos.length;
+        const ownedExistingFoodPhotos = getOwnedFoodPhotoPaths(
+            existingFoodPhotos,
+            foodPhotoOwnership,
+        );
+        const totalPhotos = ownedExistingFoodPhotos.length + newFoodPhotos.length;
         return categories.length > 0 && content.trim().length >= 20 && totalPhotos > 0;
-    }, [categories.length, content, existingFoodPhotos.length, newFoodPhotos.length]);
+    }, [categories.length, content, existingFoodPhotos, foodPhotoOwnership, newFoodPhotos.length]);
 
     // Check if this is a rejected review
     const isRejected = review?.adminNote?.includes("거부");
@@ -474,7 +658,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
         return (
             <BottomSheet
                 isOpen={isOpen}
-                onClose={handleClose}
+                onClose={() => handleClose()}
                 {...MOBILE_FULL_FORM_SHEET}
                 layoutSource="review-edit-modal"
                 className="z-[110]"
@@ -490,7 +674,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                             descriptionId="review-edit-sheet-description"
                             icon={<Info className="h-5 w-5" />}
                             action={(
-                                <Button type="button" variant="ghost" size="icon" onClick={handleClose} aria-label="리뷰 수정 닫기">
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleClose()} aria-label="리뷰 수정 닫기">
                                     <XIcon className="h-5 w-5" />
                                 </Button>
                             )}
@@ -500,7 +684,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     <>
                                         <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
                                         <span className="text-green-600">
-                                            저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                            텍스트만 임시 저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </>
                                 )}
@@ -532,6 +716,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <span>승인 전까지 리뷰가 비공개 처리됩니다.</span>
                                     </AlertDescription>
                                 </Alert>
+                                {cleanupFailureMessage && (
+                                    <Alert role="alert" aria-live="assertive" className="border-destructive/40 bg-destructive/5">
+                                        <AlertCircle className="h-4 w-4 text-destructive" />
+                                        <AlertDescription className="text-destructive">
+                                            {cleanupFailureMessage}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
 
 
                                 {/* Category selection */}
@@ -640,15 +832,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     </Label>
 
                                     {/* Existing photos */}
-                                    {existingFoodPhotos.length > 0 && (
+                                    {existingFoodPhotoPreviews.length > 0 && (
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">기존 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {existingFoodPhotos.map((photoPath, idx) => (
-                                                    <div key={photoPath} className="relative group">
+                                                {existingFoodPhotoPreviews.map(({ path, url }, idx) => (
+                                                    <div key={path} className="relative group">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
                                                             <Image
-                                                                src={supabase.storage.from('review-photos').getPublicUrl(photoPath).data.publicUrl}
+                                                                src={url}
                                                                 alt={`기존 음식 사진 ${idx + 1}`}
                                                                 fill
                                                                 unoptimized
@@ -658,7 +850,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeExistingFoodPhoto(photoPath)}
+                                                            onClick={() => removeExistingFoodPhoto(path)}
                                                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                         >
                                                             <XIcon className="h-3 w-3" />
@@ -674,8 +866,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">새로 추가된 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {newFoodPhotos.map((photo, idx) => (
-                                                    <div key={idx} className="relative group">
+                                                {newFoodPhotoUrls.length === newFoodPhotos.length && newFoodPhotos.map((photo, idx) => (
+                                                    <div key={`${photo.name}-${idx}`} className="relative group">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
                                                             <Image
                                                                 src={newFoodPhotoUrls[idx]}
@@ -722,7 +914,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <input
                                             ref={foodPhotosFileInputRef}
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/avif,image/jpeg,image/png,image/webp"
                                             onChange={handleFoodPhotosChange}
                                             multiple
                                             className="hidden"
@@ -774,7 +966,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 </AlertDialog>
                                 <Button
                                     variant="outline"
-                                    onClick={handleClose}
+                                    onClick={() => handleClose()}
                                     className="flex-1"
                                     disabled={isSubmitting || isDeleting}
                                 >
@@ -803,7 +995,9 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+            if (!open) handleClose();
+        }}>
             {isOpen && review && (
                 <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden p-0 rounded-xl">
                     <div className="flex flex-col h-full max-h-[calc(100dvh-2rem)]">
@@ -814,7 +1008,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     <>
                                         <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
                                         <span className="text-green-600">
-                                            저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                            텍스트만 임시 저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </>
                                 )}
@@ -856,6 +1050,14 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <span>승인 전까지 리뷰가 비공개 처리됩니다.</span>
                                     </AlertDescription>
                                 </Alert>
+                                {cleanupFailureMessage && (
+                                    <Alert role="alert" aria-live="assertive" className="border-destructive/40 bg-destructive/5">
+                                        <AlertCircle className="h-4 w-4 text-destructive" />
+                                        <AlertDescription className="text-destructive">
+                                            {cleanupFailureMessage}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
 
 
                                 {/* Category selection */}
@@ -964,15 +1166,15 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                     </Label>
 
                                     {/* Existing photos */}
-                                    {existingFoodPhotos.length > 0 && (
+                                    {existingFoodPhotoPreviews.length > 0 && (
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">기존 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {existingFoodPhotos.map((photoPath, idx) => (
-                                                    <div key={photoPath} className="relative group">
+                                                {existingFoodPhotoPreviews.map(({ path, url }, idx) => (
+                                                    <div key={path} className="relative group">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
                                                             <Image
-                                                                src={supabase.storage.from('review-photos').getPublicUrl(photoPath).data.publicUrl}
+                                                                src={url}
                                                                 alt={`기존 음식 사진 ${idx + 1}`}
                                                                 fill
                                                                 unoptimized
@@ -982,7 +1184,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                                         </div>
                                                         <button
                                                             type="button"
-                                                            onClick={() => removeExistingFoodPhoto(photoPath)}
+                                                            onClick={() => removeExistingFoodPhoto(path)}
                                                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                         >
                                                             <XIcon className="h-3 w-3" />
@@ -998,8 +1200,8 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <div className="space-y-1">
                                             <p className="text-xs text-muted-foreground">새로 추가된 사진</p>
                                             <div className="flex flex-wrap gap-2">
-                                                {newFoodPhotos.map((photo, idx) => (
-                                                    <div key={idx} className="relative group">
+                                                {newFoodPhotoUrls.length === newFoodPhotos.length && newFoodPhotos.map((photo, idx) => (
+                                                    <div key={`${photo.name}-${idx}`} className="relative group">
                                                         <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-green-300">
                                                             <Image
                                                                 src={newFoodPhotoUrls[idx]}
@@ -1046,7 +1248,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                         <input
                                             ref={foodPhotosFileInputRef}
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/avif,image/jpeg,image/png,image/webp"
                                             onChange={handleFoodPhotosChange}
                                             multiple
                                             className="hidden"
@@ -1098,7 +1300,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 </AlertDialog>
                                 <Button
                                     variant="outline"
-                                    onClick={handleClose}
+                                    onClick={() => handleClose()}
                                     className="flex-1"
                                     disabled={isSubmitting || isDeleting}
                                 >

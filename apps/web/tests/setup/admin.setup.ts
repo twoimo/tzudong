@@ -1,9 +1,10 @@
 import { test as setup, expect, Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { hidePopupOverlay } from '../helpers';
 
-const authFile = path.join(__dirname, '..', '.auth', 'admin.json');
+const authFile = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.auth', 'admin.json');
 const ADMIN_COOKIE_ENV = 'INSIGHTS_CHAT_ADMIN_COOKIE';
 const SUPABASE_URL_ENV = 'NEXT_PUBLIC_SUPABASE_URL';
 const SUPABASE_ANON_KEY_ENV = 'NEXT_PUBLIC_SUPABASE_ANON_KEY';

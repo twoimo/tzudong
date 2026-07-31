@@ -275,8 +275,39 @@ type DesktopMapMenuItem = {
   >;
   label: string;
   icon: typeof MessageSquare;
-  onSelect: () => void;
 };
+const DESKTOP_MAP_MENU_ITEMS = [
+  {
+    id: "profile",
+    label: "프로필",
+    icon: UserRound,
+  },
+  {
+    id: "bookmarks",
+    label: "북마크",
+    icon: Bookmark,
+  },
+  {
+    id: "notifications",
+    label: "알림",
+    icon: Bell,
+  },
+  {
+    id: "feed",
+    label: "리뷰",
+    icon: MessageSquare,
+  },
+  {
+    id: "stamp",
+    label: "도장",
+    icon: Stamp,
+  },
+  {
+    id: "leaderboard",
+    label: "랭킹",
+    icon: Trophy,
+  },
+] as const satisfies ReadonlyArray<DesktopMapMenuItem>;
 
 const DESKTOP_LEFT_PANEL_AUTH_TOASTS = {
   profile: "로그인 후 프로필을 확인할 수 있어요",
@@ -1346,46 +1377,25 @@ export default function HomeDesktopControlPanel({
     router.push("/?panel=notifications", { scroll: false });
   }, [activeRightPanel, onPanelClose, revealDesktopLeftPanel, router, user]);
 
-  const desktopMapMenuItems = useMemo(
-    () =>
-      [
-        {
-          id: "profile",
-          label: "프로필",
-          icon: UserRound,
-          onSelect: handleAccountClick,
-        },
-        {
-          id: "bookmarks",
-          label: "북마크",
-          icon: Bookmark,
-          onSelect: handleBookmarkClick,
-        },
-        {
-          id: "notifications",
-          label: "알림",
-          icon: Bell,
-          onSelect: handleNotificationClick,
-        },
-        {
-          id: "feed",
-          label: "리뷰",
-          icon: MessageSquare,
-          onSelect: () => handleShortcutClick("feed"),
-        },
-        {
-          id: "stamp",
-          label: "도장",
-          icon: Stamp,
-          onSelect: () => handleShortcutClick("stamp"),
-        },
-        {
-          id: "leaderboard",
-          label: "랭킹",
-          icon: Trophy,
-          onSelect: () => handleShortcutClick("leaderboard"),
-        },
-      ] as const satisfies ReadonlyArray<DesktopMapMenuItem>,
+  const handleDesktopMapMenuItemSelect = useCallback(
+    (id: DesktopMapMenuItem["id"]) => {
+      switch (id) {
+        case "profile":
+          handleAccountClick();
+          return;
+        case "bookmarks":
+          handleBookmarkClick();
+          return;
+        case "notifications":
+          handleNotificationClick();
+          return;
+        case "feed":
+        case "stamp":
+        case "leaderboard":
+          handleShortcutClick(id);
+          return;
+      }
+    },
     [
       handleAccountClick,
       handleBookmarkClick,
@@ -1773,13 +1783,13 @@ export default function HomeDesktopControlPanel({
                     className="z-[180] w-max min-w-[max-content] max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-1.5 font-sans shadow-2xl"
                     data-desktop-map-menu="true"
                   >
-                    {desktopMapMenuItems.map((item) => {
+                    {DESKTOP_MAP_MENU_ITEMS.map((item) => {
                       const isActive = activeLeftPanelView === item.id;
                       const ItemIcon = item.icon;
                       return (
                         <DropdownMenuItem
                           key={item.id}
-                          onClick={item.onSelect}
+                          onClick={() => handleDesktopMapMenuItemSelect(item.id)}
                           className={cn(
                             desktopMapMenuItemClass,
                             isActive && "bg-primary/10 text-primary focus:text-primary",

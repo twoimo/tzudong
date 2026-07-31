@@ -7,6 +7,11 @@
 import json
 import sys
 from pathlib import Path
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
 
 
 def migrate_eval_item(item: dict) -> dict:
@@ -21,7 +26,7 @@ def migrate_laaj_results(data_path: Path):
     laaj_dir = data_path / "evaluation" / "laaj_results"
 
     if not laaj_dir.exists():
-        print(f"[ERROR] laaj_results 폴더 없음: {laaj_dir}")
+        print("[ERROR] operation=laaj_migration_input_unavailable code=LAAJ_RESULTS_DIRECTORY_MISSING")
         return
 
     files = list(laaj_dir.glob("*.jsonl"))
@@ -104,7 +109,10 @@ def migrate_laaj_results(data_path: Path):
                 print(f"  {updated}개 업데이트...")
 
         except Exception as e:
-            print(f"[WARN] 오류: {f.name} - {e}")
+            print(
+                f"[WARN] operation=laaj_migration_failed "
+                f"error={safe_error_name(e)} code=LAAJ_MIGRATION_FAILED"
+            )
 
     print(f"\n[OK] 마이그레이션 완료!")
     print(f"   업데이트: {updated}개")
@@ -112,7 +120,7 @@ def migrate_laaj_results(data_path: Path):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("사용법: python migrate_laaj_format.py <data_path>")
+        print("LAAJ_MIGRATION_ARGUMENTS_INVALID code=ARGUMENTS_INVALID")
         sys.exit(1)
 
     data_path = Path(sys.argv[1])

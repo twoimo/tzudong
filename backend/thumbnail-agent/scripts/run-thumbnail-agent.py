@@ -24,30 +24,22 @@ import time
 from pathlib import Path
 from typing import Any
 
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import redact_log_text, safe_error_name
+
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parents[0]
 SRC_ROOT = BACKEND_ROOT / "src"
 DEFAULT_CODEX_MODEL = "gpt-5.5"
 DEFAULT_CODEX_EFFORT = "low"
 DEFAULT_TIMEOUT_SECONDS = 120
-SECRET_PATTERNS = [
-    re.compile(r"sk-[A-Za-z0-9_\-]{12,}"),
-    re.compile(r"sk-proj-[A-Za-z0-9_\-]{12,}"),
-    re.compile(r"eyJ[A-Za-z0-9_\-.]{20,}"),
-    re.compile(r"(?i)(OPENAI[_A-Z]*|SERVICE[_A-Z]*|SUPABASE[_A-Z]*|API[_A-Z]*KEY|TOKEN|SECRET)\s*[:=]\s*[^\s,;]+"),
-    re.compile(r"https://[^\s]+(?:token|key|secret)[^\s]*", re.I),
-]
-
-
-def redact(value: Any) -> str:
-    text = str(value or "")
-    for pattern in SECRET_PATTERNS:
-        text = pattern.sub("[REDACTED]", text)
-    return text
 
 
 def eprint(message: str) -> None:
-    print(redact(message), file=sys.stderr)
+    print(redact_log_text(message), file=sys.stderr)
 
 
 def load_dotenv_file(path: Path) -> None:
@@ -132,7 +124,7 @@ def deterministic_plan(payload: dict[str, Any], runtime: str, reason: str | None
     ])
     warnings = ["thumbnail_agent_deterministic_fallback: emitted deterministic orchestration plan"]
     if reason:
-        warnings.append(f"thumbnail_agent_graph_unavailable: {redact(reason)}")
+        warnings.append("thumbnail_agent_graph_unavailable")
     return {
         "mode": "command",
         "runtime": runtime,
@@ -281,13 +273,9 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
             timeout=timeout,
             check=False,
         )
-        stdout = redact(completed.stdout[-3000:])
-        stderr = redact(completed.stderr[-3000:])
         answer = answer_path.read_text(encoding="utf-8", errors="ignore") if answer_path.exists() else ""
         if completed.returncode != 0:
-            raise RuntimeError(
-                f"codex_cli_oauth_failed exit={completed.returncode} model={model} stdout={stdout[-800:]} stderr={stderr[-1200:]}"
-            )
+            raise RuntimeError("codex_cli_oauth_failed")
         parsed = parse_codex_answer(answer or completed.stdout, model, effort, payload)
         parsed.setdefault("diagnostics", {})
         parsed["diagnostics"].update({
@@ -296,8 +284,8 @@ def run_codex_oauth(payload: dict[str, Any]) -> dict[str, Any]:
             "effort": effort,
             "threadId": thread_id,
             "timeoutSeconds": timeout,
-            "stdoutPreview": stdout[-800:],
-            "stderrPreview": stderr[-800:],
+            "stdoutPreview": "[SUPPRESSED]",
+            "stderrPreview": "[SUPPRESSED]",
         })
         return parsed
 
@@ -316,10 +304,10 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except subprocess.TimeoutExpired as exc:
-        eprint(f"thumbnail_agent_timeout: {exc}")
+        eprint(f"thumbnail_agent_timeout: {safe_error_name(exc)}")
         return 124
     except Exception as exc:
-        eprint(f"thumbnail_agent_error: {exc}")
+        eprint(f"thumbnail_agent_error: {safe_error_name(exc)}")
         return 1
 
 

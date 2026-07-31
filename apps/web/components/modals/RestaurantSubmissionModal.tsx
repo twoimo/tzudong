@@ -99,6 +99,22 @@ export default function RestaurantSubmissionModal({
         new: { key: null, fingerprint: null },
         request: { key: null, fingerprint: null },
     });
+    const resetForm = useCallback(() => {
+        setFormData({
+            restaurant_name: "",
+            address: "",
+            phone: "",
+            categories: [],
+            youtube_link: "",
+            description: "",
+        });
+        setCategoryInput("");
+        setLastSavedAt(null);
+        submissionClientKeysRef.current = {
+            new: { key: null, fingerprint: null },
+            request: { key: null, fingerprint: null },
+        };
+    }, []);
 
     // 모달 열릴 때 초기화
     useEffect(() => {
@@ -108,7 +124,7 @@ export default function RestaurantSubmissionModal({
             setValidationMessage(null);
             setPendingDraft(null);
         }
-    }, [isOpen, submissionMode]);
+    }, [isOpen, submissionMode, resetForm]);
 
     useEffect(() => {
         setValidationMessage(null);
@@ -165,7 +181,7 @@ export default function RestaurantSubmissionModal({
         const result = await response.json().catch(() => null) as { error?: string } | null;
 
         if (!response.ok) {
-            throw new Error(result?.error || '제출 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+            throw new Error('SUBMISSION_REQUEST_FAILED');
         }
 
         return result;
@@ -215,22 +231,6 @@ export default function RestaurantSubmissionModal({
         },
     });
 
-    const resetForm = () => {
-        setFormData({
-            restaurant_name: "",
-            address: "",
-            phone: "",
-            categories: [],
-            youtube_link: "",
-            description: "",
-        });
-        setCategoryInput("");
-        setLastSavedAt(null);
-        submissionClientKeysRef.current = {
-            new: { key: null, fingerprint: null },
-            request: { key: null, fingerprint: null },
-        };
-    };
 
     // 임시 저장된 데이터 확인
     const loadDraft = useCallback(async () => {
@@ -241,7 +241,7 @@ export default function RestaurantSubmissionModal({
             setPendingDraft(draft);
             setLastSavedAt(null);
         } catch (error) {
-            console.error('임시 저장 데이터 확인 실패:', error);
+            console.error('임시 저장 데이터 확인 실패:');
             setPendingDraft(null);
         }
     }, [user?.id, submissionMode]);
@@ -297,7 +297,7 @@ export default function RestaurantSubmissionModal({
             });
             setLastSavedAt(new Date());
         } catch (error) {
-            console.error('자동 저장 실패:', error);
+            console.error('자동 저장 실패:');
         } finally {
             setIsSaving(false);
         }
@@ -311,7 +311,7 @@ export default function RestaurantSubmissionModal({
             await deleteDraft(user.id, submissionMode);
             setLastSavedAt(null);
         } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:', error);
+            console.error('임시 저장 데이터 삭제 실패:');
         }
     }, [user?.id, submissionMode]);
 
@@ -324,7 +324,7 @@ export default function RestaurantSubmissionModal({
         setValidationMessage(null);
         setPendingDraft(null);
         toast.success('임시 저장된 내용을 삭제했습니다');
-    }, [clearDraft, pendingDraft, user?.id]);
+    }, [clearDraft, pendingDraft, resetForm, user?.id]);
 
     // 디바운스된 자동 저장 (500ms)
     useEffect(() => {

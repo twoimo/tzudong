@@ -37,6 +37,24 @@ import {
 type ReviewRow = Tables<'reviews'>;
 type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
 type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
+type AdminReviewRow = Pick<
+    ReviewRow,
+    | 'id'
+    | 'user_id'
+    | 'restaurant_id'
+    | 'title'
+    | 'content'
+    | 'visited_at'
+    | 'verification_photo'
+    | 'food_photos'
+    | 'categories'
+    | 'is_verified'
+    | 'admin_note'
+    | 'is_pinned'
+    | 'is_edited_by_admin'
+    | 'created_at'
+    | 'updated_at'
+>;
 const ADMIN_REVIEW_SELECT = [
     'id',
     'user_id',
@@ -64,6 +82,79 @@ interface RestaurantSummaryRow {
 
 interface RestaurantReviewCountRow {
     review_count: number | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isAdminReviewRow(value: unknown): value is AdminReviewRow {
+    if (!isRecord(value)) return false;
+
+    return typeof value.id === 'string'
+        && typeof value.user_id === 'string'
+        && typeof value.restaurant_id === 'string'
+        && typeof value.title === 'string'
+        && typeof value.content === 'string'
+        && typeof value.visited_at === 'string'
+        && typeof value.verification_photo === 'string'
+        && isStringArray(value.food_photos)
+        && isStringArray(value.categories)
+        && typeof value.is_verified === 'boolean'
+        && (value.admin_note === null || typeof value.admin_note === 'string')
+        && typeof value.is_pinned === 'boolean'
+        && typeof value.is_edited_by_admin === 'boolean'
+        && typeof value.created_at === 'string'
+        && typeof value.updated_at === 'string';
+}
+
+function isProfileRow(value: unknown): value is ProfileRow {
+    return isRecord(value)
+        && typeof value.user_id === 'string'
+        && typeof value.nickname === 'string';
+}
+
+function isRestaurantSummaryRow(value: unknown): value is RestaurantSummaryRow {
+    return isRecord(value)
+        && typeof value.id === 'string'
+        && (value.name === null || typeof value.name === 'string')
+        && (value.road_address === null || typeof value.road_address === 'string')
+        && (value.jibun_address === null || typeof value.jibun_address === 'string');
+}
+
+function isReviewStatusRow(value: unknown): value is ReviewStatusRow {
+    return isRecord(value)
+        && typeof value.restaurant_id === 'string'
+        && typeof value.is_verified === 'boolean';
+}
+
+function isRestaurantReviewCountRow(value: unknown): value is RestaurantReviewCountRow {
+    return isRecord(value)
+        && (value.review_count === null || typeof value.review_count === 'number');
+}
+
+function requireRows<T>(
+    value: unknown,
+    isRow: (row: unknown) => row is T,
+    errorMessage: string,
+): T[] {
+    if (!Array.isArray(value)) throw new Error(errorMessage);
+    const rows = value.filter(isRow);
+    if (rows.length !== value.length) throw new Error(errorMessage);
+    return rows;
+}
+
+function requireRow<T>(
+    value: unknown,
+    isRow: (row: unknown) => row is T,
+    errorMessage: string,
+): T {
+    if (!isRow(value)) throw new Error(errorMessage);
+    return value;
 }
 
 interface Review {
@@ -125,7 +216,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 .from('reviews')
                 .select(ADMIN_REVIEW_SELECT)
                 .order('created_at', { ascending: false })
-                .range(pageParam, pageParam + 19);
+                .range(pageParam, pageParam + 19)
+                .overrideTypes<AdminReviewRow[], { merge: false }>();
 
             if (reviewsError) throw reviewsError;
 
@@ -133,7 +225,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 return { reviews: [], nextCursor: null };
             }
 
-            const typedReviewsData = (reviewsData || []) as ReviewRow[];
+            const typedReviewsData = requireRows(reviewsData, isAdminReviewRow, '리뷰 데이터 형식이 올바르지 않습니다.');
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
@@ -141,15 +233,21 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 supabase
                     .from('profiles')
                     .select('user_id, nickname')
-                    .in('user_id', userIds),
+                    .in('user_id', userIds)
+                    .overrideTypes<ProfileRow[], { merge: false }>(),
                 supabase
                     .from('restaurants')
                     .select('id, name:approved_name, road_address, jibun_address')
-                    .in('id', restaurantIds),
+                    .in('id', restaurantIds)
+                    .overrideTypes<RestaurantSummaryRow[], { merge: false }>(),
             ]);
 
-            const typedProfilesData = (profilesData || []) as ProfileRow[];
-            const typedRestaurantsData = (restaurantsData || []) as RestaurantSummaryRow[];
+            const typedProfilesData = profilesData
+                ? requireRows(profilesData, isProfileRow, '사용자 데이터 형식이 올바르지 않습니다.')
+                : [];
+            const typedRestaurantsData = restaurantsData
+                ? requireRows(restaurantsData, isRestaurantSummaryRow, '레스토랑 데이터 형식이 올바르지 않습니다.')
+                : [];
 
             const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
             const restaurantsMap = new Map(
@@ -226,24 +324,22 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 .from('reviews')
                 .select('restaurant_id, is_verified')
                 .eq('id', reviewId)
-                .single();
+                .single()
+                .overrideTypes<ReviewStatusRow, { merge: false }>();
 
             if (reviewError) throw reviewError;
 
-            const typedReview = review as ReviewStatusRow | null;
-            if (!typedReview) {
-                throw new Error('리뷰 정보를 찾을 수 없습니다.');
-            }
+            const typedReview = requireRow(review, isReviewStatusRow, '리뷰 정보를 찾을 수 없습니다.');
             const wasAlreadyVerified = typedReview.is_verified;
 
             const { error: approveError } = await supabase
-                .from('reviews' as never)
+                .from('reviews')
                 .update({
                     is_verified: true,
                     admin_note: adminNote.trim() || null,
                     is_edited_by_admin: !!adminNote.trim(),
                     updated_at: new Date().toISOString(),
-                } as never)
+                })
                 .eq('id', reviewId);
 
             if (approveError) throw approveError;
@@ -253,21 +349,23 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     .from('restaurants')
                     .select('review_count')
                     .eq('id', typedReview.restaurant_id)
-                    .single();
+                    .single()
+                    .overrideTypes<RestaurantReviewCountRow, { merge: false }>();
 
                 if (fetchError) throw fetchError;
 
-                const typedRestaurant = restaurant as RestaurantReviewCountRow | null;
-                if (!typedRestaurant) {
-                    throw new Error('레스토랑 리뷰 수 정보를 찾을 수 없습니다.');
-                }
+                const typedRestaurant = requireRow(
+                    restaurant,
+                    isRestaurantReviewCountRow,
+                    '레스토랑 리뷰 수 정보를 찾을 수 없습니다.',
+                );
 
                 const { error: visitError } = await supabase
-                    .from('restaurants' as never)
+                    .from('restaurants')
                     .update({
                         review_count: (typedRestaurant.review_count ?? 0) + 1,
                         updated_at: new Date().toISOString(),
-                    } as never)
+                    })
                     .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
@@ -292,7 +390,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             setAdminNote("");
         },
         onError: (error: Error) => {
-            toast.error(error.message || '승인에 실패했습니다');
+            toast.error('승인에 실패했습니다');
         },
     });
 
@@ -304,23 +402,21 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 .from('reviews')
                 .select('restaurant_id, is_verified')
                 .eq('id', reviewId)
-                .single();
+                .single()
+                .overrideTypes<ReviewStatusRow, { merge: false }>();
 
             if (reviewError) throw reviewError;
 
-            const typedReview = review as ReviewStatusRow | null;
-            if (!typedReview) {
-                throw new Error('리뷰 정보를 찾을 수 없습니다.');
-            }
+            const typedReview = requireRow(review, isReviewStatusRow, '리뷰 정보를 찾을 수 없습니다.');
 
             const { error: rejectError } = await supabase
-                .from('reviews' as never)
+                .from('reviews')
                 .update({
                     is_verified: false,
                     admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
                     is_edited_by_admin: true,
                     updated_at: new Date().toISOString(),
-                } as never)
+                })
                 .eq('id', reviewId);
 
             if (rejectError) throw rejectError;
@@ -330,21 +426,23 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     .from('restaurants')
                     .select('review_count')
                     .eq('id', typedReview.restaurant_id)
-                    .single();
+                    .single()
+                    .overrideTypes<RestaurantReviewCountRow, { merge: false }>();
 
                 if (fetchError) throw fetchError;
 
-                const typedRestaurant = restaurant as RestaurantReviewCountRow | null;
-                if (!typedRestaurant) {
-                    throw new Error('레스토랑 리뷰 수 정보를 찾을 수 없습니다.');
-                }
+                const typedRestaurant = requireRow(
+                    restaurant,
+                    isRestaurantReviewCountRow,
+                    '레스토랑 리뷰 수 정보를 찾을 수 없습니다.',
+                );
 
                 const { error: visitError } = await supabase
-                    .from('restaurants' as never)
+                    .from('restaurants')
                     .update({
                         review_count: Math.max((typedRestaurant.review_count ?? 0) - 1, 0),
                         updated_at: new Date().toISOString(),
-                    } as never)
+                    })
                     .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
@@ -369,7 +467,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             setAdminNote("");
         },
         onError: (error: Error) => {
-            toast.error(error.message || '거부에 실패했습니다');
+            toast.error('거부에 실패했습니다');
         },
     });
 
@@ -390,7 +488,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
         },
         onError: (error: Error) => {
-            toast.error(error.message || '삭제에 실패했습니다');
+            toast.error('삭제에 실패했습니다');
         },
     });
 

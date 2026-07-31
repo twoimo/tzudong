@@ -34,6 +34,7 @@ import { toast } from "@/lib/no-toast";
 import { cn } from "@/lib/utils";
 import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 import { siteConfig } from "@/lib/site-config";
+import { resolveProfileAvatarUrl } from "@/lib/profile-avatar-url";
 
 const desktopUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
@@ -89,14 +90,11 @@ export default function HomeMapUserMenu({
         .maybeSingle();
 
       if (error) {
-        console.error("지도 사용자 프로필 사진 조회 실패:", error);
+        console.error("지도 사용자 프로필 사진 조회 실패:");
         return null;
       }
 
-      const profile = data as { avatar_url?: string | null } | null;
-      return typeof profile?.avatar_url === "string" && profile.avatar_url.trim()
-        ? profile.avatar_url
-        : null;
+      return resolveProfileAvatarUrl(data?.avatar_url, user.id);
     },
     enabled: Boolean(user?.id),
     staleTime: 5 * 60 * 1000,
@@ -124,7 +122,7 @@ export default function HomeMapUserMenu({
       toast.success("로그아웃되었습니다");
       router.push("/");
     } catch (error) {
-      console.error("로그아웃 실패:", error);
+      console.error("로그아웃 실패:");
       toast.error("로그아웃에 실패했습니다");
     }
   }, [queryClient, router, signOut]);
@@ -157,7 +155,7 @@ export default function HomeMapUserMenu({
 
       await document.exitFullscreen();
     } catch (error) {
-      console.error("지도 전체화면 전환 실패:", error);
+      console.error("지도 전체화면 전환 실패:");
       toast.error("전체화면 전환에 실패했습니다");
     }
   }, []);

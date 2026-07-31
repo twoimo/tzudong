@@ -1,9 +1,21 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import * as fsPromises from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 
+import { fetchTrustedRemoteImage } from '../youtube-thumbnail-generator/request';
+import {
+  canonicalizeStoryboardImageBase64,
+  canonicalizeStoryboardImageBytes,
+  cleanupPrivateStoryboardImageRun,
+  createPrivateStoryboardImageRun,
+  persistCanonicalStoryboardImage,
+  readContainedStoryboardImageFile,
+  resolvePrivateStoryboardImageRunPath,
+  STORYBOARD_IMAGE_CANONICAL_HEIGHT,
+  STORYBOARD_IMAGE_CANONICAL_WIDTH,
+  type CanonicalStoryboardImage,
+} from './image-canonicalizer';
 import { STORYBOARD_GENERATED_IMAGE_TRUST_POLICY } from './image-trust';
 import {
   STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
@@ -19,8 +31,8 @@ import {
   type StoryboardSceneGeneratedImage,
 } from './types';
 
-const STORYBOARD_IMAGE_TARGET_WIDTH = 1280 as const;
-const STORYBOARD_IMAGE_TARGET_HEIGHT = 720 as const;
+const STORYBOARD_IMAGE_TARGET_WIDTH = STORYBOARD_IMAGE_CANONICAL_WIDTH;
+const STORYBOARD_IMAGE_TARGET_HEIGHT = STORYBOARD_IMAGE_CANONICAL_HEIGHT;
 const LOCAL_CODEX_DEFAULT_MODEL = STORYBOARD_IMAGE_PROVIDER_MODEL;
 const LOCAL_CODEX_ALLOWED_MODEL = STORYBOARD_IMAGE_PROVIDER_MODEL;
 const STORYBOARD_IMAGE_OUTPUT_SIZE = '1536x864' as const;
@@ -39,6 +51,14 @@ const LOCAL_CODEX_COMMAND_TIMEOUT_MS = 5 * 60 * 1000;
 const LOCAL_CODEX_COMMAND_MAX_OUTPUT_BYTES = 3 * 1024 * 1024;
 const BROWSER_OPENAI_REQUEST_TIMEOUT_MS = 5 * 60 * 1000;
 const STORYBOARD_IMAGE_GENERATION_DEFAULT_CONCURRENCY = 4;
+const BROWSER_OPENAI_REMOTE_IMAGE_TIMEOUT_MS = 30_000;
+const BROWSER_OPENAI_REMOTE_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+const BROWSER_OPENAI_IMAGE_RESPONSE_MAX_BYTES =
+  Math.ceil(BROWSER_OPENAI_REMOTE_IMAGE_MAX_BYTES / 3) * 4 + 1_048_576;
+const BROWSER_OPENAI_REMOTE_IMAGE_ALLOWED_HOSTNAMES = [
+  'api.openai.com',
+  'oaidalleapiprodscus.blob.core.windows.net',
+] as const;
 
 type StoryboardImageContext = {
   title: string;
@@ -105,8 +125,8 @@ type StoryboardImageProviderBaseAvailability = {
   model: string;
   providerId: typeof STORYBOARD_IMAGE_PROVIDER_ID | typeof STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID;
   target: StoryboardImageProviderTarget;
-  authMode?: 'codex_oauth' | 'browser_local_storage_api_key';
-  browserKeyStorage?: 'browser_local_storage_only';
+  authMode?: 'codex_oauth' | 'browser_memory_only_api_key';
+  browserKeyStorage?: 'memory_only_operation_scoped';
 };
 
 export type StoryboardImageProviderAvailability =
@@ -185,6 +205,7 @@ function redactProviderSecretText(value: string) {
   return value
     .replace(/sk-[A-Za-z0-9_-]{8,}/g, '[redacted_api_key]')
     .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer [redacted]')
+    .replace(/https?:\/\/[^\s"'<>]+/gi, '[redacted_url]')
     .slice(0, 800);
 }
 
@@ -413,11 +434,12 @@ export function getStoryboardImageProviderAvailability(
     return {
       available: true,
       reason: 'ready',
-      command: 'browser localStorage API key (transient request header)',
+      command:
+        'browser component-memory API key (active operation; transmitted once in guarded request header; never persisted)',
       model: STORYBOARD_IMAGE_PROVIDER_MODEL,
       providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
-      authMode: 'browser_local_storage_api_key',
-      browserKeyStorage: 'browser_local_storage_only',
+      authMode: 'browser_memory_only_api_key',
+      browserKeyStorage: 'memory_only_operation_scoped',
       modelProvenance: STORYBOARD_IMAGE_PROVIDER_EXACT_PROVENANCE,
       target,
     };
@@ -754,18 +776,19 @@ function runLocalCodexStoryboardCommand(
   });
 }
 
-async function getVerifiedGeneratedImageFile(path: string) {
-  const fileStat = await fsPromises.stat(path);
-  if (!fileStat.isFile() || fileStat.size <= 0) {
+async function runProviderImageOperation<T>(
+  operation: Promise<T>,
+): Promise<T> {
+  try {
+    return await operation;
+  } catch {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
-      '로컬 Codex bridge가 유효한 이미지 파일을 생성하지 않았습니다.',
+      '이미지 응답이 완전한 정지 이미지 검증 또는 canonical PNG 변환을 통과하지 못했습니다.',
       502,
     );
   }
-  return fileStat;
 }
-
 type BrowserOpenAIImageResponse = {
   id?: string;
   created?: number;
@@ -782,18 +805,89 @@ function getBrowserOpenAIRequestTimeout(env: NodeJS.ProcessEnv) {
     : BROWSER_OPENAI_REQUEST_TIMEOUT_MS;
 }
 
-async function fetchOpenAIImageUrlAsBuffer(url: string) {
-  const response = await fetch(url, {
-    headers: { Accept: 'image/png,image/*;q=0.9,*/*;q=0.1' },
-  });
-  if (!response.ok) {
+async function fetchOpenAIImageUrlAsBuffer(url: string): Promise<CanonicalStoryboardImage> {
+  try {
+    const image = await fetchTrustedRemoteImage(url, {
+      allowedHostnames: BROWSER_OPENAI_REMOTE_IMAGE_ALLOWED_HOSTNAMES,
+      maxBytes: BROWSER_OPENAI_REMOTE_IMAGE_MAX_BYTES,
+      timeoutMs: BROWSER_OPENAI_REMOTE_IMAGE_TIMEOUT_MS,
+      accept: 'image/png',
+    });
+    if (image.contentType !== 'image/png') {
+      throw new StoryboardImageGenerationError(
+        'provider_execution_failed',
+        'OpenAI 이미지 응답 형식이 올바르지 않습니다.',
+        502,
+      );
+    }
+    return runProviderImageOperation(
+      canonicalizeStoryboardImageBytes(Buffer.from(image.bytes)),
+    );
+  } catch (error) {
+    if (error instanceof StoryboardImageGenerationError) throw error;
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
-      `OpenAI 이미지 URL을 읽지 못했습니다: HTTP ${response.status}`,
+      'OpenAI 이미지 데이터를 가져오지 못했습니다.',
       502,
     );
   }
-  return Buffer.from(await response.arrayBuffer());
+}
+
+async function decodeOpenAIImageBase64(value: string): Promise<CanonicalStoryboardImage> {
+  return runProviderImageOperation(canonicalizeStoryboardImageBase64(value));
+}
+async function readLimitedOpenAIImageResponseText(response: Response) {
+  const contentLength = response.headers.get('content-length');
+  if (contentLength && (!/^\d+$/.test(contentLength) || Number(contentLength) > BROWSER_OPENAI_IMAGE_RESPONSE_MAX_BYTES)) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      'OpenAI 이미지 API 응답이 허용된 크기를 초과했습니다.',
+      502,
+    );
+  }
+  if (!response.body) {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      'OpenAI 이미지 API 응답을 처리하지 못했습니다.',
+      502,
+    );
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > BROWSER_OPENAI_IMAGE_RESPONSE_MAX_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new StoryboardImageGenerationError(
+          'provider_execution_failed',
+          'OpenAI 이미지 API 응답이 허용된 크기를 초과했습니다.',
+          502,
+        );
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof StoryboardImageGenerationError) throw error;
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      'OpenAI 이미지 API 응답을 처리하지 못했습니다.',
+      502,
+    );
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 async function requestBrowserOpenAIStoryboardImage(
@@ -821,42 +915,43 @@ async function requestBrowserOpenAIStoryboardImage(
     },
     body: JSON.stringify(requestBody),
     signal: AbortSignal.timeout(getBrowserOpenAIRequestTimeout(env)),
-  }).catch((error) => {
+  }).catch(() => {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
-      `OpenAI 이미지 API 요청 실패: ${redactProviderSecretText(error instanceof Error ? error.message : 'unknown')}`,
+      'OpenAI 이미지 API 요청에 실패했습니다.',
       502,
     );
   });
 
-  const responseText = await response.text();
   if (!response.ok) {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
-      `OpenAI 이미지 API가 실패했습니다: HTTP ${response.status} ${redactProviderSecretText(responseText)}`,
+      'OpenAI 이미지 API가 요청을 처리하지 못했습니다.',
       response.status === 401 || response.status === 403 ? 401 : 502,
     );
   }
 
+  const responseText = await readLimitedOpenAIImageResponseText(response);
+
   let payload: BrowserOpenAIImageResponse;
   try {
     payload = JSON.parse(responseText) as BrowserOpenAIImageResponse;
-  } catch (error) {
+  } catch {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
-      `OpenAI 이미지 API 응답 JSON 파싱 실패: ${error instanceof Error ? error.message : 'unknown'}`,
+      'OpenAI 이미지 API 응답을 처리하지 못했습니다.',
       502,
     );
   }
 
   const firstImage = payload.data?.[0];
-  const buffer = firstImage?.b64_json
-    ? Buffer.from(firstImage.b64_json, 'base64')
+  const canonical = firstImage?.b64_json
+    ? await decodeOpenAIImageBase64(firstImage.b64_json)
     : firstImage?.url
       ? await fetchOpenAIImageUrlAsBuffer(firstImage.url)
       : null;
 
-  if (!buffer || buffer.length <= 0) {
+  if (!canonical || canonical.byteLength <= 0) {
     throw new StoryboardImageGenerationError(
       'provider_execution_failed',
       'OpenAI 이미지 API가 사용 가능한 이미지 데이터를 반환하지 않았습니다.',
@@ -871,9 +966,9 @@ async function requestBrowserOpenAIStoryboardImage(
     responseId: payload.id || `openai_image_${randomUUID()}`,
     imageCallId: `image_${String(input.sceneNo).padStart(2, '0')}_${randomUUID().slice(0, 8)}`,
     requestHash: sha256Hex(JSON.stringify(requestBody)),
-    responseHash: sha256Hex(buffer),
-    bytes: buffer.length,
-    imageBase64: buffer.toString('base64'),
+    responseHash: canonical.sha256,
+    bytes: canonical.byteLength,
+    imageBase64: canonical.bytes.toString('base64'),
     generatedAt,
   };
 }
@@ -883,7 +978,7 @@ function toBrowserOpenAIStoryboardGeneratedImageProvenance(
 ): StoryboardGeneratedImageProvenance {
   return {
     providerId: STORYBOARD_BROWSER_OPENAI_IMAGE_PROVIDER_ID,
-    authMode: 'browser_local_storage_api_key',
+    authMode: 'browser_memory_only_api_key',
     endpoint: BROWSER_OPENAI_IMAGES_ENDPOINT,
     requestToolType: 'image_generation',
     requestToolModel: STORYBOARD_IMAGE_PROVIDER_MODEL,
@@ -927,10 +1022,11 @@ async function generateStoryboardSceneImageWithBrowserOpenAIKey(
     prompt,
     generatedAt: proof.generatedAt,
     warnings: [
-      'browser_api_key_provider: generated via a transient OpenAI API key supplied from browser localStorage.',
+      'browser_api_key_provider: API key exists only in component memory for the active operation and is transmitted once in the guarded request header.',
       'production_transport: image bytes were returned as an in-memory data URL without writing to the server public filesystem.',
       'storage_boundary: raw API key was not persisted to account data, DB, history, or provenance.',
       `exact_provenance: image_generation.${STORYBOARD_IMAGE_PROVIDER_MODEL} response=${proof.responseId} call=${proof.imageCallId}`,
+      `canonical_output: image/png ${STORYBOARD_IMAGE_TARGET_WIDTH}x${STORYBOARD_IMAGE_TARGET_HEIGHT} bytes=${proof.bytes} sha256=${proof.responseHash}`,
     ],
     provenance: toBrowserOpenAIStoryboardGeneratedImageProvenance(proof),
   };
@@ -980,39 +1076,83 @@ export async function generateStoryboardSceneImage(
     outputRoot,
     join(outputRoot, runId, `cut-${String(scene.sceneNo).padStart(2, '0')}.png`),
   );
-  await fsPromises.mkdir(dirname(outputPath), { recursive: true });
 
-  const result = await runLocalCodexStoryboardCommand(
-    {
-      prompt,
-      sceneNo: scene.sceneNo,
+  let privateRun: ReturnType<typeof createPrivateStoryboardImageRun>;
+  try {
+    privateRun = createPrivateStoryboardImageRun();
+  } catch {
+    throw new StoryboardImageGenerationError(
+      'provider_execution_failed',
+      '로컬 Codex bridge의 private 이미지 출력 경계를 만들지 못했습니다.',
+      502,
+    );
+  }
+
+  try {
+    const bridgeOutputPath = resolvePrivateStoryboardImageRunPath(
+      privateRun,
+      'source.png',
+    );
+    const result = await runLocalCodexStoryboardCommand(
+      {
+        prompt,
+        sceneNo: scene.sceneNo,
+        outputPath: bridgeOutputPath,
+        size: env.STORYBOARD_LOCAL_CODEX_IMAGE_SIZE || STORYBOARD_IMAGE_OUTPUT_SIZE,
+        outputFormat: 'png',
+        background: 'opaque',
+        agentModel: env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
+        reasoningEffort: env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
+        timeout: 300,
+      },
+      env,
+    );
+    const proof = validateLocalCodexCommandResult(result, bridgeOutputPath);
+    const rawImage = await runProviderImageOperation(Promise.resolve().then(
+      () => readContainedStoryboardImageFile(privateRun, bridgeOutputPath),
+    ));
+    if (
+      proof.bytes !== rawImage.byteLength
+      || proof.responseHash.toLowerCase() !== sha256Hex(rawImage)
+    ) {
+      throw new StoryboardImageGenerationError(
+        'provider_execution_failed',
+        '로컬 Codex bridge 이미지 proof가 private 출력 파일과 일치하지 않습니다.',
+        502,
+      );
+    }
+
+    const canonical = await runProviderImageOperation(
+      canonicalizeStoryboardImageBytes(rawImage),
+    );
+    const finalImage = await runProviderImageOperation(Promise.resolve().then(
+      () => persistCanonicalStoryboardImage(outputRoot, outputPath, canonical),
+    ));
+    const finalProof = {
+      ...proof,
+      bytes: finalImage.byteLength,
       outputPath,
-      size: env.STORYBOARD_LOCAL_CODEX_IMAGE_SIZE || STORYBOARD_IMAGE_OUTPUT_SIZE,
-      outputFormat: 'png',
-      background: 'opaque',
-      agentModel: env.CODEX_IMAGEGEN_AGENT_MODEL || 'gpt-5.5',
-      reasoningEffort: env.CODEX_IMAGEGEN_AGENT_EFFORT || 'low',
-      timeout: 300,
-    },
-    env,
-  );
-  const proof = validateLocalCodexCommandResult(result, outputPath);
-  await getVerifiedGeneratedImageFile(outputPath);
+      responseHash: finalImage.sha256,
+    };
 
-  return {
-    dataUrl: `${publicDir}/cut-${String(scene.sceneNo).padStart(2, '0')}.png`,
-    mime: 'image/png',
-    providerId: STORYBOARD_IMAGE_PROVIDER_ID,
-    trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
-    model: STORYBOARD_IMAGE_PROVIDER_MODEL,
-    prompt,
-    generatedAt: proof.generatedAt ?? new Date().toISOString(),
-    warnings: [
-      'local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.',
-      `exact_provenance: ${proof.requestToolType}.${proof.requestToolModel} response=${proof.responseId} call=${proof.imageCallId}`,
-    ],
-    provenance: toStoryboardGeneratedImageProvenance(proof),
-  };
+    return {
+      dataUrl: `${publicDir}/cut-${String(scene.sceneNo).padStart(2, '0')}.png`,
+      mime: 'image/png',
+      providerId: STORYBOARD_IMAGE_PROVIDER_ID,
+      trustPolicy: STORYBOARD_GENERATED_IMAGE_TRUST_POLICY,
+      model: STORYBOARD_IMAGE_PROVIDER_MODEL,
+      prompt,
+      generatedAt: finalProof.generatedAt ?? new Date().toISOString(),
+      warnings: [
+        'local_codex_provider: generated via local Codex OAuth provider and persisted for admin storyboard display.',
+        `exact_provenance: ${finalProof.requestToolType}.${finalProof.requestToolModel} response=${finalProof.responseId} call=${finalProof.imageCallId}`,
+        `canonical_output: image/png ${STORYBOARD_IMAGE_TARGET_WIDTH}x${STORYBOARD_IMAGE_TARGET_HEIGHT} bytes=${finalProof.bytes} sha256=${finalProof.responseHash}`,
+      ],
+      provenance: toStoryboardGeneratedImageProvenance(finalProof),
+    };
+  } finally {
+    cleanupPrivateStoryboardImageRun(privateRun);
+  }
 }
 
 export async function generateStoryboardSceneImages(

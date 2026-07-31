@@ -831,7 +831,7 @@ const NaverMapView = memo(({
                 ['order', 'is_pinned.desc,created_at.desc'],
                 ['limit', reviewLimit],
             ]).catch((error) => {
-                console.warn('NaverMapView: review bubble fetch skipped', error);
+                console.warn('NaverMapView: review bubble fetch skipped');
                 return [] as VisibleMarkerReviewRow[];
             });
 
@@ -857,7 +857,7 @@ const NaverMapView = memo(({
                     ['select', VISIBLE_MARKER_REVIEW_PROFILE_SELECT],
                     ['user_id', postgrestIn(userIds)],
                 ]).catch((error) => {
-                    console.warn('NaverMapView: review bubble profile fetch skipped', error);
+                    console.warn('NaverMapView: review bubble profile fetch skipped');
                     return [] as VisibleMarkerReviewProfileRow[];
                 })
                 : [];
@@ -1005,6 +1005,7 @@ const NaverMapView = memo(({
         };
     }, [activateNoncriticalMapEffects, isMapInitialized, onMapInteraction, releaseSearchSelectionOnUserInteraction]);
 
+    // Renders authorized device coordinates at the approved map-provider boundary.
     useEffect(() => {
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver?.maps) return;
 
@@ -2928,7 +2929,7 @@ const NaverMapView = memo(({
             // naver.maps.Event.addListener(map, 'idle', () => { ... });
 
         } catch (error) {
-            console.error("네이버 지도 초기화 오류:", error);
+            console.error("네이버 지도 초기화 오류:");
             markerPool.clear();
             clusterAnimationManager.clear();
             mapInstanceRef.current = null;
@@ -3072,7 +3073,7 @@ const NaverMapView = memo(({
                     // 줌 적용 (보정은 idle 리스너에서 수행)
                     map.setZoom(nextZoom, false);
                 } catch (error) {
-                    console.error("휠 줌 포인터 고정 처리 실패:", error);
+                    console.error("휠 줌 포인터 고정 처리 실패:");
                     map.setZoom(nextZoom, true);
                     const postAdjustPlan = resolveNaverWheelPostAdjustPlan({
                         currentZoom: map.getZoom(),

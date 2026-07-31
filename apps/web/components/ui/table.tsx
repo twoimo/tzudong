@@ -9,7 +9,10 @@ export type HorizontalScrollOwner =
   | "admin-dashboard-card-title-actions"
   | "admin-dashboard-kpi-title-actions"
   | "stamp-restaurant-list-table"
-  | "admin-evaluation-table";
+  | "admin-evaluation-table"
+  | "storyboard-canvas-toolbar"
+  | "storyboard-chat-examples"
+  | "storyboard-chat-attachments";
 
 interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
   allowHorizontalScroll?: boolean;

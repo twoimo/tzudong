@@ -98,6 +98,60 @@ test('보호 경로는 세션 갱신을 수행한다', async () => {
     expect(updateSessionCalls).toBe(1)
     expect(response.headers.get('x-auth-checked')).toBe('1')
 })
+test('internal capability POST allowlist reaches routes without bypassing other mutations', async () => {
+    resetAdminBypassEnv()
+    let updateSessionCalls = 0
+
+    mock.module('@/lib/supabase/middleware', () => ({
+        updateSession: async () => {
+            updateSessionCalls += 1
+            return NextResponse.json({ ok: true }, { headers: { 'x-auth-checked': '1' } })
+        },
+    }))
+
+    const { proxy } = await loadProxyModule()
+    const accountDeletionResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/account-deletion', {
+        method: 'POST',
+    }))
+    const privacyRetentionResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/privacy-retention/', {
+        method: 'POST',
+    }))
+    const accountDeletionNearMissResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/account-deletion-worker', {
+        method: 'POST',
+    }))
+    const privacyRetentionNearMissResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/privacy-retention/replay', {
+        method: 'POST',
+    }))
+    const accountDeletionPatchResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/account-deletion', {
+        method: 'PATCH',
+        headers: { 'x-account-deletion-worker-capability': 'a'.repeat(32) },
+    }))
+    const accountDeletionSameOriginPatchResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/account-deletion', {
+        method: 'PATCH',
+        headers: {
+            origin: 'http://localhost:3000',
+            'sec-fetch-site': 'same-origin',
+            'x-account-deletion-worker-capability': 'a'.repeat(32),
+        },
+    }))
+    const privacyRetentionDeleteResponse = await proxy(new NextRequest('http://localhost:3000/api/internal/privacy-retention', {
+        method: 'DELETE',
+        headers: { 'x-privacy-retention-capability': 'b'.repeat(32) },
+    }))
+    const ordinaryMutationResponse = await proxy(new NextRequest('http://localhost:3000/api/account/delete', {
+        method: 'POST',
+    }))
+
+    expect(accountDeletionResponse.headers.get('x-auth-checked')).toBe('1')
+    expect(privacyRetentionResponse.headers.get('x-auth-checked')).toBe('1')
+    expect(accountDeletionNearMissResponse.status).toBe(403)
+    expect(privacyRetentionNearMissResponse.status).toBe(403)
+    expect(accountDeletionPatchResponse.status).toBe(403)
+    expect(accountDeletionSameOriginPatchResponse.headers.get('x-auth-checked')).toBe('1')
+    expect(privacyRetentionDeleteResponse.status).toBe(403)
+    expect(ordinaryMutationResponse.status).toBe(403)
+    expect(updateSessionCalls).toBe(3)
+})
 
 test('관리자 우회 헤더가 있어도 env가 꺼져 있으면 세션 갱신을 수행한다', async () => {
     resetAdminBypassEnv()
@@ -395,8 +449,10 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(missingHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonAdminVariantResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(postResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(updateSessionCalls).toBe(12)
+        expect(postResponse.status).toBe(403)
+        expect(postResponse.headers.get('x-middleware-next')).toBeNull()
+        expect(postResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(updateSessionCalls).toBe(11)
     } finally {
         resetAdminBypassEnv()
     }
@@ -463,10 +519,12 @@ test('개발자 썸네일 bootstrap 쿠키는 일반 브라우저의 썸네일 �
         expect(allowedHeadResponse.headers.get('x-auth-checked')).toBeNull()
         expect(wrongModuleResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(postResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(postResponse.status).toBe(403)
+        expect(postResponse.headers.get('x-middleware-next')).toBeNull()
+        expect(postResponse.headers.get('x-auth-checked')).toBeNull()
         expect(invalidCookieResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonLocalHostResponse.headers.get('x-auth-checked')).toBe('1')
-        expect(updateSessionCalls).toBe(5)
+        expect(updateSessionCalls).toBe(4)
     } finally {
         resetAdminBypassEnv()
     }

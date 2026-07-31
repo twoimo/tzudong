@@ -4,6 +4,7 @@ import {
   DEFAULT_ADMIN_SIDEBAR_ORDER,
   normalizeAdminSidebarOrder,
 } from "../lib/admin/sidebar-order";
+import { ADMIN_CONSOLE_MODULE_IDS } from "../lib/admin/admin-module-routing";
 
 describe("admin sidebar order normalization", () => {
   test("keeps server and client defaults stable for review and operations sections", () => {
@@ -27,6 +28,28 @@ describe("admin sidebar order normalization", () => {
       "routes",
       "llm",
       "audit",
+    ]);
+  });
+
+  test("covers every routed admin module without tying route id order to sidebar IA order", () => {
+    const sidebarModuleIds = new Set(
+      Object.values(DEFAULT_ADMIN_SIDEBAR_ORDER.items).flat(),
+    );
+
+    expect([...sidebarModuleIds].sort()).toEqual(
+      [...ADMIN_CONSOLE_MODULE_IDS].sort(),
+    );
+    expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
+      "youtube-thumbnail-generator",
+      "storyboard",
+      "routes",
+      "llm",
+      "audit",
+    ]);
+    expect(ADMIN_CONSOLE_MODULE_IDS.slice(0, 3)).toEqual([
+      "overview",
+      "routes",
+      "map-overlays",
     ]);
   });
 

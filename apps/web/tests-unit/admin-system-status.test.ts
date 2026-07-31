@@ -17,7 +17,7 @@ function setAuthMock(state: AuthState) {
     mock.module('@/lib/auth/require-admin', () => ({
         requireAdmin: async () => {
             if (state === 'ok') {
-                return { ok: true, userId: 'admin-user' };
+                return { ok: true, userId: '11111111-1111-4111-8111-111111111111' };
             }
 
             return {
@@ -36,6 +36,12 @@ function setAuthMock(state: AuthState) {
         },
     }));
 }
+function setProviderBudgetMock() {
+    mock.module('@/lib/security/admin-provider-budget', () => ({
+        reserveAdminProviderBudget: async () => ({ allowed: true, retryAfterSeconds: 0 }),
+    }));
+}
+
 
 function withEnv(updates: Partial<NodeJS.ProcessEnv>): () => void {
     const previous: Partial<NodeJS.ProcessEnv> = {};
@@ -97,6 +103,17 @@ async function loadDirectionsRoute() {
     const moduleId = `../app/api/admin/routes/directions/route.ts?cache=${Math.random()}`;
     return import(moduleId);
 }
+function directionsRequest(body: string) {
+    return new Request('http://localhost/api/admin/routes/directions', {
+        method: 'POST',
+        headers: {
+            Origin: 'http://localhost',
+            'Content-Type': 'application/json',
+        },
+        body,
+    });
+}
+
 
 async function loadSystemStatusHelper() {
     const moduleId = `../lib/admin/system-status/status.ts?cache=${Math.random()}`;
@@ -1153,6 +1170,7 @@ describe('admin system status API route', () => {
 
         mock.restore();
         setAuthMock('ok');
+        setProviderBudgetMock();
         global.fetch = async () => {
             fetchCalls += 1;
             throw new Error('missing credentials should not call provider');
@@ -1160,10 +1178,9 @@ describe('admin system status API route', () => {
 
         try {
             const { POST } = await loadDirectionsRoute();
-            const response = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }] }),
-            }) as never);
+            const response = await POST(directionsRequest(
+                JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }] }),
+            ) as never);
             const payload = await response.json();
 
             expect(response.status).toBe(200);
@@ -1180,7 +1197,7 @@ describe('admin system status API route', () => {
                 roadRouteAvailable: false,
                 roadDistanceTrusted: false,
                 routeGeometrySource: 'none',
-                distanceSource: 'local-coordinate-estimate',
+                distanceSource: 'none',
                 providerRequestAttempted: false,
             });
             expect(fetchCalls).toBe(0);
@@ -1189,20 +1206,16 @@ describe('admin system status API route', () => {
             expect(payload.readiness.reasonCode).toBe('naver-directions-credentials-missing');
             expect(payload.readiness.diagnostics.configured).toBe(false);
 
-            const invalidJsonResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: '{not-json',
-            }) as never);
+            const invalidJsonResponse = await POST(directionsRequest('{not-json') as never);
             const invalidJsonPayload = await invalidJsonResponse.json();
             expect(invalidJsonResponse.status).toBe(400);
             expect(invalidJsonPayload.readiness.provider).toBe('naver-directions');
             expect(invalidJsonPayload.readiness.status).toBe('unknown');
             expect(invalidJsonPayload.readiness.reasonCode).toBe('naver-directions-request-invalid');
 
-            const tooFewPointsResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }] }),
-            }) as never);
+            const tooFewPointsResponse = await POST(directionsRequest(
+                JSON.stringify({ points: [{ lat: 37.1, lng: 127.1 }] }),
+            ) as never);
             const tooFewPointsPayload = await tooFewPointsResponse.json();
             expect(tooFewPointsResponse.status).toBe(400);
             expect(tooFewPointsPayload.readiness.provider).toBe('naver-directions');
@@ -1226,6 +1239,7 @@ describe('admin system status API route', () => {
 
         mock.restore();
         setAuthMock('ok');
+        setProviderBudgetMock();
 
         const requestBody = JSON.stringify({
             points: [{ lat: 37.1, lng: 127.1 }, { lat: 37.2, lng: 127.2 }],
@@ -1238,10 +1252,7 @@ describe('admin system status API route', () => {
                 fetchCalls += 1;
                 return new Response('raw provider body naver-client-secret-no-leak', { status: 401 });
             };
-            const authResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: requestBody,
-            }) as never);
+            const authResponse = await POST(directionsRequest(requestBody) as never);
             const authPayload = await authResponse.json();
             expect(authPayload.provider).toBe('local-heuristic');
             expect(authPayload.fallbackReasonCode).toBe('naver-directions-auth-failed');
@@ -1265,10 +1276,7 @@ describe('admin system status API route', () => {
                 fetchCalls += 1;
                 return new Response('raw provider body naver-client-secret-no-leak', { status: 429 });
             };
-            const nonOkResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: requestBody,
-            }) as never);
+            const nonOkResponse = await POST(directionsRequest(requestBody) as never);
             const nonOkPayload = await nonOkResponse.json();
             expect(nonOkResponse.status).toBe(429);
             expect(nonOkPayload.error).toBe('Naver Directions request failed');
@@ -1283,10 +1291,7 @@ describe('admin system status API route', () => {
             global.fetch = async () => {
                 throw new Error('raw network naver-client-secret-no-leak');
             };
-            const exceptionResponse = await POST(new Request('http://localhost/api/admin/routes/directions', {
-                method: 'POST',
-                body: requestBody,
-            }) as never);
+            const exceptionResponse = await POST(directionsRequest(requestBody) as never);
             const exceptionPayload = await exceptionResponse.json();
             expect(exceptionResponse.status).toBe(500);
             expect(exceptionPayload.readiness.status).toBe('unavailable');

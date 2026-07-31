@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import localFont from "next/font/local";
 import { Noto_Serif_KR } from "next/font/google";
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { RootSpeedInsights } from "./root-speed-insights";
 import "./globals.css";
+export const dynamic = "force-dynamic";
 
 // 카카오톡 OG 이미지 표시를 위해 절대 URL 필요
 const siteUrl = SITE_URL;
@@ -110,7 +112,7 @@ export default function RootLayout({
                 <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
             </head>
             <body suppressHydrationWarning>
-                <script src="/scripts/viewport-height-fix.js" defer />
+                <Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />
                 {children}
                 <RootSpeedInsights />
             </body>
