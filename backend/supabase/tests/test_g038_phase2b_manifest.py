@@ -1,16 +1,24 @@
 import hashlib
+import importlib.util
 import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
 
-from backend.supabase.tests import g038_phase2b_record as record
-
 ROOT = Path(__file__).resolve().parents[3]
 TESTS = ROOT / "backend/supabase/tests"
 MANIFEST = TESTS / "g038_phase2b_manifest.json"
 MAP = TESTS / "g038_phase2b_content_map.sha256"
+
+_RECORD_SPEC = importlib.util.spec_from_file_location(
+    "g038_phase2b_record",
+    TESTS / "g038_phase2b_record.py",
+)
+if _RECORD_SPEC is None or _RECORD_SPEC.loader is None:
+    raise ImportError("cannot load g038_phase2b_record")
+record = importlib.util.module_from_spec(_RECORD_SPEC)
+_RECORD_SPEC.loader.exec_module(record)
 
 
 class ManifestContractTests(unittest.TestCase):
