@@ -13,7 +13,7 @@ import {
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
 
-const MANIFEST_SHA256 = "ae1ed6c0b1a3659fa10916cad89230667a203c76d560d3898791cc312ed3d714";
+const MANIFEST_SHA256 = "a440b3911549dd9cd2346a306319c0b322f19805f4aba0cd015c4fc2c1d5229d";
 const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
 const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
 const migration = manifestDocument.migrations[0];
