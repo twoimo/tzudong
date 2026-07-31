@@ -51,7 +51,7 @@ DO $membership$
 BEGIN
   EXECUTE pg_catalog.format(
     'GRANT privacy_workflow_owner TO %I',
-    pg_catalog.current_user
+    current_user
   );
 END
 $membership$;
@@ -822,7 +822,7 @@ DO $membership$
 BEGIN
   EXECUTE pg_catalog.format(
     'REVOKE privacy_workflow_owner FROM %I',
-    pg_catalog.current_user
+    current_user
   );
 END
 $membership$;
