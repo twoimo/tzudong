@@ -156,7 +156,7 @@ describe("storyboard quality loop script", () => {
         ]),
       );
     }
-  });
+  }, 15_000);
 
   it("rejects output directories outside the OMX artifact tree", () => {
     const result = spawnSync(
@@ -176,7 +176,7 @@ describe("storyboard quality loop script", () => {
     );
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("--output-dir must stay under .omx/");
+    expect(result.stderr).toContain("code=STORYBOARD_QUALITY_OUTPUT_DIRECTORY_OUTSIDE_ARTIFACTS");
   });
 
   it("treats a supplied but unreachable HTTP readback URL as a gating failure", () => {

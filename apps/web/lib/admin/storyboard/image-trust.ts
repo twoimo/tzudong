@@ -47,7 +47,7 @@ function isExactBrowserOpenAIStoryboardProvenance(
 ) {
   return (
     provenance.providerId === 'browser-openai-api-key' &&
-    provenance.authMode === 'browser_local_storage_api_key' &&
+    provenance.authMode === 'browser_memory_only_api_key' &&
     provenance.endpoint === 'https://api.openai.com/v1/images/generations' &&
     provenance.hasOpenAIAPIKey === true
   );

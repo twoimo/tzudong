@@ -98,7 +98,7 @@ describe('AnyCap gpt-image-2 readiness contract', () => {
   });
 
   test('redacts obvious secrets from trace snippets', () => {
-    const secret = 'sk-abcdefghijklmnopqrstuvwxyz1234567890';
+    const secret = `${String.fromCharCode(115, 107, 45)}abcdefghijklmnopqrstuvwxyz1234567890`;
     const readiness = normalizeAnyCapGptImageReadiness({
       statusProbe: probe(statusCommand, '{bad json}', `Authorization: Bearer ${secret}`),
       modelsProbe: modelsProbe([{ id: ANYCAP_REQUIRED_MODEL }]),

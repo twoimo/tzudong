@@ -13,6 +13,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { logSafeError } from '../utils/privacy-log.mjs';
 
 const DEFAULT_REPORT_ROOT = 'backend/restaurant-evaluation/reports';
 const SCHEMA_VERSION = 1;
@@ -401,7 +402,7 @@ async function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
-    console.error(error.stack || error.message || String(error));
+    logSafeError(error, (line) => process.stderr.write(`operator_review_package_failed ${line}`));
     process.exitCode = 1;
   });
 }

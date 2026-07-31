@@ -136,9 +136,6 @@ type PopularRankSnapshotTable = {
   select: <T>(columns: string) => PopularRankSnapshotQuery<T>;
 };
 
-type PopularRankSnapshotClient = {
-  from: (table: 'restaurant_popular_rank_snapshots') => PopularRankSnapshotTable;
-};
 
 type RestaurantListArgs = {
   limit: number;
@@ -303,11 +300,27 @@ const applyRestaurantRegionAddressFilter = <T>(
   return regionAddressFilter ? query.or(regionAddressFilter) : query;
 };
 
-const getPopularRankSnapshotsTable = () =>
-  (supabase as unknown as PopularRankSnapshotClient).from(
-    'restaurant_popular_rank_snapshots',
-  );
+const isPopularRankSnapshotsTable = (
+  value: unknown,
+): value is PopularRankSnapshotTable =>
+  typeof value === 'object'
+  && value !== null
+  && 'select' in value
+  && typeof value.select === 'function';
 
+const getPopularRankSnapshotsTable = (): PopularRankSnapshotTable => {
+  const client: { from?: unknown } = supabase;
+  if (typeof client.from !== 'function') {
+    throw new Error('POPULAR_RANK_SNAPSHOTS_UNAVAILABLE');
+  }
+
+  const table: unknown = client.from('restaurant_popular_rank_snapshots');
+  if (!isPopularRankSnapshotsTable(table)) {
+    throw new Error('POPULAR_RANK_SNAPSHOTS_UNAVAILABLE');
+  }
+
+  return table;
+};
 const fetchPopularRankSnapshots = async ({
   limit,
   selectedRegion,
@@ -413,11 +426,12 @@ async function fetchRegionalPopularBackfillRestaurants({
   const { data, error } = await regionScopedQuery
     .order('review_count', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(fetchLimit ?? 20);
+    .limit(fetchLimit ?? 20)
+    .overrideTypes<Restaurant[], { merge: false }>();
 
   if (error) throw error;
 
-  return mergeRestaurants((data ?? []) as Restaurant[])
+  return mergeRestaurants(data ?? [])
     .filter(isApprovedRestaurant)
     .filter((restaurant) =>
       matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
@@ -449,11 +463,12 @@ export async function fetchPopularRestaurants({
   );
   const { data, error } = await regionScopedQuery
     .order('weekly_search_count', { ascending: false })
-    .limit(fetchLimit);
+    .limit(fetchLimit)
+    .overrideTypes<Restaurant[], { merge: false }>();
 
   if (error) throw error;
 
-  const restaurants = mergeRestaurants((data ?? []) as Restaurant[])
+  const restaurants = mergeRestaurants(data ?? [])
     .filter(isApprovedRestaurant)
     .filter((restaurant) =>
       matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
@@ -487,7 +502,7 @@ export async function fetchPopularRestaurants({
 
     return attachPopularRankTrends(restaurants, snapshots, hasSnapshotPeriod);
   } catch (error) {
-    console.warn('인기 맛집 순위 스냅샷 조회 실패:', error);
+    console.warn('인기 맛집 순위 스냅샷 조회 실패:');
     return attachPopularRankTrends(restaurants, new Map(), false);
   }
 }
@@ -513,11 +528,13 @@ export async function fetchLatestRestaurants({
           .order('weekly_search_count', { ascending: false })
           .order('created_at', { ascending: false })
       : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
-  const { data, error } = await orderedQuery.limit(fetchLimit);
+  const { data, error } = await orderedQuery
+    .limit(fetchLimit)
+    .overrideTypes<Restaurant[], { merge: false }>();
 
   if (error) throw error;
 
-  return mergeRestaurants((data ?? []) as Restaurant[])
+  return mergeRestaurants(data ?? [])
     .filter(isApprovedRestaurant)
     .filter((restaurant) =>
       matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
@@ -559,14 +576,16 @@ export async function fetchLatestRestaurantPage({
           .order('weekly_search_count', { ascending: false })
           .order('created_at', { ascending: false })
       : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
-  const { data, error } = await orderedQuery.range(
-    pageOffset,
-    pageOffset + pageSize - 1,
-  );
+  const { data, error } = await orderedQuery
+    .range(
+      pageOffset,
+      pageOffset + pageSize - 1,
+    )
+    .overrideTypes<Restaurant[], { merge: false }>();
 
   if (error) throw error;
 
-  const rawRestaurants = (data ?? []) as Restaurant[];
+  const rawRestaurants = data ?? [];
   const restaurants = mergeRestaurants(rawRestaurants)
     .filter(isApprovedRestaurant)
     .filter((restaurant) =>

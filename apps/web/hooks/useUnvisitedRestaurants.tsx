@@ -6,10 +6,15 @@ import { Tables } from "@/integrations/supabase/types";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
 
+type ReviewedRestaurant = Pick<
+    Restaurant,
+    'id' | 'name' | 'approved_name' | 'road_address' | 'jibun_address'
+>;
+
 interface UserReview {
     restaurant_id: string;
     is_verified: boolean;
-    restaurant?: Restaurant | null;
+    restaurant?: ReviewedRestaurant | null;
 }
 
 /**
@@ -29,29 +34,32 @@ export function useUnvisitedRestaurants() {
                 .from('reviews')
                 .select('restaurant_id, is_verified')
                 .eq('user_id', user.id)
-                .eq('is_verified', true);
+                .eq('is_verified', true)
+                .overrideTypes<UserReview[], { merge: false }>();
 
             if (error) throw error;
 
-            const reviews = (data ?? []) as UserReview[];
+            const reviews = data ?? [];
             const restaurantIds = [...new Set(reviews.map((review) => review.restaurant_id).filter(Boolean))];
             if (restaurantIds.length === 0) return reviews;
 
             const { data: restaurants, error: restaurantsError } = await supabase
                 .from('restaurants')
                 .select('id, name:approved_name, approved_name, road_address, jibun_address, status')
-                .in('id', restaurantIds);
+                .in('id', restaurantIds)
+                .overrideTypes<ReviewedRestaurant[], { merge: false }>();
 
             if (restaurantsError) throw restaurantsError;
 
-            const restaurantMap = new Map(
-                ((restaurants ?? []) as Restaurant[]).map((restaurant) => [restaurant.id, restaurant])
-            );
+            const restaurantMap = new Map<string, ReviewedRestaurant>();
+            for (const restaurant of restaurants ?? []) {
+                restaurantMap.set(restaurant.id, restaurant);
+            }
 
             return reviews.map((review) => ({
                 ...review,
                 restaurant: restaurantMap.get(review.restaurant_id) ?? null,
-            })) as UserReview[];
+            }));
         },
         enabled: !!user?.id,
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
@@ -66,10 +74,11 @@ export function useUnvisitedRestaurants() {
                 .select(RESTAURANT_MERGE_SELECT)
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .overrideTypes<Tables<"restaurants">[], { merge: false }>();
 
             if (error) throw error;
-            return data as Tables<"restaurants">[];
+            return data ?? [];
         },
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
     });

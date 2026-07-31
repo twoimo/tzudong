@@ -1,18 +1,26 @@
 from __future__ import annotations
 
+import argparse
 import json
+import errno
+import io
+import hashlib
 import os
 import shutil
 import stat
+import tarfile
 import subprocess
 import shlex
 import textwrap
 import time
+from datetime import datetime, timezone
 import unittest
+from unittest import mock
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Callable, Optional
+from backend.utils import run_daily_helpers
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -25,7 +33,13 @@ ACTIONS_BUDGET_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_actions_budget.py"
 DAILY_CRAWLER_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "daily-crawler.yml"
 GDRIVE_BACKFILL_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "gdrive-frame-backfill.yml"
 CHUNK_MULTIMODAL_SCRIPT = BACKEND_ROOT / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
+PUBLISHER_VALIDATOR_SOURCE = BACKEND_ROOT / "bin" / "validate_daily_publication_bundle.py"
 PYTHON_BIN = os.environ.get("TZUDONG_TEST_PYTHON") or sys.executable
+PRIVILEGED_SUPABASE_CLIENT_SOURCES = (
+    BACKEND_ROOT / "restaurant-evaluation" / "scripts" / "audit_refined_data_status.py",
+    BACKEND_ROOT / "restaurant-evaluation" / "scripts" / "validate_verified_place_correction_e2e.py",
+    BACKEND_ROOT / "storyboard-agent" / "scripts" / "02-video-caption-store-supabase.py",
+)
 
 
 def _resolve_bash_bin() -> str | None:
@@ -49,7 +63,7 @@ def _to_bash_path(path_value: Path | str) -> str:
     text = str(path_value)
     if os.name != "nt":
         return text
-    normalized = Path(text).resolve().as_posix()
+    normalized = Path(os.path.abspath(text)).as_posix()
     if len(normalized) >= 3 and normalized[1:3] == ":/":
         return f"/{normalized[0].lower()}{normalized[2:]}"
     return normalized
@@ -70,6 +84,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.status_path = self.root / "current-upload-status.json"
         self.files_from_path = self.root / "current-upload-files-from.txt"
         self.residual_queue_path = self.root / "gdrive-upload-residual-queue.jsonl"
+        self.run_id = "test-gdrive-run"
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -87,23 +102,31 @@ class GDriveUploadContractTests(unittest.TestCase):
             "size": old_stat.st_size,
             "mtimeEpoch": int(old_stat.st_mtime),
             "dedupeKey": f"old.webp:{old_stat.st_size}:{int(old_stat.st_mtime)}",
+            "md5": hashlib.md5(old.read_bytes()).hexdigest(),
+            "fileIdentity": {
+                "device": old_stat.st_dev,
+                "inode": old_stat.st_ino,
+                "mtimeNs": old_stat.st_mtime_ns,
+                "ctimeNs": old_stat.st_ctime_ns,
+            },
             "required": True,
             "reason": "new_frame",
+            "sourceState": "local",
+            "state": "pending_local",
+            "stagingShard": None,
+            "remotePath": "gdrive:frames/old.webp",
+        }
+        queue_entry = {
+            "schemaVersion": 2,
+            "firstSeenAt": "2026-04-28T00:00:00Z",
+            "firstSeenEpoch": int(time.time()),
+            "lastAttemptAt": "2026-04-28T00:00:00Z",
+            "attempts": 1,
+            "lastExitCode": 124,
+            "item": old_item,
         }
         self.residual_queue_path.write_text(
-            json.dumps(
-                {
-                    "schemaVersion": 1,
-                    "firstSeenAt": "2026-04-28T00:00:00Z",
-                    "firstSeenEpoch": int(time.time()),
-                    "lastAttemptAt": "2026-04-28T00:00:00Z",
-                    "attempts": 1,
-                    "lastExitCode": 124,
-                    "item": old_item,
-                },
-                sort_keys=True,
-            )
-            + "\n",
+            json.dumps(queue_entry, sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
@@ -171,12 +194,118 @@ class GDriveUploadContractTests(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         proof = json.loads(proof_path.read_text(encoding="utf-8"))
-        self.assertEqual("remote_manifest_check", proof["completionProof"])
+        self.assertEqual(run_daily_helpers.REMOTE_VERIFICATION_RECEIPT_TYPE, proof["receiptType"])
+        self.assertEqual(self.run_id, proof["runId"])
+        self.assertEqual(64, len(proof["expectedManifestSha256"]))
         self.assertEqual(1, proof["verifiedCount"])
         self.assertEqual(2, proof["remoteHashCount"])
         self.assertEqual(["verified.jpg"], proof["verifiedRelativePaths"])
-        self.assertEqual("verified.jpg\n", verified_path.read_text(encoding="utf-8"))
+        self.assertEqual(1, len(proof["itemReceipts"]))
+        self.assertEqual(proof, json.loads(verified_path.read_text(encoding="utf-8")))
 
+    def test_gdrive_expected_manifest_requires_explicit_exact_empty_manifest(self) -> None:
+        missing = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--exit-code",
+            "0",
+            "--skipped",
+            "true",
+        )
+        self.assertNotEqual(0, missing.returncode, self._format_process_output(missing))
+        self.assertIn("GDRIVE_EXPECTED_MANIFEST_INVALID code=MISSING", missing.stderr)
+        self.assertFalse(self.status_path.exists())
+
+        invalid_empty_payloads = (
+            {"schemaVersion": 1, "expectedCount": 0, "uploadableCount": 0, "items": []},
+            {"schemaVersion": 2, "expectedCount": 1, "uploadableCount": 0, "items": []},
+            {"schemaVersion": 2, "expectedCount": 0, "uploadableCount": 1, "items": []},
+        )
+        for payload in invalid_empty_payloads:
+            with self.subTest(payload=payload):
+                self.expected_path.write_text(json.dumps(payload), encoding="utf-8")
+                invalid = self._helper(
+                    "write-gdrive-upload-status",
+                    "--expected-manifest",
+                    str(self.expected_path),
+                    "--output",
+                    str(self.status_path),
+                    "--source-root",
+                    str(self.frames_dir),
+                    "--exit-code",
+                    "0",
+                    "--skipped",
+                    "true",
+                )
+                self.assertNotEqual(0, invalid.returncode, self._format_process_output(invalid))
+                self.assertIn("GDRIVE_EXPECTED_MANIFEST_INVALID", invalid.stderr)
+                self.assertFalse(self.status_path.exists())
+
+        self.expected_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 2,
+                    "sourceRoot": str(self.frames_dir),
+                    "expectedCount": 0,
+                    "uploadableCount": 0,
+                    "items": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        valid = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--source-root",
+            str(self.frames_dir),
+            "--exit-code",
+            "0",
+            "--skipped",
+            "true",
+        )
+        self.assertEqual(0, valid.returncode, self._format_process_output(valid))
+        self.assertEqual("skipped", json.loads(self.status_path.read_text(encoding="utf-8"))["status"])
+
+    def test_gdrive_residual_queue_rejects_malformed_record_without_rewrite(self) -> None:
+        frame = self.frames_dir / "queued.jpg"
+        frame.write_bytes(b"queued")
+        self._write_expected()
+        item = json.loads(self.expected_path.read_text(encoding="utf-8"))["items"][0]
+        first = json.dumps(self._residual_entry(item), sort_keys=True).encode("utf-8")
+        last = json.dumps(self._residual_entry(item, attempts=1), sort_keys=True).encode("utf-8")
+        queue_bytes = first + b"\n" + b'{"malformed":\n' + last + b"\n"
+        self.residual_queue_path.write_bytes(queue_bytes)
+        self.expected_path.write_bytes(b"unchanged expected artifact\n")
+        self.files_from_path.write_bytes(b"unchanged files-from artifact\n")
+
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn(
+            "GDRIVE_RESIDUAL_QUEUE_INVALID_RECORD line=2 code=JSON",
+            result.stderr,
+        )
+        self.assertEqual(queue_bytes, self.residual_queue_path.read_bytes())
+        self.assertEqual(b"unchanged expected artifact\n", self.expected_path.read_bytes())
+        self.assertEqual(b"unchanged files-from artifact\n", self.files_from_path.read_bytes())
     def test_count_frame_files_counts_supported_extensions_recursively(self) -> None:
         (self.frames_dir / "nested").mkdir()
         (self.frames_dir / "recent.jpg").write_text("jpg\n", encoding="utf-8")
@@ -311,12 +440,27 @@ class GDriveUploadContractTests(unittest.TestCase):
             "size": 1,
             "mtimeEpoch": 1,
             "dedupeKey": "missing-old.jpg:1:1",
+            "md5": "0" * 32,
+            "fileIdentity": {
+                "device": 1,
+                "inode": 1,
+                "mtimeNs": 1,
+                "ctimeNs": 1,
+            },
             "required": True,
             "reason": "residual_retry",
+            "sourceState": "missing_local",
+            "state": "missing_local",
+            "stagingShard": None,
+            "remotePath": "gdrive:frames/missing-old.jpg",
         }
         old_epoch = int(time.time()) - (30 * 24 * 60 * 60)
         self.residual_queue_path.write_text(
-            json.dumps({"item": missing_item, "firstSeenEpoch": old_epoch, "attempts": 5}, sort_keys=True) + "\n",
+            json.dumps(
+                self._residual_entry(missing_item, attempts=5, first_seen_epoch=old_epoch),
+                sort_keys=True,
+            )
+            + "\n",
             encoding="utf-8",
         )
 
@@ -362,48 +506,40 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("--size-only", upload_step)
         self.assertIn("current-upload-batches.json", workflow)
         self.assertIn("current-upload-remote-proof.json", workflow)
-        self.assertIn("github.ref_name == github.event.repository.default_branch", workflow)
+        self.assertIn("github.ref_protected", workflow)
         self.assertIn("current-upload-staging-manifest.json", workflow)
 
-    def test_workflows_validate_canonical_env_contracts_without_removed_secrets(self) -> None:
+    def test_workflows_validate_canonical_env_contracts_without_mutable_bootstrap(self) -> None:
         daily_workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
-        self.assertIn("python-version: '3.11'", daily_workflow)
-        self.assertNotIn("python-version: '3.10'", daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
-        self.assertIn("python3 backend/bin/run_agy_prompt.py", daily_workflow)
-        self.assertIn("https://antigravity.google/cli/install.sh", daily_workflow)
         self.assertIn("--require-api-available", daily_workflow)
         self.assertIn("allow_budget_risk", daily_workflow)
-        self.assertIn("Guard manual default-branch budget posture", daily_workflow)
         self.assertIn('GEMINI_CLI_TRUST_WORKSPACE: "false"', daily_workflow)
-        self.assertIn("--requirement backend/restaurant-crawling/scripts/requirements.txt", daily_workflow)
-        self.assertNotIn('pip install -U "yt-dlp[default]"', daily_workflow)
+        self.assertIn("npm ci --ignore-scripts", daily_workflow)
+        self.assertIn("RUN_DAILY_DISABLE_MUTABLE_PROVIDER_FALLBACK=true", daily_workflow)
+        for mutable_bootstrap in (
+            "pip install --upgrade",
+            "npm install -g",
+            "curl -fsSL",
+            "deno-version: v2.x",
+            "ollama pull",
+            "camoufox fetch",
+            "antigravity.google/cli/install.sh",
+        ):
+            self.assertNotIn(mutable_bootstrap, daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile gdrive-backfill", backfill_workflow)
         self.assertIn("Check Actions budget posture before backfill", backfill_workflow)
         self.assertNotIn("Record budget skip", backfill_workflow)
         self.assertNotIn("steps.budget.outputs.soft_gate != 'critical'", backfill_workflow)
         self.assertIn("YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}", daily_workflow)
         self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", daily_workflow)
-        self.assertIn("GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}", daily_workflow)
-        self.assertIn("GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}", daily_workflow)
-        self.assertIn('"selectedType"] = "oauth-personal"', daily_workflow)
-        self.assertIn("Antigravity CLI status: $AGY_STATUS", daily_workflow)
-        self.assertIn("Gemini CLI OAuth preflight exited $GEMINI_CLI_STATUS", daily_workflow)
-        self.assertIn('gemini --skip-trust -p "Reply with only: ok"', daily_workflow)
-        self.assertIn("agy-runtime-preflight.err", daily_workflow)
-        self.assertIn("gemini-cli-runtime-preflight.err", daily_workflow)
-        self.assertIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
-        self.assertIn("AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}", daily_workflow)
-        self.assertIn("libsecret-tools", daily_workflow)
-        self.assertIn("gnome-keyring", daily_workflow)
-        self.assertIn("dbus-x11", daily_workflow)
-        self.assertIn('secret-tool store --label="Antigravity OAuth token" service gemini username antigravity', daily_workflow)
-        self.assertIn("Antigravity OAuth credential restored to Secret Service", daily_workflow)
+        self.assertNotIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
+        self.assertNotIn("AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}", daily_workflow)
 
-    def test_gemini_defaults_prefer_35_flash_with_3_flash_preview_fallback(self) -> None:
+    def test_gemini_defaults_prefer_36_flash_with_35_flash_fallback(self) -> None:
         config = (REPO_ROOT / "backend" / "config" / "channels.yaml").read_text(encoding="utf-8")
         crawling_script = (
             REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
@@ -421,10 +557,10 @@ class GDriveUploadContractTests(unittest.TestCase):
             encoding="utf-8"
         )
 
+        self.assertIn('- "gemini-3.6-flash"', config)
         self.assertIn('- "gemini-3.5-flash"', config)
-        self.assertIn('- "gemini-3-flash-preview"', config)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"', crawling_script)
-        self.assertIn('FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"', crawling_script)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', crawling_script)
+        self.assertIn('FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.5-flash}"', crawling_script)
         self.assertIn('GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"', crawling_script)
         self.assertIn('GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"', crawling_script)
         self.assertIn('GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-HIGH}"', crawling_script)
@@ -432,10 +568,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("'HIGH'", final_merge)
         self.assertIn("process.env.GEMINI_MAP_THINKING_LEVEL", map_crawling)
         self.assertIn("'HIGH'", map_crawling)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"', laaj_script)
-        self.assertIn('FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3-flash-preview}"', laaj_script)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', laaj_script)
+        self.assertIn('FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.5-flash}"', laaj_script)
         self.assertIn('LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-HIGH}"', laaj_script)
-        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.5-flash'", runtime_preflight)
+        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.6-flash'", runtime_preflight)
         self.assertIn("process.env.GEMINI_PREFLIGHT_THINKING_LEVEL", runtime_preflight)
         self.assertIn("'MEDIUM'", runtime_preflight)
 
@@ -511,6 +647,8 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.residual_queue_path),
             "--remote-root",
             "gdrive:frames",
+            "--run-id",
+            self.run_id,
             "--max-items",
             "2",
         )
@@ -528,8 +666,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual("c.jpg", queue[0]["item"]["relativePath"])
         self.assertEqual(0, queue[0]["attempts"])
 
-        verified_path = self.root / "verified.txt"
-        verified_path.write_text("a.jpg\nb.jpg\n", encoding="utf-8")
+        verified_path = self.root / "verified-receipt.json"
+        self._write_remote_receipt(verified_path, {"a.jpg", "b.jpg"})
         result = self._helper(
             "write-gdrive-upload-status",
             "--expected-manifest",
@@ -538,7 +676,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.status_path),
             "--residual-queue",
             str(self.residual_queue_path),
-            "--verified-files-from",
+            "--verification-receipt",
             str(verified_path),
             "--source-root",
             str(self.frames_dir),
@@ -570,6 +708,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("types: [completed]", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == github.event.repository.default_branch", workflow)
+        self.assertIn("github.event.workflow_run.head_repository.full_name == github.repository", workflow)
+        self.assertIn("github.ref_protected", workflow)
         self.assertIn("MAX_BACKFILL_BATCHES: ${{ github.event.inputs.max_batches || '1' }}", workflow)
         self.assertIn("MAX_BACKFILL_ITEMS: ${{ github.event.inputs.max_items || '500' }}", workflow)
         self.assertIn("check_actions_budget.py", workflow)
@@ -582,7 +722,15 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("rclone check", workflow)
         self.assertNotIn("--size-only", workflow)
         self.assertIn("--hash", workflow)
-        self.assertIn("ref: ${{ github.event.repository.default_branch }}", workflow)
+        self.assertIn(
+            "ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}",
+            workflow,
+        )
+        self.assertIn("fetch-depth: 0", workflow)
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("Bind trusted backfill source", workflow)
+        self.assertIn('test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"', workflow)
+        self.assertIn('git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"', workflow)
         self.assertIn("--upload-mode backfill", workflow)
         self.assertIn('--completion-proof "$COMPLETION_PROOF"', workflow)
         self.assertNotIn("--completion-proof remote_manifest_check", workflow)
@@ -619,7 +767,12 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("remoteVerifiedBeforeCount", workflow)
         self.assertIn("No staged shards to backfill; writing cumulative remote status.", workflow)
         self.assertIn('rclone lsjson "$GDRIVE_FRAMES_PATH"', workflow)
-        self.assertIn('--staging-manifest "$STAGING_MANIFEST"', workflow)
+        self.assertIn("extract-gdrive-backfill-shard", workflow)
+        self.assertIn("archiveSha256", workflow)
+        self.assertIn("sourceManifestBinding", workflow)
+        self.assertIn("backfill-shard-*.receipt.json", workflow)
+        self.assertNotIn("tar -xzf", workflow)
+        self.assertNotIn('--staging-manifest "$STAGING_MANIFEST"', workflow)
         self.assertNotIn('../../../$RCLONE_LOG', workflow)
         self.assertNotIn('../../../$FILES_FROM', workflow)
         self.assertIn('exit "$BACKFILL_EXIT"', workflow)
@@ -769,10 +922,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         frame.write_text("frame\n", encoding="utf-8")
         self._write_expected()
         expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
-        verified_path = self.root / "verified-files.txt"
-        verified_path.write_text("done.jpg\n", encoding="utf-8")
+        verified_path = self.root / "verified-receipt.json"
+        self._write_remote_receipt(verified_path)
         self.residual_queue_path.write_text(
-            json.dumps({"item": expected["items"][0], "attempts": 2}, sort_keys=True) + "\n",
+            json.dumps(self._residual_entry(expected["items"][0], attempts=2), sort_keys=True) + "\n",
             encoding="utf-8",
         )
 
@@ -784,7 +937,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.status_path),
             "--residual-queue",
             str(self.residual_queue_path),
-            "--verified-files-from",
+            "--verification-receipt",
             str(verified_path),
             "--completion-proof",
             "remote_manifest_check",
@@ -811,8 +964,6 @@ class GDriveUploadContractTests(unittest.TestCase):
         frame = self.frames_dir / "same-size-stale-risk.jpg"
         frame.write_text("frame\n", encoding="utf-8")
         self._write_expected()
-        verified_path = self.root / "verified-size-only.txt"
-        verified_path.write_text("same-size-stale-risk.jpg\n", encoding="utf-8")
 
         result = self._helper(
             "write-gdrive-upload-status",
@@ -822,8 +973,6 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.status_path),
             "--residual-queue",
             str(self.residual_queue_path),
-            "--verified-files-from",
-            str(verified_path),
             "--completion-proof",
             "remote_size_check",
             "--source-root",
@@ -986,8 +1135,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         summary_path = self.root / "current-summary.json"
         summary_path.write_text(json.dumps({"finalStatus": "OK"}, sort_keys=True), encoding="utf-8")
 
-        verified_path = self.root / "summary-verified.txt"
-        verified_path.write_text("summary.jpg\n", encoding="utf-8")
+        verified_path = self.root / "summary-verified-receipt.json"
+        self._write_remote_receipt(verified_path)
 
         result = self._helper(
             "write-gdrive-upload-status",
@@ -999,7 +1148,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(summary_path),
             "--residual-queue",
             str(self.residual_queue_path),
-            "--verified-files-from",
+            "--verification-receipt",
             str(verified_path),
             "--completion-proof",
             "remote_manifest_check",
@@ -1029,27 +1178,60 @@ class GDriveUploadContractTests(unittest.TestCase):
             "size": stale_stat.st_size,
             "mtimeEpoch": int(stale_stat.st_mtime),
             "dedupeKey": f"stale.jpg:{stale_stat.st_size}:{int(stale_stat.st_mtime)}",
+            "md5": hashlib.md5(stale_file.read_bytes()).hexdigest(),
+            "fileIdentity": {
+                "device": stale_stat.st_dev,
+                "inode": stale_stat.st_ino,
+                "mtimeNs": stale_stat.st_mtime_ns,
+                "ctimeNs": stale_stat.st_ctime_ns,
+            },
             "required": True,
             "reason": "residual_retry",
+            "sourceState": "local",
+            "state": "pending_local",
+            "stagingShard": None,
+            "remotePath": "gdrive:frames/stale.jpg",
         }
         missing_item = {
             "relativePath": "missing.jpg",
             "size": 1,
             "mtimeEpoch": 1,
             "dedupeKey": "missing.jpg:1:1",
+            "md5": "0" * 32,
+            "fileIdentity": {
+                "device": 1,
+                "inode": 1,
+                "mtimeNs": 1,
+                "ctimeNs": 1,
+            },
             "required": True,
             "reason": "residual_retry",
+            "sourceState": "missing_local",
+            "state": "missing_local",
+            "stagingShard": None,
+            "remotePath": "gdrive:frames/missing.jpg",
         }
         old_epoch = int(time.time()) - (8 * 24 * 60 * 60)
         self.residual_queue_path.write_text(
-            json.dumps({"item": stale_item, "firstSeenEpoch": old_epoch}, sort_keys=True)
+            json.dumps(
+                self._residual_entry(stale_item, first_seen_epoch=old_epoch),
+                sort_keys=True,
+            )
             + "\n"
-            + json.dumps({"item": missing_item, "firstSeenEpoch": int(time.time())}, sort_keys=True)
+            + json.dumps(self._residual_entry(missing_item), sort_keys=True)
             + "\n",
             encoding="utf-8",
         )
         self.expected_path.write_text(
-            json.dumps({"schemaVersion": 1, "sourceRoot": str(self.frames_dir), "expectedCount": 0, "items": []}),
+            json.dumps(
+                {
+                    "schemaVersion": 2,
+                    "sourceRoot": str(self.frames_dir),
+                    "expectedCount": 0,
+                    "uploadableCount": 0,
+                    "items": [],
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -1094,15 +1276,11 @@ class GDriveUploadContractTests(unittest.TestCase):
         expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
         self.residual_queue_path.write_text(
             json.dumps(
-                {
-                    "schemaVersion": 1,
-                    "firstSeenAt": "2026-04-28T00:00:00Z",
-                    "firstSeenEpoch": int(time.time()),
-                    "lastAttemptAt": "2026-04-28T00:00:00Z",
-                    "attempts": 2,
-                    "lastExitCode": 124,
-                    "item": expected["items"][0],
-                },
+                self._residual_entry(
+                    expected["items"][0],
+                    attempts=2,
+                    last_exit_code=124,
+                ),
                 sort_keys=True,
             )
             + "\n",
@@ -1172,8 +1350,8 @@ class GDriveUploadContractTests(unittest.TestCase):
         uploaded.write_text("uploaded\n", encoding="utf-8")
         pending.write_text("pending\n", encoding="utf-8")
         self._write_expected()
-        verified_path = self.root / "verified.txt"
-        verified_path.write_text("uploaded.jpg\n", encoding="utf-8")
+        verified_path = self.root / "verified-receipt.json"
+        self._write_remote_receipt(verified_path, {"uploaded.jpg"})
         staging_manifest = self.root / "staging.json"
         staging_dir = self.root / "staging"
 
@@ -1185,7 +1363,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(staging_manifest),
             "--output-dir",
             str(staging_dir),
-            "--verified-files-from",
+            "--verification-receipt",
             str(verified_path),
             "--source-root",
             str(self.frames_dir),
@@ -1201,7 +1379,671 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(1, manifest["stagedShardItemCount"])
         self.assertEqual("pending.jpg", manifest["shards"][0]["items"][0]["relativePath"])
         self.assertTrue((staging_dir / "shard-0001.tar.gz").exists())
+        shard = manifest["shards"][0]
+        self.assertEqual(
+            {"device", "inode", "mode"},
+            set(shard["archiveIdentity"]),
+        )
+        self.assertEqual(64, len(shard["archiveSha256"]))
+        self.assertEqual((staging_dir / "shard-0001.tar.gz").stat().st_size, shard["archiveSize"])
+        verified = self._helper(
+            "verify-gdrive-staging-shards",
+            "--staging-manifest",
+            str(staging_manifest),
+            "--expected-manifest",
+            str(self.expected_path),
+        )
+        self.assertEqual(0, verified.returncode, self._format_process_output(verified))
+        self.assertEqual("ok", verified.stdout.strip())
 
+    def test_gdrive_staging_rejects_stale_receipt_before_archive_creation(self) -> None:
+        frame = self.frames_dir / "same-path.jpg"
+        frame.write_bytes(b"before")
+        self._write_expected()
+        receipt_path = self.root / "stale-verification-receipt.json"
+        self._write_remote_receipt(receipt_path)
+
+        frame.write_bytes(b"after!")
+        self._write_expected()
+        staging_manifest = self.root / "stale-staging.json"
+        staging_dir = self.root / "stale-staging"
+        result = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--verification-receipt",
+            str(receipt_path),
+            "--source-root",
+            str(self.frames_dir),
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("GDRIVE_VERIFICATION_RECEIPT_INVALID code=BINDING", result.stderr)
+        self.assertFalse(staging_manifest.exists())
+        self.assertFalse(staging_dir.exists())
+    def test_gdrive_staging_archive_verification_rejects_replacement_and_tampering(self) -> None:
+        pending = self.frames_dir / "pending.jpg"
+        pending.write_bytes(b"pending\n")
+        self._write_expected()
+        staging_manifest = self.root / "staging.json"
+        staging_dir = self.root / "staging"
+        staged = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--source-root",
+            str(self.frames_dir),
+        )
+        self.assertEqual(0, staged.returncode, self._format_process_output(staged))
+        baseline = json.loads(staging_manifest.read_text(encoding="utf-8"))
+        archive_path = staging_dir / "shard-0001.tar.gz"
+        archive_bytes = archive_path.read_bytes()
+
+        def write_manifest(payload: dict) -> None:
+            staging_manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+        def reset_archive() -> None:
+            if archive_path.exists() or archive_path.is_symlink():
+                archive_path.unlink()
+            archive_path.write_bytes(archive_bytes)
+
+        def write_archive(member_name: str, contents: bytes) -> None:
+            if archive_path.exists() or archive_path.is_symlink():
+                archive_path.unlink()
+            with tarfile.open(archive_path, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+                member = tarfile.TarInfo(member_name)
+                member.size = len(contents)
+                member.mode = 0o600
+                member.mtime = 0
+                archive.addfile(member, io.BytesIO(contents))
+
+        def refreshed_payload() -> dict:
+            payload = json.loads(json.dumps(baseline))
+            archive_stat = archive_path.stat()
+            payload["shards"][0].update(
+                {
+                    "archiveSha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                    "archiveSize": archive_stat.st_size,
+                    "archiveIdentity": {
+                        "device": archive_stat.st_dev,
+                        "inode": archive_stat.st_ino,
+                        "mode": archive_stat.st_mode,
+                    },
+                }
+            )
+            return payload
+
+        def verify_failure(code: str) -> None:
+            verified = self._helper(
+                "verify-gdrive-staging-shards",
+                "--staging-manifest",
+                str(staging_manifest),
+                "--expected-manifest",
+                str(self.expected_path),
+            )
+            self.assertNotEqual(0, verified.returncode, self._format_process_output(verified))
+            self.assertTrue(
+                "GDRIVE_STAGING_ARCHIVE_INVALID" in verified.stderr
+                or "GDRIVE_STAGING_RECEIPT_INVALID" in verified.stderr,
+                self._format_process_output(verified),
+            )
+
+        reset_archive()
+        write_manifest(baseline)
+        verify_failure("IDENTITY")
+
+        external_archive = self.root / "external.tar.gz"
+        external_archive.write_bytes(archive_bytes)
+        reset_archive()
+        try:
+            os.symlink(str(external_archive), str(archive_path))
+        except (NotImplementedError, OSError):
+            pass
+        else:
+            write_manifest(baseline)
+            verify_failure("OPEN")
+
+        write_archive("../escape.jpg", b"pending\n")
+        write_manifest(refreshed_payload())
+        verify_failure("MEMBER_PATH")
+
+        write_archive("pending.jpg", b"pending\n")
+        write_manifest(baseline)
+        verify_failure("SHA256")
+
+        size_payload = refreshed_payload()
+        size_payload["shards"][0]["archiveSize"] += 1
+        write_manifest(size_payload)
+        verify_failure("SIZE")
+
+        identity_payload = refreshed_payload()
+        identity_payload["shards"][0]["archiveIdentity"]["mode"] ^= stat.S_IXUSR
+        write_manifest(identity_payload)
+        verify_failure("IDENTITY")
+    def test_gdrive_backfill_receiver_rejects_adversarial_archives_and_accepts_valid_archive(self) -> None:
+        pending = self.frames_dir / "pending.jpg"
+        pending_bytes = b"pending\n"
+        pending.write_bytes(pending_bytes)
+        self._write_expected()
+        staging_manifest = self.root / "staging.json"
+        staging_dir = self.root / "staging"
+        staged = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--source-root",
+            str(self.frames_dir),
+            "--remote-staging-root",
+            "gdrive:status/main/staging/run-test",
+        )
+        self.assertEqual(0, staged.returncode, self._format_process_output(staged))
+        baseline = json.loads(staging_manifest.read_text(encoding="utf-8"))["shards"][0]
+        archive_path = staging_dir / "shard-0001.tar.gz"
+        original_archive = archive_path.read_bytes()
+        selected_files = self.root / "selected-files.txt"
+        selected_files.write_text("pending.jpg\n", encoding="utf-8")
+        receiver_root = self.root / "receiver"
+        receiver_root.mkdir()
+
+        def bound_contract() -> dict:
+            contract = json.loads(json.dumps(baseline))
+            archive_stat = archive_path.stat()
+            binding = {
+                "archiveSha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                "archiveSize": archive_stat.st_size,
+                "archiveIdentity": {
+                    "device": archive_stat.st_dev,
+                    "inode": archive_stat.st_ino,
+                    "mode": archive_stat.st_mode,
+                },
+            }
+            contract.update(binding)
+            contract["archiveReceipt"].update(binding)
+            return contract
+
+        def write_contract(label: str, contract: dict) -> Path:
+            contract_path = self.root / f"{label}.contract.json"
+            contract_path.write_text(
+                json.dumps(contract, sort_keys=True),
+                encoding="utf-8",
+            )
+            return contract_path
+
+        def receive(label: str, contract: dict) -> subprocess.CompletedProcess[str]:
+            return self._helper(
+                "extract-gdrive-backfill-shard",
+                "--archive",
+                str(archive_path),
+                "--shard-contract",
+                str(write_contract(label, contract)),
+                "--expected-manifest",
+                str(self.expected_path),
+                "--files-from",
+                str(selected_files),
+                "--output-dir",
+                str(receiver_root / label),
+                "--output-receipt",
+                str(receiver_root / f"{label}.receipt.json"),
+            )
+
+        def assert_rejected(label: str, contract: dict) -> None:
+            result = receive(label, contract)
+            self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+            self.assertIn(
+                "GDRIVE_STAGING_ARCHIVE_INVALID",
+                result.stderr,
+                self._format_process_output(result),
+            )
+
+        def write_regular_archive(members: list[tuple[str, bytes]]) -> None:
+            archive_path.unlink()
+            with tarfile.open(archive_path, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+                for name, contents in members:
+                    member = tarfile.TarInfo(name)
+                    member.size = len(contents)
+                    member.mode = 0o600
+                    member.mtime = 0
+                    archive.addfile(member, io.BytesIO(contents))
+
+        def write_link_archive(link_type: bytes) -> None:
+            archive_path.unlink()
+            with tarfile.open(archive_path, "w:gz", format=tarfile.PAX_FORMAT) as archive:
+                member = tarfile.TarInfo("pending.jpg")
+                member.type = link_type
+                member.linkname = "../outside.jpg"
+                member.size = 0
+                archive.addfile(member)
+
+        archive_path.write_bytes(b"digest drift")
+        assert_rejected("digest-drift", baseline)
+
+        write_regular_archive([("../pending.jpg", pending_bytes)])
+        assert_rejected("traversal", bound_contract())
+
+        write_link_archive(tarfile.SYMTYPE)
+        assert_rejected("symlink", bound_contract())
+
+        write_link_archive(tarfile.LNKTYPE)
+        assert_rejected("hardlink", bound_contract())
+
+        write_regular_archive(
+            [("pending.jpg", pending_bytes), ("pending.jpg", pending_bytes)]
+        )
+        assert_rejected("duplicate", bound_contract())
+
+        write_regular_archive(
+            [("pending.jpg", pending_bytes), ("PENDING.JPG", pending_bytes)]
+        )
+        assert_rejected("case-collision", bound_contract())
+
+        write_regular_archive([("pending.jpg", pending_bytes + b"x")])
+        assert_rejected("over-limit", bound_contract())
+
+        write_regular_archive([])
+        assert_rejected("missing-member", bound_contract())
+
+        write_regular_archive(
+            [("pending.jpg", pending_bytes), ("extra.jpg", b"unexpected\n")]
+        )
+        assert_rejected("extra-member", bound_contract())
+
+        archive_path.write_bytes(original_archive + b"changed remote shard")
+        assert_rejected("changed-remote-shard", baseline)
+
+        archive_path.write_bytes(original_archive)
+        valid = receive("valid", baseline)
+        self.assertEqual(0, valid.returncode, self._format_process_output(valid))
+        receipt = json.loads(valid.stdout)
+        self.assertEqual(baseline["archiveSha256"], receipt["archiveSha256"])
+        self.assertEqual(
+            baseline["archiveReceipt"]["expectedManifestSha256"],
+            receipt["sourceManifestBinding"]["expectedManifestSha256"],
+        )
+        self.assertEqual(["pending.jpg"], [item["relativePath"] for item in receipt["items"]])
+        self.assertEqual(
+            pending_bytes,
+            (receiver_root / "valid" / "pending.jpg").read_bytes(),
+        )
+    @unittest.skipUnless(os.name == "nt", "Windows handle pinning is Windows-specific")
+    def test_windows_gdrive_staging_retains_trusted_handles_across_junction_swaps(self) -> None:
+        source_child = self.frames_dir / "nested"
+        source_child.mkdir()
+        (source_child / "pending.jpg").write_bytes(b"pending\n")
+        self._write_expected()
+
+        output_root = self.root / "output-root"
+        staging_dir = output_root / "staging"
+        output_root.mkdir()
+        external = self.root / "external"
+        external.mkdir()
+        external_sentinels = {
+            external / "sentinel.txt": "external sentinel\n",
+            external / "shard-0001.tar.gz": "external archive\n",
+        }
+        for path, contents in external_sentinels.items():
+            path.write_text(contents, encoding="utf-8")
+
+        attempted: set[str] = set()
+        blocked: set[str] = set()
+        moved: list[tuple[Path, Path]] = []
+        verify_root = False
+        api = run_daily_helpers._windows_api()
+        ctypes = api["ctypes"]
+        native_open_calls: list[tuple[int, int, int, int]] = []
+        native_nt_create_file = api["NtCreateFile"]
+
+        def observe_nt_create_file(*native_args: object) -> int:
+            attributes = ctypes.cast(
+                native_args[2],
+                ctypes.POINTER(api["ObjectAttributes"]),
+            ).contents
+            unicode_name = attributes.object_name.contents
+            native_open_calls.append(
+                (
+                    int(native_args[1]),
+                    int(native_args[8]),
+                    int(unicode_name.length),
+                    int(unicode_name.maximum_length),
+                )
+            )
+            return int(native_nt_create_file(*native_args))
+
+        def replace_with_junction(label: str, original: Path) -> None:
+            attempted.add(label)
+            replacement = original.with_name(f"{original.name}-{label}-moved")
+            try:
+                os.replace(original, replacement)
+            except OSError:
+                blocked.add(label)
+                return
+            moved.append((original, replacement))
+            result = subprocess.run(
+                ["cmd.exe", "/d", "/c", f'mklink /J "{original}" "{external}"'],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            if result.returncode:
+                raise AssertionError(f"could not create junction for {label}: {result.stderr}")
+
+        def hook(stage: str, path: Path) -> None:
+            if stage == "gdrive-source-root-pinned":
+                replace_with_junction("source-root", self.frames_dir)
+            elif stage == "gdrive-output-root-pinned":
+                replace_with_junction("output-root", output_root)
+                replace_with_junction("staging-child", staging_dir)
+            elif stage == "gdrive-temp-archive-pinned" and path.name.endswith(".tmp"):
+                replace_with_junction("temporary-archive", path)
+            elif stage == "gdrive-final-archive-pinned" and path.name == "shard-0001.tar.gz":
+                replace_with_junction("final-archive", path)
+            elif stage == "gdrive-verification-root-pinned" and verify_root:
+                replace_with_junction("verification-root", staging_dir)
+
+        staging_args = argparse.Namespace(
+            expected_manifest=str(self.expected_path),
+            output=str(self.root / "staging-manifest.json"),
+            output_dir=str(staging_dir),
+            verified_files_from="",
+            verification_receipt="",
+            run_id=self.run_id,
+            source_root=str(self.frames_dir),
+            remote_staging_root="gdrive:status/main/staging/test",
+            max_files=10,
+            max_bytes=512 * 1024 * 1024,
+            generated_at="",
+        )
+        try:
+            with mock.patch.dict(api, {"NtCreateFile": observe_nt_create_file}):
+                with mock.patch.object(run_daily_helpers, "_WINDOWS_RUNTIME_TEST_HOOK", hook):
+                    payload = run_daily_helpers.create_gdrive_staging_shards(staging_args)
+                    self.assertEqual(1, payload["stagedShardCount"])
+                    verify_root = True
+                    shard = payload["shards"][0]
+                    run_daily_helpers._verify_published_staging_archive(
+                        Path(shard["archivePath"]).parent,
+                        shard["archiveName"],
+                        shard["items"],
+                        shard,
+                    )
+        finally:
+            for original, replacement in reversed(moved):
+                if original.is_symlink():
+                    original.unlink()
+                elif original.exists():
+                    os.rmdir(original)
+                if replacement.exists():
+                    os.replace(replacement, original)
+
+        expected_labels = {
+            "output-root",
+            "staging-child",
+            "source-root",
+            "temporary-archive",
+            "final-archive",
+            "verification-root",
+        }
+        self.assertEqual(expected_labels, attempted)
+        self.assertEqual(expected_labels, blocked)
+        self.assertTrue(native_open_calls)
+        wchar_size = ctypes.sizeof(api["wintypes"].WCHAR)
+        for desired_access, options, name_length, maximum_name_length in native_open_calls:
+            self.assertEqual(api["SYNCHRONIZE"], desired_access & api["SYNCHRONIZE"])
+            self.assertEqual(
+                api["FILE_OPEN_REPARSE_POINT"],
+                options & api["FILE_OPEN_REPARSE_POINT"],
+            )
+            self.assertEqual(
+                api["FILE_SYNCHRONOUS_IO_NONALERT"],
+                options & api["FILE_SYNCHRONOUS_IO_NONALERT"],
+            )
+            self.assertEqual(name_length + wchar_size, maximum_name_length)
+        self.assertTrue((staging_dir / "shard-0001.tar.gz").is_file())
+        for path, contents in external_sentinels.items():
+            self.assertEqual(contents, path.read_text(encoding="utf-8"))
+    def test_gdrive_manifest_paths_reject_absolute_traversal_separators_and_unsafe_archive_names(self) -> None:
+        (self.frames_dir / "safe.jpg").write_bytes(b"safe")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        unsafe_paths = (
+            "/absolute.jpg",
+            "../traversal.jpg",
+            "nested\\mixed.jpg",
+            "C:/drive.jpg",
+            "nested//empty.jpg",
+            "NUL.jpg",
+            "safe.jpg:ads",
+            f"{'x' * 129}.jpg",
+        )
+
+        for index, unsafe_path in enumerate(unsafe_paths, start=1):
+            with self.subTest(relative_path=unsafe_path):
+                expected["items"][0]["relativePath"] = unsafe_path
+                self.expected_path.write_text(json.dumps(expected), encoding="utf-8")
+                batch_manifest = self.root / f"unsafe-batch-{index}.json"
+                batch_dir = self.root / f"unsafe-batch-{index}"
+                batch = self._helper(
+                    "write-gdrive-upload-batches",
+                    "--expected-manifest",
+                    str(self.expected_path),
+                    "--output",
+                    str(batch_manifest),
+                    "--output-dir",
+                    str(batch_dir),
+                    "--source-root",
+                    str(self.frames_dir),
+                )
+                self.assertNotEqual(0, batch.returncode, self._format_process_output(batch))
+                self.assertFalse(batch_manifest.exists())
+                self.assertFalse(batch_dir.exists())
+
+                staging_manifest = self.root / f"unsafe-staging-{index}.json"
+                staging_dir = self.root / f"unsafe-staging-{index}"
+                staging = self._helper(
+                    "write-gdrive-staging-shards",
+                    "--expected-manifest",
+                    str(self.expected_path),
+                    "--output",
+                    str(staging_manifest),
+                    "--output-dir",
+                    str(staging_dir),
+                    "--source-root",
+                    str(self.frames_dir),
+                )
+                self.assertNotEqual(0, staging.returncode, self._format_process_output(staging))
+                self.assertFalse(staging_manifest.exists())
+                self.assertFalse(staging_dir.exists())
+
+    def test_gdrive_expected_rejects_external_symlink_and_reparse_directory(self) -> None:
+        external_root = self.root / "external"
+        external_root.mkdir()
+        sentinel = external_root / "sentinel.jpg"
+        sentinel.write_bytes(b"external-sentinel")
+        cases = (
+            ("external-file.jpg", sentinel, False),
+            ("external-directory", external_root, True),
+        )
+
+        for link_name, target, target_is_directory in cases:
+            with self.subTest(link_name=link_name):
+                linked_path = self.frames_dir / link_name
+                try:
+                    os.symlink(str(target), str(linked_path), target_is_directory=target_is_directory)
+                except (NotImplementedError, OSError) as exc:
+                    self.skipTest(f"symlink/reparse fixture unavailable: {exc}")
+                try:
+                    result = self._helper(
+                        "write-gdrive-upload-expected",
+                        "--frames-dir",
+                        str(self.frames_dir),
+                        "--output",
+                        str(self.expected_path),
+                        "--files-from-output",
+                        str(self.files_from_path),
+                        "--residual-queue",
+                        str(self.residual_queue_path),
+                    )
+                    self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+                    self.assertEqual(b"external-sentinel", sentinel.read_bytes())
+                finally:
+                    linked_path.unlink()
+
+    def test_gdrive_expected_rejects_hard_linked_external_media(self) -> None:
+        external = self.root / "external-hard-link.jpg"
+        external.write_bytes(b"hard-link-sentinel")
+        linked_path = self.frames_dir / "hard-link.jpg"
+        try:
+            os.link(str(external), str(linked_path))
+        except OSError as exc:
+            self.skipTest(f"hard-link fixture unavailable: {exc}")
+
+        result = self._helper(
+            "write-gdrive-upload-expected",
+            "--frames-dir",
+            str(self.frames_dir),
+            "--output",
+            str(self.expected_path),
+            "--files-from-output",
+            str(self.files_from_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual(b"hard-link-sentinel", external.read_bytes())
+        self.assertFalse(self.expected_path.exists())
+
+    def test_gdrive_expected_skips_fifo_and_device_inputs_when_supported(self) -> None:
+        created = []
+        if os.name != "nt" and hasattr(os, "mkfifo"):
+            fifo = self.frames_dir / "stream.jpg"
+            try:
+                os.mkfifo(str(fifo))
+                created.append(fifo)
+            except OSError:
+                pass
+        if os.name != "nt" and hasattr(os, "mknod") and hasattr(os, "makedev"):
+            device = self.frames_dir / "device.jpg"
+            try:
+                os.mknod(str(device), stat.S_IFCHR | 0o600, os.makedev(1, 3))
+                created.append(device)
+            except OSError:
+                pass
+        if not created:
+            self.skipTest("FIFO/device fixtures unavailable")
+
+        self._write_expected()
+
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.assertEqual([], expected["items"])
+        self.assertEqual("", self.files_from_path.read_text(encoding="utf-8"))
+
+    def test_gdrive_rejects_manifest_mutation_and_rename_before_batch_or_archive(self) -> None:
+        mutated = self.frames_dir / "mutated.jpg"
+        renamed = self.frames_dir / "renamed.jpg"
+        mutated.write_bytes(b"before")
+        renamed.write_bytes(b"rename")
+        self._write_expected()
+
+        mutated.write_bytes(b"after!")
+        batch_manifest = self.root / "mutated-batches.json"
+        batch = self._helper(
+            "write-gdrive-upload-batches",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(batch_manifest),
+            "--output-dir",
+            str(self.root / "mutated-batches"),
+            "--source-root",
+            str(self.frames_dir),
+        )
+        self.assertNotEqual(0, batch.returncode, self._format_process_output(batch))
+        self.assertFalse(batch_manifest.exists())
+
+        self._write_expected()
+        moved = self.frames_dir / "renamed-away.jpg"
+        renamed.replace(moved)
+        renamed.write_bytes(b"rename")
+        staging_manifest = self.root / "renamed-staging.json"
+        staging_dir = self.root / "renamed-staging"
+        staging = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--source-root",
+            str(self.frames_dir),
+        )
+        self.assertNotEqual(0, staging.returncode, self._format_process_output(staging))
+        self.assertFalse(staging_manifest.exists())
+        self.assertFalse((staging_dir / "shard-0001.tar.gz").exists())
+
+    def test_gdrive_valid_nested_media_preserves_safe_batch_and_archive_identity(self) -> None:
+        nested = self.frames_dir / "nested"
+        nested.mkdir()
+        media = nested / "safe-media.jpeg"
+        media.write_bytes(b"nested-media")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            {"device", "inode", "mtimeNs", "ctimeNs"},
+            set(expected["items"][0]["fileIdentity"]),
+        )
+
+        self.assertEqual("nested/safe-media.jpeg\n", self.files_from_path.read_text(encoding="utf-8"))
+        batch_manifest = self.root / "nested-batches.json"
+        batch_dir = self.root / "nested-batches"
+        batch = self._helper(
+            "write-gdrive-upload-batches",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(batch_manifest),
+            "--output-dir",
+            str(batch_dir),
+            "--source-root",
+            str(self.frames_dir),
+        )
+        self.assertEqual(0, batch.returncode, self._format_process_output(batch))
+        self.assertEqual("nested/safe-media.jpeg\n", (batch_dir / "batch-0001.txt").read_text(encoding="utf-8"))
+
+        staging_manifest = self.root / "nested-staging.json"
+        staging_dir = self.root / "nested-staging"
+        staging = self._helper(
+            "write-gdrive-staging-shards",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(staging_manifest),
+            "--output-dir",
+            str(staging_dir),
+            "--source-root",
+            str(self.frames_dir),
+        )
+        self.assertEqual(0, staging.returncode, self._format_process_output(staging))
+        with tarfile.open(staging_dir / "shard-0001.tar.gz", "r:gz") as archive:
+            self.assertEqual(["nested/safe-media.jpeg"], archive.getnames())
+            extracted = archive.extractfile("nested/safe-media.jpeg")
+            self.assertIsNotNone(extracted)
+            self.assertEqual(b"nested-media", extracted.read())
+            extracted.close()
     def test_rclone_exit_zero_without_remote_proof_requires_backfill(self) -> None:
         frame = self.frames_dir / "weak.jpg"
         frame.write_text("frame\n", encoding="utf-8")
@@ -1233,6 +2075,198 @@ class GDriveUploadContractTests(unittest.TestCase):
         queue = [json.loads(line) for line in self.residual_queue_path.read_text(encoding="utf-8").splitlines() if line]
         self.assertEqual(True, queue[0]["item"]["verificationRequired"])
 
+    def test_gdrive_status_rejects_path_only_and_unbound_receipts_without_queue_loss(self) -> None:
+        frame = self.frames_dir / "same-path.jpg"
+        frame.write_bytes(b"before")
+        self._write_expected()
+        receipt_path = self.root / "verification-receipt.json"
+        stale_receipt = self._write_remote_receipt(receipt_path)
+
+        frame.write_bytes(b"after!")
+        self._write_expected()
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        self.residual_queue_path.write_text(
+            json.dumps(self._residual_entry(expected["items"][0]), sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        queue_before = self.residual_queue_path.read_bytes()
+        self.status_path.write_bytes(b"prior status\n")
+
+        missing = self._helper(
+            "write-gdrive-upload-status",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--output",
+            str(self.status_path),
+            "--residual-queue",
+            str(self.residual_queue_path),
+            "--completion-proof",
+            "remote_manifest_check",
+            "--source-root",
+            str(self.frames_dir),
+            "--exit-code",
+            "0",
+        )
+        self.assertNotEqual(0, missing.returncode, self._format_process_output(missing))
+        self.assertIn("GDRIVE_VERIFICATION_RECEIPT_INVALID code=MISSING", missing.stderr)
+        self.assertEqual(b"prior status\n", self.status_path.read_bytes())
+        self.assertEqual(queue_before, self.residual_queue_path.read_bytes())
+        def assert_rejected(raw_receipt: bytes, code: str) -> None:
+            receipt_path.write_bytes(raw_receipt)
+            result = self._helper(
+                "write-gdrive-upload-status",
+                "--expected-manifest",
+                str(self.expected_path),
+                "--output",
+                str(self.status_path),
+                "--residual-queue",
+                str(self.residual_queue_path),
+                "--verification-receipt",
+                str(receipt_path),
+                "--completion-proof",
+                "remote_manifest_check",
+                "--source-root",
+                str(self.frames_dir),
+                "--exit-code",
+                "0",
+            )
+            self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+            self.assertIn(
+                f"GDRIVE_VERIFICATION_RECEIPT_INVALID code={code}",
+                result.stderr,
+            )
+            self.assertEqual(b"prior status\n", self.status_path.read_bytes())
+            self.assertEqual(queue_before, self.residual_queue_path.read_bytes())
+
+        assert_rejected(
+            json.dumps(stale_receipt, sort_keys=True).encode("utf-8"),
+            "BINDING",
+        )
+        fresh_receipt = self._write_remote_receipt(receipt_path)
+
+        assert_rejected(b"same-path.jpg\n", "PATH_ONLY")
+        assert_rejected(b'{"schemaVersion":2}', "REQUIRED_FIELD")
+
+        duplicate = json.loads(json.dumps(fresh_receipt))
+        duplicate["verifiedCount"] = 2
+        duplicate["receiptCount"] = 2
+        duplicate["verifiedRelativePaths"].append("same-path.jpg")
+        duplicate["itemReceipts"].append(
+            json.loads(json.dumps(duplicate["itemReceipts"][0]))
+        )
+        assert_rejected(json.dumps(duplicate, sort_keys=True).encode("utf-8"), "DUPLICATE")
+
+        extra = json.loads(json.dumps(fresh_receipt))
+        extra["verifiedCount"] = 2
+        extra["receiptCount"] = 2
+        extra["verifiedRelativePaths"].append("extra.jpg")
+        extra_item = json.loads(json.dumps(extra["itemReceipts"][0]))
+        extra_item["relativePath"] = "extra.jpg"
+        extra["itemReceipts"].append(extra_item)
+        assert_rejected(json.dumps(extra, sort_keys=True).encode("utf-8"), "EXTRA")
+
+        stale_run = json.loads(json.dumps(fresh_receipt))
+        stale_run["runId"] = "other-run"
+        assert_rejected(json.dumps(stale_run, sort_keys=True).encode("utf-8"), "BINDING")
+
+        stale_manifest = json.loads(json.dumps(fresh_receipt))
+        stale_manifest["expectedManifestSha256"] = "0" * 64
+        assert_rejected(json.dumps(stale_manifest, sort_keys=True).encode("utf-8"), "BINDING")
+
+        wrong_identity = json.loads(json.dumps(fresh_receipt))
+        wrong_identity["itemReceipts"][0]["fileIdentity"]["inode"] += 1
+        assert_rejected(
+            json.dumps(wrong_identity, sort_keys=True).encode("utf-8"),
+            "IDENTITY",
+        )
+    def test_write_queue_faults_preserve_prior_records_and_owned_temp_cleanup(self) -> None:
+        queue_path = self.root / "fault-injected-queue.jsonl"
+        prior_entries = [{"record": "prior"}]
+        next_entries = [{"record": "prior"}, {"record": "next"}]
+        run_daily_helpers._write_queue(queue_path, prior_entries)
+        prior_bytes = queue_path.read_bytes()
+        unrelated_temp = self.root / "unowned-queue-temp"
+        unrelated_temp.write_bytes(b"keep")
+
+        fault_contexts = (
+            (
+                "open",
+                lambda: mock.patch.object(
+                    run_daily_helpers.tempfile,
+                    "mkstemp",
+                    side_effect=OSError("open failure"),
+                ),
+            ),
+            (
+                "write",
+                lambda: mock.patch.object(
+                    run_daily_helpers.os,
+                    "write",
+                    side_effect=OSError("write failure"),
+                ),
+            ),
+            (
+                "file-fsync",
+                lambda: mock.patch.object(
+                    run_daily_helpers.os,
+                    "fsync",
+                    side_effect=OSError("fsync failure"),
+                ),
+            ),
+            (
+                "replace",
+                lambda: mock.patch.object(
+                    run_daily_helpers.os,
+                    "replace",
+                    side_effect=OSError("replace failure"),
+                ),
+            ),
+            (
+                "directory-fsync",
+                lambda: mock.patch.object(
+                    run_daily_helpers,
+                    "_fsync_parent_directory",
+                    side_effect=OSError("directory fsync failure"),
+                ),
+            ),
+            (
+                "enospc",
+                lambda: mock.patch.object(
+                    run_daily_helpers.os,
+                    "write",
+                    side_effect=OSError(errno.ENOSPC, "no space"),
+                ),
+            ),
+        )
+
+        for fault_name, context in fault_contexts:
+            with self.subTest(fault=fault_name):
+                with context():
+                    with self.assertRaises(OSError):
+                        run_daily_helpers._write_queue(queue_path, next_entries)
+                self.assertEqual(prior_bytes, queue_path.read_bytes())
+                self.assertEqual(b"keep", unrelated_temp.read_bytes())
+                self.assertEqual(
+                    [],
+                    list(self.root.glob(f".{queue_path.name}.*.tmp")),
+                )
+    def _residual_entry(
+        self,
+        item: dict,
+        *,
+        attempts: int = 0,
+        first_seen_epoch: Optional[int] = None,
+        last_exit_code: int = 0,
+    ) -> dict:
+        return {
+            "schemaVersion": 2,
+            "firstSeenAt": "2026-04-28T00:00:00Z",
+            "firstSeenEpoch": int(time.time()) if first_seen_epoch is None else first_seen_epoch,
+            "lastAttemptAt": "2026-04-28T00:00:00Z",
+            "attempts": attempts,
+            "lastExitCode": last_exit_code,
+            "item": item,
+        }
     def _write_expected(self) -> None:
         result = self._helper(
             "write-gdrive-upload-expected",
@@ -1246,9 +2280,51 @@ class GDriveUploadContractTests(unittest.TestCase):
             str(self.residual_queue_path),
             "--remote-root",
             "gdrive:frames",
+            "--run-id",
+            self.run_id,
         )
         self.assertEqual(0, result.returncode, self._format_process_output(result))
 
+    def _write_remote_receipt(
+        self,
+        receipt_path: Path,
+        verified_paths: Optional[set[str]] = None,
+    ) -> dict:
+        expected = json.loads(self.expected_path.read_text(encoding="utf-8"))
+        verified = (
+            {item["relativePath"] for item in expected["items"]}
+            if verified_paths is None
+            else verified_paths
+        )
+        remote_list_path = self.root / f"{receipt_path.stem}-remote-list.json"
+        remote_list_path.write_text(
+            json.dumps(
+                [
+                    {
+                        "Path": item["relativePath"],
+                        "Size": item["size"],
+                        "Hashes": {"MD5": item["md5"]},
+                    }
+                    for item in expected["items"]
+                    if item["relativePath"] in verified
+                ],
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        result = self._helper(
+            "write-gdrive-remote-verification",
+            "--expected-manifest",
+            str(self.expected_path),
+            "--remote-list",
+            str(remote_list_path),
+            "--output",
+            str(receipt_path),
+            "--run-id",
+            self.run_id,
+        )
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        return json.loads(receipt_path.read_text(encoding="utf-8"))
     def _helper(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [PYTHON_BIN, str(RUN_DAILY_HELPER_SOURCE), *args],
@@ -1259,6 +2335,231 @@ class GDriveUploadContractTests(unittest.TestCase):
 
     def _format_process_output(self, result: subprocess.CompletedProcess[str]) -> str:
         return f"exit={result.returncode}\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+
+
+class DailyPublicationContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.artifact = self.root / "artifact"
+        self.artifact.mkdir()
+        self.bundle = self.artifact / "daily-data-publication.tar"
+        self.manifest = self.artifact / "publication-manifest.json"
+        self.sidecar = self.artifact / "publication-manifest.sha256"
+        self.repository = "owner/repository"
+        self.execution_sha = "a" * 40
+        self.base_sha = "b" * 40
+        self.base_tree = "c" * 40
+        self.relative_path = "backend/restaurant-crawling/data/published.json"
+        self.data = b'{"published":true}\n'
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def _write_manifest(self, *, path: str | None = None, mode: str = "0644") -> None:
+        bundle_digest = hashlib.sha256(self.bundle.read_bytes()).hexdigest()
+        payload = {
+            "schemaVersion": 1,
+            "kind": "daily-data-publication",
+            "repository": self.repository,
+            "executionSha": self.execution_sha,
+            "base": {"sha": self.base_sha, "tree": self.base_tree},
+            "targetBranch": "data",
+            "bundle": {
+                "path": "daily-data-publication.tar",
+                "size": self.bundle.stat().st_size,
+                "sha256": bundle_digest,
+            },
+            "files": [
+                {
+                    "path": path or self.relative_path,
+                    "mode": mode,
+                    "size": len(self.data),
+                    "sha256": hashlib.sha256(self.data).hexdigest(),
+                }
+            ],
+        }
+        self.manifest.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        self.compute_manifest_sha256 = hashlib.sha256(self.manifest.read_bytes()).hexdigest()
+        self.sidecar.write_text(
+            f"{self.compute_manifest_sha256}  publication-manifest.json\n",
+            encoding="ascii",
+        )
+
+    def _write_bundle(
+        self,
+        *,
+        member_name: str | None = None,
+        member_mode: int = 0o644,
+        member_type: bytes | None = None,
+        extra_member: bool = False,
+    ) -> None:
+        with tarfile.open(self.bundle, "w") as archive:
+            member = tarfile.TarInfo(member_name or self.relative_path)
+            member.mode = member_mode
+            if member_type is not None:
+                member.type = member_type
+                member.linkname = "outside"
+                member.size = 0
+                archive.addfile(member)
+            else:
+                member.size = len(self.data)
+                archive.addfile(member, io.BytesIO(self.data))
+            if extra_member:
+                extra = tarfile.TarInfo("backend/restaurant-evaluation/data/extra.json")
+                extra.mode = 0o644
+                extra.size = len(self.data)
+                archive.addfile(extra, io.BytesIO(self.data))
+
+    def _validator(
+        self,
+        command: str,
+        *,
+        base_sha: str | None = None,
+        compute_manifest_sha256: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        arguments = [
+            PYTHON_BIN,
+            str(PUBLISHER_VALIDATOR_SOURCE),
+            command,
+            "--manifest",
+            str(self.manifest),
+            "--manifest-sha256",
+            str(self.sidecar),
+            "--bundle",
+            str(self.bundle),
+            "--expected-repository",
+            self.repository,
+            "--expected-execution-sha",
+            self.execution_sha,
+            "--expected-target-branch",
+            "data",
+            "--expected-base-sha",
+            base_sha or self.base_sha,
+            "--expected-base-tree",
+            self.base_tree,
+            "--expected-compute-manifest-sha256",
+            compute_manifest_sha256 or self.compute_manifest_sha256,
+            "--expected-artifact-digest",
+            f"sha256:{'d' * 64}",
+        ]
+        if command == "extract":
+            arguments.extend(("--destination", str(self.root / f"extracted-{time.monotonic_ns()}")))
+        return subprocess.run(arguments, capture_output=True, text=True, check=False)
+
+    def _verify(
+        self,
+        *,
+        base_sha: str | None = None,
+        compute_manifest_sha256: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        return self._validator(
+            "verify",
+            base_sha=base_sha,
+            compute_manifest_sha256=compute_manifest_sha256,
+        )
+
+    def _extract(self) -> subprocess.CompletedProcess[str]:
+        return self._validator("extract")
+
+    def test_publisher_source_separates_secret_compute_from_write_publish(self) -> None:
+        workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
+        compute = workflow.split("  daily-compute:", 1)[1].split("  daily-publish:", 1)[0]
+        publisher = workflow.split("  daily-publish:", 1)[1]
+
+        self.assertIn("contents: read", compute)
+        self.assertNotIn("contents: write", compute)
+        self.assertIn("contents: write", publisher)
+        self.assertIn("persist-credentials: false", compute)
+        self.assertIn("persist-credentials: false", publisher)
+        self.assertEqual(2, workflow.count("ref: ${{ github.sha }}"))
+        self.assertNotIn("github.event.inputs.checkout_ref", workflow)
+        self.assertIn("RUN_DAILY_WORKFLOW_COMPUTE: \"true\"", compute)
+        self.assertIn("artifact-digest", compute)
+        self.assertIn("publication_manifest_sha256", compute)
+        self.assertIn("actions/download-artifact@", publisher)
+        self.assertIn("EXPECTED_COMPUTE_MANIFEST_SHA256", publisher)
+        self.assertIn("--expected-compute-manifest-sha256", publisher)
+        self.assertIn("validate_daily_publication_bundle.py extract", publisher)
+        self.assertIn("GIT_ASKPASS", publisher)
+        self.assertNotIn("secrets.", publisher)
+        for forbidden in (
+            "SUPABASE_",
+            "GDRIVE_",
+            "GEMINI_",
+            "YOUTUBE_",
+            "NAVER_",
+            "NCP_",
+            "OPENAI_",
+        ):
+            self.assertNotIn(forbidden, publisher)
+
+        run_daily = RUN_DAILY_SOURCE.read_text(encoding="utf-8")
+        sync_section = run_daily.split("sync_data_to_remote() {", 1)[1].split("# ============================================================", 1)[0]
+        self.assertLess(
+            sync_section.index('if [ "$WORKFLOW_COMPUTE_MODE" = "true" ]; then'),
+            sync_section.index("commit_and_push_current_repo_data"),
+        )
+        self.assertIn("workflow compute mode defers data publication", sync_section)
+        self.assertIn("write-daily-publication-bundle", run_daily)
+
+    def test_publisher_rejects_manifest_drift_and_base_mismatch(self) -> None:
+        self._write_bundle()
+        self._write_manifest()
+        self.manifest.write_text("{}\n", encoding="utf-8")
+        drift = self._verify()
+        self.assertNotEqual(0, drift.returncode)
+        self.assertIn("compute-bound SHA-256", drift.stderr)
+
+        current_manifest_sha256 = hashlib.sha256(self.manifest.read_bytes()).hexdigest()
+        sidecar_drift = self._verify(compute_manifest_sha256=current_manifest_sha256)
+        self.assertNotEqual(0, sidecar_drift.returncode)
+        self.assertIn("sidecar", sidecar_drift.stderr)
+
+        self._write_manifest()
+        base_mismatch = self._verify(base_sha="e" * 40)
+        self.assertNotEqual(0, base_mismatch.returncode)
+        self.assertIn("base does not match", base_mismatch.stderr)
+
+    def test_publisher_rejects_whole_artifact_replacement_against_compute_digest(self) -> None:
+        self._write_bundle()
+        self._write_manifest()
+        original_compute_manifest_sha256 = self.compute_manifest_sha256
+
+        self.data = b'{"published":false}\n'
+        self._write_bundle()
+        self._write_manifest()
+        internally_consistent = self._verify()
+        self.assertEqual(0, internally_consistent.returncode, internally_consistent.stderr)
+
+        replacement = self._verify(compute_manifest_sha256=original_compute_manifest_sha256)
+        self.assertNotEqual(0, replacement.returncode)
+        self.assertIn("compute-bound SHA-256", replacement.stderr)
+
+    def test_publisher_rejects_unsafe_artifact_members_and_executables(self) -> None:
+        self._write_bundle(member_name="../outside.json")
+        self._write_manifest()
+        traversal = self._extract()
+        self.assertNotEqual(0, traversal.returncode)
+        self.assertIn("unexpected member", traversal.stderr)
+
+        self._write_bundle(member_type=tarfile.SYMTYPE)
+        self._write_manifest()
+        symlink = self._extract()
+        self.assertNotEqual(0, symlink.returncode)
+        self.assertIn("member type is unsafe", symlink.stderr)
+
+        self._write_bundle(member_mode=0o755)
+        self._write_manifest(mode="0755")
+        executable = self._verify()
+        self.assertNotEqual(0, executable.returncode)
+        self.assertIn("mode is not permitted", executable.stderr)
+
+        self._write_bundle(extra_member=True)
+        self._write_manifest()
+        extra_member = self._extract()
+        self.assertNotEqual(0, extra_member.returncode)
+        self.assertIn("unexpected member", extra_member.stderr)
 
 
 class BackendGuardrailScriptTests(unittest.TestCase):
@@ -1371,6 +2672,40 @@ class RunDailyRegressionTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
+
+    def test_privileged_supabase_clients_use_canonical_service_role_credentials(self) -> None:
+        prohibited_environment_names = (
+            "VITE_SUPABASE_",
+            "NEXT_PUBLIC_SUPABASE_",
+            "PUBLIC_SUPABASE_URL",
+            "SUPABASE_ANON_KEY",
+            "SUPABASE_PUBLISHABLE_KEY",
+            "SUPABASE_KEY",
+        )
+        for source_path in PRIVILEGED_SUPABASE_CLIENT_SOURCES:
+            source = source_path.read_text(encoding="utf-8")
+            with self.subTest(source=source_path.name):
+                self.assertIn("resolve_privileged_supabase_rest_credentials", source)
+                self.assertIn("SupabaseRestConfigurationError", source)
+                self.assertIn(
+                    "create_client(credentials.url, credentials.service_role_key)",
+                    source,
+                )
+                for environment_name in prohibited_environment_names:
+                    self.assertNotIn(environment_name, source)
+
+        required_credentials = '[ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]'
+        run_daily_source = RUN_DAILY_SOURCE.read_text(encoding="utf-8")
+        for readiness_function, next_function in (
+            ("has_supabase_migration_credentials() {", "has_supabase_insert_credentials() {"),
+            ("has_supabase_insert_credentials() {", "has_youtube_api_key()"),
+        ):
+            readiness = run_daily_source.split(readiness_function, 1)[1].split(next_function, 1)[0]
+            with self.subTest(readiness_function=readiness_function):
+                self.assertIn(required_credentials, readiness)
+                self.assertNotIn("VITE_SUPABASE_", readiness)
+                self.assertNotIn("SUPABASE_KEY", readiness)
+
 
     def test_happy_path_exits_zero(self) -> None:
         result = self._run_script()
@@ -1496,19 +2831,23 @@ class RunDailyRegressionTests(unittest.TestCase):
             )
         )
 
-    def test_supabase_key_only_skips_insert_stage_in_local_mode(self) -> None:
+    def test_public_only_supabase_env_skips_insert_stage_in_local_mode(self) -> None:
         result = self._run_script(
             env_overrides={
+                "SUPABASE_URL": None,
                 "SUPABASE_SERVICE_ROLE_KEY": None,
-                "VITE_SUPABASE_PUBLISHABLE_KEY": None,
-                "SUPABASE_KEY": "stub-legacy-key",
+                "PUBLIC_SUPABASE_URL": "https://public.stub.supabase.co",
+                "NEXT_PUBLIC_SUPABASE_URL": "https://public.stub.supabase.co",
+                "VITE_SUPABASE_PUBLISHABLE_KEY": "stub-publishable-key",
+                "NEXT_PUBLIC_SUPABASE_ANON_KEY": "stub-anon-key",
             },
             force_phase3=True,
         )
 
         self.assertEqual(0, result.returncode, self._format_process_output(result))
         self.assertIn("Step 13 (Supabase) 선택 건너뜀", result.stdout)
-        self.assertIn("SUPABASE_SERVICE_ROLE_KEY 또는 VITE_SUPABASE_PUBLISHABLE_KEY", result.stdout)
+        self.assertIn("SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY", result.stdout)
+        self.assertNotIn("[Step 13] Insert to Supabase...", result.stdout)
 
         manifest = self._read_manifest()
         self.assertEqual("WARN", manifest["finalStatus"])
@@ -1519,6 +2858,21 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertTrue(
             any(
                 event["name"] == "Step 13 (Supabase)" and event["status"] == "optional_skipped"
+                for event in manifest["stepEvents"]
+            )
+        )
+
+    def test_dedicated_supabase_credentials_enable_insert_stage(self) -> None:
+        result = self._run_script(force_phase3=True)
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertIn("[Step 13] Insert to Supabase...", result.stdout)
+        self.assertIn("성공 (Insert): 0", result.stdout)
+
+        manifest = self._read_manifest()
+        self.assertTrue(
+            any(
+                event["name"] == "Step 13 (Supabase)" and event["status"] == "completed"
                 for event in manifest["stepEvents"]
             )
         )
@@ -1679,6 +3033,109 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertIn("push -u origin data", git_log)
         self.assertNotIn("fetch origin data", git_log)
         self.assertNotIn("pull --rebase --autostash origin data", git_log)
+    def test_daily_log_replaces_planted_current_link_without_touching_sentinel(self) -> None:
+        sentinel = self.root / "external-current-sentinel.txt"
+        sentinel.write_text("unchanged\n", encoding="utf-8")
+
+        def plant_current_link(project_root: Path, _state_dir: Path) -> None:
+            log_dir = project_root / "tmp" / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                (log_dir / "current.log").symlink_to(sentinel)
+            except OSError as exc:
+                self.skipTest(f"symbolic links are unavailable: {exc}")
+
+        result = self._run_script(fixture_mutator=plant_current_link)
+
+        self.assertEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("unchanged\n", sentinel.read_text(encoding="utf-8"))
+        current_log = self.root / "project" / "tmp" / "logs" / "current.log"
+        self.assertTrue(current_log.is_symlink())
+        self.assertTrue((current_log.parent / current_log.readlink()).is_file())
+
+    def test_daily_log_rejects_planted_log_link_without_touching_sentinel(self) -> None:
+        sentinel = self.root / "external-daily-sentinel.txt"
+        sentinel.write_text("unchanged\n", encoding="utf-8")
+        run_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        def plant_daily_link(project_root: Path, _state_dir: Path) -> None:
+            log_dir = project_root / "tmp" / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                (log_dir / f"daily_{run_date}.log").symlink_to(sentinel)
+            except OSError as exc:
+                self.skipTest(f"symbolic links are unavailable: {exc}")
+
+        result = self._run_script(
+            env_overrides={"TZ": "UTC"},
+            fixture_mutator=plant_daily_link,
+        )
+
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("unchanged\n", sentinel.read_text(encoding="utf-8"))
+    def test_daily_log_helper_appends_and_archives_previous_run(self) -> None:
+        log_root = self.root / "logs"
+        prepare_args = [
+            PYTHON_BIN,
+            str(RUN_DAILY_HELPER_SOURCE),
+            "prepare-daily-log",
+            "--log-root",
+            str(log_root),
+            "--archive-relative",
+            "archive",
+            "--current-log-relative",
+            "current.log",
+            "--date",
+            "2026-07-13",
+        ]
+        prepared = subprocess.run(
+            prepare_args,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        self.assertEqual(0, prepared.returncode, self._format_process_output(prepared))
+        _archive, root_device, root_inode = prepared.stdout.strip().split("|")
+        appended = subprocess.run(
+            [
+                PYTHON_BIN,
+                str(RUN_DAILY_HELPER_SOURCE),
+                "append-daily-log",
+                "--log-root",
+                str(log_root),
+                "--log-name",
+                "daily_2026-07-13.log",
+                "--root-device",
+                root_device,
+                "--root-inode",
+                root_inode,
+                "--no-stdout",
+            ],
+            input="first run\n",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        self.assertEqual(0, appended.returncode, self._format_process_output(appended))
+
+        archived = subprocess.run(
+            prepare_args,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        self.assertEqual(0, archived.returncode, self._format_process_output(archived))
+        archive_relative, _root_device, _root_inode = archived.stdout.strip().split("|")
+        self.assertTrue(archive_relative.startswith("archive/daily_2026-07-13_"))
+        self.assertEqual("first run\n", (log_root / archive_relative).read_text(encoding="utf-8"))
+        self.assertEqual("", (log_root / "daily_2026-07-13.log").read_text(encoding="utf-8"))
+        self.assertTrue((log_root / "current.log").is_symlink())
 
     def test_mirror_data_root_skips_identical_files_and_updates_changed_files(self) -> None:
         source = self.root / "source"
@@ -1700,6 +3157,173 @@ class RunDailyRegressionTests(unittest.TestCase):
         self.assertEqual(same_before, (target / "same.jsonl").stat().st_mtime_ns)
         self.assertEqual('{"version": 2}\n', (target / "changed.jsonl").read_text(encoding="utf-8"))
         self.assertFalse((target / "stale.jsonl").exists())
+    def test_mirror_data_root_rejects_source_and_destination_link_swaps(self) -> None:
+        external = self.root / "external"
+        external.mkdir()
+        sentinel = external / "sentinel.txt"
+        sentinel.write_text("unchanged\n", encoding="utf-8")
+        source = self.root / "source"
+        source.mkdir()
+        (source / "item.jsonl").write_text('{"ok": true}\n', encoding="utf-8")
+
+        source_link = self.root / "source-link"
+        try:
+            source_link.symlink_to(external, target_is_directory=True)
+        except OSError as exc:
+            self.skipTest(f"symbolic links are unavailable: {exc}")
+        result = self._run_mirror_data_root(source_link, self.root / "target")
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("unchanged\n", sentinel.read_text(encoding="utf-8"))
+
+        target_link = self.root / "target-link"
+        target_link.symlink_to(external, target_is_directory=True)
+        result = self._run_mirror_data_root(source, target_link)
+        self.assertNotEqual(0, result.returncode, self._format_process_output(result))
+        self.assertEqual("unchanged\n", sentinel.read_text(encoding="utf-8"))
+    @unittest.skipUnless(os.name == "nt", "Windows handle pinning is Windows-specific")
+    def test_windows_mirror_blocks_mid_operation_root_and_child_junction_swaps(self) -> None:
+        source = self.root / "source"
+        target = self.root / "target"
+        external = self.root / "external"
+        (source / "nested").mkdir(parents=True)
+        (target / "nested").mkdir(parents=True)
+        (external / "nested").mkdir(parents=True)
+        (source / "nested" / "item.jsonl").write_text('{"source": true}\n', encoding="utf-8")
+        (target / "nested" / "item.jsonl").write_text('{"target": true}\n', encoding="utf-8")
+        (external / "item.jsonl").write_text('{"external": "child"}\n', encoding="utf-8")
+        (external / "nested" / "item.jsonl").write_text('{"external": "root"}\n', encoding="utf-8")
+        sentinels = {
+            path: path.read_text(encoding="utf-8")
+            for path in (external / "item.jsonl", external / "nested" / "item.jsonl")
+        }
+        blocked: list[str] = []
+        moved: list[tuple[Path, Path]] = []
+        attempted = False
+
+        def hook(stage: str, path: Path) -> None:
+            nonlocal attempted
+            if stage != "before-mutation" or attempted or path.name != "nested":
+                return
+            attempted = True
+            for label, original in (("root", target), ("child", target / "nested")):
+                replacement = original.with_name(f"{original.name}-moved")
+                try:
+                    os.replace(original, replacement)
+                except OSError:
+                    blocked.append(label)
+                    continue
+                moved.append((original, replacement))
+                subprocess.run(
+                    ["cmd.exe", "/d", "/c", f'mklink /J "{original}" "{external}"'],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    check=False,
+                )
+
+        try:
+            with mock.patch.object(run_daily_helpers, "_WINDOWS_RUNTIME_TEST_HOOK", hook):
+                run_daily_helpers.mirror_data_root(str(source), str(target))
+        finally:
+            for original, replacement in reversed(moved):
+                if original.is_symlink():
+                    original.unlink()
+                elif original.exists():
+                    os.rmdir(original)
+                if replacement.exists():
+                    os.replace(replacement, original)
+
+        self.assertTrue(attempted)
+        self.assertEqual(["root", "child"], blocked)
+        self.assertEqual('{"source": true}\n', (target / "nested" / "item.jsonl").read_text(encoding="utf-8"))
+        for path, contents in sentinels.items():
+            self.assertEqual(contents, path.read_text(encoding="utf-8"))
+
+    @unittest.skipUnless(os.name == "nt", "Windows handle pinning is Windows-specific")
+    def test_windows_daily_log_blocks_mid_operation_root_and_child_junction_swaps(self) -> None:
+        log_root = self.root / "logs"
+        external = self.root / "external"
+        (external / "archive").mkdir(parents=True)
+        (external / "daily_2026-07-13.log").write_text("external root\n", encoding="utf-8")
+        (external / "archive" / "daily_2026-07-13.log").write_text("external child\n", encoding="utf-8")
+        sentinels = {
+            path: path.read_text(encoding="utf-8")
+            for path in (
+                external / "daily_2026-07-13.log",
+                external / "archive" / "daily_2026-07-13.log",
+            )
+        }
+        blocked: list[str] = []
+        moved: list[tuple[Path, Path]] = []
+        root_attempted = False
+        child_attempted = False
+
+        def attempt(label: str, original: Path) -> None:
+            replacement = original.with_name(f"{original.name}-moved")
+            try:
+                os.replace(original, replacement)
+            except OSError:
+                blocked.append(label)
+                return
+            moved.append((original, replacement))
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", f'mklink /J "{original}" "{external}"'],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+
+        def hook(stage: str, path: Path) -> None:
+            nonlocal root_attempted, child_attempted
+            if stage != "before-mutation":
+                return
+            if path == log_root and not root_attempted:
+                root_attempted = True
+                attempt("root", log_root)
+            elif path.name == "archive" and not child_attempted:
+                child_attempted = True
+                attempt("child", log_root / "archive")
+
+        try:
+            with mock.patch.object(run_daily_helpers, "_WINDOWS_RUNTIME_TEST_HOOK", hook):
+                _archive, root_device, root_inode = run_daily_helpers.prepare_daily_log(
+                    str(log_root),
+                    "archive",
+                    "current.log",
+                    "2026-07-13",
+                )
+                with mock.patch.object(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"entry\n"), encoding="utf-8")):
+                    run_daily_helpers.append_daily_log(
+                        str(log_root),
+                        "daily_2026-07-13.log",
+                        root_device,
+                        root_inode,
+                        False,
+                    )
+                archive_relative, _root_device, _root_inode = run_daily_helpers.prepare_daily_log(
+                    str(log_root),
+                    "archive",
+                    "current.log",
+                    "2026-07-13",
+                )
+        finally:
+            for original, replacement in reversed(moved):
+                if original.is_symlink():
+                    original.unlink()
+                elif original.exists():
+                    os.rmdir(original)
+                if replacement.exists():
+                    os.replace(replacement, original)
+
+        self.assertTrue(root_attempted)
+        self.assertTrue(child_attempted)
+        self.assertEqual(["root", "child"], blocked)
+        self.assertTrue(archive_relative.startswith("archive/daily_2026-07-13_"))
+        for path, contents in sentinels.items():
+            self.assertEqual(contents, path.read_text(encoding="utf-8"))
 
     def test_mirror_data_root_returns_non_zero_when_directory_creation_fails(self) -> None:
         source = self.root / "source"
@@ -1903,18 +3527,16 @@ class RunDailyRegressionTests(unittest.TestCase):
                 path.chmod(0o755)
 
     def _run_mirror_data_root(self, source: Path, target: Path) -> subprocess.CompletedProcess[str]:
-        mirror_script = textwrap.dedent(
-            f"""
-            set -euo pipefail
-            source <(sed -n '/^mirror_data_root()/,/^mirror_data_files_to_sync_worktree()/p' '{_to_bash_path(RUN_DAILY_SOURCE)}' | sed '$d')
-            mirror_data_root '{_to_bash_path(source)}' '{_to_bash_path(target)}'
-            """
-        )
-
-        if not BASH_BIN:
-            self.skipTest("bash is not available in PATH")
         return subprocess.run(
-            [BASH_BIN, "-lc", mirror_script],
+            [
+                PYTHON_BIN,
+                str(RUN_DAILY_HELPER_SOURCE),
+                "mirror-data-root",
+                "--source-root",
+                str(source),
+                "--target-root",
+                str(target),
+            ],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -2043,13 +3665,13 @@ class RunDailyRegressionTests(unittest.TestCase):
           02-collect-meta.py)
             echo "메타데이터 수집 완료: 0개"
             ;;
-          02.1-migrate-meta-to-supabase.py)
+          02-1-migrate-meta-to-supabase.py)
             echo "meta migration ok"
             ;;
-          02.5-cleanup-orphans.py)
+          02-5-cleanup-orphans.py)
             echo "orphan cleanup ok"
             ;;
-          03.1-generate-transcript-context.py)
+          03-1-generate-transcript-context.py)
             echo "Context generation for stub-video completed"
             ;;
           09-target-selection.py)

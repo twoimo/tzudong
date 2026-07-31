@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "historical-migration-inventory/v1",
+  "status": "inventory_only",
+  "replayAuthorized": false,
+  "endpointMetadata": {
+    "anchor": {
+      "commit": "a15558368ac86c86835d8f105746cf553c18ddf9",
+      "tree": "f96999e1653c39f68dfc6833a70f9de2a4577c7e",
+      "parents": [
+        "3744fb957ce33d2945234411fc9281ede453080f",
+        "d42088e8c8ffd6917a721e17f5ca211de4e68c49"
+      ]
+    },
+    "cutoff": {
+      "commit": "6087fc0294a2bbdc1bfc5453015dff301a8e0c85",
+      "tree": "1a7a6501090d99b4a2de9f39bf749121082d4626",
+      "parents": [
+        "56d1b74337c66db3b27249fe4952f81d4781be67",
+        "36ee0c2ea084d4ee7fd5b5112b805f72b6f9a904"
+      ]
+    }
+  },
+  "records": [
+    {
+      "path": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "blob": "b286fb1589b46203a0010d44c29ce65a39188fbc",
+      "byteLength": 79793,
+      "sha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33"
+    }
+  ],
+  "unresolvedGaps": [
+    "complete connecting DAG",
+    "application order",
+    "overlap classification",
+    "platform prerequisites"
+  ]
+}

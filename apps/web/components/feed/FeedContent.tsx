@@ -59,9 +59,6 @@ interface FeedReviewLikeRow {
     review_id: string;
 }
 
-interface FeedProfileNicknameRow {
-    nickname: string | null;
-}
 
 const FEED_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,like_count';
 const FEED_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road_address,jibun_address,english_address,phone,categories,review_count,youtube_link,tzuyang_review,youtube_meta,lat,lng,status,created_at,updated_at';
@@ -453,7 +450,7 @@ export default function FeedContent({
     }, [loadMore]);
 
     // 좋아요 토글
-    const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number, reviewUserId: string) => {
+    const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number) => {
         if (!user) {
             if (onOpenAuth) {
                 onOpenAuth();
@@ -478,40 +475,37 @@ export default function FeedContent({
 
         try {
             if (currentIsLiked) {
-                await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
+                const { error } = await supabase
+                    .from('review_likes')
+                    .delete()
+                    .eq('review_id', reviewId)
+                    .eq('user_id', user.id);
+
+                if (error) throw error;
             } else {
-                await supabase.from('review_likes' as never).insert({ review_id: reviewId, user_id: user.id } as never);
+                const { error } = await supabase
+                    .from('review_likes' as never)
+                    .insert({ review_id: reviewId, user_id: user.id } as never);
 
-                if (reviewUserId && reviewUserId !== user.id) {
-                    try {
-                        const { data: profileDataRaw } = await supabase
-                            .from('profiles')
-                            .select('nickname')
-                            .eq('user_id', user.id)
-                            .single();
-                        const profileData = profileDataRaw as FeedProfileNicknameRow | null;
+                if (error) throw error;
 
-                        const likerName = profileData?.nickname || '누군가';
+                try {
+                    const notificationResponse = await fetch('/api/notifications/review-like', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reviewId }),
+                    });
 
-                        const rpcClient = supabase as unknown as {
-                            rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown>;
-                        };
-
-                        await rpcClient.rpc('create_user_notification', {
-                            p_user_id: reviewUserId,
-                            p_type: 'review_like',
-                            p_title: '리뷰에 좋아요가 눌렸어요!',
-                            p_message: `${likerName}님이 당신의 리뷰에 좋아요를 눌렀습니다.`,
-                            p_data: { reviewId }
-                        });
-                    } catch (notifError) {
-                        console.error('알림 생성 실패:', notifError);
+                    if (!notificationResponse.ok) {
+                        // 알림 실패는 이미 적용된 좋아요를 되돌리지 않는다.
                     }
+                } catch {
+                    // 네트워크 오류는 이미 적용된 좋아요를 되돌리지 않는다.
                 }
             }
             queryClient.invalidateQueries({ queryKey: [queryKey] });
         } catch (error) {
-            console.error('좋아요 토글 실패:', error);
+            console.error('좋아요 토글 실패:');
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
@@ -665,7 +659,7 @@ export default function FeedContent({
                                             likeCount: likeCount,
                                             isLikedByUser: isLiked,
                                         }}
-                                        onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount, review.userId)}
+                                        onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount)}
                                         onRestaurantClick={() => goToRestaurant(review.restaurantId, review.restaurant)}
                                         currentUserId={user?.id}
                                         onEditReview={setEditingReview}

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const projectRoot = process.cwd();
 const DEFAULT_PORT_RANGE = [18080, 18089];
@@ -22,12 +23,13 @@ const explicitPort = readArg('--port');
 const outputDir = path.resolve(projectRoot, readArg('--out-dir', '.omx/reports/dev-compile'));
 const cachePolicy = hasFlag('--cold') ? 'cold-dev-cache' : 'skip-clean';
 const artifactTimestamp = new Date().toISOString().replace(/[:.]/g, '');
-const safeLabel = String(label).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'run';
+const safeLabel = redactCliText(String(label), 120).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'run';
 const artifactBase = path.join(outputDir, `${artifactTimestamp}-${safeLabel}`);
 const logPath = `${artifactBase}.log`;
 const jsonPath = `${artifactBase}.json`;
 
 const nowMs = () => Number(process.hrtime.bigint() / 1_000_000n);
+const statusError = (code) => Object.assign(new Error(code), { code });
 
 function parseDurationMs(value, unit) {
   const amount = Number(value);
@@ -65,7 +67,7 @@ async function choosePort() {
   if (explicitPort) {
     const port = Number(explicitPort);
     if (!Number.isInteger(port) || port <= 0) {
-      throw new Error(`Invalid --port value: ${explicitPort}`);
+      throw statusError('DEV_COMPILE_INVALID_PORT');
     }
     return port;
   }
@@ -73,13 +75,13 @@ async function choosePort() {
   for (let port = DEFAULT_PORT_RANGE[0]; port <= DEFAULT_PORT_RANGE[1]; port += 1) {
     if (await canListen(port)) return port;
   }
-  throw new Error(`No free port in ${DEFAULT_PORT_RANGE[0]}..${DEFAULT_PORT_RANGE[1]}`);
+  throw statusError('DEV_COMPILE_NO_FREE_PORT');
 }
 
-async function timedFetch(url, { timeoutAt, label: requestLabel }) {
+async function timedFetch(url, { timeoutAt }) {
   const remainingMs = Math.max(0, timeoutAt - nowMs());
   if (remainingMs <= 0) {
-    throw new Error(`${requestLabel} did not start before the benchmark timeout`);
+    throw statusError('DEV_COMPILE_BENCHMARK_TIMEOUT');
   }
 
   const controller = new AbortController();
@@ -94,11 +96,11 @@ async function timedFetch(url, { timeoutAt, label: requestLabel }) {
       elapsed_ms: nowMs() - started,
       bytes: text.length,
     };
-  } catch (error) {
+  } catch {
     if (controller.signal.aborted) {
-      throw new Error(`${requestLabel} did not complete within the remaining benchmark timeout (${remainingMs}ms)`);
+      throw statusError('DEV_COMPILE_REQUEST_TIMEOUT');
     }
-    throw error;
+    throw statusError('DEV_COMPILE_REQUEST_FAILED');
   } finally {
     clearTimeout(abortTimer);
   }
@@ -143,7 +145,7 @@ async function main() {
     command: command.join(' '),
     port,
     cache_policy: cachePolicy,
-    label,
+    label: safeLabel,
     ready_ms: null,
     first_health_ms: null,
     first_home_ms: null,
@@ -167,7 +169,7 @@ async function main() {
   const appendLog = (chunk) => {
     const text = chunk.toString();
     logChunks.push(text);
-    fs.appendFileSync(logPath, text);
+    fs.appendFileSync(logPath, redactCliText(text, 1_024));
   };
   fs.writeFileSync(logPath, `$ ${command.join(' ')}\n`);
 
@@ -188,6 +190,10 @@ async function main() {
     exited = true;
     result.exit_code = code;
     result.exit_signal = signal;
+  });
+  child.on('error', () => {
+    exited = true;
+    result.errors.push('DEV_COMPILE_CHILD_PROCESS_ERROR');
   });
 
   const getLog = () => logChunks.join('');
@@ -213,7 +219,7 @@ async function main() {
   try {
     result.ready_ms = await waitForReady({ getLog, processExited: () => exited, timeoutAt });
     if (result.ready_ms === null) {
-      throw new Error(`Next dev did not become ready within ${timeoutMs}ms`);
+      throw statusError('DEV_COMPILE_READY_TIMEOUT');
     }
 
     const baseUrl = `http://127.0.0.1:${port}`;
@@ -239,19 +245,19 @@ async function main() {
     if (homeTiming) {
       result.first_home_next_ms = homeTiming.next_ms;
       result.first_home_app_ms = homeTiming.app_ms;
-      result.first_home_log_line = homeTiming.line;
+      result.first_home_log_line = redactCliText(homeTiming.line, 512);
     }
 
     const slowLine = log.split(/\r?\n/).find((line) => line.includes('Slow filesystem detected'));
     result.slow_fs_warning = Boolean(slowLine);
-    result.slow_fs_warning_text = slowLine ?? null;
+    result.slow_fs_warning_text = slowLine ? redactCliText(slowLine, 512) : null;
 
-    if (!health.ok) result.errors.push(`/api/health returned ${health.status}`);
-    if (!home.ok) result.errors.push(`/ returned ${home.status}`);
-    if (!script.ok) result.errors.push(`/scripts/viewport-height-fix.js returned ${script.status}`);
-    if (!warmHome.ok) result.errors.push(`warm / returned ${warmHome.status}`);
-  } catch (error) {
-    result.errors.push(error instanceof Error ? error.message : String(error));
+    if (!health.ok) result.errors.push('DEV_COMPILE_HEALTH_HTTP_STATUS');
+    if (!home.ok) result.errors.push('DEV_COMPILE_HOME_HTTP_STATUS');
+    if (!script.ok) result.errors.push('DEV_COMPILE_SCRIPT_HTTP_STATUS');
+    if (!warmHome.ok) result.errors.push('DEV_COMPILE_WARM_HOME_HTTP_STATUS');
+  } catch {
+    result.errors.push('DEV_COMPILE_EXECUTION_FAILED');
   } finally {
     await stopChild();
     await delay(100);
@@ -263,6 +269,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.stack || error.message : String(error));
+  logCliError(error, (line) => process.stderr.write(`[measure-dev-compile] ${line}`));
   process.exit(1);
 });

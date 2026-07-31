@@ -55,7 +55,7 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/home-map-container.tsx',
         contains: [
           'data-layout-primitives="viewport-shell overlay-stack cluster"',
-          'data-scroll-owner="home-viewport"',
+          'data-scroll-owner="map-canvas-none"',
           'role="region"',
           'aria-label="쯔동여지도 홈 지도 화면"',
         ],
@@ -109,7 +109,7 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/MobileControlOverlay.tsx',
         contains: [
           'data-layout-primitives="cluster wrap-row overlay-stack"',
-          'data-scroll-owner="mobile-control-overlay"',
+          'data-fixed-control-region="mobile-map-top-controls"',
           'data-user-submitted-marker-toggle="admin-only"',
         ],
       },
@@ -117,7 +117,7 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/SubmissionFloatingButton.tsx',
         contains: [
           'data-layout-primitives="cluster wrap-row overlay-stack"',
-          'data-scroll-owner="mobile-control-overlay"',
+          'data-fixed-control-region="map-submission-actions"',
           'data-user-submitted-marker-toggle="admin-only"',
         ],
       },
@@ -129,7 +129,7 @@ const g003SourceCoverageMatrix = {
         path: 'components/home/MobileControlOverlay.tsx',
         contains: [
           'data-layout-primitives="list-detail frame stack"',
-          'data-scroll-owner="visible-marker-list"',
+          'data-scroll-owner="home-mobile-list-sheet"',
           'data-mobile-visible-marker-restaurants-sheet="true"',
         ],
       },
@@ -251,6 +251,16 @@ function walkSourceFiles(relativeRoot: string): string[] {
 function readSource(relativePath: string) {
   return readFileSync(join(appRoot, relativePath), 'utf8');
 }
+const publicMapLayoutSources = [
+  'components/home/home-map-container.tsx',
+  'components/home/MobileControlOverlay.tsx',
+  'components/home/SubmissionFloatingButton.tsx',
+  'components/map/naver-map-surface.tsx',
+] as const;
+
+function collectScrollOwners(source: string) {
+  return Array.from(source.matchAll(/data-scroll-owner="([^"]+)"/g), (match) => match[1]);
+}
 
 function collectLayoutPrimitiveTokens() {
   const findings: Array<{ file: string; token: string; value: string }> = [];
@@ -336,6 +346,114 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     expect(unknownTokens).toEqual([]);
     expect(collectDynamicLayoutPrimitiveAttributes()).toEqual([]);
   });
+  test('G012 public map states declare one task-owned vertical scroll region', () => {
+    const homeMapSource = readSource('components/home/home-map-container.tsx');
+    const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
+    const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
+    const mapSurfaceSource = readSource('components/map/naver-map-surface.tsx');
+
+    expect(collectScrollOwners(homeMapSource)).toEqual([
+      'map-canvas-none',
+      'home-desktop-detail-panel',
+      'home-mobile-detail-sheet',
+    ]);
+    expect(collectScrollOwners(mobileControlsSource)).toEqual(['home-mobile-list-sheet']);
+    expect(collectScrollOwners(submissionSource)).toEqual([]);
+    expect(collectScrollOwners(mapSurfaceSource)).toEqual(['map-canvas-none']);
+
+    expect(homeMapSource).toContain('{isDesktop && renderDesktopDetailPanel && (');
+    expect(homeMapSource).toContain('{isMobileOrTablet && isPanelOpen && !isMapFullscreen && (');
+    expect(mobileControlsSource).toContain("{activeSheet !== 'none' && activeSheet !== 'search' && (");
+
+    for (const obsoleteOwner of [
+      'home-viewport',
+      'home-bottom-sheet',
+      'mobile-control-overlay',
+      'visible-marker-list',
+    ]) {
+      expect(`${homeMapSource}\n${mobileControlsSource}\n${submissionSource}`).not.toContain(
+        `data-scroll-owner="${obsoleteOwner}"`,
+      );
+    }
+  });
+
+  test('G012 public map keeps the reel narrow and fixed controls shrink-safe and keyboard-safe', () => {
+    const homeMapSource = readSource('components/home/home-map-container.tsx');
+    const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
+    const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
+    const mapSurfaceSource = readSource('components/map/naver-map-surface.tsx');
+    const publicMapSource = publicMapLayoutSources.map(readSource).join('\n');
+    const horizontalOverflowUtilities = Array.from(
+      publicMapSource.matchAll(/\boverflow-x-(?:auto|scroll)\b/g),
+      (match) => match[0],
+    );
+    const horizontalOwners = Array.from(
+      publicMapSource.matchAll(/data-horizontal-scroll-owner="([^"]+)"/g),
+      (match) => match[1],
+    );
+
+    expect(horizontalOverflowUtilities).toEqual(['overflow-x-auto']);
+    expect(horizontalOwners).toEqual(['mobile-theme-filter-reel']);
+    expect(mobileControlsSource).toContain('data-allow-horizontal-scroll="true"');
+    expect(mobileControlsSource).toContain('id="tzudong-mobile-category-slider"');
+
+    expect(homeMapSource).toContain(
+      'className="relative h-full min-h-0 min-w-0 w-full overflow-hidden',
+    );
+    expect(homeMapSource).toContain("'min-h-0 min-w-0 overflow-hidden flex flex-col'");
+    expect(homeMapSource).toContain('className="min-h-0 flex-1 overflow-hidden"');
+    expect(homeMapSource).toContain("'pb-[env(safe-area-inset-bottom)]'");
+    expect(mapSurfaceSource).toContain(
+      "cn('relative h-full min-h-0 min-w-0 w-full overflow-hidden', className)",
+    );
+
+    expect(mobileControlsSource).toContain('doesMobileSheetOwnFixedControlSpace');
+    expect(mobileControlsSource).toContain('{shouldRenderMobileBottomControls && (');
+    expect(mobileControlsSource).toContain('{shouldRenderMobileFloatingActions && (');
+    expect(mobileControlsSource).toContain(
+      'bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)]',
+    );
+    expect(submissionSource).toContain('env(safe-area-inset-bottom)');
+    expect(submissionSource).toContain('env(safe-area-inset-right)');
+    expect(mobileControlsSource).toContain('aria-label="지도 상단 제어"');
+    expect(mobileControlsSource).toContain('aria-label="맛집 검색 열기"');
+    expect(mobileControlsSource).toContain('focus-visible:ring-2 focus-visible:ring-primary');
+    expect(mobileControlsSource).toContain('getFocusTrapContainers(searchLayerRef.current');
+    expect(mobileControlsSource).toContain('focus({ preventScroll: true })');
+    expect(mobileControlsSource).toContain('mobileSheetTriggerRef');
+    expect(mobileControlsSource).toContain('data-mobile-map-sheet-trigger');
+    expect(mobileControlsSource).toContain(
+      '[data-bottom-sheet-layout-source="mobile-control-overlay-sheet"]',
+    );
+    expect(submissionSource).toContain('aria-label="맛집 제보하기"');
+    expect(submissionSource).toContain('role="group"');
+  });
+
+  test('G012 public map retains public boundaries and lazy map entry points', () => {
+    const sources = publicMapLayoutSources.map(readSource);
+    const mobileControlsSource = readSource('components/home/MobileControlOverlay.tsx');
+    const submissionSource = readSource('components/home/SubmissionFloatingButton.tsx');
+    const homeMapSource = readSource('components/home/home-map-container.tsx');
+    const homeClientSource = readSource('app/home-client.tsx');
+
+    for (const source of sources) {
+      expect(source).not.toContain('@/components/admin/');
+      expect(source).not.toContain('/api/admin/');
+      expect(source).not.toContain('map-overlays');
+      expect(source).not.toContain('trend-proposals');
+    }
+
+    expect(mobileControlsSource).toContain('{isAdmin && (');
+    expect(submissionSource).toContain('{isAdmin && (');
+    expect(homeMapSource).toContain('const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));');
+    expect(homeMapSource).toContain('const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));');
+    expect(homeMapSource).toContain('const RestaurantDetailPanel = lazy(() =>');
+    expect(homeMapSource).toContain('<Suspense fallback={null}>');
+    expect(homeClientSource).toContain('const HomeMapContainer = dynamic(');
+    expect(homeClientSource).toContain('() => import("../components/home/home-map-container")');
+    expect(homeClientSource).toContain('const HomeControlPanel = dynamic(');
+    expect(homeClientSource).toContain('const SubmissionFloatingButton = dynamic(');
+  });
   test('requires approved owners for horizontal-scroll policy exceptions', () => {
     const tableSource = readSource('components/ui/table.tsx');
     const stampPageSource = readSource('app/stamp/page.tsx');
@@ -350,6 +468,9 @@ describe('StyleGallery primitive taxonomy source contract', () => {
       'admin-dashboard-kpi-title-actions',
       'stamp-restaurant-list-table',
       'admin-evaluation-table',
+      'storyboard-canvas-toolbar',
+      'storyboard-chat-examples',
+      'storyboard-chat-attachments',
     ]) {
       expect(tableSource).toContain(owner);
       expect(responsiveOverflowSource).toContain(owner);
@@ -365,6 +486,48 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     );
     expect(stampPageSource).toContain('horizontalScrollOwner="stamp-restaurant-list-table"');
     expect(evaluationTableSource).toContain('horizontalScrollOwner="admin-evaluation-table"');
+    expect(responsiveOverflowSource).toContain("'storyboard-canvas-toolbar'");
+    expect(responsiveOverflowSource).toContain("'/admin?module=storyboard'");
+    expect(responsiveOverflowSource).toContain("'storyboard-chat-examples'");
+    expect(responsiveOverflowSource).toContain("'storyboard-chat-attachments'");
+    expect(tableSource).not.toContain('admin-module-header-actions');
+    expect(responsiveOverflowSource).not.toContain('admin-module-header-actions');
     expect(responsiveOverflowSource).toContain('unapprovedPolicyExceptions');
+  });
+  test('records the pinned unlicensed clean-room adoption boundary', () => {
+    const matrix = JSON.parse(readSource('stylegallery-adoption.v1.json')) as {
+      schemaVersion: number;
+      source: {
+        repository: string;
+        commit: string;
+        licenseStatus: string;
+        usageBoundary: string;
+      };
+      entries: Array<{
+        sourceUse: string;
+        targetPaths: string[];
+        ownershipBoundary: string;
+        rejectedAlternatives: string[];
+        verification: string[];
+      }>;
+    };
+
+    expect(matrix.schemaVersion).toBe(1);
+    expect(matrix.source.repository).toBe('changeroa/StyleGallery');
+    expect(matrix.source.commit).toBe('775430bbaf4ee208a642220f440f6926d79c90a3');
+    expect(matrix.source.licenseStatus).toBe('unlicensed');
+    expect(matrix.source.usageBoundary).toContain('no upstream code, CSS, prose, names, tests, assets');
+    expect(matrix.entries).toHaveLength(4);
+
+    for (const entry of matrix.entries) {
+      expect(entry.sourceUse).toStartWith('Question only:');
+      expect(entry.ownershipBoundary.length).toBeGreaterThan(20);
+      expect(entry.rejectedAlternatives.length).toBeGreaterThan(0);
+      expect(entry.verification.length).toBeGreaterThan(0);
+      for (const targetPath of entry.targetPaths) {
+        expect(targetPath).toStartWith('apps/web/');
+        expect(existsSync(join(appRoot, targetPath.slice('apps/web/'.length)))).toBe(true);
+      }
+    }
   });
 });

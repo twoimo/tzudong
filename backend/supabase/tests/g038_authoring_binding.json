@@ -1,0 +1,263 @@
+{
+  "schemaVersion": 1,
+  "kind": "g038-authoring-binding",
+  "manifestSha256": "edb9ed0f637249581587e8703086a90954459b735a0e4821997acbc423756089",
+  "boundAuthorities": {
+    "governingPlan": "457d6914c5ff26922b71f60de816044992f1c14c297dfa74350ce16e08fc6531",
+    "technicalAuthority": "d99ceb632c976bc7c2388b1c7f95571c8b7429a14e7915a9cc09d8aaa99842a4",
+    "inventorySource": "18b473ebc39da27845a1a88664ed191b90f613a7a90255da03e1aafb2c1e1b8a"
+  },
+  "files": {
+    "backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql": "7e08c6796dd47b12a7b28ea49fe45f2a4e95f884d3acfd7bebf50747b2e7a3fa",
+    "backend/supabase/tests/g038_local_sandbox.sh": "bbb41c30771ff37195d114571b76bd37dd16fe7fc372eab6dd1a5e1d2321d635",
+    "backend/supabase/tests/g038_local_sandbox.profile.json": "88b79801f5781572274335bafd1309f76b2df49ca67bed383efcb91fce222dd0",
+    "backend/supabase/tests/g038_catalog_assertions.sql": "42cb0b0624b9f4137a53ddcdd864f66cc80d06f70af12874819a288735b4d40c",
+    "backend/supabase/tests/g038_exclusion_scan.py": "1e01005366d7e5e04bf3efd543378206c50339066be7414f0e199cec6a75dc94"
+  },
+  "independent": false,
+  "operatorCount": 1,
+  "environmentClass": "LOCAL_DISPOSABLE_ONLY",
+  "executionPerformed": "local-content-hash-plus-interpreter-syntax-gates-plus-pure-bash-function-tests-plus-h4-module-over-tmp-fixtures-plus-readonly-docker-image-inspect-catalog-reads",
+  "limitations": [
+    "Solo-operator lane cannot self-certify isolation; the second review gate relocates rather than escapes that circularity.",
+    "No execution against any database, container, network, or credential occurred; no isolation property is claimed.",
+    "No hosted, provider, legal, deployment, or independent-durability evidence is produced."
+  ],
+  "authoringPass": {
+    "pass": 32,
+    "supersedes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "driftDisclosure": "LEADER-SIDE FREEZE EVENTS, self-reported. Two kinds occurred and they are recorded separately because they differ in consequence.\n\nKIND 1 -- a hashed operand moved while a gate was open. This happened at pass 9 and at pass 15. In both, review lanes were mid-read when an operand byte changed, so the digest those lanes hashed no longer matched disk and their sourceHash binding was void. Pass 15 invalidated four already-running pass-14 lanes (2088 cleaner, 2089 QA, 2090 architect, 2091 critic); their findings were treated as input rather than as gate verdicts, and the pass-14 H3 bytes they hashed are not on disk, so those four verdicts cannot be re-adjudicated against what they actually read. The pass-11 rule that forbids this is the authoring lane's own.\n\nKIND 2, mid-read H5 edits, stated as a rule because every numeral this field has carried went stale at the next pass. THE RULE: every pass from 23 onward has edited H5 while at least one lane of the in-flight gate was still reading. No count is given. Two earlier wordings here gave one -- 'third', and an enumeration of passes 23 and 24 -- and both were already stale when written, because passes 25 and 26 were themselves mid-read edits and the pass-24 cleaner and critic lanes were reading through them (pass-24 cleaner lane, carried forward by IRC). The pass authoring this sentence is authoringPass.pass, so a reader can derive the span without a maintained list. This is milder than KIND 1 in one specific respect and no other: H5 carries no frozen digest and is not an argv operand, so no lane's sourceHash was invalidated. It is still not harmless -- H5 is in every lane's read set, so a finding about H5 prose can be stale against later bytes, and lanes have been told to rebind rather than yield against superseded text. What IS true of every pass from 16 onward, and checkable without prose: none moved a hashed operand. digestSetsByPass records an empty entry for each such pass, and the five operand digests in the files map have not changed since pass 15.",
+    "digestSetsByPassNote": "Changed-file delta log, NOT a snapshot series. Only passes 1, 2 and 3 record all five hashed operands; every pass from 4 onward records only the operands whose digest moved in that pass, and every pass from 16 onward records none, because each of those passes edited H5 alone and H5 is not a hashed operand. An earlier version of this note called the map a per-pass snapshot with three delta exceptions (passes 4, 6, 8); that was wrong -- passes 5, 7, 9, 10, 11, 12, 13, 14 and 15 are partial too. It also claimed some entries repeat a prior digest because a file went untouched; no (operand, digest) pair repeats across any two passes at all, which follows from it being a delta log. The pass-11 critic raised this as F7, the pass-15 QA lane raised it again as O3, and it is now described as what it is.",
+    "digestSetsByPass": {
+      "pass1": {
+        "P1": "853825cc51637eeb56d9e9867d73ede1294b86b7f89c956d5870a66b6e184e46",
+        "H1": "1ea24067a86bb208c92db23146af79c16f898cd7ddf5caa235824f1109f4de48",
+        "H2": "059d091239dc99bb6146f937a59821fd6770a17a12b1c4e0ed0657287e9e9a95",
+        "H3": "620727c0643d11bddf0154afb7ac56d870f3450d953465fdfcd554a6cbb884cd",
+        "H4": "c092ac9cc5e96bb86f9a6611288a25c855fcfb0546b3bd99eb1900b6b997ec5c"
+      },
+      "pass2": {
+        "P1": "b8197ccec49d7b11896789b4adc6924eea8da7b9378ae4ca9c6d36c8819ab78e",
+        "H1": "54b5696cb3226eb6b3983a5a74598f8a7ebc258019dfc5b4adda196921d8834f",
+        "H2": "adaa8d848aab870012dd39967c371aa9f472187736bd8d9cc35431282e65f97b",
+        "H3": "73b2c71e71b7c998aaa052386f60891b5ca002eed94880d9566d0642f5567170",
+        "H4": "66ebf7bf1f0574eaa4e65e99b83b54325d673935fe1d087627ccf315b4132517"
+      },
+      "pass3": {
+        "P1": "9d991dc0414afda36b6c1be84db25441557bb73a83816cbebcdb8be55dd5a81f",
+        "H1": "f0b38a6aca37f83f5547cbd382de5de11064d9d28312a8cd99d47f0b4f980d1b",
+        "H2": "b305d4c3719d0e860448de5e0e00ab361af8e46de9b1fb811216b0d30dba72d7",
+        "H3": "ee43e60a8ae38131954eb8b74eb1f1ab7738c359a82e3a074513e9ef814f3b6e",
+        "H4": "1e01005366d7e5e04bf3efd543378206c50339066be7414f0e199cec6a75dc94"
+      },
+      "pass4": {
+        "P1": "696eb2b57c41997bc13d7313a9bf7391f0eaa4eae53d8dbbbb4671d84f3c1462"
+      },
+      "pass5": {
+        "P1": "19ad3caf4bf768694bbf8a7e050964d99b752e26bca8bde0c2fc2566061ffa8c",
+        "H2": "f92ec8c9bbf237d4a3a0ae731fe2ab1e2ee7f60b680fa596d122e10f47d5e529",
+        "H3": "c69c7cb14a7d710aaea052e6c73e990427ea40bb4838d470665a76a4371b5770"
+      },
+      "pass6": {
+        "P1": "be1ccb87bc4d5bd672a5fd5f2d3482e68cf69eea0f8f41ec2a5a5da9cd7216d8"
+      },
+      "pass7": {
+        "P1": "97cc563f974bbc8136b9ac46f979ca896d4116f83d1b3811f9d47984fde20b19",
+        "H2": "7f650cfe7840a9793a65040231faba5190d18a5959251f62b408bd7f31961356"
+      },
+      "pass8": {
+        "P1": "c0d98c6846c3977fcc90124cfe0ecd8e0ecb66b6493f10acd1f0104ac6979027"
+      },
+      "pass9": {
+        "H1": "ab22c793f6aa141a7842b336b6f54c6d6be02ac16ab8f7c9fd8aae1e76178820",
+        "H2": "e75effa7669e95e6bc64ac2ca67b913b71c7a65eac1f51fb1ffbeaec45fdef47"
+      },
+      "pass10": {
+        "H1": "451e0642685a28a546bcbde792ed6b4d7de3c2725f02b0663a2a1d3a076f6d32",
+        "H2": "0b57d2c0d0d0563b1f05ddc9f9da22c62d19dbcf24edcf8e42a9667d40c4f791"
+      },
+      "pass11": {
+        "H1": "66a68c65759166a20441d8e3a8ab475dfe6a3113edc0419ea394203d5b963745",
+        "H2": "9ce013d74841399af9b0e8dde4336b33b3bed7e2656cb18d0c9edbe4020c2169"
+      },
+      "pass12": {
+        "H1": "bbb41c30771ff37195d114571b76bd37dd16fe7fc372eab6dd1a5e1d2321d635",
+        "H2": "88b79801f5781572274335bafd1309f76b2df49ca67bed383efcb91fce222dd0"
+      },
+      "pass13": {
+        "P1": "4ae4a900393fba518a87caf4bb3ed748037c31eaefac74dff3e3994aa14983c4",
+        "H3": "e05dd698f1299647253c49bed33f33fbddcbd950d11d81801f44d59262dfdc93"
+      },
+      "pass14": {
+        "H3": "c322f1825eebd027deae9b71b95a3809e4b6f21823320181d77c4fb76bf03473"
+      },
+      "pass15": {
+        "H3": "68561f3d67e773e5ea001e4deca744578a8d6f8dbd2f322edb91823064202a2f"
+      },
+      "pass16": {},
+      "pass17": {},
+      "pass18": {},
+      "pass19": {},
+      "pass20": {},
+      "pass21": {},
+      "pass22": {},
+      "pass23": {},
+      "pass24": {},
+      "pass25": {},
+      "pass26": {},
+      "pass27": {},
+      "pass28": {},
+      "pass29": {},
+      "pass30": {},
+      "pass31": {},
+      "pass32": {}
+    },
+    "defectsByPass": {
+      "pass2": 4,
+      "pass3": 11,
+      "pass4": 1,
+      "pass5": 5,
+      "pass6": 3,
+      "pass7": 5,
+      "pass8": 2,
+      "pass9": 1,
+      "pass10": 2,
+      "pass11": 3,
+      "pass12": 3,
+      "pass13": 4,
+      "pass14": 4,
+      "pass15": 3,
+      "pass16": 7,
+      "pass17": 4,
+      "pass18": 6,
+      "pass19": 4,
+      "pass20": 7,
+      "pass21": 2,
+      "pass22": 2,
+      "pass23": 5,
+      "pass24": 1,
+      "pass25": 9,
+      "pass26": 1,
+      "pass27": 2,
+      "pass28": 1,
+      "pass29": 1,
+      "pass30": 2,
+      "pass31": 3,
+      "pass32": 2
+    },
+    "totalDefectsFoundAndFixed": 110,
+    "correctedOverclaims": [
+      "Pass 5 asserted the 24 compared fields are 'every supplied value a genuine retry reproduces identically'. False for p_nonce, which G005 requires freshly generated per candidate. Consequence accepted rather than hidden: the CREATE-phase REPLAY branch is near-unreachable for conforming callers, and those callers land on G005's own 409 -> LOOKUP -> checkout recovery path.",
+      "Passes 1-8 asserted executionPerformed 'none-beyond-local-content-hash'. Too strong and withdrawn. Interpreter syntax gates, pure-bash function tests, the H4 module over /tmp fixtures, and read-only docker image inspect catalog reads all occurred. The value now names all five classes.",
+      "Pass 9 asserted in H2 that 'a symlink aimed outside the repo is rejected instead of silently copied in'. FALSE as implemented -- canonicalization resolved the directory only, never the leaf. Proven false by executable test: a symlink at sub/evil.sql aimed outside was accepted and read SECRET-OUTSIDE-REPO. Fixed by full-path realpath plus returning the canonical value; the same test now rejects it.",
+      "Pass 9 asserted the verification gates touched 'no file outside the authored set'. Contradicted by this artifact's own liveEvidenceObtained, which records synthetic /tmp fixtures. Withdrawn and filed under stateDeltaBreachesAndDisclosureGaps.",
+      "Pass 10 claimed via H1 that the post-copy check proved the two files 'are the two expected ones'. An ls -1 name count cannot show that -- a wrong-source or truncated copy satisfies it identically. Withdrawn and replaced with an in-container digest comparison against the host source.",
+      "Pass 11 recorded as live evidence that 'a missing file yields an empty digest caught by the -n guard'. True only WITHOUT pipefail, which is not how the launcher runs. The guard was unreachable and || fail was the actual catcher. Withdrawn; the guards are now structurally reachable and re-verified.",
+      "Pass 13 asserted in H3's A4 rationale that a five- or seven-column function would 'still pass' the name and type vectors. That was false -- both compare against fixed six-element targets. Withdrawn in pass 14 and replaced with the narrower true claim, including an explicit statement that the mode assertion's per-element comparison is tautological. The overclaim was mine and it was introduced by the very fix that closed the dead-output blocker, which is the recurring hazard this ledger exists to catch.",
+      "Pass 14 asserted in H3's A4 comment that the mode assertion is 'the only check in A4 that fails closed on NULL proargmodes'. Withdrawn as false: the name check fails closed on the same input because both arrays come from one aggregation. The claim was found by the authoring lane's own probe, not by a review lane.",
+      "Pass 14 asserted in H3's A4 comment, as the mechanism behind the NULL case, that 'a scalar-returning function has NULL proargmodes, the LATERAL unnest yields zero rows'. Withdrawn as false ON THE PADDED SHAPE ONLY -- it remains the operative mechanism for the both-NULL shape, as stated below. A multi-argument unnest pads to the LONGEST argument, so the behaviour depends on the co-argument. Named-argument function: unnest(proargmodes, proargnames) emits one row per name with NULL in the padded am column, and WHERE s.am = 't' is what empties the set -- so the withdrawn wording named the wrong cause. Unnamed-argument or zero-argument set-returning function: both arrays are NULL, unnest(NULL, NULL) yields zero rows, and the withdrawn wording is correct there. Pass 16 stated the padding replacement as an unqualified absolute, which was itself wrong (QA lane, pass 16); this label and this body are both scoped. The fail-closed conclusion holds on every shape: array_agg over zero rows returns NULL and NULL IS DISTINCT FROM the six-element literal fires. This label was double-spliced at pass 19 by two patch scripts both targeting it, producing duplicated qualifier text; rewritten once here (cleaner lane, pass 19, blocker 1)."
+    ],
+    "stateDeltaBreachesAndDisclosureGaps": [
+      {
+        "id": "pyc-byproduct",
+        "what": "backend/supabase/tests/__pycache__/g038_exclusion_scan.cpython-314.pyc, born 2026-07-30T14:06:41.963735, 6102 bytes.",
+        "cause": "An interpreter syntax gate in one of the authoring lane's own post-edit verification batches byte-compiled H4. py_compile and import write a .pyc; ast.parse and builtin compile do not. Verified by direct test in /tmp.",
+        "whyItIsABreach": "The manifest's frozen argv declares its state delta as 'creates exactly H5. No other path is created, modified, or deleted.' This .pyc is a second created path, outside Class P/H.",
+        "whyItWasNotCaught": "__pycache__/ is listed in .gitignore line 3, so the git-porcelain row counts the lane used as its scope check could never surface it.",
+        "exactInvocationNamed": false,
+        "exactInvocationNote": "The specific batch is not reconstructible from the record. The verification batches were not individually retained and the .pyc has been deleted, so naming a command would be a guess presented as evidence. Recorded as unknown rather than invented.",
+        "forensicsReproducible": false,
+        "forensicsNote": "Deleting the .pyc was the correct remediation but it destroyed the PEP-552 evidence, so no later auditor can reproduce the header check. The observed values are preserved here instead: embedded source mtime 1785383734 = 2026-07-30T12:55:34, embedded source size 6249, both matching H4 exactly at the time of observation. A better remediation existed and is named for the record: copy the .pyc outside the repository before deleting it, which would have preserved both class purity and reproducibility. That was not done.",
+        "remediation": "Deleted. Confirmed absent by find; the four pre-existing user .pyc files in the same directory were left untouched: test_compare_g024_clean_replays.cpython-314.pyc 2026-07-15T00:51:12, test_g037_core_workflow_guards.cpython-314.pyc 2026-07-18T06:14:34, test_historical_source_archive.cpython-314.pyc 2026-07-15T00:18:44, test_read_hosted_migration_ledger.cpython-314.pyc 2026-07-14T21:54:16. All subsequent verification uses python3 -B so it cannot recur.",
+        "manifestGap": "The manifest admits a .py module into Class H without admitting its bytecode byproduct. Any lane that imports the harness module creates a path the allowlist does not cover. Filed against the manifest for Phase 2b, not against executionPerformed."
+      },
+      {
+        "id": "tmp-fixture-writes",
+        "what": "Synthetic fixture trees created under the system temp directory by the authoring lane's own verification (and, per attributionCorrection below, by review lanes as well): ten scanner fixtures for the H4 adversarial cases, and two symlink trees for the leaf-canonicalization test (the first at /private/tmp/gjc-symtest/, which produced the SECRET-OUTSIDE-REPO result, and a second under a mkdtemp path for the post-fix re-test).",
+        "cause": "Verification of H4's frozen comment rule and of H1's resolver required inputs that must NOT exist in the repository -- a repo-resident evasion fixture would itself be a Class-P/H violation and would trip H4's own scan.",
+        "whyItIsABreach": "Same clause as above: paths created outside Class P/H/W. Direction is the opposite of the .pyc case -- these were deliberate and are the sole evidence for two findings -- but the class violation is identical and is filed rather than excused.",
+        "cleanupState": "Mixed, and narrowed at pass 31 to what is checkable. The named root /private/tmp/gjc-symtest/ is ABSENT from disk, so the earlier unqualified 'the trees remain under the temp directory' was false for the one path this field names as load-bearing; that wording is withdrawn (pass-30 cleaner lane). The authoring lane did not itself delete its fixture trees, and several used mkdtemp so a full path list cannot be reconstructed. The load-bearing point for correctedOverclaims item 3 is unaffected: the SECRET-OUTSIDE-REPO result was observed when that tree existed, and its later absence does not retract the observation.",
+        "manifestGap": "The manifest provides no scratch class for verification fixtures that must not live in the repository. Filed for Phase 2b.",
+        "attributionCorrection": "ATTRIBUTION CORRECTED at pass 29. This class previously scoped H4-over-/tmp-fixture execution and scratch-path creation to the authoring lane. That scoping was false. Review lanes did the same thing repeatedly: QA lanes reported executing H4 as a copied module over synthetic mkdtemp fixture trees at passes 15, 16, 17, 20, 22, 24 and 26, each creating and then deleting its own fixture roots, and each reporting python3 -B so no bytecode byproduct was written. The pass-24 architect lane asked whether the pass-22 QA lane executed the unterminated-block case or merely read it; it executed, which makes the provenance clause in liveEvidenceObtained true and makes this class's authoring-lane-only scoping false. Two separable parts, both mine: the lanes' conduct was inside their assigned read-only mandate, so the defect is this ledger's attribution, not their behaviour; and the manifest's Class P/H allowlist covers neither review-lane scratch space nor review-lane interpreter invocation, which is the same manifest gap already filed for __pycache__. Found by the pass-24 architect lane."
+      },
+      {
+        "id": "argv-and-frozen-value-deviation",
+        "what": "Two related deviations from frozen manifest text, filed as one class after the pass-11 critic (F2) observed that the breach ledger recorded only path-class breaches.",
+        "deviation1": "The manifest freezes exactly one argv for Phase 2a: `shasum -a 256` over the five operands. That freeze was not honoured in full. Beyond it the authoring lane ran interpreter syntax gates, pure-bash tests of H1's own resolver and digest-guard functions, the H4 scanner module over synthetic /tmp fixtures, read-only `docker image inspect` catalog reads, and the frozen argv itself once per authoring pass -- so the run count equals authoringPass.pass, not one. The count is stated as a reference to that field rather than as a literal numeral ON PURPOSE: it was hardcoded as 'twelve' and went stale at pass 13 (pass-13 critic blocker), was rewritten to 'fourteen' and went stale again at pass 15 (pass-15 cleaner blocker). A restated numeral reproduces the same defect every pass; a field reference cannot.",
+        "deviation2": "The manifest's H5 block freezes executionPerformed as the literal 'none-beyond-local-content-hash', and the terminal addendum makes the verbatim block authoritative for values. This artifact deliberately carries a different, longer value because the frozen literal is false on this lane's own behaviour. The deviation direction is anti-overclaiming, but it is still a deviation from a frozen value and was previously unfiled.",
+        "whyNotCaughtEarlier": "Passes 1-8 asserted the frozen literal outright. Passes 9-10 restated it too narrowly. Pass 11 rewrote the value to be exhaustive but filed only path-class breaches, so the argv-count and frozen-value classes had no entry anywhere.",
+        "harmAssessment": "No database, network, container runtime, credential, or provider was reached by any of it. Every execution was read-only or confined to /tmp except the .pyc filed above. The material cost is that Phase 2a's execution surface is wider than the manifest authorized, and a reviewer relying on the frozen text alone would have understated it.",
+        "manifestGap": "A manifest that authorizes authoring six files while permitting exactly one argv cannot accommodate the verification needed to author them honestly -- syntax checking a Python module, unit-testing a bash function, or confirming an image digest all require additional argvs. Filed for Phase 2b: either widen the permitted set to name read-only verification explicitly, or state that verification argvs are outside the freeze."
+      }
+    ],
+    "attributionCorrection": {
+      "what": "The authoring lane gave two audit lanes contradictory answers about the .pyc.",
+      "toLane2072": "Answered that it was the authoring lane's, from a Python syntax gate. Correct.",
+      "toLane2074": "Answered that it was NOT the authoring lane's and was probably an auditor lane. Wrong.",
+      "reasoningError": "The second answer reasoned that H4's bytes date from 12:55:34 while the .pyc was born 14:06:41, so a compile 71 minutes later could not be the authoring lane's. That inference is invalid: a PEP-552 timestamp .pyc embeds the SOURCE mtime, which carries no information about when compilation happened. The compile traces to a post-edit verification batch at 14:06, two minutes after the H2 write at 14:04 -- a verification moment, not an edit moment.",
+      "credit": "Lane 2072 reached the correct attribution independently and did not soften it. Lane 2074 is credited for detecting the mid-audit H5 digest change, not for the attribution question, on which it received the wrong answer."
+    },
+    "liveEvidenceObtained": [
+      "The pinned image declares no VOLUME: docker image inspect --format '{{json .Config.Volumes}}' returns null, so the zero-mounts assertion is achievable rather than fail-closed-by-accident.",
+      "RepoDigests entries are TAGLESS on this host: [\"supabase/postgres@sha256:ac581882...\"]. Matching a tag-bearing form could never succeed and would have aborted the launcher before docker create.",
+      "The image .Id equals the pinned digest on this host: sha256:ac581882596ed0e46937ea6dd53a627d09f53e005d7264c2082a7ff7b62eaaca. This REFUTES the pass-11 architect's HIGH non-blocking finding, which reasoned from Docker's general data model that .Id (config digest) should never equal a RepoDigest (manifest digest) and predicted the launcher would abort before docker create. Its own lane could not run docker and stated confidence 0.85. On this host both digests are the same value, so the ANDed precondition is satisfiable. Phase 2b must re-confirm on its actual host, since the equality is not guaranteed in general.",
+      "The H4 scanner was executed over synthetic fixture trees under /tmp with python3 -B, never pointed at the repository tree. Cases exercised and matched: two clean files; a bare forbidden literal reported with file, line and literal; a line-initial '--' comment skipped; an indented '--' comment skipped; a '/* */' region skipped; a MID-LINE '--' followed by a literal CAUGHT rather than skipped; uppercase G026 matched as a case-distinct member; a literal after '*/' caught; an absent scan-set member exiting non-zero with a message that names no literal and no line number; and per-file attribution correct in both directions.\n\nONE CASE IS NOT 'as specified' and the earlier head sentence here wrongly counted it among them. An unterminated '/*' sets the in-block flag and blanks every remaining line to EOF, so a forbidden literal after it is NOT reported and the scan exits 0. That is fail-OPEN, the opposite direction from the mid-line '--' decision, which H4's own note defends as fail-closed. The frozen rule names a region between '/*' and '*/'; an unterminated opener closes no region, so treating it as comment-to-EOF is a permissive reading rather than a requirement. Found by the pass-22 QA lane (O5) and re-confirmed by execution at pass 24.\n\nNot live on current bytes: P1 and H3 contain zero '/*' and zero '*/' tokens, verified by direct scan, so the fail-open branch is unreachable for the two files in the scan set. Whether psql would additionally reject an unterminated block comment is a runtime prediction, not something this lane observed -- H3 has never been parsed by a SQL engine. It is filed in openForPhase2b rather than asserted here (pass-24 QA lane, O-P24-8).",
+      "The absent-scan-target path exits 1, reports 'is absent', and does NOT fabricate a literal match.",
+      "resolve_copy_source accepts only indices 1 and 2, returning canonical absolute paths, and rejects 3, 0, the empty string, ../../../etc/passwd, /etc/passwd, 1;id, $(id), and 1 2. Honest scope: those are index-domain rejections, not path-injection resistance -- see H2 WITHDRAWAL 3.",
+      "The leaf-symlink case is genuine path-resolution evidence: before the fix a symlink at sub/evil.sql aimed outside the repo was ACCEPTED and read SECRET-OUTSIDE-REPO; after the fix the identical fixture is REJECTED.",
+      "verify_copied_file residual guards are reachable. Executable evidence, from the authoring lane's own harness rather than from H1: with the launcher's own set -euo pipefail, a command that exits 0 while emitting empty output is rejected, and so are a non-hex first field and a 63-hex first field. DELIBERATELY NOT RESTATED HERE: H1's guard count, variable names, or assertion text. Two prior versions of this entry got that re-description wrong -- pass 16 invented labels H1 does not carry (GUARD-EMPTY / GUARD-MALFORMED were harness case names), and pass 17's correction then misquoted a ${digest} variable that exists in H1 only inside the historical NOTE describing the DELETED piped form, and undercounted H1's guards as one per side. H1's verify_copied_file is authoritative for the mechanism; read it directly. The now-deleted pass18DefectsFixed did mirror the guard shape, because a defect record cannot state what was false without naming it (that array was removed at pass 22, so this reference is historical and no longer checkable in this file) -- an earlier wording here claimed no mirror exists, which was false (cleaner lane, pass 19, N1). This entry now claims only the harness outcome, which is what the lane actually observed.",
+      "H1 sets set -euo pipefail at line 39 (cited as line 30 through pass 13; H1 grew above that point and the coordinate was never re-checked), so a failed docker exec inside a pipeline is caught by || fail. Confirmed by differential test: with pipefail the failure is caught, without it the failure is masked.",
+      "H3 structural balance, re-verified on pass-15 bytes (invariant across passes 13-15 because the pass-14 and pass-15 deltas were comment-only): IF 21 / END IF; 21, $assert$ delimiters 2, RAISE EXCEPTION 20, RAISE NOTICE 11. Verified by static count, not by executing psql -- H3 has never been run and in-lane SQL parsing is not available. Mechanism, since deviation1 enumerates execution classes and text counting is not among them: these counts come from read-only file reading plus regex search over already-read bytes, which engages no additional argv, starts no interpreter, and parses no SQL. It is not an AST or a psql dry run, and H3 remains unparsed by any SQL engine."
+    ],
+    "openForPhase2b": [
+      "Every runtime property is unverified. A1-A9 are reviewed as SQL text only; the replay-equality path, route-digest negative case, candidate-identifier guard, unique_violation handler, nonce-uniqueness rejection, and fixed-string error class are all catalog-invisible.",
+      "Pin the transaction isolation level or map 40001. The unique_violation mapping assumes READ COMMITTED; under REPEATABLE READ or SERIALIZABLE the concurrent case can surface serialization_failure, which is outside this body's mapped error set.",
+      "Confirm the lock-ladder divergence against the full G005 ladder once the remaining relations exist. P1 takes no lock; correctness rests on the partial unique index and the nonce uniqueness constraint.",
+      "Confirm in-image sha256sum availability. verify_copied_file fails closed if the binary is absent, but that is an unverified precondition.",
+      "Re-confirm .Id == IMAGE_DIGEST on the Phase-2b host. It holds here but is not guaranteed by Docker's data model; if it fails, compare against the config digest or drop the check and keep the tagless RepoDigests match.",
+      "Cross-candidate route_id reuse trips g038_deletion_route_pkey, yields NOT FOUND in the scope-pinned handler, and re-raises 23505 -> 409 -- the same residual class as the argued cross-scope nonce case, and currently unmentioned in P1's comments.",
+      "Tighten containment from prefix-under-repo-root to equality with the allowlisted path. An in-repo symlink at an allowlisted path still redirects which bytes reach docker cp. Not live: both paths are regular files.",
+      "No H5-digest pin exists in H1, so H2's hash-drift incident predicate has no detector: post-gate edits to P1 or H3 would copy in and verify cleanly against their own host bytes.",
+      "docker create is never passed --pull never, so no-registry-egress rests on a pre-create precondition with a TOCTOU window.",
+      "The ephemeral password appears in the docker create argv and therefore in the host process table. H2 discloses Config.Env but not this.",
+      "Resolve the manifest gaps filed above: bytecode byproducts, verification scratch space, and the one-argv freeze versus the argvs honest authoring requires.",
+      "H3 has never been parsed by a SQL engine. The pass-13 A4 mode-vector assertion, and every other A1-A9 assertion, is reviewed as text only. First Phase-2b execution is the first real parse; a syntax defect of the class caught manually this pass would surface there.",
+      "H5 narration has no mechanical gate. Under NO_RUNTIME no executed check can validate prose, so every claim this artifact makes about another file's bytes, about a lane attribution, or about its own history rests on per-pass reading. That is a statement about the absence of a gate, not about the content of any field.\n\nThe record of how that played out is in defectsByPass and in the withdrawals: from pass 14 onward, each pass introduced at least one fresh false or stale sentence into this block; blockers were not always closed by the pass they were filed against (see perPassNarrationRemoved). The range is deliberately open-ended rather than a pass list, because two earlier versions of this entry named a closing pass and both went stale the next pass.\n\nPhase 2b remedy: treat this block as unverified narration. The mechanically checkable fields are the files map, digestSetsByPass, defectsByPass against totalDefectsFoundAndFixed, and the ten frozen keys. Everything else here is prose. A gate that parses this block and rejects unscoped absolutes would close the class; none exists.\n\nCORRECTION: an earlier version of this entry asserted that defectsByPass was the only field stating per-pass counts, while pass 22 had added a second field that also stated them. Pass 23 deleted that second field. This entry no longer asserts uniqueness for any field, because uniqueness claims here have been falsified twice (pass-22 QA lane O2, pass-24 QA lane O-P24-6).",
+      "H4 treats an unterminated '/*' as a comment region running to EOF, which is fail-open: a forbidden literal after such an open is not reported. Zero '/*' tokens exist in P1 or H3 today, so nothing is currently hidden, and it is plausible but UNVERIFIED here that psql would reject an unterminated comment on load -- this artifact has never parsed H3 with any SQL engine, so that is a prediction and not evidence. An earlier wording stated it as fact; withdrawn (pass-24 QA lane O-P24-8, restated by the pass-26 cleaner lane). Phase 2b should decide whether to reject an unterminated block outright, which is the fail-closed reading of the frozen rule, or to record the permissive reading as deliberate."
+    ],
+    "perPassNarrationRemoved": "WHAT WAS DELETED. Pass 22 removed ten arrays from this block -- pass12DefectsFixed through pass21DefectsFixed -- totalling 44 entries. Each entry was a prose description of one defect found and fixed in that pass.\n\nWHY. From pass 14 onward -- deliberately open-ended, because two earlier versions of this sentence named a closing pass and both went stale on the next pass -- each pass introduced at least one fresh false or stale sentence into this block. Blockers were not always closed by the pass they were filed against: the openForPhase2b half of an earlier siting claim was filed by the pass-24 cleaner lane and not closed until pass 30, so passes 24 through 29 carried a known-false sentence. An earlier wording here and in openForPhase2b claimed each pass closed the blockers filed against it; that was false and is withdrawn (pass-30 QA lane, F2). The sentences asserted things about other files' bytes, about lane attributions, and about this ledger's own history. Under NO_RUNTIME no executed check validates prose, so the only defence was per-pass reading, and per-pass reading did not hold. The arrays were the largest concentration of that kind of sentence. Removing them reduced the surface; it did not eliminate it. What the surviving fields show, without quantifying over the whole history: correctedOverclaims carries an entry citing a filed blocker (pass-19 cleaner, blocker 1). liveEvidenceObtained and openForPhase2b carry entries citing non-blocking findings, not blockers (pass-19 cleaner N1; pass-22 QA O2 and pass-24 QA O-P24-6). An earlier version of this sentence said correctedOverclaims AND openForPhase2b each carried a blocker citation; the openForPhase2b half was false and is withdrawn (pass-24 cleaner lane, blocker 1). An earlier wording here said all three had hosted a filed blocker; that was false for liveEvidenceObtained, whose pass-19 cleaner finding was N1, non-blocking. Withdrawn (authoring lane's own probe, pass 26).\n\nWHAT SURVIVES. defectsByPass keeps the per-pass counts. correctedOverclaims keeps the withdrawals that had been promoted into it, each quoting the false claim before refuting it. stateDeltaBreachesAndDisclosureGaps keeps the three breach classes. liveEvidenceObtained and openForPhase2b are untouched by the deletion. digestSetsByPass keeps which operand moved in which pass.\n\nWHAT IS LOST, and how far. The itemized identity of most of those 44 defects, and the finding-lane attribution for them. Two recovery routes were checked. Git: this file is untracked, so no prior revision of it exists in version control. In-worktree review artifacts: the pass-24 QA lane found that ralplan stage artifacts under .gjc/ quote 17 of the deleted indices by exact index, several with entry text, so part of the history is reconstructible from those artifacts even though it is not reconstructible from this file or from git. An earlier sentence here asserted the loss could not be retrieved from any source in this repository; that was false and is withdrawn (pass-24 QA lane, O-P24-3).\n\nTwo findings the pass-20 cleaner lane filed were resolved by the deletion rather than by editing their text, and both were real. One concerned a merge claim in a pass-19 entry that its own sibling entry refuted. The other concerned a pass-20 entry asserting that the defects of passes 14 to 19 were never in a hashed operand; pass 14's minted defect was in H3's A4 comment, H3 is a hashed operand, and digestSetsByPass records H3 moving at pass 15 to fix it. Both host entries were deleted at pass 22, so neither claim is checkable in this file. An earlier version of this record named a fourth site for an outside-array blocker that no entry in this file supports; that citation was fabricated and is withdrawn (pass-24 QA lane, O-P24-2).",
+    "pass32Deletions": "Pass 32 is deletion-only. Two clauses pass 31 wrote into stateDeltaBreachesAndDisclosureGaps[tmp-fixture-writes].cleanupState were removed and nothing was written in their place. (1) 'Review lanes that created their own fixture roots each reported deleting them and verifying absence, per attributionCorrection in this same class.' -- attributionCorrection contains no 'verif' and no 'absence'; its actual wording is 'each creating and then deleting its own fixture roots, and each reporting python3 -B so no bytecode byproduct was written'. Pass 31 attributed to a sibling field a claim that field does not make, which is the fabricated-citation class this block already withdrew once at pass 24. The sentence was deleted rather than corrected because attributionCorrection already states the true version and the pointer added nothing. (2) 'whatever remains is reaped by the OS' -- an unobserved prediction stated as fact, inside the one field that opens by claiming it was narrowed to what is checkable. No lane observed any reaping. Deleted, not rescoped. Both were found by the pass-31 delta lane. Why deletion-only: pass 31 made three edits to this block. The two that were pure deletions were checked clean; the one that rewrote a sentence minted both of these defects. That is the narrowest available evidence on the question openForPhase2b records as unresolved -- writing prose into this block introduces defects at a rate that editing has not reduced, while deleting text from it has not. Pass 32 therefore removes text and adds no assertion beyond this record of what it removed."
+  }
+}
