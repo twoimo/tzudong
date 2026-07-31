@@ -15,16 +15,20 @@ BEGIN
 END
 $preflight$;
 
+-- Hosted Supabase's postgres role can assume supabase_admin but is intentionally
+-- not a direct member of application-owned NOLOGIN roles.
+SET LOCAL ROLE supabase_admin;
+
 DO $membership$
 BEGIN
   IF NOT pg_catalog.pg_has_role(
-    current_user,
+    session_user,
     'privacy_workflow_owner',
     'MEMBER'
   ) THEN
     EXECUTE pg_catalog.format(
       'GRANT privacy_workflow_owner TO %I',
-      current_user
+      session_user
     );
     PERFORM pg_catalog.set_config('g016.temporary_membership', 'true', true);
   ELSE
@@ -32,6 +36,7 @@ BEGIN
   END IF;
 END
 $membership$;
+RESET ROLE;
 
 SET LOCAL ROLE privacy_workflow_owner;
 
@@ -76,15 +81,17 @@ REVOKE ALL ON TABLE privacy_retention.privacy_audit_events
 
 RESET ROLE;
 
+SET LOCAL ROLE supabase_admin;
 DO $membership$
 BEGIN
   IF pg_catalog.current_setting('g016.temporary_membership', true) = 'true' THEN
     EXECUTE pg_catalog.format(
       'REVOKE privacy_workflow_owner FROM %I',
-      current_user
+      session_user
     );
   END IF;
 END
 $membership$;
+RESET ROLE;
 
 COMMIT;

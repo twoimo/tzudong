@@ -23,7 +23,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  RELEASE_MIGRATION_MANIFEST_SHA256: "a440b3911549dd9cd2346a306319c0b322f19805f4aba0cd015c4fc2c1d5229d"
+  RELEASE_MIGRATION_MANIFEST_SHA256: "fb18ae8365912533fcce0535538e07bb3b50e5d675ecf4532b972f1c84c4f66a"
 concurrency:
   group: supabase-migration-apply
   cancel-in-progress: false
