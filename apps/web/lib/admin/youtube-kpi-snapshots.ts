@@ -102,7 +102,7 @@ async function fetchLatestBucket(): Promise<string | null> {
     .maybeSingle<BucketRow>();
 
   if (error) {
-    console.warn('[youtube-kpi-snapshots] latest bucket unavailable:', error.message);
+    console.warn('[youtube-kpi-snapshots] latest bucket unavailable:');
     return null;
   }
 
@@ -130,7 +130,7 @@ async function fetchComparisonBucket(
     .maybeSingle<BucketRow>();
 
   if (error) {
-    console.warn('[youtube-kpi-snapshots] comparison bucket unavailable:', error.message);
+    console.warn('[youtube-kpi-snapshots] comparison bucket unavailable:');
     return null;
   }
 
@@ -161,7 +161,7 @@ async function fetchVideoSnapshotRows(
     }
 
     const { data, error } = await query.range(from, to);
-    if (error) throw new Error(`youtube-kpi-snapshot-videos:${error.message}`);
+    if (error) throw new Error('youtube-kpi-snapshot-videos:query_failed');
 
     if (data && data.length > 0) rows.push(...(data as VideoSnapshotRow[]));
     if (!data || data.length < SNAPSHOT_PAGE_SIZE) break;
@@ -196,7 +196,7 @@ async function fetchSnapshotMapForVideoIds(
       .eq('bucket_started_at', bucketStartedAt)
       .in('video_id', chunk);
 
-    if (error) throw new Error(`youtube-kpi-snapshot-video-map:${error.message}`);
+    if (error) throw new Error('youtube-kpi-snapshot-video-map:query_failed');
     for (const row of (data ?? []) as VideoSnapshotRow[]) {
       result.set(row.video_id, row);
     }
@@ -382,7 +382,7 @@ async function fetchLatestChannelSnapshotRow(): Promise<ChannelSnapshotRow | nul
     .maybeSingle<ChannelSnapshotRow>();
 
   if (error) {
-    console.warn('[youtube-kpi-snapshots] latest channel snapshot unavailable:', error.message);
+    console.warn('[youtube-kpi-snapshots] latest channel snapshot unavailable:');
     return null;
   }
 
@@ -410,7 +410,7 @@ async function fetchComparisonChannelSnapshotRow(
     .maybeSingle<ChannelSnapshotRow>();
 
   if (error) {
-    console.warn('[youtube-kpi-snapshots] comparison channel snapshot unavailable:', error.message);
+    console.warn('[youtube-kpi-snapshots] comparison channel snapshot unavailable:');
     return null;
   }
 

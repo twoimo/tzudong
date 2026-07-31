@@ -2,12 +2,39 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
+import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export const runtime = "nodejs";
 
 type RefreshCandidateStatus = "needs_review" | "approved" | "rejected" | "applied" | "superseded";
 type CandidateDecision = "approved" | "rejected" | "superseded";
 
+// record_candidate carries nested candidate_snapshot, query, and evidence records.
+const MAX_REFRESH_HISTORY_REQUEST_BYTES = 16 * 1024;
+
+type JsonObject = { [key: string]: Json | undefined };
+type RestaurantPatch = Database["public"]["Tables"]["restaurants"]["Update"];
+type CandidateDecisionRow = {
+  id: string;
+  restaurant_id: string;
+  candidate_status: RefreshCandidateStatus;
+  detected_change_types: string[] | null;
+  candidate_snapshot: JsonObject;
+};
+type IdRow = {
+  id: string;
+};
+type RefreshHistorySummary = {
+  approved_restaurants_total: number | null;
+  needs_review: number;
+  approved: number;
+  rejected: number;
+  applied: number;
+  superseded: number;
+  last_checked_at: string | null;
+};
 type RestaurantRow = {
   id: string;
   approved_name: string | null;
@@ -26,9 +53,9 @@ type CandidateRow = {
   run_id: string | null;
   candidate_status: RefreshCandidateStatus;
   detected_change_types: string[] | null;
-  previous_snapshot: Record<string, unknown>;
-  candidate_snapshot: Record<string, unknown>;
-  evidence: Record<string, unknown> | null;
+  previous_snapshot: JsonObject;
+  candidate_snapshot: JsonObject;
+  evidence: JsonObject | null;
   operator_decision: string | null;
   decided_at: string | null;
   applied_at: string | null;
@@ -39,29 +66,117 @@ type ReadbackRunRow = {
   id: string;
   restaurant_id: string;
   status: string | null;
-  query: Record<string, unknown> | null;
+  query: JsonObject | null;
   notes: string | null;
   completed_at: string | null;
   created_at: string;
 };
 
-const candidateStatuses = new Set<RefreshCandidateStatus>([
-  "needs_review",
-  "approved",
-  "rejected",
-  "applied",
-  "superseded",
-]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+function isJsonValue(value: unknown): value is Json {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  return isRecord(value) && Object.values(value).every(isJsonValue);
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return isRecord(value) && Object.values(value).every(isJsonValue);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRefreshCandidateStatus(value: unknown): value is RefreshCandidateStatus {
+  return value === "needs_review"
+    || value === "approved"
+    || value === "rejected"
+    || value === "applied"
+    || value === "superseded";
+}
+
+function isCandidateDecision(value: unknown): value is CandidateDecision {
+  return value === "approved" || value === "rejected" || value === "superseded";
+}
+
+function isRestaurantRow(value: unknown): value is RestaurantRow {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && (value.approved_name === null || typeof value.approved_name === "string")
+    && (value.phone === null || typeof value.phone === "string")
+    && (value.road_address === null || typeof value.road_address === "string")
+    && (value.jibun_address === null || typeof value.jibun_address === "string")
+    && (value.lat === null || typeof value.lat === "number")
+    && (value.lng === null || typeof value.lng === "number")
+    && (value.status === null || typeof value.status === "string")
+    && (value.updated_at === null || typeof value.updated_at === "string");
+}
+
+function isCandidateRow(value: unknown): value is CandidateRow {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.restaurant_id === "string"
+    && (value.run_id === null || typeof value.run_id === "string")
+    && isRefreshCandidateStatus(value.candidate_status)
+    && (value.detected_change_types === null || isStringArray(value.detected_change_types))
+    && isJsonObject(value.previous_snapshot)
+    && isJsonObject(value.candidate_snapshot)
+    && (value.evidence === null || isJsonObject(value.evidence))
+    && (value.operator_decision === null || typeof value.operator_decision === "string")
+    && (value.decided_at === null || typeof value.decided_at === "string")
+    && (value.applied_at === null || typeof value.applied_at === "string")
+    && typeof value.created_at === "string";
+}
+
+function isReadbackRunRow(value: unknown): value is ReadbackRunRow {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.restaurant_id === "string"
+    && (value.status === null || typeof value.status === "string")
+    && (value.query === null || isJsonObject(value.query))
+    && (value.notes === null || typeof value.notes === "string")
+    && (value.completed_at === null || typeof value.completed_at === "string")
+    && typeof value.created_at === "string";
+}
+
+function isCandidateDecisionRow(value: unknown): value is CandidateDecisionRow {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.restaurant_id === "string"
+    && isRefreshCandidateStatus(value.candidate_status)
+    && (value.detected_change_types === null || isStringArray(value.detected_change_types))
+    && isJsonObject(value.candidate_snapshot);
+}
+
+function isIdRow(value: unknown): value is IdRow {
+  return isRecord(value) && typeof value.id === "string";
+}
+
+function parseRows<T>(value: unknown, isRow: (item: unknown) => item is T): T[] {
+  if (!Array.isArray(value)) throw new Error("Invalid database response.");
+  const rows: T[] = [];
+  for (const item of value) {
+    if (!isRow(item)) throw new Error("Invalid database response.");
+    rows.push(item);
+  }
+  return rows;
+}
+
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+  const response = NextResponse.json(body, init);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function snapshotFromRestaurant(row: RestaurantRow) {
+function snapshotFromRestaurant(row: RestaurantRow): JsonObject {
   return {
     name: row.approved_name,
     phone: row.phone,
@@ -73,8 +188,8 @@ function snapshotFromRestaurant(row: RestaurantRow) {
   };
 }
 
-function candidatePatchFromSnapshot(snapshot: Record<string, unknown>, adminUserId: string) {
-  const patch: Record<string, unknown> = { updated_by_admin_id: adminUserId };
+function candidatePatchFromSnapshot(snapshot: JsonObject, adminUserId: string): RestaurantPatch {
+  const patch: RestaurantPatch = { updated_by_admin_id: adminUserId };
   const name = stringValue(snapshot.name ?? snapshot.approved_name);
   const phone = stringValue(snapshot.phone);
   const roadAddress = stringValue(snapshot.road_address);
@@ -92,7 +207,7 @@ function candidatePatchFromSnapshot(snapshot: Record<string, unknown>, adminUser
   return patch;
 }
 
-function hasMaterialRestaurantPatch(patch: Record<string, unknown>) {
+function hasMaterialRestaurantPatch(patch: RestaurantPatch) {
   return Object.keys(patch).some((key) => key !== "updated_by_admin_id");
 }
 
@@ -109,10 +224,11 @@ async function fetchRestaurantMap(
     .from("restaurants")
     .select("id, approved_name, phone, road_address, jibun_address, lat, lng, status, updated_at")
     .in("id", [...new Set(restaurantIds)])
-    .returns<RestaurantRow[]>();
+    .overrideTypes<RestaurantRow[], { merge: false }>();
 
   if (error) throw error;
-  return new Map((data ?? []).map((row) => [row.id, row]));
+  const restaurants = parseRows(data ?? [], isRestaurantRow);
+  return new Map(restaurants.map((row) => [row.id, row]));
 }
 
 async function fetchReadbackRunMap(
@@ -142,12 +258,12 @@ async function fetchReadbackRunMap(
     .in("restaurant_id", restaurantIds)
     .order("created_at", { ascending: false })
     .limit(200)
-    .returns<ReadbackRunRow[]>();
+    .overrideTypes<ReadbackRunRow[], { merge: false }>();
 
   if (error) throw error;
 
   const readbackRunMap = new Map<string, ReadbackRunRow>();
-  for (const run of data ?? []) {
+  for (const run of parseRows(data ?? [], isReadbackRunRow)) {
     const appliedCandidateId = stringValue(run.query?.applied_candidate_id);
     if (appliedCandidateId && appliedCandidateIds.has(appliedCandidateId) && !readbackRunMap.has(appliedCandidateId)) {
       readbackRunMap.set(appliedCandidateId, run);
@@ -177,8 +293,8 @@ export async function GET(request: NextRequest) {
     if (!auth.ok) return auth.response;
 
     const { searchParams } = new URL(request.url);
-    const requestedStatus = searchParams.get("status") as RefreshCandidateStatus | null;
-    const status = requestedStatus && candidateStatuses.has(requestedStatus) ? requestedStatus : null;
+    const requestedStatus = searchParams.get("status");
+    const status = isRefreshCandidateStatus(requestedStatus) ? requestedStatus : null;
     const search = searchParams.get("search")?.trim() || "";
     const supabase = createSupabaseServiceRoleClient();
 
@@ -199,13 +315,13 @@ export async function GET(request: NextRequest) {
       filteredCandidateQuery
         .order("created_at", { ascending: false })
         .limit(100)
-        .returns<CandidateRow[]>(),
+        .overrideTypes<CandidateRow[], { merge: false }>(),
     ]);
 
     if (countError) throw countError;
     if (candidateError) throw candidateError;
 
-    const candidateRows = candidates ?? [];
+    const candidateRows = parseRows(candidates ?? [], isCandidateRow);
     const [restaurantMap, readbackRunMap] = await Promise.all([
       fetchRestaurantMap(
         supabase,
@@ -246,7 +362,7 @@ export async function GET(request: NextRequest) {
         return haystack.includes(search.toLowerCase());
       });
 
-    const summary = rows.reduce(
+    const summary = rows.reduce<RefreshHistorySummary>(
       (acc, row) => {
         acc[row.candidate_status] += 1;
         if (!acc.last_checked_at || row.created_at > acc.last_checked_at) acc.last_checked_at = row.created_at;
@@ -259,13 +375,13 @@ export async function GET(request: NextRequest) {
         rejected: 0,
         applied: 0,
         superseded: 0,
-        last_checked_at: null as string | null,
+        last_checked_at: null,
       },
     );
 
     return NextResponse.json({ summary, candidates: rows }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("[admin/restaurant-refresh-history] failed to list refresh history:", error);
+    console.error("[admin/restaurant-refresh-history] failed to list refresh history:");
     return NextResponse.json({ error: "맛집 최신화 이력을 불러오지 못했습니다." }, { status: 500 });
   }
 }
@@ -273,11 +389,32 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+    if (!auth.ok) {
+      auth.response.headers.set("Cache-Control", "no-store");
+      return auth.response;
+    }
 
-    const body = await request.json().catch(() => null);
+    if (!isTrustedSameOriginMutation(request)) {
+      return noStoreJson(
+        { error: "요청을 처리할 수 없습니다." },
+        { status: 403 },
+      );
+    }
+
+    const requestBody = await readBoundedJsonRequest(request, MAX_REFRESH_HISTORY_REQUEST_BYTES);
+    if (!requestBody.ok) {
+      return noStoreJson(
+        { error: "요청 본문이 올바르지 않습니다." },
+        { status: 400 },
+      );
+    }
+
+    const body = requestBody.value;
     if (!isRecord(body)) {
-      return NextResponse.json({ error: "요청 본문이 올바르지 않습니다." }, { status: 400 });
+      return noStoreJson(
+        { error: "요청 본문이 올바르지 않습니다." },
+        { status: 400 },
+      );
     }
 
     const action = stringValue(body.action);
@@ -285,7 +422,7 @@ export async function POST(request: NextRequest) {
 
     if (action === "record_candidate") {
       const restaurantId = stringValue(body.restaurant_id);
-      const candidateSnapshot = isRecord(body.candidate_snapshot) ? body.candidate_snapshot : null;
+      const candidateSnapshot = isJsonObject(body.candidate_snapshot) ? body.candidate_snapshot : null;
       if (!restaurantId || !candidateSnapshot) {
         return NextResponse.json({ error: "restaurant_id와 candidate_snapshot이 필요합니다." }, { status: 400 });
       }
@@ -296,9 +433,9 @@ export async function POST(request: NextRequest) {
         .eq("id", restaurantId)
         .eq("status", "approved")
         .single()
-        .returns<RestaurantRow>();
+        .overrideTypes<RestaurantRow, { merge: false }>();
 
-      if (restaurantError || !restaurant) {
+      if (restaurantError || !isRestaurantRow(restaurant)) {
         return NextResponse.json({ error: "승인된 맛집을 찾지 못했습니다." }, { status: 404 });
       }
 
@@ -309,16 +446,16 @@ export async function POST(request: NextRequest) {
           requested_by_admin_id: auth.userId,
           run_type: stringValue(body.run_type) || "manual_check",
           status: "completed",
-          query: isRecord(body.query) ? body.query : {},
+          query: isJsonObject(body.query) ? body.query : {},
           source_snapshot: snapshotFromRestaurant(restaurant),
           notes: stringValue(body.notes),
           completed_at: new Date().toISOString(),
         })
         .select("id")
         .single()
-        .returns<{ id: string }>();
+        .overrideTypes<IdRow, { merge: false }>();
 
-      if (runError || !run) throw runError;
+      if (runError || !isIdRow(run)) throw runError;
 
       const detectedChangeTypes = Array.isArray(body.detected_change_types)
         ? body.detected_change_types.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
@@ -332,22 +469,23 @@ export async function POST(request: NextRequest) {
           detected_change_types: detectedChangeTypes,
           previous_snapshot: snapshotFromRestaurant(restaurant),
           candidate_snapshot: candidateSnapshot,
-          evidence: isRecord(body.evidence) ? body.evidence : {},
+          evidence: isJsonObject(body.evidence) ? body.evidence : {},
           candidate_status: "needs_review",
         })
         .select("id")
         .single()
-        .returns<{ id: string }>();
+        .overrideTypes<IdRow, { merge: false }>();
 
-      if (candidateError || !candidate) throw candidateError;
+      if (candidateError || !isIdRow(candidate)) throw candidateError;
       return NextResponse.json({ ok: true, candidate_id: candidate.id }, { headers: { "Cache-Control": "no-store" } });
     }
 
     if (action === "decide_candidate") {
       const candidateId = stringValue(body.candidate_id);
-      const decision = stringValue(body.decision) as CandidateDecision | null;
+      const decisionValue = stringValue(body.decision);
+      const decision = isCandidateDecision(decisionValue) ? decisionValue : null;
       const apply = body.apply === true;
-      if (!candidateId || !decision || !["approved", "rejected", "superseded"].includes(decision)) {
+      if (!candidateId || !decision) {
         return NextResponse.json({ error: "candidate_id와 유효한 decision이 필요합니다." }, { status: 400 });
       }
 
@@ -356,9 +494,9 @@ export async function POST(request: NextRequest) {
         .select("id, restaurant_id, candidate_status, detected_change_types, candidate_snapshot")
         .eq("id", candidateId)
         .single()
-        .returns<{ id: string; restaurant_id: string; candidate_status: RefreshCandidateStatus; detected_change_types: string[] | null; candidate_snapshot: Record<string, unknown> }>();
+        .overrideTypes<CandidateDecisionRow, { merge: false }>();
 
-      if (candidateError || !candidate) {
+      if (candidateError || !isCandidateDecisionRow(candidate)) {
         return NextResponse.json({ error: "최신화 후보를 찾지 못했습니다." }, { status: 404 });
       }
 
@@ -388,8 +526,8 @@ export async function POST(request: NextRequest) {
           .eq("status", "approved")
           .select("id")
           .single()
-          .returns<{ id: string }>();
-        if (updateError || !updatedRestaurant) {
+          .overrideTypes<IdRow, { merge: false }>();
+        if (updateError || !isIdRow(updatedRestaurant)) {
           return NextResponse.json({ error: "승인된 맛집에만 최신화 후보를 적용할 수 있습니다." }, { status: 409 });
         }
       }
@@ -413,7 +551,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "지원하지 않는 action입니다." }, { status: 400 });
   } catch (error) {
-    console.error("[admin/restaurant-refresh-history] failed to mutate refresh history:", error);
+    console.error("[admin/restaurant-refresh-history] failed to mutate refresh history:");
     return NextResponse.json({ error: "맛집 최신화 이력을 저장하지 못했습니다." }, { status: 500 });
   }
 }

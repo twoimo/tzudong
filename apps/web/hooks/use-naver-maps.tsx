@@ -104,7 +104,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             };
 
             script.onerror = (error) => {
-                console.error("❌ 네이버 지도 API 스크립트 로드 실패:", error);
+                console.error("❌ 네이버 지도 API 스크립트 로드 실패:");
                 setLoadError(
                     new Error(
                         "네이버 지도 API 스크립트 로드 실패 - Client ID 또는 웹 서비스 URL을 확인해주세요."

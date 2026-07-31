@@ -14,6 +14,8 @@ import {
     getGuardedMutationErrorName,
     isGuardedMutationConfirmationValid,
 } from '@/lib/admin/guarded-mutation-contract';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +25,8 @@ const GITHUB_OWNER = process.env.GITHUB_OWNER!;
 const GITHUB_REPO = process.env.GITHUB_REPO!;
 
 const OCR_RESET_ALL_CONFIRMATION = 'OCR초기화';
+
+const MAX_OCR_RESET_ALL_REQUEST_BYTES = 4 * 1024;
 
 function hasGuardedMutationConfirmation(
     request: Request,
@@ -34,27 +38,53 @@ function hasGuardedMutationConfirmation(
     );
 }
 
+function noStoreJson(body: unknown, init: ResponseInit = {}) {
+    const response = NextResponse.json(body, init);
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+}
+
 export async function POST(request: Request) {
     try {
         const auth = await requireAdmin();
-        if (!auth.ok) return auth.response;
-
-        let body: { confirmation?: string; guardedMutationConfirmation?: string } = {};
-        try {
-            body = await request.json();
-        } catch {
-            body = {};
+        if (!auth.ok) {
+            auth.response.headers.set('Cache-Control', 'no-store');
+            return auth.response;
         }
 
+        if (!isTrustedSameOriginMutation(request)) {
+            return noStoreJson(
+                { error: '요청을 처리할 수 없습니다.' },
+                { status: 403 }
+            );
+        }
+
+        const requestBody = await readBoundedJsonRequest(request, MAX_OCR_RESET_ALL_REQUEST_BYTES);
+        if (
+            !requestBody.ok ||
+            !requestBody.value ||
+            typeof requestBody.value !== 'object' ||
+            Array.isArray(requestBody.value)
+        ) {
+            return noStoreJson(
+                { error: '요청 본문이 올바르지 않습니다.' },
+                { status: 400 }
+            );
+        }
+        const body = requestBody.value as {
+            confirmation?: string;
+            guardedMutationConfirmation?: string;
+        };
+
         if (!hasGuardedMutationConfirmation(request, body)) {
-            return NextResponse.json(
+            return noStoreJson(
                 buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all'),
                 { status: 400 }
             );
         }
 
         if (body.confirmation !== OCR_RESET_ALL_CONFIRMATION) {
-            return NextResponse.json(
+            return noStoreJson(
                 {
                     ...buildGuardedMutationRequiredResponse('ocr_receipt', 'reset_all'),
                     error: 'OCR 전체 초기화 확인 문구가 일치하지 않습니다.',

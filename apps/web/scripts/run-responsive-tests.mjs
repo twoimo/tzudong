@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { logCliError } from './privacy-safe-cli-log.mjs';
 
 const STRICT_ENV = ['1', 'true', 'yes', 'on'];
 const strictMode = STRICT_ENV.includes(
@@ -17,6 +18,26 @@ const defaultWorkers = Math.max(
 );
 const serverMode = String(process.env.RESPONSIVE_TEST_SERVER_MODE ?? 'production').toLowerCase();
 const adminAuthFilePath = path.join(projectRoot, 'tests', '.auth', 'admin.json');
+const SAFE_LIBRARY_NAME_PATTERN = /^lib[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$/;
+const MISSING_LIBRARY_LINE_PATTERN = /^([A-Za-z0-9][A-Za-z0-9._+-]{0,127})\s+=>\s+not found$/;
+
+class OperationFailure extends Error {
+    constructor(code) {
+        super();
+        this.code = code;
+    }
+}
+
+function reportFailure(code) {
+    logCliError(new OperationFailure(code));
+}
+
+function logMissingLibraryFacts(missingLibraries, write = console.warn) {
+    write(`[responsive-test] missing_library_count=${missingLibraries.length}`);
+    if (missingLibraries.length > 0) {
+        write(`[responsive-test] missing_libraries=${missingLibraries.join(', ')}`);
+    }
+}
 
 function run(command, args, options = {}) {
     return spawnSync(command, args, {
@@ -103,24 +124,40 @@ function withSupplementalLibraryEnv() {
 
 function collectMissingLibraries(binaryPath, env) {
     if (process.platform === 'win32') {
-        return [];
+        return { inspectionFailed: false, missingLibraries: [] };
     }
 
     const ldd = run('ldd', [binaryPath], { env });
-    if (ldd.status !== 0) {
-        return [`ldd failed: ${ldd.stderr.trim() || ldd.stdout.trim() || 'unknown error'}`];
+    if (ldd.status !== 0 || ldd.error) {
+        return { inspectionFailed: true, missingLibraries: [] };
     }
 
-    return ldd.stdout
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.includes('not found'))
-        .map((line) => line.split('=>')[0]?.trim() || line);
+    let inspectionFailed = false;
+    const missingLibraries = new Set();
+    const output = typeof ldd.stdout === 'string' ? ldd.stdout : '';
+    for (const rawLine of output.split('\n')) {
+        const line = rawLine.trim();
+        if (!line.includes('not found')) {
+            continue;
+        }
+
+        const match = line.match(MISSING_LIBRARY_LINE_PATTERN);
+        if (!match || !SAFE_LIBRARY_NAME_PATTERN.test(match[1])) {
+            inspectionFailed = true;
+            continue;
+        }
+        missingLibraries.add(match[1]);
+    }
+
+    return {
+        inspectionFailed,
+        missingLibraries: [...missingLibraries],
+    };
 }
 
-function printSkip(missingLibraries) {
-    console.warn('[responsive-test] SKIP: missing Playwright system dependencies');
-    console.warn(`[responsive-test] missing libs: ${missingLibraries.join(', ')}`);
+function printSkip(code, missingLibraries) {
+    console.warn(`[responsive-test] SKIP code=${code}`);
+    logMissingLibraryFacts(missingLibraries);
     console.warn('[responsive-test] remediation: run `npx playwright install-deps chromium` in an interactive sudo shell.');
     console.warn('[responsive-test] set RESPONSIVE_TEST_STRICT=1 to fail instead of skipping.');
 }
@@ -225,61 +262,77 @@ function maybeBuildForProduction(env) {
     }
 
     console.log('[responsive-test] building Next.js app for production server mode...');
-    const build = spawnSync('bun', ['run', 'build'], { stdio: 'inherit', shell: false, env });
+    const build = spawnSync('bun', ['run', 'build'], { stdio: 'ignore', shell: false, env });
     return build.status === 0;
 }
 
 function main() {
-    const executable = resolveChromiumExecutable();
-    const runtimeEnv = ensureServerConfig(withSupplementalLibraryEnv());
+    try {
+        const executable = resolveChromiumExecutable();
+        const runtimeEnv = ensureServerConfig(withSupplementalLibraryEnv());
 
-    if (!executable) {
-        const message = '[responsive-test] Playwright chromium executable not found. Run `npx playwright install chromium`.';
-        if (strictMode) {
-            console.error(message);
+        if (!executable) {
+            if (strictMode) {
+                reportFailure('RESPONSIVE_TEST_CHROMIUM_UNAVAILABLE');
+                process.exit(1);
+            }
+            console.warn('[responsive-test] SKIP code=RESPONSIVE_TEST_CHROMIUM_UNAVAILABLE');
+            console.warn('[responsive-test] remediation: run `npx playwright install chromium`.');
+            console.warn('[responsive-test] set RESPONSIVE_TEST_STRICT=1 to fail instead of skipping.');
+            process.exit(0);
+        }
+
+        const libraryCheck = collectMissingLibraries(executable, runtimeEnv);
+        if (libraryCheck.inspectionFailed) {
+            if (strictMode) {
+                reportFailure('RESPONSIVE_TEST_LIBRARY_INSPECTION_FAILED');
+                logMissingLibraryFacts(libraryCheck.missingLibraries, console.error);
+                process.exit(1);
+            }
+            printSkip('RESPONSIVE_TEST_LIBRARY_INSPECTION_FAILED', libraryCheck.missingLibraries);
+            process.exit(0);
+        }
+
+        if (libraryCheck.missingLibraries.length > 0) {
+            if (strictMode) {
+                reportFailure('RESPONSIVE_TEST_MISSING_SYSTEM_LIBRARIES');
+                logMissingLibraryFacts(libraryCheck.missingLibraries, console.error);
+                process.exit(1);
+            }
+            printSkip('RESPONSIVE_TEST_MISSING_SYSTEM_LIBRARIES', libraryCheck.missingLibraries);
+            process.exit(0);
+        }
+
+        if (!maybeBuildForProduction(runtimeEnv)) {
+            reportFailure('RESPONSIVE_TEST_BUILD_FAILED');
             process.exit(1);
         }
-        console.warn(message);
-        console.warn('[responsive-test] SKIP (non-strict mode).');
-        process.exit(0);
-    }
 
-    const missingLibraries = collectMissingLibraries(executable, runtimeEnv);
-    if (missingLibraries.length > 0) {
-        if (strictMode) {
-            console.error('[responsive-test] missing Playwright system dependencies (strict mode):');
-            missingLibraries.forEach((lib) => console.error(`- ${lib}`));
-            process.exit(1);
+        if (!hasAdminAuthHint()) {
+            console.warn('[responsive-test] admin auth not detected (configured credentials, cookie, or local state).');
+            console.warn('[responsive-test] admin route responsive cases will be skipped.');
         }
-        printSkip(missingLibraries);
-        process.exit(0);
-    }
 
-    if (!maybeBuildForProduction(runtimeEnv)) {
-        console.error('[responsive-test] build failed. Aborting responsive test run.');
+        const forwardedArgs = process.argv.slice(2);
+        const workerArgs = hasWorkersFlag(forwardedArgs)
+            ? forwardedArgs
+            : [`--workers=${defaultWorkers}`, ...forwardedArgs];
+        const playwrightCli = path.join(projectRoot, 'node_modules', 'playwright', 'cli.js');
+        const playwrightArgs = ['test', 'tests/responsive-overflow.spec.ts', ...workerArgs];
+        const result = spawnSync(
+            process.execPath,
+            [playwrightCli, ...playwrightArgs],
+            { stdio: 'ignore', shell: false, env: runtimeEnv }
+        );
+        if (typeof result.status === 'number') {
+            process.exit(result.status);
+        }
+        reportFailure('RESPONSIVE_TEST_PLAYWRIGHT_LAUNCH_FAILED');
+        process.exit(1);
+    } catch {
+        reportFailure('RESPONSIVE_TEST_RUNNER_FAILED');
         process.exit(1);
     }
-
-    if (!hasAdminAuthHint()) {
-        console.warn('[responsive-test] admin auth not detected (E2E_ADMIN_EMAIL/PASSWORD or INSIGHTS_CHAT_ADMIN_COOKIE or tests/.auth/admin.json).');
-        console.warn('[responsive-test] admin route responsive cases will be skipped.');
-    }
-
-    const forwardedArgs = process.argv.slice(2);
-    const workerArgs = hasWorkersFlag(forwardedArgs)
-        ? forwardedArgs
-        : [`--workers=${defaultWorkers}`, ...forwardedArgs];
-    const playwrightCli = path.join(projectRoot, 'node_modules', 'playwright', 'cli.js');
-    const playwrightArgs = ['test', 'tests/responsive-overflow.spec.ts', ...workerArgs];
-    const result = spawnSync(
-        process.execPath,
-        [playwrightCli, ...playwrightArgs],
-        { stdio: 'inherit', shell: false, env: runtimeEnv }
-    );
-    if (typeof result.status === 'number') {
-        process.exit(result.status);
-    }
-    process.exit(1);
 }
 
 main();

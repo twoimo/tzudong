@@ -17,8 +17,7 @@ export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
                     ['status', 'eq.approved'],
                 ]);
                 return mergeRestaurants(data);
-            } catch (error) {
-                console.error('글로벌 맛집 데이터 조회 실패:', error);
+            } catch {
                 return [];
             }
         },

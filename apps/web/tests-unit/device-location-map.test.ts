@@ -51,10 +51,13 @@ describe('device location map helpers', () => {
     test('clamps accuracy radius for map overlays', () => {
         expect(resolveDeviceLocationAccuracyRadius(null)).toBeNull();
         expect(resolveDeviceLocationAccuracyRadius(Number.NaN)).toBeNull();
-        expect(resolveDeviceLocationAccuracyRadius(4)).toBe(12);
+        expect(resolveDeviceLocationAccuracyRadius(Number.POSITIVE_INFINITY)).toBeNull();
+        expect(resolveDeviceLocationAccuracyRadius(-50)).toBe(12);
+        expect(resolveDeviceLocationAccuracyRadius(0)).toBe(12);
         expect(resolveDeviceLocationAccuracyRadius(42)).toBe(42);
-        expect(resolveDeviceLocationAccuracyRadius(800)).toBe(500);
-        expect(resolveDeviceLocationAccuracyRadius(8, 5, 20)).toBe(8);
+        expect(resolveDeviceLocationAccuracyRadius(Number.MAX_VALUE)).toBe(500);
+        expect(resolveDeviceLocationAccuracyRadius(-50, 25, 75)).toBe(25);
+        expect(resolveDeviceLocationAccuracyRadius(Number.MAX_VALUE, 25, 75)).toBe(75);
     });
 
     test('keeps device-location focus zoom at least the map minimum', () => {
@@ -181,5 +184,25 @@ describe('device location map helpers', () => {
         const headingHtml = buildDeviceLocationMarkerHtml({ accuracy: 17.2, heading: 92.4, mode: 'heading' });
         expect(headingHtml).toContain('92°');
         expect(headingHtml).toContain('rotate(92.4deg)');
+    });
+
+    test('uses the bounded map radius for position-marker accuracy labels', () => {
+        const cases = [
+            { accuracy: -50, expectedRadius: 12, expectedLabel: '12m' },
+            { accuracy: 0, expectedRadius: 12, expectedLabel: '12m' },
+            { accuracy: 42, expectedRadius: 42, expectedLabel: '42m' },
+            { accuracy: Number.MAX_VALUE, expectedRadius: 500, expectedLabel: '500m' },
+            { accuracy: Number.POSITIVE_INFINITY, expectedRadius: null, expectedLabel: '현재 위치' },
+            { accuracy: Number.NaN, expectedRadius: null, expectedLabel: '현재 위치' },
+            { accuracy: null, expectedRadius: null, expectedLabel: '현재 위치' },
+        ];
+
+        for (const { accuracy, expectedRadius, expectedLabel } of cases) {
+            const markerHtml = buildDeviceLocationMarkerHtml({ accuracy, heading: null, mode: 'position' });
+
+            expect(resolveDeviceLocationAccuracyRadius(accuracy)).toBe(expectedRadius);
+            expect(markerHtml).toContain(`>${expectedLabel}</span>`);
+            expect(markerHtml).not.toMatch(/-50m|Infinity|NaN|e[+-]\d+m/);
+        }
     });
 });

@@ -3,15 +3,55 @@ import time
 import os
 import json
 from patchright.sync_api import sync_playwright
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+BACKEND_ROOT = SCRIPT_DIR.parents[1]
+REPO_ROOT = BACKEND_ROOT.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from backend.utils.privacy_log import safe_error_name
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}")
+
+def load_cookies_securely(cookie_file):
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(cookie_file, flags)
+    with os.fdopen(descriptor, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def save_cookies_securely(cookie_file, cookies):
+    directory = os.path.dirname(cookie_file)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    if os.name != "nt":
+        os.chmod(directory, 0o700)
+
+    temporary = f"{cookie_file}.tmp-{os.getpid()}"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(temporary, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(cookies, handle, separators=(",", ":"))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, cookie_file)
+        if os.name != "nt":
+            os.chmod(cookie_file, 0o600)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
 
 def main():
     cookie_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
     
     log("Gemini 웹 브라우저 자동 로그인 및 쿠키 추출기")
-    log(f"쿠키 저장 경로: {cookie_file}")
+    log("쿠키 저장소 준비 완료")
     
     with sync_playwright() as p:
         # patchright 런칭 (구글/클라우드플레어 우회에 특화됨)
@@ -25,11 +65,10 @@ def main():
         if os.path.exists(cookie_file):
             log("기존 쿠키 로드 중...")
             try:
-                with open(cookie_file, "r", encoding="utf-8") as f:
-                    cookies = json.load(f)
-                    context.add_cookies(cookies)
-            except Exception as e:
-                log(f"기존 쿠키 로드 실패: {e}")
+                cookies = load_cookies_securely(cookie_file)
+                context.add_cookies(cookies)
+            except Exception as error:
+                log(f"기존 쿠키 로드 실패: {safe_error_name(error)}")
 
         page = context.new_page()
         log("gemini.google.com 이동 중...")
@@ -54,18 +93,14 @@ def main():
             # 쿠키 추출 및 저장
             new_cookies = context.cookies()
             
-            # data 폴더가 없으면 생성
-            os.makedirs(os.path.dirname(cookie_file), exist_ok=True)
-            
-            with open(cookie_file, "w", encoding="utf-8") as f:
-                json.dump(new_cookies, f, indent=2)
-                
-            log(f"✅ 인증 쿠키 추출 및 저장 완료: {cookie_file}")
+            save_cookies_securely(cookie_file, new_cookies)
+
+            log("✅ 인증 쿠키 추출 및 저장 완료")
             log("브라우저를 닫습니다. 이제 폴백 스크립트가 이 쿠키를 사용하여 백그라운드에서도 동작할 수 있습니다.")
             time.sleep(3)
             
-        except Exception as e:
-            log(f"❌ 화면 인식 실패 또는 시간 초과: {str(e)}")
+        except Exception as error:
+            log(f"❌ 화면 인식 실패 또는 시간 초과: {safe_error_name(error)}")
             log("로그인을 완료하지 못했거나, 화면 UI가 변경되었을 수 있습니다.")
             sys.exit(1)
             

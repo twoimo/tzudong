@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional
 
 
@@ -98,7 +98,7 @@ def validate(profile: str, env: Dict[str, str]) -> Dict[str, object]:
 
     return {
         "schemaVersion": 1,
-        "checkedAt": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "checkedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "profile": profile,
         "ok": not missing_required and not forbidden_present,
         "required": _status_map(env, required),

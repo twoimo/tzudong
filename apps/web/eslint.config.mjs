@@ -2,9 +2,6 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 
 const eslintConfig = [
     {
-        linterOptions: {
-            reportUnusedDisableDirectives: 'off',
-        },
         ignores: [
             'node_modules/**',
             '.next/**',
@@ -18,6 +15,11 @@ const eslintConfig = [
             'playwright-report/**',
             'test-results/**',
         ],
+    },
+    {
+        linterOptions: {
+            reportUnusedDisableDirectives: 'off',
+        },
     },
     ...nextCoreWebVitals,
     {

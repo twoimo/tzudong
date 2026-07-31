@@ -425,7 +425,7 @@ async function normalizeCandidates(rawManifest: RawReleaseManifest, manifestPath
       });
     } catch (error) {
       const reason = options.mirrorCandidateImages === false ? 'public-image-unavailable' : 'source_image_unavailable';
-      if (options.mirrorCandidateImages !== false) console.error('[youtube-thumbnail/release-candidates] failed to mirror manifest artifact:', error);
+      if (options.mirrorCandidateImages !== false) console.error('[youtube-thumbnail/release-candidates] failed to mirror manifest artifact:');
       warnings.push(`mirror-failed:${toString(rawCandidate.id, 120) || 'unknown'}:${reason}`);
     }
   }

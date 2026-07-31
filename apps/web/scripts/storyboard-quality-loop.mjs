@@ -4,10 +4,12 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = resolve(SCRIPT_DIR, '..');
 const DEFAULT_CASE_COUNT = 12;
+const statusError = (code) => Object.assign(new Error(code), { code });
 
 const SCENARIOS = [
   {
@@ -131,12 +133,12 @@ function parseArgs(argv) {
       printHelp();
       process.exit(0);
     } else {
-      throw new Error(`Unknown argument: ${arg}`);
+      throw statusError('STORYBOARD_QUALITY_UNKNOWN_ARGUMENT');
     }
   }
 
   if (!Number.isFinite(options.cases) || options.cases < 1) {
-    throw new Error('--cases must be a positive integer');
+    throw statusError('STORYBOARD_QUALITY_INVALID_CASE_COUNT');
   }
 
   options.cases = Math.min(options.cases, SCENARIOS.length);
@@ -209,8 +211,8 @@ function safeGitStatus() {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim().split(/\r?\n/).filter(Boolean);
-  } catch (error) {
-    return [`git status unavailable: ${error.message}`];
+  } catch {
+    return ['git-status-unavailable'];
   }
 }
 
@@ -241,7 +243,7 @@ function classifyDirtyFiles(statusLines) {
       scope = 'storyboard-quality-loop';
     }
 
-    return { status: line.slice(0, 2), file, scope };
+    return { status: line.slice(0, 2), file: redactCliText(file, 240), scope };
   });
 }
 
@@ -278,13 +280,13 @@ function collectTrustedSeedImages(seedFile) {
 function resolveOutputDirectory(outputDir, runId) {
   const relativeOutput = outputDir || `.omx/storyboard-quality-loop/${runId}`;
   if (isAbsolute(relativeOutput)) {
-    throw new Error('--output-dir must be relative to the web app root');
+    throw statusError('STORYBOARD_QUALITY_OUTPUT_DIRECTORY_ABSOLUTE');
   }
 
   const resolved = resolve(WEB_ROOT, relativeOutput);
   const artifactRoot = resolve(WEB_ROOT, '.omx');
   if (relative(artifactRoot, resolved).startsWith('..')) {
-    throw new Error('--output-dir must stay under .omx/');
+    throw statusError('STORYBOARD_QUALITY_OUTPUT_DIRECTORY_OUTSIDE_ARTIFACTS');
   }
 
   return resolved;
@@ -403,13 +405,18 @@ async function httpReadback(baseUrl) {
     const response = await fetch(url, { cache: 'no-store' });
     return {
       mode: 'http',
-      url,
+      url: redactCliText(url, 512),
       ok: response.ok,
       status: response.status,
       evidence: response.ok ? 'Public storyboard seed JSON is reachable over HTTP.' : 'HTTP readback failed.',
     };
-  } catch (error) {
-    return { mode: 'http', url, ok: false, evidence: error.message };
+  } catch {
+    return {
+      mode: 'http',
+      url: redactCliText(url, 512),
+      ok: false,
+      evidence: 'HTTP_READBACK_TRANSPORT_FAILURE',
+    };
   }
 }
 
@@ -502,7 +509,7 @@ async function main() {
     minScore: Math.min(...totals),
     maxScore: Math.max(...totals),
     exactImageProvenance: {
-      source: options.seedFile,
+      source: redactCliText(options.seedFile, 240),
       trustedImageCount: trustedImages.filter((image) => image.exists).length,
       model: 'gpt-image-2',
       failClosed: trustedImages.length === 0,
@@ -539,6 +546,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`[storyboard-quality-loop] ${error.stack || error.message}`);
+  logCliError(error, (line) => process.stderr.write(`[storyboard-quality-loop] ${line}`));
   process.exit(1);
 });

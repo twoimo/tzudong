@@ -9,8 +9,13 @@ import {
 const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
 const ADMIN_STORAGE_STATE = 'tests/.auth/admin.json';
+const DEPENDENCY_MODERNIZATION_SPEC = /dependency-modernization\.spec\.ts$/;
+const runsDependencyModernizationSpec = process.argv.some((argument) =>
+    DEPENDENCY_MODERNIZATION_SPEC.test(argument.replaceAll('\\', '/'))
+);
 const PLAYWRIGHT_WEB_SERVER_COMMAND =
-    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ?? 'bun run dev:playwright';
+    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
+    (runsDependencyModernizationSpec ? 'bun run start:playwright' : 'bun run dev:playwright');
 const PLAYWRIGHT_WEB_SERVER_URL =
     process.env.PLAYWRIGHT_WEB_SERVER_URL ?? 'http://localhost:8080/api/health';
 const PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = Number(
@@ -20,6 +25,11 @@ const PLAYWRIGHT_RESPONSIVE_BROWSER =
     process.env.PLAYWRIGHT_RESPONSIVE_BROWSER ?? 'chromium';
 const E2E_ADMIN_ROUTE_BYPASS_TOKEN =
     process.env.E2E_ADMIN_ROUTE_BYPASS_TOKEN?.trim() || `playwright-${randomUUID()}`;
+const PLAYWRIGHT_HEALTH_RELEASE_ID = `playwright-${randomUUID()}`;
+const PLAYWRIGHT_HEALTH_GIT_SHA = '0'.repeat(40);
+const PLAYWRIGHT_HEALTH_DEPLOYMENT_ID = 'playwright-local-deployment';
+const PLAYWRIGHT_HEALTH_PROJECT_ID = 'playwright-local-project';
+
 
 type DeviceUse = {
     viewport: { width: number; height: number };
@@ -225,6 +235,10 @@ export default defineConfig({
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context]: E2E_ADMIN_ROUTE_BYPASS_CONTEXT,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime]: E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token]: E2E_ADMIN_ROUTE_BYPASS_TOKEN,
+            TS7_RELEASE_ID: process.env.TS7_RELEASE_ID ?? PLAYWRIGHT_HEALTH_RELEASE_ID,
+            VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? PLAYWRIGHT_HEALTH_GIT_SHA,
+            VERCEL_DEPLOYMENT_ID: process.env.VERCEL_DEPLOYMENT_ID ?? PLAYWRIGHT_HEALTH_DEPLOYMENT_ID,
+            VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID ?? PLAYWRIGHT_HEALTH_PROJECT_ID,
         },
     },
 });

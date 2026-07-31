@@ -37,16 +37,18 @@ ENV_FILES=(
 )
 
 ENV_LOADED=false
-for env_file in "${ENV_FILES[@]}"; do
-    if [ -f "$env_file" ]; then
-        set -a
-        source "$env_file"
-        set +a
-        ENV_LOADED=true
-        echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
-        break
-    fi
-done
+if [ "${TZUDONG_PIPELINE_ISOLATED:-0}" != "1" ]; then
+    for env_file in "${ENV_FILES[@]}"; do
+        if [ -f "$env_file" ]; then
+            set -a
+            source "$env_file"
+            set +a
+            ENV_LOADED=true
+            echo "[$(date '+%H:%M:%S')] [OK] .env 파일 로드: $env_file"
+            break
+        fi
+    done
+fi
 
 if [ "$ENV_LOADED" = false ]; then
     if [ -n "$GEMINI_API_KEY" ]; then
@@ -56,9 +58,9 @@ if [ "$ENV_LOADED" = false ]; then
     fi
 fi
 
-# Gemini 모델 설정 (최신 Preview 모델 우선)
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.5-flash}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3-flash-preview}"
+# Gemini 모델 설정 (최신 안정 모델 우선)
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.5-flash}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
 export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
 

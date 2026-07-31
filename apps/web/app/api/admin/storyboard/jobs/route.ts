@@ -13,15 +13,15 @@ import {
   sanitizeStoryboardJobRow,
   type StoryboardJobRow,
 } from '@/lib/admin/storyboard/jobs';
+import { BOUNDED_JSON_REQUEST_ERROR } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const STORYBOARD_JOB_SELECT = 'id, requested_by_admin_id, status, stage, request_payload, result_payload, error_code, readiness, claimed_by, claimed_at, completed_at, cancelled_at, created_at, updated_at';
+const MAX_STORYBOARD_JOB_CREATE_REQUEST_BYTES = 64 * 1024;
 
-type StoryboardJobsRouteContext = {
-  params?: never;
-};
 
 function noStoreJson(telemetry: ReturnType<typeof createStoryboardRouteTelemetry>, body: unknown, init: ResponseInit = {}) {
   return NextResponse.json(body, {
@@ -30,7 +30,7 @@ function noStoreJson(telemetry: ReturnType<typeof createStoryboardRouteTelemetry
   });
 }
 
-export async function GET(request: NextRequest, _context: StoryboardJobsRouteContext) {
+export async function GET(request: NextRequest) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-jobs-list');
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) {
@@ -58,14 +58,35 @@ export async function GET(request: NextRequest, _context: StoryboardJobsRouteCon
 }
 
 export async function POST(request: NextRequest) {
-  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-job-create');
+  const telemetry = createStoryboardRouteTelemetry(
+    'admin-storyboard-job-create',
+  );
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) {
     auth.response.headers.set('Cache-Control', 'no-store');
     return auth.response;
   }
 
-  const body = await readStoryboardRouteJson(request, telemetry) as Record<string, unknown> | null;
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson(telemetry, { ok: false, error: 'invalid_storyboard_job_request' }, { status: 403 });
+  }
+
+  const bodyResult = await readStoryboardRouteJson(
+    request,
+    telemetry,
+    MAX_STORYBOARD_JOB_CREATE_REQUEST_BYTES,
+  );
+  if (!bodyResult.ok) {
+    return noStoreJson(
+      telemetry,
+      { ok: false, error: 'invalid_storyboard_job_request' },
+      { status: bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge ? 413 : 400 },
+    );
+  }
+  const body = bodyResult.value as Record<string, unknown>;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return noStoreJson(telemetry, { ok: false, error: 'invalid_storyboard_job_request' }, { status: 400 });
+  }
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
     .from('admin_storyboard_jobs')
