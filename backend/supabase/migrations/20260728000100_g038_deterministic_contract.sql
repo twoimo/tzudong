@@ -44,6 +44,18 @@ BEGIN
   END IF;
 END
 $$;
+-- PostgreSQL requires the migration actor to be a member of a role before
+-- transferring object ownership to it. Keep that authority only for the
+-- ownership handoff; the membership is revoked below in the same transaction.
+DO $membership$
+BEGIN
+  EXECUTE pg_catalog.format(
+    'GRANT privacy_workflow_owner TO %I',
+    pg_catalog.current_user
+  );
+END
+$membership$;
+
 
 -- ---------------------------------------------------------------------------
 -- Commitment storage.
@@ -806,6 +818,14 @@ ALTER FUNCTION public.g038_reserve_account_deletion_commitment(
   uuid, bytea, uuid, bytea, uuid, bytea, uuid, bytea, smallint, bytea,
   text, text, text, bytea, bytea, bytea, bytea, bytea
 ) OWNER TO privacy_workflow_owner;
+DO $membership$
+BEGIN
+  EXECUTE pg_catalog.format(
+    'REVOKE privacy_workflow_owner FROM %I',
+    pg_catalog.current_user
+  );
+END
+$membership$;
 
 REVOKE ALL ON FUNCTION public.g038_reserve_account_deletion_commitment(
   text, uuid, uuid, uuid, uuid, uuid, uuid, text, text, text, text,
