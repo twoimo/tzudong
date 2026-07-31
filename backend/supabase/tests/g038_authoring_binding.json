@@ -8,7 +8,7 @@
     "inventorySource": "18b473ebc39da27845a1a88664ed191b90f613a7a90255da03e1aafb2c1e1b8a"
   },
   "files": {
-    "backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql": "1e1d3eb80a0cb622acb2b6703905f1e56ab1ff550e5e50eb8af963b92f31ef7e",
+    "backend/supabase/migrations/20260728000100_g038_deterministic_contract.sql": "7e08c6796dd47b12a7b28ea49fe45f2a4e95f884d3acfd7bebf50747b2e7a3fa",
     "backend/supabase/tests/g038_local_sandbox.sh": "bbb41c30771ff37195d114571b76bd37dd16fe7fc372eab6dd1a5e1d2321d635",
     "backend/supabase/tests/g038_local_sandbox.profile.json": "88b79801f5781572274335bafd1309f76b2df49ca67bed383efcb91fce222dd0",
     "backend/supabase/tests/g038_catalog_assertions.sql": "42cb0b0624b9f4137a53ddcdd864f66cc80d06f70af12874819a288735b4d40c",

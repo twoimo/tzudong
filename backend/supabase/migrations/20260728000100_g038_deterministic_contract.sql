@@ -818,14 +818,6 @@ ALTER FUNCTION public.g038_reserve_account_deletion_commitment(
   uuid, bytea, uuid, bytea, uuid, bytea, uuid, bytea, smallint, bytea,
   text, text, text, bytea, bytea, bytea, bytea, bytea
 ) OWNER TO privacy_workflow_owner;
-DO $membership$
-BEGIN
-  EXECUTE pg_catalog.format(
-    'REVOKE privacy_workflow_owner FROM %I',
-    current_user
-  );
-END
-$membership$;
 
 REVOKE ALL ON FUNCTION public.g038_reserve_account_deletion_commitment(
   text, uuid, uuid, uuid, uuid, uuid, uuid, text, text, text, text,
@@ -892,4 +884,14 @@ REVOKE ALL ON TABLE public.g038_deletion_route      FROM PUBLIC;
 ALTER TABLE public.g038_deletion_commitment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.g038_deletion_route      ENABLE ROW LEVEL SECURITY;
 
+-- The temporary ownership-handoff membership is no longer needed after every
+-- owner-only ACL and RLS operation has completed.
+DO $membership$
+BEGIN
+  EXECUTE pg_catalog.format(
+    'REVOKE privacy_workflow_owner FROM %I',
+    current_user
+  );
+END
+$membership$;
 COMMIT;
