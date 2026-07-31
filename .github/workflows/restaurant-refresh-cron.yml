@@ -38,24 +38,29 @@ concurrency:
 
 jobs:
   refresh:
+    if: github.ref_name == github.event.repository.default_branch && vars.G037_WRITE_FREEZE != 'active'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: production-refresh
     defaults:
       run:
         working-directory: apps/web
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
-      NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
-      RESTAURANT_REFRESH_MODE: ${{ github.event.inputs.mode || 'both' }}
-      RESTAURANT_REFRESH_LIMIT: ${{ github.event.inputs.limit || '50' }}
-      RESTAURANT_REFRESH_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
     steps:
-      - name: Checkout repository
+      - name: Checkout exact triggering commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Validate dispatch bounds
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RESTAURANT_REFRESH_LIMIT: ${{ github.event.inputs.limit || '50' }}
+        run: |
+          set -euo pipefail
+          [[ "$RESTAURANT_REFRESH_LIMIT" =~ ^[1-9][0-9]{0,2}$ ]]
+          test "$RESTAURANT_REFRESH_LIMIT" -le 500
 
       - name: Set up Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
@@ -68,6 +73,14 @@ jobs:
         run: npm ci --omit=dev --ignore-scripts
 
       - name: Run approved restaurant freshness scan
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          RESTAURANT_REFRESH_MODE: ${{ github.event.inputs.mode || 'both' }}
+          RESTAURANT_REFRESH_LIMIT: ${{ github.event.inputs.limit || '50' }}
+          RESTAURANT_REFRESH_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           set -euo pipefail
           args=(--mode "$RESTAURANT_REFRESH_MODE" --limit "$RESTAURANT_REFRESH_LIMIT" --json)
@@ -84,4 +97,5 @@ jobs:
         with:
           name: restaurant-refresh-cron-report
           path: apps/web/reports/restaurant-refresh-cron/
-          if-no-files-found: ignore
+          if-no-files-found: error
+          retention-days: 30

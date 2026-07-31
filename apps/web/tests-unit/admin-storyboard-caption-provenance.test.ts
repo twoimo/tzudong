@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -35,17 +35,16 @@ function withEnv<T>(patch: EnvPatch, callback: () => T | Promise<T>): Promise<T>
 
 function createCommand(stdoutJson: unknown) {
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-caption-provenance-'));
-  const commandPath = path.join(tempDir, 'storyboard-command.sh');
+  const commandPath = path.join(tempDir, 'storyboard-command.py');
   writeFileSync(
     commandPath,
     [
-      '#!/usr/bin/env bash',
-      'cat >/dev/null',
-      `printf '%s\n' ${JSON.stringify(JSON.stringify(stdoutJson))}`,
+      'import sys',
+      'sys.stdin.read()',
+      `sys.stdout.write(${JSON.stringify(`${JSON.stringify(stdoutJson)}\n`)})`,
     ].join('\n'),
     'utf8',
   );
-  chmodSync(commandPath, 0o755);
   return { commandPath, cleanup: () => rmSync(tempDir, { recursive: true, force: true }) };
 }
 
@@ -105,8 +104,17 @@ describe('admin storyboard caption provenance diagnostics', () => {
           TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
         },
         async () => {
-          const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-          const result = await generateStoryboardWithBackendAgent(request);
+          const {
+            createStoryboardAgentTestCommandCapability,
+            generateStoryboardWithBackendAgent,
+          } = await import('../lib/admin/storyboard/backend-agent.ts');
+          const result = await generateStoryboardWithBackendAgent(request, {
+            env: { ...process.env, STORYBOARD_AGENT_COMMAND: command.commandPath },
+            testCommandCapability: createStoryboardAgentTestCommandCapability(
+              command.commandPath,
+              'caption-provenance',
+            ),
+          });
           const caption = result.backendAnalysis.backendAgent?.graph?.retrieval?.caption;
           const serialized = JSON.stringify(result.backendAnalysis.backendAgent?.graph);
 
@@ -163,8 +171,17 @@ describe('admin storyboard caption provenance diagnostics', () => {
           TZUYANG_HEATMAP_DIR: path.join(os.tmpdir(), `missing-tzudong-heatmap-${Date.now()}`),
         },
         async () => {
-          const { generateStoryboardWithBackendAgent } = await import(`../lib/admin/storyboard/backend-agent.ts?case=${Math.random()}`);
-          const result = await generateStoryboardWithBackendAgent(request);
+          const {
+            createStoryboardAgentTestCommandCapability,
+            generateStoryboardWithBackendAgent,
+          } = await import('../lib/admin/storyboard/backend-agent.ts');
+          const result = await generateStoryboardWithBackendAgent(request, {
+            env: { ...process.env, STORYBOARD_AGENT_COMMAND: command.commandPath },
+            testCommandCapability: createStoryboardAgentTestCommandCapability(
+              command.commandPath,
+              'caption-unavailable',
+            ),
+          });
           expect(result.backendAnalysis.backendAgent?.graph?.retrieval?.caption?.lookupStatus).toBe('unavailable');
           expect(result.backendAnalysis.backendAgent?.graph?.retrieval?.caption?.fallbackReason).toBe('empty_caption_result');
         },

@@ -8,9 +8,15 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { resolveAdminSessionCookie } from './admin-session.mjs';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDir, '..', '..', '..');
+const operationError = (code) => {
+    const error = new Error(code);
+    error.code = code;
+    return error;
+};
 
 function printUsage() {
     console.log(`Usage: node apps/web/scripts/admin-evaluations-smoke.mjs [options]
@@ -63,7 +69,7 @@ function parseArgs(argv) {
 
         const next = argv[index + 1];
         if (!next) {
-            throw new Error(`Missing value for ${arg}`);
+            throw operationError('ADMIN_EVALUATIONS_ARGUMENT_INVALID');
         }
 
         switch (arg) {
@@ -100,7 +106,7 @@ function parseArgs(argv) {
                 index += 1;
                 break;
             default:
-                throw new Error(`Unknown argument: ${arg}`);
+                throw operationError('ADMIN_EVALUATIONS_ARGUMENT_INVALID');
         }
     }
 
@@ -120,7 +126,11 @@ function resolveFromProjectRoot(candidatePath) {
 }
 
 function readJson(filePath) {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch {
+        throw operationError('ADMIN_EVALUATIONS_FIXTURE_READ_FAILED');
+    }
 }
 
 function isPlaceholder(value) {
@@ -180,7 +190,7 @@ function validateSelectedCases(fixture, selectedCases) {
     const available = new Map(fixture.cases.map((smokeCase) => [smokeCase.id, smokeCase]));
     const missing = selectedCases.filter((caseId) => !available.has(caseId));
     if (missing.length > 0) {
-        throw new Error(`Unknown fixture case id(s): ${missing.join(', ')}`);
+        throw operationError('ADMIN_EVALUATIONS_FIXTURE_CASE_UNAVAILABLE');
     }
 
     return selectedCases.map((caseId) => available.get(caseId));
@@ -208,7 +218,7 @@ function assertNoTodoPlaceholders(smokeCase) {
     collect(smokeCase, smokeCase.id);
 
     if (todoEntries.length > 0) {
-        throw new Error(`Fixture case ${smokeCase.id} still contains TODO placeholders: ${todoEntries.join(', ')}`);
+        throw operationError('ADMIN_EVALUATIONS_FIXTURE_CONTAINS_TODO');
     }
 }
 
@@ -221,9 +231,7 @@ function createSupabaseClient() {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!url || !serviceRoleKey) {
-        throw new Error(
-            'NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for DB read-backs. Use --validate-only if you only need fixture validation.'
-        );
+        throw operationError('ADMIN_EVALUATIONS_DB_CREDENTIALS_MISSING');
     }
 
     return createClient(url, serviceRoleKey, {
@@ -286,15 +294,13 @@ async function launchAdminContext({ baseUrl, storageStatePath, headless }) {
         const cookieHeader = resolveAdminSessionCookie();
         if (!cookieHeader) {
             await browser.close();
-            throw new Error(
-                'Admin session not found. Provide --storage-state, STATE_PATH, INSIGHTS_CHAT_ADMIN_COOKIE, or apps/web/tests/.auth/admin.json.'
-            );
+            throw operationError('ADMIN_EVALUATIONS_SESSION_MISSING');
         }
 
         const cookies = parseCookieHeader(cookieHeader, baseUrl);
         if (cookies.length === 0) {
             await browser.close();
-            throw new Error('Admin session cookie could not be parsed into browser cookies.');
+            throw operationError('ADMIN_EVALUATIONS_SESSION_INVALID');
         }
 
         await context.addCookies(cookies);
@@ -323,7 +329,7 @@ async function fetchSnapshots(supabase, fixture, smokeCase) {
         .in('id', ids);
 
     if (error) {
-        throw new Error(`DB read-back failed for case ${smokeCase.id}: ${error.message}`);
+        throw operationError('ADMIN_EVALUATIONS_DB_READBACK_FAILED');
     }
 
     return data ?? [];
@@ -339,25 +345,25 @@ function compareExpectedValue(expected, actual, adminUserId) {
             if (adminUserId) {
                 return {
                     ok: actual === adminUserId,
-                    reason: `expected updated_by_admin_id=${adminUserId}, got ${String(actual)}`,
+                    reason: 'value_mismatch',
                 };
             }
 
             return {
                 ok: actual !== null && actual !== undefined && String(actual).trim() !== '',
-                reason: `expected non-empty admin id, got ${String(actual)}`,
+                reason: 'required_value_missing',
             };
         }
 
         return {
             ok: actual !== null && actual !== undefined && !(typeof actual === 'string' && actual.trim() === ''),
-            reason: `expected non-empty value for placeholder ${expected}`,
+            reason: 'required_value_missing',
         };
     }
 
     return {
         ok: Object.is(actual, expected),
-        reason: `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+        reason: 'value_mismatch',
     };
 }
 
@@ -365,7 +371,7 @@ function evaluateExpectedRow(label, row, expectedRow, adminUserId) {
     if (!row) {
         return {
             ok: false,
-            checks: [`${label} row missing from DB read-back`],
+            checks: [`${label}_row_missing`],
         };
     }
 
@@ -376,15 +382,21 @@ function evaluateExpectedRow(label, row, expectedRow, adminUserId) {
         const comparison = compareExpectedValue(expectedValue, row[field], adminUserId);
         if (!comparison.ok) {
             ok = false;
-            checks.push(`${label}.${field}: ${comparison.reason}`);
+            checks.push(`${label}_${comparison.reason}`);
         }
     }
 
     if (checks.length === 0) {
-        checks.push(`${label}: all strict checks passed`);
+        checks.push(`${label}_checks_passed`);
     }
 
     return { ok, checks };
+}
+
+function writeSnapshotMetadata(filePath, snapshots) {
+    fs.writeFileSync(filePath, JSON.stringify({
+        row_count: Array.isArray(snapshots) ? snapshots.length : 0,
+    }, null, 2));
 }
 
 function buildMarkdownReport(run) {
@@ -392,12 +404,6 @@ function buildMarkdownReport(run) {
         '# Admin evaluations smoke report',
         '',
         `- Run at: ${run.startedAt}`,
-        `- Operator: ${run.operator}`,
-        `- Environment: ${run.environment}`,
-        `- Base URL: ${run.baseUrl}`,
-        `- Storage state: ${run.storageState ?? 'admin cookie fallback'}`,
-        `- Fixture: ${run.fixturePath}`,
-        `- Admin user id: ${run.adminUserId ?? 'not supplied'}`,
         '',
         '## Summary',
         `- Overall: ${run.overall}`,
@@ -405,25 +411,22 @@ function buildMarkdownReport(run) {
         `- Cases failed: ${run.failed}`,
         '',
         '## Case results',
-        '| Case | Source id | Target id | PASS/FAIL | Notes |',
-        '| --- | --- | --- | --- | --- |',
+        '| Case | PASS/FAIL | Notes |',
+        '| --- | --- | --- |',
     ];
 
     for (const caseResult of run.caseResults) {
         lines.push(
-            `| ${caseResult.id} | ${caseResult.sourceId} | ${caseResult.targetId ?? ''} | ${caseResult.ok ? 'PASS' : 'FAIL'} | ${caseResult.notes.join('<br/>')} |`
+            `| ${caseResult.sequence} | ${caseResult.ok ? 'PASS' : 'FAIL'} | ${caseResult.notes.map((note) => redactCliText(note, 128)).join('<br/>')} |`
         );
     }
 
-    lines.push('', '## Snapshot artifact references');
+    lines.push('', '## Readback metadata references');
 
     for (const caseResult of run.caseResults) {
-        lines.push(`### ${caseResult.id}`);
-        lines.push(`- Before snapshot: \`${caseResult.beforeSnapshotPath}\``);
-        lines.push(`- After snapshot: \`${caseResult.afterSnapshotPath}\``);
-        lines.push(`- Before screenshot: \`${caseResult.beforeScreenshotPath}\``);
-        lines.push(`- After screenshot: \`${caseResult.afterScreenshotPath}\``);
-        lines.push(`- UI note: ${caseResult.uiNote || 'n/a'}`);
+        lines.push(`### Case ${caseResult.sequence}`);
+        lines.push(`- Before readback metadata: \`${caseResult.beforeSnapshotPath}\``);
+        lines.push(`- After readback metadata: \`${caseResult.afterSnapshotPath}\``);
         lines.push('');
     }
 
@@ -435,19 +438,19 @@ async function main() {
     const fixturePath = resolveFromProjectRoot(args.fixture);
 
     if (!fixturePath || !fs.existsSync(fixturePath)) {
-        throw new Error(`Fixture file not found: ${args.fixture}`);
+        throw operationError('ADMIN_EVALUATIONS_FIXTURE_UNAVAILABLE');
     }
 
     const fixture = readJson(fixturePath);
     const fixtureErrors = validateFixture(fixture);
     if (fixtureErrors.length > 0) {
-        throw new Error(`Fixture validation failed:\n- ${fixtureErrors.join('\n- ')}`);
+        throw operationError('ADMIN_EVALUATIONS_FIXTURE_INVALID');
     }
 
     const selectedCases = validateSelectedCases(fixture, args.selectedCases);
     const baseUrl = args.baseUrl || fixture?.auth?.base_url_default;
     if (!baseUrl) {
-        throw new Error('Base URL is required.');
+        throw operationError('ADMIN_EVALUATIONS_BASE_URL_MISSING');
     }
 
     const storageStatePath = getStorageStatePath(args.storageState, fixture);
@@ -458,15 +461,11 @@ async function main() {
 
     const validateOnlySummary = {
         mode: args.validateOnly ? 'validate-only' : 'run',
-        fixturePath,
-        baseUrl,
-        storageStatePath,
-        reportPath,
-        selectedCaseIds: selectedCases.map((smokeCase) => smokeCase.id),
+        selectedCaseCount: selectedCases.length,
     };
 
     if (args.validateOnly) {
-        console.log(JSON.stringify(validateOnlySummary, null, 2));
+        console.log(redactCliText(JSON.stringify(validateOnlySummary), 256));
         return;
     }
 
@@ -493,43 +492,27 @@ async function main() {
     await page.goto(new URL('/admin/evaluations', baseUrl).toString(), { waitUntil: 'domcontentloaded' });
     await hideOverlay(page);
     if (!page.url().includes('/admin/evaluations')) {
-        throw new Error(`Expected to land on /admin/evaluations but got ${page.url()}`);
+        throw operationError('ADMIN_EVALUATIONS_ROUTE_UNAVAILABLE');
     }
 
     const caseResults = [];
 
     try {
-        for (const smokeCase of selectedCases) {
+        for (const [caseIndex, smokeCase] of selectedCases.entries()) {
             const beforeSnapshots = await fetchSnapshots(supabase, fixture, smokeCase);
-            const beforeMap = snapshotMap(beforeSnapshots);
-            const beforeSnapshotPath = path.join(runDir, `${smokeCase.id}-before.json`);
-            const afterSnapshotPath = path.join(runDir, `${smokeCase.id}-after.json`);
-            const beforeScreenshotPath = path.join(runDir, `${smokeCase.id}-before.png`);
-            const afterScreenshotPath = path.join(runDir, `${smokeCase.id}-after.png`);
+            const beforeSnapshotPath = path.join(runDir, `case-${caseIndex + 1}-before.json`);
+            const afterSnapshotPath = path.join(runDir, `case-${caseIndex + 1}-after.json`);
 
-            fs.writeFileSync(beforeSnapshotPath, JSON.stringify(beforeSnapshots, null, 2));
-            await page.screenshot({ path: beforeScreenshotPath, fullPage: true });
+            writeSnapshotMetadata(beforeSnapshotPath, beforeSnapshots);
 
-            console.log(`\n[admin-evaluations-smoke] Case ${smokeCase.id}`);
-            console.log(`- UI surface: ${smokeCase.ui_surface}`);
-            console.log(`- Source row id: ${smokeCase.source_row.id}`);
-            if (smokeCase.target_row?.id) {
-                console.log(`- Target row id: ${smokeCase.target_row.id}`);
-            }
-            if (Array.isArray(smokeCase.preconditions) && smokeCase.preconditions.length > 0) {
-                console.log('- Preconditions:');
-                for (const precondition of smokeCase.preconditions) {
-                    console.log(`  • ${precondition}`);
-                }
-            }
+            console.log('\n[admin-evaluations-smoke] case_started');
 
             await rl.question('Perform the UI action now, then press Enter to capture the after state...');
             const uiNote = await rl.question('Short UI result note: ');
 
             const afterSnapshots = await fetchSnapshots(supabase, fixture, smokeCase);
             const afterMap = snapshotMap(afterSnapshots);
-            fs.writeFileSync(afterSnapshotPath, JSON.stringify(afterSnapshots, null, 2));
-            await page.screenshot({ path: afterScreenshotPath, fullPage: true });
+            writeSnapshotMetadata(afterSnapshotPath, afterSnapshots);
 
             const sourceEvaluation = evaluateExpectedRow(
                 'source',
@@ -544,8 +527,7 @@ async function main() {
                     smokeCase.expected_after?.target,
                     args.adminUserId
                 )
-                : { ok: true, checks: ['target: not applicable'] };
-
+                : { ok: true, checks: ['target_not_applicable'] };
             const ok = sourceEvaluation.ok && targetEvaluation.ok;
             const notes = [
                 ...sourceEvaluation.checks,
@@ -553,25 +535,19 @@ async function main() {
             ];
 
             if (uiNote) {
-                notes.push(`ui-note: ${uiNote}`);
+                const safeUiNote = redactCliText(uiNote, 256);
+                notes.push(safeUiNote === '[REDACTED:bounded]' ? 'ui_note_rejected' : 'ui_note_recorded');
             }
 
             caseResults.push({
-                id: smokeCase.id,
+                sequence: caseIndex + 1,
                 ok,
-                sourceId: smokeCase.source_row.id,
-                targetId: smokeCase.target_row?.id ?? null,
-                uiNote,
                 beforeSnapshotPath: path.relative(projectRoot, beforeSnapshotPath),
                 afterSnapshotPath: path.relative(projectRoot, afterSnapshotPath),
-                beforeScreenshotPath: path.relative(projectRoot, beforeScreenshotPath),
-                afterScreenshotPath: path.relative(projectRoot, afterScreenshotPath),
-                beforeSnapshot: beforeMap.get(smokeCase.source_row.id),
-                afterSnapshot: afterMap.get(smokeCase.source_row.id),
                 notes,
             });
 
-            console.log(`[admin-evaluations-smoke] ${smokeCase.id}: ${ok ? 'PASS' : 'FAIL'}`);
+            console.log(`[admin-evaluations-smoke] case_completed status=${ok ? 'passed' : 'failed'}`);
             notes.forEach((note) => console.log(`  - ${note}`));
         }
     } finally {
@@ -584,12 +560,6 @@ async function main() {
     const failed = caseResults.length - passed;
     const report = {
         startedAt: new Date().toISOString(),
-        operator: args.operator,
-        environment: process.env.SMOKE_ENVIRONMENT || 'unspecified',
-        baseUrl,
-        storageState: storageStatePath ? path.relative(projectRoot, storageStatePath) : null,
-        fixturePath: path.relative(projectRoot, fixturePath),
-        adminUserId: args.adminUserId,
         overall: failed === 0 ? 'PASS' : 'FAIL',
         passed,
         failed,
@@ -600,14 +570,13 @@ async function main() {
     fs.writeFileSync(reportPath, buildMarkdownReport(report));
     fs.writeFileSync(path.join(runDir, 'summary.json'), JSON.stringify(report, null, 2));
 
-    console.log(JSON.stringify({
+    console.log(redactCliText(JSON.stringify({
         ...validateOnlySummary,
-        reportPath: path.relative(projectRoot, reportPath),
-        runDir: path.relative(projectRoot, runDir),
+        reportWritten: true,
         overall: report.overall,
         passed,
         failed,
-    }, null, 2));
+    }), 256));
 
     if (failed > 0) {
         process.exitCode = 1;
@@ -615,6 +584,8 @@ async function main() {
 }
 
 main().catch((error) => {
-    console.error(`[admin-evaluations-smoke] ${error instanceof Error ? error.message : String(error)}`);
+    logCliError(error, (line) =>
+        process.stderr.write(`[admin-evaluations-smoke] ${line}`)
+    );
     process.exit(1);
 });

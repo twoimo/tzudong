@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { logCliError } from './privacy-safe-cli-log.mjs';
 
 function stripQuotes(value) {
   const trimmed = value.trim();
@@ -162,13 +163,8 @@ try {
         console.log(`[supabase-gen-types] Wrote ${outFile}`);
         process.exit(0);
       } catch (fallbackError) {
-        const fallbackMessage =
-          fallbackError?.stderr?.toString?.() ||
-          fallbackError?.message ||
-          String(fallbackError);
-
         console.error('[supabase-gen-types] Access token missing and DB URL fallback failed.');
-        console.error(fallbackMessage);
+        logCliError(fallbackError, (line) => process.stderr.write(`[supabase-gen-types] ${line}`));
         process.exit(2);
       }
     }
@@ -185,6 +181,6 @@ try {
   }
 
   console.error('[supabase-gen-types] Failed to generate types.');
-  console.error(message);
+  logCliError(error, (line) => process.stderr.write(`[supabase-gen-types] ${line}`));
   process.exit(1);
 }

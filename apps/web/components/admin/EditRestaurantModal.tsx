@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, RefreshCw, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, TablesUpdate } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
@@ -73,12 +74,7 @@ interface NaverGeocodingResponse {
     roadAddress: string;
     jibunAddress: string;
     englishAddress: string;
-    addressElements: Array<{
-      types: string[];
-      longName: string;
-      shortName: string;
-      code: string;
-    }>;
+    addressElements: unknown;
     x: string;
     y: string;
   }>;
@@ -91,7 +87,7 @@ interface GeocodingResult {
   road_address: string;
   jibun_address: string;
   english_address: string;
-  address_elements: Record<string, unknown>;
+  address_elements: Json;
   x: string;
   y: string;
   place_name?: string;
@@ -113,6 +109,39 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 };
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function encodeJson(value: unknown): Json {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new Error('JSON_NUMBER_INVALID');
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(encodeJson);
+  if (!isPlainRecord(value)) throw new Error('JSON_VALUE_INVALID');
+
+  const encoded: { [key: string]: Json | undefined } = {};
+  for (const [key, entry] of Object.entries(value)) {
+    encoded[key] = entry === undefined ? undefined : encodeJson(entry);
+  }
+  return encoded;
+}
+
+function isJsonRecord(value: Json): value is { [key: string]: Json | undefined } {
+  return isPlainRecord(value);
+}
+
+function getEvaluationAddressElements(
+  value: Json,
+  fallback: Record<string, unknown>,
+): Record<string, unknown> {
+  return isJsonRecord(value) ? value : fallback;
+}
 
 const sanitizeNaverPlaceTitle = (title: string | undefined) =>
   (title || '')
@@ -256,7 +285,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         setGeocodingError('주소를 찾을 수 없습니다.');
       }
     } catch (error: unknown) {
-      console.error('💥 네이버 지오코딩 에러:', error);
+      console.error('💥 네이버 지오코딩 에러:');
       const message = getErrorMessage(error, '네이버 지오코딩에 실패했습니다');
       setGeocodingError(message);
       toast({
@@ -276,7 +305,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     if (!query) return {};
 
     try {
-      const response = await fetch(`/api/naver-search?query=${encodeURIComponent(query)}&display=5`);
+      const response = await fetch('/api/naver-search', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, display: 5 }),
+      });
       if (!response.ok) {
         console.warn('네이버 장소 검색 실패:', response.status);
         return {};
@@ -295,7 +329,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         ...(placePhone ? { place_phone: placePhone } : {}),
       };
     } catch (error) {
-      console.warn('네이버 장소 검색 중 오류:', error);
+      console.warn('네이버 장소 검색 중 오류:');
       return {};
     }
   };
@@ -349,8 +383,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
       if (error) {
-        console.error('❌ Edge Function 에러:', error);
-        throw new Error(error.message || JSON.stringify(error));
+        console.error('❌ Edge Function 에러:');
+        throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
       }
 
       if (!data) {
@@ -359,8 +393,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       if (data.error) {
-        console.error('❌ API 에러:', data.error);
-        throw new Error(data.error);
+        console.error('❌ API 에러:');
+        throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
       }
 
 
@@ -377,12 +411,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         road_address: addr.roadAddress,
         jibun_address: addr.jibunAddress,
         english_address: addr.englishAddress,
-        address_elements: addr.addressElements as unknown as Record<string, unknown>,
+        address_elements: encodeJson(addr.addressElements),
         x: addr.x,
         y: addr.y,
       }));
     } catch (error) {
-      console.error('💥 지오코딩 에러:', error);
+      console.error('💥 지오코딩 에러:');
       throw error; // 에러를 다시 throw하여 상위에서 처리
     }
   };
@@ -504,10 +538,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: duplicateCheck.reason,
-            db_error_details: errorDetails,
+            db_error_details: encodeJson(errorDetails),
           })
           .eq('id', record.id);
 
@@ -531,7 +564,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       await performApproval(adminUserId);
 
     } catch (error) {
-      console.error('승인 실패:', error);
+      console.error('승인 실패:');
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
       toast({
         variant: 'destructive',
@@ -557,7 +590,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
     const updatedAt = new Date().toISOString();
-    const updateData = {
+    const updateData: TablesUpdate<'restaurants'> = {
 
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
@@ -583,7 +616,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     const { error: updateError } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update(updateData)
       .eq('id', record.id); // restaurants 테이블의 ID로 업데이트
 
@@ -614,7 +646,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
       english_address: selectedResult.english_address,
-      address_elements: selectedResult.address_elements,
+      address_elements: getEvaluationAddressElements(selectedResult.address_elements, record.address_elements),
       lat: parseFloat(selectedResult.y),
       lng: parseFloat(selectedResult.x),
       phone: trimmedPhone || null,
@@ -634,7 +666,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           road_address: selectedResult.road_address,
           jibun_address: selectedResult.jibun_address,
           english_address: selectedResult.english_address,
-          address_elements: selectedResult.address_elements,
+          address_elements: getEvaluationAddressElements(
+            selectedResult.address_elements,
+            record.restaurant_info.naver_address_info?.address_elements ?? record.address_elements,
+          ),
           x: selectedResult.x,
           y: selectedResult.y,
         },
@@ -706,11 +741,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         if (canAutoSoftDeleteDuplicateSource(record)) {
           await supabase
             .from('restaurants')
-            // @ts-expect-error - Supabase 자동 생성 타입 문제
             .update({
               status: 'deleted',
               db_error_message: conflictMessage,
-              db_error_details: errorDetails,
+              db_error_details: encodeJson(errorDetails),
               updated_by_admin_id: adminUserId,
               updated_at: updatedAt,
             })
@@ -735,10 +769,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
         await supabase
           .from('restaurants')
-          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: conflictMessage,
-            db_error_details: errorDetails,
+            db_error_details: encodeJson(errorDetails),
             updated_at: updatedAt,
           })
           .eq('id', record.id);
@@ -758,7 +791,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       // 수정 사항만 업데이트 (status는 변경하지 않음)
-      const updateData: Record<string, unknown> = {
+      const updateData: TablesUpdate<'restaurants'> = {
         approved_name: trimmedName,
         phone: trimmedPhone || null,
         youtube_link: trimmedYoutubeLink || null,
@@ -786,12 +819,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       const { error: updateError } = await supabase
         .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update(updateData)
         .eq('id', record.id);
 
       if (updateError) {
-        console.error('❌ DB 업데이트 에러:', updateError);
+        console.error('❌ DB 업데이트 에러:');
         if (isActiveRestaurantIdentityConflictError(updateError)) {
           throw new Error(formatActiveRestaurantIdentityConflictMessage({ restaurantName: trimmedName }));
         }
@@ -834,7 +866,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updates.road_address = selectedResult.road_address;
         updates.jibun_address = selectedResult.jibun_address;
         updates.english_address = selectedResult.english_address;
-        updates.address_elements = selectedResult.address_elements;
+        updates.address_elements = getEvaluationAddressElements(selectedResult.address_elements, record.address_elements);
         updates.lat = parseFloat(selectedResult.y);
         updates.lng = parseFloat(selectedResult.x);
         updates.geocoding_success = true;
@@ -848,7 +880,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               road_address: selectedResult.road_address,
               jibun_address: selectedResult.jibun_address,
               english_address: selectedResult.english_address,
-              address_elements: selectedResult.address_elements,
+              address_elements: getEvaluationAddressElements(
+                selectedResult.address_elements,
+                record.restaurant_info.naver_address_info?.address_elements ?? record.address_elements,
+              ),
               x: selectedResult.x,
               y: selectedResult.y,
             },
@@ -861,7 +896,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       resetForm();
 
     } catch (error) {
-      console.error('💥 저장 실패:', error);
+      console.error('💥 저장 실패:');
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
       toast({
         variant: 'destructive',
@@ -984,16 +1019,21 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       // 기존 지오코딩 결과가 있다면 표시
       if (record.restaurant_info.naver_address_info) {
-        const existingResult = {
-          road_address: record.restaurant_info.naver_address_info.road_address || '',
-          jibun_address: record.restaurant_info.naver_address_info.jibun_address,
-          english_address: record.restaurant_info.naver_address_info.english_address || '',
-          address_elements: record.restaurant_info.naver_address_info.address_elements,
-          x: record.restaurant_info.naver_address_info.x,
-          y: record.restaurant_info.naver_address_info.y,
-        };
-        setGeocodingResults([existingResult]);
-        setSelectedGeocodingIndex(0); // 기존 결과를 자동 선택
+        try {
+          const existingResult: GeocodingResult = {
+            road_address: record.restaurant_info.naver_address_info.road_address || '',
+            jibun_address: record.restaurant_info.naver_address_info.jibun_address,
+            english_address: record.restaurant_info.naver_address_info.english_address || '',
+            address_elements: encodeJson(record.restaurant_info.naver_address_info.address_elements),
+            x: record.restaurant_info.naver_address_info.x,
+            y: record.restaurant_info.naver_address_info.y,
+          };
+          setGeocodingResults([existingResult]);
+          setSelectedGeocodingIndex(0);
+        } catch {
+          setGeocodingResults([]);
+          setSelectedGeocodingIndex(null);
+        }
       } else {
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
@@ -1033,7 +1073,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         if (!cancelled) setSameVideoDuplicateWarnings(candidates);
       })
       .catch((error) => {
-        console.warn('같은 영상 중복 후보 조회 실패:', error);
+        console.warn('같은 영상 중복 후보 조회 실패:');
         if (!cancelled) setSameVideoDuplicateWarnings([]);
       });
 
@@ -1047,12 +1087,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const { data, error } = await supabase
         .from('restaurants')
         .select('id, approved_name, origin_name, naver_name, google_name, status, youtube_link, reasoning_basis, evaluation_results')
-        .ilike('youtube_link', `%${videoId}%`);
+        .ilike('youtube_link', `%${videoId}%`)
+        .overrideTypes<RestaurantIdentityWarningRow[], { merge: false }>();
 
       if (error) throw error;
-      if (!cancelled) setRestaurantIdentityWarningRows((data || []) as RestaurantIdentityWarningRow[]);
+      if (!cancelled) setRestaurantIdentityWarningRows(data ?? []);
     })().catch((error: unknown) => {
-      console.warn('장소명 검증 경고 조회 실패:', error);
+      console.warn('장소명 검증 경고 조회 실패:');
       if (!cancelled) setRestaurantIdentityWarningRows([]);
     });
 
@@ -1510,7 +1551,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 try {
                   await performApproval(requireAdminUserId());
                 } catch (error) {
-                  console.error('승인 실패:', error);
+                  console.error('승인 실패:');
                   toast({
                     variant: 'destructive',
                     title: '승인 실패',

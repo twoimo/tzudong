@@ -3,6 +3,8 @@
 import json
 import os
 import re
+import sys
+from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
@@ -10,13 +12,18 @@ import numpy as np
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_ROOT))
+
+from utils.privacy_log import redact_log_text
+from utils.supabase_rest import resolve_privileged_supabase_rest_credentials
+
 _SRC_DIR = os.path.dirname(os.path.abspath(__file__))
 _BASE_DIR = os.path.dirname(_SRC_DIR)
 
 load_dotenv(os.path.join(_BASE_DIR, ".env"))
 
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 _supabase_client: Optional[Client] = None
 _bge_model = None
@@ -64,22 +71,31 @@ def _patch_flagembedding_dtype_kwarg() -> None:
 
 
 def log_tool_call(tool_name: str, **kwargs) -> None:
-    """도구 호출 원문을 log.md에 기록"""
+    """Record only bounded tool identity and argument field names, never values."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    params = ", ".join(f"{k}={v!r}" for k, v in kwargs.items())
-    with open(_LOG_PATH, "a", encoding="utf-8") as f:
-        f.write(f"- `{timestamp}` **{tool_name}**({params})\n")
+    safe_tool_name = redact_log_text(tool_name, max_length=64)
+    field_names = sorted(redact_log_text(name, max_length=64) for name in kwargs)[:32]
+    entry = (
+        f"- `{timestamp}` **{safe_tool_name}**"
+        f"(fields={json.dumps(field_names, ensure_ascii=True)}, field_count={len(kwargs)})\n"
+    )
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(_LOG_PATH, flags, 0o600)
+    with os.fdopen(descriptor, "a", encoding="utf-8") as file:
+        file.write(entry)
 
 
 def get_supabase() -> Client:
     """Supabase 클라이언트 싱글톤 반환"""
     global _supabase_client
     if _supabase_client is None:
-        if not SUPABASE_URL or not SUPABASE_KEY:
-            raise ValueError(
-                "SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다."
-            )
-        _supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        credentials = resolve_privileged_supabase_rest_credentials()
+        _supabase_client = create_client(
+            credentials.url,
+            credentials.service_role_key,
+        )
     return _supabase_client
 
 

@@ -16,6 +16,8 @@ import {
   STORYBOARD_ROUTE_SSE_HEADERS,
 } from '@/lib/admin/storyboard/route-telemetry';
 import { requireAdmin } from '@/lib/auth/require-admin';
+import { BOUNDED_JSON_REQUEST_ERROR } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import type { StoryboardThinkingTraceEntry } from '@/lib/admin/storyboard/types';
 
 export const runtime = 'nodejs';
@@ -43,7 +45,7 @@ function jsonError(
 }
 
 function normalizeRouteError(error: unknown) {
-  console.error('[admin/storyboard/chat] unexpected failure:', error);
+  console.error('[admin/storyboard/chat] unexpected failure:');
   const failure = buildStoryboardRagErrorStatus(error, {
     fallbackCauseCode: 'storyboard_chat_agent_failed',
   });
@@ -128,6 +130,7 @@ const STORYBOARD_CHAT_IMAGE_ATTACHMENT_MIME_TYPES = new Set([
 ] as const);
 const STORYBOARD_CHAT_CONVERSATION_MESSAGE_LIMIT = 8;
 const STORYBOARD_CHAT_CONVERSATION_CONTENT_LIMIT = 320;
+const MAX_STORYBOARD_CHAT_REQUEST_BYTES = 20 * 1024 * 1024;
 
 function isRouteConversationReadbackMessage(
   message: StoryboardChatConversationMessageForRoute,
@@ -728,11 +731,32 @@ function sendBackendRagTrace(send: SseSend, result: StoryboardChatAgentResultFor
 }
 
 export async function POST(request: NextRequest) {
-  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-chat');
+  const telemetry = createStoryboardRouteTelemetry(
+    'admin-storyboard-chat',
+  );
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+    auth.response.headers.set('Cache-Control', 'no-store');
+    return auth.response;
+  }
+  if (!isTrustedSameOriginMutation(request)) {
+    return jsonError('Forbidden', 403, telemetry);
+  }
 
-  const payload = await readStoryboardRouteJson(request, telemetry) as unknown;
+  const bodyResult = await readStoryboardRouteJson(
+    request,
+    telemetry,
+    MAX_STORYBOARD_CHAT_REQUEST_BYTES,
+  );
+  if (!bodyResult.ok) {
+    return jsonError(
+      'payload_json_invalid',
+      bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge ? 413 : 400,
+      telemetry,
+      '채팅 요청 JSON이 필요합니다.',
+    );
+  }
+  const payload = bodyResult.value;
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     return jsonError('payload_json_invalid', 400, telemetry, '채팅 요청 JSON이 필요합니다.');
   }

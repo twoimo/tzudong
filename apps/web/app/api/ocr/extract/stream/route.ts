@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
+import { assertPrivacySafe } from '@/lib/privacy/sanitize';
 import { callGeminiReceiptOcr, GEMINI_OCR_FALLBACK_MODEL, GeminiOcrError } from '@/lib/ocr/gemini';
 import {
   RECEIPT_OCR_EXTRACTION_PROMPT,
@@ -9,20 +9,12 @@ import {
 } from '@/lib/ocr/receipt-prompt';
 import { resolveOcrAiRuntimeConfig, type OcrAiRuntimeConfigCandidate } from '@/lib/ocr/runtime-config';
 import {
-    buildOcrCacheVersion,
-    doesOcrCacheMetadataMatch,
-    RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-    RECEIPT_OCR_RAW_CACHE_KIND,
-    type OcrCacheMetadata,
-} from '@/lib/ocr/cache-version';
-import {
     buildReceiptOcrEnvelope,
     flattenReceiptOcrEnvelope,
     RECEIPT_OCR_NORMALIZATION_VERSION,
 } from '@/lib/ocr/receipt-normalization';
 import { findOcrRestaurantMatches } from '@/lib/ocr/restaurant-matching';
 import {
-    buildOcrResponseFromRawCache,
     buildOcrSuccessLogMetadata,
     createRestaurantLookupCallbacks,
     getRunnableCredentials,
@@ -40,33 +32,14 @@ import {
   getOcrUploadRejectionForRequest,
   OCR_MAX_INPUT_PIXELS,
   readOcrImageFile,
+  readBoundedOcrFormData,
 } from '@/lib/ocr/request-security';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 
 
-type OcrLogMetadata = OcrCacheMetadata & {
-  ocr_result?: Record<string, unknown>;
-  error?: string;
-};
 
-function createOcrLogsSupabaseClient(accessToken: string | null) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (accessToken && supabaseUrl && supabaseAnonKey) {
-    return createSupabaseJsClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${accessToken}` } },
-      auth: { persistSession: false },
-    });
-  }
-
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) return null;
-
-  return createSupabaseJsClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
-}
 
 function createSseResponse(
   run: (send: (event: string, payload: Record<string, unknown>) => void) => Promise<void>,
@@ -80,9 +53,11 @@ function createSseResponse(
 
       try {
         await run(send);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        send('error', { message: 'OCR 처리 중 오류가 발생했습니다.', detail: process.env.NODE_ENV === 'production' ? undefined : message });
+      } catch {
+        send('error', {
+          code: 'OCR_STREAM_FAILED',
+          message: 'OCR 처리 중 오류가 발생했습니다.',
+        });
       } finally {
         controller.close();
       }
@@ -143,6 +118,12 @@ async function runStreamingOcrCandidate(input: {
 }
 
 export async function POST(req: Request) {
+  if (!isTrustedSameOriginMutation(req)) {
+    return new Response(JSON.stringify({ error: '허용되지 않은 요청입니다.' }), {
+      status: 403,
+      headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+    });
+  }
   const uploadRejection = getOcrUploadRejectionForRequest(req.headers);
   if (uploadRejection) {
     return new Response(JSON.stringify({ error: uploadRejection.error }), {
@@ -159,7 +140,18 @@ export async function POST(req: Request) {
     });
   }
   const { supabase, user } = auth;
-  let accessToken: string | null = auth.accessToken;
+
+  const multipart = await readBoundedOcrFormData(req);
+  if (!multipart.ok) {
+    return new Response(JSON.stringify({ error: multipart.error }), {
+      status: multipart.status,
+      headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+    });
+  }
+  const formData = multipart.formData;
+  const file = formData.get('image') as File;
+  const forceRefreshRequested = isOcrForceRefreshRequested({ formData, headers: req.headers });
+  const selectedRestaurantContext = parseSelectedRestaurantContext(formData);
 
   const aiRuntime = await resolveOcrAiRuntimeConfig();
   const providerCandidates = [aiRuntime, ...aiRuntime.fallbackCandidates];
@@ -171,11 +163,6 @@ export async function POST(req: Request) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
-  const formData = await req.formData();
-  const file = formData.get('image') as File | null;
-  const forceRefreshRequested = isOcrForceRefreshRequested({ formData, headers: req.headers });
-  const selectedRestaurantContext = parseSelectedRestaurantContext(formData);
   if (!file) {
     return new Response(JSON.stringify({ error: '이미지가 제공되지 않았습니다' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
@@ -189,17 +176,9 @@ export async function POST(req: Request) {
   }
 
   const buffer = imageReadResult.buffer;
+  // 개인정보 최소화를 위해 원본 이미지는 저장하지 않고 단방향 해시만 감사·쿼터 키로 사용합니다.
   const imageHash = crypto.createHash('sha256').update(buffer).digest('hex');
-  const ocrCacheVersions = providerCandidates.map(candidate => buildOcrCacheVersion({
-    cacheKind: RECEIPT_OCR_RAW_CACHE_KIND,
-    provider: candidate.provider,
-    model: candidate.models[0] ?? candidate.model,
-    promptVersion: RECEIPT_OCR_PROMPT_VERSION,
-    preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
-    extractionSchemaVersion: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-    routingMode: aiRuntime.routingMode,
-  }));
-  const ocrSupabase = createOcrLogsSupabaseClient(accessToken) ?? supabase;
+  const ocrSupabase = supabase;
   const ocrLogsTable = ocrSupabase.from('ocr_logs' as never);
   const forceRefresh = forceRefreshRequested
     ? await canForceRefreshOcr({ userId: user.id, roleClient: supabase as never })
@@ -212,42 +191,10 @@ export async function POST(req: Request) {
     });
   }
 
-  if (!forceRefresh) {
-    const { data: cachedResultRaw } = await ocrLogsTable
-      .select('metadata')
-      .eq('user_id', user.id)
-      .eq('image_hash', imageHash)
-      .eq('success', true)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    const cachedRows = (cachedResultRaw as Array<{ metadata?: OcrLogMetadata | null }> | null) ?? [];
-    const cachedMetadata = cachedRows
-      .map(row => row.metadata ?? null)
-      .find(metadata => ocrCacheVersions.some(version => doesOcrCacheMetadataMatch(metadata, version)))
-      ?? cachedRows
-        .map(row => row.metadata ?? null)
-        .find(metadata => Boolean(metadata?.raw_ocr_result && metadata.provider && metadata.model))
-      ?? null;
-    const cachedResponse = await buildOcrResponseFromRawCache({
-      metadata: cachedMetadata,
-      selectedRestaurantContext,
-      lookupCallbacks: createRestaurantLookupCallbacks(ocrSupabase as never),
-    });
-    if (cachedResponse) {
-      return createSseResponse(async (send) => {
-        send('progress', { message: '이전에 분석한 영수증 결과를 현재 맛집 문맥으로 다시 확인했어요.', stage: 'cache' });
-        send('field_patch', { data: cachedResponse.responsePayload, cached: true });
-        send('done', { data: cachedResponse.responsePayload, cached: true });
-      });
-    }
-  }
-
   try {
     const quota = await checkOcrDailyQuota({
-      userId: user.id,
-      logsClient: ocrSupabase as never,
-      roleClient: supabase as never,
+      quotaClient: ocrSupabase as never,
+      operationId: crypto.randomUUID(),
     });
 
     if (quota.exceeded) {
@@ -256,12 +203,17 @@ export async function POST(req: Request) {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-  } catch (countError) {
-    console.error('쿼터 확인 실패:', countError);
+  } catch {
+    return new Response(JSON.stringify({ error: 'OCR 사용 한도를 확인할 수 없습니다.' }), {
+      status: 503,
+      headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' },
+    });
   }
 
   return createSseResponse(async (send) => {
-    const failedAttempts: unknown[] = [];
+    let failedAttemptCount = 0;
+    let lastFailedProvider = aiRuntime.provider;
+    let lastFailedModel = aiRuntime.model || aiRuntime.models[0] || GEMINI_OCR_FALLBACK_MODEL;
     try {
       send('progress', { message: '영수증 이미지를 읽기 좋게 압축하고 있어요.', stage: 'preprocess' });
       const { optimized, savings } = await optimizeImage(buffer);
@@ -292,72 +244,74 @@ export async function POST(req: Request) {
           const responsePayload = flattenReceiptOcrEnvelope(envelope);
           send('field_patch', { data: responsePayload, model: result.model, final: true });
 
+          const successLogMetadata = buildOcrSuccessLogMetadata({
+            fileSize: file.size,
+            compressedSize: optimized.length,
+            savings,
+            provider: candidate.provider,
+            model: result.model,
+            promptVersion: RECEIPT_OCR_PROMPT_VERSION,
+            preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
+            routingMode: aiRuntime.routingMode,
+            normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
+            fallbackUsed: candidate.provider !== aiRuntime.provider || failedAttemptCount > 0,
+            forceRefresh,
+            envelope,
+            restaurantLookupStats: restaurantMatches.stats,
+          });
+          assertPrivacySafe(successLogMetadata);
           const { error: logError } = await ocrLogsTable.insert({
             user_id: user.id,
             image_hash: imageHash,
             model_used: result.model,
             success: true,
-            metadata: buildOcrSuccessLogMetadata({
-              fileSize: file.size,
-              compressedSize: optimized.length,
-              savings,
-              provider: candidate.provider,
-              model: result.model,
-              promptVersion: RECEIPT_OCR_PROMPT_VERSION,
-              preprocessVersion: RECEIPT_OCR_PREPROCESS_VERSION,
-              routingMode: aiRuntime.routingMode,
-              normalizationVersion: RECEIPT_OCR_NORMALIZATION_VERSION,
-              credentialSource: credential.sourceName ?? credential.source,
-              fallbackUsed: candidate.provider !== aiRuntime.provider || failedAttempts.length > 0,
-              forceRefresh,
-              envelope,
-              ocrResult: responsePayload,
-              restaurantLookupStats: restaurantMatches.stats,
-            }),
+            metadata: successLogMetadata,
           } as never);
           if (logError) {
             send('progress', { message: '분석은 완료됐지만 분석 로그 저장은 실패했어요.', stage: 'log_warning' });
           }
           send('done', { data: responsePayload, model: result.model, attempts: result.attempts });
           return;
-        } catch (error) {
-          failedAttempts.push({
-            provider: candidate.provider,
-            credential_source: credential.sourceName ?? credential.source,
-            error: error instanceof Error ? error.message : String(error),
-            attempts: error instanceof GeminiOcrError ? error.attempts : undefined,
-          });
-          if (aiRuntime.routingMode === 'manual') throw error;
+        } catch {
+          failedAttemptCount += 1;
+          lastFailedProvider = candidate.provider;
+          lastFailedModel = candidate.models[0] ?? candidate.model ?? GEMINI_OCR_FALLBACK_MODEL;
+          if (aiRuntime.routingMode === 'manual') {
+            throw new Error('OCR_MANUAL_PROVIDER_FAILED');
+          }
           send('model_attempt', { attempt: { model: candidate.model, ok: false, elapsedMs: 0, error: 'provider fallback' } });
         }
         }
       }
 
-      throw new Error(`모든 OCR provider 호출에 실패했습니다: ${JSON.stringify(failedAttempts)}`);
+      throw new Error('OCR_PROVIDERS_FAILED');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const lastFailedAttempt = failedAttempts.at(-1) as { provider?: string; attempts?: Array<{ model?: string }> } | undefined;
-      const failedProvider = lastFailedAttempt?.provider ?? aiRuntime.provider;
-      const failedModel = lastFailedAttempt?.attempts?.at(-1)?.model
-        ?? (failedProvider === aiRuntime.provider ? aiRuntime.model || aiRuntime.models[0] : undefined)
-        ?? GEMINI_OCR_FALLBACK_MODEL;
+      const failureCode = error instanceof GeminiOcrError
+        ? 'GEMINI_OCR_FAILED'
+        : 'OCR_PROCESSING_FAILED';
       try {
+        const failureMetadata = {
+          error_code: failureCode,
+          provider: lastFailedProvider,
+          attempt_count: failedAttemptCount,
+        };
+        assertPrivacySafe(failureMetadata);
         await ocrLogsTable.insert({
           user_id: user.id,
           image_hash: imageHash,
-          model_used: `${failedModel}:fail`,
+          model_used: `${lastFailedModel}:fail`,
           success: false,
-          metadata: {
-            error: errorMessage,
-            provider: failedProvider,
-            attempted_providers: failedAttempts,
-            attempts: error instanceof GeminiOcrError ? error.attempts : undefined,
-          },
+          metadata: failureMetadata,
         } as never);
       } catch {
         // Ignore logging failures.
       }
-      send('error', { message: 'OCR 처리 중 오류가 발생했습니다.', detail: process.env.NODE_ENV === 'production' ? undefined : errorMessage, terminal: true, status: 422 });
+      send('error', {
+        message: 'OCR 처리 중 오류가 발생했습니다.',
+        detail: process.env.NODE_ENV === 'production' ? undefined : failureCode,
+        terminal: true,
+        status: 422,
+      });
     }
   });
 }

@@ -14,9 +14,12 @@
   - `apps/web/app/admin/evaluations/page.tsx`, `apps/web/app/admin/banners/page.tsx`, `apps/web/app/insights/insights-client.tsx`: canonical admin modules embedded into `/admin`; standalone routes must stay stable.
   - `apps/web/design/pencil/reports/admin-unified-console-design-brief-20260512T133359Z.md`: warm editorial operations hub, clear entry flows, status summaries, guarded destructive operations.
   - `apps/web/docs/pencil-storyboard-sync.md`, `apps/web/tests-unit/pencil-storyboard-contract.test.ts`: design artifacts should be reviewable, manifest-backed, and tied to repo source.
-  - `https://github.com/changeroa/StyleGallery`: layout-only reference for semantic primitives, single-owner scroll contracts, `reel` for intentional horizontal scanning, and command-surface recipes.
-  - `apps/web/components/home/home-map-container.tsx`, `apps/web/components/home/MobileControlOverlay.tsx`: home viewport label, StyleGallery `reel cluster` mobile theme filter, and 44px mobile map controls.
+  - `https://github.com/changeroa/StyleGallery/tree/775430bbaf4ee208a642220f440f6926d79c90a3`: unlicensed, immutable question checklist only; no upstream code, CSS, prose, names, tests, or assets are copied or translated.
+  - `apps/web/stylegallery-adoption.v1.json`, `apps/web/components/home/home-map-container.tsx`, `apps/web/components/home/MobileControlOverlay.tsx`: Tzudong-owned layout vocabulary, scroll ownership, safe-area controls, and clean-room adoption evidence.
   - `apps/web/components/ui/table.tsx`, `apps/web/tests/responsive-overflow.spec.ts`: owner-gated horizontal-scroll policy via `data-horizontal-scroll-owner` and responsive overflow guard allowlisting.
+  - `apps/web/performance/*`: canonical performance inputs, scorer/validator outputs, frozen-tree evidence, and artifact-map references only; the artifact-map SHA is recorded out of band.
+  - `backend/naming-renames.v1.json`: bounded high-confidence taxonomy and rename evidence, not authorization for all-path naming churn.
+  - StyleGallery commit `775430bbaf4ee208a642220f440f6926d79c90a3` is unlicensed and question-only; `apps/web/stylegallery-adoption.v1.json` records clean-room, no-copy adoption. Neither reference implies affiliation.
 
 ## Brand
 - Personality: warm Korean food-map product, editorial, trustworthy, calm, operationally clear.
@@ -31,7 +34,7 @@
   - Keep risky actions visibly constrained by Preview → Confirm → Apply → Readback → Audit.
 - Non-goals:
   - No dependency additions for this admin-console refresh.
-  - No Supabase schema/RLS/mutation behavior changes except explicitly scoped admin audit persistence for user-management actions.
+  - Admin-console layout changes do not alter Supabase semantics; separately scoped privacy migrations and RPCs follow the privacy-sensitive contract below.
   - No broad rewrite of large existing admin modules unless a focused embedded seam is required.
   - No iframe embedding for admin modules.
 - Success signals:
@@ -92,11 +95,12 @@
   - Shared table horizontal scrolling is owner-gated: `allowHorizontalScroll` may preserve visual overflow, but policy allowlisting requires an explicit `data-horizontal-scroll-owner` such as `stamp-restaurant-list-table` or `admin-evaluation-table`.
 
 ## Accessibility
-- Target standard: WCAG 2.2 AA for new UI and regressions.
-- Keyboard/focus behavior: sidebar, collapse control, active canvas, module actions reachable in predictable order; focus rings visible and not clipped.
-- Contrast/readability: red-on-ivory, muted text on tinted cards, and status badges must remain readable.
-- Screen-reader semantics: icon-only/collapsed controls require stable accessible names; active navigation exposes `aria-current` or equivalent; content canvas has clear label.
-- Reduced motion and sensory considerations: transitions are subtle and not required to understand state; no motion-only state communication.
+- Target standard: WCAG 2.2 AA for new UI and regressions; it is a target, not a certification claim.
+- Keyboard/focus behavior: sidebar, collapse control, active canvas, and module actions are reachable in predictable order; focus rings remain visible, are not clipped, and the layout-owned scroll container scrolls the focused control into view.
+- Contrast/readability: red-on-ivory, muted text on tinted cards, and status badges remain readable.
+- Screen-reader semantics: icon-only/collapsed controls require stable accessible names; active navigation exposes `aria-current` or equivalent; content canvas has a clear label.
+- Mobile controls respect safe-area insets. Motion honors `prefers-reduced-motion`, remains subtle, and is never required to understand state.
+- Accessibility and visual evidence is sanitized: retain only route, viewport, visible control labels, fixed state codes/counts, and approved scroll owners; exclude cookies, tokens, headers, local storage, precise coordinates, raw OCR, raw admin/table data, and Supabase payloads.
 
 ## Responsive behavior
 - Supported breakpoints/devices: mobile/narrow admin fallback, tablet, desktop, large desktop.
@@ -106,7 +110,7 @@
   - Collapsed desktop sidebar should be narrower and icon-stable without squeezing text.
 - Mobile/desktop admin parity: authenticated admin user menus should expose a single “관리자 콘솔” entry that lands on `/admin`; detailed 맛집/제보/리뷰/배너/인사이트 task switching belongs inside the admin console sidebar/canvas so mobile and desktop do not drift.
 - Touch/hover differences: touch targets should be approximately 44px high where practical; hover affordances must not be the only state cue.
-- Horizontal scroll policy: `data-allow-horizontal-scroll="true"` is not a generic escape hatch. It must be paired with one of the approved owners: `mobile-theme-filter-reel`, `admin-dashboard-action-bar`, `admin-dashboard-series-toggle`, `admin-dashboard-card-title-actions`, `admin-dashboard-kpi-title-actions`, `stamp-restaurant-list-table`, or `admin-evaluation-table`. Naver map cluster marker overflow remains a provider-specific exception outside this policy.
+- Horizontal scroll policy: `data-allow-horizontal-scroll="true"` is not a generic escape hatch. It must be paired with an approved owner: `mobile-theme-filter-reel`, `admin-dashboard-action-bar`, `admin-dashboard-series-toggle`, `admin-dashboard-card-title-actions`, `admin-dashboard-kpi-title-actions`, `stamp-restaurant-list-table`, `admin-evaluation-table`, `storyboard-canvas-toolbar`, `storyboard-chat-examples`, or `storyboard-chat-attachments`. Naver map cluster marker overflow remains a provider-specific exception outside this policy.
 
 ## Interaction states
 - Loading: use `GlobalLoader` only for full auth/page gates. Inline admin moderation modules should render the work screen shell immediately and place skeletons inside the actual elements that are loading: header counts, filters, table rows, list cards, badges, and action cells. Avoid large route-level loading cards such as “제보 큐를 여는 중”, “리뷰 검수 큐를 여는 중”, or “맛집 검수 화면을 여는 중”; operators should see the target screen shape first, with per-element loading affordances and reduced-motion-safe animation.
@@ -134,6 +138,10 @@
 - Compatibility constraints: preserve `/admin`, `/admin/evaluations`, `/admin/banners`, `/admin/submissions`, `/insights`; preserve Supabase query/mutation semantics.
 - Supabase admin constraints: privileged user-management writes stay behind server-only service-role routes after `requireAdmin`; user-role mutation remains service-only; `admin_audit_events` records intent/applied status; `admin_user_preferences` stores only per-admin UI ordering preferences under RLS and explicit Data API grants.
 - Layout-contract constraints: keep StyleGallery primitive hooks source-visible (`data-layout-primitives`, `data-layout-recipe`, `data-scroll-owner`) and avoid adding decorative primitives that do not match the real spatial job.
+- Performance evidence constraints: use only `apps/web/performance/*` with its scorer/validator and an artifact map whose SHA is stored out of band. Reports state absolute, relative, and noise budgets and retain frozen-tree evidence; zero admitted slices is valid. No current G003 measured improvement is established without retained raw and scored artifacts.
+- Load-test constraints: run only authorized, bounded, non-production tests with explicit stop conditions, rollback, and readback receipts. This is not a capacity certification.
+- Recovery/release constraints: the dirty original worktree is immutable and the isolated recovery candidate is the only edit surface; never reset, stash, or clean. Start each serialized content-patch PR from a fresh head and promote `develop -> data -> main` only under external approval and branch protection.
+- Hosting constraints: verify the exact Git-integrated `tzudong` Vercel project before an action; do not use a stale `web` project or mutate DNS. A release or rollback requires external approval, branch-protection evidence, rollback planning, and a deployment readback receipt. No merge or deployment is asserted here.
 - Test/screenshot expectations:
   - `cd apps/web && npx eslint components/admin/AdminConsoleOverview.tsx --max-warnings=0`
   - `cd apps/web && npx tsc --noEmit --pretty false`
@@ -157,4 +165,15 @@
 ## Open questions
 - [ ] Production analytics/ops data contract / owner: product/backend / impact: needed before advisory LLM UI becomes write-capable.
 - [ ] Stable authenticated visual regression screenshots / owner: frontend QA / impact: would improve visual-verdict comparisons beyond heuristic screenshots.
-- [ ] Future audit persistence schema / owner: backend/product / impact: required before the audit placeholder becomes a real write/read surface.
+- [ ] Production privacy migration/RLS/RPC/type readback / owner: backend/privacy owner / impact: required before release; local schema tests do not prove the deployed catalog.
+
+## Privacy-sensitive interaction contract
+- Privacy onboarding precedes account creation. The UI must show the exact Korean policy version and content-hash-bound notice, require an explicit policy acknowledgement, and keep optional marketing choices visually and semantically separate.
+- Registration for users under 14 remains unavailable until an operator-approved guardian-verification provider is deployed and independently read back. The blocked state must explain that limitation without collecting a birth date, guardian contact, or resident registration number.
+- Marketing controls are purpose- and channel-specific (`email`, `sms`, `push`). A separate control is required for advertising between 21:00 and 08:00; ordinary consent must never imply night-time consent.
+- Device location uses a just-in-time disclosure immediately before the browser permission prompt. Coordinates remain in memory, the watcher is stopped on cancellation or unmount, and stored restaurant/business coordinates are presented as a separate data category.
+- Account deletion keeps the existing risky-action grammar: Preview → exact `계정 삭제` confirmation → Apply → Readback → Audit. Legal holds, last-admin protection, recent reauthentication, and session revocation are visible blockers rather than hidden retries.
+- The privacy-incident workspace is an operator decision aid. It displays awareness time, the bounded 72-hour assessment window, named approval and receipt fields, and fixed status/reason codes; it must not say an authority or user notice was filed or accepted without an external receipt.
+- Privacy-safe visual evidence may retain route, viewport, control labels, state codes, counts, and approved scroll owners only. It must not retain cookies, tokens, headers, local storage, email/phone values, precise coordinates, raw OCR, free-form incident evidence, admin tables, or Supabase payloads.
+- These interaction controls are product safeguards, not a legal-compliance certification. Policy publication, retention periods, guardian/provider approval, location-business filing or non-applicability, incident notices, and Korean legal review remain external release gates.
+- External production evidence remains required for policy publication, Korean legal/privacy-owner review, location filing or non-applicability, guardian/provider approval, incident submission/receipt, retention/operator approval, approved HTTPS provider capability, and hosted migration/RLS/grant/RPC/type/catalog, backup/PITR, key-management, and operator-access readback. Source safeguards do not prove any of those facts.

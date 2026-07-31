@@ -9,9 +9,15 @@ import {
   normalizeTrendJobRequestBody,
   statusUrlForTrendJobRequest,
 } from '@/lib/admin-trend-jobs';
+import {
+  BOUNDED_JSON_REQUEST_ERROR,
+  readBoundedJsonRequest,
+} from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const MAX_TREND_JOB_REQUEST_BYTES = 16 * 1024;
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
@@ -29,10 +35,22 @@ export async function POST(request: NextRequest) {
     admin.response.headers.set('Cache-Control', 'no-store');
     return admin.response;
   }
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ ok: false, error: 'trend_job_request_forbidden' }, { status: 403 });
+  }
+
+
+  const requestBody = await readBoundedJsonRequest(request, MAX_TREND_JOB_REQUEST_BYTES);
+  if (!requestBody.ok) {
+    return noStoreJson(
+      { ok: false, error: 'invalid_trend_job_request' },
+      { status: requestBody.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge ? 413 : 400 },
+    );
+  }
 
   let normalized: ReturnType<typeof normalizeTrendJobRequestBody>;
   try {
-    normalized = normalizeTrendJobRequestBody(await request.json());
+    normalized = normalizeTrendJobRequestBody(requestBody.value);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'invalid_trend_job_request';
     return noStoreJson({ ok: false, error: message === 'trend_job_request_window_invalid' ? message : 'invalid_trend_job_request' }, { status: message === 'trend_job_request_window_invalid' ? 409 : 400 });

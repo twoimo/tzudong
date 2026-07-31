@@ -16,12 +16,17 @@ import os
 import sys
 import json
 import re
+import stat
+import time
+import secrets
 import argparse
 import hashlib
 import requests
 from pathlib import Path
+from urllib.parse import urlsplit
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, List
+from requests.adapters import TimeoutSauce
+from typing import Callable, Dict, Any, NamedTuple, Optional, List
 
 # 유틸리티 모듈 경로 추가
 BASE_BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -38,13 +43,13 @@ from utils.config_loader import (
 from utils.logger import PipelineLogger
 from utils.duplicate_checker import append_to_jsonl
 from utils.runtime_paths import load_backend_env, get_backend_log_dir, resolve_backend_root
+from utils.privacy_log import safe_error_name
 
 try:
     from googleapiclient.discovery import build
     from openai import OpenAI
 except ImportError:
-    print("[ERROR] 필수 패키지 설치 필요:")
-    print("   pip install google-api-python-client openai requests")
+    print("op=required_dependencies_missing")
     sys.exit(1)
 
 # .env 로드
@@ -123,15 +128,187 @@ def save_checked_cache(channel_path: Path, cache: Dict[str, str]):
         pass
 
 
-def get_image_hash(url: str) -> Optional[str]:
-    """썸네일 이미지의 MD5 해시 계산"""
+THUMBNAIL_ALLOWED_HOSTS = frozenset(("i.ytimg.com", "img.youtube.com"))
+THUMBNAIL_MAX_URL_LENGTH = 2048
+THUMBNAIL_MAX_BYTES = 8 * 1024 * 1024
+THUMBNAIL_CHUNK_BYTES = 64 * 1024
+THUMBNAIL_CONNECT_TIMEOUT_SECONDS = 3
+THUMBNAIL_READ_TIMEOUT_SECONDS = 4
+THUMBNAIL_TOTAL_TIMEOUT_SECONDS = 10
+THUMBNAIL_MAGIC_PREFIX_BYTES = 12
+THUMBNAIL_CONTENT_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+VIDEO_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{11}$")
+MAX_RECOLLECT_ID = 2_147_483_647
+
+
+class VerifiedThumbnail(NamedTuple):
+    digest: str
+    extension: str
+    byte_count: int
+
+
+def _validated_thumbnail_url(value: Any) -> Optional[str]:
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > THUMBNAIL_MAX_URL_LENGTH
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        return None
+
     try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            return hashlib.md5(response.content).hexdigest()
-    except Exception:
-        pass
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError:
+        return None
+
+    if (
+        parsed.scheme != "https"
+        or parsed.username
+        or parsed.password
+        or parsed.hostname not in THUMBNAIL_ALLOWED_HOSTS
+        or port not in (None, 443)
+    ):
+        return None
+
+    return parsed.geturl()
+
+
+def _thumbnail_extension_from_magic(prefix: bytes) -> Optional[str]:
+    if prefix.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if prefix.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if len(prefix) >= THUMBNAIL_MAGIC_PREFIX_BYTES and prefix[:4] == b"RIFF" and prefix[8:12] == b"WEBP":
+        return "webp"
     return None
+
+
+def _thumbnail_response_header(response: Any, name: str) -> Optional[str]:
+    try:
+        value = response.headers.get(name)
+    except (AttributeError, TypeError):
+        return None
+    return value if isinstance(value, str) else None
+
+
+def _thumbnail_content_length(response: Any) -> Optional[int]:
+    value = _thumbnail_response_header(response, "Content-Length")
+    if value is None:
+        return None
+    value = value.strip()
+    if not re.fullmatch(r"\d+", value):
+        return -1
+    return int(value)
+
+
+def _thumbnail_timeout() -> TimeoutSauce:
+    return TimeoutSauce(
+        total=THUMBNAIL_TOTAL_TIMEOUT_SECONDS,
+        connect=THUMBNAIL_CONNECT_TIMEOUT_SECONDS,
+        read=THUMBNAIL_READ_TIMEOUT_SECONDS,
+    )
+
+
+def download_verified_thumbnail(
+    url: Any, write_chunk: Optional[Callable[[bytes], Any]] = None
+) -> Optional[VerifiedThumbnail]:
+    """스트리밍된 YouTube 썸네일을 검증하고, 필요하면 검증된 바이트만 기록한다."""
+    trusted_url = _validated_thumbnail_url(url)
+    if not trusted_url:
+        return None
+
+    response = None
+    started_at = time.monotonic()
+    prefix = bytearray()
+    digest = hashlib.md5()
+    byte_count = 0
+    extension = None
+
+    def deadline_expired() -> bool:
+        return time.monotonic() - started_at > THUMBNAIL_TOTAL_TIMEOUT_SECONDS
+
+    def emit(chunk: bytes) -> None:
+        digest.update(chunk)
+        if write_chunk:
+            write_chunk(chunk)
+
+    try:
+        response = requests.get(
+            trusted_url,
+            stream=True,
+            allow_redirects=False,
+            timeout=_thumbnail_timeout(),
+            headers={
+                "Accept": "image/jpeg,image/png,image/webp",
+                "Accept-Encoding": "identity",
+            },
+        )
+        if deadline_expired() or getattr(response, "status_code", None) != 200:
+            return None
+
+        content_type = (_thumbnail_response_header(response, "Content-Type") or "").split(";", 1)[0].strip().lower()
+        content_encoding = (_thumbnail_response_header(response, "Content-Encoding") or "").strip().lower()
+        declared_length = _thumbnail_content_length(response)
+        if (
+            content_type not in THUMBNAIL_CONTENT_TYPES
+            or content_encoding not in ("", "identity")
+            or declared_length is not None and (declared_length < 0 or declared_length > THUMBNAIL_MAX_BYTES)
+        ):
+            return None
+
+        for chunk in response.iter_content(chunk_size=THUMBNAIL_CHUNK_BYTES, decode_unicode=False):
+            if deadline_expired() or not isinstance(chunk, (bytes, bytearray)):
+                return None
+            if not chunk:
+                continue
+
+            byte_count += len(chunk)
+            if byte_count > THUMBNAIL_MAX_BYTES:
+                return None
+
+            offset = 0
+            if extension is None:
+                needed = THUMBNAIL_MAGIC_PREFIX_BYTES - len(prefix)
+                prefix.extend(chunk[:needed])
+                offset = min(len(chunk), needed)
+                if len(prefix) == THUMBNAIL_MAGIC_PREFIX_BYTES:
+                    extension = _thumbnail_extension_from_magic(bytes(prefix))
+                    if not extension or THUMBNAIL_CONTENT_TYPES[content_type] != extension:
+                        return None
+                    emit(bytes(prefix))
+
+            if extension is not None and offset < len(chunk):
+                emit(chunk[offset:])
+
+        if deadline_expired() or declared_length is not None and byte_count != declared_length:
+            return None
+
+        if extension is None:
+            extension = _thumbnail_extension_from_magic(bytes(prefix))
+            if not extension or THUMBNAIL_CONTENT_TYPES[content_type] != extension:
+                return None
+            emit(bytes(prefix))
+
+        return VerifiedThumbnail(digest.hexdigest(), extension, byte_count)
+    except Exception:
+        return None
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
+
+
+def get_image_hash(url: str) -> Optional[str]:
+    """검증된 썸네일 바이트의 MD5 해시 계산"""
+    thumbnail = download_verified_thumbnail(url)
+    return thumbnail.digest if thumbnail else None
 
 
 def check_thumbnail_exists(
@@ -340,20 +517,13 @@ def analyze_ad_content(
         parsed = [str(x).strip() for x in parsed if str(x).strip()]
         return parsed if parsed else None
 
-    except Exception as e:
-        err_text = str(e).lower()
-        if (
-            "invalid_api_key" in err_text
-            or "incorrect api key" in err_text
-            or "error code: 401" in err_text
-        ):
+    except Exception as error:
+        error_name = safe_error_name(error)
+        if error_name == "AuthenticationError" or getattr(error, "status_code", None) == 401:
             OPENAI_AD_ANALYSIS_DISABLED_REASON = "invalid_api_key"
-            logger.warning(
-                "광고 분석 비활성화: OpenAI API 키 인증 실패(401). "
-                "--skip-ads 사용 또는 OPENAI_API_KEY_BYEON/OPENAI_API_KEY를 점검하세요."
-            )
+            logger.warning(f"op=ad_analysis_auth_failed error={error_name}")
             return None
-        logger.warning(f"광고 분석 실패: {e}")
+        logger.warning(f"op=ad_analysis_failed error={error_name}")
         return None
 
 
@@ -441,37 +611,125 @@ def get_video_meta_batch(
                     ),
                 },
             }
-    except Exception as e:
-        print(f"배치 API 오류: {e}")
+    except Exception as error:
+        print(f"op=video_metadata_batch_failed error={safe_error_name(error)}")
 
     return results
+
+
+def _is_plain_directory(path: Path) -> bool:
+    try:
+        info = path.lstat()
+    except OSError:
+        return False
+
+    reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    return (
+        stat.S_ISDIR(info.st_mode)
+        and not stat.S_ISLNK(info.st_mode)
+        and not (getattr(info, "st_file_attributes", 0) & reparse_point)
+    )
+
+
+def _thumbnail_directory(channel_data_path: Path) -> Optional[Path]:
+    root = Path(channel_data_path)
+    if not _is_plain_directory(root):
+        return None
+
+    thumb_dir = root / "thumbnails"
+    try:
+        if os.path.lexists(thumb_dir):
+            if not _is_plain_directory(thumb_dir):
+                return None
+        else:
+            os.mkdir(thumb_dir, 0o700)
+            if not _is_plain_directory(thumb_dir):
+                return None
+
+        resolved_root = root.resolve(strict=True)
+        resolved_thumb_dir = thumb_dir.resolve(strict=True)
+        if resolved_thumb_dir.parent != resolved_root:
+            return None
+    except OSError:
+        return None
+    return thumb_dir
+
+
+def _valid_thumbnail_target(video_id: Any, recollect_id: Any) -> bool:
+    return (
+        isinstance(video_id, str)
+        and VIDEO_ID_PATTERN.fullmatch(video_id) is not None
+        and isinstance(recollect_id, int)
+        and not isinstance(recollect_id, bool)
+        and 0 <= recollect_id <= MAX_RECOLLECT_ID
+    )
 
 
 def save_thumbnail_file(
     channel_data_path: Path, video_id: str, recollect_id: int, url: str
 ):
-    """버전 관리가 적용된 썸네일 이미지 파일 저장"""
-    if not url:
+    """버전 관리가 적용된 검증된 썸네일 이미지를 원자적으로 저장한다."""
+    if not url or not _valid_thumbnail_target(video_id, recollect_id):
         return
 
-    thumb_dir = channel_data_path / "thumbnails"
-    thumb_dir.mkdir(parents=True, exist_ok=True)
+    thumb_dir = _thumbnail_directory(channel_data_path)
+    if not thumb_dir:
+        return
 
+    temporary_path = None
+    thumbnail_file = None
     try:
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            ext = url.split(".")[-1]
-            if len(ext) > 4 or "?" in ext:
-                ext = "jpg"  # 간단한 대체 처리
+        open_flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if hasattr(os, "O_NOFOLLOW"):
+            open_flags |= os.O_NOFOLLOW
 
-            # 파일 형식: {video_id}-{recollect_id}.{ext}
-            filename = f"{video_id}-{recollect_id}.{ext}"
-            filepath = thumb_dir / filename
+        for _ in range(8):
+            candidate = thumb_dir / f".thumbnail-{secrets.token_hex(16)}.part"
+            try:
+                descriptor = os.open(candidate, open_flags, 0o600)
+            except FileExistsError:
+                continue
+            temporary_path = candidate
+            thumbnail_file = os.fdopen(descriptor, "wb")
+            if not stat.S_ISREG(os.fstat(thumbnail_file.fileno()).st_mode):
+                return
+            os.chmod(candidate, 0o600)
+            break
+        else:
+            return
 
-            with open(filepath, "wb") as f:
-                f.write(resp.content)
+        thumbnail = download_verified_thumbnail(url, thumbnail_file.write)
+        if not thumbnail:
+            return
+
+        thumbnail_file.flush()
+        os.fsync(thumbnail_file.fileno())
+        thumbnail_file.close()
+        thumbnail_file = None
+
+        destination = thumb_dir / f"{video_id}-{recollect_id}.{thumbnail.extension}"
+        if os.path.lexists(destination) or not _is_plain_directory(thumb_dir):
+            return
+
+        try:
+            os.link(temporary_path, destination)
+        except OSError:
+            return
+        os.unlink(temporary_path)
+        temporary_path = None
     except Exception:
-        pass
+        return
+    finally:
+        if thumbnail_file is not None:
+            try:
+                thumbnail_file.close()
+            except Exception:
+                pass
+        if temporary_path is not None:
+            try:
+                os.unlink(temporary_path)
+            except OSError:
+                pass
 
 
 def collect_channel_meta(
@@ -486,7 +744,7 @@ def collect_channel_meta(
     deleted_path = channel_path / "deleted_urls.txt"
 
     if not urls_path.exists():
-        logger.warning(f"  [ERROR] URL 파일 없음: {urls_path}")
+        logger.warning("op=video_url_list_missing")
         return {}
 
     # 1. 수집 대상 비디오 ID 로드
@@ -515,9 +773,9 @@ def collect_channel_meta(
     original_count = len(video_ids)
     video_ids = [vid for vid in video_ids if vid not in deleted_ids]
     if len(video_ids) < original_count:
-        logger.warning(f"  [WARN] 삭제된 영상 {original_count - len(video_ids)}개 필터링됨")
+        logger.warning(f"op=deleted_videos_filtered count={original_count - len(video_ids)}")
 
-    logger.info(f"  [SCAN] 수집 대상: {len(video_ids)}개")
+    logger.info(f"op=video_metadata_collection_target count={len(video_ids)}")
     if not video_ids:
         return {"processed": 0}
 
@@ -569,14 +827,12 @@ def collect_channel_meta(
     # 초기 캐시 저장 (메타데이터로 업데이트된 내용 반영)
     if skipped_today_count > 0:
         save_checked_cache(channel_path, checked_cache)
-        logger.info(
-            f"  [Smart Skip] {skipped_today_count}개 영상은 오늘 이미 확인되어 건너뜁니다."
-        )
+        logger.info(f"op=video_metadata_skip_collected_today count={skipped_today_count}")
 
     video_ids = pending_ids
 
     if not video_ids:
-        logger.info("  수집할 대상이 없습니다 (모두 최신 상태)")
+        logger.info("op=video_metadata_collection_empty")
         return {"processed": 0, "success": success_count}
 
     # 배치 처리
@@ -660,7 +916,7 @@ def collect_channel_meta(
 
             # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
             if not is_changed and is_scheduled and already_collected_today:
-                logger.debug(f"  오늘 이미 수집됨 (스킵): {vid}")
+                logger.debug("op=video_skip_collected_today")
                 continue
 
             # 5. 수집 확정 -> ID 계산
@@ -702,9 +958,7 @@ def collect_channel_meta(
 
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)
-            logger.info(
-                f"  [Meta Updated] {vid} - {current_meta.get('title', 'No Title')[:30]}..."
-            )
+            logger.info("op=metadata_updated")
             success_count += 1
 
         # 배치 처리 후 캐시 업데이트 (처리된 모든 비디오)
@@ -713,7 +967,7 @@ def collect_channel_meta(
         save_checked_cache(channel_path, checked_cache)
 
     logger.progress_done()
-    logger.info(f"완료: 업데이트 {success_count}개")
+    logger.info(f"op=video_metadata_collection_complete updated={success_count}")
     return {"success": success_count}
 
 
@@ -727,7 +981,7 @@ def main():
     openai_api_key = (get_api_key("openai") or os.environ.get("OPENAI_API_KEY") or "").strip()
 
     if not youtube_api_key:
-        print("[ERROR] YOUTUBE_API_KEY 누락됨")
+        print("op=youtube_api_key_missing")
         sys.exit(1)
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)
@@ -745,8 +999,8 @@ def main():
         else:
             for ch in get_all_channels():
                 collect_channel_meta(ch, youtube, openai_client, logger)
-    except Exception as e:
-        logger.error(f"Error: {e}")
+    except Exception as error:
+        logger.error(f"op=collect_meta_failed error={safe_error_name(error)}")
     finally:
         logger.end_stage()
 

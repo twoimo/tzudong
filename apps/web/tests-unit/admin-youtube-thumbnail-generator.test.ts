@@ -4,17 +4,24 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { NextRequest } from "next/server";
+import sharp from "sharp";
 
 import {
   buildThumbnailProviderRequestEnv,
   detectImageMime,
   fetchThumbnailReferenceImageFromUrl,
+  fetchTrustedRemoteImage,
   getContentLengthRejection,
+  getMultipartFieldRejection,
   getMultipartContentTypeRejection,
   parseThumbnailChatAgentRequest,
   parseThumbnailReferenceImageUrl,
   parseThumbnailPayload,
   readThumbnailReferenceImages,
+  THUMBNAIL_MAX_FILE_BYTES,
+  THUMBNAIL_MAX_CANONICAL_TOTAL_BYTES,
+  THUMBNAIL_MAX_TOTAL_BYTES,
+  TrustedRemoteImageFetchError,
 } from "../lib/admin/youtube-thumbnail-generator/request";
 import {
   generateYoutubeThumbnail,
@@ -135,6 +142,21 @@ async function expectThumbnailErrorAsync(fn: () => Promise<unknown>, code: strin
   }
   throw new Error(`Expected ThumbnailGenerationError ${code}`);
 }
+async function expectTrustedRemoteImageError(
+  fn: () => Promise<unknown>,
+  code: string,
+  status?: number,
+) {
+  try {
+    await fn();
+  } catch (error) {
+    expect(error).toBeInstanceOf(TrustedRemoteImageFetchError);
+    expect((error as TrustedRemoteImageFetchError).code).toBe(code);
+    if (typeof status === "number") expect((error as TrustedRemoteImageFetchError).status).toBe(status);
+    return error as TrustedRemoteImageFetchError;
+  }
+  throw new Error(`Expected TrustedRemoteImageFetchError ${code}`);
+}
 
 function writeThumbnailAgentCommand(root: string, name: string, body: string) {
   mkdirSync(root, { recursive: true });
@@ -142,6 +164,33 @@ function writeThumbnailAgentCommand(root: string, name: string, body: string) {
   writeFileSync(commandPath, `#!/usr/bin/env node\n${body}\n`, "utf8");
   chmodSync(commandPath, 0o755);
   return commandPath;
+}
+function writeTerminationIgnoringThumbnailAgentTreeCommand(
+  root: string,
+  name: string,
+  directPidPath: string,
+  grandchildPidPath: string,
+  terminatedPath: string,
+  onInputEnd: string,
+) {
+  const grandchildScript = [
+    'process.on("SIGTERM", () => {});',
+    'setInterval(() => {}, 1_000);',
+  ].join("\n");
+  return writeThumbnailAgentCommand(root, name, `
+const { spawn } = require("node:child_process");
+const { writeFileSync } = require("node:fs");
+const grandchild = spawn(process.execPath, ["-e", ${JSON.stringify(grandchildScript)}], { stdio: "ignore" });
+writeFileSync(${JSON.stringify(directPidPath)}, String(process.pid), "utf8");
+writeFileSync(${JSON.stringify(grandchildPidPath)}, String(grandchild.pid), "utf8");
+process.on("SIGTERM", () => {
+  if (process.platform !== "win32") {
+    writeFileSync(${JSON.stringify(terminatedPath)}, "terminated", "utf8");
+  }
+});
+process.stdin.resume();
+${onInputEnd}
+`);
 }
 
 function createThumbnailChatAgentCommandFixture(prefix = "thumbnail-chat-agent-") {
@@ -402,6 +451,20 @@ function writeThumbnailRetrievalCommand(root: string, body: string) {
 }
 
 
+const VALID_TEST_JPEG_BYTES = await sharp({
+  create: { width: 12, height: 8, channels: 3, background: { r: 32, g: 64, b: 96 } },
+}).jpeg().toBuffer();
+
+function validThumbnailJpegResponse() {
+  return new Response(VALID_TEST_JPEG_BYTES, {
+    status: 200,
+    headers: {
+      "content-type": "image/jpeg",
+      "content-length": String(VALID_TEST_JPEG_BYTES.byteLength),
+    },
+  });
+}
+
 describe("admin youtube thumbnail generator", () => {
   test("normalizes thumbnail local bridge contract and trusts exact local-codex gpt-image-2 only", () => {
     expect(normalizeThumbnailLocalBridgeUrl("http://localhost:17873/path?debug=1#hash")).toBe("http://localhost:17873");
@@ -486,7 +549,7 @@ describe("admin youtube thumbnail generator", () => {
         reason: "openai_api_key_required",
         providerId: "openai-gpt-image-2",
         model: "gpt-image-2",
-        browserKeyStorage: "browser_local_storage_only",
+        browserKeyStorage: "memory_only_operation_scoped",
       },
     });
     expect(getThumbnailProviderAvailability({ OPENAI_API_KEY: "sk-test-openai-key-1234567890" } as NodeJS.ProcessEnv)).toMatchObject({
@@ -773,7 +836,7 @@ describe("admin youtube thumbnail generator", () => {
     expect(() => parseThumbnailPayload({ ...safePayload, providerId: "mock" })).toThrow("providerId");
     expect(() => parseThumbnailPayload({ ...safePayload, providerId: "bad" })).toThrow("providerId");
 
-    expect(detectImageMime(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00]))).toBe("image/png");
+    expect(detectImageMime(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe("image/png");
     expect(detectImageMime(new Uint8Array([0xff, 0xd8, 0xff, 0xdb]))).toBe("image/jpeg");
     expect(detectImageMime(new Uint8Array([82, 73, 70, 70, 1, 2, 3, 4, 87, 69, 66, 80]))).toBe("image/webp");
     expect(detectImageMime(new Uint8Array([1, 2, 3, 4]))).toBeNull();
@@ -844,8 +907,7 @@ describe("admin youtube thumbnail generator", () => {
     })).toMatchObject({
       chatThreadId: "thumbnail-chat:thread01",
       conversationMessages: [
-        { role: "user", id: "user-prev", content: "제육볶음 밥도둑 한상" },
-        { role: "assistant", id: "assistant-prev", content: "좋아요. 큰 문구는 밥도둑 한상이 좋습니다." },
+        { role: "user", content: "제육볶음 밥도둑 한상" },
       ],
       focusContext: expect.objectContaining({ kind: "text-layer", layerId: "headline", role: "headline" }),
       referenceImageAttachments: [
@@ -869,6 +931,14 @@ describe("admin youtube thumbnail generator", () => {
       error: "multipart_form_data_required",
     });
     expect(getMultipartContentTypeRejection(new Headers({ "content-type": "multipart/form-data; boundary=abc" }))).toBeNull();
+    expect(getContentLengthRejection(new Headers())).toEqual({
+      status: 411,
+      error: "content_length_required",
+    });
+    expect(getContentLengthRejection(new Headers({ "content-length": "1e3" }))).toEqual({
+      status: 400,
+      error: "content_length_invalid",
+    });
     expect(getContentLengthRejection(new Headers({ "content-length": "abc" }))).toEqual({
       status: 400,
       error: "content_length_invalid",
@@ -877,29 +947,123 @@ describe("admin youtube thumbnail generator", () => {
       status: 413,
       error: "content_length_too_large",
     });
+    const validForm = new FormData();
+    validForm.append("payload", "{}");
+    validForm.append("referenceImages", new File([new Uint8Array([1])], "image.png", { type: "image/png" }));
+    expect(getMultipartFieldRejection(validForm)).toBeNull();
+
+    const unknownField = new FormData();
+    unknownField.append("payload", "{}");
+    unknownField.append("unexpected", "value");
+    expect(getMultipartFieldRejection(unknownField)).toEqual({
+      status: 400,
+      error: "multipart_fields_invalid",
+    });
+
+    const duplicateKey = new FormData();
+    duplicateKey.append("payload", "{}");
+    duplicateKey.append("thumbnailSessionOpenaiApiKey", "sk-test-key-1234567890");
+    duplicateKey.append("thumbnailSessionOpenaiApiKey", "sk-test-key-0987654321");
+    expect(getMultipartFieldRejection(duplicateKey)).toEqual({
+      status: 400,
+      error: "multipart_fields_invalid",
+    });
   });
 
-  test("reads reference images with file-count, byte-size, and mime guards", async () => {
-    const png = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])], "sample.png", { type: "image/png" });
+  test("reads complete static reference images with file-count, byte-size, and mime guards", async () => {
+    const pngBytes = await sharp({
+      create: { width: 12, height: 8, channels: 3, background: { r: 32, g: 64, b: 96 } },
+    }).png().toBuffer();
+    const png = new File([pngBytes], "sample.png", { type: "image/png" });
     const images = await readThumbnailReferenceImages([png], ["food"]);
 
     expect(images).toHaveLength(1);
-    expect(images[0]).toMatchObject({ name: "reference-1", mime: "image/png", role: "food" });
+    expect(images[0]).toMatchObject({ name: "reference-1", mime: "image/jpeg", role: "food" });
+    expect(images[0]?.bytes.slice(0, 3)).toEqual(new Uint8Array([0xff, 0xd8, 0xff]));
 
     const invalid = new File([new Uint8Array([1, 2, 3, 4])], "sample.txt", { type: "text/plain" });
     await expectThumbnailErrorAsync(() => readThumbnailReferenceImages([invalid]), "invalid_text", 415);
-    await expectThumbnailErrorAsync(() => readThumbnailReferenceImages(Array.from({ length: 9 }, (_, index) => new File([new Uint8Array([0xff, 0xd8, 0xff])], `${index}.jpg`, { type: "image/jpeg" }))), "invalid_text", 400);
+    await expectThumbnailErrorAsync(
+      () => readThumbnailReferenceImages([
+        new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "prefix.png", { type: "image/png" }),
+      ]),
+      "invalid_text",
+      415,
+    );
+    await expectThumbnailErrorAsync(
+      () => readThumbnailReferenceImages([
+        new File([
+          new Uint8Array([...pngBytes, ...new TextEncoder().encode("forged-provider-output")]),
+        ], "polyglot.png", { type: "image/png" }),
+      ]),
+      "invalid_text",
+      415,
+    );
+    await expectThumbnailErrorAsync(() => readThumbnailReferenceImages(Array.from({ length: 9 }, (_, index) => new File([pngBytes], `${index}.png`, { type: "image/png" }))), "invalid_text", 400);
   });
+  test("rejects compressed manual uploads whose canonical images exceed the aggregate budget before provider work", async () => {
+    const width = 2_048;
+    const height = 2_048;
+    const entropy = new Uint8Array(width * height * 3);
+    let state = 0x9e3779b9;
+    for (let index = 0; index < entropy.byteLength; index += 1) {
+      state ^= state << 13;
+      state ^= state >>> 17;
+      state ^= state << 5;
+      entropy[index] = state & 0xff;
+    }
 
-  test("imports remote reference images through URL, DNS, size, and mime guards", async () => {
-    expect(parseThumbnailReferenceImageUrl("https://i.ytimg.com/vi/sample/maxresdefault.jpg").hostname).toBe("i.ytimg.com");
+    let compressedSource: Buffer | undefined;
+    let canonicalBytes = 0;
+    for (const quality of [75, 80, 85, 90]) {
+      const candidate = await sharp(Buffer.from(entropy), {
+        raw: { width, height, channels: 3 },
+      }).webp({ quality }).toBuffer();
+      if (candidate.byteLength * 8 > THUMBNAIL_MAX_TOTAL_BYTES) continue;
+
+      const canonical = await readThumbnailReferenceImages([
+        new File([candidate], "compressed.webp", { type: "image/webp" }),
+      ]);
+      const bytes = canonical[0]?.bytes.byteLength ?? 0;
+      if (bytes * 8 > THUMBNAIL_MAX_CANONICAL_TOTAL_BYTES) {
+        compressedSource = candidate;
+        canonicalBytes = bytes;
+        break;
+      }
+    }
+
+    if (!compressedSource) throw new Error("Expected a compressed source whose canonical JPEG expands beyond the aggregate limit.");
+    const expandedSource = compressedSource;
+    expect(expandedSource.byteLength * 8).toBeLessThanOrEqual(THUMBNAIL_MAX_TOTAL_BYTES);
+    expect(canonicalBytes * 8).toBeGreaterThan(THUMBNAIL_MAX_CANONICAL_TOTAL_BYTES);
+
+    const files = Array.from({ length: 8 }, (_, index) => new File(
+      [expandedSource],
+      `compressed-${index}.webp`,
+      { type: "image/webp" },
+    ));
+    await expectThumbnailErrorAsync(
+      () => readThumbnailReferenceImages(files),
+      "invalid_text",
+      413,
+    );
+  }, 20_000);
+
+  test("imports remote reference images through exact-host, DNS, timeout, size, and image guards", async () => {
+    const allowedUrl = "https://i.ytimg.com/vi/sample/maxresdefault.jpg";
+    const publicLookup = (async () => [{ address: "8.8.8.8", family: 4 }]) as never;
+    const jpgBytes = await sharp({
+      create: { width: 12, height: 8, channels: 3, background: { r: 32, g: 64, b: 96 } },
+    }).jpeg().toBuffer();
+
+    expect(parseThumbnailReferenceImageUrl(allowedUrl).hostname).toBe("i.ytimg.com");
     expectThumbnailError(() => parseThumbnailReferenceImageUrl("file:///tmp/image.jpg"), "invalid_text");
-    expectThumbnailError(() => parseThumbnailReferenceImageUrl("http://localhost/image.jpg"), "invalid_text");
-    expectThumbnailError(() => parseThumbnailReferenceImageUrl("https://user:pass@example.com/image.jpg"), "invalid_text");
+    expectThumbnailError(() => parseThumbnailReferenceImageUrl("http://i.ytimg.com/image.jpg"), "invalid_text");
+    expectThumbnailError(() => parseThumbnailReferenceImageUrl("https://user:pass@i.ytimg.com/image.jpg"), "invalid_text");
+    expectThumbnailError(() => parseThumbnailReferenceImageUrl("https://assets.example.com/image.jpg"), "invalid_text");
 
-    const jpgBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0x00]);
-    const imported = await fetchThumbnailReferenceImageFromUrl("https://assets.example.com/path/photo", {
-      lookup: (async () => [{ address: "93.184.216.34", family: 4 }]) as never,
+    const imported = await fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+      lookup: publicLookup,
       fetch: (async () => new Response(jpgBytes, {
         headers: {
           "content-type": "image/jpeg",
@@ -907,21 +1071,48 @@ describe("admin youtube thumbnail generator", () => {
         },
       })) as typeof fetch,
     });
-
     expect(imported.mime).toBe("image/jpeg");
-    expect(imported.fileName).toBe("photo.jpg");
-    expect(imported.bytes).toEqual(jpgBytes);
+    expect(imported.fileName).toBe("maxresdefault.jpg");
+    expect(imported.bytes.slice(0, 3)).toEqual(new Uint8Array([0xff, 0xd8, 0xff]));
+    let remoteFetchesAfterDnsDeadline = 0;
+    let resolveLateLookup: ((addresses: Array<{ address: string; family: 4 }>) => void) | undefined;
+    const dnsDeadlineError = await expectTrustedRemoteImageError(
+      () => fetchTrustedRemoteImage(allowedUrl, {
+        allowedHostnames: ["i.ytimg.com"],
+        maxBytes: THUMBNAIL_MAX_FILE_BYTES,
+        timeoutMs: 10,
+        accept: "image/jpeg",
+      }, {
+        lookup: (() => new Promise<Array<{ address: string; family: 4 }>>((resolve) => {
+          resolveLateLookup = resolve;
+        })) as never,
+        fetch: (async () => {
+          remoteFetchesAfterDnsDeadline += 1;
+          return validThumbnailJpegResponse();
+        }) as typeof fetch,
+      }),
+      "remote_image_timeout",
+      408,
+    );
+    expect(dnsDeadlineError.message).toBe("remote_image_timeout");
+    expect(remoteFetchesAfterDnsDeadline).toBe(0);
+    resolveLateLookup?.([{ address: "8.8.8.8", family: 4 }]);
+    await Promise.resolve();
+    expect(remoteFetchesAfterDnsDeadline).toBe(0);
 
     await expectThumbnailErrorAsync(
-      () => fetchThumbnailReferenceImageFromUrl("https://private.example.com/image.jpg", {
-        lookup: (async () => [{ address: "127.0.0.1", family: 4 }]) as never,
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+        lookup: (async () => [
+          { address: "8.8.8.8", family: 4 },
+          { address: "127.0.0.1", family: 4 },
+        ]) as never,
         fetch: (async () => new Response(jpgBytes)) as typeof fetch,
       }),
       "invalid_text",
       400,
     );
     await expectThumbnailErrorAsync(
-      () => fetchThumbnailReferenceImageFromUrl("https://mapped-private.example.com/image.jpg", {
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
         lookup: (async () => [{ address: "::ffff:172.16.0.1", family: 6 }]) as never,
         fetch: (async () => new Response(jpgBytes)) as typeof fetch,
       }),
@@ -929,8 +1120,17 @@ describe("admin youtube thumbnail generator", () => {
       400,
     );
     await expectThumbnailErrorAsync(
-      () => fetchThumbnailReferenceImageFromUrl("https://assets.example.com/image.txt", {
-        lookup: (async () => [{ address: "93.184.216.34", family: 4 }]) as never,
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+        lookup: (async () => [{ address: "192.0.2.10", family: 4 }]) as never,
+        fetch: (async () => new Response(jpgBytes)) as typeof fetch,
+      }),
+      "invalid_text",
+      400,
+    );
+
+    await expectThumbnailErrorAsync(
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+        lookup: publicLookup,
         fetch: (async () => new Response(new Uint8Array([1, 2, 3, 4]), {
           headers: { "content-type": "text/plain" },
         })) as typeof fetch,
@@ -939,13 +1139,90 @@ describe("admin youtube thumbnail generator", () => {
       415,
     );
     await expectThumbnailErrorAsync(
-      () => fetchThumbnailReferenceImageFromUrl("https://assets.example.com/redirect.jpg", {
-        lookup: (async () => [{ address: "93.184.216.34", family: 4 }]) as never,
-        fetch: (async () => new Response(null, { status: 302, headers: { location: "https://example.com/next.jpg" } })) as typeof fetch,
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+        lookup: publicLookup,
+        fetch: (async () => new Response(new Uint8Array([1, 2, 3, 4]), {
+          headers: { "content-type": "image/jpeg" },
+        })) as typeof fetch,
       }),
       "invalid_text",
+      415,
+    );
+    await expectThumbnailErrorAsync(
+      () => fetchThumbnailReferenceImageFromUrl(allowedUrl, {
+        lookup: publicLookup,
+        fetch: (async () => new Response(new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(THUMBNAIL_MAX_FILE_BYTES));
+            controller.enqueue(new Uint8Array(1));
+            controller.close();
+          },
+        }), {
+          headers: { "content-type": "image/jpeg" },
+        })) as typeof fetch,
+      }),
+      "invalid_text",
+      413,
+    );
+
+    let redirectRequests = 0;
+    const redirectError = await expectTrustedRemoteImageError(
+      () => fetchTrustedRemoteImage(allowedUrl, {
+        allowedHostnames: ["i.ytimg.com"],
+        maxBytes: THUMBNAIL_MAX_FILE_BYTES,
+        timeoutMs: 25,
+        accept: "image/jpeg",
+      }, {
+        lookup: publicLookup,
+        fetch: (async () => {
+          redirectRequests += 1;
+          return new Response(null, {
+            status: 302,
+            headers: { location: "https://127.0.0.1/private-image?token=do-not-leak" },
+          });
+        }) as typeof fetch,
+      }),
+      "remote_image_redirect",
       400,
     );
+    expect(redirectRequests).toBe(1);
+    expect(redirectError.message).not.toContain("127.0.0.1");
+    expect(redirectError.message).not.toContain("do-not-leak");
+
+    const timeoutError = await expectTrustedRemoteImageError(
+      () => fetchTrustedRemoteImage(allowedUrl, {
+        allowedHostnames: ["i.ytimg.com"],
+        maxBytes: THUMBNAIL_MAX_FILE_BYTES,
+        timeoutMs: 1,
+        accept: "image/jpeg",
+      }, {
+        lookup: publicLookup,
+        fetch: ((_input, init) => new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        })) as typeof fetch,
+      }),
+      "remote_image_timeout",
+      408,
+    );
+    expect(timeoutError.message).toBe("remote_image_timeout");
+
+    const redactedError = await expectTrustedRemoteImageError(
+      () => fetchTrustedRemoteImage(allowedUrl, {
+        allowedHostnames: ["i.ytimg.com"],
+        maxBytes: THUMBNAIL_MAX_FILE_BYTES,
+        timeoutMs: 25,
+        accept: "image/jpeg",
+      }, {
+        lookup: publicLookup,
+        fetch: (async () => {
+          throw new Error("https://i.ytimg.com/private-image?token=do-not-leak");
+        }) as typeof fetch,
+      }),
+      "remote_image_request_failed",
+      502,
+    );
+    expect(redactedError.message).toBe("remote_image_request_failed");
+    expect(redactedError.message).not.toContain("do-not-leak");
   });
 
   test("blocks unsafe rendered text, copied prompt chunks, contact data, prices, and brands", () => {
@@ -1039,6 +1316,78 @@ describe("admin youtube thumbnail generator", () => {
       expect(prompt).toContain("No embedding/reranker model-use claim is made");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+  test("G013 local-pool safety keeps a bounded regular JSONL control when unsafe entries coexist", async () => {
+    const poolDir = mkdtempSync(join(tmpdir(), "thumbnail-g013-local-pool-"));
+    const outsideDir = mkdtempSync(join(tmpdir(), "thumbnail-g013-local-pool-outside-"));
+    try {
+      writeTzuyangMetaFixture(poolDir, "localPoolSafe01", "쯔양 제육볶음 먹방 안전 제어");
+      writeFileSync(join(poolDir, "oversized-file.jsonl"), "x".repeat((16 * 1024) + 1), "utf8");
+      writeFileSync(join(poolDir, "truncated-first-line.jsonl"), "x".repeat((8 * 1024) + 1), "utf8");
+      writeFileSync(join(poolDir, "long-string.jsonl"), `${JSON.stringify({
+        youtube_link: "https://www.youtube.com/watch?v=longString01",
+        title: "x".repeat(1_025),
+      })}\n`, "utf8");
+
+      const deeplyNested = Array.from(
+        { length: 9 },
+        (_, index) => index,
+      ).reduce<unknown>((value) => ({ nested: value }), "leaf");
+      writeFileSync(join(poolDir, "deep-json.jsonl"), `${JSON.stringify({
+        youtube_link: "https://www.youtube.com/watch?v=deepJson01",
+        title: "쯔양 깊은 JSON",
+        deeplyNested,
+      })}\n`, "utf8");
+
+      writeFileSync(join(poolDir, "many-fields.jsonl"), `${JSON.stringify({
+        youtube_link: "https://www.youtube.com/watch?v=manyFields01",
+        title: "쯔양 필드 제한",
+        ...Object.fromEntries(Array.from(
+          { length: 33 },
+          (_, index) => [`field${index}`, index],
+        )),
+      })}\n`, "utf8");
+      mkdirSync(join(poolDir, "directory-entry.jsonl"));
+      if (process.platform !== "win32"
+        && typeof process.getuid === "function"
+        && process.getuid() !== 0) {
+        const unreadablePath = join(poolDir, "unreadable-entry.jsonl");
+        writeTzuyangMetaFixture(poolDir, "unreadable-entry", "쯔양 읽기 거부");
+        chmodSync(unreadablePath, 0);
+      }
+
+      const outsideEntry = join(outsideDir, "outside.jsonl");
+      writeTzuyangMetaFixture(outsideDir, "outside", "쯔양 외부 파일");
+      if (process.platform === "win32") {
+        try {
+          symlinkSync(outsideDir, join(poolDir, "junction-escape.jsonl"), "junction");
+        } catch {
+          // Junction creation can require an unavailable Windows developer privilege.
+        }
+      } else {
+        symlinkSync(outsideEntry, join(poolDir, "symlink-escape.jsonl"));
+        symlinkSync("/dev/null", join(poolDir, "device-escape.jsonl"));
+        const fifoPath = join(poolDir, "fifo-entry.jsonl");
+        expect(spawnSync("mkfifo", [fifoPath]).status).toBe(0);
+      }
+
+      const parsed = parseThumbnailPayload({
+        ...safePayload,
+        topic: "제육볶음 먹방 썸네일",
+        headline: "안전 제어",
+      });
+      const retrieval = await resolveThumbnailRetrievalReferences(parsed, {
+        THUMBNAIL_RETRIEVAL_LOCAL_POOL: poolDir,
+        THUMBNAIL_RETRIEVAL_DEFAULT_ADAPTER_DISABLED: "1",
+      } as NodeJS.ProcessEnv);
+
+      expect(retrieval.diagnostics.status).toBe("partial");
+      expect(retrieval.diagnostics.commandRuntime).toBe("local_static_pool");
+      expect(retrieval.evidence.map((item) => item.videoId)).toEqual(["localPoolSafe01"]);
+    } finally {
+      rmSync(poolDir, { recursive: true, force: true });
+      rmSync(outsideDir, { recursive: true, force: true });
     }
   });
 
@@ -1248,13 +1597,7 @@ process.stdin.on("end", () => {
       lookup: async () => [{ address: "142.250.1.1", family: 4 }] as any,
       fetch: mock(async (input: URL | RequestInfo) => {
         fetchedUrls.push(String(input));
-        return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-          status: 200,
-          headers: {
-            "content-type": "image/jpeg",
-            "content-length": "4",
-          },
-        });
+        return validThumbnailJpegResponse();
       }) as any,
     };
 
@@ -1303,13 +1646,7 @@ process.stdin.on("end", () => {
   test("can opt into existing Tzuyang thumbnails as host references when the operator requests Tzuyang", async () => {
     const deps = {
       lookup: async () => [{ address: "142.250.1.1", family: 4 }] as any,
-      fetch: mock(async () => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-        status: 200,
-        headers: {
-          "content-type": "image/jpeg",
-          "content-length": "4",
-        },
-      })) as any,
+      fetch: mock(async () => validThumbnailJpegResponse()) as any,
     };
 
     const result = await readThumbnailRetrievalReferenceImages([
@@ -1372,13 +1709,7 @@ process.stdin.on("end", () => {
   test("limits automatic retrieved references to smaller host/style budgets", async () => {
     const deps = {
       lookup: async () => [{ address: "142.250.1.1", family: 4 }] as any,
-      fetch: mock(async () => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-        status: 200,
-        headers: {
-          "content-type": "image/jpeg",
-          "content-length": "4",
-        },
-      })) as any,
+      fetch: mock(async () => validThumbnailJpegResponse()) as any,
     };
     const evidence = Array.from({ length: 9 }, (_, index) => ({
       id: `ref-${index + 1}`,
@@ -1425,13 +1756,7 @@ process.stdin.on("end", () => {
       },
     ], 0, {
       lookup: async () => [{ address: "142.250.1.1", family: 4 }] as any,
-      fetch: mock(async () => new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-        status: 200,
-        headers: {
-          "content-type": "image/jpeg",
-          "content-length": "4",
-        },
-      })) as any,
+      fetch: mock(async () => validThumbnailJpegResponse()) as any,
     }, { allowHostPersonFromRetrievedThumbnails: true });
 
     const prompt = buildYoutubeThumbnailPrompt({
@@ -1477,13 +1802,7 @@ process.stdin.on("end", () => {
         if (url.includes("maxresdefault")) {
           return new Response("missing", { status: 404 });
         }
-        return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
-          status: 200,
-          headers: {
-            "content-type": "image/jpeg",
-            "content-length": "4",
-          },
-        });
+        return validThumbnailJpegResponse();
       }) as any,
     };
 
@@ -2278,14 +2597,41 @@ process.stdin.on("end", () => {
   test("runs backend-agent planning but blocks local Codex provider generation without exact provenance", async () => {
     const parsed = parseThumbnailPayload({ ...safePayload, generationMode: "backend_agent", providerId: "local-codex" });
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-backend-agent-no-proof-"));
-    const env = createLocalCodexFixtureEnv();
-    env.THUMBNAIL_LOCAL_CODEX_PROVENANCE_FILE = join(tempDir, "missing-proof.json");
+    const commandPath = writeThumbnailAgentCommand(tempDir, "thumbnail-agent-missing-proof", `
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: "missing provenance guard",
+    layoutBrief: "provider must remain fail closed",
+    promptAddendum: "Backend thumbnail agent orchestration brief: missing provenance fixture",
+    safetyReview: "exact provenance required",
+    nextActions: ["provenance 검증"],
+    warnings: [],
+    diagnostics: { fixture: "missing_provenance" },
+  }));
+});
+`);
+    const env = {
+      ALLOW_LOCAL_CLI_THUMBNAIL: "true",
+      THUMBNAIL_LOCAL_CODEX_COMMAND: process.execPath,
+      THUMBNAIL_LOCAL_CODEX_IMAGE_MODEL: "gpt-image-2",
+      THUMBNAIL_LOCAL_CODEX_PROVENANCE_FILE: join(tempDir, "missing-proof.json"),
+      TZUDONG_REPO_ROOT: tempDir,
+      THUMBNAIL_AGENT_RUNTIME: "local_graph",
+      THUMBNAIL_AGENT_COMMAND: commandPath,
+    } as NodeJS.ProcessEnv;
 
-    await expectThumbnailErrorAsync(
-      () => generateYoutubeThumbnailWithBackendAgent(parsed, [], env),
-      "provider_unavailable",
-      503,
-    );
+    try {
+      await expectThumbnailErrorAsync(
+        () => generateYoutubeThumbnailWithBackendAgent(parsed, [], env),
+        "provider_unavailable",
+        503,
+      );
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   test("passes retrieval evidence into backend-agent planning payload", async () => {
@@ -2394,7 +2740,7 @@ process.stdin.on("end", () => {
     expect(parsed.diagnostics.retrievalEvidenceCount).toBe(1);
     expect(["langgraph", "langgraph-compatible-fallback"]).toContain(parsed.diagnostics.graphRuntime);
     expect(JSON.stringify(parsed)).not.toContain("thumbnail_agent_graph_unavailable");
-  });
+  }, 15_000);
 
   test("does not disguise a broken installed LangGraph import as package absence", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-broken-langgraph-"));
@@ -2417,7 +2763,9 @@ process.stdin.on("end", () => {
       });
 
       expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("broken installed langgraph");
+      expect(result.stderr).toContain("thumbnail_agent_error: RuntimeError");
+      expect(result.stderr).not.toContain("broken installed langgraph");
+      expect(result.stderr).not.toContain("Traceback");
       expect(result.stdout).not.toContain("langgraph-compatible-fallback");
       expect(result.stdout).not.toContain("package is unavailable");
     } finally {
@@ -2433,8 +2781,8 @@ process.stdin.on("end", () => {
 const { writeFileSync } = require("node:fs");
 process.stdin.resume();
 process.stdin.on("end", () => {
-  const diagnostics = { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) };
-  writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify(diagnostics), "utf8");
+  const childDiagnostics = { openaiKeyLeaked: Boolean(process.env.OPENAI_API_KEY) };
+  writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify(childDiagnostics), "utf8");
   process.stdout.write(JSON.stringify({
     mode: "command",
     runtime: "codex_cli_oauth",
@@ -2444,7 +2792,7 @@ process.stdin.on("end", () => {
     safetyReview: "review",
     nextActions: ["검수"],
     warnings: [],
-    diagnostics,
+    diagnostics: { runtime: "codex_cli_oauth" },
   }));
 });
 `);
@@ -2467,6 +2815,192 @@ process.stdin.on("end", () => {
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  describe("backend-agent bounded output trust boundary", () => {
+    async function waitForMarker(markerPath: string) {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        if (existsSync(markerPath)) return readFileSync(markerPath, "utf8");
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      return "";
+    }
+    async function waitForProcessExit(pid: number) {
+      expect(Number.isSafeInteger(pid)).toBe(true);
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        try {
+          process.kill(pid, 0);
+        } catch {
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Process ${pid} survived backend-agent cleanup.`);
+    }
+
+    test("terminates and awaits the full process tree when combined stdout and stderr exceed the hard cap", async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-bounded-output-"));
+      const terminatedPath = join(tempDir, "terminated.txt");
+      const startedPath = join(tempDir, "started.txt");
+      const grandchildPath = join(tempDir, "grandchild.txt");
+      try {
+        const commandPath = writeTerminationIgnoringThumbnailAgentTreeCommand(
+          tempDir,
+          "combined-output-overflow",
+          startedPath,
+          grandchildPath,
+          terminatedPath,
+          `
+process.stdin.on("end", () => {
+  process.stderr.write("s".repeat(32 * 1024));
+  process.stdout.write("o".repeat(40 * 1024));
+  setInterval(() => {}, 1_000);
+});
+`,
+        );
+        await expectThumbnailErrorAsync(
+          () => generateYoutubeThumbnailChatWithBackendAgent({
+            message: "메인: 역대급 불맛 생성해줘",
+            providerId: "local-codex",
+            generationMode: "backend_agent",
+          }, { THUMBNAIL_AGENT_COMMAND: commandPath } as NodeJS.ProcessEnv),
+          "provider_unavailable",
+          503,
+        );
+        const childPid = Number(readFileSync(startedPath, "utf8"));
+        const grandchildPid = Number(readFileSync(grandchildPath, "utf8"));
+        await waitForProcessExit(childPid);
+        await waitForProcessExit(grandchildPid);
+        if (process.platform !== "win32") {
+          expect(await waitForMarker(terminatedPath)).toBe("terminated");
+        }
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    }, 15_000);
+
+    test("keeps Gemini keys, bearer tokens, and stdin request JSON out of the adapter environment and response", async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-secret-env-"));
+      const diagnosticsPath = join(tempDir, "child-env.json");
+      const geminiKey = "AIzaFakeGeminiKeyForBoundedOutputTest";
+      const bearerToken = "Bearer bounded-output-test-token";
+      try {
+        const commandPath = writeThumbnailAgentCommand(tempDir, "secret-env", `
+const { writeFileSync } = require("node:fs");
+process.stdin.resume();
+process.stdin.on("end", () => {
+  writeFileSync(${JSON.stringify(diagnosticsPath)}, JSON.stringify({
+    hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
+    hasBearerToken: Boolean(process.env.AUTHORIZATION),
+    hasRequestJson: Boolean(process.env.THUMBNAIL_AGENT_JSON),
+  }), "utf8");
+  process.stderr.write(${JSON.stringify(`adapter stderr ${geminiKey} ${bearerToken}`)});
+  process.stdout.write(JSON.stringify({
+    mode: "command",
+    runtime: "codex_cli_oauth",
+    concept: ${JSON.stringify(`adapter output ${geminiKey} ${bearerToken}`)},
+    layoutBrief: "layout",
+    promptAddendum: "Backend thumbnail agent orchestration brief: bounded output",
+    safetyReview: "review",
+    nextActions: ["검수"],
+    warnings: [],
+    diagnostics: { runtime: "codex_cli_oauth", stdoutPreview: "[SUPPRESSED]", stderrPreview: "[SUPPRESSED]" },
+  }));
+});
+`);
+        const result = await generateYoutubeThumbnailChatWithBackendAgent({
+          message: "메인: 역대급 불맛 생성해줘",
+          providerId: "local-codex",
+          generationMode: "backend_agent",
+        }, {
+          THUMBNAIL_AGENT_COMMAND: commandPath,
+          GEMINI_API_KEY: geminiKey,
+          AUTHORIZATION: bearerToken,
+        } as NodeJS.ProcessEnv);
+
+        expect(JSON.parse(readFileSync(diagnosticsPath, "utf8"))).toEqual({
+          hasGeminiKey: false,
+          hasBearerToken: false,
+          hasRequestJson: false,
+        });
+        expect(JSON.stringify(result)).not.toContain(geminiKey);
+        expect(JSON.stringify(result)).not.toContain(bearerToken);
+        expect(result.backendAgent.diagnostics).not.toHaveProperty("stdoutPreview");
+        expect(result.backendAgent.diagnostics).not.toHaveProperty("stderrPreview");
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test("rejects oversized action arrays and deep or unknown command diagnostics", async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-invalid-plan-"));
+      const invalidPlans = [
+        { mode: "command", warnings: Array.from({ length: 9 }, () => "warning") },
+        { mode: "command", nextActions: Array.from({ length: 7 }, () => "review") },
+        { mode: "command", diagnostics: { runtime: { nested: { value: "deep" } } } },
+        { mode: "command", diagnostics: { unknownDiagnostic: "exfiltrate" } },
+      ];
+      try {
+        for (const [index, invalidPlan] of invalidPlans.entries()) {
+          const commandPath = writeThumbnailAgentCommand(tempDir, `invalid-plan-${index}`, `
+process.stdin.resume();
+process.stdin.on("end", () => {
+  process.stdout.write(${JSON.stringify(JSON.stringify(invalidPlan))});
+});
+`);
+          await expectThumbnailErrorAsync(
+            () => generateYoutubeThumbnailChatWithBackendAgent({
+              message: "메인: 역대급 불맛 생성해줘",
+              providerId: "local-codex",
+              generationMode: "backend_agent",
+            }, { THUMBNAIL_AGENT_COMMAND: commandPath } as NodeJS.ProcessEnv),
+            "provider_unavailable",
+            503,
+          );
+        }
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test("awaits aborted full process-tree cleanup before returning the fixed abort result", async () => {
+      const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-abort-cleanup-"));
+      const startedPath = join(tempDir, "started.txt");
+      const grandchildPath = join(tempDir, "grandchild.txt");
+      const terminatedPath = join(tempDir, "terminated.txt");
+      try {
+        const commandPath = writeTerminationIgnoringThumbnailAgentTreeCommand(
+          tempDir,
+          "abort-cleanup",
+          startedPath,
+          grandchildPath,
+          terminatedPath,
+          "setInterval(() => {}, 1_000);",
+        );
+        const controller = new AbortController();
+        const promise = generateYoutubeThumbnailChatWithBackendAgent({
+          message: "메인: 역대급 불맛 생성해줘",
+          providerId: "local-codex",
+          generationMode: "backend_agent",
+        }, {
+          THUMBNAIL_AGENT_COMMAND: commandPath,
+        } as NodeJS.ProcessEnv, {
+          signal: controller.signal,
+        });
+
+        const childPid = Number(await waitForMarker(startedPath));
+        const grandchildPid = Number(await waitForMarker(grandchildPath));
+        controller.abort();
+        await expectThumbnailErrorAsync(() => promise, "thumbnail_chat_aborted", 499);
+        await waitForProcessExit(childPid);
+        await waitForProcessExit(grandchildPid);
+        if (process.platform !== "win32") {
+          expect(readFileSync(terminatedPath, "utf8")).toBe("terminated");
+        }
+      } finally {
+        rmSync(tempDir, { recursive: true, force: true });
+      }
+    }, 15_000);
   });
   test("fails explicitly when a configured thumbnail backend-agent command emits invalid JSON", async () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-agent-invalid-"));
@@ -3294,7 +3828,7 @@ process.stdin.on("end", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-chat-agent-abort-"));
     const abortMarkerPath = join(tempDir, "aborted.txt");
     const readAbortMarker = async () => {
-      for (let attempt = 0; attempt < 20; attempt += 1) {
+      for (let attempt = 0; attempt < 100; attempt += 1) {
         if (existsSync(abortMarkerPath)) return readFileSync(abortMarkerPath, "utf8");
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
@@ -3329,7 +3863,7 @@ setTimeout(() => {}, 30_000);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   test("returns JSON 400 for malformed thumbnail chat payloads without invoking the backend-agent", async () => {
     let backendAgentCalls = 0;
@@ -3349,7 +3883,11 @@ setTimeout(() => {}, 30_000);
       const response = await routeModule.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/chat", {
         method: "POST",
         body: JSON.stringify({ message: "   " }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://localhost",
+          "Sec-Fetch-Site": "same-origin",
+        },
       }) as unknown as NextRequest);
       const payload = await response.json() as { error: string; detail?: string };
 
@@ -3388,8 +3926,14 @@ setTimeout(() => {}, 30_000);
   });
 
   test("keeps role-aware reference summaries in generated prompt grammar", async () => {
-    const png = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])], "food.png", { type: "image/png" });
-    const jpg = new File([new Uint8Array([0xff, 0xd8, 0xff])], "host.jpg", { type: "image/jpeg" });
+    const pngBytes = await sharp({
+      create: { width: 12, height: 8, channels: 3, background: { r: 32, g: 64, b: 96 } },
+    }).png().toBuffer();
+    const jpgBytes = await sharp({
+      create: { width: 12, height: 8, channels: 3, background: { r: 96, g: 64, b: 32 } },
+    }).jpeg().toBuffer();
+    const png = new File([pngBytes], "food.png", { type: "image/png" });
+    const jpg = new File([jpgBytes], "host.jpg", { type: "image/jpeg" });
     const parsed = parseThumbnailPayload({
       ...safePayload,
       stylePreset: "sushi-seafood-table",
@@ -3399,7 +3943,7 @@ setTimeout(() => {}, 30_000);
     const prompt = buildYoutubeThumbnailPrompt(parsed, references);
 
     expect(prompt).toContain("Style preset: sushi-seafood-table");
-    expect(prompt).toContain("1. food reference (image/png)");
+    expect(prompt).toContain("1. food reference (image/jpeg)");
     expect(prompt).toContain("2. host reference (image/jpeg)");
   });
 
@@ -3407,6 +3951,10 @@ setTimeout(() => {}, 30_000);
   test("locks the live aesthetic evaluation loop contracts", () => {
     const runner = readFileSync(
       join(process.cwd(), "scripts/thumbnail-live-aesthetic-eval.mjs"),
+      "utf8",
+    );
+    const ollamaPullRunner = readFileSync(
+      join(process.cwd(), "scripts/storyboard-rag-ollama-pull.mjs"),
       "utf8",
     );
     const parsed = parseThumbnailPayload(safePayload);
@@ -3428,6 +3976,24 @@ setTimeout(() => {}, 30_000);
     expect(runner).toContain("script+human-vision-adjudication");
     expect(runner).toContain("requiredAverage");
     expect(runner).toContain("requiredMin");
+    expect(runner).toContain("safeRequestSummary");
+    expect(runner).toContain("safeOperationErrorCode");
+    expect(runner).toContain("thumbnail_provider_quota");
+    expect(runner).toContain("thumbnail_provider_timeout");
+    expect(runner).toContain("promptRecorded: false");
+    expect(runner).toContain("logCliError({ name: failure.errorName, code: failure.errorCode }");
+    expect(runner).not.toContain("payload: result.payload");
+    expect(runner).not.toContain("promptDigest");
+    expect(runner).not.toContain("JSON.stringify(body).slice");
+    expect(runner).not.toContain("error.message");
+    expect(runner).not.toContain("String(lastError)");
+    expect(ollamaPullRunner).toContain("logCliError({ name: failed.errorName, code: failed.errorCode }");
+    expect(ollamaPullRunner).toContain("safeCliErrorName(error)");
+    expect(ollamaPullRunner).toContain("selectedOllamaModels");
+    expect(ollamaPullRunner).not.toContain("stderrTail");
+    expect(ollamaPullRunner).not.toContain("stdoutTail");
+    expect(ollamaPullRunner).not.toContain("error?.message");
+    expect(ollamaPullRunner).not.toContain("version.stdout");
     expect(prompt).toContain("food must occupy roughly 70-85%");
     expect(prompt).toContain("avoid blank_space, synthetic_host, weak_focus, text_conflict, food_density, and lighting issues");
     expect(prompt).toContain("food-only hero composition is mandatory");
@@ -4266,7 +4832,11 @@ test("youtube thumbnail durable release routes return 503 with readiness when th
     const publishResponse = await publishRoute.POST(new Request("http://localhost/api/admin/youtube-thumbnail-generator/releases/publish", {
       method: "POST",
       body: JSON.stringify({ candidateId: "release-candidate" }),
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://localhost",
+        "Sec-Fetch-Site": "same-origin",
+      },
     }) as unknown as NextRequest);
     expect(publishResponse.status).toBe(503);
     const publishPayload = await publishResponse.json() as typeof unavailablePayload;
@@ -4515,7 +5085,7 @@ test("youtube thumbnail hosted release certification requires a real hosted HTTP
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
-});
+}, 30_000);
 
 test("youtube thumbnail release candidates ignore stale promotion state instead of mutating QA history", async () => {
   const tempDir = mkdtempSync(join(tmpdir(), "thumbnail-stale-promotion-"));
@@ -4860,4 +5430,73 @@ test('keeps thumbnail provenance labels honest for preview, history, and exact g
   expect(componentSource).toContain('case "durable_release_fallback"');
   expect(componentSource).toContain('data-thumbnail-history-source-label="true"');
   expect(componentSource).toContain('data-thumbnail-history-provenance-label="true"');
+});
+test("keeps thumbnail provider credentials in synchronously clearable component refs without Web Storage", () => {
+  const componentSource = readFileSync(
+    new URL(
+      "../components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const legacyStorageAliases = [
+    "THUMBNAIL_BROWSER_MODEL_KEYS_STORAGE_KEY",
+    "THUMBNAIL_LOCAL_BRIDGE_SESSION_STORAGE_KEY",
+    "readThumbnailBrowserModelKeysCache",
+    "writeThumbnailBrowserModelKeysCache",
+    "readThumbnailLocalBridgeSessionCache",
+    "writeThumbnailLocalBridgeSessionCache",
+    "browser_local_storage_only",
+    "browser_session_storage_only",
+  ];
+
+  for (const alias of legacyStorageAliases) {
+    expect(componentSource).not.toContain(alias);
+  }
+  expect(componentSource).not.toMatch(/\b(?:localStorage|sessionStorage)\b/);
+  expect(componentSource).toContain(
+    'data-thumbnail-browser-api-key-settings="memory-only"',
+  );
+  expect(componentSource).toContain(
+    'data-thumbnail-local-bridge-persistence="none"',
+  );
+  expect(componentSource).toContain(
+    "function handleApplyThumbnailBrowserOpenAIApiKey()",
+  );
+  expect(componentSource).toContain("const browserOpenAIApiKeyRef = useRef<string | null>(null);");
+  expect(componentSource).toContain("const thumbnailLocalBridgeTokenRef = useRef<string | null>(null);");
+  expect(componentSource).toContain("ref={browserOpenAIApiKeyInputRef}");
+  expect(componentSource).toContain("ref={thumbnailLocalBridgeTokenInputRef}");
+  const browserKeyInputSource = componentSource.slice(
+    componentSource.indexOf('id="thumbnail-browser-openai-api-key"'),
+    componentSource.indexOf('data-thumbnail-browser-api-key-input="true"'),
+  );
+  const localBridgeTokenInputSource = componentSource.slice(
+    componentSource.indexOf('id="thumbnail-local-bridge-token"'),
+    componentSource.indexOf('data-thumbnail-local-bridge-token-input="true"'),
+  );
+  expect(browserKeyInputSource).not.toContain("value=");
+  expect(localBridgeTokenInputSource).not.toContain("value=");
+  expect(componentSource).not.toContain("const [browserOpenAIApiKey, setBrowserOpenAIApiKey]");
+  expect(componentSource).not.toContain("const [browserOpenAIApiKeyDraft, setBrowserOpenAIApiKeyDraft]");
+  expect(componentSource).not.toContain("const [thumbnailLocalBridgeToken, setThumbnailLocalBridgeToken]");
+  expect(componentSource).not.toContain("const [thumbnailLocalBridgeTokenDraft, setThumbnailLocalBridgeTokenDraft]");
+  expect(componentSource).toContain('if (value.length <= 8) return "적용됨";');
+  expect(componentSource).toContain("browserOpenAIApiKeyRef.current = normalizedKey;");
+  expect(componentSource).toContain("thumbnailLocalBridgeTokenRef.current = token;");
+  expect(componentSource).toContain("browserOpenAIApiKeyRef.current = null;");
+  expect(componentSource).toContain("thumbnailLocalBridgeTokenRef.current = null;");
+  expect(componentSource).toContain('browserOpenAIApiKeyInputRef.current.value = "";');
+  expect(componentSource).toContain('thumbnailLocalBridgeTokenInputRef.current.value = "";');
+  expect(componentSource).toContain('window.addEventListener("pagehide", clearForPageLifecycle);');
+  expect(componentSource).toContain('window.addEventListener("pageshow", clearForPageLifecycle);');
+  expect(componentSource).toContain("clearThumbnailCredentialLifecycle();");
+  expect(componentSource).toContain("thumbnailLocalBridgeStatusAbortControllerRef.current?.abort();");
+  expect(componentSource).toContain("resetThumbnailLocalBridgeHelperTransport({ closePopup: true });");
+  expect(componentSource).toContain('cache: "no-store",');
+  expect(componentSource).toContain(
+    'method: "POST",\n        cache: "no-store",\n        signal: controller.signal,\n        body: formData,',
+  );
+  expect(componentSource).toContain("invokeThumbnailLocalBridgeHelper,\n        controller.signal,");
+  expect(componentSource).toContain("화면을 닫으면 키가 제거됩니다.");
 });

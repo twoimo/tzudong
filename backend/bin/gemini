@@ -1,98 +1,1700 @@
-#!/usr/bin/env bash
+#!/bin/bash -p
+# Gemini CLI wrapper: execute a verified CLI without exposing provider stderr.
+umask 077
 
-# Gemini CLI Wrapper for Automatic Quota Bypass
-# Find the real gemini executable path
-WRAPPER_PATH=$(readlink -f "$0")
-REAL_GEMINI=""
-for cmd in $(which -a gemini 2>/dev/null); do
-    cmd_path=$(readlink -f "$cmd")
-    if [ "$cmd_path" != "$WRAPPER_PATH" ]; then
-        REAL_GEMINI="$cmd"
-        break
-    fi
-done
-
-if [ -z "$REAL_GEMINI" ]; then
-    # Fallback to globally installed gemini via npm if not in PATH
-    if [ -x "$HOME/.npm-global/bin/gemini" ]; then
-        REAL_GEMINI="$HOME/.npm-global/bin/gemini"
-    else
-        echo "Error: Could not find the real gemini CLI executable." >&2
-        exit 1
-    fi
+# The heredoc below consumes standard input. Keep the caller's descriptor open
+# for the supervised child before starting the isolated Python supervisor.
+if ! exec 3<&0; then
+    printf '%s\n' 'GEMINI_WRAPPER_INTERNAL_ERROR' >&2
+    exit 126
 fi
 
-GEMINI_DIR="$HOME/.gemini"
-CURRENT_CREDS="$GEMINI_DIR/oauth_creds.json"
+# Do not permit Python bootstrap settings from the wrapper's caller to affect
+# the fixed supervisor. -I is the enforcement boundary; unsetting also keeps
+# these values out of subprocess diagnostics and compatibility paths.
+unset BASH_ENV ENV CDPATH
+unset PYTHONHOME PYTHONPATH PYTHONSTARTUP PYTHONUSERBASE PYTHONINSPECT
+unset PYTHONWARNINGS PYTHONSAFEPATH PYTHONPLATLIBDIR PYTHONEXECUTABLE
+unset PYTHONCASEOK PYTHONNOUSERSITE PYTHONHASHSEED
 
-# Gemini CLI OAuth requires the auth method selection in settings.json on fresh runners.
-# Keep this idempotent so CI, local shells, and rotated accounts all use OAuth when
-# oauth_creds.json is present and no API key is intentionally supplied by the caller.
-if [ -f "$CURRENT_CREDS" ]; then
-    python3 - <<'PY' || true
+if [ ! -x /usr/bin/python3 ]; then
+    printf '%s\n' 'GEMINI_WRAPPER_INTERNAL_ERROR' >&2
+    exit 126
+fi
+
+exec /usr/bin/python3 -I - "$0" "$@" 0<<'PY'
+from __future__ import annotations
+
+import contextlib
+import ctypes
+import dataclasses
+import errno
+import hashlib
 import json
+import os
+import re
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import threading
+import time
 from pathlib import Path
+from typing import Iterator
 
-path = Path.home() / ".gemini" / "settings.json"
 try:
-    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
-except json.JSONDecodeError:
-    data = {}
-data.setdefault("security", {}).setdefault("auth", {})["selectedType"] = "oauth-personal"
-path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    import fcntl
+    import resource
+except ImportError:  # Linux/POSIX support is an explicit wrapper prerequisite.
+    fcntl = None  # type: ignore[assignment]
+    resource = None  # type: ignore[assignment]
+
+
+STDERR_CAP_BYTES = 64 * 1024
+CREDENTIAL_CAP_BYTES = 256 * 1024
+EXECUTABLE_CAP_BYTES = 64 * 1024 * 1024
+READ_CHUNK_BYTES = 8192
+MAX_ROTATIONS = 8
+MAX_GENERATION_RETRIES = 8
+MAX_CREDENTIAL_DIRECTORY_ENTRIES = 256
+LOCK_RETRY_SECONDS = 0.05
+TERMINATE_GRACE_SECONDS = 1.0
+CLEANUP_RESERVE_SECONDS = 0.2
+TERMINATION_RESERVE_SECONDS = min(TERMINATE_GRACE_SECONDS, CLEANUP_RESERVE_SECONDS)
+ORPHAN_REAP_GRACE_SECONDS = 0.05
+READER_CLEANUP_RESERVE_SECONDS = 0.05
+DEFAULT_WALL_TIMEOUT_SECONDS = 120.0
+MAX_WALL_TIMEOUT_SECONDS = 120.0
+TRUSTED_CHILD_PATH = "/usr/bin:/bin"
+SAVED_STDIN_FD = 3
+
+# These are the only caller-provided values the Gemini CLI can receive. They
+# are Gemini/Google authentication or Gemini CLI configuration knobs; wrapper
+# controls, runtime hooks, language hooks, and service/database settings are
+# deliberately not inherited.
+CHILD_ENVIRONMENT_NAMES = (
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_CLOUD_LOCATION",
+    "GOOGLE_CLOUD_QUOTA_PROJECT",
+    "GOOGLE_GENAI_USE_VERTEXAI",
+    "GEMINI_CLI_HOME",
+    "GEMINI_CLI_CONFIG",
+    "GEMINI_CLI_SYSTEM_SETTINGS_PATH",
+    "GEMINI_CLI_USER_SETTINGS_PATH",
+    "GEMINI_CLI_WORKSPACE_SETTINGS_PATH",
+    "GEMINI_CLI_ENABLE_TELEMETRY",
+    "GEMINI_CLI_TELEMETRY_TARGET",
+    "GEMINI_CLI_IDE_SERVER_PORT",
+    "GEMINI_CLI_USE_COMPUTE_SA",
+    "GEMINI_SANDBOX",
+)
+
+# A Node package entrypoint is allowed to contain the conventional env shebang
+# only after its package identity has been verified. It is never executed via
+# /usr/bin/env; the fixed Node identity below is used instead.
+FIXED_PYTHON_INTERPRETER = "/usr/bin/python3"
+FIXED_NODE_INTERPRETER = "/usr/bin/node"
+NODE_PACKAGE_NAME = "@google/gemini-cli"
+NODE_PACKAGE_ENTRYPOINT = ("dist", "index.js")
+
+CODE_EXECUTABLE_UNAVAILABLE = "GEMINI_WRAPPER_EXECUTABLE_UNAVAILABLE"
+CODE_CREDENTIAL_INVALID = "GEMINI_WRAPPER_CREDENTIAL_INVALID"
+CODE_CREDENTIAL_ROTATION_FAILED = "GEMINI_WRAPPER_CREDENTIAL_ROTATION_FAILED"
+CODE_QUOTA_EXHAUSTED = "GEMINI_WRAPPER_QUOTA_EXHAUSTED"
+CODE_TIMEOUT = "GEMINI_WRAPPER_TIMEOUT"
+CODE_STDERR_LIMIT = "GEMINI_WRAPPER_STDERR_LIMIT"
+CODE_RESOURCE_LIMIT = "GEMINI_WRAPPER_RESOURCE_LIMIT"
+CODE_RESOURCE_UNAVAILABLE = "GEMINI_WRAPPER_RESOURCE_UNAVAILABLE"
+CODE_CLEANUP_FAILED = "GEMINI_WRAPPER_CLEANUP_FAILED"
+CODE_CHILD_FAILURE = "GEMINI_WRAPPER_CHILD_FAILURE"
+CODE_INTERRUPTED = "GEMINI_WRAPPER_INTERRUPTED"
+CODE_INTERNAL_ERROR = "GEMINI_WRAPPER_INTERNAL_ERROR"
+
+EXIT_EXECUTABLE_UNAVAILABLE = 127
+EXIT_CREDENTIAL_ERROR = 126
+EXIT_QUOTA_EXHAUSTED = 75
+EXIT_TIMEOUT = 124
+EXIT_STDERR_LIMIT = 125
+EXIT_RESOURCE_LIMIT = 123
+EXIT_CLEANUP_FAILED = 122
+EXIT_CHILD_FAILURE = 1
+EXIT_INTERNAL_ERROR = 126
+
+QUOTA_429 = re.compile(rb"(?:^|[^0-9A-Za-z])429(?:[^0-9A-Za-z]|$)", re.IGNORECASE)
+QUOTA_RESOURCE_EXHAUSTED = re.compile(rb"(?:^|[^A-Z_])RESOURCE_EXHAUSTED(?:[^A-Z_]|$)", re.IGNORECASE)
+RESOURCE_MARKERS = (
+    b"memoryerror",
+    b"cannot allocate memory",
+    b"resource temporarily unavailable",
+    b"file too large",
+    b"too many open files",
+)
+BACKUP_NAME = re.compile(r"oauth_creds_[A-Za-z0-9][A-Za-z0-9_.-]{0,120}\.json\Z")
+
+
+class CredentialError(Exception):
+    pass
+class CredentialRace(CredentialError):
+    pass
+
+
+
+
+class RotationError(Exception):
+    pass
+
+
+class ExecutableError(Exception):
+    pass
+
+
+class DeadlineExpired(Exception):
+    pass
+
+
+class ResourceUnavailable(Exception):
+    pass
+class Interrupted(Exception):
+    pass
+class CleanupFailure(Exception):
+    pass
+
+
+def same_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    return left.st_dev == right.st_dev and left.st_ino == right.st_ino
+
+
+@dataclasses.dataclass
+class PinnedDirectory:
+    descriptor: int
+    file_stat: os.stat_result
+    path: str
+    parent: "PinnedDirectory | None" = None
+    entry_name: str | None = None
+
+    @property
+    def proc_path(self) -> str:
+        return f"/proc/self/fd/{self.descriptor}"
+
+    def require_current(self) -> None:
+        try:
+            if self.parent is None:
+                current = os.lstat(self.path)
+            else:
+                self.parent.require_current()
+                if self.entry_name is None:
+                    raise OSError("missing pinned directory entry")
+                current = os.stat(
+                    self.entry_name,
+                    dir_fd=self.parent.descriptor,
+                    follow_symlinks=False,
+                )
+        except OSError:
+            raise
+        if not same_identity(current, self.file_stat) or not stat.S_ISDIR(current.st_mode):
+            raise OSError("pinned directory identity changed")
+
+    def close(self) -> bool:
+        try:
+            os.close(self.descriptor)
+        except OSError:
+            return False
+        return True
+
+@dataclasses.dataclass(frozen=True)
+class RuntimeDirectoryEntry:
+    parent: PinnedDirectory
+    entry_name: str
+    file_stat: os.stat_result
+
+
+
+
+@dataclasses.dataclass(frozen=True)
+class Deadline:
+    ends_at: float
+
+    @classmethod
+    def start(cls, seconds: float) -> "Deadline":
+        return cls(time.monotonic() + seconds)
+
+    def remaining(self) -> float:
+        return max(0.0, self.ends_at - time.monotonic())
+
+    def expired(self) -> bool:
+        return self.remaining() <= 0.0
+
+    def require(self) -> None:
+        if self.remaining() <= CLEANUP_RESERVE_SECONDS:
+            raise DeadlineExpired
+
+    def require_cleanup(self) -> None:
+        if self.expired():
+            raise DeadlineExpired
+
+    def sleep(self, seconds: float) -> None:
+        self.require()
+        time.sleep(min(seconds, max(0.0, self.remaining() - CLEANUP_RESERVE_SECONDS)))
+        self.require()
+
+
+@dataclasses.dataclass(frozen=True)
+class CredentialInventory:
+    current: bytes | None
+    backups: tuple[tuple[str, bytes], ...]
+
+
+@dataclasses.dataclass
+class OpenedIdentity:
+    descriptor: int
+    file_stat: os.stat_result
+    digest: bytes
+    path: str
+
+    @property
+    def proc_path(self) -> str:
+        return f"/proc/self/fd/{self.descriptor}"
+
+    def close(self) -> None:
+        try:
+            os.close(self.descriptor)
+        except OSError:
+            pass
+
+
+@dataclasses.dataclass
+class ExecutionPlan:
+    executable: OpenedIdentity
+    interpreter: OpenedIdentity | None
+    is_python: bool
+
+    def close(self) -> None:
+        self.executable.close()
+        if self.interpreter is not None:
+            self.interpreter.close()
+
+    def command(self, argv: list[str]) -> list[str]:
+        if self.interpreter is None:
+            return [self.executable.proc_path, *argv]
+        if self.is_python:
+            return [self.interpreter.proc_path, "-I", self.executable.proc_path, *argv]
+        return [self.interpreter.proc_path, self.executable.proc_path, *argv]
+
+    def inherited_descriptors(self) -> tuple[int, ...]:
+        descriptors = [self.executable.descriptor]
+        if self.interpreter is not None:
+            descriptors.append(self.interpreter.descriptor)
+        return tuple(descriptors)
+
+
+@dataclasses.dataclass(frozen=True)
+class ChildResult:
+    returncode: int
+    stderr: bytes
+    timed_out: bool
+    stderr_limited: bool
+    resource_limited: bool
+    cleanup_ok: bool
+
+
+@dataclasses.dataclass(frozen=True)
+class Outcome:
+    code: str | None
+    status: int
+
+
+def emit(code: str) -> None:
+    os.write(2, (code + "\n").encode("ascii"))
+
+
+def wall_timeout_seconds() -> float:
+    """Permit callers to lower, but never remove or raise, the hard timeout."""
+    value = os.environ.get("GEMINI_WRAPPER_TIMEOUT_SECONDS")
+    if value is None:
+        return DEFAULT_WALL_TIMEOUT_SECONDS
+    try:
+        parsed = float(value)
+    except ValueError:
+        return DEFAULT_WALL_TIMEOUT_SECONDS
+    if 1.0 <= parsed <= MAX_WALL_TIMEOUT_SECONDS:
+        return parsed
+    return DEFAULT_WALL_TIMEOUT_SECONDS
+
+
+def owner_is_trusted(file_stat: os.stat_result) -> bool:
+    return file_stat.st_uid in (os.geteuid(), 0)
+
+
+def path_is_canonical_absolute(path: str) -> bool:
+    return (
+        path.startswith("/")
+        and not path.startswith("//")
+        and "\n" not in path
+        and "\r" not in path
+        and os.path.abspath(path) == path
+        and os.path.normpath(path) == path
+    )
+
+
+def trusted_directory(path: str) -> bool:
+    """Require non-link, non-mutable directories up to a safe root or /tmp."""
+    if not path_is_canonical_absolute(path):
+        return False
+
+    original = path
+    current = path
+    while True:
+        try:
+            directory_stat = os.lstat(current)
+        except OSError:
+            return False
+        if (
+            stat.S_ISLNK(directory_stat.st_mode)
+            or not stat.S_ISDIR(directory_stat.st_mode)
+            or not owner_is_trusted(directory_stat)
+        ):
+            return False
+        if directory_stat.st_mode & 0o022:
+            # A root-owned sticky directory is a safe boundary only after the
+            # candidate's own private directory has already been verified.
+            return (
+                current != original
+                and directory_stat.st_uid == 0
+                and bool(directory_stat.st_mode & stat.S_ISVTX)
+            )
+        parent = os.path.dirname(current)
+        if parent == current:
+            return True
+        current = parent
+
+
+def private_regular_stat(file_stat: os.stat_result, *, executable: bool = False) -> bool:
+    return (
+        stat.S_ISREG(file_stat.st_mode)
+        and file_stat.st_nlink == 1
+        and owner_is_trusted(file_stat)
+        and not bool(file_stat.st_mode & 0o022)
+        and (not executable or bool(file_stat.st_mode & 0o111))
+    )
+
+
+def private_credential_stat(file_stat: os.stat_result) -> bool:
+    return (
+        private_regular_stat(file_stat)
+        and file_stat.st_uid == os.geteuid()
+        and not bool(file_stat.st_mode & 0o077)
+        and 0 < file_stat.st_size <= CREDENTIAL_CAP_BYTES
+    )
+
+
+def private_lock_stat(file_stat: os.stat_result) -> bool:
+    return (
+        stat.S_ISREG(file_stat.st_mode)
+        and file_stat.st_nlink == 1
+        and file_stat.st_uid == os.geteuid()
+        and not bool(file_stat.st_mode & 0o077)
+    )
+
+
+def digest_open_descriptor(descriptor: int, cap: int, deadline: Deadline) -> bytes:
+    digest = hashlib.sha256()
+    total = 0
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    while True:
+        deadline.require()
+        chunk = os.read(descriptor, READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > cap:
+            raise ExecutableError
+        digest.update(chunk)
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    return digest.digest()
+
+
+def open_verified_identity(path: str, deadline: Deadline, *, executable: bool) -> OpenedIdentity:
+    if not path_is_canonical_absolute(path) or not trusted_directory(os.path.dirname(path)):
+        raise ExecutableError
+    deadline.require()
+    try:
+        before = os.lstat(path)
+    except OSError as exc:
+        raise ExecutableError from exc
+    if stat.S_ISLNK(before.st_mode) or not private_regular_stat(before, executable=executable):
+        raise ExecutableError
+
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        raise ExecutableError
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK | nofollow
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ExecutableError from exc
+    try:
+        opened = os.fstat(descriptor)
+        if (
+            not private_regular_stat(opened, executable=executable)
+            or opened.st_dev != before.st_dev
+            or opened.st_ino != before.st_ino
+        ):
+            raise ExecutableError
+        digest = digest_open_descriptor(descriptor, EXECUTABLE_CAP_BYTES, deadline)
+        return OpenedIdentity(descriptor, opened, digest, path)
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def resolve_fixed_interpreter(path: str, deadline: Deadline) -> OpenedIdentity:
+    """Open a fixed interpreter after validating every terminal symlink hop."""
+    if path not in (FIXED_PYTHON_INTERPRETER, FIXED_NODE_INTERPRETER):
+        raise ExecutableError
+    current = path
+    for _ in range(8):
+        deadline.require()
+        if not path_is_canonical_absolute(current) or not trusted_directory(os.path.dirname(current)):
+            raise ExecutableError
+        try:
+            candidate_stat = os.lstat(current)
+        except OSError as exc:
+            raise ExecutableError from exc
+        if not stat.S_ISLNK(candidate_stat.st_mode):
+            return open_verified_identity(current, deadline, executable=True)
+        # Linux reports symlink permissions as 0777; link mode is not an
+        # authority boundary. Validate its owner and resolve each target under
+        # trusted directories instead of rejecting every normal fixed symlink.
+        if not owner_is_trusted(candidate_stat):
+            raise ExecutableError
+        try:
+            target = os.readlink(current)
+        except OSError as exc:
+            raise ExecutableError from exc
+        current = target if target.startswith("/") else os.path.join(os.path.dirname(current), target)
+        current = os.path.normpath(current)
+    raise ExecutableError
+
+
+def wrapper_identity(wrapper_path: str) -> tuple[int, int] | None:
+    if not path_is_canonical_absolute(wrapper_path):
+        return None
+    try:
+        wrapper_stat = os.stat(wrapper_path)
+    except OSError:
+        return None
+    return (wrapper_stat.st_dev, wrapper_stat.st_ino)
+
+
+def read_shebang(identity: OpenedIdentity) -> bytes:
+    try:
+        return os.pread(identity.descriptor, 256, 0).split(b"\n", 1)[0]
+    except OSError as exc:
+        raise ExecutableError from exc
+
+
+def node_package_is_verified(identity: OpenedIdentity, deadline: Deadline) -> bool:
+    entrypoint = Path(identity.path)
+    if entrypoint.name != NODE_PACKAGE_ENTRYPOINT[1] or entrypoint.parent.name != NODE_PACKAGE_ENTRYPOINT[0]:
+        return False
+    package_root = entrypoint.parent.parent
+    if package_root.name != "gemini-cli" or package_root.parent.name != "@google":
+        return False
+    if package_root.parent.parent.name != "node_modules" or not trusted_directory(str(package_root)):
+        return False
+    try:
+        package_identity = open_verified_identity(str(package_root / "package.json"), deadline, executable=False)
+    except ExecutableError:
+        return False
+    try:
+        package_contents = os.read(package_identity.descriptor, EXECUTABLE_CAP_BYTES)
+        package_data = json.loads(package_contents.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    finally:
+        package_identity.close()
+    if not isinstance(package_data, dict) or package_data.get("name") != NODE_PACKAGE_NAME:
+        return False
+    package_bin = package_data.get("bin")
+    if isinstance(package_bin, dict):
+        package_bin = package_bin.get("gemini")
+    return package_bin == "/".join(NODE_PACKAGE_ENTRYPOINT)
+
+
+def build_execution_plan(identity: OpenedIdentity, deadline: Deadline) -> ExecutionPlan:
+    shebang = read_shebang(identity)
+    if not shebang.startswith(b"#!"):
+        return ExecutionPlan(identity, None, False)
+
+    # No shebang arguments are accepted. In particular, /usr/bin/env is never
+    # used as an interpreter selector.
+    if shebang == b"#!/usr/bin/env node":
+        if not node_package_is_verified(identity, deadline):
+            raise ExecutableError
+        return ExecutionPlan(identity, resolve_fixed_interpreter(FIXED_NODE_INTERPRETER, deadline), False)
+    if shebang == b"#!" + FIXED_NODE_INTERPRETER.encode("ascii"):
+        if not node_package_is_verified(identity, deadline):
+            raise ExecutableError
+        return ExecutionPlan(identity, resolve_fixed_interpreter(FIXED_NODE_INTERPRETER, deadline), False)
+    if shebang == b"#!" + FIXED_PYTHON_INTERPRETER.encode("ascii"):
+        return ExecutionPlan(identity, resolve_fixed_interpreter(FIXED_PYTHON_INTERPRETER, deadline), True)
+    raise ExecutableError
+
+
+def approved_package_entrypoints(home: str) -> tuple[str, ...]:
+    package_suffix = os.path.join("node_modules", "@google", "gemini-cli", *NODE_PACKAGE_ENTRYPOINT)
+    return (
+        os.path.join("/usr/local/lib", package_suffix),
+        os.path.join("/usr/lib", package_suffix),
+        os.path.join(home, ".npm-global", "lib", package_suffix),
+        os.path.join(home, ".local", "lib", package_suffix),
+    )
+
+
+def resolve_executable(wrapper_path: str, home: str, deadline: Deadline) -> ExecutionPlan:
+    wrapper = wrapper_identity(wrapper_path)
+    candidates = list(approved_package_entrypoints(home))
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        if path_is_canonical_absolute(directory) and trusted_directory(directory):
+            candidates.append(os.path.join(directory, "gemini"))
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        deadline.require()
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        try:
+            identity = open_verified_identity(candidate, deadline, executable=True)
+        except ExecutableError:
+            continue
+        if wrapper is not None and (identity.file_stat.st_dev, identity.file_stat.st_ino) == wrapper:
+            identity.close()
+            continue
+        try:
+            return build_execution_plan(identity, deadline)
+        except ExecutableError:
+            identity.close()
+            continue
+    raise ExecutableError
+
+
+def pin_directory(
+    path: str,
+    *,
+    parent: PinnedDirectory | None = None,
+    entry_name: str | None = None,
+) -> PinnedDirectory:
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    if not directory_flag or not nofollow:
+        raise OSError("directory identity flags are unavailable")
+    flags = os.O_RDONLY | os.O_CLOEXEC | directory_flag | nofollow
+    target = path if parent is None else entry_name
+    if target is None:
+        raise OSError("missing directory target")
+    if parent is not None:
+        parent.require_current()
+    if parent is None:
+        before = os.lstat(target)
+        descriptor = os.open(target, flags)
+    else:
+        before = os.stat(target, dir_fd=parent.descriptor, follow_symlinks=False)
+        descriptor = os.open(target, flags, dir_fd=parent.descriptor)
+    try:
+        opened = os.fstat(descriptor)
+        if parent is None:
+            after = os.lstat(target)
+        else:
+            parent.require_current()
+            after = os.stat(target, dir_fd=parent.descriptor, follow_symlinks=False)
+        if (
+            stat.S_ISLNK(before.st_mode)
+            or not stat.S_ISDIR(opened.st_mode)
+            or not same_identity(before, opened)
+            or not same_identity(after, opened)
+        ):
+            raise OSError("directory identity changed while opening")
+        return PinnedDirectory(
+            descriptor=descriptor,
+            file_stat=opened,
+            path=path,
+            parent=parent,
+            entry_name=entry_name,
+        )
+    except Exception:
+        os.close(descriptor)
+        raise
+
+
+def open_home_directory(home: str) -> PinnedDirectory:
+    if not path_is_canonical_absolute(home) or not trusted_directory(home):
+        raise ResourceUnavailable
+    try:
+        return pin_directory(home)
+    except OSError as exc:
+        raise ResourceUnavailable from exc
+
+
+def credential_directory(home: PinnedDirectory, deadline: Deadline) -> PinnedDirectory | None:
+    deadline.require()
+    try:
+        directory = pin_directory(
+            os.path.join(home.path, ".gemini"),
+            parent=home,
+            entry_name=".gemini",
+        )
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise CredentialError from exc
+    if (
+        directory.file_stat.st_uid != os.geteuid()
+        or bool(directory.file_stat.st_mode & 0o022)
+    ):
+        directory.close()
+        raise CredentialError
+    return directory
+
+
+def read_credential_once(directory: PinnedDirectory, name: str, deadline: Deadline) -> bytes:
+    deadline.require()
+    try:
+        directory.require_current()
+        before = os.stat(name, dir_fd=directory.descriptor, follow_symlinks=False)
+    except OSError as exc:
+        raise CredentialError from exc
+    if stat.S_ISLNK(before.st_mode) or not private_credential_stat(before):
+        raise CredentialError
+
+    nofollow = getattr(os, "O_NOFOLLOW", None)
+    if nofollow is None:
+        raise CredentialError
+    flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NONBLOCK | nofollow
+    try:
+        descriptor = os.open(name, flags, dir_fd=directory.descriptor)
+    except OSError as exc:
+        if exc.errno in (errno.ENOENT, errno.ESTALE):
+            raise CredentialRace from exc
+        raise CredentialError from exc
+    try:
+        opened = os.fstat(descriptor)
+        directory.require_current()
+        after = os.stat(name, dir_fd=directory.descriptor, follow_symlinks=False)
+        if not private_credential_stat(opened):
+            raise CredentialError
+        if not same_identity(opened, before) or not same_identity(opened, after):
+            raise CredentialRace
+        data = bytearray()
+        while len(data) <= CREDENTIAL_CAP_BYTES:
+            deadline.require()
+            chunk = os.read(descriptor, min(READ_CHUNK_BYTES, CREDENTIAL_CAP_BYTES + 1 - len(data)))
+            if not chunk:
+                break
+            data.extend(chunk)
+        if len(data) > CREDENTIAL_CAP_BYTES:
+            raise CredentialError
+    except OSError as exc:
+        raise CredentialError from exc
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            raise CleanupFailure from exc
+
+    try:
+        parsed = json.loads(bytes(data).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CredentialError from exc
+    if not isinstance(parsed, dict):
+        raise CredentialError
+    return bytes(data)
+
+
+def read_credential(directory: PinnedDirectory, name: str, deadline: Deadline) -> bytes:
+    """Retry a replacement race; each retry fully revalidates the snapshot."""
+    for attempt in range(3):
+        try:
+            return read_credential_once(directory, name, deadline)
+        except CredentialRace:
+            if attempt == 2:
+                raise CredentialError
+            deadline.sleep(LOCK_RETRY_SECONDS)
+    raise CredentialError
+
+
+def credential_inventory(directory: PinnedDirectory | None, deadline: Deadline) -> CredentialInventory:
+    deadline.require()
+    if directory is None:
+        return CredentialInventory(current=None, backups=())
+    try:
+        directory.require_current()
+        os.stat("oauth_creds.json", dir_fd=directory.descriptor, follow_symlinks=False)
+    except FileNotFoundError:
+        current = None
+    except OSError as exc:
+        raise CredentialError from exc
+    else:
+        current = read_credential(directory, "oauth_creds.json", deadline)
+
+    backups: list[tuple[str, bytes]] = []
+    try:
+        with os.scandir(os.dup(directory.descriptor)) as entries:
+            for entry_count, entry in enumerate(entries, start=1):
+                deadline.require()
+                if entry_count > MAX_CREDENTIAL_DIRECTORY_ENTRIES:
+                    raise CredentialError
+                name = entry.name
+                if not (name.startswith("oauth_creds_") and name.endswith(".json")):
+                    continue
+                if BACKUP_NAME.fullmatch(name) is None:
+                    raise CredentialError
+                backups.append((name, read_credential(directory, name, deadline)))
+    except OSError as exc:
+        raise CredentialError from exc
+    backups.sort(key=lambda item: item[0])
+    return CredentialInventory(current=current, backups=tuple(backups))
+
+
+@contextlib.contextmanager
+def credential_rotation_lock(directory: PinnedDirectory, deadline: Deadline) -> Iterator[None]:
+    if fcntl is None:
+        raise RotationError
+    deadline.require()
+    try:
+        directory.require_current()
+    except OSError as exc:
+        raise RotationError from exc
+    descriptor: int | None = None
+    locked = False
+    cleanup_failed = False
+    try:
+        flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NONBLOCK | os.O_NOFOLLOW
+        try:
+            descriptor = os.open(".oauth_creds.rotation.lock", flags, 0o600, dir_fd=directory.descriptor)
+        except OSError as exc:
+            raise RotationError from exc
+        lock_stat = os.fstat(descriptor)
+        if not private_lock_stat(lock_stat):
+            raise RotationError
+        while True:
+            deadline.require()
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locked = True
+                break
+            except BlockingIOError:
+                deadline.sleep(LOCK_RETRY_SECONDS)
+        yield
+    finally:
+        if descriptor is not None:
+            if locked:
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                except OSError:
+                    cleanup_failed = True
+            try:
+                os.close(descriptor)
+            except OSError:
+                cleanup_failed = True
+        if cleanup_failed:
+            raise RotationError
+
+
+def fsync_directory(directory: PinnedDirectory, deadline: Deadline) -> None:
+    deadline.require()
+    try:
+        directory.require_current()
+        os.fsync(directory.descriptor)
+    except OSError as exc:
+        raise RotationError from exc
+
+
+def atomic_replace_current(directory: PinnedDirectory, contents: bytes, deadline: Deadline) -> None:
+    stage_name: str | None = None
+    descriptor: int | None = None
+    cleanup_failed = False
+    try:
+        deadline.require()
+        directory.require_current()
+        descriptor, stage_path = tempfile.mkstemp(prefix=".oauth_creds.stage.", dir=directory.proc_path)
+        stage_name = os.path.basename(stage_path)
+        if not stage_name.startswith(".oauth_creds.stage."):
+            raise RotationError
+        os.fchmod(descriptor, 0o600)
+        view = memoryview(contents)
+        while view:
+            deadline.require()
+            written = os.write(descriptor, view)
+            view = view[written:]
+        os.fsync(descriptor)
+        stage_descriptor = descriptor
+        descriptor = None
+        try:
+            os.close(stage_descriptor)
+        except OSError as exc:
+            cleanup_failed = True
+            raise CleanupFailure from exc
+        read_credential(directory, stage_name, deadline)
+        deadline.require()
+        directory.require_current()
+        os.replace(
+            stage_name,
+            "oauth_creds.json",
+            src_dir_fd=directory.descriptor,
+            dst_dir_fd=directory.descriptor,
+        )
+        stage_name = None
+        fsync_directory(directory, deadline)
+    except DeadlineExpired:
+        raise
+    except (OSError, CredentialError) as exc:
+        raise RotationError from exc
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                cleanup_failed = True
+        if stage_name is not None:
+            try:
+                os.unlink(stage_name, dir_fd=directory.descriptor)
+            except OSError:
+                cleanup_failed = True
+        if cleanup_failed:
+            raise CleanupFailure
+
+
+def rotate_credentials_for_attempt(
+    directory: PinnedDirectory | None,
+    attempted_digest: bytes,
+    deadline: Deadline,
+) -> str:
+    """Rotate only the exact generation that produced the quota response."""
+    if directory is None:
+        raise RotationError
+    with credential_rotation_lock(directory, deadline):
+        inventory = credential_inventory(directory, deadline)
+        if inventory.current is None:
+            raise RotationError
+        current_digest = hashlib.sha256(inventory.current).digest()
+        if current_digest != attempted_digest:
+            return "current_changed"
+        alternate = next(
+            (
+                contents
+                for _, contents in inventory.backups
+                if hashlib.sha256(contents).digest() != attempted_digest
+            ),
+            None,
+        )
+        if alternate is None:
+            return "exhausted"
+        atomic_replace_current(directory, alternate, deadline)
+    return "rotated"
+
+
+def quota_detected(returncode: int, stderr: bytes) -> bool:
+    if returncode == 0:
+        return False
+    return bool(QUOTA_429.search(stderr) or QUOTA_RESOURCE_EXHAUSTED.search(stderr))
+def resource_limit_detected(returncode: int, stderr: bytes) -> bool:
+    return returncode != 0 and any(marker in stderr.lower() for marker in RESOURCE_MARKERS)
+
+
+
+def direct_child_pids() -> set[int]:
+    if os.name != "posix" or not os.path.isdir("/proc"):
+        return set()
+    parent_pid = os.getpid()
+    children: set[int] = set()
+    try:
+        entries = os.scandir("/proc")
+    except OSError:
+        return set()
+    with entries:
+        for index, entry in enumerate(entries):
+            if index >= 16384 or not entry.name.isdigit():
+                continue
+            try:
+                with open(f"/proc/{entry.name}/stat", "rb") as status_file:
+                    suffix = status_file.read(4096).rsplit(b")", 1)[1].split()
+                if int(suffix[1]) == parent_pid and suffix[0] != b"Z":
+                    children.add(int(entry.name))
+            except (OSError, IndexError, ValueError):
+                continue
+    return children
+
+
+def descendant_pids(root_pid: int) -> set[int]:
+    """Best-effort bounded /proc snapshot before descendants reparent."""
+    if os.name != "posix" or not os.path.isdir("/proc"):
+        return set()
+    parents: dict[int, list[int]] = {}
+    try:
+        entries = os.scandir("/proc")
+    except OSError:
+        return set()
+    with entries:
+        for index, entry in enumerate(entries):
+            if index >= 16384 or not entry.name.isdigit():
+                continue
+            try:
+                with open(f"/proc/{entry.name}/stat", "rb") as status_file:
+                    suffix = status_file.read(4096).rsplit(b")", 1)[1].split()
+                parents.setdefault(int(suffix[1]), []).append(int(entry.name))
+            except (OSError, IndexError, ValueError):
+                continue
+    descendants: set[int] = set()
+    pending = [root_pid]
+    while pending:
+        parent = pending.pop()
+        for child in parents.get(parent, ()):
+            if child not in descendants:
+                descendants.add(child)
+                pending.append(child)
+    return descendants
+
+
+def signal_pids(process_ids: set[int], signum: int) -> None:
+    for process_id in sorted(process_ids, reverse=True):
+        if process_id == os.getpid():
+            continue
+        try:
+            os.kill(process_id, signum)
+        except ProcessLookupError:
+            pass
+
+
+def signal_process_group(process: subprocess.Popen[bytes], signum: int) -> None:
+    try:
+        os.killpg(process.pid, signum)
+    except ProcessLookupError:
+        pass
+
+
+def reap_children() -> None:
+    while True:
+        try:
+            process_id, _ = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return
+        if process_id == 0:
+            return
+
+
+def termination_deadline(deadline: Deadline, *, reserve_cleanup: bool = False) -> Deadline:
+    cleanup_reserve = CLEANUP_RESERVE_SECONDS if reserve_cleanup else 0.0
+    return Deadline(
+        min(
+            deadline.ends_at - cleanup_reserve,
+            time.monotonic() + TERMINATE_GRACE_SECONDS,
+        )
+    )
+def orphan_cleanup_deadline(deadline: Deadline) -> Deadline:
+    return Deadline(
+        deadline.ends_at
+        - CLEANUP_RESERVE_SECONDS
+        - READER_CLEANUP_RESERVE_SECONDS
+    )
+
+
+def reader_cleanup_deadline(deadline: Deadline) -> Deadline:
+    return Deadline(deadline.ends_at - CLEANUP_RESERVE_SECONDS)
+
+
+def wait_for_process(process: subprocess.Popen[bytes], deadline: Deadline) -> bool:
+    while process.poll() is None and not deadline.expired():
+        try:
+            process.wait(timeout=min(0.02, deadline.remaining()))
+        except subprocess.TimeoutExpired:
+            pass
+    return process.poll() is not None
+
+
+def terminate_orphan_children(
+    deadline: Deadline,
+    *,
+    graceful_seconds: float = TERMINATE_GRACE_SECONDS,
+) -> bool:
+    """Bounded subreaper cleanup for descendants escaping the process group."""
+    graceful_deadline = Deadline(
+        min(deadline.ends_at, time.monotonic() + graceful_seconds)
+    )
+    sent_kill = False
+    while True:
+        reap_children()
+        children = direct_child_pids()
+        if not children:
+            return True
+        if graceful_deadline.expired():
+            signal_pids(children, signal.SIGKILL)
+            sent_kill = True
+        else:
+            signal_pids(children, signal.SIGTERM)
+        if deadline.expired():
+            reap_children()
+            return not direct_child_pids()
+        time.sleep(min(0.02, deadline.remaining()))
+        if sent_kill:
+            reap_children()
+
+
+def terminate_process(process: subprocess.Popen[bytes], deadline: Deadline) -> bool:
+    descendants = descendant_pids(process.pid)
+    if process.poll() is None:
+        signal_process_group(process, signal.SIGTERM)
+        signal_pids(descendants, signal.SIGTERM)
+        wait_for_process(process, termination_deadline(deadline))
+    if process.poll() is None:
+        signal_process_group(process, signal.SIGKILL)
+        signal_pids(descendants | descendant_pids(process.pid), signal.SIGKILL)
+        wait_for_process(process, termination_deadline(deadline))
+    return process.poll() is not None and terminate_orphan_children(deadline)
+
+
+def install_subreaper() -> None:
+    if os.name != "posix" or not os.path.isdir("/proc"):
+        raise ResourceUnavailable
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        prctl = libc.prctl
+        prctl.argtypes = [ctypes.c_int, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong]
+        prctl.restype = ctypes.c_int
+        if prctl(36, 1, 0, 0, 0) != 0:  # PR_SET_CHILD_SUBREAPER
+            raise OSError(ctypes.get_errno(), "prctl(PR_SET_CHILD_SUBREAPER)")
+    except (AttributeError, OSError) as exc:
+        raise ResourceUnavailable from exc
+
+
+def require_resource_support() -> None:
+    if resource is None or fcntl is None:
+        raise ResourceUnavailable
+    for name in ("RLIMIT_AS", "RLIMIT_NPROC", "RLIMIT_FSIZE", "RLIMIT_CORE", "RLIMIT_NOFILE", "RLIMIT_CPU"):
+        if not hasattr(resource, name):
+            raise ResourceUnavailable
+
+
+def resource_limit_value(limit: int, desired: int) -> int:
+    if resource is None:
+        raise ResourceUnavailable
+    _soft, hard = resource.getrlimit(limit)
+    if hard != resource.RLIM_INFINITY:
+        desired = min(desired, hard)
+    if desired <= 0 and limit != resource.RLIMIT_CORE:
+        raise ResourceUnavailable
+    return desired
+
+
+def install_child_resource_limits() -> None:
+    if resource is None:
+        raise ResourceUnavailable
+    limits = (
+        (resource.RLIMIT_AS, 2 * 1024 * 1024 * 1024),
+        (resource.RLIMIT_NPROC, 64),
+        (resource.RLIMIT_FSIZE, 32 * 1024 * 1024),
+        (resource.RLIMIT_CORE, 0),
+        (resource.RLIMIT_NOFILE, 128),
+        (resource.RLIMIT_CPU, 115),
+    )
+    for limit, desired in limits:
+        value = resource_limit_value(limit, desired)
+        resource.setrlimit(limit, (value, value))
+
+
+def minimal_child_environment(home: str, runtime_directory: str) -> dict[str, str]:
+    environment = {
+        "HOME": home,
+        "PATH": TRUSTED_CHILD_PATH,
+        "TMPDIR": runtime_directory,
+        "PWD": runtime_directory,
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+    }
+    for name in CHILD_ENVIRONMENT_NAMES:
+        value = os.environ.get(name)
+        if value is not None:
+            environment[name] = value
+    return environment
+
+
+class ProcessSupervisor:
+    def __init__(self, deadline: Deadline) -> None:
+        self.deadline = deadline
+        self.active: subprocess.Popen[bytes] | None = None
+        self.interrupted_signum: int | None = None
+
+    def set_active(self, process: subprocess.Popen[bytes] | None) -> None:
+        self.active = process
+
+    def interrupt(self, signum: int) -> None:
+        self.interrupted_signum = signum
+        process = self.active
+        if process is not None and process.poll() is None:
+            signal_process_group(process, signal.SIGTERM)
+
+    def terminate_active(self) -> bool:
+        if self.active is None:
+            return terminate_orphan_children(self.deadline)
+        return terminate_process(self.active, self.deadline)
+
+
+class BoundedStderrReader:
+    def __init__(self, stream: object) -> None:
+        self.stream = stream
+        self.buffer = bytearray()
+        self.limit_exceeded = threading.Event()
+        self.thread = threading.Thread(target=self._read, daemon=True)
+
+    def start(self) -> None:
+        self.thread.start()
+
+    def _read(self) -> None:
+        try:
+            descriptor = self.stream.fileno()  # type: ignore[union-attr]
+            while True:
+                chunk = os.read(descriptor, READ_CHUNK_BYTES)
+                if not chunk:
+                    return
+                remaining = STDERR_CAP_BYTES - len(self.buffer)
+                if remaining > 0:
+                    self.buffer.extend(chunk[:remaining])
+                if len(chunk) > remaining:
+                    self.limit_exceeded.set()
+                    return
+        except OSError:
+            return
+
+    def close(self, deadline: Deadline) -> bool:
+        stream_closed = True
+        try:
+            self.stream.close()  # type: ignore[union-attr]
+        except OSError:
+            stream_closed = False
+        self.thread.join(timeout=min(TERMINATE_GRACE_SECONDS, deadline.remaining()))
+        return stream_closed and not self.thread.is_alive()
+
+
+def spawn_child(
+    plan: ExecutionPlan,
+    argv: list[str],
+    home: str,
+    runtime_directory: PinnedDirectory,
+    supervisor: ProcessSupervisor,
+    deadline: Deadline,
+) -> subprocess.Popen[bytes]:
+    deadline.require()
+    try:
+        runtime_directory.require_current()
+    except OSError as exc:
+        raise ResourceUnavailable from exc
+    try:
+        caller_stdin = os.dup(SAVED_STDIN_FD)
+    except OSError as exc:
+        raise ResourceUnavailable from exc
+    blocked = {signal.SIGINT, signal.SIGHUP, signal.SIGTERM}
+    previous_mask: set[signal.Signals] | None = None
+    try:
+        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
+        if supervisor.interrupted_signum is not None:
+            raise Interrupted
+        command = plan.command(argv)
+        inherited_descriptors = tuple(
+            dict.fromkeys((*plan.inherited_descriptors(), runtime_directory.descriptor))
+        )
+
+        def configure_child() -> None:
+            install_child_resource_limits()
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+        process = subprocess.Popen(
+            command,
+            executable=command[0],
+            stdin=caller_stdin,
+            stdout=None,
+            stderr=subprocess.PIPE,
+            cwd=runtime_directory.proc_path,
+            env=minimal_child_environment(home, runtime_directory.path),
+            close_fds=True,
+            pass_fds=inherited_descriptors,
+            start_new_session=True,
+            preexec_fn=configure_child,
+        )
+        supervisor.set_active(process)
+        return process
+    finally:
+        os.close(caller_stdin)
+        if previous_mask is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+
+
+def run_child(
+    plan: ExecutionPlan,
+    argv: list[str],
+    home: str,
+    runtime_directory: PinnedDirectory,
+    supervisor: ProcessSupervisor,
+    deadline: Deadline,
+) -> ChildResult:
+    process = spawn_child(plan, argv, home, runtime_directory, supervisor, deadline)
+    assert process.stderr is not None
+    reader = BoundedStderrReader(process.stderr)
+    reader.start()
+    timed_out = False
+    stderr_limited = False
+    cleanup_ok = True
+    try:
+        while process.poll() is None:
+            if supervisor.interrupted_signum is not None:
+                cleanup_ok = terminate_process(
+                    process,
+                    termination_deadline(deadline, reserve_cleanup=True),
+                ) and cleanup_ok
+                break
+            if reader.limit_exceeded.is_set():
+                stderr_limited = True
+                cleanup_ok = terminate_process(
+                    process,
+                    termination_deadline(deadline, reserve_cleanup=True),
+                ) and cleanup_ok
+                break
+            if deadline.remaining() <= CLEANUP_RESERVE_SECONDS + TERMINATION_RESERVE_SECONDS:
+                timed_out = True
+                cleanup_ok = terminate_process(
+                    process,
+                    termination_deadline(deadline, reserve_cleanup=True),
+                ) and cleanup_ok
+                break
+            time.sleep(min(0.02, deadline.remaining() - CLEANUP_RESERVE_SECONDS))
+        if process.poll() is None:
+            cleanup_ok = terminate_process(
+                process,
+                termination_deadline(deadline, reserve_cleanup=True),
+            ) and cleanup_ok
+        if process.poll() is None:
+            cleanup_ok = False
+            returncode = EXIT_INTERNAL_ERROR
+        else:
+            returncode = process.wait(timeout=0)
+    finally:
+        supervisor.set_active(None)
+        try:
+            cleanup_ok = terminate_orphan_children(
+                orphan_cleanup_deadline(deadline),
+                graceful_seconds=ORPHAN_REAP_GRACE_SECONDS,
+            ) and cleanup_ok
+        except Exception:
+            cleanup_ok = False
+        cleanup_ok = reader.close(reader_cleanup_deadline(deadline)) and cleanup_ok
+        stderr_limited = reader.limit_exceeded.is_set() or stderr_limited
+    resource_limited = returncode in (-getattr(signal, "SIGXCPU", signal.SIGKILL), -getattr(signal, "SIGXFSZ", signal.SIGKILL))
+    return ChildResult(
+        returncode=returncode,
+        stderr=bytes(reader.buffer),
+        timed_out=timed_out,
+        stderr_limited=stderr_limited,
+        resource_limited=resource_limited,
+        cleanup_ok=cleanup_ok,
+    )
+
+
+def create_runtime_directory(home: PinnedDirectory, deadline: Deadline) -> PinnedDirectory:
+    deadline.require()
+    try:
+        home.require_current()
+        runtime_path = tempfile.mkdtemp(prefix=".gemini-wrapper-", dir=home.proc_path)
+    except OSError as exc:
+        raise ResourceUnavailable from exc
+    runtime_name = os.path.basename(runtime_path)
+    try:
+        runtime_entry = RuntimeDirectoryEntry(
+            parent=home,
+            entry_name=runtime_name,
+            file_stat=os.stat(
+                runtime_name,
+                dir_fd=home.descriptor,
+                follow_symlinks=False,
+            ),
+        )
+        if (
+            stat.S_ISLNK(runtime_entry.file_stat.st_mode)
+            or not stat.S_ISDIR(runtime_entry.file_stat.st_mode)
+        ):
+            raise OSError("runtime directory identity changed")
+    except OSError as exc:
+        raise CleanupFailure from exc
+    try:
+        runtime_directory = pin_directory(
+            os.path.join(home.path, runtime_name),
+            parent=home,
+            entry_name=runtime_name,
+        )
+    except OSError as exc:
+        if not cleanup_unpinned_runtime_directory(runtime_entry, deadline):
+            raise CleanupFailure from exc
+        raise ResourceUnavailable from exc
+    try:
+        os.fchmod(runtime_directory.descriptor, 0o700)
+    except OSError as exc:
+        if not cleanup_runtime_directory(runtime_directory, deadline):
+            raise CleanupFailure from exc
+        raise ResourceUnavailable from exc
+    return runtime_directory
+
+
+def remove_private_tree(directory_descriptor: int, deadline: Deadline) -> None:
+    deadline.require_cleanup()
+    directory_stat = os.fstat(directory_descriptor)
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        raise OSError("runtime directory identity changed")
+    with os.scandir(os.dup(directory_descriptor)) as entries:
+        for entry in entries:
+            deadline.require_cleanup()
+            name = entry.name
+            before = entry.stat(follow_symlinks=False)
+            current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            if not same_identity(before, current):
+                raise OSError("runtime entry identity changed")
+            if stat.S_ISDIR(before.st_mode) and not stat.S_ISLNK(before.st_mode):
+                flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+                child_descriptor = os.open(name, flags, dir_fd=directory_descriptor)
+                try:
+                    opened = os.fstat(child_descriptor)
+                    current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+                    if not same_identity(before, opened) or not same_identity(before, current):
+                        raise OSError("runtime entry identity changed")
+                    remove_private_tree(child_descriptor, deadline)
+                    current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+                    if not same_identity(before, current):
+                        raise OSError("runtime entry identity changed")
+                    os.rmdir(name, dir_fd=directory_descriptor)
+                    if os.fstat(child_descriptor).st_nlink != 0:
+                        raise OSError("runtime directory remains linked")
+                finally:
+                    os.close(child_descriptor)
+            else:
+                current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+                if not same_identity(before, current):
+                    raise OSError("runtime entry identity changed")
+                os.unlink(name, dir_fd=directory_descriptor)
+
+
+def directory_entry_stat(directory_descriptor: int, name: str) -> os.stat_result | None:
+    try:
+        return os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+
+
+def cleanup_unpinned_runtime_directory(
+    runtime_entry: RuntimeDirectoryEntry,
+    deadline: Deadline,
+) -> bool:
+    try:
+        deadline.require_cleanup()
+        current = directory_entry_stat(
+            runtime_entry.parent.descriptor,
+            runtime_entry.entry_name,
+        )
+        if (
+            current is None
+            or stat.S_ISLNK(current.st_mode)
+            or not stat.S_ISDIR(current.st_mode)
+            or not same_identity(current, runtime_entry.file_stat)
+        ):
+            return False
+        os.rmdir(runtime_entry.entry_name, dir_fd=runtime_entry.parent.descriptor)
+        return (
+            directory_entry_stat(
+                runtime_entry.parent.descriptor,
+                runtime_entry.entry_name,
+            )
+            is None
+        )
+    except (DeadlineExpired, OSError):
+        return False
+
+def open_pinned_runtime_parent(runtime_directory: PinnedDirectory) -> tuple[PinnedDirectory, str]:
+    try:
+        runtime_path = os.readlink(runtime_directory.proc_path)
+    except OSError as exc:
+        raise OSError("cannot resolve pinned runtime path") from exc
+    parent_path, entry_name = os.path.split(runtime_path)
+    if (
+        not path_is_canonical_absolute(runtime_path)
+        or not path_is_canonical_absolute(parent_path)
+        or entry_name in ("", ".", "..")
+        or "/" in entry_name
+    ):
+        raise OSError("pinned runtime path is no longer resolvable")
+    return pin_directory(parent_path), entry_name
+
+
+def remove_directory_entry(
+    parent_descriptor: int,
+    name: str,
+    expected_stat: os.stat_result,
+    deadline: Deadline,
+) -> None:
+    deadline.require_cleanup()
+    before = directory_entry_stat(parent_descriptor, name)
+    if before is None or not same_identity(before, expected_stat):
+        raise OSError("directory entry identity changed")
+    if stat.S_ISLNK(before.st_mode):
+        os.unlink(name, dir_fd=parent_descriptor)
+    elif stat.S_ISDIR(before.st_mode):
+        flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+        descriptor = os.open(name, flags, dir_fd=parent_descriptor)
+        try:
+            opened = os.fstat(descriptor)
+            current = directory_entry_stat(parent_descriptor, name)
+            if (
+                current is None
+                or not same_identity(before, opened)
+                or not same_identity(before, current)
+            ):
+                raise OSError("directory entry identity changed")
+            remove_private_tree(descriptor, deadline)
+            current = directory_entry_stat(parent_descriptor, name)
+            if current is None or not same_identity(before, current):
+                raise OSError("directory entry identity changed")
+            os.rmdir(name, dir_fd=parent_descriptor)
+            if os.fstat(descriptor).st_nlink != 0:
+                raise OSError("directory remains linked")
+        finally:
+            os.close(descriptor)
+    else:
+        os.unlink(name, dir_fd=parent_descriptor)
+    if directory_entry_stat(parent_descriptor, name) is not None:
+        raise OSError("directory entry remains linked")
+
+
+def cleanup_runtime_directory(runtime_directory: PinnedDirectory, deadline: Deadline) -> bool:
+    cleanup_ok = True
+    parent = runtime_directory.parent
+    entry_name = runtime_directory.entry_name
+
+    try:
+        remove_private_tree(runtime_directory.descriptor, deadline)
+    except (DeadlineExpired, OSError):
+        cleanup_ok = False
+
+    if parent is None or entry_name is None:
+        cleanup_ok = False
+    else:
+        try:
+            parent.require_current()
+        except OSError:
+            cleanup_ok = False
+
+        try:
+            runtime_linked = os.fstat(runtime_directory.descriptor).st_nlink != 0
+        except OSError:
+            cleanup_ok = False
+            runtime_linked = False
+        if runtime_linked:
+            actual_parent: PinnedDirectory | None = None
+            try:
+                actual_parent, actual_name = open_pinned_runtime_parent(runtime_directory)
+                actual_stat = directory_entry_stat(actual_parent.descriptor, actual_name)
+                if (
+                    actual_stat is None
+                    or not same_identity(actual_stat, runtime_directory.file_stat)
+                ):
+                    raise OSError("pinned runtime entry changed")
+                remove_directory_entry(
+                    actual_parent.descriptor,
+                    actual_name,
+                    runtime_directory.file_stat,
+                    deadline,
+                )
+            except (DeadlineExpired, OSError):
+                cleanup_ok = False
+            finally:
+                if actual_parent is not None and not actual_parent.close():
+                    cleanup_ok = False
+
+        try:
+            replacement_stat = directory_entry_stat(parent.descriptor, entry_name)
+            if replacement_stat is not None:
+                cleanup_ok = False
+                remove_directory_entry(
+                    parent.descriptor,
+                    entry_name,
+                    replacement_stat,
+                    deadline,
+                )
+        except (DeadlineExpired, OSError):
+            cleanup_ok = False
+
+        try:
+            if os.fstat(runtime_directory.descriptor).st_nlink != 0:
+                cleanup_ok = False
+            if directory_entry_stat(parent.descriptor, entry_name) is not None:
+                cleanup_ok = False
+        except OSError:
+            cleanup_ok = False
+    try:
+        cleanup_ok = runtime_directory.close() and cleanup_ok
+    except OSError:
+        cleanup_ok = False
+    return cleanup_ok
+
+
+
+
+def main() -> int:
+    deadline = Deadline.start(wall_timeout_seconds())
+    supervisor = ProcessSupervisor(deadline)
+    runtime_directory: PinnedDirectory | None = None
+    home_directory: PinnedDirectory | None = None
+    credential_cleanup_ok = True
+
+    def interrupted(signum: int, _frame: object) -> None:
+        supervisor.interrupt(signum)
+
+    for signum in (signal.SIGINT, signal.SIGHUP, signal.SIGTERM):
+        signal.signal(signum, interrupted)
+
+    outcome = Outcome(CODE_INTERNAL_ERROR, EXIT_INTERNAL_ERROR)
+    try:
+        if len(sys.argv) < 2:
+            outcome = Outcome(CODE_EXECUTABLE_UNAVAILABLE, EXIT_EXECUTABLE_UNAVAILABLE)
+        else:
+            require_resource_support()
+            install_subreaper()
+            home = os.environ.get("HOME", "")
+            if not path_is_canonical_absolute(home) or not trusted_directory(home):
+                raise CredentialError
+            home_directory = open_home_directory(home)
+            # Keep runtime state under the already-validated private HOME, not
+            # under credential storage, so API-key-only invocations still work.
+            runtime_directory = create_runtime_directory(home_directory, deadline)
+            try:
+                # Resolve open descriptors once; child execution never reopens
+                # the mutable CLI or interpreter pathname.
+                plan = resolve_executable(sys.argv[1], home, deadline)
+                try:
+                    rotations = 0
+                    generation_retries = 0
+                    argv = list(sys.argv[2:])
+                    while True:
+                        directory: PinnedDirectory | None = None
+                        try:
+                            deadline.require()
+                            directory = credential_directory(home_directory, deadline)
+                            inventory = credential_inventory(directory, deadline)
+                            attempted_digest = (
+                                None
+                                if inventory.current is None
+                                else hashlib.sha256(inventory.current).digest()
+                            )
+                            result = run_child(
+                                plan,
+                                argv,
+                                home,
+                                runtime_directory,
+                                supervisor,
+                                deadline,
+                            )
+                            if not result.cleanup_ok:
+                                outcome = Outcome(CODE_CLEANUP_FAILED, EXIT_CLEANUP_FAILED)
+                                break
+                            if supervisor.interrupted_signum is not None:
+                                outcome = Outcome(
+                                    CODE_INTERRUPTED,
+                                    128 + supervisor.interrupted_signum,
+                                )
+                                break
+                            if result.stderr_limited:
+                                outcome = Outcome(CODE_STDERR_LIMIT, EXIT_STDERR_LIMIT)
+                                break
+                            if result.timed_out:
+                                outcome = Outcome(CODE_TIMEOUT, EXIT_TIMEOUT)
+                                break
+                            if result.resource_limited or resource_limit_detected(
+                                result.returncode,
+                                result.stderr,
+                            ):
+                                outcome = Outcome(CODE_RESOURCE_LIMIT, EXIT_RESOURCE_LIMIT)
+                                break
+                            if not quota_detected(result.returncode, result.stderr):
+                                outcome = (
+                                    Outcome(None, 0)
+                                    if result.returncode == 0
+                                    else Outcome(CODE_CHILD_FAILURE, EXIT_CHILD_FAILURE)
+                                )
+                                break
+                            if attempted_digest is None or rotations >= MAX_ROTATIONS:
+                                outcome = Outcome(CODE_QUOTA_EXHAUSTED, EXIT_QUOTA_EXHAUSTED)
+                                break
+                            rotation = rotate_credentials_for_attempt(
+                                directory,
+                                attempted_digest,
+                                deadline,
+                            )
+                            if rotation == "exhausted":
+                                outcome = Outcome(CODE_QUOTA_EXHAUSTED, EXIT_QUOTA_EXHAUSTED)
+                                break
+                            if rotation == "current_changed":
+                                generation_retries += 1
+                                if generation_retries > MAX_GENERATION_RETRIES:
+                                    outcome = Outcome(CODE_QUOTA_EXHAUSTED, EXIT_QUOTA_EXHAUSTED)
+                                    break
+                                continue
+                            rotations += 1
+                        finally:
+                            if directory is not None:
+                                credential_cleanup_ok = directory.close() and credential_cleanup_ok
+                finally:
+                    plan.close()
+            except ExecutableError:
+                outcome = Outcome(CODE_EXECUTABLE_UNAVAILABLE, EXIT_EXECUTABLE_UNAVAILABLE)
+    except CleanupFailure:
+        credential_cleanup_ok = False
+        outcome = Outcome(CODE_CLEANUP_FAILED, EXIT_CLEANUP_FAILED)
+    except Interrupted:
+        outcome = Outcome(CODE_INTERRUPTED, 128 + (supervisor.interrupted_signum or signal.SIGTERM))
+    except DeadlineExpired:
+        outcome = Outcome(CODE_TIMEOUT, EXIT_TIMEOUT)
+    except CredentialError:
+        outcome = Outcome(CODE_CREDENTIAL_INVALID, EXIT_CREDENTIAL_ERROR)
+    except RotationError:
+        outcome = Outcome(CODE_CREDENTIAL_ROTATION_FAILED, EXIT_CREDENTIAL_ERROR)
+    except ResourceUnavailable:
+        outcome = Outcome(CODE_RESOURCE_UNAVAILABLE, EXIT_CREDENTIAL_ERROR)
+    except Exception:
+        outcome = Outcome(CODE_INTERNAL_ERROR, EXIT_INTERNAL_ERROR)
+    finally:
+        try:
+            process_cleanup_ok = supervisor.terminate_active()
+        except Exception:
+            process_cleanup_ok = False
+        runtime_cleanup_ok = True
+        if runtime_directory is not None:
+            runtime_cleanup_ok = cleanup_runtime_directory(runtime_directory, deadline)
+        home_cleanup_ok = True
+        if home_directory is not None:
+            home_cleanup_ok = home_directory.close()
+        if not (
+            process_cleanup_ok
+            and credential_cleanup_ok
+            and runtime_cleanup_ok
+            and home_cleanup_ok
+        ):
+            outcome = Outcome(CODE_CLEANUP_FAILED, EXIT_CLEANUP_FAILED)
+        elif supervisor.interrupted_signum is not None:
+            outcome = Outcome(CODE_INTERRUPTED, 128 + supervisor.interrupted_signum)
+
+    if outcome.code is not None:
+        emit(outcome.code)
+    return outcome.status
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 PY
-    chmod 600 "$GEMINI_DIR/settings.json" 2>/dev/null || true
-fi
-
-TMP_STDERR=$(mktemp)
-
-# Calculate max retries based on available backup credentials
-BACKUPS_INIT=($(ls "$GEMINI_DIR"/oauth_creds_*.json 2>/dev/null | grep -Ev "/oauth_creds\.json$" | sort))
-MAX_RETRIES=${#BACKUPS_INIT[@]}
-ATTEMPT=0
-
-# Execute the real command, teeing stderr to both the console and our temp file
-"$REAL_GEMINI" "$@" 2> >(tee "$TMP_STDERR" >&2)
-EXIT_CODE=$?
-
-# Detect Quota or Rate Limit errors and retry up to MAX_RETRIES times
-while grep -qi -E '429 Too Many Requests|Quota|rate limit|RESOURCE_EXHAUSTED' "$TMP_STDERR" && [ $ATTEMPT -lt $MAX_RETRIES ]; do
-    echo "[gemini-wrapper] Quota error detected. Checking for alternate accounts... (Attempt $((ATTEMPT+1))/$MAX_RETRIES)" >&2
-    
-    # Get all backup credentials sorted alphabetically
-    BACKUPS=($(ls "$GEMINI_DIR"/oauth_creds_*.json 2>/dev/null | grep -Ev "/oauth_creds\.json$" | sort))
-    
-    if [ ${#BACKUPS[@]} -gt 0 ]; then
-        NEXT_CRED="${BACKUPS[0]}"
-        echo "[gemini-wrapper] Switching account to $NEXT_CRED" >&2
-        
-        # To maintain a queue, move current to a name that sorts last
-        NEW_BACKUP_NAME="$GEMINI_DIR/oauth_creds_z_$(date +%s)_$ATTEMPT.json"
-        
-        # 1. Move current to end of queue
-        if [ -f "$CURRENT_CREDS" ]; then
-            mv "$CURRENT_CREDS" "$NEW_BACKUP_NAME"
-        fi
-        
-        # 2. Move next to current
-        mv "$NEXT_CRED" "$CURRENT_CREDS"
-        
-        echo "[gemini-wrapper] Retrying command with new account..." >&2
-        rm -f "$TMP_STDERR"
-        
-        "$REAL_GEMINI" "$@" 2> >(tee "$TMP_STDERR" >&2)
-        EXIT_CODE=$?
-        
-        ATTEMPT=$((ATTEMPT+1))
-    else
-        echo "[gemini-wrapper] No backup credentials found. Cannot rotate." >&2
-        break
-    fi
-done
-
-if grep -qi -E '429 Too Many Requests|Quota|rate limit|RESOURCE_EXHAUSTED' "$TMP_STDERR"; then
-    echo "[gemini-wrapper] All accounts exhausted or quota limits reached. Giving up." >&2
-fi
-
-rm -f "$TMP_STDERR"
-exit $EXIT_CODE

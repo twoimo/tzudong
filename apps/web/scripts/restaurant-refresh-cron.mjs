@@ -8,6 +8,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
+
+const operationError = (code) => {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+};
 
 const DEFAULT_OUT = 'apps/web/reports/restaurant-refresh-cron';
 const DEFAULT_LIMIT = 50;
@@ -37,11 +44,11 @@ function parseArgs(argv) {
       console.log('Usage: node apps/web/scripts/restaurant-refresh-cron.mjs [--mode candidates|readback|both] [--limit N] [--dry-run|--allow-db-write] [--json]');
       process.exit(0);
     } else {
-      throw new Error(`Unknown argument: ${arg}`);
+      throw operationError('RESTAURANT_REFRESH_ARGUMENT_INVALID');
     }
   }
-  if (!['candidates', 'readback', 'both'].includes(args.mode)) throw new Error(`Unknown --mode: ${args.mode}`);
-  if (!Number.isFinite(args.limit) || args.limit < 0) throw new Error('--limit must be a non-negative number');
+  if (!['candidates', 'readback', 'both'].includes(args.mode)) throw operationError('RESTAURANT_REFRESH_MODE_INVALID');
+  if (!Number.isFinite(args.limit) || args.limit < 0) throw operationError('RESTAURANT_REFRESH_LIMIT_INVALID');
   return args;
 }
 
@@ -56,7 +63,7 @@ function envValue(...keys) {
 function createSupabaseClientFromEnv() {
   const url = envValue('SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL');
   const key = envValue('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !key) throw new Error('SUPABASE_URL/NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
+  if (!url || !key) throw operationError('RESTAURANT_REFRESH_CREDENTIALS_MISSING');
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
@@ -204,7 +211,7 @@ function candidateScore(previous, candidate, query) {
 
 export function buildCandidateFromLocalItems(row, items, now, query) {
   const previous = canonicalSnapshot(row);
-  const snapshots = (items || []).map((item) => ({ snapshot: localItemSnapshot(item, now), raw: item }));
+  const snapshots = (items || []).map((item) => ({ snapshot: localItemSnapshot(item, now) }));
   snapshots.sort((a, b) => candidateScore(previous, b.snapshot, query) - candidateScore(previous, a.snapshot, query));
   const selectedPair = snapshots[0] || null;
   const selected = selectedPair?.snapshot || null;
@@ -223,7 +230,6 @@ export function buildCandidateFromLocalItems(row, items, now, query) {
       checked_at: now,
       result_count: items.length,
       selected_reason: 'highest_name_phone_address_score',
-      raw_item: snapshots[0].raw,
     },
   };
 }
@@ -281,30 +287,57 @@ async function queryNaverLocal(query) {
   const clientId = envValue('NAVER_CLIENT_ID_BYEON', 'NAVER_CLIENT_ID');
   const clientSecret = envValue('NAVER_CLIENT_SECRET_BYEON', 'NAVER_CLIENT_SECRET');
   if (!clientId || !clientSecret) {
-    return { query, status: 'missing_credentials', items: [], error: 'NAVER_CLIENT_ID_BYEON/NAVER_CLIENT_SECRET_BYEON missing' };
+    return {
+      query,
+      status: 'missing_credentials',
+      items: [],
+      errorCode: 'RESTAURANT_REFRESH_PROVIDER_CREDENTIALS_MISSING',
+    };
   }
   const url = new URL(NAVER_LOCAL_ENDPOINT);
   url.searchParams.set('query', query);
   url.searchParams.set('display', '5');
   url.searchParams.set('sort', 'random');
-  const response = await fetch(url, {
-    headers: {
-      'X-Naver-Client-Id': clientId,
-      'X-Naver-Client-Secret': clientSecret,
-      Accept: 'application/json',
-    },
-  });
-  if (!response.ok) {
-    return { query, status: 'http_error', items: [], error: `http_${response.status}:${(await response.text()).slice(0, 500)}` };
+
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
+        Accept: 'application/json',
+      },
+    });
+  } catch {
+    throw operationError('RESTAURANT_REFRESH_PROVIDER_REQUEST_FAILED');
   }
-  const payload = await response.json();
-  return { query, status: 'ok', items: Array.isArray(payload.items) ? payload.items : [], total: payload.total ?? null };
+
+  if (!response.ok) {
+    return {
+      query,
+      status: 'http_error',
+      items: [],
+      errorCode: 'RESTAURANT_REFRESH_PROVIDER_HTTP_FAILED',
+    };
+  }
+
+  try {
+    const payload = await response.json();
+    return {
+      query,
+      status: 'ok',
+      items: Array.isArray(payload.items) ? payload.items : [],
+      total: payload.total ?? null,
+    };
+  } catch {
+    throw operationError('RESTAURANT_REFRESH_PROVIDER_RESPONSE_INVALID');
+  }
 }
 
 async function safeSelect(supabase, table, select, transform) {
   const query = transform(supabase.from(table).select(select));
   const { data, error } = await query;
-  if (error) throw error;
+  if (error) throw operationError('RESTAURANT_REFRESH_DB_SELECT_FAILED');
   return data || [];
 }
 
@@ -349,7 +382,7 @@ async function insertRunAndCandidate(supabase, candidate, runType, now, write) {
     })
     .select('id')
     .single();
-  if (runError) throw runError;
+  if (runError) throw operationError('RESTAURANT_REFRESH_RUN_INSERT_FAILED');
   const { data: inserted, error: candidateError } = await supabase
     .from('restaurant_refresh_candidates')
     .insert({
@@ -363,7 +396,7 @@ async function insertRunAndCandidate(supabase, candidate, runType, now, write) {
     })
     .select('id')
     .single();
-  if (candidateError) throw candidateError;
+  if (candidateError) throw operationError('RESTAURANT_REFRESH_CANDIDATE_INSERT_FAILED');
   return { dry_run: false, candidate_id: inserted.id, run_id: run.id };
 }
 
@@ -382,7 +415,7 @@ async function writeReadbackRun(supabase, candidate, restaurant, now, write) {
     })
     .select('id')
     .single();
-  if (error) throw error;
+  if (error) throw operationError('RESTAURANT_REFRESH_READBACK_RUN_INSERT_FAILED');
   return { dry_run: false, run_id: data.id };
 }
 
@@ -408,11 +441,18 @@ async function runCandidateScan(supabase, args) {
     }
     if (!candidate) candidate = buildNoResultCandidate(row, attempts, args.now);
     if (!candidate) {
-      results.push({ restaurant_id: row.id, status: 'no_candidate', attempts: attempts.map((attempt) => ({ query: attempt.query, status: attempt.status, result_count: attempt.items.length, error: attempt.error || null })) });
+      results.push({
+        status: 'no_candidate',
+        attempts: attempts.map((attempt) => ({
+          status: attempt.status,
+          result_count: attempt.items.length,
+          error_code: attempt.errorCode || null,
+        })),
+      });
       continue;
     }
     const writeResult = await insertRunAndCandidate(supabase, candidate, 'scheduled_check', args.now, args.allowDbWrite && !args.dryRun);
-    results.push({ restaurant_id: row.id, status: 'candidate_recorded', detected_change_types: candidate.detected_change_types, ...writeResult });
+    results.push({ status: 'candidate_recorded', detected_change_types: candidate.detected_change_types, ...writeResult });
   }
   return results;
 }
@@ -433,7 +473,7 @@ async function runReadback(supabase, args) {
       (query) => query.eq('restaurant_id', candidate.restaurant_id).eq('run_type', 'readback_recrawl').contains('query', { applied_candidate_id: candidate.id }).limit(1),
     );
     if (existingReadback.length > 0) {
-      results.push({ candidate_id: candidate.id, restaurant_id: candidate.restaurant_id, status: 'skipped_existing_readback' });
+      results.push({ status: 'skipped_existing_readback' });
       continue;
     }
     const { data: restaurant, error } = await supabase
@@ -441,17 +481,24 @@ async function runReadback(supabase, args) {
       .select('id, approved_name, origin_name, naver_name, google_name, phone, road_address, jibun_address, english_address, lat, lng, status, updated_at')
       .eq('id', candidate.restaurant_id)
       .single();
-    if (error || !restaurant) throw error || new Error(`Restaurant not found for applied candidate ${candidate.id}`);
+    if (error || !restaurant) throw operationError('RESTAURANT_REFRESH_READBACK_FETCH_FAILED');
     const mismatch = buildReadbackMismatchCandidate(candidate, restaurant, args.now);
     if (mismatch) {
       const writeResult = await insertRunAndCandidate(supabase, mismatch, 'readback_recrawl', args.now, args.allowDbWrite && !args.dryRun);
-      results.push({ candidate_id: candidate.id, restaurant_id: candidate.restaurant_id, status: 'readback_mismatch_candidate_recorded', detected_change_types: mismatch.detected_change_types, ...writeResult });
+      results.push({ status: 'readback_mismatch_candidate_recorded', detected_change_types: mismatch.detected_change_types, ...writeResult });
     } else {
       const writeResult = await writeReadbackRun(supabase, candidate, restaurant, args.now, args.allowDbWrite && !args.dryRun);
-      results.push({ candidate_id: candidate.id, restaurant_id: candidate.restaurant_id, status: 'readback_ok', ...writeResult });
+      results.push({ status: 'readback_ok', ...writeResult });
     }
   }
   return results;
+}
+
+function countStatuses(results) {
+  return results.reduce((counts, result) => {
+    counts[result.status] = (counts[result.status] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 async function writeReport(args, summary) {
@@ -478,25 +525,30 @@ export async function main(argv = process.argv.slice(2)) {
       recorded: candidateResults.filter((row) => row.status === 'candidate_recorded').length,
       skipped_open_candidate: candidateResults.filter((row) => row.status === 'skipped_open_candidate').length,
       no_candidate: candidateResults.filter((row) => row.status === 'no_candidate').length,
-      results: candidateResults,
+      status_counts: countStatuses(candidateResults),
     },
     readback: {
       scanned: readbackResults.length,
       ok: readbackResults.filter((row) => row.status === 'readback_ok').length,
       mismatch_candidates: readbackResults.filter((row) => row.status === 'readback_mismatch_candidate_recorded').length,
       skipped_existing_readback: readbackResults.filter((row) => row.status === 'skipped_existing_readback').length,
-      results: readbackResults,
+      status_counts: countStatuses(readbackResults),
     },
   };
   summary.report_path = await writeReport(args, summary);
-  if (args.json) console.log(JSON.stringify(summary, null, 2));
-  else console.log(`restaurant refresh cron complete: ${summary.report_path}`);
+  if (args.json) {
+    console.log(redactCliText(JSON.stringify(summary), 1024));
+  } else {
+    console.log(`restaurant refresh cron complete: ${redactCliText(summary.report_path, 512)}`);
+  }
   return summary;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
-    console.error(error.stack || error.message || String(error));
+    logCliError(error, (line) =>
+      process.stderr.write(`[restaurant-refresh-cron] ${line}`),
+    );
     process.exitCode = 1;
   });
 }

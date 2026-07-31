@@ -76,41 +76,56 @@ function buildFakeLocalProviderScript(markerPath: string) {
     const fs = require('node:fs');
     const path = require('node:path');
     const crypto = require('node:crypto');
+    const sharp = require('sharp');
     let body = '';
     process.stdin.on('data', (chunk) => { body += chunk; });
     process.stdin.on('end', () => {
-      const payload = JSON.parse(body);
-      const image = Buffer.from(${JSON.stringify(tinyPngBase64)}, 'base64');
-      fs.mkdirSync(path.dirname(payload.outputPath), { recursive: true });
-      fs.writeFileSync(payload.outputPath, image);
-      fs.appendFileSync(${JSON.stringify(markerPath)}, JSON.stringify({
-        outputPath: payload.outputPath,
-        hasOpenAIAPIKey: Boolean(process.env.OPENAI_API_KEY),
-        promptPreview: String(payload.prompt).slice(0, 120),
-      }) + '\\n');
-      console.log(JSON.stringify({
-        ok: true,
-        providerId: 'local-codex',
-        authMode: 'codex_oauth',
-        endpoint: 'https://chatgpt.com/backend-api/codex/responses',
-        agentModel: payload.agentModel,
-        requestToolType: 'image_generation',
-        requestToolModel: 'gpt-image-2',
-        model: 'gpt-image-2',
-        modelProvenance: 'exact',
-        responseId: 'resp_' + crypto.createHash('sha256').update(payload.prompt).digest('hex').slice(0, 16),
-        imageCallId: 'ig_' + crypto.createHash('sha256').update(payload.outputPath).digest('hex').slice(0, 16),
-        imageItemCount: 1,
-        generatedImageItemTypes: ['image_generation_call'],
-        rawImageItemTypes: ['image_generation_call'],
-        requestHash: crypto.createHash('sha256').update(payload.prompt).digest('hex'),
-        responseHash: crypto.createHash('sha256').update(image).digest('hex'),
-        mime: 'image/png',
-        bytes: image.length,
-        outputPath: payload.outputPath,
-        hasOpenAIAPIKey: Boolean(process.env.OPENAI_API_KEY),
-        generatedAt: new Date().toISOString(),
-      }));
+      void (async () => {
+        try {
+          const payload = JSON.parse(body);
+          const image = await sharp({
+            create: {
+              width: 1536,
+              height: 864,
+              channels: 3,
+              background: { r: 24, g: 48, b: 72 },
+            },
+          }).png().toBuffer();
+          fs.mkdirSync(path.dirname(payload.outputPath), { recursive: true });
+          fs.writeFileSync(payload.outputPath, image);
+          fs.appendFileSync(${JSON.stringify(markerPath)}, JSON.stringify({
+            outputPath: payload.outputPath,
+            hasOpenAIAPIKey: Boolean(process.env.OPENAI_API_KEY),
+            promptPreview: String(payload.prompt).slice(0, 120),
+          }) + '\\n');
+          console.log(JSON.stringify({
+            ok: true,
+            providerId: 'local-codex',
+            authMode: 'codex_oauth',
+            endpoint: 'https://chatgpt.com/backend-api/codex/responses',
+            agentModel: payload.agentModel,
+            requestToolType: 'image_generation',
+            requestToolModel: 'gpt-image-2',
+            model: 'gpt-image-2',
+            modelProvenance: 'exact',
+            responseId: 'resp_' + crypto.createHash('sha256').update(payload.prompt).digest('hex').slice(0, 16),
+            imageCallId: 'ig_' + crypto.createHash('sha256').update(payload.outputPath).digest('hex').slice(0, 16),
+            imageItemCount: 1,
+            generatedImageItemTypes: ['image_generation_call'],
+            rawImageItemTypes: ['image_generation_call'],
+            requestHash: crypto.createHash('sha256').update(payload.prompt).digest('hex'),
+            responseHash: crypto.createHash('sha256').update(image).digest('hex'),
+            mime: 'image/png',
+            bytes: image.length,
+            outputPath: payload.outputPath,
+            hasOpenAIAPIKey: Boolean(process.env.OPENAI_API_KEY),
+            generatedAt: new Date().toISOString(),
+          }));
+        } catch (error) {
+          console.error(error);
+          process.exitCode = 1;
+        }
+      })();
     });
   `;
 }
@@ -208,5 +223,5 @@ describe('storyboard ten guided preset UltraQA coverage', () => {
         rmSync(dir, { recursive: true, force: true });
       }
     }
-  });
+  }, 30_000);
 });
