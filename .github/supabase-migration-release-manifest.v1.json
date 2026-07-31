@@ -22,7 +22,7 @@
     {
       "id": "g016_privacy_audit_owner_policy",
       "path": "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
-      "sha256": "9fe65d91270043c24adf70f39af400e1efe38a51efbaf4d5f2ad9524cdda53fb",
+      "sha256": "6e6c4a464d066947a0b89dbca791ed220febd4abde12d89a1b7136240bb2ad78",
       "expectedPriorState": {
         "query": "SELECT json_build_object(\n  'g016_policy_absent', NOT EXISTS (\n    SELECT 1 FROM pg_policy p\n    JOIN pg_class c ON c.oid = p.polrelid\n    JOIN pg_namespace n ON n.oid = c.relnamespace\n    WHERE n.nspname = 'privacy_retention'\n      AND c.relname = 'privacy_audit_events'\n      AND p.polname = 'g016_privacy_workflow_owner_access'\n  )\n)::text;\n",
         "expected": {
