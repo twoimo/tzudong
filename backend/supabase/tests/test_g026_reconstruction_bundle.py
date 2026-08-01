@@ -906,15 +906,19 @@ class G026BundleTests(unittest.TestCase):
         ).read_text(encoding='utf8')
         declared_invokers = (
             'public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+            'public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
             'public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+            'public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
             'public.ocr_log_metadata_is_safe(jsonb)',
         )
         invoker_block = (
             "IF v_expected.source_signature IN (\n"
-            f"      '{declared_invokers[0]}',\n"
-            f"      '{declared_invokers[1]}',\n"
-            f"      '{declared_invokers[2]}'\n"
-            "    ) THEN"
+            + "".join(
+                f"      '{signature}',\n"
+                for signature in declared_invokers[:-1]
+            )
+            + f"      '{declared_invokers[-1]}'\n"
+            + "    ) THEN"
         )
 
         def require_contract(candidate):
@@ -937,12 +941,12 @@ class G026BundleTests(unittest.TestCase):
 
         require_contract(source)
         for mutation in (
-            source.replace(declared_invokers[2], 'public.unexpected_invoker()', 1),
+            source.replace(declared_invokers[-1], 'public.unexpected_invoker()', 1),
             source.replace(
                 invoker_block,
                 invoker_block.replace(
-                    f"      '{declared_invokers[2]}'\n",
-                    f"      '{declared_invokers[2]}',\n"
+                    f"      '{declared_invokers[-1]}'\n",
+                    f"      '{declared_invokers[-1]}',\n"
                     "      'public.unexpected_invoker()'\n",
                 ),
             ),
