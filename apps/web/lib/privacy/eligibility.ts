@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
+import {
+  PRIVACY_POLICY_CONTENT_SHA256,
+  PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -21,6 +25,7 @@ export type PrivacyEligibilityReceipt = Readonly<{
   eligible: boolean;
   reasonCode: PrivacyEligibilityReasonCode;
   policyVersionId: string | null;
+  policyVersion: string | null;
   contentSha256: string | null;
 }>;
 
@@ -57,6 +62,7 @@ const RECEIPT_KEYS = [
   'reasonCode',
   'policyVersionId',
   'contentSha256',
+  'policyVersion',
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,9 +86,12 @@ function isReasonCode(value: unknown): value is PrivacyEligibilityReasonCode {
 export function parsePrivacyEligibilityReceipt(value: unknown): PrivacyEligibilityReceipt | null {
   if (!isRecord(value) || !hasExactReceiptKeys(value)) return null;
 
-  const { schemaVersion, eligible, reasonCode, policyVersionId, contentSha256 } = value;
+  const { schemaVersion, eligible, reasonCode, policyVersionId, policyVersion, contentSha256 } = value;
   if (schemaVersion !== 1 || typeof eligible !== 'boolean' || !isReasonCode(reasonCode)) return null;
   if (policyVersionId !== null && (typeof policyVersionId !== 'string' || !UUID_PATTERN.test(policyVersionId))) {
+    return null;
+  }
+  if (policyVersion !== null && (typeof policyVersion !== 'string' || policyVersion !== PRIVACY_POLICY_VERSION)) {
     return null;
   }
   if (contentSha256 !== null && (typeof contentSha256 !== 'string' || !SHA256_PATTERN.test(contentSha256))) {
@@ -90,16 +99,16 @@ export function parsePrivacyEligibilityReceipt(value: unknown): PrivacyEligibili
   }
 
   if (reasonCode === 'PRIVACY_POLICY_UNAVAILABLE') {
-    return !eligible && policyVersionId === null && contentSha256 === null
-      ? { schemaVersion, eligible, reasonCode, policyVersionId, contentSha256 }
+    return !eligible && policyVersionId === null && policyVersion === null && contentSha256 === null
+      ? { schemaVersion, eligible, reasonCode, policyVersionId, policyVersion, contentSha256 }
       : null;
   }
 
-  if (!policyVersionId || !contentSha256 || eligible !== (reasonCode === 'PRIVACY_ELIGIBLE')) {
+  if (!policyVersionId || policyVersion !== PRIVACY_POLICY_VERSION || !contentSha256 || eligible !== (reasonCode === 'PRIVACY_ELIGIBLE')) {
     return null;
   }
 
-  return { schemaVersion, eligible, reasonCode, policyVersionId, contentSha256 };
+  return { schemaVersion, eligible, reasonCode, policyVersionId, policyVersion, contentSha256 };
 }
 export function privacyEligibilityMatchesPolicy(
   receipt: PrivacyEligibilityReceipt | null,
@@ -107,6 +116,32 @@ export function privacyEligibilityMatchesPolicy(
 ) {
   return receipt?.policyVersionId === policy.policyVersionId
     && receipt?.contentSha256 === policy.contentSha256;
+}
+export function hasLivePrivacyEligibilityReceipt(
+  eligibility: CurrentPrivacyEligibility | null,
+): eligibility is CurrentPrivacyEligibility & Readonly<{
+  eligible: true;
+  reasonCode: 'PRIVACY_ELIGIBLE';
+  receipt: PrivacyEligibilityReceipt & Readonly<{
+    eligible: true;
+    reasonCode: 'PRIVACY_ELIGIBLE';
+    policyVersionId: string;
+    contentSha256: string;
+  }>;
+}> {
+  const receipt = eligibility?.receipt;
+  return eligibility !== null
+    && eligibility.eligible === true
+    && eligibility.reasonCode === 'PRIVACY_ELIGIBLE'
+    && receipt?.schemaVersion === 1
+    && receipt.eligible === true
+    && receipt.reasonCode === 'PRIVACY_ELIGIBLE'
+    && typeof receipt.policyVersionId === 'string'
+    && UUID_PATTERN.test(receipt.policyVersionId)
+    && typeof receipt.contentSha256 === 'string'
+    && receipt.policyVersion === PRIVACY_POLICY_VERSION
+    && receipt.contentSha256 === PRIVACY_POLICY_CONTENT_SHA256
+    && SHA256_PATTERN.test(receipt.contentSha256);
 }
 
 /**
@@ -122,7 +157,7 @@ export async function getCurrentPrivacyEligibility(
     const { data, error } = await rpcClient.rpc('get_current_privacy_eligibility');
     const receipt = error === null ? parsePrivacyEligibilityReceipt(data) : null;
     return {
-      eligible: receipt?.eligible === true,
+      eligible: receipt?.eligible === true && receipt?.reasonCode === 'PRIVACY_ELIGIBLE',
       reasonCode: receipt?.reasonCode ?? null,
       receipt,
     };
@@ -146,7 +181,7 @@ export async function getPrivacyEligibilityForUser(
     });
     const receipt = error === null ? parsePrivacyEligibilityReceipt(data) : null;
     return {
-      eligible: receipt?.eligible === true,
+      eligible: receipt?.eligible === true && receipt?.reasonCode === 'PRIVACY_ELIGIBLE',
       reasonCode: receipt?.reasonCode ?? null,
       receipt,
     };

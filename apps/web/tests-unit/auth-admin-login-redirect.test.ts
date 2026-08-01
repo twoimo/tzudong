@@ -9,7 +9,14 @@ import {
   isAdminAuthRedirect,
   readHomeAuthLoginRequestFromLocation,
 } from '@/lib/auth/auth-redirect';
-import { shouldSkipPublicEligibilitySession } from '@/lib/auth/public-eligibility-session';
+import {
+  classifyPublicEligibilitySessionRoute,
+  shouldSkipPublicEligibilitySession,
+} from '@/lib/auth/public-eligibility-session';
+import {
+  PRIVACY_POLICY_CONTENT_SHA256,
+  PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy';
 
 type SupabaseMockState = {
   userId: string | null;
@@ -69,7 +76,8 @@ mock.module('@supabase/ssr', () => ({
             eligible: true,
             reasonCode: 'PRIVACY_ELIGIBLE',
             policyVersionId: '11111111-1111-4111-8111-111111111111',
-            contentSha256: 'a'.repeat(64),
+            contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+            policyVersion: PRIVACY_POLICY_VERSION,
           },
           error: supabaseMockState.privacyEligibilityError ?? null,
         });
@@ -170,11 +178,11 @@ describe('public eligibility proxy', () => {
     })).toBe(true);
     expect(shouldSkipPublicEligibilitySession({
       pathname: '/api/shorten',
-      method: 'POST',
+      method: 'GET',
       hasSessionHint: false,
     })).toBe(true);
 
-    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/api/health']) {
+    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password']) {
       expect(shouldSkipPublicEligibilitySession({
         pathname,
         method: 'GET',
@@ -187,6 +195,55 @@ describe('public eligibility proxy', () => {
       method: 'GET',
       hasSessionHint: false,
     })).toBe(false);
+  });
+  test('only the exact method/path matrix can bypass eligibility', () => {
+    for (const { pathname, method } of [
+      { pathname: '/privacy', method: 'POST' },
+      { pathname: '/data-deletion', method: 'POST' },
+      { pathname: '/auth/callback', method: 'POST' },
+      { pathname: '/auth//callback', method: 'GET' },
+      { pathname: '/privacy/', method: 'GET' },
+      { pathname: '/%70rivacy', method: 'GET' },
+      { pathname: '/privacy%2f', method: 'GET' },
+      { pathname: '/privacy%5c', method: 'GET' },
+      { pathname: '/privacy\\', method: 'GET' },
+      { pathname: '/privacy%252f', method: 'GET' },
+      { pathname: '/privacy%zz', method: 'GET' },
+      { pathname: '/privacy.evil', method: 'GET' },
+      { pathname: '/api/privacy/onboarding/evil', method: 'GET' },
+      { pathname: '/api/privacy/onboarding/', method: 'POST' },
+      { pathname: '/api/privacy//onboarding', method: 'POST' },
+      { pathname: '/api/privacy/%6fonboarding', method: 'POST' },
+      { pathname: '/api/health', method: 'POST' },
+      { pathname: '/auth/reset-password', method: 'POST' },
+      { pathname: '/api/shorten/evil', method: 'GET' },
+      { pathname: '/api/shorten/', method: 'HEAD' },
+      { pathname: '/api/shorten', method: 'POST' },
+      { pathname: '/auth/required', method: 'get' },
+    ]) {
+      expect(classifyPublicEligibilitySessionRoute({ pathname, method })).toBe('protected');
+      expect(shouldSkipPublicEligibilitySession({
+        pathname,
+        method,
+        hasSessionHint: true,
+      })).toBe(false);
+      expect(shouldSkipPublicEligibilitySession({
+        pathname,
+        method,
+        hasSessionHint: false,
+      })).toBe(false);
+    }
+
+    for (const { pathname, method, routeClass } of [
+      { pathname: '/', method: 'GET', routeClass: 'credentialless-public' },
+      { pathname: '/privacy', method: 'HEAD', routeClass: 'credentialless-public' },
+      { pathname: '/api/health', method: 'HEAD', routeClass: 'credentialless-public' },
+      { pathname: '/api/privacy/onboarding', method: 'POST', routeClass: 'loop-safe' },
+      { pathname: '/auth/callback', method: 'GET', routeClass: 'loop-safe' },
+      { pathname: '/auth/reset-password', method: 'GET', routeClass: 'loop-safe' },
+    ] as const) {
+      expect(classifyPublicEligibilitySessionRoute({ pathname, method })).toBe(routeClass);
+    }
   });
 
   test('credentialless public pages and APIs bypass session lookup', async () => {
@@ -223,7 +280,7 @@ describe('public eligibility proxy', () => {
     };
 
     const { proxy } = await loadProxy();
-    for (const path of ['/api/privacy/onboarding', '/auth/callback', '/api/health']) {
+    for (const path of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password']) {
       const response = await proxy(requestWithSupabaseSessionHint(path));
 
       expect(response.status).toBe(200);
@@ -516,4 +573,15 @@ describe('admin middleware login redirect', () => {
     const rpcFailureResponse = await updateSession(adminRequest('/api/admin/release-auth-proof', 'POST'));
     expect(rpcFailureResponse.status).toBe(403);
     expect(rpcFailureResponse.headers.get('cache-control')).toBe('no-store');
+  });
+  test('existing accounts are classification-only and missing privacy evidence stays onboarding-required', () => {
+    const middleware = source('lib/supabase/middleware.ts');
+    const eligibility = source('lib/privacy/eligibility.ts');
+
+    expect(middleware).toContain('await getCurrentPrivacyEligibility(supabase)');
+    expect(middleware).not.toContain('auth.admin.createUser');
+    expect(middleware).not.toContain('confirm_privacy_onboarding');
+    expect(middleware).not.toContain('privacy_age_profiles');
+    expect(eligibility).toContain("rpc('get_current_privacy_eligibility')");
+    expect(eligibility).not.toContain('submit_privacy_consent');
   });
