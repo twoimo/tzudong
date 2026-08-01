@@ -18,6 +18,40 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from '@/lib/debug-log';
 
+function hasValidRecoveryQuery(searchParams: URLSearchParams) {
+    const keys = [...searchParams.keys()];
+    if (new Set(keys).size !== keys.length) return false;
+    if (keys.some((key) => !['code', 'token', 'token_hash', 'type'].includes(key))) return false;
+
+    const code = searchParams.get('code');
+    const token = searchParams.get('token');
+    const tokenHash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
+    if ((code ? 1 : 0) + (token ? 1 : 0) + (tokenHash ? 1 : 0) > 1) return false;
+    if (code || token) return (code ?? token)!.length <= 2048 && (type === null || type === 'recovery');
+    if (tokenHash) return tokenHash.length <= 2048 && type === 'recovery';
+    return keys.length === 0;
+}
+
+function hasValidRecoveryFragment(hashParams: URLSearchParams) {
+    const keys = [...hashParams.keys()];
+    const accessToken = hashParams.get('access_token');
+    return keys.length > 0
+        && keys.every((key) => (
+            key === 'access_token'
+            || key === 'refresh_token'
+            || key === 'expires_in'
+            || key === 'token_type'
+            || key === 'type'
+        ))
+        && hashParams.getAll('access_token').length === 1
+        && hashParams.getAll('type').length === 1
+        && hashParams.get('type') === 'recovery'
+        && typeof accessToken === 'string'
+        && accessToken.length > 0
+        && accessToken.length <= 4096;
+}
+
 export default function ResetPasswordPage() {
     const router = useRouter();
     const { updatePassword } = useAuth();
@@ -33,31 +67,54 @@ export default function ResetPasswordPage() {
             // 1. URL 파라미터 확인 (Hash 및 Query 모두 확인)
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
             const queryParams = new URLSearchParams(window.location.search);
+            if (!hasValidRecoveryQuery(queryParams) || !hasValidRecoveryFragment(hashParams) && hashParams.size > 0) {
+                setIsCheckingSession(false);
+                return;
+            }
 
             const type = hashParams.get('type') || queryParams.get('type');
-            const accessToken = hashParams.get('access_token');
+            const accessToken = hasValidRecoveryFragment(hashParams)
+                ? hashParams.get('access_token')
+                : null;
             const code = queryParams.get('code');
             const token = queryParams.get('token');
+            const tokenHash = queryParams.get('token_hash');
 
             // 2. 이벤트 리스너 설정 (PKCE Flow 등에서 발생)
-            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                if (event === 'PASSWORD_RECOVERY' || (session && type === 'recovery')) {
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+                if (event === 'PASSWORD_RECOVERY') {
                     setIsValidSession(true);
                     setIsCheckingSession(false);
                 }
             });
 
-            // 3. 토큰 직접 검증 (PKCE Code Exchange)
-            if (token && type === 'recovery') {
+            // A successful exchange alone is not recovery authority. Only the
+            // provider PASSWORD_RECOVERY event above enables password updates.
+            if (code && (type === 'recovery' || type === null)) {
                 try {
-                    // pkce_로 시작하는 토큰은 Auth Code이므로 교환해야 함
-                    const { data, error } = await supabase.auth.exchangeCodeForSession(token);
+                    const { error } = await supabase.auth.exchangeCodeForSession(code);
                     if (error) throw error;
-                    if (data?.session) {
-                        setIsValidSession(true);
-                        setIsCheckingSession(false);
-                        return;
-                    }
+                } catch {
+                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
+                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
+                    });
+                }
+            } else if (token && (type === 'recovery' || type === null)) {
+                try {
+                    const { error } = await supabase.auth.exchangeCodeForSession(token);
+                    if (error) throw error;
+                } catch {
+                    debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
+                        reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
+                    });
+                }
+            } else if (tokenHash && type === 'recovery') {
+                try {
+                    const { error } = await supabase.auth.verifyOtp({
+                        type: 'recovery',
+                        token_hash: tokenHash,
+                    });
+                    if (error) throw error;
                 } catch {
                     debugLog(DEBUG_LOG_EVENT.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED, {
                         reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
@@ -65,36 +122,11 @@ export default function ResetPasswordPage() {
                 }
             }
 
-            // 4. 현재 세션 상태 확인
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (session && type === 'recovery') {
-                setIsValidSession(true);
-                setIsCheckingSession(false);
-            } else if (accessToken || code || token) {
-                // 토큰/코드가 있지만 세션이 아직 없는 경우 (처리 중)
-                // onAuthStateChange에서 처리되기를 기다림
-                // 3초 후에도 세션이 없으면 에러 처리
-                setTimeout(async () => {
-                    const { data: { session: retrySession } } = await supabase.auth.getSession();
-                    if (retrySession) {
-                        setIsValidSession(true);
-                    } else if (!isValidSession) { // 이미 유효해졌으면 무시
-                        // PKCE의 경우 코드가 교환되면 세션이 생김.
-                        // 하지만 sometimes code exchange fails or happens on main layout.
-                        // 여기서는 UI를 보여주되, updatePassword 호출 시 에러가 나면 처리.
-                        if (code) {
-                            // 코드가 있으면 조금 더 기다려볼 수도 있지만,
-                            // 일단 UI를 보여주는 게 나을 수 있음 (세션이 곧 생길 것이라 가정)
-                            // 하지만 안전하게 로그인 페이지로 보내는 게 나을 수도.
-                            // 여기서는 세션 확인 실패로 간주.
-                            // toast.error('세션 연결 시간이 초과되었습니다.');
-                        }
-                    }
+            if (accessToken || code || token || tokenHash) {
+                setTimeout(() => {
                     setIsCheckingSession(false);
                 }, 3000);
             } else {
-                // 아무 토큰도 없는 경우
                 setIsCheckingSession(false);
             }
 

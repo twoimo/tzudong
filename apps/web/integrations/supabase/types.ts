@@ -1842,7 +1842,8 @@ interface DatabaseSource {
                     p_challenge_token: string
                     p_user_id: string
                     p_source: 'password_signup' | 'oauth'
-                    p_guardian_verification_id?: string | null
+                    p_guardian_verification_id: string | null
+                    p_oauth_nonce_hash: string | null
                 }
                 Returns: Json
             }
