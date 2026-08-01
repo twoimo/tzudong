@@ -31,6 +31,8 @@ def build_transformed(source: bytes, item: dict[str, Any], window: dict[str, Any
     precondition = (window["precondition"] + "\n").encode("ascii")
     grant = (window["grantStatement"] + "\n").encode("ascii")
     revoke = (window["revokeStatement"] + "\n").encode("ascii")
+    set_role = b"SET LOCAL ROLE privacy_workflow_owner;\n"
+    reset_role = b"RESET ROLE;\n"
     postcondition = (window["postcondition"] + "\n").encode("ascii")
     catalog_schema_usage_grant = (window["catalogSchemaUsageGrantStatement"] + "\n").encode("ascii")
     catalog_function_execute_grant = (window["catalogFunctionExecuteGrantStatement"] + "\n").encode("ascii")
@@ -46,15 +48,16 @@ def build_transformed(source: bytes, item: dict[str, Any], window: dict[str, Any
         cleanup = item["cleanupAnchor"].encode("ascii")
         if source.count(anchor) != 1 or source.count(cleanup) != 1:
             raise ValueError("replay membership transaction reuse drifted")
-        transformed = source.replace(anchor, anchor + precondition + grant, 1)
-        transformed = transformed.replace(cleanup, b"\n" + revoke + postcondition + b"COMMIT;", 1)
+        transformed = source.replace(anchor, anchor + precondition + grant + set_role, 1)
+        transformed = transformed.replace(cleanup, b"\n" + reset_role + revoke + postcondition + b"COMMIT;", 1)
     elif mode == "revoke_before_catalog_assertion":
         anchor = item["anchor"].encode("ascii")
         if item["cleanupAnchor"] or source.count(anchor) != 1:
             raise ValueError("catalog assertion membership ordering drifted")
-        transformed = b"BEGIN;\n" + precondition + grant + source.replace(
+        transformed = b"BEGIN;\n" + precondition + grant + set_role + source.replace(
             anchor,
-            catalog_schema_usage_grant
+            reset_role
+            + catalog_schema_usage_grant
             + catalog_function_execute_grant
             + revoke
             + postcondition
@@ -70,7 +73,7 @@ def build_transformed(source: bytes, item: dict[str, Any], window: dict[str, Any
     elif mode == "wrapper_transaction":
         if item["anchor"] or item["cleanupAnchor"]:
             raise ValueError("replay membership wrapper anchor drifted")
-        transformed = b"BEGIN;\n" + precondition + grant + source + revoke + postcondition + b"COMMIT;\n"
+        transformed = b"BEGIN;\n" + precondition + grant + set_role + source + reset_role + revoke + postcondition + b"COMMIT;\n"
     else:
         raise ValueError("replay membership mode drifted")
 
@@ -79,6 +82,8 @@ def build_transformed(source: bytes, item: dict[str, Any], window: dict[str, Any
             or transformed.count(revoke) != expected_membership_count
             or transformed.count(postcondition) != expected_membership_count):
         raise ValueError("replay membership statement count drifted")
+    if transformed.count(set_role) != 1 or transformed.count(reset_role) != 1:
+        raise ValueError("replay membership role window count drifted")
     if mode == "revoke_before_catalog_assertion":
         catalog_statements = (
             catalog_schema_usage_grant,
