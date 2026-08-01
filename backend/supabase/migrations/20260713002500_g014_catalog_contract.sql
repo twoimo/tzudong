@@ -1082,13 +1082,31 @@ GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   TO privacy_workflow_owner;
 
 -- Extension helpers installed in public are not application RPCs. Remove the
--- default EXECUTE surface before asserting the exact checked-in RPC matrix.
-REVOKE EXECUTE ON FUNCTION public.cosine_distance(public.vector, public.vector)
-  FROM PUBLIC, anon, authenticated, service_role;
-REVOKE EXECUTE ON FUNCTION public.l1_distance(public.vector, public.vector)
-  FROM PUBLIC, anon, authenticated, service_role;
-REVOKE EXECUTE ON FUNCTION public.vector_negative_inner_product(public.vector, public.vector)
-  FROM PUBLIC, anon, authenticated, service_role;
+-- default EXECUTE surface when pgvector is already installed; clean source
+-- replay installs the extension later, so these signatures may not exist yet.
+DO $extension_helpers$
+DECLARE
+  helper regprocedure;
+BEGIN
+  FOR helper IN
+    SELECT procedure.oid::regprocedure
+    FROM pg_catalog.pg_proc AS procedure
+    JOIN pg_catalog.pg_namespace AS namespace
+      ON namespace.oid = procedure.pronamespace
+    WHERE namespace.nspname = 'public'
+      AND procedure.proname IN (
+        'cosine_distance',
+        'l1_distance',
+        'vector_negative_inner_product'
+      )
+  LOOP
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated, service_role',
+      helper
+    );
+  END LOOP;
+END
+$extension_helpers$;
 -- The assertion resolves auth.users from pg_catalog and needs no privilege on
 -- the platform-owned auth schema.
 SELECT privacy_retention.assert_g014_catalog_contract();
