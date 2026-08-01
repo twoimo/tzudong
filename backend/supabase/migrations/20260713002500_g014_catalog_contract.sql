@@ -909,7 +909,9 @@ BEGIN
     WHERE procedure.oid = v_procedure;
     IF v_expected.source_signature IN (
       'public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+      'public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
       'public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+      'public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
       'public.ocr_log_metadata_is_safe(jsonb)'
     ) THEN
       IF v_is_definer THEN
@@ -943,6 +945,16 @@ BEGIN
     FROM pg_catalog.pg_proc AS procedure
     JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace
     WHERE namespace.nspname = 'public'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_depend AS dependency
+        JOIN pg_catalog.pg_extension AS extension
+          ON extension.oid = dependency.refobjid
+        WHERE dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+          AND dependency.objid = procedure.oid
+          AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+          AND dependency.deptype = 'e'
+      )
   LOOP
     IF EXISTS (
       SELECT 1
@@ -1069,6 +1081,14 @@ REVOKE ALL ON FUNCTION privacy_retention.assert_g014_catalog_contract()
 GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   TO privacy_workflow_owner;
 
+-- Extension helpers installed in public are not application RPCs. Remove the
+-- default EXECUTE surface before asserting the exact checked-in RPC matrix.
+REVOKE EXECUTE ON FUNCTION public.cosine_distance(public.vector, public.vector)
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.l1_distance(public.vector, public.vector)
+  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.vector_negative_inner_product(public.vector, public.vector)
+  FROM PUBLIC, anon, authenticated, service_role;
 -- The assertion resolves auth.users from pg_catalog and needs no privilege on
 -- the platform-owned auth schema.
 SELECT privacy_retention.assert_g014_catalog_contract();
