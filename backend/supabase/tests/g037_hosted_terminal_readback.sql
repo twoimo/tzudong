@@ -1,6 +1,6 @@
 -- G037 terminal readback. Read-only assertions emit only booleans and fingerprints.
 SELECT
-  pg_catalog.count(*) = 40 AS exact_terminal_ledger_count,
+  pg_catalog.count(*) = 41 AS exact_terminal_ledger_count,
   pg_catalog.encode(
     extensions.digest(
       COALESCE(
@@ -159,8 +159,8 @@ SELECT
       ORDER BY role_name,member_name,grantor_name)::text FROM membership_rows
   ),'[]'),'sha256'),'hex') AS managed_role_sha256;
 
--- Composed immutable source contract: 02000–02400 terminal ACL fragments.
--- Terminal matrix SHA-256: fb55b1f0b36236578c7a3c337eb5032094d1fc7c741fa000dde9e2d2eee55e3c (104 rows).
+-- Composed immutable source contract: G014 02000–02400 plus G016 20260801000300 terminal ACL fragments.
+-- Terminal matrix SHA-256: 59b3d7d942241e70e24196251aef0dabfb999d986512a7d138e44cd2f57e490d (104 rows).
 WITH expected_rpc(source_signature,grantee) AS (
   VALUES
     ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'::name),
@@ -207,7 +207,7 @@ WITH expected_rpc(source_signature,grantee) AS (
     ('public.get_current_privacy_policy_version()', 'authenticated'::name),
     ('public.get_current_privacy_policy_version()', 'service_role'::name),
     ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'::name),
-    ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)', 'service_role'::name),
+    ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', 'service_role'::name),
     ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'::name),
     ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'::name),
     ('public.read_privacy_guardian_status(uuid)', 'service_role'::name),

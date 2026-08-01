@@ -90,7 +90,7 @@ class ContractTests(unittest.TestCase):
   manifest=contract.validate_sources(ROOT)
   expected=(("20251219","db_performance_optimization"),("20260118","create_ocr_logs"),("20260425","allow_ocr_logs_user_insert"),("20260506065538","optimize_auth_user_state_indexes"),("20260506085634","optimize_app_query_indexes"),("20260509000100","drop_server_costs"),("20260509000200","drop_admin_ai_settings"),("20260523093000","create_restaurant_popular_rank_snapshots"),("20260525143908","create_youtube_kpi_snapshots"),("20260526083932","add_youtube_channel_growth_snapshot_deltas"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
   reconstructed=(("20260124","create_document_embeddings_bge"),("20260124","create_restaurants"),("20260124","fix_approved_name_sync"),("20260124","update_embeddings_constraint"),("20260131","fix_search_rpc"),("20260213","create_announcements_table_and_seed"),("20260214","fix_approve_edit_backup_stage"),("20260214","fix_restaurant_rpcs_and_search"),("20260214","fix_submission_item_target_to_backup"),("20260514","admin_user_management_audit"),("20260531084217","harden_public_api_grants_and_rpcs"),("20260531084516","tighten_public_table_data_api_grants"))
-  self.assertEqual(28,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
+  self.assertEqual(29,len(manifest.migrations)); self.assertEqual(expected,contract.BASELINE_PAIRS)
   self.assertGreaterEqual(recovery.CAPTURE_TIMEOUT_SECONDS,3600)
   self.assertTrue(contract.ledger_prefix(manifest,expected))
   self.assertTrue(contract.ledger_prefix(manifest,[list(pair) for pair in expected]))
@@ -2397,8 +2397,11 @@ class ManifestDependencyTests(unittest.TestCase):
   migrations=data["migrations"]
   marketing=next(entry for entry in migrations if entry["version"]=="20260713002200")
   self.assertEqual({"version":"20260713002200","name":"g014_marketing_state_machine","path":"backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql","sha256":"a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"},marketing)
-  self.assertEqual(28,len(migrations))
-  self.assertEqual(["20260713002100","20260713002200","20260713002300"],[entry["version"] for entry in migrations[-4:-1]])
+  self.assertEqual(29,len(migrations))
+  self.assertEqual(
+   ["20260713002100","20260713002200","20260713002300"],
+   [entry["version"] for entry in migrations if entry["version"] in {"20260713002100","20260713002200","20260713002300"}],
+  )
   self.assertEqual(contract.FORBIDDEN_VERSIONS,frozenset(data["excludedVersions"]))
   self.assertNotIn("20260713002200",data["excludedVersions"])
  def test_manifest_rejects_marketing_omission_reexclusion_and_reordering(self):

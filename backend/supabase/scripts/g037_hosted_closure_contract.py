@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
+MANIFEST_SHA256 = "50a5de915edcabd1ce1a0ab2846c9f170f373e8b5f640228fa06292411737ac5"
 MODES = frozenset(("validate", "preflight", "readback", "runtime-probe", "reconciliation-readback"))
 SELF_WRAPPING = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset(("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"))
@@ -257,7 +257,7 @@ ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256 = "e35114d17655152d87ecbe0a40b10162b9868a12
 
 # The terminal allowlist is a deterministic composition of literal immutable
 # source fragments.  It is deliberately not a snapshot of hosted state.
-G014_RPC_ALLOWLIST_VERSION = "20260713002400"
+G014_RPC_ALLOWLIST_VERSION = "20260801000300"
 G014_RPC_ALLOWLIST_FRAGMENTS = (
     ("20260713002000", "base", 22620, 30545, "cdcb24d308f8ebe8c3b7ab37e483fe2e9faf846d2814181aa52ee71ca9d13352"),
     ("20260713002100", "add", 71537, 72885, "3de6a2e37df45a6f0197d021e8c852c58540d8fc934e3119b60777e64744409f"),
@@ -267,6 +267,7 @@ G014_RPC_ALLOWLIST_FRAGMENTS = (
     ("20260713002300", "add-claim", 300106, 300657, "15d968016ccd9220aefe0185aa6de46a7953cb4d5d9e8fa4ca34acf178c38b4d"),
     ("20260713002300", "add-status", 305066, 305638, "c1d2e32caca9df1e5428ddd492b8d0b3a43451c6e8e17de4b2a8662241ecf718"),
     ("20260713002400", "replace-retention", 151492, 153625, "0f9d37d62dd7b66a719894f4f8c2482c2213411dbadf491cdddaf6f4a1727a08"),
+    ("20260801000300", "replace-confirm", 1, 959, "49180e710d99c1f828dcb205497d1c86a1989d431d112ac507886193bfa79b3f"),
 )
 G014_RPC_ALLOWLIST_SOURCES = (
     ("20260713002000", "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql", "094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e"),
@@ -274,6 +275,7 @@ G014_RPC_ALLOWLIST_SOURCES = (
     ("20260713002200", "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql", "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"),
     ("20260713002300", "backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql", "6705f42b16cc3c9e5d25d5f9afebffc4be377c442aa0b90b737e22b333d0b36d"),
     ("20260713002400", "backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql", "3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94"),
+    ("20260801000300", "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql", "701acd5da759da3e9c01a0c2613cd103373590935c2fec9194e5d52aa4c5d014"),
 )
 BASELINE_RPC_MATRIX = (
     ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'),
@@ -417,11 +419,23 @@ def _rpc_name(row: tuple[str, str]) -> str:
     return row[0].split("(", 1)[0].rsplit(".", 1)[1]
 def _without_names(rows: tuple[tuple[str, str], ...], names: frozenset[str]) -> tuple[tuple[str, str], ...]:
     return tuple(row for row in rows if _rpc_name(row) not in names)
-STATIC_RPC_MATRIX = (
+_rpc_matrix_source = (
     _without_names(BASELINE_RPC_MATRIX, _ACCOUNT_INITIAL_NAMES | _RETENTION_REPLACED_NAMES)
     + _RPC_ADDITIONS
 )
-STATIC_RPC_MATRIX_SHA256 = "fb55b1f0b36236578c7a3c337eb5032094d1fc7c741fa000dde9e2d2eee55e3c"
+STATIC_RPC_MATRIX = (
+    tuple(
+        (signature, grantee)
+        for signature, grantee in _rpc_matrix_source
+        if signature != 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
+    )
+    + tuple(
+        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', grantee)
+        for signature, grantee in _rpc_matrix_source
+        if signature == 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
+    )
+)
+STATIC_RPC_MATRIX_SHA256 = "59b3d7d942241e70e24196251aef0dabfb999d986512a7d138e44cd2f57e490d"
 CHECKPOINT_IDS = (
     "prelude-admission", "plan-prevalidated", "role-self-grant",
     "g013-vector-ledger", "g014-boundary-vector-ledger",
@@ -464,7 +478,7 @@ def load_manifest(root: Path) -> Manifest:
         data=json.loads(raw, object_pairs_hook=no_duplicate_object)
     except (OSError,json.JSONDecodeError) as exc: raise ContractError("manifest unreadable") from exc
     rows=data.get("migrations"); excluded=data.get("excludedVersions")
-    if not isinstance(data,dict) or data.get("schemaVersion")!=1 or not isinstance(rows,list) or len(rows)!=28 or not isinstance(excluded,list): raise ContractError("manifest inventory mismatch")
+    if not isinstance(data,dict) or data.get("schemaVersion")!=1 or not isinstance(rows,list) or len(rows)!=29 or not isinstance(excluded,list): raise ContractError("manifest inventory mismatch")
     entries=[]; seen=set(); previous=""
     for row in rows:
         if not isinstance(row,dict) or set(row)!={"version","name","path","sha256"}: raise ContractError("manifest fields mismatch")
@@ -473,7 +487,7 @@ def load_manifest(root: Path) -> Manifest:
         entries.append(item); seen.add(item.version); previous=item.version
     forbidden=frozenset(excluded)
     if forbidden!=FORBIDDEN_VERSIONS or len(excluded)!=len(forbidden) or forbidden & seen: raise ContractError("excluded set mismatch")
-    if data.get("ledgerTerminalVersion")!="20260531084516" or data.get("closureTerminalVersion")!="20260713002400": raise ContractError("terminal mismatch")
+    if data.get("ledgerTerminalVersion")!="20260531084516" or data.get("closureTerminalVersion")!="20260801000300": raise ContractError("terminal mismatch")
     return Manifest(tuple(entries),forbidden,data["ledgerTerminalVersion"],data["closureTerminalVersion"])
 def validate_sources(root: Path) -> Manifest:
     manifest=load_manifest(root); directory=(root/"backend/supabase/migrations").resolve()
