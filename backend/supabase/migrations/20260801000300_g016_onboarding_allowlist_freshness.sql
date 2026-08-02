@@ -27,8 +27,8 @@ SET function_schema = EXCLUDED.function_schema,
 
 SELECT privacy_retention.assert_g014_public_rpc_allowlist();
 GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
-  TO CURRENT_USER;
+  TO PUBLIC;
 SELECT privacy_retention.assert_g014_catalog_contract();
 REVOKE EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
-  FROM CURRENT_USER;
+  FROM PUBLIC;
 NOTIFY pgrst, 'reload schema';
