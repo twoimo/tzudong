@@ -1095,6 +1095,8 @@ REVOKE ALL ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
+  TO postgres;
 
 -- Extension helpers installed in public are not application RPCs. Remove the
 -- default EXECUTE surface when pgvector is already installed; clean source
