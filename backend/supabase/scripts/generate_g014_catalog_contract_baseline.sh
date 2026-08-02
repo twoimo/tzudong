@@ -1196,6 +1196,20 @@ g026_apply_replay_membership_window() {
     --output "$transformed" || exit 1
   printf '%s\n' "$transformed"
 }
+g016_apply_catalog_assertion_membership_window() {
+  local source=$1 filename transformed
+  filename=${source##*/}
+  transformed="$work_dir/g016-catalog-assertion-membership-$filename"
+  {
+    printf '%s\n' 'BEGIN;' \
+      'GRANT privacy_workflow_owner TO postgres WITH SET TRUE;'
+    cat -- "$source"
+    printf '%s\n' \
+      'REVOKE privacy_workflow_owner FROM postgres;' \
+      'COMMIT;'
+  } >"$transformed"
+  printf '%s\n' "$transformed"
+}
 g026_chain_apply() {
   local phase=$1 source=$2 source_hash
   source_hash=$(sha256sum -- "$source" | cut -d' ' -f1)
@@ -1314,6 +1328,11 @@ for migration in "${effective_migrations[@]}"; do
     20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql)
       transformed_migration=$(g026_apply_replay_membership_window "$migration")
       g026_chain_apply "replay-membership-window:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20260801000300_g016_onboarding_allowlist_freshness.sql)
+      transformed_migration=$(g016_apply_catalog_assertion_membership_window "$migration")
+      g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     *)
