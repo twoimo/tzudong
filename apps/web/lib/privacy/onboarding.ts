@@ -20,6 +20,7 @@ const ONBOARDING_CHALLENGE_REQUIRED_KEYS = [
   'ageBand',
   'intent',
   'expiresAt',
+  'origin',
 ] as const;
 const ONBOARDING_CHALLENGE_OPTIONAL_KEYS = ['oauthNonce'] as const;
 const ONBOARDING_START_REQUIRED_KEYS = ['policyVersion', 'ageBand', 'intent', 'policyAcknowledged'];
@@ -53,8 +54,31 @@ export type OnboardingChallengeCookie = {
   ageBand: AgeBand;
   intent: OnboardingIntent;
   oauthNonce?: string;
+  origin: string;
   expiresAt: number;
 };
+export type PrivacyOnboardingConfirmationReceipt = Readonly<{
+  schemaVersion: 1;
+  operationId: string;
+  challengeId: string;
+  userId: string;
+  policyVersionId: string;
+  eligible: true;
+  status: 'applied';
+  disposition: 'fresh' | 'idempotent_replay';
+  readback: Readonly<{
+    passed: true;
+    checks: Readonly<{
+      challengeConsumed: true;
+      ageProfileRecorded: true;
+      requiredConsentRecorded: true;
+      eligible: true;
+    }>;
+  }>;
+  auditId: string;
+  errorCode: null;
+  ageStatus: 'eligible';
+}>;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -83,6 +107,69 @@ export function safeEquals(left: string, right: string) {
   const rightBuffer = Buffer.from(right);
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
+export function parseFreshPrivacyOnboardingConfirmationReceipt(
+  value: unknown,
+  challengeId: string,
+  userId: string,
+  policyVersionId: string,
+): PrivacyOnboardingConfirmationReceipt | null {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, [
+      'schemaVersion',
+      'operationId',
+      'challengeId',
+      'userId',
+      'policyVersionId',
+      'eligible',
+      'status',
+      'disposition',
+      'readback',
+      'auditId',
+      'errorCode',
+      'ageStatus',
+    ])
+    || value.schemaVersion !== 1
+    || value.operationId !== challengeId
+    || value.challengeId !== challengeId
+    || value.userId !== userId
+    || value.policyVersionId !== policyVersionId
+    || value.eligible !== true
+    || value.status !== 'applied'
+    || (value.disposition !== 'fresh' && value.disposition !== 'idempotent_replay')
+    || typeof value.auditId !== 'string'
+    || !UUID_PATTERN.test(value.auditId)
+    || value.errorCode !== null
+    || value.ageStatus !== 'eligible'
+    || !isRecord(value.readback)
+    || !hasExactKeys(value.readback, ['passed', 'checks'])
+    || value.readback.passed !== true
+    || !isRecord(value.readback.checks)
+    || !hasExactKeys(value.readback.checks, [
+      'challengeConsumed',
+      'ageProfileRecorded',
+      'requiredConsentRecorded',
+      'eligible',
+    ])
+    || value.readback.checks.challengeConsumed !== true
+    || value.readback.checks.ageProfileRecorded !== true
+    || value.readback.checks.requiredConsentRecorded !== true
+    || value.readback.checks.eligible !== true
+  ) {
+    return null;
+  }
+
+  return value as PrivacyOnboardingConfirmationReceipt;
+}
+function isCanonicalHttpOrigin(value: string) {
+  try {
+    const origin = new URL(value);
+    return (origin.protocol === 'http:' || origin.protocol === 'https:') && origin.origin === value;
+  } catch {
+    return false;
+  }
+}
+
 
 function isValidOnboardingChallengePayload(
   payload: Record<string, unknown>,
@@ -97,6 +184,7 @@ function isValidOnboardingChallengePayload(
     || typeof payload.contentSha256 !== 'string' || !LOWER_SHA256_PATTERN.test(payload.contentSha256)
     || typeof payload.ageBand !== 'string' || !AGE_BANDS.has(payload.ageBand)
     || typeof payload.intent !== 'string' || !ONBOARDING_INTENTS.has(payload.intent)
+    || typeof payload.origin !== 'string' || !isCanonicalHttpOrigin(payload.origin)
     || typeof payload.expiresAt !== 'number' || !Number.isSafeInteger(payload.expiresAt)
     || (now !== null && payload.expiresAt <= now)
   ) {
@@ -104,7 +192,9 @@ function isValidOnboardingChallengePayload(
   }
 
   if (payload.intent === 'oauth') {
-    return typeof payload.oauthNonce === 'string' && LOWER_SHA256_PATTERN.test(payload.oauthNonce);
+    return typeof payload.oauthNonce === 'string'
+      && LOWER_SHA256_PATTERN.test(payload.oauthNonce)
+      && safeEquals(payload.oauthNonce, payload.challengeToken);
   }
   return payload.oauthNonce === undefined;
 }
@@ -204,7 +294,10 @@ function parseMarketing(value: unknown): MarketingChoices | null {
   const nightEmail = booleanOrFalse(channelValue('email'));
   const nightSms = booleanOrFalse(channelValue('sms'));
   const nightPush = booleanOrFalse(channelValue('push'));
-  if ([email, sms, push, nightEmail, nightSms, nightPush].some((entry) => entry === null)) return null;
+  if ([email, sms, push, nightEmail, nightSms, nightPush].some((entry) => entry === null)
+    || (nightEmail === true && email !== true)
+    || (nightSms === true && sms !== true)
+    || (nightPush === true && push !== true)) return null;
 
   return {
     email: email as boolean,

@@ -116,6 +116,18 @@ test('authenticated browser proof is challenge-bound, redacted, and fail-closed'
     expect(middlewareSource).toContain('if (activeSessionError || activeSession !== true)');
     expect(middlewareSource).toContain('clearSupabaseAuthCookies(request, supabaseResponse)');
 });
+test('release smoke classifies existing sessions only and cannot create privacy admission evidence', async () => {
+    const childSource = await readFile(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'), 'utf8');
+    const proofRouteSource = await readFile(resolve(root, 'app/api/admin/release-auth-proof/route.ts'), 'utf8');
+
+    for (const source of [childSource, proofRouteSource]) {
+        expect(source).not.toContain('auth.signUp');
+        expect(source).not.toContain('auth.admin.createUser');
+        expect(source).not.toContain('confirm_privacy_onboarding');
+        expect(source).not.toContain('submit_privacy_consent');
+        expect(source).not.toContain('privacy_consent_events');
+    }
+});
 test('proof transport bypasses hostile page code and routing blocks egress before dispatch', async () => {
     const source = await readFile(resolve(root, 'scripts/run-auth-release-smoke-child.mjs'), 'utf8');
     const calls: Array<{ url: string; options: Record<string, unknown> }> = [];

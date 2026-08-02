@@ -17,13 +17,18 @@ on:
         required: false
         default: false
         type: boolean
+      provider_receipt:
+        description: 'Canonical provider receipt JSON bound to the provider-owned G016 migration'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  RELEASE_MIGRATION_MANIFEST_SHA256: "afc0074ff3fdd8a3a07eea8f0c6e722ddf62c1e633eadfb1ff8725970e41980b"
+  RELEASE_MIGRATION_MANIFEST_SHA256: "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d"
 concurrency:
   group: supabase-migration-apply
   cancel-in-progress: false
@@ -103,7 +108,9 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.ref_name == 'main' &&
       (vars.G037_WRITE_FREEZE != 'active' ||
-       needs.validate.outputs.migration_id == 'g016_privacy_audit_owner_policy')
+       contains(fromJSON('["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness"]'), needs.validate.outputs.migration_id)) &&
+      (!contains(fromJSON('["g016_privacy_audit_owner_policy","g016_onboarding_confirmation_freshness"]'), needs.validate.outputs.migration_id) ||
+       github.event.inputs.verify_terminal_state == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -140,20 +147,23 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install PostgreSQL client for direct DB migration
+      - name: Install PostgreSQL client for migration apply or terminal verification
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Apply reviewed migration through direct Postgres
+      - name: Apply reviewed migration or verify provider-applied terminal state
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           MIGRATION_ID: ${{ needs.validate.outputs.migration_id }}
           VERIFY_TERMINAL_STATE: ${{ github.event.inputs.verify_terminal_state }}
+          PROVIDER_MIGRATION_RECEIPT_SHA256: ${{ secrets.PROVIDER_MIGRATION_RECEIPT_SHA256 }}
+          PROVIDER_RECEIPT: ${{ github.event.inputs.provider_receipt }}
         run: |
           set -euo pipefail
           args=(--migration-id "$MIGRATION_ID" --json)
           if [ "$VERIFY_TERMINAL_STATE" = "true" ]; then
             args+=(--verify-terminal-state)
+            args+=(--provider-receipt "$PROVIDER_RECEIPT")
           fi
           node apps/web/scripts/apply-supabase-migration.mjs "${args[@]}"

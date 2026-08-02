@@ -15,8 +15,8 @@ import preflight_g034_hosted_migration_closure as g034
 class G037ExecutorTests(unittest.TestCase):
  def test_duplicate_keys_and_pinned_manifest(self):
   with self.assertRaises(c.ContractError): json.loads('{"x":1,"x":2}',object_pairs_hook=c.no_duplicate_object)
-  self.assertEqual(c.MANIFEST_SHA256,"1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1")
-  self.assertEqual(len(c.load_manifest(Path(__file__).parents[3]).migrations),28)
+  self.assertEqual(c.MANIFEST_SHA256,"bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95")
+  self.assertEqual(len(c.load_manifest(Path(__file__).parents[3]).migrations),29)
  def test_g026_and_later_promotions_are_excluded(self):
   self.assertTrue({"20260627150000","20260713002500","20260713002600","20260713002700"} <= c.FORBIDDEN_VERSIONS)
  def test_only_exact_self_wrappers_are_normalized(self):
@@ -778,8 +778,8 @@ class G037ExecutorTests(unittest.TestCase):
  def test_managed_role_splices_are_ordered_literal_and_nonoverlapping(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
   splices=e._splice_specs(root,manifest)
-  self.assertEqual(tuple(item["version"] for item in splices),("20260713000450","20260713002000","20260713002400"))
-  self.assertEqual(len(c.ROLE_SPLICES),7)
+  self.assertEqual(tuple(item["version"] for item in splices),("20260713000450","20260713002000","20260713002400","20260801000300"))
+  self.assertEqual(len(c.ROLE_SPLICES),8)
   self.assertEqual(tuple(record["label"] for record in c.ROLE_SPLICES),e._ROLE_SPLICE_LABELS)
   for item in splices:
    self.assertEqual(hashlib.sha256(item["raw"]).hexdigest(),item["group"]["source_sha256"])
@@ -828,7 +828,7 @@ class G037ExecutorTests(unittest.TestCase):
  def test_full_precompute_matches_all_pinned_splice_vectors(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
   plan,splices=e._precompute_execution_plan(root,manifest)
-  self.assertEqual(len(plan),28)
+  self.assertEqual(len(plan),29)
   self.assertEqual(tuple((entry["version"],entry["group"]["original_vector_sha256"],entry["group"]["transformed_vector_sha256"]) for entry in splices),tuple((group["version"],group["original_vector_sha256"],group["transformed_vector_sha256"]) for group in c.ROLE_SPLICE_GROUPS))
   vectors={item.version:(e.digest(original),e.digest(transformed)) for item,original,transformed,_ in plan}
   self.assertEqual(tuple((group["version"],*vectors[group["version"]]) for group in c.ROLE_SPLICE_GROUPS),tuple((group["version"],group["original_vector_sha256"],group["transformed_vector_sha256"]) for group in c.ROLE_SPLICE_GROUPS))
@@ -916,7 +916,7 @@ class G037ExecutorTests(unittest.TestCase):
   self.assertEqual(len(c.STATIC_RPC_MATRIX),104)
   self.assertEqual(len({signature for signature,_ in c.STATIC_RPC_MATRIX}),97)
   self.assertEqual({role:sum(grantee==role for _,grantee in c.STATIC_RPC_MATRIX) for role in ("anon","authenticated","service_role")},{"anon":1,"authenticated":18,"service_role":85})
-  self.assertEqual(c.STATIC_RPC_MATRIX_SHA256,"fb55b1f0b36236578c7a3c337eb5032094d1fc7c741fa000dde9e2d2eee55e3c")
+  self.assertEqual(c.STATIC_RPC_MATRIX_SHA256,"59b3d7d942241e70e24196251aef0dabfb999d986512a7d138e44cd2f57e490d")
   self.assertEqual(c.STATIC_RPC_MATRIX_SHA256,c.digest(c.STATIC_RPC_MATRIX))
   class Cursor:
    description=object()
@@ -943,8 +943,8 @@ class G037ExecutorTests(unittest.TestCase):
  def test_g014_source_contract_is_pinned_in_terminal_spec_and_sql(self):
   root=Path(__file__).parents[3]; manifest=c.load_manifest(root)
   spec=c.terminal_spec(manifest)
-  self.assertEqual(c.G014_RPC_ALLOWLIST_VERSION,"20260713002400")
-  self.assertEqual(len(c.G014_RPC_ALLOWLIST_FRAGMENTS),8)
+  self.assertEqual(c.G014_RPC_ALLOWLIST_VERSION,"20260801000300")
+  self.assertEqual(len(c.G014_RPC_ALLOWLIST_FRAGMENTS),9)
   self.assertEqual(len(c.STATIC_RPC_MATRIX),104)
   self.assertEqual(len({signature for signature,_ in c.STATIC_RPC_MATRIX}),97)
   self.assertEqual(tuple(sum(grantee==role for _,grantee in c.STATIC_RPC_MATRIX) for role in ("anon","authenticated","service_role")),(1,18,85))
@@ -956,7 +956,7 @@ class G037ExecutorTests(unittest.TestCase):
   with patch.object(c,"G014_RPC_ALLOWLIST_FRAGMENTS",()):
    self.assertNotEqual(spec,c.terminal_spec(manifest))
   sql=Path(__file__).with_name("g037_hosted_terminal_readback.sql").read_text(encoding="utf-8")
-  for token in ("02000","02400",c.STATIC_RPC_MATRIX_SHA256,"EXCEPT ALL","to_regprocedure","no_unlisted_public_api_execute","no_unexpected_allowlisted_name_overloads"):
+  for token in ("02000","02400","20260801000300",c.STATIC_RPC_MATRIX_SHA256,"EXCEPT ALL","to_regprocedure","no_unlisted_public_api_execute","no_unexpected_allowlisted_name_overloads"):
    self.assertIn(token,sql)
   self.assertEqual(tuple(sorted(self._terminal_rpc_matrix(sql))),tuple(sorted(c.STATIC_RPC_MATRIX)))
   first="    ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'::name),"
