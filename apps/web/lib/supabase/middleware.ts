@@ -17,6 +17,14 @@ import {
 import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
 
+import {
+    emitPrivacyAuthEventFromServerEnvironment,
+    type PrivacyAuthEventInput,
+} from '@/lib/observability/privacy-auth-events'
+import {
+    PRIVACY_POLICY_CONTENT_SHA256,
+    PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy'
 
 
 const isSupabaseAuthCookie = (name: string) =>
@@ -38,6 +46,33 @@ const isEligibilityExemptRequest = (request: NextRequest) =>
         method: request.method,
     }) === 'loop-safe';
 const isApiRequest = (request: NextRequest) => request.nextUrl.pathname.startsWith('/api/');
+const telemetryRouteClass = (request: NextRequest): PrivacyAuthEventInput['routeClass'] =>
+    isEligibilityExemptRequest(request)
+        ? (isApiRequest(request) ? 'loop_safe_api' : 'loop_safe_page')
+        : isProtectedAdminRequest(request) || isMyPageRequest(request)
+            ? 'protected'
+            : isApiRequest(request)
+                ? 'public_api'
+                : 'public_page';
+const emitMiddlewarePrivacyAuthEvent = (
+    request: NextRequest,
+    outcomeReason: PrivacyAuthEventInput['outcomeReason'],
+) => {
+    try {
+        emitPrivacyAuthEventFromServerEnvironment({
+            event: 'middleware',
+            policyVersion: PRIVACY_POLICY_VERSION,
+            policySha: PRIVACY_POLICY_CONTENT_SHA256,
+            routeClass: telemetryRouteClass(request),
+            provider: 'session',
+            outcomeReason,
+            correlationId: crypto.randomUUID(),
+            subjectDigest: null,
+        });
+    } catch {
+        // Telemetry must not affect privacy enforcement.
+    }
+};
 
 const isProtectedAdminRequest = (request: NextRequest) => {
     const { pathname } = request.nextUrl;
@@ -176,6 +211,9 @@ export async function updateSession(
     }
 
     const hasAuthCookie = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined);
+    if (hasAuthCookie) {
+        emitMiddlewarePrivacyAuthEvent(request, 'auth_started');
+    }
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
@@ -228,6 +266,7 @@ export async function updateSession(
     }
 
     if (hasAuthCookie && (authFailed || !authUserId)) {
+        emitMiddlewarePrivacyAuthEvent(request, 'eligibility_error');
         await signOutRejectedPrivacySession(supabase);
         return eligibilityFailureResponse(request, supabaseResponse);
     }
@@ -235,6 +274,10 @@ export async function updateSession(
     if (authUserId) {
         const eligibility = await getCurrentPrivacyEligibility(supabase);
         if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+            emitMiddlewarePrivacyAuthEvent(
+                request,
+                eligibility.reasonCode === 'PRIVACY_POLICY_UNAVAILABLE' ? 'policy_drift' : 'denied',
+            );
             await signOutRejectedPrivacySession(supabase);
             return eligibilityFailureResponse(request, supabaseResponse);
         }

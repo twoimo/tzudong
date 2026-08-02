@@ -1,5 +1,8 @@
-import { createHash } from 'node:crypto';
-import type { CurrentPrivacyEligibility } from '@/lib/privacy/eligibility';
+import { createHash, createHmac } from 'node:crypto';
+import {
+  hasLivePrivacyEligibilityReceipt,
+  type CurrentPrivacyEligibility,
+} from '@/lib/privacy/eligibility';
 
 if (typeof window !== 'undefined') {
   throw new Error('Privacy roster classification is server-only.');
@@ -23,6 +26,10 @@ export type StoredRosterClassification = Readonly<{
 }>;
 
 export type RosterClassificationSink = Readonly<{
+  bindManifestIfAbsent: (batchId: string, manifestDigest: string) => Promise<Readonly<{
+    inserted: boolean;
+    manifestDigest: string;
+  }>>;
   get: (batchId: string, userId: string) => Promise<StoredRosterClassification | null>;
   putIfAbsent: (result: StoredRosterClassification) => Promise<Readonly<{
     inserted: boolean;
@@ -33,6 +40,7 @@ export type RosterClassificationSink = Readonly<{
 export type RosterClassificationDependencies = Readonly<{
   getCurrentPrivacyEligibilityForUser: (userId: string) => Promise<CurrentPrivacyEligibility>;
   sink: RosterClassificationSink;
+  subjectPseudonymKey: Uint8Array;
 }>;
 
 export type RosterClassificationResult = Readonly<{
@@ -48,6 +56,7 @@ export type RosterClassificationResult = Readonly<{
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const SUBJECT_PSEUDONYM_PURPOSE = 'privacy-roster-classification:subject:v1';
 const CLASSIFICATIONS = new Set<RosterClassification>([
   'already_current_eligible',
   'needs_user_onboarding',
@@ -59,22 +68,52 @@ function digest(value: string) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+function subjectDigest(userId: string, key: Uint8Array) {
+  return createHmac('sha256', key)
+    .update(`${SUBJECT_PSEUDONYM_PURPOSE}:${userId}`)
+    .digest('hex');
+}
+
 function receiptDigest(eligibility: CurrentPrivacyEligibility | null) {
   if (eligibility === null) return digest('eligibility-error');
 
+  try {
+    return digest(JSON.stringify({
+      eligible: eligibility.eligible,
+      reasonCode: eligibility.reasonCode,
+      receipt: eligibility.receipt,
+    }));
+  } catch {
+    return digest('eligibility-error');
+  }
+}
+
+function resultDigest(result: Pick<
+  StoredRosterClassification,
+  'batchId' | 'userId' | 'classification' | 'subjectDigest' | 'receiptDigest'
+>) {
+  const {
+    batchId,
+    userId,
+    classification,
+    subjectDigest: storedSubjectDigest,
+    receiptDigest: storedReceiptDigest,
+  } = result;
   return digest(JSON.stringify({
-    eligible: eligibility.eligible,
-    reasonCode: eligibility.reasonCode,
-    receipt: eligibility.receipt,
+    batchId,
+    userId,
+    classification,
+    subjectDigest: storedSubjectDigest,
+    receiptDigest: storedReceiptDigest,
   }));
 }
 
-function classifyEligibility(eligibility: CurrentPrivacyEligibility): RosterClassification {
-  if (eligibility.eligible === true && eligibility.reasonCode === 'PRIVACY_ELIGIBLE') {
+function classifyEligibility(eligibility: CurrentPrivacyEligibility | null): RosterClassification {
+  if (hasLivePrivacyEligibilityReceipt(eligibility)) {
     return 'already_current_eligible';
   }
 
-  switch (eligibility.reasonCode) {
+  switch (eligibility?.reasonCode) {
     case 'PRIVACY_AGE_ATTESTATION_REQUIRED':
     case 'PRIVACY_POLICY_REATTESTATION_REQUIRED':
       return 'needs_user_onboarding';
@@ -109,13 +148,24 @@ function validateManifest(batchId: string, userIds: readonly string[]) {
   return normalizedUserIds;
 }
 
-function isStoredResult(value: StoredRosterClassification, batchId: string, userId: string) {
+function manifestDigest(userIds: readonly string[]) {
+  return digest(JSON.stringify([...userIds].sort()));
+}
+
+function isStoredResult(
+  value: StoredRosterClassification,
+  batchId: string,
+  userId: string,
+  pseudonymKey: Uint8Array,
+) {
   return value.batchId === batchId
     && value.userId === userId
     && CLASSIFICATIONS.has(value.classification)
     && SHA256_PATTERN.test(value.subjectDigest)
     && SHA256_PATTERN.test(value.receiptDigest)
-    && SHA256_PATTERN.test(value.resultDigest);
+    && SHA256_PATTERN.test(value.resultDigest)
+    && value.subjectDigest === subjectDigest(userId, pseudonymKey)
+    && value.resultDigest === resultDigest(value);
 }
 
 function publicSubject(result: StoredRosterClassification) {
@@ -133,6 +183,20 @@ export async function classifyPrivacyRoster(
   dependencies: RosterClassificationDependencies,
 ): Promise<RosterClassificationResult> {
   const normalizedUserIds = validateManifest(batchId, userIds);
+  if (!(dependencies.subjectPseudonymKey instanceof Uint8Array) || dependencies.subjectPseudonymKey.byteLength === 0) {
+    throw new Error('A non-empty server-held subject pseudonym key is required.');
+  }
+
+  const canonicalManifestDigest = manifestDigest(normalizedUserIds);
+  const manifestBinding = await dependencies.sink.bindManifestIfAbsent(batchId, canonicalManifestDigest);
+  if (
+    typeof manifestBinding.manifestDigest !== 'string'
+    || !SHA256_PATTERN.test(manifestBinding.manifestDigest)
+    || manifestBinding.manifestDigest !== canonicalManifestDigest
+  ) {
+    throw new Error('Durable roster batch manifest is invalid.');
+  }
+
   const counts: Record<RosterClassification, number> = {
     already_current_eligible: 0,
     needs_user_onboarding: 0,
@@ -144,7 +208,7 @@ export async function classifyPrivacyRoster(
   for (const userId of normalizedUserIds) {
     const stored = await dependencies.sink.get(batchId, userId);
     if (stored !== null) {
-      if (!isStoredResult(stored, batchId, userId)) {
+      if (!isStoredResult(stored, batchId, userId, dependencies.subjectPseudonymKey)) {
         throw new Error('Durable roster classification is invalid.');
       }
       counts[stored.classification] += 1;
@@ -159,20 +223,26 @@ export async function classifyPrivacyRoster(
       eligibility = null;
     }
 
-    const classification = eligibility === null ? 'failed' : classifyEligibility(eligibility);
+    const classification = classifyEligibility(eligibility);
     const evidenceDigest = receiptDigest(eligibility);
-    const subjectDigest = digest(userId);
+    const pseudonym = subjectDigest(userId, dependencies.subjectPseudonymKey);
     const result: StoredRosterClassification = {
       batchId,
       userId,
       classification,
-      subjectDigest,
+      subjectDigest: pseudonym,
       receiptDigest: evidenceDigest,
-      resultDigest: digest(`${batchId}:${userId}:${classification}:${evidenceDigest}`),
+      resultDigest: resultDigest({
+        batchId,
+        userId,
+        classification,
+        subjectDigest: pseudonym,
+        receiptDigest: evidenceDigest,
+      }),
     };
     const persisted = await dependencies.sink.putIfAbsent(result);
 
-    if (!isStoredResult(persisted.classification, batchId, userId)) {
+    if (!isStoredResult(persisted.classification, batchId, userId, dependencies.subjectPseudonymKey)) {
       throw new Error('Durable roster classification is invalid.');
     }
     counts[persisted.classification.classification] += 1;
