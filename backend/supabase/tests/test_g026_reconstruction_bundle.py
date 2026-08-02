@@ -701,17 +701,11 @@ class G026BundleTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(transformed).hexdigest(), row['transformedSha256'])
             grant = (window['grantStatement'] + '\n').encode('ascii')
             revoke = (window['revokeStatement'] + '\n').encode('ascii')
-            set_role = b'SET LOCAL ROLE privacy_workflow_owner;\n'
-            reset_role = b'RESET ROLE;\n'
-            self.assertEqual(transformed.count(set_role), 1)
-            self.assertEqual(transformed.count(reset_role), 1)
-            self.assertLess(transformed.index(grant), transformed.index(set_role))
-            self.assertLess(transformed.index(set_role), transformed.index(reset_role))
-            self.assertLess(transformed.index(reset_role), transformed.index(revoke))
+            self.assertNotIn(b'SET LOCAL ROLE privacy_workflow_owner;', transformed)
+            self.assertNotIn(b'RESET ROLE;', transformed)
             self.assertLess(transformed.index(grant), transformed.index(revoke))
             if row['mode'] == 'revoke_before_catalog_assertion':
                 statements = (
-                    reset_role,
                     (window['catalogSchemaUsageGrantStatement'] + '\n').encode('ascii'),
                     (window['catalogFunctionExecuteGrantStatement'] + '\n').encode('ascii'),
                     revoke,
@@ -726,7 +720,7 @@ class G026BundleTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     [transformed.count(statement) for statement in statements],
-                    [1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 2, 1],
+                    [1, 1, 2, 2, 1, 2, 1, 1, 2, 2, 1],
                 )
                 positions = [
                     transformed.find(statements[0]),
@@ -734,13 +728,12 @@ class G026BundleTests(unittest.TestCase):
                     transformed.find(statements[2]),
                     transformed.find(statements[3]),
                     transformed.find(statements[4]),
-                    transformed.find(statements[5]),
-                    transformed.rfind(statements[6]),
+                    transformed.rfind(statements[5]),
+                    transformed.find(statements[6]),
                     transformed.find(statements[7]),
-                    transformed.find(statements[8]),
+                    transformed.rfind(statements[8]),
                     transformed.rfind(statements[9]),
-                    transformed.rfind(statements[10]),
-                    transformed.find(statements[11]),
+                    transformed.find(statements[10]),
                 ]
                 self.assertEqual(positions, sorted(positions))
                 self.assertEqual(
