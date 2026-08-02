@@ -1,7 +1,8 @@
 
-DELETE FROM privacy_retention.g014_public_rpc_allowlist
-WHERE source_signature = 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
-  AND grantee = 'service_role'::name;
+-- Retain the historical five-argument identity as catalog evidence. G014's
+-- immutable terminal assertion requires that baseline row even after the
+-- executable overload is replaced; only the six-argument function remains
+-- callable.
 
 INSERT INTO privacy_retention.g014_public_rpc_allowlist (
   function_schema,
@@ -25,7 +26,6 @@ SET function_schema = EXCLUDED.function_schema,
     function_name = EXCLUDED.function_name,
     identity_arguments = EXCLUDED.identity_arguments;
 
-SELECT privacy_retention.assert_g014_public_rpc_allowlist();
 -- pgvector can recreate its public extension helpers after the G014 baseline.
 -- Keep them outside the application RPC surface before re-running the catalog
 -- assertion, matching the original G014 hardening.
@@ -52,6 +52,7 @@ BEGIN
   END LOOP;
 END
 $extension_helpers$;
+SELECT privacy_retention.assert_g014_public_rpc_allowlist();
 SET LOCAL ROLE privacy_workflow_owner;
 SELECT privacy_retention.assert_g014_catalog_contract();
 RESET ROLE;
