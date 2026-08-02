@@ -314,7 +314,7 @@ export async function GET(request: Request) {
     || challenge.origin !== origin
     || !matchingOAuthTransaction(transaction, challenge, callback)
   )) {
-    emitCallbackPrivacyAuthEvent('failed', freshCorrelationId);
+    emitCallbackPrivacyAuthEvent('failed', correlationId);
     return rejectedCallbackRedirect(request, origin);
   }
   if (callback.providerError || !callback.code) {
