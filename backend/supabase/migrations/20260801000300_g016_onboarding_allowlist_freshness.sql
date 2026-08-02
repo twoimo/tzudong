@@ -1,8 +1,9 @@
-
--- Retain the historical five-argument identity as catalog evidence. G014's
--- immutable terminal assertion requires that baseline row even after the
--- executable overload is replaced; only the six-argument function remains
--- callable.
+-- Replace the retired five-argument identity with the nonce-bound confirmation
+-- RPC. Keeping both identities would either fail the catalog assertion or make
+-- PostgREST overload selection ambiguous.
+DELETE FROM privacy_retention.g014_public_rpc_allowlist
+WHERE source_signature = 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
+  AND grantee = 'service_role'::name;
 
 INSERT INTO privacy_retention.g014_public_rpc_allowlist (
   function_schema,
