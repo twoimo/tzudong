@@ -146,7 +146,7 @@
       "version": "20260713002000",
       "name": "g014_public_api_private_boundary",
       "path": "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql",
-      "sha256": "094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e"
+      "sha256": "b3bea6e4f4b1649d3f7eebd719386473a22534551cbff5f69cafc3a05844c6f9"
     },
     {
       "version": "20260713002100",

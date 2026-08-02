@@ -543,8 +543,8 @@ class G026BundleTests(unittest.TestCase):
         self.assertEqual(g013['publicSchemaTargetOwnerAnchor'], 'ALTER FUNCTION public.consume_tzuyang_address_evidence_admin_approval(\n')
         self.assertIn('assert_g014_workflow_owner_contract', transform['files'][1]['relocatedFinalContractInvocation'])
         g014 = transform['files'][1]
-        self.assertEqual(g014['sourceSha256'], '094c4ae71ae6c85f0792f72f5941dd8d723104d59af057a3cf6b5667d4740f7e')
-        self.assertEqual(g014['transformedSha256'], '6d9c46982454b273d694e07e18181cdf92410ce4ae2e3f814662e186c45a9f35')
+        self.assertEqual(g014['sourceSha256'], 'b3bea6e4f4b1649d3f7eebd719386473a22534551cbff5f69cafc3a05844c6f9')
+        self.assertEqual(g014['transformedSha256'], '0c935031e8098a896f0c49268fd2f48c99af4d3c63df8d94f6e32e861c885a7a')
         self.assertEqual(g014['privateSchemaUsageGrantStatement'], 'GRANT USAGE ON SCHEMA privacy_retention TO postgres;')
         self.assertEqual(g014['privateFunctionExecuteGrantStatement'], 'GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_workflow_owner_contract() TO postgres;')
         self.assertEqual(g014['privateFunctionExecuteRevokeStatement'], 'REVOKE EXECUTE ON FUNCTION privacy_retention.assert_g014_workflow_owner_contract() FROM postgres;')
