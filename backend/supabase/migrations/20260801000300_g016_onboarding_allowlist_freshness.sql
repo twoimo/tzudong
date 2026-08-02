@@ -52,9 +52,7 @@ BEGIN
   END LOOP;
 END
 $extension_helpers$;
-GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
-  TO PUBLIC;
+SET LOCAL ROLE privacy_workflow_owner;
 SELECT privacy_retention.assert_g014_catalog_contract();
-REVOKE EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
-  FROM PUBLIC;
+RESET ROLE;
 NOTIFY pgrst, 'reload schema';

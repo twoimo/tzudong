@@ -235,18 +235,19 @@ def vectors(root,item, *, raw=None, source_sha256=None):
 _ROLE_SPLICE_LABELS = (
     "00450-role", "00450-schema", "02000-role", "02000-schema-pair",
     "02000-full-assertion-definition", "02000-in-flight-invocation", "02400-role-block",
+    "00300-catalog-assertion-role",
 )
-_ROLE_SPLICE_VERSIONS = ("20260713000450", "20260713002000", "20260713002400")
+_ROLE_SPLICE_VERSIONS = ("20260713000450", "20260713002000", "20260713002400", "20260801000300")
 _SPLICE_FIELDS = frozenset(("label", "version", "old", "new", "start", "end", "old_sha256", "new_sha256"))
 _GROUP_FIELDS = frozenset(("version", "source_sha256", "transformed_source_sha256", "original_vector_sha256", "transformed_vector_sha256"))
 _HEX64 = re.compile(r"^[a-f0-9]{64}$")
 def _splice_specs(root, manifest):
     """Validate the complete immutable splice table and transform each source once."""
-    if not isinstance(ROLE_SPLICES, tuple) or len(ROLE_SPLICES) != 7:
+    if not isinstance(ROLE_SPLICES, tuple) or len(ROLE_SPLICES) != 8:
         raise ClosureError("managed role splice count drift")
     if tuple(record.get("label") if isinstance(record, dict) else None for record in ROLE_SPLICES) != _ROLE_SPLICE_LABELS:
         raise ClosureError("managed role splice order drift")
-    if not isinstance(ROLE_SPLICE_GROUPS, tuple) or len(ROLE_SPLICE_GROUPS) != 3:
+    if not isinstance(ROLE_SPLICE_GROUPS, tuple) or len(ROLE_SPLICE_GROUPS) != 4:
         raise ClosureError("managed role splice group count drift")
     groups = {}
     for group in ROLE_SPLICE_GROUPS:
