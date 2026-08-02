@@ -26,5 +26,7 @@ SET function_schema = EXCLUDED.function_schema,
     identity_arguments = EXCLUDED.identity_arguments;
 
 SELECT privacy_retention.assert_g014_public_rpc_allowlist();
+GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
+  TO postgres;
 SELECT privacy_retention.assert_g014_catalog_contract();
 NOTIFY pgrst, 'reload schema';
