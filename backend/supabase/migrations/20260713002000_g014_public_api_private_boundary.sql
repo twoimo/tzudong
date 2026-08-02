@@ -1490,14 +1490,18 @@ SECURITY DEFINER
 SET search_path = ''
 AS $function$
 DECLARE
+  v_missing_identity text;
   v_unexpected_identity text;
 BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM privacy_retention.g014_public_rpc_allowlist AS allowed
-    WHERE pg_catalog.to_regprocedure(allowed.source_signature) IS NULL
-  ) THEN
-    RAISE EXCEPTION 'G014 required public RPC identity is missing';
+  SELECT allowed.source_signature
+  INTO v_missing_identity
+  FROM privacy_retention.g014_public_rpc_allowlist AS allowed
+  WHERE pg_catalog.to_regprocedure(allowed.source_signature) IS NULL
+  ORDER BY allowed.source_signature
+  LIMIT 1;
+
+  IF v_missing_identity IS NOT NULL THEN
+    RAISE EXCEPTION 'G014 required public RPC identity is missing: %', v_missing_identity;
   END IF;
 
   SELECT format(
