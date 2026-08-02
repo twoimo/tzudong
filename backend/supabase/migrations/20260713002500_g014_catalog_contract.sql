@@ -802,7 +802,7 @@ BEGIN
         ('public.get_current_privacy_policy_version()', 'authenticated'::name),
         ('public.get_current_privacy_policy_version()', 'service_role'::name),
         ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'::name),
-        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', 'service_role'::name),
+        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)', 'service_role'::name),
         ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'::name),
         ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'::name),
         ('public.read_privacy_guardian_status(uuid)', 'service_role'::name),
