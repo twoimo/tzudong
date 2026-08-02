@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "50a5de915edcabd1ce1a0ab2846c9f170f373e8b5f640228fa06292411737ac5"
+MANIFEST_SHA256 = "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95"
 SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention", "ocr_private", "provider_budget_private")
