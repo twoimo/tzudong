@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "76f4db7769bd653cb3a9f8c719e934f7d4f1a530d319f0d57807ee368795a2e6"
+MANIFEST_SHA256 = "9b3bda4cd7bc3aac2ce6a3a18470c1439065a0a60999805d60af37d7c7075b34"
 MODES = frozenset(("validate", "preflight", "readback", "runtime-probe", "reconciliation-readback"))
 SELF_WRAPPING = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset(("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"))
@@ -174,15 +174,15 @@ ROLE_SPLICES = (
     {"label": '02000-role', "version": '20260713002000', "old": b"DO $role$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    EXECUTE 'CREATE ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\n  ELSE\n    IF v_role.rolsuper\n       OR v_role.rolinherit\n       OR v_role.rolcreaterole\n       OR v_role.rolcreatedb\n       OR v_role.rolreplication\n       OR v_role.rolbypassrls\n       OR v_role.rolcanlogin THEN\n      RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n    END IF;\n\n    IF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_auth_members AS membership\n      WHERE membership.member = v_role.oid\n         OR membership.roleid = v_role.oid\n    ) THEN\n      RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n    END IF;\n  END IF;\n\n  EXECUTE 'ALTER ROLE privacy_workflow_owner NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS';\nEND;\n$role$;", "new": _ROLE_02000_SQL, "start": 204, "end": 1492, "old_sha256": '722c208dcc6b50ae1eae9bca8386f3da6a843fdfeb42ec599b4357eded687e84', "new_sha256": '0df33b8a8cc87673d3d6c3bcbcc0eab6c17c967a44f33b416eede8e929068df5'},
     {"label": '02000-schema-pair', "version": '20260713002000', "old": b'CREATE SCHEMA IF NOT EXISTS privacy_retention;\nALTER SCHEMA privacy_retention OWNER TO privacy_workflow_owner;', "new": _SCHEMA_OWNER_ASSERTION_SQL, "start": 1494, "end": 1604, "old_sha256": '5dec71c0bb6729698a174817afe9326871dcc97bc1d0531f0a37074463901765', "new_sha256": 'ec74d291a3093a661d1856c0ef6472f57ca705f4f09612c4784f4fc46bea7844'},
     {"label": '02000-full-assertion-definition', "version": '20260713002000', "old": b"CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()\nRETURNS void\nLANGUAGE plpgsql\nSET search_path = ''\nAS $function$\nDECLARE\n  v_role record;\nBEGIN\n  SELECT role_row.oid,\n         role_row.rolsuper,\n         role_row.rolinherit,\n         role_row.rolcreaterole,\n         role_row.rolcreatedb,\n         role_row.rolreplication,\n         role_row.rolbypassrls,\n         role_row.rolcanlogin\n  INTO v_role\n  FROM pg_catalog.pg_roles AS role_row\n  WHERE role_row.rolname = 'privacy_workflow_owner';\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'privacy_workflow_owner is missing';\n  END IF;\n  IF v_role.rolsuper\n     OR v_role.rolinherit\n     OR v_role.rolcreaterole\n     OR v_role.rolcreatedb\n     OR v_role.rolreplication\n     OR v_role.rolbypassrls\n     OR v_role.rolcanlogin THEN\n    RAISE EXCEPTION 'privacy_workflow_owner role attributes are incompatible';\n  END IF;\n  IF EXISTS (\n    SELECT 1\n    FROM pg_catalog.pg_auth_members AS membership\n    WHERE membership.member = v_role.oid\n       OR membership.roleid = v_role.oid\n  ) THEN\n    RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';\n  END IF;\nEND;\n$function$;", "new": _TERMINAL_WORKFLOW_ASSERTION_SQL, "start": 4192, "end": 5379, "old_sha256": '50c4da47bb3f57203ca7bb95ab6d644833c12a98f8f5f84d87a4c50414c3bf9a', "new_sha256": 'ee3641f846a2459db7dcbf6391249ba9223c15172e3da1dab7b432facf1f8003'},
-    {"label": '02000-in-flight-invocation', "version": '20260713002000', "old": b'  PERFORM privacy_retention.assert_g014_workflow_owner_contract();', "new": _INFLIGHT_WORKFLOW_ASSERTION_SQL, "start": 91459, "end": 91525, "old_sha256": '087e6706906fc0c0059fa68ddf0ae11ee1c235bfb2cba9ebd846dad441c21ea9', "new_sha256": '1ff662f7dbb0daf1c5a8f58430a3ae6657857766dcc7a4abe6b13a06c8138902'},
+    {"label": '02000-in-flight-invocation', "version": '20260713002000', "old": b'  PERFORM privacy_retention.assert_g014_workflow_owner_contract();', "new": _INFLIGHT_WORKFLOW_ASSERTION_SQL, "start": 91474, "end": 91540, "old_sha256": '087e6706906fc0c0059fa68ddf0ae11ee1c235bfb2cba9ebd846dad441c21ea9', "new_sha256": '1ff662f7dbb0daf1c5a8f58430a3ae6657857766dcc7a4abe6b13a06c8138902'},
     {"label": '02400-role-block', "version": '20260713002400', "old": b"DO $g014_retention_approval_roles$\nDECLARE\n  v_role name;\nBEGIN\n  FOREACH v_role IN ARRAY ARRAY[\n    'privacy_retention_operator_approver'::name,\n    'privacy_retention_legal_approver'::name,\n    'privacy_retention_activation_operator'::name\n  ] LOOP\n    IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles AS role_row WHERE role_row.rolname = v_role) THEN\n      EXECUTE pg_catalog.format(\n        'CREATE ROLE %I NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN NOREPLICATION NOBYPASSRLS',\n        v_role\n      );\n    ELSIF EXISTS (\n      SELECT 1\n      FROM pg_catalog.pg_roles AS role_row\n      WHERE role_row.rolname = v_role\n        AND (role_row.rolsuper OR role_row.rolreplication OR role_row.rolbypassrls)\n    ) THEN\n      RAISE EXCEPTION 'G014 retention approval role % has a privileged immutable attribute', v_role;\n    END IF;\n    EXECUTE pg_catalog.format(\n      'ALTER ROLE %I NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN',\n      v_role\n    );\n  END LOOP;\n\n  IF pg_catalog.pg_has_role('service_role', 'privacy_retention_operator_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_legal_approver', 'member')\n     OR pg_catalog.pg_has_role('service_role', 'privacy_retention_activation_operator', 'member') THEN\n    RAISE EXCEPTION 'service_role cannot hold a G014 retention approval capability';\n  END IF;\nEND;\n$g014_retention_approval_roles$;", "new": _RETENTION_ROLES_SQL, "start": 10317, "end": 11707, "old_sha256": '93afc29f3cf6dc761318c940b86bacd62e66a359e439dd68317c48579610042c', "new_sha256": '55a7aa55e5d86f19345b94d84e313caa897992f41babdda13ff29e07d96c7a0a'},
-    {"label": '00300-catalog-assertion-role', "version": '20260801000300', "old": b"SET LOCAL ROLE privacy_workflow_owner;\nSELECT privacy_retention.assert_g014_catalog_contract();\nRESET ROLE;", "new": b"SET LOCAL ROLE privacy_workflow_owner;\nSELECT privacy_retention.assert_g014_catalog_contract();\nRESET ROLE;", "start": 1822, "end": 1929, "old_sha256": 'ceef0b1002846be2fa977f20754057905f77c12dd9e9e1469caf2a71157b63d7', "new_sha256": 'ceef0b1002846be2fa977f20754057905f77c12dd9e9e1469caf2a71157b63d7'},
+    {"label": '00300-catalog-assertion-role', "version": '20260801000300', "old": b"SET LOCAL ROLE privacy_workflow_owner;\nSELECT privacy_retention.assert_g014_catalog_contract();\nRESET ROLE;", "new": b"SET LOCAL ROLE privacy_workflow_owner;\nSELECT privacy_retention.assert_g014_catalog_contract();\nRESET ROLE;", "start": 2024, "end": 2131, "old_sha256": 'ceef0b1002846be2fa977f20754057905f77c12dd9e9e1469caf2a71157b63d7', "new_sha256": 'ceef0b1002846be2fa977f20754057905f77c12dd9e9e1469caf2a71157b63d7'},
 )
 ROLE_SPLICE_GROUPS = (
     {"version": '20260713000450', "source_sha256": 'f5d513aba329b3b1a6e12a76d8947f43c247257a379500d7ed5a45486f1c364a', "transformed_source_sha256": '7d888d55b95d4cb4bc45ed1afa47497043a78328920cd459b20028f969f3dafc', "original_vector_sha256": '24d10cdb1f74b3eaeee84f107f72ef92fccbfa080e6d872a52519cd1e3d108fe', "transformed_vector_sha256": '7a1dd216698644a7abde379d7cdfd29ac32cad95499b5af740dea46fc5f10c83'},
-    {"version": '20260713002000', "source_sha256": 'b3bea6e4f4b1649d3f7eebd719386473a22534551cbff5f69cafc3a05844c6f9', "transformed_source_sha256": '937cc2e6170ea68eef2d6f4a5eeeab237de8f34e99e697c6681e9ffc55a368a5', "original_vector_sha256": '146a20c432cde5b3900f751d73f3dd6ef194542b415202998d13b92aa1e07a31', "transformed_vector_sha256": '2dfad4aada594530a41a6388ae5cb6a4af41b24daad32005cccda04325d4438e'},
+    {"version": '20260713002000', "source_sha256": 'ab16a1bd09be58297813ef80c81634598567afa0368a0086691c9770d7aeb66e', "transformed_source_sha256": 'c2b9824d17bad14b5084f40da161755598f6257e925b86db8f14cdb1a603a28a', "original_vector_sha256": '1ce1a383e2b92d14e5cbe1e20ea7d2a30f27998c94ec52862eee02aaf3eba9f8', "transformed_vector_sha256": 'ada6f063f09538f48526e00df1c1f31f0e2b5e148d4a67828635290bec798519'},
     {"version": '20260713002400', "source_sha256": '3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94', "transformed_source_sha256": '7fcd0eab337541c595e593f3a88e4662bdb246eddb8ee16b25b78c5ba797c491', "original_vector_sha256": 'dc72dca4154077e2e1c69ea9f85ca5a0e0d105af121daf1cca5f0253dcd162ad', "transformed_vector_sha256": 'db5701da7853d448b0c342ae2275496dc0825e42b4441b404e294bc3f26c8c6b'},
-    {"version": '20260801000300', "source_sha256": 'bc87388cdd3c300cf385fa3a8e86b4842e3d25e4612b13d0179c2ba5244713c5', "transformed_source_sha256": 'bc87388cdd3c300cf385fa3a8e86b4842e3d25e4612b13d0179c2ba5244713c5', "original_vector_sha256": 'ab13b4641f1e807edcca33a1876c075f36d245a836fae127180b5fa57ba66689', "transformed_vector_sha256": 'ab13b4641f1e807edcca33a1876c075f36d245a836fae127180b5fa57ba66689'},
+    {"version": '20260801000300', "source_sha256": '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3', "transformed_source_sha256": '2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3', "original_vector_sha256": 'ab7916642c670d7c76bad73a6fe57a36114bc7a8d0888a9e9763e0faac74bbad', "transformed_vector_sha256": 'ab7916642c670d7c76bad73a6fe57a36114bc7a8d0888a9e9763e0faac74bbad'},
 )
 ROLE_PROTOCOL_EPILOGUE = b"""DO $g037_epilogue$
 BEGIN
@@ -261,7 +261,7 @@ ROLE_PROTOCOL_EPILOGUE_VECTOR_SHA256 = "e35114d17655152d87ecbe0a40b10162b9868a12
 # source fragments.  It is deliberately not a snapshot of hosted state.
 G014_RPC_ALLOWLIST_VERSION = "20260801000300"
 G014_RPC_ALLOWLIST_FRAGMENTS = (
-    ("20260713002000", "base", 22620, 30545, "cdcb24d308f8ebe8c3b7ab37e483fe2e9faf846d2814181aa52ee71ca9d13352"),
+    ("20260713002000", "base", 22620, 30550, "a32f6d8f4b2b7c21af287578768dd2fc5314dc43a82f14fdda5da2563591cd82"),
     ("20260713002100", "add", 71537, 72885, "3de6a2e37df45a6f0197d021e8c852c58540d8fc934e3119b60777e64744409f"),
     ("20260713002200", "add", 111451, 112094, "458c06ea8666b3184cc005da6a1220c36736bdade6652114c9d27f50a4899c5d"),
     ("20260713002300", "replace-account", 155888, 157982, "15930f6e2350b9114ac7690d575d5b2199b71721ea4aca4cc623303bbf1b9010"),
@@ -269,15 +269,15 @@ G014_RPC_ALLOWLIST_FRAGMENTS = (
     ("20260713002300", "add-claim", 300106, 300657, "15d968016ccd9220aefe0185aa6de46a7953cb4d5d9e8fa4ca34acf178c38b4d"),
     ("20260713002300", "add-status", 305066, 305638, "c1d2e32caca9df1e5428ddd492b8d0b3a43451c6e8e17de4b2a8662241ecf718"),
     ("20260713002400", "replace-retention", 151492, 153625, "0f9d37d62dd7b66a719894f4f8c2482c2213411dbadf491cdddaf6f4a1727a08"),
-    ("20260801000300", "replace-confirm", 1, 959, "49180e710d99c1f828dcb205497d1c86a1989d431d112ac507886193bfa79b3f"),
+    ("20260801000300", "replace-confirm", 0, 1104, "4863bd3fe1beb01bacfa1c5d75968df6cc24a1baf49ce86a612cb05c5649cddd"),
 )
 G014_RPC_ALLOWLIST_SOURCES = (
-    ("20260713002000", "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql", "b3bea6e4f4b1649d3f7eebd719386473a22534551cbff5f69cafc3a05844c6f9"),
+    ("20260713002000", "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql", "ab16a1bd09be58297813ef80c81634598567afa0368a0086691c9770d7aeb66e"),
     ("20260713002100", "backend/supabase/migrations/20260713002100_g014_privacy_workflows.sql", "0a06618bf56e426f3bfa671aa42b94195fa52fb50ccc6e3a4986f2c718336848"),
     ("20260713002200", "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql", "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"),
     ("20260713002300", "backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql", "6705f42b16cc3c9e5d25d5f9afebffc4be377c442aa0b90b737e22b333d0b36d"),
     ("20260713002400", "backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql", "3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94"),
-    ("20260801000300", "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql", "bc87388cdd3c300cf385fa3a8e86b4842e3d25e4612b13d0179c2ba5244713c5"),
+    ("20260801000300", "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql", "2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3"),
 )
 BASELINE_RPC_MATRIX = (
     ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'),
@@ -324,7 +324,7 @@ BASELINE_RPC_MATRIX = (
     ('public.get_current_privacy_policy_version()', 'authenticated'),
     ('public.get_current_privacy_policy_version()', 'service_role'),
     ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'),
-    ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)', 'service_role'),
+    ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', 'service_role'),
     ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'),
     ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'),
     ('public.read_privacy_guardian_status(uuid)', 'service_role'),
@@ -361,7 +361,7 @@ BASELINE_RPC_MATRIX = (
     ('public.reserve_admin_provider_budget(uuid,text,uuid)', 'service_role'),
     ('public.consume_tzuyang_address_evidence_admin_approval(uuid,text,text,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'),
 )
-BASELINE_RPC_MATRIX_SHA256 = "71129fbe994390a711ee262b7bf7ad3ed523afe4db8be563bc401d8c21111f22"
+BASELINE_RPC_MATRIX_SHA256 = "ef1f3067ad36d6306e9eadc55d27ab7b20d528a8021bdd7d6376ea2c5fedde2e"
 _ACCOUNT_INITIAL_NAMES = frozenset((
     "preview_account_deletion", "begin_account_deletion_apply",
     "apply_account_deletion_database_cleanup", "claim_account_deletion_external_phase",
@@ -426,16 +426,8 @@ _rpc_matrix_source = (
     + _RPC_ADDITIONS
 )
 STATIC_RPC_MATRIX = (
-    tuple(
-        (signature, grantee)
-        for signature, grantee in _rpc_matrix_source
-        if signature != 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
-    )
-    + tuple(
-        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)', grantee)
-        for signature, grantee in _rpc_matrix_source
-        if signature == 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
-    )
+    tuple(row for row in _rpc_matrix_source if _rpc_name(row) != "confirm_privacy_onboarding")
+    + tuple(row for row in _rpc_matrix_source if _rpc_name(row) == "confirm_privacy_onboarding")
 )
 STATIC_RPC_MATRIX_SHA256 = "59b3d7d942241e70e24196251aef0dabfb999d986512a7d138e44cd2f57e490d"
 CHECKPOINT_IDS = (
