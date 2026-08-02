@@ -36,6 +36,21 @@ DELETE FROM privacy_retention.g014_public_rpc_allowlist
 WHERE source_signature = 'public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid[])';
 
 DROP FUNCTION IF EXISTS public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid[]);
+-- The migration runner must be able to maintain the exact RPC allowlist in
+-- later forward migrations without assuming it can SET ROLE to the protected
+-- workflow owner. This policy is restricted to the dashboard migration role;
+-- application roles remain fully revoked.
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON privacy_retention.g014_public_rpc_allowlist
+  TO postgres;
+DROP POLICY IF EXISTS g014_postgres_migration_maintenance
+  ON privacy_retention.g014_public_rpc_allowlist;
+CREATE POLICY g014_postgres_migration_maintenance
+  ON privacy_retention.g014_public_rpc_allowlist
+  FOR ALL
+  TO postgres
+  USING (true)
+  WITH CHECK (true);
 -- The catalog manifest is a one-time, append-only baseline from the completed
 -- G014 migration sequence. It deliberately excludes only itself; every
 -- protected relation is listed below and every structural projection is
