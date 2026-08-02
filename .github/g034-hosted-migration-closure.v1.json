@@ -176,7 +176,7 @@
       "version": "20260801000300",
       "name": "g016_onboarding_allowlist_freshness",
       "path": "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
-      "sha256": "bd06b459c1210f215eae41ddd8bb06fcb9a08809c1c9238d106b52e546848419"
+      "sha256": "8ba81f4b423ab85acfa36e10ca35acd228d3e207245db5e45ab844a632615790"
     }
   ],
   "excludedVersions": [

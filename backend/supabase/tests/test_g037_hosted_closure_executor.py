@@ -15,7 +15,7 @@ import preflight_g034_hosted_migration_closure as g034
 class G037ExecutorTests(unittest.TestCase):
  def test_duplicate_keys_and_pinned_manifest(self):
   with self.assertRaises(c.ContractError): json.loads('{"x":1,"x":2}',object_pairs_hook=c.no_duplicate_object)
-  self.assertEqual(c.MANIFEST_SHA256,"60df07ce85434a14e16e6aa333c189030efad9f0eae5806b62d7ffd14f9c7a89")
+  self.assertEqual(c.MANIFEST_SHA256,"f65b4dd97a9549b62c6598aba88a7c1c5403589fb935e19349cd3409a3dfd4d2")
   self.assertEqual(len(c.load_manifest(Path(__file__).parents[3]).migrations),29)
  def test_g026_and_later_promotions_are_excluded(self):
   self.assertTrue({"20260627150000","20260713002500","20260713002600","20260713002700"} <= c.FORBIDDEN_VERSIONS)
