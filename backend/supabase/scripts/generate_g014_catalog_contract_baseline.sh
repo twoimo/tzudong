@@ -1202,7 +1202,7 @@ g016_apply_catalog_assertion_membership_window() {
   transformed="$work_dir/g016-catalog-assertion-membership-$filename"
   {
     printf '%s\n' 'BEGIN;' \
-      'GRANT privacy_workflow_owner TO postgres WITH SET TRUE;'
+      'GRANT privacy_workflow_owner TO postgres;'
     cat -- "$source"
     printf '%s\n' \
       'REVOKE privacy_workflow_owner FROM postgres;' \
