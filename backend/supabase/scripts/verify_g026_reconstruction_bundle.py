@@ -1161,8 +1161,6 @@ def require_replay_membership_windows(window):
     grant = (window['grantStatement'] + '\n').encode('ascii')
     revoke = (window['revokeStatement'] + '\n').encode('ascii')
     postcondition = (window['postcondition'] + '\n').encode('ascii')
-    set_role = b'SET LOCAL ROLE privacy_workflow_owner;\n'
-    reset_role = b'RESET ROLE;\n'
     catalog_schema_usage_grant = (window['catalogSchemaUsageGrantStatement'] + '\n').encode('ascii')
     catalog_function_execute_grant = (window['catalogFunctionExecuteGrantStatement'] + '\n').encode('ascii')
     catalog_function_execute_revoke = (window['catalogFunctionExecuteRevokeStatement'] + '\n').encode('ascii')
@@ -1193,15 +1191,14 @@ def require_replay_membership_windows(window):
         if item['mode'] == 'reuse_source_transaction':
             if item['filename'] != expected_names[3] or item['anchor'] != 'BEGIN;\n' or item['cleanupAnchor'] != '\nCOMMIT;':
                 raise ValueError('replay membership transaction reuse drifted')
-            transformed = source.replace(item['anchor'], item['anchor'] + precondition.decode() + grant.decode() + set_role.decode(), 1)
-            transformed = transformed.replace(item['cleanupAnchor'], '\n' + reset_role.decode() + revoke.decode() + postcondition.decode() + 'COMMIT;', 1)
+            transformed = source.replace(item['anchor'], item['anchor'] + precondition.decode() + grant.decode(), 1)
+            transformed = transformed.replace(item['cleanupAnchor'], '\n' + revoke.decode() + postcondition.decode() + 'COMMIT;', 1)
         elif item['mode'] == 'revoke_before_catalog_assertion':
             if item['filename'] != expected_names[4] or item['anchor'] != 'SELECT privacy_retention.assert_g014_catalog_contract();\n' or item['cleanupAnchor']:
                 raise ValueError('catalog assertion membership ordering drifted')
-            transformed = 'BEGIN;\n' + precondition.decode() + grant.decode() + set_role.decode() + source.replace(
+            transformed = 'BEGIN;\n' + precondition.decode() + grant.decode() + source.replace(
                 item['anchor'],
-                reset_role.decode()
-                + catalog_schema_usage_grant.decode()
+                catalog_schema_usage_grant.decode()
                 + catalog_function_execute_grant.decode()
                 + revoke.decode()
                 + postcondition.decode()
@@ -1217,7 +1214,7 @@ def require_replay_membership_windows(window):
         elif item['mode'] == 'wrapper_transaction':
             if item['anchor'] or item['cleanupAnchor']:
                 raise ValueError('replay membership wrapper anchor drifted')
-            transformed = 'BEGIN;\n' + precondition.decode() + grant.decode() + set_role.decode() + source + reset_role.decode() + revoke.decode() + postcondition.decode() + 'COMMIT;\n'
+            transformed = 'BEGIN;\n' + precondition.decode() + grant.decode() + source + revoke.decode() + postcondition.decode() + 'COMMIT;\n'
         else:
             raise ValueError('replay membership mode drifted')
         encoded = transformed.encode('utf-8')
@@ -1228,17 +1225,14 @@ def require_replay_membership_windows(window):
         if (encoded.count(grant) != expected_membership_count
                 or encoded.count(revoke) != expected_membership_count
                 or encoded.count(precondition) != 1
-                or encoded.count(set_role) != 1
-                or encoded.count(reset_role) != 1
+                or b'SET LOCAL ROLE privacy_workflow_owner;' in encoded
+                or b'RESET ROLE;' in encoded
                 or encoded.count(postcondition) != expected_membership_count
                 or encoded.find(grant) <= encoded.find(precondition)
-                or encoded.find(set_role) <= encoded.find(grant)
-                or encoded.find(reset_role) <= encoded.find(set_role)
-                or encoded.find(revoke) <= encoded.find(reset_role)):
+                or encoded.find(revoke) <= encoded.find(grant)):
             raise ValueError('replay membership transaction ordering drifted')
         if item['mode'] == 'revoke_before_catalog_assertion':
             catalog_statements = (
-                reset_role,
                 catalog_schema_usage_grant,
                 catalog_function_execute_grant,
                 revoke,
@@ -1251,9 +1245,8 @@ def require_replay_membership_windows(window):
                 postcondition,
                 catalog_privilege_postcondition,
             )
-            expected_counts = (1, 1, 1, 2, 2, 1, 2, 1, 1, 2, 2, 1)
+            expected_counts = (1, 1, 2, 2, 1, 2, 1, 1, 2, 2, 1)
             positions = [
-                encoded.find(reset_role),
                 encoded.find(catalog_schema_usage_grant),
                 encoded.find(catalog_function_execute_grant),
                 encoded.find(revoke),
