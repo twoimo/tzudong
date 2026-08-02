@@ -1196,6 +1196,12 @@ g026_apply_replay_membership_window() {
     --output "$transformed" || exit 1
   printf '%s\n' "$transformed"
 }
+g026_chain_apply() {
+  local phase=$1 source=$2 source_hash
+  source_hash=$(sha256sum -- "$source" | cut -d' ' -f1)
+  previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$phase" "$source_hash" | sha256sum | cut -d' ' -f1)
+  printf '%s  %s  %s\n' "$previous_hash" "$source_hash" "$phase" >>"$chain_file"
+}
 g016_apply_catalog_assertion_membership_window() {
   local source=$1 filename transformed
   filename=${source##*/}
@@ -1235,12 +1241,6 @@ output.write_text(
 )
 PY
   printf '%s\n' "$transformed"
-}
-g026_chain_apply() {
-  local phase=$1 source=$2 source_hash
-  source_hash=$(sha256sum -- "$source" | cut -d' ' -f1)
-  previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$phase" "$source_hash" | sha256sum | cut -d' ' -f1)
-  printf '%s  %s  %s\n' "$previous_hash" "$source_hash" "$phase" >>"$chain_file"
 }
 g026_apply_transition() {
   g026_chain_apply 'g026-phase-a-after-ordinal-2' "$g026_transition"
