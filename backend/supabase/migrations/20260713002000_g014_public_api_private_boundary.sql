@@ -1581,6 +1581,8 @@ $function$;
 ALTER FUNCTION privacy_retention.assert_g014_public_rpc_allowlist() OWNER TO privacy_workflow_owner;
 REVOKE ALL ON FUNCTION privacy_retention.assert_g014_public_rpc_allowlist()
   FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_public_rpc_allowlist()
+  TO postgres;
 CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_invoker_contract()
 RETURNS void
 LANGUAGE plpgsql

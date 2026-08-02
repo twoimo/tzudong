@@ -4,9 +4,12 @@ import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
+import { isExistingAccountPrivacyRecoveryActive } from "@/lib/auth/existing-account-recovery";
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from "@/lib/debug-log";
+import { recordPasswordRecoveryProof } from "@/lib/auth/password-recovery-proof";
 import {
     getCurrentPrivacyEligibility,
+    hasLivePrivacyEligibilityReceipt,
     signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
 import { hasSupabaseAuthSessionHint } from "@/lib/supabase-auth-session-hints";
@@ -46,6 +49,17 @@ function shouldBootstrapAuthOnGeneralInteraction() {
     return window.matchMedia('(min-width: 1024px)').matches;
 }
 
+function isLiteralLoopSafePrivacyOnboarding() {
+    return typeof window !== 'undefined'
+        && window.location.pathname === '/privacy/onboarding'
+        && !window.location.search
+        && !window.location.hash;
+}
+function isLiteralPasswordRecoveryRoute() {
+    return typeof window !== 'undefined'
+        && window.location.pathname === '/auth/reset-password';
+}
+
 const isRefreshTokenNotFoundError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false;
 
@@ -68,6 +82,17 @@ const isExpiredJwtError = (error: unknown) => {
 
 const isAuthSessionInvalidError = (error: unknown) => {
     return isRefreshTokenNotFoundError(error) || isExpiredJwtError(error);
+};
+
+const isAuthSessionMissingError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false;
+
+    const name = 'name' in error ? String(error.name) : '';
+    const code = 'code' in error ? String(error.code) : '';
+    const message = 'message' in error ? String(error.message).toLowerCase() : '';
+    return name === 'AuthSessionMissingError'
+        || code === 'session_not_found'
+        || message.includes('auth session missing');
 };
 
 const isSessionExpired = (currentSession: Session | null) => {
@@ -94,7 +119,7 @@ const INELIGIBLE_AUTH_USER_STATE: AuthUserState = {
 async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
     const supabase = await getSupabaseClient();
     const eligibility = await getCurrentPrivacyEligibility(supabase);
-    if (!eligibility.eligible) {
+    if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
         return INELIGIBLE_AUTH_USER_STATE;
     }
 
@@ -144,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [profileNickname, setProfileNickname] = useState<string | null>(null);
     const activeAuthUserIdRef = useRef<string | null>(null);
     const pendingAuthUserIdRef = useRef<string | null>(null);
+    const authEventGenerationRef = useRef(0);
 
     const clearPrivateDrafts = useCallback(async (userId: string | null) => {
         if (!userId) return;
@@ -156,7 +182,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const clearPublishedAuthState = useCallback((source: string) => {
+    const clearPublishedAuthState = useCallback((source: string, generation?: number) => {
+        if (generation !== undefined && authEventGenerationRef.current !== generation) return;
         activeAuthUserIdRef.current = null;
         pendingAuthUserIdRef.current = null;
         setSession(null);
@@ -167,12 +194,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         dispatchHomeAuthSessionUpdated({ hasSession: false, source });
     }, []);
 
-    const clearStaleSession = useCallback(async (userId?: string, revokeGlobally = false) => {
+    const clearStaleSession = useCallback(async (userId?: string, revokeGlobally = false, generation?: number) => {
+        const isCurrentGeneration = () => generation === undefined || authEventGenerationRef.current === generation;
+        if (!isCurrentGeneration()) return;
+
         const signedOutUserId = userId ?? pendingAuthUserIdRef.current ?? activeAuthUserIdRef.current;
         await clearPrivateDrafts(signedOutUserId);
+        if (!isCurrentGeneration()) return;
 
         try {
             const supabase = await getSupabaseClient();
+            if (!isCurrentGeneration()) return;
             if (revokeGlobally) {
                 await signOutRejectedPrivacySession(supabase);
             } else {
@@ -182,22 +214,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // The local React state below must be cleared even when the client cannot be loaded.
         }
 
-        clearPublishedAuthState('auth-clear-stale-session');
+        if (isCurrentGeneration()) {
+            clearPublishedAuthState('auth-clear-stale-session', generation);
+        }
     }, [clearPrivateDrafts, clearPublishedAuthState]);
 
-    const publishEligibleSession = useCallback(async (nextSession: Session) => {
+    const publishEligibleSession = useCallback(async (
+        nextSession: Session,
+        generation: number,
+        allowPasswordRecovery = false,
+    ) => {
         const userId = nextSession.user?.id;
         if (!userId) {
-            await clearStaleSession();
+            await clearStaleSession(undefined, false, generation);
             return;
         }
 
         pendingAuthUserIdRef.current = userId;
         try {
             const state = await fetchAuthUserState(userId);
-            if (pendingAuthUserIdRef.current !== userId) return;
+            if (authEventGenerationRef.current !== generation) return;
             if (!state.isEligible) {
-                await clearStaleSession(userId, true);
+                if (
+                    isExistingAccountPrivacyRecoveryActive(nextSession.user.email)
+                    || isLiteralLoopSafePrivacyOnboarding()
+                    || (allowPasswordRecovery && isLiteralPasswordRecoveryRoute())
+                ) {
+                    pendingAuthUserIdRef.current = null;
+                    setIsLoading(false);
+                    return;
+                }
+                await clearStaleSession(userId, true, generation);
                 return;
             }
 
@@ -210,11 +257,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfileNickname(state.profileNickname);
             dispatchHomeAuthSessionUpdated({ hasSession: true, source: 'auth-eligible-session' });
         } catch {
-            if (pendingAuthUserIdRef.current !== userId) return;
+            if (authEventGenerationRef.current !== generation) return;
             debugLog(DEBUG_LOG_EVENT.AUTH_USER_STATE_LOAD_FAILED, {
                 reason: DEBUG_LOG_REASON_CODE.AUTH_USER_STATE_LOAD_FAILED,
             });
-            await clearStaleSession(userId);
+            await clearStaleSession(userId, false, generation);
         }
     }, [clearStaleSession]);
 
@@ -247,10 +294,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .then((supabase) => {
                     if (isCancelled) return;
 
+                    const generation = ++authEventGenerationRef.current;
                     supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
                         if (error && isAuthSessionInvalidError(error)) {
-                            await clearStaleSession();
-                            setIsLoading(false);
+                            await clearStaleSession(undefined, false, generation);
+                            if (authEventGenerationRef.current === generation) setIsLoading(false);
                             return;
                         }
                         if (error) {
@@ -268,40 +316,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                         reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_REFRESH_FAILED,
                                     });
                                 }
-                                await clearStaleSession();
-                                setIsLoading(false);
+                                await clearStaleSession(undefined, false, generation);
+                                if (authEventGenerationRef.current === generation) setIsLoading(false);
                                 return;
                             }
                             nextSession = data.session;
                         }
 
                         if (nextSession?.user) {
-                            await publishEligibleSession(nextSession);
+                            await publishEligibleSession(
+                                nextSession,
+                                generation,
+                                isLiteralPasswordRecoveryRoute(),
+                            );
                         } else {
-                            clearPublishedAuthState('auth-no-session');
+                            clearPublishedAuthState('auth-no-session', generation);
                         }
-                        setIsLoading(false);
+                        if (authEventGenerationRef.current === generation) setIsLoading(false);
                     }).catch(async (error) => {
                         if (isAuthSessionInvalidError(error)) {
-                            await clearStaleSession();
+                            await clearStaleSession(undefined, false, generation);
                         } else {
                             debugLog(DEBUG_LOG_EVENT.AUTH_SESSION_LOAD_FAILED, {
                                 reason: DEBUG_LOG_REASON_CODE.AUTH_SESSION_LOAD_FAILED,
                             });
                         }
-                        setIsLoading(false);
+                        if (authEventGenerationRef.current === generation) setIsLoading(false);
                     });
 
-                    const authSubscription = supabase.auth.onAuthStateChange((_event, nextSession) => {
+                    const authSubscription = supabase.auth.onAuthStateChange((event, nextSession) => {
+                        const generation = ++authEventGenerationRef.current;
                         if (isSessionExpired(nextSession)) {
-                            void clearStaleSession(nextSession?.user?.id);
+                            void clearStaleSession(nextSession?.user?.id, false, generation);
                             return;
                         }
                         if (!nextSession?.user) {
-                            clearPublishedAuthState(`auth-state:${_event}`);
+                            clearPublishedAuthState(`auth-state:${event}`, generation);
                             return;
                         }
-                        void publishEligibleSession(nextSession);
+                        if (event === 'PASSWORD_RECOVERY') {
+                            recordPasswordRecoveryProof(nextSession.user.id);
+                        }
+                        void publishEligibleSession(
+                            nextSession,
+                            generation,
+                            event === 'PASSWORD_RECOVERY',
+                        );
                     });
                     subscription = authSubscription.data.subscription;
                 })
@@ -373,7 +433,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const eligibility = await getCurrentPrivacyEligibility(supabase);
-            if (!eligibility.eligible) {
+            if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
                 throw new Error(PASSWORD_SIGN_IN_ERROR);
             }
         } catch {
@@ -392,6 +452,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await clearBrowserDraftsForUser(signingOutUserId);
         };
 
+        const logoutResponse = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'same-origin',
+        });
+        if (!logoutResponse.ok) {
+            throw new Error('server_logout_failed');
+        }
         const supabase = await getSupabaseClient();
         const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (!error) {
@@ -400,7 +467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        if (isAuthSessionInvalidError(error)) {
+        if (isAuthSessionInvalidError(error) || isAuthSessionMissingError(error)) {
             await clearPrivateDrafts();
             await clearStaleSession(signingOutUserId ?? undefined);
             return;

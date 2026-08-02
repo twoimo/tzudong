@@ -1202,6 +1202,46 @@ g026_chain_apply() {
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$phase" "$source_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$source_hash" "$phase" >>"$chain_file"
 }
+g016_apply_catalog_assertion_membership_window() {
+  local source=$1 filename transformed
+  filename=${source##*/}
+  transformed="$work_dir/g016-catalog-assertion-membership-$filename"
+  python3 - "$source" "$transformed" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1])
+output = pathlib.Path(sys.argv[2])
+sql = source.read_text(encoding="utf-8")
+needle = """SET LOCAL ROLE privacy_workflow_owner;
+SELECT privacy_retention.assert_g014_catalog_contract();
+RESET ROLE;"""
+replacement = """SET LOCAL ROLE privacy_workflow_owner;
+CREATE OR REPLACE FUNCTION pg_temp.g016_catalog_assertion_bridge()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $bridge$
+BEGIN
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+END
+$bridge$;
+RESET ROLE;
+REVOKE privacy_workflow_owner FROM postgres;
+SELECT pg_temp.g016_catalog_assertion_bridge();"""
+if sql.count(needle) != 1:
+    raise SystemExit(f"expected one G016 catalog assertion block in {source}")
+output.write_text(
+    "BEGIN;\n"
+    "GRANT privacy_workflow_owner TO postgres;\n"
+    + sql.replace(needle, replacement)
+    + "\nCOMMIT;\n",
+    encoding="utf-8",
+)
+PY
+  printf '%s\n' "$transformed"
+}
 g026_apply_transition() {
   g026_chain_apply 'g026-phase-a-after-ordinal-2' "$g026_transition"
   compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$g026_transition"
@@ -1314,6 +1354,11 @@ for migration in "${effective_migrations[@]}"; do
     20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql)
       transformed_migration=$(g026_apply_replay_membership_window "$migration")
       g026_chain_apply "replay-membership-window:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20260801000300_g016_onboarding_allowlist_freshness.sql)
+      transformed_migration=$(g016_apply_catalog_assertion_membership_window "$migration")
+      g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     *)
