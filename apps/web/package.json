@@ -133,8 +133,8 @@
     "baseline-browser-mapping": "2.10.43",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.2.10",
-    "postcss": "^8.5.17",
+    "eslint-config-next": "^16.2.12",
+    "postcss": "^8.5.25",
     "supabase": "^2.109.1",
     "tailwindcss": "^4.3.2",
     "typescript": "npm:@typescript/typescript6@6.0.2",
@@ -142,6 +142,10 @@
   },
   "overrides": {
     "baseline-browser-mapping": "2.10.43",
+    "brace-expansion": "5.0.9",
+    "minimatch@3.1.5": {
+      "brace-expansion": "2.1.4"
+    },
     "postcss": "$postcss",
     "sharp": "$sharp"
   }

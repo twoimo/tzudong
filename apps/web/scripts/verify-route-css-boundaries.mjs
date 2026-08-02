@@ -184,8 +184,9 @@ export function collectRouteCssAssetPaths(manifest, routeKey) {
 }
 function inside(root, candidate) { const rel = relative(root, candidate); return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !rel.includes(sep); }
 export function resolveCssAssetPath(nextDirectory, assetPath) {
-  const cssDirectory = realpathSync(resolve(nextDirectory, "static", "css"));
-  const candidate = resolve(nextDirectory, ...assetPath.split("/"));
+  const canonicalNextDirectory = realpathSync(resolve(nextDirectory));
+  const cssDirectory = realpathSync(resolve(canonicalNextDirectory, "static", "css"));
+  const candidate = resolve(canonicalNextDirectory, ...assetPath.split("/"));
   if (!inside(cssDirectory, candidate)) fail(`CSS asset path escapes .next/static/css: ${assetPath}`);
   const stat = lstatSync(candidate);
   if (stat.isSymbolicLink()) fail(`CSS asset path is a symlink: ${assetPath}`);
