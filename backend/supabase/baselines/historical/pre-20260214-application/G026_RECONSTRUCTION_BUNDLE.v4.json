@@ -571,10 +571,10 @@
       },
       {
         "filename": "20260713002500_g014_catalog_contract.sql",
-        "sourceSha256": "aa5799a82b9bbcf9df404bb57b7d3f84727a87fcd23b6f93345495183375fc5c",
-        "sourceByteLength": 49588,
-        "transformedSha256": "3d333018dca1ec6a25fff29581e732f2ef495245d12caaf9b3cc7e3e0d28f5af",
-        "transformedByteLength": 52659,
+        "sourceSha256": "808532b79fdc20d1c12a71c7988954188c7fe1d91bbfe4b7d47d9da458615838",
+        "sourceByteLength": 49892,
+        "transformedSha256": "f7025334264a0dea19d2d2680b17183b86b9c0392e1d816b7b07cf96629f7f3a",
+        "transformedByteLength": 52963,
         "mode": "revoke_before_catalog_assertion",
         "anchor": "SELECT privacy_retention.assert_g014_catalog_contract();\n",
         "cleanupAnchor": ""
