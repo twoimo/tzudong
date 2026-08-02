@@ -35,6 +35,10 @@ import {
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
+import {
+  emitPrivacyAuthEventFromServerEnvironment,
+  type PrivacyAuthEventInput,
+} from '@/lib/observability/privacy-auth-events';
 
 export const runtime = 'nodejs';
 
@@ -53,6 +57,26 @@ const PASSWORD_RECOVERY_KEYS = [
   'origin',
   'expiresAt',
 ] as const;
+function emitOnboardingPrivacyAuthEvent(
+  outcomeReason: PrivacyAuthEventInput['outcomeReason'],
+  provider: PrivacyAuthEventInput['provider'],
+) {
+  try {
+    emitPrivacyAuthEventFromServerEnvironment({
+      event: 'onboarding',
+      policyVersion: PRIVACY_POLICY_VERSION,
+      policySha: PRIVACY_POLICY_CONTENT_SHA256,
+      routeClass: 'loop_safe_api',
+      provider,
+      outcomeReason,
+      correlationId: crypto.randomUUID(),
+      subjectDigest: null,
+    });
+  } catch {
+    // Telemetry must not affect privacy onboarding.
+  }
+}
+
 
 type PasswordSignupRequest = {
   action: 'password_signup';
@@ -784,6 +808,10 @@ export async function POST(request: NextRequest) {
 
     const input = parseOnboardingStart(body);
     if (!input) return errorResponse('INVALID_ONBOARDING_REQUEST', 400, request);
+    emitOnboardingPrivacyAuthEvent(
+      'onboarding_started',
+      input.intent === 'oauth' ? 'oauth' : 'password',
+    );
     if (input.ageBand === 'under_14') {
       return under14SignupRejectedResponse(request);
     }

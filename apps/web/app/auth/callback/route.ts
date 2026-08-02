@@ -14,6 +14,14 @@ import {
 import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
+import {
+  emitPrivacyAuthEventFromServerEnvironment,
+  type PrivacyAuthEventInput,
+} from '@/lib/observability/privacy-auth-events';
+import {
+  PRIVACY_POLICY_CONTENT_SHA256,
+  PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy';
 
 export const runtime = 'nodejs';
 
@@ -27,12 +35,14 @@ const CALLBACK_QUERY_KEYS = new Set([
   'error',
   'error_code',
   'error_description',
+  'flow',
 ]);
 
 type CallbackQuery = Readonly<{
   code: string | null;
   next: string;
   providerError: boolean;
+  flow: string | null;
 }>;
 
 function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null {
@@ -48,17 +58,24 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
   }
 
   const code = searchParams.get('code');
+  const flow = searchParams.get('flow');
   const providerError = ['error', 'error_code', 'error_description']
     .some((key) => searchParams.has(key));
   if (providerError) {
     return code === null
-      ? { code: null, next: getSafeAuthNextPath(searchParams.get('next')), providerError: true }
+      ? {
+          code: null,
+          next: getSafeAuthNextPath(searchParams.get('next')),
+          providerError: true,
+          flow,
+        }
       : null;
   }
   if (
     !code
     || code.length > MAX_OAUTH_CODE_LENGTH
     || /[\u0000-\u0020]/.test(code)
+    || (flow !== null && !/^[0-9a-f]{64}$/.test(flow))
   ) {
     return null;
   }
@@ -67,8 +84,26 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
     code,
     next: getSafeAuthNextPath(searchParams.get('next')),
     providerError: false,
+    flow,
   };
 }
+function emitCallbackPrivacyAuthEvent(outcomeReason: PrivacyAuthEventInput['outcomeReason']) {
+  try {
+    emitPrivacyAuthEventFromServerEnvironment({
+      event: 'auth_callback',
+      policyVersion: PRIVACY_POLICY_VERSION,
+      policySha: PRIVACY_POLICY_CONTENT_SHA256,
+      routeClass: 'loop_safe_api',
+      provider: 'oauth',
+      outcomeReason,
+      correlationId: crypto.randomUUID(),
+      subjectDigest: null,
+    });
+  } catch {
+    // Telemetry must not affect OAuth callback handling.
+  }
+}
+
 
 type CallbackSupabaseClient = Awaited<ReturnType<typeof createClient>>;
 type OnboardingChallenge = NonNullable<ReturnType<typeof readOnboardingChallenge>>;
@@ -156,6 +191,7 @@ async function rejectOAuthCallbackSession(supabase: CallbackSupabaseClient) {
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
+  emitCallbackPrivacyAuthEvent('callback_started');
   const callback = parseCallbackQuery(searchParams);
   if (!callback || callback.providerError) return rejectedCallbackRedirect(request, origin);
   const challengeCookie = request.headers.get('cookie')
@@ -165,7 +201,17 @@ export async function GET(request: Request) {
     ?.slice(ONBOARDING_CHALLENGE_COOKIE.length + 1);
   const challenge = readOnboardingChallenge(challengeCookie);
   if (challengeCookie && !challenge) return rejectedCallbackRedirect(request, origin);
-  const onboardingRequested = challenge?.intent === 'oauth';
+  const onboardingRequested = callback.flow !== null;
+  if (
+    onboardingRequested
+    && (
+      challenge?.intent !== 'oauth'
+      || !challenge.oauthNonce
+      || sha256(challenge.oauthNonce) !== callback.flow
+    )
+  ) {
+    return rejectedCallbackRedirect(request, origin);
+  }
 
   const { code, next } = callback;
   if (!code) return rejectedCallbackRedirect(request, origin);

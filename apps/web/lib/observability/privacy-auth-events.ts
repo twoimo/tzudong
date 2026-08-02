@@ -19,6 +19,9 @@ const PROVIDERS = ['password', 'oauth', 'session', 'none'] as const;
 
 const OUTCOME_REASONS = [
   'started',
+  'auth_started',
+  'callback_started',
+  'onboarding_started',
   'pending_email_confirmation',
   'onboarding_required',
   'admitted',
@@ -28,7 +31,10 @@ const OUTCOME_REASONS = [
   'completed',
   'already_current_eligible',
   'needs_user_onboarding',
+  'workflow_42501',
   'audit_write_failed',
+  'eligibility_error',
+  'policy_drift',
   'catalog_drift',
   'roster_conservation_mismatch',
   'release_verified',
@@ -51,6 +57,58 @@ export type PrivacyAuthEvent = {
 export type EmittedPrivacyAuthEvent = PrivacyAuthEvent & {
   utcMinute: string;
 };
+export type PrivacyAuthEventInput = Omit<
+  PrivacyAuthEvent,
+  'buildCommit' | 'deploymentId' | 'migrationManifestSha'
+>;
+
+const SERVER_METADATA_ENVIRONMENT_KEYS = [
+  'VERCEL_GIT_COMMIT_SHA',
+  'VERCEL_DEPLOYMENT_ID',
+  'RELEASE_MIGRATION_MANIFEST_SHA256',
+] as const;
+
+function serverMetadataFromEnvironment(environment: Record<string, string | undefined>): Pick<
+  PrivacyAuthEvent,
+  'buildCommit' | 'deploymentId' | 'migrationManifestSha'
+> | null {
+  const [buildCommit, deploymentId, migrationManifestSha] = SERVER_METADATA_ENVIRONMENT_KEYS
+    .map((key) => environment[key]?.trim());
+
+  if (
+    !buildCommit || !COMMIT_PATTERN.test(buildCommit)
+    || !deploymentId || !DEPLOYMENT_ID_PATTERN.test(deploymentId)
+    || !migrationManifestSha || !SHA256_PATTERN.test(migrationManifestSha)
+  ) {
+    return null;
+  }
+
+  return { buildCommit, deploymentId, migrationManifestSha };
+}
+
+/**
+ * Best-effort server telemetry which never alters an auth/privacy decision.
+ * Invalid or unavailable deployment provenance is deliberately suppressed rather
+ * than represented by a synthetic value.
+ */
+export function emitPrivacyAuthEventFromServerEnvironment(
+  input: PrivacyAuthEventInput,
+  environment: Record<string, string | undefined> = process.env,
+  now: Date = new Date(),
+): EmittedPrivacyAuthEvent | null {
+  const metadata = serverMetadataFromEnvironment(environment);
+  if (!metadata) {
+    console.warn('privacy_auth_event_suppressed: invalid_server_metadata');
+    return null;
+  }
+
+  try {
+    return emitPrivacyAuthEvent({ ...metadata, ...input }, now);
+  } catch {
+    console.warn('privacy_auth_event_suppressed: invalid_event');
+    return null;
+  }
+}
 
 const EVENT_KEYS = [
   'event',

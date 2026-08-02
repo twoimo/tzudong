@@ -7,11 +7,16 @@ import {
   type StoredRosterClassification,
 } from '@/lib/privacy/roster-classification';
 import type { CurrentPrivacyEligibility } from '@/lib/privacy/eligibility';
+import {
+  PRIVACY_POLICY_CONTENT_SHA256,
+  PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy';
 
 const roster = Array.from(
   { length: 16 },
   (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
 );
+const pseudonymKey = new TextEncoder().encode('server-held-roster-pseudonym-key');
 
 function eligibility(
   reasonCode: CurrentPrivacyEligibility['reasonCode'],
@@ -23,8 +28,27 @@ function eligibility(
   };
 }
 
-function createDependencies(receipts: readonly (CurrentPrivacyEligibility | Error)[]) {
+function liveEligibility(): CurrentPrivacyEligibility {
+  return {
+    eligible: true,
+    reasonCode: 'PRIVACY_ELIGIBLE',
+    receipt: {
+      schemaVersion: 1,
+      eligible: true,
+      reasonCode: 'PRIVACY_ELIGIBLE',
+      policyVersionId: '11111111-1111-4111-8111-111111111111',
+      policyVersion: PRIVACY_POLICY_VERSION,
+      contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+    },
+  };
+}
+
+function createDependencies(
+  receipts: readonly (CurrentPrivacyEligibility | Error)[],
+  subjectPseudonymKey = pseudonymKey,
+) {
   const durable = new Map<string, StoredRosterClassification>();
+  const manifests = new Map<string, string>();
   let lookups = 0;
   const key = (batchId: string, userId: string) => `${batchId}:${userId}`;
   const dependencies: RosterClassificationDependencies = {
@@ -33,7 +57,14 @@ function createDependencies(receipts: readonly (CurrentPrivacyEligibility | Erro
       if (receipt instanceof Error) throw receipt;
       return receipt ?? eligibility(null);
     },
+    subjectPseudonymKey,
     sink: {
+      bindManifestIfAbsent: async (batchId, manifestDigest) => {
+        const existing = manifests.get(batchId);
+        if (existing) return { inserted: false, manifestDigest: existing };
+        manifests.set(batchId, manifestDigest);
+        return { inserted: true, manifestDigest };
+      },
       get: async (batchId, userId) => durable.get(key(batchId, userId)) ?? null,
       putIfAbsent: async (result) => {
         const existing = durable.get(key(result.batchId, result.userId));
@@ -44,7 +75,7 @@ function createDependencies(receipts: readonly (CurrentPrivacyEligibility | Erro
     },
   };
 
-  return { dependencies, getLookups: () => lookups };
+  return { dependencies, durable, getLookups: () => lookups };
 }
 
 describe('classifyPrivacyRoster', () => {
@@ -56,9 +87,28 @@ describe('classifyPrivacyRoster', () => {
     await expect(classifyPrivacyRoster('batch-1', [...roster.slice(0, 15), 'not-a-uuid'], dependencies)).rejects.toThrow('UUIDs');
   });
 
+  test('requires a live current-policy schema-v1 receipt for eligible classification', async () => {
+const live = liveEligibility();
+    const stale: CurrentPrivacyEligibility = {
+      ...live,
+      receipt: { ...live.receipt!, policyVersion: 'stale-policy' },
+    };
+    const { dependencies } = createDependencies([
+      eligibility('PRIVACY_ELIGIBLE'),
+      stale,
+      ...Array.from({ length: 14 }, liveEligibility),
+    ]);
+
+    const result = await classifyPrivacyRoster('batch-live-receipt', roster, dependencies);
+
+    expect(result.subjects[0]?.classification).toBe('failed');
+    expect(result.subjects[1]?.classification).toBe('failed');
+    expect(result.counts.already_current_eligible).toBe(14);
+  });
+
   test('conserves exactly sixteen opaque outcomes', async () => {
     const receipts = [
-      ...Array.from({ length: 5 }, () => eligibility('PRIVACY_ELIGIBLE')),
+      ...Array.from({ length: 5 }, liveEligibility),
       ...Array.from({ length: 4 }, () => eligibility('PRIVACY_POLICY_REATTESTATION_REQUIRED')),
       ...Array.from({ length: 3 }, () => eligibility('PRIVACY_GUARDIAN_REQUIRED')),
       ...Array.from({ length: 3 }, () => eligibility(null)),
@@ -84,9 +134,61 @@ describe('classifyPrivacyRoster', () => {
     }
   });
 
+  test('rejects corrupt manifest bindings and same-batch different-manifest replay', async () => {
+const { dependencies } = createDependencies(Array.from({ length: 32 }, liveEligibility));
+    const corruptDependencies: RosterClassificationDependencies = {
+      ...dependencies,
+      sink: {
+        ...dependencies.sink,
+        bindManifestIfAbsent: async () => ({
+          inserted: false,
+          manifestDigest: 'not-a-digest',
+        }),
+      },
+    };
+    await expect(
+      classifyPrivacyRoster('batch-corrupt-manifest', roster, corruptDependencies),
+    ).rejects.toThrow('batch manifest');
+
+    const replay = createDependencies(Array.from({ length: 32 }, liveEligibility));
+    await classifyPrivacyRoster('batch-manifest-replay', roster, replay.dependencies);
+    const differentRoster = [...roster];
+    differentRoster[15] = '00000000-0000-4000-8000-000000000099';
+    await expect(
+      classifyPrivacyRoster('batch-manifest-replay', differentRoster, replay.dependencies),
+    ).rejects.toThrow('batch manifest');
+  });
+
+  test('uses purpose-scoped HMAC pseudonyms and verifies raced durable bindings', async () => {
+    const first = createDependencies(Array.from({ length: 16 }, liveEligibility));
+    const second = createDependencies(
+      Array.from({ length: 16 }, liveEligibility),
+      new TextEncoder().encode('different-server-held-roster-pseudonym-key'),
+    );
+    const firstResult = await classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies);
+    const secondResult = await classifyPrivacyRoster('batch-pseudonym-b', roster, second.dependencies);
+    expect(firstResult.subjects[0]?.subjectDigest).not.toBe(secondResult.subjects[0]?.subjectDigest);
+
+    const stored = first.durable.get('batch-pseudonym-a:00000000-0000-4000-8000-000000000001')!;
+    first.durable.set(stored.batchId + ':' + stored.userId, {
+      ...stored,
+      subjectDigest: '0'.repeat(64),
+    });
+    await expect(
+      classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies),
+    ).rejects.toThrow('classification is invalid');
+    first.durable.set(stored.batchId + ':' + stored.userId, {
+      ...stored,
+      resultDigest: '0'.repeat(64),
+    });
+    await expect(
+      classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies),
+    ).rejects.toThrow('classification is invalid');
+  });
+
   test('replays durable results without re-reading eligibility or overwriting them', async () => {
     const { dependencies, getLookups } = createDependencies(
-      Array.from({ length: 16 }, () => eligibility('PRIVACY_ELIGIBLE')),
+      Array.from({ length: 16 }, liveEligibility),
     );
 
     const first = await classifyPrivacyRoster('batch-replay', roster, dependencies);
@@ -122,7 +224,9 @@ describe('classifyPrivacyRoster', () => {
     );
 
     expect(source).toContain("typeof window !== 'undefined'");
-    expect(source).toContain('getCurrentPrivacyEligibilityForUser');
+    expect(source).toContain('hasLivePrivacyEligibilityReceipt');
+    expect(source).toContain('bindManifestIfAbsent');
+    expect(source).toContain('createHmac');
     expect(source).toContain('putIfAbsent');
     expect(source).not.toMatch(/\b(?:insert|upsert|delete)\w*\s*\(/i);
     expect(source).not.toMatch(/\b(?:consent|guardian|marketing|age|profile)\w*\s*[:=]/i);

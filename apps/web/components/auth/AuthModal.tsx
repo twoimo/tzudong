@@ -48,6 +48,10 @@ const generateRandomNickname = (): string => {
   const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
   return `${randomPrefix}_${randomSuffix}`;
 };
+const sha256Hex = async (value: string): Promise<string> => {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -385,6 +389,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       if (isAdminRedirect) {
         callbackUrl.searchParams.set("next", safeRedirectTo);
       }
+      callbackUrl.searchParams.set("flow", await sha256Hex(challenge.oauthNonce));
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
