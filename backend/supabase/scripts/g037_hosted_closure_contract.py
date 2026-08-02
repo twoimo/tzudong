@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "3b4e88b7bda2c8ae912d1e990c7ca8f07924130f93f7c23cb655e7132fd538d4"
+MANIFEST_SHA256 = "1c81fd4fa4e6cd7a843241e8eb419a24bb9c329e6ab5a2c2f9d9acf1dd4ddf5c"
 MODES = frozenset(("validate", "preflight", "readback", "runtime-probe", "reconciliation-readback"))
 SELF_WRAPPING = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset(("20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"))
@@ -275,7 +275,7 @@ G014_RPC_ALLOWLIST_SOURCES = (
     ("20260713002200", "backend/supabase/migrations/20260713002200_g014_marketing_state_machine.sql", "a041f88d781ef50bfdf59feee2af3f09bc02fc64714fe335861ed5e7d99694a3"),
     ("20260713002300", "backend/supabase/migrations/20260713002300_g014_account_deletion_state_machine.sql", "6705f42b16cc3c9e5d25d5f9afebffc4be377c442aa0b90b737e22b333d0b36d"),
     ("20260713002400", "backend/supabase/migrations/20260713002400_g014_retention_adapters_receipts.sql", "3b89edc7ffe96a770d1f537267546c6229c823fc3c2d9b4c036ff008ca7c0b94"),
-    ("20260801000300", "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql", "0443dd1c2ee77697e9b1b0330c6239234c7bc8e0861585cd9d7348e5fc38ab48"),
+    ("20260801000300", "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql", "30a184ccaba1dc6c7d6798010381a38b8141ded441ad643628baeb21270d7c82"),
 )
 BASELINE_RPC_MATRIX = (
     ('public.approve_submission_item(uuid,uuid,jsonb)', 'authenticated'),
