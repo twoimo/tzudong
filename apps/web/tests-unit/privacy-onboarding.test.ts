@@ -272,6 +272,9 @@ describe('privacy onboarding challenge', () => {
     expect(authContext).toContain('isExistingAccountPrivacyRecoveryActive(nextSession.user.email)');
     expect(authContext).toContain('event === \'PASSWORD_RECOVERY\'');
     expect(authContext).toContain('allowPasswordRecovery && isLiteralPasswordRecoveryRoute()');
+    expect(authContext).toContain('recordPasswordRecoveryProof(nextSession.user.id)');
+    expect(authContext).toContain('isLiteralPasswordRecoveryRoute(),');
+    expect(authContext).toContain('isAuthSessionMissingError(error)');
     expect(onboardingPage).toContain('if (hasQuery) router.replace(\'/\');');
     expect(onboardingPage).toContain('if (hasQuery) return null;');
   });

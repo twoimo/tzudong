@@ -6,6 +6,7 @@ import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 import { isExistingAccountPrivacyRecoveryActive } from "@/lib/auth/existing-account-recovery";
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from "@/lib/debug-log";
+import { recordPasswordRecoveryProof } from "@/lib/auth/password-recovery-proof";
 import {
     getCurrentPrivacyEligibility,
     hasLivePrivacyEligibilityReceipt,
@@ -81,6 +82,17 @@ const isExpiredJwtError = (error: unknown) => {
 
 const isAuthSessionInvalidError = (error: unknown) => {
     return isRefreshTokenNotFoundError(error) || isExpiredJwtError(error);
+};
+
+const isAuthSessionMissingError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false;
+
+    const name = 'name' in error ? String(error.name) : '';
+    const code = 'code' in error ? String(error.code) : '';
+    const message = 'message' in error ? String(error.message).toLowerCase() : '';
+    return name === 'AuthSessionMissingError'
+        || code === 'session_not_found'
+        || message.includes('auth session missing');
 };
 
 const isSessionExpired = (currentSession: Session | null) => {
@@ -312,7 +324,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         }
 
                         if (nextSession?.user) {
-                            await publishEligibleSession(nextSession, generation);
+                            await publishEligibleSession(
+                                nextSession,
+                                generation,
+                                isLiteralPasswordRecoveryRoute(),
+                            );
                         } else {
                             clearPublishedAuthState('auth-no-session', generation);
                         }
@@ -337,6 +353,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         if (!nextSession?.user) {
                             clearPublishedAuthState(`auth-state:${event}`, generation);
                             return;
+                        }
+                        if (event === 'PASSWORD_RECOVERY') {
+                            recordPasswordRecoveryProof(nextSession.user.id);
                         }
                         void publishEligibleSession(
                             nextSession,
@@ -448,7 +467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        if (isAuthSessionInvalidError(error)) {
+        if (isAuthSessionInvalidError(error) || isAuthSessionMissingError(error)) {
             await clearPrivateDrafts();
             await clearStaleSession(signingOutUserId ?? undefined);
             return;
