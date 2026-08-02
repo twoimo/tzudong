@@ -1,3 +1,4 @@
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
   clearOnboardingCookies,
@@ -7,11 +8,11 @@ import {
   readOnboardingChallenge,
   sha256,
 } from '@/lib/privacy/onboarding';
+import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import {
   getCurrentPrivacyEligibility,
   hasLivePrivacyEligibilityReceipt,
 } from '@/lib/privacy/eligibility';
-import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -87,7 +88,10 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
     flow,
   };
 }
-function emitCallbackPrivacyAuthEvent(outcomeReason: PrivacyAuthEventInput['outcomeReason']) {
+function emitCallbackPrivacyAuthEvent(
+  outcomeReason: Extract<PrivacyAuthEventInput['outcomeReason'], 'admitted' | 'onboarding_required' | 'failed'>,
+  correlationId: string,
+) {
   try {
     emitPrivacyAuthEventFromServerEnvironment({
       event: 'auth_callback',
@@ -96,7 +100,7 @@ function emitCallbackPrivacyAuthEvent(outcomeReason: PrivacyAuthEventInput['outc
       routeClass: 'loop_safe_api',
       provider: 'oauth',
       outcomeReason,
-      correlationId: crypto.randomUUID(),
+      correlationId,
       subjectDigest: null,
     });
   } catch {
@@ -146,10 +150,23 @@ async function revokeRejectedCallbackSession(supabase: CallbackSupabaseClient) {
   }
 }
 
+function clearOAuthTransaction(response: NextResponse) {
+  response.cookies.set({
+    name: OAUTH_TRANSACTION_COOKIE,
+    value: '',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  });
+}
+
 function redirectWithOnboardingCookiesCleared(origin: string, path = '/') {
   const response = NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${path}`);
   response.headers.set('Cache-Control', 'no-store');
   clearOnboardingCookies(response);
+  clearOAuthTransaction(response);
   return response;
 }
 
@@ -157,10 +174,84 @@ function rejectedCallbackRedirect(request: Request, origin: string) {
   const response = NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}/`);
   response.headers.set('Cache-Control', 'no-store');
   clearRejectedOnboardingCookies(response, request);
+  clearOAuthTransaction(response);
   return response;
 }
 
 
+const OAUTH_TRANSACTION_COOKIE = 'tzudong_oauth_transaction';
+
+type OAuthTransaction = Readonly<{
+  version: 1;
+  flow: string;
+  correlationId: string;
+  intent: 'login' | 'signup';
+  challengeId: string | null;
+  challengeTokenDigest: string | null;
+  next: string;
+  expiresAt: number;
+}>;
+
+function readOAuthTransaction(value: string | undefined): OAuthTransaction | null {
+  const secret = process.env.PRIVACY_ONBOARDING_COOKIE_SECRET;
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32 || !value) return null;
+  const [encoded, signature, ...extra] = value.split('.');
+  if (!encoded || !signature || extra.length !== 0) return null;
+  const expected = createHmac('sha256', secret).update(encoded, 'utf8').digest('base64url');
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) return null;
+  try {
+    const payload: unknown = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    if (
+      !payload
+      || typeof payload !== 'object'
+      || Array.isArray(payload)
+      || Object.keys(payload).length !== 8
+    ) return null;
+    const transaction = payload as OAuthTransaction;
+    return transaction.version === 1
+      && /^[0-9a-f]{64}$/.test(transaction.flow)
+      && UUID_PATTERN.test(transaction.correlationId)
+      && (transaction.intent === 'login' || transaction.intent === 'signup')
+      && (transaction.challengeId === null || UUID_PATTERN.test(transaction.challengeId))
+      && (transaction.challengeTokenDigest === null || /^[0-9a-f]{64}$/.test(transaction.challengeTokenDigest))
+      && (transaction.intent === 'signup'
+        ? transaction.challengeId !== null && transaction.challengeTokenDigest !== null
+        : transaction.challengeId === null && transaction.challengeTokenDigest === null)
+      && typeof transaction.next === 'string'
+      && transaction.next === getSafeAuthNextPath(transaction.next)
+      && typeof transaction.expiresAt === 'number'
+      && Number.isSafeInteger(transaction.expiresAt)
+      && transaction.expiresAt > Date.now()
+      ? transaction
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function requestCookie(request: Request, name: string) {
+  return request.headers.get('cookie')
+    ?.split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+}
+
+function matchingOAuthTransaction(
+  transaction: OAuthTransaction | null,
+  challenge: OnboardingChallenge | null,
+  callback: CallbackQuery,
+) {
+  return transaction !== null
+    && challenge !== null
+    && callback.flow !== null
+    && transaction.flow === callback.flow
+    && transaction.next === callback.next
+    && transaction.challengeId === challenge.challengeId
+    && transaction.challengeTokenDigest === sha256(challenge.challengeToken);
+}
 async function confirmOAuthOnboarding(
   challenge: OnboardingChallenge,
   userId: string,
@@ -191,61 +282,81 @@ async function rejectOAuthCallbackSession(supabase: CallbackSupabaseClient) {
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  emitCallbackPrivacyAuthEvent('callback_started');
+  const freshCorrelationId = randomUUID();
   const callback = parseCallbackQuery(searchParams);
-  if (!callback || callback.providerError) return rejectedCallbackRedirect(request, origin);
-  const challengeCookie = request.headers.get('cookie')
-    ?.split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${ONBOARDING_CHALLENGE_COOKIE}=`))
-    ?.slice(ONBOARDING_CHALLENGE_COOKIE.length + 1);
-  const challenge = readOnboardingChallenge(challengeCookie);
-  if (challengeCookie && !challenge) return rejectedCallbackRedirect(request, origin);
-  const onboardingRequested = callback.flow !== null;
+  if (!callback) {
+    emitCallbackPrivacyAuthEvent('failed', freshCorrelationId);
+    return rejectedCallbackRedirect(request, origin);
+  }
+
+  const transaction = readOAuthTransaction(requestCookie(request, OAUTH_TRANSACTION_COOKIE));
   if (
-    onboardingRequested
-    && (
-      challenge?.intent !== 'oauth'
-      || !challenge.oauthNonce
-      || sha256(challenge.oauthNonce) !== callback.flow
-    )
+    !transaction
+    || callback.flow === null
+    || transaction.flow !== callback.flow
+    || transaction.next !== callback.next
   ) {
+    emitCallbackPrivacyAuthEvent('failed', freshCorrelationId);
+    return rejectedCallbackRedirect(request, origin);
+  }
+  const correlationId = transaction.correlationId;
+  const challengeCookie = requestCookie(request, ONBOARDING_CHALLENGE_COOKIE);
+  const challenge = readOnboardingChallenge(challengeCookie);
+  if (challengeCookie && !challenge) {
+    emitCallbackPrivacyAuthEvent('failed', correlationId);
+    return rejectedCallbackRedirect(request, origin);
+  }
+
+  const onboardingRequested = transaction.intent === 'signup';
+  if (onboardingRequested && (
+    challenge?.intent !== 'oauth'
+    || !challenge.oauthNonce
+    || challenge.origin !== origin
+    || !matchingOAuthTransaction(transaction, challenge, callback)
+  )) {
+    emitCallbackPrivacyAuthEvent('failed', freshCorrelationId);
+    return rejectedCallbackRedirect(request, origin);
+  }
+  if (callback.providerError || !callback.code) {
+    emitCallbackPrivacyAuthEvent('failed', correlationId);
     return rejectedCallbackRedirect(request, origin);
   }
 
   const { code, next } = callback;
-  if (!code) return rejectedCallbackRedirect(request, origin);
-
   if (!onboardingRequested) {
-
     let supabase: CallbackSupabaseClient | null = null;
     try {
       supabase = await createClient();
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError) {
         await revokeRejectedCallbackSession(supabase);
+        emitCallbackPrivacyAuthEvent('failed', correlationId);
         return rejectedCallbackRedirect(request, origin);
       }
 
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user?.id || !UUID_PATTERN.test(user.id)) {
         await revokeRejectedCallbackSession(supabase);
+        emitCallbackPrivacyAuthEvent('failed', correlationId);
         return rejectedCallbackRedirect(request, origin);
       }
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+        emitCallbackPrivacyAuthEvent('onboarding_required', correlationId);
         return redirectWithOnboardingCookiesCleared(origin, '/privacy/onboarding');
       }
 
+      emitCallbackPrivacyAuthEvent('admitted', correlationId);
       return redirectWithOnboardingCookiesCleared(origin, next);
     } catch {
-      if (!supabase) return rejectedCallbackRedirect(request, origin);
-      await revokeRejectedCallbackSession(supabase);
+      if (supabase) await revokeRejectedCallbackSession(supabase);
+      emitCallbackPrivacyAuthEvent('failed', correlationId);
       return rejectedCallbackRedirect(request, origin);
     }
   }
 
   if (!challenge || !challenge.oauthNonce || challenge.origin !== origin) {
+    emitCallbackPrivacyAuthEvent('failed', freshCorrelationId);
     return rejectedCallbackRedirect(request, origin);
   }
 
@@ -255,6 +366,7 @@ export async function GET(request: Request) {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       await rejectOAuthCallbackSession(supabase);
+      emitCallbackPrivacyAuthEvent('failed', correlationId);
       return rejectedCallbackRedirect(request, origin);
     }
 
@@ -264,13 +376,13 @@ export async function GET(request: Request) {
       : null;
     if (userError || !candidateUserId) {
       await rejectOAuthCallbackSession(supabase);
+      emitCallbackPrivacyAuthEvent('failed', correlationId);
       return rejectedCallbackRedirect(request, origin);
     }
-    const userId = candidateUserId;
 
     let confirmed = false;
     try {
-      confirmed = await confirmOAuthOnboarding(challenge, userId);
+      confirmed = await confirmOAuthOnboarding(challenge, candidateUserId);
     } catch {
       confirmed = false;
     }
@@ -281,13 +393,15 @@ export async function GET(request: Request) {
       || eligibility.receipt.contentSha256 !== challenge.contentSha256
     ) {
       await rejectOAuthCallbackSession(supabase);
+      emitCallbackPrivacyAuthEvent('failed', correlationId);
       return rejectedCallbackRedirect(request, origin);
     }
 
+    emitCallbackPrivacyAuthEvent('admitted', correlationId);
     return redirectWithOnboardingCookiesCleared(origin, next);
   } catch {
-    if (!supabase) return rejectedCallbackRedirect(request, origin);
-    await rejectOAuthCallbackSession(supabase);
+    if (supabase) await rejectOAuthCallbackSession(supabase);
+    emitCallbackPrivacyAuthEvent('failed', correlationId);
     return rejectedCallbackRedirect(request, origin);
   }
 }

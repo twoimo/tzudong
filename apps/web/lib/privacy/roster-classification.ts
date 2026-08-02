@@ -1,8 +1,16 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import {
   hasLivePrivacyEligibilityReceipt,
   type CurrentPrivacyEligibility,
 } from '@/lib/privacy/eligibility';
+import {
+  emitPrivacyAuthEventFromServerEnvironment,
+  type PrivacyAuthEventInput,
+} from '@/lib/observability/privacy-auth-events';
+import {
+  PRIVACY_POLICY_CONTENT_SHA256,
+  PRIVACY_POLICY_VERSION,
+} from '@/lib/privacy/policy';
 
 if (typeof window !== 'undefined') {
   throw new Error('Privacy roster classification is server-only.');
@@ -57,6 +65,8 @@ export type RosterClassificationResult = Readonly<{
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const SUBJECT_PSEUDONYM_PURPOSE = 'privacy-roster-classification:subject:v1';
+const RESULT_SIGNATURE_KEY_PURPOSE = 'privacy-roster-classification:result-signing-key:v1';
+const RESULT_SIGNATURE_PURPOSE = 'privacy-roster-classification:result:v1';
 const CLASSIFICATIONS = new Set<RosterClassification>([
   'already_current_eligible',
   'needs_user_onboarding',
@@ -88,24 +98,27 @@ function receiptDigest(eligibility: CurrentPrivacyEligibility | null) {
   }
 }
 
-function resultDigest(result: Pick<
-  StoredRosterClassification,
-  'batchId' | 'userId' | 'classification' | 'subjectDigest' | 'receiptDigest'
->) {
-  const {
-    batchId,
-    userId,
-    classification,
-    subjectDigest: storedSubjectDigest,
-    receiptDigest: storedReceiptDigest,
-  } = result;
-  return digest(JSON.stringify({
-    batchId,
-    userId,
-    classification,
-    subjectDigest: storedSubjectDigest,
-    receiptDigest: storedReceiptDigest,
-  }));
+function resultDigest(
+  result: Pick<
+    StoredRosterClassification,
+    'batchId' | 'classification' | 'subjectDigest' | 'receiptDigest'
+  >,
+  canonicalManifestDigest: string,
+  pseudonymKey: Uint8Array,
+) {
+  const resultSigningKey = createHmac('sha256', pseudonymKey)
+    .update(RESULT_SIGNATURE_KEY_PURPOSE)
+    .digest();
+  return createHmac('sha256', resultSigningKey)
+    .update(RESULT_SIGNATURE_PURPOSE)
+    .update(JSON.stringify({
+      manifestDigest: canonicalManifestDigest,
+      batchId: result.batchId,
+      classification: result.classification,
+      subjectDigest: result.subjectDigest,
+      receiptDigest: result.receiptDigest,
+    }))
+    .digest('hex');
 }
 
 function classifyEligibility(eligibility: CurrentPrivacyEligibility | null): RosterClassification {
@@ -156,6 +169,7 @@ function isStoredResult(
   value: StoredRosterClassification,
   batchId: string,
   userId: string,
+  canonicalManifestDigest: string,
   pseudonymKey: Uint8Array,
 ) {
   return value.batchId === batchId
@@ -165,7 +179,7 @@ function isStoredResult(
     && SHA256_PATTERN.test(value.receiptDigest)
     && SHA256_PATTERN.test(value.resultDigest)
     && value.subjectDigest === subjectDigest(userId, pseudonymKey)
-    && value.resultDigest === resultDigest(value);
+    && value.resultDigest === resultDigest(value, canonicalManifestDigest, pseudonymKey);
 }
 
 function publicSubject(result: StoredRosterClassification) {
@@ -176,12 +190,32 @@ function publicSubject(result: StoredRosterClassification) {
     resultDigest: result.resultDigest,
   };
 }
+function emitRosterClassificationEvent(
+  outcomeReason: PrivacyAuthEventInput['outcomeReason'],
+  correlationId: string,
+) {
+  try {
+    emitPrivacyAuthEventFromServerEnvironment({
+      event: 'roster_classification',
+      policyVersion: PRIVACY_POLICY_VERSION,
+      policySha: PRIVACY_POLICY_CONTENT_SHA256,
+      routeClass: 'protected',
+      provider: 'none',
+      outcomeReason,
+      correlationId,
+      subjectDigest: null,
+    });
+  } catch {
+    // Telemetry must not affect roster classification.
+  }
+}
 
 export async function classifyPrivacyRoster(
   batchId: string,
   userIds: readonly string[],
   dependencies: RosterClassificationDependencies,
 ): Promise<RosterClassificationResult> {
+  const correlationId = randomUUID();
   const normalizedUserIds = validateManifest(batchId, userIds);
   if (!(dependencies.subjectPseudonymKey instanceof Uint8Array) || dependencies.subjectPseudonymKey.byteLength === 0) {
     throw new Error('A non-empty server-held subject pseudonym key is required.');
@@ -208,7 +242,7 @@ export async function classifyPrivacyRoster(
   for (const userId of normalizedUserIds) {
     const stored = await dependencies.sink.get(batchId, userId);
     if (stored !== null) {
-      if (!isStoredResult(stored, batchId, userId, dependencies.subjectPseudonymKey)) {
+      if (!isStoredResult(stored, batchId, userId, canonicalManifestDigest, dependencies.subjectPseudonymKey)) {
         throw new Error('Durable roster classification is invalid.');
       }
       counts[stored.classification] += 1;
@@ -234,15 +268,20 @@ export async function classifyPrivacyRoster(
       receiptDigest: evidenceDigest,
       resultDigest: resultDigest({
         batchId,
-        userId,
         classification,
         subjectDigest: pseudonym,
         receiptDigest: evidenceDigest,
-      }),
+      }, canonicalManifestDigest, dependencies.subjectPseudonymKey),
     };
     const persisted = await dependencies.sink.putIfAbsent(result);
 
-    if (!isStoredResult(persisted.classification, batchId, userId, dependencies.subjectPseudonymKey)) {
+    if (!isStoredResult(
+      persisted.classification,
+      batchId,
+      userId,
+      canonicalManifestDigest,
+      dependencies.subjectPseudonymKey,
+    )) {
       throw new Error('Durable roster classification is invalid.');
     }
     counts[persisted.classification.classification] += 1;
@@ -251,7 +290,13 @@ export async function classifyPrivacyRoster(
 
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   if (total !== ROSTER_CLASSIFICATION_SIZE || subjects.length !== ROSTER_CLASSIFICATION_SIZE) {
+    emitRosterClassificationEvent('roster_conservation_mismatch', correlationId);
     throw new Error('Roster classification count conservation failed.');
+  }
+  for (const classification of CLASSIFICATIONS) {
+    if (counts[classification] > 0) {
+      emitRosterClassificationEvent(classification, correlationId);
+    }
   }
 
   return {
