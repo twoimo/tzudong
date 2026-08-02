@@ -60,6 +60,7 @@ const PASSWORD_RECOVERY_KEYS = [
 function emitOnboardingPrivacyAuthEvent(
   outcomeReason: PrivacyAuthEventInput['outcomeReason'],
   provider: PrivacyAuthEventInput['provider'],
+  correlationId: string,
 ) {
   try {
     emitPrivacyAuthEventFromServerEnvironment({
@@ -69,7 +70,7 @@ function emitOnboardingPrivacyAuthEvent(
       routeClass: 'loop_safe_api',
       provider,
       outcomeReason,
-      correlationId: crypto.randomUUID(),
+      correlationId,
       subjectDigest: null,
     });
   } catch {
@@ -279,6 +280,9 @@ async function getCurrentPolicyVersion(): Promise<CurrentPolicyVersion | null> {
     publishedAt,
   };
 }
+function isWorkflowAuthorizationError(error: unknown) {
+  return isRecord(error) && error.code === '42501';
+}
 
 type ChallengeReceipt = Readonly<{
   challengeId: string;
@@ -312,28 +316,59 @@ function isExactChallengeReceipt(
 async function createChallenge(
   input: NonNullable<ReturnType<typeof parseOnboardingStart>>,
   origin: string,
+  correlationId: string,
 ) {
-  const currentPolicy = await getCurrentPolicyVersion();
-  if (!currentPolicy || currentPolicy.id !== input.policyVersion) return null;
+  let currentPolicy: CurrentPolicyVersion | null = null;
+  try {
+    currentPolicy = await getCurrentPolicyVersion();
+  } catch {
+    emitOnboardingPrivacyAuthEvent(
+      'policy_drift',
+      input.intent === 'oauth' ? 'oauth' : 'password',
+      correlationId,
+    );
+    return null;
+  }
+  if (!currentPolicy || currentPolicy.id !== input.policyVersion) {
+    emitOnboardingPrivacyAuthEvent(
+      'policy_drift',
+      input.intent === 'oauth' ? 'oauth' : 'password',
+      correlationId,
+    );
+    return null;
+  }
 
   const oauthNonce = input.intent === 'oauth' ? randomBytes(32).toString('hex') : undefined;
   const challengeToken = oauthNonce ?? randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + ONBOARDING_CHALLENGE_TTL_MS);
   const admin = createSupabaseServiceRoleClient();
-  const { data, error } = await admin.rpc('create_privacy_onboarding_challenge', {
-    p_token_hash: sha256(challengeToken),
-    p_policy_version_id: input.policyVersion,
-    p_age_band: input.ageBand,
-    p_requested_consents: input.marketing,
-    p_oauth_nonce_hash: oauthNonce ? sha256(oauthNonce) : null,
-    p_expires_at: expiresAt.toISOString(),
-  });
+  let data: unknown = null;
+  let error: unknown = null;
+  try {
+    const response = await admin.rpc('create_privacy_onboarding_challenge', {
+      p_token_hash: sha256(challengeToken),
+      p_policy_version_id: input.policyVersion,
+      p_age_band: input.ageBand,
+      p_requested_consents: input.marketing,
+      p_oauth_nonce_hash: oauthNonce ? sha256(oauthNonce) : null,
+      p_expires_at: expiresAt.toISOString(),
+    });
+    data = response.data;
+    error = response.error;
+  } catch {
+    error = { code: 'unknown' };
+  }
   const result = getResultRecord(data);
   if (error || !isExactChallengeReceipt(result, input, expiresAt)) {
+    emitOnboardingPrivacyAuthEvent(
+      error && isWorkflowAuthorizationError(error) ? 'workflow_42501' : 'audit_write_failed',
+      input.intent === 'oauth' ? 'oauth' : 'password',
+      correlationId,
+    );
     return null;
   }
 
-  return {
+  const challenge = {
     challengeId: result.challengeId,
     challengeToken,
     policyVersionId: currentPolicy.id,
@@ -345,6 +380,12 @@ async function createChallenge(
     expiresAt: expiresAt.getTime(),
     publicExpiresAt: result.expiresAt,
   };
+  emitOnboardingPrivacyAuthEvent(
+    'completed',
+    input.intent === 'oauth' ? 'oauth' : 'password',
+    correlationId,
+  );
+  return challenge;
 }
 
 async function confirmChallenge(
@@ -808,15 +849,22 @@ export async function POST(request: NextRequest) {
 
     const input = parseOnboardingStart(body);
     if (!input) return errorResponse('INVALID_ONBOARDING_REQUEST', 400, request);
+    const correlationId = crypto.randomUUID();
     emitOnboardingPrivacyAuthEvent(
       'onboarding_started',
       input.intent === 'oauth' ? 'oauth' : 'password',
+      correlationId,
     );
     if (input.ageBand === 'under_14') {
+      emitOnboardingPrivacyAuthEvent(
+        'denied',
+        input.intent === 'oauth' ? 'oauth' : 'password',
+        correlationId,
+      );
       return under14SignupRejectedResponse(request);
     }
 
-    const challenge = await createChallenge(input, requestOrigin(request));
+    const challenge = await createChallenge(input, requestOrigin(request), correlationId);
     if (!challenge) return errorResponse('ONBOARDING_CHALLENGE_UNAVAILABLE', 409, request);
 
     const signedChallenge = sealOnboardingChallenge({

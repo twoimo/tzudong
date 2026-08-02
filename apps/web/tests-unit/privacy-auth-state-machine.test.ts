@@ -88,7 +88,7 @@ describe('privacy auth state machine', () => {
     expect(consumePasswordRecoveryProof(USER_ID)).toBe(false);
   });
 
-  test('rejects an ambiguous OAuth identity before confirmation can mutate onboarding state', async () => {
+  test('rejects a signed OAuth challenge without a matching transaction before exchange or onboarding mutation', async () => {
     exchangeCalls = 0;
     signOutCalls = 0;
     confirmationCalls = 0;
@@ -113,8 +113,8 @@ describe('privacy auth state machine', () => {
     }));
 
     expect(response.headers.get('location')).toBe('http://localhost:3000/');
-    expect(exchangeCalls).toBe(1);
-    expect(signOutCalls).toBe(2);
+    expect(exchangeCalls).toBe(0);
+    expect(signOutCalls).toBe(0);
     expect(confirmationCalls).toBe(0);
   });
 });

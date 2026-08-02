@@ -128,21 +128,52 @@ describe('privacy auth observability', () => {
       console.warn = originalWarn;
     }
   });
-  test('wires fail-safe no-PII telemetry at callback, onboarding, and middleware transitions', () => {
+  test('wires fail-safe no-PII telemetry at callback, onboarding, middleware, and roster transitions', () => {
     const root = resolve(import.meta.dir, '..');
     const callback = readFileSync(resolve(root, 'app/auth/callback/route.ts'), 'utf8');
     const onboarding = readFileSync(resolve(root, 'app/api/privacy/onboarding/route.ts'), 'utf8');
     const middleware = readFileSync(resolve(root, 'lib/supabase/middleware.ts'), 'utf8');
+    const roster = readFileSync(resolve(root, 'lib/privacy/roster-classification.ts'), 'utf8');
 
-    expect(callback).toContain("emitCallbackPrivacyAuthEvent('callback_started')");
+    expect(callback).toContain("emitCallbackPrivacyAuthEvent('admitted', correlationId)");
     expect(callback).toContain("subjectDigest: null");
-    expect(onboarding).toContain("emitOnboardingPrivacyAuthEvent(");
     expect(onboarding).toContain("'onboarding_started'");
-    expect(middleware).toContain("emitMiddlewarePrivacyAuthEvent(request, 'auth_started')");
+    expect(onboarding).toContain("'workflow_42501'");
+    expect(onboarding).toContain("'audit_write_failed'");
+    expect(onboarding).toContain("'policy_drift'");
+    expect(onboarding).toContain('correlationId');
+    expect(middleware).not.toContain("emitMiddlewarePrivacyAuthEvent(request, 'auth_started')");
     expect(middleware).toContain("'eligibility_error'");
+    expect(middleware).toContain("'admitted'");
+    expect(roster).toContain("'roster_conservation_mismatch'");
+    expect(roster).toContain("event: 'roster_classification'");
+    expect(roster).toContain('randomUUID');
     expect(middleware).toContain('Telemetry must not affect privacy enforcement.');
   });
 
+  test('routes password login through the server cookie client with one fail-safe telemetry terminal', () => {
+    const root = resolve(import.meta.dir, '..');
+    const route = readFileSync(resolve(root, 'app/api/auth/password-login/route.ts'), 'utf8');
+    const modal = readFileSync(resolve(root, 'components/auth/AuthModal.tsx'), 'utf8');
+    const passwordLoginHandler = modal.slice(modal.indexOf('const handleLogin'), modal.indexOf('const handleSignup'));
+
+    expect(route).toContain("const correlationId = crypto.randomUUID();");
+    expect(route).toContain("emitPasswordLoginEvent(correlationId, 'auth_started');");
+    expect(route).toContain("let terminalEmitted = false;");
+    expect(route).toContain("emitTerminal('admitted');");
+    expect(route).toContain("emitTerminal('onboarding_required');");
+    expect(route).toContain("emitTerminal('failed');");
+    expect(route).toContain("await signOutRejectedPrivacySession(supabase);");
+    expect(route).toContain("createClientForCookieStore({");
+    expect(route).toContain("return loginResponse('admitted', 200, writes);");
+    expect(route).toContain("return loginResponse('onboarding_required', 409, writes);");
+    expect(route).toContain("return loginResponse('auth_failed', 401, writes);");
+    expect(route).toContain('Telemetry must not affect password authentication.');
+    expect(route).not.toContain('console.');
+    expect(route).not.toContain('JSON.stringify(credentials)');
+    expect(passwordLoginHandler).toContain('fetch("/api/auth/password-login"');
+    expect(passwordLoginHandler).not.toContain('supabase.auth.signInWithPassword');
+  });
   test('formats timestamps deterministically at the UTC minute', () => {
     expect(formatPrivacyAuthUtcMinute(new Date('2026-08-02T23:59:59.999-07:00'))).toBe('2026-08-03T06:59:00.000Z');
     expect(() => formatPrivacyAuthUtcMinute(new Date('invalid'))).toThrow(

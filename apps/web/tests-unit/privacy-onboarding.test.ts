@@ -98,16 +98,8 @@ function resetOAuthRejectionRouteMock() {
 }
 
 function oauthRejectionRequest() {
-  const challenge = signedChallenge(Date.now() + 60_000);
-  if (!challenge) throw new Error('Expected signed OAuth onboarding challenge');
-
   return new Request(
     'https://www.tzudong.app/auth/callback?code=oauth-code&next=%2Fsafe',
-    {
-      headers: {
-        cookie: `${ONBOARDING_CHALLENGE_COOKIE}=${challenge}`,
-      },
-    },
   );
 }
 
@@ -199,7 +191,7 @@ describe('privacy onboarding challenge', () => {
     expect(callbackRoute).toContain('p_challenge_token: challenge.challengeToken');
     expect(callbackRoute).toContain('p_oauth_nonce_hash: sha256(challenge.oauthNonce)');
     expect(callbackRoute).toContain('challenge.origin !== origin');
-    expect(callbackRoute).toContain('if (challengeCookie && !challenge) return rejectedCallbackRedirect(request, origin);');
+    expect(callbackRoute).toContain('if (challengeCookie && !challenge) {');
     expect(readOnboardingChallenge(rawSignedChallenge({
       ...rawPayload,
       origin: 'https://www.tzudong.app/onboarding',
@@ -250,14 +242,19 @@ describe('privacy onboarding challenge', () => {
     expect(onboardingRoute).not.toContain('.from(\'privacy_consent_events\')');
   });
 
-  test('OAuth callback uses only the signed HttpOnly challenge as the onboarding discriminator', () => {
+  test('OAuth onboarding requires a server-bound transaction in addition to the signed challenge', () => {
+    const initiationRoute = source('app/api/auth/oauth/route.ts');
     const callbackRoute = source('app/auth/callback/route.ts');
 
     expect(callbackRoute).not.toContain("'onboarding_nonce'");
-    expect(callbackRoute).not.toContain("'onboarding'");
-    expect(callbackRoute).toContain("const onboardingRequested = challenge?.intent === 'oauth'");
-    expect(callbackRoute).toContain("if (!challenge || !challenge.oauthNonce || challenge.origin !== origin)");
+    expect(callbackRoute).toContain("const onboardingRequested = transaction.intent === 'signup';");
+    expect(callbackRoute).toContain('callback.flow === null');
+    expect(callbackRoute).toContain('transaction.flow !== callback.flow');
+    expect(callbackRoute).toContain('transaction.challengeId === challenge.challengeId');
+    expect(callbackRoute).toContain('transaction.challengeTokenDigest === sha256(challenge.challengeToken)');
     expect(callbackRoute).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(initiationRoute).toContain('(name !== ONBOARDING_CHALLENGE_COOKIE && name !== OAUTH_TRANSACTION_COOKIE)');
+    expect(initiationRoute).toContain('if (intent === \'login\') clearOnboardingCookies(response);');
   });
 
   test('no-challenge OAuth sessions without a live receipt enter only exact onboarding without revocation', () => {
@@ -300,16 +297,13 @@ describe('privacy onboarding challenge', () => {
     expect(onboardingRoute).toContain('signupClient.auth.signUp');
     expect(authModal).toContain('startOnboardingChallenge("oauth")');
     expect(authModal).not.toContain('onboarding_nonce');
-    expect(callbackRoute).toContain('confirmOAuthOnboarding(challenge, userId)');
+    expect(callbackRoute).toContain('confirmOAuthOnboarding(challenge, candidateUserId)');
   });
 
   test('live eligibility receipt gates browser sessions without process-global policy state', () => {
     const authContext = source('contexts/AuthContext.tsx');
     const authModal = source('components/auth/AuthModal.tsx');
-    const passwordLogin = authModal.slice(
-      authModal.indexOf('const handleLogin = useCallback'),
-      authModal.indexOf('const handleSignup = useCallback'),
-    );
+    const passwordLogin = source('app/api/auth/password-login/route.ts');
     const passwordSignup = authModal.slice(
       authModal.indexOf('const handleSignup = useCallback'),
       authModal.indexOf('const handleForgotPassword = useCallback'),
@@ -317,6 +311,7 @@ describe('privacy onboarding challenge', () => {
     const eligibilityLookupIndex = authContext.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     const roleLookupIndex = authContext.indexOf('.from("user_roles")');
     const profileLookupIndex = authContext.indexOf('.from("profiles")');
+    const passwordEligibilityIndex = passwordLogin.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
 
     expect(authContext).not.toContain('privacy_age_profiles');
     expect(authContext).not.toContain('as never');
@@ -329,14 +324,17 @@ describe('privacy onboarding challenge', () => {
     expect(authContext).toContain('await signOutRejectedPrivacySession(supabase)');
     expect(authContext).toContain("dispatchHomeAuthSessionUpdated({ hasSession: true, source: 'auth-eligible-session' })");
 
-    const loginEligibilityIndex = passwordLogin.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
-    expect(loginEligibilityIndex).toBeGreaterThan(-1);
-    expect(passwordLogin.indexOf('toast.success("로그인 성공!")')).toBeGreaterThan(loginEligibilityIndex);
-    expect(passwordLogin.indexOf('dispatchHomeAuthSessionUpdated({')).toBeGreaterThan(loginEligibilityIndex);
-    expect(passwordLogin.indexOf('redirectAfterAdminLogin()')).toBeGreaterThan(loginEligibilityIndex);
-    expect(passwordLogin).toContain('setAuthTab("signup")');
-    expect(passwordLogin).toContain('setIsExistingAccountRecovery(true)');
-    expect(passwordLogin).toContain('현재 개인정보 처리방침과 연령 확인을 완료해주세요.');
+    expect(authModal).toContain('fetch("/api/auth/password-login"');
+    expect(passwordLogin).toContain('supabase.auth.signInWithPassword(credentials)');
+    expect(passwordEligibilityIndex).toBeGreaterThan(passwordLogin.indexOf('supabase.auth.signInWithPassword(credentials)'));
+    expect(passwordLogin.indexOf('await signOutRejectedPrivacySession(supabase)')).toBeGreaterThan(passwordEligibilityIndex);
+    expect(passwordLogin).toContain("return loginResponse('onboarding_required', 409, writes)");
+    expect(authModal.indexOf('toast.success("로그인 성공!")')).toBeGreaterThan(
+      authModal.indexOf('outcome !== "admitted"'),
+    );
+    expect(authModal).toContain('setAuthTab("signup")');
+    expect(authModal).toContain('setIsExistingAccountRecovery(true)');
+    expect(authModal).toContain('현재 개인정보 처리방침과 연령 확인을 완료해주세요.');
 
     const signupEligibilityIndex = passwordSignup.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     expect(signupEligibilityIndex).toBeGreaterThan(-1);
@@ -433,7 +431,7 @@ describe('minimum-data age and consent choices', () => {
     const guardianRoute = source('app/api/privacy/guardian/route.ts');
     const onboardingRoute = source('app/api/privacy/onboarding/route.ts');
     const under14StartIndex = onboardingRoute.indexOf("if (input.ageBand === 'under_14')");
-    const challengeCreateIndex = onboardingRoute.indexOf('const challenge = await createChallenge(input, requestOrigin(request));');
+    const challengeCreateIndex = onboardingRoute.indexOf('const challenge = await createChallenge(input, requestOrigin(request), correlationId);');
     const under14PasswordIndex = onboardingRoute.indexOf("if (challenge.ageBand !== 'age_14_plus')");
     const accountCreateIndex = onboardingRoute.indexOf('signupClient.auth.signUp');
 
@@ -599,9 +597,9 @@ describe('G014 server session release boundaries', () => {
       callback.indexOf('return redirectWithOnboardingCookiesCleared(origin, next);', oauthFlowStart),
     );
 
-    expect(oauthFlow.indexOf('confirmOAuthOnboarding(challenge, userId)')).toBeGreaterThan(-1);
+    expect(oauthFlow.indexOf('confirmOAuthOnboarding(challenge, candidateUserId)')).toBeGreaterThan(-1);
     expect(oauthFlow.indexOf('getCurrentPrivacyEligibility(supabase)')).toBeGreaterThan(
-      oauthFlow.indexOf('confirmOAuthOnboarding(challenge, userId)'),
+      oauthFlow.indexOf('confirmOAuthOnboarding(challenge, candidateUserId)'),
     );
     expect(callback).toContain('eligibility.receipt.policyVersionId !== challenge.policyVersionId');
     expect(callback).toContain('eligibility.receipt.contentSha256 !== challenge.contentSha256');
@@ -624,7 +622,7 @@ describe('G014 server session release boundaries', () => {
     expect(authModal).toContain('await rejectPrivacyIneligibleSession(existingUserId)');
     expect(authModal).toContain('Google 개인정보 확인 계속하기');
   });
-  test('rejected OAuth callbacks redirect no-store after attempting both sign-outs even when they fail', async () => {
+  test('ordinary OAuth callback without the server-issued transaction fails closed before a stale session can be used', async () => {
     oauthRejectionSignOutFails = true;
 
     const response = await oauthCallbackGet(oauthRejectionRequest());
@@ -632,15 +630,15 @@ describe('G014 server session release boundaries', () => {
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('location')).toBe('https://www.tzudong.app/');
-    expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
+    expect(oauthRejectionSignOutScopes).toEqual([]);
   });
-  test('rejected OAuth callbacks redirect no-store after both sign-outs resolve', async () => {
+  test('ordinary OAuth callback without a transaction cannot reach eligibility handling', async () => {
     const response = await oauthCallbackGet(oauthRejectionRequest());
 
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('location')).toBe('https://www.tzudong.app/');
-    expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
+    expect(oauthRejectionSignOutScopes).toEqual([]);
   });
 
   test('password onboarding keeps explicit Auth absence checks for identity cleanup', () => {

@@ -57,6 +57,7 @@ const telemetryRouteClass = (request: NextRequest): PrivacyAuthEventInput['route
 const emitMiddlewarePrivacyAuthEvent = (
     request: NextRequest,
     outcomeReason: PrivacyAuthEventInput['outcomeReason'],
+    correlationId: string,
 ) => {
     try {
         emitPrivacyAuthEventFromServerEnvironment({
@@ -66,7 +67,7 @@ const emitMiddlewarePrivacyAuthEvent = (
             routeClass: telemetryRouteClass(request),
             provider: 'session',
             outcomeReason,
-            correlationId: crypto.randomUUID(),
+            correlationId,
             subjectDigest: null,
         });
     } catch {
@@ -211,9 +212,7 @@ export async function updateSession(
     }
 
     const hasAuthCookie = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined);
-    if (hasAuthCookie) {
-        emitMiddlewarePrivacyAuthEvent(request, 'auth_started');
-    }
+    const eligibilityCorrelationId = hasAuthCookie ? crypto.randomUUID() : null;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
@@ -266,7 +265,7 @@ export async function updateSession(
     }
 
     if (hasAuthCookie && (authFailed || !authUserId)) {
-        emitMiddlewarePrivacyAuthEvent(request, 'eligibility_error');
+        emitMiddlewarePrivacyAuthEvent(request, 'eligibility_error', eligibilityCorrelationId!);
         await signOutRejectedPrivacySession(supabase);
         return eligibilityFailureResponse(request, supabaseResponse);
     }
@@ -277,10 +276,12 @@ export async function updateSession(
             emitMiddlewarePrivacyAuthEvent(
                 request,
                 eligibility.reasonCode === 'PRIVACY_POLICY_UNAVAILABLE' ? 'policy_drift' : 'denied',
+                eligibilityCorrelationId ?? crypto.randomUUID(),
             );
             await signOutRejectedPrivacySession(supabase);
             return eligibilityFailureResponse(request, supabaseResponse);
         }
+        emitMiddlewarePrivacyAuthEvent(request, 'admitted', eligibilityCorrelationId ?? crypto.randomUUID());
     }
 
     if (isProtectedAdminRequest(request)) {

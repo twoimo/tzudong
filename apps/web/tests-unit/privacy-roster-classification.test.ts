@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import {
   classifyPrivacyRoster,
   type RosterClassificationDependencies,
@@ -42,7 +43,12 @@ function liveEligibility(): CurrentPrivacyEligibility {
     },
   };
 }
-
+function legacyPublicResultDigest(result: Pick<
+  StoredRosterClassification,
+  'batchId' | 'userId' | 'classification' | 'subjectDigest' | 'receiptDigest'
+>) {
+  return createHash('sha256').update(JSON.stringify(result)).digest('hex');
+}
 function createDependencies(
   receipts: readonly (CurrentPrivacyEligibility | Error)[],
   subjectPseudonymKey = pseudonymKey,
@@ -159,7 +165,7 @@ const { dependencies } = createDependencies(Array.from({ length: 32 }, liveEligi
     ).rejects.toThrow('batch manifest');
   });
 
-  test('uses purpose-scoped HMAC pseudonyms and verifies raced durable bindings', async () => {
+  test('uses purpose-scoped HMAC pseudonyms', async () => {
     const first = createDependencies(Array.from({ length: 16 }, liveEligibility));
     const second = createDependencies(
       Array.from({ length: 16 }, liveEligibility),
@@ -167,22 +173,59 @@ const { dependencies } = createDependencies(Array.from({ length: 32 }, liveEligi
     );
     const firstResult = await classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies);
     const secondResult = await classifyPrivacyRoster('batch-pseudonym-b', roster, second.dependencies);
-    expect(firstResult.subjects[0]?.subjectDigest).not.toBe(secondResult.subjects[0]?.subjectDigest);
 
-    const stored = first.durable.get('batch-pseudonym-a:00000000-0000-4000-8000-000000000001')!;
-    first.durable.set(stored.batchId + ':' + stored.userId, {
-      ...stored,
-      subjectDigest: '0'.repeat(64),
-    });
+    expect(firstResult.subjects[0]?.subjectDigest).not.toBe(secondResult.subjects[0]?.subjectDigest);
+  });
+
+  test('rejects forged coherent stored and raced sink rewrites', async () => {
+    const storedFixture = createDependencies(Array.from({ length: 16 }, liveEligibility));
+    await classifyPrivacyRoster('batch-forged-stored', roster, storedFixture.dependencies);
+
+    const storedKey = 'batch-forged-stored:00000000-0000-4000-8000-000000000001';
+    const stored = storedFixture.durable.get(storedKey)!;
+    const forgedStoredFields = {
+      batchId: stored.batchId,
+      userId: stored.userId,
+      classification: 'held' as const,
+      subjectDigest: stored.subjectDigest,
+      receiptDigest: '0'.repeat(64),
+    };
+    const forgedStored: StoredRosterClassification = {
+      ...forgedStoredFields,
+      resultDigest: legacyPublicResultDigest(forgedStoredFields),
+    };
+    storedFixture.durable.set(storedKey, forgedStored);
+
     await expect(
-      classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies),
+      classifyPrivacyRoster('batch-forged-stored', roster, storedFixture.dependencies),
     ).rejects.toThrow('classification is invalid');
-    first.durable.set(stored.batchId + ':' + stored.userId, {
-      ...stored,
-      resultDigest: '0'.repeat(64),
-    });
+
+    const racedFixture = createDependencies(Array.from({ length: 16 }, liveEligibility));
+    const racedDependencies: RosterClassificationDependencies = {
+      ...racedFixture.dependencies,
+      sink: {
+        ...racedFixture.dependencies.sink,
+        putIfAbsent: async (result) => {
+          const forgedResultFields = {
+            batchId: result.batchId,
+            userId: result.userId,
+            classification: 'held' as const,
+            subjectDigest: result.subjectDigest,
+            receiptDigest: 'f'.repeat(64),
+          };
+          return {
+            inserted: false,
+            classification: {
+              ...forgedResultFields,
+              resultDigest: legacyPublicResultDigest(forgedResultFields),
+            },
+          };
+        },
+      },
+    };
+
     await expect(
-      classifyPrivacyRoster('batch-pseudonym-a', roster, first.dependencies),
+      classifyPrivacyRoster('batch-forged-race', roster, racedDependencies),
     ).rejects.toThrow('classification is invalid');
   });
 
@@ -228,6 +271,9 @@ const { dependencies } = createDependencies(Array.from({ length: 32 }, liveEligi
     expect(source).toContain('bindManifestIfAbsent');
     expect(source).toContain('createHmac');
     expect(source).toContain('putIfAbsent');
+    expect(source).toContain("event: 'roster_classification'");
+    expect(source).toContain("'roster_conservation_mismatch'");
+    expect(source).toContain("emitRosterClassificationEvent(classification, correlationId)");
     expect(source).not.toMatch(/\b(?:insert|upsert|delete)\w*\s*\(/i);
     expect(source).not.toMatch(/\b(?:consent|guardian|marketing|age|profile)\w*\s*[:=]/i);
   });

@@ -48,10 +48,6 @@ const generateRandomNickname = (): string => {
   const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
   return `${randomPrefix}_${randomSuffix}`;
 };
-const sha256Hex = async (value: string): Promise<string> => {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-};
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -357,23 +353,11 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     }
   }, [ageBand, marketingConsent, policyContentSha256, policyVersion, privacyAgreed]);
 
-  const handleGoogleLogin = useCallback(async () => {
+  const handleGoogleLogin = useCallback(() => {
     setIsGoogleLoading(true);
-    try {
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
-      if (isAdminRedirect) {
-        callbackUrl.searchParams.set("next", safeRedirectTo);
-      }
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
-    } catch {
-      toast.error("Google 로그인에 실패했습니다");
-      setIsGoogleLoading(false);
-    }
+    const params = new URLSearchParams({ intent: "login" });
+    if (isAdminRedirect) params.set("next", safeRedirectTo);
+    window.location.assign(`/api/auth/oauth?${params.toString()}`);
   }, [isAdminRedirect, safeRedirectTo]);
 
   const handleGoogleSignup = useCallback(async () => {
@@ -384,22 +368,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       return;
     }
 
-    try {
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
-      if (isAdminRedirect) {
-        callbackUrl.searchParams.set("next", safeRedirectTo);
-      }
-      callbackUrl.searchParams.set("flow", await sha256Hex(challenge.oauthNonce));
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: callbackUrl.toString() },
-      });
-      if (error) throw new Error("oauth_start_failed");
-    } catch {
-      toast.error("Google 가입을 시작할 수 없습니다");
-      setIsGoogleLoading(false);
-    }
+    const params = new URLSearchParams({ intent: "signup" });
+    if (isAdminRedirect) params.set("next", safeRedirectTo);
+    window.location.assign(`/api/auth/oauth?${params.toString()}`);
   }, [isAdminRedirect, safeRedirectTo, startOnboardingChallenge]);
 
   const redirectAfterAdminLogin = useCallback(() => {
@@ -433,20 +404,23 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      const signedInUserId = data.session?.user?.id;
-      if (error || !signedInUserId) {
-        if (signedInUserId) await rejectPrivacyIneligibleSession(signedInUserId);
-        throw new Error("password_login_failed");
-      }
-
-      const eligibility = await getCurrentPrivacyEligibility(supabase);
-      if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+      const response = await fetch("/api/auth/password-login", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const outcome = typeof payload === "object" && payload !== null && !Array.isArray(payload)
+        ? (payload as { outcome?: unknown }).outcome
+        : null;
+      if (outcome === "onboarding_required") {
         setAuthTab("signup");
         setIsExistingAccountRecovery(true);
         toast.error("현재 개인정보 처리방침과 연령 확인을 완료해주세요.");
         return;
       }
+      if (!response.ok || outcome !== "admitted") throw new Error("password_login_failed");
 
       toast.success("로그인 성공!");
       dispatchHomeAuthSessionUpdated({
@@ -463,7 +437,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
     } finally {
       setIsLoading(false);
     }
-  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess, rejectPrivacyIneligibleSession]);
+  }, [email, password, redirectAfterAdminLogin, resetForm, closeAfterAuthSuccess]);
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
