@@ -149,16 +149,25 @@ export async function GET(request: Request) {
   callback.searchParams.set('next', next);
   callback.searchParams.set('flow', flow);
   emitOAuthCallbackEvent('callback_started', correlationId);
-  const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: callback.toString() } });
-  if (error || !data.url) {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: callback.toString() },
+    });
+    if (error || !data.url) {
+      emitOAuthCallbackEvent('failed', correlationId);
+      return rejectedResponse(url.origin);
+    }
+
+    const response = NextResponse.redirect(data.url);
+    response.headers.set('Cache-Control', 'no-store');
+    for (const write of writes) response.cookies.set(write.name, write.value, write.options);
+    if (intent === 'login') clearOnboardingCookies(response);
+    response.cookies.set({ name: OAUTH_TRANSACTION_COOKIE, value: transaction, httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: OAUTH_TRANSACTION_TTL_SECONDS });
+    return response;
+  } catch {
     emitOAuthCallbackEvent('failed', correlationId);
     return rejectedResponse(url.origin);
   }
 
-  const response = NextResponse.redirect(data.url);
-  response.headers.set('Cache-Control', 'no-store');
-  for (const write of writes) response.cookies.set(write.name, write.value, write.options);
-  if (intent === 'login') clearOnboardingCookies(response);
-  response.cookies.set({ name: OAUTH_TRANSACTION_COOKIE, value: transaction, httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: OAUTH_TRANSACTION_TTL_SECONDS });
-  return response;
 }

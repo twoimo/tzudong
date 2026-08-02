@@ -218,6 +218,7 @@ export async function updateSession(
 
     if (!supabaseUrl || !supabaseAnonKey) {
         if (hasAuthCookie) {
+            emitMiddlewarePrivacyAuthEvent(request, 'eligibility_error', eligibilityCorrelationId!);
             return eligibilityFailureResponse(request, createNextResponse());
         }
         if (isProtectedAdminRequest(request) || isMyPageRequest(request)) {
@@ -275,7 +276,11 @@ export async function updateSession(
         if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
             emitMiddlewarePrivacyAuthEvent(
                 request,
-                eligibility.reasonCode === 'PRIVACY_POLICY_UNAVAILABLE' ? 'policy_drift' : 'denied',
+                eligibility.reasonCode === null
+                    ? 'eligibility_error'
+                    : eligibility.reasonCode === 'PRIVACY_POLICY_UNAVAILABLE'
+                      ? 'policy_drift'
+                      : 'denied',
                 eligibilityCorrelationId ?? crypto.randomUUID(),
             );
             await signOutRejectedPrivacySession(supabase);
