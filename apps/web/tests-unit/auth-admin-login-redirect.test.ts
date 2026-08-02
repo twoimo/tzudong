@@ -14,6 +14,10 @@ import {
   shouldSkipPublicEligibilitySession,
 } from '@/lib/auth/public-eligibility-session';
 import {
+  consumePasswordRecoveryProof,
+  recordPasswordRecoveryProof,
+} from '@/lib/auth/password-recovery-proof';
+import {
   PRIVACY_POLICY_CONTENT_SHA256,
   PRIVACY_POLICY_VERSION,
 } from '@/lib/privacy/policy';
@@ -158,6 +162,16 @@ test('proxy emits a fresh nonce-bound enforcing CSP and forwards the nonce to re
   expect(secondPolicy).toContain(`'nonce-${secondNonce}'`);
   expect(secondNonce).not.toBe(firstNonce);
 });
+describe('password recovery proof', () => {
+  test('is user-bound and can be consumed only once', () => {
+    recordPasswordRecoveryProof('user-a');
+    expect(consumePasswordRecoveryProof('user-b')).toBe(false);
+
+    recordPasswordRecoveryProof('user-a');
+    expect(consumePasswordRecoveryProof('user-a')).toBe(true);
+    expect(consumePasswordRecoveryProof('user-a')).toBe(false);
+  });
+});
 describe('public eligibility proxy', () => {
   test('public eligibility skip decisions keep session hints eligible for live checks', () => {
     expect(shouldSkipPublicEligibilitySession({
@@ -182,7 +196,7 @@ describe('public eligibility proxy', () => {
       hasSessionHint: false,
     })).toBe(true);
 
-    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password']) {
+    for (const pathname of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password', '/auth/required']) {
       expect(shouldSkipPublicEligibilitySession({
         pathname,
         method: 'GET',

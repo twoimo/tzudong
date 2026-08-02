@@ -37,6 +37,7 @@ export function classifyPublicEligibilitySessionRoute({
     || (pathname === '/auth/callback' && method === 'GET')
     || (pathname === '/privacy/onboarding' && isGetOrHead(method))
     || (pathname === '/auth/reset-password' && isGetOrHead(method))
+    || (pathname === '/auth/required' && isGetOrHead(method))
   ) {
     return 'loop-safe';
   }
@@ -48,7 +49,6 @@ export function classifyPublicEligibilitySessionRoute({
       || pathname === '/stamp'
       || pathname === '/privacy'
       || pathname === '/data-deletion'
-      || pathname === '/auth/required'
       || pathname === '/api/health'
       || pathname === '/api/shorten'
     )

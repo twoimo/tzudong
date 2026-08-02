@@ -17,6 +17,7 @@ import { toast } from '@/lib/no-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from '@/lib/debug-log';
+import { consumePasswordRecoveryProof } from '@/lib/auth/password-recovery-proof';
 
 function hasValidRecoveryQuery(searchParams: URLSearchParams) {
     const keys = [...searchParams.keys()];
@@ -120,6 +121,12 @@ export default function ResetPasswordPage() {
                         reason: DEBUG_LOG_REASON_CODE.PASSWORD_RECOVERY_CODE_EXCHANGE_FAILED,
                     });
                 }
+            }
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.id && consumePasswordRecoveryProof(session.user.id)) {
+                setIsValidSession(true);
+                setIsCheckingSession(false);
             }
 
             if (accessToken || code || token || tokenHash) {
