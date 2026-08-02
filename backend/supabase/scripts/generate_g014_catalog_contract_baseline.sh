@@ -1200,14 +1200,40 @@ g016_apply_catalog_assertion_membership_window() {
   local source=$1 filename transformed
   filename=${source##*/}
   transformed="$work_dir/g016-catalog-assertion-membership-$filename"
-  {
-    printf '%s\n' 'BEGIN;' \
-      'GRANT privacy_workflow_owner TO postgres;'
-    cat -- "$source"
-    printf '%s\n' \
-      'REVOKE privacy_workflow_owner FROM postgres;' \
-      'COMMIT;'
-  } >"$transformed"
+  python3 - "$source" "$transformed" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1])
+output = pathlib.Path(sys.argv[2])
+sql = source.read_text(encoding="utf-8")
+needle = """SET LOCAL ROLE privacy_workflow_owner;
+SELECT privacy_retention.assert_g014_catalog_contract();
+RESET ROLE;"""
+replacement = """SET LOCAL ROLE privacy_workflow_owner;
+CREATE OR REPLACE FUNCTION pg_temp.g016_catalog_assertion_bridge()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $bridge$
+BEGIN
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+END
+$bridge$;
+RESET ROLE;
+REVOKE privacy_workflow_owner FROM postgres;
+SELECT pg_temp.g016_catalog_assertion_bridge();"""
+if sql.count(needle) != 1:
+    raise SystemExit(f"expected one G016 catalog assertion block in {source}")
+output.write_text(
+    "BEGIN;\n"
+    "GRANT privacy_workflow_owner TO postgres;\n"
+    + sql.replace(needle, replacement)
+    + "\nCOMMIT;\n",
+    encoding="utf-8",
+)
+PY
   printf '%s\n' "$transformed"
 }
 g026_chain_apply() {
