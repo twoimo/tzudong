@@ -1,4 +1,6 @@
 
+SET LOCAL ROLE privacy_workflow_owner;
+
 DELETE FROM privacy_retention.g014_public_rpc_allowlist
 WHERE source_signature = 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
   AND grantee = 'service_role'::name;
@@ -24,6 +26,8 @@ ON CONFLICT (source_signature, grantee) DO UPDATE
 SET function_schema = EXCLUDED.function_schema,
     function_name = EXCLUDED.function_name,
     identity_arguments = EXCLUDED.identity_arguments;
+
+RESET ROLE;
 
 SELECT privacy_retention.assert_g014_public_rpc_allowlist();
 SELECT privacy_retention.assert_g014_catalog_contract();
