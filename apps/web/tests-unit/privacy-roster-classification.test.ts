@@ -93,6 +93,15 @@ describe('classifyPrivacyRoster', () => {
     await expect(classifyPrivacyRoster('batch-1', [...roster.slice(0, 15), 'not-a-uuid'], dependencies)).rejects.toThrow('UUIDs');
   });
 
+  test('rejects undersized subject pseudonym keys', async () => {
+    const { dependencies } = createDependencies([]);
+
+    await expect(classifyPrivacyRoster('batch-short-key', roster, {
+      ...dependencies,
+      subjectPseudonymKey: new Uint8Array([1]),
+    })).rejects.toThrow('at least 32 bytes');
+  });
+
   test('requires a live current-policy schema-v1 receipt for eligible classification', async () => {
 const live = liveEligibility();
     const stale: CurrentPrivacyEligibility = {
