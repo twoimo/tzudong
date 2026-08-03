@@ -217,8 +217,11 @@ export async function classifyPrivacyRoster(
 ): Promise<RosterClassificationResult> {
   const correlationId = randomUUID();
   const normalizedUserIds = validateManifest(batchId, userIds);
-  if (!(dependencies.subjectPseudonymKey instanceof Uint8Array) || dependencies.subjectPseudonymKey.byteLength === 0) {
-    throw new Error('A non-empty server-held subject pseudonym key is required.');
+  if (
+    !(dependencies.subjectPseudonymKey instanceof Uint8Array)
+    || dependencies.subjectPseudonymKey.byteLength < 32
+  ) {
+    throw new Error('A server-held subject pseudonym key of at least 32 bytes is required.');
   }
 
   const canonicalManifestDigest = manifestDigest(normalizedUserIds);
