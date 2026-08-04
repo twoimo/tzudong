@@ -211,6 +211,53 @@ BEGIN
   EXECUTE v_definition;
 END
 $public_rpc_owner_contract$;
+DO $definer_owner_contract$
+DECLARE
+  v_definition text;
+  v_source text;
+  v_owner_predicate text :=
+    $definer_predicate$IF v_owner IS DISTINCT FROM 'privacy_workflow_owner' THEN$definer_predicate$;
+  v_owner_replacement text := $definer_replacement$IF v_owner IS DISTINCT FROM CASE
+      WHEN v_signature = ANY (ARRAY[
+        'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',
+        'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',
+        'public.create_review_like_notification(uuid,uuid,uuid)',
+        'public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text)',
+        'public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)',
+        'public.make_user_admin(text)',
+        'public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)',
+        'public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)',
+        'public.preview_account_deletion(uuid,uuid,timestamptz)',
+        'privacy_retention.g014_account_deletion_reconcile_expired_attempt(uuid,text,uuid)',
+        'privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text)',
+        'public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)',
+        'public.read_release_auth_revocation(uuid,uuid,uuid)',
+        'public.read_release_auth_revocation_by_operation(uuid)',
+        'public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)',
+        'public.revoke_release_auth_session_family(uuid,uuid,uuid,text)',
+        'public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)',
+        'privacy_retention.g014_account_deletion_apply_adapter(text,uuid,uuid)',
+        'public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)',
+        'public.activate_account_deletion_policy(text,text)',
+        'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'
+      ]) THEN 'privacy_auth_bridge'
+      ELSE 'privacy_workflow_owner'
+    END THEN$definer_replacement$;
+BEGIN
+  SELECT pg_catalog.pg_get_functiondef(procedure.oid), procedure.prosrc
+  INTO v_definition, v_source
+  FROM pg_catalog.pg_proc AS procedure
+  WHERE procedure.oid = 'privacy_retention.assert_g014_definer_contract()'::pg_catalog.regprocedure
+    AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+    AND procedure.prosecdef;
+
+  IF v_definition IS NULL
+     OR (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) <> 1 THEN
+    RAISE EXCEPTION 'g041_definer_owner_contract_drift';
+  END IF;
+  EXECUTE replace(v_definition, v_owner_predicate, v_owner_replacement);
+END
+$definer_owner_contract$;
 
 -- Replace only the exact claim-only routine set. CREATE OR REPLACE preserves
 -- existing execute ACLs while the temporary owner role preserves ownership.
