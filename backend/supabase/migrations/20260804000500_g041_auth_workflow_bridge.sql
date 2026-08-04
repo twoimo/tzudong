@@ -226,8 +226,7 @@ BEGIN
       AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
       AND procedure.prosecdef;
 
-    IF v_definition IS NULL
-       OR v_definition !~ '\mauth\.(users|sessions|identities|refresh_tokens)\M' THEN
+    IF v_definition IS NULL THEN
       RAISE EXCEPTION 'g041_auth_workflow_view_replacement_drift: %', v_signature;
     END IF;
 
@@ -239,7 +238,9 @@ BEGIN
     IF v_rewritten ~ '\mauth\.(uid|users|sessions|identities|refresh_tokens)\M' THEN
       RAISE EXCEPTION 'g041_auth_workflow_view_replacement_incomplete: %', v_signature;
     END IF;
-    EXECUTE v_rewritten;
+    IF v_rewritten IS DISTINCT FROM v_definition THEN
+      EXECUTE v_rewritten;
+    END IF;
   END LOOP;
 END
 $auth_view_replacements$;
