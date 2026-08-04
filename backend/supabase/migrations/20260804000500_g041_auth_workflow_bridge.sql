@@ -142,6 +142,75 @@ BEGIN
   END IF;
 END;
 $function$;
+DO $public_rpc_owner_contract$
+DECLARE
+  v_definition text;
+  v_source text;
+  v_owner_predicate text :=
+    $owner_predicate$pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner')$owner_predicate$;
+  v_owner_replacement text :=
+    $owner_replacement$pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner', 'privacy_auth_bridge')$owner_replacement$;
+  v_anchor text := $owner_anchor$    RAISE EXCEPTION 'G014 found a public function owned by an unverified creator';
+  END IF;
+
+  IF EXISTS ($owner_anchor$;
+  v_exact_bridge_check text := $bridge_check$    RAISE EXCEPTION 'G014 found a public function owned by an unverified creator';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc AS bridge_procedure
+    JOIN pg_catalog.pg_namespace AS bridge_namespace
+      ON bridge_namespace.oid = bridge_procedure.pronamespace
+    WHERE bridge_namespace.nspname = 'public'
+      AND bridge_procedure.proowner = 'privacy_auth_bridge'::pg_catalog.regrole
+      AND NOT EXISTS (
+        SELECT 1
+        FROM unnest(ARRAY[
+          'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',
+          'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',
+          'public.create_review_like_notification(uuid,uuid,uuid)',
+          'public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text)',
+          'public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)',
+          'public.make_user_admin(text)',
+          'public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)',
+          'public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)',
+          'public.preview_account_deletion(uuid,uuid,timestamptz)',
+          'public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)',
+          'public.read_release_auth_revocation(uuid,uuid,uuid)',
+          'public.read_release_auth_revocation_by_operation(uuid)',
+          'public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)',
+          'public.revoke_release_auth_session_family(uuid,uuid,uuid,text)',
+          'public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)',
+          'public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)',
+          'public.activate_account_deletion_policy(text,text)',
+          'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'
+        ]) AS expected(signature)
+        WHERE pg_catalog.to_regprocedure(expected.signature) = bridge_procedure.oid
+      )
+  ) THEN
+    RAISE EXCEPTION 'G041 found a public function unexpectedly owned by privacy_auth_bridge';
+  END IF;
+
+  IF EXISTS ($bridge_check$;
+BEGIN
+  SELECT pg_catalog.pg_get_functiondef(procedure.oid), procedure.prosrc
+  INTO v_definition, v_source
+  FROM pg_catalog.pg_proc AS procedure
+  WHERE procedure.oid = 'privacy_retention.assert_g014_public_rpc_allowlist()'::pg_catalog.regprocedure
+    AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+    AND procedure.prosecdef;
+
+  IF v_definition IS NULL
+     OR (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) <> 1
+     OR (length(v_source) - length(replace(v_source, v_anchor, ''))) / length(v_anchor) <> 1 THEN
+    RAISE EXCEPTION 'g041_public_rpc_owner_contract_drift';
+  END IF;
+  v_definition := replace(v_definition, v_owner_predicate, v_owner_replacement);
+  v_definition := replace(v_definition, v_anchor, v_exact_bridge_check);
+  EXECUTE v_definition;
+END
+$public_rpc_owner_contract$;
 
 -- Replace only the exact claim-only routine set. CREATE OR REPLACE preserves
 -- existing execute ACLs while the temporary owner role preserves ownership.
