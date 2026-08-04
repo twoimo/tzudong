@@ -1439,7 +1439,20 @@ final_catalog_assertion_window="$work_dir/g026-final-catalog-assertion-window.sq
 } >"$final_catalog_assertion_window"
 g026_chain_apply 'g026-final-catalog-assertion-window' "$final_catalog_assertion_window"
 compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$final_catalog_assertion_window" >/dev/null
-compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$g028_reauth_test" >/dev/null
+g028_reauth_bridge_window="$work_dir/g028-account-deletion-reauth-bridge-window.sql"
+{
+  printf 'GRANT privacy_auth_bridge TO postgres;\n'
+  cat -- "$g028_reauth_test"
+  printf '\nREVOKE privacy_auth_bridge FROM postgres;\n'
+  cat <<'SQL'
+DO $$ BEGIN
+  IF pg_catalog.pg_has_role('postgres', 'privacy_auth_bridge', 'MEMBER') THEN
+    RAISE EXCEPTION 'G028 bridge membership cleanup failed';
+  END IF;
+END $$;
+SQL
+} >"$g028_reauth_bridge_window"
+compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$g028_reauth_bridge_window" >/dev/null
 jsonl="$staging_dir/catalog-manifest.jsonl"
 tuple_evidence="$staging_dir/catalog-manifest-tuples.sql"
 order_sql='ORDER BY manifest_kind COLLATE "C", manifest_key::text COLLATE "C", manifest_value::text COLLATE "C"'
