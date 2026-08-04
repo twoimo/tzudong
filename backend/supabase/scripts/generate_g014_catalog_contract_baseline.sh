@@ -1398,7 +1398,7 @@ compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -
     'extensions', (SELECT jsonb_agg(extname ORDER BY extname) FROM pg_extension WHERE extname IN ('vector','fuzzystrmatch','pgcrypto')),
     'functions', (SELECT jsonb_agg(p.proname ORDER BY p.proname) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname IN ('approve_submission_item','approve_restaurant','approve_edit_submission_item','approve_new_restaurant_submission','insert_restaurant_from_jsonl','batch_insert_restaurants_from_jsonl')),
     'probeAbsent', to_regclass('public.g026_hnsw_probe_vectors') IS NULL AND to_regclass('public.g026_hnsw_probe_vectors_embedding_hnsw_idx') IS NULL,
-    'privacyWorkflowOwnerPostRevoke', jsonb_build_object('exists', EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'privacy_workflow_owner'), 'hardened', COALESCE((SELECT bool_and(NOT (rolsuper OR rolinherit OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolcanlogin)) FROM pg_roles WHERE rolname = 'privacy_workflow_owner'), false), 'membershipCount', (SELECT count(*) FROM pg_auth_members AS membership JOIN pg_roles AS role_row ON role_row.oid = membership.member OR role_row.oid = membership.roleid WHERE role_row.rolname = 'privacy_workflow_owner'))
+    'privacyWorkflowOwnerPostRevoke', jsonb_build_object('exists', EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'privacy_workflow_owner'), 'hardened', COALESCE((SELECT bool_and(NOT (rolsuper OR rolinherit OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolcanlogin)) FROM pg_roles WHERE rolname = 'privacy_workflow_owner'), false), 'membershipCount', (SELECT count(*) FROM pg_auth_members AS membership WHERE membership.roleid = 'privacy_workflow_owner'::regrole OR membership.member = 'privacy_workflow_owner'::regrole), 'bridgeMembershipOnly', (SELECT count(*) = 1 AND bool_and(membership.roleid = 'privacy_workflow_owner'::regrole AND membership.member = 'privacy_auth_bridge'::regrole) FROM pg_auth_members AS membership WHERE membership.roleid = 'privacy_workflow_owner'::regrole OR membership.member = 'privacy_workflow_owner'::regrole))
   );" >"$g026_readback_receipt"
 compose exec -T db psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At <<'SQL' >"$g026_behavior_receipt"
 BEGIN;
@@ -1406,7 +1406,7 @@ SET LOCAL request.jwt.claim.role = 'service_role';
 SELECT jsonb_build_object('emptyBatch', to_jsonb(public.batch_insert_restaurants_from_jsonl(ARRAY[]::jsonb[])));
 ROLLBACK;
 SQL
-jq -e '.extensions == ["fuzzystrmatch","pgcrypto","vector"] and (.functions | length == 6) and .probeAbsent == true and .privacyWorkflowOwnerPostRevoke == {"exists":true,"hardened":true,"membershipCount":0}' "$g026_readback_receipt" >/dev/null
+jq -e '.extensions == ["fuzzystrmatch","pgcrypto","vector"] and (.functions | length == 6) and .probeAbsent == true and .privacyWorkflowOwnerPostRevoke == {"exists":true,"hardened":true,"membershipCount":1,"bridgeMembershipOnly":true}' "$g026_readback_receipt" >/dev/null
 jq -e '.emptyBatch == {"inserted_count":0,"updated_count":0,"failed_count":0,"failed_records":[]}' "$g026_behavior_receipt" >/dev/null
 for receipt in "$g026_semantic_receipt" "$g026_readback_receipt" "$g026_behavior_receipt"; do
   receipt_hash=$(sha256sum -- "$receipt" | cut -d' ' -f1)
