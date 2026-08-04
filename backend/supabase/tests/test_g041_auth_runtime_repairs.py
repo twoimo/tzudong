@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_PRIVILEGES = ROOT / "backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql"
 RUNTIME_REPAIRS = ROOT / "backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql"
 CLOSURE = ROOT / "backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql"
+BRIDGE = ROOT / "backend/supabase/migrations/20260804000500_g041_auth_workflow_bridge.sql"
 RUNTIME_MATRIX = ROOT / "backend/supabase/tests/g041_auth_boundary_runtime.sql"
 
 
@@ -96,6 +97,74 @@ class AuthBoundaryRuntimeRepairTests(unittest.TestCase):
         self.assertIn("g041_runtime.restore_set_false", self.sql)
 
 
+class AuthWorkflowBridgeContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sql = BRIDGE.read_text(encoding="utf-8")
+        cls.runtime_sql = RUNTIME_MATRIX.read_text(encoding="utf-8")
+
+    def test_exact_workflow_signatures_and_private_bridge_are_fail_closed(self) -> None:
+        self.assertIn("privacy_auth_bridge NOLOGIN", self.sql)
+        self.assertIn("NOBYPASSRLS", self.sql)
+        self.assertIn("g041_auth_workflow_bridge_expected_signature_drift", self.sql)
+        self.assertIn("g041_auth_workflow_bridge_replacement_coverage_invalid", self.sql)
+        self.assertEqual(self.sql.count("OWNER TO privacy_auth_bridge;"), 21)
+        self.assertEqual(self.sql.count("ALTER FUNCTION "), 22)
+        self.assertEqual(self.sql.count("::regprocedure"), 21)
+        for signature in (
+            "begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)",
+            "hold_privacy_onboarding_compensation(uuid,uuid,text,text)",
+            "preview_account_deletion(uuid,uuid,timestamptz)",
+            "run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)",
+        ):
+            self.assertIn(signature, self.sql)
+
+    def test_catalog_assertions_allow_only_the_exact_hardened_bridge(self) -> None:
+        self.assertIn("privacy workflow bridge role attributes are incompatible", self.sql)
+        self.assertIn("g041_public_rpc_owner_contract_drift", self.sql)
+        self.assertIn("G041 found a public function unexpectedly owned by privacy_auth_bridge", self.sql)
+        self.assertIn("g041_definer_owner_contract_drift", self.sql)
+        self.assertIn("g041_final_catalog_owner_contract_drift", self.sql)
+        self.assertIn("NOT membership.admin_option", self.sql)
+        self.assertIn("pg_catalog.pg_has_role(v_bridge.oid, v_owner.oid, 'USAGE')", self.sql)
+
+    def test_managed_auth_access_uses_narrow_barrier_views(self) -> None:
+        for view in (
+            "g041_auth_users",
+            "g041_auth_sessions",
+            "g041_auth_identities",
+            "g041_auth_refresh_tokens",
+        ):
+            self.assertIn(f"privacy_retention.{view}", self.sql)
+        self.assertEqual(self.sql.count("WITH (security_barrier = true) AS"), 4)
+        self.assertIn("DO $auth_view_replacements$", self.sql)
+        self.assertIn("g041_auth_workflow_view_replacement_incomplete", self.sql)
+        self.assertIn("relation.reloptions @> ARRAY['security_barrier=true']", self.sql)
+        for forbidden in (
+            "GRANT USAGE ON SCHEMA auth TO privacy_auth_bridge",
+            "ON TABLE auth.users TO privacy_auth_bridge",
+            "ON TABLE auth.sessions TO privacy_auth_bridge",
+            "ON TABLE auth.identities TO privacy_auth_bridge",
+            "ON TABLE auth.refresh_tokens TO privacy_auth_bridge",
+        ):
+            self.assertNotIn(forbidden, self.sql)
+
+    def test_claim_replacements_and_runtime_matrix_are_fail_closed(self) -> None:
+        self.assertIn("g041_current_claim_user_id", self.sql)
+        self.assertIn("g041_auth_workflow_claim_signature_drift", self.sql)
+        self.assertIn("FOREACH v_signature IN ARRAY v_expected_signatures", self.sql)
+        self.assertIn("'auth.uid()'", self.sql)
+        self.assertIn("'privacy_retention.g041_current_claim_user_id()'", self.sql)
+        for assertion in (
+            "missing claims did not fail closed",
+            "malformed claims did not fail closed",
+            "authenticated own-row RLS isolation failed",
+            "user_roles mutation unexpectedly succeeded",
+            "user_account_status mutation unexpectedly succeeded",
+            "account-deletion status auth permission denied",
+            "bridge user view cannot read exact identity",
+        ):
+            self.assertIn(assertion, self.runtime_sql)
 class AuthBoundaryClosureContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
