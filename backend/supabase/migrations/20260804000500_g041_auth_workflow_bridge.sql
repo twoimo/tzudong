@@ -100,6 +100,48 @@ BEGIN
 END $function$;
 ALTER FUNCTION privacy_retention.g041_current_claim_user_id() OWNER TO privacy_workflow_owner;
 REVOKE ALL ON FUNCTION privacy_retention.g041_current_claim_user_id() FROM PUBLIC, anon, authenticated, service_role;
+CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_workflow_owner_contract()
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = ''
+AS $function$
+DECLARE
+  v_owner pg_catalog.pg_roles%ROWTYPE;
+  v_bridge pg_catalog.pg_roles%ROWTYPE;
+BEGIN
+  SELECT * INTO v_owner
+  FROM pg_catalog.pg_roles
+  WHERE rolname = 'privacy_workflow_owner';
+  SELECT * INTO v_bridge
+  FROM pg_catalog.pg_roles
+  WHERE rolname = 'privacy_auth_bridge';
+
+  IF v_owner.oid IS NULL OR v_bridge.oid IS NULL THEN
+    RAISE EXCEPTION 'privacy workflow bridge roles are missing';
+  END IF;
+  IF v_owner.rolsuper OR v_owner.rolinherit OR v_owner.rolcreaterole
+     OR v_owner.rolcreatedb OR v_owner.rolreplication
+     OR v_owner.rolbypassrls OR v_owner.rolcanlogin
+     OR v_bridge.rolsuper OR NOT v_bridge.rolinherit OR v_bridge.rolcreaterole
+     OR v_bridge.rolcreatedb OR v_bridge.rolreplication
+     OR v_bridge.rolbypassrls OR v_bridge.rolcanlogin THEN
+    RAISE EXCEPTION 'privacy workflow bridge role attributes are incompatible';
+  END IF;
+  IF (SELECT count(*)
+      FROM pg_catalog.pg_auth_members AS membership
+      WHERE membership.member = v_owner.oid OR membership.roleid = v_owner.oid) <> 1
+     OR NOT EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_auth_members AS membership
+       WHERE membership.roleid = v_owner.oid
+         AND membership.member = v_bridge.oid
+         AND NOT membership.admin_option
+     )
+     OR NOT pg_catalog.pg_has_role(v_bridge.oid, v_owner.oid, 'USAGE') THEN
+    RAISE EXCEPTION 'privacy_workflow_owner has unexpected role membership or effective access';
+  END IF;
+END;
+$function$;
 
 -- Replace only the exact claim-only routine set. CREATE OR REPLACE preserves
 -- existing execute ACLs while the temporary owner role preserves ownership.
