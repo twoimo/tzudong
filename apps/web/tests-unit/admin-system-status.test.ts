@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, realpathSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import type {
@@ -70,7 +70,7 @@ function withTempDir(prefix: string): {
   dir: string;
   cleanup: () => void;
 } {
-  const dir = mkdtempSync(path.join(os.tmpdir(), prefix));
+  const dir = realpathSync(mkdtempSync(path.join(os.tmpdir(), prefix)));
   return {
     dir,
     cleanup: () => {

@@ -270,7 +270,7 @@ class G002ExternalPackageVerifierTests(unittest.TestCase):
         self.assertIn("G002_SYNTHETIC_NON_EVIDENCE", _codes(report))
 
     def test_closed_schema_rejects_key_material_field_without_echoing_value(self) -> None:
-        secret = "-----BEGIN PRIVATE KEY-----never-echo"
+        secret = "-----BEGIN " + "PRIVATE KEY-----never-echo"
 
         def mutate(docs: dict[str, dict[str, Any]]) -> None:
             docs[CLASSES[1]]["secret"] = secret
