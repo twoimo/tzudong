@@ -130,6 +130,12 @@ function sameWindowsArtifactPath(left,right){
 function sameArtifactPath(left,right){
   return process.platform==='win32'?sameWindowsArtifactPath(left,right):left===right;
 }
+function normalizeSystemRootAlias(value){
+  if(process.platform!=='darwin')return value;
+  if(value==='/tmp'||value.startsWith('/tmp/'))return `/private${value}`;
+  if(value==='/var'||value.startsWith('/var/'))return `/private${value}`;
+  return value;
+}
 async function assertTrustedDirectory(path,message,filesystem={lstat,realpath}){
   let rootStats,canonical,canonicalStats;
   try{
@@ -418,7 +424,7 @@ function derive(raw,rawRef,table,receipts,manifests,health,context){
 }
 /* The out-of-band map digest protects the closed map; the map itself must never appear as a self-referential entry. */
 async function run(){
-  const context=cli(process.argv.slice(2)),root=resolve(context['--artifact-root']);
+  const context=cli(process.argv.slice(2)),root=normalizeSystemRootAlias(resolve(context['--artifact-root']));
   await assertTrustedDirectory(root,'artifact root alias');
   const total={n:0};
   const mapBytes=await readTrusted(root,context['--artifact-map'],context['--artifact-map-sha256'],MiB,total);

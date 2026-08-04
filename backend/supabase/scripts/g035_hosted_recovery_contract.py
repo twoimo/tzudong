@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
-MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
+MANIFEST_SHA256 = "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95"
 SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
 APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention", "ocr_private", "provider_budget_private")
@@ -65,7 +65,7 @@ def load_manifest(root: Path) -> Manifest:
         data = json.loads(canonical_bytes, object_pairs_hook=_no_duplicate_object)
     except (OSError, json.JSONDecodeError) as exc: raise ContractError("manifest is unreadable") from exc
     raw, excluded = data.get("migrations"), data.get("excludedVersions")
-    if not isinstance(data, dict) or data.get("schemaVersion") != 1 or not isinstance(raw, list) or len(raw) != 28 or not isinstance(excluded, list): raise ContractError("manifest inventory mismatch")
+    if not isinstance(data, dict) or data.get("schemaVersion") != 1 or not isinstance(raw, list) or len(raw) != 29 or not isinstance(excluded, list): raise ContractError("manifest inventory mismatch")
     entries=[]; seen=set(); prior=""
     for item in raw:
         if not isinstance(item, dict) or set(item) != {"version","name","path","sha256"}: raise ContractError("manifest migration fields mismatch")
@@ -74,7 +74,7 @@ def load_manifest(root: Path) -> Manifest:
         entries.append(entry); seen.add(entry.version); prior=entry.version
     excluded_set=frozenset(excluded)
     if excluded_set != FORBIDDEN_VERSIONS or len(excluded)!=len(excluded_set) or any(v in seen for v in excluded_set): raise ContractError("excluded version set mismatch")
-    if data.get("ledgerTerminalVersion") != "20260531084516" or data.get("closureTerminalVersion") != SELF_COMMIT_VERSIONS[-1]: raise ContractError("manifest terminal mismatch")
+    if data.get("ledgerTerminalVersion") != "20260531084516" or data.get("closureTerminalVersion") != "20260801000300": raise ContractError("manifest terminal mismatch")
     return Manifest(tuple(entries), excluded_set, data["ledgerTerminalVersion"], data["closureTerminalVersion"])
 def validate_sources(root: Path) -> Manifest:
     manifest=load_manifest(root); migration_dir=(root / "backend/supabase/migrations").resolve()

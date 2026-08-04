@@ -11,8 +11,10 @@ import {
 } from '@/lib/auth/auth-redirect'
 import {
     getCurrentPrivacyEligibility,
+    hasLivePrivacyEligibilityReceipt,
     signOutRejectedPrivacySession,
 } from '@/lib/privacy/eligibility'
+import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
 
 
@@ -30,13 +32,11 @@ const clearSupabaseAuthCookies = (request: NextRequest, response: NextResponse) 
         });
     }
 };
-const isEligibilityExemptRequest = (request: NextRequest) => {
-    const { pathname } = request.nextUrl;
-    return pathname === '/api/health'
-        || pathname === '/api/privacy/onboarding'
-        || pathname.startsWith('/api/privacy/onboarding/')
-        || pathname === '/auth/callback';
-};
+const isEligibilityExemptRequest = (request: NextRequest) =>
+    classifyPublicEligibilitySessionRoute({
+        pathname: request.nextUrl.pathname,
+        method: request.method,
+    }) === 'loop-safe';
 const isApiRequest = (request: NextRequest) => request.nextUrl.pathname.startsWith('/api/');
 
 const isProtectedAdminRequest = (request: NextRequest) => {
@@ -234,7 +234,7 @@ export async function updateSession(
 
     if (authUserId) {
         const eligibility = await getCurrentPrivacyEligibility(supabase);
-        if (!eligibility.eligible) {
+        if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
             await signOutRejectedPrivacySession(supabase);
             return eligibilityFailureResponse(request, supabaseResponse);
         }
