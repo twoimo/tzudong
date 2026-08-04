@@ -26,22 +26,43 @@ $preflight$;
 
 DO $membership$
 DECLARE
-  v_set_option boolean;
+  v_membership_exists boolean;
+  v_set_option boolean := true;
+  v_supports_set_option boolean;
 BEGIN
-  SELECT membership.set_option
-  INTO v_set_option
-  FROM pg_catalog.pg_auth_members AS membership
-  WHERE membership.roleid = 'privacy_workflow_owner'::pg_catalog.regrole
-    AND membership.member = pg_catalog.to_regrole(session_user);
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_auth_members AS membership
+    WHERE membership.roleid = 'privacy_workflow_owner'::pg_catalog.regrole
+      AND membership.member = pg_catalog.to_regrole(session_user)
+  ) INTO v_membership_exists;
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_attribute AS attribute
+    WHERE attribute.attrelid = 'pg_catalog.pg_auth_members'::pg_catalog.regclass
+      AND attribute.attname = 'set_option'
+      AND NOT attribute.attisdropped
+  ) INTO v_supports_set_option;
 
-  IF NOT FOUND THEN
+  IF v_membership_exists AND v_supports_set_option THEN
+    EXECUTE
+      'SELECT membership.set_option FROM pg_catalog.pg_auth_members AS membership '
+      || 'WHERE membership.roleid = ''privacy_workflow_owner''::pg_catalog.regrole '
+      || 'AND membership.member = pg_catalog.to_regrole(session_user)'
+    INTO v_set_option;
+  END IF;
+
+  IF NOT v_membership_exists THEN
     EXECUTE pg_catalog.format(
-      'GRANT privacy_workflow_owner TO %I WITH SET TRUE',
+      CASE WHEN v_supports_set_option
+        THEN 'GRANT privacy_workflow_owner TO %I WITH SET TRUE'
+        ELSE 'GRANT privacy_workflow_owner TO %I'
+      END,
       session_user
     );
     PERFORM pg_catalog.set_config('g041.remove_membership', 'true', true);
     PERFORM pg_catalog.set_config('g041.restore_set_false', 'false', true);
-  ELSIF NOT v_set_option THEN
+  ELSIF v_supports_set_option AND NOT v_set_option THEN
     EXECUTE pg_catalog.format(
       'GRANT privacy_workflow_owner TO %I WITH SET TRUE',
       session_user
