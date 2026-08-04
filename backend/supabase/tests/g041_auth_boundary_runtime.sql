@@ -1,7 +1,7 @@
 BEGIN;
 
 -- This runs as the migration/test administrator. Calls switch to the actual
--- authenticated caller; the target functions execute as privacy_workflow_owner.
+-- authenticated caller and to the exact hardened definer roles under test.
 DO $setup$
 DECLARE
   v_ordinary uuid := '41000000-0000-4000-8000-000000000001';
@@ -11,6 +11,12 @@ BEGIN
   VALUES
     (v_ordinary, 'authenticated', 'authenticated', 'g041-ordinary@example.invalid', 'disabled', '{}'::jsonb, '{}'::jsonb, pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp()),
     (v_dedicated, 'authenticated', 'authenticated', 'g041-dedicated@example.invalid', 'disabled', '{}'::jsonb, '{}'::jsonb, pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp());
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (v_ordinary, 'user'), (v_dedicated, 'user')
+  ON CONFLICT (user_id, role) DO NOTHING;
+  INSERT INTO public.user_account_status (user_id, account_status)
+  VALUES (v_ordinary, 'active'), (v_dedicated, 'active')
+  ON CONFLICT (user_id) DO UPDATE SET account_status = EXCLUDED.account_status;
 END
 $setup$;
 
@@ -142,6 +148,41 @@ END
 $owner_visibility$;
 
 RESET ROLE;
+DO $bridge_membership$
+DECLARE
+  v_supports_set_option boolean;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_attribute AS attribute
+    WHERE attribute.attrelid = 'pg_catalog.pg_auth_members'::pg_catalog.regclass
+      AND attribute.attname = 'set_option'
+      AND NOT attribute.attisdropped
+  ) INTO v_supports_set_option;
+  EXECUTE pg_catalog.format(
+    CASE WHEN v_supports_set_option
+      THEN 'GRANT privacy_auth_bridge TO %I WITH SET TRUE'
+      ELSE 'GRANT privacy_auth_bridge TO %I'
+    END,
+    session_user
+  );
+END
+$bridge_membership$;
+SET LOCAL ROLE privacy_auth_bridge;
+DO $bridge_views$
+BEGIN
+  PERFORM 1 FROM privacy_retention.g041_auth_users
+  WHERE id = '41000000-0000-4000-8000-000000000001';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'g041 bridge user view cannot read exact identity';
+  END IF;
+  DELETE FROM privacy_retention.g041_auth_refresh_tokens
+  WHERE user_id = '41000000-0000-4000-8000-000000000099';
+  DELETE FROM privacy_retention.g041_auth_sessions
+  WHERE user_id = '41000000-0000-4000-8000-000000000099';
+END
+$bridge_views$;
+RESET ROLE;
 DO $catalog$
 DECLARE
   v_owner oid := 'privacy_workflow_owner'::pg_catalog.regrole;
@@ -184,4 +225,57 @@ BEGIN
 END
 $catalog$;
 
+-- Signed-claim parsing must fail closed before any workflow can act.
+SET LOCAL ROLE authenticated;
+DO $claims$
+DECLARE
+  v_current uuid := '41000000-0000-4000-8000-000000000001';
+  v_other uuid := '41000000-0000-4000-8000-000000000002';
+BEGIN
+  PERFORM pg_catalog.set_config('request.jwt.claims', '{}'::jsonb::text, true);
+  IF public.get_current_auth_session_id() IS NOT NULL OR public.is_current_auth_session_active() IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'g041 missing claims did not fail closed';
+  END IF;
+  PERFORM pg_catalog.set_config('request.jwt.claims', '{"role":"authenticated","sub":"not-a-uuid","session_id":"not-a-uuid"}', true);
+  IF public.get_current_auth_session_id() IS NOT NULL OR public.is_current_auth_session_active() IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'g041 malformed claims did not fail closed';
+  END IF;
+  PERFORM pg_catalog.set_config('request.jwt.claims', pg_catalog.jsonb_build_object('role','authenticated','sub',v_current::text)::text, true);
+  IF (SELECT count(*) FROM public.user_roles WHERE user_id = v_current) <> 1
+     OR EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = v_other)
+     OR (SELECT count(*) FROM public.user_account_status WHERE user_id = v_current) <> 1
+     OR EXISTS (SELECT 1 FROM public.user_account_status WHERE user_id = v_other) THEN
+    RAISE EXCEPTION 'g041 authenticated own-row RLS isolation failed';
+  END IF;
+  BEGIN
+    UPDATE public.user_roles SET role = role WHERE user_id = v_current;
+    RAISE EXCEPTION 'g041 user_roles mutation unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+  BEGIN
+    UPDATE public.user_account_status SET account_status = account_status WHERE user_id = v_current;
+    RAISE EXCEPTION 'g041 user_account_status mutation unexpectedly succeeded';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
+  END;
+END
+$claims$;
+RESET ROLE;
+
+-- These are non-destructive boundary probes: invalid inputs must reach each
+-- SECURITY DEFINER workflow without an Auth permission-denied regression.
+SET LOCAL ROLE authenticated;
+DO $workflow_boundary$
+BEGIN
+  PERFORM pg_catalog.set_config('request.jwt.claims', '{"role":"authenticated"}', true);
+  BEGIN PERFORM public.read_current_account_deletion_status(
+    '44000000-0000-4000-8000-000000000001',
+    repeat('0', 64),
+    repeat('0', 64)
+  );
+  EXCEPTION WHEN insufficient_privilege THEN
+    RAISE EXCEPTION 'g041 account-deletion status auth permission denied';
+  WHEN others THEN NULL; END;
+END
+$workflow_boundary$;
+RESET ROLE;
 ROLLBACK;
