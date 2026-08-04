@@ -119,6 +119,13 @@ class AuthWorkflowBridgeContractTests(unittest.TestCase):
         ):
             self.assertIn(signature, self.sql)
 
+    def test_catalog_assertions_allow_only_the_exact_hardened_bridge(self) -> None:
+        self.assertIn("privacy workflow bridge role attributes are incompatible", self.sql)
+        self.assertIn("g041_public_rpc_owner_contract_drift", self.sql)
+        self.assertIn("G041 found a public function unexpectedly owned by privacy_auth_bridge", self.sql)
+        self.assertIn("NOT membership.admin_option", self.sql)
+        self.assertIn("pg_catalog.pg_has_role(v_bridge.oid, v_owner.oid, 'USAGE')", self.sql)
+
     def test_managed_auth_access_uses_narrow_barrier_views(self) -> None:
         for view in (
             "g041_auth_users",
