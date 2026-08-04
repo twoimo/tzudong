@@ -150,6 +150,10 @@ DECLARE
     $owner_predicate$pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner')$owner_predicate$;
   v_owner_replacement text :=
     $owner_replacement$pg_catalog.pg_get_userbyid(procedure.proowner) NOT IN ('postgres', 'privacy_workflow_owner', 'privacy_auth_bridge')$owner_replacement$;
+  v_owner_in_predicate text :=
+    $owner_in_predicate$pg_catalog.pg_get_userbyid(procedure.proowner) IN ('postgres', 'privacy_workflow_owner')$owner_in_predicate$;
+  v_owner_in_replacement text :=
+    $owner_in_replacement$pg_catalog.pg_get_userbyid(procedure.proowner) IN ('postgres', 'privacy_workflow_owner', 'privacy_auth_bridge')$owner_in_replacement$;
   v_anchor text := $owner_anchor$    RAISE EXCEPTION 'G014 found a public function owned by an unverified creator';
   END IF;
 
@@ -201,14 +205,25 @@ BEGIN
     AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
     AND procedure.prosecdef;
 
-  IF v_definition IS NULL
-     OR (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) <> 1
-     OR (length(v_source) - length(replace(v_source, v_anchor, ''))) / length(v_anchor) <> 1 THEN
+  IF v_definition IS NULL THEN
     RAISE EXCEPTION 'g041_public_rpc_owner_contract_drift';
   END IF;
-  v_definition := replace(v_definition, v_owner_predicate, v_owner_replacement);
-  v_definition := replace(v_definition, v_anchor, v_exact_bridge_check);
-  EXECUTE v_definition;
+  IF (length(v_source) - length(replace(v_source, v_anchor, ''))) / length(v_anchor) = 1
+     AND (
+       (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) = 1
+       OR (length(v_source) - length(replace(v_source, v_owner_in_predicate, ''))) / length(v_owner_in_predicate) = 1
+     ) THEN
+    v_definition := replace(v_definition, v_owner_predicate, v_owner_replacement);
+    v_definition := replace(v_definition, v_owner_in_predicate, v_owner_in_replacement);
+    v_definition := replace(v_definition, v_anchor, v_exact_bridge_check);
+    EXECUTE v_definition;
+  ELSIF (
+       (length(v_source) - length(replace(v_source, v_owner_replacement, ''))) / length(v_owner_replacement) <> 1
+       AND (length(v_source) - length(replace(v_source, v_owner_in_replacement, ''))) / length(v_owner_in_replacement) <> 1
+     )
+     OR (length(v_source) - length(replace(v_source, v_exact_bridge_check, ''))) / length(v_exact_bridge_check) <> 1 THEN
+    RAISE EXCEPTION 'g041_public_rpc_owner_contract_drift';
+  END IF;
 END
 $public_rpc_owner_contract$;
 DO $definer_owner_contract$
@@ -251,11 +266,14 @@ BEGIN
     AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
     AND procedure.prosecdef;
 
-  IF v_definition IS NULL
-     OR (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) <> 1 THEN
+  IF v_definition IS NULL THEN
     RAISE EXCEPTION 'g041_definer_owner_contract_drift';
   END IF;
-  EXECUTE replace(v_definition, v_owner_predicate, v_owner_replacement);
+  IF (length(v_source) - length(replace(v_source, v_owner_predicate, ''))) / length(v_owner_predicate) = 1 THEN
+    EXECUTE replace(v_definition, v_owner_predicate, v_owner_replacement);
+  ELSIF (length(v_source) - length(replace(v_source, v_owner_replacement, ''))) / length(v_owner_replacement) <> 1 THEN
+    RAISE EXCEPTION 'g041_definer_owner_contract_drift';
+  END IF;
 END
 $definer_owner_contract$;
 DO $final_catalog_owner_contract$
@@ -309,14 +327,18 @@ BEGIN
     AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
     AND procedure.prosecdef;
 
-  IF v_definition IS NULL
-     OR (length(v_source) - length(replace(v_source, v_helper_predicate, ''))) / length(v_helper_predicate) <> 1
-     OR (length(v_source) - length(replace(v_source, v_rpc_predicate, ''))) / length(v_rpc_predicate) <> 1 THEN
+  IF v_definition IS NULL THEN
     RAISE EXCEPTION 'g041_final_catalog_owner_contract_drift';
   END IF;
-  v_definition := replace(v_definition, v_helper_predicate, v_helper_replacement);
-  v_definition := replace(v_definition, v_rpc_predicate, v_rpc_replacement);
-  EXECUTE v_definition;
+  IF (length(v_source) - length(replace(v_source, v_helper_predicate, ''))) / length(v_helper_predicate) = 1
+     AND (length(v_source) - length(replace(v_source, v_rpc_predicate, ''))) / length(v_rpc_predicate) = 1 THEN
+    v_definition := replace(v_definition, v_helper_predicate, v_helper_replacement);
+    v_definition := replace(v_definition, v_rpc_predicate, v_rpc_replacement);
+    EXECUTE v_definition;
+  ELSIF (length(v_source) - length(replace(v_source, v_helper_replacement, ''))) / length(v_helper_replacement) <> 1
+     OR (length(v_source) - length(replace(v_source, v_rpc_replacement, ''))) / length(v_rpc_replacement) <> 1 THEN
+    RAISE EXCEPTION 'g041_final_catalog_owner_contract_drift';
+  END IF;
 END
 $final_catalog_owner_contract$;
 
@@ -352,19 +374,21 @@ BEGIN
     WHERE procedure.oid = pg_catalog.to_regprocedure(v_signature)
       AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
       AND procedure.prosecdef;
-
     v_occurrences := (length(v_source) - length(replace(v_source, 'auth.uid()', ''))) / length('auth.uid()');
+
     IF v_function_definition IS NULL
-       OR v_occurrences < 1
        OR v_source ~ '\mauth\.(users|sessions|identities|refresh_tokens)\M' THEN
       RAISE EXCEPTION 'g041_auth_workflow_claim_replacement_drift: %', v_signature;
     END IF;
-
-    EXECUTE replace(
-      v_function_definition,
-      'auth.uid()',
-      'privacy_retention.g041_current_claim_user_id()'
-    );
+    IF v_occurrences >= 1 THEN
+      EXECUTE replace(
+        v_function_definition,
+        'auth.uid()',
+        'privacy_retention.g041_current_claim_user_id()'
+      );
+    ELSIF pg_catalog.strpos(v_source, 'privacy_retention.g041_current_claim_user_id()') = 0 THEN
+      RAISE EXCEPTION 'g041_auth_workflow_claim_replacement_drift: %', v_signature;
+    END IF;
   END LOOP;
 END
 $claim_only_replacements$;
@@ -442,7 +466,7 @@ BEGIN
     INTO v_definition
     FROM pg_catalog.pg_proc AS procedure
     WHERE procedure.oid = pg_catalog.to_regprocedure(v_signature)
-      AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+      AND procedure.proowner IN ('privacy_workflow_owner'::pg_catalog.regrole, 'privacy_auth_bridge'::pg_catalog.regrole)
       AND procedure.prosecdef;
 
     IF v_definition IS NULL THEN
