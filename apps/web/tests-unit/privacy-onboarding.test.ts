@@ -490,7 +490,7 @@ describe('minimum-data age and consent choices', () => {
     }))?.marketing).toMatchObject({ email: true, night_email: true });
   });
   test('정책 내용 해시는 정확한 렌더링 입력을 고정한다', () => {
-    expect(PRIVACY_POLICY_CONTENT_SHA256).toBe('1004892064d995543d9b422593c5b4daa49e79532ef0c5a222f2644b09f78d9b');
+    expect(PRIVACY_POLICY_CONTENT_SHA256).toBe('6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b');
     expect(PRIVACY_POLICY_CONTENT_SHA256).toBe(
       createHash('sha256').update(privacyPolicyHashInput(), 'utf8').digest('hex'),
     );
