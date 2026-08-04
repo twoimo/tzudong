@@ -258,6 +258,67 @@ BEGIN
   EXECUTE replace(v_definition, v_owner_predicate, v_owner_replacement);
 END
 $definer_owner_contract$;
+DO $final_catalog_owner_contract$
+DECLARE
+  v_definition text;
+  v_source text;
+  v_helper_predicate text := $helper_predicate$pg_catalog.pg_get_userbyid((
+         SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid
+       )) IS DISTINCT FROM 'privacy_workflow_owner'$helper_predicate$;
+  v_helper_replacement text := $helper_replacement$pg_catalog.pg_get_userbyid((
+         SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_expected.oid
+       )) IS DISTINCT FROM (CASE
+         WHEN v_expected.oid = ANY (ARRAY[
+           pg_catalog.to_regprocedure('privacy_retention.g014_account_deletion_reconcile_expired_attempt(uuid,text,uuid)'),
+           pg_catalog.to_regprocedure('privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text)'),
+           pg_catalog.to_regprocedure('privacy_retention.g014_account_deletion_apply_adapter(text,uuid,uuid)')
+         ]) THEN 'privacy_auth_bridge'
+         ELSE 'privacy_workflow_owner'
+       END)$helper_replacement$;
+  v_rpc_predicate text := $rpc_predicate$pg_catalog.pg_get_userbyid((SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_procedure))
+            IS DISTINCT FROM 'privacy_workflow_owner'$rpc_predicate$;
+  v_rpc_replacement text := $rpc_replacement$pg_catalog.pg_get_userbyid((SELECT procedure.proowner FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = v_procedure))
+            IS DISTINCT FROM (CASE
+              WHEN v_expected.source_signature = ANY (ARRAY[
+                'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',
+                'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',
+                'public.create_review_like_notification(uuid,uuid,uuid)',
+                'public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text)',
+                'public.hold_privacy_onboarding_compensation(uuid,uuid,text,text)',
+                'public.make_user_admin(text)',
+                'public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint)',
+                'public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid)',
+                'public.preview_account_deletion(uuid,uuid,timestamptz)',
+                'public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid)',
+                'public.read_release_auth_revocation(uuid,uuid,uuid)',
+                'public.read_release_auth_revocation_by_operation(uuid)',
+                'public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid)',
+                'public.revoke_release_auth_session_family(uuid,uuid,uuid,text)',
+                'public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid)',
+                'public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text)',
+                'public.activate_account_deletion_policy(text,text)',
+                'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'
+              ]) THEN 'privacy_auth_bridge'
+              ELSE 'privacy_workflow_owner'
+            END)$rpc_replacement$;
+BEGIN
+  SELECT pg_catalog.pg_get_functiondef(procedure.oid), procedure.prosrc
+  INTO v_definition, v_source
+  FROM pg_catalog.pg_proc AS procedure
+  WHERE procedure.oid = 'privacy_retention.assert_g014_catalog_contract()'::pg_catalog.regprocedure
+    AND procedure.proowner = 'privacy_workflow_owner'::pg_catalog.regrole
+    AND procedure.prosecdef;
+
+  IF v_definition IS NULL
+     OR (length(v_source) - length(replace(v_source, v_helper_predicate, ''))) / length(v_helper_predicate) <> 1
+     OR (length(v_source) - length(replace(v_source, v_rpc_predicate, ''))) / length(v_rpc_predicate) <> 1 THEN
+    RAISE EXCEPTION 'g041_final_catalog_owner_contract_drift';
+  END IF;
+  v_definition := replace(v_definition, v_helper_predicate, v_helper_replacement);
+  v_definition := replace(v_definition, v_rpc_predicate, v_rpc_replacement);
+  EXECUTE v_definition;
+END
+$final_catalog_owner_contract$;
 
 -- Replace only the exact claim-only routine set. CREATE OR REPLACE preserves
 -- existing execute ACLs while the temporary owner role preserves ownership.
