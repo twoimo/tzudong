@@ -36,6 +36,21 @@ DELETE FROM privacy_retention.g014_public_rpc_allowlist
 WHERE source_signature = 'public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid[])';
 
 DROP FUNCTION IF EXISTS public.finalize_marketing_campaign_batch(uuid,uuid,uuid,text,uuid[]);
+-- The migration runner must be able to maintain the exact RPC allowlist in
+-- later forward migrations without assuming it can SET ROLE to the protected
+-- workflow owner. This policy is restricted to the dashboard migration role;
+-- application roles remain fully revoked.
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON privacy_retention.g014_public_rpc_allowlist
+  TO postgres;
+DROP POLICY IF EXISTS g014_postgres_migration_maintenance
+  ON privacy_retention.g014_public_rpc_allowlist;
+CREATE POLICY g014_postgres_migration_maintenance
+  ON privacy_retention.g014_public_rpc_allowlist
+  FOR ALL
+  TO postgres
+  USING (true)
+  WITH CHECK (true);
 -- The catalog manifest is a one-time, append-only baseline from the completed
 -- G014 migration sequence. It deliberately excludes only itself; every
 -- protected relation is listed below and every structural projection is
@@ -787,7 +802,16 @@ BEGIN
         ('public.get_current_privacy_policy_version()', 'authenticated'::name),
         ('public.get_current_privacy_policy_version()', 'service_role'::name),
         ('public.create_privacy_onboarding_challenge(text,uuid,text,jsonb,text,timestamptz)', 'service_role'::name),
-        ('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)', 'service_role'::name),
+        (
+          CASE
+            WHEN pg_catalog.to_regprocedure(
+              'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)'
+            ) IS NOT NULL
+              THEN 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)'
+            ELSE 'public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)'
+          END,
+          'service_role'::name
+        ),
         ('public.submit_privacy_consent(text,text,text,uuid,text,text,uuid,text,uuid)', 'authenticated'::name),
         ('public.record_privacy_guardian_verification(uuid,uuid,text,text,text,timestamptz,timestamptz)', 'service_role'::name),
         ('public.read_privacy_guardian_status(uuid)', 'service_role'::name),
@@ -909,7 +933,9 @@ BEGIN
     WHERE procedure.oid = v_procedure;
     IF v_expected.source_signature IN (
       'public.match_storyboard_documents_hybrid(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+      'public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
       'public.match_storyboard_documents_hybrid_v2(uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb)',
+      'public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)',
       'public.ocr_log_metadata_is_safe(jsonb)'
     ) THEN
       IF v_is_definer THEN
@@ -943,6 +969,16 @@ BEGIN
     FROM pg_catalog.pg_proc AS procedure
     JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace
     WHERE namespace.nspname = 'public'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_depend AS dependency
+        JOIN pg_catalog.pg_extension AS extension
+          ON extension.oid = dependency.refobjid
+        WHERE dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+          AND dependency.objid = procedure.oid
+          AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+          AND dependency.deptype = 'e'
+      )
   LOOP
     IF EXISTS (
       SELECT 1
@@ -1068,7 +1104,35 @@ REVOKE ALL ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
   TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()
+  TO postgres;
 
+-- Extension helpers installed in public are not application RPCs. Remove the
+-- default EXECUTE surface when pgvector is already installed; clean source
+-- replay installs the extension later, so these signatures may not exist yet.
+DO $extension_helpers$
+DECLARE
+  helper regprocedure;
+BEGIN
+  FOR helper IN
+    SELECT procedure.oid::regprocedure
+    FROM pg_catalog.pg_proc AS procedure
+    JOIN pg_catalog.pg_namespace AS namespace
+      ON namespace.oid = procedure.pronamespace
+    WHERE namespace.nspname = 'public'
+      AND procedure.proname IN (
+        'cosine_distance',
+        'l1_distance',
+        'vector_negative_inner_product'
+      )
+  LOOP
+    EXECUTE format(
+      'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated, service_role',
+      helper
+    );
+  END LOOP;
+END
+$extension_helpers$;
 -- The assertion resolves auth.users from pg_catalog and needs no privilege on
 -- the platform-owned auth schema.
 SELECT privacy_retention.assert_g014_catalog_contract();

@@ -30,6 +30,46 @@ const operationError = (code) => {
   error.code = code;
   return error;
 };
+const PROVIDER_RECEIPT_KEYS = Object.freeze([
+  'version',
+  'provider',
+  'migration_id',
+  'migration_sha256',
+  'manifest_sha256',
+  'receipt_id',
+]);
+const PROVIDER_RECEIPT_ID_PATTERN = /^[A-Za-z0-9._:-]{8,256}$/;
+
+function validateProviderReceipt(receiptText, migration, manifestSha256, expectedReceiptSha256) {
+  if (typeof receiptText !== 'string' || !receiptText.trim()) {
+    throw operationError('PROVIDER_RECEIPT_REQUIRED');
+  }
+  if (!SHA256_PATTERN.test(expectedReceiptSha256 || '')) {
+    throw operationError('PROVIDER_RECEIPT_DIGEST_INVALID');
+  }
+
+  let receipt;
+  try {
+    receipt = JSON.parse(receiptText);
+  } catch {
+    throw operationError('PROVIDER_RECEIPT_INVALID');
+  }
+  assertExactKeys(receipt, PROVIDER_RECEIPT_KEYS);
+  if (receipt.version !== 1
+    || receipt.provider !== 'supabase'
+    || receipt.migration_id !== migration.id
+    || receipt.migration_sha256 !== migration.sha256
+    || receipt.manifest_sha256 !== manifestSha256
+    || !PROVIDER_RECEIPT_ID_PATTERN.test(receipt.receipt_id)) {
+    throw operationError('PROVIDER_RECEIPT_INVALID');
+  }
+  const canonicalReceipt = `${JSON.stringify(receipt)}\n`;
+  if (createHash('sha256').update(canonicalReceipt).digest('hex') !== expectedReceiptSha256) {
+    throw operationError('PROVIDER_RECEIPT_DIGEST_MISMATCH');
+  }
+  return receipt;
+}
+
 
 
 function assertExactKeys(value, expectedKeys) {
@@ -168,7 +208,13 @@ export function resolveReviewedMigration(migrationId, manifest) {
 }
 
 function parseArgs(argv) {
-  const args = { migrationId: '', dryRun: false, verifyTerminalState: false, json: false };
+  const args = {
+    migrationId: '',
+    dryRun: false,
+    verifyTerminalState: false,
+    providerReceipt: '',
+    json: false,
+  };
   const seen = new Set();
   const readValue = (option, index) => {
     if (seen.has(option)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
@@ -190,12 +236,15 @@ function parseArgs(argv) {
       if (seen.has(arg)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
       seen.add(arg);
       args.verifyTerminalState = true;
+    } else if (arg === '--provider-receipt') {
+      args.providerReceipt = readValue(arg, index);
+      index += 1;
     } else if (arg === '--json') {
       if (seen.has(arg)) throw operationError('MIGRATION_ARGUMENT_DUPLICATE');
       seen.add(arg);
       args.json = true;
     } else if (arg === '--help' || arg === '-h') {
-      console.log('Usage: node scripts/apply-supabase-migration.mjs --migration-id ID [--dry-run | --verify-terminal-state] [--json]');
+      console.log('Usage: node scripts/apply-supabase-migration.mjs --migration-id ID [--dry-run | --verify-terminal-state --provider-receipt RECEIPT] [--json]');
       process.exit(0);
     } else {
       throw operationError('MIGRATION_ARGUMENT_INVALID');
@@ -393,6 +442,11 @@ function applyMigrationWithTerminalReadback(databaseUrl, migration, query) {
   );
 }
 
+const PROVIDER_OWNED_MIGRATION_IDS = new Set([
+  'g016_privacy_audit_owner_policy',
+  'g016_onboarding_confirmation_freshness',
+]);
+
 export async function main(
   argv = process.argv.slice(2),
   { environment = process.env } = {},
@@ -413,8 +467,25 @@ export async function main(
     dry_run: args.dryRun,
     verify_terminal_state: args.verifyTerminalState,
     migration_applied: false,
+    provider_receipt_id: null,
     terminal_readback: null,
   };
+  if (
+    !args.dryRun
+    && !args.verifyTerminalState
+    && PROVIDER_OWNED_MIGRATION_IDS.has(migration.id)
+  ) {
+    throw operationError('PROVIDER_OWNED_MIGRATION_APPLY_FORBIDDEN');
+  }
+  if (args.verifyTerminalState && PROVIDER_OWNED_MIGRATION_IDS.has(migration.id)) {
+    const receipt = validateProviderReceipt(
+      args.providerReceipt,
+      migration,
+      manifestSha256,
+      normalizedEnvironmentValue(environment, 'PROVIDER_MIGRATION_RECEIPT_SHA256'),
+    );
+    result.provider_receipt_id = receipt.receipt_id;
+  }
 
   if (!args.dryRun) {
     const { databaseUrl } = selectDirectDatabaseTransport(environment);
