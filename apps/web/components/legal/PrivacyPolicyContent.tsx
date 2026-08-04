@@ -1,17 +1,60 @@
-import { memo } from 'react';
+'use client';
+
+import { memo, useEffect, useState } from 'react';
 
 import { siteConfig } from '@/lib/site-config';
 import {
   OFFICIAL_PRIVACY_AUTHORITY_LINKS,
+  parsePrivacyPolicyPublicationReadback,
   PRIVACY_POLICY_CONTENT_SHA256,
   PRIVACY_POLICY_PUBLICATION,
   PRIVACY_POLICY_SECTIONS,
   PRIVACY_POLICY_TITLE,
-  privacyPolicyPublicationLabel,
+  type PrivacyPolicyPublicationReadback,
 } from '@/lib/privacy/policy';
 import { PROCESSING_INVENTORY } from '@/lib/privacy/processing-inventory';
 
-export const PrivacyPolicyContent = memo(() => (
+const PublicationReadback = () => {
+  const [publication, setPublication] = useState<PrivacyPolicyPublicationReadback | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch('/api/privacy/onboarding', { cache: 'no-store' })
+      .then(async (response) => {
+        const payload: unknown = await response.json().catch(() => null);
+        return response.status === 200 ? parsePrivacyPolicyPublicationReadback(payload) : null;
+      })
+      .catch(() => null)
+      .then((readback) => {
+        if (!cancelled) setPublication(readback);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!publication) {
+    return (
+      <>
+        <dt className="font-medium">게시 상태</dt>
+        <dd>배포 읽기검증을 사용할 수 없습니다.</dd>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <dt className="font-medium">공개 효력 발생일</dt>
+      <dd>{publication.effectiveAt}</dd>
+      <dt className="font-medium">게시 시각</dt>
+      <dd>{publication.publishedAt}</dd>
+    </>
+  );
+};
+
+const PrivacyPolicyContentComponent = () => (
   <div
     className="space-y-6 text-sm"
     data-policy-content-sha256={PRIVACY_POLICY_CONTENT_SHA256}
@@ -24,12 +67,7 @@ export const PrivacyPolicyContent = memo(() => (
         <dd>{PRIVACY_POLICY_PUBLICATION.version}</dd>
         <dt className="font-medium">내용 SHA-256</dt>
         <dd className="break-all font-mono">{PRIVACY_POLICY_CONTENT_SHA256}</dd>
-        <dt className="font-medium">공개 효력 발생일</dt>
-        <dd>{PRIVACY_POLICY_PUBLICATION.effectiveAt ?? '미정'}</dd>
-        <dt className="font-medium">게시 시각</dt>
-        <dd>{PRIVACY_POLICY_PUBLICATION.publishedAt ?? '미정'}</dd>
-        <dt className="font-medium">게시 상태</dt>
-        <dd>{privacyPolicyPublicationLabel()}</dd>
+        <PublicationReadback />
       </dl>
     </section>
 
@@ -109,7 +147,7 @@ export const PrivacyPolicyContent = memo(() => (
     <section aria-labelledby="privacy-authorities">
       <h3 className="mb-2 text-base font-semibold" id="privacy-authorities">10. 공식 확인 경로</h3>
       <p className="text-muted-foreground">
-        아래 링크는 공식 정보 확인 경로입니다. 이 검토본이 법령 해석이나 실제 운영 상태를 대신하지 않습니다.
+        아래 링크는 공식 정보 확인 경로입니다. 이 문서가 법령 해석이나 실제 운영 상태를 대신하지 않습니다.
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
         {OFFICIAL_PRIVACY_AUTHORITY_LINKS.map((link) => (
@@ -123,6 +161,7 @@ export const PrivacyPolicyContent = memo(() => (
       </ul>
     </section>
   </div>
-));
+);
 
+export const PrivacyPolicyContent = memo(PrivacyPolicyContentComponent);
 PrivacyPolicyContent.displayName = 'PrivacyPolicyContent';
