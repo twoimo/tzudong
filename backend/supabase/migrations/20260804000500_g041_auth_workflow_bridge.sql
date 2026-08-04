@@ -217,7 +217,7 @@ DECLARE
   v_source text;
   v_owner_predicate text :=
     $definer_predicate$IF v_owner IS DISTINCT FROM 'privacy_workflow_owner' THEN$definer_predicate$;
-  v_owner_replacement text := $definer_replacement$IF v_owner IS DISTINCT FROM CASE
+  v_owner_replacement text := $definer_replacement$IF v_owner IS DISTINCT FROM (CASE
       WHEN v_signature = ANY (ARRAY[
         'public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)',
         'public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb)',
@@ -242,7 +242,7 @@ DECLARE
         'public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text)'
       ]) THEN 'privacy_auth_bridge'
       ELSE 'privacy_workflow_owner'
-    END THEN$definer_replacement$;
+    END) THEN$definer_replacement$;
 BEGIN
   SELECT pg_catalog.pg_get_functiondef(procedure.oid), procedure.prosrc
   INTO v_definition, v_source
