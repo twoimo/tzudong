@@ -6,6 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_PRIVILEGES = ROOT / "backend/supabase/migrations/20260804000200_g041_privacy_onboarding_workflow_privileges.sql"
 RUNTIME_REPAIRS = ROOT / "backend/supabase/migrations/20260804000300_g041_auth_boundary_runtime_repairs.sql"
+CLOSURE = ROOT / "backend/supabase/migrations/20260804000400_g041_auth_boundary_closure.sql"
+RUNTIME_MATRIX = ROOT / "backend/supabase/tests/g041_auth_boundary_runtime.sql"
 
 
 class PrivacyOnboardingWorkflowPrivilegeTests(unittest.TestCase):
@@ -55,7 +57,7 @@ class AuthBoundaryRuntimeRepairTests(unittest.TestCase):
         self.assertIn("v_claims ->> 'sub'", self.sql)
         self.assertNotRegex(self.sql, re.compile(r"\bauth\.(?:uid|jwt)\b", re.IGNORECASE))
         self.assertNotRegex(self.sql, re.compile(r"\b(?:SELECT|FROM)\s+auth\.", re.IGNORECASE))
-        self.assertIn("g041_runtime_auth_schema_privilege_detected", self.sql)
+        self.assertIn("g041_runtime_auth_direct_privilege_detected", self.sql)
 
     def test_reattest_audit_summary_stays_within_the_safe_shape(self) -> None:
         expected = "pg_catalog.jsonb_build_object('consentEvents', v_event_count, 'eligible', true)"
@@ -92,6 +94,75 @@ class AuthBoundaryRuntimeRepairTests(unittest.TestCase):
         self.assertIn("WITH SET FALSE", self.sql)
         self.assertIn("g041_runtime.remove_membership", self.sql)
         self.assertIn("g041_runtime.restore_set_false", self.sql)
+
+
+class AuthBoundaryClosureContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.sql = CLOSURE.read_text(encoding="utf-8")
+        cls.runtime_sql = RUNTIME_MATRIX.read_text(encoding="utf-8")
+
+    def test_replay_and_live_closure_revoke_each_predecessor_auth_grant(self) -> None:
+        expected_revokes = (
+            "REVOKE ALL PRIVILEGES ON SCHEMA auth FROM privacy_workflow_owner;",
+            "REVOKE ALL PRIVILEGES ON TABLE auth.users, auth.sessions, auth.identities, auth.refresh_tokens",
+            "REVOKE SELECT (id, last_sign_in_at) ON TABLE auth.users FROM privacy_workflow_owner;",
+        )
+        for revoke in expected_revokes:
+            self.assertIn(revoke, RUNTIME_REPAIRS.read_text(encoding="utf-8"))
+            self.assertIn(revoke, self.sql)
+        self.assertIn("pg_catalog.aclexplode", self.sql)
+        self.assertIn("g041_auth_direct_acl_remains", self.sql)
+
+    def test_owner_only_rls_and_narrow_lease_lock_grant_are_exact(self) -> None:
+        for relation, policy in (
+            ("release_auth_identities", "g041_release_auth_identities_owner_select"),
+            ("release_auth_session_leases", "g041_release_auth_session_leases_owner_select"),
+        ):
+            self.assertRegex(
+                self.sql,
+                re.compile(
+                    rf"CREATE POLICY {policy}\s+ON public\.{relation}\s+FOR SELECT\s+TO privacy_workflow_owner\s+USING \(true\);",
+                    re.IGNORECASE,
+                ),
+            )
+        self.assertRegex(
+            self.sql,
+            re.compile(
+                r"CREATE POLICY g041_release_auth_session_leases_owner_update\s+"
+                r"ON public\.release_auth_session_leases\s+FOR UPDATE\s+"
+                r"TO privacy_workflow_owner\s+USING \(true\)\s+WITH CHECK \(true\);",
+                re.IGNORECASE,
+            ),
+        )
+        self.assertIn("GRANT SELECT ON TABLE public.release_auth_identities TO privacy_workflow_owner;", self.sql)
+        self.assertIn(
+            "GRANT SELECT, UPDATE (created_at) ON TABLE public.release_auth_session_leases",
+            self.sql,
+        )
+        self.assertIn("g041_release_auth_guard_rls_invalid", self.sql)
+        self.assertIn("refresh_sha256', 'UPDATE'", self.sql)
+        self.assertIn("expires_at', 'UPDATE'", self.sql)
+
+    def test_runtime_matrix_exercises_roles_and_fail_closed_lease_cases(self) -> None:
+        self.assertTrue(RUNTIME_MATRIX.is_file())
+        self.assertIn("BEGIN;", self.runtime_sql)
+        self.assertIn("ROLLBACK;", self.runtime_sql)
+        self.assertIn("SET LOCAL ROLE authenticated;", self.runtime_sql)
+        self.assertIn("SET LOCAL ROLE privacy_workflow_owner;", self.runtime_sql)
+        for assertion in (
+            "ordinary identity did not pass",
+            "dedicated identity without lease did not fail closed",
+            "exact live lease did not pass",
+            "wrong session did not fail closed",
+            "wrong-user lease did not fail closed",
+            "expired lease did not fail closed",
+            "owner RLS cannot see dedicated identity",
+            "owner RLS cannot lock exact lease",
+            "sensitive lease update unexpectedly succeeded",
+            "auth ACL contract failed",
+        ):
+            self.assertIn(assertion, self.runtime_sql)
 
 
 if __name__ == "__main__":
