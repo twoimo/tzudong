@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   OFFICIAL_PRIVACY_AUTHORITY_LINKS,
+  parsePrivacyPolicyPublicationReadback,
   PRIVACY_POLICY_CONTENT_SHA256,
   PRIVACY_POLICY_DATABASE_BINDING,
   PRIVACY_POLICY_PUBLICATION,
@@ -36,35 +37,49 @@ const prohibitedClaims = [
 ] as const;
 
 describe('G010 privacy policy publication contract', () => {
-  test('keeps the Korean source as a draft until a matching deployed record has a nonempty operator approval reference', () => {
+  test('keeps the Korean public source and accepts only a matching deployed readback', () => {
+    expect(PRIVACY_POLICY_VERSION).toBe('2026-08-04.1');
     expect(PRIVACY_POLICY_PUBLICATION.locale).toBe('ko-KR');
-    expect(PRIVACY_POLICY_PUBLICATION.status).toBe('draft');
-    expect(PRIVACY_POLICY_PUBLICATION.effectiveAt).toBeNull();
-    expect(PRIVACY_POLICY_PUBLICATION.publishedAt).toBeNull();
-    expect(PRIVACY_POLICY_PUBLICATION.operatorApprovalRef).toBeNull();
     expect(PRIVACY_POLICY_DATABASE_BINDING.table).toBe('privacy_policy_versions');
     expect(PRIVACY_POLICY_DATABASE_BINDING.contentHashColumn).toBe('content_sha256');
     expect(PRIVACY_POLICY_DATABASE_BINDING.operatorApprovalRefColumn).toBe('operator_approval_ref');
 
-    expect(isApprovedPolicyPublication(null)).toBe(false);
-    expect(isApprovedPolicyPublication({
-      id: 'policy-row',
+    expect(parsePrivacyPolicyPublicationReadback(null)).toBeNull();
+    expect(parsePrivacyPolicyPublicationReadback({
+      id: '00000000-0000-4000-8000-000000000041',
       version: PRIVACY_POLICY_VERSION,
-      locale: 'ko-KR',
-      status: 'published',
-      content_sha256: PRIVACY_POLICY_CONTENT_SHA256,
-      effective_at: '2026-07-12T00:00:00.000Z',
-      published_at: '2026-07-12T00:00:00.000Z',
-      operator_approval_ref: '   ',
-    })).toBe(false);
+      contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+      effectiveAt: '2026-08-04T00:00:00.000Z',
+      publishedAt: '2026-08-04T00:00:00.000Z',
+    })).not.toBeNull();
+    expect(parsePrivacyPolicyPublicationReadback({
+      id: '00000000-0000-4000-8000-000000000041',
+      version: '2026-08-04.0',
+      contentSha256: PRIVACY_POLICY_CONTENT_SHA256,
+      effectiveAt: '2026-08-04T00:00:00.000Z',
+      publishedAt: '2026-08-04T00:00:00.000Z',
+    })).toBeNull();
+    expect(parsePrivacyPolicyPublicationReadback({
+      id: '00000000-0000-4000-8000-000000000041',
+      version: PRIVACY_POLICY_VERSION,
+      contentSha256: 'mismatch',
+      effectiveAt: '2026-08-04T00:00:00.000Z',
+      publishedAt: '2026-08-04T00:00:00.000Z',
+    })).toBeNull();
+    expect(isApprovedPolicyPublication(null)).toBe(false);
   });
 
-  test('uses one Korean-first document hash for embedded and public policy content', () => {
+  test('uses one Korean-first public document hash for embedded and public policy content', () => {
     expect(createHash('sha256').update(privacyPolicyHashInput(), 'utf8').digest('hex')).toBe(PRIVACY_POLICY_CONTENT_SHA256);
     expect(privacyPolicyHashInput()).toContain(OFFICIAL_PRIVACY_AUTHORITY_LINKS[0].href);
     expect(PRIVACY_POLICY_SECTIONS[0]?.title).toMatch(/^1\. 이 문서의 상태/);
+    expect(policySource()).toContain('공개 처리방침 원문');
+    expect(policySource()).not.toContain('게시 전 검토본');
     expect(policyContentSource()).toContain('data-policy-version={PRIVACY_POLICY_PUBLICATION.version}');
     expect(policyContentSource()).toContain('data-policy-content-sha256={PRIVACY_POLICY_CONTENT_SHA256}');
+    expect(policyContentSource()).toContain("fetch('/api/privacy/onboarding', { cache: 'no-store' })");
+    expect(policyContentSource()).toContain('parsePrivacyPolicyPublicationReadback(payload)');
+    expect(policyContentSource()).toContain('배포 읽기검증을 사용할 수 없습니다.');
     expect(source('components/auth/AuthModal.tsx')).toContain('<PrivacyPolicyContent />');
     expect(source('app/privacy/page.tsx')).toContain('<PrivacyPolicyContent />');
     expect(dataDeletionSource()).toContain('PRIVACY_POLICY_CONTENT_SHA256');
