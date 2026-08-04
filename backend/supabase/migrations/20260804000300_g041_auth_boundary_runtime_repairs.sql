@@ -322,6 +322,11 @@ REVOKE ALL ON FUNCTION public.is_current_auth_session_active()
 GRANT EXECUTE ON FUNCTION public.is_current_auth_session_active() TO authenticated;
 
 RESET ROLE;
+REVOKE ALL PRIVILEGES ON SCHEMA auth FROM privacy_workflow_owner;
+REVOKE ALL PRIVILEGES ON TABLE auth.users, auth.sessions, auth.identities, auth.refresh_tokens
+  FROM privacy_workflow_owner;
+REVOKE SELECT (id, last_sign_in_at) ON TABLE auth.users FROM privacy_workflow_owner;
+
 GRANT SELECT ON TABLE public.release_auth_identities TO privacy_workflow_owner;
 GRANT SELECT, UPDATE ON TABLE public.release_auth_session_leases TO privacy_workflow_owner;
 REVOKE ALL ON TABLE public.release_auth_identities, public.release_auth_session_leases
@@ -357,8 +362,13 @@ BEGIN
   END LOOP;
 
   IF pg_catalog.has_schema_privilege('privacy_workflow_owner', 'auth', 'USAGE')
-     OR pg_catalog.has_table_privilege('privacy_workflow_owner', 'auth.users', 'SELECT') THEN
-    RAISE EXCEPTION 'g041_runtime_auth_schema_privilege_detected';
+     OR pg_catalog.has_table_privilege('privacy_workflow_owner', 'auth.users', 'SELECT')
+     OR pg_catalog.has_table_privilege('privacy_workflow_owner', 'auth.sessions', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+     OR pg_catalog.has_table_privilege('privacy_workflow_owner', 'auth.identities', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+     OR pg_catalog.has_table_privilege('privacy_workflow_owner', 'auth.refresh_tokens', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
+     OR pg_catalog.has_column_privilege('privacy_workflow_owner', 'auth.users', 'id', 'SELECT')
+     OR pg_catalog.has_column_privilege('privacy_workflow_owner', 'auth.users', 'last_sign_in_at', 'SELECT') THEN
+    RAISE EXCEPTION 'g041_runtime_auth_direct_privilege_detected';
   END IF;
   IF NOT pg_catalog.has_table_privilege('privacy_workflow_owner', 'public.release_auth_identities', 'SELECT')
      OR NOT pg_catalog.has_table_privilege('privacy_workflow_owner', 'public.release_auth_session_leases', 'SELECT, UPDATE') THEN
