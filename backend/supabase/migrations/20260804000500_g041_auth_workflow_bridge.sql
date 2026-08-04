@@ -8,34 +8,6 @@ BEGIN
     CREATE ROLE privacy_auth_bridge NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE INHERIT NOBYPASSRLS;
   END IF;
 END $bridge_role$;
-CREATE OR REPLACE VIEW privacy_retention.g041_auth_users
-WITH (security_barrier = true) AS
-SELECT id, email, last_sign_in_at FROM auth.users;
-CREATE OR REPLACE VIEW privacy_retention.g041_auth_sessions
-WITH (security_barrier = true) AS
-SELECT id, user_id FROM auth.sessions;
-CREATE OR REPLACE VIEW privacy_retention.g041_auth_identities
-WITH (security_barrier = true) AS
-SELECT user_id FROM auth.identities;
-CREATE OR REPLACE VIEW privacy_retention.g041_auth_refresh_tokens
-WITH (security_barrier = true) AS
-SELECT user_id, session_id, token FROM auth.refresh_tokens;
-REVOKE ALL ON TABLE
-  privacy_retention.g041_auth_users,
-  privacy_retention.g041_auth_sessions,
-  privacy_retention.g041_auth_identities,
-  privacy_retention.g041_auth_refresh_tokens
-FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT ON TABLE
-  privacy_retention.g041_auth_users,
-  privacy_retention.g041_auth_sessions,
-  privacy_retention.g041_auth_identities,
-  privacy_retention.g041_auth_refresh_tokens
-TO privacy_auth_bridge;
-GRANT DELETE ON TABLE
-  privacy_retention.g041_auth_sessions,
-  privacy_retention.g041_auth_refresh_tokens
-TO privacy_auth_bridge;
 
 
 DO $membership$
@@ -81,6 +53,34 @@ BEGIN
     session_user
   );
 END $membership$;
+CREATE OR REPLACE VIEW privacy_retention.g041_auth_users
+WITH (security_barrier = true) AS
+SELECT id, email, last_sign_in_at FROM auth.users;
+CREATE OR REPLACE VIEW privacy_retention.g041_auth_sessions
+WITH (security_barrier = true) AS
+SELECT id, user_id FROM auth.sessions;
+CREATE OR REPLACE VIEW privacy_retention.g041_auth_identities
+WITH (security_barrier = true) AS
+SELECT user_id FROM auth.identities;
+CREATE OR REPLACE VIEW privacy_retention.g041_auth_refresh_tokens
+WITH (security_barrier = true) AS
+SELECT user_id, session_id, token FROM auth.refresh_tokens;
+REVOKE ALL ON TABLE
+  privacy_retention.g041_auth_users,
+  privacy_retention.g041_auth_sessions,
+  privacy_retention.g041_auth_identities,
+  privacy_retention.g041_auth_refresh_tokens
+FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON TABLE
+  privacy_retention.g041_auth_users,
+  privacy_retention.g041_auth_sessions,
+  privacy_retention.g041_auth_identities,
+  privacy_retention.g041_auth_refresh_tokens
+TO privacy_auth_bridge;
+GRANT DELETE ON TABLE
+  privacy_retention.g041_auth_sessions,
+  privacy_retention.g041_auth_refresh_tokens
+TO privacy_auth_bridge;
 
 SET LOCAL ROLE privacy_workflow_owner;
 
