@@ -2140,7 +2140,9 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual("",errors.getvalue())
  def test_runtime_sql_is_executed_directly_without_outer_write_transaction(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
-  self.assertIn('run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)',text)
+  self.assertIn('for fixture in (runtime,g041_runtime): run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(fixture)],env=env)',text)
+  self.assertIn('g035_hosted_clone_runtime.sql',text)
+  self.assertIn('g041_auth_boundary_runtime.sql',text)
   self.assertNotIn('runtime_script.write_text',text)
  def test_clone_requires_the_restore_receipt_digest_and_exact_baseline_before_applying_migrations(self):
   text=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf8")
@@ -2159,8 +2161,9 @@ class ControllerTests(unittest.TestCase):
    prior={"receipt_sha256":"x","evidence":{"ledger_pairs":[list(pair) for pair in full],"ledger_sha256":recovery._ledger_sha256(full),"ledger_count":len(full)}}
    with patch.object(recovery,"_require_prior",return_value=prior),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=fingerprints(pairs=full)),patch.object(recovery,"_ledger_assert"),patch.object(recovery,"_approval_catalog_evidence",return_value=recovery._approval_contract_descriptor()),patch.object(recovery,"run") as run:
     result=recovery.apply_manifest(args,manifest)
-  self.assertEqual(1,run.call_count)
-  self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
+  self.assertEqual(2,run.call_count)
+  self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args_list[0].args[0]))
+  self.assertIn("g041_auth_boundary_runtime.sql",str(run.call_args_list[1].args[0]))
   self.assertEqual("full",result["evidence"]["initial_ledger_state"])
   self.assertEqual(0,result["evidence"]["migrations_applied_in_invocation"])
   self.assertEqual(len(manifest.migrations),result["evidence"]["migrations_already_present"])
@@ -2240,7 +2243,10 @@ class ControllerTests(unittest.TestCase):
   applied={"receipt_sha256":"clone","prior_receipt_sha256":["restore"],"evidence":evidence}
   with patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value=applied),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_approval_catalog_evidence",return_value=approval),patch.object(recovery,"run") as run:
    result=recovery.run_postflight(args,manifest)
-  self.assertEqual("validated",result["status"]); self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args.args[0]))
+  self.assertEqual("validated",result["status"])
+  self.assertEqual(2,run.call_count)
+  self.assertIn("g035_hosted_clone_runtime.sql",str(run.call_args_list[0].args[0]))
+  self.assertIn("g041_auth_boundary_runtime.sql",str(run.call_args_list[1].args[0]))
   for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256","managed_metadata_schemas_present","approval_contract_sha256","approval_contract_identities","approval_contract_valid"):
    mutated={**evidence,key:("unexpected" if key!="ledger_count" else evidence[key]+1)}
    with self.subTest(key=key),patch.object(recovery,"_copy_local_service",return_value=Path("service")),patch.object(recovery,"_connect",return_value=Conn()),patch.object(recovery,"_require_prior",return_value={**applied,"evidence":mutated}),patch.object(recovery,"command_exists",return_value="psql"),patch.object(recovery,"_query_conn",return_value=[]),patch.object(recovery,"_fingerprints",return_value=observed),patch.object(recovery,"_approval_catalog_evidence",return_value=approval),patch.object(recovery,"run"):
@@ -2417,4 +2423,11 @@ class ManifestDependencyTests(unittest.TestCase):
      manifest_path.write_text(json.dumps(data,separators=(",",":")),encoding="utf8")
      with patch.object(contract,"MANIFEST_SHA256",contract.sha256_file(manifest_path)),self.assertRaises(contract.ContractError):
       contract.load_manifest(root)
+class G041FixtureWiringTests(unittest.TestCase):
+ def test_clone_apply_and_postflight_execute_g041_runtime_fixture(self):
+  source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf-8")
+  fixture='backend/supabase/tests/g041_auth_boundary_runtime.sql'
+  self.assertEqual(source.count(fixture),2)
+  self.assertEqual(source.count("for fixture in (runtime,g041_runtime)"),2)
+
 if __name__=="__main__": unittest.main()
