@@ -155,6 +155,12 @@ async function read(root,path,digest,limit,cache,total){
   }
 }
 /* Security amendment: the trusted map cannot self-attest, so its exact bytes require the out-of-band --artifact-map-sha256 pin. */
+function normalizeSystemRootAlias(value){
+  if(process.platform!=='darwin')return value;
+  if(value==='/tmp'||value.startsWith('/tmp/'))return `/private${value}`;
+  if(value==='/var'||value.startsWith('/var/'))return `/private${value}`;
+  return value;
+}
 function args(a){const names=['--artifact-root','--artifact-map','--artifact-map-sha256','--release-id','--candidate-sha','--candidate-tree','--config-sha256','--data-profile-sha256','--frozen-as-of','--input','--scored'];if(a.length!==22)fail('invalid CLI');const r={};for(let i=0;i<a.length;i+=2)if(!names.includes(a[i])||r[a[i]]||!a[i+1])fail('invalid CLI');else r[a[i]]=a[i+1];if(names.some(k=>!r[k])||!isAbsolute(r['--artifact-root'])||!safePath(r['--artifact-map'])||!safePath(r['--input'])||!safePath(r['--scored'])||!H.test(r['--artifact-map-sha256'])||!ID.test(r['--release-id'])||!G.test(r['--candidate-sha'])||!G.test(r['--candidate-tree'])||!H.test(r['--config-sha256'])||!H.test(r['--data-profile-sha256'])||!TS.test(r['--frozen-as-of']))fail('invalid protected CLI');return r}
 const bind=(x,a,n)=>{if(x.releaseId!==a['--release-id']||x.candidate?.sha!==a['--candidate-sha']||x.candidate?.tree!==a['--candidate-tree']||x.configSha256!==a['--config-sha256']||x.dataProfileSha256!==a['--data-profile-sha256'])fail(`${n} binding`)};
 function epoch(t){if(!TS.test(t))fail('invalid timestamp');const [Y,M,D,h,m,s,u]=t.match(/\d+/g).map(Number);const d=new Date(0);d.setUTCHours(h,m,s,0);d.setUTCFullYear(Y,M-1,D);if(d.getUTCFullYear()!==Y||d.getUTCMonth()!==M-1||d.getUTCDate()!==D||d.getUTCHours()!==h||d.getUTCMinutes()!==m||d.getUTCSeconds()!==s)fail('invalid timestamp');return BigInt(d.getTime())*1000n+BigInt(u)}
@@ -346,7 +352,7 @@ function recompute(raw,table,receipts,manifests,health,context){
   };
 }
 async function main(){
-  const a=args(process.argv.slice(2)),root=resolve(a['--artifact-root']),cache=new Map,total={bytes:0};
+  const a=args(process.argv.slice(2)),root=normalizeSystemRootAlias(resolve(a['--artifact-root'])),cache=new Map,total={bytes:0};
   await assertTrustedDirectory(root,'artifact root alias');
   const mapSchema={type:'object',additionalProperties:false,required:['schemaVersion','releaseId','candidate','configSha256','dataProfileSha256','frozenAsOf','pins','artifacts'],properties:{schemaVersion:{const:'performance-trusted-artifacts.v1'},releaseId:{type:'string',pattern:ID.source},candidate:{type:'object',additionalProperties:false,required:['sha','tree'],properties:{sha:{type:'string',pattern:G.source},tree:{type:'string',pattern:G.source}}},configSha256:{type:'string',pattern:H.source},dataProfileSha256:{type:'string',pattern:H.source},frozenAsOf:{type:'string',pattern:TS.source},pins:{type:'object'},artifacts:{type:'object'}}};
   const mapBytes=await read(root,a['--artifact-map'],a['--artifact-map-sha256'],1024*1024,cache,total);

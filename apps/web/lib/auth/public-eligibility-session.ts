@@ -1,20 +1,64 @@
-const LOOP_SAFE_API_PATHS = [
-  '/api/health',
-  '/api/privacy/onboarding',
-] as const;
+export type PublicEligibilitySessionRouteClass =
+  | 'credentialless-public'
+  | 'loop-safe'
+  | 'protected';
 
-const LOOP_SAFE_PAGE_PATHS = new Set([
-  '/privacy',
-  '/data-deletion',
-  '/auth/required',
-  '/auth/callback',
-]);
+const isGetOrHead = (method: string) => method === 'GET' || method === 'HEAD';
 
-const PUBLIC_API_PREFIXES = ['/api/shorten'] as const;
-const PUBLIC_PAGE_PATHS = new Set(['/', '/home-frame', '/stamp']);
+const isLiteralRoutePath = (pathname: string) => {
+  if (
+    !pathname.startsWith('/')
+    || (pathname !== '/' && pathname.endsWith('/'))
+    || pathname.includes('//')
+    || pathname.includes('\\')
+  ) {
+    return false;
+  }
 
-const matchesPathOrChildPath = (pathname: string, path: string) =>
-  pathname === path || pathname.startsWith(`${path}/`);
+  try {
+    return decodeURIComponent(pathname) === pathname;
+  } catch {
+    return false;
+  }
+};
+
+export function classifyPublicEligibilitySessionRoute({
+  pathname,
+  method,
+}: {
+  pathname: string;
+  method: string;
+}): PublicEligibilitySessionRouteClass {
+  if (!isLiteralRoutePath(pathname)) return 'protected';
+
+  if (
+    (pathname === '/api/privacy/onboarding' && (method === 'GET' || method === 'POST'))
+    || (pathname === '/api/auth/logout' && method === 'POST')
+    || (pathname === '/auth/callback' && method === 'GET')
+    || (pathname === '/privacy/onboarding' && isGetOrHead(method))
+    || (pathname === '/auth/reset-password' && isGetOrHead(method))
+    || (pathname === '/auth/required' && isGetOrHead(method))
+  ) {
+    return 'loop-safe';
+  }
+
+  if (
+    (
+      pathname === '/'
+      || pathname === '/home-frame'
+      || pathname === '/stamp'
+      || pathname === '/privacy'
+      || pathname === '/data-deletion'
+      || pathname === '/api/health'
+      || pathname === '/api/shorten'
+    )
+    && isGetOrHead(method)
+  ) {
+    return 'credentialless-public';
+  }
+
+  return 'protected';
+}
 
 export function shouldSkipPublicEligibilitySession({
   pathname,
@@ -25,18 +69,7 @@ export function shouldSkipPublicEligibilitySession({
   method: string;
   hasSessionHint: boolean;
 }) {
-  if (
-    LOOP_SAFE_PAGE_PATHS.has(pathname) ||
-    LOOP_SAFE_API_PATHS.some((path) => matchesPathOrChildPath(pathname, path))
-  ) {
-    return true;
-  }
-
-  if (hasSessionHint) return false;
-
-  if (PUBLIC_API_PREFIXES.some((path) => matchesPathOrChildPath(pathname, path))) {
-    return true;
-  }
-
-  return (method === 'GET' || method === 'HEAD') && PUBLIC_PAGE_PATHS.has(pathname);
+  const routeClass = classifyPublicEligibilitySessionRoute({ pathname, method });
+  return routeClass === 'loop-safe'
+    || (!hasSessionHint && routeClass === 'credentialless-public');
 }

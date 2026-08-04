@@ -23,9 +23,14 @@ import {
   getSafeAuthNextPath,
   isAdminAuthRedirect,
 } from "@/lib/auth/auth-redirect";
+import {
+  beginExistingAccountPrivacyRecovery,
+  endExistingAccountPrivacyRecovery,
+} from "@/lib/auth/existing-account-recovery";
 import { PrivacyPolicyContent } from "@/components/legal/PrivacyPolicyContent";
 import {
   getCurrentPrivacyEligibility,
+  hasLivePrivacyEligibilityReceipt,
   privacyEligibilityGuidance,
   signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
@@ -50,6 +55,7 @@ interface AuthModalProps {
   onAuthSuccess?: () => void;
   redirectTo?: string | null;
   reason?: string | null;
+  initialAuthTab?: "login" | "signup";
 }
 
 const AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME = "max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]";
@@ -198,6 +204,7 @@ function OnboardingConsentFields({
             <Checkbox
               id={`marketing-${key}`}
               checked={marketingConsent[key]}
+              disabled={key.startsWith("night_") && !marketingConsent[key.slice(6) as keyof MarketingConsent]}
               onCheckedChange={(checked) => onMarketingConsentChange(key, checked === true)}
             />
             {label}
@@ -208,7 +215,7 @@ function OnboardingConsentFields({
   );
 }
 
-const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: AuthModalProps) => {
+const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, initialAuthTab = "login" }: AuthModalProps) => {
   const isMobileOrTablet = useImmediateMobileOrTablet();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -221,6 +228,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
   const [marketingConsent, setMarketingConsent] = useState<MarketingConsent>(EMPTY_MARKETING_CONSENT);
   const [policyVersion, setPolicyVersion] = useState<string | null>(null);
   const [policyContentSha256, setPolicyContentSha256] = useState<string | null>(null);
+  const [authTab, setAuthTab] = useState<"login" | "signup">(initialAuthTab);
+  const [isExistingAccountRecovery, setIsExistingAccountRecovery] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
@@ -230,6 +239,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
   useEffect(() => {
     if (!isOpen) return;
+    setAuthTab(initialAuthTab);
 
     setUsername((currentUsername) => currentUsername || generateRandomNickname());
 
@@ -267,7 +277,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [initialAuthTab, isOpen]);
 
   const resetForm = useCallback(() => {
     setEmail("");
@@ -277,6 +287,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
     setPrivacyAgreed(false);
     setAgeBand("");
     setMarketingConsent(EMPTY_MARKETING_CONSENT);
+    setAuthTab("login");
+    setIsExistingAccountRecovery(false);
   }, []);
 
   const refreshNickname = useCallback(() => {
@@ -370,8 +382,6 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
     try {
       const callbackUrl = new URL("/auth/callback", window.location.origin);
-      callbackUrl.searchParams.set("onboarding", "1");
-      callbackUrl.searchParams.set("onboarding_nonce", challenge.oauthNonce);
       if (isAdminRedirect) {
         callbackUrl.searchParams.set("next", safeRedirectTo);
       }
@@ -426,9 +436,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       }
 
       const eligibility = await getCurrentPrivacyEligibility(supabase);
-      if (!eligibility.eligible) {
-        await rejectPrivacyIneligibleSession(signedInUserId);
-        toast.error(privacyEligibilityGuidance(eligibility.reasonCode));
+      if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+        setAuthTab("signup");
+        setIsExistingAccountRecovery(true);
+        toast.error("현재 개인정보 처리방침과 연령 확인을 완료해주세요.");
         return;
       }
 
@@ -451,7 +462,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !username) {
+    if (!email || !password || (!isExistingAccountRecovery && !username)) {
       toast.error("모든 필드를 입력해주세요");
       return;
     }
@@ -459,7 +470,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       toast.error("연령대와 최신 개인정보 처리방침 동의를 확인해주세요");
       return;
     }
-    if (username.length < 2 || username.length > 20) {
+    if (!isExistingAccountRecovery && (username.length < 2 || username.length > 20)) {
       toast.error("닉네임은 2-20자 사이여야 합니다");
       return;
     }
@@ -467,26 +478,65 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       toast.error("비밀번호는 8자 이상 12자 이하여야 합니다");
       return;
     }
-    if (password !== confirmPassword) {
+    if (!isExistingAccountRecovery && password !== confirmPassword) {
       toast.error("비밀번호가 일치하지 않습니다");
       return;
     }
 
     setIsLoading(true);
+    let recoveryToken: number | null = null;
     try {
+      const challenge = await startOnboardingChallenge("password");
+      if (!challenge) return;
+
+      if (isExistingAccountRecovery) recoveryToken = beginExistingAccountPrivacyRecovery(email);
+      const { data: existingSession, error: existingSessionError } = await supabase.auth.signInWithPassword({ email, password });
+      const existingUserId = existingSession.session?.user?.id;
+      if (isExistingAccountRecovery && (existingSessionError || !existingUserId)) {
+        if (existingUserId) await rejectPrivacyIneligibleSession(existingUserId);
+        toast.error("기존 계정 확인에 실패했습니다. 이메일과 비밀번호를 다시 확인해주세요.");
+        return;
+      }
+      if (!existingSessionError && existingUserId) {
+        const response = await fetch("/api/privacy/onboarding", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "existing_account" }),
+        });
+        const eligibility = response.ok ? await getCurrentPrivacyEligibility(supabase) : null;
+        if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+          await rejectPrivacyIneligibleSession(existingUserId);
+          toast.error("개인정보 처리 확인을 완료할 수 없습니다. 다시 시도해주세요.");
+          return;
+        }
+
+        const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || refreshedSession.session?.user?.id !== existingUserId) {
+          await rejectPrivacyIneligibleSession(existingUserId);
+          toast.error("개인정보 처리 확인을 완료하지 못했습니다. 다시 시도해주세요.");
+          return;
+        }
+        toast.success("개인정보 처리 확인이 완료되었습니다.");
+        dispatchHomeAuthSessionUpdated({
+          hasSession: true,
+          source: 'auth-modal-existing-account-onboarding',
+        });
+        resetForm();
+        if (redirectAfterAdminLogin()) return;
+        closeAfterAuthSuccess();
+        return;
+      }
+
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('nickname')
         .eq('nickname', username.trim())
         .maybeSingle();
-
       if (existingProfile) {
         toast.error("이미 사용 중인 닉네임입니다. 다른 닉네임을 선택해주세요.");
         return;
       }
-
-      const challenge = await startOnboardingChallenge("password");
-      if (!challenge) return;
 
       const response = await fetch("/api/privacy/onboarding", {
         method: "POST",
@@ -522,7 +572,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
       }
 
       const eligibility = await getCurrentPrivacyEligibility(supabase);
-      if (!eligibility.eligible) {
+      if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
         await rejectPrivacyIneligibleSession(signedInUserId);
         toast.error(privacyEligibilityGuidance(eligibility.reasonCode));
         return;
@@ -534,16 +584,15 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
         source: 'auth-modal-signup',
       });
       resetForm();
-      if (redirectAfterAdminLogin()) {
-        return;
-      }
+      if (redirectAfterAdminLogin()) return;
       closeAfterAuthSuccess();
     } catch {
       toast.error("회원가입을 완료할 수 없습니다. 다시 시도해주세요.");
     } finally {
+      if (recoveryToken !== null) endExistingAccountPrivacyRecovery(recoveryToken);
       setIsLoading(false);
     }
-  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterAdminLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
+  }, [ageBand, closeAfterAuthSuccess, confirmPassword, email, isExistingAccountRecovery, password, policyContentSha256, policyVersion, privacyAgreed, redirectAfterAdminLogin, rejectPrivacyIneligibleSession, resetForm, startOnboardingChallenge, username]);
 
   const handleForgotPassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -573,7 +622,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
   }, []);
 
   const handleMarketingConsentChange = useCallback((key: keyof MarketingConsent, value: boolean) => {
-    setMarketingConsent((current) => ({ ...current, [key]: value }));
+    setMarketingConsent((current) => {
+      const next = { ...current, [key]: value };
+      if (key === "email" && !value) next.night_email = false;
+      if (key === "sms" && !value) next.night_sms = false;
+      if (key === "push" && !value) next.night_push = false;
+      return next;
+    });
   }, []);
 
   // 모달이 닫혀있으면 아무것도 렌더링하지 않음 (성능 최적화)
@@ -605,7 +660,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
             )}
           />
 
-          <Tabs defaultValue="login" className="w-full flex-1 px-4 py-4">
+          <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full flex-1 px-4 py-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">로그인</TabsTrigger>
               <TabsTrigger value="signup">회원가입</TabsTrigger>
@@ -686,6 +741,11 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
+                {isExistingAccountRecovery && (
+                  <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
+                    기존 계정의 개인정보 처리 확인을 완료합니다. 연령대와 최신 개인정보 처리방침을 선택해주세요.
+                  </p>
+                )}
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
                     <Label htmlFor="signup-username" className="text-sm">닉네임</Label>
@@ -796,7 +856,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
                 <GoogleIcon />
-                {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
+                {isGoogleLoading ? "연결 중..." : "Google 개인정보 확인 계속하기"}
               </Button>
             </TabsContent>
           </Tabs>
@@ -832,7 +892,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">로그인</TabsTrigger>
               <TabsTrigger value="signup">회원가입</TabsTrigger>
@@ -910,6 +970,11 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
+                {isExistingAccountRecovery && (
+                  <p className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm" role="status">
+                    기존 계정의 개인정보 처리 확인을 완료합니다. 연령대와 최신 개인정보 처리방침을 선택해주세요.
+                  </p>
+                )}
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
                     <Label htmlFor="signup-username" className="text-sm">닉네임</Label>
@@ -1017,7 +1082,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason }: 
                 disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
               >
                 <GoogleIcon />
-                {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
+                {isGoogleLoading ? "연결 중..." : "Google 개인정보 확인 계속하기"}
               </Button>
             </TabsContent>
           </Tabs>

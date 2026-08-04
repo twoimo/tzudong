@@ -10,7 +10,7 @@ const releaseManifestPath = join(
   "supabase-migration-release-manifest.v1.json",
 );
 const releaseManifest = readFileSync(releaseManifestPath);
-const RELEASE_MANIFEST_SHA256 = "afc0074ff3fdd8a3a07eea8f0c6e722ddf62c1e633eadfb1ff8725970e41980b";
+const RELEASE_MANIFEST_SHA256 = "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d";
 const workflow = (name: string) =>
   readFileSync(join(root, ".github", "workflows", name), "utf8");
 
@@ -59,7 +59,7 @@ describe("production workflow trust boundaries", () => {
     expect(source).not.toContain("secrets.SUPABASE_URL");
 
     const applyStep = source.slice(
-      source.indexOf("- name: Apply reviewed migration through direct Postgres"),
+      source.indexOf("- name: Apply reviewed migration or verify provider-applied terminal state"),
     );
     expect(applyStep).toContain("secrets.SUPABASE_DB_URL");
     expect(applyStep).not.toContain("secrets.SUPABASE_ACCESS_TOKEN");

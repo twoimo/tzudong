@@ -235,18 +235,19 @@ def vectors(root,item, *, raw=None, source_sha256=None):
 _ROLE_SPLICE_LABELS = (
     "00450-role", "00450-schema", "02000-role", "02000-schema-pair",
     "02000-full-assertion-definition", "02000-in-flight-invocation", "02400-role-block",
+    "00300-catalog-assertion-role",
 )
-_ROLE_SPLICE_VERSIONS = ("20260713000450", "20260713002000", "20260713002400")
+_ROLE_SPLICE_VERSIONS = ("20260713000450", "20260713002000", "20260713002400", "20260801000300")
 _SPLICE_FIELDS = frozenset(("label", "version", "old", "new", "start", "end", "old_sha256", "new_sha256"))
 _GROUP_FIELDS = frozenset(("version", "source_sha256", "transformed_source_sha256", "original_vector_sha256", "transformed_vector_sha256"))
 _HEX64 = re.compile(r"^[a-f0-9]{64}$")
 def _splice_specs(root, manifest):
     """Validate the complete immutable splice table and transform each source once."""
-    if not isinstance(ROLE_SPLICES, tuple) or len(ROLE_SPLICES) != 7:
+    if not isinstance(ROLE_SPLICES, tuple) or len(ROLE_SPLICES) != 8:
         raise ClosureError("managed role splice count drift")
     if tuple(record.get("label") if isinstance(record, dict) else None for record in ROLE_SPLICES) != _ROLE_SPLICE_LABELS:
         raise ClosureError("managed role splice order drift")
-    if not isinstance(ROLE_SPLICE_GROUPS, tuple) or len(ROLE_SPLICE_GROUPS) != 3:
+    if not isinstance(ROLE_SPLICE_GROUPS, tuple) or len(ROLE_SPLICE_GROUPS) != 4:
         raise ClosureError("managed role splice group count drift")
     groups = {}
     for group in ROLE_SPLICE_GROUPS:
@@ -307,6 +308,11 @@ def _fragment_rpc_rows(operation, raw):
         if role is None:
             raise ClosureError("G014 RPC fragment grammar drift")
         return tuple((signature.decode("ascii"), role.group(1).decode("ascii")) for signature in signatures)
+    if operation == "replace-confirm":
+        match = re.search(rb"SELECT\s+namespace\.nspname,.*?'(public\.confirm_privacy_onboarding\([^']+\))'\s*FROM", raw, re.S)
+        if match is None:
+            raise ClosureError("G014 RPC fragment grammar drift")
+        return ((match.group(1).decode("ascii"), "service_role"),)
     if operation in {"add-claim", "add-status"}:
         role = re.search(rb"'(anon|authenticated|service_role)'::name", raw)
         signatures = re.findall(rb"'(public\.[^']+)'", raw)
@@ -315,8 +321,13 @@ def _fragment_rpc_rows(operation, raw):
         return ((signatures[0].decode("ascii"), role.group(1).decode("ascii")),)
     raise ClosureError("G014 RPC fragment operation drift")
 def _fragment_removed_names(operation, raw):
-    if operation not in {"replace-account", "replace-external", "replace-retention"}:
+    if operation not in {"replace-account", "replace-external", "replace-retention", "replace-confirm"}:
         return ()
+    if operation == "replace-confirm":
+        match = re.search(rb"DELETE\s+FROM.*?source_signature\s*=\s*'([^']+)'", raw, re.S)
+        if match is None:
+            raise ClosureError("G014 RPC fragment delete grammar drift")
+        return (match.group(1).decode("ascii").split("(", 1)[0].rsplit(".", 1)[-1],)
     field = b"function_name" if operation != "replace-retention" else b"source_signature"
     match = re.search(rb"DELETE\s+FROM.*?" + field + rb"\s+IN\s*\((.*?)\)\s*;", raw, re.S)
     if not match:
@@ -326,8 +337,8 @@ def _fragment_removed_names(operation, raw):
         raise ClosureError("G014 RPC fragment delete drift")
     return tuple(value.split("(", 1)[0].rsplit(".", 1)[-1] for value in values)
 def _compose_source_bound_rpc_matrix(fragments):
-    expected_counts = (80, 7, 5, 11, 8, 1, 1, 9)
-    expected_removed = {"replace-account": 7, "replace-external": 5, "replace-retention": 6}
+    expected_counts = (80, 7, 5, 11, 8, 1, 1, 9, 1)
+    expected_removed = {"replace-account": 7, "replace-external": 5, "replace-retention": 6, "replace-confirm": 1}
     matrix = []
     for index, (operation, raw) in enumerate(fragments):
         additions = _fragment_rpc_rows(operation, raw)
@@ -354,11 +365,11 @@ def _source_bound_rpc_matrix(root, manifest):
     """Verify every immutable ACL mutation fragment before accepting the composed terminal matrix."""
     expected_versions = (
         "20260713002000", "20260713002100", "20260713002200",
-        "20260713002300", "20260713002400",
+        "20260713002300", "20260713002400", "20260801000300",
     )
     if (G014_RPC_ALLOWLIST_VERSION != expected_versions[-1]
             or not isinstance(G014_RPC_ALLOWLIST_FRAGMENTS, tuple)
-            or len(G014_RPC_ALLOWLIST_FRAGMENTS) != 8
+            or len(G014_RPC_ALLOWLIST_FRAGMENTS) != 9
             or not isinstance(G014_RPC_ALLOWLIST_SOURCES, tuple)
             or tuple(version for version, _, _ in G014_RPC_ALLOWLIST_SOURCES) != expected_versions):
         raise ClosureError("G014 RPC allowlist binding drift")
@@ -370,13 +381,13 @@ def _source_bound_rpc_matrix(root, manifest):
     if tuple(version for version, *_ in G014_RPC_ALLOWLIST_FRAGMENTS) != (
             "20260713002000", "20260713002100", "20260713002200",
             "20260713002300", "20260713002300", "20260713002300",
-            "20260713002300", "20260713002400"):
+            "20260713002300", "20260713002400", "20260801000300"):
         raise ClosureError("G014 RPC allowlist fragment order drift")
     fragments = []
     for version, operation, start, end, bounded_sha256 in G014_RPC_ALLOWLIST_FRAGMENTS:
         item = sources.get(version)
         if (item is None or operation not in {"base", "add", "replace-account",
-                "replace-external", "add-claim", "add-status", "replace-retention"}
+                "replace-external", "add-claim", "add-status", "replace-retention", "replace-confirm"}
                 or not isinstance(start, int) or not isinstance(end, int)
                 or start < 0 or end <= start or not re.fullmatch(r"[a-f0-9]{64}", bounded_sha256)):
             raise ClosureError("G014 RPC allowlist fragment schema drift")
@@ -770,7 +781,7 @@ def _terminal_assert(cur, manifest, expected_vectors, *, deadline=None, runtime_
     rows=ledger(cur)
     expected=BASELINE_PAIRS+tuple((item.version,item.name) for item in manifest.migrations)
     pairs=tuple((version,name) for version,name,_ in rows)
-    if len(rows)!=40 or pairs!=expected or len(set(pairs))!=len(pairs):
+    if len(rows)!=len(expected) or pairs!=expected or len(set(pairs))!=len(pairs):
         raise ClosureError("terminal ledger mismatch")
     if any(not isinstance(statements,tuple) or not statements for _,_,statements in rows):
         raise ClosureError("terminal ledger noncanonical")
@@ -1006,7 +1017,7 @@ def apply_cursor(cur, capability, *, root, manifest, freeze_id, relation_root, a
         raise ClosureError("commit ambiguity: readback only; retry forbidden") from None
     return evidence
 def run(args):
-    root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root); base={"commit_sha256":root_commit(root),"source_sha256":digest([x.sha256 for x in manifest.migrations]),"migration_count":28}
+    root=repository_root(Path(__file__).resolve()); manifest=validate_sources(root); base={"commit_sha256":root_commit(root),"source_sha256":digest([x.sha256 for x in manifest.migrations]),"migration_count":29}
     if args.mode=="validate": return receipt(args.mode,"valid",base)
     conn=connection(args.db_env)
     try:

@@ -13,7 +13,7 @@ import {
   validateReleaseMigrationManifest,
 } from "../scripts/apply-supabase-migration.mjs";
 
-const MANIFEST_SHA256 = "afc0074ff3fdd8a3a07eea8f0c6e722ddf62c1e633eadfb1ff8725970e41980b";
+const MANIFEST_SHA256 = "515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d";
 const manifestBytes = readFileSync(RELEASE_MIGRATION_MANIFEST_PATH);
 const manifestDocument = JSON.parse(manifestBytes.toString("utf8"));
 const migration = manifestDocument.migrations[0];
@@ -32,6 +32,10 @@ expect(migrationScriptSource).toContain("undefinedFunction ?? undefinedOperator"
 expect(migrationScriptSource).not.toContain("result.stderr.trim()");
 expect(migrationScriptSource).toContain("--verify-terminal-state");
 expect(migrationScriptSource).toContain("MIGRATION_TERMINAL_READBACK_FAILED");
+expect(migrationScriptSource).toContain("PROVIDER_RECEIPT_REQUIRED");
+expect(migrationScriptSource).toContain("PROVIDER_RECEIPT_DIGEST_MISMATCH");
+expect(migrationScriptSource).toContain("migration_sha256");
+expect(migrationScriptSource).toContain("manifest_sha256");
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const canonicalBytes = (document: unknown) =>
@@ -79,6 +83,11 @@ describe("reviewed Supabase migration apply contract", () => {
           id: "g016_privacy_audit_owner_policy",
           path: "backend/supabase/migrations/20260801000100_g016_privacy_audit_owner_policy.sql",
           sha256: "6e6c4a464d066947a0b89dbca791ed220febd4abde12d89a1b7136240bb2ad78",
+        }),
+        expect.objectContaining({
+          id: "g016_onboarding_confirmation_freshness",
+          path: "backend/supabase/migrations/20260801000200_g016_onboarding_confirmation_freshness.sql",
+          sha256: "a116b2d0a71304b0c6cd6ceca05344e198709384381451b250d7145d4fe12d3e",
         }),
       ],
     });
@@ -222,5 +231,26 @@ describe("reviewed Supabase migration apply contract", () => {
       SUPABASE_SERVICE_ROLE_KEY: "service-role",
     })).toThrow("MIGRATION_TRANSPORT_CREDENTIAL_OVERLAP");
     expect(() => selectDirectDatabaseTransport({})).toThrow("MIGRATION_CREDENTIALS_MISSING");
+  });
+  test("requires a manifest-bound provider receipt before G016 terminal verification", async () => {
+    await expect(main([
+      "--migration-id",
+      "g016_privacy_audit_owner_policy",
+      "--verify-terminal-state",
+    ], {
+      environment: {
+        RELEASE_MIGRATION_MANIFEST_SHA256: MANIFEST_SHA256,
+      },
+    })).rejects.toThrow("PROVIDER_RECEIPT_REQUIRED");
+
+    for (const entry of manifestDocument.migrations.filter((item: { id: string }) =>
+      item.id.startsWith("g016_"))) {
+      expect(entry.terminalReadback.query).toContain("acl.grantee = 0");
+      expect(entry.terminalReadback.query).toContain("NOT rolcanlogin");
+      expect(entry.terminalReadback.query).toContain("m.roleid = (SELECT oid FROM pg_roles");
+      expect(entry.terminalReadback.query).toContain("m.member = (SELECT oid FROM pg_roles");
+      expect(entry.terminalReadback.query).toContain("p.prosecdef");
+      expect(entry.terminalReadback.query).toContain("search_path=");
+    }
   });
 });
