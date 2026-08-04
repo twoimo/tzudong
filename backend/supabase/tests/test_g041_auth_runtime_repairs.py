@@ -123,6 +123,7 @@ class AuthWorkflowBridgeContractTests(unittest.TestCase):
         self.assertIn("privacy workflow bridge role attributes are incompatible", self.sql)
         self.assertIn("g041_public_rpc_owner_contract_drift", self.sql)
         self.assertIn("G041 found a public function unexpectedly owned by privacy_auth_bridge", self.sql)
+        self.assertIn("g041_definer_owner_contract_drift", self.sql)
         self.assertIn("NOT membership.admin_option", self.sql)
         self.assertIn("pg_catalog.pg_has_role(v_bridge.oid, v_owner.oid, 'USAGE')", self.sql)
 
