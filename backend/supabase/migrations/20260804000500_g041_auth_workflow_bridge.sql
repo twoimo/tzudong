@@ -489,6 +489,27 @@ ALTER FUNCTION privacy_retention.g014_account_deletion_apply_adapter(text,uuid,u
 ALTER FUNCTION public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text) OWNER TO privacy_auth_bridge;
 ALTER FUNCTION public.activate_account_deletion_policy(text,text) OWNER TO privacy_auth_bridge;
 ALTER FUNCTION public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text) OWNER TO privacy_auth_bridge;
+GRANT EXECUTE ON FUNCTION public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.create_admin_transactional_notification(uuid,uuid,text,text,text,jsonb) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.create_review_like_notification(uuid,uuid,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.finalize_account_deletion_auth(uuid,uuid,uuid,text,text,text,uuid,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.hold_privacy_onboarding_compensation(uuid,uuid,text,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.make_user_admin(text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.preflight_release_auth_session_family(uuid,uuid,uuid,text,bigint) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.prepare_account_deletion_external_egress(uuid,uuid,uuid,text,text,text,text,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.preview_account_deletion(uuid,uuid,timestamptz) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION privacy_retention.g014_account_deletion_reconcile_expired_attempt(uuid,text,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION privacy_retention.g014_retention_append_audit(privacy_retention.privacy_retention_runs,text,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.read_account_deletion_external_job(uuid,uuid,uuid,text,text,text,text,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.read_release_auth_revocation(uuid,uuid,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.read_release_auth_revocation_by_operation(uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.reconcile_account_deletion_auth_job(uuid,uuid,uuid,text,text,text,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.revoke_release_auth_session_family(uuid,uuid,uuid,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.run_account_deletion_session_family_cleanup(uuid,uuid,uuid,text,text,text,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION privacy_retention.g014_account_deletion_apply_adapter(text,uuid,uuid) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.apply_account_deletion_database_cleanup(uuid,uuid,uuid,text,text,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.activate_account_deletion_policy(text,text) TO privacy_workflow_owner;
+GRANT EXECUTE ON FUNCTION public.evaluate_notification_marketing_permission(uuid,text,timestamptz,text) TO privacy_workflow_owner;
 
 
 DO $readback$
