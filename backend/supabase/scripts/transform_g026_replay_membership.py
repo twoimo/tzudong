@@ -79,6 +79,8 @@ def build_transformed(source: bytes, item: dict[str, Any], window: dict[str, Any
             or transformed.count(revoke) != expected_membership_count
             or transformed.count(postcondition) != expected_membership_count):
         raise ValueError("replay membership statement count drifted")
+    if b"SET LOCAL ROLE privacy_workflow_owner;" in transformed or b"RESET ROLE;" in transformed:
+        raise ValueError("replay membership must not switch away from postgres")
     if mode == "revoke_before_catalog_assertion":
         catalog_statements = (
             catalog_schema_usage_grant,

@@ -9,7 +9,7 @@ import {
     getDevAdminBypassCookieFromHeader,
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
-import { shouldSkipPublicEligibilitySession } from '@/lib/auth/public-eligibility-session'
+import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation'
 import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
@@ -178,13 +178,11 @@ function isTrustedProxyMutation(request: NextRequest) {
 
 async function shouldSkipSession(request: NextRequest) {
     const { pathname } = request.nextUrl
-    const method = request.method.toUpperCase()
+    const method = request.method
+    const routeClass = classifyPublicEligibilitySessionRoute({ pathname, method })
+    const hasSessionHint = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined)
 
-    if (shouldSkipPublicEligibilitySession({
-        pathname,
-        method,
-        hasSessionHint: hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined),
-    })) {
+    if (routeClass === 'loop-safe' || (!hasSessionHint && routeClass === 'credentialless-public')) {
         return true
     }
     if (isPlaywrightAdminBypassRequest(request)) {

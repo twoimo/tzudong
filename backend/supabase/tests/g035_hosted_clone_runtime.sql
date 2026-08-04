@@ -55,7 +55,7 @@ BEGIN
     RAISE EXCEPTION 'G035 clone G010 consent fail-closed grant contract failed';
   END IF;
 
-  target := pg_catalog.to_regprocedure('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid)');
+  target := pg_catalog.to_regprocedure('public.confirm_privacy_onboarding(uuid,text,uuid,text,uuid,text)');
   SELECT EXISTS (
     SELECT 1
       FROM pg_catalog.pg_proc AS procedure_row
