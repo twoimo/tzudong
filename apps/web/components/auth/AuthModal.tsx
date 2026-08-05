@@ -20,6 +20,7 @@ import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 import {
+  AUTH_PRIVACY_ONBOARDING_REASON,
   getSafeAuthNextPath,
   isAdminAuthRedirect,
 } from "@/lib/auth/auth-redirect";
@@ -630,6 +631,36 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       return next;
     });
   }, []);
+  const isPrivacyOnboarding = reason === AUTH_PRIVACY_ONBOARDING_REASON;
+  const privacyOnboardingContent = (
+    <div className="space-y-4" data-testid="privacy-onboarding-modal">
+      <p className="rounded-lg border border-primary/25 bg-primary/5 p-3 text-sm leading-6" role="status">
+        Google 로그인은 완료되었습니다. 서비스 이용에 필요한 항목만 확인해주세요.
+      </p>
+      <OnboardingConsentFields
+        ageBand={ageBand}
+        onAgeBandChange={setAgeBand}
+        privacyAgreed={privacyAgreed}
+        onPrivacyAgreedChange={setPrivacyAgreed}
+        onPrivacyPolicyOpen={() => setIsPrivacyModalOpen(true)}
+        marketingConsent={marketingConsent}
+        onMarketingConsentChange={handleMarketingConsentChange}
+        policyVersionReady={Boolean(policyVersion && policyContentSha256)}
+      />
+      <Button
+        type="button"
+        className="h-11 w-full bg-gradient-primary text-sm hover:opacity-90 sm:text-base"
+        onClick={handleGoogleSignup}
+        disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
+      >
+        <GoogleIcon />
+        {isGoogleLoading ? "연결 중..." : "Google로 개인정보 확인 완료하기"}
+      </Button>
+      <p className="text-center text-xs text-muted-foreground">
+        선택 항목에 동의하지 않아도 계속할 수 있습니다.
+      </p>
+    </div>
+  );
 
   // 모달이 닫혀있으면 아무것도 렌더링하지 않음 (성능 최적화)
   if (!isOpen) return null;
@@ -648,8 +679,8 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         >
           <div className={mobileSheetStyles.frame}>
           <MobileSheetHeader
-            title="쯔동여지도"
-            description="쯔양의 맛집을 리뷰하고 공유하세요"
+            title={isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
+            description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
             titleId="auth-sheet-title"
             descriptionId="auth-sheet-description"
             icon={<span className="text-xl">🔥</span>}
@@ -660,6 +691,12 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             )}
           />
 
+          {isPrivacyOnboarding && (
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              {privacyOnboardingContent}
+            </div>
+          )}
+          {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full flex-1 px-4 py-4">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">로그인</TabsTrigger>
@@ -860,8 +897,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </Button>
             </TabsContent>
           </Tabs>
+          )}
 
-          <div className={`${mobileSheetStyles.footer} text-center text-xs text-muted-foreground`}>
+          {!isPrivacyOnboarding && (
+            <div className={`${mobileSheetStyles.footer} text-center text-xs text-muted-foreground`}>
             <button
               type="button"
               className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
@@ -871,6 +910,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             </button>
             을 확인해주세요
           </div>
+          )}
           </div>
         </BottomSheet>
       )}
@@ -884,14 +924,16 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 <span className="text-xl sm:text-2xl">🔥</span>
               </div>
               <DialogTitle className="text-xl sm:text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                쯔동여지도
+                {isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
               </DialogTitle>
             </div>
             <DialogDescription className="text-sm text-left">
-              쯔양의 맛집을 리뷰하고 공유하세요
+              {isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
             </DialogDescription>
           </DialogHeader>
 
+          {isPrivacyOnboarding && privacyOnboardingContent}
+          {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">로그인</TabsTrigger>
@@ -1086,8 +1128,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </Button>
             </TabsContent>
           </Tabs>
+          )}
 
-          <div className="text-xs text-center text-muted-foreground">
+          {!isPrivacyOnboarding && (
+            <div className="text-xs text-center text-muted-foreground">
             <button
               type="button"
               className="inline-flex min-h-6 items-center text-primary underline hover:text-primary/80"
@@ -1097,6 +1141,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
             </button>
             을 확인해주세요
           </div>
+          )}
         </DialogContent>
       </Dialog>
       )}
