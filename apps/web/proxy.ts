@@ -10,6 +10,7 @@ import {
     validateDevAdminBypassCookie,
 } from '@/lib/auth/dev-admin-bypass-cookie'
 import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
+import { isHomePrivacyOnboardingRequest } from '@/lib/auth/auth-redirect'
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation'
 import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url'
 import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
@@ -181,6 +182,15 @@ async function shouldSkipSession(request: NextRequest) {
     const method = request.method
     const routeClass = classifyPublicEligibilitySessionRoute({ pathname, method })
     const hasSessionHint = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined)
+    if (
+        (method === 'GET' || method === 'HEAD')
+        && isHomePrivacyOnboardingRequest({
+            pathname,
+            search: request.nextUrl.search,
+        })
+    ) {
+        return true
+    }
 
     if (routeClass === 'loop-safe' || (!hasSessionHint && routeClass === 'credentialless-public')) {
         return true

@@ -5,6 +5,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextType } from "@/contexts/AuthContextBase";
 import { dispatchHomeAuthSessionUpdated } from "@/lib/home-auth-events";
 import { isExistingAccountPrivacyRecoveryActive } from "@/lib/auth/existing-account-recovery";
+import { isHomePrivacyOnboardingRequest } from "@/lib/auth/auth-redirect";
 import { DEBUG_LOG_EVENT, DEBUG_LOG_REASON_CODE, debugLog } from "@/lib/debug-log";
 import { recordPasswordRecoveryProof } from "@/lib/auth/password-recovery-proof";
 import {
@@ -50,10 +51,12 @@ function shouldBootstrapAuthOnGeneralInteraction() {
 }
 
 function isLiteralLoopSafePrivacyOnboarding() {
-    return typeof window !== 'undefined'
-        && window.location.pathname === '/privacy/onboarding'
+    if (typeof window === 'undefined' || window.location.hash) return false;
+
+    return (
+        window.location.pathname === '/privacy/onboarding'
         && !window.location.search
-        && !window.location.hash;
+    ) || isHomePrivacyOnboardingRequest(window.location);
 }
 function isLiteralPasswordRecoveryRoute() {
     return typeof window !== 'undefined'
