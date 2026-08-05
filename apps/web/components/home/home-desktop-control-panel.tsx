@@ -1500,7 +1500,7 @@ export default function HomeDesktopControlPanel({
                     aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
                       "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
@@ -1534,7 +1534,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1549,7 +1549,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1564,7 +1564,7 @@ export default function HomeDesktopControlPanel({
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
                 onRegionSelect={onSearchExecute}
-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
                 contentSide="top"
                 contentAlign="start"
               />
@@ -1573,7 +1573,7 @@ export default function HomeDesktopControlPanel({
                 value={selectedCountry || undefined}
                 onValueChange={onCountryChange}
               >
-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80">
+                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80">
                   <SelectValue placeholder="해외 지역" />
                 </SelectTrigger>
                 <SelectContent
@@ -1595,7 +1595,7 @@ export default function HomeDesktopControlPanel({
               onCategoryChange={onCategoryChange}
               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
               contentSide="top"
               contentAlign="start"
             />
