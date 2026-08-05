@@ -11,7 +11,7 @@ import {
   getCurrentPrivacyEligibility,
   hasLivePrivacyEligibilityReceipt,
 } from '@/lib/privacy/eligibility';
-import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
+import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
 
@@ -188,7 +188,7 @@ export async function GET(request: Request) {
       }
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
-        return redirectWithOnboardingCookiesCleared(origin, '/privacy/onboarding');
+        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());
       }
 
       return redirectWithOnboardingCookiesCleared(origin, next);
