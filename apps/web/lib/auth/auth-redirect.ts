@@ -1,9 +1,10 @@
 export const AUTH_LOGIN_QUERY_PARAM = 'auth';
 export const AUTH_LOGIN_QUERY_VALUE = 'login';
 export const AUTH_REDIRECT_REASON_PARAM = 'reason';
+export const AUTH_PRIVACY_ONBOARDING_REASON = 'privacy_onboarding';
 export const AUTH_REDIRECT_NEXT_PARAM = 'next';
 
-export type AuthRedirectReason = 'admin' | 'mypage' | 'review';
+export type AuthRedirectReason = 'admin' | 'mypage' | 'review' | typeof AUTH_PRIVACY_ONBOARDING_REASON;
 
 const SAFE_AUTH_NEXT_PATH_PATTERN = /^\/(?:admin(?:\/[A-Za-z0-9_-]+)*|mypage(?:\/[A-Za-z0-9_-]+)*|submissions(?:\/[A-Za-z0-9_-]+)*|user(?:\/[A-Za-z0-9_-]+)*|feed|)$/;
 const SAFE_AUTH_NEXT_QUERY_PATTERN = /^[A-Za-z0-9._~!$&'()*+,;=:@/?%-]*$/;
@@ -44,6 +45,26 @@ export function buildHomeAuthLoginPath({
   });
 
   return `/?${params.toString()}`;
+}
+
+export function buildHomePrivacyOnboardingPath() {
+  const params = new URLSearchParams({
+    [AUTH_LOGIN_QUERY_PARAM]: AUTH_LOGIN_QUERY_VALUE,
+    [AUTH_REDIRECT_REASON_PARAM]: AUTH_PRIVACY_ONBOARDING_REASON,
+  });
+
+  return `/?${params.toString()}`;
+}
+
+export function isHomePrivacyOnboardingRequest(
+  location: { pathname: string; search: string },
+) {
+  if (location.pathname !== '/') return false;
+
+  const params = new URLSearchParams(location.search);
+  return params.size === 2
+    && params.get(AUTH_LOGIN_QUERY_PARAM) === AUTH_LOGIN_QUERY_VALUE
+    && params.get(AUTH_REDIRECT_REASON_PARAM) === AUTH_PRIVACY_ONBOARDING_REASON;
 }
 
 export function readHomeAuthLoginRequestFromLocation(location: Pick<Location, 'search'>) {
