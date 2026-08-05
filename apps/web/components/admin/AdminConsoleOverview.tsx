@@ -3782,7 +3782,7 @@ function AdminDashboardManagementSkeleton() {
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            쯔양 KPI 대시보드
+            Tzuyang KPI Dashboard
           </h1>
         </div>
         <div
@@ -7210,7 +7210,7 @@ function AdminDashboardManagementPanel({
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            쯔양 KPI 대시보드
+            Tzuyang KPI Dashboard
           </h1>
         </div>
         <div

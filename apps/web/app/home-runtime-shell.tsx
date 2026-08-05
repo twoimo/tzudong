@@ -11,7 +11,10 @@ import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
-import { readHomeAuthLoginRequestFromLocation } from '@/lib/auth/auth-redirect';
+import {
+    AUTH_PRIVACY_ONBOARDING_REASON,
+    readHomeAuthLoginRequestFromLocation,
+} from '@/lib/auth/auth-redirect';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
@@ -32,6 +35,7 @@ type AuthModalProps = {
     onAuthSuccess?: () => void;
     redirectTo?: string | null;
     reason?: string | null;
+    initialAuthTab?: 'login' | 'signup';
 };
 type ProfileModalProps = AuthModalProps;
 type NicknameSetupModalProps = { isOpen: boolean; onComplete: () => void };
@@ -235,6 +239,9 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                         onAuthSuccess={closeAuthAfterSuccess}
                         redirectTo={authLoginRequest.requested ? authLoginRequest.nextPath : null}
                         reason={authLoginRequest.requested ? authLoginRequest.reason : null}
+                        initialAuthTab={
+                            authLoginRequest.reason === AUTH_PRIVACY_ONBOARDING_REASON ? 'signup' : 'login'
+                        }
                     />
                 </Suspense>
             )}
