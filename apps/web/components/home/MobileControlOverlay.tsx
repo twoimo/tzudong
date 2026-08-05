@@ -995,7 +995,7 @@ function MobileControlOverlayComponent({
                                 title={`${theme.label}: ${theme.description}`}
                                 className={cn(
                                     'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                    'px-2.5 text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    'px-2.5 home-map-floating-control-text text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
                                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                                     isSelected
                                         ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
@@ -1025,7 +1025,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1038,7 +1038,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1057,7 +1057,7 @@ function MobileControlOverlayComponent({
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
@@ -1078,7 +1078,7 @@ function MobileControlOverlayComponent({
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2',
+                        'hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text',
                         activeSheet === 'category' && 'ring-2 ring-primary'
                     )}
                 >
