@@ -1500,8 +1500,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toContain("쯔양 KPI 대시보드");
-    expect(consoleSource).not.toContain("Tzuyang KPI Dashboard");
+    expect(consoleSource).toMatch(/>\s*Tzuyang KPI Dashboard\s*</);
+    expect(consoleSource).not.toMatch(/>\s*쯔양 KPI 대시보드\s*</);
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
     );
