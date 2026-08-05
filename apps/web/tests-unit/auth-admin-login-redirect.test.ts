@@ -5,8 +5,10 @@ import { join } from 'node:path';
 
 import {
   buildHomeAuthLoginPath,
+  buildHomePrivacyOnboardingPath,
   getSafeAuthNextPath,
   isAdminAuthRedirect,
+  isHomePrivacyOnboardingRequest,
   readHomeAuthLoginRequestFromLocation,
 } from '@/lib/auth/auth-redirect';
 import {
@@ -294,7 +296,13 @@ describe('public eligibility proxy', () => {
     };
 
     const { proxy } = await loadProxy();
-    for (const path of ['/api/privacy/onboarding', '/auth/callback', '/privacy/onboarding', '/auth/reset-password']) {
+    for (const path of [
+      '/api/privacy/onboarding',
+      '/auth/callback',
+      '/privacy/onboarding',
+      '/auth/reset-password',
+      '/?auth=login&reason=privacy_onboarding',
+    ]) {
       const response = await proxy(requestWithSupabaseSessionHint(path));
 
       expect(response.status).toBe(200);
@@ -329,6 +337,24 @@ describe('admin auth redirect helpers', () => {
       reason: 'admin',
       nextPath: '/admin?module=storyboard',
     });
+  });
+
+  test('privacy onboarding uses one exact loop-safe home modal URL', () => {
+    const onboardingPath = buildHomePrivacyOnboardingPath();
+
+    expect(onboardingPath).toBe('/?auth=login&reason=privacy_onboarding');
+    expect(isHomePrivacyOnboardingRequest({
+      pathname: '/',
+      search: onboardingPath.slice(1),
+    })).toBe(true);
+    expect(isHomePrivacyOnboardingRequest({
+      pathname: '/',
+      search: `${onboardingPath.slice(1)}&next=%2Fadmin`,
+    })).toBe(false);
+    expect(isHomePrivacyOnboardingRequest({
+      pathname: '/privacy/onboarding',
+      search: '',
+    })).toBe(false);
   });
 
   test('홈 쿼리 로그인 성공은 success-aware cleanup을 사용하고 관리자 redirect는 assign을 유지한다', () => {
