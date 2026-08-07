@@ -818,7 +818,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="shrink-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl"',
     );
     expect(overviewSource).toContain(
-      'className="scrollbar-hide rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
+      'className="scrollbar-hide min-w-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3"',
     );
     expect(overviewSource).toContain(
       'className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-card/80 shadow-sm md:rounded-2xl"',
