@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
 import { gotoAndHidePopup } from './helpers';
 
 test.describe('QA Integration Tests', () => {
@@ -10,7 +10,11 @@ test.describe('QA Integration Tests', () => {
         // Review Page (GlobalLoader used directly)
         await page.route('**/rest/v1/**', async route => {
             await new Promise(f => setTimeout(f, 500)); // Delay to keep loader visible
-            await route.continue();
+            if (process.env.NIGHTLY_OFFLINE === '1') {
+                await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+            } else {
+                await route.continue();
+            }
         });
 
         await gotoAndHidePopup(page, '/feed');
@@ -88,6 +92,8 @@ test.describe('QA Integration Tests', () => {
                     road_address: `서울시 ${i}`
                 }));
                 await route.fulfill({ json });
+            } else if (process.env.NIGHTLY_OFFLINE === '1') {
+                await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
             } else {
                 await route.continue();
             }
@@ -131,6 +137,8 @@ test.describe('QA Integration Tests', () => {
                 // Mock user stamps
                 const json = [{ restaurant_id: 'test-restaurant-1', is_verified: true }];
                 await route.fulfill({ json });
+            } else if (process.env.NIGHTLY_OFFLINE === '1') {
+                await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
             } else {
                 await route.continue();
             }

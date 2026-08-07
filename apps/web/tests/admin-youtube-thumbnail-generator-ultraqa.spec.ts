@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from './nightly/nightly-test';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
@@ -76,7 +76,9 @@ function readEnvWithFallback(key: string) {
 }
 
 function getSupabaseAuthStorageKey() {
-  const supabaseUrl = readEnvWithFallback('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseUrl = process.env.NIGHTLY_OFFLINE === '1'
+    ? 'http://127.0.0.1:54321'
+    : readEnvWithFallback('NEXT_PUBLIC_SUPABASE_URL');
   const hostname = supabaseUrl ? new URL(supabaseUrl).hostname : 'local.supabase.co';
   return `sb-${hostname.split('.')[0]}-auth-token`;
 }
