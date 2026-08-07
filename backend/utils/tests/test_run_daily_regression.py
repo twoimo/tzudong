@@ -793,6 +793,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("\nrequests\n", crawling_requirements)
         self.assertIn("langgraph==", pipeline_requirements)
         self.assertNotIn("langchain-core>=", pipeline_requirements)
+        g038_workflow = (REPO_ROOT / ".github" / "workflows" / "g038-account-deletion-successor.yml").read_text(encoding="utf-8")
+        self.assertIn("cryptography==50.0.0", g038_workflow)
+        self.assertIn("cffi==2.0.0", g038_workflow)
+        self.assertNotIn("cffi==1.17.1", g038_workflow)
 
     def test_chunk_multimodal_only_uses_chrome_impersonation_when_available(self) -> None:
         script = CHUNK_MULTIMODAL_SCRIPT.read_text(encoding="utf-8")
