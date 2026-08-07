@@ -45,7 +45,14 @@
   white-space: normal;
 }
 
-.mobile-map-status-badge > span > span:last-child {
+.mobile-map-status-badge > span > span.map-overlay-notice-single-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-map-status-badge > span > span:last-child:not(.map-overlay-notice-single-line) {
   min-width: 0;
   overflow-wrap: anywhere;
   white-space: normal;
