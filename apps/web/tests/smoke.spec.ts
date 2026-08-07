@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
 
 test.describe('Phase 1: Smoke Test', () => {
     test('ST-01: 메인 페이지 로딩 및 타이틀 확인', async ({ page }) => {
@@ -12,24 +12,20 @@ test.describe('Phase 1: Smoke Test', () => {
         await expect(description).toHaveAttribute('content', /쯔양.*맛집/);
     });
 
-    test('ST-02: 비인증 상태 UI (헤더) 확인', async ({ page }) => {
+    test('ST-02: 비인증 상태 홈 UI 확인', async ({ page }) => {
         await page.goto('/');
 
-        // 헤더 영역이 로드될 때까지 대기
-        const header = page.locator('header');
-        await expect(header).toBeVisible();
+        const main = page.getByRole('main');
+        await expect(main).toBeVisible();
 
-        // 로그인 버튼이 보여야 함 (비로그인 상태)
-        const loginButton = page.getByRole('button', { name: /로그인/i });
+        const homeRegion = page.getByRole('region', { name: '쯔동여지도 홈 지도 화면' });
+        await expect(homeRegion).toBeVisible();
+
+        const searchBox = page.getByRole('textbox', { name: '맛집 검색어 입력' });
+        await expect(searchBox).toBeVisible();
+
+        const loginButton = page.getByRole('button', { name: '로그인 열기' });
         await expect(loginButton).toBeVisible();
-        // 버튼 텍스트가 정확하지 않을 수 있으므로, LoginUser UI 컴포넌트 구조에 따라 조정 필요
-        // 여기서는 일반적인 '로그인' 텍스트 혹은 아이콘을 찾습니다.
-        // 만약 아이콘이라면 aria-label 등을 확인해야 합니다.
-
-        // 실제 컴포넌트: Header -> LoginUser -> Button
-        // "로그인하고 맛집 기록하기"는 AuthModal 내부 텍스트일 수 있음.
-        // Header 우측 상단 버튼 확인.
-        // LoginUser.tsx를 보면 비로그인 시 "로그인" 버튼이나 아이콘이 렌더링됨.
     });
 
     // 지도 컨테이너 로딩 확인은 클라이언트 로직이 포함되므로 약간의 대기가 필요할 수 있음
