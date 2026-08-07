@@ -20,15 +20,54 @@ const securityHeaders = [
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
 ];
 
-const supabaseStorageHostname = (() => {
+const NIGHTLY_OFFLINE_SUPABASE_ORIGIN = 'http://127.0.0.1:54321';
+const SUPABASE_STORAGE_PATHNAME = '/storage/v1/object/public/**';
+
+/**
+ * @param {string | undefined} supabaseUrl
+ * @param {{ nightlyOffline?: boolean, isProduction?: boolean, isVercel?: boolean }} options
+ */
+export function getSupabaseStorageRemotePattern(supabaseUrl, {
+    nightlyOffline = false,
+    isProduction = false,
+    isVercel = false,
+} = {}) {
+    if (
+        nightlyOffline
+        && !isProduction
+        && !isVercel
+        && supabaseUrl === NIGHTLY_OFFLINE_SUPABASE_ORIGIN
+    ) {
+        return {
+            protocol: 'http',
+            hostname: '127.0.0.1',
+            port: '54321',
+            pathname: SUPABASE_STORAGE_PATHNAME,
+        };
+    }
+
     try {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         if (!supabaseUrl) return null;
-        return new URL(supabaseUrl).hostname;
+        const parsedSupabaseUrl = new URL(supabaseUrl);
+        if (parsedSupabaseUrl.protocol !== 'https:') return null;
+        return {
+            protocol: 'https',
+            hostname: parsedSupabaseUrl.hostname,
+            pathname: SUPABASE_STORAGE_PATHNAME,
+        };
     } catch {
         return null;
     }
-})();
+}
+
+const supabaseStorageRemotePattern = getSupabaseStorageRemotePattern(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    {
+        nightlyOffline: process.env.NIGHTLY_OFFLINE === '1',
+        isProduction: process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production',
+        isVercel: Boolean(process.env.VERCEL || process.env.VERCEL_ENV),
+    },
+);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -62,13 +101,7 @@ const nextConfig = {
                 hostname: 'i.ytimg.com',
             },
             // [OPTIMIZATION] Supabase 스토리지 도메인 (현재 프로젝트 URL 기준)
-            ...(supabaseStorageHostname ? [
-                {
-                    protocol: 'https',
-                    hostname: supabaseStorageHostname,
-                    pathname: '/storage/v1/object/public/**',
-                },
-            ] : []),
+            ...(supabaseStorageRemotePattern ? [supabaseStorageRemotePattern] : []),
         ],
     },
     env: {

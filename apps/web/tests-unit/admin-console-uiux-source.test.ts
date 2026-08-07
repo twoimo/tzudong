@@ -158,10 +158,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       appGlobalsSource,
       '[data-admin-storyboard-generator="true"][data-storyboard-viewport-fit="bounded"]',
       "height",
-      "calc(var(--full-height, 100vh) - 2rem)",
+      "100%",
+    );
+    expect(storyboardSource).not.toContain(
+      'height: "calc(var(--full-height, 100vh) - 2rem)"',
     );
     expect(storyboardSource).toContain(
-      'height: "calc(var(--full-height, 100vh) - 2rem)"',
+      "grid min-h-0 flex-1 gap-3 overflow-hidden",
     );
 
     expectCssDeclaration(
@@ -465,6 +468,83 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("처음이라면");
     expect(consoleSource).not.toContain("안전하게 처리하려면");
     expect(consoleSource).not.toContain("ModuleContextHeader");
+  });
+
+  test("uses the shared compact embedded module shell instead of canvas-level generic headers", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const routeSource = source("lib/admin/admin-module-routing.ts");
+    const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
+
+    expect(shellSource).toContain("export function AdminEmbeddedModuleShell");
+    expect(shellSource).toContain('data-admin-embedded-module-shell="true"');
+    expect(shellSource).toContain("data-admin-embedded-module-id={moduleId}");
+    expect(shellSource).toContain('data-admin-module-header="compact"');
+    expect(shellSource).toContain("data-admin-module-header-module={moduleId}");
+    expect(shellSource).toContain('data-admin-module-summary="true"');
+    expect(shellSource).toContain('data-admin-module-actions="top-right"');
+    expect(shellSource).toContain('data-admin-module-content="bounded"');
+    expect(shellSource).toContain(
+      '"shrink-0 border-b border-border bg-card px-2 py-1.5"',
+    );
+    expect(shellSource).toContain("bg-gradient-primary bg-clip-text");
+    expect(shellSource).toContain('"min-h-0 flex-1 overflow-hidden"');
+
+    for (const moduleId of [
+      "overview",
+      "routes",
+      "map-overlays",
+      "restaurants",
+      "restaurant-refresh-history",
+      "submissions",
+      "reviews",
+      "storyboard",
+      "banners",
+      "users",
+      "insights",
+      "audit",
+      "youtube-thumbnail-generator",
+      "llm",
+    ]) {
+      expect(routeSource).toContain(`"${moduleId}"`);
+    }
+
+    expect(consoleSource).toContain("AdminEmbeddedModuleShell");
+    expect(consoleSource).not.toContain("ModuleContextHeader");
+    expect(consoleSource).not.toContain("data-admin-console-generic-header");
+    expect(consoleSource).not.toContain("data-admin-module-header-snapshot");
+  });
+
+  test("keeps embedded insights loading and error states inside the shared compact shell", () => {
+    const insightsSource = source("app/insights/insights-client.tsx");
+
+    expect(insightsSource).toContain("AdminEmbeddedModuleShell");
+    expect(insightsSource).toContain('moduleId="insights"');
+    expect(insightsSource).toContain('titleId="admin-insights-title"');
+    expect(insightsSource).toContain('summary={summary}');
+    expect(insightsSource).toContain('contentClassName="p-2"');
+
+    const loadingBranch =
+      insightsSource.match(
+        /if \(isLoading && !canRender\) \{([\s\S]*?)if \(treemapQuery\.isError \|\| !treemapQuery\.data\)/,
+      )?.[1] ?? "";
+    expect(loadingBranch).toContain("if (embedded)");
+    expect(loadingBranch).toContain("return renderEmbeddedShell(");
+    expect(loadingBranch).toContain("<InsightsClientLoadingSkeleton />");
+    expect(loadingBranch).toContain("'데이터를 불러오는 중입니다.'");
+    expect(loadingBranch).toContain("return <InsightsClientLoadingSkeleton />");
+
+    const errorBranch =
+      insightsSource.match(
+        /if \(treemapQuery\.isError \|\| !treemapQuery\.data\) \{([\s\S]*?)const insightsContent =/,
+      )?.[1] ?? "";
+    expect(errorBranch).toContain("const errorContent = (");
+    expect(errorBranch).toContain("onClick={handleRetry}");
+    expect(errorBranch).toContain("return renderEmbeddedShell(errorContent");
+    expect(errorBranch).toContain("'데이터를 불러오지 못했습니다.'");
+    expect(errorBranch).toContain("return errorContent");
+
+    expect(insightsSource).toContain("return renderEmbeddedShell(insightsContent)");
+    expect(insightsSource).toContain('className="flex h-full min-h-0 flex-col bg-background overflow-hidden"');
   });
 
   test("keeps announcement operations safer and accessible inside the console", () => {
@@ -1136,6 +1216,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/AdminOverviewDashboard.tsx",
     );
     const runtimeSpecSource = source("tests/admin-kpi-dashboard-runtime.spec.ts");
+    const runtimeLiveSpecSource = source(
+      "tests/admin-kpi-dashboard-runtime-live.spec.ts",
+    );
     const auditEventsRouteSource = source("app/api/admin/audit-events/route.ts");
     const directionsRouteSource = source("app/api/admin/routes/directions/route.ts");
 
@@ -1339,8 +1422,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toContain("쯔양 KPI 대시보드");
-    expect(consoleSource).not.toContain("Tzuyang KPI Dashboard");
+    expect(consoleSource).toMatch(/>\s*Tzuyang KPI Dashboard\s*</);
+    expect(consoleSource).not.toContain("쯔양 핵심 성과 대시보드");
+    expect(consoleSource).not.toMatch(/>\s*쯔양 KPI 대시보드\s*</);
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
     );
@@ -1895,19 +1979,36 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-data-confidence="true"',
     );
     expect(consoleSource).not.toContain("AdminDashboardDataConfidenceRail");
-    expect(runtimeSpecSource).not.toContain("title: `KPI 회귀");
-    expect(runtimeSpecSource).not.toContain("MOCK_VIDEO_TITLES");
-    expect(runtimeSpecSource).not.toContain("mockAdminDashboardApis");
-    expect(runtimeSpecSource).not.toContain("createMockVideo");
-    expect(runtimeSpecSource).not.toContain("createKpiQualityMeta");
-    expect(runtimeSpecSource).not.toContain("api/admin/youtube-kpis**");
-    expect(runtimeSpecSource).not.toContain("api/dashboard/summary', async");
-    expect(runtimeSpecSource).toContain("expectOperationalKpiPayload");
-    expect(runtimeSpecSource).toContain("kpi-dashboard-real-data-fhd.png");
-    expect(runtimeSpecSource).toContain("waitForResponse");
-    expect(runtimeSpecSource).toContain("width: 1920, height: 1080");
-    expect(runtimeSpecSource).toContain("not.toContainText('KPI 회귀 테스트 영상')");
-    expect(runtimeSpecSource).toContain("getByText(operationalVideoTitle");
+    expect(runtimeSpecSource).toContain(
+      "관리자 라우트는 비인증 상태에서도 브라우저 런타임 오류를 내지 않는다",
+    );
+    expect(runtimeSpecSource).toContain(
+      "관리자 세션 쿠키가 있어도 우회 토큰이 틀리면 대시보드를 렌더링하지 않는다",
+    );
+    expect(runtimeSpecSource).toContain(
+      "모바일 KPI 대시보드는 스크롤 시 관리자 헤더와 바텀 네비게이션을 함께 숨긴다",
+    );
+    expect(runtimeLiveSpecSource).not.toContain("title: `KPI 회귀");
+    expect(runtimeLiveSpecSource).not.toContain("MOCK_VIDEO_TITLES");
+    expect(runtimeLiveSpecSource).not.toContain("mockAdminDashboardApis");
+    expect(runtimeLiveSpecSource).not.toContain("createMockVideo");
+    expect(runtimeLiveSpecSource).not.toContain("createKpiQualityMeta");
+    expect(runtimeLiveSpecSource).not.toContain("api/admin/youtube-kpis**");
+    expect(runtimeLiveSpecSource).not.toContain("api/dashboard/summary', async");
+    expect(runtimeSpecSource).not.toContain(
+      "KPI 대시보드는 관리자 세션에서 브라우저 런타임 오류 없이 렌더링된다",
+    );
+    expect(runtimeLiveSpecSource).toContain(
+      "KPI 대시보드는 관리자 세션에서 브라우저 런타임 오류 없이 렌더링된다",
+    );
+    expect(runtimeLiveSpecSource).toContain("expectOperationalKpiPayload");
+    expect(runtimeLiveSpecSource).toContain("kpi-dashboard-real-data-fhd.png");
+    expect(runtimeLiveSpecSource).toContain("waitForResponse");
+    expect(runtimeLiveSpecSource).toContain("width: 1920, height: 1080");
+    expect(runtimeLiveSpecSource).toContain(
+      "not.toContainText('KPI 회귀 테스트 영상')",
+    );
+    expect(runtimeLiveSpecSource).toContain("getByText(operationalVideoTitle");
     expect(consoleSource).not.toContain("단일 지배");
     expect(consoleSource).not.toContain("집중도");
     expect(consoleSource).toContain("slice(0, maxVisible)");
@@ -3279,7 +3380,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "flex h-full min-h-0 flex-col overflow-hidden bg-background p-3",
     );
     expect(componentSource).toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]",
+      "grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]",
     );
     expect(componentSource).toContain(
       'data-thumbnail-chat-right-layout="true"',
@@ -5219,8 +5320,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).toContain(
       'data-storyboard-viewport-fit="bounded"',
     );
-    expect(storyboardSource).toContain(
+    expect(storyboardSource).not.toContain(
       'height: "calc(var(--full-height, 100vh) - 2rem)"',
+    );
+    expect(storyboardSource).toContain(
+      "grid min-h-0 flex-1 gap-3 overflow-hidden",
     );
     expect(storyboardSource).toContain(
       'data-storyboard-desktop-split-layout="inline-grid"',
@@ -8393,7 +8497,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(usersSource).toContain("return () => controller.abort();");
     expect(usersSource).toContain("if (!signal?.aborted)");
     expect(evaluationsSource).toContain(
-      'embedded ? "border-b border-border bg-card px-2 py-1.5"',
+      'embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5"',
     );
     expect(evaluationsSource).toContain("p-2 sm:p-2");
     expect(consoleSource).toContain("function loadAdminBannerModule()");
@@ -8435,7 +8539,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("배너 관리 화면 준비 중");
     expect(consoleSource).not.toContain("공지사항 운영 화면 준비 중");
     expect(consoleSource).not.toContain("사용자 관리 화면 준비 중");
-    expect(bannersSource).toContain('embedded ? "px-2 py-1.5"');
+    expect(bannersSource).toContain('embedded ? "shrink-0 px-2 py-1.5"');
     expect(bannersSource).toContain(
       'embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans"',
     );

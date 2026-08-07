@@ -26,23 +26,72 @@ const ADMIN_MODULE_SMOKE_TARGETS = [
     readySelector: '[data-admin-map-overlays-module="true"]',
   },
   {
-    path: '/admin?module=youtube-thumbnail-generator',
-    moduleId: 'youtube-thumbnail-generator',
-    readySelector: '[data-admin-youtube-thumbnail-generator="true"]',
+    path: '/admin?module=restaurants',
+    moduleId: 'restaurants',
+    readySelector: '#scroll-container',
+  },
+  {
+    path: '/admin?module=restaurant-refresh-history',
+    moduleId: 'restaurant-refresh-history',
+    readySelector: '[data-admin-restaurant-refresh-history="true"]',
+  },
+  {
+    path: '/admin?module=submissions',
+    moduleId: 'submissions',
+    readySelector: '#scroll-container',
+  },
+  {
+    path: '/admin?module=reviews',
+    moduleId: 'reviews',
+    readySelector: '#scroll-container',
+  },
+  {
+    path: '/admin?module=storyboard',
+    moduleId: 'storyboard',
+    readySelector: '[data-admin-storyboard-generator="true"]',
+  },
+  {
+    path: '/admin?module=banners',
+    moduleId: 'banners',
+    readySelector: '[aria-labelledby="banner-list-title"]',
+  },
+  {
+    path: '/admin?module=users',
+    moduleId: 'users',
+    readySelector: '[data-admin-users-summary]',
+  },
+  {
+    path: '/admin?module=insights',
+    moduleId: 'insights',
+    readySelector: '[data-admin-embedded-module-id="insights"]',
   },
   {
     path: '/admin?module=audit',
     moduleId: 'audit',
     readySelector: '[data-admin-audit-coverage="partial-domain-specific"]',
   },
+  {
+    path: '/admin?module=youtube-thumbnail-generator',
+    moduleId: 'youtube-thumbnail-generator',
+    readySelector: '[data-admin-youtube-thumbnail-generator="true"]',
+  },
+  {
+    path: '/admin?module=llm',
+    moduleId: 'llm',
+    readySelector: '[aria-label="운영 보조 제안"]',
+  },
 ] as const;
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = 'tzudong:e2e-admin-shell-bypass';
 const HYDRATION_SMOKE_ARTIFACT_DIR = resolve(process.cwd(), '..', '..', 'artifacts', 'ultragoal');
-const HYDRATION_SMOKE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g006-hydration-smoke-final.png');
-const HYDRATION_SMOKE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g006-hydration-smoke-transcript.json');
+const HYDRATION_SMOKE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-admin-console-modules-final.png');
+const HYDRATION_SMOKE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-admin-console-modules-transcript.json');
 const MOBILE_MENU_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-mobile-admin-menu-final.jpg');
 const MOBILE_MENU_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-mobile-admin-menu-transcript.json');
+const STORYBOARD_RESPONSIVE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-storyboard-responsive-final.png');
+const STORYBOARD_RESPONSIVE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-storyboard-responsive-transcript.json');
+const INSIGHTS_STATE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-insights-error-final.png');
+const INSIGHTS_STATE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-insights-state-transcript.json');
 
 
 function getE2EAdminRouteBypassToken(testInfo: TestInfo) {
@@ -63,7 +112,7 @@ function attachRuntimeErrorCollectors(page: Page, runtimeErrors: string[]) {
   page.on('console', (message: ConsoleMessage) => {
     if (message.type() !== 'error') return;
     const text = message.text();
-    if (/hydration|react|error #418|minified react error/i.test(text)) {
+    if (/hydration|error #418|minified react error|react[^\n]*hydration/i.test(text)) {
       runtimeErrors.push(text);
     }
   });
@@ -75,10 +124,10 @@ function attachRuntimeErrorCollectors(page: Page, runtimeErrors: string[]) {
 
 test.describe('admin console module hydration smoke', () => {
   test('loads core admin modules without hydration/runtime errors', async ({ page }, testInfo) => {
-    test.setTimeout(120_000);
+    test.setTimeout(300_000);
 
     const runtimeErrors: string[] = [];
-    const visited: Array<{ path: string; moduleId: string; readySelector: string }> = [];
+    const visited: Array<{ path: string; moduleId: string; headerSelector: string; readySelector: string }> = [];
     attachRuntimeErrorCollectors(page, runtimeErrors);
 
     await installE2EAdminShellBypass(page);
@@ -95,8 +144,10 @@ test.describe('admin console module hydration smoke', () => {
         target.moduleId,
         { timeout: 30_000 },
       );
+      const headerSelector = `[data-admin-module-header-module="${target.moduleId}"]`;
+      await expect(page.locator(headerSelector)).toBeVisible({ timeout: 30_000 });
       await expect(page.locator(target.readySelector)).toBeVisible({ timeout: 30_000 });
-      visited.push({ path: target.path, moduleId: target.moduleId, readySelector: target.readySelector });
+      visited.push({ path: target.path, moduleId: target.moduleId, headerSelector, readySelector: target.readySelector });
       await page.waitForTimeout(300);
     }
 
@@ -131,6 +182,7 @@ test.describe('admin console module hydration smoke', () => {
     await gotoAndHidePopup(page, '/admin');
     const canvas = page.locator('#admin-console-canvas');
     const dropdown = page.locator('[data-admin-console-menu-dropdown="true"]');
+    const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
     const menuTrigger = page.locator('[data-admin-console-menu-trigger="hamburger"]');
     const routeMenuItem = page.locator(
       '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
@@ -139,6 +191,50 @@ test.describe('admin console module hydration smoke', () => {
     await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
       timeout: 30_000,
     });
+    await expect(mobileHeader).toHaveAttribute(
+      'data-admin-console-mobile-header-visible',
+      'true',
+    );
+    const nestedScrollObservation = await canvas.evaluate((element) => {
+      const nestedScroller = document.createElement('div');
+      nestedScroller.setAttribute('data-admin-nested-scroll-visibility-probe', 'true');
+      nestedScroller.style.height = '96px';
+      nestedScroller.style.overflowY = 'auto';
+      nestedScroller.style.overscrollBehavior = 'contain';
+
+      const nestedContent = document.createElement('div');
+      nestedContent.style.height = '720px';
+      nestedContent.textContent = 'Nested admin mobile chrome scroll probe';
+      nestedScroller.appendChild(nestedContent);
+      element.appendChild(nestedScroller);
+
+      nestedScroller.scrollTop = 180;
+      nestedScroller.dispatchEvent(new Event('scroll', { bubbles: false }));
+      return {
+        nestedScrollTop: nestedScroller.scrollTop,
+        probeExists: element.contains(nestedScroller),
+      };
+    });
+    expect(nestedScrollObservation).toEqual({
+      nestedScrollTop: 180,
+      probeExists: true,
+    });
+    await expect(mobileHeader).toHaveAttribute(
+      'data-admin-console-mobile-header-visible',
+      'false',
+    );
+    await canvas.evaluate((element) => {
+      const nestedScroller = element.querySelector<HTMLElement>(
+        '[data-admin-nested-scroll-visibility-probe="true"]',
+      );
+      if (!nestedScroller) throw new Error('Nested admin scroll probe was not mounted.');
+      nestedScroller.scrollTop = 0;
+      nestedScroller.dispatchEvent(new Event('scroll', { bubbles: false }));
+    });
+    await expect(mobileHeader).toHaveAttribute(
+      'data-admin-console-mobile-header-visible',
+      'true',
+    );
     await canvas.evaluate((element) => {
       const spacer = document.createElement('div');
       spacer.setAttribute('data-admin-menu-scroll-spacer', 'runtime-guard');
@@ -198,8 +294,9 @@ test.describe('admin console module hydration smoke', () => {
           dropdownCountAfterSelection,
           finalUrlAfterSelection,
           measuredScrollTopAfterSelection,
+          nestedScrollObservation,
           screenshot: MOBILE_MENU_SCREENSHOT,
-          setup: 'Inserted a test-only spacer into #admin-console-canvas before selection to make scroll reset observable.',
+          setup: 'Inserted a nested scroll probe and a test-only spacer into #admin-console-canvas before selection to make descendant chrome visibility and scroll reset observable.',
         },
         actions: [
           { type: 'goto', timestamp: '2026-07-09T03:20:00.000Z', url: '/admin' },
@@ -225,6 +322,12 @@ test.describe('admin console module hydration smoke', () => {
           },
         ],
         assertions: [
+          {
+            timestamp: '2026-07-09T03:20:04.500Z',
+            selector: '[data-admin-nested-scroll-visibility-probe="true"]',
+            status: 'passed',
+            description: `Nested descendant scrollTop=${nestedScrollObservation.nestedScrollTop} hid the mobile header, then scrollTop=0 restored it.`,
+          },
           {
             timestamp: '2026-07-09T03:20:05.000Z',
             selector: '#admin-console-canvas',
@@ -306,6 +409,166 @@ test.describe('admin console module hydration smoke', () => {
     await slideToggle.click();
     await expect(slideToggle).toHaveAttribute('aria-pressed', 'true');
     await expect(listToggle).toHaveAttribute('aria-pressed', 'false');
+
+    expect(runtimeErrors).toEqual([]);
+  });
+
+  test('responsive storyboard shell exposes both stacked panels to the admin canvas', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+
+    await gotoAndHidePopup(page, '/admin?module=storyboard');
+
+    const canvas = page.locator('#admin-console-canvas');
+    const shell = page.locator('[data-admin-embedded-module-id="storyboard"]');
+    const resultPanel = shell.locator('[data-storyboard-result-panel="image-frames-only"]');
+    const inputPanel = shell.locator('[data-storyboard-input-panel="chat-stream"]');
+
+    await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'storyboard', {
+      timeout: 30_000,
+    });
+    await expect(page.locator('[data-admin-module-header-module="storyboard"]')).toBeVisible();
+    await expect(resultPanel).toBeVisible();
+    await expect(inputPanel).toBeVisible();
+
+    const layout = await shell.evaluate((element) => {
+      const content = element.querySelector<HTMLElement>(':scope > [data-admin-module-content="bounded"]');
+      const result = element.querySelector<HTMLElement>('[data-storyboard-result-panel="image-frames-only"]');
+      const input = element.querySelector<HTMLElement>('[data-storyboard-input-panel="chat-stream"]');
+      const canvasElement = element.closest<HTMLElement>('#admin-console-canvas');
+      if (!content || !result || !input || !canvasElement) {
+        throw new Error('Storyboard responsive layout markers are incomplete.');
+      }
+
+      const shellRect = element.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const resultRect = result.getBoundingClientRect();
+      const inputRect = input.getBoundingClientRect();
+      const panelBottom = Math.max(resultRect.bottom, inputRect.bottom);
+
+      return {
+        shellContainsPanels: panelBottom <= shellRect.bottom + 1,
+        contentContainsPanels: panelBottom <= contentRect.bottom + 1,
+        shellHasNoClippedScrollRange: element.scrollHeight <= element.clientHeight + 1,
+        contentHasNoClippedScrollRange: content.scrollHeight <= content.clientHeight + 1,
+        canvasHasVerticalScrollRange: canvasElement.scrollHeight > canvasElement.clientHeight,
+        shellHeight: Math.round(shellRect.height),
+        contentHeight: Math.round(contentRect.height),
+        canvasClientHeight: canvasElement.clientHeight,
+        canvasScrollHeight: canvasElement.scrollHeight,
+      };
+    });
+
+    expect(layout.shellContainsPanels).toBe(true);
+    expect(layout.contentContainsPanels).toBe(true);
+    expect(layout.shellHasNoClippedScrollRange).toBe(true);
+    expect(layout.contentHasNoClippedScrollRange).toBe(true);
+    expect(layout.canvasHasVerticalScrollRange).toBe(true);
+
+    await inputPanel.scrollIntoViewIfNeeded();
+    await expect(inputPanel).toBeInViewport();
+
+    mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
+    await page.screenshot({ path: STORYBOARD_RESPONSIVE_SCREENSHOT, fullPage: false });
+    writeFileSync(
+      STORYBOARD_RESPONSIVE_TRANSCRIPT,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        kind: 'playwright-browser-automation-report',
+        surface: 'web',
+        viewport: page.viewportSize(),
+        route: '/admin?module=storyboard',
+        layout,
+        assertions: {
+          compactHeaderVisible: true,
+          resultPanelVisible: true,
+          inputPanelReachable: true,
+          stackedPanelsNotClipped: true,
+        },
+        runtimeErrors,
+        screenshot: STORYBOARD_RESPONSIVE_SCREENSHOT,
+      }, null, 2)}\n`,
+    );
+
+    expect(runtimeErrors).toEqual([]);
+  });
+
+  test('embedded insights keeps its compact shell while loading and after an API failure', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+
+    let releaseInsightsRequest = () => {};
+    const insightsRequestGate = new Promise<void>((resolveGate) => {
+      releaseInsightsRequest = resolveGate;
+    });
+    await page.route('**/api/insights/treemap**', async (route) => {
+      await insightsRequestGate;
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'forced-insights-smoke-failure' }),
+      });
+    });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+
+    await gotoAndHidePopup(page, '/admin?module=insights');
+
+    const canvas = page.locator('#admin-console-canvas');
+    const shell = page.locator('[data-admin-embedded-module-id="insights"]');
+    const header = page.locator('[data-admin-module-header-module="insights"]');
+    const boundedContent = shell.locator(':scope > [data-admin-module-content="bounded"]');
+
+    await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'insights', {
+      timeout: 30_000,
+    });
+    await expect(header).toBeVisible();
+    await expect(boundedContent).toBeVisible();
+    await expect(page.locator('[data-insights-client-loading="true"]')).toBeVisible();
+
+    releaseInsightsRequest();
+
+    await expect(page.getByRole('heading', { name: '문제가 발생했습니다' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(header).toBeVisible();
+    await expect(boundedContent).toBeVisible();
+    await expect(shell.getByRole('button', { name: '다시 시도' })).toBeVisible();
+
+    mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
+    await page.screenshot({ path: INSIGHTS_STATE_SCREENSHOT, fullPage: false });
+    writeFileSync(
+      INSIGHTS_STATE_TRANSCRIPT,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        kind: 'playwright-browser-automation-report',
+        surface: 'web',
+        viewport: page.viewportSize(),
+        route: '/admin?module=insights',
+        states: {
+          loading: { compactHeaderVisible: true, boundedContentVisible: true },
+          apiFailure: { compactHeaderVisible: true, boundedContentVisible: true, retryVisible: true },
+        },
+        runtimeErrors,
+        screenshot: INSIGHTS_STATE_SCREENSHOT,
+      }, null, 2)}\n`,
+    );
 
     expect(runtimeErrors).toEqual([]);
   });

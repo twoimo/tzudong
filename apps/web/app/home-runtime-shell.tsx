@@ -279,7 +279,10 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
 
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
-        <div className="min-h-[var(--full-height,100vh)] bg-background text-foreground">
+        <div
+            className="min-h-[var(--full-height,100vh)] bg-background text-foreground"
+            style={{ height: 'var(--full-height, 100vh)' }}
+        >
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>

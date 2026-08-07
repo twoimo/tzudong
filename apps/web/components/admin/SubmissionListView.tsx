@@ -53,6 +53,8 @@ import {
     type AdminSubmissionQueueReasonFilter,
     type AdminSubmissionQueueSafetySummary,
 } from '@/lib/admin/submission-queue-safety';
+import { resolveReviewPhotoUrl } from '@/lib/review-photo-url';
+import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
 
@@ -121,25 +123,6 @@ function buildGuardedOcrSuccessMessage(payload: unknown, fallback: string): stri
 }
 
 
-// Supabase Storage에서 리뷰 사진 public URL 생성
-function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
-    // 이미 full URL인 경우 그대로 반환
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-        // 캐시 버스터 추가
-        if (cacheBuster) {
-            const separator = path.includes('?') ? '&' : '?';
-            return `${path}${separator}t=${new Date(cacheBuster).getTime()}`;
-        }
-        return path;
-    }
-    // 상대 경로인 경우 Supabase Storage에서 public URL 생성
-    let url = supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl;
-    // 캐시 버스터 추가 (OCR 재처리 후 새 이미지 로드)
-    if (cacheBuster) {
-        url += `?t=${new Date(cacheBuster).getTime()}`;
-    }
-    return url;
-}
 
 // 리뷰 타입 정의
 export interface Review {
@@ -551,6 +534,25 @@ export function SubmissionListView({
 
     // 이미지 확대 모달 상태
     const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
+    const selectedReviewPhotos = useMemo(() => {
+        if (!selectedReview) {
+            return { verificationPhotoUrl: null, foodPhotos: [] as Array<{ url: string; index: number }> };
+        }
+
+        const verificationPhotoUrl = resolveReviewPhotoUrl(
+            selectedReview.verification_photo,
+            selectedReview.ocr_processed_at,
+        );
+        const foodPhotos = Array.isArray(selectedReview.food_photos)
+            ? selectedReview.food_photos.reduce<Array<{ url: string; index: number }>>((photos, photo, index) => {
+                const url = resolveReviewPhotoUrl(photo);
+                if (url) photos.push({ url, index });
+                return photos;
+            }, [])
+            : [];
+
+        return { verificationPhotoUrl, foodPhotos };
+    }, [selectedReview]);
 
     // OCR 상태 조회
     const fetchOcrStatus = useCallback(async () => {
@@ -1906,7 +1908,10 @@ export function SubmissionListView({
         );
     };
 
-    const renderRecommendationDetailContent = (submission: SubmissionRecord) => (
+    const renderRecommendationDetailContent = (submission: SubmissionRecord) => {
+        const recommendationYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(submission.items[0]?.youtube_link);
+
+        return (
         <div className="space-y-3">
             <Card className="p-3 shadow-none">
                 <div className="space-y-2 text-sm">
@@ -1948,16 +1953,16 @@ export function SubmissionListView({
                 </p>
             </Card>
 
-            {submission.items[0]?.youtube_link && (
+            {recommendationYoutubeUrl && (
                 <Card className="p-3 shadow-none">
                     <Label className="text-sm font-medium">YouTube 링크</Label>
                     <a
-                        href={submission.items[0].youtube_link}
+                        href={recommendationYoutubeUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-2 block break-all text-sm text-primary underline-offset-4 hover:underline"
                     >
-                        {submission.items[0].youtube_link}
+                        {recommendationYoutubeUrl}
                     </a>
                 </Card>
             )}
@@ -2015,7 +2020,8 @@ export function SubmissionListView({
                 </Card>
             )}
         </div>
-    );
+        );
+    };
     const renderSubmissionDetailPanel = () => (
         <section
             aria-label="제보 상세 작업 패널"
@@ -2341,27 +2347,27 @@ export function SubmissionListView({
 
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">제출된 사진</Label>
-                            {(!selectedReview.verification_photo && (!selectedReview.food_photos || selectedReview.food_photos.length === 0)) ? (
+                            {!selectedReviewPhotos.verificationPhotoUrl && selectedReviewPhotos.foodPhotos.length === 0 ? (
                                 <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">제출된 사진이 없습니다</div>
                             ) : (
                                 <div className="flex gap-2 overflow-x-auto pb-2">
-                                    {selectedReview.verification_photo && (
+                                    {selectedReviewPhotos.verificationPhotoUrl && (
                                         <ReviewPhotoItem
-                                            src={getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at)}
+                                            src={selectedReviewPhotos.verificationPhotoUrl}
                                             alt="영수증"
                                             label="영수증"
                                             labelVariant="receipt"
-                                            onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at), alt: '영수증' })}
+                                            onClick={() => setPreviewImage({ url: selectedReviewPhotos.verificationPhotoUrl!, alt: '영수증' })}
                                         />
                                     )}
-                                    {selectedReview.food_photos?.map((photo, idx) => (
+                                    {selectedReviewPhotos.foodPhotos.map(({ url, index }) => (
                                         <ReviewPhotoItem
-                                            key={idx}
-                                            src={getReviewPhotoUrl(photo)}
-                                            alt={`음식 ${idx + 1}`}
-                                            label={`음식 ${idx + 1}`}
+                                            key={index}
+                                            src={url}
+                                            alt={`음식 ${index + 1}`}
+                                            label={`음식 ${index + 1}`}
                                             labelVariant="food"
-                                            onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
+                                            onClick={() => setPreviewImage({ url, alt: `음식 ${index + 1}` })}
                                         />
                                     ))}
                                 </div>

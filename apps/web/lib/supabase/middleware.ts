@@ -18,6 +18,13 @@ const isRefreshTokenNotFoundError = (error: unknown) => {
     return message.includes('invalid refresh token') || message.includes('refresh token not found');
 };
 
+const PRIVACY_PROFILE_ALLOWED_STATUSES = ['eligible', 'guardian_verified'] as const;
+const isPrivacyProfileStatusAllowed = (status: unknown) =>
+    typeof status === 'string' && PRIVACY_PROFILE_ALLOWED_STATUSES.includes(status as (typeof PRIVACY_PROFILE_ALLOWED_STATUSES)[number]);
+
+const isApiRequest = (request: NextRequest) =>
+    request.nextUrl.pathname.startsWith('/api/');
+
 const isMissingOptionalAdminStatusStoreError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false;
 
@@ -82,6 +89,20 @@ const redirectAuthRequiredWithSessionCookies = (
     }
 
     return redirectResponse;
+};
+const buildNoStoreForbiddenResponse = (sourceResponse: NextResponse) => {
+    const response = NextResponse.json({ error: 'forbidden' }, {
+        status: 403,
+        headers: {
+            'Cache-Control': 'no-store',
+        },
+    });
+
+    for (const cookie of sourceResponse.cookies.getAll()) {
+        response.cookies.set(cookie);
+    }
+
+    return response;
 };
 
 const redirectAdminLoginWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
@@ -155,10 +176,39 @@ export async function updateSession(request: NextRequest) {
         authFailed = true;
         if (isRefreshTokenNotFoundError(error)) {
             clearSupabaseAuthCookies(request, supabaseResponse);
-        } else {
-            console.error('[supabase middleware] getUser error:', error);
         }
     }
+
+    if (!authFailed && authUserId) {
+        try {
+            const { data, error } = await (supabase
+                .from('privacy_age_profiles' as never)
+                .select('status')
+                .eq('owner', authUserId)
+                .maybeSingle() as Promise<{ data: { status: string | null } | null; error: unknown }>);
+
+            const isPrivacyProfileComplete = Boolean(data) && isPrivacyProfileStatusAllowed(data.status);
+
+            if (error || !isPrivacyProfileComplete) {
+                clearSupabaseAuthCookies(request, supabaseResponse);
+
+                if (isApiRequest(request)) {
+                    return buildNoStoreForbiddenResponse(supabaseResponse);
+                }
+
+                return redirectAuthRequiredWithSessionCookies(request, supabaseResponse, 'review');
+            }
+        } catch {
+            clearSupabaseAuthCookies(request, supabaseResponse);
+
+            if (isApiRequest(request)) {
+                return buildNoStoreForbiddenResponse(supabaseResponse);
+            }
+
+            return redirectAuthRequiredWithSessionCookies(request, supabaseResponse, 'review');
+        }
+    }
+
 
     if (isAdminPageRequest(request)) {
         if (authFailed || !authUserId) {

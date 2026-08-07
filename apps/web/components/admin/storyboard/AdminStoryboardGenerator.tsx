@@ -126,6 +126,7 @@ import {
   type StoryboardLocalBridgeStatus,
 } from "@/lib/admin/storyboard/local-bridge-contract";
 import { cn } from "@/lib/utils";
+import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import {
   StoryboardCanvasContent,
   StoryboardCanvasHeader,
@@ -7969,53 +7970,65 @@ export function AdminStoryboardGenerator({
       setActiveGeneratingStoryboardImageSceneNo(null);
     }
   }
+  const storyboardModuleSummary = acceptedStoryboardJob
+    ? `작업 ${formatStoryboardJobStatusLabel(acceptedStoryboardJob.status)} · ${acceptedStoryboardJob.stage}`
+    : isGenerating
+      ? "스토리보드 구성 중 · 작업 제출/응답 대기"
+      : isGeneratingImages
+        ? `이미지 생성 중 · ${generatedImageCount}/${totalCutCount}컷 준비`
+        : isChatAgentStreaming
+          ? "도우미 응답 중 · 캔버스 맥락 반영"
+          : `이미지 ${generatedImageCount}/${totalCutCount}컷 · ${formatStoryboardOmittedSceneText(omittedStoryboardSceneCount)}`;
+
 
   return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2"
-      aria-label="스토리보드 생성"
-      data-admin-storyboard-generator="true"
-      data-storyboard-viewport-fit="bounded"
-      data-layout-primitives="split-sidebar panel-layout list-detail frame step-nav stack"
-      data-storyboard-job-status={
-        acceptedStoryboardJob
-          ? `storyboard-job-${acceptedStoryboardJob.status}`
-          : isGenerating
-            ? "storyboard-generating"
-            : isGeneratingImages
-              ? "image-generating"
-              : isChatAgentStreaming
-                ? "chat-streaming"
-                : "idle"
-      }
-      data-storyboard-stage-progress={
-        acceptedStoryboardJob
-          ? acceptedStoryboardJob.stage
-          : isGenerating
-            ? "async-job-submit"
-            : isGeneratingImages
-              ? "image-batch"
-              : isChatAgentStreaming
-                ? "chat-stream"
-                : "idle"
-      }
-      data-storyboard-provider-readiness={acceptedStoryboardJob?.readiness?.status ?? "async-control-plane-readback"}
-      style={{
-        height: "calc(var(--full-height, 100vh) - 2rem)",
-        maxHeight: "100%",
-        minHeight: 0,
-      }}
+    <AdminEmbeddedModuleShell
+      moduleId="storyboard"
+      titleId="admin-storyboard-generator-title"
+      title="스토리보드 생성"
+      icon={Clapperboard}
+      summary={storyboardModuleSummary}
     >
-      <div
-        className="grid h-full min-h-0 gap-3 overflow-hidden"
-        data-storyboard-desktop-split-layout="inline-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
-        }}
+      <section
+        className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2"
+        aria-label="스토리보드 생성"
+        data-admin-storyboard-generator="true"
+        data-storyboard-viewport-fit="bounded"
+        data-layout-primitives="split-sidebar panel-layout list-detail frame step-nav stack"
+        data-storyboard-job-status={
+          acceptedStoryboardJob
+            ? `storyboard-job-${acceptedStoryboardJob.status}`
+            : isGenerating
+              ? "storyboard-generating"
+              : isGeneratingImages
+                ? "image-generating"
+                : isChatAgentStreaming
+                  ? "chat-streaming"
+                  : "idle"
+        }
+        data-storyboard-stage-progress={
+          acceptedStoryboardJob
+            ? acceptedStoryboardJob.stage
+            : isGenerating
+              ? "async-job-submit"
+              : isGeneratingImages
+                ? "image-batch"
+                : isChatAgentStreaming
+                  ? "chat-stream"
+                  : "idle"
+        }
+        data-storyboard-provider-readiness={acceptedStoryboardJob?.readiness?.status ?? "async-control-plane-readback"}
       >
+        <div
+          className="grid min-h-0 flex-1 gap-3 overflow-hidden"
+          data-storyboard-desktop-split-layout="inline-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
+            gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
+          }}
+        >
         <Card
           className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
           aria-label="요구사항 채팅"
@@ -10077,7 +10090,8 @@ export function AdminStoryboardGenerator({
             </div>
           </StoryboardCanvasContent>
         </StoryboardCanvasShell>
-      </div>
-    </section>
+        </div>
+      </section>
+    </AdminEmbeddedModuleShell>
   );
 }

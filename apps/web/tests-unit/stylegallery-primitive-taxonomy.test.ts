@@ -365,6 +365,8 @@ describe('StyleGallery primitive taxonomy source contract', () => {
     );
     expect(stampPageSource).toContain('horizontalScrollOwner="stamp-restaurant-list-table"');
     expect(evaluationTableSource).toContain('horizontalScrollOwner="admin-evaluation-table"');
+    expect(tableSource).not.toContain('admin-module-header-actions');
+    expect(responsiveOverflowSource).not.toContain('admin-module-header-actions');
     expect(responsiveOverflowSource).toContain('unapprovedPolicyExceptions');
   });
 });
