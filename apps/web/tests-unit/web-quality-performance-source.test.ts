@@ -1583,10 +1583,19 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-announcement="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'initialRoutePanel === "announcement" ? "announcement" : "map"',
+      'initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'panelParam !== "announcement"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "!isPublicRestrictedMode",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "isPublicRestrictedMode && panelParam === 'announcement'",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'activeLeftPanelView === "announcement" && !isPublicRestrictedMode',
     );
     expect(homeDesktopControlPanelSource).toContain("window.addEventListener(");
     expect(homeDesktopControlPanelSource).toContain('"openAnnouncementDetail"');
@@ -1944,6 +1953,15 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/NaverMapAnnouncementRuntime.tsx")).toContain(
       "useBannerAnnouncements(true)",
     );
+    expect(source("app/home-client.tsx")).toContain(
+      'panel === "announcement"',
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "!isPublicRestrictedMode",
+    );
+    expect(source("app/home-client.tsx")).toContain("announcementId");
+    expect(naverMapSource).toContain("!isPublicRestrictedMode");
+    expect(naverMapSource).toContain("!isPublicRestrictedMode");
     expect(naverMapSource).toContain(
       "setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true)",
     );
@@ -4439,10 +4457,16 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).not.toContain("const checkProfileStatus");
     expect(authContextSource).not.toContain("import { supabase }");
     expect(source("app/home-runtime-shell.tsx")).toContain(
-      "useState(() => hasSupabaseAuthSessionHint())",
+      "!isPublicRestrictedMode && hasSupabaseAuthSessionHint()",
     );
     expect(source("app/home-runtime-shell.tsx")).toContain(
-      "<AnonymousHomeAuthProvider isLoading={hasStoredSession}>",
+      "<AnonymousHomeAuthProvider isLoading={isPublicRestrictedMode ? false : hasStoredSession}>",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "if (!isPublicRestrictedMode) {",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "if (isPublicRestrictedMode) return;",
     );
     expect(source("lib/auth-ui-events.ts")).toContain(
       "AUTH_UI_SESSION_HINT_GRACE_MS",

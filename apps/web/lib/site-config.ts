@@ -19,5 +19,23 @@ export const siteConfig = {
   },
 } as const;
 
+const STRICT_BUILD_FLAG_VALUES = new Set(['true', '1']);
+
+export const parseStrictBuildFlag = (value: unknown): boolean =>
+  typeof value === 'string' && STRICT_BUILD_FLAG_VALUES.has(value.trim().toLowerCase());
+
+export const isPublicDemoMode = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_PUBLIC_DEMO_MODE,
+);
+
+export const isLimitedPublicMode = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE,
+);
+export const isLimitedPublicModeAllowAuth = parseStrictBuildFlag(
+  process.env.NEXT_PUBLIC_LIMITED_PUBLIC_MODE_ALLOW_AUTH,
+);
+
+export const isPublicRestrictedMode =
+  isPublicDemoMode || (isLimitedPublicMode && !isLimitedPublicModeAllowAuth);
 export const supportMailto = (subject: string = siteConfig.contact.mailtoSubject) =>
   `mailto:${siteConfig.contact.email}?subject=${encodeURIComponent(subject)}`;
