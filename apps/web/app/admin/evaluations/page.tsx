@@ -35,7 +35,7 @@ import { debugLog } from '@/lib/debug-log';
 import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
-import { buildCanonicalAdminEvaluationsHref } from '@/lib/admin/admin-module-routing';
+import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
@@ -2853,14 +2853,24 @@ function AdminEvaluationPage({
     ? getRestaurantIdentityWarnings(pendingRecordAction.record)
     : [];
 
+  const embeddedModuleId: Extract<AdminConsoleRouteModuleId, 'restaurants' | 'submissions' | 'reviews'> = showSubmissionView
+    ? (submissionInitialTab === 'reviews' ? 'reviews' : 'submissions')
+    : 'restaurants';
+
   return (
     <div
       ref={scrollContainerRef}
       className="flex h-full min-h-0 flex-col overflow-auto"
       id="scroll-container"
+      data-admin-embedded-module-shell={embedded ? "true" : undefined}
+      data-admin-embedded-module-id={embedded ? embeddedModuleId : undefined}
     >
       {/* Header */}
-      <div className={embedded ? "border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}>
+      <div
+        className={embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5" : "border-b border-border bg-card px-3 py-2.5 sm:px-4 sm:py-3"}
+        data-admin-module-header={embedded ? "compact" : undefined}
+        data-admin-module-header-module={embedded ? embeddedModuleId : undefined}
+      >
         <div className={embedded ? "flex flex-row items-start justify-between gap-1.5 lg:items-center" : "flex flex-row items-start justify-between gap-2.5 lg:items-center"}>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -2897,7 +2907,7 @@ function AdminEvaluationPage({
                 </Button>
               </div>
             )}
-            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"}>
+            <div className={embedded ? "mt-0.5 truncate text-xs text-muted-foreground" : "mt-0.5 truncate text-xs text-muted-foreground sm:text-sm"} data-admin-module-summary={embedded ? "true" : undefined}>
               {pendingQueueSummaryContent}
             </div>
           </div>
@@ -2909,7 +2919,7 @@ function AdminEvaluationPage({
               selectedStatuses={selectedStatuses}
               onSelectStatuses={setSelectedStatuses}
             >
-              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right">
+              <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
                 {canSwitchEvaluationView && (
                   <>
                     <Button
@@ -2982,7 +2992,7 @@ function AdminEvaluationPage({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col" data-admin-module-content={embedded ? "bounded" : undefined}>
         {pendingRecordAction && (
           <section
             role="region"

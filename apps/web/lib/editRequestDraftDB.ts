@@ -123,20 +123,45 @@ export async function getAllDraftsByUser(userId: string): Promise<EditRequestDra
     }
 }
 
+export async function deleteDraftsByUser(userId: string): Promise<number> {
+    if (!userId) return 0;
+
+    try {
+        const db = await initDB();
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.store;
+        const userDraftKeys = await store.index('by-user').getAllKeys(userId);
+
+        for (const key of userDraftKeys) {
+            await store.delete(key);
+        }
+
+        await tx.done;
+        return userDraftKeys.length;
+    } catch (error) {
+        console.error('사용자 Draft 삭제 실패:', error);
+        throw new Error('사용자 임시 저장 데이터 삭제에 실패했습니다.');
+    }
+}
+
 // 오래된 Draft 정리 (30일 이상)
 export async function cleanupOldDrafts(): Promise<void> {
     try {
         const db = await initDB();
-        const allDrafts = await db.getAll(STORE_NAME);
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.store;
+        const allDrafts = await store.getAll();
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         for (const draft of allDrafts) {
             const savedDate = new Date(draft.savedAt);
             if (savedDate < thirtyDaysAgo) {
-                await db.delete(STORE_NAME, draft.id);
+                await store.delete(draft.id);
             }
         }
+
+        await tx.done;
     } catch (error) {
         console.error('오래된 Draft 정리 실패:', error);
     }

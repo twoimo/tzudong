@@ -476,7 +476,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     };
 
     return (
-        <div className={cn("text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans")}>
+        <div className={cn("text-foreground", embedded ? "flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans tracking-normal" : "min-h-screen bg-[#fdfbf7] font-sans")} data-admin-embedded-module-shell={embedded ? "true" : undefined} data-admin-embedded-module-id={embedded ? "banners" : undefined}>
             {!embedded && (
                 <div
                     className="fixed inset-0 opacity-30 pointer-events-none z-0"
@@ -487,7 +487,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
             )}
 
             <div className={cn("relative z-10 flex min-h-0 flex-1 flex-col", embedded ? "h-full" : "container mx-auto min-h-screen max-w-7xl p-3 md:p-4")}>
-                <div className={cn("flex flex-none flex-col gap-2 border-b border-border bg-card lg:flex-row lg:items-center lg:justify-between", embedded ? "px-2 py-1.5" : "rounded-t-2xl border px-3 py-2.5 shadow-sm")}>
+                <div className={cn("flex flex-none flex-col gap-2 border-b border-border bg-card lg:flex-row lg:items-center lg:justify-between", embedded ? "shrink-0 px-2 py-1.5" : "rounded-t-2xl border px-3 py-2.5 shadow-sm")} data-admin-module-header={embedded ? "compact" : undefined} data-admin-module-header-module={embedded ? "banners" : undefined}>
                     <div className="flex min-w-0 items-start gap-2">
                         {!embedded && (
                             <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-9 w-9 rounded-xl hover:bg-muted" aria-label="이전 화면으로 돌아가기">
@@ -495,18 +495,18 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             </Button>
                         )}
                         <div className="flex min-w-0 gap-2">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 text-primary">
-                                <ImageIcon className="h-4 w-4" aria-hidden="true" />
+                            <div className={cn("flex shrink-0 items-center justify-center text-primary", embedded ? "h-6 w-6" : "h-8 w-8 rounded-lg border border-primary/20 bg-primary/5")}>
+                                <ImageIcon className={embedded ? "h-5 w-5" : "h-4 w-4"} aria-hidden="true" />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="truncate text-lg font-bold tracking-[-0.04em] text-foreground md:text-xl">배너 관리</h1>
-                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "truncate text-lg font-bold tracking-[-0.04em] text-foreground md:text-xl"}>배너 관리</h1>
+                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground" data-admin-module-summary={embedded ? "true" : undefined}>
                                     전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto">
+                    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto" data-admin-module-actions={embedded ? "top-right" : undefined}>
                         <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
                             <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
                             <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
@@ -517,7 +517,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                     </div>
                 </div>
 
-                <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl bg-background/70 p-2 sm:p-3 md:border md:border-t-0 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")}>
+                <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl bg-background/70 p-2 sm:p-3 md:border md:border-t-0 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")} data-admin-module-content={embedded ? "bounded" : undefined}>
                     <section className="min-h-0 overflow-hidden rounded-xl bg-card/95 shadow-sm md:border md:border-border xl:flex xl:flex-col" aria-labelledby="banner-list-title">
                         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border p-2.5">
                             <div>

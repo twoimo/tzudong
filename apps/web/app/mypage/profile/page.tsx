@@ -53,6 +53,12 @@ import {
   useUserProfile,
 } from "@/hooks/useUserProfile";
 import { cn } from "@/lib/utils";
+import {
+  createAccountDeletionReauthenticationSession,
+  issueAccountDeletionReauthenticationProof,
+  parseAccountDeletionPreview,
+  type AccountDeletionPreview,
+} from "@/lib/privacy/account-deletion-reauth";
 
 interface Profile {
   nickname: string;
@@ -60,6 +66,41 @@ interface Profile {
 }
 
 const PROFILE_SELECT = "nickname, avatar_url";
+
+function isAuthoritativeAccountDeletionBeginReceipt(
+  receipt: unknown,
+  requestId: string,
+): receipt is { success: true; begin: Record<string, unknown> } {
+  if (!receipt || typeof receipt !== "object") return false;
+  const response = receipt as { success?: unknown; begin?: unknown };
+  const begin = response.begin;
+  return (
+    response.success === true &&
+    begin !== null &&
+    typeof begin === "object" &&
+    (begin as Record<string, unknown>).request_id === requestId &&
+    typeof (begin as Record<string, unknown>).status === "string" &&
+    typeof (begin as Record<string, unknown>).db_readback_passed === "boolean" &&
+    typeof (begin as Record<string, unknown>).storage_readback_passed === "boolean" &&
+    typeof (begin as Record<string, unknown>).session_readback_passed === "boolean" &&
+    typeof (begin as Record<string, unknown>).auth_readback_passed === "boolean"
+  );
+}
+const accountDeletionFailureMessages: Record<string, string> = {
+  account_deletion_reauth_proof_invalid_claims: "현재 비밀번호를 다시 확인해주세요.",
+  account_deletion_reauth_proof_password_reauthentication_required: "현재 비밀번호를 다시 확인해주세요.",
+  account_deletion_reauthentication_required: "현재 비밀번호를 다시 확인해주세요.",
+  account_deletion_reauth_proof_not_available: "재인증 증명이 만료되었거나 이미 사용되었습니다. 비밀번호를 다시 확인해주세요.",
+  account_deletion_apply_not_started: "계정 삭제 요청을 시작하지 못했습니다.",
+};
+
+function accountDeletionFailureMessage(receipt: unknown, fallback: string): string {
+  if (!receipt || typeof receipt !== "object") return fallback;
+  const reasonCode = (receipt as { reasonCode?: unknown }).reasonCode;
+  return typeof reasonCode === "string" ? accountDeletionFailureMessages[reasonCode] ?? fallback : fallback;
+}
+
+
 
 export default function ProfilePage() {
   const { user, profileNickname } = useAuth();
@@ -88,6 +129,16 @@ export default function ProfilePage() {
 
   // 계정 완전 삭제
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletionSession, setDeletionSession] = useState<{
+    preview: AccountDeletionPreview;
+    proofId: string;
+    expiresAt: string;
+    bearerToken: string;
+  } | null>(null);
+  useEffect(() => () => {
+    setDeletionSession(null);
+  }, []);
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -377,53 +428,102 @@ export default function ProfilePage() {
     }
   };
 
-  // 계정 완전 삭제 (Supabase Auth에서 삭제)
+  // 계정 삭제는 서버의 G014 durable worker가 처리한다.
   const handleAccountPermanentDelete = async () => {
-    if (!user) return;
-
-    if (deleteConfirmationEmail !== user.email) {
-      toast.error("이메일이 일치하지 않습니다");
+    if (!user || !user.email) return;
+    if (deleteConfirmationEmail !== user.email || (!deletionSession && !deletePassword)) {
+      toast.error("이메일과 현재 비밀번호를 확인해주세요");
       return;
     }
 
     setLoading(true);
     try {
+      if (!deletionSession) {
+        const reauthentication = await createAccountDeletionReauthenticationSession({
+          userId: user.id,
+          email: user.email,
+          password: deletePassword,
+        });
+        const previewResponse = await fetch("/api/account/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${reauthentication.bearerToken}`,
+          },
+          body: JSON.stringify({ targetUserId: user.id }),
+        });
+        const previewReceipt = await previewResponse.json().catch(() => null);
+        const preview = parseAccountDeletionPreview(previewReceipt?.preview);
+        if (
+          !previewResponse.ok ||
+          !preview ||
+          typeof preview.previewHash !== "string" ||
+          typeof preview.sourceManifestHash !== "string"
+        ) {
+          throw new Error("계정 삭제 미리보기를 만들지 못했습니다");
+        }
+
+        const proof = await issueAccountDeletionReauthenticationProof({ userId: user.id });
+        setDeletionSession({
+          preview,
+          proofId: proof.proofId,
+          expiresAt: proof.expiresAt,
+          bearerToken: reauthentication.bearerToken,
+        });
+        setDeletePassword("");
+        toast.warning("삭제 범위를 확인했습니다. 영구 삭제를 한 번 더 확인해주세요.");
+        return;
+      }
+
+      if (Date.parse(deletionSession.expiresAt) <= Date.now()) {
+        setDeletionSession(null);
+        throw new Error("재인증 증명이 만료되었습니다. 비밀번호를 다시 확인해주세요.");
+      }
+
+      const bindings = {
+        requestId: crypto.randomUUID(),
+        previewHash: deletionSession.preview.previewHash,
+        idempotencyKey: crypto.randomUUID(),
+        sourceManifestHash: deletionSession.preview.sourceManifestHash,
+      };
       const response = await fetch("/api/account/delete", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${deletionSession.bearerToken}`,
         },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({
+          userId: user.id,
+          proofId: deletionSession.proofId,
+          requestId: bindings.requestId,
+          previewHash: bindings.previewHash,
+          confirmationText: deleteConfirmationEmail,
+          idempotencyKey: bindings.idempotencyKey,
+          sourceManifestHash: bindings.sourceManifestHash,
+        }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "계정 삭제에 실패했습니다");
+      const serverReceipt = await response.json().catch(() => null);
+      if (
+        !response.ok ||
+        !isAuthoritativeAccountDeletionBeginReceipt(serverReceipt, bindings.requestId)
+      ) {
+        throw new Error(
+          accountDeletionFailureMessage(serverReceipt, "계정 삭제 요청을 시작하지 못했습니다."),
+        );
       }
 
-      toast.success(
-        "계정이 영구적으로 삭제되었습니다. 잠시 후 홈으로 이동합니다.",
-      );
-
-      // 세션 정리
-      await supabase.auth.signOut();
-
-      // localStorage에서 Supabase 관련 항목 정리
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("sb-") || key.startsWith("supabase")) {
-          localStorage.removeItem(key);
-        }
-      });
-
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000);
+      setDeletionSession(null);
+      setDeleteConfirmationEmail("");
+      setDeletePassword("");
+      toast.success("계정 삭제 요청이 접수되었습니다. 처리 상태를 확인해 주세요.");
+      router.refresh();
     } catch (error) {
-      const errorMessage =
+      setDeletionSession(null);
+      toast.error(
         error instanceof Error
           ? error.message
-          : "계정 삭제 중 오류가 발생했습니다";
-      toast.error(errorMessage);
+          : "계정 삭제 요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
     } finally {
       setLoading(false);
     }
@@ -1303,6 +1403,16 @@ export default function ProfilePage() {
                         name="delete-confirmation-email"
                         autoComplete="email"
                       />
+                      <Input
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        placeholder="현재 비밀번호"
+                        type="password"
+                        className="mt-3"
+                        aria-label="계정 영구 삭제 현재 비밀번호"
+                        name="delete-current-password"
+                        autoComplete="current-password"
+                      />
                       {deleteConfirmationEmail &&
                         deleteConfirmationEmail !== user.email && (
                           <p className="text-sm text-destructive mt-2 text-center">
@@ -1312,15 +1422,22 @@ export default function ProfilePage() {
                     </div>
                     <AlertDialogFooter>
                       <AlertDialogCancel
-                        onClick={() => setDeleteConfirmationEmail("")}
+                        onClick={() => {
+                          setDeleteConfirmationEmail("");
+                          setDeletePassword("");
+                          setDeletionSession(null);
+                        }}
                       >
                         취소
                       </AlertDialogCancel>
-                      <AlertDialogAction
+                      <Button
+                        type="button"
                         onClick={handleAccountPermanentDelete}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         disabled={
-                          loading || deleteConfirmationEmail !== user.email
+                          loading ||
+                          deleteConfirmationEmail !== user.email ||
+                          (!deletionSession && !deletePassword)
                         }
                       >
                         {loading ? (
@@ -1328,10 +1445,12 @@ export default function ProfilePage() {
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                             삭제 중…
                           </>
+                        ) : deletionSession ? (
+                          "영구 삭제 다시 확인"
                         ) : (
-                          "영구 삭제"
+                          "삭제 범위 확인"
                         )}
-                      </AlertDialogAction>
+                      </Button>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

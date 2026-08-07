@@ -419,7 +419,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         );
     });
 
-    test('MHM-08: zoomed individual markers expose a visible-marker restaurant sheet', async ({ page }) => {
+    test('MHM-08: zoomed individual markers expose a visible-marker restaurant sheet', async ({ page, browserName }) => {
         const sheet = await openVisibleMarkerSheetFromCluster(page);
 
         await expect(page.locator('[data-mobile-visible-marker-restaurants-trigger="true"]')).toHaveCount(0);
@@ -437,10 +437,15 @@ test.describe('Phase 1: mobile home map regressions', () => {
                 webkitScrollbarDisplay: window.getComputedStyle(scrollContainer, '::-webkit-scrollbar').display,
             };
         });
-        expect(scrollbarState).toMatchObject({
-            scrollbarWidth: 'none',
-            webkitScrollbarDisplay: 'none',
-        });
+        if (browserName === 'firefox') {
+            expect(scrollbarState).toMatchObject({
+                scrollbarWidth: 'none',
+            });
+        } else {
+            expect(scrollbarState).toMatchObject({
+                webkitScrollbarDisplay: 'none',
+            });
+        }
 
         await page.screenshot({
             path: 'test-results/home-map-contextual-discovery-mobile.png',

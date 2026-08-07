@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, User, Mail, Lock, Trash2, X } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -49,8 +48,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Account deletion
-    const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
 
     const loadProfile = useCallback(async () => {
         if (!user) return;
@@ -157,62 +154,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         }
     };
 
-    const handleAccountDelete = async () => {
-        if (!user) return;
-
-        // 이메일 확인
-        if (deleteConfirmationEmail !== user.email) {
-            toast.error('이메일이 일치하지 않습니다');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            // 1. 프로필 익명화 (삭제 대신 닉네임 변경)
-            const { error: profileError } = await supabase
-                .from('profiles' as never)
-                .update({ nickname: '탈퇴한 사용자' } as never)
-                .eq('user_id', user.id);
-
-            if (profileError) {
-                console.warn('프로필 익명화 실패:', profileError);
-                // 프로필 익명화 실패해도 계속 진행
-            }
-
-            // 2. user_stats 정보 삭제
-            const { error: statsError } = await supabase
-                .from('user_stats')
-                .delete()
-                .eq('user_id', user.id);
-
-            if (statsError) {
-                console.warn('통계 정보 삭제 실패:', statsError);
-                // 통계 삭제 실패해도 계속 진행
-            }
-
-            // 3. 계정 탈퇴 처리 완료
-            toast.success('계정 탈퇴가 완료되었습니다. 잠시 후 로그아웃됩니다.');
-
-            // 로그아웃
-            onClose();
-            setTimeout(async () => {
-                try {
-                    await supabase.auth.signOut();
-                    window.location.reload();
-                } catch (signOutError) {
-                    console.warn('로그아웃 실패:', signOutError);
-                    // 로그아웃 실패해도 페이지 리로드
-                    window.location.reload();
-                }
-            }, 2000);
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '계정 삭제 중 오류가 발생했습니다';
-            toast.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (!user) return null;
 
@@ -410,50 +351,16 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-4 pt-2">
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full">
-                                        계정 삭제
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            계정을 탈퇴하면:
-                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                                            <br />• 프로필이 익명화됩니다
-                                            <br />• 랭킹에서 제외됩니다
-                                            <br />• 자동으로 로그아웃됩니다
-                                            <br />
-                                            <br />계속하시려면 아래에 계정 이메일을 입력해주세요.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <div className="py-4">
-                                        <Input
-                                            value={deleteConfirmationEmail}
-                                            onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
-                                            placeholder={user.email}
-                                            className="text-center"
-                                        />
-                                        {deleteConfirmationEmail && deleteConfirmationEmail !== user.email && (
-                                            <p className="text-sm text-destructive mt-2 text-center">
-                                                이메일이 일치하지 않습니다
-                                            </p>
-                                        )}
-                                    </div>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>취소</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleAccountDelete}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            disabled={loading || deleteConfirmationEmail !== user.email}
-                                        >
-                                            {loading ? "삭제 중..." : "영구 삭제"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                                variant="destructive"
+                                className="w-full"
+                                onClick={() => {
+                                    onClose();
+                                    window.location.assign("/mypage/profile#account-deletion");
+                                }}
+                            >
+                                계정 삭제 페이지로 이동
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>
@@ -648,50 +555,16 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full">
-                                        계정 삭제
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            계정을 탈퇴하면:
-                                            <br />• 작성한 리뷰는 &apos;탈퇴한 사용자&apos;로 유지됩니다
-                                            <br />• 프로필이 익명화됩니다
-                                            <br />• 랭킹에서 제외됩니다
-                                            <br />• 자동으로 로그아웃됩니다
-                                            <br />
-                                            <br />계속하시려면 아래에 계정 이메일을 입력해주세요.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <div className="py-4">
-                                        <Input
-                                            value={deleteConfirmationEmail}
-                                            onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
-                                            placeholder={user.email}
-                                            className="text-center"
-                                        />
-                                        {deleteConfirmationEmail && deleteConfirmationEmail !== user.email && (
-                                            <p className="text-sm text-destructive mt-2 text-center">
-                                                이메일이 일치하지 않습니다
-                                            </p>
-                                        )}
-                                    </div>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>취소</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            onClick={handleAccountDelete}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            disabled={loading || deleteConfirmationEmail !== user.email}
-                                        >
-                                            {loading ? "삭제 중..." : "영구 삭제"}
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                            <Button
+                                variant="destructive"
+                                className="w-full"
+                                onClick={() => {
+                                    onClose();
+                                    window.location.assign("/mypage/profile#account-deletion");
+                                }}
+                            >
+                                계정 삭제 페이지로 이동
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

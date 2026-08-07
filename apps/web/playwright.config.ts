@@ -225,6 +225,9 @@ export default defineConfig({
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context]: E2E_ADMIN_ROUTE_BYPASS_CONTEXT,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime]: E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.token]: E2E_ADMIN_ROUTE_BYPASS_TOKEN,
+            ...(process.env.NIGHTLY_OFFLINE === '1'
+                ? { NEXT_PUBLIC_NAVER_CLIENT_ID: 'playwright-offline-naver-client-id' }
+                : {}),
         },
     },
 });

@@ -45,10 +45,20 @@ describe("admin restaurant refresh history source contracts", () => {
       'data-admin-restaurant-refresh-history="true"',
     );
     expect(panelSource).toContain(
-      'data-admin-restaurant-refresh-headerless="true"',
+      'data-admin-embedded-module-shell="true"',
     );
     expect(panelSource).toContain(
-      'data-admin-restaurant-refresh-toolbar="headerless-management"',
+      'data-admin-embedded-module-id="restaurant-refresh-history"',
+    );
+    expect(panelSource).toContain('data-admin-module-header="compact"');
+    expect(panelSource).toContain(
+      'data-admin-module-header-module="restaurant-refresh-history"',
+    );
+    expect(panelSource).toContain('data-admin-module-summary="true"');
+    expect(panelSource).toContain('data-admin-module-actions="top-right"');
+    expect(panelSource).toContain('data-admin-module-content="bounded"');
+    expect(panelSource).not.toContain(
+      'data-admin-restaurant-refresh-headerless="true"',
     );
     expect(panelSource).not.toMatch(
       /<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/,
@@ -106,16 +116,24 @@ describe("admin restaurant refresh history source contracts", () => {
     );
   });
 
-  test("panel renders as a headerless management toolbar without the old visible title", () => {
+  test("panel renders inside the compact embedded module shell without the old h1 title", () => {
     const html = renderToStaticMarkup(
       createElement(AdminRestaurantRefreshHistoryPanel),
     );
 
-    expect(html).toContain('data-admin-restaurant-refresh-headerless="true"');
+    expect(html).toContain('data-admin-embedded-module-shell="true"');
     expect(html).toContain(
-      'data-admin-restaurant-refresh-toolbar="headerless-management"',
+      'data-admin-embedded-module-id="restaurant-refresh-history"',
     );
-    expect(html).toContain('aria-label="맛집 최신화 기록관리"');
+    expect(html).toContain('data-admin-module-header="compact"');
+    expect(html).toContain(
+      'data-admin-module-header-module="restaurant-refresh-history"',
+    );
+    expect(html).toContain('data-admin-module-summary="true"');
+    expect(html).toContain('data-admin-module-actions="top-right"');
+    expect(html).toContain('data-admin-module-content="bounded"');
+    expect(html).not.toContain('data-admin-restaurant-refresh-headerless="true"');
+    expect(html).toContain('aria-labelledby="admin-restaurant-refresh-history-title"');
     expect(html).toContain("기록 관리");
     expect(html).not.toMatch(/<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/);
   });

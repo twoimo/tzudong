@@ -426,27 +426,38 @@ export default function AdminUsersPanel() {
 
 
   return (
-    <section aria-labelledby="admin-users-title" className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
-      <div className="shrink-0 border-b border-border bg-card px-2 py-1.5">
+    <section
+      aria-labelledby="admin-users-title"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+      data-admin-embedded-module-shell="true"
+      data-admin-embedded-module-id="users"
+    >
+      <div
+        className="shrink-0 border-b border-border bg-card px-2 py-1.5"
+        data-admin-module-header="compact"
+        data-admin-module-header-module="users"
+      >
         <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-primary">계정·권한 운영</p>
-            <h2 id="admin-users-title" className="flex items-center gap-1.5 bg-gradient-primary bg-clip-text text-base font-bold text-transparent">
-              <UsersRound className="h-5 w-5 text-primary" aria-hidden="true" />
-              사용자 관리
-            </h2>
+            <div className="flex items-center gap-2">
+              <UsersRound className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+              <h2 id="admin-users-title" className="whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent">
+                사용자 관리
+              </h2>
+            </div>
             <p className="mt-0.5 max-w-3xl text-xs leading-5 text-muted-foreground">
               계정 상태, 관리자 권한, 프로필 정보를 한 화면에서 확인하고 위험 변경은 재확인 후 적용합니다.
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5 sm:gap-2" aria-label="사용자 관리 안전 원칙">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2" aria-label="사용자 관리 안전 원칙" data-admin-module-actions="top-right">
             {['관리자 확인 필수', '자기 잠금 방지', '상태 재확인', '삭제 대신 비활성화'].map((label) => (
               <Badge key={label} variant="outline" className="max-w-full rounded-full border-primary/25 bg-background px-2.5 text-[11px] text-primary sm:text-xs">{label}</Badge>
             ))}
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-2 xl:grid-cols-4" data-admin-users-summary>
+        <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-2 xl:grid-cols-4" data-admin-users-summary data-admin-module-summary="true">
           <SummaryMetric label="불러온 사용자" value={summary.loadedUsers} tone="primary" isLoading={isLoading} />
           <SummaryMetric label="관리자" value={summary.adminUsers} isLoading={isLoading} />
           <SummaryMetric label="비활성 계정" value={summary.disabledUsers} tone={summary.disabledUsers > 0 ? 'danger' : 'default'} isLoading={isLoading} />
@@ -454,7 +465,7 @@ export default function AdminUsersPanel() {
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] xl:grid-cols-[minmax(340px,0.95fr)_minmax(400px,1.05fr)] xl:overflow-hidden xl:p-2">
+      <div className="grid min-h-0 flex-1 gap-2 overflow-y-auto p-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] xl:grid-cols-[minmax(340px,0.95fr)_minmax(400px,1.05fr)] xl:overflow-hidden xl:p-2" data-admin-module-content="bounded">
         <Card className="min-h-0 border-border bg-card shadow-sm xl:flex xl:flex-col xl:overflow-hidden">
           <CardHeader className="shrink-0 space-y-2 p-2 pb-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -170,13 +170,33 @@ describe("mypage CRUD QA/QC source contracts", () => {
     }
   });
 
-  test("permanent account delete cleans the same bookmark table used by the mypage bookmark feature", () => {
+  test("permanent account delete keeps owner-scoped server deletion workflow and avoids destructive retry patterns", () => {
     const accountDeleteRouteSource = source("app/api/account/delete/route.ts");
 
-    expect(accountDeleteRouteSource).toContain(".from('user_bookmarks')");
-    expect(accountDeleteRouteSource).not.toContain(".from('restaurant_bookmarks')");
-    expect(accountDeleteRouteSource).toContain("supabaseAdmin.auth.admin.deleteUser");
+    expect(accountDeleteRouteSource).toContain("await supabase.auth.getUser()");
     expect(accountDeleteRouteSource).toContain("targetUserId !== user.id");
     expect(accountDeleteRouteSource).toContain("requireAdmin()");
+    expect(accountDeleteRouteSource).toContain("await revokeCurrentUserSessions({ supabase, supabaseAdmin, request })");
+    expect(accountDeleteRouteSource).toContain("await supabaseAdmin.auth.admin.deleteUser(targetUserId)");
+    expect(accountDeleteRouteSource).toContain(".from('user_bookmarks')");
+    expect(accountDeleteRouteSource).toContain(".eq('user_id', targetUserId)");
+    expect(
+      accountDeleteRouteSource.split(".eq('user_id', targetUserId)").length - 1,
+    ).toBeGreaterThanOrEqual(4);
+    expect(accountDeleteRouteSource).not.toContain(".from('restaurant_bookmarks')");
+    expect(accountDeleteRouteSource).toContain("return NextResponse.json({ success: true })");
+    expect(accountDeleteRouteSource).not.toContain("indexedDB.deleteDatabase");
+
+    expect(
+      accountDeleteRouteSource.match(/await supabaseAdmin\.auth\.admin\.deleteUser\(/g)?.length ?? 0,
+    ).toBe(1);
+
+    expect(
+      accountDeleteRouteSource.indexOf(
+        "await revokeCurrentUserSessions({ supabase, supabaseAdmin, request })",
+      ),
+    ).toBeLessThan(
+      accountDeleteRouteSource.indexOf("await supabaseAdmin.auth.admin.deleteUser(targetUserId)"),
+    );
   });
 });

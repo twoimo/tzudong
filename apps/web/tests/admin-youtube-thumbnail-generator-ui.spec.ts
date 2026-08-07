@@ -1,4 +1,4 @@
-import { expect, test, type TestInfo } from '@playwright/test';
+import { expect, test, type TestInfo } from './nightly/nightly-test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -36,7 +36,9 @@ function readEnvWithFallback(key: string) {
 }
 
 function getSupabaseAuthStorageKey() {
-  const supabaseUrl = readEnvWithFallback('NEXT_PUBLIC_SUPABASE_URL');
+  const supabaseUrl = process.env.NIGHTLY_OFFLINE === '1'
+    ? 'http://127.0.0.1:54321'
+    : readEnvWithFallback('NEXT_PUBLIC_SUPABASE_URL');
   const hostname = supabaseUrl ? new URL(supabaseUrl).hostname : 'local.supabase.co';
   return `sb-${hostname.split('.')[0]}-auth-token`;
 }
@@ -813,14 +815,18 @@ test('thumbnail generator omits trace review drawer and keeps toolbar viewport-b
     'data-thumbnail-api-router-parity',
     'storyboard',
   );
-  await expect(page.locator('[data-thumbnail-api-key-settings="local-storage-only"]')).toBeVisible();
-  await expect(page.locator('[data-thumbnail-browser-api-key-settings="local-storage-only"]')).toBeVisible();
+  const apiKeySettings = page.locator('[data-thumbnail-api-key-settings="memory-only"]');
+  await expect(apiKeySettings).toBeVisible();
+  await expect(page.locator('[data-thumbnail-browser-api-key-settings="memory-only"]')).toBeVisible();
+  await expect(apiKeySettings).toHaveAttribute('data-thumbnail-api-key-storage', 'memory-only');
+  await expect(apiKeySettings).toHaveAttribute('data-thumbnail-api-key-persistence', 'none');
+  await expect(apiKeySettings).toHaveAttribute('data-thumbnail-api-key-lifetime', 'component');
   await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toHaveCount(0);
   await expect(page.locator('[data-thumbnail-api-key-input="openai"]')).toHaveCount(0);
   await expect(page.locator('[data-thumbnail-browser-api-key-input="true"]')).toBeVisible();
   await expect(page.locator('[data-thumbnail-api-key-save="true"]')).toBeVisible();
   await expect(page.locator('[data-thumbnail-api-key-session-status="true"]')).toContainText('저장된 키 없음');
-  await expect(page.locator('[data-thumbnail-api-key-browser-only-copy="true"]')).toContainText('브라우저 저장');
+  await expect(page.locator('[data-thumbnail-api-key-browser-only-copy="true"]')).toContainText('브라우저 메모리');
   await expect(page.locator('[data-thumbnail-browser-api-key-model-policy="gpt-image-2-only"]')).toContainText('gpt-image-2 전용');
   await expect(chatPanel).not.toContainText('sk-live-secret-for-ui-only');
 
