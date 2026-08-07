@@ -786,6 +786,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("npm audit --audit-level=moderate", security_workflow)
         self.assertIn("python -m pip_audit", security_workflow)
         self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
+        self.assertIn("backend/supabase/scripts/g037-hosted-closure-requirements.txt", security_workflow)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
         self.assertNotIn("git+https://github.com/yt-dlp/yt-dlp.git@master", crawling_requirements)
         self.assertIn("yt-dlp[default]==", crawling_requirements)
