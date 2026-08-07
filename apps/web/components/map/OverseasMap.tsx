@@ -50,6 +50,19 @@ interface OverseasMapProps {
     onMapInteraction?: () => void;
     deviceLocation?: DeviceMapLocation | null;
 }
+const hasValidOverseasDeviceLocation = (
+    location: DeviceMapLocation | null,
+    zoom: number,
+): location is DeviceMapLocation =>
+    location !== null &&
+    Number.isFinite(location.lat) &&
+    Number.isFinite(location.lng) &&
+    location.lat >= -90 &&
+    location.lat <= 90 &&
+    location.lng >= -180 &&
+    location.lng <= 180 &&
+    Number.isFinite(zoom);
+
 
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 
@@ -123,6 +136,17 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             return;
         }
 
+        const currentMap = map.current;
+        const currentZoom = currentMap.getZoom();
+
+        if (!hasValidOverseasDeviceLocation(deviceLocation, currentZoom)) {
+            deviceLocationMarkerRef.current?.remove();
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        // Provider boundary: keep device coordinates in React state memory, and only apply validated updates to the map provider.
         if (!deviceLocationMarkerRef.current) {
             const markerElement = document.createElement('div');
             markerElement.style.width = '56px';
@@ -135,18 +159,18 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 anchor: 'center',
             })
                 .setLngLat([deviceLocation.lng, deviceLocation.lat])
-                .addTo(map.current);
+                .addTo(currentMap);
         } else {
             const markerElement = deviceLocationMarkerRef.current.getElement();
             markerElement.innerHTML = buildDeviceLocationMarkerHtml(deviceLocation);
-            deviceLocationMarkerRef.current.setLngLat([deviceLocation.lng, deviceLocation.lat]).addTo(map.current);
+            deviceLocationMarkerRef.current.setLngLat([deviceLocation.lng, deviceLocation.lat]).addTo(currentMap);
         }
 
         if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
             lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
-            map.current.easeTo({
+            currentMap.easeTo({
                 center: [deviceLocation.lng, deviceLocation.lat],
-                zoom: Math.max(map.current.getZoom(), 14),
+                zoom: Math.max(currentZoom, 14),
                 duration: 550,
             });
         }

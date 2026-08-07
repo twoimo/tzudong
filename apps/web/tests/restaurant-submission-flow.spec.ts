@@ -1,7 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
 import { hidePopupOverlay } from './helpers';
 
-const SUPABASE_AUTH_COOKIE_NAME = 'sb-aqlcofblfxdrjhhdmarw-auth-token';
+const SUPABASE_AUTH_COOKIE_NAME = process.env.NIGHTLY_OFFLINE === '1'
+  ? 'sb-127-auth-token'
+  : 'sb-aqlcofblfxdrjhhdmarw-auth-token';
 
 test.describe('G003 restaurant submission flow contracts', () => {
   test.use({

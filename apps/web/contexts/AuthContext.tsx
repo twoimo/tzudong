@@ -69,11 +69,16 @@ const isSessionExpired = (currentSession: Session | null) => {
     if (!currentSession?.expires_at) return false;
     return currentSession.expires_at * 1000 <= Date.now();
 };
+const PRIVACY_PROFILE_ALLOWED_STATUSES = ['eligible', 'guardian_verified'] as const;
+const isPrivacyProfileStatusAllowed = (status: unknown) =>
+    typeof status === 'string' &&
+    PRIVACY_PROFILE_ALLOWED_STATUSES.includes(status as (typeof PRIVACY_PROFILE_ALLOWED_STATUSES)[number]);
 
 type AuthUserState = {
     isAdmin: boolean;
     needsNicknameSetup: boolean;
     profileNickname: string | null;
+    isPrivacyProfileEligible: boolean;
 };
 
 type AuthUserStateCacheEntry = {
@@ -112,7 +117,7 @@ function getCachedAuthUserState(userId: string) {
 
 async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
     const supabase = await getSupabaseClient();
-    const [roleResponse, profileResponse] = await Promise.all([
+    const [roleResponse, profileResponse, privacyProfileResponse] = await Promise.all([
         supabase
             .from("user_roles")
             .select("role")
@@ -124,6 +129,11 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
             .select("nickname")
             .eq("user_id", userId)
             .maybeSingle(),
+        (supabase
+            .from('privacy_age_profiles' as never)
+            .select('status')
+            .eq('owner', userId)
+            .maybeSingle() as Promise<{ data: { status: string | null } | null; error: unknown }>),
     ]);
 
     if (roleResponse.error && isAuthSessionInvalidError(roleResponse.error)) {
@@ -133,16 +143,18 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
         throw profileResponse.error;
     }
 
-    if (profileResponse.error) {
-        console.error("Profile check error:", profileResponse.error);
-    }
-
     const profileData = profileResponse.data as { nickname?: string } | null;
     const nickname = profileData?.nickname;
+    const isPrivacyProfileEligible =
+        !privacyProfileResponse.error &&
+        privacyProfileResponse.data != null &&
+        isPrivacyProfileStatusAllowed(privacyProfileResponse.data.status);
+
     const state: AuthUserState = {
         isAdmin: !roleResponse.error && Boolean(roleResponse.data),
         needsNicknameSetup: profileResponse.error ? false : !profileData || nickname === "탈퇴한 사용자",
         profileNickname: typeof nickname === "string" && nickname.trim().length > 0 ? nickname.trim() : null,
+        isPrivacyProfileEligible,
     };
 
     authUserStateCache = {

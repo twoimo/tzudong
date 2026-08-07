@@ -713,6 +713,71 @@ export interface Database {
             }
         }
         Functions: {
+            allocate_short_url: {
+                Args: {
+                    p_target_url: string
+                    p_restaurant_id: string
+                    p_review_id: string
+                    p_client_bucket: string
+                    p_candidate_codes: string[]
+                }
+                Returns: {
+                    code: string | null
+                    is_existing: boolean
+                    rate_limited: boolean
+                    retry_after_seconds: number
+                    allocation_failed: boolean
+                }[]
+            }
+            begin_account_deletion_apply_with_reauth: {
+                Args: {
+                    p_proof_id: string
+                    p_actor_user_id: string
+                    p_target_user_id: string
+                    p_request_id: string
+                    p_preview_hash: string
+                    p_confirmation_text: string
+                    p_idempotency_key: string
+                    p_source_manifest_hash: string
+                }
+                Returns: {
+                    request_id: string
+                    status: string
+                    reason_code: string
+                    delete_count: number
+                    anonymize_count: number
+                    separate_count: number
+                    retain_count: number
+                    db_readback_passed: boolean
+                    storage_readback_passed: boolean
+                    session_readback_passed: boolean
+                    auth_readback_passed: boolean
+                    storage_receipt_refs: Json | null
+                    auth_receipt_ref: string | null
+                    source_manifest_hash: string
+                }[]
+            }
+            consume_account_deletion_reauth_proof: {
+                Args: {
+                    p_proof_id: string
+                    p_target_user_id: string
+                    p_request_id: string
+                    p_idempotency_key: string
+                }
+                Returns: {
+                    proof_id: string
+                    consumed_at: string
+                }[]
+            }
+            issue_account_deletion_reauth_proof: {
+                Args: {
+                    p_target_user_id: string
+                }
+                Returns: {
+                    proof_id: string
+                    expires_at: string
+                }[]
+            }
             apply_admin_restaurant_map_overlay_action: {
                 Args: {
                     p_actor_user_id: string

@@ -117,7 +117,7 @@ test('developer bootstrap opens the thumbnail page in a normal browser and rende
 
   await page.locator('[data-thumbnail-chat-settings-toggle="true"]').click();
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeVisible();
-  await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toContainText('fallback으로 전환하지 않습니다');
+  await expect(page.locator('[data-thumbnail-api-key-disabled="true"]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-thumbnail-chat-settings-dropdown="true"]')).toBeHidden();
 
@@ -297,10 +297,12 @@ test('AHP 98+ multi-scenario browser QA for thumbnail generation quality and saf
   });
 
   for (const item of cases) {
+    const generationPostsBeforeCase = generationPosts.length;
     await page.locator('[data-thumbnail-chat-ime-safe="true"]').fill(item.prompt);
     await expect(page.locator('[data-thumbnail-chat-submit="true"]')).toBeEnabled();
     await page.locator('[data-thumbnail-chat-submit="true"]').click();
-    await expect(page.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('provenance exact', { timeout: 20_000 });
+    await expect(page.locator('[data-thumbnail-chat-message="assistant"]').last()).toContainText('확인된 실제 이미지입니다.', { timeout: 20_000 });
+    await expect.poll(() => generationPosts.length, { timeout: 20_000 }).toBe(generationPostsBeforeCase + 1);
     await expect
       .poll(async () => page.locator('[data-thumbnail-draggable-canvas="true"]').evaluate((canvas) => {
         const context = (canvas as HTMLCanvasElement).getContext('2d');

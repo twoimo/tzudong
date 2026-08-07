@@ -1,0 +1,191 @@
+name: Nightly Regression
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # 03:30 KST (UTC)
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Regression lane to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - unit
+          - e2e
+
+concurrency:
+  group: nightly-regression
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '24.x'
+  APP_PORT: '8080'
+  NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+  NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+  NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+  NIGHTLY_SLACK_WEBHOOK: ${{ secrets.NIGHTLY_SLACK_WEBHOOK }}
+
+jobs:
+  preflight:
+    name: Preflight isolated environment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      suite: ${{ steps.selection.outputs.suite }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: selection
+        name: Resolve suite selection
+        shell: bash
+        run: echo "suite=${{ inputs.suite || 'all' }}" >> "$GITHUB_OUTPUT"
+      - name: Validate nightly secrets and environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(NIGHTLY_SUPABASE_PROJECT_REF NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NIGHTLY_ADMIN_EMAIL NIGHTLY_ADMIN_PASSWORD)
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required nightly secret: ${name}" >&2
+              exit 1
+            fi
+          done
+          if [[ "${NEXT_PUBLIC_SUPABASE_URL}" != *"${NIGHTLY_SUPABASE_PROJECT_REF}"* ]]; then
+            echo 'Nightly Supabase URL does not identify the configured isolated project.' >&2
+            exit 1
+          fi
+          if [[ "${NIGHTLY_ADMIN_EMAIL}" != *"nightly"* ]]; then
+            echo 'Nightly admin identity must be a dedicated non-production account.' >&2
+            exit 1
+          fi
+
+  unit:
+    name: Unit regression
+    needs: preflight
+    if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'unit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Run unit regressions
+        run: bun run test:unit | tee ../../nightly-unit.log
+      - name: Upload unit log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-unit-log
+          path: nightly-unit.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: Curated Playwright regression
+    needs: preflight
+    if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'e2e'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+      - name: Start app
+        run: nohup bun run dev:playwright > ../../nightly-web.log 2>&1 &
+      - name: Wait for health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error "http://127.0.0.1:${APP_PORT}/api/health" > /tmp/nightly-health.json; then
+              cat /tmp/nightly-health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Application did not become ready.' >&2
+          cat ../../nightly-web.log || true
+          exit 1
+      - name: Run curated read-only browser regressions
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:${{ env.APP_PORT }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NIGHTLY_ADMIN_EMAIL: ${{ env.NIGHTLY_ADMIN_EMAIL }}
+          NIGHTLY_ADMIN_PASSWORD: ${{ env.NIGHTLY_ADMIN_PASSWORD }}
+          PLAYWRIGHT_REUSE_EXISTING_SERVER: '1'
+        run: >-
+          bunx playwright test
+          tests/smoke.spec.ts
+          tests/navigation.spec.ts
+          tests/browser-title.spec.ts
+          tests/mobile-home-map.spec.ts
+          --project=chromium
+          --reporter=line,html
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-playwright-diagnostics
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+            nightly-web.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  summary:
+    name: Nightly summary
+    if: always()
+    needs: [preflight, unit, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Write redacted summary
+        shell: bash
+        run: |
+          {
+            echo '## Nightly regression summary'
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Unit: ${{ needs.unit.result }}"
+            echo "- E2E: ${{ needs.e2e.result }}"
+            echo "- Preflight: ${{ needs.preflight.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Optional failure notification
+        if: (needs.unit.result == 'failure' || needs.e2e.result == 'failure' || needs.preflight.result == 'failure') && env.NIGHTLY_SLACK_WEBHOOK != ''
+        env:
+          NIGHTLY_SLACK_WEBHOOK: ${{ secrets.NIGHTLY_SLACK_WEBHOOK }}
+        shell: bash
+        run: |
+          set +e
+          payload=$(printf '{"text":"Nightly regression failed: %s"}' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")
+          curl --fail --silent --show-error --max-time 10 -X POST -H 'Content-Type: application/json' --data "$payload" "$NIGHTLY_SLACK_WEBHOOK" || echo 'Notification failed; see GitHub summary.'

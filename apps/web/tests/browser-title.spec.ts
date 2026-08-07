@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './nightly/nightly-test';
 
 const publicTitleCases = [
     ['/', '쯔양이 다녀간 맛집 지도 - 쯔동여지도'],

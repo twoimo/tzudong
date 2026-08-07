@@ -129,6 +129,7 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
+import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -3833,7 +3834,7 @@ function AdminDashboardManagementSkeleton() {
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            쯔양 KPI 대시보드
+            Tzuyang KPI Dashboard
           </h1>
         </div>
         <div
@@ -7301,7 +7302,7 @@ function AdminDashboardManagementPanel({
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
           <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            쯔양 KPI 대시보드
+            Tzuyang KPI Dashboard
           </h1>
         </div>
         <div
@@ -9008,83 +9009,67 @@ function GuardedApplyCard() {
 
 function LlmSessionWorkspace() {
   return (
-    <section aria-labelledby="admin-llm-session-title" className="space-y-3">
-      <div className="rounded-2xl border border-primary/15 bg-card/95 p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-primary">읽기 전용 보조</p>
-            <h2
-              id="admin-llm-session-title"
-              className="mt-1 text-2xl font-bold tracking-[-0.04em] text-foreground md:text-3xl"
-            >
-              자동 운영 보조
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-              선택한 운영 모듈의 상황을 요약하고 다음 검수 순서를 제안하는 읽기
-              전용 보조 화면입니다. 실제 승인·삭제·공개 변경은 관리자 확인과
-              상태 재확인 이후에만 진행됩니다.
-            </p>
-          </div>
-          <Badge
-            variant="outline"
-            className="w-fit border-primary/30 text-primary"
-          >
-            읽기 전용
-          </Badge>
+    <AdminEmbeddedModuleShell
+      moduleId="llm"
+      titleId="admin-llm-session-title"
+      title="운영 보조"
+      icon={Bot}
+      summary="읽기 전용 · 제안만 제공 · 적용은 각 모듈에서"
+      contentClassName="overflow-y-auto p-2 md:p-3"
+    >
+      <section aria-label="운영 보조 제안" className="space-y-3">
+        <div className="grid gap-3 xl:grid-cols-3">
+          {[
+            [
+              "현재 화면 요약",
+              "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
+            ],
+            [
+              "다음 검수 추천",
+              "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
+            ],
+            [
+              "위험 액션 체크리스트",
+              "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
+            ],
+          ].map(([title, description]) => (
+            <Card key={title} className="border-border bg-card/95 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">{title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {description}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
 
-      <div className="grid gap-3 xl:grid-cols-3">
-        {[
-          [
-            "현재 화면 요약",
-            "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
-          ],
-          [
-            "다음 검수 추천",
-            "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
-          ],
-          [
-            "위험 액션 체크리스트",
-            "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
-          ],
-        ].map(([title, description]) => (
-          <Card key={title} className="border-border bg-card/95 shadow-sm">
+        <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
+          <GuardedApplyCard />
+          <Card className="border-border bg-card/95 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">{title}</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
+                운영 원칙
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {description}
+            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+              <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
+              <p>
+                2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
+                수행하지 않습니다.
+              </p>
+              <p>
+                3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
+                거칩니다.
               </p>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-        <GuardedApplyCard />
-        <Card className="border-border bg-card/95 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
-              운영 원칙
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-            <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
-            <p>
-              2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
-              수행하지 않습니다.
-            </p>
-            <p>
-              3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
-              거칩니다.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
+        </div>
+      </section>
+    </AdminEmbeddedModuleShell>
   );
 }
 
@@ -9147,39 +9132,15 @@ function AuditPlaceholder() {
   const adminAuditLoginHref = "/?auth=login&reason=admin&next=%2Fadmin%3Fmodule%3Daudit";
 
   return (
-    <Card className="min-h-[480px] border-border bg-card/95 shadow-sm">
-      <CardHeader>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-medium text-primary">실데이터 연결</p>
-            <CardTitle className="mt-1 text-2xl tracking-[-0.04em]">
-              감사 로그
-            </CardTitle>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
-              사용자 관리 감사 이벤트는 admin_audit_events 기준의 부분/도메인별
-              범위에서 읽습니다. 맛집 추천 검토 감사는 restaurant_request_review_audit의
-              별도 도메인별 읽기 경로로 구분하며, 전체 운영 변경을 포괄하는
-              범용 감사 로그처럼 표시하지 않습니다.
-            </p>
-          </div>
-          <Badge
-            variant="outline"
-            className={cn(
-              "w-fit",
-              isAuditAuthUnavailable
-                ? "border-destructive/30 text-destructive"
-                : unavailable || auditEventsQuery.isError
-                  ? "border-amber-300 text-amber-700"
-                  : hasTruthfulCoverage
-                    ? "border-primary/30 text-primary"
-                    : "border-amber-300 text-amber-700",
-            )}
-          >
-            {coverageBadgeLabel}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <AdminEmbeddedModuleShell
+      moduleId="audit"
+      titleId="admin-audit-title"
+      title="감사 로그"
+      icon={ScrollText}
+      summary={coverageBadgeLabel}
+      contentClassName="overflow-y-auto p-2 md:p-3"
+    >
+      <div className="min-h-[480px] space-y-3">
         <div
           className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
           data-admin-audit-coverage="partial-domain-specific"
@@ -9197,6 +9158,7 @@ function AuditPlaceholder() {
           <p className="mt-1">
             admin_audit_events는 사용자 관리 감사의 현재 1차 피드이며, 맛집 추천
             검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
+            전체 운영 변경을 포괄하는 범용 감사 로그처럼 표시하지 않습니다.
           </p>
         </div>
 
@@ -9328,8 +9290,8 @@ function AuditPlaceholder() {
             ))}
           </ol>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </AdminEmbeddedModuleShell>
   );
 }
 
@@ -9364,35 +9326,24 @@ function AdminMapOverlayOperationsModule() {
     ADMIN_MAP_OVERLAY_TABS[0];
 
   return (
-    <section
-      className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
-      aria-labelledby="admin-map-overlays-title"
-      data-admin-map-overlays-module="true"
-      data-layout-primitives="panel-layout list-detail step-nav stack"
-      data-scroll-owner="admin-map-overlays"
+    <AdminEmbeddedModuleShell
+      moduleId="map-overlays"
+      titleId="admin-map-overlays-title"
+      title="지도 오버레이"
+      icon={Layers3}
+      summary={`${activeTabConfig.label} · readback/audit 확인 흐름`}
+      contentClassName="overflow-y-auto p-2 md:p-3"
     >
-      <Card className="rounded-xl border-border/60 bg-card/95 shadow-sm">
-        <CardHeader className="space-y-2 p-3 pb-2 md:p-6 md:pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                관리자 지도 오버레이 작업대
-              </p>
-              <CardTitle id="admin-map-overlays-title" className="text-xl">
-                지도 오버레이
-              </CardTitle>
-            </div>
-            <Badge variant="outline" className="rounded-full">
-              승인 데이터: admin_restaurant_map_overlays
-            </Badge>
-          </div>
-          <p className="text-sm leading-6 text-muted-foreground">
-            수동 오버레이, 트렌드 제안, 트렌드 실행 요청을 한 모듈에서
-            연결합니다. 승인된 지도 표시는 명시적 수동/RPC 흐름으로만
-            변경됩니다.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-2 p-3 pt-0 md:space-y-3 md:p-6 md:pt-0">
+      <section
+        className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
+        aria-label="지도 오버레이 작업"
+        data-admin-map-overlays-module="true"
+        data-layout-primitives="panel-layout list-detail step-nav stack"
+      >
+        <div className="space-y-2 md:space-y-3">
+          <Badge variant="outline" className="w-fit rounded-full">
+            승인 데이터: admin_restaurant_map_overlays
+          </Badge>
           <div
             role="tablist"
             aria-label="지도 오버레이 작업 탭"
@@ -9480,9 +9431,9 @@ function AdminMapOverlayOperationsModule() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </section>
+        </div>
+      </section>
+    </AdminEmbeddedModuleShell>
   );
 }
 function InlineModulePanel({
@@ -9558,6 +9509,8 @@ function InlineModulePanel({
     <section
       aria-label={`${module.title} 작업 화면`}
       className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
+      data-admin-console-inline-module-frame="true"
+      data-admin-console-inline-module-id={module.id}
     >
       <div
         className={cn(
@@ -10549,6 +10502,7 @@ export function AdminConsoleOverview({
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
   const [isAdminMobileViewport, setIsAdminMobileViewport] = useState(false);
   const canvasRef = useRef<HTMLElement | null>(null);
+  const activeDescendantScrollTopRef = useRef(0);
   const previousMobileHeaderScrollTopRef = useRef(0);
   const lastAdminMobileChromeHideAtRef = useRef(0);
   const mobileChromeRevealTimeoutRef = useRef<number | null>(null);
@@ -10660,6 +10614,8 @@ export function AdminConsoleOverview({
     (moduleId: AdminModuleId) => {
       const nextHref = buildCanonicalAdminModuleHref(moduleId);
       setActiveModuleId(moduleId);
+      activeDescendantScrollTopRef.current = 0;
+      previousMobileHeaderScrollTopRef.current = 0;
       setIsMobileHeaderVisible(true);
 
       router.replace(nextHref, {
@@ -10704,6 +10660,8 @@ export function AdminConsoleOverview({
 
     if (previousRequestedModuleIdRef.current !== nextModuleId) {
       previousRequestedModuleIdRef.current = nextModuleId;
+      activeDescendantScrollTopRef.current = 0;
+      previousMobileHeaderScrollTopRef.current = 0;
       setIsMobileHeaderVisible(true);
     }
 
@@ -10722,7 +10680,11 @@ export function AdminConsoleOverview({
       document.body.scrollTop,
     );
 
-    return Math.max(canvasScrollTop, pageScrollTop);
+    return Math.max(
+      canvasScrollTop,
+      activeDescendantScrollTopRef.current,
+      pageScrollTop,
+    );
   }, []);
 
   const updateMobileHeaderVisibility = useCallback(() => {
@@ -10744,6 +10706,23 @@ export function AdminConsoleOverview({
       return current;
     });
   }, [getAdminConsoleScrollTop]);
+
+  const updateActiveDescendantScrollTop = useCallback((eventTarget: EventTarget | null) => {
+    const canvasElement = canvasRef.current;
+    if (!canvasElement || !(eventTarget instanceof Element)) {
+      activeDescendantScrollTopRef.current = 0;
+      return;
+    }
+
+    if (eventTarget === canvasElement) {
+      activeDescendantScrollTopRef.current = 0;
+      return;
+    }
+
+    if (canvasElement.contains(eventTarget)) {
+      activeDescendantScrollTopRef.current = eventTarget.scrollTop;
+    }
+  }, []);
 
   const adminBottomNavAutoHide = useMobileBottomNavAutoHide({
     scrollRef: canvasRef,
@@ -10811,12 +10790,20 @@ export function AdminConsoleOverview({
       isAdminMobileViewport ||
       window.matchMedia("(max-width: 767px)").matches;
 
-
     if (isMobileViewportNow && currentScrollTop > 24) {
-      previousMobileHeaderScrollTopRef.current = currentScrollTop;
       if (mobileChromeHadDownScrollRef.current) {
+        previousMobileHeaderScrollTopRef.current = currentScrollTop;
         setAdminMobileChromeHidden(true);
+        return;
       }
+
+      if (activeDescendantScrollTopRef.current > 0) {
+        updateMobileHeaderVisibility();
+        adminBottomNavAutoHide.onScroll();
+        return;
+      }
+
+      previousMobileHeaderScrollTopRef.current = currentScrollTop;
       return;
     }
 
@@ -10953,12 +10940,25 @@ export function AdminConsoleOverview({
     ],
   );
 
+  const handleAdminCapturedScroll = useCallback(
+    (event: Event) => {
+      updateActiveDescendantScrollTop(event.target);
+      handleAdminCanvasScroll();
+    },
+    [handleAdminCanvasScroll, updateActiveDescendantScrollTop],
+  );
+
   useEffect(() => {
     const canvasElement = canvasRef.current;
     const handleScroll = () => handleAdminCanvasScroll();
+    const handleCapturedScroll = (event: Event) =>
+      handleAdminCapturedScroll(event);
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    canvasElement?.addEventListener("scroll", handleScroll, { passive: true });
+    canvasElement?.addEventListener("scroll", handleCapturedScroll, {
+      capture: true,
+      passive: true,
+    });
     window.addEventListener("wheel", handleAdminWindowWheel, { passive: true });
     document.addEventListener("wheel", handleAdminWindowWheel, {
       capture: true,
@@ -10970,13 +10970,13 @@ export function AdminConsoleOverview({
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("wheel", handleAdminWindowWheel);
       document.removeEventListener("wheel", handleAdminWindowWheel, true);
-      canvasElement?.removeEventListener("scroll", handleScroll);
+      canvasElement?.removeEventListener("scroll", handleCapturedScroll, true);
       if (mobileChromeRevealTimeoutRef.current !== null) {
         window.clearTimeout(mobileChromeRevealTimeoutRef.current);
         mobileChromeRevealTimeoutRef.current = null;
       }
     };
-  }, [handleAdminCanvasScroll, handleAdminWindowWheel]);
+  }, [handleAdminCanvasScroll, handleAdminCapturedScroll, handleAdminWindowWheel]);
   useEffect(() => {
     const mobileHeaderElement = document.querySelector<HTMLElement>(
       '[data-admin-console-mobile-header="true"]',
@@ -10999,6 +10999,11 @@ export function AdminConsoleOverview({
 
   const isAdminCanvasBootstrapping =
     isShellBootstrapping || !loadedModuleIds.has(activeModuleId);
+  const overviewModuleSummary = statsLoading
+    ? "KPI 데이터를 불러오는 중입니다."
+    : statsHasError
+      ? "일부 KPI를 확인하지 못했습니다."
+      : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
 
   return (
     <main
@@ -11053,7 +11058,6 @@ export function AdminConsoleOverview({
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"
-          onScroll={handleAdminCanvasScroll}
           onWheel={handleAdminCanvasWheel}
           onTouchStart={handleAdminCanvasTouchStart}
           onTouchMove={handleAdminCanvasTouchMove}
@@ -11064,19 +11068,37 @@ export function AdminConsoleOverview({
           {isAdminCanvasBootstrapping ? (
             getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
           ) : activeModuleId === "overview" ? (
-            <AdminDashboardManagementPanel
-              stats={stats}
-              isLoading={statsLoading}
-              hasError={statsHasError}
-              isAdmin={canLoadAdminConsoleData}
-            />
+            <AdminEmbeddedModuleShell
+              moduleId="overview"
+              titleId="admin-overview-module-title"
+              title="대시보드 (KPI)"
+              icon={Activity}
+              summary={overviewModuleSummary}
+              contentClassName="overflow-y-auto"
+            >
+              <AdminDashboardManagementPanel
+                stats={stats}
+                isLoading={statsLoading}
+                hasError={statsHasError}
+                isAdmin={canLoadAdminConsoleData}
+              />
+            </AdminEmbeddedModuleShell>
           ) : activeModuleId === "routes" ? (
-            <AdminRouteRecommendationModule
-              stats={stats}
-              isLoading={statsLoading}
-              hasError={statsHasError}
-              onSelectModule={selectModule}
-            />
+            <AdminEmbeddedModuleShell
+              moduleId="routes"
+              titleId="admin-routes-module-title"
+              title="맛집 동선 추천"
+              icon={Route}
+              summary="지도 맛집과 실제 도로 동선을 함께 확인합니다."
+              contentClassName="overflow-hidden"
+            >
+              <AdminRouteRecommendationModule
+                stats={stats}
+                isLoading={statsLoading}
+                hasError={statsHasError}
+                onSelectModule={selectModule}
+              />
+            </AdminEmbeddedModuleShell>
           ) : activeModuleId === "llm" ? (
             <LlmSessionWorkspace />
           ) : activeModule ? (

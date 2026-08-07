@@ -6,6 +6,21 @@ import { tmpdir } from "node:os";
 
 const appRoot = resolve(import.meta.dir, "..");
 const tempDirs: string[] = [];
+const readAppSource = (relativePath: string) =>
+  readFileSync(join(appRoot, relativePath), "utf8");
+
+function expectSourceOrder(source: string, markers: readonly string[]) {
+  let previousIndex = -1;
+
+  for (const marker of markers) {
+    const index = source.indexOf(marker, previousIndex + 1);
+    expect(index, `${marker} should follow the preceding task step`).toBeGreaterThan(
+      previousIndex,
+    );
+    previousIndex = index;
+  }
+}
+
 
 const criticalDisplayUtilities = [
   ["md:block", "block"],
@@ -236,4 +251,89 @@ describe("admin responsive CSS guard", () => {
       ).toBe(true);
     }
   }, 20_000);
+});
+describe("operational pane source guard", () => {
+  test("keeps map/info and list/detail panes shrinkable with state-specific scroll ownership", () => {
+    const overviewSource = readAppSource(
+      "components/admin/AdminOverviewDashboard.tsx",
+    );
+    const trendProposalSource = readAppSource(
+      "components/admin/TrendProposalQueue.tsx",
+    );
+    const overlayPanelSource = readAppSource(
+      "components/layout/OverlayPagePanel.tsx",
+    );
+
+    expect(overviewSource).toContain(
+      'grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain',
+    );
+    expect(overviewSource).toContain(
+      'lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]',
+    );
+    expect(overviewSource).toContain(
+      'lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3',
+    );
+    expect(overviewSource).toContain('data-scroll-owner="admin-overview-canvas"');
+    expect(overviewSource).toContain('data-scroll-owner="map-canvas-none"');
+    expect(overviewSource).toContain('data-scroll-owner="route-control-pane"');
+    expect(overviewSource).toContain('break-words whitespace-pre-wrap');
+
+    expect(trendProposalSource).toContain(
+      'grid min-w-0 gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]',
+    );
+    expect(trendProposalSource).toContain(
+      'data-scroll-owner="trend-proposal-queue"',
+    );
+    expect(trendProposalSource.match(/data-scroll-owner=/g)).toHaveLength(1);
+    expect(trendProposalSource).not.toContain(
+      'data-scroll-owner="trend-proposal-list"',
+    );
+    expect(trendProposalSource).not.toContain(
+      'data-scroll-owner="trend-proposal-detail"',
+    );
+    expect(trendProposalSource).toContain(
+      'break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]',
+    );
+    expect(trendProposalSource).toContain('break-all font-mono');
+
+    expect(overlayPanelSource).toContain(
+      'fixed z-[98] flex min-h-0 min-w-0 max-w-[calc(100vw-1rem)] gap-2',
+    );
+    expect(overlayPanelSource).toContain(
+      'hidden min-w-0 flex-1 basis-[400px] flex-col',
+    );
+    expect(overlayPanelSource).toContain(
+      'data-scroll-owner="overlay-page-panel"',
+    );
+  });
+
+  test("preserves logical panel focus order and the guarded proposal workflow order", () => {
+    const trendProposalSource = readAppSource(
+      "components/admin/TrendProposalQueue.tsx",
+    );
+    const overlayPanelSource = readAppSource(
+      "components/layout/OverlayPagePanel.tsx",
+    );
+
+    expectSourceOrder(overlayPanelSource, [
+      "<FeedContent",
+      "<ReviewModal",
+      "<UserProfilePanel",
+      "<RestaurantDetailPanel",
+    ]);
+    expectSourceOrder(trendProposalSource, [
+      'data-trend-proposal-preview="true"',
+      'data-trend-proposal-confirmation-input="true"',
+      'data-trend-proposal-approve-action="true"',
+      'data-trend-proposal-approval-readback="true"',
+      "승인 감사",
+    ]);
+    expect(trendProposalSource).toContain(
+      "approvalConfirmationText !== previewQuery.data.confirmation.requiredText",
+    );
+    expect(trendProposalSource).toContain(
+      "normalizedOverlayPayload: input.preview.normalizedOverlayPayload",
+    );
+    expect(trendProposalSource).toContain("focus-visible:ring-2");
+  });
 });

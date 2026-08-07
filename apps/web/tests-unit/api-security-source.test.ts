@@ -6,7 +6,7 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 const repoSource = (relativePath: string) => readFileSync(join(import.meta.dir, '..', '..', '..', relativePath), 'utf8');
 
 describe('public API security source contracts', () => {
-  test('shorten verifies public review visibility through anon/RLS before service-role writes', () => {
+  test('shorten verifies public review visibility through anon/RLS before service-role allocation', () => {
     const shortenSource = source('app/api/shorten/route.ts');
 
     expect(shortenSource).toContain('function createSupabasePublicClient()');
@@ -14,11 +14,69 @@ describe('public API security source contracts', () => {
     expect(shortenSource).toContain('const supabasePublic = createSupabasePublicClient()');
     expect(shortenSource).toContain('const supabaseAdmin = createSupabaseAdminClient()');
     expect(shortenSource.indexOf('const { data: review, error: reviewError } = await supabasePublic')).toBeLessThan(
-      shortenSource.indexOf("const { data: existing } = await supabaseAdmin"),
+      shortenSource.indexOf('const supabaseAdmin = createSupabaseAdminClient()'),
+    );
+    expect(shortenSource.indexOf('const supabaseAdmin = createSupabaseAdminClient()')).toBeLessThan(
+      shortenSource.indexOf(".rpc('allocate_short_url'"),
     );
     expect(shortenSource).toContain(".select('id, restaurant_id, is_verified')");
     expect(shortenSource).toContain(".eq('is_verified', true)");
-    expect(shortenSource).toContain("target_url: allowedTarget.canonicalTargetUrl");
+    expect(shortenSource).toContain('p_target_url: allowedTarget.canonicalTargetUrl');
+    expect(shortenSource).not.toContain(".from('short_urls')");
+    expect(shortenSource).not.toContain('new Map<');
+  });
+
+  test('shorten bounds actual request bytes and trusts only a Vercel-owned forwarded identity', () => {
+    const shortenSource = source('app/api/shorten/route.ts');
+
+    expect(shortenSource).toContain("const MAX_SHORTEN_BODY_BYTES = 4 * 1024");
+    expect(shortenSource).toContain("request.body.getReader()");
+    expect(shortenSource).toContain('totalBytes += value.byteLength');
+    expect(shortenSource).toContain('if (totalBytes > MAX_SHORTEN_BODY_BYTES)');
+    expect(shortenSource).not.toContain('request.text()');
+    expect(shortenSource).not.toContain('request.json()');
+    expect(shortenSource).toContain("mediaType !== 'application/json'");
+    expect(shortenSource).toContain("keys[0] !== 'targetUrl'");
+    expect(shortenSource).toContain("process.env.VERCEL !== '1'");
+    expect(shortenSource).toContain("request.headers.get('x-vercel-forwarded-for')");
+    expect(shortenSource).not.toContain("request.headers.get('x-forwarded-for')");
+    expect(shortenSource).not.toContain("request.headers.get('x-real-ip')");
+    expect(shortenSource).toContain('PRIVACY_AUDIT_HASH_KEY');
+    expect(shortenSource).toContain("Buffer.byteLength(privacyHashKey, 'utf8') < 32");
+    expect(shortenSource).toContain("createHmac('sha256', privacyHashKey)");
+    expect(shortenSource).toContain("return 'unknown'");
+    expect(shortenSource).toContain("const SHORT_CODE_CANDIDATE_COUNT = 5");
+    expect(shortenSource).toContain('randomInt(SHORT_CODE_ALPHABET.length)');
+    expect(shortenSource).toContain('p_candidate_codes: generateShortCodeCandidates()');
+    expect(shortenSource).toContain("'Retry-After': String(Math.max(1, allocation.retry_after_seconds))");
+    expect(shortenSource).toContain("'Cache-Control': 'no-store'");
+  });
+
+  test('shorten migration keeps rate ceilings shared, private, atomic, and fail-closed', () => {
+    const migrationSource = repoSource('backend/supabase/migrations/20260713000100_g013_short_url_security.sql')
+      .replace(/\r\n/g, '\n');
+    const supabaseTypes = source('integrations/supabase/types.ts');
+
+    expect(migrationSource).toContain('CREATE SCHEMA IF NOT EXISTS shortener_private');
+    expect(migrationSource).toContain("('ip', 20, 60)");
+    expect(migrationSource).toContain("('global', 200, 60)");
+    expect(migrationSource).toContain("('review', 10, 60)");
+    expect(migrationSource).toContain('ON CONFLICT (policy_scope, bucket_key) DO UPDATE');
+    expect(migrationSource).toContain('LIMIT 100');
+    expect(migrationSource).toContain("p_now - interval '1 hour'");
+    expect(migrationSource).toContain('SET search_path = \'\'');
+    expect(migrationSource).toContain("auth.role() <> 'service_role'");
+    expect(migrationSource).toContain('short_urls contains duplicate code rows; repair before applying G013');
+    expect(migrationSource).toContain('short_urls contains duplicate target_url rows; repair before applying G013');
+    expect(migrationSource).toContain('ADD CONSTRAINT short_urls_code_unique UNIQUE (code)');
+    expect(migrationSource).toContain('ADD CONSTRAINT short_urls_target_url_unique UNIQUE (target_url)');
+    expect(migrationSource).toContain('ON CONFLICT DO NOTHING');
+    expect(migrationSource).toContain('COALESCE(array_length(p_candidate_codes, 1), 0) <> 5');
+    expect(migrationSource).toContain('REVOKE INSERT, UPDATE, DELETE ON TABLE public.short_urls');
+    expect(migrationSource).toContain('GRANT EXECUTE ON FUNCTION public.allocate_short_url(text, uuid, uuid, text, text[])');
+    expect(supabaseTypes).toContain('allocate_short_url: {');
+    expect(supabaseTypes).toContain('p_candidate_codes: string[]');
+    expect(supabaseTypes).toContain('allocation_failed: boolean');
   });
 
   test('keeps auth required feed redirects truthful and safe', () => {
@@ -33,16 +91,17 @@ describe('public API security source contracts', () => {
     expect(authRedirectSource).toContain("next.startsWith('//')");
   });
 
-  test('self account deletion revokes current sessions before deleting the auth user', () => {
+  test('self account deletion atomically starts G014 after verified bearer reauthentication', () => {
     const accountDeleteSource = source('app/api/account/delete/route.ts');
     const revocationSource = source('lib/auth/session-revocation.ts');
 
-    expect(accountDeleteSource).toContain("import { revokeCurrentUserSessions } from '@/lib/auth/session-revocation'");
-    expect(accountDeleteSource.indexOf('await revokeCurrentUserSessions({ supabase, supabaseAdmin, request })')).toBeLessThan(
-      accountDeleteSource.indexOf('await supabaseAdmin.auth.admin.deleteUser(targetUserId)'),
-    );
+    expect(accountDeleteSource).toContain("begin_account_deletion_apply_with_reauth");
+    expect(accountDeleteSource).toContain("supabaseAdmin.auth.getUser(bearerToken)");
+    expect(accountDeleteSource).not.toContain("consume_account_deletion_reauth_proof");
+    expect(accountDeleteSource).not.toContain("revokeCurrentUserSessions");
+    expect(accountDeleteSource).not.toContain("deleteUser(");
+    expect(revocationSource).toContain("verifiedBearerToken?: string;");
     expect(revocationSource).toContain("auth.admin.signOut(accessToken, 'global')");
-    expect(revocationSource).toContain("input.request.headers.get('Authorization')");
   });
 
   test('hardens Supabase public API default grants and browser-callable admin RPCs', () => {
