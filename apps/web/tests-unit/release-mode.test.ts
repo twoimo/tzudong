@@ -10,7 +10,7 @@ import {
 import {
   buildReleaseModeReadback,
   getReleaseModeReadback,
-} from '../app/api/release/mode/route';
+} from '../lib/release-mode';
 
 describe('release mode flags', () => {
   test('accepts only explicit true and 1 values', () => {
