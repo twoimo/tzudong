@@ -246,7 +246,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {showUserProfile && (
                     <div className={cn(
                         "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
-                        "max-w-[min(400px,calc(100vw-1rem))]",
+                        "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <UserProfilePanel
@@ -263,7 +263,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {showRestaurantDetail && (
                     <div className={cn(
                         "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
-                        "max-w-[min(400px,calc(100vw-1rem))]",
+                        "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <RestaurantDetailPanel
