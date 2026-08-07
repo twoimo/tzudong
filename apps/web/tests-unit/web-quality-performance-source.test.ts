@@ -2070,6 +2070,8 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
+    expect(homeAppGlobalsSource).toContain('max-height: min(20rem, calc(100dvh - 24rem))');
+    expect(homeAppGlobalsSource).toContain('overflow-y: auto');
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );

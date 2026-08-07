@@ -32,6 +32,9 @@
 .mobile-map-status-badge {
   margin-top: 0.5rem;
   max-width: calc(100vw - 2rem);
+  max-height: min(20rem, calc(100dvh - 24rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mobile-map-status-badge > span {
