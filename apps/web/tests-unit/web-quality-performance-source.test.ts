@@ -2064,6 +2064,9 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
     expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
+    expect(homeAppGlobalsSource).toContain('margin-top: 0.5rem');
+    expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
+    expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );
