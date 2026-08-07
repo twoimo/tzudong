@@ -2016,6 +2016,23 @@ describe("web quality performance source contracts", () => {
       "import { supabase } from '@/integrations/supabase/client'",
     );
     expect(mapOverlayNoticeSource).toContain("max-w-[calc(100vw-2rem)]");
+    expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
+    for (const visualToken of [
+      "border border-border",
+      "bg-card/95",
+      "text-foreground",
+      "rounded-2xl",
+      "px-3 py-2",
+    ]) {
+      expect(mapOverlayNoticeSource).toContain(visualToken);
+    }
+    expect(mapOverlayNoticeSource).toContain("appearance-none");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';",
+    );
+    expect(mapIndicatorsSource).toContain(
+      "contentClassName={MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME}",
+    );
     expect(overlayStackSource).toContain('showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded');
     expect(overlayStackSource).toContain('showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle');
     expect(mapOverlayNoticeSource).toContain("min-h-9");
@@ -2067,6 +2084,15 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(homeAppGlobalsSource).toContain('margin-top: 0.5rem');
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge > span > span.map-overlay-notice-single-line",
+    );
+    expect(homeAppGlobalsSource).toContain("overflow: hidden");
+    expect(homeAppGlobalsSource).toContain("text-overflow: ellipsis");
+    expect(homeAppGlobalsSource).toContain("white-space: nowrap");
+    expect(homeAppGlobalsSource).toContain(
+      "html[data-mobile-search-open] .mobile-map-status-badge {\n    display: none;",
+    );
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');

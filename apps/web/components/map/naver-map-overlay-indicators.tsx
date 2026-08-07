@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { CSSProperties } from 'react';
 
-import { MAP_OVERLAY_TOAST_CLASS_NAME, MapOverlayNotice, MapOverlayNoticeButton } from '@/components/map/map-overlay-notice';
+import { MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME, MAP_OVERLAY_TOAST_CLASS_NAME, MapOverlayNotice, MapOverlayNoticeButton } from '@/components/map/map-overlay-notice';
 
 export const MapLoadingIndicator = memo(({
     isLoaded,
@@ -54,6 +54,7 @@ export const AnnouncementToastBadge = memo(({ title, style, className, onClick }
         className={`animate-[fadeInOut_4s_ease-in-out_forwards] motion-reduce:animate-none ${className || ''}`}
         ariaLabel={`공지사항 열기: ${title}`}
         icon="📢"
+        contentClassName={MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME}
     >
         {title}
     </MapOverlayNoticeButton>
