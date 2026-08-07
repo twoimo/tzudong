@@ -7,6 +7,7 @@ import type { MutableRefObject } from 'react';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
 import { requestAuthUi } from '@/lib/auth-ui-events';
+import { isPublicRestrictedMode } from '@/lib/site-config';
 import { toast } from '@/lib/no-toast';
 import { HOME_DESKTOP_INLINE_DETAIL_OPEN_FAILED_EVENT } from '@/lib/desktop-left-panel-entry';
 import {
@@ -94,6 +95,10 @@ export default function HomeClientEffects({
 
     useEffect(() => {
         const panelParam = searchParams.get('panel');
+        if (isPublicRestrictedMode && panelParam === 'announcement') {
+            closeAllPanels();
+            return;
+        }
         const announcementId = searchParams.get('announcementId');
         const restaurantId = resolveHomeDetailRestaurantParam(searchParams);
         const timers: number[] = [];

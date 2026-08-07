@@ -16,6 +16,7 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
 import { NaverMapOverlayStack } from "@/components/map/naver-map-overlay-stack";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import {
     NaverMapDetailPanelShell,
     NaverMapReviewModal,
@@ -3188,7 +3189,7 @@ const NaverMapView = memo(({
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
     // 로딩 에러 처리
-    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects ? (
+    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects && !isPublicRestrictedMode ? (
         <Suspense fallback={null}>
             <NaverMapAnnouncementRuntime
                 onAnnouncementToastPayloadChange={setAnnouncementToastPayload}

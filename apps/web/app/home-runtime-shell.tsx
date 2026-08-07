@@ -18,6 +18,7 @@ import {
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
+import { isPublicRestrictedMode } from '@/lib/site-config';
 import {
     APP_HEADER_HEIGHT_VAR,
     MOBILE_SHEET_HEADER_OFFSET_VAR,
@@ -52,9 +53,13 @@ const loadNotificationProvider = async () => {
 };
 
 function HomeSessionProviders({ children }: ProviderProps) {
-    const [hasStoredSession, setHasStoredSession] = useState(() => hasSupabaseAuthSessionHint());
+    const [hasStoredSession, setHasStoredSession] = useState(
+        () => !isPublicRestrictedMode && hasSupabaseAuthSessionHint(),
+    );
 
     useEffect(() => {
+        if (isPublicRestrictedMode) return undefined;
+
         const updateSessionHint = (event?: Event) => {
             const detail = (event as CustomEvent<HomeAuthSessionUpdatedDetail> | undefined)?.detail;
             if (typeof detail?.hasSession === 'boolean') {
@@ -87,7 +92,7 @@ function HomeSessionProviders({ children }: ProviderProps) {
     }
 
     return (
-        <AnonymousHomeAuthProvider isLoading={hasStoredSession}>
+        <AnonymousHomeAuthProvider isLoading={isPublicRestrictedMode ? false : hasStoredSession}>
             <StaticNotificationProvider>{children}</StaticNotificationProvider>
         </AnonymousHomeAuthProvider>
     );
@@ -144,7 +149,10 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         nextPath: '/',
     });
 
-    const openAuth = useCallback(() => setIsAuthModalOpen(true), []);
+    const openAuth = useCallback(() => {
+        if (isPublicRestrictedMode) return;
+        setIsAuthModalOpen(true);
+    }, []);
     const closeAuth = useCallback(() => {
         setIsAuthModalOpen(false);
         setAuthLoginRequest((current) => {
@@ -157,7 +165,10 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         closeAuth();
     }, [closeAuth]);
 
-    const openProfile = useCallback(() => setIsProfileModalOpen(true), []);
+    const openProfile = useCallback(() => {
+        if (isPublicRestrictedMode) return;
+        setIsProfileModalOpen(true);
+    }, []);
 
     useEffect(() => {
         const root = document.documentElement;
@@ -177,14 +188,18 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
             openProfile();
         };
 
-        window.addEventListener(AUTH_UI_REQUEST_EVENT, openAuth);
-        window.addEventListener('home:mobile-auth-request', openAuthListener);
-        window.addEventListener('home:mobile-profile-request', openProfileListener);
+        if (!isPublicRestrictedMode) {
+            window.addEventListener(AUTH_UI_REQUEST_EVENT, openAuth);
+            window.addEventListener('home:mobile-auth-request', openAuthListener);
+            window.addEventListener('home:mobile-profile-request', openProfileListener);
+        }
 
         return () => {
-            window.removeEventListener(AUTH_UI_REQUEST_EVENT, openAuth);
-            window.removeEventListener('home:mobile-auth-request', openAuthListener);
-            window.removeEventListener('home:mobile-profile-request', openProfileListener);
+            if (!isPublicRestrictedMode) {
+                window.removeEventListener(AUTH_UI_REQUEST_EVENT, openAuth);
+                window.removeEventListener('home:mobile-auth-request', openAuthListener);
+                window.removeEventListener('home:mobile-profile-request', openProfileListener);
+            }
             root.style.setProperty(MOBILE_SHEET_HEADER_PROGRESS_VAR, '0');
             root.style.setProperty(MOBILE_SHEET_HEADER_OFFSET_VAR, '0px');
             root.style.setProperty(APP_HEADER_HEIGHT_VAR, '56px');
@@ -193,8 +208,20 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const request = readHomeAuthLoginRequestFromLocation(window.location);
+        if (request.requested && isPublicRestrictedMode) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('auth');
+            currentUrl.searchParams.delete('reason');
+            currentUrl.searchParams.delete('next');
+            const nextSearch = currentUrl.searchParams.toString();
+            const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ''}${currentUrl.hash}`;
+            window.history.replaceState(window.history.state, '', nextUrl);
+            setAuthLoginRequest({ requested: false, reason: null, nextPath: '/' });
+            return;
+        }
+
         setAuthLoginRequest(request);
-        if (request.requested) {
+        if (request.requested && !isPublicRestrictedMode) {
             setIsAuthModalOpen(true);
         }
     }, []);
@@ -221,17 +248,19 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 </main>
             </div>
 
-            <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
-                <MobileBottomNav
-                    className="transition-transform duration-300"
-                    style={{
-                        transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
-                        willChange: 'transform',
-                    }}
-                />
-            </div>
+            {!isPublicRestrictedMode && (
+                <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
+                    <MobileBottomNav
+                        className="transition-transform duration-300"
+                        style={{
+                            transform: 'translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)',
+                            willChange: 'transform',
+                        }}
+                    />
+                </div>
+            )}
 
-            {isAuthModalOpen && (
+            {!isPublicRestrictedMode && isAuthModalOpen && (
                 <Suspense fallback={null}>
                     <DeferredAuthModal
                         isOpen={isAuthModalOpen}
@@ -246,7 +275,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 </Suspense>
             )}
 
-            {isProfileModalOpen && (
+            {!isPublicRestrictedMode && isProfileModalOpen && (
                 <Suspense fallback={null}>
                     <DeferredProfileModal
                         isOpen={isProfileModalOpen}
@@ -255,7 +284,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 </Suspense>
             )}
 
-            {needsNicknameSetup && (
+            {!isPublicRestrictedMode && needsNicknameSetup && (
                 <Suspense fallback={null}>
                     <DeferredNicknameSetupModal
                         isOpen={needsNicknameSetup}
@@ -275,6 +304,9 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     }
 
     if (viewportMode === 'desktop') {
+        if (isPublicRestrictedMode) {
+            return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
+        }
         return (
             <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
                 <OverlayLayout>{children}</OverlayLayout>
