@@ -1816,13 +1816,13 @@ export function AdminOverviewDashboard({
     <div
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
-      className="grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:overflow-hidden"
+      className="grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
       data-layout-primitives="panel-layout list-detail frame cluster"
       data-scroll-owner="admin-overview-canvas"
       data-admin-overview-layout="two-pane"
     >
       <div
-        className="h-[340px] min-w-0 sm:h-[390px] lg:h-full lg:min-h-0"
+        className="h-[340px] min-w-0 sm:h-[390px] overflow-visible lg:h-full lg:min-h-0"
         data-admin-map-pane="true"
         data-scroll-owner="map-canvas-none"
       >
