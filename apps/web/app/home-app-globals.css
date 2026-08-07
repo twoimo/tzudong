@@ -29,6 +29,21 @@
     display: none;
   }
 }
+.mobile-map-status-badge {
+  margin-top: 0.5rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.mobile-map-status-badge > span {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.mobile-map-status-badge > span > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 
 /* ============================================
    모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
