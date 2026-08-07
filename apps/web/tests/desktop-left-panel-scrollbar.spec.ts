@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './nightly/nightly-test';
 import { hidePopupOverlay } from './helpers';
 
 test.describe('Desktop left panel scrollbar chrome', () => {
