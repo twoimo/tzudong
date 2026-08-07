@@ -2016,6 +2016,8 @@ describe("web quality performance source contracts", () => {
       "import { supabase } from '@/integrations/supabase/client'",
     );
     expect(mapOverlayNoticeSource).toContain("max-w-[calc(100vw-2rem)]");
+    expect(overlayStackSource).toContain('showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded');
+    expect(overlayStackSource).toContain('showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle');
     expect(mapOverlayNoticeSource).toContain("min-h-9");
     expect(mapOverlayNoticeSource).toContain("w-fit");
     expect(mapOverlayNoticeSource).not.toContain("flex w-[calc(100vw-2rem)]");
@@ -2067,6 +2069,7 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('margin-top: 0.5rem');
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
+    expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );

@@ -35,6 +35,9 @@
 }
 
 .mobile-map-status-badge > span {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  width: 100%;
   max-width: 100%;
   white-space: normal;
 }
