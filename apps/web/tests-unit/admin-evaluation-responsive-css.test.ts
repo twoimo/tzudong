@@ -360,7 +360,7 @@ describe("operational pane source guard", () => {
       'grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain',
     );
     expect(overviewSource).toContain(
-      'lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]',
+      'lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]',
     );
     expect(overviewSource).toContain(
       'lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3',

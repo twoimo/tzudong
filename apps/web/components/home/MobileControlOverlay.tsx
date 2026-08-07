@@ -263,6 +263,13 @@ function MobileControlOverlayComponent({
     }, []);
 
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
+    useEffect(() => {
+        document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search');
+
+        return () => {
+            document.documentElement.removeAttribute('data-mobile-search-open');
+        };
+    }, [activeSheet]);
     const [searchViewportHeight, setSearchViewportHeight] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
