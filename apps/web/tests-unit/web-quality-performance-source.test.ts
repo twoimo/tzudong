@@ -56,6 +56,7 @@ const tailwindEntries = {
       '"../hooks"', '"../contexts"', '"../components/home"', '"../components/layout"',
       '"../components/map"', '"../components/search"', '"../components/filters"',
       '"../components/region"', '"../components/skeletons"', '"../components/ui"',
+      '"../lib/naver-map-overlay-position-helpers.ts"',
     ],
     exclusions: [],
   },
@@ -2038,7 +2039,13 @@ describe("web quality performance source contracts", () => {
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
     expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
-    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)_+_126px)]");
+    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)_+_8.5rem)]");
+    expect(overlayPositionSource).toContain("z-[70]");
+    expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-position-helpers.ts";');
+    expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
+    expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
+    expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
+    expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );
