@@ -12,8 +12,6 @@ export interface AuthContextType {
     needsNicknameSetup: boolean;
     profileNickname: string | null;
     signIn: (email: string, password: string) => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
     signOut: () => Promise<void>;
     completeNicknameSetup: () => void;
     resetPassword: (email: string) => Promise<void>;
@@ -38,8 +36,6 @@ export function AnonymousHomeAuthProvider({
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
 
     const unavailableSignIn = useMemo(() => createUnavailableAuthAction('signIn'), []);
-    const unavailableSignInWithGoogle = useMemo(() => createUnavailableAuthAction('signInWithGoogle'), []);
-    const unavailableSignUp = useMemo(() => createUnavailableAuthAction('signUp') as AuthContextType['signUp'], []);
     const unavailableSignOut = useMemo(() => createUnavailableAuthAction('signOut'), []);
     const unavailableResetPassword = useMemo(() => createUnavailableAuthAction('resetPassword'), []);
     const unavailableUpdatePassword = useMemo(() => createUnavailableAuthAction('updatePassword'), []);
@@ -52,13 +48,11 @@ export function AnonymousHomeAuthProvider({
         needsNicknameSetup,
         profileNickname: null,
         signIn: unavailableSignIn,
-        signInWithGoogle: unavailableSignInWithGoogle,
-        signUp: unavailableSignUp,
         signOut: unavailableSignOut,
         completeNicknameSetup: () => setNeedsNicknameSetup(false),
         resetPassword: unavailableResetPassword,
         updatePassword: unavailableUpdatePassword,
-    }), [isLoading, needsNicknameSetup, unavailableResetPassword, unavailableSignIn, unavailableSignInWithGoogle, unavailableSignOut, unavailableSignUp, unavailableUpdatePassword]);
+    }), [isLoading, needsNicknameSetup, unavailableResetPassword, unavailableSignIn, unavailableSignOut, unavailableUpdatePassword]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

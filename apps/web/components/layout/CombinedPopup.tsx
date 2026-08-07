@@ -9,7 +9,7 @@ import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
 import {
     buildPopupBannerLoopSlides,
-    filterPopupBannersWithPosterMedia,
+    filterPopupBannersWithTrustedPosterMedia,
     getPopupBannerInitialTrackIndex,
     getPopupBannerLoopResetIndex,
     getPopupBannerNavigationTarget,
@@ -87,16 +87,18 @@ const BannerSlide = memo(({
     banner: AdBanner;
     isActive: boolean;
     shouldLoadMedia: boolean;
-    onClick: () => void;
+    onClick?: () => void;
     onVideoEnded?: () => void;
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const isActionable = Boolean(banner.link_url);
     const handleSlideKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick();
-        }
-    }, [onClick]);
+        if (!isActionable || !onClick || (e.key !== 'Enter' && e.key !== ' ')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+    }, [isActionable, onClick]);
 
     // isActive 변경 시 영상 재생/정지 제어
     useEffect(() => {
@@ -118,11 +120,11 @@ const BannerSlide = memo(({
     return (
         <div
             className="w-full h-full flex-shrink-0"
-            onClick={onClick}
-            role="button"
-            tabIndex={0}
-            aria-label={`${banner.title} 배너 열기`}
-            onKeyDown={handleSlideKeyDown}
+            onClick={isActionable ? onClick : undefined}
+            role={isActionable ? "button" : undefined}
+            tabIndex={isActionable ? 0 : undefined}
+            aria-label={isActionable ? `${banner.title} 배너 열기` : undefined}
+            onKeyDown={isActionable ? handleSlideKeyDown : undefined}
         >
             {/* 영상 배너 (우선순위 1) */}
             {banner.video_url ? (
@@ -176,7 +178,7 @@ const CombinedPopupComponent = () => {
 
     // 배너 데이터
     const { data: banners = [] } = usePopupAdBanners({ enabled: canLoadBanners });
-    const posterBanners = useMemo(() => filterPopupBannersWithPosterMedia(banners), [banners]);
+    const posterBanners = useMemo(() => filterPopupBannersWithTrustedPosterMedia(banners), [banners]);
     const carouselSlides = useMemo(() => buildPopupBannerLoopSlides(posterBanners), [posterBanners]);
     const posterBannerSignature = useMemo(
         () => posterBanners.map((banner) => banner.id).join('|'),
@@ -340,10 +342,15 @@ const CombinedPopupComponent = () => {
     }, [posterBanners.length, trackSlide]);
 
     // 배너 클릭
-    const handleBannerClick = useCallback((banner: AdBanner) => {
-        if (banner.link_url) {
-            openExternalUrl(banner.link_url);
+    const handleBannerClick = useCallback((destination: string | null) => {
+        if (!destination) return;
+
+        if (destination.startsWith('/')) {
+            window.location.assign(destination);
+            return;
         }
+
+        openExternalUrl(destination);
     }, []);
 
     const handleSlideViewportKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -362,8 +369,8 @@ const CombinedPopupComponent = () => {
         if ((e.key === 'Enter' || e.key === ' ') && !isDragging) {
             e.preventDefault();
             const currentBanner = posterBanners[currentSlide];
-            if (currentBanner) {
-                handleBannerClick(currentBanner);
+            if (currentBanner?.link_url) {
+                handleBannerClick(currentBanner.link_url);
             }
         }
     }, [posterBanners, currentSlide, handleBannerClick, isDragging, nextSlide, prevSlide]);
@@ -422,6 +429,8 @@ const CombinedPopupComponent = () => {
         }
     }, [isDragging]);
 
+    const currentBannerDestination = posterBanners[currentSlide]?.link_url ?? null;
+
     // 표시 조건 체크
     if (!isVisible || posterBanners.length === 0) {
         return null;
@@ -442,10 +451,10 @@ const CombinedPopupComponent = () => {
                 {/* 배너 슬라이드 컨텐츠 - 가로 슬라이딩 방식 */}
                 <div
                     className="relative aspect-[4/5] overflow-hidden group"
-                    role="button"
-                    tabIndex={0}
+                    role={currentBannerDestination ? "button" : "region"}
+                    tabIndex={currentBannerDestination ? 0 : undefined}
                     aria-label="팝업 배너 슬라이드"
-                    onKeyDown={handleSlideViewportKeyDown}
+                    onKeyDown={currentBannerDestination ? handleSlideViewportKeyDown : undefined}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -458,7 +467,7 @@ const CombinedPopupComponent = () => {
                         className={cn(
                             "flex w-full h-full",
                             isLoopResetting ? "transition-none" : "transition-transform duration-500 ease-out",
-                            isDragging ? "cursor-grabbing" : "cursor-grab"
+                            isDragging ? "cursor-grabbing" : currentBannerDestination ? "cursor-pointer" : "cursor-default"
                         )}
                         style={{ transform: `translateX(-${trackSlide * 100}%)` }}
                         ref={slideContainerRef}
@@ -470,7 +479,7 @@ const CombinedPopupComponent = () => {
                                 banner={banner}
                                 isActive={index === trackSlide}
                                 shouldLoadMedia={Math.abs(index - trackSlide) <= 1}
-                                onClick={() => !isDragging && handleBannerClick(banner)}
+                                onClick={banner.link_url ? () => !isDragging && handleBannerClick(banner.link_url) : undefined}
                                 onVideoEnded={() => {
                                     if (posterBanners.length > 1 && index === trackSlide) {
                                         nextSlide();

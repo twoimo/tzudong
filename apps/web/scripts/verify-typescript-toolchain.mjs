@@ -30,29 +30,36 @@ async function json(relativePath) {
 }
 async function verifyBinShims(name, expectedEntrypoint, forbiddenEntrypoint) {
   const binRoot = path.join(APP_ROOT, 'node_modules', '.bin');
-  const shimNames = process.platform === 'win32' ? [`${name}.exe`] : [name];
+  let shimNames = [name];
+  if (process.platform === 'win32') {
+    const binaryShim = `${name}.exe`;
+    try {
+      await access(path.join(binRoot, binaryShim));
+      shimNames = [binaryShim];
+    } catch {
+      shimNames = [name, `${name}.cmd`, `${name}.ps1`];
+    }
+  }
   const expectedToken = path.relative(binRoot, expectedEntrypoint).replaceAll('\\', '/').toLowerCase();
   const forbiddenToken = path.relative(binRoot, forbiddenEntrypoint).replaceAll('\\', '/').toLowerCase();
 
   return Promise.all(shimNames.map(async (shimName) => {
     const shimPath = path.join(binRoot, shimName);
     const shim = await readFile(shimPath);
-    if (process.platform !== 'win32') {
+    const binaryShim = shimName.endsWith('.exe');
+    if (binaryShim) {
+      if (shim.length < 1024 || shim[0] !== 0x4d || shim[1] !== 0x5a) {
+        throw statusError('TOOLCHAIN_SHIM_BINARY_INVALID');
+      }
+    } else if (process.platform !== 'win32') {
       if (await realpath(shimPath) !== await realpath(expectedEntrypoint)) {
         throw statusError('TOOLCHAIN_SHIM_RESOLUTION_INVALID');
       }
-    } else if (shim.length < 1024 || shim[0] !== 0x4d || shim[1] !== 0x5a) {
-      throw statusError('TOOLCHAIN_SHIM_BINARY_INVALID');
-    }
-    if (process.platform === 'win32') {
-      return {
-        path: relativeReceiptPath(shimPath),
-        sha256: createHash('sha256').update(shim).digest('hex'),
-      };
-    }
-    const source = shim.toString('utf8').replaceAll('\\', '/').toLowerCase();
-    if (!source.includes(expectedToken) || source.includes(forbiddenToken)) {
-      throw statusError('TOOLCHAIN_SHIM_OWNER_INVALID');
+    } else {
+      const source = shim.toString('utf8').replaceAll('\\', '/').toLowerCase();
+      if (!source.includes(expectedToken) || source.includes(forbiddenToken)) {
+        throw statusError('TOOLCHAIN_SHIM_OWNER_INVALID');
+      }
     }
     return {
       path: relativeReceiptPath(shimPath),

@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createHmac, randomInt } from 'node:crypto';
 import { isIP } from 'node:net';
+import {
+    BOUNDED_JSON_REQUEST_ERROR,
+    readBoundedJsonRequest,
+} from '@/lib/security/bounded-json-request';
+import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import type { Database } from '@/integrations/supabase/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const DEFAULT_SITE_ORIGIN = 'https://www.tzudong.app';
 const MAX_SHORTEN_BODY_BYTES = 4 * 1024;
 const MAX_TARGET_URL_LENGTH = 2_048;
@@ -28,13 +32,6 @@ const SHORTEN_ERRORS = {
     storageFailed: '단축 URL 저장에 실패했습니다.',
     serverError: '서버 오류가 발생했습니다.',
 } as const;
-
-type ShortenBodyResult =
-    | { kind: 'ok'; targetUrl: string }
-    | { kind: 'unsupported-media-type' }
-    | { kind: 'too-large' }
-    | { kind: 'invalid' };
-
 export const runtime = 'nodejs';
 
 function noStoreJson(body: object, status = 200, headers?: Record<string, string>) {
@@ -49,75 +46,6 @@ function noStoreJson(body: object, status = 200, headers?: Record<string, string
 
 function shortenError(error: string, status: number, headers?: Record<string, string>) {
     return noStoreJson({ error }, status, headers);
-}
-
-async function readShortenBody(request: NextRequest): Promise<ShortenBodyResult> {
-    const mediaType = request.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
-    if (mediaType !== 'application/json') {
-        return { kind: 'unsupported-media-type' };
-    }
-
-    if (!request.body) {
-        return { kind: 'invalid' };
-    }
-
-    const reader = request.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-
-    try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (!value) continue;
-
-            totalBytes += value.byteLength;
-            if (totalBytes > MAX_SHORTEN_BODY_BYTES) {
-                return { kind: 'too-large' };
-            }
-            chunks.push(value);
-        }
-    } catch {
-        return { kind: 'invalid' };
-    } finally {
-        reader.releaseLock();
-    }
-
-    const bytes = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-    }
-
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-    } catch {
-        return { kind: 'invalid' };
-    }
-
-    if (
-        typeof parsed !== 'object'
-        || parsed === null
-        || Array.isArray(parsed)
-        || Object.getPrototypeOf(parsed) !== Object.prototype
-    ) {
-        return { kind: 'invalid' };
-    }
-
-    const payload = parsed as Record<string, unknown>;
-    const keys = Object.keys(payload);
-    if (
-        keys.length !== 1
-        || keys[0] !== 'targetUrl'
-        || typeof payload.targetUrl !== 'string'
-        || payload.targetUrl.length > MAX_TARGET_URL_LENGTH
-    ) {
-        return { kind: 'invalid' };
-    }
-
-    return { kind: 'ok', targetUrl: payload.targetUrl };
 }
 
 function getRequesterBucket(request: NextRequest) {
@@ -142,23 +70,37 @@ function getRequesterBucket(request: NextRequest) {
     return `ip:${createHmac('sha256', privacyHashKey).update(vercelForwardedFor).digest('hex')}`;
 }
 
+function parseTrustedSiteOrigin(value: string, allowLoopbackHttp: boolean) {
+    try {
+        const parsed = new URL(value);
+        const isLoopback = parsed.hostname === 'localhost'
+            || parsed.hostname === '127.0.0.1'
+            || parsed.hostname === '[::1]';
+        if (
+            parsed.username
+            || parsed.password
+            || parsed.pathname !== '/'
+            || parsed.search
+            || parsed.hash
+            || (parsed.protocol !== 'https:' && !(allowLoopbackHttp && parsed.protocol === 'http:' && isLoopback))
+        ) {
+            return null;
+        }
+        return parsed.origin;
+    } catch {
+        return null;
+    }
+}
+
 function getShortUrlOrigin(request: NextRequest) {
     const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
     if (configuredSiteUrl) {
-        try {
-            return new URL(configuredSiteUrl).origin;
-        } catch {
-            return DEFAULT_SITE_ORIGIN;
-        }
+        return parseTrustedSiteOrigin(configuredSiteUrl, process.env.NODE_ENV !== 'production')
+            ?? DEFAULT_SITE_ORIGIN;
     }
 
     if (process.env.NODE_ENV !== 'production') {
-        const developmentOrigin = request.headers.get('origin') || request.nextUrl.origin;
-        try {
-            return new URL(developmentOrigin).origin;
-        } catch {
-            return DEFAULT_SITE_ORIGIN;
-        }
+        return parseTrustedSiteOrigin(request.nextUrl.origin, true) ?? DEFAULT_SITE_ORIGIN;
     }
 
     return DEFAULT_SITE_ORIGIN;
@@ -204,16 +146,11 @@ function createSupabasePublicClient() {
 }
 
 function createSupabaseAdminClient() {
-    if (!supabaseUrl || !supabaseServiceKey) {
+    try {
+        return createSupabaseServiceRoleClient();
+    } catch {
         return null;
     }
-
-    return createSupabaseClient<Database>(supabaseUrl, supabaseServiceKey, {
-        auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-        },
-    });
 }
 
 function generateShortCode(): string {
@@ -230,21 +167,44 @@ function generateShortCodeCandidates() {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await readShortenBody(request);
-        if (body.kind === 'unsupported-media-type') {
-            return shortenError(SHORTEN_ERRORS.unsupportedMediaType, 415);
-        }
-        if (body.kind === 'too-large') {
-            return shortenError(SHORTEN_ERRORS.bodyTooLarge, 413);
-        }
-        if (body.kind === 'invalid') {
+        const bodyResult = await readBoundedJsonRequest(request, MAX_SHORTEN_BODY_BYTES);
+        if (!bodyResult.ok) {
+            if (bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType) {
+                return shortenError(SHORTEN_ERRORS.unsupportedMediaType, 415);
+            }
+            if (bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge) {
+                return shortenError(SHORTEN_ERRORS.bodyTooLarge, 413);
+            }
             return shortenError(SHORTEN_ERRORS.invalidBody, 400);
         }
-        if (!body.targetUrl.trim()) {
+
+        const body = bodyResult.value;
+        if (
+            typeof body !== 'object'
+            || body === null
+            || Array.isArray(body)
+            || Object.getPrototypeOf(body) !== Object.prototype
+        ) {
+            return shortenError(SHORTEN_ERRORS.invalidBody, 400);
+        }
+
+        const payload = body as Record<string, unknown>;
+        const keys = Object.keys(payload);
+        if (
+            keys.length !== 1
+            || keys[0] !== 'targetUrl'
+            || typeof payload.targetUrl !== 'string'
+            || payload.targetUrl.length > MAX_TARGET_URL_LENGTH
+        ) {
+            return shortenError(SHORTEN_ERRORS.invalidBody, 400);
+        }
+
+        const targetUrl = payload.targetUrl;
+        if (!targetUrl.trim()) {
             return shortenError(SHORTEN_ERRORS.targetRequired, 400);
         }
 
-        const allowedTarget = getAllowedShortUrlTarget(body.targetUrl, request);
+        const allowedTarget = getAllowedShortUrlTarget(targetUrl, request);
         if (!allowedTarget) {
             return shortenError(SHORTEN_ERRORS.invalidTarget, 400);
         }

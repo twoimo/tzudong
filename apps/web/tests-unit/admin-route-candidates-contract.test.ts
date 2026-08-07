@@ -29,24 +29,28 @@ describe("admin route candidate and export source contracts", () => {
     expect(route).toContain("Cache-Control', 'no-store'");
   });
 
-  test("directions route keeps seven-point cap, sixty-second cache, and per-admin soft limit", () => {
+  test("directions route keeps seven-point cap and durable bounded provider controls", () => {
     const route = source("app/api/admin/routes/directions/route.ts");
 
     expect(route).toContain("MAX_DIRECTIONS_POINTS = 7");
-    expect(route).toContain("NAVER_DIRECTIONS_PROVIDER_CACHE_TTL_MS = 60 * 1000");
-    expect(route).toContain("NAVER_DIRECTIONS_RATE_LIMIT_WINDOW_MS = 60 * 1000");
-    expect(route).toContain("NAVER_DIRECTIONS_RATE_LIMIT_MAX = 20");
-    expect(route).toContain("normalizeDirectionsMode");
-    expect(route).toContain("mode: AdminDirectionsRouteMode");
-    expect(route).toContain("buildDirectionsProviderCacheKey");
-    expect(route).toContain("providerCache: \"hit\"");
-    expect(route).toContain("providerCache: \"miss\"");
-    expect(route).toContain("providerCache: AdminDirectionsProviderCacheState = \"bypass\"");
+    expect(route).toContain("MAX_DIRECTIONS_POINT_ID_LENGTH = 96");
+    expect(route).toContain("MAX_DIRECTIONS_POINT_NAME_LENGTH = 160");
+    expect(route).toContain("MAX_NAVER_DIRECTIONS_RESPONSE_BYTES = 256 * 1024");
+    expect(route).toContain("MAX_NAVER_DIRECTIONS_PATH_POINTS = 2_000");
+    expect(route).toContain("NAVER_DIRECTIONS_OPTIONS");
+    expect(route).toContain("normalizeDirectionsOption");
+    expect(route).toContain("AdminDirectionsRequestBody");
+    expect(route).toContain('provider: "naver_directions"');
+    expect(route).toContain('redirect: "error"');
+    expect(route).toContain("AbortSignal.timeout(NAVER_DIRECTIONS_PROVIDER_TIMEOUT_MS)");
+    expect(route).not.toContain("adminDirectionsRateLimits");
+    expect(route).not.toContain("adminDirectionsProviderCache");
     expect(route).not.toContain("toFixed(5)");
-    expect(route.indexOf("readAdminDirectionsRateLimit(auth.userId)")).toBeLessThan(
-      route.indexOf("adminDirectionsProviderCache.get(providerCacheKey)"),
+    expect(route.indexOf("await reserveAdminProviderBudget({")).toBeLessThan(
+      route.indexOf("await fetch(url"),
     );
     expect(route).toContain("naver-directions-rate-limited");
+    expect(route).toContain('providerCache: "miss"');
     expect(route).toContain("headers: { \"Cache-Control\": \"no-store\" }");
   });
 

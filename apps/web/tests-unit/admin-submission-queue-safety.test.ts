@@ -23,7 +23,7 @@ function baseSubmission(overrides: Partial<AdminSubmissionQueueSubmissionInput> 
     restaurant_phone: '02-1234-5678',
     restaurant_categories: ['중식'],
     items: [{
-      youtube_link: 'https://youtube.com/watch?v=abc',
+      youtube_link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       tzuyang_review: '쯔양이 소개한 맛집입니다.',
       item_status: 'pending',
     }],
@@ -42,7 +42,7 @@ describe('admin submission queue safety badges', () => {
     }));
     const laterInvalidYoutube = getAdminSubmissionQueueSafetySummary(baseSubmission({
       items: [
-        { youtube_link: 'https://youtube.com/watch?v=abc', tzuyang_review: '정상 리뷰입니다.', item_status: 'pending' },
+        { youtube_link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', tzuyang_review: '정상 리뷰입니다.', item_status: 'pending' },
         { youtube_link: 'https://example.com/watch?v=bad', tzuyang_review: '나중 항목입니다.', item_status: 'pending' },
       ],
     }));
@@ -70,7 +70,7 @@ describe('admin submission queue safety badges', () => {
     const editSummary = getAdminSubmissionQueueSafetySummary(baseSubmission({
       submission_type: 'edit',
       items: [{
-        youtube_link: 'https://youtu.be/abc',
+        youtube_link: 'https://youtu.be/dQw4w9WgXcQ',
         tzuyang_review: '',
         item_status: 'pending',
       }],
@@ -93,7 +93,7 @@ describe('admin submission queue safety badges', () => {
   test('marks duplicate candidates and missing pending items without mutating the queue', () => {
     const summary = getAdminSubmissionQueueSafetySummary(baseSubmission({
       items: [{
-        youtube_link: 'https://youtu.be/abc',
+        youtube_link: 'https://youtu.be/dQw4w9WgXcQ',
         tzuyang_review: '쯔양이 소개한 맛집입니다.',
         item_status: 'approved',
         duplicate_check_result: { isDuplicate: true, existingRestaurantName: '기존 맛집' },

@@ -1105,8 +1105,7 @@ function AdminMapInfoPanel({
 }) {
   const selectedVideoId = selectedRestaurant?.videoId ?? null;
   const selectedThumbnailUrl = getAdminYoutubeThumbnailUrl(selectedVideoId);
-  const selectedYoutubeUrl =
-    selectedRestaurant?.youtubeLink ?? getAdminYoutubeWatchUrl(selectedVideoId);
+  const selectedYoutubeUrl = getAdminYoutubeWatchUrl(selectedVideoId);
   const selectedCoordinateText =
     selectedRestaurant?.lat == null || selectedRestaurant?.lng == null
       ? "좌표 확인 필요"
@@ -1190,7 +1189,7 @@ function AdminMapInfoPanel({
             <a
               href={selectedYoutubeUrl ?? undefined}
               target={selectedYoutubeUrl ? "_blank" : undefined}
-              rel={selectedYoutubeUrl ? "noreferrer" : undefined}
+              rel={selectedYoutubeUrl ? "noopener noreferrer" : undefined}
               aria-label={
                 selectedYoutubeUrl
                   ? `${selectedRestaurant.name} 원본 YouTube 영상 새 탭에서 열기`

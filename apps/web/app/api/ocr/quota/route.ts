@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getOcrQuotaStatus } from '@/lib/ocr/quota';
+const noStoreJson = (body: unknown, init?: ResponseInit) =>
+    NextResponse.json(body, {
+        ...init,
+        headers: { ...init?.headers, 'Cache-Control': 'no-store' },
+    });
 
 export async function GET() {
     try {
@@ -8,20 +13,16 @@ export async function GET() {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return noStoreJson({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const quota = await getOcrQuotaStatus({
-            userId: user.id,
-            logsClient: supabase as never,
-            roleClient: supabase as never,
+            quotaClient: supabase as never,
         });
 
-        return NextResponse.json(quota);
+        return noStoreJson(quota);
 
-    } catch (error: unknown) {
-        console.error('Quota check failed:', error);
-        const message = error instanceof Error ? error.message : 'Quota check failed';
-        return NextResponse.json({ error: message }, { status: 500 });
+    } catch {
+        return noStoreJson({ error: 'OCR_QUOTA_UNAVAILABLE' }, { status: 503 });
     }
 }

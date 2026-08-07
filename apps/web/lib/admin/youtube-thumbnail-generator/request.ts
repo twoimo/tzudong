@@ -1,5 +1,9 @@
 import { lookup } from 'node:dns/promises';
+import { request as httpsRequest } from 'node:https';
 import { isIP } from 'node:net';
+import { performance } from 'node:perf_hooks';
+
+import { canonicalizeReceiptImage } from '@/lib/ocr/admin-receipt-image-security';
 
 import type {
   ThumbnailBriefPreset,
@@ -19,7 +23,9 @@ import {
   THUMBNAIL_REFERENCE_ROLES,
 } from './types';
 
+const THUMBNAIL_REMOTE_IMAGE_ALLOWED_HOSTNAMES = ['i.ytimg.com', 'img.youtube.com'] as const;
 export const THUMBNAIL_MAX_TOTAL_BYTES = 33_554_432;
+export const THUMBNAIL_MAX_CANONICAL_TOTAL_BYTES = 16_777_216;
 export const THUMBNAIL_MAX_FILE_BYTES = 8_388_608;
 export const THUMBNAIL_MAX_FILES = 8;
 export const THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS = 10_000;
@@ -36,7 +42,6 @@ const THUMBNAIL_CHAT_RUN_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 const THUMBNAIL_CHAT_THREAD_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT = 8;
 const THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH = 280;
-const THUMBNAIL_CHAT_CONVERSATION_ID_MAX_LENGTH = 120;
 const THUMBNAIL_CHAT_FOCUS_LABEL_MAX_LENGTH = 80;
 const THUMBNAIL_CHAT_FOCUS_DETAIL_MAX_LENGTH = 180;
 const THUMBNAIL_CHAT_FOCUS_PROMPT_MAX_LENGTH = 260;
@@ -46,9 +51,51 @@ const THUMBNAIL_CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F
 const THUMBNAIL_SESSION_OPENAI_API_KEY_PATTERN = /^sk-[A-Za-z0-9_-]{16,}$/;
 const THUMBNAIL_SESSION_API_KEY_FORBIDDEN_CHARS_PATTERN = /[\s\u0000-\u001F\u007F]/;
 
-type RemoteImageFetchDeps = {
+export type TrustedRemoteImageFetchDeps = {
   fetch?: typeof fetch;
   lookup?: typeof lookup;
+};
+
+type RemoteImageFetchDeps = TrustedRemoteImageFetchDeps;
+
+export type TrustedRemoteImageFetchErrorCode =
+  | 'remote_image_url_invalid'
+  | 'remote_image_host_not_allowed'
+  | 'remote_image_dns_unavailable'
+  | 'remote_image_dns_unsafe'
+  | 'remote_image_redirect'
+  | 'remote_image_timeout'
+  | 'remote_image_response_invalid'
+  | 'remote_image_request_failed'
+  | 'remote_image_too_large';
+
+export class TrustedRemoteImageFetchError extends Error {
+  constructor(
+    public readonly code: TrustedRemoteImageFetchErrorCode,
+    public readonly status: number,
+  ) {
+    super(code);
+    this.name = 'TrustedRemoteImageFetchError';
+  }
+}
+
+export type TrustedRemoteImageFetchOptions = {
+  allowedHostnames: readonly string[];
+  maxBytes: number;
+  timeoutMs: number;
+  accept: string;
+};
+
+type TrustedRemoteImageResponse = {
+  bytes: Uint8Array;
+  contentType: string;
+};
+type TrustedRemoteImageAddress = {
+  address: string;
+  family: 4 | 6;
+};
+type TrustedRemoteImageDeadline = {
+  expiresAt: number;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -144,45 +191,18 @@ function parseThumbnailChatThreadId(value: unknown) {
   return safe || undefined;
 }
 
-function isThumbnailChatReadbackMessage(message: { role: 'user' | 'assistant'; content: string; id?: string }) {
-  if (message.role === 'user') return false;
-  const normalized = message.content.replace(/\s+/g, ' ').trim();
-  return (
-    message.id?.startsWith('assistant-intro') ||
-    message.id?.startsWith('assistant-history-load') ||
-    normalized.startsWith('원하는 썸네일을 말로 적어 주세요') ||
-    normalized.startsWith('간단히 3가지만 적어 주세요') ||
-    normalized.startsWith('현재 상태를 쉽게 정리했어요') ||
-    normalized.startsWith('생성 히스토리를 이 페이지 안에서 열었습니다') ||
-    normalized.startsWith('히스토리 결과 불러오기') ||
-    normalized.startsWith('현재 캔버스를 PNG로 저장했습니다') ||
-    normalized.startsWith('참고 이미지 파일 선택창을 열었습니다') ||
-    normalized.startsWith('참고 이미지를 모두 비웠습니다') ||
-    normalized.includes('실제 생성 결과를 캔버스에 반영했습니다') ||
-    normalized.includes('공용 릴리즈') ||
-    normalized.includes('릴리즈 후보')
-  );
-}
-
 function parseThumbnailChatConversationMessages(value: unknown): ThumbnailChatAgentRequest['conversationMessages'] {
   if (!Array.isArray(value)) return [];
-  return value
-    .flatMap((item): ThumbnailChatConversationMessage[] => {
-      if (!isRecord(item)) return [];
-      const role = item.role === 'user' || item.role === 'assistant' ? item.role : null;
-      const content = toStringValue(item.content, THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH);
-      if (!role || !content) return [];
-      const id = toStringValue(item.id, THUMBNAIL_CHAT_CONVERSATION_ID_MAX_LENGTH);
-      const createdAt = toStringValue(item.createdAt, 80);
-      const message: ThumbnailChatConversationMessage = {
-        role,
-        content,
-        ...(id ? { id } : {}),
-        ...(createdAt ? { createdAt } : {}),
-      };
-      return isThumbnailChatReadbackMessage(message) ? [] : [message];
-    })
-    .slice(-THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT);
+
+  const messages: ThumbnailChatConversationMessage[] = [];
+  for (let index = value.length - 1; index >= 0 && messages.length < THUMBNAIL_CHAT_CONVERSATION_CONTEXT_LIMIT; index -= 1) {
+    const item = value[index];
+    if (!isRecord(item) || item.role !== 'user') continue;
+    const content = toStringValue(item.content, THUMBNAIL_CHAT_CONVERSATION_CONTENT_MAX_LENGTH);
+    if (!content) continue;
+    messages.push({ role: 'user', content });
+  }
+  return messages.reverse();
 }
 
 function parseThumbnailChatFocusContext(value: unknown): ThumbnailChatAgentRequest['focusContext'] {
@@ -367,10 +387,37 @@ export function parseThumbnailPayload(value: unknown): ThumbnailGeneratorPayload
 
 export function getContentLengthRejection(headers: Headers) {
   const raw = headers.get('content-length');
-  if (!raw) return null;
+  if (!raw) return { status: 411, error: 'content_length_required' };
+  if (!/^\d+$/.test(raw)) return { status: 400, error: 'content_length_invalid' };
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0) return { status: 400, error: 'content_length_invalid' };
+  if (!Number.isSafeInteger(parsed)) return { status: 400, error: 'content_length_invalid' };
   if (parsed > THUMBNAIL_MAX_TOTAL_BYTES) return { status: 413, error: 'content_length_too_large' };
+  return null;
+}
+export function getMultipartFieldRejection(formData: FormData) {
+  const allowedFields = new Set([
+    'payload',
+    'referenceImages',
+    THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD,
+  ]);
+  let entryCount = 0;
+  for (const [name] of formData.entries()) {
+    entryCount += 1;
+    if (entryCount > THUMBNAIL_MAX_FILES + 2 || !allowedFields.has(name)) {
+      return { status: 400, error: 'multipart_fields_invalid' };
+    }
+  }
+  const keyEntries = formData.getAll(THUMBNAIL_SESSION_OPENAI_API_KEY_FIELD);
+  if (keyEntries.length > 1 || keyEntries.some((entry) => typeof entry !== 'string')) {
+    return { status: 400, error: 'multipart_fields_invalid' };
+  }
+  const referenceEntries = formData.getAll('referenceImages');
+  if (
+    referenceEntries.length > THUMBNAIL_MAX_FILES
+    || referenceEntries.some((entry) => !(entry instanceof File))
+  ) {
+    return { status: 400, error: 'multipart_fields_invalid' };
+  }
   return null;
 }
 
@@ -382,7 +429,7 @@ export function getMultipartContentTypeRejection(headers: Headers) {
 }
 
 export function detectImageMime(bytes: Uint8Array): ThumbnailReferenceImage['mime'] | null {
-  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png';
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
   if (
     bytes.length >= 12 &&
@@ -392,10 +439,250 @@ export function detectImageMime(bytes: Uint8Array): ThumbnailReferenceImage['mim
   return null;
 }
 
+function hasCompletePngPayload(bytes: Uint8Array) {
+  let offset = 8;
+  while (offset < bytes.length) {
+    if (bytes.length - offset < 12) return false;
+    const length = (
+      (bytes[offset]! << 24) |
+      (bytes[offset + 1]! << 16) |
+      (bytes[offset + 2]! << 8) |
+      bytes[offset + 3]!
+    ) >>> 0;
+    const chunkEnd = offset + 12 + length;
+    if (chunkEnd > bytes.length) return false;
+    const isIend = (
+      bytes[offset + 4] === 0x49 &&
+      bytes[offset + 5] === 0x45 &&
+      bytes[offset + 6] === 0x4e &&
+      bytes[offset + 7] === 0x44
+    );
+    if (isIend) return length === 0 && chunkEnd === bytes.length;
+    offset = chunkEnd;
+  }
+  return false;
+}
+
+function hasCompleteJpegPayload(bytes: Uint8Array) {
+  let offset = 2;
+  let inScan = false;
+
+  while (offset < bytes.length) {
+    if (inScan) {
+      while (offset < bytes.length) {
+        if (bytes[offset] !== 0xff) {
+          offset += 1;
+          continue;
+        }
+
+        const markerStart = offset;
+        offset += 1;
+        while (bytes[offset] === 0xff) offset += 1;
+        const marker = bytes[offset];
+        if (marker === undefined) return false;
+        offset += 1;
+        if (marker === 0x00 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+        if (marker === 0xd9) return offset === bytes.length;
+        offset = markerStart;
+        inScan = false;
+        break;
+      }
+      if (inScan) return false;
+      continue;
+    }
+
+    if (bytes[offset] !== 0xff) return false;
+    while (bytes[offset] === 0xff) offset += 1;
+    const marker = bytes[offset];
+    if (marker === undefined) return false;
+    offset += 1;
+    if (marker === 0xd9) return offset === bytes.length;
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    if (offset + 2 > bytes.length) return false;
+
+    const segmentLength = (bytes[offset]! << 8) | bytes[offset + 1]!;
+    if (segmentLength < 2 || offset + segmentLength > bytes.length) return false;
+    offset += segmentLength;
+    if (marker === 0xda) inScan = true;
+  }
+
+  return false;
+}
+
+function getWebpChunkName(bytes: Uint8Array, offset: number) {
+  return String.fromCharCode(
+    bytes[offset]!,
+    bytes[offset + 1]!,
+    bytes[offset + 2]!,
+    bytes[offset + 3]!,
+  );
+}
+
+function hasValidWebpVp8Chunk(bytes: Uint8Array, offset: number, length: number) {
+  return (
+    length >= 10 &&
+    (bytes[offset]! & 0x01) === 0 &&
+    bytes[offset + 3] === 0x9d &&
+    bytes[offset + 4] === 0x01 &&
+    bytes[offset + 5] === 0x2a
+  );
+}
+
+function hasValidWebpVp8lChunk(bytes: Uint8Array, offset: number, length: number) {
+  return length >= 5 && bytes[offset] === 0x2f;
+}
+
+function hasCompleteWebpPayload(bytes: Uint8Array) {
+  if (
+    bytes.length < 20 ||
+    bytes.length % 2 !== 0 ||
+    getWebpChunkName(bytes, 0) !== 'RIFF' ||
+    getWebpChunkName(bytes, 8) !== 'WEBP'
+  ) return false;
+
+  const riffLength = (
+    bytes[4]! |
+    (bytes[5]! << 8) |
+    (bytes[6]! << 16) |
+    (bytes[7]! << 24)
+  ) >>> 0;
+  if (riffLength < 4 || riffLength + 8 !== bytes.length) return false;
+
+  let offset = 12;
+  let chunkCount = 0;
+  let hasVp8X = false;
+  let vp8XFlags = 0;
+  let imageChunk: 'VP8 ' | 'VP8L' | null = null;
+  let hasIccp = false;
+  let hasAlpha = false;
+  let hasExif = false;
+  let hasXmp = false;
+
+  while (offset < bytes.length) {
+    if (bytes.length - offset < 8) return false;
+    const chunkName = getWebpChunkName(bytes, offset);
+    const chunkLength = (
+      bytes[offset + 4]! |
+      (bytes[offset + 5]! << 8) |
+      (bytes[offset + 6]! << 16) |
+      (bytes[offset + 7]! << 24)
+    ) >>> 0;
+    const payloadOffset = offset + 8;
+    if (chunkLength > bytes.length - payloadOffset) return false;
+    const payloadEnd = payloadOffset + chunkLength;
+    const paddedEnd = payloadEnd + (chunkLength % 2);
+    if (paddedEnd > bytes.length) return false;
+    offset = paddedEnd;
+    chunkCount += 1;
+
+    if (chunkName === 'ANIM' || chunkName === 'ANMF') return false;
+
+    if (chunkName === 'VP8X') {
+      if (hasVp8X || chunkCount !== 1 || chunkLength !== 10) return false;
+      vp8XFlags = bytes[payloadOffset]!;
+      if (
+        (vp8XFlags & 0xc3) !== 0 ||
+        bytes[payloadOffset + 1] !== 0 ||
+        bytes[payloadOffset + 2] !== 0 ||
+        bytes[payloadOffset + 3] !== 0
+      ) return false;
+      hasVp8X = true;
+      continue;
+    }
+
+    if (chunkName === 'VP8 ' || chunkName === 'VP8L') {
+      if (imageChunk || (!hasVp8X && chunkCount !== 1)) return false;
+      if (chunkName === 'VP8 ' && !hasValidWebpVp8Chunk(bytes, payloadOffset, chunkLength)) return false;
+      if (chunkName === 'VP8L' && !hasValidWebpVp8lChunk(bytes, payloadOffset, chunkLength)) return false;
+      if (hasAlpha && chunkName !== 'VP8 ') return false;
+      imageChunk = chunkName;
+      continue;
+    }
+
+    if (chunkName === 'ICCP') {
+      if (!hasVp8X || imageChunk || hasIccp || hasAlpha || chunkLength === 0) return false;
+      hasIccp = true;
+      continue;
+    }
+
+    if (chunkName === 'ALPH') {
+      if (!hasVp8X || imageChunk || hasAlpha || chunkLength === 0) return false;
+      hasAlpha = true;
+      continue;
+    }
+
+    if (chunkName === 'EXIF') {
+      if (!hasVp8X || !imageChunk || hasExif) return false;
+      hasExif = true;
+      continue;
+    }
+
+    if (chunkName === 'XMP ') {
+      if (!hasVp8X || !imageChunk || hasXmp) return false;
+      hasXmp = true;
+      continue;
+    }
+
+    return false;
+  }
+
+  if (offset !== bytes.length || !imageChunk) return false;
+  if (!hasVp8X) return chunkCount === 1;
+  if (imageChunk === 'VP8 ' && Boolean(vp8XFlags & 0x10) !== hasAlpha) return false;
+  return (
+    Boolean(vp8XFlags & 0x20) === hasIccp &&
+    Boolean(vp8XFlags & 0x08) === hasExif &&
+    Boolean(vp8XFlags & 0x04) === hasXmp
+  );
+}
+
+function hasCompleteImagePayload(bytes: Uint8Array, mime: ThumbnailReferenceImage['mime']) {
+  switch (mime) {
+    case 'image/png':
+      return hasCompletePngPayload(bytes);
+    case 'image/jpeg':
+      return hasCompleteJpegPayload(bytes);
+    case 'image/webp':
+      return hasCompleteWebpPayload(bytes);
+  }
+}
+
+function invalidThumbnailReferenceImageError() {
+  return new ThumbnailGenerationError(
+    'invalid_text',
+    'PNG/JPEG/WebP 형식의 완전한 정지 이미지만 사용할 수 있습니다.',
+    415,
+  );
+}
+
+async function canonicalizeThumbnailReferenceImage(
+  source: Uint8Array,
+  mime: ThumbnailReferenceImage['mime'],
+): Promise<Pick<ThumbnailReferenceImage, 'bytes' | 'mime'>> {
+  if (
+    source.byteLength === 0 ||
+    source.byteLength > THUMBNAIL_MAX_FILE_BYTES ||
+    !hasCompleteImagePayload(source, mime)
+  ) {
+    throw invalidThumbnailReferenceImageError();
+  }
+
+  try {
+    const canonical = await canonicalizeReceiptImage(Buffer.from(source), mime);
+    if (canonical.bytes.byteLength === 0 || canonical.bytes.byteLength > THUMBNAIL_MAX_FILE_BYTES) {
+      throw invalidThumbnailReferenceImageError();
+    }
+    return { bytes: canonical.bytes, mime: canonical.mimeType };
+  } catch (error) {
+    if (error instanceof ThumbnailGenerationError) throw error;
+    throw invalidThumbnailReferenceImageError();
+  }
+}
+
 function isBlockedIPv4(address: string) {
   const parts = address.split('.').map((part) => Number(part));
   if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
-  const [a, b] = parts;
+  const [a, b, c] = parts;
   return (
     a === 0 ||
     a === 10 ||
@@ -403,25 +690,81 @@ function isBlockedIPv4(address: string) {
     (a === 100 && b >= 64 && b <= 127) ||
     (a === 169 && b === 254) ||
     (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 192 && (
+      b === 0 ||
+      b === 2 ||
+      b === 168
+    )) ||
+    (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+    (a === 203 && b === 0 && c === 113) ||
     a >= 224
   );
 }
 
-function isBlockedIPv6(address: string) {
-  const normalized = address.toLowerCase();
-  if (normalized.startsWith('::ffff:')) {
-    const mappedIPv4 = normalized.slice('::ffff:'.length);
-    if (isIP(mappedIPv4) === 4) return isBlockedIPv4(mappedIPv4);
+function parseIPv6Bytes(address: string) {
+  if (address.includes('%')) return null;
+
+  const [head, tail, ...extra] = address.toLowerCase().split('::');
+  if (extra.length) return null;
+
+  const normalizeParts = (value: string) => {
+    const parts = value ? value.split(':') : [];
+    const last = parts.at(-1);
+    if (!last || isIP(last) !== 4) return parts;
+
+    const ipv4 = last.split('.').map((part) => Number(part));
+    return [
+      ...parts.slice(0, -1),
+      `${((ipv4[0]! << 8) | ipv4[1]!).toString(16)}`,
+      `${((ipv4[2]! << 8) | ipv4[3]!).toString(16)}`,
+    ];
+  };
+
+  const headParts = normalizeParts(head);
+  const tailParts = normalizeParts(tail ?? '');
+  let expanded: string[];
+  if (tail === undefined) {
+    if (headParts.length !== 8) return null;
+    expanded = headParts;
+  } else {
+    if (headParts.length + tailParts.length >= 8) return null;
+    expanded = [
+      ...headParts,
+      ...Array.from({ length: 8 - headParts.length - tailParts.length }, () => '0'),
+      ...tailParts,
+    ];
   }
 
+  if (expanded.some((part) => !/^[0-9a-f]{1,4}$/.test(part))) return null;
+
+  const bytes = new Uint8Array(16);
+  for (const [index, part] of expanded.entries()) {
+    const value = Number.parseInt(part, 16);
+    bytes[index * 2] = value >> 8;
+    bytes[index * 2 + 1] = value & 0xff;
+  }
+  return bytes;
+}
+
+function isBlockedIPv6(address: string) {
+  const bytes = parseIPv6Bytes(address);
+  if (!bytes) return true;
+
+  const isUnspecified = bytes.every((value) => value === 0);
+  const isLoopback = bytes.slice(0, 15).every((value) => value === 0) && bytes[15] === 1;
+  const isIpv4Mapped = bytes.slice(0, 10).every((value) => value === 0) && bytes[10] === 0xff && bytes[11] === 0xff;
+  const isIpv4Compatible = bytes.slice(0, 12).every((value) => value === 0);
+  const embeddedIpv4 = `${bytes[12]}.${bytes[13]}.${bytes[14]}.${bytes[15]}`;
+
   return (
-    normalized === '::1' ||
-    normalized === '::' ||
-    normalized.startsWith('fc') ||
-    normalized.startsWith('fd') ||
-    normalized.startsWith('fe80')
+    isUnspecified ||
+    isLoopback ||
+    (bytes[0]! & 0xfe) === 0xfc ||
+    (bytes[0] === 0xfe && (bytes[1]! & 0xc0) === 0x80) ||
+    (bytes[0] === 0xfe && (bytes[1]! & 0xc0) === 0xc0) ||
+    bytes[0] === 0xff ||
+    (bytes[0] === 0x20 && bytes[1] === 0x01 && bytes[2] === 0x0d && bytes[3] === 0xb8) ||
+    ((isIpv4Mapped || isIpv4Compatible) && isBlockedIPv4(embeddedIpv4))
   );
 }
 
@@ -439,7 +782,413 @@ function getSafeRemoteFileName(url: URL, mime: ThumbnailReferenceImage['mime']) 
     .replace(/^-+|-+$/g, '');
   const extension = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
   const baseName = rawName || 'reference-image';
-  return /\.(png|jpe?g|webp)$/i.test(baseName) ? baseName : `${baseName}.${extension}`;
+  const stem = baseName.replace(/\.(png|jpe?g|webp)$/i, '') || 'reference-image';
+  return `${stem}.${extension}`;
+}
+
+function getTrustedRemoteImageUrl(value: unknown) {
+  const raw = typeof value === 'string' ? value.trim() : value instanceof URL ? value.toString() : '';
+  if (!raw || raw.length > 2_048) {
+    throw new TrustedRemoteImageFetchError('remote_image_url_invalid', 400);
+  }
+
+  try {
+    return new URL(raw);
+  } catch {
+    throw new TrustedRemoteImageFetchError('remote_image_url_invalid', 400);
+  }
+}
+
+function assertTrustedRemoteImageUrl(url: URL, options: TrustedRemoteImageFetchOptions) {
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.port ||
+    !options.allowedHostnames.includes(url.hostname)
+  ) {
+    throw new TrustedRemoteImageFetchError(
+      options.allowedHostnames.includes(url.hostname)
+        ? 'remote_image_url_invalid'
+        : 'remote_image_host_not_allowed',
+      400,
+    );
+  }
+}
+
+function remoteImageTimeoutError() {
+  return new TrustedRemoteImageFetchError('remote_image_timeout', 408);
+}
+
+function createTrustedRemoteImageDeadline(timeoutMs: number): TrustedRemoteImageDeadline {
+  return {
+    expiresAt: performance.now() + (Number.isFinite(timeoutMs) ? Math.max(0, timeoutMs) : 0),
+  };
+}
+
+function hasTrustedRemoteImageDeadlineExpired(deadline: TrustedRemoteImageDeadline) {
+  return performance.now() >= deadline.expiresAt;
+}
+
+function getTrustedRemoteImageRemainingTimeoutMs(deadline: TrustedRemoteImageDeadline) {
+  const remainingMs = deadline.expiresAt - performance.now();
+  if (remainingMs <= 0) throw remoteImageTimeoutError();
+  return Math.max(1, Math.ceil(remainingMs));
+}
+
+function awaitTrustedRemoteImageBeforeDeadline<T>(
+  operation: () => Promise<T> | T,
+  deadline: TrustedRemoteImageDeadline,
+  onTimeout?: () => void,
+): Promise<T> {
+  let timeoutMs: number;
+  try {
+    timeoutMs = getTrustedRemoteImageRemainingTimeoutMs(deadline);
+  } catch (error) {
+    try {
+      onTimeout?.();
+    } catch {
+      // The deadline error remains authoritative even when cancellation fails.
+    }
+    return Promise.reject(error);
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const rejectForDeadline = () => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      try {
+        onTimeout?.();
+      } catch {
+        // The deadline error remains authoritative even when cancellation fails.
+      }
+      reject(remoteImageTimeoutError());
+    };
+    timeout = setTimeout(rejectForDeadline, timeoutMs);
+
+    let operationPromise: Promise<T>;
+    try {
+      if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+        rejectForDeadline();
+        return;
+      }
+      operationPromise = Promise.resolve(operation());
+    } catch (error) {
+      if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+        rejectForDeadline();
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+      return;
+    }
+
+    operationPromise.then(
+      (value) => {
+        if (settled) return;
+        if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+          rejectForDeadline();
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      (error: unknown) => {
+        if (settled) return;
+        if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+          rejectForDeadline();
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+async function resolveTrustedRemoteImageHost(
+  url: URL,
+  deps: TrustedRemoteImageFetchDeps,
+  deadline: TrustedRemoteImageDeadline,
+) {
+  const lookupFn = deps.lookup ?? lookup;
+  let addresses: TrustedRemoteImageAddress[];
+  try {
+    addresses = await awaitTrustedRemoteImageBeforeDeadline(
+      () => lookupFn(url.hostname, { all: true, verbatim: true }),
+      deadline,
+    ) as TrustedRemoteImageAddress[];
+  } catch (error) {
+    if (error instanceof TrustedRemoteImageFetchError) throw error;
+    throw new TrustedRemoteImageFetchError('remote_image_dns_unavailable', 502);
+  }
+
+  if (!addresses.length || addresses.some((entry) => isBlockedAddress(entry.address))) {
+    throw new TrustedRemoteImageFetchError('remote_image_dns_unsafe', 400);
+  }
+  return addresses;
+}
+
+function getTrustedRemoteImageContentType(headers: Headers) {
+  return (headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+}
+
+function assertTrustedRemoteImageContentLength(contentLength: string | null | undefined, maxBytes: number) {
+  if (!contentLength) return;
+  if (!/^\d+$/.test(contentLength) || Number(contentLength) > maxBytes) {
+    throw new TrustedRemoteImageFetchError(
+      /^\d+$/.test(contentLength) ? 'remote_image_too_large' : 'remote_image_response_invalid',
+      /^\d+$/.test(contentLength) ? 413 : 502,
+    );
+  }
+}
+
+async function readLimitedTrustedRemoteImageBytes(
+  response: Response,
+  maxBytes: number,
+  deadline: TrustedRemoteImageDeadline,
+  onTimeout?: () => void,
+) {
+  if (!response.body) {
+    throw new TrustedRemoteImageFetchError('remote_image_response_invalid', 502);
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await awaitTrustedRemoteImageBeforeDeadline(
+      () => reader.read(),
+      deadline,
+      () => {
+        void reader.cancel().catch(() => undefined);
+        onTimeout?.();
+      },
+    );
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      void reader.cancel().catch(() => undefined);
+      throw new TrustedRemoteImageFetchError('remote_image_too_large', 413);
+    }
+    chunks.push(value);
+  }
+
+  getTrustedRemoteImageRemainingTimeoutMs(deadline);
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+async function fetchTrustedRemoteImageWithFetch(
+  url: URL,
+  options: TrustedRemoteImageFetchOptions,
+  deps: TrustedRemoteImageFetchDeps,
+  deadline: TrustedRemoteImageDeadline,
+): Promise<TrustedRemoteImageResponse> {
+  const controller = new AbortController();
+
+  try {
+    const response = await awaitTrustedRemoteImageBeforeDeadline(
+      () => (deps.fetch ?? fetch)(url, {
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: { Accept: options.accept },
+      }),
+      deadline,
+      () => controller.abort(),
+    );
+
+    if (response.status >= 300 && response.status < 400) {
+      throw new TrustedRemoteImageFetchError('remote_image_redirect', 400);
+    }
+    if (!response.ok) {
+      throw new TrustedRemoteImageFetchError('remote_image_request_failed', 502);
+    }
+
+    assertTrustedRemoteImageContentLength(response.headers.get('content-length'), options.maxBytes);
+    return {
+      bytes: await readLimitedTrustedRemoteImageBytes(
+        response,
+        options.maxBytes,
+        deadline,
+        () => controller.abort(),
+      ),
+      contentType: getTrustedRemoteImageContentType(response.headers),
+    };
+  } catch (error) {
+    if (error instanceof TrustedRemoteImageFetchError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw remoteImageTimeoutError();
+    }
+    throw new TrustedRemoteImageFetchError('remote_image_request_failed', 502);
+  }
+}
+
+async function fetchTrustedRemoteImageWithPinnedDns(
+  url: URL,
+  addresses: readonly TrustedRemoteImageAddress[],
+  options: TrustedRemoteImageFetchOptions,
+  deadline: TrustedRemoteImageDeadline,
+): Promise<TrustedRemoteImageResponse> {
+  const selectedAddress = addresses[0];
+  if (!selectedAddress) throw new TrustedRemoteImageFetchError('remote_image_dns_unavailable', 502);
+  const timeoutMs = getTrustedRemoteImageRemainingTimeoutMs(deadline);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const settle = (result: TrustedRemoteImageResponse | TrustedRemoteImageFetchError, isError: boolean) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      if (isError) reject(result);
+      else resolve(result as TrustedRemoteImageResponse);
+    };
+    if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+      reject(remoteImageTimeoutError());
+      return;
+    }
+    const request = httpsRequest(url, {
+      headers: { Accept: options.accept, Host: url.hostname },
+      agent: false,
+      servername: url.hostname,
+      rejectUnauthorized: true,
+      lookup: (_hostname, _options, callback) => {
+        callback(null, selectedAddress.address, selectedAddress.family);
+      },
+    });
+
+    request.once('error', () => {
+      settle(
+        hasTrustedRemoteImageDeadlineExpired(deadline)
+          ? remoteImageTimeoutError()
+          : new TrustedRemoteImageFetchError('remote_image_request_failed', 502),
+        true,
+      );
+    });
+    request.once('response', (response) => {
+      if (settled) {
+        response.resume();
+        return;
+      }
+      if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+        response.resume();
+        request.destroy();
+        settle(remoteImageTimeoutError(), true);
+        return;
+      }
+
+      const status = response.statusCode ?? 0;
+      if (status >= 300 && status < 400) {
+        response.resume();
+        request.destroy();
+        settle(new TrustedRemoteImageFetchError('remote_image_redirect', 400), true);
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        request.destroy();
+        settle(new TrustedRemoteImageFetchError('remote_image_request_failed', 502), true);
+        return;
+      }
+
+      const contentLength = response.headers['content-length'];
+      const contentLengthValue = Array.isArray(contentLength) ? contentLength[0] : contentLength;
+      try {
+        assertTrustedRemoteImageContentLength(contentLengthValue, options.maxBytes);
+      } catch (error) {
+        response.resume();
+        request.destroy();
+        settle(
+          error instanceof TrustedRemoteImageFetchError
+            ? error
+            : new TrustedRemoteImageFetchError('remote_image_response_invalid', 502),
+          true,
+        );
+        return;
+      }
+
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      response.on('data', (chunk: Buffer) => {
+        if (settled) return;
+        if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+          response.destroy();
+          request.destroy();
+          settle(remoteImageTimeoutError(), true);
+          return;
+        }
+        total += chunk.byteLength;
+        if (total > options.maxBytes) {
+          response.destroy();
+          request.destroy();
+          settle(new TrustedRemoteImageFetchError('remote_image_too_large', 413), true);
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.once('error', () => {
+        settle(
+          hasTrustedRemoteImageDeadlineExpired(deadline)
+            ? remoteImageTimeoutError()
+            : new TrustedRemoteImageFetchError('remote_image_request_failed', 502),
+          true,
+        );
+      });
+      response.once('end', () => {
+        if (hasTrustedRemoteImageDeadlineExpired(deadline)) {
+          request.destroy();
+          settle(remoteImageTimeoutError(), true);
+          return;
+        }
+        const bytes = new Uint8Array(total);
+        let offset = 0;
+        for (const chunk of chunks) {
+          bytes.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        const contentType = Array.isArray(response.headers['content-type'])
+          ? response.headers['content-type'][0] ?? ''
+          : response.headers['content-type'] ?? '';
+        settle({
+          bytes,
+          contentType: contentType.split(';')[0]?.trim().toLowerCase() ?? '',
+        }, false);
+      });
+    });
+
+    timeout = setTimeout(() => {
+      request.destroy();
+      settle(remoteImageTimeoutError(), true);
+    }, timeoutMs);
+    request.end();
+  });
+}
+
+export async function fetchTrustedRemoteImage(
+  value: unknown,
+  options: TrustedRemoteImageFetchOptions,
+  deps: TrustedRemoteImageFetchDeps = {},
+) {
+  const deadline = createTrustedRemoteImageDeadline(options.timeoutMs);
+  const url = getTrustedRemoteImageUrl(value);
+  assertTrustedRemoteImageUrl(url, options);
+  const addresses = await resolveTrustedRemoteImageHost(url, deps, deadline);
+  return deps.fetch
+    ? fetchTrustedRemoteImageWithFetch(url, options, deps, deadline)
+    : fetchTrustedRemoteImageWithPinnedDns(url, addresses, options, deadline);
 }
 
 export function parseThumbnailReferenceImageUrl(value: unknown) {
@@ -455,114 +1204,56 @@ export function parseThumbnailReferenceImageUrl(value: unknown) {
     throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL 형식이 올바르지 않습니다.', 400);
   }
 
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new ThumbnailGenerationError('invalid_text', 'HTTP/HTTPS 이미지 URL만 사용할 수 있습니다.', 400);
+  if (url.protocol !== 'https:' || url.username || url.password || url.port) {
+    throw new ThumbnailGenerationError('invalid_text', 'HTTPS 참고 이미지 URL만 사용할 수 있습니다.', 400);
   }
-  if (url.username || url.password) {
-    throw new ThumbnailGenerationError('invalid_text', '인증 정보가 포함된 URL은 사용할 수 없습니다.', 400);
-  }
-  if (!url.hostname || url.hostname === 'localhost' || url.hostname.endsWith('.localhost')) {
-    throw new ThumbnailGenerationError('invalid_text', '로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
+  if (!THUMBNAIL_REMOTE_IMAGE_ALLOWED_HOSTNAMES.includes(url.hostname as typeof THUMBNAIL_REMOTE_IMAGE_ALLOWED_HOSTNAMES[number])) {
+    throw new ThumbnailGenerationError('invalid_text', '허용된 제공자 참고 이미지 URL만 사용할 수 있습니다.', 400);
   }
 
   return url;
 }
 
-async function assertPublicRemoteImageHost(url: URL, deps: RemoteImageFetchDeps = {}) {
-  if (isIP(url.hostname)) {
-    if (isBlockedAddress(url.hostname)) {
-      throw new ThumbnailGenerationError('invalid_text', '사설망/로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
+function toThumbnailRemoteImageError(error: unknown) {
+  if (error instanceof TrustedRemoteImageFetchError) {
+    if (error.code === 'remote_image_timeout') {
+      return new ThumbnailGenerationError('invalid_text', '참고 이미지 URL 응답 시간이 초과되었습니다.', error.status);
     }
-    return;
-  }
-
-  const lookupFn = deps.lookup ?? lookup;
-  const addresses = await lookupFn(url.hostname, { all: true, verbatim: true });
-  if (!addresses.length || addresses.some((entry) => isBlockedAddress(entry.address))) {
-    throw new ThumbnailGenerationError('invalid_text', '사설망/로컬 주소는 참고 이미지 URL로 사용할 수 없습니다.', 400);
-  }
-}
-
-async function readLimitedRemoteImageBytes(response: Response) {
-  if (!response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > THUMBNAIL_MAX_FILE_BYTES) {
-      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
+    if (error.code === 'remote_image_too_large') {
+      return new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', error.status);
     }
-    return bytes;
   }
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > THUMBNAIL_MAX_FILE_BYTES) {
-      await reader.cancel().catch(() => undefined);
-      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
-    }
-    chunks.push(value);
-  }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
+  return new ThumbnailGenerationError('invalid_text', '참고 이미지를 가져오지 못했습니다.', 400);
 }
 
 export async function fetchThumbnailReferenceImageFromUrl(value: unknown, deps: RemoteImageFetchDeps = {}) {
   const url = parseThumbnailReferenceImageUrl(value);
-  await assertPublicRemoteImageHost(url, deps);
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS);
   try {
-    const fetchFn = deps.fetch ?? fetch;
-    const response = await fetchFn(url, {
-      redirect: 'manual',
-      signal: controller.signal,
-      headers: { Accept: 'image/png,image/jpeg,image/webp' },
-    });
-
-    if (response.status >= 300 && response.status < 400) {
-      throw new ThumbnailGenerationError('invalid_text', '리다이렉트되는 이미지 URL은 사용할 수 없습니다.', 400);
-    }
-    if (!response.ok) {
-      throw new ThumbnailGenerationError('invalid_text', `참고 이미지를 가져오지 못했습니다. HTTP ${response.status}`, 400);
-    }
-
-    const declaredLength = Number(response.headers.get('content-length') ?? '0');
-    if (Number.isFinite(declaredLength) && declaredLength > THUMBNAIL_MAX_FILE_BYTES) {
-      throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
-    }
-    const declaredType = (response.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
-    if (declaredType && !['image/png', 'image/jpeg', 'image/webp'].includes(declaredType)) {
+    const remote = await fetchTrustedRemoteImage(url, {
+      allowedHostnames: THUMBNAIL_REMOTE_IMAGE_ALLOWED_HOSTNAMES,
+      maxBytes: THUMBNAIL_MAX_FILE_BYTES,
+      timeoutMs: THUMBNAIL_REMOTE_IMAGE_TIMEOUT_MS,
+      accept: 'image/png,image/jpeg,image/webp',
+    }, deps);
+    const declaredType = remote.contentType;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(declaredType)) {
       throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지 URL만 사용할 수 있습니다.', 415);
     }
 
-    const bytes = await readLimitedRemoteImageBytes(response);
-    const mime = detectImageMime(bytes);
-    if (!mime) throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지 URL만 사용할 수 있습니다.', 415);
+    const mime = detectImageMime(remote.bytes);
+    if (!mime || mime !== declaredType) {
+      throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지 URL만 사용할 수 있습니다.', 415);
+    }
+    const canonical = await canonicalizeThumbnailReferenceImage(remote.bytes, mime);
 
     return {
-      bytes,
-      mime,
-      fileName: getSafeRemoteFileName(url, mime),
+      bytes: canonical.bytes,
+      mime: canonical.mime,
+      fileName: getSafeRemoteFileName(url, canonical.mime),
     };
   } catch (error) {
     if (error instanceof ThumbnailGenerationError) throw error;
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL 응답 시간이 초과되었습니다.', 408);
-    }
-    throw new ThumbnailGenerationError('invalid_text', '참고 이미지 URL을 가져오지 못했습니다.', 400);
-  } finally {
-    clearTimeout(timeout);
+    throw toThumbnailRemoteImageError(error);
   }
 }
 
@@ -571,16 +1262,27 @@ export async function readThumbnailReferenceImages(
   roles: readonly ThumbnailReferenceRole[] = [],
 ): Promise<ThumbnailReferenceImage[]> {
   if (files.length > THUMBNAIL_MAX_FILES) throw new ThumbnailGenerationError('invalid_text', '참고 이미지는 최대 8개까지 업로드할 수 있습니다.', 400);
-  let totalBytes = 0;
+  let sourceTotalBytes = 0;
+  let canonicalTotalBytes = 0;
   const images: ThumbnailReferenceImage[] = [];
   for (const [index, file] of files.entries()) {
     if (file.size > THUMBNAIL_MAX_FILE_BYTES) throw new ThumbnailGenerationError('invalid_text', '이미지 1개는 8MiB를 넘을 수 없습니다.', 413);
-    totalBytes += file.size;
-    if (totalBytes > THUMBNAIL_MAX_TOTAL_BYTES) throw new ThumbnailGenerationError('invalid_text', '이미지 총 용량은 32MiB를 넘을 수 없습니다.', 413);
+    sourceTotalBytes += file.size;
+    if (sourceTotalBytes > THUMBNAIL_MAX_TOTAL_BYTES) throw new ThumbnailGenerationError('invalid_text', '이미지 총 용량은 32MiB를 넘을 수 없습니다.', 413);
     const bytes = new Uint8Array(await file.arrayBuffer());
     const mime = detectImageMime(bytes);
     if (!mime) throw new ThumbnailGenerationError('invalid_text', 'PNG/JPEG/WebP 이미지만 업로드할 수 있습니다.', 415);
-    images.push({ name: `reference-${index + 1}`, mime, bytes, role: roles[index] ?? 'other' });
+    const canonical = await canonicalizeThumbnailReferenceImage(bytes, mime);
+    if (canonicalTotalBytes + canonical.bytes.byteLength > THUMBNAIL_MAX_CANONICAL_TOTAL_BYTES) {
+      throw new ThumbnailGenerationError('invalid_text', '처리된 이미지 총 용량은 16MiB를 넘을 수 없습니다.', 413);
+    }
+    canonicalTotalBytes += canonical.bytes.byteLength;
+    images.push({
+      name: `reference-${index + 1}`,
+      mime: canonical.mime,
+      bytes: canonical.bytes,
+      role: roles[index] ?? 'other',
+    });
   }
   return images;
 }

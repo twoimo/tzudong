@@ -13,15 +13,15 @@ import {
   STORYBOARD_ROUTE_STATUS_CACHE_SECONDS,
   STORYBOARD_ROUTE_STATUS_STALE_SECONDS,
 } from '@/lib/admin/storyboard/route-telemetry';
+import { BOUNDED_JSON_REQUEST_ERROR } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { buildStoryboardJobInsert, sanitizeStoryboardJobRow, type StoryboardJobRow } from '@/lib/admin/storyboard/jobs';
 
 export const runtime = 'nodejs';
 
-type StoryboardRouteContext = {
-  params?: never;
-};
 
 const STORYBOARD_JOB_SELECT = 'id, requested_by_admin_id, status, stage, request_payload, result_payload, error_code, readiness, claimed_by, claimed_at, completed_at, cancelled_at, created_at, updated_at';
+const MAX_STORYBOARD_GENERATE_REQUEST_BYTES = 64 * 1024;
 function hasRequiredStoryboardRagWorkerUrl() {
   return Boolean(process.env.STORYBOARD_RAG_WORKER_URL?.trim());
 }
@@ -72,7 +72,7 @@ async function readLocalStoryboardHeatmapStatus(limit: number) {
 
 
 
-export async function GET(_request: NextRequest, _context: StoryboardRouteContext) {
+export async function GET(_request: NextRequest) {
   const telemetry = createStoryboardRouteTelemetry('admin-storyboard-status');
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
@@ -123,7 +123,7 @@ export async function GET(_request: NextRequest, _context: StoryboardRouteContex
       }
     );
   } catch (error) {
-    console.error('[admin/storyboard] failed to read heatmap status:', error);
+    console.error('[admin/storyboard] failed to read heatmap status:');
     const payload = { error: '스토리보드 히트맵 상태를 불러오지 못했습니다.' };
     return NextResponse.json(
       payload,
@@ -136,7 +136,9 @@ export async function GET(_request: NextRequest, _context: StoryboardRouteContex
 }
 
 export async function POST(request: NextRequest) {
-  const telemetry = createStoryboardRouteTelemetry('admin-storyboard-generate');
+  const telemetry = createStoryboardRouteTelemetry(
+    'admin-storyboard-generate',
+  );
 
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
@@ -145,7 +147,43 @@ export async function POST(request: NextRequest) {
       return auth.response;
     }
 
-    const body = await readStoryboardRouteJson(request, telemetry) as Record<string, unknown> | null;
+    if (!isTrustedSameOriginMutation(request)) {
+      const failurePayload = { ok: false, error: 'invalid_storyboard_job_request' };
+      return NextResponse.json(
+        failurePayload,
+        {
+          status: 403,
+          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, failurePayload),
+        },
+      );
+    }
+
+    const bodyResult = await readStoryboardRouteJson(
+      request,
+      telemetry,
+      MAX_STORYBOARD_GENERATE_REQUEST_BYTES,
+    );
+    if (!bodyResult.ok) {
+      const failurePayload = { ok: false, error: 'invalid_storyboard_job_request' };
+      return NextResponse.json(
+        failurePayload,
+        {
+          status: bodyResult.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge ? 413 : 400,
+          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, failurePayload),
+        },
+      );
+    }
+    const body = bodyResult.value as Record<string, unknown>;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      const failurePayload = { ok: false, error: 'invalid_storyboard_job_request' };
+      return NextResponse.json(
+        failurePayload,
+        {
+          status: 400,
+          headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, failurePayload),
+        },
+      );
+    }
     const supabase = createSupabaseServiceRoleClient();
     const { data, error } = await supabase
       .from('admin_storyboard_jobs')
@@ -178,7 +216,7 @@ export async function POST(request: NextRequest) {
       },
     );
   } catch (error) {
-    console.error('[admin/storyboard] generation failed:', error);
+    console.error('[admin/storyboard] generation failed:');
     const failure = buildStoryboardRagErrorStatus(error, {
       fallbackCauseCode: 'storyboard_generation_failed',
     });

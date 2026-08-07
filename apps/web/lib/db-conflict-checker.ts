@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { debugLog } from '@/lib/debug-log';
 import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import type { Json, TablesUpdate } from '@/integrations/supabase/types';
 
 export interface ConflictCheckResult {
   hasConflict: boolean;
@@ -139,7 +140,7 @@ export async function checkRestaurantDuplicate(
     const { data: allRestaurants, error } = await query;
 
     if (error) {
-      console.error('❌ DB 조회 에러:', error);
+      console.error('❌ DB 조회 에러:');
       throw error;
     }
 
@@ -237,7 +238,7 @@ export async function checkRestaurantDuplicate(
     debugLog('✅ 중복 없음 (유사도 85% 미만)');
     return { isDuplicate: false, similarityScore: 0 };
   } catch (error) {
-    console.error('💥 중복 검사 에러:', error);
+    console.error('💥 중복 검사 에러:');
     throw error;
   }
 }
@@ -334,7 +335,7 @@ export async function checkDbConflict(params: {
     return { hasConflict: false };
 
   } catch (error) {
-    console.error('오류 체크 실패:', error);
+    console.error('오류 체크 실패:');
     throw error;
   }
 }
@@ -346,13 +347,13 @@ export async function mergeRestaurantData(params: {
   existingRestaurant: {
     id: string;
     youtube_link: string | null;
-    youtube_meta: Record<string, unknown> | null;
+    youtube_meta: Json | null;
     tzuyang_review: string | null;
     categories: string[] | string;
     updated_at: string;
   };
   newYoutubeLink: string;
-  newYoutubeMeta?: Record<string, unknown>;
+  newYoutubeMeta?: Json;
   newTzuyangReview?: string;
   newCategory?: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -378,18 +379,18 @@ export async function mergeRestaurantData(params: {
     const updatedCategories = newCategory && !currentCategories.includes(newCategory)
       ? [...currentCategories, newCategory]
       : currentCategories;
+    const restaurantUpdate = {
+      youtube_link: updatedYoutubeLink,
+      youtube_meta: updatedYoutubeMeta,
+      tzuyang_review: updatedTzuyangReview,
+      categories: updatedCategories,
+      updated_at: new Date().toISOString(),
+    } satisfies TablesUpdate<'restaurants'>;
 
     // Optimistic Locking으로 업데이트
     const { error: updateError } = await supabase
       .from('restaurants')
-      // @ts-expect-error - Supabase 자동 생성 타입 문제
-      .update({
-        youtube_link: updatedYoutubeLink,
-        youtube_meta: updatedYoutubeMeta,
-        tzuyang_review: updatedTzuyangReview,
-        categories: updatedCategories,
-        updated_at: new Date().toISOString(),
-      })
+      .update(restaurantUpdate)
       .eq('id', existingRestaurant.id)
       .eq('updated_at', existingRestaurant.updated_at);
 
@@ -405,9 +406,7 @@ export async function mergeRestaurantData(params: {
 
     return { success: true };
 
-  } catch (error) {
-    console.error('병합 실패:', error);
-    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-    return { success: false, error: errorMessage };
+  } catch {
+    return { success: false, error: '병합 처리에 실패했습니다.' };
   }
 }

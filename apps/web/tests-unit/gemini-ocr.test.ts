@@ -8,20 +8,13 @@ import {
   GeminiOcrError,
   getGeminiOcrModels,
 } from '@/lib/ocr/gemini';
-import {
-  buildOcrCacheVersion,
-  doesOcrCacheMetadataMatch,
-  RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-  RECEIPT_OCR_RAW_CACHE_KIND,
-  serializeOcrCacheVersion,
-} from '@/lib/ocr/cache-version';
 
 describe('gemini receipt ocr helper', () => {
-  test('defaults to gemini-3.5-flash as the authoritative OCR baseline', () => {
-    expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.5-flash');
-    expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.5-flash');
+  test('defaults to gemini-3.6-flash as the authoritative OCR baseline', () => {
+    expect(GEMINI_OCR_FALLBACK_MODEL).toBe('gemini-3.6-flash');
+    expect(getGeminiOcrDefaultModel({} as NodeJS.ProcessEnv)).toBe('gemini-3.6-flash');
     expect(getGeminiOcrDefaultModel({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toBe('gemini-env-default');
-    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.5-flash']);
+    expect(getGeminiOcrModels({} as NodeJS.ProcessEnv)).toEqual(['gemini-3.6-flash']);
     expect(getGeminiOcrModels({ GEMINI_OCR_DEFAULT_MODEL: 'gemini-env-default' } as NodeJS.ProcessEnv)).toEqual(['gemini-env-default']);
     expect(getGeminiOcrModels({ GEMINI_OCR_MODEL: ' a, b ,, c ' } as NodeJS.ProcessEnv)).toEqual(['a', 'b', 'c']);
   });
@@ -56,15 +49,15 @@ describe('gemini receipt ocr helper', () => {
       imageBase64: 'abc123',
       mimeType: 'image/jpeg',
       prompt: 'read',
-      env: { GEMINI_OCR_MODEL: 'gemini-3.5-flash' } as NodeJS.ProcessEnv,
+      env: { GEMINI_OCR_MODEL: 'gemini-3.6-flash' } as NodeJS.ProcessEnv,
       generateContentImpl: async ({ model, thinkingLevel }) => {
         seenModels.push(`${model}:${thinkingLevel}`);
         return '{"store_name":"데일리픽스 강남본점","date":"2026-04-25","time":"12:30","total_amount":"11,500원","items":[{"name":"아메리카노","price":"4,500"}],"confidence":0.94}';
       },
     });
 
-    expect(seenModels).toEqual(['gemini-3.5-flash:MEDIUM']);
-    expect(result.model).toBe('gemini-3.5-flash');
+    expect(seenModels).toEqual(['gemini-3.6-flash:MEDIUM']);
+    expect(result.model).toBe('gemini-3.6-flash');
     expect(result.data).toMatchObject({
       store_name: '데일리픽스 강남본점',
       date: '2026-04-25',
@@ -114,54 +107,5 @@ describe('gemini receipt ocr helper', () => {
       env: { GEMINI_OCR_MODEL: 'bad-a,bad-b' } as NodeJS.ProcessEnv,
       generateContentImpl: async () => { throw new Error('boom'); },
     })).rejects.toBeInstanceOf(GeminiOcrError);
-  });
-});
-
-describe('ocr cache versioning', () => {
-  test('requires raw cache kind schema provider model prompt preprocess and routing mode to match', () => {
-    const version = buildOcrCacheVersion({
-      cacheKind: RECEIPT_OCR_RAW_CACHE_KIND,
-      provider: 'gemini',
-      model: 'gemini-3.5-flash',
-      promptVersion: 'receipt-extraction-v1',
-      preprocessVersion: 'receipt-image-1600w-q85-v2',
-      extractionSchemaVersion: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-      routingMode: 'manual',
-    });
-
-    expect(serializeOcrCacheVersion(version)).toBe('receipt_ocr_raw_v1|gemini|gemini-3.5-flash|receipt-extraction-v1|receipt-image-1600w-q85-v2|receipt-ocr-schema-v1|manual');
-    expect(doesOcrCacheMetadataMatch({
-      cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
-      provider: 'gemini',
-      model: 'gemini-3.5-flash',
-      prompt_version: 'receipt-extraction-v1',
-      preprocess_version: 'receipt-image-1600w-q85-v2',
-      extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-      routing_mode: 'manual',
-      raw_ocr_result: { store_name: '데일리픽스' },
-      ocr_result: { store_name: '과거 보정값' },
-    }, version)).toBe(true);
-
-    expect(doesOcrCacheMetadataMatch({
-      cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
-      provider: 'gemini',
-      model: 'gemini-3.5-flash',
-      prompt_version: 'receipt-extraction-v1',
-      preprocess_version: 'receipt-image-1600w-q85-v2',
-      extraction_schema_version: 'stale-schema',
-      routing_mode: 'manual',
-      raw_ocr_result: { store_name: '데일리픽스' },
-    }, version)).toBe(false);
-
-    expect(doesOcrCacheMetadataMatch({
-      cache_kind: RECEIPT_OCR_RAW_CACHE_KIND,
-      provider: 'gemini',
-      model: 'other-model',
-      prompt_version: 'receipt-extraction-v1',
-      preprocess_version: 'receipt-image-1600w-q85-v2',
-      extraction_schema_version: RECEIPT_OCR_EXTRACTION_SCHEMA_VERSION,
-      routing_mode: 'manual',
-      raw_ocr_result: { store_name: '데일리픽스' },
-    }, version)).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 'use client';
+// Keep the home Tailwind entry separate from the full app stylesheet loaded by AppRuntimeShell.
 
 import './home-app-globals.css';
 import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
@@ -10,7 +11,10 @@ import { StaticNotificationProvider } from '@/contexts/NotificationContextBase';
 import { useHomeViewportMode } from '@/hooks/useHomeViewportMode';
 import { cn } from '@/lib/utils';
 import { AUTH_UI_REQUEST_EVENT } from '@/lib/auth-ui-events';
-import { readHomeAuthLoginRequestFromLocation } from '@/lib/auth/auth-redirect';
+import {
+    AUTH_PRIVACY_ONBOARDING_REASON,
+    readHomeAuthLoginRequestFromLocation,
+} from '@/lib/auth/auth-redirect';
 import { HOME_AUTH_SESSION_UPDATED_EVENT, type HomeAuthSessionUpdatedDetail } from '@/lib/home-auth-events';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { hasSupabaseAuthSessionHint } from '@/lib/supabase-auth-session-hints';
@@ -31,6 +35,7 @@ type AuthModalProps = {
     onAuthSuccess?: () => void;
     redirectTo?: string | null;
     reason?: string | null;
+    initialAuthTab?: 'login' | 'signup';
 };
 type ProfileModalProps = AuthModalProps;
 type NicknameSetupModalProps = { isOpen: boolean; onComplete: () => void };
@@ -209,7 +214,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
                 </a>
-                <main id="main-content" className="flex-1 relative overflow-hidden">
+                <main id="main-content" className="flex-1 relative overflow-hidden" aria-label="쯔동여지도 지도 본문">
                     <div className="h-full w-full">
                         {children}
                     </div>
@@ -234,6 +239,9 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                         onAuthSuccess={closeAuthAfterSuccess}
                         redirectTo={authLoginRequest.requested ? authLoginRequest.nextPath : null}
                         reason={authLoginRequest.requested ? authLoginRequest.reason : null}
+                        initialAuthTab={
+                            authLoginRequest.reason === AUTH_PRIVACY_ONBOARDING_REASON ? 'signup' : 'login'
+                        }
                     />
                 </Suspense>
             )}
@@ -279,14 +287,11 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
 
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
-        <div
-            className="min-h-[var(--full-height,100vh)] bg-background text-foreground"
-            style={{ height: 'var(--full-height, 100vh)' }}
-        >
+        <div className="bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full w-full bg-background">
+            <main id="main-content" className="h-full w-full bg-background" aria-label="쯔동여지도 지도 본문">
                 {children}
             </main>
         </div>

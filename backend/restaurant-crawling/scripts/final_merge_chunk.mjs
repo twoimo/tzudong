@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
     const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
@@ -23,7 +24,7 @@ async function main() {
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 
     if (!apiKey) {
-        console.error('Error: GEMINI_API_KEY environment variable not set.');
+        console.error('GEMINI_API_KEY_UNAVAILABLE');
         process.exit(1);
     }
 
@@ -45,7 +46,7 @@ async function main() {
                         return `[${mm}:${ss}] ${s.text}`;
                     }).join('\n');
                 } catch (e) {
-                    console.warn(`[WARN] 자막 파일 파싱 실패: ${e.message}`);
+                    logSafeError(e, line => console.warn(`FINAL_MERGE_TRANSCRIPT_PARSE_FAILED ${line.trim()}`));
                 }
             }
         }
@@ -55,7 +56,7 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
         const thinkingLevel = resolveThinkingLevel(
             process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
             process.env.GEMINI_THINKING_LEVEL,
@@ -78,7 +79,7 @@ async function main() {
         process.exit(0);
 
     } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
+        logSafeError(error, line => console.error(`FINAL_MERGE_FAILED ${line.trim()}`));
         process.exit(1);
     }
 }

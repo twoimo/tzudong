@@ -27,7 +27,7 @@ export async function GET() {
         .order('id', { ascending: true });
 
       if (error) {
-        throw new Error(error.message || 'restaurants evaluation query failed');
+        throw new Error('restaurants evaluation query failed');
       }
 
       if (!data || data.length === 0) break;

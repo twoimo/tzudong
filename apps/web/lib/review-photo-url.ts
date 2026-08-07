@@ -1,86 +1,57 @@
+import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url';
 import { supabase } from '@/integrations/supabase/client';
 
 const REVIEW_PHOTO_BUCKET = 'review-photos';
 const REVIEW_PHOTO_PUBLIC_PATH = `/storage/v1/object/public/${REVIEW_PHOTO_BUCKET}/`;
 const MAX_STORAGE_OBJECT_PATH_LENGTH = 1024;
-const MAX_CACHE_BUSTER_LENGTH = 13;
 const MAX_CACHE_BUSTER_VALUE = 9_999_999_999_999;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
+const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const SAFE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
+const SAFE_IMAGE_EXTENSION_PATTERN = /\.(?:avif|jpe?g|png|webp)$/i;
 
-function getConfiguredSupabaseOrigin(): string | null {
-    const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    if (!configuredUrl || configuredUrl !== configuredUrl.trim()) return null;
+export type ReviewPhotoPurpose = 'food' | 'verification';
 
-    try {
-        const url = new URL(configuredUrl);
-        if (
-            url.protocol !== 'https:' ||
-            url.username ||
-            url.password ||
-            url.port ||
-            url.pathname !== '/' ||
-            url.search ||
-            url.hash
-        ) {
-            return null;
-        }
-
-        return url.origin;
-    } catch {
-        return null;
-    }
+export interface ReviewPhotoOwnership {
+    ownerId: string;
+    reviewId: string;
+    purpose: ReviewPhotoPurpose;
 }
 
-function decodeStoragePathSegment(segment: string): string | null {
-    let decoded = segment;
 
-    for (let index = 0; index < 3; index += 1) {
-        try {
-            const next = decodeURIComponent(decoded);
-            if (next === decoded) return next;
-            decoded = next;
-        } catch {
-            return null;
-        }
-    }
-
-    return decoded.includes('%') ? null : decoded;
+function isCanonicalIdentifier(value: string): boolean {
+    return SAFE_IDENTIFIER_PATTERN.test(value);
 }
 
-function isCanonicalStorageObjectPath(path: string): boolean {
-    if (
-        !path ||
-        path.length > MAX_STORAGE_OBJECT_PATH_LENGTH ||
-        path !== path.trim() ||
-        path.startsWith('/') ||
-        path.includes('\\') ||
-        path.includes('?') ||
-        path.includes('#') ||
-        path.includes(':') ||
-        CONTROL_CHARACTER_PATTERN.test(path)
-    ) {
-        return false;
-    }
+function isCanonicalReviewPhotoOwnership(
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+): ownership is ReviewPhotoOwnership {
+    return Boolean(
+        ownership &&
+        typeof ownership === 'object' &&
+        isCanonicalIdentifier(ownership.ownerId) &&
+        isCanonicalIdentifier(ownership.reviewId) &&
+        (ownership.purpose === 'food' || ownership.purpose === 'verification'),
+    );
+}
 
-    const segments = path.split('/');
-    return segments.every((segment) => {
-        if (!segment || segment === '.' || segment === '..') return false;
-
-        const decoded = decodeStoragePathSegment(segment);
-        return Boolean(
-            decoded &&
-            decoded !== '.' &&
-            decoded !== '..' &&
-            !decoded.includes('/') &&
-            !decoded.includes('\\') &&
-            !CONTROL_CHARACTER_PATTERN.test(decoded),
-        );
-    });
+function isSafeObjectKey(value: string): boolean {
+    return Boolean(
+        value &&
+        value.length <= MAX_STORAGE_OBJECT_PATH_LENGTH &&
+        value === value.trim() &&
+        !value.startsWith('/') &&
+        !value.includes('\\') &&
+        !value.includes('%') &&
+        !value.includes('?') &&
+        !value.includes('#') &&
+        !value.includes(':') &&
+        !CONTROL_CHARACTER_PATTERN.test(value),
+    );
 }
 
 function getBoundedCacheBuster(value: string | null | undefined): string | null {
-    if (!value) return null;
-    if (value.length > 64 || CONTROL_CHARACTER_PATTERN.test(value)) return null;
+    if (!value || value.length > 64 || CONTROL_CHARACTER_PATTERN.test(value)) return null;
 
     const timestamp = Date.parse(value);
     if (!Number.isFinite(timestamp) || timestamp < 0 || timestamp > MAX_CACHE_BUSTER_VALUE) return null;
@@ -88,41 +59,148 @@ function getBoundedCacheBuster(value: string | null | undefined): string | null 
     return String(Math.trunc(timestamp));
 }
 
-function hasOnlyBoundedCacheBuster(url: URL): boolean {
-    if (!url.search) return true;
-    if (!/^\?t=(?:0|[1-9]\d{0,12})$/.test(url.search)) return false;
-
-    const value = Number(url.searchParams.get('t'));
-    return Number.isSafeInteger(value) && value <= MAX_CACHE_BUSTER_VALUE;
-}
-
-function resolveAbsoluteReviewPhotoUrl(
-    value: string,
-    cacheBuster?: string | null,
+export function getCanonicalReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
 ): string | null {
-    const origin = getConfiguredSupabaseOrigin();
-    if (!origin || value.length > origin.length + REVIEW_PHOTO_PUBLIC_PATH.length + MAX_STORAGE_OBJECT_PATH_LENGTH + MAX_CACHE_BUSTER_LENGTH + 3) {
+    if (
+        typeof value !== 'string' ||
+        !isSafeObjectKey(value) ||
+        !isCanonicalReviewPhotoOwnership(ownership)
+    ) {
         return null;
     }
 
-    const expectedPrefix = `${origin}${REVIEW_PHOTO_PUBLIC_PATH}`;
-    if (!value.startsWith(expectedPrefix)) return null;
+    const [ownerId, reviewDirectory, reviewId, purpose, filename, ...extraSegments] = value.split('/');
+    if (
+        extraSegments.length > 0 ||
+        ownerId !== ownership.ownerId ||
+        reviewDirectory !== 'reviews' ||
+        reviewId !== ownership.reviewId ||
+        purpose !== ownership.purpose ||
+        !isCanonicalIdentifier(ownerId) ||
+        !isCanonicalIdentifier(reviewId) ||
+        !SAFE_FILENAME_PATTERN.test(filename) ||
+        !SAFE_IMAGE_EXTENSION_PATTERN.test(filename)
+    ) {
+        return null;
+    }
 
-    const objectPathAndQuery = value.slice(expectedPrefix.length);
-    const queryIndex = objectPathAndQuery.indexOf('?');
-    const objectPath = queryIndex === -1 ? objectPathAndQuery : objectPathAndQuery.slice(0, queryIndex);
-    if (!isCanonicalStorageObjectPath(objectPath)) return null;
+    return value;
+}
+export function getCanonicalReviewPhotoObjectPaths(
+    values: unknown,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+): string[] {
+    if (!Array.isArray(values)) return [];
+
+    const paths = new Set<string>();
+    for (const value of values) {
+        const path = getCanonicalReviewPhotoObjectPath(
+            typeof value === 'string' ? value : null,
+            ownership,
+        );
+        if (path) paths.add(path);
+    }
+
+    return [...paths];
+}
+
+export interface ReviewPhotoStorage {
+    remove(paths: string[]): Promise<{ error: unknown | null }>;
+    list(
+        path: string,
+        options: { limit: number; search: string },
+    ): Promise<{ data: Array<{ name: string }> | null; error: unknown | null }>;
+}
+
+export interface ReviewPhotoCleanupResult {
+    paths: string[];
+    success: boolean;
+}
+
+/**
+ * Deletes only canonical, owner- and review-bound objects. A successful remove
+ * is not committed until a storage list readback proves each object is absent.
+ * `paths` is always the exact canonical retry set when `success` is false.
+ */
+export async function cleanupCanonicalReviewPhotoObjects(
+    values: unknown,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    storage: ReviewPhotoStorage,
+): Promise<ReviewPhotoCleanupResult> {
+    const paths = getCanonicalReviewPhotoObjectPaths(values, ownership);
+    if (paths.length === 0) return { paths, success: true };
 
     try {
-        const url = new URL(value);
+        const { error: removeError } = await storage.remove(paths);
+        if (removeError) return { paths, success: false };
+
+        for (const path of paths) {
+            const separatorIndex = path.lastIndexOf('/');
+            const directory = path.slice(0, separatorIndex);
+            const filename = path.slice(separatorIndex + 1);
+            const { data, error: readbackError } = await storage.list(directory, {
+                limit: 1,
+                search: filename,
+            });
+
+            if (
+                readbackError ||
+                !data ||
+                data.some((entry) => entry.name === filename)
+            ) {
+                return { paths, success: false };
+            }
+        }
+
+        return { paths, success: true };
+    } catch {
+        return { paths, success: false };
+    }
+}
+
+export function buildReviewPhotoObjectPath(
+    ownership: ReviewPhotoOwnership,
+    filename: string,
+): string | null {
+    if (!isCanonicalReviewPhotoOwnership(ownership)) return null;
+
+    return getCanonicalReviewPhotoObjectPath(
+        `${ownership.ownerId}/reviews/${ownership.reviewId}/${ownership.purpose}/${filename}`,
+        ownership,
+    );
+}
+
+export function resolveReviewPhotoUrl(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    cacheBuster?: string | null,
+): string | null {
+    const objectPath = getCanonicalReviewPhotoObjectPath(value, ownership);
+    const configuredOrigin = resolveConfiguredSupabaseOrigin();
+    if (!objectPath || !configuredOrigin) return null;
+
+    try {
+        const publicUrl = supabase.storage
+            .from(REVIEW_PHOTO_BUCKET)
+            .getPublicUrl(objectPath)
+            .data.publicUrl;
+        const url = new URL(publicUrl);
+        const expectedPath = `${REVIEW_PHOTO_PUBLIC_PATH}${objectPath
+            .split('/')
+            .map(encodeURIComponent)
+            .join('/')}`;
+
         if (
             url.protocol !== 'https:' ||
-            url.origin !== origin ||
+            url.origin !== configuredOrigin ||
             url.username ||
             url.password ||
             url.port ||
-            url.hash ||
-            !hasOnlyBoundedCacheBuster(url)
+            url.pathname !== expectedPath ||
+            url.search ||
+            url.hash
         ) {
             return null;
         }
@@ -133,35 +211,6 @@ function resolveAbsoluteReviewPhotoUrl(
         }
 
         return url.toString();
-    } catch {
-        return null;
-    }
-}
-
-export function resolveReviewPhotoUrl(
-    value: string | null | undefined,
-    cacheBuster?: string | null,
-): string | null {
-    if (
-        typeof value !== 'string' ||
-        !value ||
-        value.length > MAX_STORAGE_OBJECT_PATH_LENGTH + 2048 ||
-        value !== value.trim() ||
-        value.includes('\\') ||
-        CONTROL_CHARACTER_PATTERN.test(value)
-    ) {
-        return null;
-    }
-
-    if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
-        return resolveAbsoluteReviewPhotoUrl(value, cacheBuster);
-    }
-
-    if (!isCanonicalStorageObjectPath(value)) return null;
-
-    try {
-        const publicUrl = supabase.storage.from(REVIEW_PHOTO_BUCKET).getPublicUrl(value).data.publicUrl;
-        return resolveAbsoluteReviewPhotoUrl(publicUrl, cacheBuster);
     } catch {
         return null;
     }

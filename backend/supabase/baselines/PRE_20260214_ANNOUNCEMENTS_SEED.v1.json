@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "pre-20260214-announcements-seed",
+  "source": {
+    "path": "backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+    "sha256": "bd102f106bda1d9aaaabe14edbd753ebd456031181b14dbbee10eb3815c4d785",
+    "lineStart": 241,
+    "lineEnd": 421
+  },
+  "seedSha256": "036d0a073bfcf50fead4e3379bc8e4373372e934b69112dbed4963767245ed68",
+  "orderedIds": [
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "b2c3d4e5-f6a7-8901-bcde-f23456789012",
+    "c3d4e5f6-a7b8-9012-cdef-345678901234",
+    "d4e5f6a7-b8c9-0123-def0-456789012345",
+    "e5f6a7b8-c9d0-1234-ef01-567890123456",
+    "f6a7b8c9-d0e1-2345-f012-678901234567",
+    "a7b8c9d0-e1f2-3456-0123-789012345678",
+    "b8c9d0e1-f2a3-4567-1234-890123456789",
+    "c9d0e1f2-a3b4-5678-2345-901234567890",
+    "d0e1f2a3-b4c5-6789-3456-012345678901"
+  ],
+  "contract": "data-only INSERT into public.announcements with ON CONFLICT (id) DO UPDATE"
+}

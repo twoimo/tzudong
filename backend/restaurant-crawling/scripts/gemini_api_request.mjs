@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { logSafeError } from '../../utils/privacy-log.mjs';
 
 function resolveThinkingLevel(...candidates) {
     const allowed = new Set(['MINIMAL', 'LOW', 'MEDIUM', 'HIGH']);
@@ -66,11 +67,11 @@ async function main() {
     const outputFile = args[1];
     const framesDir = args[2] || ""; // 세 번째 인자: 히트맵 프레임 폴더 (옵션)
     
-    console.log(`DEBUG: PromptFile=${promptFile}, OutputFile=${outputFile}, FramesDir=${framesDir}`);
+    console.log('DEBUG: Input files accepted.');
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 
     if (!apiKey) {
-        console.error('Error: GEMINI_API_KEY environment variable not set.');
+        console.error('GEMINI_API_KEY_UNAVAILABLE');
         process.exit(1);
     }
 
@@ -84,7 +85,7 @@ async function main() {
 
         // 히트맵 프레임 폴더가 제공되었고, 실제로 존재할 경우 이미지를 재귀 수집
         if (framesDir && fs.existsSync(framesDir)) {
-            console.log(`DEBUG: Recursively scanning heatmap frames in ${framesDir}...`);
+            console.log('DEBUG: Recursively scanning heatmap frames.');
 
             const MAX_FRAMES = 50; // API Payload 크기 제한 (Base64 인코딩 시 ~20MB 이내 권장)
             const imageFiles = collectFramesRecursive(framesDir, MAX_FRAMES);
@@ -109,16 +110,16 @@ async function main() {
 
             console.log(`DEBUG: Appended ${imageFiles.length} frames to prompt payload.`);
         } else if (framesDir) {
-            console.log(`DEBUG: Frames directory not found: ${framesDir} (text-only mode)`);
+            console.log('DEBUG: Frames directory unavailable; using text-only mode.');
         }
 
         console.log("DEBUG: Initializing GoogleGenerativeAI...");
         const genAI = new GoogleGenerativeAI(apiKey);
         
         // 환경변수 CURRENT_MODEL 우선, 없으면 기본 모델 사용
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.5-flash';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
         const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
-        console.log(`DEBUG: Getting Model=${modelName}, thinkingLevel=${thinkingLevel}...`);
+        console.log('DEBUG: Configuring Gemini model.');
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
@@ -141,7 +142,7 @@ async function main() {
         process.exit(0);
 
     } catch (error) {
-        console.error(`Gemini API Error: ${error.message}`);
+        logSafeError(error, line => console.error(`GEMINI_FRAME_REQUEST_FAILED ${line.trim()}`));
         process.exit(1);
     }
 }

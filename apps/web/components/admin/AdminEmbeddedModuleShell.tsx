@@ -42,6 +42,7 @@ export function AdminEmbeddedModuleShell({
       )}
       data-admin-embedded-module-shell="true"
       data-admin-embedded-module-id={moduleId}
+      data-layout-primitives="stack"
     >
       <div
         className={cn(
@@ -51,19 +52,19 @@ export function AdminEmbeddedModuleShell({
         data-admin-module-header="compact"
         data-admin-module-header-module={moduleId}
       >
-        <div className="flex flex-row items-start justify-between gap-1.5 lg:items-center">
+        <div className="flex min-w-0 flex-row items-start justify-between gap-1.5 lg:items-center">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
               <h2
                 id={titleId}
-                className="whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent"
+                className="min-w-0 truncate whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent"
               >
                 {title}
               </h2>
             </div>
             <div
-              className="mt-0.5 truncate text-xs text-muted-foreground"
+              className="mt-0.5 min-w-0 truncate text-xs text-muted-foreground"
               data-admin-module-summary="true"
             >
               {summary}
@@ -80,7 +81,7 @@ export function AdminEmbeddedModuleShell({
         </div>
       </div>
       <div
-        className={cn("min-h-0 flex-1 overflow-hidden", contentClassName)}
+        className={cn("min-h-0 min-w-0 flex-1 overflow-hidden", contentClassName)}
         data-admin-module-content="bounded"
         data-scroll-owner={scrollOwner}
       >

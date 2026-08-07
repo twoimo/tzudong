@@ -16,7 +16,7 @@ import {
     Loader2,
     Clock,
     AlertCircle,
-    Youtube,
+    Video,
     Edit,
     Search,
     X,
@@ -27,6 +27,7 @@ import {
     ScanSearch,
     RefreshCw,
 } from 'lucide-react';
+import { YouTubeIcon } from '@/components/icons/YouTubeIcon';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -53,7 +54,7 @@ import {
     type AdminSubmissionQueueReasonFilter,
     type AdminSubmissionQueueSafetySummary,
 } from '@/lib/admin/submission-queue-safety';
-import { resolveReviewPhotoUrl } from '@/lib/review-photo-url';
+import { resolveReviewPhotoUrl, type ReviewPhotoOwnership } from '@/lib/review-photo-url';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
@@ -539,13 +540,24 @@ export function SubmissionListView({
             return { verificationPhotoUrl: null, foodPhotos: [] as Array<{ url: string; index: number }> };
         }
 
+        const verificationPhotoOwnership: ReviewPhotoOwnership = {
+            ownerId: selectedReview.user_id,
+            reviewId: selectedReview.id,
+            purpose: 'verification',
+        };
+        const foodPhotoOwnership: ReviewPhotoOwnership = {
+            ownerId: selectedReview.user_id,
+            reviewId: selectedReview.id,
+            purpose: 'food',
+        };
         const verificationPhotoUrl = resolveReviewPhotoUrl(
             selectedReview.verification_photo,
+            verificationPhotoOwnership,
             selectedReview.ocr_processed_at,
         );
         const foodPhotos = Array.isArray(selectedReview.food_photos)
             ? selectedReview.food_photos.reduce<Array<{ url: string; index: number }>>((photos, photo, index) => {
-                const url = resolveReviewPhotoUrl(photo);
+                const url = resolveReviewPhotoUrl(photo, foodPhotoOwnership);
                 if (url) photos.push({ url, index });
                 return photos;
             }, [])
@@ -563,7 +575,7 @@ export function SubmissionListView({
                 setOcrStatus(data);
             }
         } catch (error) {
-            console.error('OCR 상태 조회 실패:', error);
+            console.error('OCR 상태 조회 실패:');
         }
     }, []);
 
@@ -854,7 +866,7 @@ export function SubmissionListView({
                     }
                 }
             } catch (err) {
-                console.error('OCR 상태 폴링 오류:', err);
+                console.error('OCR 상태 폴링 오류:');
             }
         };
 
@@ -1427,12 +1439,17 @@ export function SubmissionListView({
     // 네이버 검색 API 호출 함수
     const searchNaverPlace = async (query: string, display: number = 5) => {
         try {
-            const response = await fetch(`/api/naver-search?query=${encodeURIComponent(query)}&display=${display}`);
+            const response = await fetch('/api/naver-search', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, display }),
+            });
             if (!response.ok) throw new Error('Search failed');
             const data = await response.json();
             return data.items || [];
         } catch (error) {
-            console.error('Naver search error:', error);
+            console.error('Naver search error:');
             return [];
         }
     };
@@ -1529,7 +1546,7 @@ export function SubmissionListView({
             }
 
         } catch (error) {
-            console.error('Naver search verification failed', error);
+            console.error('Naver search verification failed');
             toast.error('검증 중 오류가 발생했습니다. 다시 시도해주세요.');
         } finally {
             setNaverSearchLoading(false);
@@ -2579,7 +2596,7 @@ export function SubmissionListView({
                                     onClick={() => setActiveTabWithReset('new')}
                                     className={tabTriggerClassName}
                                 >
-                                    <Youtube className="h-4 w-4" />
+                                    <Video className="h-4 w-4" />
                                     <span>{isMobile ? '신규' : '신규 제보'}</span>
                                     <Badge
                                         variant={getTabCountBadgeVariant(newCount)}
@@ -2609,7 +2626,7 @@ export function SubmissionListView({
                                     onClick={() => setActiveTabWithReset('recommend')}
                                     className={tabTriggerClassName}
                                 >
-                                    <Youtube className="h-4 w-4" />
+                                    <YouTubeIcon className="h-4 w-4" />
                                     <span>{isMobile ? '추천' : '쯔양 제보'}</span>
                                     <Badge
                                         variant={getTabCountBadgeVariant(recommendCount)}

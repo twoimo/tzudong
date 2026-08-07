@@ -30,6 +30,9 @@ const APPROVED_HORIZONTAL_SCROLL_OWNERS = [
     'admin-dashboard-kpi-title-actions',
     'stamp-restaurant-list-table',
     'admin-evaluation-table',
+    'storyboard-canvas-toolbar',
+    'storyboard-chat-examples',
+    'storyboard-chat-attachments',
 ] as const;
 
 function decodeBase64Url(value: string): string {
@@ -270,6 +273,7 @@ test.describe('Responsive Overflow Guard', () => {
         }
     });
 
+
     test('admin routes should not overflow horizontally', async ({ page }) => {
         test.skip(
             !HAS_ADMIN_AUTH_HINT,
@@ -285,6 +289,7 @@ test.describe('Responsive Overflow Guard', () => {
             '/admin?module=announcements',
             '/admin?module=insights',
             '/admin?module=audit',
+            '/admin?module=storyboard',
             '/admin/evaluations',
             '/admin/submissions',
             '/insights',
@@ -292,6 +297,110 @@ test.describe('Responsive Overflow Guard', () => {
         for (const route of adminRoutes) {
             await assertNoHorizontalOverflow(page, route);
         }
+    });
+
+    test('global map detail panel resizes through pointer and keyboard within its bounds', async ({ page }) => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        const runtimeErrors: string[] = [];
+        page.on('pageerror', (error) => runtimeErrors.push(error.message));
+        page.on('console', (message) => {
+            if (message.type() === 'error' && /hydration|hydrated but|server-rendered html/i.test(message.text())) {
+                runtimeErrors.push(message.text());
+            }
+        });
+        await gotoForOverflowCheck(page, '/global-map');
+
+        await page.evaluate(() => {
+            window.dispatchEvent(new CustomEvent('restaurant-selected', {
+                detail: {
+                    restaurant: {
+                        id: 'responsive-panel-fixture',
+                        name: '패널 크기 검증 맛집',
+                        approved_name: '패널 크기 검증 맛집',
+                        address: '서울특별시 중구',
+                        road_address: '서울특별시 중구',
+                        category: '한식',
+                        youtube_link: 'https://www.youtube.com/watch?v=8kE5Uq_YV08',
+                        review_count: 0,
+                    },
+                },
+            }));
+        });
+
+        const panelGroup = page.locator('[data-global-map-panel-group="true"]');
+        const detailPanel = page.locator('[data-global-map-panel="detail"]');
+        const resizeHandle = page.locator('[data-global-map-resize-handle="true"]');
+
+        await expect(panelGroup).toBeVisible();
+        await expect(detailPanel).toBeVisible();
+        await expect(resizeHandle).toBeVisible();
+        await expect(resizeHandle).toHaveAttribute('role', 'separator');
+        await expect(resizeHandle).toHaveAccessibleName('글로벌 지도 상세 패널 너비 조절');
+
+        const measureDetailWidth = () => panelGroup.evaluate((group) => {
+            const detail = group.querySelector<HTMLElement>('[data-global-map-panel="detail"]');
+            if (!detail) throw new Error('Global map detail panel was not rendered.');
+            const groupWidth = group.getBoundingClientRect().width;
+            const detailWidth = detail.getBoundingClientRect().width;
+            const observedWidth = Number(group.dataset.globalMapObservedDetailWidth);
+            return {
+                detailWidth,
+                observedWidth,
+                percent: (detailWidth / groupWidth) * 100,
+            };
+        });
+        const expectObservedWidthToMatch = async () => {
+            await expect.poll(async () => {
+                const measurement = await measureDetailWidth();
+                return Number.isFinite(measurement.observedWidth)
+                    ? Math.abs(measurement.observedWidth - measurement.detailWidth)
+                    : Number.POSITIVE_INFINITY;
+            }).toBeLessThanOrEqual(2);
+        };
+        const dragHandleBy = async (deltaX: number) => {
+            const box = await resizeHandle.boundingBox();
+            if (!box) throw new Error('Global map resize handle has no bounding box.');
+            const centerX = box.x + box.width / 2;
+            const centerY = box.y + box.height / 2;
+            await page.mouse.move(centerX, centerY);
+            await page.mouse.down();
+            await page.mouse.move(centerX + deltaX, centerY, { steps: 12 });
+            await page.mouse.up();
+        };
+
+        const initial = await measureDetailWidth();
+        expect(initial.detailWidth).toBeGreaterThan(0);
+        await expectObservedWidthToMatch();
+
+        await dragHandleBy(-120);
+        const afterPointer = await measureDetailWidth();
+        expect(afterPointer.detailWidth).toBeGreaterThan(initial.detailWidth + 40);
+        expect(afterPointer.percent).toBeGreaterThanOrEqual(19);
+        expect(afterPointer.percent).toBeLessThanOrEqual(34);
+        await expectObservedWidthToMatch();
+
+        await resizeHandle.focus();
+        await page.keyboard.press('ArrowRight');
+        const afterKeyboard = await measureDetailWidth();
+        expect(Math.abs(afterKeyboard.detailWidth - afterPointer.detailWidth)).toBeGreaterThan(0);
+        expect(afterKeyboard.percent).toBeGreaterThanOrEqual(19);
+        expect(afterKeyboard.percent).toBeLessThanOrEqual(34);
+        await expectObservedWidthToMatch();
+
+        await dragHandleBy(-2_000);
+        const atMaximum = await measureDetailWidth();
+        expect(atMaximum.percent).toBeGreaterThanOrEqual(32);
+        expect(atMaximum.percent).toBeLessThanOrEqual(34);
+        await expectObservedWidthToMatch();
+
+        await dragHandleBy(2_000);
+        const atMinimum = await measureDetailWidth();
+        expect(atMinimum.percent).toBeGreaterThanOrEqual(19);
+        expect(atMinimum.percent).toBeLessThanOrEqual(21);
+        await expectObservedWidthToMatch();
+
+        expect(runtimeErrors).toEqual([]);
+        expectNoOverflow('/global-map interactive resize', await collectOverflowData(page));
     });
 
     test('interactive surfaces should keep overflow-safe layout', async ({ page, isMobile }) => {

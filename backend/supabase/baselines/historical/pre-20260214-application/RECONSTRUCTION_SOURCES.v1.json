@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "archiveSha256": "21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3",
+  "historicalSourceArchiveSha256": "1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11",
+  "status": "candidate_ordered",
+  "reconstructionAuthorized": false,
+  "unresolvedGaps": [
+    "platform_prerequisites",
+    "overlap_classification",
+    "dual_clean_replay"
+  ],
+  "purpose": "source-only reconstruction candidate; not historical application proof or hosted-state evidence",
+  "compatibilityExclusions": [
+    {
+      "ordinal": 0,
+      "sourcePath": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "sourceGitBlobSha1": "b286fb1589b46203a0010d44c29ce65a39188fbc",
+      "sourceSha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33",
+      "startLine": 916,
+      "endLine": 954,
+      "byteLength": 1252,
+      "sha256": "e30512d59c749072280bd463d932cf54fba534b8d7244740a60ff0c4fa3603e0",
+      "objectType": "function",
+      "objectIdentity": "public.batch_insert_restaurants_from_jsonl(jsonb[])",
+      "reasonCode": "truncated_legacy_function_source",
+      "disposition": "excluded_without_replacement",
+      "evidenceScope": "candidate_only"
+    }
+  ],
+  "compatibilityRelocations": [
+    {
+      "ordinal": 0,
+      "sourcePath": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "sourceGitBlobSha1": "b286fb1589b46203a0010d44c29ce65a39188fbc",
+      "sourceSha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33",
+      "startLine": 1802,
+      "endLine": 1819,
+      "byteLength": 860,
+      "sha256": "3c34d8721bcf7454e59b2dd15bc0895ec7bb91aed8e8caafe20acf423bc0ceb4",
+      "identities": [
+        "extensions schema",
+        "pg_trgm",
+        "uuid-ossp",
+        "btree_gin"
+      ],
+      "reasonCode": "extension_prerequisites_declared_after_dependents",
+      "disposition": "relocated_before_source_without_modification",
+      "evidenceScope": "candidate_only"
+    }
+  ],
+  "entries": [
+    {
+      "ordinal": 0,
+      "path": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "blobSha1": "b286fb1589b46203a0010d44c29ce65a39188fbc",
+      "byteLength": 79793,
+      "sha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33",
+      "role": "historical_baseline_candidate"
+    },
+    {
+      "ordinal": 1,
+      "path": "supabase/migrations/temp/20251210_redesign_submissions_v2.sql",
+      "blobSha1": "254765d14e47bc2754fcbbcecc1365153f944505",
+      "byteLength": 16452,
+      "sha256": "3e5bf820c508f24f02b3a81843707758642a53c1d90084f201bb60f7836bb674",
+      "role": "historical_prerequisite_candidate"
+    },
+    {
+      "ordinal": 2,
+      "path": "apps/web/supabase/migrations/20251219_db_performance_optimization.sql",
+      "blobSha1": "454d276962a33311cb22406bc9b7b0987c695053",
+      "byteLength": 10370,
+      "sha256": "d7bbc68e095fab250bbb4796a7a4b0e8bb0d3ab9b9310c668cce27e00a2db17a",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 3,
+      "path": "apps/web/supabase/migrations/20260118_create_ocr_logs.sql",
+      "blobSha1": "f86e1d1c534cc0cffce2122a6a60795d060ac81c",
+      "byteLength": 1160,
+      "sha256": "e982bc7d52d28f77166f976b225988f998d87c9af734cd99917c84b7fb9e2a82",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 4,
+      "path": "backend/supabase/migrations/20260124_create_document_embeddings_bge.sql",
+      "blobSha1": "93610e964e508e749d0f722050a66e68c3d84437",
+      "byteLength": 1455,
+      "sha256": "3f0f090a8e2d9de41221720cfe63afbb173e2264d2614263b34a53075a1806f9",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 5,
+      "path": "backend/supabase/migrations/20260124_create_restaurants.sql",
+      "blobSha1": "1e4b06979766cc8e6f33fc40aab09342e0d6131c",
+      "byteLength": 1621,
+      "sha256": "73b1453e2dbe70ff72f375e408b89e023c81a79d6931ccc48688d180013eb557",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 6,
+      "path": "backend/supabase/migrations/20260124_fix_approved_name_sync.sql",
+      "blobSha1": "d91d492d858d7b8a6abbdbea31a059884b5cef19",
+      "byteLength": 18892,
+      "sha256": "9e85765dcb74cbce098a384ed08ef34a59b7b52ad753b283cc930b6f7e78c100",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 7,
+      "path": "backend/supabase/migrations/20260124_update_embeddings_constraint.sql",
+      "blobSha1": "cb36c4cb42704535c572cc04bd2524664759f959",
+      "byteLength": 488,
+      "sha256": "a9487144c0c2a1a887fd0523a6a47a36a7810ba7e9bb677c209082c040a0caef",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 8,
+      "path": "backend/supabase/migrations/20260131_fix_search_rpc.sql",
+      "blobSha1": "78d19d468790ae2e41579c68b6184396cc2bfded",
+      "byteLength": 4708,
+      "sha256": "cf3a8f0c282596f4fe3c6d4a9d670544c62ada8510e8df765a18d73062befa43",
+      "role": "current_recovery_candidate"
+    },
+    {
+      "ordinal": 9,
+      "path": "backend/supabase/migrations/20260213_create_announcements_table_and_seed.sql",
+      "blobSha1": "d78afb7dd440cadf4d5c144554ba9e38c36d17e3",
+      "byteLength": 15242,
+      "sha256": "bd102f106bda1d9aaaabe14edbd753ebd456031181b14dbbee10eb3815c4d785",
+      "role": "current_recovery_candidate"
+    }
+  ]
+}

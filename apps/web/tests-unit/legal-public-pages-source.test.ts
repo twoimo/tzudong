@@ -22,7 +22,8 @@ describe('public legal and app-review readiness contracts', () => {
     expect(dataDeletionPage).toContain('계정 완전 삭제');
     expect(dataDeletionPage).toContain('supportMailto');
     expect(dataDeletionPage).toContain('siteConfig.legal.myPageProfilePath');
-    expect(dataDeletionPage).toContain('작성한 리뷰와 제보 내역은 서비스 무결성을 위해 작성자를 탈퇴한 사용자로 익명화');
+    expect(dataDeletionPage).toContain('리뷰·제보 등 서비스 무결성 검토가 필요한 콘텐츠는 승인된 기준이 있을 때');
+    expect(dataDeletionPage).toContain('모든 시스템 또는 제공자 백업에서의 삭제 완료를 단정하지 않습니다.');
 
     expect(seoSource).toContain("path: '/privacy'");
     expect(seoSource).toContain("path: '/data-deletion'");

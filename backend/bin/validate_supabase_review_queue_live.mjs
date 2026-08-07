@@ -3,6 +3,7 @@
 import 'dotenv/config';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { logSafeError } from '../utils/privacy-log.mjs';
 
 const LOCAL_URL = 'https://openapi.naver.com/v1/search/local.json';
 const GEOCODE_URL = 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode';
@@ -42,7 +43,10 @@ async function naverLocal(query) {
     const payload = await response.json();
     const items = (payload.items || []).map((item) => ({ title: norm(item.title), category: norm(item.category), address: norm(item.address), roadAddress: norm(item.roadAddress), mapx: item.mapx, mapy: item.mapy, lng: naverCoord(item.mapx), lat: naverCoord(item.mapy) }));
     return { ok: items.length > 0, status: items.length ? 'ok' : 'no_result', items };
-  } catch (error) { return { ok: false, status: 'api_error', error_type: error.constructor?.name || 'Error', items: [] }; }
+  } catch (error) {
+    logSafeError(error, (line) => process.stderr.write(`review_queue_naver_local_failed ${line}`));
+    return { ok: false, status: 'api_error', error_type: 'backend_error', items: [] };
+  }
 }
 async function geocode(query) {
   if (!norm(query)) return { ok: false, status: 'empty_query', addresses: [] };
@@ -52,7 +56,10 @@ async function geocode(query) {
     const payload = await response.json();
     const addresses = (payload.addresses || []).slice(0, 3).map((item) => ({ roadAddress: norm(item.roadAddress), jibunAddress: norm(item.jibunAddress), englishAddress: norm(item.englishAddress), x: item.x, y: item.y, lng: num(item.x), lat: num(item.y) }));
     return { ok: addresses.length > 0, status: addresses.length ? 'ok' : 'no_result', addresses };
-  } catch (error) { return { ok: false, status: 'api_error', error_type: error.constructor?.name || 'Error', addresses: [] }; }
+  } catch (error) {
+    logSafeError(error, (line) => process.stderr.write(`review_queue_geocode_failed ${line}`));
+    return { ok: false, status: 'api_error', error_type: 'backend_error', addresses: [] };
+  }
 }
 function bestLocalMatch(row, local, geoTop) {
   let best = null;
@@ -115,4 +122,7 @@ async function main() {
   await fs.writeFile(path.join(args.reportDir, `review-queue-live-validation${suffix}.csv`), csv, 'utf8');
   console.log(JSON.stringify({ ...payload, results: undefined }, null, 2));
 }
-main().catch((error) => { console.error(error.stack || error.message || String(error)); process.exitCode = 1; });
+main().catch((error) => {
+  logSafeError(error, (line) => process.stderr.write(`review_queue_validation_failed ${line}`));
+  process.exitCode = 1;
+});

@@ -1,92 +1,80 @@
 import { supabase } from '@/integrations/supabase/client';
+import {
+  isAccountDeletionIdempotencyKey,
+  isAccountDeletionRequestId,
+} from '@/lib/privacy/account-deletion';
 
-export type AccountDeletionPreview = {
-  previewHash: string;
-  sourceManifestHash: string;
-  deleteCount: number;
-  anonymizeCount: number;
-  separateCount: number;
-  retainCount: number;
-};
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type RecordValue = Record<string, unknown>;
 
-type ReauthenticationSession = {
-  bearerToken: string;
-};
-
-type ReauthenticationProof = {
+type AccountDeletionReauthBinding = Readonly<{
+  userId: string;
   proofId: string;
-  expiresAt: string;
-};
+  requestId: string;
+  idempotencyKey: string;
+}>;
+export type AccountDeletionReauthIssueReceipt = Readonly<{ proofId: string; expiresAt: string }>;
 
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
+const isRecord = (value: unknown): value is RecordValue =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const hasExactKeys = (value: RecordValue, keys: readonly string[]) =>
+  Object.keys(value).length === keys.length && Object.keys(value).every((key) => keys.includes(key));
 
-function isNonNegativeInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
-}
+export const asSingleRow = (value: unknown): RecordValue | null =>
+  Array.isArray(value) && value.length === 1 && isRecord(value[0]) ? value[0] : null;
+export const isAccountDeletionReauthProofId = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_PATTERN.test(value);
 
-export function asSingleRow(value: unknown): Record<string, unknown> | null {
-  return Array.isArray(value) && value.length === 1 && value[0] !== null && typeof value[0] === 'object'
-    ? value[0] as Record<string, unknown>
+export const parseAccountDeletionReauthRequest = (
+  value: unknown,
+): AccountDeletionReauthBinding | null =>
+  isRecord(value)
+  && hasExactKeys(value, ['userId', 'proofId', 'requestId', 'idempotencyKey'])
+  && typeof value.userId === 'string'
+  && UUID_PATTERN.test(value.userId)
+  && isAccountDeletionReauthProofId(value.proofId)
+  && isAccountDeletionRequestId(value.requestId)
+  && isAccountDeletionIdempotencyKey(value.idempotencyKey)
+    ? {
+      userId: value.userId,
+      proofId: value.proofId,
+      requestId: value.requestId,
+      idempotencyKey: value.idempotencyKey,
+    }
     : null;
-}
+export const parseAccountDeletionReauthIssueReceipt = (value: unknown): AccountDeletionReauthIssueReceipt | null =>
+  isRecord(value)
+  && hasExactKeys(value, ['proofId', 'expiresAt'])
+  && isAccountDeletionReauthProofId(value.proofId)
+  && typeof value.expiresAt === 'string'
+  && Number.isFinite(Date.parse(value.expiresAt))
+    ? { proofId: value.proofId, expiresAt: value.expiresAt }
+    : null;
 
-export function parseAccountDeletionPreview(value: unknown): AccountDeletionPreview | null {
-  if (!value || typeof value !== 'object') return null;
-  const row = value as Record<string, unknown>;
-  if (
-    !isNonEmptyString(row.preview_hash) ||
-    !isNonEmptyString(row.source_manifest_hash) ||
-    !isNonNegativeInteger(row.delete_count) ||
-    !isNonNegativeInteger(row.anonymize_count) ||
-    !isNonNegativeInteger(row.separate_count) ||
-    !isNonNegativeInteger(row.retain_count)
-  ) return null;
-
-  return {
-    previewHash: row.preview_hash,
-    sourceManifestHash: row.source_manifest_hash,
-    deleteCount: row.delete_count,
-    anonymizeCount: row.anonymize_count,
-    separateCount: row.separate_count,
-    retainCount: row.retain_count,
-  };
-}
-
-
-export async function createAccountDeletionReauthenticationSession(input: {
+export async function createAccountDeletionReauthenticationSession(input: Readonly<{
   userId: string;
   email: string;
   password: string;
-}): Promise<ReauthenticationSession> {
-  const { userId, email, password } = input;
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+}>) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: input.email,
+    password: input.password,
   });
-
-  if (signInError || !signInData.session || signInData.user?.id !== userId) {
-    throw new Error('현재 비밀번호 재확인이 필요합니다.');
-  }
-
-  return { bearerToken: signInData.session.access_token };
+  if (error || !data.session?.access_token || data.user?.id !== input.userId) return null;
+  return { bearerToken: data.session.access_token };
 }
 
-export async function issueAccountDeletionReauthenticationProof(input: {
-  userId: string;
-}): Promise<ReauthenticationProof> {
-  const { data: proofRows, error: proofError } = await supabase.rpc(
-    'issue_account_deletion_reauth_proof',
-    { p_target_user_id: input.userId },
-  );
-  const proof = asSingleRow(proofRows);
-  const proofId = proof?.proof_id;
-  const expiresAt = proof?.expires_at;
-
-  if (proofError || !isNonEmptyString(proofId) || !isNonEmptyString(expiresAt)) {
-    throw new Error('계정 삭제 재인증 증명 발급에 실패했습니다.');
-  }
-
-  return { proofId, expiresAt };
+export async function issueAccountDeletionReauthenticationProof(userId: string) {
+  const { data, error } = await supabase.rpc('issue_account_deletion_reauth_proof', {
+    p_target_user_id: userId,
+  });
+  if (error) return null;
+  const row = asSingleRow(data);
+  return parseAccountDeletionReauthIssueReceipt(row && {
+    proofId: row.proof_id,
+    expiresAt: row.expires_at,
+  });
 }
+
+export const bearerTokenFromAuthorization = (value: string | null): string | null =>
+  value?.startsWith('Bearer ') && value.length > 'Bearer '.length ? value.slice('Bearer '.length) : null;

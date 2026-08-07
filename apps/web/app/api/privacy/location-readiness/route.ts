@@ -5,12 +5,8 @@ import { resolveDeviceLocationReadiness } from '@/lib/privacy/location-readiness
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export function GET() {
-  const readiness = resolveDeviceLocationReadiness(process.env);
-
-  return NextResponse.json(readiness, {
-    headers: {
-      'Cache-Control': 'no-store',
-    },
+export async function GET() {
+  return NextResponse.json(resolveDeviceLocationReadiness(), {
+    headers: { 'Cache-Control': 'no-store, max-age=0' },
   });
 }

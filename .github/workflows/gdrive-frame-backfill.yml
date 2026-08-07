@@ -45,7 +45,18 @@ jobs:
     # Public standard runners do not consume the Pro 3000-minute quota, and
     # catch-up backfills can legitimately exceed the former budget guard.
     timeout-minutes: 360
-    if: ${{ (github.event_name != 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch) && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch && github.event.workflow_run.event == 'schedule')) && vars.G037_WRITE_FREEZE != 'active' }}
+    if: >-
+      ${{ github.repository == github.event.repository.full_name &&
+          github.ref_name == github.event.repository.default_branch &&
+          github.ref_protected &&
+          (github.event_name != 'workflow_run' ||
+            (github.event.workflow_run.conclusion == 'success' &&
+             github.event.workflow_run.event == 'schedule' &&
+             github.event.workflow_run.head_branch == github.event.repository.default_branch &&
+             github.event.workflow_run.head_repository.full_name == github.repository)) &&
+          vars.G037_WRITE_FREEZE != 'active' }}
+    environment:
+      name: production-backfill
     env:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
@@ -57,7 +68,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bind trusted backfill source
+        env:
+          TRIGGER_REPOSITORY: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name || github.repository }}
+          TRIGGER_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          TRIGGER_REF_NAME: ${{ github.ref_name }}
+          TRIGGER_REF_PROTECTED: ${{ github.ref_protected }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "$TRIGGER_REPOSITORY"
+          test "$TRIGGER_REF_NAME" = "$DEFAULT_BRANCH"
+          test "$TRIGGER_REF_PROTECTED" = "true"
+          test -n "$TRIGGER_SHA"
+          test "$(git rev-parse HEAD)" = "$TRIGGER_SHA"
+          git merge-base --is-ancestor "$TRIGGER_SHA" "origin/$DEFAULT_BRANCH"
 
       - name: Check Actions budget posture before backfill
         id: budget
@@ -295,6 +323,7 @@ jobs:
           import json, sys
           from collections import OrderedDict
           from pathlib import Path
+
           queue_path, plan_path, max_batches_raw, max_items_raw, manifest_dir, staging_manifest_path, expected_path, remote_list_path, verified_path = sys.argv[1:10]
           max_batches = max(1, int(max_batches_raw or '1'))
           max_items = max(1, int(max_items_raw or '500'))
@@ -319,29 +348,50 @@ jobs:
                   expected_md5s[rel] = md5
           remote_verified = {rel for rel, md5 in expected_md5s.items() if remote_md5s.get(rel) == md5}
           Path(verified_path).write_text('\n'.join(sorted(remote_verified)) + ('\n' if remote_verified else ''), encoding='utf-8')
+
           staging_by_rel = {}
-          shard_items = OrderedDict()
+          shard_contracts = OrderedDict()
+          source_bindings = {}
           for manifest_path in sorted(Path(manifest_dir).rglob('current-upload-staging-manifest.json')):
               try:
                   payload = json.loads(manifest_path.read_text(encoding='utf-8'))
               except Exception:
                   continue
+              source_binding = {
+                  'runId': payload.get('runId'),
+                  'expectedManifestSha256': payload.get('expectedManifestSha256'),
+              }
               for shard in payload.get('shards', []):
                   if not isinstance(shard, dict):
                       continue
-                  remote = shard.get('remoteShard') or shard.get('archivePath')
-                  if not remote:
+                  required_shard_keys = {
+                      'shardId', 'remoteShard', 'archiveSha256', 'archiveSize',
+                      'itemCount', 'byteCount', 'items', 'archiveReceipt',
+                  }
+                  if set(shard) != required_shard_keys:
+                      raise SystemExit('staging shard contract has missing or extra fields')
+                  remote = shard.get('remoteShard')
+                  if not isinstance(remote, str) or not remote:
                       continue
-                  bucket = shard_items.setdefault(remote, OrderedDict())
+                  existing = shard_contracts.get(remote)
+                  if existing is not None and (
+                      existing != shard or source_bindings[remote] != source_binding
+                  ):
+                      raise SystemExit(f'conflicting staging contracts for {remote}')
+                  shard_contracts[remote] = shard
+                  source_bindings[remote] = source_binding
                   for item in shard.get('items', []):
                       if not isinstance(item, dict):
                           continue
                       rel = item.get('relativePath')
                       if isinstance(rel, str) and rel:
+                          previous = staging_by_rel.get(rel)
+                          if previous is not None and previous != remote:
+                              raise SystemExit(f'conflicting staging membership for {rel}')
                           staging_by_rel[rel] = remote
-                          bucket.setdefault(rel, item)
+
           eligible_states = {'staged', 'missing_local', 'pending_local'}
-          shards = OrderedDict()
+          selected_by_remote = OrderedDict()
           missing = []
           for line in open(queue_path, encoding='utf-8'):
               if not line.strip():
@@ -350,35 +400,53 @@ jobs:
               item = entry.get('item') or {}
               rel = item.get('relativePath')
               state = entry.get('state') or item.get('state')
-              shard = entry.get('stagingShard') or item.get('stagingShard') or staging_by_rel.get(rel)
+              remote = entry.get('stagingShard') or item.get('stagingShard') or staging_by_rel.get(rel)
               if rel in remote_verified:
                   continue
-              if state in eligible_states and rel and shard:
-                  shards.setdefault(shard, []).append(rel)
+              if (
+                  state in eligible_states
+                  and isinstance(rel, str)
+                  and rel
+                  and remote in shard_contracts
+              ):
+                  selected_by_remote.setdefault(remote, OrderedDict()).setdefault(rel, None)
               elif state == 'missing_local':
                   missing.append(rel)
+
           selected = []
           selected_item_count = 0
-          for remote, items in list(shards.items())[:max_batches]:
+          for remote, selected_items_by_path in list(selected_by_remote.items())[:max_batches]:
               remaining = max_items - selected_item_count
               if remaining <= 0:
                   break
-              selected_items = items[:remaining]
+              selected_items = list(selected_items_by_path)[:remaining]
               if selected_items:
-                  selected.append((remote, selected_items))
+                  selected.append(
+                      {
+                          'remoteShard': remote,
+                          'items': selected_items,
+                          'shard': shard_contracts[remote],
+                          'sourceManifestBinding': source_bindings[remote],
+                      }
+                  )
                   selected_item_count += len(selected_items)
+
           staging_manifest = {
               'schemaVersion': 2,
               'shards': [
                   {
                       'remoteShard': remote,
-                      'items': list(items_by_rel.values()),
+                      'shard': shard,
+                      'sourceManifestBinding': source_bindings[remote],
                   }
-                  for remote, items_by_rel in shard_items.items()
+                  for remote, shard in shard_contracts.items()
               ],
           }
-          Path(staging_manifest_path).write_text(json.dumps(staging_manifest, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-          plan = {'shards': [{'remoteShard': remote, 'items': items} for remote, items in selected], 'missingItems': missing}
+          Path(staging_manifest_path).write_text(
+              json.dumps(staging_manifest, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          plan = {'shards': selected, 'missingItems': missing}
           Path(plan_path).write_text(json.dumps(plan, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           print('Backfill plan telemetry: ' + json.dumps({
               'selectedShardCount': len(selected),
@@ -402,25 +470,35 @@ jobs:
           fi
 
           for index in $(seq 0 $((SHARD_COUNT - 1))); do
-            REMOTE_SHARD=$(jq -r ".shards[$index].remoteShard" "$PLAN_JSON")
-            ARCHIVE_NAME="$(basename "$REMOTE_SHARD")"
-            LOCAL_ARCHIVE="$RESTORE_DIR/$ARCHIVE_NAME"
+            REMOTE_SHARD=$(jq -er ".shards[$index].remoteShard" "$PLAN_JSON")
+            LOCAL_ARCHIVE="$RESTORE_DIR/backfill-shard-$index.tar.gz"
+            SHARD_CONTRACT="$WORK_DIR/backfill-shard-$index.contract.json"
             FILES_FROM="$WORK_DIR/backfill-shard-$index.txt"
             FILES_FROM_ABS="$ROOT_DIR/$FILES_FROM"
+            SHARD_EXTRACT_DIR="$EXTRACT_DIR/shard-$index"
+            SHARD_RECEIPT="$WORK_DIR/backfill-shard-$index.receipt.json"
+            jq -e ".shards[$index].shard" "$PLAN_JSON" > "$SHARD_CONTRACT"
             jq -r ".shards[$index].items[]" "$PLAN_JSON" > "$FILES_FROM"
             SHARD_EXIT=0
             set +e
             rclone copyto "$REMOTE_SHARD" "$LOCAL_ARCHIVE" --stats 30s "${RCLONE_DRIVE_FLAGS[@]}" "${RCLONE_RETRY_FLAGS[@]}"
             COPY_EXIT=$?
             if [ "$COPY_EXIT" -eq 0 ]; then
-              tar -xzf "$LOCAL_ARCHIVE" -C "$EXTRACT_DIR"
-              TAR_EXIT=$?
+              python3 backend/utils/run_daily_helpers.py extract-gdrive-backfill-shard \
+                --archive "$LOCAL_ARCHIVE" \
+                --shard-contract "$SHARD_CONTRACT" \
+                --expected-manifest "$EXPECTED_MANIFEST" \
+                --files-from "$FILES_FROM" \
+                --output-dir "$SHARD_EXTRACT_DIR" \
+                --output-receipt "$SHARD_RECEIPT" \
+                > "$WORK_DIR/backfill-shard-$index.extract.json"
+              EXTRACT_EXIT=$?
             else
-              TAR_EXIT=1
+              EXTRACT_EXIT=1
             fi
-            if [ "$COPY_EXIT" -eq 0 ] && [ "$TAR_EXIT" -eq 0 ]; then
+            if [ "$COPY_EXIT" -eq 0 ] && [ "$EXTRACT_EXIT" -eq 0 ]; then
               (
-                cd "$EXTRACT_DIR"
+                cd "$SHARD_EXTRACT_DIR"
                 rclone copy . "$GDRIVE_FRAMES_PATH" \
                   --files-from "$FILES_FROM_ABS" \
                   --no-traverse --ignore-existing \
@@ -441,10 +519,10 @@ jobs:
             set -e
             if [ "$SHARD_EXIT" -eq 0 ]; then
               cat "$FILES_FROM" >> "$VERIFIED_FILES"
-              echo "Backfill shard $(basename "$REMOTE_SHARD") copied; terminal status is deferred until cumulative lsjson --hash proof completes."
+              echo "Backfill shard $index copied from a hash-bound archive; terminal status is deferred until cumulative lsjson --hash proof completes."
             else
               BACKFILL_EXIT="$SHARD_EXIT"
-              echo "Backfill shard $(basename "$REMOTE_SHARD") failed with exit=$SHARD_EXIT; preserving residual queue."
+              echo "Backfill shard $index failed with exit=$SHARD_EXIT; preserving residual queue."
             fi
           done
 
@@ -497,7 +575,6 @@ jobs:
               --output "$UPLOAD_STATUS" \
               --residual-queue "$RESIDUAL_QUEUE" \
               --verified-files-from "$VERIFIED_FILES" \
-              --staging-manifest "$STAGING_MANIFEST" \
               --run-id "${GITHUB_RUN_ID:-}" \
               --policy warn \
               --upload-mode backfill \
@@ -542,6 +619,9 @@ jobs:
             backend/log/cron/gdrive-backfill/backfill-remote-files.json
             backend/log/cron/gdrive-backfill/current-upload-staging-manifest.json
             backend/log/cron/gdrive-backfill/backfill-rclone.log
+            backend/log/cron/gdrive-backfill/backfill-shard-*.contract.json
+            backend/log/cron/gdrive-backfill/backfill-shard-*.extract.json
+            backend/log/cron/gdrive-backfill/backfill-shard-*.receipt.json
             backend/log/cron/gdrive-backfill/staging-manifests/**
             backend/log/cron/gdrive-backfill/restored/**
             backend/log/cron/gdrive-backfill/backfill.lock.json

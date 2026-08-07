@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections import Counter
 from datetime import datetime, timezone
@@ -27,6 +26,10 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.runtime_paths import load_backend_env, resolve_backend_root
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 
 try:
     from supabase import create_client
@@ -202,11 +205,11 @@ def load_supabase_client() -> Any | None:
         load_dotenv(legacy_env)
     load_backend_env(backend_root, prefer_local=False)
 
-    url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("VITE_SUPABASE_PUBLISHABLE_KEY")
-    if not url or not key:
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
         return None
-    return create_client(url, key)
+    return create_client(credentials.url, credentials.service_role_key)
 
 
 def fetch_db_rows_by_trace_id(trace_ids: list[str], chunk_size: int = 100) -> dict[str, dict[str, Any]]:

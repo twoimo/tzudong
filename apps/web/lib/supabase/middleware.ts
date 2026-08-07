@@ -1,52 +1,30 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { Database } from '@/integrations/supabase/types'
 import {
     AUTH_LOGIN_QUERY_PARAM,
     AUTH_LOGIN_QUERY_VALUE,
     AUTH_REDIRECT_NEXT_PARAM,
     AUTH_REDIRECT_REASON_PARAM,
+    getSafeAuthNextPath,
     type AuthRedirectReason,
 } from '@/lib/auth/auth-redirect'
+import {
+    getCurrentPrivacyEligibility,
+    hasLivePrivacyEligibilityReceipt,
+    signOutRejectedPrivacySession,
+} from '@/lib/privacy/eligibility'
+import { classifyPublicEligibilitySessionRoute } from '@/lib/auth/public-eligibility-session'
+import { hasSupabaseAuthCookieSessionHint } from '@/lib/supabase-auth-session-hints'
 
-const isRefreshTokenNotFoundError = (error: unknown) => {
-    if (!error || typeof error !== 'object') return false;
 
-    const code = 'code' in error ? String(error.code) : '';
-    if (code === 'refresh_token_not_found') return true;
 
-    const message = 'message' in error ? String(error.message).toLowerCase() : '';
-    return message.includes('invalid refresh token') || message.includes('refresh token not found');
-};
-
-const PRIVACY_PROFILE_ALLOWED_STATUSES = ['eligible', 'guardian_verified'] as const;
-const isPrivacyProfileStatusAllowed = (status: unknown) =>
-    typeof status === 'string' && PRIVACY_PROFILE_ALLOWED_STATUSES.includes(status as (typeof PRIVACY_PROFILE_ALLOWED_STATUSES)[number]);
-
-const isApiRequest = (request: NextRequest) =>
-    request.nextUrl.pathname.startsWith('/api/');
-
-const isMissingOptionalAdminStatusStoreError = (error: unknown) => {
-    if (!error || typeof error !== 'object') return false;
-
-    const code = 'code' in error ? String(error.code) : '';
-    if (code === 'PGRST205' || code === '42P01') return true;
-
-    const message = 'message' in error ? String(error.message).toLowerCase() : '';
-    return message.includes('user_account_status') && (
-        message.includes('could not find the table') ||
-        message.includes('does not exist') ||
-        message.includes('schema cache')
-    );
-};
+const isSupabaseAuthCookie = (name: string) =>
+    name.startsWith('sb-') && (name.includes('auth-token') || name.includes('code-verifier'));
 
 const clearSupabaseAuthCookies = (request: NextRequest, response: NextResponse) => {
-    const allCookies = request.cookies.getAll();
-    for (const cookie of allCookies) {
-        const isSupabaseAuthCookie =
-            cookie.name.startsWith('sb-') &&
-            (cookie.name.includes('auth-token') || cookie.name.includes('code-verifier'));
-
-        if (!isSupabaseAuthCookie) continue;
+    for (const cookie of request.cookies.getAll()) {
+        if (!isSupabaseAuthCookie(cookie.name)) continue;
 
         response.cookies.set(cookie.name, '', {
             path: '/',
@@ -54,11 +32,21 @@ const clearSupabaseAuthCookies = (request: NextRequest, response: NextResponse) 
         });
     }
 };
+const isEligibilityExemptRequest = (request: NextRequest) =>
+    classifyPublicEligibilitySessionRoute({
+        pathname: request.nextUrl.pathname,
+        method: request.method,
+    }) === 'loop-safe';
+const isApiRequest = (request: NextRequest) => request.nextUrl.pathname.startsWith('/api/');
 
-const isAdminPageRequest = (request: NextRequest) => {
+const isProtectedAdminRequest = (request: NextRequest) => {
+    const { pathname } = request.nextUrl;
+    return pathname === '/admin' || pathname.startsWith('/admin/') || pathname === '/api/admin' || pathname.startsWith('/api/admin/');
+};
+
+const isAdminNavigationRequest = (request: NextRequest) => {
     const { pathname } = request.nextUrl;
     const method = request.method.toUpperCase();
-
     return (method === 'GET' || method === 'HEAD') && (pathname === '/admin' || pathname.startsWith('/admin/'));
 };
 
@@ -69,9 +57,17 @@ const isMyPageRequest = (request: NextRequest) => {
     return (method === 'GET' || method === 'HEAD') && (pathname === '/mypage' || pathname.startsWith('/mypage/'));
 };
 
-const getRequestedPathWithSearch = (request: NextRequest) => {
+const getCanonicalSameOriginNextPath = (request: NextRequest) => {
     const { pathname, search } = request.nextUrl;
-    return `${pathname}${search}`;
+    const requestedPath = `${pathname}${search}`;
+
+    try {
+        decodeURIComponent(requestedPath);
+    } catch {
+        return '/';
+    }
+
+    return getSafeAuthNextPath(requestedPath);
 };
 
 const redirectAuthRequiredWithSessionCookies = (
@@ -81,8 +77,9 @@ const redirectAuthRequiredWithSessionCookies = (
 ) => {
     const redirectUrl = new URL('/auth/required', request.url);
     redirectUrl.searchParams.set('reason', reason);
-    redirectUrl.searchParams.set('next', getRequestedPathWithSearch(request));
+    redirectUrl.searchParams.set('next', getCanonicalSameOriginNextPath(request));
     const redirectResponse = NextResponse.redirect(redirectUrl);
+    redirectResponse.headers.set('Cache-Control', 'no-store');
 
     for (const cookie of sourceResponse.cookies.getAll()) {
         redirectResponse.cookies.set(cookie);
@@ -90,27 +87,14 @@ const redirectAuthRequiredWithSessionCookies = (
 
     return redirectResponse;
 };
-const buildNoStoreForbiddenResponse = (sourceResponse: NextResponse) => {
-    const response = NextResponse.json({ error: 'forbidden' }, {
-        status: 403,
-        headers: {
-            'Cache-Control': 'no-store',
-        },
-    });
-
-    for (const cookie of sourceResponse.cookies.getAll()) {
-        response.cookies.set(cookie);
-    }
-
-    return response;
-};
 
 const redirectAdminLoginWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
     const redirectUrl = new URL('/', request.url);
     redirectUrl.searchParams.set(AUTH_LOGIN_QUERY_PARAM, AUTH_LOGIN_QUERY_VALUE);
     redirectUrl.searchParams.set(AUTH_REDIRECT_REASON_PARAM, 'admin');
-    redirectUrl.searchParams.set(AUTH_REDIRECT_NEXT_PARAM, getRequestedPathWithSearch(request));
+    redirectUrl.searchParams.set(AUTH_REDIRECT_NEXT_PARAM, getCanonicalSameOriginNextPath(request));
     const redirectResponse = NextResponse.redirect(redirectUrl);
+    redirectResponse.headers.set('Cache-Control', 'no-store');
 
     for (const cookie of sourceResponse.cookies.getAll()) {
         redirectResponse.cookies.set(cookie);
@@ -121,6 +105,7 @@ const redirectAdminLoginWithSessionCookies = (request: NextRequest, sourceRespon
 
 const redirectAdminHomeWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) => {
     const redirectResponse = NextResponse.redirect(new URL('/', request.url));
+    redirectResponse.headers.set('Cache-Control', 'no-store');
 
     for (const cookie of sourceResponse.cookies.getAll()) {
         redirectResponse.cookies.set(cookie);
@@ -128,18 +113,90 @@ const redirectAdminHomeWithSessionCookies = (request: NextRequest, sourceRespons
 
     return redirectResponse;
 };
+const adminJsonResponseWithSessionCookies = (
+    sourceResponse: NextResponse,
+    error: 'Unauthorized' | 'Forbidden' | 'Service unavailable',
+    status: 401 | 403 | 503,
+) => {
+    const response = NextResponse.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } });
+    for (const cookie of sourceResponse.cookies.getAll()) {
+        response.cookies.set(cookie);
+    }
+    return response;
+};
+
+const adminUnauthorizedResponse = (request: NextRequest, sourceResponse: NextResponse) =>
+    isAdminNavigationRequest(request)
+        ? redirectAdminLoginWithSessionCookies(request, sourceResponse)
+        : adminJsonResponseWithSessionCookies(sourceResponse, 'Unauthorized', 401);
+
+const adminForbiddenResponse = (request: NextRequest, sourceResponse: NextResponse) =>
+    isAdminNavigationRequest(request)
+        ? redirectAdminHomeWithSessionCookies(request, sourceResponse)
+        : adminJsonResponseWithSessionCookies(sourceResponse, 'Forbidden', 403);
 
 const redirectMyPageAuthRequiredWithSessionCookies = (request: NextRequest, sourceResponse: NextResponse) =>
     redirectAuthRequiredWithSessionCookies(request, sourceResponse, 'mypage');
+const eligibilityFailureResponse = (request: NextRequest, sourceResponse: NextResponse) => {
+    clearSupabaseAuthCookies(request, sourceResponse);
 
-export async function updateSession(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    })
+    if (isApiRequest(request)) {
+        const response = NextResponse.json(
+            { error: 'Forbidden' },
+            { status: 403, headers: { 'Cache-Control': 'no-store' } },
+        );
+        for (const cookie of sourceResponse.cookies.getAll()) {
+            response.cookies.set(cookie);
+        }
+        return response;
+    }
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    const redirectUrl = new URL('/auth/required', request.url);
+    redirectUrl.searchParams.set('reason', 'privacy');
+    redirectUrl.searchParams.set('next', getCanonicalSameOriginNextPath(request));
+
+    const response = NextResponse.redirect(redirectUrl);
+    response.headers.set('Cache-Control', 'no-store');
+    for (const cookie of sourceResponse.cookies.getAll()) {
+        response.cookies.set(cookie);
+    }
+    return response;
+};
+
+
+export async function updateSession(
+    request: NextRequest,
+    forwardedRequestHeaders: Headers = request.headers,
+) {
+    const createNextResponse = () => NextResponse.next({
+        request: { headers: forwardedRequestHeaders },
+    });
+    if (isEligibilityExemptRequest(request)) {
+        return createNextResponse();
+    }
+
+    const hasAuthCookie = hasSupabaseAuthCookieSessionHint(request.headers.get('cookie') ?? undefined);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        if (hasAuthCookie) {
+            return eligibilityFailureResponse(request, createNextResponse());
+        }
+        if (isProtectedAdminRequest(request) || isMyPageRequest(request)) {
+            return NextResponse.json(
+                { error: 'Service unavailable' },
+                { status: 503, headers: { 'Cache-Control': 'no-store' } },
+            );
+        }
+        return createNextResponse();
+    }
+
+    let supabaseResponse = createNextResponse()
+
+    const supabase = createServerClient<Database>(
+        supabaseUrl,
+        supabaseAnonKey,
         {
             cookies: {
                 getAll() {
@@ -149,9 +206,7 @@ export async function updateSession(request: NextRequest) {
                     cookiesToSet.forEach(({ name, value }) =>
                         request.cookies.set(name, value)
                     )
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
+                    supabaseResponse = createNextResponse()
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
                     )
@@ -168,51 +223,44 @@ export async function updateSession(request: NextRequest) {
         const { data: { user }, error } = await supabase.auth.getUser();
         authUserId = user?.id ?? null;
         authFailed = Boolean(error);
-
-        if (error && isRefreshTokenNotFoundError(error)) {
-            clearSupabaseAuthCookies(request, supabaseResponse);
-        }
-    } catch (error) {
+    } catch {
         authFailed = true;
-        if (isRefreshTokenNotFoundError(error)) {
-            clearSupabaseAuthCookies(request, supabaseResponse);
+    }
+
+    if (hasAuthCookie && (authFailed || !authUserId)) {
+        await signOutRejectedPrivacySession(supabase);
+        return eligibilityFailureResponse(request, supabaseResponse);
+    }
+
+    if (authUserId) {
+        const eligibility = await getCurrentPrivacyEligibility(supabase);
+        if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
+            await signOutRejectedPrivacySession(supabase);
+            return eligibilityFailureResponse(request, supabaseResponse);
         }
     }
 
-    if (!authFailed && authUserId) {
-        try {
-            const { data, error } = await (supabase
-                .from('privacy_age_profiles' as never)
-                .select('status')
-                .eq('owner', authUserId)
-                .maybeSingle() as Promise<{ data: { status: string | null } | null; error: unknown }>);
-
-            const isPrivacyProfileComplete = Boolean(data) && isPrivacyProfileStatusAllowed(data.status);
-
-            if (error || !isPrivacyProfileComplete) {
-                clearSupabaseAuthCookies(request, supabaseResponse);
-
-                if (isApiRequest(request)) {
-                    return buildNoStoreForbiddenResponse(supabaseResponse);
-                }
-
-                return redirectAuthRequiredWithSessionCookies(request, supabaseResponse, 'review');
-            }
-        } catch {
-            clearSupabaseAuthCookies(request, supabaseResponse);
-
-            if (isApiRequest(request)) {
-                return buildNoStoreForbiddenResponse(supabaseResponse);
-            }
-
-            return redirectAuthRequiredWithSessionCookies(request, supabaseResponse, 'review');
-        }
-    }
-
-
-    if (isAdminPageRequest(request)) {
+    if (isProtectedAdminRequest(request)) {
         if (authFailed || !authUserId) {
-            return redirectAdminLoginWithSessionCookies(request, supabaseResponse);
+            return adminUnauthorizedResponse(request, supabaseResponse);
+        }
+
+        let activeSession: boolean | null = null;
+        let activeSessionError = false;
+        try {
+            const { data, error } = await supabase
+                .rpc('is_current_auth_session_active' as never)
+                .returns<boolean>();
+            activeSession = typeof data === 'boolean' ? data : null;
+            activeSessionError = Boolean(error) || typeof data !== 'boolean';
+        } catch {
+            activeSessionError = true;
+        }
+
+        if (activeSessionError || activeSession !== true) {
+            await signOutRejectedPrivacySession(supabase);
+            clearSupabaseAuthCookies(request, supabaseResponse);
+            return adminUnauthorizedResponse(request, supabaseResponse);
         }
 
         const { data: role, error: roleError } = await supabase
@@ -223,7 +271,7 @@ export async function updateSession(request: NextRequest) {
             .maybeSingle();
 
         if (roleError || !role) {
-            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
+            return adminForbiddenResponse(request, supabaseResponse);
         }
 
         const { data: accountStatus, error: accountStatusError } = await supabase
@@ -232,12 +280,8 @@ export async function updateSession(request: NextRequest) {
             .eq('user_id', authUserId)
             .maybeSingle();
 
-        if (accountStatus?.account_status === 'disabled') {
-            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
-        }
-
-        if (accountStatusError && !isMissingOptionalAdminStatusStoreError(accountStatusError)) {
-            return redirectAdminHomeWithSessionCookies(request, supabaseResponse);
+        if (accountStatusError || accountStatus?.account_status !== 'active') {
+            return adminForbiddenResponse(request, supabaseResponse);
         }
     }
 
