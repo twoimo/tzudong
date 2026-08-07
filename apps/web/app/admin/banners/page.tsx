@@ -38,6 +38,12 @@ import {
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { toast } from '@/hooks/use-toast';
+import {
+    AD_BANNER_URL_VALIDATION_ERROR,
+    resolveAdBannerDestinationUrl,
+    resolveAdBannerMediaStoragePath,
+    resolveAdBannerPersistenceUrls,
+} from '@/lib/ad-banner-url';
 
 // 이미지 압축 옵션
 const IMAGE_COMPRESSION_OPTIONS = {
@@ -107,13 +113,21 @@ type BannerManagementPageWrapperProps = {
 };
 
 // Suspense 래퍼
-export default function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
+function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
     return (
         <Suspense fallback={null}>
             <BannerManagementPage embedded={embedded} />
         </Suspense>
     );
 }
+
+function BannerManagementRoutePage() {
+    return <BannerManagementPageWrapper />;
+}
+
+BannerManagementRoutePage.Embedded = BannerManagementPageWrapper;
+
+export default BannerManagementRoutePage;
 
 
 function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapperProps>) {
@@ -224,24 +238,23 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
 
     // 상세 편집 패널 열기 (수정)
     const openEditPanel = (banner: AdBanner) => {
+        const resolvedUrls = resolveAdBannerPersistenceUrls(banner);
         setEditingBanner(banner);
         setFormData({
             title: banner.title,
             description: banner.description || '',
-            image_url: banner.image_url,
-            video_url: banner.video_url,
-            media_type: banner.media_type,
-            link_url: banner.link_url || '',
+            image_url: resolvedUrls?.image_url ?? null,
+            video_url: resolvedUrls?.video_url ?? null,
+            media_type: resolvedUrls?.media_type ?? 'none',
+            link_url: resolvedUrls?.link_url ?? '',
             is_active: banner.is_active,
             priority: banner.priority,
             display_target: banner.display_target as DisplayTarget[],
         });
-        if (banner.image_url) {
-            setImagePreview(banner.image_url);
-        }
-        if (banner.video_url) {
-            setVideoPreview(banner.video_url);
-        }
+        revokeObjectUrlIfNeeded(imagePreview);
+        revokeObjectUrlIfNeeded(videoPreview);
+        setImagePreview(resolvedUrls?.image_url ?? null);
+        setVideoPreview(resolvedUrls?.video_url ?? null);
         setBannerToDelete(null);
         setDeleteConfirmation('');
     };
@@ -328,7 +341,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
             setImagePreview(URL.createObjectURL(webpFile));
             setFormData(prev => ({ ...prev, media_type: 'image', image_url: null, video_url: null }));
         } catch (error) {
-            console.error('이미지 압축 실패:', error);
+            console.error('이미지 압축 실패:');
             toast({
                 title: '이미지 처리 실패',
                 description: '이미지를 처리하는 중 오류가 발생했습니다.',
@@ -356,7 +369,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
             setVideoPreview(URL.createObjectURL(file));
             setFormData(prev => ({ ...prev, media_type: 'video', image_url: null, video_url: null }));
         } catch (error) {
-            console.error('영상 처리 실패:', error);
+            console.error('영상 처리 실패:');
             toast({
                 title: '영상 처리 실패',
                 description: '영상을 처리하는 중 오류가 발생했습니다.',
@@ -408,6 +421,32 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
             return;
         }
 
+        const normalizedDestinationUrl = formData.link_url
+            ? resolveAdBannerDestinationUrl(formData.link_url)
+            : null;
+        if (formData.link_url && !normalizedDestinationUrl) {
+            toast({
+                title: '배너 저장 실패',
+                description: AD_BANNER_URL_VALIDATION_ERROR,
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (!imageFile && !videoFile && !resolveAdBannerPersistenceUrls({
+            image_url: formData.image_url ?? null,
+            video_url: formData.video_url ?? null,
+            media_type: formData.media_type,
+            link_url: normalizedDestinationUrl,
+        })) {
+            toast({
+                title: '배너 저장 실패',
+                description: AD_BANNER_URL_VALIDATION_ERROR,
+                variant: 'destructive',
+            });
+            return;
+        }
+
         try {
             setIsUploading(true);
 
@@ -432,20 +471,34 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                 ...formData,
                 image_url: imageUrl,
                 video_url: videoUrl,
-                link_url: formData.link_url?.trim() || null,
+                link_url: normalizedDestinationUrl,
+            };
+            const resolvedUrls = resolveAdBannerPersistenceUrls(dataToSubmit);
+            if (!resolvedUrls) {
+                toast({
+                    title: '배너 저장 실패',
+                    description: AD_BANNER_URL_VALIDATION_ERROR,
+                    variant: 'destructive',
+                });
+                return;
+            }
+
+            const validatedDataToSubmit = {
+                ...dataToSubmit,
+                ...resolvedUrls,
             };
 
             if (editingBanner) {
                 // 수정
-                await updateBanner.mutateAsync({ id: editingBanner.id, data: dataToSubmit });
+                await updateBanner.mutateAsync({ id: editingBanner.id, data: validatedDataToSubmit });
             } else {
                 // 생성
-                await createBanner.mutateAsync(dataToSubmit);
+                await createBanner.mutateAsync(validatedDataToSubmit);
             }
 
             resetEditorPanel();
         } catch (error) {
-            console.error('배너 저장 실패:', error);
+            console.error('배너 저장 실패:');
         } finally {
             setIsUploading(false);
         }
@@ -458,20 +511,23 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
         try {
             await deleteBanner.mutateAsync(bannerToDelete.id);
 
-            const mediaUrls = [bannerToDelete.image_url, bannerToDelete.video_url].filter(Boolean) as string[];
-            await Promise.all(mediaUrls.map(async (mediaUrl) => {
-                const urlParts = mediaUrl.split('/');
-                const path = urlParts.slice(-2).join('/');
+            const mediaPaths = [
+                bannerToDelete.image_url,
+                bannerToDelete.video_url,
+            ]
+                .map(resolveAdBannerMediaStoragePath)
+                .filter((path): path is string => path !== null);
+            await Promise.all(mediaPaths.map(async (path) => {
                 await deleteImage.mutateAsync(path);
             })).catch((mediaDeleteError) => {
-                console.error('배너 DB 삭제 후 미디어 정리 실패:', mediaDeleteError);
+                console.error('배너 DB 삭제 후 미디어 정리 실패:');
             });
 
             setBannerToDelete(null);
             setDeleteConfirmation('');
             resetForm();
         } catch (error) {
-            console.error('배너 삭제 실패:', error);
+            console.error('배너 삭제 실패:');
         }
     };
 
@@ -538,6 +594,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                 </Card>
                             ) : sortedBanners.map((banner) => {
                                 const isSelected = editingBanner?.id === banner.id;
+                                const resolvedUrls = resolveAdBannerPersistenceUrls(banner);
                                 return (
                                     <button
                                         key={banner.id}
@@ -547,9 +604,9 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                         onClick={() => openEditPanel(banner)}
                                     >
                                         <div className="flex min-w-0 gap-2">
-                                            {banner.image_url ? (
+                                            {resolvedUrls?.image_url ? (
                                                 <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
-                                                    <Image src={banner.image_url} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                                                    <Image src={resolvedUrls.image_url} alt="" fill unoptimized sizes="64px" className="object-cover" />
                                                 </div>
                                             ) : (
                                                 <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40">
@@ -565,7 +622,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                                 <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-x-auto scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
                                                     {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">데스크톱 배너</Badge>}
                                                     {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">모바일 팝업</Badge>}
-                                                    {banner.link_url && <span className="inline-flex shrink-0 items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
+                                                    {resolvedUrls?.link_url && <span className="inline-flex shrink-0 items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
                                                 </div>
                                             </div>
                                         </div>

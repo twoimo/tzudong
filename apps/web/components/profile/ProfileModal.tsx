@@ -70,17 +70,14 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 setProfile(null);
                 setNewNickname(user.email?.split('@')[0] || "사용자");
             }
-        } catch (error) {
+        } catch {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
-            console.error('Profile load error:', error);
         }
     }, [user]);
 
     useEffect(() => {
         if (isOpen && user) {
             void loadProfile();
-            // 모달이 열릴 때 삭제 확인 이메일 초기화
-            setDeleteConfirmationEmail("");
         }
     }, [isOpen, user, loadProfile]);
 
@@ -108,9 +105,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
             setProfile({ ...profile, nickname: newNickname.trim() });
             toast.success('닉네임이 성공적으로 변경되었습니다');
-        } catch (error) {
-            const err = error as { message?: string };
-            toast.error(err.message || '닉네임 변경에 실패했습니다');
+        } catch {
+            toast.error('닉네임 변경에 실패했습니다');
         } finally {
             setLoading(false);
         }
@@ -146,14 +142,17 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             setNewPassword("");
             setConfirmPassword("");
             toast.success('비밀번호가 성공적으로 변경되었습니다');
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다';
-            toast.error(errorMessage);
+        } catch {
+            toast.error('비밀번호 변경에 실패했습니다');
         } finally {
             setLoading(false);
         }
     };
 
+    const openSafeAccountDeletion = () => {
+        onClose();
+        window.location.assign('/mypage/profile#account-deletion');
+    };
 
     if (!user) return null;
 
@@ -347,19 +346,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 계정 삭제
                             </CardTitle>
                             <CardDescription>
-                                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                                삭제 범위 미리보기, 최근 로그인 확인, 정확한 확인 문구, 적용 후 읽기검증을 거쳐야 합니다.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-4 pt-2">
-                            <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={() => {
-                                    onClose();
-                                    window.location.assign("/mypage/profile#account-deletion");
-                                }}
-                            >
-                                계정 삭제 페이지로 이동
+                            <Button variant="destructive" className="w-full" onClick={openSafeAccountDeletion}>
+                                삭제 범위 확인
                             </Button>
                         </CardContent>
                     </Card>
@@ -551,19 +543,12 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                 계정 삭제
                             </CardTitle>
                             <CardDescription>
-                                계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                                삭제 범위 미리보기, 최근 로그인 확인, 정확한 확인 문구, 적용 후 읽기검증을 거쳐야 합니다.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Button
-                                variant="destructive"
-                                className="w-full"
-                                onClick={() => {
-                                    onClose();
-                                    window.location.assign("/mypage/profile#account-deletion");
-                                }}
-                            >
-                                계정 삭제 페이지로 이동
+                            <Button variant="destructive" className="w-full" onClick={openSafeAccountDeletion}>
+                                삭제 범위 확인
                             </Button>
                         </CardContent>
                     </Card>

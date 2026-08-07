@@ -1,7 +1,7 @@
 -- G013: atomically allocate public short URLs without exposing a writable table surface.
 -- The rate-limit tables deliberately live outside Supabase's exposed API schemas.
 
-CREATE SCHEMA IF NOT EXISTS shortener_private;
+CREATE SCHEMA shortener_private;
 REVOKE ALL ON SCHEMA shortener_private FROM PUBLIC, anon, authenticated, service_role;
 
 DO $$
@@ -232,6 +232,16 @@ BEGIN
       RAISE EXCEPTION 'invalid_short_url_allocation_request';
     END IF;
   END LOOP;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM public.reviews AS reviews
+     WHERE reviews.id = p_review_id
+       AND reviews.restaurant_id = p_restaurant_id
+       AND reviews.is_verified IS TRUE
+  ) THEN
+    RAISE EXCEPTION 'short_url_review_not_verified';
+  END IF;
 
   PERFORM shortener_private.cleanup_expired_short_url_rate_limits(v_now);
 

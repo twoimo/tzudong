@@ -21,7 +21,7 @@ describe('receipt OCR manifest/evaluation harness', () => {
       {
         fixtureId: 'fixture-1',
         provider: 'gemini',
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.6-flash',
         latencyMs: 1200,
         raw: gold,
         normalized: gold,
@@ -30,7 +30,7 @@ describe('receipt OCR manifest/evaluation harness', () => {
       {
         fixtureId: 'fixture-2',
         provider: 'gemini',
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.6-flash',
         latencyMs: 3000,
         error: 'timeout',
         gold,
@@ -46,7 +46,7 @@ describe('receipt OCR manifest/evaluation harness', () => {
 
   test('blocks production promotion when gold-set and critical-field thresholds are not met', () => {
     const baseline = summarizeReceiptOcrEvaluations([
-      { fixtureId: 'base', provider: 'gemini', model: 'gemini-3.5-flash', latencyMs: 1500, raw: gold, normalized: gold, gold },
+      { fixtureId: 'base', provider: 'gemini', model: 'gemini-3.6-flash', latencyMs: 1500, raw: gold, normalized: gold, gold },
     ]);
     const candidate = { ...baseline, overallAvg: baseline.overallAvg + 4, totalAmountAvg: baseline.totalAmountAvg - 3 };
 

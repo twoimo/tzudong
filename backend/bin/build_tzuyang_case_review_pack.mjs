@@ -10,11 +10,18 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { logSafeError } from '../utils/privacy-log.mjs';
 
 const DEFAULT_REPORT_ROOT = 'backend/restaurant-evaluation/reports';
 const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const SCHEMA_VERSION = 1;
 const FETCH_TIMEOUT_MS = 15_000;
+const FETCH_CONNECT_TIMEOUT_MS = 5_000;
+const MAX_NAVER_RESPONSE_BYTES = 1_000_000;
+const MAX_SCRAPLING_JSON_DEPTH = 6;
+const MAX_SCRAPLING_URL_BYTES = 4_096;
+const MAX_SCRAPLING_DIAGNOSTIC_BYTES = 256;
+const SCRAPLING_FETCHER_TERMINATION_GRACE_MS = 500;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SCRAPLING_FETCHER_SCRIPT = path.join(SCRIPT_DIR, 'naver_scrapling_fetch.py');
 const VIDEO_EVIDENCE_FAMILIES = new Set(['transcript_region', 'multimodal_region', 'visual_signage', 'visual_phone', 'neighbor_street']);
@@ -280,51 +287,347 @@ function parseNaverSearch(html, row, query, fetchedAt, provider = 'naver_search'
   };
 }
 
-async function fetchNaver(query) {
-  const url = new URL('https://search.naver.com/search.naver');
-  url.searchParams.set('query', query);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, {
-      headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
-      signal: controller.signal,
-    });
-    const html = await response.text();
-    return { status: response.status, url: String(url), html };
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error(`naver_search_timeout_after_${FETCH_TIMEOUT_MS}ms`);
-    throw error;
-  } finally {
-    clearTimeout(timeout);
+function fixedError(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+function boundedPositiveInteger(value, fallback) {
+  return Number.isSafeInteger(value) && value > 0 ? Math.min(value, fallback) : fallback;
+}
+
+function discardResponseBody(response) {
+  if (typeof response?.body?.cancel === 'function') {
+    void response.body.cancel().catch(() => {});
   }
 }
 
-function spawnFileJson(command, args, options = {}) {
+function responseContentTypeIsHtml(response) {
+  const contentType = response?.headers?.get?.('content-type');
+  return typeof contentType === 'string'
+    && /^(?:text\/html|application\/xhtml\+xml)(?:\s*;|$)/i.test(contentType);
+}
+
+function declaredContentLength(response, maxBytes) {
+  const value = response?.headers?.get?.('content-length');
+  if (value === null || value === undefined) return;
+  if (typeof value !== 'string' || value.length > 20 || !/^(?:0|[1-9]\d*)$/.test(value)) {
+    throw fixedError('NAVER_SEARCH_CONTENT_LENGTH_INVALID');
+  }
+  if (BigInt(value) > BigInt(maxBytes)) {
+    throw fixedError('NAVER_SEARCH_RESPONSE_TOO_LARGE');
+  }
+}
+
+function abortableReaderRead(reader, signal) {
+  if (signal.aborted) return Promise.reject(fixedError('NAVER_SEARCH_TOTAL_TIMEOUT'));
+
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
-      cwd: options.cwd,
-      env: options.env,
-      stdio: ['ignore', 'pipe', 'pipe'],
+    let settled = false;
+    const complete = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      callback(value);
+    };
+    const onAbort = () => {
+      void reader.cancel().catch(() => {});
+      complete(reject, fixedError('NAVER_SEARCH_TOTAL_TIMEOUT'));
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
+    reader.read().then(
+      (value) => complete(resolve, value),
+      () => complete(reject, fixedError(signal.aborted ? 'NAVER_SEARCH_TOTAL_TIMEOUT' : 'NAVER_SEARCH_BODY_READ_FAILED')),
+    );
+  });
+}
+
+async function readBoundedNaverHtml(response, { maxBytes, signal }) {
+  if (!responseContentTypeIsHtml(response)) {
+    discardResponseBody(response);
+    throw fixedError('NAVER_SEARCH_CONTENT_TYPE_REJECTED');
+  }
+  try {
+    declaredContentLength(response, maxBytes);
+  } catch (error) {
+    discardResponseBody(response);
+    throw error;
+  }
+  if (typeof response?.body?.getReader !== 'function') {
+    throw fixedError('NAVER_SEARCH_BODY_INVALID');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const fragments = [];
+  let byteCount = 0;
+  try {
+    while (true) {
+      const { done, value } = await abortableReaderRead(reader, signal);
+      if (done) break;
+      if (!(value instanceof Uint8Array)) {
+        void reader.cancel().catch(() => {});
+        throw fixedError('NAVER_SEARCH_BODY_INVALID');
+      }
+      byteCount += value.byteLength;
+      if (byteCount > maxBytes) {
+        void reader.cancel().catch(() => {});
+        throw fixedError('NAVER_SEARCH_RESPONSE_TOO_LARGE');
+      }
+      try {
+        fragments.push(decoder.decode(value, { stream: true }));
+      } catch {
+        throw fixedError('NAVER_SEARCH_TEXT_INVALID');
+      }
+    }
+    try {
+      fragments.push(decoder.decode());
+    } catch {
+      throw fixedError('NAVER_SEARCH_TEXT_INVALID');
+    }
+    return fragments.join('');
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // The response has already been canceled or closed.
+    }
+  }
+}
+
+async function fetchNaverWithLimits(query, options = {}) {
+  const fetchImpl = typeof options.fetchImpl === 'function' ? options.fetchImpl : fetch;
+  const connectTimeoutMs = boundedPositiveInteger(options.connectTimeoutMs, FETCH_CONNECT_TIMEOUT_MS);
+  const totalTimeoutMs = boundedPositiveInteger(options.totalTimeoutMs, FETCH_TIMEOUT_MS);
+  const maxBytes = boundedPositiveInteger(options.maxResponseBytes, MAX_NAVER_RESPONSE_BYTES);
+  const url = new URL('https://search.naver.com/search.naver');
+  url.searchParams.set('query', query);
+
+  const controller = new AbortController();
+  let connectTimedOut = false;
+  let totalTimedOut = false;
+  const connectTimeout = setTimeout(() => {
+    connectTimedOut = true;
+    controller.abort();
+  }, connectTimeoutMs);
+  const totalTimeout = setTimeout(() => {
+    totalTimedOut = true;
+    controller.abort();
+  }, totalTimeoutMs);
+
+  try {
+    let response;
+    try {
+      response = await fetchImpl(url, {
+        headers: { 'user-agent': USER_AGENT, accept: 'text/html,application/xhtml+xml' },
+        redirect: 'error',
+        signal: controller.signal,
+      });
+    } catch {
+      if (connectTimedOut) throw fixedError('NAVER_SEARCH_CONNECT_TIMEOUT');
+      if (totalTimedOut) throw fixedError('NAVER_SEARCH_TOTAL_TIMEOUT');
+      throw fixedError('NAVER_SEARCH_REQUEST_FAILED');
+    } finally {
+      clearTimeout(connectTimeout);
+    }
+
+    if (!response || response.redirected) {
+      discardResponseBody(response);
+      throw fixedError('NAVER_SEARCH_REDIRECT_REJECTED');
+    }
+
+    const html = await readBoundedNaverHtml(response, { maxBytes, signal: controller.signal });
+    return { status: response.status, url: String(url), html };
+  } finally {
+    clearTimeout(connectTimeout);
+    clearTimeout(totalTimeout);
+  }
+}
+
+async function fetchNaver(query) {
+  return fetchNaverWithLimits(query);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function signalProcessTree(child, force) {
+  if (!Number.isSafeInteger(child.pid) || child.pid < 1) return;
+  if (process.platform === 'win32') {
+    try {
+      const taskkill = spawn('taskkill.exe', force
+        ? ['/pid', String(child.pid), '/T', '/F']
+        : ['/pid', String(child.pid), '/T'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      taskkill.once('error', () => {});
+      taskkill.unref();
+    } catch {
+      // A later forced termination attempt still runs.
+    }
+    return;
+  }
+
+  try {
+    process.kill(-child.pid, force ? 'SIGKILL' : 'SIGTERM');
+  } catch {
+    try {
+      child.kill(force ? 'SIGKILL' : 'SIGTERM');
+    } catch {
+      // The child has already exited.
+    }
+  }
+}
+
+async function terminateProcessTree(child, closePromise) {
+  signalProcessTree(child, false);
+  const closedDuringGrace = await Promise.race([
+    closePromise.then(() => true),
+    delay(SCRAPLING_FETCHER_TERMINATION_GRACE_MS).then(() => false),
+  ]);
+  if (!closedDuringGrace) {
+    signalProcessTree(child, true);
+    await closePromise;
+  }
+}
+
+function validateScraplingPayload(payload, maxBytes) {
+  if (!payload || Array.isArray(payload) || Object.getPrototypeOf(payload) !== Object.prototype) {
+    throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+  }
+  const expectedKeys = ['status', 'url', 'html', 'fetcher', 'blocked_reason'];
+  const actualKeys = Object.keys(payload).sort();
+  if (actualKeys.length !== expectedKeys.length || actualKeys.some((key, index) => key !== expectedKeys.sort()[index])) {
+    throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+  }
+  if (!Number.isInteger(payload.status) || payload.status < 0 || payload.status > 599) {
+    throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+  }
+  for (const key of ['url', 'html', 'fetcher', 'blocked_reason']) {
+    if (typeof payload[key] !== 'string') throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+  }
+  if (
+    Buffer.byteLength(payload.html, 'utf8') > maxBytes
+    || Buffer.byteLength(payload.url, 'utf8') > MAX_SCRAPLING_URL_BYTES
+    || Buffer.byteLength(payload.fetcher, 'utf8') > MAX_SCRAPLING_DIAGNOSTIC_BYTES
+    || Buffer.byteLength(payload.blocked_reason, 'utf8') > MAX_SCRAPLING_DIAGNOSTIC_BYTES
+  ) {
+    throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+  }
+
+  const stack = [{ value: payload, depth: 1 }];
+  while (stack.length > 0) {
+    const { value, depth } = stack.pop();
+    if (depth > MAX_SCRAPLING_JSON_DEPTH) throw fixedError('SCRAPLING_FETCHER_SCHEMA_INVALID');
+    if (Array.isArray(value)) {
+      for (const entry of value) stack.push({ value: entry, depth: depth + 1 });
+    } else if (value && typeof value === 'object') {
+      for (const entry of Object.values(value)) stack.push({ value: entry, depth: depth + 1 });
+    }
+  }
+  return payload;
+}
+
+function spawnFileJson(command, args, options = {}) {
+  const timeoutMs = boundedPositiveInteger(options.timeoutMs, FETCH_TIMEOUT_MS);
+  const maxBytes = boundedPositiveInteger(options.maxOutputBytes, MAX_NAVER_RESPONSE_BYTES);
+  if (options.signal?.aborted) return Promise.reject(fixedError('SCRAPLING_FETCHER_ABORTED'));
+
+  return new Promise((resolve, reject) => {
+    let child;
+    try {
+      child = spawn(command, args, {
+        cwd: options.cwd,
+        env: options.env,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        detached: process.platform !== 'win32',
+        windowsHide: true,
+      });
+    } catch {
+      reject(fixedError('SCRAPLING_FETCHER_SPAWN_FAILED'));
+      return;
+    }
+
+    let stdoutBytes = 0;
+    const stdout = [];
+    let failureCode = null;
+    let terminationPromise = null;
+    let timer;
+    let onAbort;
+    let closeResult;
+    let resolveClose;
+    const closePromise = new Promise((resolveClosePromise) => {
+      resolveClose = resolveClosePromise;
     });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`scrapling_fetcher_exit_${code}: ${stderr.trim() || stdout.trim()}`));
+    const cleanup = () => {
+      clearTimeout(timer);
+      if (onAbort) options.signal?.removeEventListener('abort', onAbort);
+    };
+    const requestFailure = (code) => {
+      if (failureCode) return;
+      failureCode = code;
+      if (child.stdout && !child.stdout.destroyed) child.stdout.destroy();
+      terminationPromise = terminateProcessTree(child, closePromise);
+    };
+
+    child.once('error', () => requestFailure('SCRAPLING_FETCHER_SPAWN_FAILED'));
+    child.once('close', (code, signal) => {
+      closeResult = { code, signal };
+      resolveClose(closeResult);
+    });
+    if (!child.stdout) {
+      requestFailure('SCRAPLING_FETCHER_STDOUT_FAILED');
+    } else {
+      child.stdout.on('error', () => requestFailure('SCRAPLING_FETCHER_STDOUT_FAILED'));
+      child.stdout.on('data', (chunk) => {
+        if (failureCode) return;
+        const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        stdoutBytes += bytes.byteLength;
+        if (stdoutBytes > maxBytes) {
+          requestFailure('SCRAPLING_FETCHER_STDOUT_TOO_LARGE');
+          return;
+        }
+        stdout.push(bytes);
+      });
+    }
+
+    timer = setTimeout(() => requestFailure('SCRAPLING_FETCHER_TIMEOUT'), timeoutMs);
+    if (options.signal) {
+      onAbort = () => requestFailure('SCRAPLING_FETCHER_ABORTED');
+      options.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    void (async () => {
+      await closePromise;
+      if (terminationPromise) await terminationPromise;
+      cleanup();
+
+      if (failureCode) {
+        reject(fixedError(failureCode));
+        return;
+      }
+      if (closeResult.code !== 0) {
+        reject(fixedError('SCRAPLING_FETCHER_EXIT'));
+        return;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(stdout)));
+      } catch {
+        reject(fixedError('SCRAPLING_FETCHER_INVALID_JSON'));
         return;
       }
       try {
-        resolve(JSON.parse(stdout));
+        resolve(validateScraplingPayload(payload, maxBytes));
       } catch (error) {
-        reject(new Error(`scrapling_fetcher_invalid_json: ${error.message}; stdout=${stdout.slice(0, 500)} stderr=${stderr.slice(0, 500)}`));
+        reject(error);
       }
-    });
+    })();
   });
 }
 
@@ -333,14 +636,14 @@ async function fetchNaverWithScrapling(query, args) {
     args.scraplingFetcherScript,
     '--query', query,
     '--timeout-ms', String(FETCH_TIMEOUT_MS),
-  ]);
+  ], { timeoutMs: FETCH_TIMEOUT_MS });
   return {
-    status: Number(payload.status || 0),
-    url: payload.url || '',
-    html: payload.html || '',
+    status: payload.status,
+    url: payload.url,
+    html: payload.html,
     provider: 'naver_search_scrapling',
-    blocked_reason: payload.blocked_reason || '',
-    fetcher: payload.fetcher || 'scrapling',
+    blocked_reason: payload.status >= 200 && payload.status < 300 ? '' : 'SCRAPLING_FETCHER_HTTP_ERROR',
+    fetcher: 'scrapling',
   };
 }
 
@@ -591,7 +894,7 @@ async function main() {
               query,
               fetched_at: fetchedAt,
               status: 'http_error',
-              blocked_reason: fetched.blocked_reason || `http_status_${fetched.status}`,
+              blocked_reason: fetched.blocked_reason || 'NAVER_SEARCH_HTTP_ERROR',
               http_status: fetched.status,
               fetch_url: fetched.url,
               fetcher: fetched.fetcher,
@@ -612,9 +915,10 @@ async function main() {
           searchLog.push({ id: row.id, video_id: row.video_id, query, provider: 'naver_search', fetched_at: fetchedAt, status: 'skipped', blocked_reason: 'live_search_not_enabled', result_count: 0 });
         }
       } catch (error) {
-        const failure = { provider: 'naver_search', query, fetched_at: fetchedAt, status: 'failed', blocked_reason: error.message, result_count: 0, results: [], place_candidates: [] };
+        logSafeError(error, (line) => process.stderr.write(`case_review_search_failed ${line}`));
+        const failure = { provider: 'naver_search', query, fetched_at: fetchedAt, status: 'failed', blocked_reason: 'search_failed', result_count: 0, results: [], place_candidates: [] };
         attempts.push(failure);
-        searchLog.push({ id: row.id, video_id: row.video_id, query, provider: 'naver_search', fetched_at: fetchedAt, status: 'failed', blocked_reason: error.message, result_count: 0 });
+        searchLog.push({ id: row.id, video_id: row.video_id, query, provider: 'naver_search', fetched_at: fetchedAt, status: 'failed', blocked_reason: 'search_failed', result_count: 0 });
       }
       const minimumConfirmationAttempts = Math.min(2, queries.length);
       if (attempts.length >= minimumConfirmationAttempts && scoreCase(row, attempts).decision === 'confirmed_external_place') break;
@@ -634,15 +938,17 @@ async function main() {
   else console.log(`Wrote ${args.out} (${summary.total_case_rows} rows, confirmed=${summary.confirmed_external_place_rows}, review=${summary.needs_operator_review_rows})`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(error.stack || error.message || String(error));
+    logSafeError(error, (line) => process.stderr.write(`case_review_pack_failed ${line}`));
     process.exitCode = 1;
   });
 }
 
 export {
   buildQueries,
+  fetchNaverWithLimits,
   parseNaverSearch,
   scoreCase,
+  spawnFileJson,
 };

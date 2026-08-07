@@ -38,7 +38,10 @@ import {
 import {
   needsEvaluationRerun,
 } from '@/lib/admin-evaluation-completeness';
-import { extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import {
+  extractCanonicalYouTubeVideoId,
+  normalizeCanonicalYouTubeWatchUrl,
+} from '@/lib/youtube-url';
 import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 
 interface EvaluationTableProps {
@@ -294,7 +297,8 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
     },
     ref
   ) {
-    const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
+    const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
+    const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
     // 썸네일 로딩 트리거
     useEffect(() => {
       if (videoId && !thumbnailState) {
@@ -340,9 +344,9 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
           )}
         >
           <div className="flex items-center gap-3">
-            {videoId && (
+            {canonicalYoutubeUrl && videoId && (
               <a
-                href={record.youtube_link}
+                href={canonicalYoutubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-shrink-0"
@@ -385,7 +389,7 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
             )}
             <div className="min-w-0 flex-1">
               <div className="line-clamp-2 text-xs font-medium sm:text-sm">
-                {record.youtube_meta?.title || record.youtube_link}
+                {record.youtube_meta?.title || canonicalYoutubeUrl || '영상 링크 없음'}
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
                 {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
@@ -829,7 +833,8 @@ export function EvaluationTable({
     if (records && records.length > 0) {
       const currentVideoIds = new Set<string>();
       records.forEach(record => {
-        const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
+        const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
+        const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
         if (videoId) {
           currentVideoIds.add(videoId);
         }
@@ -851,7 +856,8 @@ export function EvaluationTable({
   // 모바일 카드 뷰에서도 썸네일이 보이도록 선로딩
   useEffect(() => {
     records.forEach((record) => {
-      const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
+      const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
+      const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
       if (videoId && !thumbnailDataRef.current[videoId] && !loadingThumbnailsRef.current.has(videoId)) {
         loadThumbnail(videoId);
       }
@@ -1104,7 +1110,8 @@ export function EvaluationTable({
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
         {records.map((record) => {
-        const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
+        const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
+        const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
         const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
         const isExpanded = expandedId === record.id;
         const visitValue = getMobileMetricDisplayValue(record, record.evaluation_results?.visit_authenticity?.eval_value);
@@ -1164,9 +1171,9 @@ export function EvaluationTable({
             </div>
 
             <div className="mt-2 flex items-start gap-2">
-              {videoId && (
+              {canonicalYoutubeUrl && videoId && (
                 <a
-                  href={record.youtube_link}
+                  href={canonicalYoutubeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0"
@@ -1197,11 +1204,11 @@ export function EvaluationTable({
 
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {record.youtube_meta?.title || record.youtube_link}
+                  {record.youtube_meta?.title || canonicalYoutubeUrl || '영상 링크 없음'}
                 </p>
-                {record.youtube_link && (
+                {canonicalYoutubeUrl && (
                   <a
-                    href={record.youtube_link}
+                    href={canonicalYoutubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-1 inline-flex items-center gap-1 truncate text-[11px] text-blue-600 hover:underline"
@@ -1634,7 +1641,8 @@ export function EvaluationTable({
               </TableRow>
             ) : (
               records.flatMap((record) => {
-                const videoId = extractVideoIdFromYoutubeLink(record.youtube_link);
+                const canonicalYoutubeUrl = normalizeCanonicalYouTubeWatchUrl(record.youtube_link);
+                const videoId = extractCanonicalYouTubeVideoId(canonicalYoutubeUrl);
 
                 // 썸네일 정보 조회
                 const thumbnailInfo = videoId ? thumbnailData[videoId] : null;

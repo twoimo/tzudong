@@ -9,6 +9,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import puppeteer from 'puppeteer';
+import { logSafeError } from '../utils/privacy-log.mjs';
 
 function parseArgs(argv) {
   const args = { reportDir: '', input: '', out: '', limit: 0, offset: 0, headless: true, delayMs: 1500 };
@@ -154,6 +155,7 @@ async function main() {
         await page.screenshot({ path: screenshotPath, fullPage: false });
         result = { ...candidate, ...verdictFor(candidate) };
       } catch (error) {
+        logSafeError(error, (line) => process.stderr.write(`google_maps_browser_row_failed ${line}`));
         result = {
           id: row.id,
           queue: row.queue,
@@ -173,7 +175,7 @@ async function main() {
           screenshot_path: '',
           google_api_used: false,
           verdict: 'browser_error',
-          reason_ko: error instanceof Error ? error.message : String(error),
+          reason_ko: 'Google Maps browser validation failed; keep this row for manual review.',
         };
       }
       results.push(result);
@@ -205,4 +207,7 @@ async function main() {
   console.log(JSON.stringify({ ...payload, results: undefined }, null, 2));
 }
 
-main().catch((error) => { console.error(error.stack || error.message || String(error)); process.exitCode = 1; });
+main().catch((error) => {
+  logSafeError(error, (line) => process.stderr.write(`google_maps_browser_validation_failed ${line}`));
+  process.exitCode = 1;
+});

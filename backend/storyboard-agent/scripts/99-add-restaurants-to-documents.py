@@ -10,23 +10,25 @@ Docker PostgreSQL에서 approved 음식점을 조회하여
 """
 
 import json
-import os
 import re
-from pathlib import Path
+import sys
 from collections import defaultdict
-import os
-import re
 from pathlib import Path
-from collections import defaultdict
+
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
 # .env 로드
 load_dotenv()
 
-# Supabase 설정
-SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -208,12 +210,13 @@ def main():
     print("=" * 60)
 
     # 1. Supabase 연결
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
+    print("\n🔌 Supabase 연결 준비됨")
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("❌ Supabase REST configuration invalid.")
         return
-
-    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}")
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    supabase = create_client(credentials.url, credentials.service_role_key)
     print("✅ 연결 성공")
 
     # 2. 음식점 조회

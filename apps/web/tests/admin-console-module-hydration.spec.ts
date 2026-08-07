@@ -92,6 +92,55 @@ const STORYBOARD_RESPONSIVE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, '
 const STORYBOARD_RESPONSIVE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-storyboard-responsive-transcript.json');
 const INSIGHTS_STATE_SCREENSHOT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-insights-error-final.png');
 const INSIGHTS_STATE_TRANSCRIPT = resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g002-insights-state-transcript.json');
+const ADMIN_DASHBOARD_ZERO_VALUE_FIXTURE = {
+  asOf: '2026-07-01T00:00:00.000Z',
+  period: '1M',
+  totalVideos: 3,
+  videos: [
+    {
+      id: 'dashboard-chart-high',
+      title: '차트 최대값 영상',
+      category: '한식',
+      viewCount: 1000,
+      likeCount: 100,
+      commentCount: 20,
+      duration: 600,
+      previousViewCount: 900,
+      previousLikeCount: 90,
+      previousCommentCount: 18,
+      previousDuration: 580,
+      publishedAt: '2026-06-01T00:00:00.000Z',
+    },
+    {
+      id: 'dashboard-chart-zero',
+      title: '차트 영값 영상',
+      category: '한식',
+      viewCount: 0,
+      likeCount: 0,
+      commentCount: 0,
+      duration: 0,
+      previousViewCount: 0,
+      previousLikeCount: 0,
+      previousCommentCount: 0,
+      previousDuration: 0,
+      publishedAt: '2026-06-15T00:00:00.000Z',
+    },
+    {
+      id: 'dashboard-chart-middle',
+      title: '차트 중간값 영상',
+      category: '한식',
+      viewCount: 500,
+      likeCount: 50,
+      commentCount: 10,
+      duration: 300,
+      previousViewCount: 400,
+      previousLikeCount: 40,
+      previousCommentCount: 8,
+      previousDuration: 290,
+      publishedAt: '2026-06-30T00:00:00.000Z',
+    },
+  ],
+} as const;
 
 
 function getE2EAdminRouteBypassToken(testInfo: TestInfo) {
@@ -164,6 +213,64 @@ test.describe('admin console module hydration smoke', () => {
         screenshot: HYDRATION_SMOKE_SCREENSHOT,
       }, null, 2)}\n`,
     );
+  });
+
+  test('renders the production Recharts series, legend, and zero-value tooltip', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+
+    const runtimeErrors: string[] = [];
+    attachRuntimeErrorCollectors(page, runtimeErrors);
+    await page.route('**/api/admin/youtube-kpis**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(ADMIN_DASHBOARD_ZERO_VALUE_FIXTURE),
+      });
+    });
+    await page.route('**/api/admin/youtube-channel**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          channelId: 'dashboard-chart-channel',
+          title: '차트 검증 채널',
+          handle: '@chart-test',
+          subscriberCount: 100,
+          previousSubscriberCount: 100,
+          subscriberDelta: 0,
+          videoCount: 3,
+          previousVideoCount: 3,
+          videoDelta: 0,
+          deltaSource: 'snapshot-delta',
+        }),
+      });
+    });
+
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+    await gotoAndHidePopup(page, '/admin');
+
+    const trendChart = page.locator('[data-admin-dashboard-line-chart="recharts"]');
+    const legend = page.getByLabel('영상별 성과 분포 지표 숨김/보임');
+    await expect(trendChart).toBeVisible({ timeout: 30_000 });
+    await expect(legend).toBeVisible();
+    await expect(legend.getByRole('button', { name: '조회수 숨기기' })).toBeVisible();
+    await expect(trendChart.locator('.recharts-line-curve')).toHaveCount(3);
+    await expect(trendChart.locator('.recharts-line-dots circle')).toHaveCount(9);
+
+    const zeroValueDot = trendChart.locator('.recharts-line-dots').last().locator('circle').nth(1);
+    await zeroValueDot.hover();
+    const tooltip = page.locator('[data-admin-dashboard-tooltip-kind="trend-simple"]');
+    await expect(tooltip).toBeVisible();
+    await expect(tooltip).toContainText('0점');
+
+    await legend.getByRole('button', { name: '참여율 숨기기' }).click();
+    await expect(legend.getByRole('button', { name: '참여율 보이기' })).toBeVisible();
+    await expect(trendChart.locator('.recharts-line-curve')).toHaveCount(2);
+    expect(runtimeErrors).toEqual([]);
   });
 
   test('mobile hamburger menu selects a module with active state and closes the dropdown', async ({ page }, testInfo) => {

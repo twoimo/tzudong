@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   ExternalLink,
-  Youtube,
   Clock,
   CheckCircle,
   XCircle,
@@ -28,7 +27,9 @@ import {
   ArrowRight,
   Trash2,
 } from "lucide-react";
+import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
+import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
 import {
   MyPageEmptyState,
@@ -119,6 +120,95 @@ const SUBMISSION_ITEM_SELECT = [
   "created_at",
 ].join(", ");
 
+type SubmissionRow = Omit<Submission, "items" | "target_restaurant">;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function parseValidatedRows<Row>(
+  values: readonly unknown[],
+  isRow: (value: unknown) => value is Row,
+): Row[] {
+  const rows: Row[] = [];
+
+  for (const value of values) {
+    if (isRow(value)) {
+      rows.push(value);
+    }
+  }
+
+  return rows;
+}
+
+function getResponseErrorMessage(value: unknown): string | null {
+  return isRecord(value) && typeof value.error === "string" ? value.error : null;
+}
+
+
+function isNullableString(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
+}
+
+function isNullableStringArray(value: unknown): value is string[] | null {
+  return value === null || (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
+function isSubmissionStatus(value: unknown): value is SubmissionStatus {
+  return value === "pending"
+    || value === "approved"
+    || value === "partially_approved"
+    || value === "rejected";
+}
+
+function isItemStatus(value: unknown): value is ItemStatus {
+  return value === "pending" || value === "approved" || value === "rejected";
+}
+
+function isSubmissionRow(value: unknown): value is SubmissionRow {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string"
+    && typeof value.user_id === "string"
+    && (value.submission_type === "new" || value.submission_type === "edit")
+    && isSubmissionStatus(value.status)
+    && typeof value.restaurant_name === "string"
+    && isNullableString(value.restaurant_address)
+    && isNullableString(value.restaurant_phone)
+    && isNullableStringArray(value.restaurant_categories)
+    && isNullableString(value.admin_notes)
+    && isNullableString(value.rejection_reason)
+    && isNullableString(value.resolved_by_admin_id)
+    && isNullableString(value.reviewed_at)
+    && typeof value.created_at === "string"
+    && typeof value.updated_at === "string"
+  );
+}
+
+function isSubmissionItem(value: unknown): value is SubmissionItem {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string"
+    && typeof value.submission_id === "string"
+    && typeof value.youtube_link === "string"
+    && isNullableString(value.tzuyang_review)
+    && isNullableString(value.target_restaurant_id)
+    && isItemStatus(value.item_status)
+    && isNullableString(value.rejection_reason)
+    && typeof value.created_at === "string"
+  );
+}
+
+function isTargetRestaurantSummary(value: unknown): value is TargetRestaurantSummary {
+  return isRecord(value)
+    && typeof value.id === "string"
+    && typeof value.name === "string"
+    && isNullableString(value.road_address);
+}
+
 export default function EditSubmissionsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -143,10 +233,11 @@ export default function EditSubmissionsPage() {
         .eq("user_id", user.id)
         .eq("submission_type", "edit")
         .order("created_at", { ascending: false })
-        .range(pageParam, pageParam + PAGE_SIZE - 1);
+        .range(pageParam, pageParam + PAGE_SIZE - 1)
+        .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
       if (error) throw error;
-      const typedSubmissions = (submissions ?? []) as Submission[];
+      const typedSubmissions = parseValidatedRows(submissions ?? [], isSubmissionRow);
       if (typedSubmissions.length === 0) {
         return { data: [], nextCursor: null };
       }
@@ -158,10 +249,11 @@ export default function EditSubmissionsPage() {
         .from("restaurant_submission_items")
         .select(SUBMISSION_ITEM_SELECT)
         .in("submission_id", submissionIds)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
       if (itemsError) throw itemsError;
-      const typedItems = (items ?? []) as SubmissionItem[];
+      const typedItems = parseValidatedRows(items ?? [], isSubmissionItem);
 
       // 아이템에서 target_restaurant_id 추출
       const targetRestaurantIds = [
@@ -183,10 +275,13 @@ export default function EditSubmissionsPage() {
         const { data: restaurants } = await supabase
           .from("restaurants")
           .select("id, name, road_address")
-          .in("id", targetRestaurantIds);
+          .in("id", targetRestaurantIds)
+          .overrideTypes<Record<string, unknown>[], { merge: false }>();
 
-        const typedRestaurants = (restaurants ??
-          []) as TargetRestaurantSummary[];
+        const typedRestaurants = parseValidatedRows(
+          restaurants ?? [],
+          isTargetRestaurantSummary,
+        );
         if (typedRestaurants.length > 0) {
           targetRestaurants = typedRestaurants.reduce<
             Record<string, { name: string; address: string | null }>
@@ -267,10 +362,10 @@ export default function EditSubmissionsPage() {
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        throw new Error(data?.error || "맛집 수정 요청 삭제에 실패했습니다.");
+        const payload: unknown = await response.json().catch(() => null);
+        throw new Error(
+          getResponseErrorMessage(payload) || "맛집 수정 요청 삭제에 실패했습니다.",
+        );
       }
     },
     onSuccess: async () => {
@@ -452,35 +547,43 @@ export default function EditSubmissionsPage() {
               관련 영상 ({submission.items.length}개)
             </p>
             <div className="space-y-2">
-              {submission.items.map((item, idx) => (
-                <div key={item.id} className={myPageNestedCardClass}>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Youtube className="h-4 w-4 text-red-500 shrink-0" />
-                      <a
-                        href={item.youtube_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={myPageInlineLinkClass}
-                      >
-                        영상 #{idx + 1}
-                        <ExternalLink className="h-3 w-3 inline ml-1" />
-                      </a>
+              {submission.items.map((item, idx) => {
+                const youtubeUrl = normalizeCanonicalYouTubeWatchUrl(
+                  item.youtube_link,
+                );
+
+                return (
+                  <div key={item.id} className={myPageNestedCardClass}>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <YouTubeIcon className="h-4 w-4 text-red-500 shrink-0" />
+                        {youtubeUrl && (
+                          <a
+                            href={youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={myPageInlineLinkClass}
+                          >
+                            영상 #{idx + 1}
+                            <ExternalLink className="h-3 w-3 inline ml-1" />
+                          </a>
+                        )}
+                      </div>
+                      {getItemStatusBadge(item.item_status)}
                     </div>
-                    {getItemStatusBadge(item.item_status)}
+                    {item.tzuyang_review && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        💬 {item.tzuyang_review}
+                      </p>
+                    )}
+                    {item.rejection_reason && item.item_status === "rejected" && (
+                      <p className="text-xs text-red-500 mt-1">
+                        ❌ 반려 사유: {item.rejection_reason}
+                      </p>
+                    )}
                   </div>
-                  {item.tzuyang_review && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      💬 {item.tzuyang_review}
-                    </p>
-                  )}
-                  {item.rejection_reason && item.item_status === "rejected" && (
-                    <p className="text-xs text-red-500 mt-1">
-                      ❌ 반려 사유: {item.rejection_reason}
-                    </p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

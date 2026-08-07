@@ -1,5 +1,9 @@
 import { describe, expect, mock, test } from 'bun:test';
 import type { NextRequest } from 'next/server';
+import * as actualRetrieval from '../lib/admin/youtube-thumbnail-generator/retrieval';
+import * as actualBackendAgent from '../lib/admin/youtube-thumbnail-generator/backend-agent';
+import * as actualProviders from '../lib/admin/youtube-thumbnail-generator/providers';
+import * as actualAnyCapReadiness from '../lib/admin/anycap-gpt-image-readiness';
 
 const nonReadyAnyCap = {
   providerId: 'anycap' as const,
@@ -32,12 +36,24 @@ const safePayload = {
   textLayers: [],
 };
 
-function multipartThumbnailRequest(payload: unknown) {
-  const formData = new FormData();
-  formData.set('payload', JSON.stringify(payload));
+async function multipartThumbnailRequest(payload: unknown) {
+  const boundary = '----TzudongThumbnailBoundary';
+  const bytes = new TextEncoder().encode(
+    `--${boundary}\r\n`
+    + 'Content-Disposition: form-data; name="payload"\r\n\r\n'
+    + `${JSON.stringify(payload)}\r\n`
+    + `--${boundary}--\r\n`,
+  );
+
   return new Request('http://localhost/api/admin/youtube-thumbnail-generator', {
     method: 'POST',
-    body: formData,
+    body: bytes,
+    headers: {
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      'Content-Length': String(bytes.byteLength),
+      Origin: 'http://localhost',
+      'Sec-Fetch-Site': 'same-origin',
+    },
   }) as unknown as NextRequest;
 }
 
@@ -84,24 +100,28 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => {
         readinessCalls += 1;
         return nonReadyAnyCap;
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/retrieval', () => ({
+      ...actualRetrieval,
       resolveThumbnailRetrievalReferences: async () => {
         retrievalCalls += 1;
         throw new Error('retrieval should not run when readiness blocks');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/providers', () => ({
+      ...actualProviders,
       generateYoutubeThumbnail: async () => {
         providerCalls += 1;
         throw new Error('provider should not run when readiness blocks');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailWithBackendAgent: async () => {
         backendAgentCalls += 1;
         throw new Error('backend agent should not run when readiness blocks');
@@ -110,7 +130,7 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
 
     try {
       const route = await loadDirectRoute();
-      const response = await route.POST(multipartThumbnailRequest(safePayload));
+      const response = await route.POST(await multipartThumbnailRequest(safePayload));
       const payload = await response.json();
 
       expect(response.status).toBe(503);
@@ -140,9 +160,11 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => nonReadyAnyCap,
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailChatWithBackendAgent: async () => {
         backendAgentCalls += 1;
         throw new Error('chat backend agent should not run when readiness blocks');
@@ -154,7 +176,11 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       const response = await route.POST(new Request('http://localhost/api/admin/youtube-thumbnail-generator/chat', {
         method: 'POST',
         body: JSON.stringify({ message: '이 주제로 썸네일 생성해줘' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://localhost',
+          'Sec-Fetch-Site': 'same-origin',
+        },
       }) as unknown as NextRequest);
       const streamText = await response.text();
 
@@ -178,12 +204,14 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       requireAdmin: async () => ({ ok: true, userId: 'admin-user' }),
     }));
     mock.module('@/lib/admin/anycap-gpt-image-readiness', () => ({
+      ...actualAnyCapReadiness,
       probeAnyCapGptImageReadiness: async () => {
         readinessCalls += 1;
         throw new Error('help chat should not check provider readiness');
       },
     }));
     mock.module('@/lib/admin/youtube-thumbnail-generator/backend-agent', () => ({
+      ...actualBackendAgent,
       generateYoutubeThumbnailChatWithBackendAgent: async () => {
         backendAgentCalls += 1;
         return {
@@ -221,7 +249,11 @@ describe('thumbnail AnyCap gpt-image-2 readiness gate', () => {
       const response = await route.POST(new Request('http://localhost/api/admin/youtube-thumbnail-generator/chat', {
         method: 'POST',
         body: JSON.stringify({ message: 'help' }),
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://localhost',
+          'Sec-Fetch-Site': 'same-origin',
+        },
       }) as unknown as NextRequest);
       const streamText = await response.text();
 

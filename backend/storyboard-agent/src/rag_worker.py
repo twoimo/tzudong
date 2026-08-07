@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 import platform
@@ -22,6 +23,12 @@ from threading import Lock
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
+CANONICAL_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+if str(CANONICAL_BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(CANONICAL_BACKEND_ROOT))
+
+from utils.privacy_log import safe_error_name
+
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
@@ -78,6 +85,81 @@ _COUNTER_LOCK = Lock()
 class RagWorkerError(RuntimeError):
     """Worker-visible provider failure."""
 
+
+_SAFE_RAG_REASON_CODES = frozenset(
+    {
+        "required_bge_sparse_weights_missing",
+        "required_bge_sparse_weights_empty",
+        "required_flagembedding_missing",
+        "required_llava_transformers_missing",
+        "required_bge_output_shape_invalid",
+        "required_bge_dimension_invalid",
+        "required_reranker_output_shape_invalid",
+        "required_remote_worker_failed",
+        "required_remote_worker_unavailable",
+        "required_remote_worker_invalid_json",
+        "required_remote_worker_invalid_response",
+        "required_llava_remote_worker_missing",
+        "required_llava_remote_contract_invalid",
+        "required_llava_frame_missing",
+        "required_llava_runtime_dependencies_missing",
+        "required_llava_caption_empty",
+        "required_ollama_cli_missing",
+        "required_ollama_list_failed",
+        "required_bge_model_load_failed",
+        "required_reranker_model_load_failed",
+        "required_reranker_score_failed",
+    }
+)
+
+
+def _error_status(error: BaseException) -> int | None:
+    for attribute in ("status", "status_code", "code"):
+        try:
+            value = getattr(error, attribute, None)
+        except Exception:  # noqa: BLE001 - provider attributes can be properties.
+            continue
+        if type(value) is int:
+            return value
+    return None
+
+
+def _exception_message_text(error: BaseException) -> str:
+    """Inspect textual exception arguments only for internal classification."""
+    try:
+        return "\n".join(value for value in error.args if type(value) is str).lower()
+    except Exception:  # noqa: BLE001 - malformed provider errors are classified generically.
+        return ""
+
+
+def _classify_provider_error(error: BaseException) -> str:
+    if isinstance(error, RagWorkerError):
+        try:
+            reason = error.args[0] if error.args else None
+        except Exception:  # noqa: BLE001 - malformed provider errors are classified generically.
+            reason = None
+        if type(reason) is str and reason in _SAFE_RAG_REASON_CODES:
+            return reason
+
+    status = _error_status(error)
+    message = _exception_message_text(error)
+    if status == 429 or any(
+        marker in message for marker in ("quota", "resource_exhausted", "rate limit", "429")
+    ):
+        return "required_model_quota_exhausted"
+    if status in (401, 403) or any(
+        marker in message
+        for marker in ("unauthenticated", "unauthorized", "forbidden", "api key", "permission denied")
+    ):
+        return "required_model_auth_failed"
+    return "required_model_failed"
+
+
+def _provider_error_reason(error: BaseException) -> str:
+    reason = _classify_provider_error(error)
+    if isinstance(error, RagWorkerError) and reason in _SAFE_RAG_REASON_CODES:
+        return reason
+    return f"{reason}:{safe_error_name(error)}"
 
 class OperationTimings(BaseModel):
     operation: str
@@ -282,7 +364,6 @@ def _runtime_profile() -> dict[str, Any]:
         "resolvedDevice": _resolve_device(),
         "cudaAvailable": cuda_available,
         "remoteLlavaConfigured": bool(REMOTE_LLAVA_WORKER_URL),
-        "remoteLlavaUrl": REMOTE_LLAVA_WORKER_URL or None,
         "localLlavaWarmupEnabled": ALLOW_LOCAL_LLAVA_WARMUP,
     }
 
@@ -330,7 +411,9 @@ def _record_observation(operation: str, cause: str | None = None) -> None:
 def _record_compatibility_fallback(key: str, error: Exception) -> None:
     with _COUNTER_LOCK:
         _COMPATIBILITY_FALLBACKS[key] += 1
-        _COMPATIBILITY_LAST_ERROR[key] = f"{type(error).__name__}:{error}"
+        _COMPATIBILITY_LAST_ERROR[key] = (
+            f"compatibility_keyword_unsupported:{safe_error_name(error)}"
+        )
 
 def _attach_observability(result: Any, timings: OperationTimings) -> Any:
     if isinstance(result, BaseModel):
@@ -357,7 +440,7 @@ async def _run_blocking(operation: str, workload: str, fn, *args: Any) -> Any:
     try:
         try:
             await asyncio.wait_for(semaphore.acquire(), timeout=_queue_timeout())
-        except asyncio.TimeoutError as exc:
+        except asyncio.TimeoutError:
             timings = OperationTimings(
                 operation=operation,
                 workload=workload,
@@ -373,7 +456,7 @@ async def _run_blocking(operation: str, workload: str, fn, *args: Any) -> Any:
             raise HTTPException(
                 status_code=503,
                 detail={"error": "required_worker_queue_timeout", "timings": timings.model_dump()},
-            ) from exc
+            ) from None
     finally:
         with _COUNTER_LOCK:
             _WORKLOAD_QUEUED[workload] -= 1
@@ -406,18 +489,19 @@ async def _run_blocking(operation: str, workload: str, fn, *args: Any) -> Any:
     try:
         try:
             result = await asyncio.wait_for(asyncio.shield(future), timeout=_timeout())
-        except asyncio.TimeoutError as exc:
+        except asyncio.TimeoutError:
             release_on_exit = False
             future.add_done_callback(release_capacity_when_done)
             _record_observation(operation, "timeout")
-            raise HTTPException(status_code=504, detail="required_model_timeout") from exc
+            raise HTTPException(status_code=504, detail="required_model_timeout") from None
         except RagWorkerError as exc:
-            _record_observation(operation, str(exc))
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001 - convert provider exceptions into fail-closed API errors.
-            cause = f"required_model_failed:{type(exc).__name__}"
+            cause = _provider_error_reason(exc)
             _record_observation(operation, cause)
-            raise HTTPException(status_code=503, detail=cause) from exc
+            raise HTTPException(status_code=503, detail=cause) from None
+        except Exception as exc:  # noqa: BLE001 - convert provider exceptions into fail-closed API errors.
+            cause = _provider_error_reason(exc)
+            _record_observation(operation, cause)
+            raise HTTPException(status_code=503, detail=cause) from None
         timings = OperationTimings(
             operation=operation,
             workload=workload,
@@ -475,7 +559,7 @@ def _resolve_device() -> str:
 
 
 def _is_unsupported_keyword_error(error: TypeError, keyword: str) -> bool:
-    message = str(error).lower()
+    message = _exception_message_text(error)
     return keyword.lower() in message and (
         "unexpected" in message
         or "unsupported" in message
@@ -487,13 +571,13 @@ def _is_unsupported_keyword_error(error: TypeError, keyword: str) -> bool:
 def _load_bge_model() -> Any:
     try:
         from FlagEmbedding import BGEM3FlagModel  # type: ignore
-    except Exception as exc:  # noqa: BLE001
-        raise RagWorkerError("required_flagembedding_missing") from exc
+    except Exception:  # noqa: BLE001
+        raise RagWorkerError("required_flagembedding_missing") from None
     try:
         return BGEM3FlagModel(BGE_MODEL_ID, use_fp16=False, device=_resolve_device())
     except TypeError as exc:
         if not _is_unsupported_keyword_error(exc, "device"):
-            raise
+            raise RagWorkerError("required_bge_model_load_failed") from None
         _record_compatibility_fallback("bge.device_keyword", exc)
         return BGEM3FlagModel(BGE_MODEL_ID, use_fp16=False)
 
@@ -502,13 +586,13 @@ def _load_bge_model() -> Any:
 def _load_reranker() -> Any:
     try:
         from FlagEmbedding import FlagReranker  # type: ignore
-    except Exception as exc:  # noqa: BLE001
-        raise RagWorkerError("required_flagembedding_missing") from exc
+    except Exception:  # noqa: BLE001
+        raise RagWorkerError("required_flagembedding_missing") from None
     try:
         return FlagReranker(RERANKER_MODEL_ID, use_fp16=False, device=_resolve_device())
     except TypeError as exc:
         if not _is_unsupported_keyword_error(exc, "device"):
-            raise
+            raise RagWorkerError("required_reranker_model_load_failed") from None
         _record_compatibility_fallback("reranker.device_keyword", exc)
         return FlagReranker(RERANKER_MODEL_ID, use_fp16=False)
 
@@ -517,8 +601,8 @@ def _load_reranker() -> Any:
 def _load_llava_components() -> tuple[Any, Any]:
     try:
         from transformers import AutoProcessor, LlavaNextVideoForConditionalGeneration  # type: ignore
-    except Exception as exc:  # noqa: BLE001
-        raise RagWorkerError("required_llava_transformers_missing") from exc
+    except Exception:  # noqa: BLE001
+        raise RagWorkerError("required_llava_transformers_missing") from None
     processor = AutoProcessor.from_pretrained(LLAVA_MODEL_ID)
     model = LlavaNextVideoForConditionalGeneration.from_pretrained(LLAVA_MODEL_ID)
     return processor, model
@@ -544,7 +628,7 @@ def _encode_texts(request: EmbedRequest) -> EmbedResponse:
     ]
     dimensions = len(items[0].dense) if items else 0
     if dimensions != 1024:
-        raise RagWorkerError(f"required_bge_dimension_invalid:{dimensions}")
+        raise RagWorkerError("required_bge_dimension_invalid")
     return EmbedResponse(model=BGE_MODEL_ID, dimensions=dimensions, items=items)
 
 
@@ -555,7 +639,7 @@ def _rerank(request: RerankRequest) -> RerankResponse:
         raw_scores = reranker.compute_score(pairs, normalize=True)
     except TypeError as exc:
         if not _is_unsupported_keyword_error(exc, "normalize"):
-            raise
+            raise RagWorkerError("required_reranker_score_failed") from None
         _record_compatibility_fallback("reranker.normalize_keyword", exc)
         raw_scores = reranker.compute_score(pairs)
     scores = _as_sequence(raw_scores)
@@ -593,12 +677,12 @@ def _post_remote_json(url: str, payload: dict[str, Any], timeout_seconds: float)
     try:
         with urllib.request.urlopen(request, timeout=timeout_seconds) as response:  # noqa: S310 - operator-provided internal worker URL
             if response.status < 200 or response.status >= 300:
-                raise RagWorkerError(f"required_remote_worker_failed:{response.status}")
+                raise RagWorkerError("required_remote_worker_failed")
             parsed = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as exc:
-        raise RagWorkerError("required_remote_worker_unavailable") from exc
-    except json.JSONDecodeError as exc:
-        raise RagWorkerError("required_remote_worker_invalid_json") from exc
+    except urllib.error.URLError:
+        raise RagWorkerError("required_remote_worker_unavailable") from None
+    except json.JSONDecodeError:
+        raise RagWorkerError("required_remote_worker_invalid_json") from None
     if not isinstance(parsed, dict):
         raise RagWorkerError("required_remote_worker_invalid_response")
     return parsed
@@ -615,8 +699,8 @@ def _remote_caption(request: CaptionRequest) -> CaptionResponse:
     )
     try:
         response = CaptionResponse(**parsed)
-    except Exception as exc:  # noqa: BLE001
-        raise RagWorkerError("required_llava_remote_contract_invalid") from exc
+    except Exception:  # noqa: BLE001
+        raise RagWorkerError("required_llava_remote_contract_invalid") from None
     if response.model != LLAVA_MODEL_ID or not response.caption.strip():
         raise RagWorkerError("required_llava_remote_contract_invalid")
     return response
@@ -633,8 +717,8 @@ def _caption_frames(request: CaptionRequest) -> CaptionResponse:
     try:
         from PIL import Image  # type: ignore
         import torch  # type: ignore
-    except Exception as exc:  # noqa: BLE001
-        raise RagWorkerError("required_llava_runtime_dependencies_missing") from exc
+    except Exception:  # noqa: BLE001
+        raise RagWorkerError("required_llava_runtime_dependencies_missing") from None
 
     frames = [Image.open(frame_path).convert("RGB") for frame_path in frame_paths]
 
@@ -705,13 +789,13 @@ def _provider_readiness(load_required_models: bool) -> ProviderReadinessResponse
             _load_bge_model()
             add_provider(BGE_MODEL_ID, True)
         except Exception as exc:  # noqa: BLE001
-            add_provider(BGE_MODEL_ID, False, str(exc))
+            add_provider(BGE_MODEL_ID, False, _provider_error_reason(exc))
 
         try:
             _load_reranker()
             add_provider(RERANKER_MODEL_ID, True)
         except Exception as exc:  # noqa: BLE001
-            add_provider(RERANKER_MODEL_ID, False, str(exc))
+            add_provider(RERANKER_MODEL_ID, False, _provider_error_reason(exc))
 
         if REMOTE_LLAVA_WORKER_URL:
             remote_ready = _remote_worker_health_ready(REMOTE_LLAVA_WORKER_URL)
@@ -727,7 +811,7 @@ def _provider_readiness(load_required_models: bool) -> ProviderReadinessResponse
                 _load_llava_components()
                 add_provider(LLAVA_MODEL_ID, True)
             except Exception as exc:  # noqa: BLE001
-                add_provider(LLAVA_MODEL_ID, False, str(exc))
+                add_provider(LLAVA_MODEL_ID, False, _provider_error_reason(exc))
 
     try:
         installed = _ollama_models()
@@ -736,7 +820,7 @@ def _provider_readiness(load_required_models: bool) -> ProviderReadinessResponse
             add_provider(model_id, model_id in installed, None if model_id in installed else "required_ollama_model_missing")
     except Exception as exc:  # noqa: BLE001
         for model_id in (CONTEXT_MODEL_ID, *OLLAMA_JUDGE_MODELS):
-            add_provider(model_id, False, str(exc))
+            add_provider(model_id, False, _provider_error_reason(exc))
 
     gemini_oauth = os.environ.get("GEMINI_OAUTH_FILE", "~/.gemini/oauth_creds.json")
     openai_oauth = os.environ.get("OPENAI_CODEX_AUTH_FILE", "~/.codex/auth.json")

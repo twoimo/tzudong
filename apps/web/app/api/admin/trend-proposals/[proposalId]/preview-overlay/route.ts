@@ -12,6 +12,8 @@ import {
   mapAdminRestaurantMapOverlayRow,
   type AdminRestaurantMapOverlayRow,
 } from '@/lib/admin-map-overlays';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +25,7 @@ type TrendProposalRouteContext = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PROPOSAL_SELECT = 'id, run_id, restaurant_id, overlay_type, proposal_status, label, description, active_from, active_until, score, score_breakdown, evidence, proposal_hash, supersedes_proposal_id, reviewed_by_admin_id, reviewed_at, review_reason, overlay_audit_id, created_at, updated_at';
 const OVERLAY_SELECT = 'restaurant_id, overlay_type, label, description, active_from, active_until, evidence, is_active, created_at, updated_at';
+const MAX_TREND_PROPOSAL_PREVIEW_REQUEST_BYTES = 4 * 1024;
 
 function noStoreJson(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
@@ -65,21 +68,24 @@ export async function POST(request: NextRequest, context: TrendProposalRouteCont
     admin.response.headers.set('Cache-Control', 'no-store');
     return admin.response;
   }
+  if (!isTrustedSameOriginMutation(request)) {
+    return noStoreJson({ ok: false, error: 'Forbidden' }, { status: 403 });
+  }
+
 
   const { proposalId } = await context.params;
   if (!UUID_PATTERN.test(proposalId)) {
     return noStoreJson({ ok: false, error: 'trend_proposal_not_found' }, { status: 404 });
   }
 
+  const requestBody = await readBoundedJsonRequest(request, MAX_TREND_PROPOSAL_PREVIEW_REQUEST_BYTES);
+  if (!requestBody.ok) {
+    return noStoreJson({ ok: false, error: 'invalid_trend_proposal_preview_request' }, { status: 400 });
+  }
+
   let previewRequest: ReturnType<typeof normalizeTrendProposalPreviewRequest>;
   try {
-    let body: unknown = {};
-    try {
-      body = await request.json();
-    } catch {
-      body = {};
-    }
-    previewRequest = normalizeTrendProposalPreviewRequest(body);
+    previewRequest = normalizeTrendProposalPreviewRequest(requestBody.value);
   } catch {
     return noStoreJson({ ok: false, error: 'invalid_trend_proposal_preview_request' }, { status: 400 });
   }

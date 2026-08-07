@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import {
   buildThumbnailProviderRequestEnv,
   getContentLengthRejection,
+  getMultipartFieldRejection,
   getMultipartContentTypeRejection,
   parseThumbnailPayload,
   readThumbnailReferenceImages,
@@ -120,7 +122,7 @@ function buildVercelThumbnailProviderAvailability() {
         providerId: 'openai-gpt-image-2' as const,
         modelProvenance: 'requested-label' as const,
         liveEnabled: true,
-        browserKeyStorage: 'browser_local_storage_only' as const,
+        browserKeyStorage: 'memory_only_operation_scoped' as const,
         strictExactModelRequired: false,
       }
       : {
@@ -130,7 +132,7 @@ function buildVercelThumbnailProviderAvailability() {
         providerId: 'openai-gpt-image-2' as const,
         modelProvenance: 'requested-label' as const,
         liveEnabled: true,
-        browserKeyStorage: 'browser_local_storage_only' as const,
+        browserKeyStorage: 'memory_only_operation_scoped' as const,
         strictExactModelRequired: false,
       },
   };
@@ -340,6 +342,9 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
     if (!auth.ok) return auth.response;
+    if (!isTrustedSameOriginMutation(request)) {
+      return jsonError('thumbnail_generation_request_forbidden', 403, '요청을 처리할 수 없습니다.');
+    }
 
     // generateYoutubeThumbnail and generateYoutubeThumbnailWithBackendAgent both stay behind the admin gate above.
 
@@ -355,6 +360,8 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData().catch(() => null);
     if (!formData) return jsonError('malformed_multipart_form', 400);
+    const fieldRejection = getMultipartFieldRejection(formData);
+    if (fieldRejection) return jsonError(fieldRejection.error, fieldRejection.status);
 
     const payloadEntries = formData.getAll('payload');
     if (payloadEntries.length !== 1 || typeof payloadEntries[0] !== 'string') {

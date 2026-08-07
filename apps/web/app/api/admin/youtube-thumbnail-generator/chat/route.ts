@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 import { parseThumbnailChatAgentRequest } from '@/lib/admin/youtube-thumbnail-generator/request';
+import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
+import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { ThumbnailGenerationError, getPublicThumbnailGenerationErrorDetail } from '@/lib/admin/youtube-thumbnail-generator/types';
 import {
   getThumbnailProviderReadinessBlocker,
@@ -12,6 +14,7 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const MAX_THUMBNAIL_CHAT_REQUEST_BYTES = 64 * 1024;
 
 const streamHeaders = {
   'Cache-Control': 'no-store, no-transform',
@@ -100,10 +103,15 @@ function jsonRouteError(error: unknown) {
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin({ allowDevAdminBypassCookie: true });
   if (!auth.ok) return auth.response;
+  if (!isTrustedSameOriginMutation(request)) {
+    return jsonError('thumbnail_chat_request_forbidden', 403, '요청을 처리할 수 없습니다.');
+  }
+
+  const requestBody = await readBoundedJsonRequest(request, MAX_THUMBNAIL_CHAT_REQUEST_BYTES);
 
   let payload: ReturnType<typeof parseThumbnailChatAgentRequest>;
   try {
-    payload = parseThumbnailChatAgentRequest(await request.json().catch(() => null));
+    payload = parseThumbnailChatAgentRequest(requestBody.ok ? requestBody.value : null);
   } catch (error) {
     return jsonRouteError(error);
   }

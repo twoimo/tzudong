@@ -13,6 +13,7 @@ DECLARE
   v_retry_after integer;
   v_call integer;
   v_restaurant_id uuid;
+  v_user_id uuid := '77777777-7777-4777-8777-777777777777';
   v_allocation record;
 BEGIN
   SELECT policies.max_requests
@@ -89,6 +90,41 @@ BEGIN
   IF v_restaurant_id IS NULL THEN
     RAISE EXCEPTION 'G013 requires one restaurant fixture';
   END IF;
+
+  INSERT INTO auth.users (
+    id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) VALUES (
+    v_user_id, 'authenticated', 'authenticated', 'g013-shortener@example.invalid',
+    'not-a-real-password', pg_catalog.clock_timestamp(),
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+    pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp()
+  );
+
+  INSERT INTO public.reviews (
+    id, user_id, restaurant_id, title, content, visited_at,
+    verification_photo, food_photos, categories, is_verified
+  ) VALUES
+    ('11111111-1111-4111-8111-111111111111', v_user_id, v_restaurant_id, 'G013 verified review 1', 'fixture', current_date, 'private/g013-1.jpg', '{}'::text[], '{}'::text[], true),
+    ('33333333-3333-4333-8333-333333333333', v_user_id, v_restaurant_id, 'G013 verified review 3', 'fixture', current_date, 'private/g013-3.jpg', '{}'::text[], '{}'::text[], true),
+    ('55555555-5555-4555-8555-555555555555', v_user_id, v_restaurant_id, 'G013 verified review 5', 'fixture', current_date, 'private/g013-5.jpg', '{}'::text[], '{}'::text[], true);
+
+  BEGIN
+    PERFORM *
+      FROM public.allocate_short_url(
+        '/?review=66666666-6666-4666-8666-666666666666',
+        v_restaurant_id,
+        '66666666-6666-4666-8666-666666666666'::uuid,
+        'unknown',
+        ARRAY['Deny01', 'Deny02', 'Deny03', 'Deny04', 'Deny05']::text[]
+      );
+    RAISE EXCEPTION 'G013 unverified review allocation unexpectedly succeeded';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM <> 'short_url_review_not_verified' THEN
+        RAISE;
+      END IF;
+  END;
 
   DELETE FROM shortener_private.short_url_rate_limit_counters;
 
