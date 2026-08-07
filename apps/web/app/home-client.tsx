@@ -31,12 +31,14 @@ import {
   type DeviceMapLocation,
 } from "@/lib/device-location-map";
 import {
-  DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED,
-  DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED,
-  LOCATION_READINESS_STATUS_AVAILABLE,
-  LOCATION_READINESS_STATUS_UNAVAILABLE,
-  type DeviceLocationReadiness,
-} from "@/lib/privacy/location-readiness";
+  acquireDeviceLocationUseAuthorization,
+  createDeviceLocationTrackingLifecycle,
+  DEVICE_LOCATION_NETWORK_SINK,
+  evaluateLocationUse,
+  revokeDeviceLocationUseAuthorization,
+  type DeviceLocationTrackingLifecycle,
+  type DeviceLocationUseAuthorization,
+} from "@/lib/privacy/location-gate";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
 import {
   buildHomeDetailState,
@@ -131,154 +133,18 @@ const requestDesktopDetailReturnCapture = () => {
   window.dispatchEvent(new Event(HOME_DESKTOP_DETAIL_RETURN_CAPTURE_EVENT));
 };
 
-const LOCATION_READINESS_BLOCKED_TOAST =
-  "현재 위치 기능은 운영자 근거가 확보될 때까지 활성화되지 않습니다. 지도 표시를 일시 중단합니다.";
-const LOCATION_READINESS_ENDPOINT = "/api/privacy/location-readiness";
-const LOCATION_READINESS_TIMEOUT_MS = 1200;
-const LOCATION_READINESS_STATUS_AVAILABLE = "available" as const;
-const LOCATION_READINESS_STATUS_UNAVAILABLE = "unavailable" as const;
-const DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED =
-  "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED" as const;
-const DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED =
-  "DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED" as const;
+const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
+const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
+const DEVICE_LOCATION_READINESS_BLOCKED =
+  "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.";
 const DEVICE_LOCATION_DISCLOSURE =
-  "현재 위치는 지도에 표시하기 위해 이 기기 메모리에서만 사용하며, 지도 SDK 화면 이동·타일 로딩은 지도 제공자 네트워크 경계를 통해 처리됩니다. 브라우저 위치 권한을 요청할까요?";
+  "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
 const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
   "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
 
-type DeviceLocationReadinessStatus =
-  | typeof LOCATION_READINESS_STATUS_AVAILABLE
-  | typeof LOCATION_READINESS_STATUS_UNAVAILABLE;
-
-type DeviceLocationReadinessReasonCode =
-  | typeof DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED
-  | typeof DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED;
-
-type DeviceLocationReadiness = {
-  status: DeviceLocationReadinessStatus;
-  reasonCode: DeviceLocationReadinessReasonCode;
-};
-
-const isDeviceLocationReadinessResponse = (
-  value: unknown,
-): value is DeviceLocationReadiness => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-
-  const candidate = value as Record<string, unknown>;
-  if (Object.keys(candidate).length !== 2) return false;
-
-  const status = candidate.status;
-  const reasonCode = candidate.reasonCode;
-  return (
-    (status === LOCATION_READINESS_STATUS_AVAILABLE ||
-      status === LOCATION_READINESS_STATUS_UNAVAILABLE) &&
-    (reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED ||
-      reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED)
-  );
-};
-
-const buildUnavailableDeviceLocationReadiness = (): DeviceLocationReadiness => ({
-  status: LOCATION_READINESS_STATUS_UNAVAILABLE,
-  reasonCode: DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED,
-});
-
-const fetchDeviceLocationReadiness = async (): Promise<DeviceLocationReadiness> => {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), LOCATION_READINESS_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(LOCATION_READINESS_ENDPOINT, {
-      method: "GET",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "Cache-Control": "no-store",
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      return buildUnavailableDeviceLocationReadiness();
-    }
-
-    const payload: unknown = await response.json().catch(() => null);
-    if (!isDeviceLocationReadinessResponse(payload)) {
-      return buildUnavailableDeviceLocationReadiness();
-    }
-
-    return payload;
-  } catch {
-    return buildUnavailableDeviceLocationReadiness();
-  } finally {
-    clearTimeout(timeout);
-  }
-};
-
-const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
-const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
-const DEVICE_LOCATION_READINESS_BLOCKED_TOAST = "현재 위치 기능은 외부 운영자 근거 확인 후에만 사용할 수 있어요.";
-const LOCATION_READINESS_ENDPOINT = "/api/privacy/location-readiness";
-const LOCATION_READINESS_TIMEOUT_MS = 2000;
-
-const isDeviceLocationReadinessResponse = (
-  value: unknown,
-): value is DeviceLocationReadiness => {
-  if (typeof value !== "object" || value === null) return false;
-  const payload = value as Partial<DeviceLocationReadiness>;
-
-  return (
-    (payload.status === LOCATION_READINESS_STATUS_AVAILABLE ||
-      payload.status === LOCATION_READINESS_STATUS_UNAVAILABLE) &&
-    (payload.reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED ||
-      payload.reasonCode === DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED)
-  );
-};
-
-const buildUnavailableDeviceLocationReadiness = (): DeviceLocationReadiness => ({
-  status: LOCATION_READINESS_STATUS_UNAVAILABLE,
-  reasonCode: DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED,
-});
-
-const fetchDeviceLocationReadiness = async (): Promise<DeviceLocationReadiness> => {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => {
-    controller.abort();
-  }, LOCATION_READINESS_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(LOCATION_READINESS_ENDPOINT, {
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-        "Cache-Control": "no-store",
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      return buildUnavailableDeviceLocationReadiness();
-    }
-
-    const payload = await response
-      .json()
-      .catch(() => null);
-
-    if (!isDeviceLocationReadinessResponse(payload)) {
-      return buildUnavailableDeviceLocationReadiness();
-    }
-
-    return payload;
-  } catch {
-    return buildUnavailableDeviceLocationReadiness();
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
+
   const currentUrl = new URL(window.location.href);
   if (
     currentUrl.pathname !== "/" ||
@@ -293,7 +159,6 @@ function clearAnnouncementPanelUrl() {
   const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
   window.history.replaceState(window.history.state, "", nextUrl);
 }
-
 
 const isHomeStartupIntent = (
   value: string | null,
@@ -354,7 +219,14 @@ export default function HomeClient() {
   const deviceLocationFocusRequestIdRef = useRef(0);
   const deviceLocationWatchIdRef = useRef<number | null>(null);
   const deviceOrientationCleanupRef = useRef<(() => void) | null>(null);
-  const isDeviceLocationModeActiveRef = useRef(false);
+  const deviceLocationTrackingLifecycleRef =
+    useRef<DeviceLocationTrackingLifecycle | null>(null);
+  const deviceLocationAuthorizationRef =
+    useRef<DeviceLocationUseAuthorization | null>(null);
+  const deviceLocationMountedRef = useRef(true);
+  const deviceLocationAuthorizationExpiryTimerRef = useRef<
+    ReturnType<typeof globalThis.setTimeout> | null
+  >(null);
   const openPanelRef = useRef<(panel: PanelType) => void>(() => {});
   const openDetailPanelRef = useRef<
     (restaurant: Restaurant, focusZoom?: number, options?: HomeDetailOpenOptions) => void
@@ -866,14 +738,52 @@ export default function HomeClient() {
       mode: "position" | "heading",
       options: { shouldFocus: boolean },
     ) => {
-      if (!isDeviceLocationModeActiveRef.current) return;
+      const authorization = deviceLocationAuthorizationRef.current;
+      const memoryUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "memory",
+        authorization,
+      });
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization,
+      });
+
+      if (!memoryUse.allowed || !networkUse.allowed) {
+        const lifecycle = deviceLocationTrackingLifecycleRef.current;
+        deviceLocationTrackingLifecycleRef.current = null;
+        lifecycle?.dispose();
+
+        if (!lifecycle) {
+          const watchId = deviceLocationWatchIdRef.current;
+          deviceLocationWatchIdRef.current = null;
+          if (
+            watchId !== null &&
+            typeof navigator !== "undefined" &&
+            navigator.geolocation
+          ) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          deviceOrientationCleanupRef.current?.();
+          deviceOrientationCleanupRef.current = null;
+        }
+
+        revokeDeviceLocationUseAuthorization(authorization);
+        const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+        if (expiryTimer !== null) {
+          globalThis.clearTimeout(expiryTimer);
+          deviceLocationAuthorizationExpiryTimerRef.current = null;
+        }
+        deviceLocationAuthorizationRef.current = null;
+        setDeviceLocation(null);
+        setIsDeviceHeadingMode(false);
+        toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+        return;
+      }
 
       const nextHeading = resolveGeolocationHeading(position.coords.heading);
-      const latitude = position.coords.latitude;
-      const longitude = position.coords.longitude;
-
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
-
       const nextFocusRequestId = options.shouldFocus
         ? deviceLocationFocusRequestIdRef.current + 1
         : deviceLocationFocusRequestIdRef.current;
@@ -884,8 +794,8 @@ export default function HomeClient() {
 
       setDeviceLocation((previous) => {
         const nextLocation: DeviceMapLocation = {
-          lat: latitude,
-          lng: longitude,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
           accuracy: Number.isFinite(position.coords.accuracy)
             ? position.coords.accuracy
             : null,
@@ -905,39 +815,54 @@ export default function HomeClient() {
   );
 
   const stopDeviceHeadingWatchers = useCallback(() => {
+    const watchId = deviceLocationWatchIdRef.current;
+    deviceLocationWatchIdRef.current = null;
+
     if (
-      deviceLocationWatchIdRef.current !== null &&
+      watchId !== null &&
       typeof navigator !== "undefined" &&
       navigator.geolocation
     ) {
-      navigator.geolocation.clearWatch(deviceLocationWatchIdRef.current);
-      deviceLocationWatchIdRef.current = null;
+      navigator.geolocation.clearWatch(watchId);
     }
 
     deviceOrientationCleanupRef.current?.();
     deviceOrientationCleanupRef.current = null;
   }, []);
 
-  const clearDeviceLocationRuntimeState = useCallback(() => {
-    isDeviceLocationModeActiveRef.current = false;
+  const stopDeviceLocationTracking = useCallback(() => {
+    const lifecycle = deviceLocationTrackingLifecycleRef.current;
+    deviceLocationTrackingLifecycleRef.current = null;
+
+    if (lifecycle) {
+      lifecycle.dispose();
+      return;
+    }
+
     stopDeviceHeadingWatchers();
   }, [stopDeviceHeadingWatchers]);
-
-  const deactivateDeviceLocationSession = useCallback(() => {
-    clearDeviceLocationRuntimeState();
-    setIsDeviceHeadingMode(false);
+  const clearDeviceLocationState = useCallback(() => {
+    const authorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(authorization);
+    deviceLocationAuthorizationRef.current = null;
+    stopDeviceLocationTracking();
     setDeviceLocation(null);
-    setIsDeviceLocationPending(false);
-    deviceLocationFocusRequestIdRef.current = 0;
-  }, [clearDeviceLocationRuntimeState]);
+    setIsDeviceHeadingMode(false);
+  }, [stopDeviceLocationTracking]);
+  useEffect(() => {
+    if (mapMode === "overseas") {
+      clearDeviceLocationState();
+    }
+  }, [clearDeviceLocationState, mapMode]);
 
   const startDeviceOrientationTracking = useCallback(async () => {
-    if (
-      typeof window === "undefined" ||
-      !isDeviceLocationModeActiveRef.current
-    ) {
-      return false;
-    }
+    if (typeof window === "undefined") return false;
+    if (!deviceLocationAuthorizationRef.current) return false;
 
     const OrientationEvent = window.DeviceOrientationEvent as
       | (typeof DeviceOrientationEvent & {
@@ -970,7 +895,16 @@ export default function HomeClient() {
     const handleOrientation = (
       event: DeviceOrientationEvent & { webkitCompassHeading?: number | null },
     ) => {
-      if (!isDeviceLocationModeActiveRef.current) return;
+      const networkUse = evaluateLocationUse({
+        purpose: "home-map-device-marker",
+        destination: "network",
+        networkSink: DEVICE_LOCATION_NETWORK_SINK,
+        authorization: deviceLocationAuthorizationRef.current,
+      });
+      if (!networkUse.allowed) {
+        clearDeviceLocationState();
+        return;
+      }
 
       const heading = resolveDeviceOrientationHeading(event);
       if (heading === null) return;
@@ -1003,122 +937,196 @@ export default function HomeClient() {
     };
 
     return true;
-  }, []);
+  }, [clearDeviceLocationState]);
 
   const startDeviceLocationWatch = useCallback(
     (mode: "position" | "heading") => {
+      const authorization = deviceLocationAuthorizationRef.current;
       if (
-        !isDeviceLocationModeActiveRef.current ||
         typeof navigator === "undefined" ||
         !navigator.geolocation ||
+        !authorization ||
         deviceLocationWatchIdRef.current !== null
       )
         return;
 
-      deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
-        (position) =>
-          applyDevicePosition(position, mode, { shouldFocus: false }),
-        () => {
-          // watchPosition은 보조 갱신용이므로 실패해도 첫 위치 표시를 유지한다.
-        },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      deviceLocationTrackingLifecycleRef.current?.dispose();
+      const lifecycle = createDeviceLocationTrackingLifecycle(
+        stopDeviceHeadingWatchers,
+        authorization,
       );
+      deviceLocationTrackingLifecycleRef.current = lifecycle;
+
+      try {
+        deviceLocationWatchIdRef.current = navigator.geolocation.watchPosition(
+          (position) =>
+            applyDevicePosition(position, mode, { shouldFocus: false }),
+          () => {
+            lifecycle.dispose();
+            if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+              clearDeviceLocationState();
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+        );
+      } catch {
+        lifecycle.dispose();
+        if (deviceLocationTrackingLifecycleRef.current === lifecycle) {
+          clearDeviceLocationState();
+        }
+      }
     },
-    [applyDevicePosition],
+    [applyDevicePosition, clearDeviceLocationState, stopDeviceHeadingWatchers],
   );
 
   const handleDeviceLocationClick = useCallback(async () => {
+    if (isDeviceHeadingMode) {
+      deviceLocationTrackingLifecycleRef.current?.onModeChange(false);
+      clearDeviceLocationState();
+      toast.info("현재 위치와 방향 표시를 껐어요");
+      return;
+    }
+
+    const authorization = await acquireDeviceLocationUseAuthorization();
+    if (!authorization) {
+      clearDeviceLocationState();
+      toast.error(DEVICE_LOCATION_READINESS_BLOCKED);
+      return;
+    }
+
+    if (
+      !deviceLocationMountedRef.current ||
+      (typeof document !== "undefined" &&
+        document.visibilityState === "hidden")
+    ) {
+      revokeDeviceLocationUseAuthorization(authorization);
+      clearDeviceLocationState();
+      return;
+    }
+
+    const previousAuthorization = deviceLocationAuthorizationRef.current;
+    const expiryTimer = deviceLocationAuthorizationExpiryTimerRef.current;
+    if (expiryTimer !== null) {
+      globalThis.clearTimeout(expiryTimer);
+      deviceLocationAuthorizationExpiryTimerRef.current = null;
+    }
+    revokeDeviceLocationUseAuthorization(previousAuthorization);
+    deviceLocationAuthorizationRef.current = authorization;
+    const expiresIn = authorization.expiresAt - authorization.grantedAt;
+    deviceLocationAuthorizationExpiryTimerRef.current = globalThis.setTimeout(() => {
+      if (deviceLocationAuthorizationRef.current === authorization) {
+        clearDeviceLocationState();
+      }
+    }, expiresIn);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      clearDeviceLocationState();
       toast.error(DEVICE_LOCATION_ENABLE_TOAST);
       return;
     }
 
-    const isSessionActive = isDeviceLocationModeActiveRef.current && Boolean(deviceLocation);
-    if (isSessionActive && isDeviceHeadingMode) {
-      deactivateDeviceLocationSession();
+    try {
+      if (
+        typeof window === "undefined" ||
+        !window.confirm(DEVICE_LOCATION_DISCLOSURE)
+      ) {
+        clearDeviceLocationState();
+        toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
+        return;
+      }
+    } catch {
+      clearDeviceLocationState();
+      toast.info(DEVICE_LOCATION_DISCLOSURE_CANCELLED);
       return;
     }
 
-    const nextMode: "position" | "heading" = isSessionActive
+    if (deviceLocationAuthorizationRef.current !== authorization) {
+      clearDeviceLocationState();
+      return;
+    }
+
+    const nextMode: "position" | "heading" = deviceLocation
       ? "heading"
       : "position";
-
     setIsDeviceLocationPending(true);
-    const preserveSession = isSessionActive;
 
     try {
-      const readiness = await fetchDeviceLocationReadiness();
+      const position = await new Promise<GeolocationPosition>(
+        (resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            maximumAge: 3000,
+            timeout: 12000,
+          });
+        },
+      );
       if (
-        readiness.status !== LOCATION_READINESS_STATUS_AVAILABLE ||
-        readiness.reasonCode !== DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED
+        !deviceLocationMountedRef.current ||
+        (typeof document !== "undefined" &&
+          document.visibilityState === "hidden")
       ) {
-        toast.error(DEVICE_LOCATION_READINESS_BLOCKED_TOAST);
+        clearDeviceLocationState();
         return;
       }
-
-      if (!preserveSession) {
-        isDeviceLocationModeActiveRef.current = true;
-      }
-
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          maximumAge: 3000,
-          timeout: 12000,
-        });
-      });
 
       if (nextMode === "heading") {
         setIsDeviceHeadingMode(true);
         await startDeviceOrientationTracking();
+
+        if (
+          !deviceLocationMountedRef.current ||
+          (typeof document !== "undefined" &&
+            document.visibilityState === "hidden")
+        ) {
+          clearDeviceLocationState();
+          return;
+        }
+
         startDeviceLocationWatch("heading");
         toast.success("현재 위치와 방향 표시를 켰어요");
       } else {
-        stopDeviceHeadingWatchers();
+        stopDeviceLocationTracking();
         setIsDeviceHeadingMode(false);
         toast.success("현재 위치를 지도에 표시했어요");
       }
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
     } catch {
-      if (!preserveSession) {
-        deactivateDeviceLocationSession();
-      }
+      clearDeviceLocationState();
       toast.error(DEVICE_LOCATION_ENABLE_TOAST);
     } finally {
-      setIsDeviceLocationPending(false);
+      if (deviceLocationMountedRef.current) {
+        setIsDeviceLocationPending(false);
+      }
     }
   }, [
     applyDevicePosition,
-    deactivateDeviceLocationSession,
+    clearDeviceLocationState,
     deviceLocation,
     isDeviceHeadingMode,
     startDeviceLocationWatch,
     startDeviceOrientationTracking,
-    stopDeviceHeadingWatchers,
+    stopDeviceLocationTracking,
   ]);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    deviceLocationMountedRef.current = true;
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        deactivateDeviceLocationSession();
-      }
+      if (document.visibilityState !== "hidden") return;
+
+      deviceLocationTrackingLifecycleRef.current?.onVisibilityChange(
+        document.visibilityState,
+      );
+      clearDeviceLocationState();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
+      deviceLocationMountedRef.current = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearDeviceLocationState();
     };
-  }, [deactivateDeviceLocationSession]);
-
-  useEffect(
-    () => () => {
-      clearDeviceLocationRuntimeState();
-    },
-    [clearDeviceLocationRuntimeState],
-  );
+  }, [clearDeviceLocationState]);
 
   const shouldRenderSidePanels = Boolean(
     isAnnouncementSheetOpen ||
@@ -1200,7 +1208,7 @@ export default function HomeClient() {
         desktopPanelSide={desktopPanelSide}
         isMapFullscreen={isMapFullscreen}
         onMapFullscreenChange={setIsMapFullscreen}
-        deviceLocation={deviceLocation}
+        deviceLocation={mapMode === "domestic" ? deviceLocation : null}
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
         onContextualRestaurantsChange={setContextualRestaurantsPayload}
         onMapInteraction={handleMapInteraction}

@@ -1,6 +1,7 @@
 // server-only: this service-role client must never be imported by browser components.
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 
 if (typeof window !== 'undefined') {
   throw new Error('Supabase service-role client is server-only.');
@@ -13,9 +14,9 @@ type CacheEntry<T> = {
   value: T;
 } | null;
 
-let supabaseAdminClientCache: CacheEntry<SupabaseClient> = null;
+let supabaseAdminClientCache: CacheEntry<SupabaseClient<Database>> = null;
 
-export function createSupabaseServiceRoleClient(): SupabaseClient {
+export function createSupabaseServiceRoleClient(): SupabaseClient<Database> {
   if (supabaseAdminClientCache && supabaseAdminClientCache.expiresAt > Date.now()) {
     return supabaseAdminClientCache.value;
   }
@@ -27,7 +28,7 @@ export function createSupabaseServiceRoleClient(): SupabaseClient {
     throw new Error('Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY).');
   }
 
-  const client = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  const client = createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

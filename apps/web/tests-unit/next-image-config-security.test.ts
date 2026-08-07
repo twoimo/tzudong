@@ -1,77 +1,72 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, test } from 'bun:test';
+import nextConfig, {
+  buildImageRemotePatterns,
+  getValidatedSupabaseImageOrigin,
+} from '../next.config.mjs';
+import { resolveConfiguredSupabaseOrigin } from '../lib/profile-avatar-url.ts';
 
-import { getSupabaseStorageRemotePattern } from "../next.config.mjs";
+const SUPABASE_ORIGIN = 'https://project-ref.supabase.co';
 
-const NIGHTLY_ORIGIN = "http://127.0.0.1:54321";
-const STORAGE_PATHNAME = "/storage/v1/object/public/**";
-const LOCAL_NIGHTLY_OPTIONS = {
-  nightlyOffline: true,
-  isProduction: false,
-  isVercel: false,
-};
-
-describe("Next Image Supabase storage origins", () => {
-  it("permits only the canonical offline loopback origin during a local nightly run", () => {
-    expect(
-      getSupabaseStorageRemotePattern(NIGHTLY_ORIGIN, LOCAL_NIGHTLY_OPTIONS),
-    ).toEqual({
-      protocol: "http",
-      hostname: "127.0.0.1",
-      port: "54321",
-      pathname: STORAGE_PATHNAME,
-    });
+describe('Next image optimizer trust boundary', () => {
+  test('allows only purpose-scoped Supabase buckets and fixed image hosts', () => {
+    expect(buildImageRemotePatterns(SUPABASE_ORIGIN)).toEqual([
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/a/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+        port: '',
+        pathname: '/vi/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        port: '',
+        pathname: '/vi/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'project-ref.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/profile-avatars/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'project-ref.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/review-photos/**',
+      },
+    ]);
   });
 
-  it("keeps HTTPS Supabase storage origins on the production-safe pattern", () => {
-    expect(
-      getSupabaseStorageRemotePattern("https://project.supabase.co", {
-        nightlyOffline: false,
-        isProduction: true,
-        isVercel: true,
-      }),
-    ).toEqual({
-      protocol: "https",
-      hostname: "project.supabase.co",
-      pathname: STORAGE_PATHNAME,
-    });
-  });
-
-  it("rejects the loopback HTTP origin outside the local nightly context", () => {
-    expect(
-      getSupabaseStorageRemotePattern(NIGHTLY_ORIGIN, {
-        nightlyOffline: false,
-        isProduction: false,
-        isVercel: false,
-      }),
-    ).toBeNull();
-
-    expect(
-      getSupabaseStorageRemotePattern(NIGHTLY_ORIGIN, {
-        nightlyOffline: true,
-        isProduction: true,
-        isVercel: false,
-      }),
-    ).toBeNull();
-
-    expect(
-      getSupabaseStorageRemotePattern(NIGHTLY_ORIGIN, {
-        nightlyOffline: true,
-        isProduction: false,
-        isVercel: true,
-      }),
-    ).toBeNull();
-  });
-
-  it("rejects offline origin near misses", () => {
-    for (const origin of [
-      "http://localhost:54321",
-      "http://127.0.0.1:54322",
-      "http://127.0.0.1:54321/",
-      "http://127.0.0.1:54321/storage/v1/object/public",
-      "http://user:password@127.0.0.1:54321",
-      "http://127.0.0.1:54321#fragment",
+  test('rejects malformed and non-Supabase origins instead of extracting a hostname', () => {
+    for (const value of [
+      'https://tracker.example',
+      'http://project-ref.supabase.co',
+      'https://user:password@project-ref.supabase.co',
+      'https://project-ref.supabase.co:443',
+      'https://project-ref.supabase.co/storage/v1/object/public/profile-avatars',
+      'https://project-ref.supabase.co?redirect=https://tracker.example',
+      'https://project-ref.supabase.co#fragment',
+      ' https://project-ref.supabase.co',
     ]) {
-      expect(getSupabaseStorageRemotePattern(origin, LOCAL_NIGHTLY_OPTIONS)).toBeNull();
+      expect(() => getValidatedSupabaseImageOrigin(value)).toThrow(
+        'NEXT_PUBLIC_SUPABASE_URL must be a canonical HTTPS *.supabase.co origin',
+      );
+      expect(() => buildImageRemotePatterns(value)).toThrow();
+      expect(resolveConfiguredSupabaseOrigin(value)).toBeNull();
     }
+
+    expect(getValidatedSupabaseImageOrigin(`${SUPABASE_ORIGIN}/`)).toBe(SUPABASE_ORIGIN);
+    expect(resolveConfiguredSupabaseOrigin(`${SUPABASE_ORIGIN}/`)).toBe(SUPABASE_ORIGIN);
+  });
+
+  test('disables SVG and local-IP optimizer exceptions', () => {
+    expect(nextConfig.images?.dangerouslyAllowSVG).toBe(false);
+    expect(nextConfig.images).not.toHaveProperty('dangerouslyAllowLocalIP');
   });
 });

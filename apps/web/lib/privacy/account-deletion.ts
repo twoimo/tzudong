@@ -1,315 +1,437 @@
-import { isSupabaseAuthSessionStorageKey } from '@/lib/supabase-auth-session-hints';
-import {
-  deleteDraftsByUser as deleteEditRequestDraftsByUser,
-} from '@/lib/editRequestDraftDB';
-import {
-  deleteDraftsByUser as deleteReviewDraftsByUser,
-} from '@/lib/reviewDraftDB';
-import {
-  deleteDraftsByUser as deleteSubmissionDraftsByUser,
-} from '@/lib/submissionDraftDB';
+import { clearBrowserDraftsForUser } from '@/lib/privacy/browser-draft-cleanup';
 
-type PrimitiveRecord = Record<string, unknown>;
+export const ACCOUNT_DELETION_CONFIRMATION_TEXT = '계정 삭제' as const;
 
-type ServerReadback = PrimitiveRecord | null;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PREVIEW_HASH_PATTERN = /^[0-9a-f]{64}$/;
+const SOURCE_MANIFEST_HASH_PATTERN = /^[0-9a-f]{64}$/;
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+const RECEIPT_REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,255}$/;
+const AUTH_RECEIPT_REFERENCE_PATTERN = RECEIPT_REFERENCE_PATTERN;
+export const MAX_ACCOUNT_DELETION_STORAGE_RECEIPT_REFS = 100;
 
-type StorageLike = {
-  readonly length: number;
-  key(index: number): string | null;
-  removeItem(key: string): void;
-};
+export type AccountDeletionCounts = Readonly<{
+  delete: number;
+  anonymize: number;
+  separate: number;
+  retain: number;
+}>;
 
-export const ACCOUNT_DELETION_BROWSER_CLEANUP_QUERY_PARAM = 'deleteCleanup';
-export const ACCOUNT_DELETION_BROWSER_CLEANUP_QUERY_VALUE = 'required';
+export type AccountDeletionPreview = Readonly<{
+  requestId: string;
+  previewHash: string;
+  expiresAt: string;
+  policyVersion: string;
+  sourceManifestHash: string;
+  counts: AccountDeletionCounts;
+}>;
+export type AccountDeletionStorageWorkItem = Readonly<{
+  bucketId: string;
+  objectName: string;
+  objectLocatorHash: string;
+  objectVersionHash: string;
+}>;
+export type AccountDeletionStorageReceiptRef = Readonly<{
+  objectLocatorHash: string;
+  objectVersionHash: string;
+  providerReceiptRef: string;
+  providerReceiptHash: string;
+}>;
+export type AccountDeletionReceipt = Readonly<{
+  requestId: string;
+  status: 'applied';
+  reasonCode: 'APPLIED';
+  sourceManifestHash: string;
+  counts: AccountDeletionCounts;
+  readback: Readonly<{
+    database: true;
+    storage: true;
+    sessions: true;
+    auth: true;
+  }>;
+  storageReceiptRefs: readonly AccountDeletionStorageReceiptRef[];
+  authReceiptRef: string;
+}>;
 
-const UUID_V4_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export type AccountDeletionInProgressStatus = Readonly<{
+  status: 'in_progress';
+}>;
+export type AccountDeletionAppliedStatus = Readonly<{
+  status: 'applied';
+  reasonCode: 'APPLIED';
+  counts: AccountDeletionCounts;
+  receipt: AccountDeletionReceipt;
+}>;
+export type AccountDeletionIncompleteStatus = Readonly<{
+  status: 'partial' | 'failed';
+  reasonCode: string;
+  counts: AccountDeletionCounts;
+}>;
+export type AccountDeletionStatus =
+  | AccountDeletionInProgressStatus
+  | AccountDeletionAppliedStatus
+  | AccountDeletionIncompleteStatus;
+export type AccountDeletionBrowserCleanupReadback = Readonly<{
+  auth: boolean;
+  submissionDrafts: boolean;
+  reviewDrafts: boolean;
+  editRequestDrafts: boolean;
+}>;
 
-function toTrimmedString(raw: unknown): string {
-  return typeof raw === 'string' ? raw.trim() : '';
-}
-
-function isNonEmptyString(raw: unknown): raw is string {
-  return typeof raw === 'string' && raw.trim().length > 0;
-}
-
-function normalizeUserId(raw: unknown): string {
-  return isNonEmptyString(raw) ? raw.trim() : '';
-}
-
-function isUuid(value: string): boolean {
-  return UUID_V4_RE.test(value);
-}
-
-function asRecord(raw: unknown): PrimitiveRecord | null {
-  return typeof raw === 'object' && raw !== null ? (raw as PrimitiveRecord) : null;
-}
-
-function extractReceiptUserId(receipt: PrimitiveRecord): string {
-  const payload = asRecord(receipt.payload);
-  const readback = asRecord(receipt.readback);
-
-  const candidates = [
-    receipt.userId,
-    receipt.targetUserId,
-    receipt.deletedUserId,
-    receipt.accountId,
-    receipt.appliedUserId,
-    payload?.userId,
-    readback?.userId,
-  ];
-
-  for (const candidate of candidates) {
-    const normalized = normalizeUserId(candidate);
-    if (normalized && isUuid(normalized)) {
-      return normalized;
-    }
-  }
-
-  return '';
-}
-
-function extractReadback(receipt: PrimitiveRecord): ServerReadback {
-  return asRecord(receipt.readback);
-}
-
-function hasBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-
-function isAppliedReceipt(receipt: unknown, expectedUserId: string): boolean {
-  const raw = asRecord(receipt);
-  if (!raw || raw.success !== true) return false;
-
-  const readback = extractReadback(raw);
-
-  const isApplied = raw.applied === true || (readback?.applied === true);
-  if (!isApplied) return false;
-
-  if (hasBoolean(raw.applied) && raw.applied !== true) return false;
-  if (readback && hasBoolean(readback.applied) && readback.applied !== true) return false;
-
-  const receiptUserId = extractReceiptUserId(raw);
-  if (!receiptUserId || receiptUserId !== expectedUserId) return false;
-
-  const readbackUserId = normalizeUserId(readback?.userId);
-  if (readbackUserId && readbackUserId !== expectedUserId) return false;
-
-  return true;
-}
-
-function clearStorageAuthKeys(storage: StorageLike | null | undefined): number {
-  if (!storage) {
-    return 0;
-  }
-
-  const keys: string[] = [];
-
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (key && isSupabaseAuthSessionStorageKey(key)) {
-      keys.push(key);
-    }
-  }
-
-  for (const key of keys) {
-    storage.removeItem(key);
-  }
-
-  return keys.length;
-}
-
-function clearLocalAuthStorageKeys(): number {
-  return clearStorageAuthKeys(window.localStorage);
-}
-
-function clearSessionAuthStorageKeys(): number {
-  return clearStorageAuthKeys(window.sessionStorage);
-}
-
-function clearAuthCookies(): number {
-  const cookieParts = document.cookie.split(';');
-  const names: string[] = [];
-
-  for (const cookiePart of cookieParts) {
-    const [rawName] = cookiePart.trim().split('=');
-    const key = toTrimmedString(rawName);
-
-    if (!key || !isSupabaseAuthSessionStorageKey(key)) continue;
-    names.push(key);
-  }
-
-  const expires = 'Thu, 01 Jan 1970 00:00:00 GMT';
-  for (const name of names) {
-    document.cookie = `${name}=; expires=${expires}; max-age=0; path=/`;
-  }
-
-  return names.length;
-}
-
-export type AccountDeletionBrowserCleanupFailureReason =
-  | 'complete'
-  | 'invalid-user-id'
-  | 'invalid-receipt'
-  | 'unsupported-environment'
-  | 'auth-key-cleanup-failed'
-  | 'submission-draft-cleanup-failed'
-  | 'review-draft-cleanup-failed'
-  | 'edit-request-draft-cleanup-failed';
-
-export type AccountDeletionBrowserCleanupReadback = {
-  draftCleanup: {
-    submission: number;
-    review: number;
-    editRequest: number;
-    total: number;
-  };
-  authKeysRemoved: {
-    localStorage: number;
-    cookie: number;
-  };
-};
-
-export type AccountDeletionBrowserCleanupResult = {
-  status: 'completed' | 'failed';
-  failureReason: AccountDeletionBrowserCleanupFailureReason;
+export type AccountDeletionBrowserCleanupResult = Readonly<{
+  status: 'complete' | 'failed';
   readback: AccountDeletionBrowserCleanupReadback;
+}>;
+
+
+type RecordValue = Record<string, unknown>;
+export type AccountDeletionProviderAttestationInput = Readonly<{
+  actorUserId: string;
+  targetUserId: string;
+  requestId: string;
+  previewHash: string;
+  idempotencyKey: string;
+  sourceManifestHash: string;
+  leaseToken: string;
+}>;
+export type AccountDeletionVerifiedStorageReceipt =
+  AccountDeletionProviderAttestationInput & Readonly<{
+    objectLocatorHash: string;
+    objectVersionHash: string;
+    providerReceiptRef: string;
+    providerReceiptHash: string;
+  }>;
+export type AccountDeletionVerifiedAuthReceipt =
+  AccountDeletionProviderAttestationInput & Readonly<{
+    authReceiptRef: string;
+  }>;
+export type AccountDeletionProviderAttestation = Readonly<{
+  getVerifiedStorageReceipts: (
+    input: AccountDeletionProviderAttestationInput & Readonly<{
+      workItems: readonly AccountDeletionStorageWorkItem[];
+    }>,
+  ) => Promise<readonly AccountDeletionVerifiedStorageReceipt[] | null>;
+  getVerifiedAuthReceipt: (
+    input: AccountDeletionProviderAttestationInput & Readonly<{
+      storageReceiptRefs: readonly AccountDeletionStorageReceiptRef[];
+    }>,
+  ) => Promise<AccountDeletionVerifiedAuthReceipt | null>;
+}>;
+export type AccountDeletionProviderAttestationFactory = () => AccountDeletionProviderAttestation | null;
+
+/**
+ * Source-pinned production dependency. It remains unavailable until an
+ * independent verifier publishes owner-only proof records it can read.
+ */
+export const createAccountDeletionProviderAttestation = (): AccountDeletionProviderAttestation | null =>
+  null;
+
+let accountDeletionProviderAttestationFactory: AccountDeletionProviderAttestationFactory =
+  createAccountDeletionProviderAttestation;
+
+export const getAccountDeletionProviderAttestation = () =>
+  accountDeletionProviderAttestationFactory();
+
+export const setAccountDeletionProviderAttestationFactoryForTests = (
+  factory: AccountDeletionProviderAttestationFactory,
+) => {
+  accountDeletionProviderAttestationFactory = factory;
 };
 
-function createResult(
-  status: AccountDeletionBrowserCleanupResult['status'],
-  failureReason: AccountDeletionBrowserCleanupFailureReason,
-  draftCleanup: AccountDeletionBrowserCleanupReadback['draftCleanup'],
-  localStorageKeysRemoved: number,
-  cookieKeysRemoved: number,
-): AccountDeletionBrowserCleanupResult {
+const isRecord = (value: unknown): value is RecordValue =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const hasExactKeys = (value: RecordValue, keys: readonly string[]) =>
+  Object.keys(value).length === keys.length
+  && Object.keys(value).every((key) => keys.includes(key));
+const isBoundedPolicyVersion = (value: unknown): value is string =>
+  typeof value === 'string'
+  && value.length > 0
+  && value.length <= 128
+  && !/[\u0000-\u001f\u007f]/.test(value);
+
+const isSafeCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+
+const isCounts = (value: unknown): value is AccountDeletionCounts =>
+  isRecord(value)
+  && hasExactKeys(value, ['delete', 'anonymize', 'separate', 'retain'])
+  && isSafeCount(value.delete)
+  && isSafeCount(value.anonymize)
+  && isSafeCount(value.separate)
+  && isSafeCount(value.retain);
+
+const isReadback = (value: unknown): value is AccountDeletionReceipt['readback'] =>
+  isRecord(value)
+  && hasExactKeys(value, ['database', 'storage', 'sessions', 'auth'])
+  && value.database === true
+  && value.storage === true
+  && value.sessions === true
+  && value.auth === true;
+
+const isStorageReceiptRefs = (
+  value: unknown,
+): value is readonly AccountDeletionStorageReceiptRef[] => {
+  if (!Array.isArray(value) || value.length > MAX_ACCOUNT_DELETION_STORAGE_RECEIPT_REFS) return false;
+
+  const objectLocators = new Set<string>();
+  const providerReceiptRefs = new Set<string>();
+  return value.every((receipt) => {
+    if (
+      !isRecord(receipt)
+      || !hasExactKeys(receipt, [
+        'objectLocatorHash',
+        'objectVersionHash',
+        'providerReceiptRef',
+        'providerReceiptHash',
+      ])
+      || !isAccountDeletionSourceManifestHash(receipt.objectLocatorHash)
+      || !isAccountDeletionSourceManifestHash(receipt.objectVersionHash)
+      || typeof receipt.providerReceiptRef !== 'string'
+      || !RECEIPT_REFERENCE_PATTERN.test(receipt.providerReceiptRef)
+      || !isAccountDeletionSourceManifestHash(receipt.providerReceiptHash)
+      || objectLocators.has(receipt.objectLocatorHash)
+      || providerReceiptRefs.has(receipt.providerReceiptRef)
+    ) {
+      return false;
+    }
+
+    objectLocators.add(receipt.objectLocatorHash);
+    providerReceiptRefs.add(receipt.providerReceiptRef);
+    return true;
+  });
+};
+
+export const isAccountDeletionConfirmation = (
+  value: unknown,
+): value is typeof ACCOUNT_DELETION_CONFIRMATION_TEXT =>
+  value === ACCOUNT_DELETION_CONFIRMATION_TEXT;
+
+export const isAccountDeletionRequestId = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_PATTERN.test(value);
+
+export const isAccountDeletionPreviewHash = (value: unknown): value is string =>
+  typeof value === 'string' && PREVIEW_HASH_PATTERN.test(value);
+
+export const isAccountDeletionSourceManifestHash = (value: unknown): value is string =>
+  typeof value === 'string' && SOURCE_MANIFEST_HASH_PATTERN.test(value);
+
+export const isAccountDeletionIdempotencyKey = (value: unknown): value is string =>
+  typeof value === 'string' && IDEMPOTENCY_KEY_PATTERN.test(value);
+
+export const createAccountDeletionIdempotencyKey = () => crypto.randomUUID();
+
+export const parseAccountDeletionPreview = (value: unknown): AccountDeletionPreview | null => {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, [
+      'requestId',
+      'previewHash',
+      'expiresAt',
+      'policyVersion',
+      'sourceManifestHash',
+      'counts',
+    ])
+    || !isRecord(value.counts)
+  ) {
+    return null;
+  }
+  if (
+    !isAccountDeletionRequestId(value.requestId)
+    || !isAccountDeletionPreviewHash(value.previewHash)
+    || typeof value.expiresAt !== 'string'
+    || !isBoundedPolicyVersion(value.policyVersion)
+    || !isAccountDeletionSourceManifestHash(value.sourceManifestHash)
+    || !isCounts(value.counts)
+  ) {
+    return null;
+  }
+
+  const expiresAt = new Date(value.expiresAt);
+  if (Number.isNaN(expiresAt.getTime())) return null;
+
   return {
-    status,
-    failureReason,
-    readback: {
-      draftCleanup,
-      authKeysRemoved: {
-        localStorage: localStorageKeysRemoved,
-        cookie: cookieKeysRemoved,
-      },
-    },
+    requestId: value.requestId,
+    previewHash: value.previewHash,
+    expiresAt: expiresAt.toISOString(),
+    policyVersion: value.policyVersion,
+    sourceManifestHash: value.sourceManifestHash,
+    counts: value.counts,
   };
-}
+};
 
-function buildFailed(
-  failureReason: Exclude<AccountDeletionBrowserCleanupFailureReason, 'complete'>,
-  localStorageKeysRemoved: number,
-  cookieKeysRemoved: number,
-  draftCleanup: AccountDeletionBrowserCleanupReadback['draftCleanup'],
-): AccountDeletionBrowserCleanupResult {
-  return createResult(
-    'failed',
-    failureReason,
-    draftCleanup,
-    localStorageKeysRemoved,
-    cookieKeysRemoved,
-  );
-}
+export const isAccountDeletionPreviewFresh = (
+  preview: AccountDeletionPreview,
+  now = new Date(),
+) => new Date(preview.expiresAt).getTime() > now.getTime();
 
-function emptyDraftReadback(): AccountDeletionBrowserCleanupReadback['draftCleanup'] {
+export const parseAccountDeletionReceipt = (value: unknown): AccountDeletionReceipt | null => {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, [
+      'requestId',
+      'status',
+      'reasonCode',
+      'sourceManifestHash',
+      'counts',
+      'readback',
+      'storageReceiptRefs',
+      'authReceiptRef',
+    ])
+    || !isRecord(value.counts)
+    || !isRecord(value.readback)
+  ) {
+    return null;
+  }
+  if (
+    !isAccountDeletionRequestId(value.requestId)
+    || value.status !== 'applied'
+    || value.reasonCode !== 'APPLIED'
+    || !isAccountDeletionSourceManifestHash(value.sourceManifestHash)
+    || !isCounts(value.counts)
+    || !isReadback(value.readback)
+    || !isStorageReceiptRefs(value.storageReceiptRefs)
+    || typeof value.authReceiptRef !== 'string'
+    || !AUTH_RECEIPT_REFERENCE_PATTERN.test(value.authReceiptRef)
+  ) {
+    return null;
+  }
+
   return {
-    submission: 0,
-    review: 0,
-    editRequest: 0,
-    total: 0,
+    requestId: value.requestId,
+    status: 'applied',
+    reasonCode: 'APPLIED',
+    sourceManifestHash: value.sourceManifestHash,
+    counts: value.counts,
+    readback: value.readback,
+    storageReceiptRefs: value.storageReceiptRefs,
+    authReceiptRef: value.authReceiptRef,
   };
-}
+};
 
-export async function clearAccountDeletionBrowserStores(
+
+export const parseAccountDeletionStatus = (value: unknown): AccountDeletionStatus | null => {
+  if (!isRecord(value) || typeof value.status !== 'string') return null;
+
+  if (value.status === 'in_progress') {
+    return hasExactKeys(value, ['status']) ? { status: 'in_progress' } : null;
+  }
+
+  if (value.status === 'applied') {
+    if (
+      !hasExactKeys(value, ['status', 'reasonCode', 'counts', 'receipt'])
+      || value.reasonCode !== 'APPLIED'
+      || !isCounts(value.counts)
+    ) {
+      return null;
+    }
+
+    const receipt = parseAccountDeletionReceipt(value.receipt);
+    return receipt
+      && receipt.reasonCode === value.reasonCode
+      && receipt.counts.delete === value.counts.delete
+      && receipt.counts.anonymize === value.counts.anonymize
+      && receipt.counts.separate === value.counts.separate
+      && receipt.counts.retain === value.counts.retain
+      ? { status: 'applied', reasonCode: 'APPLIED', counts: value.counts, receipt }
+      : null;
+  }
+
+  if (
+    (value.status !== 'partial' && value.status !== 'failed')
+    || !hasExactKeys(value, ['status', 'reasonCode', 'counts'])
+    || typeof value.reasonCode !== 'string'
+    || !/^[A-Z][A-Z0-9_]{0,63}$/.test(value.reasonCode)
+    || !isCounts(value.counts)
+  ) {
+    return null;
+  }
+
+  return { status: value.status, reasonCode: value.reasonCode, counts: value.counts };
+};
+
+const SUPABASE_AUTH_STORAGE_KEY_PATTERN = /^(?:sb-[a-z0-9-]+-auth-token(?:-code-verifier)?|supabase\.auth(?:\.[a-z0-9-]+)?)$/i;
+
+const failedBrowserCleanup = (): AccountDeletionBrowserCleanupResult => ({
+  status: 'failed',
+  readback: {
+    auth: false,
+    submissionDrafts: false,
+    reviewDrafts: false,
+    editRequestDrafts: false,
+  },
+});
+
+const isSupabaseAuthStorageKey = (key: string): boolean =>
+  SUPABASE_AUTH_STORAGE_KEY_PATTERN.test(key);
+
+const clearSupabaseAuthStorage = (): boolean => {
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      for (let index = store.length - 1; index >= 0; index -= 1) {
+        const key = store.key(index);
+        if (key && isSupabaseAuthStorageKey(key)) {
+          store.removeItem(key);
+        }
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const hasSupabaseAuthStorageKeys = (): boolean => {
+  try {
+    for (const store of [window.localStorage, window.sessionStorage]) {
+      for (let index = 0; index < store.length; index += 1) {
+        const key = store.key(index);
+        if (key && isSupabaseAuthStorageKey(key)) return true;
+      }
+    }
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * Clears Supabase auth keys and the deleted user's drafts only after a fully
+ * validated applied receipt. The result contains a bounded local readback.
+ */
+export const clearAccountDeletionBrowserStores = async (
   deletedUserId: string,
-  appliedServerReceipt: unknown,
-): Promise<AccountDeletionBrowserCleanupResult> {
-  const userId = normalizeUserId(deletedUserId);
-
-  if (!isUuid(userId)) {
-    return buildFailed('invalid-user-id', 0, 0, emptyDraftReadback());
-  }
-
-  if (!isAppliedReceipt(appliedServerReceipt, userId)) {
-    return buildFailed('invalid-receipt', 0, 0, emptyDraftReadback());
-  }
-
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return buildFailed('unsupported-environment', 0, 0, emptyDraftReadback());
-  }
-
-  const draftCleanup = emptyDraftReadback();
-  let localStorageKeysRemoved = 0;
-  let cookieKeysRemoved = 0;
-  let failureReason: Exclude<AccountDeletionBrowserCleanupFailureReason, 'complete'> | null = null;
-
-  try {
-    localStorageKeysRemoved += clearLocalAuthStorageKeys();
-  } catch {
-    failureReason = 'auth-key-cleanup-failed';
+  receipt: AccountDeletionReceipt,
+): Promise<AccountDeletionBrowserCleanupResult> => {
+  if (
+    typeof window === 'undefined'
+    || !isAccountDeletionRequestId(deletedUserId)
+    || !parseAccountDeletionReceipt(receipt)
+  ) {
+    return failedBrowserCleanup();
   }
 
   try {
-    localStorageKeysRemoved += clearSessionAuthStorageKeys();
+    const authCleared = clearSupabaseAuthStorage();
+    const { submissionDrafts, reviewDrafts, editRequestDrafts } =
+      await clearBrowserDraftsForUser(deletedUserId);
+    const readback: AccountDeletionBrowserCleanupReadback = {
+      auth: authCleared && !hasSupabaseAuthStorageKeys(),
+      submissionDrafts,
+      reviewDrafts,
+      editRequestDrafts,
+    };
+
+    return {
+      status: readback.auth
+        && readback.submissionDrafts
+        && readback.reviewDrafts
+        && readback.editRequestDrafts
+        ? 'complete'
+        : 'failed',
+      readback,
+    };
   } catch {
-    if (!failureReason) {
-      failureReason = 'auth-key-cleanup-failed';
-    }
+    return failedBrowserCleanup();
   }
-
-  try {
-    cookieKeysRemoved = clearAuthCookies();
-  } catch {
-    if (!failureReason) {
-      failureReason = 'auth-key-cleanup-failed';
-    }
-  }
-
-  try {
-    draftCleanup.submission = await deleteSubmissionDraftsByUser(userId);
-  } catch {
-    failureReason = failureReason ?? 'submission-draft-cleanup-failed';
-  }
-
-  try {
-    draftCleanup.review = await deleteReviewDraftsByUser(userId);
-  } catch {
-    failureReason = failureReason ?? 'review-draft-cleanup-failed';
-  }
-
-  try {
-    draftCleanup.editRequest = await deleteEditRequestDraftsByUser(userId);
-  } catch {
-    failureReason = failureReason ?? 'edit-request-draft-cleanup-failed';
-  }
-
-  draftCleanup.total =
-    draftCleanup.submission + draftCleanup.review + draftCleanup.editRequest;
-
-  if (failureReason) {
-    return buildFailed(
-      failureReason,
-      localStorageKeysRemoved,
-      cookieKeysRemoved,
-      draftCleanup,
-    );
-  }
-
-  return createResult(
-    'completed',
-    'complete',
-    draftCleanup,
-    localStorageKeysRemoved,
-    cookieKeysRemoved,
-  );
-}
-
-export function buildDataDeletionGuidanceUrlWithCleanupFlag(dataDeletionPath: string): string {
-  const params = new URLSearchParams();
-  params.set(
-    ACCOUNT_DELETION_BROWSER_CLEANUP_QUERY_PARAM,
-    ACCOUNT_DELETION_BROWSER_CLEANUP_QUERY_VALUE,
-  );
-
-  return `${dataDeletionPath}?${params.toString()}`;
-}
+};

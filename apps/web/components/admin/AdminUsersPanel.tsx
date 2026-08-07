@@ -5,13 +5,11 @@ import {
   Ban,
   CheckCircle2,
   Crown,
-  Loader2,
   RefreshCw,
   RotateCcw,
   Save,
   Search,
   ShieldCheck,
-  UserPlus,
   UsersRound,
 } from "lucide-react";
 
@@ -65,7 +63,7 @@ type AdminUserMutationResponse = {
   step?: string | null;
 };
 
-type AdminUserMutationAction = "create" | "profile" | "role" | "accountStatus";
+type AdminUserMutationAction = "profile" | "role" | "accountStatus";
 
 type AdminUserMutationResult = {
   action: AdminUserMutationAction;
@@ -80,29 +78,11 @@ type EditableProfile = {
   avatarUrl: string;
 };
 
-type CreateUserForm = {
-  email: string;
-  password: string;
-  nickname: string;
-  username: string;
-  isAdmin: boolean;
-  adminConfirmation: string;
-};
-
 const DEFAULT_SUMMARY: AdminUsersSummary = {
   loadedUsers: 0,
   adminUsers: 0,
   disabledUsers: 0,
   unconfirmedUsers: 0,
-};
-
-const EMPTY_CREATE_FORM: CreateUserForm = {
-  email: "",
-  password: "",
-  nickname: "",
-  username: "",
-  isAdmin: false,
-  adminConfirmation: "",
 };
 
 function formatDateTime(value: string | null) {
@@ -132,7 +112,6 @@ function getMutationAuditText(payload: AdminUserMutationResponse | null) {
 
   return auditEntries.length > 0 ? ` ${auditEntries.join(" · ")}` : "";
 }
-
 
 function SummaryMetric({ label, value, tone = "default", isLoading = false }: { label: string; value: number | string; tone?: "default" | "danger" | "primary"; isLoading?: boolean }) {
   return (
@@ -250,18 +229,12 @@ export default function AdminUsersPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState<EditableProfile>({ nickname: "", username: "", avatarUrl: "" });
-  const [createForm, setCreateForm] = useState<CreateUserForm>(EMPTY_CREATE_FORM);
   const [riskConfirmation, setRiskConfirmation] = useState("");
   const [mutationResult, setMutationResult] = useState<AdminUserMutationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const clearCreateErrorResult = useCallback(() => {
-    setMutationResult((current) =>
-      current?.action === "create" && current.status === "error" ? null : current,
-    );
-  }, []);
   const currentUserId = currentUser?.id ?? null;
   const selectedUser = useMemo(
     () => users.find((candidate) => candidate.id === selectedUserId) ?? null,
@@ -275,7 +248,6 @@ export default function AdminUsersPanel() {
   const loadUsers = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setErrorMessage("");
-    clearCreateErrorResult();
 
     try {
       const params = new URLSearchParams({ perPage: "120" });
@@ -308,7 +280,7 @@ export default function AdminUsersPanel() {
         setIsLoading(false);
       }
     }
-  }, [clearCreateErrorResult, searchQuery]);
+  }, [searchQuery]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -337,7 +309,7 @@ export default function AdminUsersPanel() {
   const patchSelectedUser = async (
     body: Record<string, unknown>,
     successMessage: string,
-    action: Exclude<AdminUserMutationAction, "create">,
+    action: AdminUserMutationAction,
   ) => {
     if (!selectedUser) return;
     setIsMutating(true);
@@ -379,51 +351,11 @@ export default function AdminUsersPanel() {
     }
   };
 
-  const createUser = async () => {
-    setIsMutating(true);
-    setMutationResult(null);
-
-    try {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ ...createForm, confirmation: createForm.adminConfirmation || undefined }),
-      });
-      const payload = await response.json().catch(() => null) as AdminUserMutationResponse | null;
-      const auditText = getMutationAuditText(payload);
-      if (!response.ok) {
-        throw new Error(`${payload?.error ?? "사용자를 만들지 못했습니다."}${auditText}`);
-      }
-
-      const message = payload?.message ?? "사용자 계정을 만들었습니다.";
-      setMutationResult({
-        action: "create",
-        targetUserId: null,
-        status: "success",
-        message: `적용 완료: ${message}${auditText} 목록을 다시 확인했습니다.`,
-      });
-      setCreateForm(EMPTY_CREATE_FORM);
-      toast({ title: "사용자 생성 완료", description: `${message}${auditText}` });
-      await loadUsers();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "사용자 생성 중 오류가 발생했습니다.";
-      setMutationResult({
-        action: "create",
-        targetUserId: null,
-        status: "error",
-        message: `적용 실패: ${message}`,
-      });
-      toast({ title: "생성 실패", description: message, variant: "destructive" });
-    } finally {
-      setIsMutating(false);
-    }
-  };
   const visibleMutationResult =
     !mutationResult?.targetUserId || mutationResult.targetUserId === selectedUser?.id
       ? mutationResult
       : null;
   const mutationResultMessage = visibleMutationResult?.message ?? "";
-
 
   return (
     <section
@@ -479,7 +411,6 @@ export default function AdminUsersPanel() {
               className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]"
               onSubmit={(event) => {
                 event.preventDefault();
-                clearCreateErrorResult();
                 setSearchQuery(searchInput);
               }}
             >
@@ -593,53 +524,17 @@ export default function AdminUsersPanel() {
           <Card className="border-border bg-card shadow-sm">
             <CardHeader className="p-2 pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <UserPlus className="h-5 w-5 text-primary" aria-hidden="true" />
-                사용자 생성
+                <ShieldCheck className="h-5 w-5 text-primary" aria-hidden="true" />
+                새 계정 안내
               </CardTitle>
               <p className="text-xs leading-5 text-muted-foreground">
-                서버의 Supabase Auth Admin API로 계정을 만들고, 프로필/관리자 권한은 서버에서만 연결합니다.
+                새 계정은 개인정보 온보딩 가입 절차를 통해서만 만들 수 있습니다.
               </p>
             </CardHeader>
-            <CardContent className="grid gap-2 p-2 pt-0 md:grid-cols-2">
-              <div className="space-y-1">
-                <Label htmlFor="new-user-email">이메일</Label>
-                <Input id="new-user-email" type="email" value={createForm.email} onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} className="rounded-lg" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-user-password">임시 비밀번호</Label>
-                <Input id="new-user-password" type="password" value={createForm.password} onChange={(event) => setCreateForm((current) => ({ ...current, password: event.target.value }))} className="rounded-lg" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-user-nickname">닉네임</Label>
-                <Input id="new-user-nickname" value={createForm.nickname} onChange={(event) => setCreateForm((current) => ({ ...current, nickname: event.target.value }))} className="rounded-lg" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new-user-username">사용자명</Label>
-                <Input id="new-user-username" value={createForm.username} onChange={(event) => setCreateForm((current) => ({ ...current, username: event.target.value }))} className="rounded-lg" />
-              </div>
-              <label className="flex items-center gap-2 rounded-md bg-muted/30 px-2.5 py-1.5 text-sm md:col-span-2">
-                <input type="checkbox" checked={createForm.isAdmin} onChange={(event) => setCreateForm((current) => ({ ...current, isAdmin: event.target.checked }))} />
-                생성 즉시 관리자 권한 부여
-              </label>
-              {createForm.isAdmin && (
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label htmlFor="new-user-admin-confirmation">관리자 생성 확인 문구</Label>
-                  <Input
-                    id="new-user-admin-confirmation"
-                    value={createForm.adminConfirmation}
-                    onChange={(event) => setCreateForm((current) => ({ ...current, adminConfirmation: event.target.value }))}
-                    placeholder="권한변경"
-                    className="rounded-lg"
-                  />
-                  <p className="text-xs leading-5 text-muted-foreground">관리자 계정으로 만들려면 확인 문구를 직접 입력해야 합니다.</p>
-                </div>
-              )}
-              <div className="md:col-span-2">
-                <Button type="button" className="w-full rounded-full sm:w-auto sm:rounded-lg" disabled={isMutating || (createForm.isAdmin && createForm.adminConfirmation !== "권한변경")} onClick={() => void createUser()} data-admin-users-create-button>
-                  {isMutating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <UserPlus className="h-4 w-4" aria-hidden="true" />}
-                  사용자 생성
-                </Button>
-              </div>
+            <CardContent className="p-2 pt-0">
+              <p className="text-sm leading-6 text-muted-foreground">
+                정책·연령·보호자 확인이 포함된 가입 흐름을 완료해야 합니다. 관리자 화면에서는 계정을 만들 수 없습니다.
+              </p>
             </CardContent>
           </Card>
 

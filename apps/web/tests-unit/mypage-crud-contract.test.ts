@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
+const repoSource = (relativePath: string) =>
+  readFileSync(join(import.meta.dir, "..", "..", "..", relativePath), "utf8");
 
 describe("mypage CRUD QA/QC source contracts", () => {
   test("profile update flows guard nickname, avatar, and password mutations by the signed-in user", () => {
@@ -170,33 +172,46 @@ describe("mypage CRUD QA/QC source contracts", () => {
     }
   });
 
-  test("permanent account delete keeps owner-scoped server deletion workflow and avoids destructive retry patterns", () => {
+  test("permanent account delete uses a bearer-bound one-time proof and preserves the durable worker/readback boundary", () => {
     const accountDeleteRouteSource = source("app/api/account/delete/route.ts");
-
-    expect(accountDeleteRouteSource).toContain("await supabase.auth.getUser()");
-    expect(accountDeleteRouteSource).toContain("targetUserId !== user.id");
-    expect(accountDeleteRouteSource).toContain("requireAdmin()");
-    expect(accountDeleteRouteSource).toContain("await revokeCurrentUserSessions({ supabase, supabaseAdmin, request })");
-    expect(accountDeleteRouteSource).toContain("await supabaseAdmin.auth.admin.deleteUser(targetUserId)");
-    expect(accountDeleteRouteSource).toContain(".from('user_bookmarks')");
-    expect(accountDeleteRouteSource).toContain(".eq('user_id', targetUserId)");
-    expect(
-      accountDeleteRouteSource.split(".eq('user_id', targetUserId)").length - 1,
-    ).toBeGreaterThanOrEqual(4);
-    expect(accountDeleteRouteSource).not.toContain(".from('restaurant_bookmarks')");
-    expect(accountDeleteRouteSource).toContain("return NextResponse.json({ success: true })");
-    expect(accountDeleteRouteSource).not.toContain("indexedDB.deleteDatabase");
-
-    expect(
-      accountDeleteRouteSource.match(/await supabaseAdmin\.auth\.admin\.deleteUser\(/g)?.length ?? 0,
-    ).toBe(1);
-
-    expect(
-      accountDeleteRouteSource.indexOf(
-        "await revokeCurrentUserSessions({ supabase, supabaseAdmin, request })",
-      ),
-    ).toBeLessThan(
-      accountDeleteRouteSource.indexOf("await supabaseAdmin.auth.admin.deleteUser(targetUserId)"),
+    const profilePageSource = source("app/mypage/profile/page.tsx");
+    const applyRequestParser = accountDeleteRouteSource.slice(
+      accountDeleteRouteSource.indexOf("const parseAccountDeletionApplyRequest"),
+      accountDeleteRouteSource.indexOf("export const runtime"),
     );
+    const deleteHandler = accountDeleteRouteSource.slice(
+      accountDeleteRouteSource.indexOf("const deleteAccount"),
+      accountDeleteRouteSource.indexOf("export async function POST"),
+    );
+    const sameOrigin = deleteHandler.indexOf("if (!isTrustedSameOriginMutation(request))");
+    const parse = deleteHandler.indexOf("const body = parseAccountDeletionApplyRequest(await request.json().catch(() => null));");
+    const bearer = deleteHandler.indexOf("const bearerToken = bearerTokenFromAuthorization");
+    const atomicBegin = deleteHandler.indexOf("rpc('begin_account_deletion_apply_with_reauth'");
+
+    expect(sameOrigin).toBeGreaterThan(-1);
+    expect(parse).toBeGreaterThan(sameOrigin);
+    expect(bearer).toBeGreaterThan(parse);
+    expect(atomicBegin).toBeGreaterThan(bearer);
+    expect(applyRequestParser).toContain("Object.keys(value).length !== 7");
+    expect(applyRequestParser).toContain("hasOnlyKeys(value, [");
+    expect(accountDeleteRouteSource).toContain("begin_account_deletion_apply_with_reauth");
+    expect(accountDeleteRouteSource).toContain("p_proof_id: body.proofId");
+    expect(accountDeleteRouteSource).toContain("p_actor_user_id: user.id");
+    expect(accountDeleteRouteSource).toContain("p_target_user_id: body.userId");
+    expect(accountDeleteRouteSource).not.toContain("consume_account_deletion_reauth_proof");
+    expect(deleteHandler).toContain("supabaseAdmin.auth.getUser(bearerToken)");
+    expect(deleteHandler).toContain("supabaseAdmin.auth.getClaims(bearerToken)");
+    expect(deleteHandler).toContain("claims?.claims.sub !== user.id");
+    expect(deleteHandler).toContain("if (body.userId !== user.id)");
+    expect(deleteHandler).toContain("const reasonCode = rpcFailureReasonCode(result.error)");
+    expect(accountDeleteRouteSource).not.toContain("getAuthenticatedActor");
+    expect(accountDeleteRouteSource).not.toContain("auth.admin.deleteUser");
+    expect(accountDeleteRouteSource).not.toContain("runAccountDeletionExternalWorker");
+    expect(accountDeleteRouteSource).toContain("rpc('read_current_account_deletion_status'");
+    expect(profilePageSource).toContain("issueAccountDeletionReauthenticationProof(user.id)");
+    expect(profilePageSource).toContain("proofId: proof.proofId");
+    expect(profilePageSource).toContain("Authorization: `Bearer ${freshSession.bearerToken}`");
+    expect(profilePageSource).toContain("Authorization: `Bearer ${deletionSession.bearerToken}`");
+    expect(profilePageSource).toContain("pollAccountDeletionReadback(deletionSession.preview");
   });
 });

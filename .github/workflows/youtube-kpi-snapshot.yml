@@ -15,23 +15,19 @@ permissions:
 
 jobs:
   capture:
+    if: github.ref_name == github.event.repository.default_branch && vars.G037_WRITE_FREEZE != 'active'
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment:
+      name: production-kpi
     defaults:
       run:
         working-directory: apps/web
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-      YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
-      YOUTUBE_CHANNEL_HANDLE: ${{ secrets.YOUTUBE_CHANNEL_HANDLE }}
-      YOUTUBE_KPI_SNAPSHOT_INTERVAL_MINUTES: "15"
-      YOUTUBE_KPI_SNAPSHOT_MAX_PLAYLIST_PAGES: "30"
     steps:
-      - name: Checkout
+      - name: Checkout exact triggering commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Setup Node
@@ -45,4 +41,12 @@ jobs:
         run: npm ci --omit=dev --ignore-scripts
 
       - name: Capture YouTube KPI snapshot
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          YOUTUBE_CHANNEL_HANDLE: ${{ secrets.YOUTUBE_CHANNEL_HANDLE }}
+          YOUTUBE_KPI_SNAPSHOT_INTERVAL_MINUTES: "15"
+          YOUTUBE_KPI_SNAPSHOT_MAX_PLAYLIST_PAGES: "30"
         run: node scripts/capture-youtube-kpi-snapshot.mjs

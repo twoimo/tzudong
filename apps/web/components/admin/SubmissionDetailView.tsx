@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/lib/no-toast';
 import {
-    Youtube,
     User,
     RefreshCw,
     Loader2,
@@ -19,6 +18,7 @@ import {
     Sparkles,
     Check,
 } from 'lucide-react';
+import { YouTubeIcon } from '@/components/icons/YouTubeIcon';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { formatCategoryText } from '@/lib/category-utils';
@@ -237,8 +237,8 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
 
 
     if (error) {
-        console.error('❌ Edge Function 에러:', error);
-        throw new Error(error.message || JSON.stringify(error));
+        console.error('❌ Edge Function 에러:');
+        throw new Error('NAVER_GEOCODE_REQUEST_FAILED');
     }
 
     const geocodeData = data as NaverGeocodeResponse | null;
@@ -249,8 +249,8 @@ async function geocodeAddressMultiple(name: string, address: string, maxResults:
     }
 
     if (geocodeData.error) {
-        console.error('❌ API 에러:', geocodeData.error);
-        throw new Error(geocodeData.error);
+        console.error('❌ API 에러:');
+        throw new Error('NAVER_GEOCODE_PROVIDER_FAILED');
     }
 
     if (!geocodeData.addresses || geocodeData.addresses.length === 0) {
@@ -287,7 +287,7 @@ async function fetchYoutubeMetadata(youtubeLink: string): Promise<{
         if (!response.ok) throw new Error('Failed to fetch metadata');
         return await response.json();
     } catch (error) {
-        console.error('YouTube metadata fetch error:', error);
+        console.error('YouTube metadata fetch error:');
         return null;
     }
 }
@@ -789,7 +789,7 @@ export function SubmissionDetailView({
                 {/* 제보 항목 */}
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <Youtube className="h-4 w-4 text-red-500" />
+                        <YouTubeIcon className="h-4 w-4 text-red-500" />
                         <Label className="text-sm">제보 항목</Label>
                         <Badge variant="outline" className="text-xs">
                             {submission.items.length}개 중{' '}

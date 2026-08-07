@@ -205,9 +205,9 @@ describe('home map contextual visible-marker restaurants', () => {
     }
     expect(mobileOverlaySource).not.toContain('visibleMarkerRestaurantsSignatureRef');
     expect(mobileOverlaySource).toContain('dismissedVisibleMarkerSheetScopeRef.current = null;');
-    expect(mobileOverlaySource).toContain('fixed bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex flex-col gap-2');
+    expect(mobileOverlaySource).toContain('fixed bottom-[calc(env(safe-area-inset-bottom)+var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] right-4 z-[90] flex min-w-0 flex-col gap-2');
     expect(mobileOverlaySource).toContain('data-mobile-bottom-right-safe-area-owner="mobile-floating-actions"');
-    expect(mobileOverlaySource).not.toContain('env(safe-area-inset-bottom)+1rem');
+    expect(mobileOverlaySource).toContain('data-fixed-control-region="mobile-map-actions"');
     expect(mobileOverlaySource.match(/const visibleMarkerSheetDismissScope = useMemo\(([\s\S]*?)\);\n    const dismissedVisibleMarkerSheetScopeRef/)?.[1]).not.toContain('visibleMarkerRestaurantsSignature');
     expect(mobileOverlaySource).toContain('const visibleMarkerSheetDismissScope = useMemo(');
     expect(mobileOverlaySource).toContain('[filters.featuredTheme, mapMode, selectedCategories, selectedCountry, selectedRegion]');

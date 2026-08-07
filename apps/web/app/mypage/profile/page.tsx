@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -44,8 +43,8 @@ import {
   MapPin,
   Edit,
   X,
-  Youtube,
 } from "lucide-react";
+import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import Link from "next/link";
 import { useBookmarks } from "@/hooks/use-bookmarks";
 import {
@@ -54,11 +53,23 @@ import {
 } from "@/hooks/useUserProfile";
 import { cn } from "@/lib/utils";
 import {
+  ACCOUNT_DELETION_CONFIRMATION_TEXT,
+  clearAccountDeletionBrowserStores,
+  createAccountDeletionIdempotencyKey,
+  parseAccountDeletionPreview,
+  parseAccountDeletionReceipt,
+  type AccountDeletionPreview,
+  type AccountDeletionReceipt,
+} from "@/lib/privacy/account-deletion";
+import {
   createAccountDeletionReauthenticationSession,
   issueAccountDeletionReauthenticationProof,
-  parseAccountDeletionPreview,
-  type AccountDeletionPreview,
 } from "@/lib/privacy/account-deletion-reauth";
+import {
+  classifyProfileAvatarUrl,
+  getProfileAvatarDeletionKey,
+  resolveProfileAvatarUrl,
+} from "@/lib/profile-avatar-url";
 
 interface Profile {
   nickname: string;
@@ -66,41 +77,290 @@ interface Profile {
 }
 
 const PROFILE_SELECT = "nickname, avatar_url";
-
-function isAuthoritativeAccountDeletionBeginReceipt(
-  receipt: unknown,
-  requestId: string,
-): receipt is { success: true; begin: Record<string, unknown> } {
-  if (!receipt || typeof receipt !== "object") return false;
-  const response = receipt as { success?: unknown; begin?: unknown };
-  const begin = response.begin;
-  return (
-    response.success === true &&
-    begin !== null &&
-    typeof begin === "object" &&
-    (begin as Record<string, unknown>).request_id === requestId &&
-    typeof (begin as Record<string, unknown>).status === "string" &&
-    typeof (begin as Record<string, unknown>).db_readback_passed === "boolean" &&
-    typeof (begin as Record<string, unknown>).storage_readback_passed === "boolean" &&
-    typeof (begin as Record<string, unknown>).session_readback_passed === "boolean" &&
-    typeof (begin as Record<string, unknown>).auth_readback_passed === "boolean"
-  );
-}
 const accountDeletionFailureMessages: Record<string, string> = {
-  account_deletion_reauth_proof_invalid_claims: "현재 비밀번호를 다시 확인해주세요.",
-  account_deletion_reauth_proof_password_reauthentication_required: "현재 비밀번호를 다시 확인해주세요.",
-  account_deletion_reauthentication_required: "현재 비밀번호를 다시 확인해주세요.",
-  account_deletion_reauth_proof_not_available: "재인증 증명이 만료되었거나 이미 사용되었습니다. 비밀번호를 다시 확인해주세요.",
-  account_deletion_apply_not_started: "계정 삭제 요청을 시작하지 못했습니다.",
+  REAUTH_REQUIRED: "현재 비밀번호를 다시 확인해 주세요.",
+  REAUTH_PROOF_UNAVAILABLE: "재인증 증명이 만료되었거나 이미 사용되었습니다. 비밀번호를 다시 확인해 주세요.",
+  APPLY_NOT_STARTED: "계정 삭제 요청을 시작하지 못했습니다.",
+};
+const accountDeletionFailureMessage = (payload: unknown) => {
+  if (!payload || typeof payload !== "object") {
+    return "계정 삭제 요청을 시작하지 못했습니다.";
+  }
+
+  const reasonCode = (payload as { reasonCode?: unknown }).reasonCode;
+  return typeof reasonCode === "string"
+    ? accountDeletionFailureMessages[reasonCode] ?? "계정 삭제 요청을 시작하지 못했습니다."
+    : "계정 삭제 요청을 시작하지 못했습니다.";
 };
 
-function accountDeletionFailureMessage(receipt: unknown, fallback: string): string {
-  if (!receipt || typeof receipt !== "object") return fallback;
-  const reasonCode = (receipt as { reasonCode?: unknown }).reasonCode;
-  return typeof reasonCode === "string" ? accountDeletionFailureMessages[reasonCode] ?? fallback : fallback;
+
+
+const CONSENT_CHANNEL_OPTIONS = [
+  { id: "email", label: "이메일" },
+  { id: "sms", label: "SMS" },
+  { id: "push", label: "푸시" },
+] as const;
+
+type ConsentChannel = (typeof CONSENT_CHANNEL_OPTIONS)[number]["id"];
+type OrdinaryConsentPurpose = "email_marketing" | "sms_marketing" | "push_marketing";
+type ConsentPurpose = OrdinaryConsentPurpose | "night_marketing";
+type ConsentDecision = "granted" | "withdrawn";
+
+type ConsentSettings = {
+  policy: {
+    policyVersionId: string;
+    version: string;
+    contentSha256: string;
+  };
+  consents: {
+    ordinary: Record<ConsentChannel, boolean>;
+    night: Record<ConsentChannel, boolean>;
+  };
+};
+
+type ConsentAction = {
+  purpose: ConsentPurpose;
+  channel: ConsentChannel;
+  decision: ConsentDecision;
+};
+
+type ConsentRequest = ConsentAction & {
+  policyVersionId: string;
+  noticeSha256: string;
+  idempotencyKey: string;
+  correlationId: string;
+};
+
+const ORDINARY_PURPOSE_BY_CHANNEL: Record<ConsentChannel, OrdinaryConsentPurpose> = {
+  email: "email_marketing",
+  sms: "sms_marketing",
+  push: "push_marketing",
+};
+
+function isConsentRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isConsentChannel(value: unknown): value is ConsentChannel {
+  return typeof value === "string" && CONSENT_CHANNEL_OPTIONS.some((channel) => channel.id === value);
+}
 
+function isConsentDecision(value: unknown): value is ConsentDecision {
+  return value === "granted" || value === "withdrawn";
+}
+
+function isConsentGroup(value: unknown): value is Record<ConsentChannel, boolean> {
+  return isConsentRecord(value)
+    && CONSENT_CHANNEL_OPTIONS.every((channel) => typeof value[channel.id] === "boolean");
+}
+
+function parseConsentSettings(value: unknown): ConsentSettings | null {
+  if (!isConsentRecord(value) || !isConsentRecord(value.policy) || !isConsentRecord(value.consents)) {
+    return null;
+  }
+
+  const { policy, consents } = value;
+  if (typeof policy.policyVersionId !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(policy.policyVersionId)
+    || typeof policy.version !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(policy.version)
+    || typeof policy.contentSha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(policy.contentSha256)
+    || !isConsentGroup(consents.ordinary)
+    || !isConsentGroup(consents.night)) {
+    return null;
+  }
+
+  return {
+    policy: {
+      policyVersionId: policy.policyVersionId,
+      version: policy.version,
+      contentSha256: policy.contentSha256,
+    },
+    consents: {
+      ordinary: consents.ordinary,
+      night: consents.night,
+    },
+  };
+}
+
+function hasConsentReadback(value: unknown, action: ConsentAction) {
+  if (!isConsentRecord(value) || value.receipt !== "PRIVACY_CONSENT_RECORDED" || !isConsentRecord(value.state)) {
+    return false;
+  }
+
+  return isConsentChannel(value.state.channel)
+    && isConsentDecision(value.state.decision)
+    && value.state.purpose === action.purpose
+    && value.state.channel === action.channel
+    && value.state.decision === action.decision;
+}
+
+function createConsentRequestIds() {
+  if (typeof window === "undefined" || typeof window.crypto?.randomUUID !== "function") return null;
+
+  const correlationId = window.crypto.randomUUID();
+  return {
+    correlationId,
+    idempotencyKey: `privacy-consent-${window.crypto.randomUUID().replaceAll("-", "")}`,
+  };
+}
+const ACCOUNT_DELETION_POLL_BACKOFF_MS = [500, 1_000, 2_000, 4_000, 8_000] as const;
+const ACCOUNT_DELETION_POLL_DEADLINE_MS = 30_000;
+type AccountDeletionPollResult =
+  | Readonly<{ kind: "applied"; receipt: AccountDeletionReceipt }>
+  | Readonly<{ kind: "in_progress" }>
+  | Readonly<{ kind: "partial" | "failed"; reasonCode: string }>
+  | Readonly<{ kind: "timeout" | "unavailable" | "aborted" }>;
+
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]) {
+  return Object.keys(value).length === keys.length
+    && Object.keys(value).every((key) => keys.includes(key));
+}
+
+function isAccountDeletionStatusCounts(value: unknown) {
+  return isConsentRecord(value)
+    && hasExactKeys(value, ["delete", "anonymize", "separate", "retain"])
+    && Object.values(value).every(
+      (count) => typeof count === "number" && Number.isSafeInteger(count) && count >= 0 && count <= 2_147_483_647,
+    );
+}
+
+function parseAccountDeletionStatusResponse(
+  value: unknown,
+  preview: AccountDeletionPreview,
+): AccountDeletionPollResult | null {
+  if (
+    !isConsentRecord(value)
+    || typeof value.status !== "string"
+    || typeof value.reasonCode !== "string"
+    || !/^[A-Z][A-Z0-9_]{0,63}$/.test(value.reasonCode)
+    || !isAccountDeletionStatusCounts(value.counts)
+  ) {
+    return null;
+  }
+
+  if (value.status === "applied") {
+    if (!hasExactKeys(value, ["status", "reasonCode", "counts", "receipt"])) return null;
+    const receipt = parseAccountDeletionReceipt(value.receipt);
+    return receipt
+      && value.reasonCode === "APPLIED"
+      && receipt.requestId === preview.requestId
+      && receipt.sourceManifestHash === preview.sourceManifestHash
+      ? { kind: "applied", receipt }
+      : null;
+  }
+
+  if (
+    !hasExactKeys(value, ["status", "reasonCode", "counts"])
+    || (value.status !== "in_progress" && value.status !== "partial" && value.status !== "failed")
+  ) {
+    return null;
+  }
+
+  if (value.status === "in_progress") return { kind: "in_progress" };
+  if (value.status === "partial" || value.status === "failed") {
+    return { kind: value.status, reasonCode: value.reasonCode };
+  }
+
+  return null;
+}
+
+async function readAccountDeletionStatus(
+  preview: AccountDeletionPreview,
+  signal: AbortSignal,
+): Promise<AccountDeletionPollResult> {
+  const query = new URLSearchParams({
+    requestId: preview.requestId,
+    previewHash: preview.previewHash,
+    sourceManifestHash: preview.sourceManifestHash,
+  });
+  const response = await fetch(`/api/account/delete?${query.toString()}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    credentials: "same-origin",
+    signal,
+  });
+  const payload = await response.json().catch(() => null);
+  const result = parseAccountDeletionStatusResponse(payload, preview);
+  if (!result) return { kind: "unavailable" };
+
+  if (
+    (result.kind === "applied" && response.status === 200)
+    || (result.kind === "in_progress" && response.status === 202)
+    || ((result.kind === "partial" || result.kind === "failed") && response.status === 409)
+  ) {
+    return result;
+  }
+
+  return { kind: "unavailable" };
+}
+
+function waitForAccountDeletionPoll(delayMs: number, signal: AbortSignal) {
+  return new Promise<boolean>((resolve) => {
+    if (signal.aborted) {
+      resolve(false);
+      return;
+    }
+
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const onAbort = () => {
+      if (timeout !== undefined) clearTimeout(timeout);
+      resolve(false);
+    };
+    timeout = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, delayMs);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function pollAccountDeletionReadback(
+  preview: AccountDeletionPreview,
+  signal: AbortSignal,
+): Promise<AccountDeletionPollResult> {
+  if (signal.aborted) return { kind: "aborted" };
+
+  const pollController = new AbortController();
+  let deadlineReached = false;
+  const abortPoll = () => pollController.abort();
+  signal.addEventListener("abort", abortPoll, { once: true });
+  const deadlineTimer = window.setTimeout(() => {
+    deadlineReached = true;
+    pollController.abort();
+  }, ACCOUNT_DELETION_POLL_DEADLINE_MS);
+  const deadline = Date.now() + ACCOUNT_DELETION_POLL_DEADLINE_MS;
+
+  try {
+    for (let attempt = 0; Date.now() < deadline; attempt += 1) {
+      const remaining = deadline - Date.now();
+      const delay = Math.min(
+        ACCOUNT_DELETION_POLL_BACKOFF_MS[
+          Math.min(attempt, ACCOUNT_DELETION_POLL_BACKOFF_MS.length - 1)
+        ],
+        remaining,
+      );
+      if (!await waitForAccountDeletionPoll(delay, pollController.signal)) {
+        return deadlineReached ? { kind: "timeout" } : { kind: "aborted" };
+      }
+
+      const result = await readAccountDeletionStatus(preview, pollController.signal);
+      if (result.kind !== "in_progress") return result;
+    }
+  } catch {
+    return deadlineReached
+      ? { kind: "timeout" }
+      : signal.aborted
+        ? { kind: "aborted" }
+        : { kind: "unavailable" };
+  } finally {
+    window.clearTimeout(deadlineTimer);
+    signal.removeEventListener("abort", abortPoll);
+  }
+
+  return { kind: "timeout" };
+}
 
 export default function ProfilePage() {
   const { user, profileNickname } = useAuth();
@@ -123,22 +383,26 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // 계정 비활성화 (익명화)
-  const [deactivateConfirmationEmail, setDeactivateConfirmationEmail] =
-    useState("");
 
   // 계정 완전 삭제
-  const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deletionSession, setDeletionSession] = useState<{
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [deletionSession, setDeletionSession] = useState<Readonly<{
     preview: AccountDeletionPreview;
     proofId: string;
     expiresAt: string;
     bearerToken: string;
-  } | null>(null);
-  useEffect(() => () => {
-    setDeletionSession(null);
-  }, []);
+  }> | null>(null);
+  const [deletionProgressMessage, setDeletionProgressMessage] = useState<string | null>(null);
+  const accountDeletionPollController = useRef<AbortController | null>(null);
+  const [deletionPassword, setDeletionPassword] = useState("");
+  const [showDeletionPassword, setShowDeletionPassword] = useState(false);
+
+  const [consentSettings, setConsentSettings] = useState<ConsentSettings | null>(null);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [consentSaving, setConsentSaving] = useState<string | null>(null);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [failedConsentAction, setFailedConsentAction] = useState<ConsentAction | null>(null);
+  const [failedConsentRequest, setFailedConsentRequest] = useState<ConsentRequest | null>(null);
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -157,9 +421,8 @@ export default function ProfilePage() {
       } else {
         setProfile(null);
       }
-    } catch (error) {
+    } catch {
       toast.error("프로필 정보를 불러오는데 실패했습니다");
-      console.error("Profile load error:", error);
     }
   }, [user]);
 
@@ -169,6 +432,38 @@ export default function ProfilePage() {
     }
   }, [user, loadProfile]);
 
+  const loadConsentSettings = useCallback(async () => {
+    if (!user) {
+      setConsentSettings(null);
+      return;
+    }
+
+    setConsentLoading(true);
+    try {
+      const response = await fetch("/api/privacy/consents", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      const parsed = parseConsentSettings(payload);
+      if (!response.ok || !parsed) throw new Error("consent_settings_unavailable");
+
+      setConsentSettings(parsed);
+      setConsentError(null);
+      setFailedConsentAction(null);
+      setFailedConsentRequest(null);
+    } catch {
+      setConsentSettings(null);
+      setConsentError("수신 동의 설정을 불러오지 못했습니다.");
+    } finally {
+      setConsentLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) void loadConsentSettings();
+  }, [user, loadConsentSettings]);
+
   const displayName =
     profile?.nickname || userProfile?.nickname || profileNickname || "사용자";
 
@@ -177,6 +472,10 @@ export default function ProfilePage() {
       setMobileNicknameInput(displayName);
     }
   }, [displayName, isMobileNicknameEditing]);
+  useEffect(() => () => {
+    accountDeletionPollController.current?.abort();
+    setDeletionSession(null);
+  }, []);
 
   const handleMobileNicknameChange = async () => {
     if (!user || !mobileNicknameInput.trim()) {
@@ -207,9 +506,8 @@ export default function ProfilePage() {
       setIsMobileNicknameEditing(false);
       router.refresh();
       toast.success("닉네임이 변경되었습니다");
-    } catch (error) {
-      const err = error as { message?: string };
-      toast.error(err.message || "닉네임 변경에 실패했습니다");
+    } catch {
+      toast.error("닉네임 변경에 실패했습니다");
     } finally {
       setMobileNicknameSaving(false);
     }
@@ -237,15 +535,14 @@ export default function ProfilePage() {
       const compressedBlob = await compressImage(file);
       const filePath = `${user.id}/avatar.jpg`;
 
-      const oldAvatarUrl = profile?.avatar_url;
-      if (oldAvatarUrl?.includes("profile-avatars")) {
-        const oldPath = oldAvatarUrl
-          .split("profile-avatars/")
-          .pop()
-          ?.split("?")[0];
-        if (oldPath) {
-          await supabase.storage.from("profile-avatars").remove([oldPath]);
-        }
+      const oldAvatarDeletionKey = getProfileAvatarDeletionKey(
+        profile?.avatar_url,
+        user.id,
+      );
+      if (oldAvatarDeletionKey) {
+        await supabase.storage
+          .from("profile-avatars")
+          .remove([oldAvatarDeletionKey]);
       }
 
       const { error: uploadError } = await supabase.storage
@@ -260,8 +557,8 @@ export default function ProfilePage() {
       const baseUrl = supabase.storage
         .from("profile-avatars")
         .getPublicUrl(filePath).data.publicUrl;
-      const publicUrl = `${baseUrl}?t=${Date.now()}`;
-
+      const publicUrl = resolveProfileAvatarUrl(baseUrl, user.id);
+      if (!publicUrl) throw new Error("profile_avatar_url_unavailable");
       const { error: updateError } = await supabase
         .from("profiles" as never)
         .update({ avatar_url: publicUrl } as never)
@@ -279,8 +576,7 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
       router.refresh();
       toast.success("프로필 사진이 변경되었습니다");
-    } catch (error) {
-      console.error("모바일 프로필 사진 업로드 실패:", error);
+    } catch {
       toast.error("프로필 사진 업로드에 실패했습니다");
     } finally {
       setMobileAvatarUploading(false);
@@ -294,14 +590,16 @@ export default function ProfilePage() {
 
     setMobileAvatarUploading(true);
     try {
-      if (profile.avatar_url.includes("profile-avatars")) {
-        const oldPath = profile.avatar_url
-          .split("profile-avatars/")
-          .pop()
-          ?.split("?")[0];
-        if (oldPath) {
-          await supabase.storage.from("profile-avatars").remove([oldPath]);
-        }
+      const avatar = classifyProfileAvatarUrl(profile.avatar_url, user.id);
+      if (avatar.kind === "invalid") {
+        throw new Error("profile_avatar_delete_key_unavailable");
+      }
+
+      if (avatar.kind === "owned_storage") {
+        const { error: removeError } = await supabase.storage
+          .from("profile-avatars")
+          .remove([avatar.storageKey]);
+        if (removeError) throw removeError;
       }
 
       const { error: updateError } = await supabase
@@ -321,8 +619,7 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
       router.refresh();
       toast.success("프로필 사진이 삭제되었습니다");
-    } catch (error) {
-      console.error("모바일 프로필 사진 삭제 실패:", error);
+    } catch {
       toast.error("프로필 사진 삭제에 실패했습니다");
     } finally {
       setMobileAvatarUploading(false);
@@ -376,116 +673,73 @@ export default function ProfilePage() {
       setNewPassword("");
       setConfirmPassword("");
       toast.success("비밀번호가 성공적으로 변경되었습니다");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "비밀번호 변경에 실패했습니다";
-      toast.error(errorMessage);
+    } catch {
+      toast.error("비밀번호 변경에 실패했습니다");
     } finally {
       setLoading(false);
     }
   };
 
-  // 계정 비활성화 (익명화 후 로그아웃)
-  const handleAccountDeactivate = async () => {
-    if (!user) return;
 
-    if (deactivateConfirmationEmail !== user.email) {
-      toast.error("이메일이 일치하지 않습니다");
+  // A fresh password session owns preview, proof, and apply; it never reaches storage.
+  const handleAccountPermanentDelete = async () => {
+    if (!user?.email) return;
+
+    if (deleteConfirmationText !== ACCOUNT_DELETION_CONFIRMATION_TEXT) {
+      toast.error(`확인 문구 ${ACCOUNT_DELETION_CONFIRMATION_TEXT}를 정확히 입력해 주세요.`);
       return;
     }
-
-    setLoading(true);
-    try {
-      // 프로필 익명화
-      const { error: profileError } = await supabase
-        .from("profiles" as never)
-        .update({ nickname: "탈퇴한 사용자" } as never)
-        .eq("user_id", user.id);
-
-      if (profileError) {
-        console.warn("프로필 익명화 실패:", profileError);
-      }
-
-      toast.success("계정이 비활성화되었습니다. 잠시 후 로그아웃됩니다.");
-
-      setTimeout(async () => {
-        try {
-          await supabase.auth.signOut();
-          window.location.href = "/";
-        } catch (signOutError) {
-          console.warn("로그아웃 실패:", signOutError);
-          window.location.href = "/";
-        }
-      }, 2000);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "계정 비활성화 중 오류가 발생했습니다";
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 계정 삭제는 서버의 G014 durable worker가 처리한다.
-  const handleAccountPermanentDelete = async () => {
-    if (!user || !user.email) return;
-    if (deleteConfirmationEmail !== user.email || (!deletionSession && !deletePassword)) {
-      toast.error("이메일과 현재 비밀번호를 확인해주세요");
+    if (!deletionSession && !deletionPassword) {
+      toast.error("계정 삭제를 위해 비밀번호를 입력해 주세요.");
       return;
     }
 
     setLoading(true);
     try {
       if (!deletionSession) {
-        const reauthentication = await createAccountDeletionReauthenticationSession({
+        const freshSession = await createAccountDeletionReauthenticationSession({
           userId: user.id,
           email: user.email,
-          password: deletePassword,
+          password: deletionPassword,
         });
+        if (!freshSession) throw new Error("reauthentication_failed");
+
         const previewResponse = await fetch("/api/account/delete", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${reauthentication.bearerToken}`,
+            Authorization: `Bearer ${freshSession.bearerToken}`,
           },
           body: JSON.stringify({ targetUserId: user.id }),
         });
-        const previewReceipt = await previewResponse.json().catch(() => null);
-        const preview = parseAccountDeletionPreview(previewReceipt?.preview);
-        if (
-          !previewResponse.ok ||
-          !preview ||
-          typeof preview.previewHash !== "string" ||
-          typeof preview.sourceManifestHash !== "string"
-        ) {
-          throw new Error("계정 삭제 미리보기를 만들지 못했습니다");
-        }
+        const previewPayload = await previewResponse.json().catch(() => null);
+        const preview = parseAccountDeletionPreview(
+          previewPayload && typeof previewPayload === "object" && "preview" in previewPayload
+            ? previewPayload.preview
+            : null,
+        );
+        if (!previewResponse.ok || !preview) throw new Error("preview_unavailable");
 
-        const proof = await issueAccountDeletionReauthenticationProof({ userId: user.id });
+        const proof = await issueAccountDeletionReauthenticationProof(user.id);
+        if (!proof) throw new Error("proof_unavailable");
         setDeletionSession({
           preview,
           proofId: proof.proofId,
           expiresAt: proof.expiresAt,
-          bearerToken: reauthentication.bearerToken,
+          bearerToken: freshSession.bearerToken,
         });
-        setDeletePassword("");
-        toast.warning("삭제 범위를 확인했습니다. 영구 삭제를 한 번 더 확인해주세요.");
+        setDeletionPassword("");
+        setShowDeletionPassword(false);
+        toast.success("삭제 범위를 확인했습니다. 같은 확인 문구로 한 번 더 적용해 주세요.");
         return;
       }
 
       if (Date.parse(deletionSession.expiresAt) <= Date.now()) {
         setDeletionSession(null);
-        throw new Error("재인증 증명이 만료되었습니다. 비밀번호를 다시 확인해주세요.");
+        throw new Error("proof_expired");
       }
 
-      const bindings = {
-        requestId: crypto.randomUUID(),
-        previewHash: deletionSession.preview.previewHash,
-        idempotencyKey: crypto.randomUUID(),
-        sourceManifestHash: deletionSession.preview.sourceManifestHash,
-      };
+      const idempotencyKey = createAccountDeletionIdempotencyKey();
       const response = await fetch("/api/account/delete", {
         method: "DELETE",
         headers: {
@@ -495,44 +749,151 @@ export default function ProfilePage() {
         body: JSON.stringify({
           userId: user.id,
           proofId: deletionSession.proofId,
-          requestId: bindings.requestId,
-          previewHash: bindings.previewHash,
-          confirmationText: deleteConfirmationEmail,
-          idempotencyKey: bindings.idempotencyKey,
-          sourceManifestHash: bindings.sourceManifestHash,
+          requestId: deletionSession.preview.requestId,
+          previewHash: deletionSession.preview.previewHash,
+          confirmationText: deleteConfirmationText,
+          idempotencyKey,
+          sourceManifestHash: deletionSession.preview.sourceManifestHash,
         }),
       });
-      const serverReceipt = await response.json().catch(() => null);
+      const payload = await response.json().catch(() => null);
       if (
-        !response.ok ||
-        !isAuthoritativeAccountDeletionBeginReceipt(serverReceipt, bindings.requestId)
+        response.status !== 202
+        || !isConsentRecord(payload)
+        || !hasExactKeys(payload, ["status", "begin"])
+        || payload.status !== "accepted"
       ) {
-        throw new Error(
-          accountDeletionFailureMessage(serverReceipt, "계정 삭제 요청을 시작하지 못했습니다."),
-        );
+        throw new Error(accountDeletionFailureMessage(payload));
       }
 
+      accountDeletionPollController.current?.abort();
+      const pollController = new AbortController();
+      accountDeletionPollController.current = pollController;
+      setDeletionProgressMessage("계정 삭제 완료 확인 중입니다. 이 창을 닫지 마세요.");
+      const readback = await pollAccountDeletionReadback(deletionSession.preview, pollController.signal);
+      accountDeletionPollController.current = null;
+      if (readback.kind !== "applied") {
+        setDeletionProgressMessage("계정 삭제 완료를 확인하지 못했습니다. 브라우저 데이터는 유지됩니다.");
+        throw new Error(`account_deletion_${readback.kind}`);
+      }
+
+      const receipt = readback.receipt;
       setDeletionSession(null);
-      setDeleteConfirmationEmail("");
-      setDeletePassword("");
-      toast.success("계정 삭제 요청이 접수되었습니다. 처리 상태를 확인해 주세요.");
-      router.refresh();
-    } catch (error) {
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      const browserCleanup = await clearAccountDeletionBrowserStores(user.id, receipt);
+      if (signOutError || browserCleanup.status !== "complete") {
+        window.location.replace("/data-deletion?browserCleanup=required");
+        return;
+      }
+      window.location.replace("/");
+    } catch {
       setDeletionSession(null);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "계정 삭제 요청 처리에 실패했습니다. 잠시 후 다시 시도해주세요.",
-      );
+      toast.error("계정 삭제를 완료하지 못했습니다. 최근 로그인 상태와 삭제 미리보기를 다시 확인해 주세요.");
     } finally {
+      setDeletionPassword("");
+      setShowDeletionPassword(false);
       setLoading(false);
+    }
+  };
+
+  const handleConsentChange = async (
+    action: ConsentAction,
+    retryRequest: ConsentRequest | null = null,
+  ) => {
+    if (!consentSettings || consentSaving) return;
+
+    const replayRequest = retryRequest !== null
+      && retryRequest.purpose === action.purpose
+      && retryRequest.channel === action.channel
+      && retryRequest.decision === action.decision
+      && retryRequest.policyVersionId === consentSettings.policy.policyVersionId
+      && retryRequest.noticeSha256 === consentSettings.policy.contentSha256
+      ? retryRequest
+      : null;
+    const requestIds = replayRequest ?? createConsentRequestIds();
+    if (!requestIds) {
+      setFailedConsentAction(action);
+      setFailedConsentRequest(null);
+      setConsentError("수신 동의 변경을 시작하지 못했습니다. 다시 시도해 주세요.");
+      return;
+    }
+
+    const request: ConsentRequest = replayRequest
+      ? replayRequest
+      : {
+        ...action,
+        policyVersionId: consentSettings.policy.policyVersionId,
+        noticeSha256: consentSettings.policy.contentSha256,
+        idempotencyKey: requestIds.idempotencyKey,
+        correlationId: requestIds.correlationId,
+      };
+    const savingKey = `${request.purpose}:${request.channel}`;
+    setConsentSaving(savingKey);
+    setConsentError(null);
+    setFailedConsentAction(null);
+    setFailedConsentRequest(null);
+    try {
+      const response = await fetch("/api/privacy/consents", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          purpose: request.purpose,
+          channel: request.channel,
+          decision: request.decision,
+          policyVersionId: request.policyVersionId,
+          noticeSha256: request.noticeSha256,
+          idempotencyKey: request.idempotencyKey,
+          correlationId: request.correlationId,
+        }),
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok || !hasConsentReadback(payload, action)) {
+        if (isConsentRecord(payload) && payload.code === "PRIVACY_POLICY_STALE") {
+          await loadConsentSettings();
+        }
+        throw new Error("consent_update_unavailable");
+      }
+
+      setConsentSettings((current) => {
+        if (!current) return current;
+        const granted = action.decision === "granted";
+        if (action.purpose === "night_marketing") {
+          return {
+            ...current,
+            consents: {
+              ...current.consents,
+              night: { ...current.consents.night, [action.channel]: granted },
+            },
+          };
+        }
+        return {
+          ...current,
+          consents: {
+            ...current.consents,
+            ordinary: { ...current.consents.ordinary, [action.channel]: granted },
+          },
+        };
+      });
+      toast.success(action.decision === "granted" ? "수신 동의를 확인했습니다." : "수신 동의 철회를 확인했습니다.");
+    } catch {
+      setFailedConsentAction(action);
+      setFailedConsentRequest(request);
+      setConsentError("수신 동의 변경을 저장하지 못했습니다. 다시 시도해 주세요.");
+    } finally {
+      setConsentSaving(null);
     }
   };
 
   if (!user) return null;
 
-  // 프로필 사진 URL (avatar_url 컬럼만 사용 - 삭제 시 완전히 제거됨)
-  const avatarUrl = profile?.avatar_url || userProfile?.avatarUrl;
+  // Render only a canonical avatar URL bound to the signed-in user.
+  const avatarUrl =
+    resolveProfileAvatarUrl(profile?.avatar_url, user.id)
+    ?? resolveProfileAvatarUrl(userProfile?.avatarUrl, user.id);
   const isMobileNicknameUnchanged = mobileNicknameInput.trim() === displayName;
   const tierProgress = getNextUserTierProgress(userProfile?.qualityScore ?? 0);
   const tierRemainingScore = tierProgress.remainingScore;
@@ -584,7 +945,7 @@ export default function ProfilePage() {
     },
     {
       href: "/mypage/submissions/recommend",
-      icon: Youtube,
+      icon: YouTubeIcon,
       title: "쯔양 제보",
       description: "영상 속 맛집 알려주기",
       accent: "bg-red-500/10 text-red-600",
@@ -634,7 +995,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-fr md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
@@ -1284,6 +1645,169 @@ export default function ProfilePage() {
         </Card>
 
         <Card
+          className="min-w-0 border-border/70 md:order-5 md:col-span-2 md:row-start-3 md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          data-privacy-consent-settings="true"
+        >
+          <CardHeader className="pb-3 lg:p-4 lg:pb-2">
+            <CardTitle className="text-base">선택 마케팅 수신 설정</CardTitle>
+            <CardDescription>
+              일반 수신과 야간 수신은 채널별 선택 항목입니다. 연락처는 이 화면에서 입력하거나 변경하지 않습니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 lg:p-4 lg:pt-1">
+            {consentLoading && !consentSettings && (
+              <p className="text-sm text-muted-foreground" role="status">
+                수신 동의 설정을 확인하는 중입니다.
+              </p>
+            )}
+            {consentError && (
+              <div
+                className="flex flex-col gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+                role="alert"
+                data-privacy-consent-retry="true"
+              >
+                <span>{consentError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    if (failedConsentAction && consentSettings) {
+                      void handleConsentChange(failedConsentAction, failedConsentRequest);
+                    } else {
+                      void loadConsentSettings();
+                    }
+                  }}
+                  disabled={consentSaving !== null || consentLoading}
+                >
+                  다시 시도
+                </Button>
+              </div>
+            )}
+
+            <section
+              className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+              aria-labelledby="ordinary-marketing-consent-title"
+              data-privacy-consent-group="ordinary"
+            >
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
+                    일반 마케팅 수신
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    새 소식과 혜택 안내를 받을 채널을 선택합니다.
+                  </p>
+                </div>
+                <Badge variant="secondary">선택</Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {CONSENT_CHANNEL_OPTIONS.map((channel) => {
+                  const enabled = consentSettings?.consents.ordinary[channel.id] === true;
+                  const action: ConsentAction = {
+                    purpose: ORDINARY_PURPOSE_BY_CHANNEL[channel.id],
+                    channel: channel.id,
+                    decision: enabled ? "withdrawn" : "granted",
+                  };
+                  const actionKey = `${action.purpose}:${action.channel}`;
+                  const unknown = !consentSettings;
+                  return (
+                    <div
+                      key={channel.id}
+                      className="flex min-h-24 flex-col justify-between rounded-xl border border-border/70 bg-background p-3"
+                      data-privacy-consent-row={`ordinary-${channel.id}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{channel.label}</span>
+                        <Badge variant={enabled ? "default" : "secondary"}>
+                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                        </Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant={enabled ? "outline" : "default"}
+                        size="sm"
+                        className="mt-3 w-full"
+                        aria-pressed={enabled}
+                        onClick={() => void handleConsentChange(action)}
+                        disabled={unknown || consentLoading || consentSaving !== null}
+                      >
+                        {consentSaving === actionKey
+                          ? "저장 중…"
+                          : enabled
+                            ? "수신 철회"
+                            : "수신 동의"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section
+              className="rounded-2xl border border-amber-500/60 bg-amber-50/60 p-3 dark:bg-amber-950/20"
+              aria-labelledby="night-marketing-consent-title"
+              data-privacy-consent-group="night"
+            >
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <div>
+                  <h2 id="night-marketing-consent-title" className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                    야간 마케팅 수신
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
+                    일반 수신과 별도로, 야간 안내를 받을 채널을 직접 선택합니다.
+                  </p>
+                </div>
+                <Badge className="bg-amber-600 text-white hover:bg-amber-600">별도 선택</Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {CONSENT_CHANNEL_OPTIONS.map((channel) => {
+                  const enabled = consentSettings?.consents.night[channel.id] === true;
+                  const action: ConsentAction = {
+                    purpose: "night_marketing",
+                    channel: channel.id,
+                    decision: enabled ? "withdrawn" : "granted",
+                  };
+                  const actionKey = `${action.purpose}:${action.channel}`;
+                  const unknown = !consentSettings;
+                  return (
+                    <div
+                      key={channel.id}
+                      className="flex min-h-24 flex-col justify-between rounded-xl border border-amber-500/40 bg-background/90 p-3"
+                      data-privacy-consent-row={`night-${channel.id}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{channel.label}</span>
+                        <Badge variant={enabled ? "default" : "secondary"}>
+                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                        </Badge>
+                      </div>
+                      <Button
+                        type="button"
+                        variant={enabled ? "outline" : "default"}
+                        size="sm"
+                        className="mt-3 w-full"
+                        aria-pressed={enabled}
+                        onClick={() => void handleConsentChange(action)}
+                        disabled={unknown || consentLoading || consentSaving !== null}
+                      >
+                        {consentSaving === actionKey
+                          ? "저장 중…"
+                          : enabled
+                            ? "수신 철회"
+                            : "수신 동의"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+
+        <Card
+          id="account-deletion"
           className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
           data-mypage-danger-zone="true"
           data-mypage-danger-zone-layout="matrix-bottom-right"
@@ -1294,7 +1818,7 @@ export default function ProfilePage() {
               className="group p-1 md:flex md:flex-1 md:flex-col lg:p-0"
             >
               <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
-                <span>비활성화·삭제 옵션 보기</span>
+                <span>계정 삭제 옵션 보기</span>
                 <ChevronRight
                   className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
                   aria-hidden="true"
@@ -1305,72 +1829,17 @@ export default function ProfilePage() {
                   className="text-xs leading-5 text-muted-foreground"
                   data-mypage-danger-zone-guidance="compact"
                 >
-                  비활성화는 복구 가능, 완전 삭제는 복구 불가입니다.
+                  완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.
                 </p>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-h-11 w-full touch-manipulation border-yellow-500 text-yellow-700 hover:bg-yellow-50 lg:min-h-9 lg:px-3"
-                    >
-                      <EyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
-                      계정 비활성화
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        계정을 비활성화하시겠습니까?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        닉네임은 탈퇴한 사용자로 표시되고, 다시 로그인하면 복구할 수 있습니다.
-                        계속하려면 계정 이메일을 입력하세요.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="py-4">
-                      <Input
-                        value={deactivateConfirmationEmail}
-                        onChange={(e) =>
-                          setDeactivateConfirmationEmail(e.target.value)
-                        }
-                        placeholder={user.email || ""}
-                        className="text-center"
-                        aria-label="계정 비활성화 확인 이메일"
-                        name="deactivate-confirmation-email"
-                        autoComplete="email"
-                      />
-                      {deactivateConfirmationEmail &&
-                        deactivateConfirmationEmail !== user.email && (
-                          <p className="text-sm text-destructive mt-2 text-center">
-                            이메일이 일치하지 않습니다
-                          </p>
-                        )}
-                    </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel
-                        onClick={() => setDeactivateConfirmationEmail("")}
-                      >
-                        취소
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleAccountDeactivate}
-                        className="bg-yellow-600 text-white hover:bg-yellow-700"
-                        disabled={
-                          loading || deactivateConfirmationEmail !== user.email
-                        }
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            처리 중…
-                          </>
-                        ) : (
-                          "비활성화"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {deletionProgressMessage && (
+                  <p
+                    className="rounded-md border border-amber-500/40 bg-amber-50/60 p-3 text-xs leading-5 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
+                    data-account-deletion-status="recoverable"
+                    role="status"
+                  >
+                    {deletionProgressMessage}
+                  </p>
+                )}
 
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -1388,43 +1857,69 @@ export default function ProfilePage() {
                         계정을 완전히 삭제하시겠습니까?
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        이 작업은 되돌릴 수 없습니다. 계속하려면 계정 이메일을 입력하세요.
+                        삭제 범위를 먼저 확인한 뒤 적용합니다. 모든 시스템의 삭제를 보장하지 않으며,
+                        보존 또는 분리 대상은 현재 승인된 처리 기준에 따라 별도로 처리됩니다.
+                        최근 로그인 후 확인 문구를 정확히 입력해 주세요.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <div className="py-4">
+                    <div className="space-y-3 py-4">
+                      {deletionSession && (
+                        <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                          삭제 미리보기: 삭제 {deletionSession.preview.counts.delete}건, 익명화{" "}
+                          {deletionSession.preview.counts.anonymize}건, 분리{" "}
+                          {deletionSession.preview.counts.separate}건, 유지{" "}
+                          {deletionSession.preview.counts.retain}건
+                        </p>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="account-deletion-password">현재 비밀번호</Label>
+                        <div className="relative">
+                          <Input
+                            id="account-deletion-password"
+                            type={showDeletionPassword ? "text" : "password"}
+                            value={deletionPassword}
+                            onChange={(e) => setDeletionPassword(e.target.value)}
+                            autoComplete="current-password"
+                            aria-label="계정 삭제 재인증 비밀번호"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full"
+                            onClick={() => setShowDeletionPassword((visible) => !visible)}
+                            aria-label={showDeletionPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
+                          >
+                            {showDeletionPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          비밀번호 로그인 계정만 재인증할 수 있습니다. OAuth 계정은 고객 지원으로 문의해 주세요.
+                        </p>
+                      </div>
                       <Input
-                        value={deleteConfirmationEmail}
-                        onChange={(e) =>
-                          setDeleteConfirmationEmail(e.target.value)
-                        }
-                        placeholder={user.email || ""}
+                        value={deleteConfirmationText}
+                        onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                        placeholder={ACCOUNT_DELETION_CONFIRMATION_TEXT}
                         className="text-center"
-                        aria-label="계정 영구 삭제 확인 이메일"
-                        name="delete-confirmation-email"
-                        autoComplete="email"
+                        aria-label="계정 삭제 확인 문구"
+                        name="delete-confirmation-text"
+                        autoComplete="off"
                       />
-                      <Input
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        placeholder="현재 비밀번호"
-                        type="password"
-                        className="mt-3"
-                        aria-label="계정 영구 삭제 현재 비밀번호"
-                        name="delete-current-password"
-                        autoComplete="current-password"
-                      />
-                      {deleteConfirmationEmail &&
-                        deleteConfirmationEmail !== user.email && (
-                          <p className="text-sm text-destructive mt-2 text-center">
-                            이메일이 일치하지 않습니다
+                      {deleteConfirmationText
+                        && deleteConfirmationText !== ACCOUNT_DELETION_CONFIRMATION_TEXT && (
+                          <p className="text-sm text-destructive text-center">
+                            {ACCOUNT_DELETION_CONFIRMATION_TEXT}를 정확히 입력해 주세요
                           </p>
                         )}
                     </div>
                     <AlertDialogFooter>
                       <AlertDialogCancel
                         onClick={() => {
-                          setDeleteConfirmationEmail("");
-                          setDeletePassword("");
+                          accountDeletionPollController.current?.abort();
+                          setDeleteConfirmationText("");
+                          setDeletionPassword("");
+                          setShowDeletionPassword(false);
                           setDeletionSession(null);
                         }}
                       >
@@ -1435,18 +1930,18 @@ export default function ProfilePage() {
                         onClick={handleAccountPermanentDelete}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         disabled={
-                          loading ||
-                          deleteConfirmationEmail !== user.email ||
-                          (!deletionSession && !deletePassword)
+                          loading
+                          || deleteConfirmationText !== ACCOUNT_DELETION_CONFIRMATION_TEXT
+                          || (!deletionSession && !deletionPassword)
                         }
                       >
                         {loading ? (
                           <>
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            삭제 중…
+                            처리 중…
                           </>
                         ) : deletionSession ? (
-                          "영구 삭제 다시 확인"
+                          "계정 삭제 적용"
                         ) : (
                           "삭제 범위 확인"
                         )}

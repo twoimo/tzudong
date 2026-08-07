@@ -4,6 +4,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { logCliError, safeCliErrorName } from './privacy-safe-cli-log.mjs'
 
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REPO_ROOT = resolve(WEB_ROOT, '../..')
@@ -351,7 +352,7 @@ async function fetchJson(baseUrl, path, options = {}) {
 }
 
 function stringifyFetchError(error) {
-  return error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+  return safeCliErrorName(error)
 }
 
 async function safeFetchJson(baseUrl, path, options = {}) {
@@ -483,7 +484,7 @@ async function runHostedReadback(result, { baseUrl, cookie, readerCookie, candid
     method: 'POST',
     headers: { ...createHeaders(cookie), 'content-type': 'application/json' },
     body: JSON.stringify({ candidateId }),
-  }).catch((error) => ({ status: 0, ok: false, body: { error: String(error) }, headers: {} }))
+  }).catch((error) => ({ status: 0, ok: false, body: { error: safeCliErrorName(error) }, headers: {} }))
   result.two_context_evidence.publisher_context = publish.ok ? 'passed' : 'failed'
   result.release.candidate_id = candidateId
   result.release.current_status = typeof publish.body?.status === 'string' ? publish.body.status : 'error'
@@ -616,6 +617,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error)
+  logCliError(error, (line) => process.stderr.write(`[thumbnail-release-readback-certification] ${line}`))
   process.exit(1)
 })

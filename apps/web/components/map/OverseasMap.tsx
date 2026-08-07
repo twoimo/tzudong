@@ -126,6 +126,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
         onVisibleRestaurantsChange(uniqueRestaurantsById(restaurantsToShow));
     }, [restaurantsToShow, onVisibleRestaurantsChange]);
 
+    // Renders authorized device coordinates at the approved map-provider boundary.
     useEffect(() => {
         if (!map.current || !isMapLoaded) return;
 
@@ -211,7 +212,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
             mapInstance.on('error', (e) => {
                 const msg = e.error?.message || '';
                 if (msg.includes('Expected value') || msg.includes('null')) return;
-                console.error("Map Error:", e.error || e);
+                console.error("Map Error");
             });
 
             mapInstance.on('click', () => {
@@ -229,7 +230,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
             map.current = mapInstance;
         } catch (err) {
-            console.error("Map Init Error:", err);
+            console.error("Map Init Error:");
         }
 
         // [New] 커스텀 스크롤 휠 핸들러 (0.5 단위 줌 -> 1단위 슬라이더 줌)

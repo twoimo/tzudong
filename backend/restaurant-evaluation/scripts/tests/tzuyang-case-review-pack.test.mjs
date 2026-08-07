@@ -5,7 +5,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildCaseReviewRow, buildQueries, parseNaverSearch } from '../../../bin/build_tzuyang_case_review_pack.mjs';
+import {
+  buildCaseReviewRow,
+  buildQueries,
+  fetchNaverWithLimits,
+  parseNaverSearch,
+  spawnFileJson,
+} from '../../../bin/build_tzuyang_case_review_pack.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 
@@ -58,6 +64,150 @@ const naverHtml = `
     <a href="https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=abc">문의 및 안내 033-242-5168 주소 강원특별자치도 춘천시 신북읍 맥국2길 123</a>
   </body></html>
 `;
+async function assertFixedRejection(promise, code) {
+  await assert.rejects(promise, (error) => error?.code === code && error.message === code);
+}
+
+function fixtureResponse(body, headers = { 'content-type': 'text/html; charset=utf-8' }) {
+  return new Response(body, { status: 200, headers });
+}
+
+test('bounded Naver fetch accepts fixture HTML without a live network request', async () => {
+  const calls = [];
+  const fetched = await fetchNaverWithLimits('유포리막국수', {
+    fetchImpl: async (url, options) => {
+      calls.push({ url: String(url), options });
+      return fixtureResponse(naverHtml);
+    },
+    maxResponseBytes: 8_192,
+  });
+
+  assert.equal(fetched.status, 200);
+  assert.match(fetched.html, /유포리막국수/);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].options.redirect, 'error');
+  assert.equal(calls[0].options.signal.aborted, false);
+});
+
+test('bounded Naver fetch rejects declared and chunked oversized fixture responses', async () => {
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => fixtureResponse('x', {
+        'content-type': 'text/html',
+        'content-length': '65',
+      }),
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_RESPONSE_TOO_LARGE',
+  );
+
+  const chunkedBody = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('x'.repeat(40)));
+      controller.enqueue(new TextEncoder().encode('x'.repeat(40)));
+      controller.close();
+    },
+  });
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => fixtureResponse(chunkedBody),
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_RESPONSE_TOO_LARGE',
+  );
+});
+
+test('bounded Naver fetch rejects slow, wrong-type, and malformed fixture responses', async () => {
+  const slowBody = new ReadableStream({
+    pull() {
+      return new Promise(() => {});
+    },
+  });
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => fixtureResponse(slowBody),
+      connectTimeoutMs: 20,
+      totalTimeoutMs: 30,
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_TOTAL_TIMEOUT',
+  );
+
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => fixtureResponse('{}', { 'content-type': 'application/json' }),
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_CONTENT_TYPE_REJECTED',
+  );
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => ({
+        status: 200,
+        redirected: true,
+        headers: new Headers({ 'content-type': 'text/html' }),
+        body: null,
+      }),
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_REDIRECT_REJECTED',
+  );
+
+  await assertFixedRejection(
+    fetchNaverWithLimits('fixture', {
+      fetchImpl: async () => fixtureResponse(new Uint8Array([0xc3, 0x28])),
+      maxResponseBytes: 64,
+    }),
+    'NAVER_SEARCH_TEXT_INVALID',
+  );
+});
+
+test('Scrapling JSON child bounds stdout, schema, and parent timeout without child diagnostics', async () => {
+  const normalPayload = JSON.stringify({
+    status: 200,
+    url: 'https://search.naver.com/search.naver?query=fixture',
+    html: '<html></html>',
+    fetcher: 'fixture',
+    blocked_reason: '',
+  });
+  const normal = await spawnFileJson(process.execPath, ['-e', `process.stdout.write(${JSON.stringify(normalPayload)})`], {
+    timeoutMs: 1_000,
+    maxOutputBytes: 8_192,
+  });
+  assert.equal(normal.status, 200);
+
+  await assertFixedRejection(
+    spawnFileJson(process.execPath, ['-e', "const write = () => process.stdout.write('x'.repeat(128)); write(); setInterval(write, 1);"], {
+      timeoutMs: 1_000,
+      maxOutputBytes: 128,
+    }),
+    'SCRAPLING_FETCHER_STDOUT_TOO_LARGE',
+  );
+
+  await assertFixedRejection(
+    spawnFileJson(process.execPath, ['-e', 'setInterval(() => {}, 1_000);'], {
+      timeoutMs: 40,
+      maxOutputBytes: 8_192,
+    }),
+    'SCRAPLING_FETCHER_TIMEOUT',
+  );
+
+  const invalidSchema = JSON.stringify({
+    status: 200,
+    url: 'https://search.naver.com/search.naver?query=fixture',
+    html: '<html></html>',
+    fetcher: 'fixture',
+    blocked_reason: '',
+    unexpected: 'not accepted',
+  });
+  await assertFixedRejection(
+    spawnFileJson(process.execPath, ['-e', `process.stdout.write(${JSON.stringify(invalidSchema)})`], {
+      timeoutMs: 1_000,
+      maxOutputBytes: 8_192,
+    }),
+    'SCRAPLING_FETCHER_SCHEMA_INVALID',
+  );
+});
 
 test('case review queries prefer phone, name, and region evidence', () => {
   const queries = buildQueries(manualRow(), 3);
@@ -145,7 +295,8 @@ const payload = {
   status: 200,
   url: 'https://search.naver.com/search.naver?query=fake',
   fetcher: 'fake_scrapling',
-  html: ${JSON.stringify(naverHtml)}
+  html: ${JSON.stringify(naverHtml)},
+  blocked_reason: '',
 };
 console.log(JSON.stringify(payload));
 `, 'utf8');
@@ -203,7 +354,9 @@ console.log(JSON.stringify({
     assert.equal(summary.confirmed_external_place_rows, 0);
     const searchLog = readFileSync(join(out, 'search-log.jsonl'), 'utf8');
     assert.match(searchLog, /"status":"http_error"/);
-    assert.match(searchLog, /http_status_403/);
+    assert.match(searchLog, /"http_status":403/);
+    assert.match(searchLog, /SCRAPLING_FETCHER_HTTP_ERROR/);
+    assert.equal(searchLog.includes('http_status_403'), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
