@@ -10,6 +10,7 @@ on:
       - 'backend/package.json'
       - 'backend/package-lock.json'
       - 'backend/**/requirements*.txt'
+      - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
   schedule:
     - cron: '0 17 * * 1'
   workflow_dispatch:
