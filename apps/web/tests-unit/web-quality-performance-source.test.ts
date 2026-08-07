@@ -2016,6 +2016,18 @@ describe("web quality performance source contracts", () => {
       "import { supabase } from '@/integrations/supabase/client'",
     );
     expect(mapOverlayNoticeSource).toContain("max-w-[calc(100vw-2rem)]");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "const baseNoticeClass = MAP_OVERLAY_NOTICE_CLASS_NAME;",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} text-left",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "className={cn(baseNoticeClass, className)}",
+    );
     expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
     for (const visualToken of [
       "border border-border",
@@ -2029,6 +2041,13 @@ describe("web quality performance source contracts", () => {
     expect(mapOverlayNoticeSource).toContain("appearance-none");
     expect(mapOverlayNoticeSource).toContain(
       "export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';",
+    );
+    expect(mapIndicatorsSource).toContain("mobile-map-announcement-toast");
+    expect(mapIndicatorsSource).toContain(
+      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} animate-in",
+    );
+    expect(overlayStackSource).toContain(
+      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} ${floatingToastPositionClass}",
     );
     expect(mapIndicatorsSource).toContain(
       "contentClassName={MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME}",
@@ -2085,7 +2104,11 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(homeAppGlobalsSource).toContain('margin-top: 0.5rem');
     expect(homeAppGlobalsSource).toContain(
-      ".mobile-map-status-badge > span > span.map-overlay-notice-single-line",
+      ".mobile-map-status-badge.mobile-map-announcement-toast",
+    );
+    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast .map-overlay-notice-single-line",
     );
     expect(homeAppGlobalsSource).toContain("overflow: hidden");
     expect(homeAppGlobalsSource).toContain("text-overflow: ellipsis");
