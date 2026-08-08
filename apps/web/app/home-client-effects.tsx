@@ -339,7 +339,7 @@ export default function HomeClientEffects({
             clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };
-    }, [mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
+    }, [closeAllPanels, mapMode, openDetailPanelRef, openPanelRef, router, searchParams, setMapMode, setSelectedAnnouncement]);
 
     useEffect(() => {
         const handleChangeMapMode = (event: Event) => {
