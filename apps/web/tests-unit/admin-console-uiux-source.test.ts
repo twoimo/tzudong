@@ -387,7 +387,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(nextConfigSource).toContain("turbopackFileSystemCacheForDev: false");
     expect(nextConfigSource).toContain("config.cache = false;");
-    expect(cleanNextSource).toContain("childEnv.NODE_ENV = 'development';");
+    expect(cleanNextSource).toContain("childEnv.NODE_ENV = nightlyLocalEnvOnly ? 'test' : 'development';");
     expect(cleanNextSource).toContain("if (isNextDevCommand())");
     expect(devPrewarmSource).toContain(
       "const shouldUseWebpackDev = !hasFlag('--turbopack') && !hasFlag('--turbo');",
