@@ -2029,6 +2029,12 @@ describe("web quality performance source contracts", () => {
       "className={cn(baseNoticeClass, className)}",
     );
     expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =\n    '!border !border-border !bg-card/95 !text-foreground !rounded-2xl !px-3 !py-2';",
+    );
+    expect(mapIndicatorsSource).toContain("<MapOverlayNotice");
+    expect(mapIndicatorsSource).toContain("<MapOverlayNoticeButton");
+    expect(mapIndicatorsSource).not.toContain("dark:bg-");
     for (const visualToken of [
       "!border",
       "!border-border",
@@ -2116,6 +2122,9 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
     expect(homeAppGlobalsSource).toContain('margin-top: 0');
     expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
+    );
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast",
     );
