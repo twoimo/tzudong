@@ -1215,12 +1215,12 @@ export default function HomeClient() {
       if (isPublicRestrictedMode) return;
       handlers.handleRequestEditRestaurant(restaurant);
     },
-    [handlers.handleRequestEditRestaurant],
+    [handlers],
   );
   const handleReviewModalOpen = useCallback(() => {
     if (isPublicRestrictedMode) return;
     state.setIsReviewModalOpen(true);
-  }, []);
+  }, [state]);
 
   return (
     <>
