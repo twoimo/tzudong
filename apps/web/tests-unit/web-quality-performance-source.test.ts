@@ -2165,6 +2165,37 @@ describe("web quality performance source contracts", () => {
     expect(floatingNavSource).toContain('aria-label="지도 화면 보조 탐색"');
     expect(floatingNavSource).toContain("aria-pressed={mapMode ===");
   });
+  test("mobile toast dark tokens and G007 announcement width stay explicit", () => {
+    const rootGlobalsSource = source("app/globals.css");
+    const homeAppGlobalsSource = source("app/home-app-globals.css");
+    const rootDarkTokenBlock =
+      rootGlobalsSource.match(/\.dark\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+
+    expect(rootDarkTokenBlock).toContain(".dark {");
+    for (const declaration of [
+      "--background: 24 10% 10%;",
+      "--foreground: 38 30% 96%;",
+      "--card: 24 9% 13%;",
+      "--card-foreground: 38 30% 96%;",
+      "--border: 24 6% 24%;",
+      "--secondary: 24 7% 18%;",
+      "--secondary-foreground: 38 30% 96%;",
+      "--muted: 24 7% 18%;",
+      "--muted-foreground: 24 7% 68%;",
+      "--accent: 24 7% 18%;",
+      "--accent-foreground: 38 30% 96%;",
+    ]) {
+      expect(rootDarkTokenBlock).toContain(declaration);
+    }
+
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
+    );
+    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
+    expect(homeAppGlobalsSource).toContain(
+      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
+    );
+  });
 
   test("naver marker click centering avoids slow duplicate recenter loops", () => {
     const naverMapSource = source("components/map/NaverMapView.tsx");
