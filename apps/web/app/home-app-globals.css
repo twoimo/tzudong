@@ -46,6 +46,8 @@
   white-space: normal;
 }
 .mobile-map-status-badge.mobile-map-announcement-toast {
+  width: max-content;
+  max-width: calc(100vw - 2rem);
   height: 2.25rem;
 }
 
