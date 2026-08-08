@@ -2030,15 +2030,19 @@ describe("web quality performance source contracts", () => {
     );
     expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
     for (const visualToken of [
-      "border border-border",
-      "bg-card/95",
-      "text-foreground",
-      "rounded-2xl",
-      "px-3 py-2",
+      "!border",
+      "!border-border",
+      "!bg-card/95",
+      "!text-foreground",
+      "!rounded-2xl",
+      "!px-3 !py-2",
     ]) {
       expect(mapOverlayNoticeSource).toContain(visualToken);
     }
+    expect(mapOverlayNoticeSource).not.toContain("hover:bg-secondary/70");
+    expect(mapOverlayNoticeSource).toContain("sm:hover:!bg-secondary/70");
     expect(mapOverlayNoticeSource).toContain("appearance-none");
+    expect(mapOverlayNoticeSource).toContain("aria-label={ariaLabel}");
     expect(mapOverlayNoticeSource).toContain(
       "export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';",
     );
@@ -2095,14 +2099,23 @@ describe("web quality performance source contracts", () => {
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
     expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
-    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)_+_8.5rem)]");
+    expect(overlayPositionSource).toContain(
+      "const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =",
+    );
+    expect(overlayPositionSource).toContain(
+      "'top-[calc(env(safe-area-inset-top)_+_114px)]'",
+    );
+    expect(overlayPositionSource).toContain(
+      "mobile-map-status-badge fixed ${MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS}",
+    );
     expect(overlayPositionSource).toContain("z-[70]");
     expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-position-helpers.ts";');
     expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
     expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
-    expect(homeAppGlobalsSource).toContain('margin-top: 0.5rem');
+    expect(homeAppGlobalsSource).toContain('margin-top: 0');
+    expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast",
     );
@@ -2116,7 +2129,18 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain(
       "html[data-mobile-search-open] .mobile-map-status-badge {\n    display: none;",
     );
-    expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
+    expect(homeAppGlobalsSource).toContain(
+      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
+    );
+    expect(mobileControlSource).toContain(
+      "pt-[calc(env(safe-area-inset-top)+10px)]",
+    );
+    expect(mobileControlSource).toContain("flex h-12");
+    expect(mobileControlSource).toContain(
+      "className=\"pointer-events-auto mt-2 flex w-full",
+    );
+    expect(mobileControlSource).toContain("inline-flex h-9");
+    expect(mobileControlSource).toContain("py-0.5");
     expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
     expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
     expect(homeAppGlobalsSource).toContain('max-height: min(20rem, calc(100dvh - 24rem))');
