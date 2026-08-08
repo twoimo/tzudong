@@ -1237,7 +1237,7 @@ function AdminMapInfoPanel({
                   </p>
                   <h2
                     id="admin-map-selected-title"
-                    className="mt-0.5 truncate text-xl font-bold tracking-[-0.04em]"
+                    className="mt-0.5 break-words text-xl font-bold tracking-[-0.04em] [overflow-wrap:anywhere]"
                   >
                     {selectedRestaurant.name}
                   </h2>
@@ -1248,7 +1248,7 @@ function AdminMapInfoPanel({
                 </p>
 
                 <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] font-semibold">
-                  <span className="max-w-full truncate rounded-full bg-white/15 px-2 py-0.5 text-white backdrop-blur">
+                  <span className="max-w-full break-words rounded-full bg-white/15 px-2 py-0.5 text-white backdrop-blur [overflow-wrap:anywhere]">
                     {selectedRestaurant.category ?? "카테고리 확인"}
                   </span>
                   <span className="rounded-full bg-white/15 px-2 py-0.5 text-white/85 backdrop-blur">
@@ -1257,7 +1257,7 @@ function AdminMapInfoPanel({
                   <span className="rounded-full bg-black/35 px-2 py-0.5 font-mono text-white/85 backdrop-blur">
                     {selectedCoordinateText}
                   </span>
-                  <span className="max-w-full truncate rounded-full bg-black/35 px-2 py-0.5 font-mono text-white/85 backdrop-blur">
+                  <span className="max-w-full break-all rounded-full bg-black/35 px-2 py-0.5 font-mono text-white/85 backdrop-blur">
                     {selectedRestaurant.videoId ?? "영상 ID 확인"}
                   </span>
                 </div>
@@ -1297,7 +1297,7 @@ function AdminMapInfoPanel({
       </section>
 
       <section
-        className="scrollbar-hide rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
+        className="scrollbar-hide min-w-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3"
         aria-label="동선 추천 초안"
         data-layout-primitives="panel-layout list-detail step-nav cluster frame"
         data-scroll-owner="route-control-pane"
@@ -1517,10 +1517,10 @@ function AdminMapInfoPanel({
                       {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-foreground">
+                      <p className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">
                         {restaurant.name}
                       </p>
-                      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                         {restaurant.address ?? "주소 미입력"} ·{" "}
                         {restaurant.category ?? "카테고리 확인"}
                       </p>
@@ -1564,7 +1564,7 @@ function AdminMapInfoPanel({
               후보 readback과 Directions providerCache를 포함해 재현 가능한 동선
               패키지로 복사할 수 있습니다.
             </p>
-            <pre className="scrollbar-hide mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5">
+            <pre className="mt-1 break-words whitespace-pre-wrap rounded-lg bg-muted/30 p-1.5 [overflow-wrap:anywhere]">
               {routePlainTextExport}
             </pre>
             <script
@@ -1573,9 +1573,11 @@ function AdminMapInfoPanel({
               dangerouslySetInnerHTML={{ __html: routeJsonExport.replace(/</g, "\\u003c") }}
             />
           </div>
+          <div className="mt-2 border-t border-border/70 pt-2">
+            <TrendProposalQueue />
+          </div>
         </div>
       </section>
-      <TrendProposalQueue />
     </aside>
   );
 }
@@ -1814,13 +1816,13 @@ export function AdminOverviewDashboard({
     <div
       role="region"
       aria-label="관리자 지도 운영 개요 2분할"
-      className="grid min-h-full min-w-0 grid-cols-1 gap-2 overflow-visible lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
+      className="grid h-full min-h-0 min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:overflow-hidden"
       data-layout-primitives="panel-layout list-detail frame cluster"
       data-scroll-owner="admin-overview-canvas"
       data-admin-overview-layout="two-pane"
     >
       <div
-        className="min-h-[340px] min-w-0 sm:min-h-[390px] lg:min-h-0"
+        className="h-[340px] min-w-0 sm:h-[390px] overflow-visible lg:h-full lg:min-h-0"
         data-admin-map-pane="true"
         data-scroll-owner="map-canvas-none"
       >
@@ -1846,7 +1848,7 @@ export function AdminOverviewDashboard({
         />
       </div>
       <div
-        className="min-h-0 min-w-0"
+        className="min-h-0 min-w-0 lg:h-full"
         data-admin-info-pane="true"
         data-scroll-owner="admin-overview-info-pane"
       >

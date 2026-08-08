@@ -1945,9 +1945,9 @@ def apply_manifest(args,manifest):
     for entry in manifest.migrations:
      source=repository_root(Path(__file__).resolve())/entry.path
      if sha256_file(source)!=entry.sha256: raise RecoveryError("migration source hash mismatch")
-   _ledger_assert(conn,manifest,len(manifest.migrations)); runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
+   _ledger_assert(conn,manifest,len(manifest.migrations)); runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"; g041_runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g041_auth_boundary_runtime.sql"
    approval_evidence=_approval_catalog_evidence(conn)
-   run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
+   for fixture in (runtime,g041_runtime): run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(fixture)],env=env)
    observed=_fingerprints(conn)
   except Exception as exc:
    if self_commit_attempted: raise RecoveryError("self_commit_ambiguous") from exc
@@ -1969,8 +1969,8 @@ def run_postflight(args,manifest):
   service=_copy_local_service(Path(raw),Path(args.service_file),"g035-local"); env=safe_environment(service); conn=_connect("g035-local",env)
   try:
    _query_conn(conn,"BEGIN READ ONLY"); observed=_fingerprints(conn); approval_evidence=_approval_catalog_evidence(conn)
-   runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"
-   run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(runtime)],env=env)
+   runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g035_hosted_clone_runtime.sql"; g041_runtime=repository_root(Path(__file__).resolve())/"backend/supabase/tests/g041_auth_boundary_runtime.sql"
+   for fixture in (runtime,g041_runtime): run([psql,"service=g035-local","--set","ON_ERROR_STOP=1","--file",str(fixture)],env=env)
   finally: conn.rollback(); conn.close()
  if not ledger_prefix(manifest,observed["ledger_pairs"]) or len(observed["ledger_pairs"])!=len(BASELINE_PAIRS)+len(manifest.migrations): raise RecoveryError("local postflight ledger mismatch")
  for key in ("ledger_sha256","ledger_count","restorable_catalog_sha256","managed_catalog_sha256"):

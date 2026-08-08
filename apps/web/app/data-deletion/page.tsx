@@ -6,7 +6,6 @@ import { siteConfig, supportMailto } from '@/lib/site-config';
 import {
   PRIVACY_POLICY_CONTENT_SHA256,
   PRIVACY_POLICY_PUBLICATION,
-  privacyPolicyPublicationLabel,
 } from '@/lib/privacy/policy';
 
 export const metadata: Metadata = buildPublicMetadata({
@@ -54,7 +53,7 @@ export default function DataDeletionPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <Link className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={siteConfig.legal.privacyPath}>
-              개인정보 처리방침 검토본
+              개인정보 처리방침
             </Link>
             <a className="rounded-full border px-3 py-1 text-muted-foreground hover:bg-muted" href={supportMailto('쯔동여지도 데이터 삭제 요청')}>
               지원 요청 보내기
@@ -63,11 +62,10 @@ export default function DataDeletionPage() {
         </header>
 
         <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-          <p className="font-semibold">처리방침 버전 연결 상태</p>
+          <p className="font-semibold">처리방침 버전 연결</p>
           <p className="mt-1">버전: {PRIVACY_POLICY_PUBLICATION.version}</p>
           <p className="break-all font-mono text-xs">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
-          <p className="mt-1">{privacyPolicyPublicationLabel()}</p>
-          <p className="mt-1">배포된 정책 레코드의 버전·해시·운영자 승인 참조·유효일 읽기검증 전에는 이 검토본을 공개 효력 있는 처리방침으로 보지 않습니다.</p>
+          <p className="mt-1">공개 효력 발생일과 게시 시각은 개인정보 처리방침 화면에서 일치하는 배포 읽기검증이 확인될 때만 표시합니다.</p>
         </section>
 
         <section className="mt-8 space-y-4">

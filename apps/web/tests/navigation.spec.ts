@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
 import { hidePopupOverlay } from './helpers';
 
 test.describe('Phase 3: Navigation Features', () => {

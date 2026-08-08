@@ -178,4 +178,17 @@ describe('home root runtime boundary', () => {
         expect(source('app/app-runtime-shell.tsx')).toContain("import './app-globals.css'");
         expect(source('app/app-runtime-shell.tsx')).toContain('MainLayout');
     });
+    test('bypasses the desktop overlay in public demo mode', () => {
+        const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
+        const desktopBranch = homeRuntimeShellSource.slice(
+            homeRuntimeShellSource.indexOf("if (viewportMode === 'desktop')"),
+            homeRuntimeShellSource.indexOf("function HomeRuntimePendingShell"),
+        );
+
+        expect(desktopBranch).toContain('if (isPublicRestrictedMode)');
+        expect(desktopBranch).toContain(
+            'return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;',
+        );
+        expect(desktopBranch).toContain('<OverlayLayout>{children}</OverlayLayout>');
+    });
 });

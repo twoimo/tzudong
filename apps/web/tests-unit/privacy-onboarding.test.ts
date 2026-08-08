@@ -262,18 +262,25 @@ describe('privacy onboarding challenge', () => {
     const authContext = source('contexts/AuthContext.tsx');
     const onboardingPage = source('app/privacy/onboarding/page.tsx');
 
-    expect(callbackRoute).toContain("return redirectWithOnboardingCookiesCleared(origin, '/privacy/onboarding');");
+    expect(callbackRoute).toContain('return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());');
     expect(callbackRoute).toContain('if (userError || !user?.id || !UUID_PATTERN.test(user.id))');
     expect(authContext).toContain('function isLiteralLoopSafePrivacyOnboarding()');
     expect(authContext).toContain("window.location.pathname === '/privacy/onboarding'");
+    expect(authContext).toContain('isHomePrivacyOnboardingRequest(window.location)');
     expect(authContext).toContain('isExistingAccountPrivacyRecoveryActive(nextSession.user.email)');
     expect(authContext).toContain('event === \'PASSWORD_RECOVERY\'');
     expect(authContext).toContain('allowPasswordRecovery && isLiteralPasswordRecoveryRoute()');
     expect(authContext).toContain('recordPasswordRecoveryProof(nextSession.user.id)');
     expect(authContext).toContain('isLiteralPasswordRecoveryRoute(),');
     expect(authContext).toContain('isAuthSessionMissingError(error)');
-    expect(onboardingPage).toContain('if (hasQuery) router.replace(\'/\');');
-    expect(onboardingPage).toContain('if (hasQuery) return null;');
+    expect(onboardingPage).toContain('redirect(buildHomePrivacyOnboardingPath());');
+    expect(onboardingPage).not.toContain('<AuthModal');
+    const authModal = source('components/auth/AuthModal.tsx');
+    const homeRuntime = source('app/home-runtime-shell.tsx');
+    expect(authModal).toContain('data-testid="privacy-onboarding-modal"');
+    expect(authModal).toContain('Google로 개인정보 확인 완료하기');
+    expect(authModal).toContain('reason === AUTH_PRIVACY_ONBOARDING_REASON');
+    expect(homeRuntime).toContain("AUTH_PRIVACY_ONBOARDING_REASON ? 'signup' : 'login'");
   });
 
   test('browser auth contexts cannot bypass the privacy onboarding challenge', () => {
@@ -488,7 +495,7 @@ describe('minimum-data age and consent choices', () => {
     }))?.marketing).toMatchObject({ email: true, night_email: true });
   });
   test('정책 내용 해시는 정확한 렌더링 입력을 고정한다', () => {
-    expect(PRIVACY_POLICY_CONTENT_SHA256).toBe('1004892064d995543d9b422593c5b4daa49e79532ef0c5a222f2644b09f78d9b');
+    expect(PRIVACY_POLICY_CONTENT_SHA256).toBe('6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b');
     expect(PRIVACY_POLICY_CONTENT_SHA256).toBe(
       createHash('sha256').update(privacyPolicyHashInput(), 'utf8').digest('hex'),
     );
