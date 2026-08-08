@@ -8,7 +8,7 @@ import {
   readOnboardingChallenge,
   sha256,
 } from '@/lib/privacy/onboarding';
-import { getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
+import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
 import {
   getCurrentPrivacyEligibility,
   hasLivePrivacyEligibilityReceipt,
@@ -343,7 +343,7 @@ export async function GET(request: Request) {
       const eligibility = await getCurrentPrivacyEligibility(supabase);
       if (!hasLivePrivacyEligibilityReceipt(eligibility)) {
         emitCallbackPrivacyAuthEvent('onboarding_required', correlationId);
-        return redirectWithOnboardingCookiesCleared(origin, '/privacy/onboarding');
+        return redirectWithOnboardingCookiesCleared(origin, buildHomePrivacyOnboardingPath());
       }
 
       emitCallbackPrivacyAuthEvent('admitted', correlationId);

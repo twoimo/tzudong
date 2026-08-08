@@ -33,6 +33,7 @@ import CategoryFilter from "@/components/filters/CategoryFilter";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
 import type { FilterState } from "@/components/filters/filter-state";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import type { Announcement } from "@/types/announcement";
 import type { Region, Restaurant } from "@/types/restaurant";
 import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
@@ -828,7 +829,7 @@ export default function HomeDesktopControlPanel({
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const [activeLeftPanelView, setActiveLeftPanelView] =
     useState<DesktopLeftPanelView>(() =>
-      initialRoutePanel === "announcement" ? "announcement" : "map",
+      initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map",
     );
   const [activeProfileUserId, setActiveProfileUserId] = useState<string | null>(
     user?.id ?? null,
@@ -900,7 +901,7 @@ export default function HomeDesktopControlPanel({
     );
   const DeferredAnnouncementPanel =
     useDeferredComponent<AnnouncementPanelComponentProps>(
-      activeLeftPanelView === "announcement",
+      activeLeftPanelView === "announcement" && !isPublicRestrictedMode,
       loadAnnouncementPanel,
     );
   const DeferredAdminReviewPanel =
@@ -923,6 +924,7 @@ export default function HomeDesktopControlPanel({
   }, [activeProfileUserId]);
 
   const revealAnnouncementLeftPanel = useCallback(() => {
+    if (isPublicRestrictedMode) return;
     flushSync(() => {
       setActiveLeftPanelView("announcement");
       setIsDesktopSearchActive(false);
@@ -1024,6 +1026,12 @@ export default function HomeDesktopControlPanel({
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
+    if (isPublicRestrictedMode) {
+      if (activeRightPanel === null) {
+        setActiveLeftPanelView("map");
+      }
+      return;
+    }
     if (!isDesktopLeftPanelRouteView(panelParam)) {
       if (activeRightPanel === null) {
         setActiveLeftPanelView("map");
@@ -1073,6 +1081,7 @@ export default function HomeDesktopControlPanel({
 
   useEffect(() => {
     if (activeRightPanel === "announcement") {
+    if (isPublicRestrictedMode) return;
       setActiveLeftPanelView("announcement");
       setIsDesktopSearchActive(false);
       revealDesktopLeftPanel();
@@ -1510,7 +1519,7 @@ export default function HomeDesktopControlPanel({
                     aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
                       "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
@@ -1544,7 +1553,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1559,7 +1568,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1574,7 +1583,7 @@ export default function HomeDesktopControlPanel({
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
                 onRegionSelect={onSearchExecute}
-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
                 contentSide="top"
                 contentAlign="start"
               />
@@ -1583,7 +1592,7 @@ export default function HomeDesktopControlPanel({
                 value={selectedCountry || undefined}
                 onValueChange={onCountryChange}
               >
-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80">
+                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80">
                   <SelectValue placeholder="해외 지역" />
                 </SelectTrigger>
                 <SelectContent
@@ -1605,7 +1614,7 @@ export default function HomeDesktopControlPanel({
               onCategoryChange={onCategoryChange}
               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
               contentSide="top"
               contentAlign="start"
             />
@@ -1888,9 +1897,10 @@ export default function HomeDesktopControlPanel({
                   setActiveLeftPanelView("profile");
                   router.push("/?panel=profile", { scroll: false });
                 }}
-                onOpenAnnouncements={() =>
-                  router.push("/?panel=announcement", { scroll: false })
-                }
+                onOpenAnnouncements={() => {
+                  if (isPublicRestrictedMode) return;
+                  router.push("/?panel=announcement", { scroll: false });
+                }}
               />
             ) : activeLeftPanelView === "settings" && user ? (
               <DesktopMapSettingsPanel
@@ -1899,7 +1909,7 @@ export default function HomeDesktopControlPanel({
                 onClose={handleReturnToMapPanel}
                 onSetPanelCollapsed={onSetPanelCollapsed}
               />
-            ) : activeLeftPanelView === "announcement" ? (
+            ) : activeLeftPanelView === "announcement" && !isPublicRestrictedMode ? (
               <div
                 className="h-full min-h-0 overflow-hidden bg-background"
                 data-desktop-left-panel-announcement="true"

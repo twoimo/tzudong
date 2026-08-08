@@ -17,6 +17,53 @@
 @source "../components/region";
 @source "../components/skeletons";
 @source "../components/ui";
+@source "../lib/naver-map-overlay-position-helpers.ts";
+
+@media (max-width: 1279px) {
+  html[data-mobile-search-open] .mobile-map-status-badge {
+    display: none;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .mobile-map-status-badge {
+    display: none;
+  }
+}
+.mobile-map-status-badge {
+  /* 10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px. */
+  margin-top: 0;
+  max-width: calc(100vw - 2rem);
+  max-height: min(20rem, calc(100dvh - 24rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.mobile-map-status-badge > span {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+}
+.mobile-map-status-badge.mobile-map-announcement-toast {
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  height: 2.25rem;
+}
+
+
+.mobile-map-status-badge.mobile-map-announcement-toast .map-overlay-notice-single-line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-map-status-badge > span > span:last-child:not(.map-overlay-notice-single-line) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 
 /* ============================================
    모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
@@ -497,4 +544,8 @@ div[style*="z-index"]>div>.custom-marker {
       transform: translate3d(var(--tw-exit-translate-x), var(--tw-exit-translate-y), 0) scale3d(var(--tw-exit-scale), var(--tw-exit-scale), var(--tw-exit-scale));
     }
   }
+}
+.home-map-floating-control-text {
+  font-size: 0.75rem;
+  line-height: 1rem;
 }

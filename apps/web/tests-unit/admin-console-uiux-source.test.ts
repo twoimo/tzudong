@@ -818,7 +818,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="shrink-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl"',
     );
     expect(overviewSource).toContain(
-      'className="scrollbar-hide rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-y-auto"',
+      'className="scrollbar-hide min-w-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scroll-pb-3"',
     );
     expect(overviewSource).toContain(
       'className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-card/80 shadow-sm md:rounded-2xl"',
@@ -1500,8 +1500,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-white p-3 shadow-[inset_0_0_0_1px_rgba(15,23,42",
     );
-    expect(consoleSource).toContain("쯔양 KPI 대시보드");
-    expect(consoleSource).not.toContain("Tzuyang KPI Dashboard");
+    expect(consoleSource).toMatch(/>\s*Tzuyang KPI Dashboard\s*</);
+    expect(consoleSource).not.toMatch(/>\s*쯔양 KPI 대시보드\s*</);
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
     );

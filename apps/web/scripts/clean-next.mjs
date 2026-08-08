@@ -15,6 +15,7 @@ const repoEnvLocalPath = path.join(repoRoot, '.env.local');
 const nextDir = path.join(projectRoot, '.next');
 const stalePrefix = '.next-stale-';
 const verbose = ['1', 'true', 'yes', 'on'].includes((process.env.CLEAN_NEXT_VERBOSE ?? '').toLowerCase());
+const nightlyLocalEnvOnly = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
 const warnedStaleEntries = new Set();
 const rawArgs = process.argv.slice(2);
 const separatorIndex = rawArgs.indexOf('--');
@@ -134,7 +135,7 @@ const purgeStaleCaches = () => {
     }
 };
 
-if (fs.existsSync(repoEnvLocalPath)) {
+if (!nightlyLocalEnvOnly && fs.existsSync(repoEnvLocalPath)) {
     loadEnv({ path: repoEnvLocalPath, override: false });
 }
 
@@ -177,7 +178,7 @@ if (commandArgs.length > 0) {
     const [command, ...args] = commandArgs;
     const childEnv = { ...process.env };
     if (isNextDevCommand()) {
-        childEnv.NODE_ENV = 'development';
+        childEnv.NODE_ENV = nightlyLocalEnvOnly ? 'test' : 'development';
     }
     const child = spawn(command, args, {
         stdio: ['inherit', 'pipe', 'pipe'],

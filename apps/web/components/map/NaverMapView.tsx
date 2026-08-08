@@ -16,6 +16,7 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
 import { NaverMapOverlayStack } from "@/components/map/naver-map-overlay-stack";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import {
     NaverMapDetailPanelShell,
     NaverMapReviewModal,
@@ -373,6 +374,18 @@ interface NaverMapViewProps {
     deviceLocation?: DeviceMapLocation | null;
     showUserSubmittedMarkers?: boolean;
 }
+const hasValidNaverDeviceLocation = (
+  location: DeviceMapLocation | null,
+  zoom: number,
+): location is DeviceMapLocation =>
+  location !== null &&
+  Number.isFinite(location.lat) &&
+  Number.isFinite(location.lng) &&
+  location.lat >= -90 &&
+  location.lat <= 90 &&
+  location.lng >= -180 &&
+  location.lng <= 180 &&
+  Number.isFinite(zoom);
 
 /**
  * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (LRU 기반)
@@ -1020,13 +1033,22 @@ const NaverMapView = memo(({
             return;
         }
 
+        const currentZoom = map.getZoom();
+        if (!hasValidNaverDeviceLocation(deviceLocation, currentZoom) || !Number.isFinite(currentZoom)) {
+            deviceLocationMarkerRef.current?.setMap(null);
+            deviceLocationMarkerRef.current = null;
+            lastFocusedDeviceLocationRequestRef.current = null;
+            return;
+        }
+
+        // Provider boundary: keep coordinates in React state memory, and only apply validated updates to the Naver map.
         const position = new naver.maps.LatLng(deviceLocation.lat, deviceLocation.lng);
         const icon = {
             content: buildDeviceLocationMarkerHtml(deviceLocation),
             anchor: new naver.maps.Point(28, 28),
         };
         const deviceLocationRenderPlan = resolveDeviceLocationMapRenderPlan({
-            currentZoom: map.getZoom(),
+            currentZoom,
             location: deviceLocation,
             previousFocusRequestId: lastFocusedDeviceLocationRequestRef.current,
         });
@@ -3167,7 +3189,7 @@ const NaverMapView = memo(({
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
     // 로딩 에러 처리
-    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects ? (
+    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects && !isPublicRestrictedMode ? (
         <Suspense fallback={null}>
             <NaverMapAnnouncementRuntime
                 onAnnouncementToastPayloadChange={setAnnouncementToastPayload}

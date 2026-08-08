@@ -211,24 +211,24 @@ export function TrendProposalQueue() {
 
   return (
     <section
-      className="rounded-xl border border-border/70 bg-card/85 p-2.5 shadow-sm"
+      className="min-w-0 rounded-xl border border-border/70 bg-card/85 p-2.5 shadow-sm"
       aria-label="트렌드 제안 검토"
       data-layout-primitives="list-detail card-grid cluster stack"
       data-scroll-owner="trend-proposal-queue"
       data-admin-trend-proposal-queue="true"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold tracking-[0.12em] text-primary">트렌드 제안</p>
-          <h3 className="text-sm font-bold text-foreground">오버레이 제안 검토</h3>
+          <h3 className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">오버레이 제안 검토</h3>
         </div>
-        <Badge variant="outline" className="rounded-full border-primary/25 text-primary">
+        <Badge variant="outline" className="shrink-0 rounded-full border-primary/25 text-primary">
           {proposals.length}건 대기
         </Badge>
       </div>
 
-      <div className="mt-2 grid gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="min-w-0 space-y-1.5" data-scroll-owner="trend-proposal-list">
+      <div className="mt-2 grid min-w-0 gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="min-w-0 space-y-1.5">
           {proposalsQuery.isLoading ? (
             <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">제안 목록을 불러오는 중입니다.</p>
           ) : proposals.length === 0 ? (
@@ -246,17 +246,17 @@ export function TrendProposalQueue() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-foreground">{proposal.label}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{proposal.restaurant.name}</p>
+                  <p className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">{proposal.label}</p>
+                  <p className="mt-0.5 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{proposal.restaurant.name}</p>
                 </div>
                 <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
                   {formatScore(proposal.score)}
                 </Badge>
               </div>
               <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold text-muted-foreground">
-                <span className="rounded-full bg-primary/5 px-2 py-0.5 text-primary">{proposal.overlayType}</span>
-                <span className="rounded-full bg-muted px-2 py-0.5">{formatWindow(proposal)}</span>
-                <span className="rounded-full bg-muted px-2 py-0.5">근거 {proposal.evidenceSummary.observationCount}개</span>
+                <span className="max-w-full break-words rounded-full bg-primary/5 px-2 py-0.5 text-primary [overflow-wrap:anywhere]">{proposal.overlayType}</span>
+                <span className="max-w-full break-words rounded-full bg-muted px-2 py-0.5 [overflow-wrap:anywhere]">{formatWindow(proposal)}</span>
+                <span className="max-w-full break-words rounded-full bg-muted px-2 py-0.5 [overflow-wrap:anywhere]">근거 {proposal.evidenceSummary.observationCount}개</span>
               </div>
             </button>
           ))}
@@ -265,20 +265,19 @@ export function TrendProposalQueue() {
         <div
           className="min-w-0 rounded-xl bg-background/75 p-2"
           data-admin-trend-proposal-readback="true"
-          data-scroll-owner="trend-proposal-detail"
         >
           {selectedProposal ? (
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">선택 제안</p>
-                  <h4 className="truncate text-base font-bold text-foreground">{selectedProposal.label}</h4>
+                  <h4 className="break-words text-base font-bold text-foreground [overflow-wrap:anywhere]">{selectedProposal.label}</h4>
                 </div>
                 <Badge variant="outline" className="rounded-full">
                   {proposalStatusLabels[selectedProposal.proposalStatus] ?? selectedProposal.proposalStatus}
                 </Badge>
               </div>
-              <p className="text-xs leading-5 text-muted-foreground">{selectedProposal.description ?? "설명 없음"}</p>
+              <p className="break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">{selectedProposal.description ?? "설명 없음"}</p>
               <div className="grid grid-cols-2 gap-1.5 text-[11px] text-muted-foreground">
                 <div className="rounded-lg bg-muted/35 p-1.5">
                   <p className="font-bold text-foreground">근거 신선도</p>
@@ -371,12 +370,12 @@ export function TrendProposalQueue() {
                   승인하려면 정확히 “오버레이 적용”을 입력합니다. 승인은 오버레이 적용, 감사 이벤트, 제안 상태 변경을 하나의 원자 RPC로 처리합니다.
                 </p>
                 {rejectMutation.data ? (
-                  <p className="rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900">
+                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900">
                     검토 이벤트 {rejectMutation.data.reviewEvent.eventId} 기록 완료 · {rejectMutation.data.status}
                   </p>
                 ) : null}
                 {approveMutation.data ? (
-                  <p className="rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900" data-trend-proposal-approval-readback="true">
+                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900" data-trend-proposal-approval-readback="true">
                     승인 감사 {approveMutation.data.proposal.overlayAuditId} 기록 완료 · {approveMutation.data.status}
                   </p>
                 ) : null}

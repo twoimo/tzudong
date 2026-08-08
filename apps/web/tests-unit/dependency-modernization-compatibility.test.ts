@@ -77,22 +77,22 @@ describe("dependency modernization compatibility", () => {
     expect(html).toContain(">0<");
   });
 
-  test("renders v4 percentage defaults; browser interaction coverage verifies resizing", () => {
+  test("renders percentage defaults; browser interaction coverage verifies resizing", () => {
     const html = renderWithoutWarnings(
       createElement(
         ResizablePanelGroup,
         { orientation: "horizontal" },
-        createElement(ResizablePanel, { id: "navigation", defaultSize: "40%", minSize: "25%" }, "navigation"),
+        createElement(ResizablePanel, { id: "navigation", defaultSize: 40, minSize: 25 }, "navigation"),
         createElement(ResizableHandle, { "aria-label": "패널 너비 조절", withHandle: true }),
-        createElement(ResizablePanel, { id: "content", defaultSize: "60%", minSize: "25%" }, "content"),
+        createElement(ResizablePanel, { id: "content", defaultSize: 60, minSize: 25 }, "content"),
       ),
     );
 
     expect(html).toContain('data-group="true"');
     expect(html).toContain('id="navigation"');
     expect(html).toContain('id="content"');
-    expect(html).toContain('flex-basis:40%');
-    expect(html).toContain('flex-basis:60%');
+    expect(html).toContain('flex-basis:40px');
+    expect(html).toContain('flex-basis:60px');
     expect(html).toContain('role="separator"');
   });
 });
