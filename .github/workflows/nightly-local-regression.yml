@@ -194,10 +194,36 @@ jobs:
                   if record['status'] != 'pulled':
                       failed = True
               records.append(record)
+          container_probe = {'status': 'failed', 'failure_class': 'unknown'}
+          if not failed:
+              try:
+                  probe = subprocess.run(
+                      [
+                          'docker', 'run', '--rm', '--pull=never', '--network=none',
+                          '--entrypoint', '/bin/sh', 'supabase/postgres:15.8.1.085',
+                          '-c', 'exit 0',
+                      ],
+                      capture_output=True,
+                      text=True,
+                      timeout=120,
+                      check=False,
+                      env=safe_env,
+                  )
+                  if probe.returncode == 0:
+                      container_probe = {'status': 'passed', 'failure_class': 'none'}
+                  else:
+                      container_probe['failure_class'] = classify(probe.stderr)
+              except FileNotFoundError:
+                  container_probe['failure_class'] = 'docker_not_found'
+              except subprocess.TimeoutExpired:
+                  container_probe['failure_class'] = 'timeout'
+              if container_probe['status'] != 'passed':
+                  failed = True
           receipt = {
               'schema': 'local-image-pull-preflight-v1',
               'image_count': len(images),
               'images': records,
+              'container_probe': container_probe,
           }
           Path('nightly-artifacts/local-image-pull-preflight.json').write_text(
               json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n',
@@ -599,7 +625,7 @@ jobs:
               'local-closure-rescan.json': runtime_fields | {'closureBinding'},
               'local-closure-smoke.json': runtime_fields,
               'local-browser-route-diagnostics.json': {'schema', 'source', 'tests', 'record_count'},
-              'local-image-pull-preflight.json': {'schema', 'image_count', 'images'},
+              'local-image-pull-preflight.json': {'schema', 'image_count', 'images', 'container_probe'},
           }
           expected_markers = {
               'local-stack-reset.json': ('schema', 'local-stack-receipt-v1'),

@@ -294,6 +294,8 @@ describe("nightly regression package and source contracts", () => {
       "Pull pinned Compose images",
       "docker', 'pull'",
       "local-image-pull-preflight-v1",
+      "container_probe",
+      "docker', 'run'",
       "registry_auth",
       "registry_network",
       "stack.env and credentials excluded",
