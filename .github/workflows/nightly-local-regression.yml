@@ -77,6 +77,20 @@ jobs:
             --output "$plugin"
           chmod 0755 "$plugin"
           test "$(docker compose version --short)" = "${COMPOSE_VERSION#v}"
+      - name: Enable disposable runner user namespaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          for setting in \
+            'kernel.apparmor_restrict_unprivileged_userns=0' \
+            'kernel.unprivileged_userns_clone=1' \
+            'user.max_user_namespaces=28633'; do
+            if sudo -n sysctl -w "$setting"; then
+              echo "Applied disposable runner namespace setting: ${setting%%=*}"
+            else
+              echo "Runner does not expose namespace setting: ${setting%%=*}" >&2
+            fi
+          done
 
       - name: Verify Linux containment and Python runtime
         shell: bash
