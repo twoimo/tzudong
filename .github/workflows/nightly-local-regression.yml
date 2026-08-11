@@ -116,6 +116,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p nightly-artifacts
           python3 - <<'PY'
           import json
           import os
