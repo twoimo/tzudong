@@ -80,6 +80,8 @@ retry and records only fixed image/status/failure-class fields. A failed pull
 stops the lane before Docker Compose or publication.
 The preflight also runs a no-network container probe from a pulled image so
 Docker runtime failures are separated from Compose configuration failures.
+When container creation succeeds, it starts each Core service separately and
+retains only fixed service/failure-class fields for the first failing service.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
