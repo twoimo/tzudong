@@ -100,6 +100,13 @@ READINESS_ENDPOINTS = {
 READINESS_REQUIRED = tuple(READINESS_ENDPOINTS)
 CORE_REQUIRED = tuple(service for service in READINESS_REQUIRED if service != "studio")
 CORE_SERVICES = tuple(service for service in EXPECTED_SERVICES if service != "studio")
+CORE_START_PHASES = (
+    (("vector",), ("vector",)),
+    (("db",), ("db",)),
+    (("analytics",), ("analytics",)),
+    (("imgproxy",), ()),
+    (("auth", "functions", "kong", "mail", "meta", "realtime", "rest", "storage", "supavisor"), ()),
+)
 _ACTIVE_COMMAND: list[str] | None = None
 
 
@@ -1456,13 +1463,16 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
         )
-        for service in CORE_SERVICES:
-            _run(
-                command + ["start", service],
-                timeout=COMPOSE_SERVICE_START_TIMEOUT_SECONDS,
-                error_code=f"compose_core_start_{service}",
-                retries=COMPOSE_SERVICE_START_RETRIES,
-            )
+        for services, wait_for in CORE_START_PHASES:
+            for service in services:
+                _run(
+                    command + ["start", service],
+                    timeout=COMPOSE_SERVICE_START_TIMEOUT_SECONDS,
+                    error_code=f"compose_core_start_{service}",
+                    retries=COMPOSE_SERVICE_START_RETRIES,
+                )
+            if wait_for:
+                _wait_ready(command, values, required=wait_for)
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
             command + ["create", "--force-recreate", "--pull=missing", "studio"],

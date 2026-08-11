@@ -73,7 +73,8 @@ Core and Studio starts retry twice after bounded command failures to absorb
 transient image-registry or runner startup errors; persistent failures remain
 fail closed.
 The lifecycle creates the pinned services once and starts them individually
-instead of relying on one collective `up` orchestration call.
+instead of relying on one collective `up` orchestration call. Vector, database,
+and analytics readiness gates run before dependent services are started.
 A failed reset may add a bounded `local-stack-failure-diagnostics-v1` receipt to
 the short-retention Actions artifact. It contains only fixed service state,
 health, exit-code, and Compose-status fields; it is never in the public release.
