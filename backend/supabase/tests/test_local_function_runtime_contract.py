@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+import importlib.util
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+SCANNER_PATH = REPOSITORY_ROOT / "backend/supabase/scripts/local-function-runtime-scan.py"
+
+
+def load_scanner():
+    spec = importlib.util.spec_from_file_location("local_function_runtime_scan_contract", SCANNER_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("scanner module unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class LocalFunctionRuntimeContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.scanner = load_scanner()
+
+    def test_drop_if_exists_lifecycle_uses_function_name(self):
+        scanner = self.scanner
+        with tempfile.TemporaryDirectory() as directory:
+            sql_path = Path(directory) / "lifecycle.sql"
+            sql_path.write_text(
+                "DROP FUNCTION IF EXISTS public.legacy(text);\n"
+                "ALTER FUNCTION public.legacy(text) RENAME TO legacy_renamed;\n",
+                encoding="utf-8",
+            )
+            original_documents = scanner._source_documents
+            scanner._source_documents = lambda: [sql_path]
+            try:
+                events = scanner._source_function_lifecycle()
+            finally:
+                scanner._source_documents = original_documents
+        self.assertEqual(events[0]["action"], "drop")
+        self.assertEqual(events[0]["key"], ("public", "legacy", "text"))
+        self.assertEqual(events[1]["action"], "move")
+        self.assertEqual(events[1]["newKey"], ("public", "legacy_renamed", "text"))
+
+    def test_candidate_smoke_binds_every_argument_with_explicit_types(self):
+        sql = self.scanner._smoke_candidate_blocks(
+            [
+                {
+                    "schema": "public",
+                    "proname": "sample_rpc",
+                    "identityArgumentsNormalized": "uuid, jsonb",
+                    "signature": "public.sample_rpc(uuid, jsonb)",
+                }
+            ]
+        )
+        self.assertIn("SELECT \"public\".\"sample_rpc\"(NULL::uuid, NULL::jsonb)", sql)
+        self.assertNotIn("'0A000'", sql)
+        self.assertNotIn("expected_sqlstate_", sql)
+        self.assertIn("sqlstate_", sql)
+        trigger_sql = self.scanner._smoke_candidate_blocks(
+            [
+                {
+                    "schema": "public",
+                    "proname": "set_documents_updated_at",
+                    "identityArgumentsNormalized": "",
+                    "signature": "public.set_documents_updated_at()",
+                }
+            ]
+        )
+        self.assertIn("'0A000'", trigger_sql)
+        self.assertIn("expected_sqlstate_", trigger_sql)
+    def test_smoke_checks_external_effect_surface_in_runtime_catalog(self):
+        sql = self.scanner._smoke_sql([])
+        self.assertIn("pg_catalog.pg_extension", sql)
+        self.assertIn("external_effect_surface_present", sql)
+        self.assertIn("external_effect_blocked", sql)
+    def test_search_path_parser_rejects_untrusted_tokens_before_patch_generation(self):
+        scanner = self.scanner
+        self.assertEqual(
+            scanner._parse_trusted_search_path("'public', 'pg_catalog'"),
+            ["public", "pg_catalog"],
+        )
+        with self.assertRaises(scanner.RuntimeScanError):
+            scanner._parse_trusted_search_path("public, auth")
+        with self.assertRaises(scanner.RuntimeScanError):
+            scanner._parse_trusted_search_path("public, $user")
+
+    def test_runtime_validation_rejects_candidate_smoke_failures(self):
+        scanner = self.scanner
+        runtime = {
+            "closureSmoke": {"status": "passed"},
+            "unresolvedPathCount": 0,
+            "ambiguousPathCount": 0,
+            "candidateResolution": {
+                "candidateCount": 1,
+                "resolvedCount": 1,
+                "missingCount": 0,
+                "ambiguousCount": 0,
+            },
+            "rpcSmoke": {
+                "status": "passed",
+                "cases": [
+                    {
+                        "rpc": "external_effect_branches",
+                        "status": "passed",
+                        "errorClass": "external_effect_blocked",
+                    }
+                ],
+            },
+            "candidateRpcSmoke": {
+                "status": "failed",
+                "candidateCount": 1,
+                "passed": 0,
+                "failed": 1,
+            },
+        }
+        with self.assertRaises(scanner.RuntimeScanError):
+            scanner._validate_runtime(runtime)
+
+    def test_runtime_validation_requires_bound_external_effect_case(self):
+        scanner = self.scanner
+        runtime = {
+            "closureSmoke": {"status": "passed"},
+            "unresolvedPathCount": 0,
+            "ambiguousPathCount": 0,
+            "candidateResolution": {
+                "candidateCount": 0,
+                "resolvedCount": 0,
+                "missingCount": 0,
+                "ambiguousCount": 0,
+            },
+            "rpcSmoke": {
+                "status": "passed",
+                "cases": [
+                    {
+                        "rpc": "external_effect_branches",
+                        "status": "passed",
+                        "errorClass": "external_effect_blocked",
+                    }
+                ],
+            },
+        }
+        scanner._validate_runtime(runtime)
+        for cases in (
+            [],
+            [
+                {
+                    "rpc": "external_effect_branches",
+                    "status": "passed",
+                    "errorClass": "external_effect_blocked",
+                },
+                {
+                    "rpc": "external_effect_branches",
+                    "status": "passed",
+                    "errorClass": "external_effect_blocked",
+                },
+            ],
+            [
+                {
+                    "rpc": "external_effect_branches",
+                    "status": "failed",
+                    "errorClass": "external_effect_surface_present",
+                }
+            ],
+        ):
+            with self.assertRaises(scanner.RuntimeScanError):
+                scanner._validate_runtime({**runtime, "rpcSmoke": {"status": "passed", "cases": cases}})
+
+    def test_closure_binding_is_deterministic_and_source_bound(self):
+        scanner = self.scanner
+        metadata = {
+            "sourceManifestSha256": "a" * 64,
+            "toolSha256": "b" * 64,
+            "trustedExtensionManifestSha256": "c" * 64,
+            "candidateSetSha256": "d" * 64,
+            "patchSha256": "e" * 64,
+        }
+        first = scanner._closure_binding_sha256(metadata, "f" * 64)
+        second = scanner._closure_binding_sha256(metadata, "f" * 64)
+        self.assertEqual(first, second)
+        with self.assertRaises(scanner.RuntimeScanError):
+            scanner._closure_binding_sha256({**metadata, "toolSha256": "invalid"}, "f" * 64)
+
+
+if __name__ == "__main__":
+    unittest.main()
