@@ -32,6 +32,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, Request, build_ope
 
 COMPOSE_VERSION = "v2.39.4"
 GENERATOR_VERSION = "local-stack-v1"
+COMPOSE_START_TIMEOUT_SECONDS = 600
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -1416,9 +1417,9 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
     try:
         _ACTIVE_COMMAND = command
         started = True
-        _run(command + ["up", "-d", *CORE_SERVICES])
+        _run(command + ["up", "-d", *CORE_SERVICES], timeout=COMPOSE_START_TIMEOUT_SECONDS)
         _wait_ready(command, values, required=CORE_REQUIRED)
-        _run(command + ["up", "-d", "studio"])
+        _run(command + ["up", "-d", "studio"], timeout=COMPOSE_START_TIMEOUT_SECONDS)
         services = _wait_ready(command, values)
     except (LocalStackError, OSError, ValueError):
         if started:
