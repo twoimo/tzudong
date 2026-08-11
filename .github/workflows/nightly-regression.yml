@@ -1,0 +1,314 @@
+name: Nightly Regression
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # 03:30 KST (UTC)
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Regression lane to run
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - unit
+          - e2e
+
+concurrency:
+  group: nightly-regression
+  cancel-in-progress: false
+
+# This workflow can read source and publish bounded artifacts only. It cannot
+# write source, deployments, releases, or hosted migration state.
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NODE_VERSION: '24.x'
+  APP_PORT: '8080'
+
+jobs:
+  preflight:
+    name: Preflight isolated hosted environment
+    runs-on: ubuntu-24.04
+    environment: nightly-hosted
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      suite: ${{ steps.selection.outputs.suite }}
+    env:
+      # The nightly-hosted environment contains only disposable test-project
+      # values. Production Supabase, service-role, crawler, and migration
+      # credentials are deliberately not mapped into this workflow.
+      NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+      NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+      NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+      TS7_RELEASE_ID: ${{ secrets.TS7_RELEASE_ID }}
+      VERCEL_GIT_COMMIT_SHA: ${{ secrets.VERCEL_GIT_COMMIT_SHA }}
+      VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+      - id: selection
+        name: Resolve suite selection
+        shell: bash
+        env:
+          REQUESTED_SUITE: ${{ inputs.suite || 'all' }}
+        run: echo "suite=${REQUESTED_SUITE}" >> "$GITHUB_OUTPUT"
+      - name: Validate dedicated hosted nightly contract
+      # The runner rejects a URL/ref mismatch with:
+      # "Nightly Supabase URL does not identify the configured isolated project."
+        working-directory: apps/web
+        env:
+          SUITE: ${{ steps.selection.outputs.suite }}
+        run: >-
+          bun run test:nightly --
+          --mode hosted
+          --suite "$SUITE"
+          --validate-only
+
+  unit:
+    name: Unit regression
+    needs: preflight
+    if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'unit'
+    runs-on: ubuntu-24.04
+    environment: nightly-hosted
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+      NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+      NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+      TS7_RELEASE_ID: ${{ secrets.TS7_RELEASE_ID }}
+      VERCEL_GIT_COMMIT_SHA: ${{ secrets.VERCEL_GIT_COMMIT_SHA }}
+      VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+      - name: Install web dependencies
+        run: bun install --frozen-lockfile
+      - name: Run hosted nightly unit regressions
+        run: |
+          set -o pipefail
+          bun run test:nightly -- \
+            --mode hosted \
+            --suite unit \
+            | tee nightly-unit.log
+      - name: Redact unit diagnostics
+        if: always()
+        env:
+          NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+          NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+          NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+          TS7_RELEASE_ID: ${{ secrets.TS7_RELEASE_ID }}
+          VERCEL_GIT_COMMIT_SHA: ${{ secrets.VERCEL_GIT_COMMIT_SHA }}
+          VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          source = Path('nightly-unit.log')
+          output = Path('nightly-artifacts/nightly-unit-redacted.log')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          text = source.read_text(encoding='utf-8', errors='replace') if source.exists() else 'unit log was not produced\n'
+          for name in (
+              'NIGHTLY_SUPABASE_PROJECT_REF',
+              'NEXT_PUBLIC_SUPABASE_URL',
+              'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+              'NIGHTLY_ADMIN_EMAIL',
+              'NIGHTLY_ADMIN_PASSWORD',
+              'TS7_RELEASE_ID',
+              'VERCEL_GIT_COMMIT_SHA',
+              'VERCEL_DEPLOYMENT_ID',
+              'VERCEL_PROJECT_ID',
+          ):
+              value = os.environ.get(name, '')
+              if value:
+                  text = text.replace(value, '[REDACTED]')
+          output.write_text(text, encoding='utf-8')
+          PY
+      - name: Upload redacted unit diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-unit-diagnostics
+          path: apps/web/nightly-artifacts/nightly-unit-redacted.log
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: Curated Playwright regression
+    needs: preflight
+    if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'e2e'
+    runs-on: ubuntu-24.04
+    environment: nightly-hosted
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+      NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+      NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+      TS7_RELEASE_ID: ${{ secrets.TS7_RELEASE_ID }}
+      VERCEL_GIT_COMMIT_SHA: ${{ secrets.VERCEL_GIT_COMMIT_SHA }}
+      VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.2.16'
+      - name: Install web dependencies
+        run: bun install --frozen-lockfile
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+      - name: Run hosted nightly browser regressions
+        # run-nightly-regression.mjs waits for /api/health and fails closed with
+        # "Application did not become ready." if the bounded readiness check expires.
+        # Its browser allowlist is exactly:
+        # tests/smoke.spec.ts, tests/navigation.spec.ts,
+        # tests/browser-title.spec.ts, tests/mobile-home-map.spec.ts.
+        run: |
+          set -o pipefail
+          bun run test:nightly -- \
+            --mode hosted \
+            --suite e2e \
+            | tee nightly-e2e.log
+      - name: Redact browser diagnostics
+        if: always()
+        env:
+          NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NIGHTLY_SUPABASE_ANON_KEY }}
+          NIGHTLY_ADMIN_EMAIL: ${{ secrets.NIGHTLY_ADMIN_EMAIL }}
+          NIGHTLY_ADMIN_PASSWORD: ${{ secrets.NIGHTLY_ADMIN_PASSWORD }}
+          TS7_RELEASE_ID: ${{ secrets.TS7_RELEASE_ID }}
+          VERCEL_GIT_COMMIT_SHA: ${{ secrets.VERCEL_GIT_COMMIT_SHA }}
+          VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          destination = Path('nightly-artifacts')
+          destination.mkdir(parents=True, exist_ok=True)
+          secret_values = [
+              os.environ.get(name, '')
+              for name in (
+                  'NIGHTLY_SUPABASE_PROJECT_REF',
+                  'NEXT_PUBLIC_SUPABASE_URL',
+                  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+                  'NIGHTLY_ADMIN_EMAIL',
+                  'NIGHTLY_ADMIN_PASSWORD',
+                  'TS7_RELEASE_ID',
+                  'VERCEL_GIT_COMMIT_SHA',
+                  'VERCEL_DEPLOYMENT_ID',
+                  'VERCEL_PROJECT_ID',
+              )
+              if os.environ.get(name, '')
+          ]
+
+          def redact(path: Path, target: Path) -> None:
+              if not path.exists() or not path.is_file():
+                  return
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  return
+              for value in secret_values:
+                  text = text.replace(value, '[REDACTED]')
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(text, encoding='utf-8')
+
+          redact(Path('nightly-e2e.log'), destination / 'nightly-e2e-redacted.log')
+          redact(Path('nightly-web.log'), destination / 'nightly-web-redacted.log')
+          if not any(destination.iterdir()):
+              (destination / 'nightly-e2e-redacted.log').write_text(
+                  'browser diagnostics were not produced\n', encoding='utf-8'
+              )
+          PY
+      - name: Upload redacted browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-playwright-diagnostics
+          path: apps/web/nightly-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  summary:
+    name: Nightly summary
+    if: always()
+    needs: [preflight, unit, e2e]
+    runs-on: ubuntu-24.04
+    environment: nightly-hosted
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      NIGHTLY_SLACK_WEBHOOK: ${{ secrets.NIGHTLY_SLACK_WEBHOOK }}
+    steps:
+      - name: Write redacted summary
+        shell: bash
+        run: |
+          {
+            echo '## Nightly regression summary'
+            echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Preflight: ${{ needs.preflight.result }}"
+            echo "- Unit: ${{ needs.unit.result }}"
+            echo "- E2E: ${{ needs.e2e.result }}"
+            echo '- Credentials, URLs, database rows, and provider payloads are omitted.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Optional redacted failure notification
+        if: (needs.unit.result == 'failure' || needs.e2e.result == 'failure' || needs.preflight.result == 'failure') && env.NIGHTLY_SLACK_WEBHOOK != ''
+        shell: bash
+        run: |
+          set +e
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(printf '{"text":"Nightly regression failed; see run %s"}' "$run_url")
+          curl --fail --silent --show-error --max-time 10 \
+            -X POST -H 'Content-Type: application/json' \
+            --data "$payload" "$NIGHTLY_SLACK_WEBHOOK" >/dev/null \
+            || echo 'Notification failed; see GitHub summary.'

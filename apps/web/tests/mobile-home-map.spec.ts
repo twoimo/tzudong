@@ -1,4 +1,5 @@
-import { test, expect, devices, type Locator, type Page } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
+import { devices, type Locator, type Page } from '@playwright/test';
 import { hidePopupOverlay } from './helpers';
 import {
     clickAnyUnselectedMarker,
@@ -266,7 +267,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
 
 
         await page.getByRole('button', { name: /한식\s*\(\d+\)/ }).click({ force: true });
-        await expect(page.getByLabel(/카테고리 필터 열기/)).toContainText('카테고리 1');
+        await expect(page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ })).toBeVisible();
         const filteredRows = await categoryResponse.then((response) => response.json());
         expect(filteredRows).toHaveLength(1);
         expect(filteredRows[0].approved_name).toBe('명동칼국수');
@@ -276,7 +277,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         });
 
         await page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ }).click();
-        await expect(page.getByLabel(/카테고리 필터 열기/)).not.toContainText('카테고리 1');
+        await expect(page.getByRole('button', { name: /초기화/ })).toHaveCount(0);
     });
     test('MHM-02: search-selected detail can swipe to the next restaurant', async ({ page }) => {
         await openMobileSearchAndSelect(page, '정원분식');
