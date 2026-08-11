@@ -298,6 +298,10 @@ describe("nightly regression package and source contracts", () => {
       "docker', 'run'",
       "registry_auth",
       "registry_network",
+      "Probe Compose container creation",
+      "backend/supabase/scripts/local-stack.py render",
+      "local-compose-create-preflight-v1",
+      "create', '--no-start'",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {
