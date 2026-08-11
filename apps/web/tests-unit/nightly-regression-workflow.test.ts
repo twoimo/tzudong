@@ -324,6 +324,10 @@ describe("nightly regression package and source contracts", () => {
       "analytics_schema_missing",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
+      "docker volume rm -f",
+      "${LOCAL_PROJECT}-db-data",
+      "${LOCAL_PROJECT}-db-config",
+      "${LOCAL_PROJECT}-storage-data",
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
