@@ -14,6 +14,7 @@ const playwrightConfigSource = read("playwright.config.ts");
 const healthRouteSource = read("app/api/health/route.ts");
 const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
 const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
+const localWorkflowSource = read("../../.github/workflows/nightly-local-regression.yml");
 const curatedSpecs = [
   "tests/smoke.spec.ts",
   "tests/navigation.spec.ts",
@@ -242,5 +243,29 @@ describe("nightly regression package and source contracts", () => {
     expect(playwrightConfigSource).toContain("PLAYWRIGHT_WEB_SERVER_COMMAND");
     expect(playwrightConfigSource).toContain("PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS");
     expect(playwrightConfigSource).toContain("PLAYWRIGHT_REUSE_EXISTING_SERVER");
+  });
+
+  test("reconstructs local Docker nightly and uploads only sanitized artifacts", () => {
+    for (const token of [
+      "runs-on: ubuntu-24.04",
+      "docker-compose-linux-${compose_arch}",
+      "docker compose version --short",
+      "python3 backend/supabase/scripts/local-stack.py reset",
+      "python3 backend/supabase/scripts/local-migrate.py apply-prerequisite",
+      "python3 backend/supabase/scripts/local-migrate.py apply",
+      "python3 backend/supabase/scripts/local-function-runtime-scan.py smoke",
+      "python3 backend/supabase/scripts/local-migrate.py receipt",
+      "--mode local",
+      "actions/upload-artifact@v4",
+      "publication-boundary.txt",
+      "stack.env and credentials excluded",
+      "down --volumes --remove-orphans",
+    ]) {
+      expect(localWorkflowSource).toContain(token);
+    }
+    expect(localWorkflowSource).toContain("contents: read");
+    expect(localWorkflowSource).not.toContain("contents: write");
+    expect(localWorkflowSource).not.toContain("softprops/action-gh-release");
+    expect(localWorkflowSource).not.toContain("stack.env/\\n");
   });
 });
