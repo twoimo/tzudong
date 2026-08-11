@@ -60,25 +60,30 @@ preflight before it resets the stack, applies the source-bound prerequisite and
 migrations, closes and smokes function paths, seeds fixed local fixtures, and
 runs `test:nightly -- --mode local`.
 
-The scheduled job has `contents: read` only. It uploads a short-retention
-`nightly-local-<run-id>` Actions artifact containing sanitized receipts,
-provenance hashes, bounded runner output, and loopback browser diagnostics.
-It never uploads `stack.env`, generated passwords, JWTs, DSNs, raw database
-rows, provider payloads, or arbitrary workspace files. The job stops and
-removes only its generated Compose project and state root after artifact
-collection.
+The scheduled regression job has `contents: read` only. It uploads a
+short-retention `nightly-local-<run-id>` Actions artifact containing only the
+fixed-schema receipts, provenance hashes, and loopback browser diagnostics.
+It does not retain or publish the raw unit or Next logs. It never uploads
+`stack.env`, generated passwords, JWTs, DSNs, raw database rows, provider
+payloads, or arbitrary workspace files. The job stops and removes only its
+generated Compose project and state root after artifact collection.
 
-A successful run also publishes a public, immutable prerelease named
-`nightly-local-<run-id>-<attempt>` with the same explicit sanitized allowlist.
-The workflow grants `contents: write` only to this local job for that purpose;
-the release is always marked prerelease and never becomes the repository's
-latest stable release. A public repository makes this boundary intentional:
-release notes and assets contain no credentials, `stack.env`, raw rows, DSNs,
-provider payloads, or hosted/production state.
+A successful regression is followed by a separate publication job. That job
+runs only when the regression succeeds on `refs/heads/main`, verifies that the
+run SHA is still the current `main` SHA, downloads the exact artifact allowlist,
+enforces a size and secret-marker boundary, and then publishes a public
+prerelease named `nightly-local-<run-id>-<attempt>`. `contents: write` is
+granted only to that publication job. The unique tag is an operational
+identifier; this source does not claim GitHub release or tag immutability.
+The release is always marked prerelease and never becomes the repository's
+latest stable release. Release notes and assets contain no credentials,
+`stack.env`, raw rows, DSNs, provider payloads, or hosted/production state.
 
 To run the same lane manually, dispatch **Nightly Local Regression** and choose
 `all`, `unit`, or `e2e`. A GitHub-hosted Ubuntu runner must pass the namespace
 preflight; a self-hosted runner is not a silent fallback.
+A manual dispatch from any non-main ref is read-only and cannot publish a
+prerelease; publication is limited to the protected default branch.
 
 ## Local Compose bootstrap
 
