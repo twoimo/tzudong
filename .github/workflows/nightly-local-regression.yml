@@ -20,8 +20,9 @@ concurrency:
   cancel-in-progress: false
 
 # This job reconstructs a disposable local stack on Linux. It does not use
-# hosted credentials, publish source, run migrations against hosted services,
-# or create a GitHub Release.
+# hosted credentials, publish source, or run migrations against hosted services.
+# A successful run publishes a public prerelease containing only the explicit
+# sanitized artifact allowlist below.
 permissions:
   contents: read
   actions: read
@@ -40,7 +41,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
-      contents: read
+      contents: write
       actions: read
     steps:
       - name: Checkout source
@@ -262,6 +263,40 @@ jobs:
           path: nightly-artifacts/
           if-no-files-found: warn
           retention-days: 14
+      - name: Publish sanitized nightly prerelease
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh --version
+          tag="nightly-local-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          title="Nightly Local Regression ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          notes="nightly-artifacts/release-notes.md"
+          cat > "$notes" <<EOF
+          Local-only nightly regression prerelease.
+
+          Commit: ${GITHUB_SHA}
+          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
+          Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
+          EOF
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$title" \
+            --notes-file "$notes" \
+            --prerelease \
+            nightly-artifacts/local-stack-reset.json \
+            nightly-artifacts/local-stack-status.json \
+            nightly-artifacts/local-migration-manifest.json \
+            nightly-artifacts/local-receipt-v1.json \
+            nightly-artifacts/local-closure-rescan.json \
+            nightly-artifacts/local-closure-smoke.json \
+            nightly-artifacts/local-browser-route-diagnostics.json \
+            nightly-artifacts/nightly-run.log \
+            nightly-artifacts/publication-boundary.txt
 
       - name: Stop and remove disposable local stack
         if: always()
