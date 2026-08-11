@@ -1451,7 +1451,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         _ACTIVE_COMMAND = command
         started = True
         _run(
-            command + ["create", "--force-recreate", "--pull=policy", *CORE_SERVICES],
+            command + ["create", "--force-recreate", "--pull=missing", *CORE_SERVICES],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
@@ -1465,7 +1465,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             )
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
-            command + ["create", "--force-recreate", "--pull=policy", "studio"],
+            command + ["create", "--force-recreate", "--pull=missing", "studio"],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_studio_create",
             retries=COMPOSE_START_RETRIES,

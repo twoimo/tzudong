@@ -228,7 +228,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("retries=COMPOSE_START_RETRIES", source)
         self.assertIn("COMPOSE_SERVICE_START_TIMEOUT_SECONDS", source)
         self.assertIn("COMPOSE_SERVICE_START_RETRIES", source)
-        self.assertIn('"create", "--force-recreate", "--pull=policy"', source)
+        self.assertIn('"create", "--force-recreate", "--pull=missing"', source)
         self.assertIn('command + ["start", service]', source)
         self.assertIn("_COMPOSE_ERROR_MARKERS", source)
         self.assertIn("_compose_error_suffix", source)
