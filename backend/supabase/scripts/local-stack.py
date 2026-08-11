@@ -1272,9 +1272,30 @@ def _probe_host_tcp(port: int, timeout: int = 5) -> bool:
     except OSError:
         return False
 
+def _probe_database_bootstrap(command: list[str], timeout: int = 5) -> bool:
+    try:
+        result = subprocess.run(
+            command + [
+                "exec", "-T", "db",
+                "psql", "-U", "postgres", "-d", "_supabase",
+                "-Atqc", "select 1 from pg_namespace where nspname = '_analytics'",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            env=_safe_process_environment(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0 and result.stdout.strip() == "1"
+
 def _probe_service(command: list[str], values: dict[str, str], service: str, timeout: int = 5) -> bool:
     if service == "db":
-        return _probe_endpoint(command, service, READINESS_ENDPOINTS[service], timeout)
+        return (
+            _probe_endpoint(command, service, READINESS_ENDPOINTS[service], timeout)
+            and _probe_database_bootstrap(command, timeout)
+        )
     if service == "kong":
         return _probe_host_http(int(values["KONG_HTTP_PORT"]), "/auth/v1/health", timeout=timeout)
     if service == "rest":
