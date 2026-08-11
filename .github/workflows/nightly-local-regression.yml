@@ -280,7 +280,7 @@ jobs:
   publish:
     name: Publish sanitized nightly prerelease
     needs: local
-    if: needs.local.result == 'success' && github.ref == 'refs/heads/main'
+    if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

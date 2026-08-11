@@ -293,7 +293,7 @@ describe("nightly regression package and source contracts", () => {
     expect(regressionWorkflowSource).toContain("contents: read");
     expect(regressionWorkflowSource).not.toContain("contents: write");
     expect(localWorkflowSource).toContain("needs: local");
-    expect(localWorkflowSource).toContain("github.ref == 'refs/heads/main'");
+    expect(localWorkflowSource).toContain("if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' }}");
     expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
     expect(localWorkflowSource).toContain("actions/download-artifact@v4");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
