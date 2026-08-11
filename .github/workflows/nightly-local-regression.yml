@@ -591,6 +591,8 @@ jobs:
               ('permission_denied', ('permission denied', 'operation not permitted')),
               ('mount_invalid', ('invalid mount', 'no such file or directory')),
               ('runtime_error', ('failed to start', 'failed to create', 'exec format error')),
+              ('database_connection', ('connection refused', 'econnrefused', 'failed to connect')),
+              ('boot_error', ('could not start', 'failed to boot', 'uncaught exception')),
           )
 
           def classify(value):
@@ -633,11 +635,23 @@ jobs:
                   state = payload.get('State') or {}
                   health = state.get('Health') or {}
                   health_log = health.get('Log') or []
+                  try:
+                      logs = subprocess.check_output(
+                          ['docker', 'logs', '--tail', '200', container_id],
+                          text=True,
+                          stderr=subprocess.STDOUT,
+                          timeout=30,
+                      )
+                  except (OSError, subprocess.SubprocessError):
+                      logs = ''
                   records.append({
                       'service': service,
                       'state': state.get('Status') if state.get('Status') in allowed_states else 'unknown',
                       'exit_code': state.get('ExitCode') if isinstance(state.get('ExitCode'), int) and 0 <= state.get('ExitCode') <= 255 else None,
                       'state_error_class': classify(state.get('Error')),
+                      'oom_killed': state.get('OOMKilled') is True,
+                      'restart_count': payload.get('RestartCount') if isinstance(payload.get('RestartCount'), int) and payload.get('RestartCount') >= 0 else None,
+                      'log_failure_class': classify(logs),
                       'health': health.get('Status') if health.get('Status') in allowed_health else 'unknown',
                       'health_failing_streak': health.get('FailingStreak') if isinstance(health.get('FailingStreak'), int) and health.get('FailingStreak') >= 0 else None,
                       'health_log_exit_codes': [

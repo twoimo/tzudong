@@ -91,7 +91,8 @@ During the hosted acceptance lane, a failed reset preserves the disposable
 container state until bounded diagnostics are captured; the final cleanup step
 still removes the project and volumes.
 The diagnostics receipt records only service state, exit code, health status,
-health failure streak, and bounded health-check exit codes.
+health failure streak, bounded health-check exit codes, restart count, OOM
+status, and a fixed class derived from bounded container logs.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the

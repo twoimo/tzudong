@@ -316,6 +316,9 @@ describe("nightly regression package and source contracts", () => {
       "local-compose-runtime-diagnostics-v1",
       "health_failing_streak",
       "health_log_exit_codes",
+      "log_failure_class",
+      "oom_killed",
+      "restart_count",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {
