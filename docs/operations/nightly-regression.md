@@ -50,6 +50,33 @@ that the account is dedicated before starting a suite. A manual run should be
 dispatched from the workflow page with one of the three suite choices. Rerun a
 failure at the same commit only after reviewing the redacted artifact and
 summary; a retry is diagnostic and is not a pass override.
+## GitHub Actions local operation
+
+`nightly-local-regression.yml` reconstructs the disposable local stack on an
+Ubuntu runner. “Local” means loopback Compose services and synthetic data; it
+does not mean that the workflow connects to a developer workstation. The job
+pins Node 24.6.0, Bun 1.3.14, Docker Compose v2.39.4, and the Linux namespace
+preflight before it resets the stack, applies the source-bound prerequisite and
+migrations, closes and smokes function paths, seeds fixed local fixtures, and
+runs `test:nightly -- --mode local`.
+
+The scheduled job has `contents: read` only. It uploads a short-retention
+`nightly-local-<run-id>` Actions artifact containing sanitized receipts,
+provenance hashes, bounded runner output, and loopback browser diagnostics.
+It never uploads `stack.env`, generated passwords, JWTs, DSNs, raw database
+rows, provider payloads, or arbitrary workspace files. The job stops and
+removes only its generated Compose project and state root after artifact
+collection.
+
+GitHub Releases are deliberately not used as the first publication boundary.
+A Release would require `contents: write` and a separate public/private
+retention decision. Add an immutable prerelease only after that policy and
+artifact allowlist receive explicit review; Actions artifacts remain the
+default nightly record.
+
+To run the same lane manually, dispatch **Nightly Local Regression** and choose
+`all`, `unit`, or `e2e`. A GitHub-hosted Ubuntu runner must pass the namespace
+preflight; a self-hosted runner is not a silent fallback.
 
 ## Local Compose bootstrap
 
