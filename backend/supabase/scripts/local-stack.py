@@ -744,6 +744,13 @@ def _docker_socket_candidates() -> tuple[Path, ...]:
         home / DOCKER_SOCKET_DOCKER_DESKTOP,
         home / DOCKER_SOCKET_COLIMA,
     )
+def _github_actions_root_owned_socket(path: Path, owner: int) -> bool:
+    return (
+        path == DOCKER_SOCKET_DEFAULT
+        and owner == 0
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("CI") == "true"
+    )
 
 
 def _local_docker_socket(endpoint: str) -> Path:
@@ -760,7 +767,9 @@ def _local_docker_socket(endpoint: str) -> Path:
         info = path.lstat()
     except OSError:
         _fail("docker_context")
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+    owned_by_current_user = info.st_uid == os.getuid()
+    owned_by_disposable_ci_root = _github_actions_root_owned_socket(path, info.st_uid)
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISSOCK(info.st_mode) or not (owned_by_current_user or owned_by_disposable_ci_root):
         _fail("docker_context")
     return path
 
