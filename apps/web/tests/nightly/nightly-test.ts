@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { expect, test as base, type Page, type Route } from '@playwright/test';
+import { expect, test as base, type Page, type Route, type TestInfo } from '@playwright/test';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isLocalNightlyMode = process.env.NIGHTLY_MODE === 'local'
@@ -540,3 +540,4 @@ export const test = base.extend({
 });
 
 export { expect };
+export type { Page, Route, TestInfo };
