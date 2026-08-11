@@ -485,6 +485,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p nightly-artifacts
+          if [[ -n "${LOCAL_PROJECT:-}" ]]; then
+            docker volume rm -f \
+              "${LOCAL_PROJECT}-db-data" \
+              "${LOCAL_PROJECT}-db-config" \
+              "${LOCAL_PROJECT}-storage-data" || true
+          fi
           python3 backend/supabase/scripts/local-stack.py reset \
             > nightly-artifacts/local-stack-reset.json
           python3 - nightly-artifacts/local-stack-reset.json <<'PY'
