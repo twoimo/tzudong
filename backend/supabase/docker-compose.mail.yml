@@ -1,0 +1,14 @@
+# Local-only mail replacement. The dev overlay's Studio build is never selected.
+services:
+  mail: !override
+    image: inbucket/inbucket:3.0.3
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:${MAIL_SMTP_PORT}:2500/tcp"
+      - "127.0.0.1:${MAIL_WEB_PORT}:9000/tcp"
+      - "127.0.0.1:${MAIL_POP3_PORT}:1100/tcp"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:9000/ || exit 1" ]
+      timeout: 5s
+      interval: 5s
+      retries: 10
