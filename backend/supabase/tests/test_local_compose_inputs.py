@@ -228,6 +228,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("retries=COMPOSE_START_RETRIES", source)
         self.assertIn("COMPOSE_SERVICE_START_TIMEOUT_SECONDS", source)
         self.assertIn("COMPOSE_SERVICE_START_RETRIES", source)
+        self.assertIn("COMPOSE_DATABASE_BOOTSTRAP_TIMEOUT_SECONDS", source)
         self.assertIn("CORE_START_PHASES", source)
         self.assertIn('(("vector",), ("vector",))', source)
         self.assertIn('(("db",), ("db",))', source)
