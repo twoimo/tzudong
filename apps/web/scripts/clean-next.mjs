@@ -16,6 +16,9 @@ const nextDir = path.join(projectRoot, '.next');
 const stalePrefix = '.next-stale-';
 const verbose = ['1', 'true', 'yes', 'on'].includes((process.env.CLEAN_NEXT_VERBOSE ?? '').toLowerCase());
 const nightlyLocalEnvOnly = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
+const nightlyEnvFileOnly = process.env.NIGHTLY_ENV_FILE_ONLY === '1';
+const nightlyMode = process.env.NIGHTLY_MODE?.trim();
+const nightlyRun = nightlyLocalEnvOnly || nightlyEnvFileOnly || nightlyMode === 'local' || nightlyMode === 'hosted';
 const warnedStaleEntries = new Set();
 const rawArgs = process.argv.slice(2);
 const separatorIndex = rawArgs.indexOf('--');
@@ -108,7 +111,11 @@ const purgeStaleCaches = () => {
     let entries = [];
     try {
         entries = fs.readdirSync(projectRoot, { withFileTypes: true });
-    } catch {
+    } catch (error) {
+        if (nightlyRun) {
+            writeCliError('stale-cache-scan', error);
+            throw error;
+        }
         return;
     }
 
@@ -134,8 +141,31 @@ const purgeStaleCaches = () => {
         }
     }
 };
+if (nightlyRun) {
+    if (process.env.NODE_ENV === 'production') {
+        process.stderr.write('[clean-next] error=NightlyProductionMode\n');
+        process.exit(1);
+    }
+    if (!process.env.NIGHTLY_ENV_PROVENANCE?.trim() && !process.env.NIGHTLY_ENV_PROVENANCE_SHA256?.trim()) {
+        process.stderr.write('[clean-next] error=MissingNightlyEnvProvenance\n');
+        process.exit(1);
+    }
+    if (nightlyLocalEnvOnly && !nightlyEnvFileOnly) {
+        process.stderr.write('[clean-next] error=NightlyEnvFileGateRequired\n');
+        process.exit(1);
+    }
+    if (nightlyMode === 'local' && !nightlyLocalEnvOnly) {
+        process.stderr.write('[clean-next] error=NightlyLocalGateRequired\n');
+        process.exit(1);
+    }
+    if (nightlyMode === 'hosted' && nightlyLocalEnvOnly) {
+        process.stderr.write('[clean-next] error=HostedLocalGateConflict\n');
+        process.exit(1);
+    }
+}
 
-if (!nightlyLocalEnvOnly && fs.existsSync(repoEnvLocalPath)) {
+
+if (!nightlyRun && fs.existsSync(repoEnvLocalPath)) {
     loadEnv({ path: repoEnvLocalPath, override: false });
 }
 
@@ -168,6 +198,10 @@ if (!skipClean) {
             }
         } catch (fallbackError) {
             writeCliError('fallback-cache-cleanup', fallbackError);
+            if (nightlyRun) {
+                process.stderr.write('[clean-next] error=NightlyCacheCleanup\n');
+                process.exit(1);
+            }
         }
     }
 
@@ -178,7 +212,14 @@ if (commandArgs.length > 0) {
     const [command, ...args] = commandArgs;
     const childEnv = { ...process.env };
     if (isNextDevCommand()) {
-        childEnv.NODE_ENV = nightlyLocalEnvOnly ? 'test' : 'development';
+        childEnv.NODE_ENV = 'development';
+        if (nightlyLocalEnvOnly) {
+            childEnv.NODE_ENV = 'test';
+        }
+    }
+    if (nightlyRun) {
+        childEnv.__NEXT_PROCESSED_ENV = 'true';
+        childEnv.NIGHTLY_ENV_FILE_ONLY = '1';
     }
     const child = spawn(command, args, {
         stdio: ['inherit', 'pipe', 'pipe'],
