@@ -277,196 +277,195 @@ jobs:
               down --volumes --remove-orphans
             rm -rf -- "$LOCAL_STATE"
           fi
-publish:
-  name: Publish sanitized nightly prerelease
-  needs: local
-  if: needs.local.result == 'success' && github.ref == 'refs/heads/main'
-  runs-on: ubuntu-24.04
-  timeout-minutes: 10
-  permissions:
-    contents: write
-    actions: read
-  steps:
-    - name: Download sanitized local nightly artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: nightly-local-${{ github.run_id }}
-        path: nightly-artifacts
+  publish:
+    name: Publish sanitized nightly prerelease
+    needs: local
+    if: needs.local.result == 'success' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download sanitized local nightly artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-local-${{ github.run_id }}
+          path: nightly-artifacts
 
-    - name: Verify trusted publication ref and artifact boundary
-      shell: bash
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        set -euo pipefail
-        test "${GITHUB_REF}" = 'refs/heads/main'
-        main_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)"
-        test -n "$main_sha"
-        test "${GITHUB_SHA}" = "$main_sha"
-        python3 - <<'PY'
-        import json
-        import pathlib
-        import re
+      - name: Verify trusted publication ref and artifact boundary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = 'refs/heads/main'
+          main_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)"
+          test -n "$main_sha"
+          test "${GITHUB_SHA}" = "$main_sha"
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import re
 
-        root = pathlib.Path('nightly-artifacts')
-        all_paths = list(root.rglob('*'))
-        if any(path.is_symlink() for path in all_paths):
-            raise SystemExit('publication artifact tree contains a symlink')
-        allowed = {
-            'local-stack-reset.json',
-            'local-stack-status.json',
-            'local-migration-manifest.json',
-            'local-receipt-v1.json',
-            'local-closure-rescan.json',
-            'local-closure-smoke.json',
-            'local-browser-route-diagnostics.json',
-            'publication-boundary.txt',
-        }
-        stack_receipt_fields = {
-            'action',
-            'config_sha256',
-            'env_provenance_sha256',
-            'error_code',
-            'generator_version',
-            'input_provenance_sha256',
-            'ok',
-            'project_name',
-            'renderer',
-            'schema',
-            'services',
-        }
-        migration_receipt_fields = {
-            'catalog_sha256',
-            'closure_binding_sha256',
-            'commit_sha256',
-            'compose_evidence_sha256',
-            'config_sha256',
-            'env_provenance_sha256',
-            'environment_contract_sha256',
-            'function_source_sha256',
-            'image_digests',
-            'image_service_digests',
-            'input_evidence_sha256',
-            'input_provenance_sha256',
-            'input_source_manifest_sha256',
-            'ledger',
-            'ledger_sha256',
-            'platform_bootstrap_evidence_sha256',
-            'platform_bootstrap_sha256',
-            'prerequisite_sha256',
-            'project_name',
-            'readback',
-            'readback_sha256',
-            'readback_sql_sha256',
-            'schema',
-            'seed_sha256',
-            'seed_source_sha256',
-            'sequence',
-            'sequence_sha256',
-            'serializer',
-            'service',
-            'service_sha256',
-            'source_chain_sha256',
-            'source_manifest_sha256',
-            'stack_provenance',
-        }
-        runtime_fields = {
-            'schemaVersion',
-            'mode',
-            'functionCount',
-            'localSearchPathCount',
-            'unresolvedPathCount',
-            'ambiguousPathCount',
-            'definerMissingSearchPathCount',
-            'functionMetadataDigest',
-            'definitionHash',
-            'extensionCatalogSha256',
-            'externalEffectBindingSha256',
-            'candidateResolution',
-            'closureSmoke',
-            'rpcSmoke',
-            'candidateRpcSmoke',
-        }
-        expected_fields = {
-            'local-stack-reset.json': stack_receipt_fields,
-            'local-stack-status.json': stack_receipt_fields,
-            'local-migration-manifest.json': {'schemaVersion', 'source', 'exclusions'},
-            'local-receipt-v1.json': migration_receipt_fields,
-            'local-closure-rescan.json': runtime_fields | {'closureBinding'},
-            'local-closure-smoke.json': runtime_fields,
-            'local-browser-route-diagnostics.json': {'schema', 'source', 'tests', 'record_count'},
-        }
-        expected_markers = {
-            'local-stack-reset.json': ('schema', 'local-stack-receipt-v1'),
-            'local-stack-status.json': ('schema', 'local-stack-receipt-v1'),
-            'local-migration-manifest.json': ('schemaVersion', 'local-supabase-migration-manifest/v1'),
-            'local-receipt-v1.json': ('schema', 'local-receipt-v1'),
-            'local-closure-rescan.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
-            'local-closure-smoke.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
-            'local-browser-route-diagnostics.json': ('schema', 'local-browser-route-diagnostics-v1'),
-        }
-        files = {
-            path.relative_to(root).as_posix()
-            for path in all_paths
-            if path.is_file()
-        }
-        if files != allowed:
-            raise SystemExit(f'unexpected publication artifacts: {sorted(files ^ allowed)}')
-        forbidden = re.compile(r'(?i)(?:password|secret|authorization|bearer|service[_-]?role|database[_-]?url|postgres(?:ql)?://|jwt)')
-        for name in sorted(allowed):
-            path = root / name
-            data = path.read_bytes()
-            if len(data) > 256 * 1024:
-                raise SystemExit(f'publication artifact exceeds size bound: {name}')
-            if name == 'publication-boundary.txt':
-                if data != b'Local-only sanitized receipts; stack.env and credentials excluded.\n':
-                    raise SystemExit('publication boundary marker is not canonical')
-                continue
-            try:
-                payload = json.loads(data)
-            except json.JSONDecodeError as error:
-                raise SystemExit(f'publication artifact is not JSON: {name}') from error
-            expected = expected_fields[name]
-            if not isinstance(payload, dict) or set(payload) != expected:
-                raise SystemExit(f'publication artifact schema mismatch: {name}')
-            marker_key, marker_value = expected_markers[name]
-            if payload.get(marker_key) != marker_value:
-                raise SystemExit(f'publication artifact marker mismatch: {name}')
-            if name == 'local-stack-reset.json' and payload.get('action') != 'reset':
-                raise SystemExit('local stack reset receipt action mismatch')
-            if name == 'local-stack-status.json' and payload.get('action') != 'status':
-                raise SystemExit('local stack status receipt action mismatch')
-            if forbidden.search(json.dumps(payload, separators=(',', ':'))):
-                raise SystemExit(f'publication artifact contains a forbidden secret marker: {name}')
-        PY
-
-    - name: Publish sanitized nightly prerelease
-      env:
-        GH_TOKEN: ${{ github.token }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        tag="nightly-local-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-        title="Nightly Local Regression ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
-        notes="nightly-artifacts/release-notes.md"
-        cat > "$notes" <<EOF
-        Local-only nightly regression prerelease.
-        Commit: ${GITHUB_SHA}
-        Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-        Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
-        Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
-        EOF
-        gh release create "$tag" \
-          --repo "$GITHUB_REPOSITORY" \
-          --target "$GITHUB_SHA" \
-          --title "$title" \
-          --notes-file "$notes" \
-          --prerelease \
-          nightly-artifacts/local-stack-reset.json \
-          nightly-artifacts/local-stack-status.json \
-          nightly-artifacts/local-migration-manifest.json \
-          nightly-artifacts/local-receipt-v1.json \
-          nightly-artifacts/local-closure-rescan.json \
-          nightly-artifacts/local-closure-smoke.json \
-          nightly-artifacts/local-browser-route-diagnostics.json \
-          nightly-artifacts/publication-boundary.txt
+          root = pathlib.Path('nightly-artifacts')
+          all_paths = list(root.rglob('*'))
+          if any(path.is_symlink() for path in all_paths):
+              raise SystemExit('publication artifact tree contains a symlink')
+          allowed = {
+              'local-stack-reset.json',
+              'local-stack-status.json',
+              'local-migration-manifest.json',
+              'local-receipt-v1.json',
+              'local-closure-rescan.json',
+              'local-closure-smoke.json',
+              'local-browser-route-diagnostics.json',
+              'publication-boundary.txt',
+          }
+          stack_receipt_fields = {
+              'action',
+              'config_sha256',
+              'env_provenance_sha256',
+              'error_code',
+              'generator_version',
+              'input_provenance_sha256',
+              'ok',
+              'project_name',
+              'renderer',
+              'schema',
+              'services',
+          }
+          migration_receipt_fields = {
+              'catalog_sha256',
+              'closure_binding_sha256',
+              'commit_sha256',
+              'compose_evidence_sha256',
+              'config_sha256',
+              'env_provenance_sha256',
+              'environment_contract_sha256',
+              'function_source_sha256',
+              'image_digests',
+              'image_service_digests',
+              'input_evidence_sha256',
+              'input_provenance_sha256',
+              'input_source_manifest_sha256',
+              'ledger',
+              'ledger_sha256',
+              'platform_bootstrap_evidence_sha256',
+              'platform_bootstrap_sha256',
+              'prerequisite_sha256',
+              'project_name',
+              'readback',
+              'readback_sha256',
+              'readback_sql_sha256',
+              'schema',
+              'seed_sha256',
+              'seed_source_sha256',
+              'sequence',
+              'sequence_sha256',
+              'serializer',
+              'service',
+              'service_sha256',
+              'source_chain_sha256',
+              'source_manifest_sha256',
+              'stack_provenance',
+          }
+          runtime_fields = {
+              'schemaVersion',
+              'mode',
+              'functionCount',
+              'localSearchPathCount',
+              'unresolvedPathCount',
+              'ambiguousPathCount',
+              'definerMissingSearchPathCount',
+              'functionMetadataDigest',
+              'definitionHash',
+              'extensionCatalogSha256',
+              'externalEffectBindingSha256',
+              'candidateResolution',
+              'closureSmoke',
+              'rpcSmoke',
+              'candidateRpcSmoke',
+          }
+          expected_fields = {
+              'local-stack-reset.json': stack_receipt_fields,
+              'local-stack-status.json': stack_receipt_fields,
+              'local-migration-manifest.json': {'schemaVersion', 'source', 'exclusions'},
+              'local-receipt-v1.json': migration_receipt_fields,
+              'local-closure-rescan.json': runtime_fields | {'closureBinding'},
+              'local-closure-smoke.json': runtime_fields,
+              'local-browser-route-diagnostics.json': {'schema', 'source', 'tests', 'record_count'},
+          }
+          expected_markers = {
+              'local-stack-reset.json': ('schema', 'local-stack-receipt-v1'),
+              'local-stack-status.json': ('schema', 'local-stack-receipt-v1'),
+              'local-migration-manifest.json': ('schemaVersion', 'local-supabase-migration-manifest/v1'),
+              'local-receipt-v1.json': ('schema', 'local-receipt-v1'),
+              'local-closure-rescan.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
+              'local-closure-smoke.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
+              'local-browser-route-diagnostics.json': ('schema', 'local-browser-route-diagnostics-v1'),
+          }
+          files = {
+              path.relative_to(root).as_posix()
+              for path in all_paths
+              if path.is_file()
+          }
+          if files != allowed:
+              raise SystemExit(f'unexpected publication artifacts: {sorted(files ^ allowed)}')
+          forbidden = re.compile(r'(?i)(?:password|secret|authorization|bearer|service[_-]?role|database[_-]?url|postgres(?:ql)?://|jwt)')
+          for name in sorted(allowed):
+              path = root / name
+              data = path.read_bytes()
+              if len(data) > 256 * 1024:
+                  raise SystemExit(f'publication artifact exceeds size bound: {name}')
+              if name == 'publication-boundary.txt':
+                  if data != b'Local-only sanitized receipts; stack.env and credentials excluded.\n':
+                      raise SystemExit('publication boundary marker is not canonical')
+                  continue
+              try:
+                  payload = json.loads(data)
+              except json.JSONDecodeError as error:
+                  raise SystemExit(f'publication artifact is not JSON: {name}') from error
+              expected = expected_fields[name]
+              if not isinstance(payload, dict) or set(payload) != expected:
+                  raise SystemExit(f'publication artifact schema mismatch: {name}')
+              marker_key, marker_value = expected_markers[name]
+              if payload.get(marker_key) != marker_value:
+                  raise SystemExit(f'publication artifact marker mismatch: {name}')
+              if name == 'local-stack-reset.json' and payload.get('action') != 'reset':
+                  raise SystemExit('local stack reset receipt action mismatch')
+              if name == 'local-stack-status.json' and payload.get('action') != 'status':
+                  raise SystemExit('local stack status receipt action mismatch')
+              if forbidden.search(json.dumps(payload, separators=(',', ':'))):
+                  raise SystemExit(f'publication artifact contains a forbidden secret marker: {name}')
+          PY
+      - name: Publish sanitized nightly prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="nightly-local-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          title="Nightly Local Regression ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          notes="nightly-artifacts/release-notes.md"
+          cat > "$notes" <<EOF
+          Local-only nightly regression prerelease.
+          Commit: ${GITHUB_SHA}
+          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
+          Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
+          EOF
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$title" \
+            --notes-file "$notes" \
+            --prerelease \
+            nightly-artifacts/local-stack-reset.json \
+            nightly-artifacts/local-stack-status.json \
+            nightly-artifacts/local-migration-manifest.json \
+            nightly-artifacts/local-receipt-v1.json \
+            nightly-artifacts/local-closure-rescan.json \
+            nightly-artifacts/local-closure-smoke.json \
+            nightly-artifacts/local-browser-route-diagnostics.json \
+            nightly-artifacts/publication-boundary.txt
