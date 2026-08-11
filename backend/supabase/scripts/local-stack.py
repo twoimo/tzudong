@@ -34,6 +34,8 @@ COMPOSE_VERSION = "v2.39.4"
 GENERATOR_VERSION = "local-stack-v1"
 COMPOSE_START_TIMEOUT_SECONDS = 600
 COMPOSE_START_RETRIES = 2
+COMPOSE_SERVICE_START_TIMEOUT_SECONDS = 180
+COMPOSE_SERVICE_START_RETRIES = 1
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -1449,17 +1451,30 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         _ACTIVE_COMMAND = command
         started = True
         _run(
-            command + ["up", "-d", *CORE_SERVICES],
+            command + ["create", "--force-recreate", "--pull=policy", *CORE_SERVICES],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_core_start",
             retries=COMPOSE_START_RETRIES,
         )
+        for service in CORE_SERVICES:
+            _run(
+                command + ["start", service],
+                timeout=COMPOSE_SERVICE_START_TIMEOUT_SECONDS,
+                error_code=f"compose_core_start_{service}",
+                retries=COMPOSE_SERVICE_START_RETRIES,
+            )
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
-            command + ["up", "-d", "studio"],
+            command + ["create", "--force-recreate", "--pull=policy", "studio"],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_studio_start",
             retries=COMPOSE_START_RETRIES,
+        )
+        _run(
+            command + ["start", "studio"],
+            timeout=COMPOSE_SERVICE_START_TIMEOUT_SECONDS,
+            error_code="compose_studio_start_studio",
+            retries=COMPOSE_SERVICE_START_RETRIES,
         )
         services = _wait_ready(command, values)
     except (LocalStackError, OSError, ValueError):
