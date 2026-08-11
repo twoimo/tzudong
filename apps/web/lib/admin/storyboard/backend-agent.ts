@@ -1,5 +1,16 @@
-import { accessSync, constants, existsSync, readFileSync } from "node:fs";
+import {
+  accessSync,
+  closeSync,
+  constants,
+  existsSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  readSync,
+  rmSync,
+} from "node:fs";
 import path from "node:path";
+import { tmpdir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
 import { randomBytes } from "node:crypto";
@@ -2206,7 +2217,7 @@ def receive_line(deadline):
         if not data:
             raise RuntimeError("protocol closed")
         buffer += data
-        if len(buffer) > 64:
+        if len(buffer) > 128:
             raise RuntimeError("protocol overflow")
         if b"\n" in buffer:
             line, remainder = buffer.split(b"\n", 1)
@@ -2220,8 +2231,16 @@ def members():
     for name in os.listdir("/proc"):
         if name.isdigit():
             try:
-                if os.stat("/proc/" + name + "/ns/pid").st_ino == own:
-                    result.append(int(name))
+                if os.stat("/proc/" + name + "/ns/pid").st_ino != own:
+                    continue
+                with open("/proc/" + name + "/status", encoding="ascii") as status_file:
+                    state_line = next(
+                        (line for line in status_file if line.startswith("State:")),
+                        "",
+                    )
+                if state_line.split()[1:2] == ["Z"]:
+                    continue
+                result.append(int(name))
             except OSError:
                 pass
     return sorted(result)
@@ -2441,6 +2460,7 @@ sys.exit(125)
 `;
 
 let linuxNamespaceContainmentProbe: LinuxNamespaceContainment | undefined;
+const LINUX_NAMESPACE_PROBE_CAPTURE_BYTES = 128;
 
 function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
   if (linuxNamespaceContainmentProbe) return linuxNamespaceContainmentProbe;
@@ -2467,7 +2487,11 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
     });
   }
   const nonce = "0".repeat(64);
+  let captureDirectory: string | undefined;
+  let captureFd: number | undefined;
   try {
+    captureDirectory = mkdtempSync(path.join(tmpdir(), "tzudong-ns-probe-"));
+    captureFd = openSync(path.join(captureDirectory, "completion"), "wx+", 0o600);
     const probe = spawnSync(
       python,
       ["-c", LINUX_NAMESPACE_OUTER_SUPERVISOR],
@@ -2483,18 +2507,27 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
           ).toString("base64"),
           TZUDONG_NS_TARGET_B64: Buffer.from(JSON.stringify(["/bin/true"]), "utf8").toString("base64"),
           TZUDONG_NS_DEADLINE_MILLISECONDS: "1500",
-          TZUDONG_NS_NODE_LIFETIME_FD: "4",
         },
-        stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"],
+        stdio: ["ignore", "ignore", "ignore", captureFd],
         timeout: 3_000,
         shell: false,
       },
     );
+    const completionCapture = Buffer.alloc(LINUX_NAMESPACE_PROBE_CAPTURE_BYTES);
+    const completionBytesRead = readSync(
+      captureFd,
+      completionCapture,
+      0,
+      completionCapture.byteLength,
+      0,
+    );
+    const expectedCompletion = Buffer.from(`COMPLETE ${nonce}\n`, "ascii");
     if (
       probe.status === 0 &&
       !probe.error &&
       !probe.signal &&
-      probe.output[3]?.equals(Buffer.from(`COMPLETE ${nonce}\n`, "ascii"))
+      completionBytesRead === expectedCompletion.byteLength &&
+      completionCapture.subarray(0, completionBytesRead).equals(expectedCompletion)
     ) {
       return (linuxNamespaceContainmentProbe = {
         available: true,
@@ -2505,6 +2538,21 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
     }
   } catch {
     // Fall through to the bounded, trusted diagnostic below.
+  } finally {
+    if (captureFd !== undefined) {
+      try {
+        closeSync(captureFd);
+      } catch {
+        // The descriptor may already have been closed after a spawn failure.
+      }
+    }
+    if (captureDirectory !== undefined) {
+      try {
+        rmSync(captureDirectory, { recursive: true, force: true });
+      } catch {
+        // Cleanup failure must not expose probe output or change fail-closed behavior.
+      }
+    }
   }
   return (linuxNamespaceContainmentProbe = {
     available: false,
@@ -4205,6 +4253,67 @@ function runStoryboardAgentCommand(
       commandEnv.STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY =
         STORYBOARD_AGENT_TEST_FIXTURE_CAPABILITY;
     }
+    if (trustedLangGraphFixture && isNativeProcessControl && processControl.platform !== "win32") {
+      const synchronousResult = spawnSync(executable, args, {
+        cwd: commandCwd,
+        env: commandEnv,
+        input: JSON.stringify(payload),
+        encoding: "utf8",
+        maxBuffer: MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES * 2,
+        shell: false,
+        timeout: timeoutMs,
+      });
+      const syncStdoutCapture: DiagnosticCapture = {
+        value: "",
+        byteCount: 0,
+        truncated: false,
+      };
+      const syncStderrCapture: DiagnosticCapture = {
+        value: "",
+        byteCount: 0,
+        truncated: false,
+      };
+      appendCommandDiagnostic(syncStdoutCapture, synchronousResult.stdout ?? "", MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES);
+      appendCommandDiagnostic(syncStderrCapture, synchronousResult.stderr ?? "", MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES);
+      const syncError = synchronousResult.error;
+      const syncTimedOut =
+        Boolean(syncError) &&
+        (syncError as NodeJS.ErrnoException).code === "ETIMEDOUT";
+      const syncSignal = synchronousResult.signal ?? null;
+      const syncExitCode =
+        typeof synchronousResult.status === "number"
+          ? synchronousResult.status
+          : null;
+      const syncLifecycleReason = syncTimedOut
+        ? "timeout"
+        : syncError
+          ? "spawn_error"
+          : syncSignal
+            ? "signal"
+            : "exit";
+      const syncStderr = syncError
+        ? appendTrustedLifecycleDiagnostic(
+            syncStderrCapture.value,
+            sanitizePublicAgentDiagnostic(String(syncError), 160),
+          )
+        : syncStderrCapture.value;
+      resolve({
+        ok:
+          !syncError &&
+          !syncSignal &&
+          synchronousResult.status === 0 &&
+          !syncTimedOut,
+        exitCode: syncExitCode,
+        timedOut: syncTimedOut,
+        stdout: syncStdoutCapture.value,
+        stderr: syncStderr,
+        lifecycleReason: syncLifecycleReason,
+        cleanupVerified: !syncError && !syncTimedOut,
+        stdoutTruncated: syncStdoutCapture.truncated,
+        stderrTruncated: syncStderrCapture.truncated,
+      });
+      return;
+    }
     const useWindowsJobSupervisor =
       processControl.platform === "win32" && isNativeProcessControl;
     const useLinuxNamespaceSupervisor =
@@ -4666,7 +4775,6 @@ function runStoryboardAgentCommand(
                   "utf8",
                 ).toString("base64"),
                 TZUDONG_NS_DEADLINE_MILLISECONDS: String(linuxSpawnBudgetMs),
-                TZUDONG_NS_NODE_LIFETIME_FD: "4",
               },
             }
           : null;
@@ -4685,7 +4793,7 @@ function runStoryboardAgentCommand(
           detached:
             processControl.platform !== "win32" && !useLinuxNamespaceSupervisor,
           stdio: useLinuxNamespaceSupervisor
-            ? ["pipe", "pipe", "pipe", "pipe", "pipe"]
+            ? ["pipe", "pipe", "pipe", "pipe"]
             : ["pipe", "pipe", "pipe"],
           env: supervisorSpec?.env ?? linuxSupervisorSpec?.env ?? commandEnv,
         },

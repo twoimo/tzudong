@@ -141,16 +141,16 @@ async function assertLinuxHeartbeatStopped(markerPath: string) {
 function writePythonShim(commandPath: string, markerPath: string, stdoutJson: unknown, cwdPath?: string) {
   writeExecutableShim(
     commandPath,
-[
-  cwdPath ? `pwd > ${JSON.stringify(cwdPath)}` : undefined,
-  `printf 'called\n' > ${JSON.stringify(markerPath)}`,
-  `printf '%s\\n' ${JSON.stringify(stdoutJson)}`,
-].filter(Boolean) as string[],
-[
-  cwdPath ? `cd > ${JSON.stringify(cwdPath)}` : undefined,
-  `echo called> ${JSON.stringify(markerPath)}`,
-  `echo ${JSON.stringify(stdoutJson)}`,
-].filter(Boolean) as string[],
+    [
+      cwdPath ? `pwd > ${JSON.stringify(cwdPath)}` : undefined,
+      `printf 'called\n' > ${JSON.stringify(markerPath)}`,
+      `printf '%s\\n' ${JSON.stringify(JSON.stringify(stdoutJson))}`,
+    ].filter(Boolean) as string[],
+    [
+      cwdPath ? `cd > ${JSON.stringify(cwdPath)}` : undefined,
+      `echo called> ${JSON.stringify(markerPath)}`,
+      `echo ${JSON.stringify(JSON.stringify(stdoutJson))}`,
+    ].filter(Boolean) as string[],
   );
 }
 function writeFailingPythonShim(commandPath: string, message: string) {

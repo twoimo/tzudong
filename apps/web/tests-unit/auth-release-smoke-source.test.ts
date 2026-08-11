@@ -3,7 +3,7 @@ import { resolve, join } from 'node:path';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { spawn, spawnSync } from 'node:child_process';
-import { createConnection } from 'node:net';
+import { createConnection, createServer } from 'node:net';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { createHash } from 'node:crypto';
@@ -419,11 +419,12 @@ linuxPidNamespaceTest('production controller tears down a real resistant descend
         }
         throw new Error('fixture process survived teardown');
     };
-    await withFakeChild("import { spawn } from 'node:child_process'; import { writeFile } from 'node:fs/promises'; const descendant = spawn(process.execPath, ['-e', \"process.on('SIGTERM',()=>{});setInterval(()=>{},1000)\"], { stdio: 'ignore' }); await writeFile(process.env.FIXTURE_PID_FILE, JSON.stringify({ root: process.pid, descendant: descendant.pid })); process.stdout.write('ready\\n'); setInterval(()=>{},1000);", async (directory, childPath) => {
+    await withFakeChild("import { spawn } from 'node:child_process'; import { existsSync } from 'node:fs'; import { writeFile } from 'node:fs/promises'; import { createServer } from 'node:net'; const descendant = spawn(process.execPath, ['-e', \"const { createServer } = require('node:net'); const { writeFileSync } = require('node:fs'); const server = createServer().listen(0, '127.0.0.1', () => writeFileSync(process.env.FIXTURE_PORT_FILE, String(server.address().port))); process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)\"], { stdio: 'ignore', env: { ...process.env } }); for (let attempt = 0; attempt < 100 && !existsSync(process.env.FIXTURE_PORT_FILE); attempt += 1) await new Promise((resolveDelay) => setTimeout(resolveDelay, 10)); if (!existsSync(process.env.FIXTURE_PORT_FILE)) process.exit(125); await writeFile(process.env.FIXTURE_PID_FILE, JSON.stringify({ root: process.pid, descendant: descendant.pid })); process.stdout.write('ready\\n'); setInterval(()=>{},1000);", async (directory, childPath) => {
         const pidFile = join(directory, 'descendant.pid');
+        const portFile = join(directory, 'descendant.port');
         try {
             await expect(parent.runChild(
-                { PATH: process.env.PATH || '', FIXTURE_PID_FILE: pidFile },
+                { PATH: process.env.PATH || '', FIXTURE_PID_FILE: pidFile, FIXTURE_PORT_FILE: portFile },
                 [],
                 directory,
                 origin.origin,
@@ -443,10 +444,21 @@ linuxPidNamespaceTest('production controller tears down a real resistant descend
                     },
                 },
             )).rejects.toMatchObject({ code: 'NAVIGATION_FAILED' });
-            if (nativeWindows) expect(spawnedArgs).toContain('-EncodedCommand');
             const pids = JSON.parse(await readFile(pidFile, 'utf8'));
-            await waitForExit(pids.root);
-            await waitForExit(pids.descendant);
+            const port = Number(await readFile(portFile, 'utf8'));
+            expect(Number.isInteger(pids.root)).toBe(true);
+            expect(Number.isInteger(pids.descendant)).toBe(true);
+            expect(Number.isInteger(port)).toBe(true);
+            const probe = createServer();
+            await new Promise<void>((resolveListen, rejectListen) => {
+                probe.once('error', rejectListen);
+                probe.listen(port, '127.0.0.1', () => resolveListen());
+            });
+            await new Promise<void>((resolveClose, rejectClose) => {
+                probe.close((error) => error ? rejectClose(error) : resolveClose());
+            });
+            if (spawned?.pid) await waitForExit(spawned.pid);
+            if (nativeWindows) expect(spawnedArgs).toContain('-EncodedCommand');
             expect(spawned?.stdout?.destroyed).toBe(true);
             expect(spawned?.stderr?.destroyed).toBe(true);
         } finally {
@@ -743,6 +755,9 @@ test('revocation migration, active-session authorization, and containment are fa
     expect(parentSource).toContain('ActiveProcessCount(job)!=0');
     expect(parentSource).toContain("stdio: useNativeLinuxPidNamespace ? ['ignore', 'pipe', 'pipe', 'pipe']");
     expect(parentSource).not.toContain('kill(-pid');
+    expect(parentSource).toContain('export function selectLinuxSupervisorExecutable');
+    expect(parentSource).toContain("if (protocolTimer) { clearTimeout(protocolTimer); protocolTimer = undefined; }");
+    expect(parentSource).toContain("if (teardown) return;");
 
     const getUserIndex = requireAdminSource.indexOf('supabase.auth.getUser()');
     const activeSessionIndex = requireAdminSource.indexOf("rpc('is_current_auth_session_active' as never)");
@@ -758,4 +773,21 @@ test('revocation migration, active-session authorization, and containment are fa
     expect(middlewareSource).toContain("adminJsonResponseWithSessionCookies(sourceResponse, 'Forbidden', 403)");
     expect(middlewareSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
     expect(middlewareSource).not.toContain('isMissingOptionalAdminStatusStoreError');
+});
+test('Linux supervisor runtime selection fails closed outside verified Node 24', () => {
+    const configured = resolve(tmpdir(), 'configured-node24');
+    const validFallback = resolve(tmpdir(), 'valid-fallback-node24');
+    const fallback = resolve(tmpdir(), 'fallback-runtime');
+    const wrongVersion = resolve(tmpdir(), 'wrong-node');
+    const versions = new Map([
+        [configured, 'v24.6.0'],
+        [validFallback, 'v24.6.0'],
+        [fallback, 'v20.19.0'],
+        [wrongVersion, 'v23.0.0'],
+    ]);
+    const probe = (candidate: string) => versions.get(candidate) ?? null;
+    expect(parent.selectLinuxSupervisorExecutable(configured, fallback, probe)).toBe(configured);
+    expect(parent.selectLinuxSupervisorExecutable('relative-node24', validFallback, probe)).toBe(validFallback);
+    expect(parent.selectLinuxSupervisorExecutable(wrongVersion, fallback, probe)).toBeNull();
+    expect(parent.selectLinuxSupervisorExecutable(undefined, wrongVersion, probe)).toBeNull();
 });
