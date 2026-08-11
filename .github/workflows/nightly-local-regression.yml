@@ -262,7 +262,7 @@ jobs:
               '-f', 'backend/supabase/docker-compose.yml',
               '-f', 'backend/supabase/docker-compose.local.yml',
               '-f', 'backend/supabase/docker-compose.mail.yml',
-              'create', '--no-start',
+              'create', '--pull=never',
               'analytics', 'auth', 'db', 'functions', 'imgproxy', 'kong', 'mail',
               'meta', 'realtime', 'rest', 'storage', 'supavisor', 'vector',
           ]

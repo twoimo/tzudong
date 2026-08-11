@@ -301,7 +301,7 @@ describe("nightly regression package and source contracts", () => {
       "Probe Compose container creation",
       "backend/supabase/scripts/local-stack.py render",
       "local-compose-create-preflight-v1",
-      "create', '--no-start'",
+      "create', '--pull=never'",
       "mount_invalid",
       "network_create",
       "runtime_create",
