@@ -206,6 +206,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("CI", source)
         self.assertIn("owned_by_current_user", source)
         self.assertIn('["docker", "ps", "-a"', source)
+        self.assertIn("COMPOSE_START_TIMEOUT_SECONDS", source)
+        self.assertIn("timeout=COMPOSE_START_TIMEOUT_SECONDS", source)
         self.assertIn('_assert_project_volumes(command, project)', source)
 if __name__ == "__main__":
     unittest.main()
