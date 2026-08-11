@@ -208,6 +208,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('["docker", "ps", "-a"', source)
         self.assertIn("COMPOSE_START_TIMEOUT_SECONDS", source)
         self.assertIn("timeout=COMPOSE_START_TIMEOUT_SECONDS", source)
+        self.assertIn("COMPOSE_START_RETRIES", source)
+        self.assertIn("retries=COMPOSE_START_RETRIES", source)
         self.assertIn('error_code="compose_config"', source)
         self.assertIn('error_code="compose_core_start"', source)
         self.assertIn('error_code="compose_studio_start"', source)

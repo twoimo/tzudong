@@ -33,6 +33,7 @@ from urllib.request import HTTPSHandler, HTTPRedirectHandler, Request, build_ope
 COMPOSE_VERSION = "v2.39.4"
 GENERATOR_VERSION = "local-stack-v1"
 COMPOSE_START_TIMEOUT_SECONDS = 600
+COMPOSE_START_RETRIES = 2
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -720,16 +721,23 @@ def _run(
     *,
     timeout: int = 120,
     error_code: str = "compose_command",
+    retries: int = 0,
 ) -> subprocess.CompletedProcess[str]:
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False, env=_safe_process_environment())
-    except FileNotFoundError:
-        _fail("docker_not_found")
-    except subprocess.TimeoutExpired:
-        _fail("docker_timeout")
-    if result.returncode != 0:
+    environment = _safe_process_environment()
+    for attempt in range(retries + 1):
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False, env=environment)
+        except FileNotFoundError:
+            _fail("docker_not_found")
+        except subprocess.TimeoutExpired:
+            _fail("docker_timeout")
+        if result.returncode == 0:
+            return result
+        if attempt < retries:
+            time.sleep(10)
+            continue
         _fail(error_code)
-    return result
+    raise AssertionError("unreachable compose retry state")
 def _handle_signal(signum: int, _frame: Any) -> None:
     global _ACTIVE_COMMAND
     command = _ACTIVE_COMMAND
@@ -1426,12 +1434,14 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             command + ["up", "-d", *CORE_SERVICES],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_core_start",
+            retries=COMPOSE_START_RETRIES,
         )
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
             command + ["up", "-d", "studio"],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
             error_code="compose_studio_start",
+            retries=COMPOSE_START_RETRIES,
         )
         services = _wait_ready(command, values)
     except (LocalStackError, OSError, ValueError):
