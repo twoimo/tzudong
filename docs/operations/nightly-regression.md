@@ -94,7 +94,8 @@ container state until bounded diagnostics are captured; the final cleanup step
 still removes the project and volumes.
 The diagnostics receipt records only service state, exit code, health status,
 health failure streak, bounded health-check exit codes, restart count, OOM
-status, and a fixed class derived from bounded container logs.
+status, a fixed class derived from bounded container logs, and the fixed
+database bootstrap result.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
