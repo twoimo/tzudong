@@ -238,7 +238,7 @@ jobs:
           set -euo pipefail
           render_receipt="$RUNNER_TEMP/local-stack-render-preflight.json"
           python3 backend/supabase/scripts/local-stack.py render > "$render_receipt"
-          python3 "$render_receipt" <<'PY'
+          python3 - "$render_receipt" <<'PY'
           import json
           import os
           import pathlib
