@@ -287,7 +287,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
-    const publishIndex = localWorkflowSource.indexOf("\npublish:");
+    const publishIndex = localWorkflowSource.indexOf("\n  publish:");
     expect(publishIndex).toBeGreaterThan(0);
     const regressionWorkflowSource = localWorkflowSource.slice(0, publishIndex);
     expect(regressionWorkflowSource).toContain("contents: read");
