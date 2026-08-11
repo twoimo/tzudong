@@ -743,6 +743,9 @@ test('revocation migration, active-session authorization, and containment are fa
     expect(parentSource).toContain('ActiveProcessCount(job)!=0');
     expect(parentSource).toContain("stdio: useNativeLinuxPidNamespace ? ['ignore', 'pipe', 'pipe', 'pipe']");
     expect(parentSource).not.toContain('kill(-pid');
+    expect(parentSource).toContain('export function selectLinuxSupervisorExecutable');
+    expect(parentSource).toContain("if (protocolTimer) { clearTimeout(protocolTimer); protocolTimer = undefined; }");
+    expect(parentSource).toContain("if (teardown) return;");
 
     const getUserIndex = requireAdminSource.indexOf('supabase.auth.getUser()');
     const activeSessionIndex = requireAdminSource.indexOf("rpc('is_current_auth_session_active' as never)");
@@ -758,4 +761,21 @@ test('revocation migration, active-session authorization, and containment are fa
     expect(middlewareSource).toContain("adminJsonResponseWithSessionCookies(sourceResponse, 'Forbidden', 403)");
     expect(middlewareSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
     expect(middlewareSource).not.toContain('isMissingOptionalAdminStatusStoreError');
+});
+test('Linux supervisor runtime selection fails closed outside verified Node 24', () => {
+    const configured = resolve(tmpdir(), 'configured-node24');
+    const validFallback = resolve(tmpdir(), 'valid-fallback-node24');
+    const fallback = resolve(tmpdir(), 'fallback-runtime');
+    const wrongVersion = resolve(tmpdir(), 'wrong-node');
+    const versions = new Map([
+        [configured, 'v24.6.0'],
+        [validFallback, 'v24.6.0'],
+        [fallback, 'v20.19.0'],
+        [wrongVersion, 'v23.0.0'],
+    ]);
+    const probe = (candidate: string) => versions.get(candidate) ?? null;
+    expect(parent.selectLinuxSupervisorExecutable(configured, fallback, probe)).toBe(configured);
+    expect(parent.selectLinuxSupervisorExecutable('relative-node24', validFallback, probe)).toBe(validFallback);
+    expect(parent.selectLinuxSupervisorExecutable(wrongVersion, fallback, probe)).toBeNull();
+    expect(parent.selectLinuxSupervisorExecutable(undefined, wrongVersion, probe)).toBeNull();
 });
