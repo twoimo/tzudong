@@ -1,0 +1,117 @@
+# Local-only overlay. Render with Docker Compose v2.39.4 through scripts/local-stack.py.
+# This file deliberately excludes docker-compose.override.yml and dev/docker-compose.dev.yml.
+name: !reset null
+
+services:
+  studio: !override
+    image: supabase/studio:2025.12.17-sha-43f4f7f
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:${STUDIO_PORT}:3000/tcp"
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})" ]
+      timeout: 10s
+      interval: 5s
+      retries: 3
+    depends_on:
+      analytics:
+        condition: service_healthy
+    environment:
+      HOSTNAME: "::"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_URL: http://analytics:4000
+      NEXT_PUBLIC_ENABLE_LOGS: "true"
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+
+  kong:
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1:${KONG_HTTP_PORT}:8000/tcp"
+      - "127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp"
+    volumes: !override
+      - "${LOCAL_INPUT_ROOT}/kong.yml:/home/kong/temp.yml:ro,z"
+
+  auth:
+    container_name: !reset null
+
+  rest:
+    container_name: !reset null
+
+  realtime:
+    container_name: !reset null
+
+  storage:
+    container_name: !reset null
+    volumes: !override
+      - "local-storage-data:/var/lib/storage:Z"
+
+  imgproxy:
+    container_name: !reset null
+    volumes: !override
+      - "local-storage-data:/var/lib/storage:Z"
+
+  meta:
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1:${META_PORT}:8080/tcp"
+
+  functions:
+    container_name: !reset null
+    volumes: !override
+      - "${LOCAL_INPUT_ROOT}/functions:/home/deno/functions:ro,Z"
+
+  analytics:
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1:${ANALYTICS_PORT}:4000/tcp"
+
+  db:
+    container_name: !reset null
+    volumes: !override
+      - "${LOCAL_INPUT_ROOT}/db-realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro,z"
+      - "${LOCAL_INPUT_ROOT}/db-webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro,z"
+      - "${LOCAL_INPUT_ROOT}/db-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro,z"
+      - "${LOCAL_INPUT_ROOT}/db-jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro,z"
+      - "local-db-data:/var/lib/postgresql/data:Z"
+      - "${LOCAL_INPUT_ROOT}/db-supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro,z"
+      - "${LOCAL_INPUT_ROOT}/db-logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:ro,z"
+      - "${LOCAL_INPUT_ROOT}/db-pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:ro,z"
+      - "local-db-config:/etc/postgresql-custom"
+
+  vector:
+    container_name: !reset null
+    volumes: !override
+      - "${LOCAL_INPUT_ROOT}/vector.yml:/etc/vector/vector.yml:ro,z"
+
+  supavisor:
+    container_name: !reset null
+    ports: !override
+      # POSTGRES_PORT remains the internal 5432 listener; only the host mapping is derived.
+      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432/tcp"
+      - "127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543/tcp"
+    volumes: !override
+      - "${LOCAL_INPUT_ROOT}/pooler.exs:/etc/pooler/pooler.exs:ro,z"
+
+volumes: !override
+  local-db-data:
+    name: "${PROJECT_NAME}-db-data"
+  local-db-config:
+    name: "${PROJECT_NAME}-db-config"
+  local-storage-data:
+    name: "${PROJECT_NAME}-storage-data"
