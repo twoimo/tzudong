@@ -68,11 +68,13 @@ rows, provider payloads, or arbitrary workspace files. The job stops and
 removes only its generated Compose project and state root after artifact
 collection.
 
-GitHub Releases are deliberately not used as the first publication boundary.
-A Release would require `contents: write` and a separate public/private
-retention decision. Add an immutable prerelease only after that policy and
-artifact allowlist receive explicit review; Actions artifacts remain the
-default nightly record.
+A successful run also publishes a public, immutable prerelease named
+`nightly-local-<run-id>-<attempt>` with the same explicit sanitized allowlist.
+The workflow grants `contents: write` only to this local job for that purpose;
+the release is always marked prerelease and never becomes the repository's
+latest stable release. A public repository makes this boundary intentional:
+release notes and assets contain no credentials, `stack.env`, raw rows, DSNs,
+provider payloads, or hosted/production state.
 
 To run the same lane manually, dispatch **Nightly Local Regression** and choose
 `all`, `unit`, or `e2e`. A GitHub-hosted Ubuntu runner must pass the namespace
