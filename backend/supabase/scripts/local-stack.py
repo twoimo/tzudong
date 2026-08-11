@@ -715,7 +715,12 @@ def _safe_process_environment() -> dict[str, str]:
     # overrides while Docker still uses its locally configured context.
     return environment
 
-def _run(command: list[str], *, timeout: int = 120) -> subprocess.CompletedProcess[str]:
+def _run(
+    command: list[str],
+    *,
+    timeout: int = 120,
+    error_code: str = "compose_command",
+) -> subprocess.CompletedProcess[str]:
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False, env=_safe_process_environment())
     except FileNotFoundError:
@@ -723,7 +728,7 @@ def _run(command: list[str], *, timeout: int = 120) -> subprocess.CompletedProce
     except subprocess.TimeoutExpired:
         _fail("docker_timeout")
     if result.returncode != 0:
-        _fail("compose_command")
+        _fail(error_code)
     return result
 def _handle_signal(signum: int, _frame: Any) -> None:
     global _ACTIVE_COMMAND
@@ -1410,16 +1415,24 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
     files = meta["files"]
     env_path = state / "stack.env"
     command = _compose(project, env_path, files)
-    _run(command + ["config", "--quiet"])
+    _run(command + ["config", "--quiet"], error_code="compose_config")
     _assert_project_volumes(command, project)
     _port_preflight(values)
     started = False
     try:
         _ACTIVE_COMMAND = command
         started = True
-        _run(command + ["up", "-d", *CORE_SERVICES], timeout=COMPOSE_START_TIMEOUT_SECONDS)
+        _run(
+            command + ["up", "-d", *CORE_SERVICES],
+            timeout=COMPOSE_START_TIMEOUT_SECONDS,
+            error_code="compose_core_start",
+        )
         _wait_ready(command, values, required=CORE_REQUIRED)
-        _run(command + ["up", "-d", "studio"], timeout=COMPOSE_START_TIMEOUT_SECONDS)
+        _run(
+            command + ["up", "-d", "studio"],
+            timeout=COMPOSE_START_TIMEOUT_SECONDS,
+            error_code="compose_studio_start",
+        )
         services = _wait_ready(command, values)
     except (LocalStackError, OSError, ValueError):
         if started:
