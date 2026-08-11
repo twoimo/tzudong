@@ -57,7 +57,13 @@ class LocalComposeInputContractTests(unittest.TestCase):
             else:
                 self.assertIn("container_name: !reset null", block, service)
         self.assertIn("image: inbucket/inbucket:3.0.3", self.mail_source)
-        for volume in ("db-data", "db-config", "storage-data"):
+        for volume in (
+            "db-data",
+            "db-config",
+            "db-init-migrations",
+            "db-init-scripts",
+            "storage-data",
+        ):
             self.assertIn(f'name: "${{PROJECT_NAME}}-{volume}"', self.overlay_source)
 
     def test_ports_and_urls_are_loopback_only(self) -> None:
@@ -111,7 +117,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
 
     def test_tracked_inputs_are_explicit_local_sources_and_destinations(self) -> None:
         for output, relative in local_stack.TRACKED_SQL.items():
-            self.assertIn(f'"${{LOCAL_INPUT_ROOT}}/{output}:/', self.overlay_source)
+            self.assertNotIn(f'"${{LOCAL_INPUT_ROOT}}/{output}:/', self.overlay_source)
             self.assertEqual(relative.split("/")[0], "volumes")
             self.assertNotIn("${HOME}", self.overlay_source)
             self.assertNotIn("/var/run/docker.sock", self.overlay_source)
@@ -119,6 +125,14 @@ class LocalComposeInputContractTests(unittest.TestCase):
         for destination in local_stack.DESTINATIONS:
             self.assertIsInstance(destination, str)
             self.assertTrue(destination.startswith("/"))
+        self.assertIn(
+            '"local-db-init-migrations:/docker-entrypoint-initdb.d/migrations:Z"',
+            self.overlay_source,
+        )
+        self.assertIn(
+            '"local-db-init-scripts:/docker-entrypoint-initdb.d/init-scripts:Z"',
+            self.overlay_source,
+        )
         self.assertIn('"${LOCAL_INPUT_ROOT}/functions:/home/deno/functions:ro,Z"', self.overlay_source)
         self.assertIn('"${LOCAL_INPUT_ROOT}/vector.yml:/etc/vector/vector.yml:ro,z"', self.overlay_source)
         self.assertIn('"${LOCAL_INPUT_ROOT}/pooler.exs:/etc/pooler/pooler.exs:ro,z"', self.overlay_source)
@@ -237,9 +251,12 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("_probe_database_bootstrap", source)
         self.assertIn("_analytics", source)
         self.assertIn("pg_namespace", source)
-        self.assertNotIn("_stage_database_init_files", source)
-        self.assertNotIn("compose_db_init_stage", source)
-        self.assertNotIn('"docker", "cp"', source)
+        self.assertIn("DB_INIT_VOLUME_FILES", source)
+        self.assertIn("_stage_database_init_files", source)
+        self.assertIn("compose_db_init_stage", source)
+        self.assertIn('"create",', source)
+        self.assertIn('"wait",', source)
+        self.assertIn("chmod 0644", source)
         self.assertIn('"create", "--force-recreate", "--pull=missing"', source)
         self.assertIn('command + ["start", service]', source)
         self.assertIn("_COMPOSE_ERROR_MARKERS", source)

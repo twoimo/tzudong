@@ -486,10 +486,22 @@ jobs:
           set -euo pipefail
           mkdir -p nightly-artifacts
           if [[ -n "${LOCAL_PROJECT:-}" ]]; then
-            docker volume rm -f \
+            for volume in \
               "${LOCAL_PROJECT}-db-data" \
               "${LOCAL_PROJECT}-db-config" \
-              "${LOCAL_PROJECT}-storage-data" || true
+              "${LOCAL_PROJECT}-db-init-migrations" \
+              "${LOCAL_PROJECT}-db-init-scripts" \
+              "${LOCAL_PROJECT}-storage-data"; do
+              mapfile -t consumers < <(docker ps -aq --filter "volume=$volume")
+              if ((${#consumers[@]})); then
+                docker rm -f "${consumers[@]}"
+              fi
+              docker volume rm -f "$volume" || true
+              if docker volume inspect "$volume"; then
+                echo "disposable volume remained after scoped cleanup: $volume" >&2
+                exit 2
+              fi
+            done
           fi
           python3 backend/supabase/scripts/local-stack.py reset \
             > nightly-artifacts/local-stack-reset.json

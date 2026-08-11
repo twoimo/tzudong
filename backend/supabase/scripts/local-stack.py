@@ -50,9 +50,20 @@ TRACKED_SQL = {
     "db-logs.sql": "volumes/db/logs.sql",
     "db-pooler.sql": "volumes/db/pooler.sql",
 }
+DB_INIT_VOLUME_FILES = (
+    ("db-supabase.sql", "db-init-migrations", "97-_supabase.sql"),
+    ("db-logs.sql", "db-init-migrations", "99-logs.sql"),
+    ("db-pooler.sql", "db-init-migrations", "99-pooler.sql"),
+    ("db-realtime.sql", "db-init-migrations", "99-realtime.sql"),
+    ("db-webhooks.sql", "db-init-scripts", "98-webhooks.sql"),
+    ("db-roles.sql", "db-init-scripts", "99-roles.sql"),
+    ("db-jwt.sql", "db-init-scripts", "99-jwt.sql"),
+)
 DESTINATIONS = {
     "/home/kong/temp.yml", "/etc/vector/vector.yml", "/etc/pooler/pooler.exs",
     "/var/lib/postgresql/data", "/etc/postgresql-custom", "/var/lib/storage",
+    "/docker-entrypoint-initdb.d/migrations",
+    "/docker-entrypoint-initdb.d/init-scripts",
     "/home/deno/functions", "/docker-entrypoint-initdb.d/migrations/99-realtime.sql",
     "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql",
     "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql",
@@ -71,7 +82,13 @@ LOCAL_URL_KEYS = ("SITE_URL", "API_EXTERNAL_URL", "SUPABASE_PUBLIC_URL")
 DOCKER_SOCKET_DEFAULT = Path("/var/run/docker.sock")
 DOCKER_SOCKET_DOCKER_DESKTOP = ".docker/run/docker.sock"
 DOCKER_SOCKET_COLIMA = ".colima/default/docker.sock"
-TARGET_VOLUME_SUFFIXES = ("db-data", "db-config", "storage-data")
+TARGET_VOLUME_SUFFIXES = (
+    "db-data",
+    "db-config",
+    "db-init-migrations",
+    "db-init-scripts",
+    "storage-data",
+)
 DOCKER_PROJECT_LABEL = "com.docker.compose.project"
 DOCKER_VOLUME_LABEL = "com.docker.compose.volume"
 DOCKER_SERVICE_LABEL = "com.docker.compose.service"
@@ -1031,7 +1048,7 @@ def _scan_model(model: dict[str, Any], project: str, state: Path, values: dict[s
         if volume_name not in expected_named_volumes or not isinstance(volume, dict):
             _fail("model_volume")
         actual_name = volume.get("name")
-        if actual_name not in {f"{project}-db-data", f"{project}-db-config", f"{project}-storage-data"}:
+        if actual_name not in {f"{project}-{suffix}" for suffix in TARGET_VOLUME_SUFFIXES}:
             _fail("model_volume")
     if sorted(published_ports) != sorted(expected_ports):
         _fail("model_ports")
@@ -1457,6 +1474,70 @@ def _assert_project_volumes(command: list[str], project: str, *, require_existin
             if labels.get(DOCKER_PROJECT_LABEL) != project or labels.get(DOCKER_SERVICE_LABEL) not in EXPECTED_SERVICES:
                 _fail("docker_container")
 
+
+def _stage_database_init_files(project: str, state: Path) -> None:
+    for source_name, _volume_suffix, _destination_name in DB_INIT_VOLUME_FILES:
+        _regular_owned(state / "inputs" / source_name, mode=0o600)
+    migrations_volume = f"{project}-db-init-migrations"
+    scripts_volume = f"{project}-db-init-scripts"
+    commands = [
+        "set -eu",
+        "cp /inputs/db-supabase.sql /migrations/97-_supabase.sql",
+        "cp /inputs/db-logs.sql /migrations/99-logs.sql",
+        "cp /inputs/db-pooler.sql /migrations/99-pooler.sql",
+        "cp /inputs/db-realtime.sql /migrations/99-realtime.sql",
+        "cp /inputs/db-webhooks.sql /scripts/98-webhooks.sql",
+        "cp /inputs/db-roles.sql /scripts/99-roles.sql",
+        "cp /inputs/db-jwt.sql /scripts/99-jwt.sql",
+        "chmod 0644 /migrations/97-_supabase.sql /migrations/99-logs.sql /migrations/99-pooler.sql /migrations/99-realtime.sql /scripts/98-webhooks.sql /scripts/99-roles.sql /scripts/99-jwt.sql",
+    ]
+    helper: str | None = None
+    try:
+        result = _run(
+            [
+                "docker",
+                "create",
+                "--network",
+                "none",
+                "--entrypoint",
+                "sh",
+                "-v",
+                f"{state / 'inputs'}:/inputs:ro,z",
+                "-v",
+                f"{migrations_volume}:/migrations:Z",
+                "-v",
+                f"{scripts_volume}:/scripts:Z",
+                "supabase/postgres:15.8.1.085",
+                "-c",
+                "; ".join(commands),
+            ],
+            error_code="compose_db_init_stage",
+        )
+        helper = result.stdout.strip()
+        if not re.fullmatch(r"[0-9a-f]{12,64}", helper):
+            _fail("compose_db_init_stage")
+        _run(
+            ["docker", "start", helper],
+            error_code="compose_db_init_stage",
+        )
+        wait_result = _run(
+            ["docker", "wait", helper],
+            error_code="compose_db_init_stage",
+        )
+        if wait_result.stdout.strip() != "0":
+            _fail("compose_db_init_stage")
+    finally:
+        if helper is not None:
+            try:
+                _run(
+                    ["docker", "rm", "-f", helper],
+                    timeout=60,
+                    error_code="compose_db_init_cleanup",
+                )
+            except (LocalStackError, OSError, ValueError):
+                pass
+
+
 def _action_render(root: Path, project: str, state: Path) -> dict[str, Any]:
     digest, _, _ = _render(root, project, state)
     input_digest, env_digest = _provenance_digests(state)
@@ -1485,6 +1566,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
         )
+        _stage_database_init_files(project, state)
         for services, wait_for in CORE_START_PHASES:
             for service in services:
                 _run(
