@@ -183,6 +183,22 @@ class LocalComposeInputContractTests(unittest.TestCase):
             self.assertFalse(local_stack._probe_host_https(18443, "/auth/v1/health", timeout=2))
 
 
+    def test_compose_error_classification_is_fixed_and_redacted(self) -> None:
+        cases = (
+            ("toomanyrequests: rate limit", "image_rate_limited"),
+            ("manifest unknown", "image_unavailable"),
+            ("no space left on device", "disk_full"),
+            ("address already in use", "port_conflict"),
+            ("operation not permitted", "permission_denied"),
+            ("temporary failure in name resolution", "network_unavailable"),
+            ("opaque provider diagnostic password=secret", "unknown"),
+        )
+        for stderr, expected in cases:
+            with self.subTest(stderr=stderr):
+                suffix = local_stack._compose_error_suffix(stderr)
+                self.assertEqual(suffix, expected)
+                self.assertNotIn("password", suffix)
+                self.assertNotIn("secret", suffix)
     def test_local_stack_rejects_remote_contexts_and_unowned_volume_resources(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         for guard in (
@@ -210,6 +226,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("timeout=COMPOSE_START_TIMEOUT_SECONDS", source)
         self.assertIn("COMPOSE_START_RETRIES", source)
         self.assertIn("retries=COMPOSE_START_RETRIES", source)
+        self.assertIn("_COMPOSE_ERROR_MARKERS", source)
+        self.assertIn("_compose_error_suffix", source)
         self.assertIn('error_code="compose_config"', source)
         self.assertIn('error_code="compose_core_start"', source)
         self.assertIn('error_code="compose_studio_start"', source)
