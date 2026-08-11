@@ -319,6 +319,9 @@ describe("nightly regression package and source contracts", () => {
       "log_failure_class",
       "oom_killed",
       "restart_count",
+      "database_bootstrap",
+      "analytics_schema_present",
+      "analytics_schema_missing",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {

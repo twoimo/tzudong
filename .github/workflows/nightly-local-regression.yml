@@ -614,6 +614,7 @@ jobs:
                   ).splitlines()
               except (OSError, subprocess.SubprocessError):
                   ids = []
+              db_container_id = None
               for container_id in ids:
                   try:
                       raw = subprocess.check_output(
@@ -632,6 +633,8 @@ jobs:
                       'supavisor', 'vector',
                   }:
                       continue
+                  if service == 'db':
+                      db_container_id = container_id
                   state = payload.get('State') or {}
                   health = state.get('Health') or {}
                   health_log = health.get('Log') or []
@@ -660,11 +663,49 @@ jobs:
                           if isinstance(item, dict) and isinstance(item.get('ExitCode'), int) and 0 <= item.get('ExitCode') <= 255
                       ],
                   })
+              database_bootstrap = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
+              if db_container_id is not None:
+                  try:
+                      result = subprocess.run(
+                          [
+                              'docker', 'exec', db_container_id,
+                              'psql', '-U', 'postgres', '-d', '_supabase',
+                              '-Atqc',
+                              "select case when exists (select 1 from pg_namespace where nspname = '_analytics') then 'analytics_schema_present' else 'analytics_schema_missing' end",
+                          ],
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                      )
+                      database_bootstrap = {
+                          'status': 'passed' if result.returncode == 0 and result.stdout.strip() == 'analytics_schema_present' else 'failed',
+                          'result': result.stdout.strip() if result.stdout.strip() in {'analytics_schema_present', 'analytics_schema_missing'} else 'unknown',
+                          'failure_class': classify(result.stderr),
+                          'exit_code': result.returncode if 0 <= result.returncode <= 255 else None,
+                      }
+                  except FileNotFoundError:
+                      database_bootstrap['failure_class'] = 'docker_not_found'
+                  except subprocess.TimeoutExpired:
+                      database_bootstrap['failure_class'] = 'timeout'
+          else:
+              database_bootstrap = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
           records.sort(key=lambda item: item['service'])
           pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json').write_text(
               json.dumps({
                   'schema': 'local-compose-runtime-diagnostics-v1',
                   'project_name': project if project.startswith('tzudong-local-') else 'unknown',
+                  'database_bootstrap': database_bootstrap,
                   'containers': records,
               }, sort_keys=True, separators=(',', ':')) + '\n',
               encoding='utf-8',
