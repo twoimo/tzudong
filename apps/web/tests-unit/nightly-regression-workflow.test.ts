@@ -291,6 +291,11 @@ describe("nightly regression package and source contracts", () => {
       "allowed_services",
       "allowed_states",
       "allowed_health",
+      "Pull pinned Compose images",
+      "docker', 'pull'",
+      "local-image-pull-preflight-v1",
+      "registry_auth",
+      "registry_network",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {
