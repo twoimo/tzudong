@@ -392,7 +392,46 @@ jobs:
           except subprocess.TimeoutExpired:
               collective['failure_class'] = 'timeout'
           results = []
-          failed = collective['status'] != 'passed'
+          failed = False
+          if collective['status'] != 'passed':
+              subprocess.run(
+                  [*command_prefix, 'down', '--volumes', '--remove-orphans'],
+                  capture_output=True,
+                  text=True,
+                  timeout=120,
+                  check=False,
+                  env=safe_env,
+              )
+              try:
+                  recreate = subprocess.run(
+                      [*command_prefix, 'create', '--pull=never', *services],
+                      capture_output=True,
+                      text=True,
+                      timeout=300,
+                      check=False,
+                      env=safe_env,
+                  )
+                  if recreate.returncode != 0:
+                      results.append({
+                          'service': '__recreate__',
+                          'status': 'failed',
+                          'failure_class': classify(recreate.stderr),
+                      })
+                      failed = True
+              except FileNotFoundError:
+                  results.append({
+                      'service': '__recreate__',
+                      'status': 'failed',
+                      'failure_class': 'docker_not_found',
+                  })
+                  failed = True
+              except subprocess.TimeoutExpired:
+                  results.append({
+                      'service': '__recreate__',
+                      'status': 'failed',
+                      'failure_class': 'timeout',
+                  })
+                  failed = True
           for service in services if not failed else ():
               record = {'service': service, 'status': 'failed', 'failure_class': 'unknown'}
               try:
