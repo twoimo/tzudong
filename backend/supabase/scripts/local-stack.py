@@ -36,6 +36,7 @@ COMPOSE_START_TIMEOUT_SECONDS = 600
 COMPOSE_START_RETRIES = 2
 COMPOSE_SERVICE_START_TIMEOUT_SECONDS = 180
 COMPOSE_SERVICE_START_RETRIES = 1
+COMPOSE_DATABASE_BOOTSTRAP_TIMEOUT_SECONDS = 900
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -1493,7 +1494,16 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
                     retries=COMPOSE_SERVICE_START_RETRIES,
                 )
             if wait_for:
-                _wait_ready(command, values, required=wait_for)
+                _wait_ready(
+                    command,
+                    values,
+                    timeout=(
+                        COMPOSE_DATABASE_BOOTSTRAP_TIMEOUT_SECONDS
+                        if wait_for == ("db",)
+                        else 300
+                    ),
+                    required=wait_for,
+                )
         _wait_ready(command, values, required=CORE_REQUIRED)
         _run(
             command + ["create", "--force-recreate", "--pull=missing", "studio"],
