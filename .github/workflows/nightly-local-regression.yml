@@ -479,6 +479,8 @@ jobs:
               print('Compose startup diagnostics recorded; continuing lifecycle acceptance.', file=sys.stderr)
           PY
       - name: Reset disposable local stack
+        env:
+          LOCAL_STACK_PRESERVE_FAILURE_STATE: '1'
         shell: bash
         run: |
           set -euo pipefail

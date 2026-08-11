@@ -87,6 +87,9 @@ When container creation succeeds, it starts each Core service separately and
 retains only fixed service/failure-class fields for the first failing service.
 The same receipt records whether the collective `up` orchestration succeeds,
 which distinguishes Compose orchestration failures from per-service starts.
+During the hosted acceptance lane, a failed reset preserves the disposable
+container state until bounded diagnostics are captured; the final cleanup step
+still removes the project and volumes.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
