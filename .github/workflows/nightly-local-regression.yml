@@ -219,6 +219,8 @@ jobs:
           python3 - <<'PY'
           import os
           from pathlib import Path
+          import json
+          import subprocess
 
           output = Path('nightly-artifacts')
           output.mkdir(parents=True, exist_ok=True)
@@ -230,6 +232,99 @@ jobs:
               )
               if os.environ.get(name, '')
           ]
+          reset_path = Path('nightly-artifacts/local-stack-reset.json')
+          try:
+              reset = json.loads(reset_path.read_text(encoding='utf-8'))
+          except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+              reset = {}
+          if reset.get('ok') is not True:
+              project = reset.get('project_name')
+              valid_project = (
+                  isinstance(project, str)
+                  and project.startswith('tzudong-local-')
+                  and len(project) == len('tzudong-local-') + 12
+              )
+              diagnostics = {
+                  'schema': 'local-stack-failure-diagnostics-v1',
+                  'project_name': project if valid_project else 'unknown',
+                  'failure_code': (
+                      reset.get('error_code')
+                      if isinstance(reset.get('error_code'), str)
+                      and reset.get('error_code').replace('_', '').isalnum()
+                      else 'reset_unknown'
+                  ),
+                  'compose_ps': 'unavailable',
+                  'services': [],
+              }
+              if valid_project:
+                  root = Path('backend/supabase/volumes/.local-stack') / project
+                  command = [
+                      'docker', 'compose',
+                      '--project-name', project,
+                      '--env-file', str(root / 'stack.env'),
+                      '-f', 'backend/supabase/docker-compose.yml',
+                      '-f', 'backend/supabase/docker-compose.local.yml',
+                      '-f', 'backend/supabase/docker-compose.mail.yml',
+                      'ps', '--all', '--format', 'json',
+                  ]
+                  safe_env = {
+                      key: os.environ[key]
+                      for key in ('PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM')
+                      if os.environ.get(key)
+                  }
+                  safe_env.setdefault('PATH', '/usr/bin:/bin')
+                  safe_env.setdefault('HOME', str(Path.home()))
+                  try:
+                      result = subprocess.run(
+                          command,
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                          env=safe_env,
+                      )
+                      if result.returncode == 0:
+                          diagnostics['compose_ps'] = 'passed'
+                          try:
+                              parsed = json.loads(result.stdout)
+                              entries = parsed if isinstance(parsed, list) else [parsed]
+                          except (TypeError, ValueError):
+                              entries = [
+                                  json.loads(line)
+                                  for line in result.stdout.splitlines()
+                                  if line.strip()
+                              ]
+                          allowed_services = {
+                              'analytics', 'auth', 'db', 'functions', 'imgproxy', 'kong',
+                              'mail', 'meta', 'realtime', 'rest', 'storage', 'studio',
+                              'supavisor', 'vector',
+                          }
+                          allowed_states = {'created', 'running', 'exited', 'dead', 'paused', 'restarting', 'removing'}
+                          allowed_health = {'', 'healthy', 'unhealthy', 'starting'}
+                          for entry in entries:
+                              if not isinstance(entry, dict):
+                                  continue
+                              service = entry.get('Service')
+                              state_value = entry.get('State')
+                              health_value = entry.get('Health') or ''
+                              exit_code = entry.get('ExitCode')
+                              if service not in allowed_services:
+                                  continue
+                              diagnostics['services'].append({
+                                  'service': service,
+                                  'state': state_value if state_value in allowed_states else 'unknown',
+                                  'health': health_value if health_value in allowed_health else 'unknown',
+                                  'exit_code': exit_code if isinstance(exit_code, int) and 0 <= exit_code <= 255 else None,
+                              })
+                  except (OSError, subprocess.TimeoutExpired, TypeError, ValueError, json.JSONDecodeError):
+                      pass
+              diagnostics['services'].sort(key=lambda entry: entry['service'])
+              target = output / 'failure-diagnostics/local-stack-failure-diagnostics.json'
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(
+                  json.dumps(diagnostics, sort_keys=True, separators=(',', ':')) + '\n',
+                  encoding='utf-8',
+              )
           sources = []
           state = os.environ.get('LOCAL_STATE', '')
           if state:
