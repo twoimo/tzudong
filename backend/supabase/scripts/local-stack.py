@@ -50,7 +50,11 @@ TRACKED_SQL = {
     "db-logs.sql": "volumes/db/logs.sql",
     "db-pooler.sql": "volumes/db/pooler.sql",
 }
-DB_INIT_VOLUME_FILES = (
+STAGED_INPUT_FILES = (
+    ("kong.yml", "kong-config", "temp.yml"),
+    ("vector.yml", "vector-config", "vector.yml"),
+    ("pooler.exs", "pooler-config", "pooler.exs"),
+    ("functions/main/index.ts", "functions", "main/index.ts"),
     ("db-supabase.sql", "db-init-migrations", "97-_supabase.sql"),
     ("db-logs.sql", "db-init-migrations", "99-logs.sql"),
     ("db-pooler.sql", "db-init-migrations", "99-pooler.sql"),
@@ -60,7 +64,8 @@ DB_INIT_VOLUME_FILES = (
     ("db-jwt.sql", "db-init-scripts", "99-jwt.sql"),
 )
 DESTINATIONS = {
-    "/home/kong/temp.yml", "/etc/vector/vector.yml", "/etc/pooler/pooler.exs",
+    "/home/kong", "/home/kong/temp.yml", "/etc/vector", "/etc/vector/vector.yml",
+    "/etc/pooler", "/etc/pooler/pooler.exs",
     "/var/lib/postgresql/data", "/etc/postgresql-custom", "/var/lib/storage",
     "/docker-entrypoint-initdb.d/migrations",
     "/docker-entrypoint-initdb.d/init-scripts",
@@ -87,7 +92,11 @@ TARGET_VOLUME_SUFFIXES = (
     "db-config",
     "db-init-migrations",
     "db-init-scripts",
+    "functions",
+    "kong-config",
+    "pooler-config",
     "storage-data",
+    "vector-config",
 )
 DOCKER_PROJECT_LABEL = "com.docker.compose.project"
 DOCKER_VOLUME_LABEL = "com.docker.compose.volume"
@@ -1475,13 +1484,24 @@ def _assert_project_volumes(command: list[str], project: str, *, require_existin
                 _fail("docker_container")
 
 
-def _stage_database_init_files(project: str, state: Path) -> None:
-    for source_name, _volume_suffix, _destination_name in DB_INIT_VOLUME_FILES:
+def _stage_input_files(project: str, state: Path) -> None:
+    for source_name, _volume_suffix, _destination_name in STAGED_INPUT_FILES:
         _regular_owned(state / "inputs" / source_name, mode=0o600)
-    migrations_volume = f"{project}-db-init-migrations"
-    scripts_volume = f"{project}-db-init-scripts"
+    volume_paths = {
+        "kong-config": "/kong",
+        "vector-config": "/vector",
+        "pooler-config": "/pooler",
+        "functions": "/functions",
+        "db-init-migrations": "/migrations",
+        "db-init-scripts": "/scripts",
+    }
     commands = [
         "set -eu",
+        "mkdir -p /functions/main",
+        "cp /inputs/kong.yml /kong/temp.yml",
+        "cp /inputs/vector.yml /vector/vector.yml",
+        "cp /inputs/pooler.exs /pooler/pooler.exs",
+        "cp /inputs/functions/main/index.ts /functions/main/index.ts",
         "cp /inputs/db-supabase.sql /migrations/97-_supabase.sql",
         "cp /inputs/db-logs.sql /migrations/99-logs.sql",
         "cp /inputs/db-pooler.sql /migrations/99-pooler.sql",
@@ -1489,8 +1509,11 @@ def _stage_database_init_files(project: str, state: Path) -> None:
         "cp /inputs/db-webhooks.sql /scripts/98-webhooks.sql",
         "cp /inputs/db-roles.sql /scripts/99-roles.sql",
         "cp /inputs/db-jwt.sql /scripts/99-jwt.sql",
-        "chmod 0644 /migrations/97-_supabase.sql /migrations/99-logs.sql /migrations/99-pooler.sql /migrations/99-realtime.sql /scripts/98-webhooks.sql /scripts/99-roles.sql /scripts/99-jwt.sql",
+        "chmod 0644 /kong/temp.yml /vector/vector.yml /pooler/pooler.exs /functions/main/index.ts /migrations/97-_supabase.sql /migrations/99-logs.sql /migrations/99-pooler.sql /migrations/99-realtime.sql /scripts/98-webhooks.sql /scripts/99-roles.sql /scripts/99-jwt.sql",
     ]
+    volume_args: list[str] = []
+    for suffix, path in volume_paths.items():
+        volume_args.extend(("-v", f"{project}-{suffix}:{path}:Z"))
     helper: str | None = None
     try:
         result = _run(
@@ -1503,29 +1526,26 @@ def _stage_database_init_files(project: str, state: Path) -> None:
                 "sh",
                 "-v",
                 f"{state / 'inputs'}:/inputs:ro,z",
-                "-v",
-                f"{migrations_volume}:/migrations:Z",
-                "-v",
-                f"{scripts_volume}:/scripts:Z",
+                *volume_args,
                 "supabase/postgres:15.8.1.085",
                 "-c",
                 "; ".join(commands),
             ],
-            error_code="compose_db_init_stage",
+            error_code="compose_input_stage",
         )
         helper = result.stdout.strip()
         if not re.fullmatch(r"[0-9a-f]{12,64}", helper):
-            _fail("compose_db_init_stage")
+            _fail("compose_input_stage")
         _run(
             ["docker", "start", helper],
-            error_code="compose_db_init_stage",
+            error_code="compose_input_stage",
         )
         wait_result = _run(
             ["docker", "wait", helper],
-            error_code="compose_db_init_stage",
+            error_code="compose_input_stage",
         )
         if wait_result.stdout.strip() != "0":
-            _fail("compose_db_init_stage")
+            _fail("compose_input_stage")
     finally:
         if helper is not None:
             try:
@@ -1566,7 +1586,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
         )
-        _stage_database_init_files(project, state)
+        _stage_input_files(project, state)
         for services, wait_for in CORE_START_PHASES:
             for service in services:
                 _run(
