@@ -273,6 +273,20 @@ jobs:
           }
           safe_env.setdefault('PATH', '/usr/bin:/bin')
           safe_env.setdefault('HOME', str(pathlib.Path.home()))
+          markers = (
+              ('port_conflict', ('address already in use', 'port is already allocated')),
+              ('mount_invalid', ('invalid mount config', 'bind source path does not exist', 'failed to mount local volume')),
+              ('network_create', ('failed to create network', 'failed to set up container networking', 'network not found')),
+              ('runtime_create', ('failed to create shim task', 'oci runtime create failed', 'failed to start shim')),
+              ('permission_denied', ('permission denied', 'operation not permitted')),
+          )
+
+          def classify(stderr):
+              normalized = stderr.casefold()
+              for suffix, values in markers:
+                  if any(value in normalized for value in values):
+                      return suffix
+              return 'unknown'
           try:
               result = subprocess.run(
                   command,
@@ -291,7 +305,7 @@ jobs:
                   'schema': 'local-compose-create-preflight-v1',
                   'project_name': project,
                   'status': status,
-                  'failure_class': 'timeout' if result is None else 'unknown',
+                  'failure_class': 'timeout' if result is None else classify(result.stderr),
               }
               target = pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-create-preflight.json')
               target.parent.mkdir(parents=True, exist_ok=True)
