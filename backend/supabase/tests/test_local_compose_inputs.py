@@ -62,7 +62,11 @@ class LocalComposeInputContractTests(unittest.TestCase):
             "db-config",
             "db-init-migrations",
             "db-init-scripts",
+            "functions",
+            "kong-config",
+            "pooler-config",
             "storage-data",
+            "vector-config",
         ):
             self.assertIn(f'name: "${{PROJECT_NAME}}-{volume}"', self.overlay_source)
 
@@ -133,9 +137,10 @@ class LocalComposeInputContractTests(unittest.TestCase):
             '"local-db-init-scripts:/docker-entrypoint-initdb.d/init-scripts:Z"',
             self.overlay_source,
         )
-        self.assertIn('"${LOCAL_INPUT_ROOT}/functions:/home/deno/functions:ro,Z"', self.overlay_source)
-        self.assertIn('"${LOCAL_INPUT_ROOT}/vector.yml:/etc/vector/vector.yml:ro,z"', self.overlay_source)
-        self.assertIn('"${LOCAL_INPUT_ROOT}/pooler.exs:/etc/pooler/pooler.exs:ro,z"', self.overlay_source)
+        self.assertIn('"local-functions:/home/deno/functions:Z"', self.overlay_source)
+        self.assertIn('"local-kong-config:/home/kong:Z"', self.overlay_source)
+        self.assertIn('"local-vector-config:/etc/vector:Z"', self.overlay_source)
+        self.assertIn('"local-pooler-config:/etc/pooler:Z"', self.overlay_source)
 
     def test_compose_command_uses_project_env_and_all_three_local_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -251,9 +256,9 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("_probe_database_bootstrap", source)
         self.assertIn("_analytics", source)
         self.assertIn("pg_namespace", source)
-        self.assertIn("DB_INIT_VOLUME_FILES", source)
-        self.assertIn("_stage_database_init_files", source)
-        self.assertIn("compose_db_init_stage", source)
+        self.assertIn("STAGED_INPUT_FILES", source)
+        self.assertIn("_stage_input_files", source)
+        self.assertIn("compose_input_stage", source)
         self.assertIn('"create",', source)
         self.assertIn('"wait",', source)
         self.assertIn("chmod 0644", source)

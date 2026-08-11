@@ -133,9 +133,9 @@
   "mounts": [
     {
       "service": "kong",
-      "source": "kong.yml",
-      "type": "bind",
-      "destination": "/home/kong/temp.yml"
+      "source": "local-kong-config",
+      "type": "volume",
+      "destination": "/home/kong"
     },
     {
       "service": "storage",
@@ -151,8 +151,8 @@
     },
     {
       "service": "functions",
-      "source": "functions",
-      "type": "bind",
+      "source": "local-functions",
+      "type": "volume",
       "destination": "/home/deno/functions"
     },
     {
@@ -181,15 +181,15 @@
     },
     {
       "service": "vector",
-      "source": "vector.yml",
-      "type": "bind",
-      "destination": "/etc/vector/vector.yml"
+      "source": "local-vector-config",
+      "type": "volume",
+      "destination": "/etc/vector"
     },
     {
       "service": "supavisor",
-      "source": "pooler.exs",
-      "type": "bind",
-      "destination": "/etc/pooler/pooler.exs"
+      "source": "local-pooler-config",
+      "type": "volume",
+      "destination": "/etc/pooler"
     }
   ],
   "compose_files": [
@@ -199,7 +199,7 @@
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",
-      "sha256": "3db0e9dd0ef7f9a0583da5ce4faa9933b43934fa37aa3913a80dff6b46a90298"
+      "sha256": "70a2f0ddec40c2e24b16e02e0975d947c0d051a0f8803a3f72ddd08c9a3e2852"
     },
     {
       "path": "backend/supabase/docker-compose.mail.yml",

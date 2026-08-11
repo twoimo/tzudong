@@ -45,7 +45,7 @@ services:
       - "127.0.0.1:${KONG_HTTP_PORT}:8000/tcp"
       - "127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp"
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/kong.yml:/home/kong/temp.yml:ro,z"
+      - "local-kong-config:/home/kong:Z"
 
   auth:
     container_name: !reset null
@@ -74,7 +74,7 @@ services:
   functions:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/functions:/home/deno/functions:ro,Z"
+      - "local-functions:/home/deno/functions:Z"
 
   analytics:
     container_name: !reset null
@@ -92,7 +92,7 @@ services:
   vector:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/vector.yml:/etc/vector/vector.yml:ro,z"
+      - "local-vector-config:/etc/vector:Z"
 
   supavisor:
     container_name: !reset null
@@ -101,7 +101,7 @@ services:
       - "127.0.0.1:${POSTGRES_HOST_PORT}:5432/tcp"
       - "127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543/tcp"
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/pooler.exs:/etc/pooler/pooler.exs:ro,z"
+      - "local-pooler-config:/etc/pooler:Z"
 
 volumes: !override
   local-db-data:
@@ -112,5 +112,13 @@ volumes: !override
     name: "${PROJECT_NAME}-db-init-scripts"
   local-db-config:
     name: "${PROJECT_NAME}-db-config"
+  local-functions:
+    name: "${PROJECT_NAME}-functions"
+  local-kong-config:
+    name: "${PROJECT_NAME}-kong-config"
+  local-pooler-config:
+    name: "${PROJECT_NAME}-pooler-config"
   local-storage-data:
     name: "${PROJECT_NAME}-storage-data"
+  local-vector-config:
+    name: "${PROJECT_NAME}-vector-config"

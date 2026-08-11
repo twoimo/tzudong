@@ -333,7 +333,11 @@ describe("nightly regression package and source contracts", () => {
       "${LOCAL_PROJECT}-db-config",
       "${LOCAL_PROJECT}-db-init-migrations",
       "${LOCAL_PROJECT}-db-init-scripts",
+      "${LOCAL_PROJECT}-functions",
+      "${LOCAL_PROJECT}-kong-config",
+      "${LOCAL_PROJECT}-pooler-config",
       "${LOCAL_PROJECT}-storage-data",
+      "${LOCAL_PROJECT}-vector-config",
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
