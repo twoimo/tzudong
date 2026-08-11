@@ -22,7 +22,6 @@ import ssl
 import stat
 import subprocess
 import sys
-import tempfile
 import time
 import unicodedata
 from pathlib import Path
@@ -51,15 +50,6 @@ TRACKED_SQL = {
     "db-logs.sql": "volumes/db/logs.sql",
     "db-pooler.sql": "volumes/db/pooler.sql",
 }
-DB_INIT_FILES = (
-    ("db-supabase.sql", "97-_supabase.sql"),
-    ("db-webhooks.sql", "98-webhooks.sql"),
-    ("db-realtime.sql", "99-realtime.sql"),
-    ("db-logs.sql", "99-logs.sql"),
-    ("db-pooler.sql", "99-pooler.sql"),
-    ("db-roles.sql", "99-roles.sql"),
-    ("db-jwt.sql", "99-jwt.sql"),
-)
 DESTINATIONS = {
     "/home/kong/temp.yml", "/etc/vector/vector.yml", "/etc/pooler/pooler.exs",
     "/var/lib/postgresql/data", "/etc/postgresql-custom", "/var/lib/storage",
@@ -1467,34 +1457,6 @@ def _assert_project_volumes(command: list[str], project: str, *, require_existin
             if labels.get(DOCKER_PROJECT_LABEL) != project or labels.get(DOCKER_SERVICE_LABEL) not in EXPECTED_SERVICES:
                 _fail("docker_container")
 
-def _stage_database_init_files(command: list[str], state: Path) -> None:
-    result = _run(command + ["ps", "-aq", "db"], error_code="compose_db_container")
-    db_id = result.stdout.strip()
-    if not re.fullmatch(r"[0-9a-f]{12,64}", db_id):
-        _fail("compose_db_container")
-    for source_name, destination_name in DB_INIT_FILES:
-        source = state / "inputs" / source_name
-        _regular_owned(source, mode=0o600)
-        temporary: Path | None = None
-        try:
-            with tempfile.NamedTemporaryFile(prefix=".db-init-", dir=state, delete=False) as handle:
-                temporary = Path(handle.name)
-                handle.write(source.read_bytes())
-            os.chmod(temporary, 0o644)
-            _run(
-                [
-                    "docker", "cp", str(temporary),
-                    f"{db_id}:/docker-entrypoint-initdb.d/{destination_name}",
-                ],
-                error_code="compose_db_init_stage",
-            )
-        finally:
-            if temporary is not None:
-                try:
-                    temporary.unlink()
-                except FileNotFoundError:
-                    pass
-
 def _action_render(root: Path, project: str, state: Path) -> dict[str, Any]:
     digest, _, _ = _render(root, project, state)
     input_digest, env_digest = _provenance_digests(state)
@@ -1523,7 +1485,6 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
             error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
         )
-        _stage_database_init_files(command, state)
         for services, wait_for in CORE_START_PHASES:
             for service in services:
                 _run(

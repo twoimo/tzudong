@@ -77,11 +77,6 @@ instead of relying on one collective `up` orchestration call. Vector, database,
 and analytics readiness gates run before dependent services are started; the
 database gate also verifies the `_analytics` bootstrap schema with a
 900-second first-run bound.
-The lifecycle stages the fixed database init files into the image's
-top-level init directory after container creation so the pinned Postgres
-The staged copies are
-readable only inside the disposable container; host input files remain
-owner-only.
 The hosted lane removes only the three exact project volume names before reset
 so diagnostic probes cannot leave a stale database volume behind.
 A failed reset may add a bounded `local-stack-failure-diagnostics-v1` receipt to
