@@ -65,6 +65,8 @@ replaced with a weaker runtime; the preflight fails closed.
 The GitHub-hosted runner's root-owned `/var/run/docker.sock` is accepted only
 for the default local socket when both `GITHUB_ACTIONS=true` and `CI=true`;
 remote Docker contexts and non-default sockets remain rejected.
+Core and Studio Compose startup commands each have a 600-second bound for
+first-run image pulls; readiness remains separately bounded and fail closed.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
