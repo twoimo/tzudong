@@ -307,6 +307,8 @@ describe("nightly regression package and source contracts", () => {
       "runtime_create",
       "Probe Compose service startup",
       "local-compose-start-preflight-v1",
+      "collective",
+      "up', '-d', '--pull=never'",
       "docker', 'compose",
       "'start', service",
       "exec_invalid",

@@ -370,9 +370,30 @@ jobs:
           }
           safe_env.setdefault('PATH', '/usr/bin:/bin')
           safe_env.setdefault('HOME', str(pathlib.Path.home()))
+          collective = {'status': 'failed', 'failure_class': 'unknown'}
+          try:
+              result = subprocess.run(
+                  [
+                      *command_prefix, 'up', '-d', '--pull=never',
+                      *services,
+                  ],
+                  capture_output=True,
+                  text=True,
+                  timeout=600,
+                  check=False,
+                  env=safe_env,
+              )
+              if result.returncode == 0:
+                  collective = {'status': 'passed', 'failure_class': 'none'}
+              else:
+                  collective['failure_class'] = classify(result.stderr)
+          except FileNotFoundError:
+              collective['failure_class'] = 'docker_not_found'
+          except subprocess.TimeoutExpired:
+              collective['failure_class'] = 'timeout'
           results = []
-          failed = False
-          for service in services:
+          failed = collective['status'] != 'passed'
+          for service in services if not failed else ():
               record = {'service': service, 'status': 'failed', 'failure_class': 'unknown'}
               try:
                   result = subprocess.run(
@@ -398,6 +419,7 @@ jobs:
           report = {
               'schema': 'local-compose-start-preflight-v1',
               'project_name': project,
+              'collective': collective,
               'services': results,
           }
           target = pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json')
