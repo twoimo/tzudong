@@ -1,39 +1,246 @@
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, test } from "bun:test";
 
-const workflow = readFileSync(
-  resolve(import.meta.dir, "../../../.github/workflows/nightly-regression.yml"),
-  "utf8",
-);
+const appRoot = resolve(import.meta.dir, "..");
+const read = (relativePath: string) => readFileSync(resolve(appRoot, relativePath), "utf8");
 
-describe("nightly regression workflow contract", () => {
-  test("schedules UTC runs and supports explicit manual lanes", () => {
-    expect(workflow).toContain("cron: '30 18 * * *'");
-    expect(workflow).toContain("workflow_dispatch:");
-    expect(workflow).toContain("- all");
-    expect(workflow).toContain("- unit");
-    expect(workflow).toContain("- e2e");
+const packageSource = read("package.json");
+const packageJson = JSON.parse(packageSource) as {
+  scripts?: Record<string, unknown>;
+};
+const nightlyRunnerSource = read("scripts/run-nightly-regression.mjs");
+const playwrightConfigSource = read("playwright.config.ts");
+const healthRouteSource = read("app/api/health/route.ts");
+const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
+const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
+const curatedSpecs = [
+  "tests/smoke.spec.ts",
+  "tests/navigation.spec.ts",
+  "tests/browser-title.spec.ts",
+  "tests/mobile-home-map.spec.ts",
+] as const;
+
+function sourceBlock(source: string, startMarker: string, endMarker: string): string {
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start + startMarker.length);
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(end).toBeGreaterThan(start);
+  return source.slice(start, end);
+}
+
+describe("nightly regression package and source contracts", () => {
+  test("publishes one package entry point for the explicit nightly runner", () => {
+    expect(packageJson.scripts?.["test:nightly"]).toBe(
+      "node scripts/run-nightly-regression.mjs",
+    );
+    expect(packageSource).toContain('"test:nightly": "node scripts/run-nightly-regression.mjs"');
+    expect(nightlyRunnerSource).toContain("function parseArguments(argumentsList)");
+    expect(nightlyRunnerSource).toContain("function main()");
   });
 
-  test("fails closed on isolated environment and readiness", () => {
-    expect(workflow).toContain("NIGHTLY_SUPABASE_PROJECT_REF");
-    expect(workflow).toContain("Nightly Supabase URL does not identify the configured isolated project.");
-    expect(workflow).toContain("/api/health");
-    expect(workflow).toContain("Application did not become ready.");
+  test("parses local and hosted mode only from explicit command arguments", () => {
+    const parser = sourceBlock(
+      nightlyRunnerSource,
+      "function parseArguments(argumentsList)",
+      "function resolveExplicitPath",
+    );
+    expect(parser).toContain("if (argument === '--mode')");
+    expect(parser).toContain("if (argument.startsWith('--mode='))");
+    expect(parser).toContain("if (!['local', 'hosted'].includes(mode))");
+    expect(parser).toContain("Nightly mode is required. Use --mode local or --mode hosted.");
+    expect(parser).not.toContain("process.env");
+    expect(nightlyRunnerSource).toContain("function validateLocalEnvironment(environment)");
+    expect(nightlyRunnerSource).toContain("function validateHostedEnvironment(environment)");
+    expect(nightlyRunnerSource).toContain("return validateHostedEnvironment(environment);");
+    for (const variable of [
+      "NIGHTLY_SUPABASE_PROJECT_REF",
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "NIGHTLY_ADMIN_EMAIL",
+      "NIGHTLY_ADMIN_PASSWORD",
+    ]) {
+      expect(nightlyRunnerSource).toContain(`'${variable}'`);
+    }
   });
 
-  test("keeps the browser scope curated and diagnostics available", () => {
-    expect(workflow).toContain("tests/smoke.spec.ts");
-    expect(workflow).toContain("tests/mobile-home-map.spec.ts");
-    expect(workflow).toContain("if: always()");
-    expect(workflow).toContain("nightly-playwright-diagnostics");
-    expect(workflow).toContain("retention-days: 14");
+  test("requires dedicated nightly inputs instead of silently falling back to ambient env files", () => {
+    const environmentLoader = sourceBlock(
+      nightlyRunnerSource,
+      "function loadExplicitEnvironment(mode, envFileArgument)",
+      "function parseProvenanceHash",
+    );
+    expect(environmentLoader).toContain("const inheritedFile = process.env.NIGHTLY_ENV_FILE?.trim();");
+    expect(environmentLoader).toContain("const selectedArgument = envFileArgument ?? inheritedFile;");
+    expect(environmentLoader).toContain(
+      "Local nightly mode requires --env-file (or NIGHTLY_ENV_FILE) for generated inputs.",
+    );
+    expect(environmentLoader).toContain("isDedicatedNightlyEnvFile(envFilePath)");
+    expect(environmentLoader).toContain(".env.local and backend/.env are rejected");
+    expect(environmentLoader).not.toContain("loadEnv()");
+    expect(environmentLoader).not.toContain("path: '.env'");
+    expect(nightlyRunnerSource).toContain("function loadProvenance(mode, envFilePath, provenanceFileArgument)");
+    expect(nightlyRunnerSource).toContain("Nightly env provenance does not match the explicit env file.");
   });
 
-  test("uses least privilege and non-masking notification", () => {
-    expect(workflow).toContain("contents: read");
-    expect(workflow).toContain("actions: read");
-    expect(workflow).toContain("Notification failed; see GitHub summary.");
+  test("keeps the browser lane pinned to exactly four curated specs", () => {
+    const curatedBlock = sourceBlock(
+      nightlyRunnerSource,
+      "const curatedBrowserSpecs = [",
+      "const hostedRequiredEnvironment",
+    );
+    expect(curatedBlock.match(/'tests\/[a-z0-9-]+\.spec\.ts'/g)).toHaveLength(curatedSpecs.length);
+    for (const spec of curatedSpecs) expect(curatedBlock).toContain(`'${spec}'`);
+    expect(nightlyRunnerSource).toContain("...curatedBrowserSpecs");
+    expect(nightlyRunnerSource).toContain("'--project=chromium'");
+  });
+
+  test("requires loopback local endpoints and blocks third-party browser destinations", () => {
+    for (const token of [
+      "function isLoopbackHostname(hostname)",
+      "function assertLoopbackUrl(value, label)",
+      "function assertLoopbackDatabaseUrl(value)",
+      "function containsCloudEndpoint(value)",
+      "Local nightly mode rejects cloud endpoint",
+      "Local nightly mode requires an explicit loopback Supabase URL.",
+    ]) {
+      expect(nightlyRunnerSource).toContain(token);
+    }
+    for (const token of [
+      "function isLoopbackUrl(url: URL)",
+      "function classifyDeniedDestination(url: URL)",
+      "third-party-provider-denied",
+      "await route.abort('blockedbyclient')",
+      "if (!isLoopbackUrl(url))",
+      "function isAllowedApplicationUrl(url: URL)",
+      "function isAllowedSupabaseWebSocketUrl(url: URL)",
+      "function isAllowedHostedSupabaseUrl(url: URL)",
+      "function isAllowedHostedSupabaseWebSocketUrl(url: URL)",
+      "HOSTED_SUPABASE_ORIGIN",
+      "application-path-denied",
+      "isAllowedSupabaseFixturePath",
+    ]) {
+      expect(nightlyFixtureSource).toContain(token);
+    }
+    for (const spec of curatedSpecs) {
+      expect(read(spec)).toContain("./nightly/nightly-test");
+    }
+  });
+  test("requires an explicit non-conflicting local browser port", () => {
+    expect(nightlyRunnerSource).toContain("Local nightly mode requires an explicit APP_PORT that is not the protected 8080 listener.");
+    expect(nightlyRunnerSource).toContain("Local nightly APP_PORT must not overlap a generated Supabase service port.");
+    expect(nightlyRunnerSource).toContain("KONG_HTTP_PORT");
+    expect(nightlyRunnerSource).toContain("POSTGRES_HOST_PORT");
+    expect(nightlyRunnerSource).toContain("const requestedPort = Number(environment.APP_PORT);");
+    expect(nightlyRunnerSource).toContain("assertRepositoryInputFile");
+    expect(nightlyRunnerSource).toContain("inputMetadata.source_manifest_mode !== manifestMode");
+    expect(nightlyRunnerSource).toContain("const expectedHost = `${projectRef}.supabase.co`;");
+  });
+
+  test("requires current owner-only local stack and migration receipts before browser admission", () => {
+    for (const token of [
+      "const localMigrationReceiptFilename = 'local-receipt-v1.json';",
+      "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
+      "receipt.schema !== 'local-receipt-v1'",
+      "receipt.serializer !== 'receipt-v1'",
+      "receipt.ledger.length !== 69",
+      "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
+      "  'platform_bootstrap_evidence_sha256',",
+      "  'platform_bootstrap_sha256',",
+      "module._load_receipt_file(pathlib.Path(sys.argv[2]))",
+      "service.health !== 'healthy'",
+      'any(item.get("health") != "healthy" for item in services)',
+      "Local stack readiness evidence contains a non-running or unhealthy service.",
+    ]) {
+      expect(nightlyRunnerSource).toContain(token);
+    }
+  });
+
+  test("keeps nightly web log custody owner-only and symlink-safe", () => {
+    for (const token of [
+      "function openNightlyWebLog(logPath)",
+      "fsConstants.O_NOFOLLOW",
+      "fsConstants.O_CREAT | fsConstants.O_EXCL",
+      "fstatSync(descriptor)",
+      "ftruncateSync(descriptor, 0)",
+      "nightly-web.log must be an owner-only regular file.",
+      "const logStream = openNightlyWebLog(logPath);",
+    ]) {
+      expect(nightlyRunnerSource).toContain(token);
+    }
+  });
+  test("keeps local Supabase fixture routing fail-closed", () => {
+    for (const token of [
+      "const LOCAL_NIGHTLY_MODE",
+      "function isAllowedLocalNightlyUrl(url: URL)",
+      "blockedbyclient",
+      "increment_search_count",
+      "search_restaurants_by_youtube_title",
+      "method === 'OPTIONS'",
+      "method !== 'GET'",
+      "method === 'POST'",
+      "const LOCAL_REST_FIXTURE_PATHS",
+      "const LOCAL_AUTH_FIXTURE_PATHS",
+      "if (!LOCAL_REST_FIXTURE_PATHS.has(url.pathname))",
+      "if (!LOCAL_AUTH_FIXTURE_PATHS.has(url.pathname))",
+    ]) {
+      expect(mobileHomeMapHelpersSource).toContain(token);
+    }
+  });
+
+  test("keeps local health responses redacted to the stable three-field contract", () => {
+    expect(healthRouteSource).toContain("const localMarker = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';");
+    expect(healthRouteSource).toContain("const localTestGate = localMarker");
+    expect(healthRouteSource).toContain("process.env.NODE_ENV === 'test' || localBrowserRuntimeGate");
+    expect(healthRouteSource).toContain("&& LOOPBACK_HOSTS.has(host);");
+    expect(healthRouteSource).toContain("{ ok: true, service: 'tzudong-web', mode: 'local' }");
+    const localResponse = sourceBlock(
+      healthRouteSource,
+      "if (localTestGate)",
+      "// A local marker is never valid",
+    );
+    expect(localResponse).not.toContain("releaseId");
+    expect(localResponse).not.toContain("gitSha");
+    expect(localResponse).not.toContain("deploymentId");
+    expect(localResponse).not.toContain("projectId");
+    expect(nightlyRunnerSource).toContain("Object.keys(payload).length === 3");
+  });
+
+  test("accepts the runner base URL and forwards nightly provenance without service-key leakage", () => {
+    expect(playwrightConfigSource).toContain("process.env.PLAYWRIGHT_BASE_URL");
+    expect(playwrightConfigSource).toContain("new URL('/api/health', PLAYWRIGHT_BASE_URL).toString()");
+    expect(playwrightConfigSource).toContain("const PLAYWRIGHT_NIGHTLY_MODE = process.env.NIGHTLY_MODE?.trim();");
+    for (const variable of [
+      "NIGHTLY_MODE",
+      "NIGHTLY_LOCAL_ENV_ONLY",
+      "NIGHTLY_ENV_FILE_ONLY",
+      "NIGHTLY_ENV_PROVENANCE",
+      "NIGHTLY_ENV_PROVENANCE_SHA256",
+      "NIGHTLY_ENV_FILE",
+    ]) {
+      expect(playwrightConfigSource).toContain(`'${variable}'`);
+    }
+    expect(playwrightConfigSource).toContain("const playwrightWebServerEnvironment = isNightlyRegressionRun");
+    expect(playwrightConfigSource).toContain("...playwrightWebServerEnvironment");
+    expect(playwrightConfigSource).not.toContain("...process.env");
+    for (const secret of [
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_ACCESS_TOKEN",
+      "NIGHTLY_ADMIN_PASSWORD",
+      "VERCEL_TOKEN",
+      "GOOGLE_APPLICATION_CREDENTIALS",
+    ]) {
+      expect(playwrightConfigSource).not.toContain(secret);
+    }
+    expect(playwrightConfigSource).toContain("baseURL: PLAYWRIGHT_BASE_URL");
+  });
+
+  test("leaves the existing Playwright projects and server controls intact", () => {
+    for (const project of ["admin-setup", "chromium", "firefox", "webkit", "...responsiveProjects"]) {
+      expect(playwrightConfigSource).toContain(project);
+    }
+    expect(playwrightConfigSource).toContain("PLAYWRIGHT_WEB_SERVER_COMMAND");
+    expect(playwrightConfigSource).toContain("PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS");
+    expect(playwrightConfigSource).toContain("PLAYWRIGHT_REUSE_EXISTING_SERVER");
   });
 });

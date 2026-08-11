@@ -1,0 +1,239 @@
+{
+  "schema": "local-stack-input-manifest-v1",
+  "generator_version": "local-stack-v1",
+  "inputs": [
+    {
+      "kind": "template",
+      "template": "kong.yml",
+      "template_sha256": "1de8eae7cf14be297323d2975a3ca4ee703e69757f53fee3abe6f9c43514d08c",
+      "template_mode": "0644",
+      "output": "kong.yml",
+      "output_sha256": "1de8eae7cf14be297323d2975a3ca4ee703e69757f53fee3abe6f9c43514d08c",
+      "service": "kong",
+      "destination": "/home/kong/temp.yml",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "vector.yml",
+      "template_sha256": "892fd1fbea5531fdb6d67aece9a9f389d2158650329bfcb04ce3266b5ff48907",
+      "template_mode": "0644",
+      "output": "vector.yml",
+      "output_sha256": "892fd1fbea5531fdb6d67aece9a9f389d2158650329bfcb04ce3266b5ff48907",
+      "service": "vector",
+      "destination": "/etc/vector/vector.yml",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "pooler.exs",
+      "template_sha256": "d08dd7dcf5ac32a7e8edbbde9c4f205ca898cfd6382ec4837bdf9bd339cbc91f",
+      "template_mode": "0644",
+      "output": "pooler.exs",
+      "output_sha256": "d08dd7dcf5ac32a7e8edbbde9c4f205ca898cfd6382ec4837bdf9bd339cbc91f",
+      "service": "supavisor",
+      "destination": "/etc/pooler/pooler.exs",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "functions/main/index.ts",
+      "template_sha256": "e254581f71f38371c5ef69b42df4c612e4e8e1ff88f44b4b59b9ee19aca5ec7a",
+      "template_mode": "0644",
+      "output": "functions/main/index.ts",
+      "output_sha256": "e254581f71f38371c5ef69b42df4c612e4e8e1ff88f44b4b59b9ee19aca5ec7a",
+      "service": "functions",
+      "destination": "/home/deno/functions",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/realtime.sql",
+      "source_sha256": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+      "source_mode": "0644",
+      "output": "db-realtime.sql",
+      "output_sha256": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-realtime.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/webhooks.sql",
+      "source_sha256": "b584aaaa0c393f27218f81e01e76e1d07d42f947083249adcd6097ad471cde62",
+      "source_mode": "0644",
+      "output": "db-webhooks.sql",
+      "output_sha256": "b584aaaa0c393f27218f81e01e76e1d07d42f947083249adcd6097ad471cde62",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/roles.sql",
+      "source_sha256": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+      "source_mode": "0644",
+      "output": "db-roles.sql",
+      "output_sha256": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/jwt.sql",
+      "source_sha256": "1cc94a4f16f6e2932b383cd68e211a96bcae298437ca4120d8a5106396c58465",
+      "source_mode": "0644",
+      "output": "db-jwt.sql",
+      "output_sha256": "1cc94a4f16f6e2932b383cd68e211a96bcae298437ca4120d8a5106396c58465",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/_supabase.sql",
+      "source_sha256": "9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f",
+      "source_mode": "0644",
+      "output": "db-supabase.sql",
+      "output_sha256": "9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/97-_supabase.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/logs.sql",
+      "source_sha256": "f0463ce5030907acef49326d2bffd36002df0718035071be7c99bd7fc897c63d",
+      "source_mode": "0644",
+      "output": "db-logs.sql",
+      "output_sha256": "f0463ce5030907acef49326d2bffd36002df0718035071be7c99bd7fc897c63d",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-logs.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/pooler.sql",
+      "source_sha256": "df97ebe148d94cfb92a5e37ebf972dfd496be195f0915ecf14396b2cf50efecb",
+      "source_mode": "0644",
+      "output": "db-pooler.sql",
+      "output_sha256": "df97ebe148d94cfb92a5e37ebf972dfd496be195f0915ecf14396b2cf50efecb",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-pooler.sql",
+      "output_mode": "0600"
+    }
+  ],
+  "functions": {
+    "root": "functions",
+    "files": [
+      "functions/main/index.ts"
+    ]
+  },
+  "mounts": [
+    {
+      "service": "kong",
+      "source": "kong.yml",
+      "type": "bind",
+      "destination": "/home/kong/temp.yml"
+    },
+    {
+      "service": "storage",
+      "source": "local-storage-data",
+      "type": "volume",
+      "destination": "/var/lib/storage"
+    },
+    {
+      "service": "imgproxy",
+      "source": "local-storage-data",
+      "type": "volume",
+      "destination": "/var/lib/storage"
+    },
+    {
+      "service": "functions",
+      "source": "functions",
+      "type": "bind",
+      "destination": "/home/deno/functions"
+    },
+    {
+      "service": "db",
+      "source": "db-realtime.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-realtime.sql"
+    },
+    {
+      "service": "db",
+      "source": "db-webhooks.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql"
+    },
+    {
+      "service": "db",
+      "source": "db-roles.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql"
+    },
+    {
+      "service": "db",
+      "source": "db-jwt.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql"
+    },
+    {
+      "service": "db",
+      "source": "local-db-data",
+      "type": "volume",
+      "destination": "/var/lib/postgresql/data"
+    },
+    {
+      "service": "db",
+      "source": "db-supabase.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/migrations/97-_supabase.sql"
+    },
+    {
+      "service": "db",
+      "source": "db-logs.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-logs.sql"
+    },
+    {
+      "service": "db",
+      "source": "db-pooler.sql",
+      "type": "bind",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-pooler.sql"
+    },
+    {
+      "service": "db",
+      "source": "local-db-config",
+      "type": "volume",
+      "destination": "/etc/postgresql-custom"
+    },
+    {
+      "service": "vector",
+      "source": "vector.yml",
+      "type": "bind",
+      "destination": "/etc/vector/vector.yml"
+    },
+    {
+      "service": "supavisor",
+      "source": "pooler.exs",
+      "type": "bind",
+      "destination": "/etc/pooler/pooler.exs"
+    }
+  ],
+  "compose_files": [
+    {
+      "path": "backend/supabase/docker-compose.yml",
+      "sha256": "5ec5ef85c420c1195dc707042be90613fda8bd395c5d6f4bd8499591106e6c8b"
+    },
+    {
+      "path": "backend/supabase/docker-compose.local.yml",
+      "sha256": "ba8ad34ed798b306bdfba45c9b0c6410f91ca74b44361afc29b8b531ee555086"
+    },
+    {
+      "path": "backend/supabase/docker-compose.mail.yml",
+      "sha256": "8ffd827495d1253b9050497ea2c20dcd7a9509288d0dfe07100c921c6e4c023d"
+    }
+  ]
+}
