@@ -78,6 +78,8 @@ health, exit-code, and Compose-status fields; it is never in the public release.
 Before reset, the workflow pulls the exact Compose image tags with a bounded
 retry and records only fixed image/status/failure-class fields. A failed pull
 stops the lane before Docker Compose or publication.
+The preflight also runs a no-network container probe from a pulled image so
+Docker runtime failures are separated from Compose configuration failures.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
