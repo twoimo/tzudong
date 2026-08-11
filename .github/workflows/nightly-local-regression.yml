@@ -598,6 +598,7 @@ jobs:
               ('mount_invalid', ('invalid mount', 'no such file or directory')),
               ('runtime_error', ('failed to start', 'failed to create', 'exec format error')),
               ('database_connection', ('connection refused', 'econnrefused', 'failed to connect')),
+              ('database_missing', ('database "_supabase" does not exist', 'database "postgres" does not exist')),
               ('boot_error', ('could not start', 'failed to boot', 'uncaught exception')),
           )
 
@@ -675,8 +676,57 @@ jobs:
                   'failure_class': 'unknown',
                   'exit_code': None,
               }
+              database_presence = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'exit_code': None,
+              }
+              database_init_files = {
+                  'status': 'unavailable',
+                  'supabase': 'unknown',
+                  'logs': 'unknown',
+              }
               if db_container_id is not None:
                   try:
+                      presence = subprocess.run(
+                          [
+                              'docker', 'exec', db_container_id,
+                              'psql', '-U', 'postgres', '-d', 'postgres',
+                              '-Atqc',
+                              "select case when exists (select 1 from pg_database where datname = '_supabase') then 'supabase_db_present' else 'supabase_db_missing' end",
+                          ],
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                      )
+                      database_presence = {
+                          'status': 'passed' if presence.returncode == 0 and presence.stdout.strip() in {'supabase_db_present', 'supabase_db_missing'} else 'failed',
+                          'result': presence.stdout.strip() if presence.stdout.strip() in {'supabase_db_present', 'supabase_db_missing'} else 'unknown',
+                          'exit_code': presence.returncode if 0 <= presence.returncode <= 255 else None,
+                      }
+                      init_paths = (
+                          ('supabase', '/docker-entrypoint-initdb.d/migrations/97-_supabase.sql'),
+                          ('logs', '/docker-entrypoint-initdb.d/migrations/99-logs.sql'),
+                      )
+                      init_results = {}
+                      for key, path in init_paths:
+                          init_probe = subprocess.run(
+                              ['docker', 'exec', db_container_id, 'test', '-r', path],
+                              capture_output=True,
+                              text=True,
+                              timeout=30,
+                              check=False,
+                          )
+                          init_results[key] = (
+                              'present' if init_probe.returncode == 0
+                              else 'missing' if init_probe.returncode == 1
+                              else 'unknown'
+                          )
+                      database_init_files = {
+                          'status': 'passed' if all(value == 'present' for value in init_results.values()) else 'failed',
+                          **init_results,
+                      }
                       result = subprocess.run(
                           [
                               'docker', 'exec', db_container_id,
@@ -697,8 +747,12 @@ jobs:
                       }
                   except FileNotFoundError:
                       database_bootstrap['failure_class'] = 'docker_not_found'
+                      database_presence['status'] = 'unavailable'
+                      database_init_files['status'] = 'unavailable'
                   except subprocess.TimeoutExpired:
                       database_bootstrap['failure_class'] = 'timeout'
+                      database_presence['status'] = 'unavailable'
+                      database_init_files['status'] = 'unavailable'
           else:
               database_bootstrap = {
                   'status': 'unavailable',
@@ -706,12 +760,24 @@ jobs:
                   'failure_class': 'unknown',
                   'exit_code': None,
               }
+              database_presence = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'exit_code': None,
+              }
+              database_init_files = {
+                  'status': 'unavailable',
+                  'supabase': 'unknown',
+                  'logs': 'unknown',
+              }
           records.sort(key=lambda item: item['service'])
           pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json').write_text(
               json.dumps({
                   'schema': 'local-compose-runtime-diagnostics-v1',
                   'project_name': project if project.startswith('tzudong-local-') else 'unknown',
                   'database_bootstrap': database_bootstrap,
+                  'database_presence': database_presence,
+                  'database_init_files': database_init_files,
                   'containers': records,
               }, sort_keys=True, separators=(',', ':')) + '\n',
               encoding='utf-8',
