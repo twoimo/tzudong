@@ -263,9 +263,10 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
-    expect(localWorkflowSource).toContain("contents: read");
-    expect(localWorkflowSource).not.toContain("contents: write");
-    expect(localWorkflowSource).not.toContain("softprops/action-gh-release");
+    expect(localWorkflowSource).toContain("contents: write");
+    expect(localWorkflowSource).toContain("GH_TOKEN: ${{ github.token }}");
+    expect(localWorkflowSource).toContain("gh release create");
+    expect(localWorkflowSource).toContain("--prerelease");
     expect(localWorkflowSource).not.toContain("stack.env/\\n");
   });
 });
