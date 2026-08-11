@@ -287,6 +287,29 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
+    const publishIndex = localWorkflowSource.indexOf("\npublish:");
+    expect(publishIndex).toBeGreaterThan(0);
+    const regressionWorkflowSource = localWorkflowSource.slice(0, publishIndex);
+    expect(regressionWorkflowSource).toContain("contents: read");
+    expect(regressionWorkflowSource).not.toContain("contents: write");
+    expect(localWorkflowSource).toContain("needs: local");
+    expect(localWorkflowSource).toContain("github.ref == 'refs/heads/main'");
+    expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
+    expect(localWorkflowSource).toContain("actions/download-artifact@v4");
+    expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
+    expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-web.log");
+    expect(localWorkflowSource).not.toContain("(Path('apps/web/nightly-run.log')");
+    expect(localWorkflowSource).not.toContain("(Path('apps/web/nightly-web.log')");
+    for (const token of [
+      "all_paths = list(root.rglob('*'))",
+      "publication artifact tree contains a symlink",
+      "files != allowed",
+      "publication artifact exceeds size bound",
+      "forbidden = re.compile",
+      "Local-only sanitized receipts; stack.env and credentials excluded.",
+    ]) {
+      expect(localWorkflowSource).toContain(token);
+    }
     expect(localWorkflowSource).toContain("contents: write");
     expect(localWorkflowSource).toContain("GH_TOKEN: ${{ github.token }}");
     expect(localWorkflowSource).toContain("gh release create");
