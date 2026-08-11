@@ -715,6 +715,24 @@ def _safe_process_environment() -> dict[str, str]:
     # The filtered environment drops remote DOCKER_HOST and DOCKER_CONTEXT
     # overrides while Docker still uses its locally configured context.
     return environment
+_COMPOSE_ERROR_MARKERS = (
+    ("image_rate_limited", ("toomanyrequests", "rate limit", "429 too many")),
+    ("image_unavailable", ("manifest unknown", "pull access denied", "repository does not exist")),
+    ("disk_full", ("no space left on device",)),
+    ("port_conflict", ("address already in use", "port is already allocated")),
+    ("permission_denied", ("permission denied", "operation not permitted")),
+    ("network_unavailable", ("network is unreachable", "temporary failure in name resolution", "connection reset")),
+)
+
+
+def _compose_error_suffix(stderr: str) -> str:
+    normalized = stderr.casefold()
+    for suffix, markers in _COMPOSE_ERROR_MARKERS:
+        if any(marker in normalized for marker in markers):
+            return suffix
+    return "unknown"
+
+
 
 def _run(
     command: list[str],
@@ -736,7 +754,7 @@ def _run(
         if attempt < retries:
             time.sleep(10)
             continue
-        _fail(error_code)
+        _fail(f"{error_code}_{_compose_error_suffix(result.stderr)}")
     raise AssertionError("unreachable compose retry state")
 def _handle_signal(signum: int, _frame: Any) -> None:
     global _ACTIVE_COMMAND
