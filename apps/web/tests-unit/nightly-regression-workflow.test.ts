@@ -286,6 +286,11 @@ describe("nightly regression package and source contracts", () => {
       "--mode local",
       "actions/upload-artifact@v4",
       "publication-boundary.txt",
+      "failure-diagnostics/local-stack-failure-diagnostics.json",
+      "local-stack-failure-diagnostics-v1",
+      "allowed_services",
+      "allowed_states",
+      "allowed_health",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {
