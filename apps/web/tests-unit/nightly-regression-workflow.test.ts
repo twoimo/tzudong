@@ -331,6 +331,8 @@ describe("nightly regression package and source contracts", () => {
       "docker volume rm -f",
       "${LOCAL_PROJECT}-db-data",
       "${LOCAL_PROJECT}-db-config",
+      "${LOCAL_PROJECT}-db-init-migrations",
+      "${LOCAL_PROJECT}-db-init-scripts",
       "${LOCAL_PROJECT}-storage-data",
     ]) {
       expect(localWorkflowSource).toContain(token);

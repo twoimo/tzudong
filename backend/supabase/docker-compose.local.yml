@@ -84,14 +84,9 @@ services:
   db:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/db-realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro,z"
+      - "local-db-init-migrations:/docker-entrypoint-initdb.d/migrations:Z"
+      - "local-db-init-scripts:/docker-entrypoint-initdb.d/init-scripts:Z"
       - "local-db-data:/var/lib/postgresql/data:Z"
-      - "${LOCAL_INPUT_ROOT}/db-supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:ro,z"
       - "local-db-config:/etc/postgresql-custom"
 
   vector:
@@ -111,6 +106,10 @@ services:
 volumes: !override
   local-db-data:
     name: "${PROJECT_NAME}-db-data"
+  local-db-init-migrations:
+    name: "${PROJECT_NAME}-db-init-migrations"
+  local-db-init-scripts:
+    name: "${PROJECT_NAME}-db-init-scripts"
   local-db-config:
     name: "${PROJECT_NAME}-db-config"
   local-storage-data:

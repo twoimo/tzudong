@@ -157,27 +157,9 @@
     },
     {
       "service": "db",
-      "source": "db-realtime.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-realtime.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-webhooks.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-roles.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-jwt.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql"
+      "source": "local-db-init-migrations",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/migrations"
     },
     {
       "service": "db",
@@ -187,21 +169,9 @@
     },
     {
       "service": "db",
-      "source": "db-supabase.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/97-_supabase.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-logs.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-logs.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-pooler.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-pooler.sql"
+      "source": "local-db-init-scripts",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts"
     },
     {
       "service": "db",
@@ -229,7 +199,7 @@
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",
-      "sha256": "ba8ad34ed798b306bdfba45c9b0c6410f91ca74b44361afc29b8b531ee555086"
+      "sha256": "3db0e9dd0ef7f9a0583da5ce4faa9933b43934fa37aa3913a80dff6b46a90298"
     },
     {
       "path": "backend/supabase/docker-compose.mail.yml",
