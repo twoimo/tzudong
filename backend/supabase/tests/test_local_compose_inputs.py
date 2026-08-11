@@ -233,8 +233,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("_COMPOSE_ERROR_MARKERS", source)
         self.assertIn("_compose_error_suffix", source)
         self.assertIn('error_code="compose_config"', source)
-        self.assertIn('error_code="compose_core_start"', source)
-        self.assertIn('error_code="compose_studio_start"', source)
+        self.assertIn('error_code="compose_core_create"', source)
+        self.assertIn('error_code="compose_studio_create"', source)
         self.assertIn('_assert_project_volumes(command, project)', source)
 if __name__ == "__main__":
     unittest.main()

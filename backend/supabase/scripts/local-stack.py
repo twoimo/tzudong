@@ -1453,7 +1453,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         _run(
             command + ["create", "--force-recreate", "--pull=policy", *CORE_SERVICES],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
-            error_code="compose_core_start",
+            error_code="compose_core_create",
             retries=COMPOSE_START_RETRIES,
         )
         for service in CORE_SERVICES:
@@ -1467,7 +1467,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         _run(
             command + ["create", "--force-recreate", "--pull=policy", "studio"],
             timeout=COMPOSE_START_TIMEOUT_SECONDS,
-            error_code="compose_studio_start",
+            error_code="compose_studio_create",
             retries=COMPOSE_START_RETRIES,
         )
         _run(
