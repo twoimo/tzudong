@@ -232,6 +232,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('(("vector",), ("vector",))', source)
         self.assertIn('(("db",), ("db",))', source)
         self.assertIn('(("analytics",), ("analytics",))', source)
+        self.assertIn("LOCAL_STACK_PRESERVE_FAILURE_STATE", source)
         self.assertIn('"create", "--force-recreate", "--pull=missing"', source)
         self.assertIn('command + ["start", service]', source)
         self.assertIn("_COMPOSE_ERROR_MARKERS", source)

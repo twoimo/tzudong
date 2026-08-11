@@ -1488,7 +1488,7 @@ def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:
         )
         services = _wait_ready(command, values)
     except (LocalStackError, OSError, ValueError):
-        if started:
+        if started and os.environ.get("LOCAL_STACK_PRESERVE_FAILURE_STATE") != "1":
             try:
                 _run(command + ["down", "--remove-orphans"])
             except (LocalStackError, OSError, ValueError):
