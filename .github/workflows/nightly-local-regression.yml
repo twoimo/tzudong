@@ -315,6 +315,108 @@ jobs:
               )
               raise SystemExit(2)
           PY
+      - name: Probe Compose service startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          render_receipt="$RUNNER_TEMP/local-stack-render-preflight.json"
+          python3 backend/supabase/scripts/local-stack.py render > "$render_receipt"
+          python3 - "$render_receipt" <<'PY'
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import sys
+
+          receipt = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          project = receipt.get('project_name')
+          if receipt.get('schema') != 'local-stack-receipt-v1' or receipt.get('action') != 'render' or receipt.get('ok') is not True:
+              raise SystemExit(2)
+          if not isinstance(project, str) or not project.startswith('tzudong-local-'):
+              raise SystemExit(2)
+          state = pathlib.Path('backend/supabase/volumes/.local-stack') / project
+          command_prefix = [
+              'docker', 'compose',
+              '--project-name', project,
+              '--env-file', str(state / 'stack.env'),
+              '-f', 'backend/supabase/docker-compose.yml',
+              '-f', 'backend/supabase/docker-compose.local.yml',
+              '-f', 'backend/supabase/docker-compose.mail.yml',
+          ]
+          services = (
+              'db', 'analytics', 'auth', 'functions', 'imgproxy', 'kong', 'mail',
+              'meta', 'realtime', 'rest', 'storage', 'supavisor', 'vector',
+          )
+          markers = (
+              ('port_conflict', ('address already in use', 'port is already allocated')),
+              ('mount_invalid', ('invalid mount config', 'bind source path does not exist', 'failed to mount local volume')),
+              ('network_create', ('failed to create network', 'failed to set up container networking', 'network not found')),
+              ('runtime_create', ('failed to create shim task', 'oci runtime create failed', 'failed to start shim')),
+              ('exec_invalid', ('exec format error', 'executable file not found')),
+              ('permission_denied', ('permission denied', 'operation not permitted')),
+          )
+
+          def classify(stderr):
+              normalized = stderr.casefold()
+              for suffix, values in markers:
+                  if any(value in normalized for value in values):
+                      return suffix
+              return 'unknown'
+
+          safe_env = {
+              key: os.environ[key]
+              for key in ('PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM')
+              if os.environ.get(key)
+          }
+          safe_env.setdefault('PATH', '/usr/bin:/bin')
+          safe_env.setdefault('HOME', str(pathlib.Path.home()))
+          results = []
+          failed = False
+          for service in services:
+              record = {'service': service, 'status': 'failed', 'failure_class': 'unknown'}
+              try:
+                  result = subprocess.run(
+                      [*command_prefix, 'start', service],
+                      capture_output=True,
+                      text=True,
+                      timeout=120,
+                      check=False,
+                      env=safe_env,
+                  )
+                  if result.returncode == 0:
+                      record = {'service': service, 'status': 'passed', 'failure_class': 'none'}
+                  else:
+                      record['failure_class'] = classify(result.stderr)
+              except FileNotFoundError:
+                  record['failure_class'] = 'docker_not_found'
+              except subprocess.TimeoutExpired:
+                  record['failure_class'] = 'timeout'
+              results.append(record)
+              if record['status'] != 'passed':
+                  failed = True
+                  break
+          report = {
+              'schema': 'local-compose-start-preflight-v1',
+              'project_name': project,
+              'services': results,
+          }
+          target = pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(
+              json.dumps(report, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
+          )
+          subprocess.run(
+              [*command_prefix, 'down', '--volumes', '--remove-orphans'],
+              capture_output=True,
+              text=True,
+              timeout=120,
+              check=False,
+              env=safe_env,
+          )
+          if failed:
+              raise SystemExit(2)
+          PY
       - name: Reset disposable local stack
         shell: bash
         run: |

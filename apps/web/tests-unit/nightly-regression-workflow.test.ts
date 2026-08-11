@@ -305,6 +305,11 @@ describe("nightly regression package and source contracts", () => {
       "mount_invalid",
       "network_create",
       "runtime_create",
+      "Probe Compose service startup",
+      "local-compose-start-preflight-v1",
+      "docker', 'compose",
+      "'start', service",
+      "exec_invalid",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {
