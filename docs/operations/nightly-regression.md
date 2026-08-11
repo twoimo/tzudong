@@ -69,6 +69,9 @@ Core and Studio Compose startup commands each have a 600-second bound for
 first-run image pulls; readiness remains separately bounded and fail closed.
 Failure receipts use stage-specific fixed codes and never expose raw Compose
 stderr.
+Core and Studio starts retry twice after bounded command failures to absorb
+transient image-registry or runner startup errors; persistent failures remain
+fail closed.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
