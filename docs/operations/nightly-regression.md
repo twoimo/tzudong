@@ -59,6 +59,9 @@ pins Node 24.6.0, Bun 1.3.14, Docker Compose v2.39.4, and the Linux namespace
 preflight before it resets the stack, applies the source-bound prerequisite and
 migrations, closes and smokes function paths, seeds fixed local fixtures, and
 runs `test:nightly -- --mode local`.
+The runner attempts only the disposable user-namespace sysctl settings needed
+by the containment probe. Missing privileged sysctl access is not silently
+replaced with a weaker runtime; the preflight fails closed.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
