@@ -1,7 +1,60 @@
 import { expect, type Page, type Route } from '@playwright/test';
 
+const LOCAL_REVIEW_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 const SUPABASE_REST_ROUTE = '**/rest/v1/**';
 const SUPABASE_AUTH_ROUTE = '**/auth/v1/**';
+const LOCAL_REST_FIXTURE_PATHS = new Set([
+    '/rest/v1/restaurants',
+    '/rest/v1/reviews',
+    '/rest/v1/profiles',
+    '/rest/v1/review_likes',
+    '/rest/v1/bookmarks',
+    '/rest/v1/rpc/increment_search_count',
+    '/rest/v1/rpc/search_restaurants_by_youtube_title',
+]);
+const LOCAL_AUTH_FIXTURE_PATHS = new Set(['/auth/v1/user']);
+const LOCAL_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'local' || process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
+const HOSTED_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'hosted';
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const LOCAL_NIGHTLY_PORTS = new Set([
+    process.env.APP_PORT,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLIC_URL,
+    process.env.API_EXTERNAL_URL,
+    process.env.PLAYWRIGHT_BASE_URL,
+].flatMap((value) => {
+    if (!value) return [];
+    try {
+        return [new URL(value).port || '80'];
+    } catch {
+        return /^\d{1,5}$/.test(value) ? [value] : [];
+    }
+}));
+const HOSTED_SUPABASE_ORIGINS = new Set(
+    [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL, process.env.SUPABASE_PUBLIC_URL]
+        .flatMap((value) => {
+            if (!value) return [];
+            try {
+                const parsed = new URL(value);
+                return ['http:', 'https:'].includes(parsed.protocol) ? [parsed.origin] : [];
+            } catch {
+                return [];
+            }
+        }),
+);
+
+function isAllowedLocalNightlyUrl(url: URL): boolean {
+    if (LOCAL_NIGHTLY_MODE) {
+        return ['http:', 'https:'].includes(url.protocol)
+            && LOOPBACK_HOSTS.has(url.hostname)
+            && LOCAL_NIGHTLY_PORTS.has(url.port || (url.protocol === 'https:' ? '443' : '80'));
+    }
+    if (HOSTED_NIGHTLY_MODE) {
+        return HOSTED_SUPABASE_ORIGINS.has(url.origin);
+    }
+    return true;
+}
 
 const RESTAURANT_FIXTURES = [
     {
@@ -69,7 +122,7 @@ const REVIEW_FIXTURES = [
         restaurant_id: 'restaurant-marker-1',
         user_id: 'user-reviewer-1',
         content: '국물이 진하고 만두가 푸짐해서 재방문하고 싶어요.',
-        food_photos: ['https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-01T00:00:00.000Z',
         is_pinned: false,
     },
@@ -78,7 +131,7 @@ const REVIEW_FIXTURES = [
         restaurant_id: 'restaurant-marker-2',
         user_id: 'user-reviewer-2',
         content: '튀김이 바삭하고 소스가 깔끔했어요.',
-        food_photos: ['https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-02T00:00:00.000Z',
         is_pinned: false,
     },
@@ -87,7 +140,7 @@ const REVIEW_FIXTURES = [
         restaurant_id: 'restaurant-search',
         user_id: 'user-reviewer-3',
         content: '분식집 분위기가 좋고 떡볶이가 매콤해요.',
-        food_photos: ['https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-03T00:00:00.000Z',
         is_pinned: true,
     },
@@ -526,9 +579,26 @@ function filterRestaurantsForRequest(url: URL): RestaurantFixture[] {
 async function handleSupabaseRestRoute(route: Route) {
     const request = route.request();
     const url = new URL(request.url());
+    const method = request.method().toUpperCase();
+    const isMutationFixture = url.pathname.endsWith('/rest/v1/rpc/increment_search_count')
+        || url.pathname.endsWith('/rest/v1/rpc/search_restaurants_by_youtube_title');
 
-    if (request.method() === 'OPTIONS') {
+    if (!isAllowedLocalNightlyUrl(url)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (!LOCAL_REST_FIXTURE_PATHS.has(url.pathname)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+
+    if (method === 'OPTIONS') {
         await fulfillJson(route, {});
+        return;
+    }
+
+    if (method !== 'GET' && !(method === 'POST' && isMutationFixture)) {
+        await route.abort('blockedbyclient');
         return;
     }
 
@@ -576,14 +646,29 @@ async function handleSupabaseRestRoute(route: Route) {
         return;
     }
 
-    await fulfillJson(route, []);
+    await route.abort('blockedbyclient');
 }
 
 async function handleSupabaseAuthRoute(route: Route) {
     const request = route.request();
+    const url = new URL(request.url());
+
+    if (!isAllowedLocalNightlyUrl(url)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (!LOCAL_AUTH_FIXTURE_PATHS.has(url.pathname)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
 
     if (request.method() === 'OPTIONS') {
         await fulfillJson(route, {});
+        return;
+    }
+
+    if (request.method() !== 'GET') {
+        await route.abort('blockedbyclient');
         return;
     }
 
