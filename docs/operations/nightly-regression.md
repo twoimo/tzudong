@@ -75,6 +75,9 @@ fail closed.
 A failed reset may add a bounded `local-stack-failure-diagnostics-v1` receipt to
 the short-retention Actions artifact. It contains only fixed service state,
 health, exit-code, and Compose-status fields; it is never in the public release.
+Before reset, the workflow pulls the exact Compose image tags with a bounded
+retry and records only fixed image/status/failure-class fields. A failed pull
+stops the lane before Docker Compose or publication.
 
 The scheduled regression job has `contents: read` only. It uploads a
 short-retention `nightly-local-<run-id>` Actions artifact containing only the
