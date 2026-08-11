@@ -287,13 +287,22 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
+    for (const action of [
+      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+      "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+      "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6",
+      "actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08",
+      "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+    ]) {
+      expect(localWorkflowSource).toContain(action);
+    }
     const publishIndex = localWorkflowSource.indexOf("\n  publish:");
     expect(publishIndex).toBeGreaterThan(0);
     const regressionWorkflowSource = localWorkflowSource.slice(0, publishIndex);
     expect(regressionWorkflowSource).toContain("contents: read");
     expect(regressionWorkflowSource).not.toContain("contents: write");
     expect(localWorkflowSource).toContain("needs: local");
-    expect(localWorkflowSource).toContain("github.ref == 'refs/heads/main'");
+    expect(localWorkflowSource).toContain("if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' }}");
     expect(localWorkflowSource).toContain('test "${GITHUB_SHA}" = "$main_sha"');
     expect(localWorkflowSource).toContain("actions/download-artifact@v4");
     expect(localWorkflowSource).not.toContain("nightly-artifacts/nightly-run.log");
