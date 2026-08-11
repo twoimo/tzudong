@@ -312,6 +312,10 @@ describe("nightly regression package and source contracts", () => {
       "docker', 'compose",
       "'start', service",
       "exec_invalid",
+      "Capture bounded Compose runtime diagnostics",
+      "local-compose-runtime-diagnostics-v1",
+      "health_failing_streak",
+      "health_log_exit_codes",
       "stack.env and credentials excluded",
       "down --volumes --remove-orphans",
     ]) {

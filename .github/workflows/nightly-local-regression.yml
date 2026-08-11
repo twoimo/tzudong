@@ -571,6 +571,92 @@ jobs:
             --provenance-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env.provenance.json" \
             > nightly-run.log
 
+      - name: Capture bounded Compose runtime diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p nightly-artifacts/failure-diagnostics
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import subprocess
+
+          project = os.environ.get('LOCAL_PROJECT', '')
+          records = []
+          allowed_states = {'created', 'running', 'paused', 'restarting', 'removing', 'exited', 'dead'}
+          allowed_health = {'', 'starting', 'healthy', 'unhealthy', 'none'}
+          markers = (
+              ('permission_denied', ('permission denied', 'operation not permitted')),
+              ('mount_invalid', ('invalid mount', 'no such file or directory')),
+              ('runtime_error', ('failed to start', 'failed to create', 'exec format error')),
+          )
+
+          def classify(value):
+              normalized = str(value or '').casefold()
+              for suffix, values in markers:
+                  if any(marker in normalized for marker in values):
+                      return suffix
+              return 'none' if not normalized else 'unknown'
+
+          if project.startswith('tzudong-local-'):
+              try:
+                  ids = subprocess.check_output(
+                      [
+                          'docker', 'ps', '-aq',
+                          '--filter', f'label=com.docker.compose.project={project}',
+                      ],
+                      text=True,
+                      timeout=30,
+                  ).splitlines()
+              except (OSError, subprocess.SubprocessError):
+                  ids = []
+              for container_id in ids:
+                  try:
+                      raw = subprocess.check_output(
+                          ['docker', 'inspect', container_id],
+                          text=True,
+                          timeout=30,
+                      )
+                      payload = json.loads(raw)[0]
+                  except (OSError, subprocess.SubprocessError, ValueError, IndexError, KeyError):
+                      continue
+                  labels = (payload.get('Config') or {}).get('Labels') or {}
+                  service = labels.get('com.docker.compose.service')
+                  if service not in {
+                      'analytics', 'auth', 'db', 'functions', 'imgproxy', 'kong',
+                      'mail', 'meta', 'realtime', 'rest', 'storage', 'studio',
+                      'supavisor', 'vector',
+                  }:
+                      continue
+                  state = payload.get('State') or {}
+                  health = state.get('Health') or {}
+                  health_log = health.get('Log') or []
+                  records.append({
+                      'service': service,
+                      'state': state.get('Status') if state.get('Status') in allowed_states else 'unknown',
+                      'exit_code': state.get('ExitCode') if isinstance(state.get('ExitCode'), int) and 0 <= state.get('ExitCode') <= 255 else None,
+                      'state_error_class': classify(state.get('Error')),
+                      'health': health.get('Status') if health.get('Status') in allowed_health else 'unknown',
+                      'health_failing_streak': health.get('FailingStreak') if isinstance(health.get('FailingStreak'), int) and health.get('FailingStreak') >= 0 else None,
+                      'health_log_exit_codes': [
+                          item.get('ExitCode')
+                          for item in health_log[-5:]
+                          if isinstance(item, dict) and isinstance(item.get('ExitCode'), int) and 0 <= item.get('ExitCode') <= 255
+                      ],
+                  })
+          records.sort(key=lambda item: item['service'])
+          pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json').write_text(
+              json.dumps({
+                  'schema': 'local-compose-runtime-diagnostics-v1',
+                  'project_name': project if project.startswith('tzudong-local-') else 'unknown',
+                  'containers': records,
+              }, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
       - name: Capture sanitized local receipts
         if: always()
         shell: bash
