@@ -22,6 +22,7 @@ import ssl
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import unicodedata
 from pathlib import Path
@@ -1474,13 +1475,25 @@ def _stage_database_init_files(command: list[str], state: Path) -> None:
     for source_name, destination_name in DB_INIT_FILES:
         source = state / "inputs" / source_name
         _regular_owned(source, mode=0o600)
-        _run(
-            [
-                "docker", "cp", str(source),
-                f"{db_id}:/docker-entrypoint-initdb.d/{destination_name}",
-            ],
-            error_code="compose_db_init_stage",
-        )
+        temporary: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(prefix=".db-init-", dir=state, delete=False) as handle:
+                temporary = Path(handle.name)
+                handle.write(source.read_bytes())
+            os.chmod(temporary, 0o644)
+            _run(
+                [
+                    "docker", "cp", str(temporary),
+                    f"{db_id}:/docker-entrypoint-initdb.d/{destination_name}",
+                ],
+                error_code="compose_db_init_stage",
+            )
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink()
+                except FileNotFoundError:
+                    pass
 
 def _action_render(root: Path, project: str, state: Path) -> dict[str, Any]:
     digest, _, _ = _render(root, project, state)

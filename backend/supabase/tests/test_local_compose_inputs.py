@@ -240,6 +240,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("DB_INIT_FILES", source)
         self.assertIn("_stage_database_init_files", source)
         self.assertIn("compose_db_init_stage", source)
+        self.assertIn("NamedTemporaryFile", source)
+        self.assertIn("os.chmod(temporary, 0o644)", source)
         self.assertIn('"create", "--force-recreate", "--pull=missing"', source)
         self.assertIn('command + ["start", service]', source)
         self.assertIn("_COMPOSE_ERROR_MARKERS", source)

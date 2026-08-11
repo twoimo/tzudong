@@ -79,7 +79,9 @@ database gate also verifies the `_analytics` bootstrap schema with a
 900-second first-run bound.
 The lifecycle stages the fixed database init files into the image's
 top-level init directory after container creation so the pinned Postgres
-entrypoint processes them deterministically on Linux.
+entrypoint processes them deterministically on Linux. The staged copies are
+readable only inside the disposable container; host input files remain
+owner-only.
 A failed reset may add a bounded `local-stack-failure-diagnostics-v1` receipt to
 the short-retention Actions artifact. It contains only fixed service state,
 health, exit-code, and Compose-status fields; it is never in the public release.
