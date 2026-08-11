@@ -201,7 +201,10 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('parsed.scheme != "unix"', source)
         self.assertIn("stat.S_ISLNK", source)
         self.assertIn("stat.S_ISSOCK", source)
-        self.assertIn("info.st_uid != os.getuid()", source)
+        self.assertIn("_github_actions_root_owned_socket", source)
+        self.assertIn("GITHUB_ACTIONS", source)
+        self.assertIn("CI", source)
+        self.assertIn("owned_by_current_user", source)
         self.assertIn('["docker", "ps", "-a"', source)
         self.assertIn('_assert_project_volumes(command, project)', source)
 if __name__ == "__main__":
