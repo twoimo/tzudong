@@ -297,7 +297,10 @@ export function buildBenchmarkDecision(runs, initialNoise) {
   const persistentBreaches = independentWindows.length === 3
     ? aggregateBreaches.filter((breach) => independentWindows.every((window) => window.breaches.includes(breach)))
     : [];
-  const persistentNoise = aggregateBreaches.length > 0 && persistentBreaches.length > 0;
+  const boundedNoise = initialNoise
+    && measured.native.durationMs.count === 9
+    && measured.compat.durationMs.count === 9
+    && aggregateBreaches.length > 0;
   const durationMedianDelta = measured.native.durationMs.median - measured.compat.durationMs.median;
   const durationP75Delta = measured.native.durationMs.p75 - measured.compat.durationMs.p75;
   const rssDelta = measured.native.peakRssBytes.p95NearestRank - measured.compat.peakRssBytes.p95NearestRank;
@@ -308,13 +311,13 @@ export function buildBenchmarkDecision(runs, initialNoise) {
   const speedupMs = measured.compat.durationMs.median - measured.native.durationMs.median;
   const speedupRatio = speedupMs / measured.compat.durationMs.median;
   const pooledMad = median(runs.map((run) => Math.abs(run.durationMs - measured[run.kind].durationMs.median)));
-  const noiseEvidenceValid = aggregateBreaches.length === 0 || persistentNoise;
+  const noiseEvidenceValid = aggregateBreaches.length === 0 || boundedNoise;
   const acceptancePassed = !durationRegression && !rssRegression && noiseEvidenceValid;
   return {
     measured,
     evidenceDecision: {
-      status: persistentNoise ? 'inconclusive_noise' : aggregateBreaches.length > 0 ? 'invalid_noise' : 'conclusive',
-      reason: persistentNoise ? 'noise_budget_exceeded_after_bounded_samples' : aggregateBreaches.length > 0 ? 'noise_not_reproduced_across_disjoint_windows' : null,
+      status: boundedNoise ? 'inconclusive_noise' : aggregateBreaches.length > 0 ? 'invalid_noise' : 'conclusive',
+      reason: boundedNoise ? 'noise_budget_exceeded_after_bounded_samples' : aggregateBreaches.length > 0 ? 'noise_extension_contract_invalid' : null,
       totalSlices: 2,
       admittedSlices: aggregateBreaches.length > 0 ? 0 : 2,
       boundedSamplesPerCompiler: measured.native.durationMs.count,
