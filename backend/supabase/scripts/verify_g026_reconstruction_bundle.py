@@ -62,6 +62,29 @@ OBSOLETE_OVERLOAD_DROPS = (
     },
 )
 
+RECONSTRUCTION_POLICY_SHELLS = (
+    '''CREATE POLICY "Restaurant requests select policy"
+  ON public.restaurant_requests FOR SELECT USING (false);''',
+    '''CREATE POLICY "Admins can delete submission items"
+  ON public.restaurant_submission_items FOR DELETE USING (false);''',
+    '''CREATE POLICY "Admins can update submission items"
+  ON public.restaurant_submission_items FOR UPDATE USING (false);''',
+    '''CREATE POLICY "Submission items insert policy"
+  ON public.restaurant_submission_items FOR INSERT WITH CHECK (false);''',
+    '''CREATE POLICY "Submission items select policy"
+  ON public.restaurant_submission_items FOR SELECT USING (false);''',
+    '''CREATE POLICY "Restaurant submissions select policy"
+  ON public.restaurant_submissions FOR SELECT USING (false);''',
+    '''CREATE POLICY "Admins can delete short URLs"
+  ON public.short_urls FOR DELETE USING (false);''',
+)
+RECONSTRUCTION_POLICY_PRECONDITION_BYTES = 3828
+RECONSTRUCTION_POLICY_PRECONDITION_SHA256 = 'b50ef1728545138077c0718eeb470aa4173c4e0ea9d00cef45457c98719fa047'
+RECONSTRUCTION_OBSOLETE_POLICY_DROPS = (
+    'DROP POLICY "Admins can view all submissions" ON public.restaurant_submissions;',
+    'DROP POLICY "Admins can manage all submission items" ON public.restaurant_submission_items;',
+)
+
 ADMIN_WORKFLOW_SOURCE = {
     'path': 'backend/supabase/baselines/historical/20260310_admin_workflow_pipeline.sql',
     'byteLength': 5998,
@@ -566,6 +589,43 @@ def require_synthesized_compatibility_bindings(repairs, binding):
         grants = re.findall(rf'GRANT EXECUTE ON FUNCTION public\.{name}\([^)]*\) TO ([^;]+);', repairs)
         if grants != ['service_role']:
             raise ValueError(f'{name} additive EXECUTE grant drifted')
+
+def require_reconstruction_policy_shells(repairs):
+    found = [
+        match.group(0)
+        for match in re.finditer(
+            r'(?ms)^CREATE POLICY (?:"[^"]+"|[a-z][a-z0-9_]*)\n  ON public\.[a-z][a-z0-9_]+ .*?;$',
+            repairs,
+        )
+    ]
+    if found != list(RECONSTRUCTION_POLICY_SHELLS):
+        raise ValueError('G026 fail-closed policy shell declarations drifted')
+    tag = '$g026_policy_shell_precondition$'
+    precondition_start = 'DO ' + tag
+    if repairs.count(precondition_start) != 1 or repairs.count(tag) != 2:
+        raise ValueError('G026 fail-closed policy shell precondition drifted')
+    precondition_position = repairs.index(precondition_start)
+    precondition_end = repairs.index(tag + ';', precondition_position + len(precondition_start))
+    precondition = repairs[precondition_position:precondition_end + len(tag) + 1]
+    if (
+        len(precondition.encode()) != RECONSTRUCTION_POLICY_PRECONDITION_BYTES
+        or hashlib.sha256(precondition.encode()).hexdigest() != RECONSTRUCTION_POLICY_PRECONDITION_SHA256
+    ):
+        raise ValueError('G026 fail-closed policy shell precondition drifted')
+    drops = re.findall(r'^DROP POLICY [^;]+;$', repairs, re.MULTILINE)
+    if drops != list(RECONSTRUCTION_OBSOLETE_POLICY_DROPS):
+        raise ValueError('G026 obsolete policy cleanup drifted')
+    positions = [repairs.index(statement) for statement in RECONSTRUCTION_POLICY_SHELLS]
+    drop_positions = [repairs.index(statement) for statement in RECONSTRUCTION_OBSOLETE_POLICY_DROPS]
+    if (
+        drop_positions != sorted(drop_positions)
+        or positions != sorted(positions)
+        or precondition_position >= drop_positions[0]
+        or drop_positions[-1] >= positions[0]
+    ):
+        raise ValueError('G026 fail-closed policy shell ordering drifted')
+    if positions[-1] >= repairs.index('DROP FUNCTION IF EXISTS public.approve_restaurant(uuid);'):
+        raise ValueError('G026 fail-closed policy shells must precede repair functions')
 
 def require(source, *tokens):
     missing = [token for token in tokens if token not in source]
@@ -1369,6 +1429,7 @@ def main():
         require_synthesized_compatibility_bindings(
             repairs, data['synthesizedCompatibilityBindings']
         )
+        require_reconstruction_policy_shells(repairs)
         require_ad_banners_source(transition, data['adBanners'])
         require_user_bookmarks_source(transition, data['userBookmarks'])
         require_short_urls_source(transition, data['shortUrls'])
