@@ -448,9 +448,10 @@ jobs:
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
       - run: npm ci
-      - run: cd ../.. && npm ci --prefix backend
+      - name: Install backend dependencies with bounded network retry
+        run: bash ../../.github/scripts/install-backend-npm-dependencies.sh
       - run: npx eslint lib/admin-address-consistency.ts app/admin/evaluations/page.tsx components/admin/EvaluationDetailView.tsx components/admin/EvaluationTableNew.tsx tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts scripts/restaurant-refresh-cron.mjs scripts/apply-supabase-migration.mjs tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts --max-warnings=0
       - run: npx tsc --noEmit --pretty false
       - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs
       - run: cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=${{ github.run_id }} SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
-      - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts
+      - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
