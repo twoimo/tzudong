@@ -18,6 +18,7 @@ const playwrightConfigSource = read("playwright.config.ts");
 const healthRouteSource = read("app/api/health/route.ts");
 const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
 const localSupabaseAdminSpecSource = read("tests/local-supabase-admin.spec.ts");
+const mobileHomeMapSpecSource = read("tests/mobile-home-map.spec.ts");
 const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
 const localWorkflowSource = read("../../.github/workflows/nightly-local-regression.yml");
 const publicationAllowlistSource = read("../../.github/nightly-local-publication-allowlist.txt");
@@ -259,6 +260,33 @@ describe("nightly regression package and source contracts", () => {
     expect(nightlyRunnerSource).toContain("'--project=chromium'");
   });
 
+  test("keeps mobile emulation inside the selected Chromium project", () => {
+    expect(mobileHomeMapSpecSource).toContain("const IPHONE_SE_DEVICE = devices['iPhone SE'];");
+    for (const option of [
+      "userAgent: IPHONE_SE_DEVICE.userAgent",
+      "viewport: IPHONE_SE_DEVICE.viewport",
+      "deviceScaleFactor: IPHONE_SE_DEVICE.deviceScaleFactor",
+      "isMobile: IPHONE_SE_DEVICE.isMobile",
+      "hasTouch: IPHONE_SE_DEVICE.hasTouch",
+    ]) {
+      expect(mobileHomeMapSpecSource).toContain(option);
+    }
+    expect(mobileHomeMapSpecSource).not.toContain("...devices['iPhone SE']");
+    expect(mobileHomeMapSpecSource).not.toContain('defaultBrowserType');
+    expect(mobileHomeMapSpecSource).not.toContain('browserName:');
+    for (const [project, browser] of [
+      ['chromium', 'chromium'],
+      ['firefox', 'firefox'],
+      ['webkit', 'webkit'],
+    ]) {
+      expect(playwrightConfigSource).toContain(`name: '${project}'`);
+      expect(playwrightConfigSource).toContain(`browserName: '${browser}'`);
+    }
+    expect(mobileHomeMapSpecSource).toContain("window.sessionStorage.removeItem(`tzudong:home-restore:${key}`);");
+    expect(mobileHomeMapSpecSource).toContain('await page.goBack();');
+    expect(mobileHomeMapSpecSource).not.toContain("new PopStateEvent('popstate'");
+  });
+
   test("requires loopback local endpoints and blocks third-party browser destinations", () => {
     for (const token of [
       "function isLoopbackHostname(hostname)",
@@ -285,9 +313,7 @@ describe("nightly regression package and source contracts", () => {
       "application-path-denied",
       "isAllowedSupabaseFixturePath",
       "SUPABASE_FIXTURE_CORS_HEADERS",
-      "await request.headerValue('origin')",
-      "await request.headerValue('access-control-request-method')",
-      "await request.headerValue('access-control-request-headers')",
+      "requestHeaders.origin !== LOCAL_APP_ORIGIN",
       "access-control-request-method",
       "access-control-request-headers",
       "Nightly Supabase fixture rejected an unexpected preflight header.",
@@ -302,8 +328,6 @@ describe("nightly regression package and source contracts", () => {
     }
     expect(nightlyFixtureSource).not.toContain("'access-control-allow-headers': '*'");
     expect(nightlyFixtureSource).not.toContain("'access-control-allow-origin': '*'");
-    expect(nightlyFixtureSource).not.toContain("request.allHeaders()");
-    expect(nightlyFixtureSource).not.toContain("new URL(request.frame().url()).origin");
     for (const spec of curatedSpecs) {
       expect(read(spec)).toContain("./nightly/nightly-test");
     }
@@ -497,9 +521,7 @@ describe("nightly regression package and source contracts", () => {
       "url.pathname.endsWith('/rest/v1/announcements')",
       "url.pathname.endsWith('/rest/v1/ad_banners')",
       "SUPABASE_FIXTURE_CORS_HEADERS",
-      "await request.headerValue('origin')",
-      "await request.headerValue('access-control-request-method')",
-      "await request.headerValue('access-control-request-headers')",
+      "requestHeaders.origin !== LOCAL_APP_ORIGIN",
       "Mobile Supabase fixture rejected an unexpected preflight header.",
       "'access-control-allow-origin': LOCAL_APP_ORIGIN",
       "'access-control-expose-headers': 'Content-Range, Link, Location'",
@@ -509,8 +531,6 @@ describe("nightly regression package and source contracts", () => {
     }
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-headers': '*'");
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-origin': '*'");
-    expect(mobileHomeMapHelpersSource).not.toContain("request.allHeaders()");
-    expect(mobileHomeMapHelpersSource).not.toContain("new URL(request.frame().url()).origin");
   });
 
   test("keeps local health responses redacted to the stable three-field contract", () => {
