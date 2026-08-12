@@ -99,6 +99,11 @@ services:
     # GitHub-hosted Docker denies Tini's subreaper setup; the image's limits
     # wrapper preserves bounded startup without requiring that capability.
     entrypoint: ["/app/limits.sh"]
+    # The hosted disposable user namespace rejects Erlang's startup thread
+    # syscalls under the default profile; this service has no host mounts or
+    # socket access and remains isolated to the local Compose network.
+    security_opt:
+      - "seccomp=unconfined"
     environment:
       CLUSTER_POSTGRES: !reset null
       ERL_AFLAGS: !reset null
