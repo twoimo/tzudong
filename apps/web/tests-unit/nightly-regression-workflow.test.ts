@@ -330,6 +330,7 @@ describe("nightly regression package and source contracts", () => {
       "erl_runtime",
       "runtime_input_checks",
       "entrypoint_class",
+      "log_signatures",
       "supabase_db_present",
       "supabase_db_missing",
       "analytics_schema_present",
