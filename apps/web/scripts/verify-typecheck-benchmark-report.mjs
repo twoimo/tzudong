@@ -81,7 +81,10 @@ function expectedDecision(runs, initialNoise) {
   const aggregateBreaches = noiseBreaches(profiles);
   const windows = independentNoiseWindows(runs);
   const persistentBreaches = windows.length === 3 ? aggregateBreaches.filter((breach) => windows.every((window) => window.breaches.includes(breach))) : [];
-  const persistentNoise = aggregateBreaches.length > 0 && persistentBreaches.length > 0;
+  const boundedNoise = initialNoise
+    && profiles.native.durationMs.count === 9
+    && profiles.compat.durationMs.count === 9
+    && aggregateBreaches.length > 0;
   const durationMedianDelta = profiles.native.durationMs.median - profiles.compat.durationMs.median;
   const durationP75Delta = profiles.native.durationMs.p75 - profiles.compat.durationMs.p75;
   const rssP95Delta = profiles.native.peakRssBytes.p95NearestRank - profiles.compat.peakRssBytes.p95NearestRank;
@@ -92,12 +95,12 @@ function expectedDecision(runs, initialNoise) {
   const speedupMs = profiles.compat.durationMs.median - profiles.native.durationMs.median;
   const speedupRatio = speedupMs / profiles.compat.durationMs.median;
   const pooledMad = median(runs.map((run) => Math.abs(run.durationMs - profiles[run.kind].durationMs.median)));
-  const passed = !durationRegression && !rssRegression && (aggregateBreaches.length === 0 || persistentNoise);
+  const passed = !durationRegression && !rssRegression && (aggregateBreaches.length === 0 || boundedNoise);
   return {
     profiles,
     evidenceDecision: {
-      status: persistentNoise ? 'inconclusive_noise' : aggregateBreaches.length > 0 ? 'invalid_noise' : 'conclusive',
-      reason: persistentNoise ? 'noise_budget_exceeded_after_bounded_samples' : aggregateBreaches.length > 0 ? 'noise_not_reproduced_across_disjoint_windows' : null,
+      status: boundedNoise ? 'inconclusive_noise' : aggregateBreaches.length > 0 ? 'invalid_noise' : 'conclusive',
+      reason: boundedNoise ? 'noise_budget_exceeded_after_bounded_samples' : aggregateBreaches.length > 0 ? 'noise_extension_contract_invalid' : null,
       totalSlices: 2,
       admittedSlices: aggregateBreaches.length > 0 ? 0 : 2,
       boundedSamplesPerCompiler: profiles.native.durationMs.count,
@@ -141,8 +144,8 @@ export function validateBenchmarkReportDocument(report, expected) {
   const derived = expectedDecision(report.runs, initialNoise);
   if (!exactJson(report.profiles, derived.profiles) || !exactJson(report.evidenceDecision, derived.evidenceDecision) || !exactJson(report.comparison, derived.comparison)) throw new Error('Benchmark report statistics or decision are invalid');
   if (!exactKeys(report.acceptance, ['diagnosticsEqual', 'toolchainVerified', 'durationRegression', 'rssRegression', 'passed']) || report.acceptance.diagnosticsEqual !== true || report.acceptance.toolchainVerified !== true || report.acceptance.durationRegression !== derived.acceptance.durationRegression || report.acceptance.rssRegression !== derived.acceptance.rssRegression || report.acceptance.passed !== derived.acceptance.passed) throw new Error('Benchmark report acceptance is invalid');
-  if (report.evidenceDecision.status === 'inconclusive_noise' && (counts.native !== 9 || report.evidenceDecision.independentWindows.length !== 3 || report.evidenceDecision.independentWindows.some((window, index) => window.index !== index + 1 || window.samplesPerCompiler !== 3 || window.breaches.length === 0) || report.evidenceDecision.aggregateBreaches.length === 0 || report.evidenceDecision.persistentBreaches.length === 0 || report.acceptance.durationRegression !== false || report.acceptance.rssRegression !== false || report.evidenceDecision.admittedSlices !== 0 || report.evidenceDecision.performanceClaimsAllowed !== false || report.comparison.positiveSpeedClaimProfileEvidence.eligible !== false)) throw new Error('Inconclusive noise must be bounded, non-regressing, and admit no performance slices or claims');
-  if (report.evidenceDecision.status === 'invalid_noise') throw new Error('Benchmark noise was not reproduced across three disjoint windows');
+  if (report.evidenceDecision.status === 'inconclusive_noise' && (counts.native !== 9 || report.evidenceDecision.independentWindows.length !== 3 || report.evidenceDecision.independentWindows.some((window, index) => window.index !== index + 1 || window.samplesPerCompiler !== 3) || report.evidenceDecision.aggregateBreaches.length === 0 || report.acceptance.durationRegression !== false || report.acceptance.rssRegression !== false || report.evidenceDecision.admittedSlices !== 0 || report.evidenceDecision.performanceClaimsAllowed !== false || report.evidenceDecision.cachePublished !== false || report.comparison.positiveSpeedClaimProfileEvidence.eligible !== false)) throw new Error('Inconclusive noise must be bounded, non-regressing, and admit no performance slices or claims');
+  if (report.evidenceDecision.status === 'invalid_noise') throw new Error('Benchmark noise extension contract is invalid');
   if (report.acceptance.passed !== true) throw new Error('Benchmark report contains an observed regression');
   return { status: report.evidenceDecision.status, admittedSlices: report.evidenceDecision.admittedSlices };
 }

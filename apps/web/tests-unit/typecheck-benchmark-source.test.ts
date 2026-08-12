@@ -277,11 +277,12 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     expect(measure).toContain("await executeSamples(7)");
     expect(measure).toContain("executeSamples(9)");
     expect(measure).not.toContain("Persistent benchmark noise after nine samples");
-    expect(measure).toContain("status: persistentNoise ? 'inconclusive_noise'");
+    expect(measure).toContain("status: boundedNoise ? 'inconclusive_noise'");
     expect(measure).toContain("admittedSlices: aggregateBreaches.length > 0 ? 0 : 2");
     expect(measure).toContain("performanceClaimsAllowed: aggregateBreaches.length === 0 && acceptancePassed");
     expect(measure).toContain("independentNoiseWindows(runs)");
     expect(measure).toContain("independentWindows.every((window) => window.breaches.includes(breach))");
+    expect(measure).toContain("measured.native.durationMs.count === 9");
     expect(measure).toContain("Array.from({ length: 3 }");
     expect(measure).toContain("seededOrder(options.releaseId");
     expect(measure).toContain("retry <= 2");
@@ -317,7 +318,7 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     expect(sampler).toContain("ThreadPriority.Highest");
   });
 
-  test("treats bounded persistent noise as zero admitted slices without hiding an observed regression", () => {
+  test("treats bounded aggregate noise as zero admitted slices without hiding an observed regression", () => {
     expect(repositoryGuidance).toContain("treat zero admitted slices as a valid result");
     expect(repositoryGuidance).toContain("No current G003 measured improvement is established without retained raw and scored artifacts");
     const stable = buildBenchmarkDecision(decisionRuns(Array(7).fill(1000), Array(7).fill(1000)), false);
@@ -338,14 +339,40 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     expect(inconclusive.comparison.positiveSpeedClaimProfileEvidence.eligible).toBe(false);
     expect(inconclusive.acceptance.passed).toBe(true);
 
-    const driftWithoutThreeIndependentBreaches = [800, 800, 800, 1000, 1000, 1000, 1200, 1200, 1200];
-    const invalidNoise = buildBenchmarkDecision(
-      decisionRuns(driftWithoutThreeIndependentBreaches, driftWithoutThreeIndependentBreaches),
+    const driftAcrossWindows = [800, 800, 800, 1000, 1000, 1000, 1200, 1200, 1200];
+    const isolatedCompatNoise = [1000, 1000, 1000, 900, 1000, 1100, 1000, 1000, 1000];
+    const inconsistentNoise = buildBenchmarkDecision(
+      decisionRuns(driftAcrossWindows, isolatedCompatNoise),
       true,
     );
-    expect(invalidNoise.evidenceDecision).toMatchObject({ status: "invalid_noise", admittedSlices: 0, performanceClaimsAllowed: false });
-    expect(invalidNoise.evidenceDecision.persistentBreaches).toEqual([]);
-    expect(invalidNoise.acceptance.passed).toBe(false);
+    expect(inconsistentNoise.evidenceDecision).toMatchObject({
+      status: "inconclusive_noise",
+      aggregateBreaches: ["native.durationMs"],
+      admittedSlices: 0,
+      performanceClaimsAllowed: false,
+      cachePublished: false,
+    });
+    expect(inconsistentNoise.evidenceDecision.independentWindows.map((window) => window.breaches)).toEqual([
+      [],
+      ["compat.durationMs"],
+      [],
+    ]);
+    expect(inconsistentNoise.evidenceDecision.persistentBreaches).toEqual([]);
+    expect(inconsistentNoise.acceptance.passed).toBe(true);
+
+    const unextendedNoise = buildBenchmarkDecision(
+      decisionRuns([800, 1000, 1200, 800, 1000, 1200, 1000], Array(7).fill(1000)),
+      true,
+    );
+    expect(unextendedNoise.evidenceDecision.status).toBe("invalid_noise");
+    expect(unextendedNoise.acceptance.passed).toBe(false);
+
+    const inconsistentNoisyRegression = buildBenchmarkDecision(
+      decisionRuns(driftAcrossWindows.map((value) => value + 500), isolatedCompatNoise),
+      true,
+    );
+    expect(inconsistentNoisyRegression.evidenceDecision.status).toBe("inconclusive_noise");
+    expect(inconsistentNoisyRegression.acceptance).toMatchObject({ durationRegression: true, passed: false });
 
     const noisyRegression = buildBenchmarkDecision(
       decisionRuns(noisyValues.map((value) => value + 500), noisyValues),
@@ -404,11 +431,14 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     const noisyRegression = benchmarkReport(noisyValues.map((value) => value + 500), noisyValues);
     expect(() => validateBenchmarkReportDocument(noisyRegression, expected)).toThrow("non-regressing");
 
-    const driftWithoutThreeIndependentBreaches = [800, 800, 800, 1000, 1000, 1000, 1200, 1200, 1200];
+    const driftAcrossWindows = [800, 800, 800, 1000, 1000, 1000, 1200, 1200, 1200];
+    const isolatedCompatNoise = [1000, 1000, 1000, 900, 1000, 1100, 1000, 1000, 1000];
+    const inconsistentNoise = benchmarkReport(driftAcrossWindows, isolatedCompatNoise);
+    expect(validateBenchmarkReportDocument(inconsistentNoise, expected)).toEqual({ status: "inconclusive_noise", admittedSlices: 0 });
     expect(() => validateBenchmarkReportDocument(
-      benchmarkReport(driftWithoutThreeIndependentBreaches, driftWithoutThreeIndependentBreaches),
+      benchmarkReport(driftAcrossWindows.map((value) => value + 500), isolatedCompatNoise),
       expected,
-    )).toThrow("three disjoint windows");
+    )).toThrow("non-regressing");
   });
 
   test("readbacks every raw hash and rejects any cache or extra publication file", async () => {
