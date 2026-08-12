@@ -617,6 +617,7 @@ jobs:
               ('auth_failure', ('password authentication failed', 'authentication failed')),
               ('tini_runtime', ('pr_set_child_subreaper', 'subreaper', 'tini')),
               ('operation_not_permitted', ('operation not permitted',)),
+              ('erl_runtime', ('cpu_sup', 'memsup', 'inet_gethost', 'failed to start epmd', 'could not start application')),
               ('permission_denied', ('permission denied',)),
               ('mount_invalid', ('invalid mount', 'no such file or directory')),
               ('runtime_error', ('failed to start', 'failed to create', 'exec format error')),
@@ -694,6 +695,11 @@ jobs:
                           for item in health_log[-5:]
                           if isinstance(item, dict) and isinstance(item.get('ExitCode'), int) and 0 <= item.get('ExitCode') <= 255
                       ],
+                      'entrypoint_class': (
+                          'limits_wrapper'
+                          if (payload.get('Config') or {}).get('Entrypoint') == ['/app/limits.sh']
+                          else 'image_default'
+                      ),
                   })
               database_bootstrap = {
                   'status': 'unavailable',
