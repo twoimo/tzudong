@@ -517,16 +517,16 @@ function toJsonBody(data: unknown): string {
 
 async function fulfillJson(route: Route, data: unknown, status = 200) {
     const request = route.request();
-    const requestHeaders = request.headers();
-    if (!LOCAL_APP_ORIGIN || requestHeaders.origin !== LOCAL_APP_ORIGIN) {
+    const requestOrigin = await request.headerValue('origin');
+    if (!LOCAL_APP_ORIGIN || requestOrigin !== LOCAL_APP_ORIGIN) {
         throw new Error('Mobile Supabase fixture rejected an untrusted browser origin.');
     }
     if (request.method() === 'OPTIONS') {
-        const requestedMethod = requestHeaders['access-control-request-method']?.toUpperCase();
+        const requestedMethod = (await request.headerValue('access-control-request-method'))?.toUpperCase();
         if (!requestedMethod || !['GET', 'HEAD', 'POST'].includes(requestedMethod)) {
             throw new Error('Mobile Supabase fixture rejected an unexpected preflight method.');
         }
-        const requestedHeaders = (requestHeaders['access-control-request-headers'] ?? '')
+        const requestedHeaders = (await request.headerValue('access-control-request-headers') ?? '')
             .split(',')
             .map((header) => header.trim().toLowerCase())
             .filter(Boolean);
