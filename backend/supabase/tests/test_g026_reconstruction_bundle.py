@@ -65,8 +65,8 @@ class G026BundleTests(unittest.TestCase):
         self.assertEqual(bundle['transition']['sha256'], '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
         self.assertEqual(verify.TRANSITION_BYTES, 27693)
         self.assertEqual(verify.TRANSITION_SHA256, '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
-        self.assertEqual(bundle['repairs']['byteLength'], 38549)
-        self.assertEqual(bundle['repairs']['sha256'], '0d4e0716fba5d65d1ff964ba00758d0f21652ee1ffbdf6e5f07623c42fd1e975')
+        self.assertEqual(bundle['repairs']['byteLength'], 43651)
+        self.assertEqual(bundle['repairs']['sha256'], '50acc4c1c2c952705f0deb67b5d06e5ef25155d071dcbbabca26039411eba1a2')
         for key, filename in (('transition', 'G026_RECONSTRUCTION_TRANSITION.v4.sql'), ('repairs', 'G026_RECONSTRUCTION_REPAIRS.v4.sql')):
             raw = (BASE / filename).read_bytes()
             self.assertEqual(bundle[key]['byteLength'], len(raw))
@@ -75,6 +75,25 @@ class G026BundleTests(unittest.TestCase):
         for name, body_hash in bundle['canonicalBodyHashes'].items():
             self.assertEqual(body_hash, verify.digest(verify.function_body(source, name)))
         self.assertEqual(set(bundle['canonicalBodyHashes']), set(verify.FUNCTIONS))
+
+    def test_source_only_policy_identity_shells_are_exact_and_fail_closed(self):
+        repairs = (BASE / 'G026_RECONSTRUCTION_REPAIRS.v4.sql').read_text(encoding='utf8')
+        verify.require_reconstruction_policy_shells(repairs)
+        self.assertEqual(len(verify.RECONSTRUCTION_POLICY_SHELLS), 7)
+        self.assertTrue(all('(false);' in statement for statement in verify.RECONSTRUCTION_POLICY_SHELLS))
+        self.assertEqual(len(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS), 2)
+        for mutation in (
+            repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[0] + '\n', '', 1),
+            repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[1], verify.RECONSTRUCTION_POLICY_SHELLS[1].replace('(false)', '(true)'), 1),
+            repairs.replace("IF v_existing_count <> 0 THEN", "IF v_existing_count < 0 THEN", 1),
+            repairs.replace("      ('short_urls', 'Admins can delete short URLs')\n", '', 1),
+            repairs.replace("WHERE namespace_row.nspname = 'public'", "WHERE namespace_row.nspname = 'not_public'", 1),
+            repairs.replace(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS[0] + '\n', '', 1),
+            repairs + '\nCREATE POLICY unexpected_policy\n  ON public.restaurant_requests FOR SELECT USING (false);\n',
+        ):
+            with self.subTest(mutation=hashlib.sha256(mutation.encode()).hexdigest()):
+                with self.assertRaises(ValueError):
+                    verify.require_reconstruction_policy_shells(mutation)
     def test_approve_restaurant_preserves_immutable_predecessor_parameter_names(self):
         repairs = (BASE / 'G026_RECONSTRUCTION_REPAIRS.v4.sql').read_text(encoding='utf8')
         predecessor = verify.APPROVE_RESTAURANT_PREDECESSOR.read_text(encoding='utf8')

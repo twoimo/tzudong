@@ -47,6 +47,40 @@ describe('local Supabase runtime source contract', () => {
     expect(() => __localSupabaseRuntimeForTests.parseGeneratedEnvironment(Buffer.from(source.replace('ANON_KEY=', 'bad-key=')))).toThrow('env_shape');
   });
 
+  test('passes only the bounded GitHub socket admission context to local stack status', () => {
+    const environment = __localSupabaseRuntimeForTests.localStackStatusEnvironment({
+      PATH: '/fixture/bin',
+      HOME: '/fixture/home',
+      LANG: 'ko_KR.UTF-8',
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REPOSITORY: 'twoimo/tzudong',
+      GITHUB_RUN_ID: '123456',
+      GITHUB_RUN_ATTEMPT: '2',
+      TZUDONG_DOCKER_SOCKET_ADMISSION_FILE: '/run/tzudong-nightly-local-admission-123456-2',
+      DOCKER_HOST: 'tcp://hosted.invalid:2375',
+      DOCKER_CONTEXT: 'remote-context',
+      COMPOSE_FILE: '/hosted/compose.yml',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://hosted.supabase.co',
+      SUPABASE_SERVICE_ROLE_KEY: 'hosted-service-role',
+      DATABASE_URL: 'postgresql://hosted.invalid/database',
+      PGHOST: 'hosted.invalid',
+      PGPASSWORD: 'hosted-password',
+    });
+
+    expect(environment).toEqual({
+      PATH: '/fixture/bin',
+      HOME: '/fixture/home',
+      LANG: 'ko_KR.UTF-8',
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REPOSITORY: 'twoimo/tzudong',
+      GITHUB_RUN_ID: '123456',
+      GITHUB_RUN_ATTEMPT: '2',
+      TZUDONG_DOCKER_SOCKET_ADMISSION_FILE: '/run/tzudong-nightly-local-admission-123456-2',
+    });
+  });
+
   test('keeps local development isolated from ambient hosted credentials', () => {
     const runner = readFileSync(path.resolve(import.meta.dir, '../scripts/local-supabase-runtime.mjs'), 'utf8');
     const packageSource = readFileSync(path.resolve(import.meta.dir, '../package.json'), 'utf8');
@@ -107,6 +141,7 @@ describe('local Supabase runtime source contract', () => {
     expect(runner).toContain("NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: '/__local/naver-maps.js'");
     expect(runner).toContain("SUPABASE_SERVICE_ROLE_KEY: local.values.SERVICE_ROLE_KEY");
     expect(runner).toContain("SUPABASE_STORAGE_SERVER_KEY: local.values.STORAGE_SERVICE_KEY");
+    expect(runner).toContain('env: localStackStatusEnvironment(),');
     expect(nextConfig).toContain("process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1'");
     expect(nextConfig).toContain("process.env.NODE_ENV === 'development'");
     expect(localDevRunner).toContain('NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`');

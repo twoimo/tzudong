@@ -19,6 +19,110 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- G026 source-only, fail-closed policy identity shells. The archived replay
+-- establishes the relations but omits these seven historical policy identities.
+-- Later immutable migration 20260812000200 replaces every false predicate and
+-- narrows each policy to authenticated; these shells grant no interim access.
+DO $g026_policy_shell_precondition$
+DECLARE
+  v_existing_count integer;
+BEGIN
+  IF to_regclass('public.restaurant_requests') IS NULL
+     OR to_regclass('public.restaurant_submission_items') IS NULL
+     OR to_regclass('public.restaurant_submissions') IS NULL
+     OR to_regclass('public.short_urls') IS NULL THEN
+    RAISE EXCEPTION 'G026 policy shell relation precondition failed' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT count(*)
+    INTO v_existing_count
+    FROM pg_catalog.pg_policy AS policy_row
+    JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = policy_row.polrelid
+    JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+    JOIN (VALUES
+      ('restaurant_requests', 'Restaurant requests select policy'),
+      ('restaurant_submission_items', 'Admins can delete submission items'),
+      ('restaurant_submission_items', 'Admins can update submission items'),
+      ('restaurant_submission_items', 'Submission items insert policy'),
+      ('restaurant_submission_items', 'Submission items select policy'),
+      ('restaurant_submissions', 'Restaurant submissions select policy'),
+      ('short_urls', 'Admins can delete short URLs')
+    ) AS expected_policy(relation_name, policy_name)
+      ON expected_policy.relation_name = relation_row.relname
+     AND expected_policy.policy_name = policy_row.polname
+   WHERE namespace_row.nspname = 'public';
+
+  IF v_existing_count <> 0 THEN
+    RAISE EXCEPTION 'G026 policy shell identity already exists' USING ERRCODE = 'P0001';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_policy AS policy_row
+      JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = policy_row.polrelid
+      JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+     WHERE namespace_row.nspname = 'public'
+       AND relation_row.relname = 'restaurant_submissions'
+       AND policy_row.polname = 'Admins can view all submissions'
+       AND policy_row.polcmd = 'r'
+       AND policy_row.polroles = ARRAY[0::oid]
+       AND pg_catalog.pg_get_expr(policy_row.polqual, policy_row.polrelid, false)
+           = 'is_user_admin(( SELECT auth.uid() AS uid))'
+       AND policy_row.polwithcheck IS NULL
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+            AND dependency.refobjid = 'public.is_user_admin(uuid)'::regprocedure
+       ) = 1
+  ) OR NOT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_policy AS policy_row
+      JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = policy_row.polrelid
+      JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+     WHERE namespace_row.nspname = 'public'
+       AND relation_row.relname = 'restaurant_submission_items'
+       AND policy_row.polname = 'Admins can manage all submission items'
+       AND policy_row.polcmd = '*'
+       AND policy_row.polroles = ARRAY[0::oid]
+       AND pg_catalog.pg_get_expr(policy_row.polqual, policy_row.polrelid, false)
+           = 'is_user_admin(( SELECT auth.uid() AS uid))'
+       AND policy_row.polwithcheck IS NULL
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+            AND dependency.refobjid = 'public.is_user_admin(uuid)'::regprocedure
+       ) = 1
+  ) THEN
+    RAISE EXCEPTION 'G026 obsolete policy identity precondition failed' USING ERRCODE = 'P0001';
+  END IF;
+END;
+$g026_policy_shell_precondition$;
+
+DROP POLICY "Admins can view all submissions" ON public.restaurant_submissions;
+DROP POLICY "Admins can manage all submission items" ON public.restaurant_submission_items;
+
+CREATE POLICY "Restaurant requests select policy"
+  ON public.restaurant_requests FOR SELECT USING (false);
+CREATE POLICY "Admins can delete submission items"
+  ON public.restaurant_submission_items FOR DELETE USING (false);
+CREATE POLICY "Admins can update submission items"
+  ON public.restaurant_submission_items FOR UPDATE USING (false);
+CREATE POLICY "Submission items insert policy"
+  ON public.restaurant_submission_items FOR INSERT WITH CHECK (false);
+CREATE POLICY "Submission items select policy"
+  ON public.restaurant_submission_items FOR SELECT USING (false);
+CREATE POLICY "Restaurant submissions select policy"
+  ON public.restaurant_submissions FOR SELECT USING (false);
+CREATE POLICY "Admins can delete short URLs"
+  ON public.short_urls FOR DELETE USING (false);
+
 DROP FUNCTION IF EXISTS public.approve_restaurant(uuid);
 DROP FUNCTION IF EXISTS public.create_user_notification(uuid, public.notification_type, text, text, jsonb);
 

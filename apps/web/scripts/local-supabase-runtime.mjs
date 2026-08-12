@@ -240,13 +240,28 @@ function assertLoopbackOrigin(value, label) {
   return parsed.origin;
 }
 
-function safeProcessEnvironment() {
+function safeProcessEnvironment(inherited = process.env) {
   const selected = {};
   for (const key of ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM']) {
-    if (process.env[key]) selected[key] = process.env[key];
+    if (inherited[key]) selected[key] = inherited[key];
   }
   selected.PATH ??= '/usr/bin:/bin';
   selected.HOME ??= process.cwd();
+  return selected;
+}
+
+function localStackStatusEnvironment(inherited = process.env) {
+  const selected = safeProcessEnvironment(inherited);
+  for (const key of [
+    'CI',
+    'GITHUB_ACTIONS',
+    'GITHUB_REPOSITORY',
+    'GITHUB_RUN_ID',
+    'GITHUB_RUN_ATTEMPT',
+    'TZUDONG_DOCKER_SOCKET_ADMISSION_FILE',
+  ]) {
+    if (inherited[key]) selected[key] = inherited[key];
+  }
   return selected;
 }
 
@@ -414,7 +429,12 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
       '--repository-root',
       local.repositoryRoot,
     ],
-    { cwd: local.repositoryRoot, code: 'stack_status', timeout: 180_000 },
+    {
+      cwd: local.repositoryRoot,
+      env: localStackStatusEnvironment(),
+      code: 'stack_status',
+      timeout: 180_000,
+    },
   );
   if (
     stackReceipt?.schema !== 'local-stack-receipt-v1'
@@ -558,6 +578,7 @@ export function buildLocalNightlyEnvironment(local, inherited = process.env) {
 }
 
 export const __localSupabaseRuntimeForTests = {
+  localStackStatusEnvironment,
   projectName,
   parseGeneratedEnvironment,
 };
