@@ -1351,7 +1351,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply "role-management-transform:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
-    20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql)
+    20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql|20260812000200_local_public_read_policy_convergence.sql|20260812000300_local_admin_data_boundary_convergence.sql|20260812000400_local_admin_map_overlay_boundary_convergence.sql)
       transformed_migration=$(g026_apply_replay_membership_window "$migration")
       g026_chain_apply "replay-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
