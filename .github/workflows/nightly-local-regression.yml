@@ -747,7 +747,7 @@ jobs:
                           else 'empty' if env_names[key] == ''
                           else 'nonempty'
                       )
-                      for key in ('CLUSTER_POSTGRES', 'ERL_AFLAGS', 'ERL_FLAGS', 'CLUSTER_NODES', 'DNS_POLL')
+                      for key in ('CLUSTER_POSTGRES', 'ERL_AFLAGS', 'ERL_FLAGS', 'RLIMIT_NOFILE', 'CLUSTER_NODES', 'DNS_POLL')
                   }
               for service, destination, path in (
                   ('kong', '/home/kong', '/home/kong/temp.yml'),

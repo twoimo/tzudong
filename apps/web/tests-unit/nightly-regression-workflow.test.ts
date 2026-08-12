@@ -336,6 +336,7 @@ describe("nightly regression package and source contracts", () => {
       "erl_runtime",
       "runtime_input_checks",
       "runtime_env_presence",
+      "RLIMIT_NOFILE",
       "nonempty",
       "empty",
       "entrypoint_class",

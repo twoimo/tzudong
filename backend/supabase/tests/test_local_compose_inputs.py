@@ -146,6 +146,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn("environment: !override", self.overlay_source)
         self.assertNotIn("CLUSTER_POSTGRES", self.overlay_source)
         self.assertIn('ERL_AFLAGS: ""', self.overlay_source)
+        self.assertIn('RLIMIT_NOFILE: ""', self.overlay_source)
 
     def test_compose_command_uses_project_env_and_all_three_local_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
