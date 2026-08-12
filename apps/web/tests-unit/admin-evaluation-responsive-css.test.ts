@@ -81,8 +81,8 @@ const criticalKpiDashboardProductionUtilities = [
     match: "any",
   },
   {
-    utility: "text-[clamp(1.2rem,1.45vw,1.75rem)]",
-    declarations: ["font-size:clamp(1.2rem,1.45vw,1.75rem)"],
+    utility: "text-lg",
+    declarations: ["font-size:var(--text-lg)"],
   },
   {
     utility: "min-h-[132px]",

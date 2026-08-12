@@ -8,6 +8,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useHomeViewportMode } from "@/hooks/useHomeViewportMode";
 import { toast } from "@/lib/no-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { buildBrowserTitle } from "@/lib/seo";
 import {
@@ -134,6 +135,19 @@ const requestDesktopDetailReturnCapture = () => {
 };
 
 const HOME_INITIAL_SHELL_INTENT_KEY = "tzudong:home-initial-intent";
+const PUBLIC_DEMO_BLOCKED_PANEL_PARAMS = new Set([
+  "feed",
+  "stamp",
+  "leaderboard",
+  "review",
+  "profile",
+  "bookmarks",
+  "notifications",
+  "settings",
+  "mypage",
+  "adminReviews",
+  "announcement",
+]);
 const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
 const DEVICE_LOCATION_READINESS_BLOCKED =
   "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.";
@@ -254,6 +268,7 @@ export default function HomeClient() {
     openRestaurantDetailSelection,
     releaseSearchSelectionOwnership,
     setFilters,
+    setIsReviewModalOpen,
     setSelectedCategories,
     setSelectedCountry,
     setSelectedRegion,
@@ -287,6 +302,9 @@ export default function HomeClient() {
   // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
   const openPanel = useCallback(
     (panel: PanelType) => {
+      if (isPublicRestrictedMode && (panel === "mypage" || panel === "adminReviews" || panel === "announcement")) {
+        return;
+      }
       setIsMapFullscreen(false);
       // 맛집 상세 패널 닫기
       clearRestaurantDetailSelection();
@@ -539,6 +557,7 @@ export default function HomeClient() {
     openRestaurantDetailSelection: state.openRestaurantDetailSelection,
     clearRestaurantDetailSelection: state.clearRestaurantDetailSelection,
   });
+  const { handleRequestEditRestaurant: openRestaurantEditRequest } = handlers;
 
   // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
   // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -650,6 +669,7 @@ export default function HomeClient() {
       window.sessionStorage.removeItem(HOME_INITIAL_SHELL_INTENT_KEY);
 
       if (!isHomeStartupIntent(intent)) return;
+      if (isPublicRestrictedMode && intent !== "search") return;
 
       setInitialMobileOverlayIntent(intent);
       if (intent === "search") {
@@ -658,6 +678,30 @@ export default function HomeClient() {
     } catch (_) {
       // Session storage may be unavailable in restrictive browser modes; fall back to normal home load.
     }
+  }, []);
+  useEffect(() => {
+    if (!isPublicRestrictedMode || typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const panel = currentUrl.searchParams.get("panel");
+    const hasDemoAuthRequest = currentUrl.searchParams.get("auth") === "login";
+    const hasBlockedPanel = PUBLIC_DEMO_BLOCKED_PANEL_PARAMS.has(panel ?? "");
+    if (!hasDemoAuthRequest && !hasBlockedPanel) return;
+
+    if (hasDemoAuthRequest) {
+      currentUrl.searchParams.delete("auth");
+      currentUrl.searchParams.delete("reason");
+      currentUrl.searchParams.delete("next");
+    }
+    if (hasBlockedPanel) {
+      currentUrl.searchParams.delete("panel");
+      currentUrl.searchParams.delete("user");
+      currentUrl.searchParams.delete("announcementId");
+      currentUrl.searchParams.delete("user");
+    }
+    const nextSearch = currentUrl.searchParams.toString();
+    const nextUrl = `${currentUrl.pathname}${nextSearch ? `?${nextSearch}` : ""}${currentUrl.hash}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
   }, []);
 
   const handleRestaurantSelectionSync = useCallback(
@@ -707,6 +751,7 @@ export default function HomeClient() {
 
   // [OPTIMIZATION] useCallback으로 메모이제이션
   const handleSubmissionButtonClick = useCallback(() => {
+    if (isPublicRestrictedMode) return;
     if (!user) {
       toast.info("로그인하면 맛집 제보를 바로 이어서 할 수 있어요");
       requestAuthUi({
@@ -980,6 +1025,10 @@ export default function HomeClient() {
   );
 
   const handleDeviceLocationClick = useCallback(async () => {
+    if (isPublicRestrictedMode) {
+      clearDeviceLocationState();
+      return;
+    }
     if (isDeviceHeadingMode) {
       deviceLocationTrackingLifecycleRef.current?.onModeChange(false);
       clearDeviceLocationState();
@@ -1130,13 +1179,15 @@ export default function HomeClient() {
 
   const shouldRenderSidePanels = Boolean(
     isAnnouncementSheetOpen ||
-    isSubmissionModalOpen ||
-    state.isEditModalOpen ||
-    state.isAdminEditModalOpen ||
-    state.isReviewModalOpen,
+      (!isPublicRestrictedMode &&
+        (isSubmissionModalOpen ||
+          state.isEditModalOpen ||
+          state.isAdminEditModalOpen ||
+          state.isReviewModalOpen)),
   );
 
   const handleTopShellUserIconClick = useCallback(() => {
+    if (isPublicRestrictedMode) return;
     if (typeof window === "undefined") return;
 
     if (!user) {
@@ -1161,6 +1212,17 @@ export default function HomeClient() {
       }),
     );
   }, [user]);
+  const handleRequestEditRestaurant = useCallback(
+    (restaurant: Restaurant) => {
+      if (isPublicRestrictedMode) return;
+      openRestaurantEditRequest(restaurant);
+    },
+    [openRestaurantEditRequest],
+  );
+  const handleReviewModalOpen = useCallback(() => {
+    if (isPublicRestrictedMode) return;
+    setIsReviewModalOpen(true);
+  }, [setIsReviewModalOpen]);
 
   return (
     <>
@@ -1179,6 +1241,18 @@ export default function HomeClient() {
         setSelectedAnnouncement={setSelectedAnnouncement}
       />
 
+      {isPublicRestrictedMode && (
+        <>
+          <div
+            className="pointer-events-none fixed left-1/2 top-3 z-[130] -translate-x-1/2 rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm"
+            data-public-demo-mode="true"
+            role="status"
+          >
+            공개 데모 · 개인정보 기능 제한
+          </div>
+          <style>{`[data-desktop-map-menu-trigger="true"], [data-desktop-map-menu="true"] { display: none !important; }`}</style>
+        </>
+      )}
       <HomeMapContainer
         key={mapMountKey}
         mapMode={mapMode}
@@ -1192,13 +1266,13 @@ export default function HomeClient() {
         panelRestaurant={state.panelRestaurant}
         isPanelOpen={state.isPanelOpen && !isPanelCollapsed}
         onAdminEditRestaurant={onAdminEditRestaurant}
-        onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
+        onRequestEditRestaurant={handleRequestEditRestaurant}
         onRestaurantSelect={handleRestaurantSelectionSync}
         onMapReady={handlers.handleMapReady}
         onMarkerClick={openDetailPanel}
         onPanelClose={closeAllPanels}
         onDetailPanelBack={returnToRestaurantListPanel}
-        onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+        onReviewModalOpen={handleReviewModalOpen}
         onTogglePanelCollapse={togglePanelCollapse}
         activePanel={activePanel}
         onPanelClick={setActivePanel}
@@ -1240,20 +1314,20 @@ export default function HomeClient() {
           mapInteractionEpoch={mapInteractionEpoch}
           onPanelClose={closeAllPanels}
           onDetailPanelBack={returnToRestaurantListPanel}
-          onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+          onReviewModalOpen={isPublicRestrictedMode ? undefined : handleReviewModalOpen}
           onAdminEditRestaurant={onAdminEditRestaurant}
-          onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
+          onRequestEditRestaurant={isPublicRestrictedMode ? undefined : handleRequestEditRestaurant}
           isAdmin={isAdmin}
           onModeChange={(mode) => {
             setIsMapFullscreen(false);
             clearRestaurantDetailSelection();
             setMapMode(mode);
           }}
-          user={user}
-          onSubmissionClick={handleSubmissionButtonClick}
-          onTopShellUserIconClick={handleTopShellUserIconClick}
-          onDeviceLocationClick={handleDeviceLocationClick}
-          deviceLocation={deviceLocation}
+          user={isPublicRestrictedMode ? null : user}
+          onSubmissionClick={isPublicRestrictedMode ? undefined : handleSubmissionButtonClick}
+          onTopShellUserIconClick={isPublicRestrictedMode ? undefined : handleTopShellUserIconClick}
+          onDeviceLocationClick={isPublicRestrictedMode ? undefined : handleDeviceLocationClick}
+          deviceLocation={isPublicRestrictedMode ? null : deviceLocation}
           isDeviceLocationPending={isDeviceLocationPending}
           isDeviceHeadingMode={isDeviceHeadingMode}
           showUserSubmittedMarkers={showUserSubmittedMarkers}
@@ -1268,7 +1342,7 @@ export default function HomeClient() {
         />
       )}
 
-      {isDesktop && (
+      {isDesktop && !isPublicRestrictedMode && (
         <>
           <HomeMapUserMenu
             desktopPanelSide={desktopPanelSide}

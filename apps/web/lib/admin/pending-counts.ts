@@ -4,6 +4,8 @@ export const ADMIN_PENDING_COUNT_DOMAIN_IDS = [
   "reviews",
 ] as const;
 
+export const ADMIN_PENDING_COUNTS_QUERY_KEY = ["admin", "pending-counts"] as const;
+
 export type AdminPendingCountDomainId = (typeof ADMIN_PENDING_COUNT_DOMAIN_IDS)[number];
 export type AdminPendingCountReadinessStatus = "ready" | "degraded";
 

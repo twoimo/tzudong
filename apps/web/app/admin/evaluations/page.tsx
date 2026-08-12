@@ -43,6 +43,7 @@ import {
   isAdminEvaluationRecordReadyForApproval,
 } from '@/lib/admin/evaluation-records';
 import {
+  ADMIN_PENDING_COUNTS_QUERY_KEY as ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY,
   buildAdminPendingCountsResponse,
   getAdminPendingCountsTotal,
   normalizeAdminPendingCountsResponse,
@@ -1710,7 +1711,7 @@ function AdminEvaluationPage({
   const queryClient = useQueryClient();
   const invalidateAdminPendingCounts = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin-pending-counts'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-overview', 'pending-counts'] });
+    queryClient.invalidateQueries({ queryKey: ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY });
   }, [queryClient]);
 
   // localStorage에서 상태 복원

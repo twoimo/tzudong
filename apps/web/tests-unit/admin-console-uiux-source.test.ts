@@ -387,6 +387,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(nextConfigSource).toContain("turbopackFileSystemCacheForDev: false");
     expect(nextConfigSource).toContain("config.cache = false;");
+    expect(nextConfigSource).toContain("TZUDONG_NEXT_DIST_DIR");
+    expect(nextConfigSource).toContain("distDir: configuredNextDistDir");
+    expect(cleanNextSource).toContain("const nextDirectoryName = configuredNextDistDir || '.next';");
+    expect(cleanNextSource).toContain("error=InvalidDistDir");
     expect(cleanNextSource).toContain("childEnv.NODE_ENV = 'development';");
     expect(cleanNextSource).toContain("if (isNextDevCommand())");
     expect(devPrewarmSource).toContain(
@@ -395,6 +399,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(devPrewarmSource).toContain(
       "...(shouldUseWebpackDev ? ['--webpack'] : [])",
     );
+    expect(devPrewarmSource).toContain("'--hostname'");
     expect(devPrewarmSource).toContain(
       "env: { ...process.env, NODE_ENV: 'development' }",
     );
@@ -1352,9 +1357,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("범위 확인 필요");
     expect(consoleSource).toContain("읽기 확인 필요");
     expect(consoleSource).toContain("세션 확인 필요");
-    expect(consoleSource).toContain("event.readbackId");
+    expect(consoleSource).toContain("event.reasonCode");
+    expect(consoleSource).toContain("event.appliedAt");
+    expect(consoleSource).not.toContain("event.readbackId");
+    expect(consoleSource).not.toContain("event.reason ?");
     expect(consoleSource).toContain("event.correlationId");
     expect(consoleSource).toContain("isAdminAuditEventsResponsePayload");
+    expect(consoleSource).toContain("value.events.length <= 50");
+    expect(consoleSource).toContain("typeof event.reasonCode === \"string\"");
     expect(consoleSource).toContain("admin-audit-events-invalid-response");
     expect(consoleSource).toContain('"admin-audit-session-expired"');
     expect(consoleSource).toContain("관리자 세션 확인이 필요합니다.");
@@ -1364,7 +1374,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain('badge: "준비 중"');
     expect(consoleSource).not.toContain("`${events.length}개 표시`");
     expect(consoleSource).not.toContain("전체 운영 변경을 포괄하는 범용 감사 로그입니다");
-    expect(auditEventsRouteSource).toContain('"admin_audit_events"');
+    expect(auditEventsRouteSource).toContain('"read_admin_user_audit_events"');
+    expect(auditEventsRouteSource).not.toContain('.from("admin_audit_events")');
     expect(auditEventsRouteSource).toContain("getAdminAuditCoverage()");
     expect(auditEventsRouteSource).toContain("domain: \"admin_user_management\"");
     expect(auditEventsRouteSource).toContain("reasonCode: row.reason");
@@ -1575,6 +1586,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "sparklineData={subscriberSparklinePoints}",
     );
     expect(consoleSource).toContain("YouTube Data API");
+    expect(consoleSource).toContain("로컬 채널 스냅샷 없음 · KPI 수집 후 표시");
     expect(consoleSource).toContain("채널 통계 확인 필요");
     expect(consoleSource).toContain(
       '<div className="hidden min-w-0 md:block">',
@@ -1582,7 +1594,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       '<h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
     );
-    expect(consoleSource).toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
+    expect(consoleSource).toContain("data-admin-dashboard-kpi-value-size=\"bounded\"");
+    expect(consoleSource).toContain("text-lg font-black");
+    expect(consoleSource).toContain("sm:text-xl");
+    expect(consoleSource).not.toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("min-w-44 space-y-1");
     expect(consoleSource).toContain(
@@ -2954,17 +2969,21 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const viewModelSource = source("lib/admin/system-status/view-model.ts");
     const routeSource = source("app/api/admin/system-status/route.ts");
 
-    expect(consoleSource).not.toContain(
+    expect(consoleSource).toContain(
       'import("@/components/admin/system-status/AdminSystemStatusCenter")',
     );
-    expect(consoleSource).not.toContain("<AdminSystemStatusCenter");
+    expect(consoleSource).toContain("<AdminSystemStatusCenter isAdmin={isAdmin} />");
+    expect(consoleSource).toContain('data-admin-system-status-slot="true"');
     expect(consoleSource).not.toContain("운영 상태 센터");
     expect(centerSource).toContain('data-admin-system-status-center="true"');
     expect(centerSource).toContain("data-admin-run-daily-state=");
+    expect(centerSource).toContain("data-admin-nightly-regression-state=");
     expect(centerSource).toContain("data-admin-run-daily-artifact-state=");
     expect(centerSource).toContain("data-admin-system-status-pending-counts=");
     expect(hookSource).toContain("/api/admin/system-status");
     expect(hookSource).toContain("/api/admin/pending-counts");
+    expect(consoleSource).toContain("queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY");
+    expect(hookSource).toContain("queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY");
     expect(hookSource).toContain("systemStatusQuery.isRefetchError");
     expect(hookSource).toContain("pendingCountsQuery.isRefetchError");
     expect(hookSource).toContain(
@@ -2972,6 +2991,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(hookSource).toContain("pendingCountsQueryFailed");
     expect(viewModelSource).toContain("latestManifestPath");
+    expect(viewModelSource).toContain("lastSuccessfulRunId");
+    expect(viewModelSource).toContain("consecutiveFailures");
     expect(viewModelSource).toContain("rclone_exit_zero");
     expect(viewModelSource).toContain("manifest 없음");
     expect(routeSource).toContain("await requireAdmin()");
@@ -3002,6 +3023,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(routeSource).toContain("respondWithYouTubeChannelSnapshotFallback");
     expect(routeSource).toContain("fallbackSource");
     expect(routeSource).toContain("supabase-channel-snapshot");
+    expect(routeSource).toContain("LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE");
+    expect(routeSource).toContain('process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1"');
     expect(routeSource).toContain("YouTube channel statistics request failed");
     expect(routeSource).toContain(
       "YouTube channel subscriber count was unavailable",
@@ -8643,7 +8666,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(tailwindSource).toContain("font-extrabold");
     expect(tailwindSource).toContain("md:p-4");
     expect(tailwindSource).toContain("gap-0");
-    expect(tailwindSource).toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
+    expect(tailwindSource).toContain("text-lg sm:text-xl");
+    expect(tailwindSource).not.toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(overviewSource).toContain("overflow-visible lg:h-full lg:min-h-0");
     expect(overviewSource).toContain(
       "lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]",

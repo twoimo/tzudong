@@ -41,11 +41,17 @@ services:
 
   kong:
     container_name: !reset null
+    # The local config is already rendered and hash-bound during staging. Run
+    # the image entrypoint directly so the read-only volume is never rewritten.
+    entrypoint: ["/docker-entrypoint.sh"]
+    command: ["kong", "docker-start"]
+    environment:
+      KONG_DECLARATIVE_CONFIG: /home/kong/temp.yml
     ports: !override
       - "127.0.0.1:${KONG_HTTP_PORT}:8000/tcp"
       - "127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp"
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/kong.yml:/home/kong/temp.yml:ro,z"
+      - "local-kong-config:/home/kong:ro"
 
   auth:
     container_name: !reset null
@@ -55,16 +61,25 @@ services:
 
   realtime:
     container_name: !reset null
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
 
   storage:
     container_name: !reset null
+    environment:
+      # Storage's internal completion transaction must run as the owner of its
+      # private schema, without restoring G014's revoked service_role table ACL.
+      SERVICE_KEY: ${STORAGE_SERVICE_KEY}
+      DB_SERVICE_ROLE: supabase_storage_admin
     volumes: !override
-      - "local-storage-data:/var/lib/storage:Z"
+      - "local-storage-data:/var/lib/storage"
 
   imgproxy:
     container_name: !reset null
     volumes: !override
-      - "local-storage-data:/var/lib/storage:Z"
+      - "local-storage-data:/var/lib/storage"
 
   meta:
     container_name: !reset null
@@ -74,7 +89,7 @@ services:
   functions:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/functions:/home/deno/functions:ro,Z"
+      - "local-functions:/home/deno/functions:ro"
 
   analytics:
     container_name: !reset null
@@ -84,34 +99,62 @@ services:
   db:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/db-realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro,z"
-      - "local-db-data:/var/lib/postgresql/data:Z"
-      - "${LOCAL_INPUT_ROOT}/db-supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:ro,z"
-      - "${LOCAL_INPUT_ROOT}/db-pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:ro,z"
+      - "local-db-init-migrations:/docker-entrypoint-initdb.d/migrations:ro"
+      - "local-db-init-scripts:/docker-entrypoint-initdb.d/init-scripts:ro"
+      - "local-db-data:/var/lib/postgresql/data"
       - "local-db-config:/etc/postgresql-custom"
 
   vector:
     container_name: !reset null
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/vector.yml:/etc/vector/vector.yml:ro,z"
+      - "local-vector-config:/etc/vector:ro"
 
   supavisor:
     container_name: !reset null
+    # GitHub-hosted Docker denies Tini's subreaper setup; the image's limits
+    # wrapper preserves bounded startup without requiring that capability.
+    entrypoint: ["/app/limits.sh"]
+    environment: !override
+      PORT: 4000
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      REGION: local
+      ERL_AFLAGS: ""
+      RLIMIT_NOFILE: ""
+      POOLER_TENANT_ID: ${POOLER_TENANT_ID}
+      POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE}
+      POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
+      POOLER_POOL_MODE: transaction
+      DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
     ports: !override
       # POSTGRES_PORT remains the internal 5432 listener; only the host mapping is derived.
       - "127.0.0.1:${POSTGRES_HOST_PORT}:5432/tcp"
       - "127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543/tcp"
     volumes: !override
-      - "${LOCAL_INPUT_ROOT}/pooler.exs:/etc/pooler/pooler.exs:ro,z"
+      - "local-pooler-config:/etc/pooler:ro"
 
 volumes: !override
   local-db-data:
     name: "${PROJECT_NAME}-db-data"
+  local-db-init-migrations:
+    name: "${PROJECT_NAME}-db-init-migrations"
+  local-db-init-scripts:
+    name: "${PROJECT_NAME}-db-init-scripts"
   local-db-config:
     name: "${PROJECT_NAME}-db-config"
+  local-functions:
+    name: "${PROJECT_NAME}-functions"
+  local-kong-config:
+    name: "${PROJECT_NAME}-kong-config"
+  local-pooler-config:
+    name: "${PROJECT_NAME}-pooler-config"
   local-storage-data:
     name: "${PROJECT_NAME}-storage-data"
+  local-vector-config:
+    name: "${PROJECT_NAME}-vector-config"
