@@ -604,6 +604,7 @@ jobs:
           import json
           import os
           import pathlib
+          import re
           import subprocess
 
           project = os.environ.get('LOCAL_PROJECT', '')
