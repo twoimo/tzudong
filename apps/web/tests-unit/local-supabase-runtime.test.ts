@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -322,9 +322,11 @@ describe('local Supabase runtime source contract', () => {
     if (process.platform === 'win32') return;
     const fixtureRoot = mkdtempSync(path.join(os.tmpdir(), 'tzudong-local-input-mode-'));
     mkdirSync(path.join(fixtureRoot, 'apps', 'web'), { recursive: true });
-    writeFileSync(path.join(fixtureRoot, '.env.local'), 'INSIGHT_GITHUB_REPOSITORY=repo/test\n', {
+    const localEnvFile = path.join(fixtureRoot, '.env.local');
+    writeFileSync(localEnvFile, 'INSIGHT_GITHUB_REPOSITORY=repo/test\n', {
       mode: 0o644,
     });
+    chmodSync(localEnvFile, 0o644);
 
     try {
       expect(() => loadLocalWebInputEnvironment({ repositoryRoot: fixtureRoot, inherited: {} }))
