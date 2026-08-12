@@ -1,6 +1,7 @@
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -52,6 +53,16 @@ FUNCTION_SCANNER_SPEC.loader.exec_module(function_scanner)
 
 
 class LocalPublicationVerifierTests(unittest.TestCase):
+    FIXTURE_GITHUB_SHA = "b" * 40
+
+    def setUp(self) -> None:
+        github_sha_patch = mock.patch.dict(
+            os.environ,
+            {"GITHUB_SHA": self.FIXTURE_GITHUB_SHA},
+        )
+        github_sha_patch.start()
+        self.addCleanup(github_sha_patch.stop)
+
     def test_readback_schema_matches_the_canonical_receipt_parser(self) -> None:
         self.assertEqual(verifier.READBACK_SECTIONS, local_migrate.READBACK_SECTIONS)
         self.assertEqual(
@@ -98,7 +109,7 @@ class LocalPublicationVerifierTests(unittest.TestCase):
         ]
         receipt = {
             "project_name": "tzudong-local-123456abcdef",
-            "commit_sha256": "b" * 40,
+            "commit_sha256": self.FIXTURE_GITHUB_SHA,
             "config_sha256": digest,
             "input_provenance_sha256": digest,
             "env_provenance_sha256": digest,
@@ -379,7 +390,7 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             "input_provenance_sha256": digest,
             "env_provenance_sha256": digest,
             "environment_contract_sha256": digest,
-            "commit_sha256": "b" * 40,
+            "commit_sha256": self.FIXTURE_GITHUB_SHA,
             "ledger_count": verifier.EXPECTED_LEDGER_UNITS,
             "ledger_sha256": verifier.sha256_bytes(verifier.serialize_rows([
                 [
@@ -420,6 +431,16 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             root = Path(raw)
             self._write_bundle(root)
             verifier.verify(root)
+
+    def test_rejects_mismatched_github_commit_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_bundle(root)
+            with (
+                mock.patch.dict(os.environ, {"GITHUB_SHA": "c" * 40}),
+                self.assertRaisesRegex(SystemExit, "commit binding mismatch"),
+            ):
+                verifier.verify(root)
 
     def test_rejects_failed_stack_receipts_before_persistence(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
