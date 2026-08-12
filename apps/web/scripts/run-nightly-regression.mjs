@@ -1179,8 +1179,43 @@ async function runUnitRegression(environment) {
     throw new Error(`Nightly unit regressions failed with exit code ${result.code}.`);
   }
 }
-function localDockerEnvironment() {
-  return pickEnvironment(process.env, ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM']);
+const localDockerBaseEnvironmentKeys = ['PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM'];
+const localDockerSocketAdmissionEnvironmentKeys = [
+  'CI',
+  'GITHUB_ACTIONS',
+  'GITHUB_REPOSITORY',
+  'GITHUB_RUN_ID',
+  'GITHUB_RUN_ATTEMPT',
+  'TZUDONG_DOCKER_SOCKET_ADMISSION_FILE',
+];
+
+function validatedLocalDockerSocketAdmissionEnvironment(environment) {
+  const admissionRequested = localDockerSocketAdmissionEnvironmentKeys
+    .slice(1)
+    .some((name) => environment[name] !== undefined);
+  if (!admissionRequested) return {};
+
+  const runId = environment.GITHUB_RUN_ID;
+  const runAttempt = environment.GITHUB_RUN_ATTEMPT;
+  const expectedAdmission = `/run/tzudong-nightly-local-admission-${runId}-${runAttempt}`;
+  if (
+    environment.CI !== 'true'
+    || environment.GITHUB_ACTIONS !== 'true'
+    || environment.GITHUB_REPOSITORY !== 'twoimo/tzudong'
+    || !/^[1-9][0-9]*$/.test(runId ?? '')
+    || !/^[1-9][0-9]*$/.test(runAttempt ?? '')
+    || environment.TZUDONG_DOCKER_SOCKET_ADMISSION_FILE !== expectedAdmission
+  ) {
+    throw new Error('Local Docker socket admission context is invalid.');
+  }
+  return pickEnvironment(environment, localDockerSocketAdmissionEnvironmentKeys);
+}
+
+function localDockerEnvironment(environment = process.env) {
+  return {
+    ...pickEnvironment(environment, localDockerBaseEnvironmentKeys),
+    ...validatedLocalDockerSocketAdmissionEnvironment(environment),
+  };
 }
 
 function localComposeArguments(envFilePath) {
