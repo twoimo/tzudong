@@ -76,6 +76,21 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertIn("'0A000'", trigger_sql)
         self.assertIn("expected_sqlstate_", trigger_sql)
 
+    def test_candidate_smoke_allows_privacy_incident_guard_outcomes(self):
+        sql = self.scanner._smoke_candidate_blocks(
+            [
+                {
+                    "schema": "public",
+                    "proname": "preview_privacy_incident_transition",
+                    "identityArgumentsNormalized": (
+                        "uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid"
+                    ),
+                    "signature": "public.preview_privacy_incident_transition(...)",
+                }
+            ]
+        )
+        self.assertIn("'P0001', '42501'", sql)
+
     def test_docker_context_accepts_github_actions_root_socket_only(self):
         scanner = self.scanner
         socket_info = SimpleNamespace(st_mode=stat.S_IFSOCK | 0o660, st_uid=0)
