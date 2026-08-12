@@ -842,6 +842,26 @@ BEGIN
     RAISE EXCEPTION 'receipt_unexpected_youtube_release_function';
   END IF;
 
+  IF (
+    SELECT count(*)
+      FROM privacy_retention.g014_public_rpc_allowlist AS allowed
+      JOIN pg_catalog.pg_proc AS function_row
+        ON function_row.oid = release_function
+      JOIN pg_catalog.pg_namespace AS function_schema
+        ON function_schema.oid = function_row.pronamespace
+     WHERE allowed.function_schema = function_schema.nspname
+       AND allowed.function_name = function_row.proname
+       AND allowed.identity_arguments = function_row.proargtypes::text
+       AND allowed.grantee = 'service_role'::name
+       AND allowed.source_signature =
+         'public.publish_youtube_thumbnail_release(uuid,text,text,text,text,text,text,text,text,numeric,jsonb,jsonb,jsonb,jsonb,uuid,timestamp with time zone)'
+  ) <> 1 THEN
+    RAISE EXCEPTION 'receipt_unexpected_youtube_release_allowlist';
+  END IF;
+
+  PERFORM privacy_retention.assert_g014_public_rpc_allowlist();
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+
   IF (SELECT count(*) FROM public.restaurants) <> 2
      OR NOT EXISTS (SELECT 1 FROM public.restaurants WHERE id = '00000000-0000-4000-8000-000000000101'::uuid
        AND trace_id = 'nightly-trace-1' AND approved_name = '정원분식' AND status = 'approved'

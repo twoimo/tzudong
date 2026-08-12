@@ -764,6 +764,65 @@ class G026BundleTests(unittest.TestCase):
                     transformed.index(statements[-1]) + len(statements[-1]),
                     transformed.index(b"NOTIFY pgrst, 'reload schema';\n"),
                 )
+
+    def test_self_contained_terminal_replay_is_exact_and_untransformed(self):
+        bundle = json.loads(
+            (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(
+                encoding='utf8'
+            )
+        )
+        binding = bundle['selfContainedReplay']
+        self.assertEqual(
+            binding,
+            {
+                'canonicalPath': 'backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
+                'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
+                'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
+                'sourceSha256': 'ae49c1ab076c9e8042866aba8d667e9a89e83f0c2e7724598b4591beb3e91de4',
+                'sourceByteLength': 30040,
+                'transactionClass': 'self_committing',
+            },
+        )
+        verify.require_self_contained_replay(binding)
+        source = (ROOT / binding['canonicalPath']).read_bytes()
+        self.assertEqual(len(source), binding['sourceByteLength'])
+        self.assertEqual(hashlib.sha256(source).hexdigest(), binding['sourceSha256'])
+        generator = (
+            ROOT / 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+        ).read_text(encoding='utf8')
+        self.assertIn(
+            '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql)',
+            generator,
+        )
+        self.assertIn('self-contained-replay:${migration##*/}', generator)
+        self.assertIn("jq -er '.selfContainedReplay.canonicalPath'", generator)
+        self.assertNotIn(
+            '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql)',
+            generator[
+                generator.index('20260713002100_g014_privacy_workflows.sql|'):
+                generator.index('20260801000300_g016_onboarding_allowlist_freshness.sql)')
+            ],
+        )
+
+    def test_self_contained_terminal_replay_rejects_binding_and_source_drift(self):
+        bundle = json.loads(
+            (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(
+                encoding='utf8'
+            )
+        )
+        binding = bundle['selfContainedReplay']
+        for mutation in (
+            {**binding, 'sourceSha256': '0' * 64},
+            {**binding, 'sourceByteLength': binding['sourceByteLength'] + 1},
+            {**binding, 'transactionClass': 'transactional'},
+            {**binding, 'predecessorFilename': '20260812000300_local_admin_data_boundary_convergence.sql'},
+            {**binding, 'canonicalPath': '../outside.sql'},
+            {**binding, 'filename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql'},
+            {**binding, 'unexpected': True},
+        ):
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(ValueError):
+                    verify.require_self_contained_replay(mutation)
     def test_retention_source_avoids_unsupported_large_regex_repetitions(self):
         source = (
             ROOT

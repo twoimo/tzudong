@@ -737,6 +737,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
           export TZUDONG_NODE24_EXECUTABLE="$(command -v node)"
           umask 077
           bun run test:nightly -- \
@@ -758,6 +759,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          set +e
           export TZUDONG_NODE24_EXECUTABLE="$(command -v node)"
           umask 077
           bun run test:nightly -- \

@@ -25,6 +25,9 @@ const publicationBuilderSource = read("../../.github/scripts/build-nightly-local
 const localOverlayBoundaryMigrationSource = read(
   "../../backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
 );
+const localThumbnailRpcAllowlistMigrationSource = read(
+  "../../backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql",
+);
 const operationsDocSource = read("../../docs/operations/nightly-regression.md");
 const hostedWorkflowSource = readFileSync(
   resolve(appRoot, "../../.github/workflows/nightly-regression.yml"),
@@ -362,7 +365,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v1'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 73",
+      "receipt.ledger.length !== 74",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -376,7 +379,10 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localOverlayBoundaryMigrationSource).digest("hex")).toBe(
       "f61595514b4218bfa47e3fb5c529f648fe4d16efef1f5ef02f216aff6dd08bcb",
     );
-    expect(operationsDocSource).toContain("73-unit migration ledger");
+    expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
+      "ae49c1ab076c9e8042866aba8d667e9a89e83f0c2e7724598b4591beb3e91de4",
+    );
+    expect(operationsDocSource).toContain("74-unit migration ledger");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -676,7 +682,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 73",
+      "EXPECTED_LEDGER_UNITS = 74",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -684,7 +690,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 73");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 74");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(2);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -820,9 +826,59 @@ describe("nightly regression package and source contracts", () => {
     expect(aggregateIndex).toBeGreaterThan(e2eIndex);
     const laneBlock = localWorkflowSource.slice(unitIndex, aggregateIndex);
     expect(laneBlock.match(/continue-on-error: true/g)).toHaveLength(2);
+    expect(laneBlock.match(/set \+e/g)).toHaveLength(2);
+    for (const lane of ["unit", "e2e"] as const) {
+      const block = sourceBlock(
+        localWorkflowSource,
+        `- name: Run local nightly ${lane === "unit" ? "unit" : "browser"} regression`,
+        lane === "unit"
+          ? "- name: Run local nightly browser regression"
+          : "- name: Aggregate local nightly lane outcomes",
+      );
+      expect(block.indexOf("set +e")).toBeLessThan(block.indexOf("bun run test:nightly"));
+      expect(block.indexOf("bun run test:nightly")).toBeLessThan(block.indexOf("exit_code=$?"));
+      expect(block.indexOf("exit_code=$?")).toBeLessThan(block.indexOf('>> "$GITHUB_OUTPUT"'));
+    }
     expect(laneBlock).not.toContain('--suite "$NIGHTLY_SUITE"');
     expect(localWorkflowSource.slice(aggregateIndex)).toContain("steps.nightly-unit.outcome");
     expect(localWorkflowSource.slice(aggregateIndex)).toContain("steps.nightly-e2e.outcome");
+  });
+
+  test("captures a failing lane exit code even when the workflow shell inherits errexit", () => {
+    const block = sourceBlock(
+      localWorkflowSource,
+      "- name: Run local nightly unit regression",
+      "- name: Run local nightly browser regression",
+    );
+    const scriptStart = block.indexOf("          set -uo pipefail\n");
+    const scriptEnd = block.indexOf('          exit "$exit_code"', scriptStart);
+    expect(scriptStart).toBeGreaterThanOrEqual(0);
+    expect(scriptEnd).toBeGreaterThan(scriptStart);
+    const script = block
+      .slice(scriptStart, scriptEnd + '          exit "$exit_code"'.length)
+      .split("\n")
+      .map((line) => line.replace(/^ {10}/, ""))
+      .join("\n")
+      .replace(
+        /bun run test:nightly -- \\\n(?: {2}.*\\\n){4} {2}> nightly-unit-run\.log 2>&1/,
+        "bash -c 'exit 37'",
+      );
+    expect(script).toContain("bash -c 'exit 37'");
+    expect(script).not.toContain("bun run test:nightly");
+
+    const temporaryRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-errexit-"));
+    const outputPath = join(temporaryRoot, "github-output");
+    try {
+      const result = spawnSync("bash", ["-euo", "pipefail", "-c", script], {
+        cwd: temporaryRoot,
+        encoding: "utf8",
+        env: { ...process.env, GITHUB_OUTPUT: outputPath },
+      });
+      expect(result.status).toBe(37);
+      expect(readFileSync(outputPath, "utf8")).toBe("exit_code=37\n");
+    } finally {
+      rmSync(temporaryRoot, { recursive: true });
+    }
   });
 
   test("emits only fixed-schema lane summaries and rejects inconsistent outcomes", () => {
