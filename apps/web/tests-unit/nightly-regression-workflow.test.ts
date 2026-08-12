@@ -44,6 +44,15 @@ describe("nightly regression package and source contracts", () => {
     expect(nightlyRunnerSource).toContain("function main()");
   });
 
+  test("passes the verified Node 24 supervisor into the unit lane", () => {
+    expect(nightlyRunnerSource).toContain(
+      "const supervisorExecutable = process.env.TZUDONG_NODE24_EXECUTABLE?.trim();",
+    );
+    expect(nightlyRunnerSource).toContain(
+      "TZUDONG_NODE24_EXECUTABLE: supervisorExecutable",
+    );
+  });
+
   test("preserves the hosted nightly schedule and bounded diagnostics", () => {
     expect(hostedWorkflowSource).toContain("cron: '30 18 * * *'");
     expect(hostedWorkflowSource).toContain("workflow_dispatch:");
