@@ -274,10 +274,13 @@ class LocalYoutubeThumbnailRpcAllowlistConvergenceTests(unittest.TestCase):
             "DO $allowlist_upsert$",
             "DO $definer_contract$",
             "DO $catalog_contract$",
+            "CREATE TEMPORARY TABLE g014_005_catalog_assertion_guard (",
+            "CREATE FUNCTION pg_temp.g014_005_catalog_assertion_bridge()",
             "RESET ROLE;",
             "DO $membership_restore$",
             "DO $membership_postcondition$",
             "SELECT privacy_retention.assert_g014_public_rpc_allowlist();",
+            "DO $catalog_assertion_readback$",
         )
         positions = [self.correction.index(statement) for statement in ordered]
         self.assertEqual(positions, sorted(positions))
@@ -291,6 +294,31 @@ class LocalYoutubeThumbnailRpcAllowlistConvergenceTests(unittest.TestCase):
         ):
             self.assertIn(exact_contract, self.correction)
         self.assertNotIn("WITH ADMIN", self.correction)
+
+    def test_catalog_assertion_bridge_is_transaction_local_and_executor_only(self) -> None:
+        self.assertIn("ON COMMIT DROP;", self.correction)
+        self.assertIn(
+            "RETURNS pg_temp.g014_005_catalog_assertion_guard",
+            self.correction,
+        )
+        self.assertIn("SECURITY DEFINER\nSET search_path = ''", self.correction)
+        self.assertIn(
+            "REVOKE ALL ON FUNCTION pg_temp.g014_005_catalog_assertion_bridge()",
+            self.correction,
+        )
+        self.assertIn(
+            "pg_temp.g014_005_catalog_assertion_bridge() TO %I",
+            self.correction,
+        )
+        self.assertIn("PERFORM privacy_retention.assert_g014_catalog_contract();", self.correction)
+        self.assertNotIn(
+            "GRANT EXECUTE ON FUNCTION privacy_retention.assert_g014_catalog_contract()",
+            self.correction,
+        )
+        self.assertLess(
+            self.correction.index("DO $membership_postcondition$"),
+            self.correction.index("DO $catalog_assertion_readback$"),
+        )
 
     def test_definer_patch_converges_two_exact_variants_to_seven_invokers(self) -> None:
         self.assertEqual(
@@ -403,7 +431,7 @@ class LocalYoutubeThumbnailRpcAllowlistConvergenceTests(unittest.TestCase):
         allowlist_assertion = (
             "SELECT privacy_retention.assert_g014_public_rpc_allowlist();"
         )
-        catalog_assertion = "SELECT privacy_retention.assert_g014_catalog_contract();"
+        catalog_assertion = "PERFORM privacy_retention.assert_g014_catalog_contract();"
         self.assertEqual(self.correction.count(allowlist_assertion), 1)
         self.assertNotIn(
             "SELECT privacy_retention.assert_g014_definer_contract();",
@@ -420,7 +448,7 @@ class LocalYoutubeThumbnailRpcAllowlistConvergenceTests(unittest.TestCase):
         )
         self.assertLess(
             self.correction.index(allowlist_assertion),
-            self.correction.index(catalog_assertion),
+            self.correction.index("DO $catalog_assertion_readback$"),
         )
 
 

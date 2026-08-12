@@ -250,6 +250,27 @@ function safeProcessEnvironment(inherited = process.env) {
   return selected;
 }
 
+export function buildLocalTypeGenerationEnvironment(local, inherited = process.env) {
+  const databaseUrl = new URL(local.values.SUPABASE_DB_URL);
+  databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`;
+  const webRoot = path.join(local.repositoryRoot, 'apps', 'web');
+
+  // `supabase gen types --db-url` starts pg-meta in a one-shot container using
+  // the default local Docker context. It does not consume our GitHub socket
+  // admission identity, so cloud credentials and Docker overrides stay absent.
+  return {
+    ...safeProcessEnvironment(inherited),
+    SUPABASE_DB_URL: databaseUrl.toString(),
+    SUPABASE_SCHEMAS: 'public,auth,storage',
+    SUPABASE_CLI: path.join(
+      webRoot,
+      'node_modules',
+      '.bin',
+      process.platform === 'win32' ? 'supabase.cmd' : 'supabase',
+    ),
+  };
+}
+
 function localStackStatusEnvironment(inherited = process.env) {
   const selected = safeProcessEnvironment(inherited);
   for (const key of [
