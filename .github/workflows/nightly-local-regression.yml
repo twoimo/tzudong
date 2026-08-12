@@ -633,6 +633,13 @@ jobs:
                       return suffix
               return 'none' if not normalized else 'unknown'
 
+          def signatures(value):
+              normalized = str(value or '').casefold()
+              return [
+                  suffix for suffix, values in markers
+                  if any(marker in normalized for marker in values)
+              ][:4]
+
           if project.startswith('tzudong-local-'):
               try:
                   ids = subprocess.check_output(
@@ -688,6 +695,7 @@ jobs:
                       'oom_killed': state.get('OOMKilled') is True,
                       'restart_count': payload.get('RestartCount') if isinstance(payload.get('RestartCount'), int) and payload.get('RestartCount') >= 0 else None,
                       'log_failure_class': classify(logs),
+                      'log_signatures': signatures(logs),
                       'health': health.get('Status') if health.get('Status') in allowed_health else 'unknown',
                       'health_failing_streak': health.get('FailingStreak') if isinstance(health.get('FailingStreak'), int) and health.get('FailingStreak') >= 0 else None,
                       'health_log_exit_codes': [
