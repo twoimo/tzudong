@@ -18,6 +18,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { config as loadEnv } from 'dotenv';
+import {
+  preparePrivatePlaywrightReport,
+  removePrivatePlaywrightReport,
+  removeSanitizedPlaywrightFailureEvidence,
+  sanitizePrivatePlaywrightReport,
+} from './nightly-playwright-failure-evidence.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDirectory, '..');
@@ -123,6 +129,16 @@ const localBrowserDiagnosticsArtifact = path.join(
   appRoot,
   'test-results',
   'local-browser-route-diagnostics.json',
+);
+const privatePlaywrightReportPath = path.join(
+  appRoot,
+  'playwright-report',
+  'nightly-playwright-private-report.json',
+);
+const playwrightFailureEvidencePath = path.join(
+  appRoot,
+  'test-results',
+  'nightly-playwright-failure-evidence.json',
 );
 const maxLocalBrowserDiagnosticsFileBytes = 64 * 1024;
 const maxLocalBrowserDiagnosticsRecords = 1024;
@@ -1005,6 +1021,12 @@ async function terminateChildren(signal) {
   }
   terminating = true;
   await Promise.all([...activeChildren].map((child) => stopProcess(child)));
+  try {
+    removePrivatePlaywrightReport(privatePlaywrightReportPath);
+    removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
+  } catch {
+    process.exit(1);
+  }
   process.exit(signal === 'SIGINT' ? 130 : 143);
 }
 
@@ -1751,6 +1773,8 @@ function openNightlyWebLog(logPath) {
   }
 }
 async function runBrowserRegression(environment, mode) {
+  removePrivatePlaywrightReport(privatePlaywrightReportPath);
+  removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
   const requestedPort = Number(environment.APP_PORT);
   if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 65535) {
     throw new Error('Nightly application APP_PORT must be an integer between 1024 and 65535.');
@@ -1823,22 +1847,38 @@ async function runBrowserRegression(environment, mode) {
       PLAYWRIGHT_REUSE_EXISTING_SERVER: '1',
     };
     const diagnosticsStartedAt = Date.now();
-    const result = await runCommand(
-      'bunx',
-      [
-        'playwright',
-        'test',
-        ...curatedBrowserSpecs,
-        '--project=chromium',
-        '--reporter=line,html',
-      ],
-      { env: browserEnvironment, detached: true },
-    );
-    if (mode === 'local') {
-      collectLocalBrowserDiagnostics(diagnosticsStartedAt);
-    }
-    if (result.code !== 0) {
-      throw new Error(`Nightly browser regressions failed with exit code ${result.code}.`);
+    preparePrivatePlaywrightReport(privatePlaywrightReportPath);
+    try {
+      const result = await runCommand(
+        'bunx',
+        [
+          'playwright',
+          'test',
+          ...curatedBrowserSpecs,
+          '--project=chromium',
+          '--reporter=line,json',
+        ],
+        {
+          env: {
+            ...browserEnvironment,
+            PLAYWRIGHT_JSON_OUTPUT_FILE: privatePlaywrightReportPath,
+          },
+          detached: true,
+        },
+      );
+      sanitizePrivatePlaywrightReport(
+        privatePlaywrightReportPath,
+        playwrightFailureEvidencePath,
+        result.code,
+      );
+      if (mode === 'local') {
+        collectLocalBrowserDiagnostics(diagnosticsStartedAt);
+      }
+      if (result.code !== 0) {
+        throw new Error(`Nightly browser regressions failed with exit code ${result.code}.`);
+      }
+    } finally {
+      removePrivatePlaywrightReport(privatePlaywrightReportPath);
     }
   } finally {
     await stopProcess(appProcess);
@@ -1867,6 +1907,8 @@ async function main() {
   }
 }
 
+removePrivatePlaywrightReport(privatePlaywrightReportPath);
+removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
 main().catch((error) => {
   const message = error instanceof Error ? error.message : 'Nightly regression failed.';
   console.error(`[nightly] ${message}`);
