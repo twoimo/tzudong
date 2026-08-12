@@ -778,8 +778,8 @@ class G026BundleTests(unittest.TestCase):
                 'canonicalPath': 'backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
                 'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
                 'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
-                'sourceSha256': 'ae49c1ab076c9e8042866aba8d667e9a89e83f0c2e7724598b4591beb3e91de4',
-                'sourceByteLength': 30040,
+                'sourceSha256': '33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7',
+                'sourceByteLength': 31716,
                 'transactionClass': 'self_committing',
             },
         )

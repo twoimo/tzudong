@@ -764,6 +764,47 @@ BEGIN
 END
 $catalog_contract$;
 
+-- Source-only G026 replay deliberately leaves the migration executor without
+-- durable access to the private catalog assertion.  Build a transaction-local
+-- owner bridge now, while the protected owner role is active, then invoke it
+-- only after the temporary owner membership has been restored.  Its composite
+-- return type is an ON COMMIT DROP temporary table, so the bridge and its exact
+-- executor-only grant cannot survive this transaction.
+CREATE TEMPORARY TABLE g014_005_catalog_assertion_guard (
+  asserted boolean NOT NULL CHECK (asserted)
+) ON COMMIT DROP;
+
+REVOKE ALL ON TABLE pg_temp.g014_005_catalog_assertion_guard
+  FROM PUBLIC, anon, authenticated, service_role, postgres, supabase_admin;
+
+CREATE FUNCTION pg_temp.g014_005_catalog_assertion_bridge()
+RETURNS pg_temp.g014_005_catalog_assertion_guard
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $bridge$
+DECLARE
+  v_result pg_temp.g014_005_catalog_assertion_guard;
+BEGIN
+  PERFORM privacy_retention.assert_g014_catalog_contract();
+  v_result.asserted := true;
+  RETURN v_result;
+END
+$bridge$;
+
+REVOKE ALL ON FUNCTION pg_temp.g014_005_catalog_assertion_bridge()
+  FROM PUBLIC, anon, authenticated, service_role, postgres, supabase_admin;
+
+DO $grant_bridge_execute$
+BEGIN
+  EXECUTE pg_catalog.format(
+    'GRANT EXECUTE ON FUNCTION '
+    || 'pg_temp.g014_005_catalog_assertion_bridge() TO %I',
+    session_user
+  );
+END
+$grant_bridge_execute$;
+
 RESET ROLE;
 
 DO $membership_restore$
@@ -854,7 +895,18 @@ END
 $membership_postcondition$;
 
 SELECT privacy_retention.assert_g014_public_rpc_allowlist();
-SELECT privacy_retention.assert_g014_catalog_contract();
+
+DO $catalog_assertion_readback$
+DECLARE
+  v_asserted boolean;
+BEGIN
+  SELECT (pg_temp.g014_005_catalog_assertion_bridge()).asserted
+    INTO v_asserted;
+  IF v_asserted IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'local_g014_catalog_assertion_bridge_failed';
+  END IF;
+END
+$catalog_assertion_readback$;
 
 NOTIFY pgrst, 'reload schema';
 
