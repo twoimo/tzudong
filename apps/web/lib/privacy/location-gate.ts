@@ -1,3 +1,4 @@
+import { isPublicRestrictedMode } from "@/lib/site-config";
 export type LocationDestination =
   | "memory"
   | "network"
@@ -136,6 +137,7 @@ const isExactReadinessPayload = (payload: unknown): boolean => {
 export const acquireDeviceLocationUseAuthorization = async (): Promise<
   DeviceLocationUseAuthorization | null
 > => {
+  if (isPublicRestrictedMode) return null;
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(
     () => controller.abort(),
@@ -181,6 +183,12 @@ export const revokeDeviceLocationUseAuthorization = (
 export const evaluateLocationUse = (
   locationUse: LocationUse,
 ): LocationUseDecision => {
+  if (isPublicRestrictedMode) {
+    return {
+      allowed: false,
+      reasonCode: "DEVICE_LOCATION_DESTINATION_DENIED",
+    };
+  }
   const {
     purpose,
     destination,

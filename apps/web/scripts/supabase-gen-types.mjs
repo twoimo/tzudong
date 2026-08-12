@@ -59,6 +59,10 @@ function splitSchemas(value) {
     .filter(Boolean);
 }
 
+function normalizeGeneratedTypes(value) {
+  return `${value.replace(/\s+$/u, '')}\n`;
+}
+
 const schemas = splitSchemas(process.env.SUPABASE_SCHEMAS || 'public,auth,storage');
 if (schemas.length === 0) {
   console.error('[supabase-gen-types] No schema provided (SUPABASE_SCHEMAS).');
@@ -130,15 +134,17 @@ function makeArgs() {
   return { args, mode: 'project-id' };
 }
 
+const supabaseExecutable = process.env.SUPABASE_CLI || 'supabase';
+
 try {
   const { args } = makeArgs();
-  const stdout = execFileSync('supabase', args, {
+  const stdout = execFileSync(supabaseExecutable, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
-  fs.writeFileSync(outFile, stdout, 'utf8');
+  fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
 
   console.log(`[supabase-gen-types] Wrote ${outFile}`);
 } catch (error) {
@@ -153,13 +159,13 @@ try {
           fallbackArgs.push('--schema', schema);
         }
 
-        const stdout = execFileSync('supabase', fallbackArgs, {
+        const stdout = execFileSync(supabaseExecutable, fallbackArgs, {
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
         fs.mkdirSync(path.dirname(outFile), { recursive: true });
-        fs.writeFileSync(outFile, stdout, 'utf8');
+        fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
         console.log(`[supabase-gen-types] Wrote ${outFile}`);
         process.exit(0);
       } catch (fallbackError) {

@@ -27,83 +27,66 @@ function isDisabledUser(user: Pick<User, 'banned_until'>) {
 function toStringValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
-type ProfileRow = {
-  id?: string;
+type AdminUserManagementMetadataRow = {
   user_id: string;
-  username?: string | null;
-  nickname?: string | null;
-  avatar_url?: string | null;
-  role?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  username: string | null;
+  nickname: string | null;
+  avatar_url: string | null;
+  profile_role: string | null;
+  profile_created_at: string | null;
+  profile_updated_at: string | null;
+  is_admin: boolean;
+  account_status: 'active' | 'disabled' | null;
 };
 
-type RoleRow = {
-  user_id: string;
-  role: string;
-};
+async function fetchUserManagementMetadata(
+  supabase: ReturnType<typeof createSupabaseServiceRoleClient>,
+  userIds: string[],
+) {
+  const metadata = new Map<string, AdminUserManagementMetadataRow>();
+  for (let offset = 0; offset < userIds.length; offset += MAX_PER_PAGE) {
+    const boundedUserIds = userIds.slice(offset, offset + MAX_PER_PAGE);
+    const requestedIds = new Set(boundedUserIds);
+    const returnedIds = new Set<string>();
+    const { data, error } = await supabase.rpc(
+      'read_admin_user_management_metadata',
+      { p_user_ids: boundedUserIds },
+    );
+    if (error) throw error;
 
-type AccountStatusRow = {
-  user_id: string;
-  account_status: 'active' | 'disabled';
-};
-
-async function fetchProfileMap(supabase: ReturnType<typeof createSupabaseServiceRoleClient>, userIds: string[]) {
-  if (userIds.length === 0) return new Map<string, ProfileRow>();
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id,user_id,username,nickname,avatar_url,role,created_at,updated_at')
-    .in('user_id', userIds);
-
-  if (error) throw error;
-
-  return new Map(((data ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]));
-}
-
-async function fetchAdminRoleSet(supabase: ReturnType<typeof createSupabaseServiceRoleClient>, userIds?: string[]) {
-  let query = supabase
-    .from('user_roles')
-    .select('user_id, role')
-    .eq('role', 'admin');
-
-  if (userIds && userIds.length > 0) {
-    query = query.in('user_id', userIds);
+    for (const row of (data ?? []) as AdminUserManagementMetadataRow[]) {
+      if (
+        !requestedIds.has(row.user_id)
+        || returnedIds.has(row.user_id)
+        || typeof row.is_admin !== 'boolean'
+        || !['active', 'disabled', null].includes(row.account_status)
+      ) {
+        throw new Error('관리자 사용자 메타데이터 응답이 유효하지 않습니다.');
+      }
+      returnedIds.add(row.user_id);
+      metadata.set(row.user_id, row);
+    }
+    if (returnedIds.size !== requestedIds.size) {
+      throw new Error('관리자 사용자 메타데이터 응답이 완전하지 않습니다.');
+    }
   }
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  return new Set(((data ?? []) as RoleRow[]).map((role) => role.user_id));
+  return metadata;
 }
 
-async function fetchAccountStatusMap(supabase: ReturnType<typeof createSupabaseServiceRoleClient>, userIds: string[]) {
-  if (userIds.length === 0) return new Map<string, AccountStatusRow['account_status']>();
-
-  const { data, error } = await supabase
-    .from('user_account_status')
-    .select('user_id, account_status')
-    .in('user_id', userIds);
-
-  if (error) throw error;
-
-  return new Map(((data ?? []) as AccountStatusRow[]).map((status) => [status.user_id, status.account_status]));
-}
-
-function buildManagedUser(user: User, profile: ProfileRow | undefined, adminUserIds: Set<string>, accountStatus?: AccountStatusRow['account_status']) {
+function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow | undefined) {
   const userMetadata = (user.user_metadata ?? {}) as Record<string, unknown>;
-  const nickname = toStringValue(profile?.nickname) || toStringValue(userMetadata.nickname) || '닉네임 없음';
-  const username = toStringValue(profile?.username) || toStringValue(userMetadata.username) || user.email?.split('@')[0] || 'unknown';
-  const isAdmin = adminUserIds.has(user.id);
-  const isDisabled = accountStatus === 'disabled' || isDisabledUser(user);
+  const nickname = toStringValue(metadata?.nickname) || toStringValue(userMetadata.nickname) || '닉네임 없음';
+  const username = toStringValue(metadata?.username) || toStringValue(userMetadata.username) || user.email?.split('@')[0] || 'unknown';
+  const isAdmin = metadata?.is_admin === true;
+  const isDisabled = metadata ? metadata.account_status !== 'active' || isDisabledUser(user) : true;
 
   return {
     id: user.id,
     email: user.email ?? '',
     username,
     nickname,
-    avatarUrl: profile?.avatar_url ?? null,
-    profileRole: profile?.role ?? (isAdmin ? 'admin' : 'user'),
+    avatarUrl: metadata?.avatar_url ?? null,
+    profileRole: metadata?.profile_role ?? (isAdmin ? 'admin' : 'user'),
     isAdmin,
     isDisabled,
     bannedUntil: user.banned_until ?? null,
@@ -147,14 +130,10 @@ export async function GET(request: NextRequest) {
 
     const authUsers = userPages;
     const userIds = authUsers.map((user) => user.id);
-    const [profileMap, adminUserIds, accountStatusMap] = await Promise.all([
-      fetchProfileMap(supabase, userIds),
-      fetchAdminRoleSet(supabase, userIds),
-      fetchAccountStatusMap(supabase, userIds),
-    ]);
+    const metadataMap = await fetchUserManagementMetadata(supabase, userIds);
 
     const users = authUsers
-      .map((user) => buildManagedUser(user, profileMap.get(user.id), adminUserIds, accountStatusMap.get(user.id)))
+      .map((user) => buildManagedUser(user, metadataMap.get(user.id)))
       .filter((user) => {
         if (!search) return true;
         return [user.email, user.nickname, user.username, user.id]

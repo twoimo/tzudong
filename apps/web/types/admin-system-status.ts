@@ -18,6 +18,7 @@ export type AdminSystemStatusChecklistCategory =
 
 export type AdminSystemStatusChecklistSource =
   | 'run_daily'
+  | 'nightly-regression'
   | 'storyboard-agent'
   | 'bge-embedding'
   | 'provider-key'
@@ -133,6 +134,42 @@ export type AdminGithubActionsStatus = {
   checkedAt: string;
 };
 
+export type AdminNightlyWorkflowRole = 'canonical-local' | 'hosted-manual-fallback';
+
+export type AdminNightlyWorkflowStatus = {
+  role: AdminNightlyWorkflowRole;
+  workflow: string;
+  branch?: string;
+  reachable: boolean;
+  latestRunId?: number;
+  latestRunStatus?: string;
+  latestRunConclusion?: string | null;
+  latestRunEvent?: string;
+  latestRunUrl?: string;
+  latestRunCreatedAt?: string;
+  latestRunUpdatedAt?: string;
+  lastSuccessfulRunId?: number;
+  lastSuccessfulRunUrl?: string;
+  lastSuccessfulRunCreatedAt?: string;
+  consecutiveFailures: number;
+  examinedRuns: number;
+  historyWindowTruncated: boolean;
+  detail?: string;
+  checkedAt: string;
+};
+
+export type AdminNightlyRegressionStatus = {
+  enabled: boolean;
+  configured: boolean;
+  reachable: boolean;
+  repositoryConfigured: boolean;
+  tokenConfigured: boolean;
+  localCanonical: AdminNightlyWorkflowStatus;
+  hostedManualFallback: AdminNightlyWorkflowStatus;
+  detail?: string;
+  checkedAt: string;
+};
+
 export type AdminSupabaseCounterStatus = {
   enabled: boolean;
   configured: boolean;
@@ -167,8 +204,8 @@ export type AdminSystemStatusResponse = {
   frameCaption: AdminSystemFrameCaptionStatus;
   runDaily?: AdminSystemRunDailyStatus;
   githubActions?: AdminGithubActionsStatus;
+  nightlyRegression?: AdminNightlyRegressionStatus;
   supabaseCounters?: AdminSupabaseCounterStatus;
   providerReadiness: AdminProviderReadinessMap;
   checklist: AdminSystemStatusChecklistItem[];
 };
-

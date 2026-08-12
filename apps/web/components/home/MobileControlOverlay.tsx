@@ -51,7 +51,7 @@ import { useAuth } from '@/contexts/AuthContextBase';
 import { resolveDeviceLocationButtonLabel, type DeviceMapLocation } from '@/lib/device-location-map';
 import { useDeferredComponent } from '@/hooks/use-deferred-component';
 import { useOverseasCountryCounts } from '@/components/home/use-overseas-country-counts';
-import { siteConfig } from "@/lib/site-config";
+import { isPublicRestrictedMode, siteConfig } from "@/lib/site-config";
 import {
     HOME_MAP_CONTEXTUAL_MOBILE_LIMIT,
     type HomeMapContextualRestaurantsPayload,
@@ -274,7 +274,10 @@ function MobileControlOverlayComponent({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'name' | 'youtube'>('name');
     const [openTopDropdown, setOpenTopDropdown] = useState<MobileTopDropdown>(() => {
-        if (initialIntent === 'bookmark' || initialIntent === 'notification' || initialIntent === 'user') {
+        if (
+            !isPublicRestrictedMode
+            && (initialIntent === 'bookmark' || initialIntent === 'notification' || initialIntent === 'user')
+        ) {
             return initialIntent;
         }
 
@@ -293,11 +296,11 @@ function MobileControlOverlayComponent({
     const handleNotificationMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'notification' : null), []);
     const handleUserMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'user' : null), []);
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
-        Boolean(user),
+        !isPublicRestrictedMode && Boolean(user),
         loadMobileBookmarkMenuButton
     );
     const DeferredMobileNotificationMenuButton = useDeferredComponent<MobileNotificationMenuButtonProps>(
-        Boolean(user),
+        !isPublicRestrictedMode && Boolean(user),
         loadMobileNotificationMenuButton
     );
     const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
@@ -732,6 +735,7 @@ function MobileControlOverlayComponent({
             setActiveSheet('search');
             return;
         }
+        if (isPublicRestrictedMode) return;
 
         if (initialIntent === 'bookmark' || initialIntent === 'notification') {
             setOpenTopDropdown(initialIntent);
@@ -830,6 +834,7 @@ function MobileControlOverlayComponent({
     );
 
     const renderBookmarkMenuButton = () => {
+        if (isPublicRestrictedMode) return null;
         if (!user || !DeferredMobileBookmarkMenuButton) return renderAnonymousBookmarkMenuButton();
 
         return <DeferredMobileBookmarkMenuButton user={user} open={isBookmarkMenuOpen} onOpenChange={handleBookmarkMenuOpenChange} />;
@@ -882,11 +887,13 @@ function MobileControlOverlayComponent({
     );
 
     const renderNotificationMenuButton = () => {
+        if (isPublicRestrictedMode) return null;
         if (!user || !DeferredMobileNotificationMenuButton) return renderAnonymousNotificationMenuButton();
 
         return <DeferredMobileNotificationMenuButton user={user} open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange} />;
     };
     const renderUserMenuButton = () => {
+        if (isPublicRestrictedMode) return null;
         if (!user) {
             return (
                 <Button
@@ -1200,56 +1207,64 @@ function MobileControlOverlayComponent({
                         )}
                     </Button>
                 )}
-                {/* 제보 버튼 */}
-                <Button
-                    onClick={() => {
-                        onSubmissionClick?.();
-                    }}
-                    className={cn(
-                        'h-12 w-12 rounded-full shadow-lg',
-                        'bg-red-800 hover:bg-red-900 text-white',
-                        'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
-                        'hover:scale-110 active:scale-95',
-                        'flex items-center justify-center',
-                        'border-2 border-border/20'
-                    )}
-                    title="맛집 제보하기"
-                    aria-label="맛집 제보하기"
-                    data-mobile-submission-floating-action="true"
-                >
-                    <Send className="h-5 w-5" aria-hidden="true" />
-                </Button>
+                {!isPublicRestrictedMode && (
+                    <>
+                        {/* 제보 버튼 */}
+                        <Button
+                            onClick={() => {
+                                onSubmissionClick?.();
+                            }}
+                            className={cn(
+                                'h-12 w-12 rounded-full shadow-lg',
+                                'bg-red-800 hover:bg-red-900 text-white',
+                                'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
+                                'hover:scale-110 active:scale-95',
+                                'flex items-center justify-center',
+                                'border-2 border-border/20'
+                            )}
+                            title="맛집 제보하기"
+                            aria-label="맛집 제보하기"
+                            data-mobile-submission-floating-action="true"
+                        >
+                            <Send className="h-5 w-5" aria-hidden="true" />
+                        </Button>
+                    </>
+                )}
 
-                {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
-                <Button
-                    type="button"
-                    onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onDeviceLocationClick?.();
-                    }}
-                    disabled={isDeviceLocationPending}
-                    aria-label={deviceLocationButtonLabel}
-                    className={cn(
-                        'h-12 w-12 rounded-full shadow-lg',
-                        'transition-colors duration-150 ease-out motion-reduce:transition-none',
-                        'flex items-center justify-center',
-                        'border-2',
-                        isDeviceHeadingMode
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
-                            : deviceLocation
-                                ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
-                                : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
-                        isDeviceLocationPending && 'opacity-80'
-                    )}
-                    title={deviceLocationButtonLabel}
-                >
-                    {isDeviceHeadingMode ? (
-                        <Navigation className="h-5 w-5" aria-hidden="true" />
-                    ) : (
-                        <LocateFixed className="h-5 w-5" aria-hidden="true" />
-                    )}
-                </Button>
+                {!isPublicRestrictedMode && (
+                    <>
+                        {/* 기기 위치 버튼: 첫 탭은 현재 위치, 두 번째 탭부터 방향 표시 */}
+                        <Button
+                            type="button"
+                            onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onDeviceLocationClick?.();
+                            }}
+                            disabled={isDeviceLocationPending}
+                            aria-label={deviceLocationButtonLabel}
+                            className={cn(
+                                'h-12 w-12 rounded-full shadow-lg',
+                                'transition-colors duration-150 ease-out motion-reduce:transition-none',
+                                'flex items-center justify-center',
+                                'border-2',
+                                isDeviceHeadingMode
+                                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
+                                    : deviceLocation
+                                        ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                                        : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
+                                isDeviceLocationPending && 'opacity-80'
+                            )}
+                            title={deviceLocationButtonLabel}
+                        >
+                            {isDeviceHeadingMode ? (
+                                <Navigation className="h-5 w-5" aria-hidden="true" />
+                            ) : (
+                                <LocateFixed className="h-5 w-5" aria-hidden="true" />
+                            )}
+                        </Button>
+                    </>
+                )}
             </div>
             )}
 

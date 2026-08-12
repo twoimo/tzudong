@@ -70,6 +70,16 @@ export async function GET(request: Request) {
         return unavailable();
     }
 
+    const localDevelopmentGate = process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1'
+        && process.env.NODE_ENV === 'development'
+        && LOOPBACK_HOSTS.has(host);
+    if (localDevelopmentGate) {
+        return NextResponse.json(
+            { ok: true, service: 'tzudong-web', mode: 'local-development' },
+            { headers: noStoreHeaders },
+        );
+    }
+
     const releaseId = process.env.TS7_RELEASE_ID;
     const gitSha = process.env.VERCEL_GIT_COMMIT_SHA;
     const deploymentId = process.env.VERCEL_DEPLOYMENT_ID;

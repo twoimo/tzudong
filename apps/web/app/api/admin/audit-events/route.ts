@@ -124,24 +124,24 @@ export async function GET(request: NextRequest) {
 
   try {
     const { data, error } = await supabase
-      .from("admin_audit_events")
-      .select(
-        "id,actor_user_id,target_user_id,action,reason,status,correlation_id,applied_at,error_code,created_at,audit_counts,audit_flags",
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      .rpc("read_admin_user_audit_events", { p_limit: limit });
 
     if (error) throw error;
 
-    const events = (data ?? [])
-      .map(toAuditEvent)
-      .filter((event): event is NonNullable<typeof event> => event !== null);
+    const rawEvents = data ?? [];
+    if (rawEvents.length > limit) {
+      throw new Error('관리자 감사 조회 응답이 허용 범위를 초과했습니다.');
+    }
+    const events = rawEvents.map(toAuditEvent);
+    if (events.some((event) => event === null)) {
+      throw new Error('관리자 감사 조회 응답이 유효하지 않습니다.');
+    }
 
     return NextResponse.json(
       {
         asOf: new Date().toISOString(),
         source: ADMIN_AUDIT_PRIMARY_SOURCE,
-        events,
+        events: events as Array<NonNullable<(typeof events)[number]>>,
         unavailable: null,
         coverage: getAdminAuditCoverage(),
       },

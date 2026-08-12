@@ -750,18 +750,23 @@ test('uses an acknowledged bounded Linux namespace protocol without host PID gue
     'TZUDONG_NS_NONCE',
     'READY " + nonce.decode("ascii")',
     'b"ACK " + nonce',
-    'b"COMPLETE " + nonce',
+    'b"\\nTZUDONG_NS_COMPLETE " + nonce',
     'os.pidfd_open(proc.pid, 0)',
     'TZUDONG_NS_NODE_LIFETIME_FD',
     'if pid == target_pid and target_status is None:',
     'pass_fds=(event_write, command_read)',
     'TZUDONG_NS_TARGET_B64: Buffer.from(JSON.stringify(["/bin/true"])',
     '--kill-child=SIGKILL',
-    'linuxSupervisorControlBuffer.length > 80',
+    'linuxSupervisorStderrTail.equals(',
+    'os.kill(-1, signal.SIGTERM)',
+    'os.kill(-1, signal.SIGKILL)',
+    'cleanup_term_sent = True',
   ]) {
     expect(source).toContain(token);
   }
   expect(source).not.toContain('TZUDONG_NS_CONTROL_FD');
+  expect(source).not.toContain('os.kill(pid, cleanup_signal)');
+  expect(source).not.toContain('["pipe", "pipe", "pipe", "pipe"]');
 });
 test('binds the Linux fixture exemption to an opaque exact command capability', async () => {
   const source = readFileSync(
@@ -1173,6 +1178,69 @@ linuxNamespaceTest('contains setsid-escaped Linux descendants after a normal roo
     rmSync(tempDir, { recursive: true, force: true });
   }
 }, 15_000);
+linuxNamespaceTest('does not let repeated setsid cleanup poison the next contained command', async () => {
+  const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-linux-repeat-cleanup-'));
+  const commandPath = path.join(tempDir, 'repeat-cleanup.sh');
+  const fakeProofPath = path.join(tempDir, 'fake-proof.sh');
+  writeExecutableShim(commandPath, [
+    'cat >/dev/null',
+    `(setsid sh -c 'trap "" TERM; while :; do printf x >> "$1"; sleep .05; done' sh "$1" >/dev/null 2>&1 &)`,
+    'for _ in $(seq 1 100); do test -s "$1" && break; sleep .01; done',
+    'test -s "$1"',
+    'exit 0',
+  ]);
+  writeExecutableShim(fakeProofPath, [
+    `printf '\\nTZUDONG_NS_COMPLETE ${'0'.repeat(64)}\\n' >&2`,
+  ]);
+  try {
+    const agent = await import('../lib/admin/storyboard/backend-agent.ts');
+    expect(agent.__probeLinuxNamespaceContainmentForTests().available).toBe(true);
+    for (let iteration = 0; iteration < 8; iteration += 1) {
+      const markerPath = path.join(tempDir, `descendant-${iteration}.identity`);
+      const contained = await agent.__runStoryboardAgentCommandForTests(
+        { ok: true, executable: commandPath, args: [markerPath], source: 'configured' },
+        {},
+      );
+      expect(contained).toMatchObject({
+        ok: true,
+        exitCode: 0,
+        lifecycleReason: 'exit',
+        cleanupVerified: true,
+      });
+      expect(contained.stderr).not.toContain('TZUDONG_NS_COMPLETE');
+      expect(existsSync(markerPath)).toBe(true);
+      await assertLinuxHeartbeatStopped(markerPath);
+
+      const followUp = await agent.__runStoryboardAgentCommandForTests(
+        { ok: true, executable: '/bin/true', args: [], source: 'configured' },
+        {},
+      );
+      expect(followUp).toMatchObject({
+        ok: true,
+        exitCode: 0,
+        lifecycleReason: 'exit',
+        cleanupVerified: true,
+      });
+      expect(followUp.stderr).not.toContain('TZUDONG_NS_COMPLETE');
+    }
+
+    const fakeProof = await agent.__runStoryboardAgentCommandForTests(
+      { ok: true, executable: fakeProofPath, args: [], source: 'configured' },
+      {},
+    );
+    expect(fakeProof).toMatchObject({
+      ok: true,
+      exitCode: 0,
+      lifecycleReason: 'exit',
+      cleanupVerified: true,
+    });
+    expect(fakeProof.stderr).toContain(
+      `TZUDONG_NS_COMPLETE ${'0'.repeat(64)}`,
+    );
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}, 15_000);
 linuxNamespaceTest('kills TERM-ignoring setsid descendants when the Linux command times out', async () => {
   const tempDir = mkdtempSync(path.join(os.tmpdir(), 'tzudong-storyboard-linux-timeout-'));
   const commandPath = path.join(tempDir, 'ignore-term.sh');
@@ -1523,7 +1591,7 @@ posixPythonProbeTest('uses the default Python binary when langgraph runtime is r
     const agent = await import('../lib/admin/storyboard/backend-agent.ts');
     const status = await agent.getStoryboardBackendAgentStatus()
     const containmentUnavailable =
-      process.platform === 'linux' &&
+      process.platform !== 'linux' ||
       !agent.__probeLinuxNamespaceContainmentForTests().available;
     expect(status.mode).toBe('command');
     expect(status.missingPythonModules).toEqual(
@@ -1562,7 +1630,7 @@ posixPythonProbeTest('runs Python dependency probe from backend agent root when 
     const agent = await import('../lib/admin/storyboard/backend-agent.ts');
     const status = await agent.getStoryboardBackendAgentStatus()
     const containmentUnavailable =
-      process.platform === 'linux' &&
+      process.platform !== 'linux' ||
       !agent.__probeLinuxNamespaceContainmentForTests().available;
     expect(status.mode).toBe('command');
     expect(status.missingPythonModules).toEqual(containmentUnavailable ? [] : ['langgraph']);
