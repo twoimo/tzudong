@@ -325,6 +325,7 @@ describe("nightly regression package and source contracts", () => {
       "database_permission",
       "config_permission",
       "auth_failure",
+      "tini_runtime",
       "supabase_db_present",
       "supabase_db_missing",
       "analytics_schema_present",
