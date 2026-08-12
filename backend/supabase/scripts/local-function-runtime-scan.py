@@ -1614,7 +1614,7 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
     ("public", "prevent_last_admin_role_delete", ""): ("0A000",),
     ("public", "prevent_last_admin_role_update", ""): ("0A000",),
     ("public", "prevent_profile_role_client_change", ""): ("0A000",),
-    ("public", "preview_privacy_incident_transition", "uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid"): ("P0001",),
+    ("public", "preview_privacy_incident_transition", "uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid"): ("P0001", "42501"),
     ("public", "privacy_append_audit_event", "text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb"): ("42501",),
     ("public", "set_admin_ai_updated_at", ""): ("0A000",),
     ("public", "set_admin_restaurant_map_overlays_updated_at", ""): ("0A000",),
