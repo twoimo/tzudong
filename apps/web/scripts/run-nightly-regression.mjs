@@ -1102,7 +1102,11 @@ async function waitForHealth(appProcess, healthUrl, mode, headers = undefined) {
 }
 
 async function runUnitRegression(environment) {
-  const result = await runCommand('bun', ['run', 'test:unit'], { env: environment });
+  const supervisorExecutable = process.env.TZUDONG_NODE24_EXECUTABLE?.trim();
+  const unitEnvironment = supervisorExecutable
+    ? { ...environment, TZUDONG_NODE24_EXECUTABLE: supervisorExecutable }
+    : environment;
+  const result = await runCommand('bun', ['run', 'test:unit'], { env: unitEnvironment });
   if (result.code !== 0) {
     throw new Error(`Nightly unit regressions failed with exit code ${result.code}.`);
   }
