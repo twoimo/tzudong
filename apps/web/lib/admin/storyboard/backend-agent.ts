@@ -87,6 +87,7 @@ const WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS = 5_000;
 const WINDOWS_JOB_SUPERVISOR_CLEANUP_GRACE_MS = 5_000;
 const WINDOWS_JOB_SUPERVISOR_FINAL_CLOSE_TIMEOUT_MS = 5_000;
 const LINUX_NAMESPACE_TERMINATION_TIMEOUT_MS = 10_000;
+const LINUX_NAMESPACE_SUPERVISOR_DRAIN_TIMEOUT_MS = 7_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
 function getRuntimeCwd() {
   const cwd = Reflect.get(process, "cwd");
@@ -4320,6 +4321,10 @@ function runStoryboardAgentCommand(
       processControl.platform === "linux" &&
       isNativeProcessControl &&
       !trustedLangGraphFixture;
+    const lifecycleStreamDrainTimeoutMs =
+      useLinuxNamespaceSupervisor && processControl.streamDrainTimeoutMs === undefined
+        ? Math.max(streamDrainTimeoutMs, LINUX_NAMESPACE_SUPERVISOR_DRAIN_TIMEOUT_MS)
+        : streamDrainTimeoutMs;
     const linuxSupervisorNonce = useLinuxNamespaceSupervisor
       ? randomBytes(32).toString("hex")
       : "";
@@ -4414,7 +4419,7 @@ function runStoryboardAgentCommand(
           );
           stderr = stderrCapture.value;
           finish();
-        }, streamDrainTimeoutMs);
+        }, lifecycleStreamDrainTimeoutMs);
         streamWaiters.add(finish);
       });
     const terminateTree = async (awaitWindowsCleanupGrace = false) => {
@@ -4647,7 +4652,7 @@ function runStoryboardAgentCommand(
             "diagnostic stream drain deadline exceeded",
             exitCode,
           );
-        }, streamDrainTimeoutMs);
+        }, lifecycleStreamDrainTimeoutMs);
       }
     };
 
