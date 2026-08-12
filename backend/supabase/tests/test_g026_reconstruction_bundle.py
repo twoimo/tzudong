@@ -65,8 +65,8 @@ class G026BundleTests(unittest.TestCase):
         self.assertEqual(bundle['transition']['sha256'], '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
         self.assertEqual(verify.TRANSITION_BYTES, 27693)
         self.assertEqual(verify.TRANSITION_SHA256, '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
-        self.assertEqual(bundle['repairs']['byteLength'], 43651)
-        self.assertEqual(bundle['repairs']['sha256'], '50acc4c1c2c952705f0deb67b5d06e5ef25155d071dcbbabca26039411eba1a2')
+        self.assertEqual(bundle['repairs']['byteLength'], 46700)
+        self.assertEqual(bundle['repairs']['sha256'], 'efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb')
         for key, filename in (('transition', 'G026_RECONSTRUCTION_TRANSITION.v4.sql'), ('repairs', 'G026_RECONSTRUCTION_REPAIRS.v4.sql')):
             raw = (BASE / filename).read_bytes()
             self.assertEqual(bundle[key]['byteLength'], len(raw))
@@ -81,7 +81,7 @@ class G026BundleTests(unittest.TestCase):
         verify.require_reconstruction_policy_shells(repairs)
         self.assertEqual(len(verify.RECONSTRUCTION_POLICY_SHELLS), 7)
         self.assertTrue(all('(false);' in statement for statement in verify.RECONSTRUCTION_POLICY_SHELLS))
-        self.assertEqual(len(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS), 2)
+        self.assertEqual(len(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS), 4)
         for mutation in (
             repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[0] + '\n', '', 1),
             repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[1], verify.RECONSTRUCTION_POLICY_SHELLS[1].replace('(false)', '(true)'), 1),
@@ -89,6 +89,8 @@ class G026BundleTests(unittest.TestCase):
             repairs.replace("      ('short_urls', 'Admins can delete short URLs')\n", '', 1),
             repairs.replace("WHERE namespace_row.nspname = 'public'", "WHERE namespace_row.nspname = 'not_public'", 1),
             repairs.replace(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS[0] + '\n', '', 1),
+            repairs.replace("= '(is_active = true)'", "= '(is_active = false)'", 1),
+            repairs.replace(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS[3] + '\n', '', 1),
             repairs + '\nCREATE POLICY unexpected_policy\n  ON public.restaurant_requests FOR SELECT USING (false);\n',
         ):
             with self.subTest(mutation=hashlib.sha256(mutation.encode()).hexdigest()):
