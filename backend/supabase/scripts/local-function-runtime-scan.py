@@ -928,7 +928,7 @@ def _validate_local_stack_state(
     return state, values, current, receipt
 
 
-def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
+def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str, str]]:
     input_root = state / "inputs"
     try:
         input_info = input_root.lstat()
@@ -958,9 +958,28 @@ def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
         or manifest.get("schema") != "local-stack-input-manifest-v1"
         or manifest.get("generator_version") != LOCAL_STACK_GENERATOR_VERSION
         or not isinstance(manifest.get("inputs"), list)
+        or not isinstance(manifest.get("mounts"), list)
     ):
         raise RuntimeScanError("local_input_manifest")
-    mounts: set[tuple[str, str]] = set()
+    for mount in manifest.get("mounts", []):
+        if not isinstance(mount, dict) or mount.get("service") != "db":
+            continue
+        source, destination = mount.get("source"), mount.get("destination")
+        if (
+            mount.get("type") != "volume"
+            or not isinstance(source, str)
+            or not source.startswith("local-")
+            or not isinstance(destination, str)
+        ):
+            raise RuntimeScanError("local_input_manifest")
+    mounts: set[tuple[str, str, str]] = set()
+    project = local_project_name(root)
+    for mount in manifest["mounts"]:
+        if not isinstance(mount, dict) or mount.get("service") != "db":
+            continue
+        source = mount["source"]
+        destination = mount["destination"]
+        mounts.add(("volume", destination, f"{project}-{source.removeprefix('local-')}"))
     for entry in manifest["inputs"]:
         if not isinstance(entry, dict) or entry.get("service") != "db":
             continue
@@ -986,7 +1005,6 @@ def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
             or output_resolved.parent != (state / "inputs").resolve()
         ):
             raise RuntimeScanError("local_input_binding")
-        mounts.add((destination, str(output_resolved)))
     if not mounts:
         raise RuntimeScanError("local_input_manifest")
     return mounts
@@ -1122,19 +1140,15 @@ class LocalPsql:
             raise RuntimeScanError("container_not_repository_compose")
         if not isinstance(mounts, list):
             raise RuntimeScanError("container_input_mounts")
-        actual_mounts: set[tuple[str, str]] = set()
+        actual_mounts: set[tuple[str, str, str]] = set()
         for mount in mounts:
             if (
                 isinstance(mount, dict)
-                and mount.get("Type") == "bind"
-                and mount.get("RW") is False
+                and mount.get("Type") == "volume"
                 and isinstance(mount.get("Destination"), str)
-                and isinstance(mount.get("Source"), str)
+                and isinstance(mount.get("Name"), str)
             ):
-                try:
-                    actual_mounts.add((mount["Destination"], str(Path(mount["Source"]).resolve(strict=True))))
-                except OSError as error:
-                    raise RuntimeScanError("container_input_mounts") from error
+                actual_mounts.add(("volume", mount["Destination"], mount["Name"]))
         if not self._expected_mounts.issubset(actual_mounts):
             raise RuntimeScanError("container_input_mounts")
 
