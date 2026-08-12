@@ -99,6 +99,8 @@ services:
     # GitHub-hosted Docker denies Tini's subreaper setup; the image's limits
     # wrapper preserves bounded startup without requiring that capability.
     entrypoint: ["/app/limits.sh"]
+    environment:
+      CLUSTER_POSTGRES: !reset null
     ports: !override
       # POSTGRES_PORT remains the internal 5432 listener; only the host mapping is derived.
       - "127.0.0.1:${POSTGRES_HOST_PORT}:5432/tcp"
