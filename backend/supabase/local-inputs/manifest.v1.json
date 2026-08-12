@@ -199,7 +199,7 @@
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",
-      "sha256": "70a2f0ddec40c2e24b16e02e0975d947c0d051a0f8803a3f72ddd08c9a3e2852"
+      "sha256": "8d44e457d9b25bc1038898d441c76f1af7fc6e7204d5fd2243dbaa58deef7f66"
     },
     {
       "path": "backend/supabase/docker-compose.mail.yml",

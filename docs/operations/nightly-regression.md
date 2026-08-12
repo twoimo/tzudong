@@ -84,6 +84,8 @@ helper is removed before service startup and those volumes are removed during
 teardown. The hosted lane removes only the nine exact project volume names
 before reset and verifies that each is absent, so diagnostic probes cannot leave
 stale database or configuration state behind.
+The local Supavisor overlay invokes the image's limits wrapper directly because
+the hosted Docker namespace denies Tini's optional subreaper capability.
 A failed reset may add a bounded `local-stack-failure-diagnostics-v1` receipt to
 the short-retention Actions artifact. It contains only fixed service state,
 health, exit-code, and Compose-status fields; it is never in the public release.
