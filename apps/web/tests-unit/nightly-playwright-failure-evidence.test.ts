@@ -440,6 +440,9 @@ describe("nightly Playwright failure evidence", () => {
         join(appRoot, "scripts/nightly-playwright-failure-evidence.mjs"),
         join(fixtureScripts, "nightly-playwright-failure-evidence.mjs"),
       );
+      const environment = { ...process.env };
+      delete environment.NIGHTLY_ENV_FILE;
+      delete environment.NIGHTLY_ENV_PROVENANCE_FILE;
       const result = spawnSync(process.execPath, [
         "scripts/run-nightly-regression.mjs",
         "--mode", "local",
@@ -447,7 +450,7 @@ describe("nightly Playwright failure evidence", () => {
       ], {
         cwd: fixtureApp,
         encoding: "utf8",
-        env: { ...process.env },
+        env: environment,
       });
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("requires --env-file");
@@ -485,6 +488,7 @@ describe("nightly Playwright failure evidence", () => {
       );
       writeFileSync(evidence, JSON.stringify({ stale: "previously-approved" }), { mode: 0o600 });
       writeFileSync(privateReport, "stale-private-report", { mode: 0o644 });
+      chmodSync(privateReport, 0o644);
       const result = spawnSync(process.execPath, ["scripts/run-nightly-regression.mjs"], {
         cwd: fixtureApp,
         encoding: "utf8",

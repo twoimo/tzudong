@@ -285,7 +285,9 @@ describe("nightly regression package and source contracts", () => {
       "application-path-denied",
       "isAllowedSupabaseFixturePath",
       "SUPABASE_FIXTURE_CORS_HEADERS",
-      "requestHeaders.origin !== LOCAL_APP_ORIGIN",
+      "await request.headerValue('origin')",
+      "await request.headerValue('access-control-request-method')",
+      "await request.headerValue('access-control-request-headers')",
       "access-control-request-method",
       "access-control-request-headers",
       "Nightly Supabase fixture rejected an unexpected preflight header.",
@@ -300,6 +302,8 @@ describe("nightly regression package and source contracts", () => {
     }
     expect(nightlyFixtureSource).not.toContain("'access-control-allow-headers': '*'");
     expect(nightlyFixtureSource).not.toContain("'access-control-allow-origin': '*'");
+    expect(nightlyFixtureSource).not.toContain("request.allHeaders()");
+    expect(nightlyFixtureSource).not.toContain("new URL(request.frame().url()).origin");
     for (const spec of curatedSpecs) {
       expect(read(spec)).toContain("./nightly/nightly-test");
     }
@@ -493,7 +497,9 @@ describe("nightly regression package and source contracts", () => {
       "url.pathname.endsWith('/rest/v1/announcements')",
       "url.pathname.endsWith('/rest/v1/ad_banners')",
       "SUPABASE_FIXTURE_CORS_HEADERS",
-      "requestHeaders.origin !== LOCAL_APP_ORIGIN",
+      "await request.headerValue('origin')",
+      "await request.headerValue('access-control-request-method')",
+      "await request.headerValue('access-control-request-headers')",
       "Mobile Supabase fixture rejected an unexpected preflight header.",
       "'access-control-allow-origin': LOCAL_APP_ORIGIN",
       "'access-control-expose-headers': 'Content-Range, Link, Location'",
@@ -503,6 +509,8 @@ describe("nightly regression package and source contracts", () => {
     }
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-headers': '*'");
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-origin': '*'");
+    expect(mobileHomeMapHelpersSource).not.toContain("request.allHeaders()");
+    expect(mobileHomeMapHelpersSource).not.toContain("new URL(request.frame().url()).origin");
   });
 
   test("keeps local health responses redacted to the stable three-field contract", () => {
