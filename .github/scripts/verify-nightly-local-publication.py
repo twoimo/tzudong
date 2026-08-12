@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 
 
@@ -264,6 +265,31 @@ CREDENTIAL_VALUE = re.compile(
     r"eyJ[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}|"
     r"-----BEGIN [A-Z ]+PRIVATE KEY-----)"
 )
+E2E_EVIDENCE_FIELDS = {
+    "schema",
+    "source",
+    "command_exit_code",
+    "outcome",
+    "test_count",
+    "test_status_counts",
+    "result_status_counts",
+    "report_error_count",
+    "failure_count",
+    "failure_class_counts",
+    "failures",
+}
+E2E_TEST_STATUS_KEYS = {"expected", "flaky", "skipped", "unexpected"}
+E2E_RESULT_STATUS_KEYS = {"failed", "interrupted", "passed", "skipped", "timedOut"}
+E2E_FAILURE_CLASS_KEYS = {
+    "failed",
+    "interrupted",
+    "no_result",
+    "runner_error",
+    "timed_out",
+    "unexpected_pass",
+}
+E2E_TEST_FAILURE_CLASSES = E2E_FAILURE_CLASS_KEYS - {"runner_error"}
+E2E_SPEC_IDS = {"PW-SMOKE", "PW-NAV", "PW-TITLE", "PW-MAP", "PW-ADMIN"}
 
 
 def fail(message: str) -> None:
@@ -294,6 +320,138 @@ def reject_credential_fields(value: object, name: str) -> None:
     elif isinstance(value, list):
         for nested in value:
             reject_credential_fields(nested, name)
+
+
+def _bounded_count(value: object, maximum: int) -> bool:
+    return type(value) is int and 0 <= value <= maximum
+
+
+def verify_e2e_failure_evidence(
+    payload: dict[str, object],
+    expected_exit_code: int,
+) -> None:
+    if (
+        set(payload) != E2E_EVIDENCE_FIELDS
+        or payload.get("schema") != "nightly-playwright-failure-evidence-v1"
+        or payload.get("source") != "playwright-json-report-v2"
+        or not _bounded_count(expected_exit_code, 255)
+        or not _bounded_count(payload.get("command_exit_code"), 255)
+        or payload.get("command_exit_code") != expected_exit_code
+        or payload.get("outcome") != ("success" if expected_exit_code == 0 else "failure")
+        or not _bounded_count(payload.get("test_count"), 128)
+        or not _bounded_count(payload.get("report_error_count"), 64)
+        or not _bounded_count(payload.get("failure_count"), 128)
+    ):
+        fail("nightly E2E failure evidence contract mismatch")
+
+    test_status_counts = payload.get("test_status_counts")
+    result_status_counts = payload.get("result_status_counts")
+    failure_class_counts = payload.get("failure_class_counts")
+    failures = payload.get("failures")
+    if (
+        not isinstance(test_status_counts, dict)
+        or set(test_status_counts) != E2E_TEST_STATUS_KEYS
+        or any(not _bounded_count(value, 128) for value in test_status_counts.values())
+        or sum(test_status_counts.values()) != payload["test_count"]
+        or not isinstance(result_status_counts, dict)
+        or set(result_status_counts) != E2E_RESULT_STATUS_KEYS
+        or any(not _bounded_count(value, 1024) for value in result_status_counts.values())
+        or sum(result_status_counts.values()) > payload["test_count"] * 8
+        or not isinstance(failure_class_counts, dict)
+        or set(failure_class_counts) != E2E_FAILURE_CLASS_KEYS
+        or any(not _bounded_count(value, 128) for value in failure_class_counts.values())
+        or sum(failure_class_counts.values()) != payload["failure_count"]
+        or not isinstance(failures, list)
+        or len(failures) > 64
+        or test_status_counts["unexpected"] != len(failures)
+        or (expected_exit_code == 0 and payload["test_count"] == 0)
+    ):
+        fail("nightly E2E failure evidence count mismatch")
+
+    expected_test_failure_counts = {
+        failure_class: 0 for failure_class in E2E_TEST_FAILURE_CLASSES
+    }
+    identities: set[tuple[str, int]] = set()
+    for failure in failures:
+        if (
+            not isinstance(failure, dict)
+            or set(failure) != {
+                "spec_id", "test_index", "classification",
+                "attempt_count", "result_error_count",
+            }
+            or failure.get("spec_id") not in E2E_SPEC_IDS
+            or not _bounded_count(failure.get("test_index"), 127)
+            or failure.get("classification") not in E2E_TEST_FAILURE_CLASSES
+            or not _bounded_count(failure.get("attempt_count"), 8)
+            or not _bounded_count(failure.get("result_error_count"), 64)
+        ):
+            fail("nightly E2E failure evidence entry mismatch")
+        identity = (failure["spec_id"], failure["test_index"])
+        if identity in identities:
+            fail("nightly E2E failure evidence identity mismatch")
+        identities.add(identity)
+        if (
+            failure["classification"] == "no_result"
+            and failure["attempt_count"] != 0
+        ) or (
+            failure["classification"] != "no_result"
+            and failure["attempt_count"] == 0
+        ) or (
+            failure["classification"] == "no_result"
+            and failure["result_error_count"] != 0
+        ):
+            fail("nightly E2E failure evidence attempt mismatch")
+        expected_test_failure_counts[failure["classification"]] += 1
+
+    if any(
+        failure_class_counts[failure_class] != count
+        for failure_class, count in expected_test_failure_counts.items()
+    ):
+        fail("nightly E2E failure evidence classification mismatch")
+    report_error_count = payload["report_error_count"]
+    expected_runner_error_count = report_error_count
+    if expected_exit_code != 0 and not failures and report_error_count == 0:
+        expected_runner_error_count = 1
+    if failure_class_counts["runner_error"] != expected_runner_error_count:
+        fail("nightly E2E failure evidence runner count mismatch")
+    if (
+        failure_class_counts["failed"] > result_status_counts["failed"]
+        or failure_class_counts["interrupted"] > result_status_counts["interrupted"]
+        or failure_class_counts["timed_out"] > result_status_counts["timedOut"]
+        or failure_class_counts["unexpected_pass"] > result_status_counts["passed"]
+        or sum(failure["attempt_count"] for failure in failures)
+        > sum(result_status_counts.values())
+    ):
+        fail("nightly E2E failure evidence result binding mismatch")
+    if (expected_exit_code == 0) != (payload["failure_count"] == 0):
+        fail("nightly E2E failure evidence outcome mismatch")
+    reject_credential_fields(payload, "nightly E2E failure evidence")
+
+
+def verify_e2e_failure_evidence_file(
+    path: Path,
+    expected_exit_code: int,
+) -> dict[str, object]:
+    try:
+        info = path.lstat()
+    except OSError as error:
+        raise SystemExit("nightly E2E failure evidence is unavailable") from error
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or info.st_uid != os.getuid()
+        or stat.S_IMODE(info.st_mode) != 0o600
+        or info.st_size > 8 * 1024
+    ):
+        fail("nightly E2E failure evidence custody mismatch")
+    try:
+        payload = json.loads(path.read_bytes())
+    except (OSError, json.JSONDecodeError) as error:
+        raise SystemExit("nightly E2E failure evidence is not valid JSON") from error
+    if not isinstance(payload, dict):
+        fail("nightly E2E failure evidence contract mismatch")
+    verify_e2e_failure_evidence(payload, expected_exit_code)
+    return payload
 
 
 def verify_stack_receipt(payload: dict[str, object], name: str) -> None:
@@ -987,12 +1145,25 @@ def verify(root: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", required=True)
+    targets = parser.add_mutually_exclusive_group(required=True)
+    targets.add_argument("--root")
+    targets.add_argument("--e2e-failure-evidence")
+    parser.add_argument("--expected-exit-code", type=int)
     args = parser.parse_args()
-    root = Path(args.root)
-    if not root.is_absolute():
-        root = REPOSITORY_ROOT / root
-    verify(root)
+    if args.root is not None:
+        if args.expected_exit_code is not None:
+            fail("publication verification does not accept an E2E exit code")
+        root = Path(args.root)
+        if not root.is_absolute():
+            root = REPOSITORY_ROOT / root
+        verify(root)
+        return
+    if args.expected_exit_code is None:
+        fail("nightly E2E failure evidence requires an expected exit code")
+    evidence_path = Path(args.e2e_failure_evidence)
+    if not evidence_path.is_absolute():
+        evidence_path = REPOSITORY_ROOT / evidence_path
+    verify_e2e_failure_evidence_file(evidence_path, args.expected_exit_code)
 
 
 if __name__ == "__main__":

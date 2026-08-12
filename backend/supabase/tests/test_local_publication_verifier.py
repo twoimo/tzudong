@@ -63,6 +63,84 @@ class LocalPublicationVerifierTests(unittest.TestCase):
         github_sha_patch.start()
         self.addCleanup(github_sha_patch.stop)
 
+    @staticmethod
+    def _e2e_failure_evidence() -> dict[str, object]:
+        return {
+            "schema": "nightly-playwright-failure-evidence-v1",
+            "source": "playwright-json-report-v2",
+            "command_exit_code": 1,
+            "outcome": "failure",
+            "test_count": 2,
+            "test_status_counts": {
+                "expected": 1, "flaky": 0, "skipped": 0, "unexpected": 1,
+            },
+            "result_status_counts": {
+                "failed": 1, "interrupted": 0, "passed": 1,
+                "skipped": 0, "timedOut": 0,
+            },
+            "report_error_count": 0,
+            "failure_count": 1,
+            "failure_class_counts": {
+                "failed": 1, "interrupted": 0, "no_result": 0,
+                "runner_error": 0, "timed_out": 0, "unexpected_pass": 0,
+            },
+            "failures": [{
+                "spec_id": "PW-NAV",
+                "test_index": 2,
+                "classification": "failed",
+                "attempt_count": 1,
+                "result_error_count": 1,
+            }],
+        }
+
+    def test_accepts_exact_owner_only_bounded_e2e_failure_evidence(self) -> None:
+        payload = self._e2e_failure_evidence()
+        verifier.verify_e2e_failure_evidence(payload, 1)
+        with tempfile.TemporaryDirectory() as raw:
+            evidence_path = Path(raw) / "nightly-e2e-failure-evidence.json"
+            evidence_path.write_text(
+                json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            evidence_path.chmod(0o600)
+            self.assertEqual(
+                verifier.verify_e2e_failure_evidence_file(evidence_path, 1),
+                payload,
+            )
+
+    def test_rejects_unbounded_or_free_form_e2e_failure_evidence(self) -> None:
+        payload = self._e2e_failure_evidence()
+        payload["title"] = "PRIVATE_FREE_FORM_MARKER"
+        with self.assertRaisesRegex(SystemExit, "contract mismatch"):
+            verifier.verify_e2e_failure_evidence(payload, 1)
+
+        payload = self._e2e_failure_evidence()
+        payload["failures"][0]["spec_id"] = "PW-UNTRUSTED"
+        with self.assertRaisesRegex(SystemExit, "entry mismatch"):
+            verifier.verify_e2e_failure_evidence(payload, 1)
+
+        payload = self._e2e_failure_evidence()
+        payload["failure_class_counts"]["failed"] = 0
+        payload["failure_class_counts"]["runner_error"] = 1
+        with self.assertRaisesRegex(SystemExit, "classification mismatch"):
+            verifier.verify_e2e_failure_evidence(payload, 1)
+
+    def test_keeps_e2e_failure_evidence_out_of_publication(self) -> None:
+        self.assertNotIn(
+            "nightly-e2e-failure-evidence.json",
+            verifier.load_allowlist(),
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._write_bundle(root)
+            private_diagnostic = root / "nightly-e2e-failure-evidence.json"
+            private_diagnostic.write_text(
+                json.dumps(self._e2e_failure_evidence(), separators=(",", ":")),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(SystemExit, "unexpected publication artifacts"):
+                verifier.verify(root)
+
     def test_readback_schema_matches_the_canonical_receipt_parser(self) -> None:
         self.assertEqual(verifier.READBACK_SECTIONS, local_migrate.READBACK_SECTIONS)
         self.assertEqual(

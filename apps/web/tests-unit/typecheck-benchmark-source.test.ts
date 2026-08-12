@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { buildBenchmarkDecision, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
+import { buildBenchmarkDecision, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
 import { validateBenchmarkReportDocument, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
 
 const root = resolve(import.meta.dir, "..");
@@ -251,6 +251,8 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     expect(measure).toContain("mustAbortSampleRetries(lastError)");
     expect(measure).toContain("TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT");
     expect(measure).toContain("throw sampleFailure(position + 1, retry + 1, kind, lastError)");
+    expect(measure).toContain("if (samplerCloseRequiresImmediateFailure(usesWindowsGate, compilerResult)) return fail(`Sampler exited before terminal compiler evidence");
+    expect(measure).toContain("'TYPECHECK_SAMPLER_PREMATURE_EXIT', samplerEvidence()");
     expect(measure).toContain("SAMPLER_FAILURE_REASONS");
     expect(measure).toContain("flag: 'wx'");
     expect(measure).toContain("requestedIntervalMs !== 10");
@@ -264,6 +266,17 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
     expect(sampler).toContain("CaptureJson");
     expect(sampler).toContain("GlobalMemoryStatusEx");
     expect(sampler).toContain("powershellPid>0?Descendants");
+    expect(sampler).toContain("const int ROOT_OBSERVATION_GRACE_MS=2000");
+    expect(sampler).toContain("while(firstSample==null&&observation.ElapsedMilliseconds<ROOT_OBSERVATION_GRACE_MS)");
+    expect(sampler).toContain("if(firstSample==null)ProcessTreeSnapshot.Wait(timer,10.0)");
+    expect(sampler).not.toContain("if(ProcessTreeSnapshot.CaptureJson(rootPid,self.Id,0,0)==null)");
+  });
+  test("retries a bounded pre-compiler sampler exit but aborts a true evidence timeout", () => {
+    expect(samplerCloseRequiresImmediateFailure(true, undefined)).toBe(true);
+    expect(samplerCloseRequiresImmediateFailure(true, { code: 0 })).toBe(false);
+    expect(samplerCloseRequiresImmediateFailure(false, undefined)).toBe(false);
+    expect(mustAbortSampleRetries({ code: "TYPECHECK_SAMPLER_PREMATURE_EXIT" })).toBe(false);
+    expect(mustAbortSampleRetries({ code: "TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT" })).toBe(true);
   });
   test("yields the high-priority Windows sampler when an overloaded snapshot misses its deadline", () => {
     expect(sampler).toContain("if(milliseconds<=0) { System.Threading.Thread.Sleep(1); return; }");
