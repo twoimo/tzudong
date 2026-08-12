@@ -62,6 +62,8 @@ runs `test:nightly -- --mode local`.
 The runner attempts only the disposable user-namespace sysctl settings needed
 by the containment probe. Missing privileged sysctl access is not silently
 replaced with a weaker runtime; the preflight fails closed.
+The checked-in source-bound prerequisite artifact is verified in place before
+apply; the lane never overwrites tracked baseline files during a hosted run.
 The GitHub-hosted runner's root-owned `/var/run/docker.sock` is accepted only
 for the default local socket when both `GITHUB_ACTIONS=true` and `CI=true`;
 remote Docker contexts and non-default sockets remain rejected.

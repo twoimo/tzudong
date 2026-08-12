@@ -280,6 +280,7 @@ describe("nightly regression package and source contracts", () => {
       "user.max_user_namespaces=28633",
       "python3 backend/supabase/scripts/local-stack.py reset",
       "python3 backend/supabase/scripts/local-migrate.py apply-prerequisite",
+      "python3 backend/supabase/scripts/local-migrate.py verify-prerequisite",
       "python3 backend/supabase/scripts/local-migrate.py apply",
       "python3 backend/supabase/scripts/local-function-runtime-scan.py smoke",
       "python3 backend/supabase/scripts/local-migrate.py receipt",

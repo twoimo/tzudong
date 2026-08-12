@@ -546,11 +546,9 @@ jobs:
           set -euo pipefail
           state="$LOCAL_STATE"
           bind=(--project "$LOCAL_PROJECT" --state-dir "$state" --env-file "$state/stack.env")
-          python3 backend/supabase/scripts/local-migrate.py generate-prerequisite \
-            --input backend/supabase/baselines/pre-20260214-public-schema.sql \
-            --output backend/supabase/baselines/local/application-prerequisites.sql \
-            --manifest-output backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json \
-            > "$state/local-prerequisite-generate.json"
+          python3 backend/supabase/scripts/local-migrate.py verify-prerequisite \
+            --input backend/supabase/baselines/local/application-prerequisites.sql \
+            > "$state/local-prerequisite-verify.json"
           python3 backend/supabase/scripts/local-migrate.py manifest \
             --output "$state/local-migration-manifest.json"
           python3 backend/supabase/scripts/local-migrate.py verify \
