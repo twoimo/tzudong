@@ -28,6 +28,23 @@ describe('same-origin mutation authorization', () => {
     expect(isTrustedSameOriginMutation(new Request('https://www.tzudong.app/api/admin/example'), productionEnv)).toBe(true);
   });
 
+  test('keeps a configured loopback origin exact for local mutation servers', () => {
+    const localEnv = {
+      NODE_ENV: 'development',
+      NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:18080',
+    } as NodeJS.ProcessEnv;
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'sb-local-auth-token=value',
+      origin: 'http://127.0.0.1:18080',
+      'sec-fetch-site': 'same-origin',
+    }, 'http://127.0.0.1:18080/api/admin/map-overlays/preview'), localEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'sb-local-auth-token=value',
+      origin: 'http://localhost:18080',
+      'sec-fetch-site': 'same-origin',
+    }, 'http://127.0.0.1:18080/api/admin/map-overlays/preview'), localEnv)).toBe(false);
+  });
+
   test('rejects cross-origin, same-site sibling, null, missing, and ambiguous origins', () => {
     for (const origin of [
       'https://attacker.example',

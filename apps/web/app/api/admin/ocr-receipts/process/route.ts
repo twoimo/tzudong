@@ -33,6 +33,7 @@ import type { ReceiptOcrData } from '@/lib/ocr/types';
 import { readBoundedJsonRequest } from '@/lib/security/bounded-json-request';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 
 export const runtime = 'nodejs';
 
@@ -130,6 +131,10 @@ const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가
 
 function getSupabaseAdmin() {
     return createSupabaseServiceRoleClient();
+}
+
+function getSupabaseStorageAdmin() {
+    return createSupabaseStorageServerClient();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -466,11 +471,11 @@ function hasExpectedReplacementReadback(
 }
 
 async function removeReplacementObject(
-    supabase: ReturnType<typeof getSupabaseAdmin>,
+    storageAdmin: ReturnType<typeof getSupabaseStorageAdmin>,
     objectPath: string,
 ): Promise<boolean> {
     try {
-        const { error } = await supabase.storage.from('review-photos').remove([objectPath]);
+        const { error } = await storageAdmin.from('review-photos').remove([objectPath]);
         return !error;
     } catch {
         return false;
@@ -479,12 +484,13 @@ async function removeReplacementObject(
 
 async function replaceReceiptWithCompressedObject(
     supabase: ReturnType<typeof getSupabaseAdmin>,
+    storageAdmin: ReturnType<typeof getSupabaseStorageAdmin>,
     reviewId: string,
     oldObjectPath: string,
     canonicalImage: Buffer,
 ): Promise<string> {
     const newObjectPath = buildReplacementReceiptObjectPath(oldObjectPath);
-    const storage = supabase.storage.from('review-photos');
+    const storage = storageAdmin.from('review-photos');
     let databaseUpdated = false;
     let replacementRemoved = false;
     let replacementStateIndeterminate = false;
@@ -527,7 +533,7 @@ async function replaceReceiptWithCompressedObject(
                 !currentReadbackError
                 && hasExpectedReplacementReadback(currentReadback, reviewId, oldObjectPath)
             ) {
-                if (!(await removeReplacementObject(supabase, newObjectPath))) {
+                if (!(await removeReplacementObject(storageAdmin, newObjectPath))) {
                     throw new OcrPersistenceError();
                 }
                 replacementRemoved = true;
@@ -546,7 +552,7 @@ async function replaceReceiptWithCompressedObject(
             !databaseUpdated
             && !replacementRemoved
             && !replacementStateIndeterminate
-            && !(await removeReplacementObject(supabase, newObjectPath))
+            && !(await removeReplacementObject(storageAdmin, newObjectPath))
         ) {
             throw new OcrPersistenceError();
         }
@@ -610,6 +616,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+    const storageAdmin = getSupabaseStorageAdmin();
     let tempRun: ReturnType<typeof createAdminReceiptTempRun> | null = null;
 
     try {
@@ -623,7 +630,7 @@ export async function POST(request: Request) {
         if (!review.verification_photo) return errorResponse('RECEIPT_NOT_FOUND', 400);
         assertSafeReceiptObjectPath(review.verification_photo);
 
-        const storage = supabase.storage.from('review-photos');
+        const storage = storageAdmin.from('review-photos');
         const downloadedImage = await downloadPrivateReceiptObject(
             () => storage.download(review.verification_photo),
         );
@@ -634,6 +641,7 @@ export async function POST(request: Request) {
         if (canonicalStorageImage.bytes.byteLength < downloadedImage.bytes.byteLength) {
             await replaceReceiptWithCompressedObject(
                 supabase,
+                storageAdmin,
                 body.reviewId,
                 review.verification_photo,
                 canonicalStorageImage.bytes,

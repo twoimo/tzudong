@@ -4,6 +4,8 @@ const LOCAL_REVIEW_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAA
 const SUPABASE_REST_ROUTE = '**/rest/v1/**';
 const SUPABASE_AUTH_ROUTE = '**/auth/v1/**';
 const LOCAL_REST_FIXTURE_PATHS = new Set([
+    '/rest/v1/ad_banners',
+    '/rest/v1/announcements',
     '/rest/v1/restaurants',
     '/rest/v1/reviews',
     '/rest/v1/profiles',
@@ -16,6 +18,25 @@ const LOCAL_AUTH_FIXTURE_PATHS = new Set(['/auth/v1/user']);
 const LOCAL_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'local' || process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
 const HOSTED_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'hosted';
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const LOCAL_APP_ORIGIN = (() => {
+    try {
+        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
+        if (
+            (value.protocol === 'http:' || value.protocol === 'https:')
+            && LOOPBACK_HOSTS.has(value.hostname)
+            && value.pathname === '/'
+            && !value.search
+            && !value.hash
+            && !value.username
+            && !value.password
+        ) {
+            return value.origin;
+        }
+    } catch {
+        // Playwright validates its base URL before installing these fixtures.
+    }
+    return undefined;
+})();
 const LOCAL_NIGHTLY_PORTS = new Set([
     process.env.APP_PORT,
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -467,11 +488,25 @@ const MOCK_NAVER_MAPS_SOURCE = `
 })();
 `;
 
+const SUPABASE_FIXTURE_CORS_HEADERS = [
+    'accept-profile',
+    'apikey',
+    'authorization',
+    'content-profile',
+    'content-type',
+    'prefer',
+    'range',
+    'x-client-info',
+    'x-retry-count',
+] as const;
+const SUPABASE_FIXTURE_CORS_HEADER_SET = new Set<string>(SUPABASE_FIXTURE_CORS_HEADERS);
 const RESPONSE_HEADERS = {
-    'access-control-allow-origin': '*',
-    'access-control-allow-headers': '*',
+    'access-control-allow-headers': SUPABASE_FIXTURE_CORS_HEADERS.join(', '),
     'access-control-allow-methods': 'GET,POST,OPTIONS,HEAD',
+    'access-control-expose-headers': 'Content-Range, Link, Location',
+    'access-control-max-age': '3600',
     'content-type': 'application/json',
+    vary: 'Origin, Access-Control-Request-Headers',
 } as const;
 
 type RestaurantFixture = (typeof RESTAURANT_FIXTURES)[number];
@@ -481,10 +516,31 @@ function toJsonBody(data: unknown): string {
 }
 
 async function fulfillJson(route: Route, data: unknown, status = 200) {
+    const request = route.request();
+    const requestHeaders = request.headers();
+    if (!LOCAL_APP_ORIGIN || requestHeaders.origin !== LOCAL_APP_ORIGIN) {
+        throw new Error('Mobile Supabase fixture rejected an untrusted browser origin.');
+    }
+    if (request.method() === 'OPTIONS') {
+        const requestedMethod = requestHeaders['access-control-request-method']?.toUpperCase();
+        if (!requestedMethod || !['GET', 'HEAD', 'POST'].includes(requestedMethod)) {
+            throw new Error('Mobile Supabase fixture rejected an unexpected preflight method.');
+        }
+        const requestedHeaders = (requestHeaders['access-control-request-headers'] ?? '')
+            .split(',')
+            .map((header) => header.trim().toLowerCase())
+            .filter(Boolean);
+        if (requestedHeaders.some((header) => !SUPABASE_FIXTURE_CORS_HEADER_SET.has(header))) {
+            throw new Error('Mobile Supabase fixture rejected an unexpected preflight header.');
+        }
+    }
     await route.fulfill({
         status,
-        headers: RESPONSE_HEADERS,
-        body: route.request().method() === 'HEAD' ? '' : toJsonBody(data),
+        headers: {
+            ...RESPONSE_HEADERS,
+            'access-control-allow-origin': LOCAL_APP_ORIGIN,
+        },
+        body: status === 204 || request.method() === 'HEAD' ? '' : toJsonBody(data),
     });
 }
 
@@ -593,7 +649,7 @@ async function handleSupabaseRestRoute(route: Route) {
     }
 
     if (method === 'OPTIONS') {
-        await fulfillJson(route, {});
+        await fulfillJson(route, {}, 204);
         return;
     }
 
@@ -623,6 +679,14 @@ async function handleSupabaseRestRoute(route: Route) {
     }
 
     if (url.pathname.endsWith('/rest/v1/bookmarks')) {
+        await fulfillJson(route, []);
+        return;
+    }
+
+    if (
+        url.pathname.endsWith('/rest/v1/announcements')
+        || url.pathname.endsWith('/rest/v1/ad_banners')
+    ) {
         await fulfillJson(route, []);
         return;
     }
@@ -663,7 +727,7 @@ async function handleSupabaseAuthRoute(route: Route) {
     }
 
     if (request.method() === 'OPTIONS') {
-        await fulfillJson(route, {});
+        await fulfillJson(route, {}, 204);
         return;
     }
 
@@ -672,11 +736,7 @@ async function handleSupabaseAuthRoute(route: Route) {
         return;
     }
 
-    await route.fulfill({
-        status: 401,
-        headers: RESPONSE_HEADERS,
-        body: toJsonBody({ message: 'Auth session missing!' }),
-    });
+    await fulfillJson(route, { message: 'Auth session missing!' }, 401);
 }
 
 export async function installMobileHomeMapTestMocks(page: Page) {

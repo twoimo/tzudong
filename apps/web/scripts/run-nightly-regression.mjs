@@ -48,6 +48,7 @@ const localExpectedServices = [
   'supavisor',
   'vector',
 ];
+const localServicesWithoutDockerHealthcheck = new Set(['functions', 'rest']);
 const localMigrationReceiptExpectedKeys = [
   'catalog_sha256',
   'closure_binding_sha256',
@@ -157,8 +158,11 @@ const browserEnvironmentKeys = [
   'NIGHTLY_ENV_PROVENANCE_SHA256',
   'NIGHTLY_ENV_FILE',
   'NIGHTLY_BROWSER_RUNTIME',
+  'NIGHTLY_ADMIN_EMAIL',
+  'NIGHTLY_ADMIN_PASSWORD',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME',
   'SUPABASE_URL',
   'SUPABASE_PUBLIC_URL',
   'API_EXTERNAL_URL',
@@ -188,6 +192,7 @@ const curatedBrowserSpecs = [
   'tests/navigation.spec.ts',
   'tests/browser-title.spec.ts',
   'tests/mobile-home-map.spec.ts',
+  'tests/local-supabase-admin.spec.ts',
 ];
 const hostedRequiredEnvironment = [
   ...hostedIdentityKeys,
@@ -210,7 +215,6 @@ const cloudEnvironment = [
   'NAVER_CLIENT_ID',
   'NAVER_CLIENT_SECRET',
   'OPENAI_API_KEY',
-  'SUPABASE_SERVICE_ROLE_KEY',
   'DATABASE_URL',
   'POSTGRES_URL',
   'AWS_ACCESS_KEY_ID',
@@ -376,13 +380,27 @@ function loadExplicitEnvironment(mode, envFileArgument) {
   }
 
   if (mode === 'local') {
-    for (const name of [...localUrlEnvironment, ...localDbEnvironment, 'ANON_KEY', 'SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY']) {
+    for (const name of [
+      ...localUrlEnvironment,
+      ...localDbEnvironment,
+      'ANON_KEY',
+      'SUPABASE_ANON_KEY',
+      'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      'NIGHTLY_LOCAL_ENV_ONLY',
+      'NIGHTLY_ENV_FILE_ONLY',
+      'NODE_ENV',
+    ]) {
       delete process.env[name];
     }
   }
   const result = loadEnv({ path: envFilePath, override: true });
   if (result.error) {
     throw new Error(`Unable to load the nightly env file: ${envFilePath}`);
+  }
+  if (mode === 'local') {
+    process.env.NIGHTLY_LOCAL_ENV_ONLY = '1';
+    process.env.NIGHTLY_ENV_FILE_ONLY = '1';
+    process.env.NODE_ENV = 'test';
   }
   return { envFilePath };
 }
@@ -764,7 +782,7 @@ function validateLocalEnvironment(environment) {
     throw new Error('Local nightly APP_PORT must not overlap a generated Supabase service port.');
   }
   const naverScriptUrl = environment.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL?.trim();
-  if (naverScriptUrl && naverScriptUrl !== '/__nightly/naver-maps.js') {
+  if (naverScriptUrl && naverScriptUrl !== '/__local/naver-maps.js') {
     let parsedNaverScript;
     try {
       parsedNaverScript = new URL(naverScriptUrl);
@@ -774,7 +792,7 @@ function validateLocalEnvironment(environment) {
     if (
       parsedNaverScript.protocol !== 'http:'
       || !isLoopbackHostname(parsedNaverScript.hostname)
-      || parsedNaverScript.pathname !== '/__nightly/naver-maps.js'
+      || parsedNaverScript.pathname !== '/__local/naver-maps.js'
     ) {
       throw new Error('Local nightly mode forbids the hosted Naver SDK URL.');
     }
@@ -844,6 +862,14 @@ function validateLocalEnvironment(environment) {
   if (!anonKey) {
     throw new Error('Local nightly mode requires an explicit generated Supabase anon key.');
   }
+  const serviceRoleKey = environment.SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey || serviceRoleKey.length < 64 || /[\r\n]/.test(serviceRoleKey)) {
+    throw new Error('Local nightly mode requires the generated Supabase service-role key.');
+  }
+  const storageServerKey = environment.STORAGE_SERVICE_KEY?.trim();
+  if (!storageServerKey || storageServerKey.length < 64 || /[\r\n]/.test(storageServerKey)) {
+    throw new Error('Local nightly mode requires the generated Storage server key.');
+  }
   if (!environment.NIGHTLY_ADMIN_EMAIL?.trim() || environment.NIGHTLY_ADMIN_EMAIL.trim() !== 'nightly-ci@local.invalid') {
     throw new Error('Local nightly mode requires the fixed nightly-ci@local.invalid identity.');
   }
@@ -851,6 +877,7 @@ function validateLocalEnvironment(environment) {
   if (!localPassword || localPassword.length < 16 || /[\r\n]/.test(localPassword)) {
     throw new Error('Local nightly mode requires a generated local nightly password.');
   }
+  const requestedPortEnvironment = appPortValue;
 
   return {
     ...pickEnvironment(environment, [...localRuntimeKeys]),
@@ -859,6 +886,13 @@ function validateLocalEnvironment(environment) {
     SUPABASE_PUBLIC_URL: environment.SUPABASE_PUBLIC_URL?.trim() || normalizedUrl,
     API_EXTERNAL_URL: environment.API_EXTERNAL_URL?.trim() || normalizedUrl,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
+    SUPABASE_STORAGE_SERVER_KEY: storageServerKey,
+    NIGHTLY_ADMIN_EMAIL: environment.NIGHTLY_ADMIN_EMAIL,
+    NIGHTLY_ADMIN_PASSWORD: localPassword,
+    APP_PORT: requestedPortEnvironment,
+    NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1',
+    NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: '/__local/naver-maps.js',
     NIGHTLY_MODE: 'local',
     NIGHTLY_LOCAL_ENV_ONLY: '1',
     NIGHTLY_ENV_FILE_ONLY: '1',
@@ -1102,7 +1136,15 @@ async function waitForHealth(appProcess, healthUrl, mode, headers = undefined) {
 }
 
 async function runUnitRegression(environment) {
-  const result = await runCommand('bun', ['run', 'test:unit'], { env: environment });
+  const supervisorExecutable = process.env.TZUDONG_NODE24_EXECUTABLE?.trim();
+  const boundedEnvironment = pickEnvironment(
+    environment,
+    [...(environment.NIGHTLY_MODE === 'local' ? localRuntimeKeys : hostedRuntimeKeys)],
+  );
+  const unitEnvironment = supervisorExecutable
+    ? { ...boundedEnvironment, TZUDONG_NODE24_EXECUTABLE: supervisorExecutable }
+    : boundedEnvironment;
+  const result = await runCommand('bun', ['run', 'test:unit'], { env: unitEnvironment });
   if (result.code !== 0) {
     throw new Error(`Nightly unit regressions failed with exit code ${result.code}.`);
   }
@@ -1218,7 +1260,7 @@ async function assertLocalMigrationReceipt(stateRoot, stackReceipt) {
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 69
+    || receipt.ledger.length !== 73
     || !Array.isArray(receipt.sequence)
     || receipt.sequence.length !== localReceiptSequenceMarkers.length
     || receipt.config_sha256 !== stackReceipt.config_sha256
@@ -1415,7 +1457,10 @@ async function assertLocalStackAdmission(environment) {
       || !localExpectedServices.includes(service.service)
       || serviceReceipt.has(service.service)
       || service.state !== 'running'
-      || service.health !== 'healthy'
+      || (
+        service.health !== 'healthy'
+        && !(localServicesWithoutDockerHealthcheck.has(service.service) && service.health === '')
+      )
     ) {
       throw new Error('Local stack receipt does not prove every expected service is running and healthy.');
     }
@@ -1446,16 +1491,63 @@ const localDiagnosticClasses = new Set([
   'application-method-denied',
   'application-path-denied',
   'hosted-supabase-allowed',
+  'hosted-supabase-denied',
   'hosted-supabase-method-denied',
   'local-dev-websocket',
   'mutation-denied',
   'naver-offline',
   'request-failed',
   'supabase-method-denied',
+  'local-supabase-allowed',
   'supabase-offline',
   'supabase-path-denied',
+  'third-party-provider-denied',
+  'unknown-destination-denied',
   'websocket-denied',
   'websocket-path-denied',
+]);
+const localDiagnosticDestinations = new Set([
+  'local-web',
+  'local-supabase',
+  'hosted-supabase',
+  'naver-maps',
+  'third-party-provider',
+  'external-other',
+  'invalid-url',
+]);
+const DIAGNOSTIC_COMPATIBILITY = new Set([
+    'application-method-denied:local-web',
+    'application-path-denied:local-web',
+    'hosted-supabase-allowed:hosted-supabase',
+    'hosted-supabase-denied:hosted-supabase',
+    'hosted-supabase-method-denied:hosted-supabase',
+    'local-dev-websocket:local-web',
+    'local-supabase-allowed:local-supabase',
+    'mutation-denied:local-web',
+    'mutation-denied:local-supabase',
+    'mutation-denied:hosted-supabase',
+    'mutation-denied:naver-maps',
+    'mutation-denied:third-party-provider',
+    'mutation-denied:external-other',
+    'naver-offline:naver-maps',
+    'request-failed:local-web',
+    'request-failed:local-supabase',
+    'request-failed:hosted-supabase',
+    'request-failed:naver-maps',
+    'request-failed:third-party-provider',
+    'request-failed:external-other',
+    'supabase-method-denied:local-supabase',
+    'supabase-offline:local-supabase',
+    'supabase-path-denied:local-supabase',
+    'third-party-provider-denied:third-party-provider',
+    'unknown-destination-denied:external-other',
+    'websocket-denied:hosted-supabase',
+    'websocket-denied:naver-maps',
+    'websocket-denied:third-party-provider',
+    'websocket-denied:external-other',
+    'websocket-denied:invalid-url',
+    'websocket-path-denied:local-web',
+    'websocket-path-denied:local-supabase',
 ]);
 const localDiagnosticSecretPattern = /(?:password|secret|token|authorization|bearer|api[_-]?key|service[_-]?role|database[_-]?url|postgres(?:ql)?)/i;
 
@@ -1463,10 +1555,9 @@ function sanitizeLocalDiagnostic(record) {
   if (
     !record
     || typeof record !== 'object'
-    || Object.keys(record).sort().join(',') !== 'class,host,method,status'
-    || typeof record.host !== 'string'
-    || record.host.length > 253
-    || !/^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|localhost|invalid|127\.0\.0\.1|\[::1\]|::1)$/i.test(record.host)
+    || Object.keys(record).sort().join(',') !== 'class,count,destination,method,status'
+    || typeof record.destination !== 'string'
+    || !localDiagnosticDestinations.has(record.destination)
     || typeof record.method !== 'string'
     || !/^[A-Z]{1,12}$/.test(record.method)
     || !Number.isInteger(record.status)
@@ -1474,15 +1565,20 @@ function sanitizeLocalDiagnostic(record) {
     || record.status > 599
     || typeof record.class !== 'string'
     || !localDiagnosticClasses.has(record.class)
+    || !Number.isInteger(record.count)
+    || record.count < 1
+    || record.count > 65_535
+    || !DIAGNOSTIC_COMPATIBILITY.has(`${record.class}:${record.destination}`)
     || localDiagnosticSecretPattern.test(JSON.stringify(record))
   ) {
     throw new Error('Local browser route diagnostics contained a malformed or secret-bearing record.');
   }
   return {
-    host: record.host,
+    destination: record.destination,
     method: record.method,
     status: record.status,
     class: record.class,
+    count: record.count,
   };
 }
 
@@ -1547,11 +1643,16 @@ function collectLocalBrowserDiagnostics(startedAt) {
   }
   const tests = [];
   let recordCount = 0;
+  let requestCount = 0;
   for (const { payload } of files) {
     const records = payload.map(sanitizeLocalDiagnostic);
     recordCount += records.length;
+    requestCount += records.reduce((total, record) => total + record.count, 0);
     if (recordCount > maxLocalBrowserDiagnosticsRecords) {
       throw new Error('Local browser route diagnostics exceeded the aggregate record bound.');
+    }
+    if (!Number.isSafeInteger(requestCount) || requestCount > maxLocalBrowserDiagnosticsRecords * 65_535) {
+      throw new Error('Local browser route diagnostic request count exceeded the aggregate bound.');
     }
     tests.push({ index: tests.length, records });
   }
@@ -1560,6 +1661,7 @@ function collectLocalBrowserDiagnostics(startedAt) {
     source: 'playwright-nightly-fixture',
     tests,
     record_count: recordCount,
+    request_count: requestCount,
   };
   const body = `${JSON.stringify(artifact)}\n`;
   if (Buffer.byteLength(body) > maxLocalBrowserDiagnosticsArtifactBytes) {
@@ -1679,11 +1781,17 @@ async function runBrowserRegression(environment, mode) {
       ? {
         NIGHTLY_HEALTH_NONCE: healthNonce,
         NIGHTLY_HEALTH_TOKEN: healthToken,
+        SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
+        SUPABASE_STORAGE_SERVER_KEY: environment.SUPABASE_STORAGE_SERVER_KEY,
       }
-      : {}),
+      : {
+        SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
+      }),
     APP_PORT: String(appPort),
     HOST: '127.0.0.1',
     HOSTNAME: '127.0.0.1',
+    NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${appPort}`,
+    TZUDONG_NEXT_DIST_DIR: `.next-nightly-${mode}-${appPort}`,
     NODE_ENV: mode === 'local' ? 'test' : environment.NODE_ENV,
     NIGHTLY_BROWSER_RUNTIME: '1',
   };
@@ -1696,6 +1804,8 @@ async function runBrowserRegression(environment, mode) {
     '--webpack',
     '--port',
     String(appPort),
+    '--hostname',
+    '127.0.0.1',
   ], {
     env: appEnvironment,
     stdio: ['ignore', 'pipe', 'pipe'],

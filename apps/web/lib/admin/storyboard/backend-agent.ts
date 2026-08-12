@@ -1,16 +1,10 @@
 import {
   accessSync,
-  closeSync,
   constants,
   existsSync,
-  mkdtempSync,
-  openSync,
   readFileSync,
-  readSync,
-  rmSync,
 } from "node:fs";
 import path from "node:path";
-import { tmpdir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
 import { randomBytes } from "node:crypto";
@@ -87,6 +81,9 @@ const WINDOWS_PROCESS_TERMINATION_TIMEOUT_MS = 5_000;
 const WINDOWS_JOB_SUPERVISOR_CLEANUP_GRACE_MS = 5_000;
 const WINDOWS_JOB_SUPERVISOR_FINAL_CLOSE_TIMEOUT_MS = 5_000;
 const LINUX_NAMESPACE_TERMINATION_TIMEOUT_MS = 10_000;
+const LINUX_NAMESPACE_SUPERVISOR_DRAIN_TIMEOUT_MS = 7_000;
+const LINUX_NAMESPACE_DESCENDANT_TERM_GRACE_MS = 500;
+const LINUX_NAMESPACE_INNER_CLEANUP_TIMEOUT_MS = 3_000;
 const MAX_STORYBOARD_AGENT_TIMEOUT_MS = 600_000;
 function getRuntimeCwd() {
   const cwd = Reflect.get(process, "cwd");
@@ -2260,6 +2257,7 @@ if target_pid == 0:
 target_status = None
 cleaning = False
 cleanup_started = None
+cleanup_term_sent = False
 control = b""
 while True:
     while True:
@@ -2292,21 +2290,26 @@ while True:
         if cleanup_started is None:
             cleanup_started = time.monotonic()
         elapsed = time.monotonic() - cleanup_started
-        cleanup_signal = signal.SIGTERM if elapsed < 4.0 else signal.SIGKILL
-        for pid in members():
-            if pid != 1:
-                try:
-                    os.kill(pid, cleanup_signal)
-                except ProcessLookupError:
-                    pass
-        if target_status is not None and members() == [1]:
+        live_members = members()
+        if target_status is not None and live_members == [1]:
             code = os.waitstatus_to_exitcode(target_status)
             normalized = code if code >= 0 else 128 - code
             send("DONE " + nonce.decode("ascii") + " " + str(normalized))
             os.close(event_fd)
             os.close(command_fd)
             sys.exit(normalized)
-        if elapsed >= 6.0:
+        if not cleanup_term_sent:
+            try:
+                os.kill(-1, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            cleanup_term_sent = True
+        elif elapsed >= ${LINUX_NAMESPACE_DESCENDANT_TERM_GRACE_MS} / 1000.0:
+            try:
+                os.kill(-1, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if elapsed >= ${LINUX_NAMESPACE_INNER_CLEANUP_TIMEOUT_MS} / 1000.0:
             send("FAIL cleanup")
             sys.exit(125)
 `;
@@ -2454,13 +2457,17 @@ if done and not failed and return_code == done_code:
     ready_pidfd, _, _ = select.select([pidfd], [], [], 0)
     os.close(pidfd)
     if ready_pidfd:
-        os.write(3, b"COMPLETE " + nonce + b"\n")
+        os.write(2, b"\nTZUDONG_NS_COMPLETE " + nonce + b"\n")
         sys.exit(return_code)
 sys.exit(125)
 `;
 
 let linuxNamespaceContainmentProbe: LinuxNamespaceContainment | undefined;
 const LINUX_NAMESPACE_PROBE_CAPTURE_BYTES = 128;
+
+function linuxNamespaceCompletionMarker(nonce: string) {
+  return Buffer.from(`\nTZUDONG_NS_COMPLETE ${nonce}\n`, "ascii");
+}
 
 function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
   if (linuxNamespaceContainmentProbe) return linuxNamespaceContainmentProbe;
@@ -2487,11 +2494,7 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
     });
   }
   const nonce = "0".repeat(64);
-  let captureDirectory: string | undefined;
-  let captureFd: number | undefined;
   try {
-    captureDirectory = mkdtempSync(path.join(tmpdir(), "tzudong-ns-probe-"));
-    captureFd = openSync(path.join(captureDirectory, "completion"), "wx+", 0o600);
     const probe = spawnSync(
       python,
       ["-c", LINUX_NAMESPACE_OUTER_SUPERVISOR],
@@ -2508,26 +2511,21 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
           TZUDONG_NS_TARGET_B64: Buffer.from(JSON.stringify(["/bin/true"]), "utf8").toString("base64"),
           TZUDONG_NS_DEADLINE_MILLISECONDS: "1500",
         },
-        stdio: ["ignore", "ignore", "ignore", captureFd],
+        stdio: ["ignore", "ignore", "pipe"],
+        maxBuffer: LINUX_NAMESPACE_PROBE_CAPTURE_BYTES,
         timeout: 3_000,
         shell: false,
       },
     );
-    const completionCapture = Buffer.alloc(LINUX_NAMESPACE_PROBE_CAPTURE_BYTES);
-    const completionBytesRead = readSync(
-      captureFd,
-      completionCapture,
-      0,
-      completionCapture.byteLength,
-      0,
-    );
-    const expectedCompletion = Buffer.from(`COMPLETE ${nonce}\n`, "ascii");
+    const completionCapture = Buffer.isBuffer(probe.stderr)
+      ? probe.stderr
+      : Buffer.alloc(0);
+    const expectedCompletion = linuxNamespaceCompletionMarker(nonce);
     if (
       probe.status === 0 &&
       !probe.error &&
       !probe.signal &&
-      completionBytesRead === expectedCompletion.byteLength &&
-      completionCapture.subarray(0, completionBytesRead).equals(expectedCompletion)
+      completionCapture.equals(expectedCompletion)
     ) {
       return (linuxNamespaceContainmentProbe = {
         available: true,
@@ -2538,21 +2536,6 @@ function probeLinuxNamespaceContainment(): LinuxNamespaceContainment {
     }
   } catch {
     // Fall through to the bounded, trusted diagnostic below.
-  } finally {
-    if (captureFd !== undefined) {
-      try {
-        closeSync(captureFd);
-      } catch {
-        // The descriptor may already have been closed after a spawn failure.
-      }
-    }
-    if (captureDirectory !== undefined) {
-      try {
-        rmSync(captureDirectory, { recursive: true, force: true });
-      } catch {
-        // Cleanup failure must not expose probe output or change fail-closed behavior.
-      }
-    }
   }
   return (linuxNamespaceContainmentProbe = {
     available: false,
@@ -4320,6 +4303,10 @@ function runStoryboardAgentCommand(
       processControl.platform === "linux" &&
       isNativeProcessControl &&
       !trustedLangGraphFixture;
+    const lifecycleStreamDrainTimeoutMs =
+      useLinuxNamespaceSupervisor && processControl.streamDrainTimeoutMs === undefined
+        ? Math.max(streamDrainTimeoutMs, LINUX_NAMESPACE_SUPERVISOR_DRAIN_TIMEOUT_MS)
+        : streamDrainTimeoutMs;
     const linuxSupervisorNonce = useLinuxNamespaceSupervisor
       ? randomBytes(32).toString("hex")
       : "";
@@ -4349,9 +4336,11 @@ function runStoryboardAgentCommand(
     let windowsSupervisorProtocolInvalid = false;
     let windowsSupervisorControlBuffer = Buffer.alloc(0);
     let linuxSupervisorComplete = false;
-    let linuxSupervisorControlClosed = !useLinuxNamespaceSupervisor;
     let linuxSupervisorProtocolInvalid = false;
-    let linuxSupervisorControlBuffer = Buffer.alloc(0);
+    let linuxSupervisorStderrTail = Buffer.alloc(0);
+    const linuxSupervisorExpectedCompletion = useLinuxNamespaceSupervisor
+      ? linuxNamespaceCompletionMarker(linuxSupervisorNonce)
+      : Buffer.alloc(0);
     let windowsLifecycle: WindowsLifecycleChannel | null = null;
     let windowsParentLifetime: WindowsLifecycleChannel | null = null;
 
@@ -4414,7 +4403,7 @@ function runStoryboardAgentCommand(
           );
           stderr = stderrCapture.value;
           finish();
-        }, streamDrainTimeoutMs);
+        }, lifecycleStreamDrainTimeoutMs);
         streamWaiters.add(finish);
       });
     const terminateTree = async (awaitWindowsCleanupGrace = false) => {
@@ -4462,7 +4451,7 @@ function runStoryboardAgentCommand(
           child,
           () =>
             exitObserved &&
-            linuxSupervisorControlClosed &&
+            stderrClosed &&
             linuxSupervisorComplete &&
             !linuxSupervisorProtocolInvalid,
         );
@@ -4587,7 +4576,6 @@ function runStoryboardAgentCommand(
       if (
         stdoutClosed &&
         stderrClosed &&
-        linuxSupervisorControlClosed &&
         windowsSupervisorControlClosed
       ) {
         if (processControl.platform !== "win32") {
@@ -4647,7 +4635,7 @@ function runStoryboardAgentCommand(
             "diagnostic stream drain deadline exceeded",
             exitCode,
           );
-        }, streamDrainTimeoutMs);
+        }, lifecycleStreamDrainTimeoutMs);
       }
     };
 
@@ -4792,9 +4780,7 @@ function runStoryboardAgentCommand(
           windowsHide: useWindowsJobSupervisor,
           detached:
             processControl.platform !== "win32" && !useLinuxNamespaceSupervisor,
-          stdio: useLinuxNamespaceSupervisor
-            ? ["pipe", "pipe", "pipe", "pipe"]
-            : ["pipe", "pipe", "pipe"],
+          stdio: ["pipe", "pipe", "pipe"],
           env: supervisorSpec?.env ?? linuxSupervisorSpec?.env ?? commandEnv,
         },
       );
@@ -4903,52 +4889,6 @@ function runStoryboardAgentCommand(
         settleAfterDrain();
       });
     });
-    const linuxSupervisorControl = useLinuxNamespaceSupervisor
-      ? spawned.stdio?.[3]
-      : null;
-    if (useLinuxNamespaceSupervisor && !linuxSupervisorControl) {
-      linuxSupervisorProtocolInvalid = true;
-      linuxSupervisorControlClosed = true;
-    }
-    linuxSupervisorControl?.on("data", (chunk) => {
-      if (linuxSupervisorComplete || linuxSupervisorProtocolInvalid) {
-        linuxSupervisorProtocolInvalid = true;
-        return;
-      }
-      linuxSupervisorControlBuffer = Buffer.concat([
-        linuxSupervisorControlBuffer,
-        Buffer.from(chunk),
-      ]);
-      if (
-        linuxSupervisorControlBuffer.length > 80 ||
-        (linuxSupervisorControlBuffer.includes(10) &&
-          linuxSupervisorControlBuffer.indexOf(10) !==
-            linuxSupervisorControlBuffer.length - 1)
-      ) {
-        linuxSupervisorProtocolInvalid = true;
-        return;
-      }
-      if (linuxSupervisorControlBuffer.at(-1) !== 10) return;
-      if (
-        linuxSupervisorControlBuffer.equals(
-          Buffer.from(`COMPLETE ${linuxSupervisorNonce}\n`, "ascii"),
-        )
-      ) {
-        linuxSupervisorComplete = true;
-      } else {
-        linuxSupervisorProtocolInvalid = true;
-      }
-    });
-    linuxSupervisorControl?.once("error", () => {
-      linuxSupervisorProtocolInvalid = true;
-      linuxSupervisorControlClosed = true;
-      settleAfterDrain();
-    });
-    linuxSupervisorControl?.once("close", () => {
-      linuxSupervisorControlClosed = true;
-      if (!linuxSupervisorComplete) linuxSupervisorProtocolInvalid = true;
-      settleAfterDrain();
-    });
     spawned.stdout?.on("data", (chunk) => {
       appendCommandDiagnostic(
         stdoutCapture,
@@ -4958,6 +4898,32 @@ function runStoryboardAgentCommand(
       stdout = stdoutCapture.value;
     });
     spawned.stderr?.on("data", (chunk) => {
+      if (useLinuxNamespaceSupervisor) {
+        const combined = Buffer.concat([
+          linuxSupervisorStderrTail,
+          Buffer.from(chunk),
+        ]);
+        const diagnosticBytes = Math.max(
+          0,
+          combined.length - linuxSupervisorExpectedCompletion.length,
+        );
+        if (diagnosticBytes > 0) {
+          appendCommandDiagnostic(
+            stderrCapture,
+            combined.subarray(0, diagnosticBytes),
+            Math.max(
+              0,
+              MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES -
+                Buffer.byteLength(stdoutCapture.value, "utf8"),
+            ),
+          );
+        }
+        linuxSupervisorStderrTail = Buffer.from(
+          combined.subarray(diagnosticBytes),
+        );
+        stderr = stderrCapture.value;
+        return;
+      }
       appendCommandDiagnostic(
         stderrCapture,
         chunk,
@@ -4965,12 +4931,37 @@ function runStoryboardAgentCommand(
       );
       stderr = stderrCapture.value;
     });
+    spawned.stderr?.once("error", () => {
+      if (useLinuxNamespaceSupervisor) linuxSupervisorProtocolInvalid = true;
+    });
     spawned.stdout?.once("close", () => {
       stdoutClosed = true;
       notifyStreamWaiters();
       settleAfterDrain();
     });
     spawned.stderr?.once("close", () => {
+      if (useLinuxNamespaceSupervisor) {
+        if (
+          linuxSupervisorStderrTail.equals(
+            linuxSupervisorExpectedCompletion,
+          )
+        ) {
+          linuxSupervisorComplete = true;
+        } else {
+          linuxSupervisorProtocolInvalid = true;
+          appendCommandDiagnostic(
+            stderrCapture,
+            linuxSupervisorStderrTail,
+            Math.max(
+              0,
+              MAX_STORYBOARD_AGENT_DIAGNOSTIC_BYTES -
+                Buffer.byteLength(stdoutCapture.value, "utf8"),
+            ),
+          );
+        }
+        linuxSupervisorStderrTail = Buffer.alloc(0);
+        stderr = stderrCapture.value;
+      }
       stderrClosed = true;
       notifyStreamWaiters();
       settleAfterDrain();

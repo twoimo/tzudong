@@ -15,6 +15,7 @@ import {
   type DeviceLocationUseAuthorization,
   type LocationDestination,
 } from '../lib/privacy/location-gate';
+import { isPublicRestrictedMode } from '../lib/site-config';
 
 const webRoot = path.resolve(import.meta.dir, '..');
 const homeClientSource = readFileSync(
@@ -75,6 +76,11 @@ test('readback acquisition is the only mint boundary and validates the exact res
 
   await withReadinessResponse(READY_AVAILABLE, async (calls) => {
     const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      expect(calls).toHaveLength(0);
+      return;
+    }
 
     expect(authorization).not.toBeNull();
     expect(calls).toHaveLength(1);
@@ -146,6 +152,10 @@ test('device coordinates use only approved memory and the exact Naver network si
 
   await withReadinessResponse(READY_AVAILABLE, async () => {
     const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
     expect(authorization).not.toBeNull();
 
     expect(evaluateLocationUse({
@@ -240,6 +250,10 @@ test('business source relabels do not bypass the device coordinate gate', async 
 test('capabilities are opaque, revocable, and reject clone or relabel attempts', async () => {
   await withReadinessResponse(READY_AVAILABLE, async () => {
     const authorization = await acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
     expect(authorization).not.toBeNull();
     if (!authorization) throw new Error('Expected ready authorization.');
     expect(Object.isFrozen(authorization)).toBe(true);
@@ -300,6 +314,10 @@ test('monotonic expiry cannot be revived by replaying an earlier clock value', a
 
   await withReadinessResponse(READY_AVAILABLE, async () => {
     const authorization = await clockedGate.acquireDeviceLocationUseAuthorization();
+    if (isPublicRestrictedMode) {
+      expect(authorization).toBeNull();
+      return;
+    }
     expect(authorization).not.toBeNull();
     if (!authorization) throw new Error('Expected ready authorization.');
 
@@ -342,6 +360,10 @@ test('tracking lifecycle revokes the genuine capability exactly once on every st
       ) => void,
     ) => {
       const authorization = await acquireDeviceLocationUseAuthorization();
+      if (isPublicRestrictedMode) {
+        expect(authorization).toBeNull();
+        return;
+      }
       expect(authorization).not.toBeNull();
       if (!authorization) throw new Error('Expected ready authorization.');
 

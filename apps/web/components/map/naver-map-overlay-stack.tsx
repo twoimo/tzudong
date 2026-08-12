@@ -67,7 +67,7 @@ export function NaverMapOverlayStack({
                 />
             )}
 
-            {showOnlineUsers && !showRestaurantCount && (
+            {showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded && (
                 <OnlineUsersBadge
                     count={count}
                     style={centerOffsetStyle}
@@ -75,7 +75,7 @@ export function NaverMapOverlayStack({
                 />
             )}
 
-            {showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && announcementToastTitle && (
+            {showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle && (
                 <AnnouncementToastBadge
                     title={announcementToastTitle}
                     style={centerOffsetStyle}

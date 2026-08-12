@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { buildAdminStatusCenterViewModel, type AdminStatusCenterPendingCounts } from '@/lib/admin/system-status/view-model';
 import {
+  ADMIN_PENDING_COUNTS_QUERY_KEY,
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from '@/lib/admin/pending-counts';
@@ -39,7 +40,7 @@ export function useAdminStatusCenter(enabled: boolean) {
   });
 
   const pendingCountsQuery = useQuery({
-    queryKey: ['admin-status-center', 'pending-counts'],
+    queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
     queryFn: fetchAdminPendingCounts,
     enabled,
     staleTime: 15 * 1000,
