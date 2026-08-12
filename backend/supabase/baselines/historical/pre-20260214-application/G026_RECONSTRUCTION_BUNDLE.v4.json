@@ -11,8 +11,8 @@
   },
   "repairs": {
     "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_REPAIRS.v4.sql",
-    "byteLength": 43651,
-    "sha256": "50acc4c1c2c952705f0deb67b5d06e5ef25155d071dcbbabca26039411eba1a2"
+    "byteLength": 46700,
+    "sha256": "efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb"
   },
   "validationLedger": [
     {

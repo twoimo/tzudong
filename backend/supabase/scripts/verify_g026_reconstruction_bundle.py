@@ -78,11 +78,13 @@ RECONSTRUCTION_POLICY_SHELLS = (
     '''CREATE POLICY "Admins can delete short URLs"
   ON public.short_urls FOR DELETE USING (false);''',
 )
-RECONSTRUCTION_POLICY_PRECONDITION_BYTES = 3828
-RECONSTRUCTION_POLICY_PRECONDITION_SHA256 = 'b50ef1728545138077c0718eeb470aa4173c4e0ea9d00cef45457c98719fa047'
+RECONSTRUCTION_POLICY_PRECONDITION_BYTES = 6728
+RECONSTRUCTION_POLICY_PRECONDITION_SHA256 = '04cdc797e498f137a2785c3773f179fe18ed43cd9b517fa0ae3b44d541d55999'
 RECONSTRUCTION_OBSOLETE_POLICY_DROPS = (
     'DROP POLICY "Admins can view all submissions" ON public.restaurant_submissions;',
     'DROP POLICY "Admins can manage all submission items" ON public.restaurant_submission_items;',
+    'DROP POLICY "Announcements are viewable by everyone" ON public.announcements;',
+    'DROP POLICY "Admins can manage announcements" ON public.announcements;',
 )
 
 ADMIN_WORKFLOW_SOURCE = {

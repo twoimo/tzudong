@@ -31,7 +31,8 @@ BEGIN
   IF to_regclass('public.restaurant_requests') IS NULL
      OR to_regclass('public.restaurant_submission_items') IS NULL
      OR to_regclass('public.restaurant_submissions') IS NULL
-     OR to_regclass('public.short_urls') IS NULL THEN
+     OR to_regclass('public.short_urls') IS NULL
+     OR to_regclass('public.announcements') IS NULL THEN
     RAISE EXCEPTION 'G026 policy shell relation precondition failed' USING ERRCODE = 'P0001';
   END IF;
 
@@ -99,6 +100,68 @@ BEGIN
             AND dependency.refclassid = 'pg_proc'::regclass
             AND dependency.refobjid = 'public.is_user_admin(uuid)'::regprocedure
        ) = 1
+  ) OR NOT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_policy AS policy_row
+      JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = policy_row.polrelid
+      JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+     WHERE namespace_row.nspname = 'public'
+       AND relation_row.relname = 'announcements'
+       AND policy_row.polname = 'Announcements are viewable by everyone'
+       AND policy_row.polcmd = 'r'
+       AND policy_row.polpermissive IS TRUE
+       AND policy_row.polroles = ARRAY[0::oid]
+       AND pg_catalog.pg_get_expr(policy_row.polqual, policy_row.polrelid, false)
+           = '(is_active = true)'
+       AND policy_row.polwithcheck IS NULL
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+       ) = 0
+  ) OR NOT EXISTS (
+    SELECT 1
+      FROM pg_catalog.pg_policy AS policy_row
+      JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid = policy_row.polrelid
+      JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid = relation_row.relnamespace
+     WHERE namespace_row.nspname = 'public'
+       AND relation_row.relname = 'announcements'
+       AND policy_row.polname = 'Admins can manage announcements'
+       AND policy_row.polcmd = '*'
+       AND policy_row.polpermissive IS TRUE
+       AND policy_row.polroles = ARRAY[(
+         SELECT role_row.oid
+           FROM pg_catalog.pg_roles AS role_row
+          WHERE role_row.rolname = 'authenticated'
+       )]
+       AND pg_catalog.pg_get_expr(policy_row.polqual, policy_row.polrelid, false)
+           = 'has_role(( SELECT auth.uid() AS uid), ''admin''::app_role)'
+       AND policy_row.polwithcheck IS NULL
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+       ) = 2
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+            AND dependency.refobjid = 'public.has_role(uuid,public.app_role)'::regprocedure
+       ) = 1
+       AND (
+         SELECT count(*)
+           FROM pg_catalog.pg_depend AS dependency
+          WHERE dependency.classid = 'pg_policy'::regclass
+            AND dependency.objid = policy_row.oid
+            AND dependency.refclassid = 'pg_proc'::regclass
+            AND dependency.refobjid = 'auth.uid()'::regprocedure
+       ) = 1
   ) THEN
     RAISE EXCEPTION 'G026 obsolete policy identity precondition failed' USING ERRCODE = 'P0001';
   END IF;
@@ -107,6 +170,8 @@ $g026_policy_shell_precondition$;
 
 DROP POLICY "Admins can view all submissions" ON public.restaurant_submissions;
 DROP POLICY "Admins can manage all submission items" ON public.restaurant_submission_items;
+DROP POLICY "Announcements are viewable by everyone" ON public.announcements;
+DROP POLICY "Admins can manage announcements" ON public.announcements;
 
 CREATE POLICY "Restaurant requests select policy"
   ON public.restaurant_requests FOR SELECT USING (false);
