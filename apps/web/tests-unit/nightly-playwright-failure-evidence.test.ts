@@ -234,7 +234,7 @@ describe("nightly Playwright failure evidence", () => {
 
   test("removes stale evidence before normal CLI validation fails", () => {
     const appRoot = resolve(import.meta.dir, "..");
-    const fixtureRoot = mkdtempSync(join(appRoot, "test-results/nightly-runner-cleanup-"));
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-runner-cleanup-"));
     const fixtureApp = join(fixtureRoot, "app");
     const fixtureScripts = join(fixtureApp, "scripts");
     const evidence = join(fixtureApp, "test-results/nightly-playwright-failure-evidence.json");
