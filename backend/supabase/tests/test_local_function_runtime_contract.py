@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import stat
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -71,6 +75,34 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         )
         self.assertIn("'0A000'", trigger_sql)
         self.assertIn("expected_sqlstate_", trigger_sql)
+
+    def test_docker_context_accepts_github_actions_root_socket_only(self):
+        scanner = self.scanner
+        socket_info = SimpleNamespace(st_mode=stat.S_IFSOCK | 0o660, st_uid=0)
+        selected = SimpleNamespace(returncode=0, stdout="default\n")
+        inspected = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps([{
+                "Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}},
+            }]),
+        )
+        with (
+            patch.object(scanner.subprocess, "run", side_effect=(selected, inspected)),
+            patch.object(scanner.Path, "lstat", return_value=socket_info),
+            patch.object(scanner.os, "getuid", return_value=1000),
+            patch.dict(scanner.os.environ, {"GITHUB_ACTIONS": "true", "CI": "true"}, clear=False),
+        ):
+            scanner._assert_local_docker_context("docker")
+
+        with (
+            patch.object(scanner.subprocess, "run", side_effect=(selected, inspected)),
+            patch.object(scanner.Path, "lstat", return_value=socket_info),
+            patch.object(scanner.os, "getuid", return_value=1000),
+            patch.dict(scanner.os.environ, {"GITHUB_ACTIONS": "false", "CI": "true"}, clear=False),
+        ):
+            with self.assertRaisesRegex(scanner.RuntimeScanError, "docker_context"):
+                scanner._assert_local_docker_context("docker")
+
     def test_smoke_checks_external_effect_surface_in_runtime_catalog(self):
         sql = self.scanner._smoke_sql([])
         self.assertIn("pg_catalog.pg_extension", sql)
