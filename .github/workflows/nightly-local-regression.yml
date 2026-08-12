@@ -917,20 +917,26 @@ jobs:
                   raise
               summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
               if summary_path:
-                  class_counts = ', '.join(
-                      f'{name}={count}'
-                      for name, count in evidence['failure_class_counts'].items()
-                      if count
-                  ) or 'none'
-                  identities = ', '.join(
-                      f"{failure['spec_id']}#{failure['test_index']}:{failure['classification']}"
-                      for failure in evidence['failures']
-                  ) or 'none'
                   with open(summary_path, 'a', encoding='utf-8') as summary:
-                      summary.write(
-                          f"- E2E fixed failure classes: {class_counts}\n"
-                          f"- E2E curated failure IDs: {identities}\n"
-                      )
+                      if evidence['schema'] == 'nightly-e2e-runner-stage-evidence-v1':
+                          summary.write(
+                              f"- E2E fixed runner stage: {evidence['stage']}\n"
+                              f"- E2E fixed runner failure class: {evidence['failure_class']}\n"
+                          )
+                      else:
+                          class_counts = ', '.join(
+                              f'{name}={count}'
+                              for name, count in evidence['failure_class_counts'].items()
+                              if count
+                          ) or 'none'
+                          identities = ', '.join(
+                              f"{failure['spec_id']}#{failure['test_index']}:{failure['classification']}"
+                              for failure in evidence['failures']
+                          ) or 'none'
+                          summary.write(
+                              f"- E2E fixed failure classes: {class_counts}\n"
+                              f"- E2E curated failure IDs: {identities}\n"
+                          )
           elif requested['e2e'] and os.environ['E2E_OUTCOME'] == 'success':
               raise SystemExit('successful nightly E2E evidence is unavailable')
           elif evidence_source.exists() or evidence_source.is_symlink() or evidence_target.exists() or evidence_target.is_symlink():

@@ -290,6 +290,26 @@ E2E_FAILURE_CLASS_KEYS = {
 }
 E2E_TEST_FAILURE_CLASSES = E2E_FAILURE_CLASS_KEYS - {"runner_error"}
 E2E_SPEC_IDS = {"PW-SMOKE", "PW-NAV", "PW-TITLE", "PW-MAP", "PW-ADMIN"}
+E2E_RUNNER_STAGE_FIELDS = {
+    "schema", "source", "command_exit_code", "outcome", "stage", "failure_class",
+}
+E2E_RUNNER_STAGE_FAILURE_CLASSES = {
+    "admission": {
+        "contract_rejected", "custody_rejected", "runtime_unavailable",
+        "unexpected_failure",
+    },
+    "log_open": {"custody_rejected"},
+    "app_spawn": {"process_spawn_failed"},
+    "health": {
+        "application_exit", "health_timeout", "process_spawn_failed",
+        "runtime_unavailable",
+    },
+    "report_prepare": {"custody_rejected"},
+    "playwright": {"process_spawn_failed"},
+    "sanitize": {"report_rejected"},
+    "diagnostics": {"diagnostics_rejected"},
+    "cleanup": {"cleanup_rejected"},
+}
 
 
 def fail(message: str) -> None:
@@ -330,6 +350,25 @@ def verify_e2e_failure_evidence(
     payload: dict[str, object],
     expected_exit_code: int,
 ) -> None:
+    if payload.get("schema") == "nightly-e2e-runner-stage-evidence-v1":
+        stage = payload.get("stage")
+        failure_class = payload.get("failure_class")
+        if (
+            set(payload) != E2E_RUNNER_STAGE_FIELDS
+            or payload.get("source") != "nightly-runner-stage-v1"
+            or type(expected_exit_code) is not int
+            or expected_exit_code != 1
+            or type(payload.get("command_exit_code")) is not int
+            or payload.get("command_exit_code") != 1
+            or payload.get("outcome") != "failure"
+            or not isinstance(stage, str)
+            or stage not in E2E_RUNNER_STAGE_FAILURE_CLASSES
+            or not isinstance(failure_class, str)
+            or failure_class not in E2E_RUNNER_STAGE_FAILURE_CLASSES[stage]
+        ):
+            fail("nightly E2E runner stage evidence contract mismatch")
+        reject_credential_fields(payload, "nightly E2E runner stage evidence")
+        return
     if (
         set(payload) != E2E_EVIDENCE_FIELDS
         or payload.get("schema") != "nightly-playwright-failure-evidence-v1"
