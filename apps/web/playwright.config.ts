@@ -251,17 +251,17 @@ export default defineConfig({
         {
             name: 'chromium',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Chrome'] },
+            use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
         },
         {
             name: 'firefox',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Firefox'] },
+            use: { ...devices['Desktop Firefox'], browserName: 'firefox' },
         },
         {
             name: 'webkit',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Safari'] },
+            use: { ...devices['Desktop Safari'], browserName: 'webkit' },
         },
         ...responsiveProjects,
     ],
