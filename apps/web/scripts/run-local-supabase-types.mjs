@@ -3,27 +3,17 @@ import path from 'node:path';
 import process from 'node:process';
 import {
   assertLocalSupabaseReady,
+  buildLocalTypeGenerationEnvironment,
   loadLocalSupabaseEnvironment,
 } from './local-supabase-runtime.mjs';
 
 try {
   const local = loadLocalSupabaseEnvironment();
   assertLocalSupabaseReady(local);
-  const databaseUrl = new URL(local.values.SUPABASE_DB_URL);
-  databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`;
-  const result = spawnSync('node', ['scripts/supabase-gen-types.mjs'], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      SUPABASE_DB_URL: databaseUrl.toString(),
-      SUPABASE_SCHEMAS: 'public,auth,storage',
-      SUPABASE_CLI: path.resolve(
-        process.cwd(),
-        'node_modules',
-        '.bin',
-        process.platform === 'win32' ? 'supabase.cmd' : 'supabase',
-      ),
-    },
+  const webRoot = path.join(local.repositoryRoot, 'apps', 'web');
+  const result = spawnSync(process.execPath, ['scripts/supabase-gen-types.mjs'], {
+    cwd: webRoot,
+    env: buildLocalTypeGenerationEnvironment(local),
     stdio: 'inherit',
   });
   if (result.error || result.signal || result.status !== 0) process.exit(2);

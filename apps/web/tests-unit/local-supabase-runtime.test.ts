@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import {
   __localSupabaseRuntimeForTests,
+  buildLocalTypeGenerationEnvironment,
   buildLocalWebEnvironment,
   loadLocalWebInputEnvironment,
 } from '../scripts/local-supabase-runtime.mjs';
@@ -81,6 +82,69 @@ describe('local Supabase runtime source contract', () => {
     });
   });
 
+  test('passes an exact local-only environment to the type generation child', () => {
+    const environment = buildLocalTypeGenerationEnvironment({
+      repositoryRoot: '/fixture/repository',
+      values: {
+        SUPABASE_DB_URL: 'postgresql://postgres:local-password@127.0.0.1:13432/postgres',
+        POOLER_TENANT_ID: 'fixture-tenant',
+      },
+    }, {
+      PATH: '/fixture/bin',
+      HOME: '/fixture/home',
+      USER: 'fixture-user',
+      TMPDIR: '/fixture/tmp',
+      LANG: 'ko_KR.UTF-8',
+      LC_ALL: 'C.UTF-8',
+      TERM: 'xterm-256color',
+      CI: 'true',
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REPOSITORY: 'twoimo/tzudong',
+      GITHUB_RUN_ID: '123456',
+      GITHUB_RUN_ATTEMPT: '2',
+      TZUDONG_DOCKER_SOCKET_ADMISSION_FILE: '/run/tzudong-nightly-local-admission-123456-2',
+      SUPABASE_ACCESS_TOKEN: 'hosted-access-token',
+      SUPABASE_PROJECT_ID: 'hosted-project-id',
+      SUPABASE_PROJECT_REF: 'hosted-project-ref',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://hosted.supabase.co',
+      SUPABASE_URL: 'https://hosted.supabase.co',
+      SUPABASE_API_URL: 'https://management.invalid',
+      SUPABASE_DB_HOST: 'hosted.invalid',
+      SUPABASE_DB_PASSWORD: 'hosted-password',
+      DATABASE_URL: 'postgresql://hosted.invalid/postgres',
+      PGHOST: 'hosted.invalid',
+      PGPASSWORD: 'hosted-password',
+      DOCKER_HOST: 'tcp://hosted.invalid:2375',
+      DOCKER_CONTEXT: 'remote-context',
+      DOCKER_TLS_VERIFY: '1',
+      DOCKER_CERT_PATH: '/hosted/docker-certs',
+      DOCKER_CONFIG: '/hosted/docker-config',
+      COMPOSE_FILE: '/hosted/compose.yml',
+      SUPABASE_TYPES_OUT_FILE: '/hosted/types.ts',
+    });
+
+    expect(environment).toEqual({
+      PATH: '/fixture/bin',
+      HOME: '/fixture/home',
+      USER: 'fixture-user',
+      TMPDIR: '/fixture/tmp',
+      LANG: 'ko_KR.UTF-8',
+      LC_ALL: 'C.UTF-8',
+      TERM: 'xterm-256color',
+      SUPABASE_DB_URL:
+        'postgresql://postgres.fixture-tenant:local-password@127.0.0.1:13432/postgres',
+      SUPABASE_SCHEMAS: 'public,auth,storage',
+      SUPABASE_CLI: path.join(
+        '/fixture/repository',
+        'apps',
+        'web',
+        'node_modules',
+        '.bin',
+        process.platform === 'win32' ? 'supabase.cmd' : 'supabase',
+      ),
+    });
+  });
+
   test('keeps local development isolated from ambient hosted credentials', () => {
     const runner = readFileSync(path.resolve(import.meta.dir, '../scripts/local-supabase-runtime.mjs'), 'utf8');
     const packageSource = readFileSync(path.resolve(import.meta.dir, '../package.json'), 'utf8');
@@ -92,8 +156,15 @@ describe('local Supabase runtime source contract', () => {
     expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 8080"');
     expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080"');
     expect(packageSource).toContain('"supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs"');
-    expect(readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-supabase-types.mjs'), 'utf8'))
-      .toContain('databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`');
+    const localTypeRunner = readFileSync(
+      path.resolve(import.meta.dir, '../scripts/run-local-supabase-types.mjs'),
+      'utf8',
+    );
+    expect(localTypeRunner).toContain('env: buildLocalTypeGenerationEnvironment(local)');
+    expect(localTypeRunner).not.toContain('...process.env');
+    expect(runner).toContain(
+      'databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`',
+    );
     const environment = buildLocalWebEnvironment({
       supabaseOrigin: 'http://127.0.0.1:8000',
       stateRoot: '/local/state',

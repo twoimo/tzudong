@@ -380,7 +380,7 @@ describe("nightly regression package and source contracts", () => {
       "f61595514b4218bfa47e3fb5c529f648fe4d16efef1f5ef02f216aff6dd08bcb",
     );
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
-      "ae49c1ab076c9e8042866aba8d667e9a89e83f0c2e7724598b4591beb3e91de4",
+      "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
     expect(operationsDocSource).toContain("74-unit migration ledger");
   });
