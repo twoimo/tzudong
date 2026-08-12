@@ -20,6 +20,10 @@ ADMIN_MAP_OVERLAY_MIGRATION = (
     ROOT
     / "backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql"
 )
+YOUTUBE_RPC_ALLOWLIST_MIGRATION = (
+    ROOT
+    / "backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql"
+)
 SEED = ROOT / "backend/supabase/scripts/local-seed.sql"
 READBACK = ROOT / "backend/supabase/scripts/local_catalog_readback.sql"
 SUPABASE_README = ROOT / "backend/supabase/README.md"
@@ -34,6 +38,9 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
         cls.admin_data_migration = ADMIN_DATA_MIGRATION.read_text(encoding="utf-8")
         cls.admin_map_overlay_migration = ADMIN_MAP_OVERLAY_MIGRATION.read_text(
             encoding="utf-8"
+        )
+        cls.youtube_rpc_allowlist_migration = (
+            YOUTUBE_RPC_ALLOWLIST_MIGRATION.read_text(encoding="utf-8")
         )
         cls.seed = SEED.read_text(encoding="utf-8")
         cls.readback = READBACK.read_text(encoding="utf-8")
@@ -83,6 +90,30 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
         self.assertNotRegex(
             self.migration,
             r"CREATE POLICY[^;]+youtube-thumbnail-releases",
+        )
+
+    def test_youtube_release_allowlist_and_g014_readback_are_terminal(self) -> None:
+        signature = (
+            "public.publish_youtube_thumbnail_release(uuid,text,text,text,text,"
+            "text,text,text,text,numeric,jsonb,jsonb,jsonb,jsonb,uuid,"
+            "timestamp with time zone)"
+        )
+        self.assertIn(signature, self.youtube_rpc_allowlist_migration)
+        self.assertIn("procedure.proargtypes::text", self.youtube_rpc_allowlist_migration)
+        self.assertIn("OWNER TO privacy_workflow_owner", self.youtube_rpc_allowlist_migration)
+        for assertion in (
+            "privacy_retention.assert_g014_public_rpc_allowlist()",
+            "privacy_retention.assert_g014_catalog_contract()",
+        ):
+            self.assertIn(assertion, self.youtube_rpc_allowlist_migration)
+            self.assertIn(f"PERFORM {assertion};", self.readback)
+        self.assertIn(
+            "receipt_unexpected_youtube_release_allowlist",
+            self.readback,
+        )
+        self.assertIn(
+            "allowed.identity_arguments = function_row.proargtypes::text",
+            self.readback,
         )
 
     def test_realtime_contract_is_the_exact_app_subscription_set(self) -> None:

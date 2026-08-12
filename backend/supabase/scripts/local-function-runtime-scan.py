@@ -59,6 +59,13 @@ _FUNCTION_START = re.compile(
 _SEARCH_PATH = re.compile(r"(?is)\bSET\s+search_path\s+(?:TO|=)\s*([^;]+)")
 _TRUSTED_SEARCH_PATH_TOKENS = ("", "pg_catalog", "public", "extensions", "pg_temp")
 _TRUSTED_SEARCH_PATH_SQL_TOKEN = r'(""|pg_catalog|public|extensions|pg_temp)'
+_TRUSTED_SEARCH_PATH_SQL_PATTERN = (
+    r"^search_path="
+    + _TRUSTED_SEARCH_PATH_SQL_TOKEN
+    + r"([[:space:]]*,[[:space:]]*"
+    + _TRUSTED_SEARCH_PATH_SQL_TOKEN
+    + r")*$"
+)
 _FUNCTION_OPERATION_START = re.compile(r"(?is)\b(?:ALTER|DROP)\s+FUNCTION\b")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _REMOTE_DOCKER_ENV = ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "DOCKER_CONFIG", "COMPOSE_PROJECT_NAME", "COMPOSE_FILE", "DATABASE_URL", "SUPABASE_URL", "PGHOST")
@@ -516,6 +523,9 @@ def _candidate_functions(functions: Iterable[dict[str, Any]]) -> list[dict[str, 
                 continue
             tokens.append("extensions")
             desired = ", ".join(dict.fromkeys(token for token in tokens if token))
+            # This is a source/runtime resolution candidate, not authority to
+            # widen an already valid runtime path.  The generated patch below
+            # changes only a runtime identity with no search_path setting.
             reason = "trusted_extension_omitted"
         key = (final_schema + "." + final_proname, final_identity)
         unique[key] = {
@@ -590,11 +600,28 @@ def _patch_sql(
     if patch_sha256 is not None:
         metadata["patchSha256"] = patch_sha256
     lines = ["-- local-function-closure-patch-v1", "-- metadata: " + canonical_json(metadata).decode("ascii"), "BEGIN;"]
+    lines.extend(
+        [
+            "DO $local_function_closure_path_guard$",
+            "DECLARE duplicate_path_count integer;",
+            "BEGIN",
+            "  SELECT count(*) FILTER (WHERE setting ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')::integer",
+            "    INTO duplicate_path_count",
+            "    FROM pg_catalog.unnest(ARRAY['search_path=\"\"','search_path=public']::text[]) AS setting;",
+            "  IF NOT ('search_path=\"\"' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')",
+            "     OR NOT ('search_path=public, extensions' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')",
+            "     OR 'search_path=auth' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "'",
+            "     OR duplicate_path_count <> 2 THEN",
+            "    RAISE EXCEPTION 'local_closure_runtime_path_guard_invalid';",
+            "  END IF;",
+            "END $local_function_closure_path_guard$;",
+        ]
+    )
     for candidate in candidates:
         lines.extend(
             [
                 "DO $local_function_closure$",
-                "DECLARE target_oid oid; target_count integer;",
+                "DECLARE target_oid oid; target_count integer; target_path_count integer; target_valid_path_count integer;",
                 "BEGIN",
                 "  SELECT count(*)::integer, min(p.oid) INTO target_count, target_oid",
                 "    FROM pg_catalog.pg_proc AS p",
@@ -612,10 +639,33 @@ def _patch_sql(
                 "     );",
                 "  IF target_count = 0 THEN RAISE EXCEPTION 'local_closure_missing'; END IF;",
                 "  IF target_count > 1 THEN RAISE EXCEPTION 'local_closure_ambiguous'; END IF;",
-                "  EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
+                "  SELECT count(*) FILTER (WHERE setting.value ~* '^search_path=')::integer,",
+                "         count(*) FILTER (WHERE setting.value ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')::integer",
+                "    INTO target_path_count, target_valid_path_count",
+                "    FROM pg_catalog.pg_proc AS procedure",
+                "    LEFT JOIN LATERAL pg_catalog.unnest(COALESCE(procedure.proconfig, ARRAY[]::text[])) AS setting(value) ON true",
+                "   WHERE procedure.oid = target_oid;",
+                "  IF target_path_count = 0 THEN",
+                "    EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
+                "  ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+                "    RAISE EXCEPTION 'local_closure_runtime_path_invalid';",
+                "  END IF;",
                 "END $local_function_closure$;",
             ]
         )
+    lines.extend(
+        [
+            "DO $local_function_closure_g014$",
+            "BEGIN",
+            "  IF pg_catalog.to_regprocedure('privacy_retention.assert_g014_definer_contract()') IS NULL",
+            "     OR pg_catalog.to_regprocedure('privacy_retention.assert_g014_catalog_contract()') IS NULL THEN",
+            "    RAISE EXCEPTION 'local_closure_g014_contract_missing';",
+            "  END IF;",
+            "  PERFORM privacy_retention.assert_g014_definer_contract();",
+            "  PERFORM privacy_retention.assert_g014_catalog_contract();",
+            "END $local_function_closure_g014$;",
+        ]
+    )
     lines.extend(["COMMIT;", ""])
     return "\n".join(lines)
 def _patch_executable_body(data: bytes) -> bytes:
@@ -1543,7 +1593,7 @@ WITH funcs AS (
   SELECT funcs.*,
          (SELECT count(*) FROM unnest(config) s(value) WHERE s.value ~* '^search_path=') AS path_count,
          (SELECT count(*) FROM unnest(config) s(value)
-          WHERE s.value ~* '^search_path={_TRUSTED_SEARCH_PATH_SQL_TOKEN}([[:space:]]*,[[:space:]]*{_TRUSTED_SEARCH_PATH_SQL_TOKEN})*$') AS valid_path_count
+          WHERE s.value ~* '{_TRUSTED_SEARCH_PATH_SQL_PATTERN}') AS valid_path_count
     FROM funcs
 ), external_effect_counts AS (
   SELECT
@@ -1582,7 +1632,12 @@ WITH funcs AS (
 ), extensions AS (
   SELECT encode(extensions.digest(convert_to(COALESCE(string_agg(n.nspname || '.' || e.extname || '@' || COALESCE(e.extversion, ''), E'\\n' ORDER BY n.nspname, e.extname), ''), 'UTF8'), 'sha256'), 'hex') AS extension_catalog_sha256
     FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
-){candidate_resolution}
+){candidate_resolution},
+g014_contract AS MATERIALIZED (
+  SELECT privacy_retention.assert_g014_definer_contract(),
+         privacy_retention.assert_g014_catalog_contract(),
+         1::integer AS passed
+)
 SELECT jsonb_build_object(
   'schemaVersion', 'local-function-runtime-scan/v1', 'mode', 'runtime',
   'functionCount', agg.function_count, 'localSearchPathCount', agg.local_search_path_count,
@@ -1603,6 +1658,7 @@ SELECT jsonb_build_object(
   'closureSmoke', jsonb_build_object(
     'status', CASE WHEN agg.unresolved_path_count = 0 AND agg.ambiguous_path_count = 0
         AND candidate_agg.missing_count = 0 AND candidate_agg.ambiguous_count = 0
+        AND g014_contract.passed = 1
       THEN 'passed' ELSE 'failed' END,
     'unresolvedPathCount', agg.unresolved_path_count,
     'ambiguousPathCount', agg.ambiguous_path_count,
@@ -1641,7 +1697,8 @@ SELECT jsonb_build_object(
         THEN 'external_effect_blocked' ELSE 'external_effect_surface_present' END
     ))
   )
-)::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect;
+)::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect
+  CROSS JOIN g014_contract;
 COMMIT;
 """
     if smoke:

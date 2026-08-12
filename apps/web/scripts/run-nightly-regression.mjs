@@ -1260,7 +1260,7 @@ async function assertLocalMigrationReceipt(stateRoot, stackReceipt) {
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 73
+    || receipt.ledger.length !== 74
     || !Array.isArray(receipt.sequence)
     || receipt.sequence.length !== localReceiptSequenceMarkers.length
     || receipt.config_sha256 !== stackReceipt.config_sha256
