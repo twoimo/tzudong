@@ -616,6 +616,12 @@ jobs:
               ('config_permission', ('permission denied: /etc', 'permission denied opening', 'eacces')),
               ('auth_failure', ('password authentication failed', 'authentication failed')),
               ('tini_runtime', ('pr_set_child_subreaper', 'subreaper', 'tini')),
+              ('thread_create', ('failed to create thread', 'pthread_create', 'clone3', 'resource temporarily unavailable')),
+              ('scheduler_permission', ('setpriority', 'sched_', 'scheduler')),
+              ('procfs_permission', ('/proc', 'cgroup', 'sysfs')),
+              ('socket_permission', ('setsockopt', 'bind', 'listen')),
+              ('signal_permission', ('prctl', 'signal')),
+              ('namespace_permission', ('user namespace', 'setns', 'namespace')),
               ('operation_not_permitted', ('operation not permitted',)),
               ('erl_runtime', ('cpu_sup', 'memsup', 'inet_gethost', 'failed to start epmd', 'could not start application')),
               ('permission_denied', ('permission denied',)),
@@ -726,6 +732,19 @@ jobs:
                   'logs': 'unknown',
               }
               runtime_input_checks = {}
+              runtime_env_presence = {}
+              for service in ('supavisor',):
+                  payload = service_payloads.get(service)
+                  env_values = (payload.get('Config') or {}).get('Env') if isinstance(payload, dict) else None
+                  env_names = {
+                      item.split('=', 1)[0]
+                      for item in env_values
+                      if isinstance(item, str) and '=' in item
+                  } if isinstance(env_values, list) else set()
+                  runtime_env_presence[service] = {
+                      key: key in env_names
+                      for key in ('CLUSTER_POSTGRES', 'ERL_AFLAGS', 'ERL_FLAGS', 'CLUSTER_NODES', 'DNS_POLL')
+                  }
               for service, destination, path in (
                   ('kong', '/home/kong', '/home/kong/temp.yml'),
                   ('supavisor', '/etc/pooler', '/etc/pooler/pooler.exs'),
@@ -848,6 +867,7 @@ jobs:
                   'logs': 'unknown',
               }
               runtime_input_checks = {}
+              runtime_env_presence = {}
           records.sort(key=lambda item: item['service'])
           pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json').write_text(
               json.dumps({
@@ -857,6 +877,7 @@ jobs:
                   'database_presence': database_presence,
                   'database_init_files': database_init_files,
                   'runtime_input_checks': runtime_input_checks,
+                  'runtime_env_presence': runtime_env_presence,
                   'containers': records,
               }, sort_keys=True, separators=(',', ':')) + '\n',
               encoding='utf-8',
