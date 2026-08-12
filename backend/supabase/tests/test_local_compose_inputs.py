@@ -141,6 +141,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('"local-kong-config:/home/kong:Z"', self.overlay_source)
         self.assertIn('"local-vector-config:/etc/vector:Z"', self.overlay_source)
         self.assertIn('"local-pooler-config:/etc/pooler:Z"', self.overlay_source)
+        self.assertIn('entrypoint: ["/app/limits.sh"]', self.overlay_source)
 
     def test_compose_command_uses_project_env_and_all_three_local_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
