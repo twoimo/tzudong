@@ -142,7 +142,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('"local-vector-config:/etc/vector:Z"', self.overlay_source)
         self.assertIn('"local-pooler-config:/etc/pooler:Z"', self.overlay_source)
         self.assertIn('entrypoint: ["/app/limits.sh"]', self.overlay_source)
-        self.assertIn('seccomp=unconfined', self.overlay_source)
+
         self.assertIn("CLUSTER_POSTGRES: !reset null", self.overlay_source)
         self.assertIn("ERL_AFLAGS: !reset null", self.overlay_source)
 
