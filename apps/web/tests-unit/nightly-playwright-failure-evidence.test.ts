@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  copyFileSync,
   lstatSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -232,20 +234,38 @@ describe("nightly Playwright failure evidence", () => {
 
   test("removes stale evidence before normal CLI validation fails", () => {
     const appRoot = resolve(import.meta.dir, "..");
-    const evidence = join(appRoot, "test-results/nightly-playwright-failure-evidence.json");
-    const privateReport = join(appRoot, "playwright-report/nightly-playwright-private-report.json");
-    writeFileSync(evidence, "stale-evidence", { mode: 0o600 });
-    writeFileSync(privateReport, "stale-private-report", { mode: 0o600 });
-    const result = spawnSync(process.execPath, ["scripts/run-nightly-regression.mjs"], {
-      cwd: appRoot,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-      },
-    });
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain("Nightly mode is required");
-    expect(() => lstatSync(evidence)).toThrow();
-    expect(() => lstatSync(privateReport)).toThrow();
+    const fixtureRoot = mkdtempSync(join(appRoot, "test-results/nightly-runner-cleanup-"));
+    const fixtureApp = join(fixtureRoot, "app");
+    const fixtureScripts = join(fixtureApp, "scripts");
+    const evidence = join(fixtureApp, "test-results/nightly-playwright-failure-evidence.json");
+    const privateReport = join(fixtureApp, "playwright-report/nightly-playwright-private-report.json");
+    try {
+      mkdirSync(fixtureScripts, { recursive: true });
+      mkdirSync(join(fixtureApp, "test-results"), { recursive: true });
+      mkdirSync(join(fixtureApp, "playwright-report"), { recursive: true });
+      copyFileSync(
+        join(appRoot, "scripts/run-nightly-regression.mjs"),
+        join(fixtureScripts, "run-nightly-regression.mjs"),
+      );
+      copyFileSync(
+        join(appRoot, "scripts/nightly-playwright-failure-evidence.mjs"),
+        join(fixtureScripts, "nightly-playwright-failure-evidence.mjs"),
+      );
+      writeFileSync(evidence, "stale-evidence", { mode: 0o600 });
+      writeFileSync(privateReport, "stale-private-report", { mode: 0o600 });
+      const result = spawnSync(process.execPath, ["scripts/run-nightly-regression.mjs"], {
+        cwd: fixtureApp,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Nightly mode is required");
+      expect(() => lstatSync(evidence)).toThrow();
+      expect(() => lstatSync(privateReport)).toThrow();
+    } finally {
+      rmSync(fixtureRoot, { recursive: true });
+    }
   });
 });
