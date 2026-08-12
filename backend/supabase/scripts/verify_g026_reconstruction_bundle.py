@@ -1141,6 +1141,9 @@ def require_replay_membership_windows(window):
         '20260713002400_g014_retention_adapters_receipts.sql',
         '20260713002500_g014_catalog_contract.sql',
         '20260713002600_g014_account_deletion_receipt_parity.sql',
+        '20260812000200_local_public_read_policy_convergence.sql',
+        '20260812000300_local_admin_data_boundary_convergence.sql',
+        '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
     )
     expected_window_keys = {
         'authority', 'member', 'role', 'precondition', 'grantStatement',

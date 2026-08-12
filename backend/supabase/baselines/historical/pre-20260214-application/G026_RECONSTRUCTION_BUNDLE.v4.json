@@ -588,6 +588,36 @@
         "mode": "wrapper_transaction",
         "anchor": "",
         "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000200_local_public_read_policy_convergence.sql",
+        "sourceSha256": "e847ea7898c9ff77748d65c94c3dc04747ef0b1bbf8ac12ed623bbfc8c5e6233",
+        "sourceByteLength": 22082,
+        "transformedSha256": "dfcf0c3e43bf93128003b85e1114a096eaeb5f1c2e3ca8b3cc521f6cb76cc288",
+        "transformedByteLength": 23150,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000300_local_admin_data_boundary_convergence.sql",
+        "sourceSha256": "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf",
+        "sourceByteLength": 14421,
+        "transformedSha256": "292815b3be72beb52b70e84a062e9cfbba7909ad82978e55dfb2ae29a522ab9b",
+        "transformedByteLength": 15489,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+        "sourceSha256": "f61595514b4218bfa47e3fb5c529f648fe4d16efef1f5ef02f216aff6dd08bcb",
+        "sourceByteLength": 20074,
+        "transformedSha256": "08994cddabb2d0e6aeb1783d84faad868ebaf614de731dff358a8046f2413834",
+        "transformedByteLength": 21142,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
       }
     ],
     "finalZeroMembershipProof": "DO $g026_membership_postcondition$\nBEGIN\n  IF EXISTS (SELECT 1 FROM pg_catalog.pg_auth_members AS membership JOIN pg_catalog.pg_roles AS member_role ON member_role.oid = membership.member JOIN pg_catalog.pg_roles AS role_role ON role_role.oid = membership.roleid WHERE member_role.rolname = 'postgres' AND role_role.rolname = 'privacy_workflow_owner') THEN\n    RAISE EXCEPTION 'privacy_workflow_owner replay membership cleanup failed';\n  END IF;\nEND;\n$g026_membership_postcondition$;",
