@@ -1982,9 +1982,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             client = LocalPsql(args.docker, args.container, args.database, args.timeout)
             candidates = _candidate_functions(_source_inventory())
             runtime = client.query(_runtime_sql(candidates=candidates, smoke=True))
-            _validate_runtime(runtime)
             smoke_status = runtime.get("rpcSmoke", {}).get("status")
             sys.stdout.buffer.write(canonical_json(runtime) + b"\n")
+            _validate_runtime(runtime)
             return 0 if smoke_status == "passed" else 2
         if args.command == "apply":
             sql, metadata = _read_patch(Path(args.patch))
