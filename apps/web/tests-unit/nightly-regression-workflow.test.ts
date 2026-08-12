@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -13,6 +13,7 @@ const packageJson = JSON.parse(packageSource) as {
   scripts?: Record<string, unknown>;
 };
 const nightlyRunnerSource = read("scripts/run-nightly-regression.mjs");
+const playwrightEvidenceSource = read("scripts/nightly-playwright-failure-evidence.mjs");
 const playwrightConfigSource = read("playwright.config.ts");
 const healthRouteSource = read("app/api/health/route.ts");
 const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
@@ -489,6 +490,48 @@ describe("nightly regression package and source contracts", () => {
     expect(playwrightConfigSource).toContain("PLAYWRIGHT_REUSE_EXISTING_SERVER");
   });
 
+  test("reduces the private Playwright JSON report before diagnostics persistence", () => {
+    for (const token of [
+      "--reporter=line,json",
+      "PLAYWRIGHT_JSON_OUTPUT_FILE: privatePlaywrightReportPath",
+      "preparePrivatePlaywrightReport(privatePlaywrightReportPath)",
+      "removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)",
+      "sanitizePrivatePlaywrightReport(",
+      "removePrivatePlaywrightReport(privatePlaywrightReportPath)",
+      "nightly-playwright-failure-evidence.json",
+    ]) {
+      expect(nightlyRunnerSource).toContain(token);
+    }
+    expect(nightlyRunnerSource.indexOf("sanitizePrivatePlaywrightReport("))
+      .toBeLessThan(nightlyRunnerSource.indexOf("collectLocalBrowserDiagnostics(diagnosticsStartedAt)"));
+    const browserRunner = sourceBlock(
+      nightlyRunnerSource,
+      "async function runBrowserRegression(environment, mode)",
+      "async function main()",
+    );
+    expect(browserRunner.indexOf("removePrivatePlaywrightReport(privatePlaywrightReportPath)"))
+      .toBeLessThan(browserRunner.indexOf("await assertLocalStackAdmission(environment)"));
+    expect(browserRunner.indexOf("removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)"))
+      .toBeLessThan(browserRunner.indexOf("await assertLocalStackAdmission(environment)"));
+    const signalHandler = sourceBlock(
+      nightlyRunnerSource,
+      "async function terminateChildren(signal)",
+      "process.once('SIGINT'",
+    );
+    expect(signalHandler).toContain("removePrivatePlaywrightReport(privatePlaywrightReportPath)");
+    expect(signalHandler).toContain("removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)");
+    expect(signalHandler.indexOf("removePrivatePlaywrightReport(privatePlaywrightReportPath)"))
+      .toBeLessThan(signalHandler.indexOf("process.exit(signal"));
+    expect(playwrightEvidenceSource).toContain("nightly-playwright-failure-evidence-v1");
+    expect(playwrightEvidenceSource).toContain("playwright-json-report-v2");
+    for (const specId of ["PW-SMOKE", "PW-NAV", "PW-TITLE", "PW-MAP", "PW-ADMIN"]) {
+      expect(playwrightEvidenceSource).toContain(specId);
+    }
+    for (const rawField of ["test.title", "result.stdout", "result.stderr", "result.attachments"]) {
+      expect(playwrightEvidenceSource).not.toContain(rawField);
+    }
+  });
+
   test("reconstructs local Docker nightly and uploads only sanitized artifacts", () => {
     for (const token of [
       "name: Nightly Regression (Local Supabase)",
@@ -657,6 +700,7 @@ describe("nightly regression package and source contracts", () => {
     expect(localWorkflowSource).toContain("nightly-local-publication-${{ github.run_id }}-${{ github.run_attempt }}");
     expect(localWorkflowSource).toContain("failure-diagnostics/nightly-unit-run-summary.json");
     expect(localWorkflowSource).toContain("failure-diagnostics/nightly-e2e-run-summary.json");
+    expect(localWorkflowSource).toContain("failure-diagnostics/nightly-e2e-failure-evidence.json");
     expect(localWorkflowSource).toContain("'schema': 'nightly-lane-outcome-v1'");
     expect(localWorkflowSource).toContain("'failure_code': 'none' if exit_code == 0 else 'command_failed'");
     expect(localWorkflowSource).toContain("'attempt_count': 1");
@@ -687,11 +731,13 @@ describe("nightly regression package and source contracts", () => {
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
       "def verify_image_preflight(",
+      "def verify_e2e_failure_evidence(",
+      "def verify_e2e_failure_evidence_file(",
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
     expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 74");
-    expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(2);
+    expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
@@ -721,6 +767,8 @@ describe("nightly regression package and source contracts", () => {
     expect(verifiedDiagnosticsUploadBlock).not.toContain(".log");
     expect(verifiedDiagnosticsUploadBlock).not.toContain("local-receipt-v1.json");
     expect(verifiedDiagnosticsUploadBlock).toContain("local-migration-summary.json");
+    expect(verifiedDiagnosticsUploadBlock).toContain("nightly-e2e-failure-evidence.json");
+    expect(verifiedDiagnosticsUploadBlock).not.toContain("nightly-playwright-private-report.json");
     expect(verifiedDiagnosticsUploadBlock).toContain("if-no-files-found: error");
     const failedDiagnosticsUploadBlock = sourceBlock(
       localWorkflowSource,
@@ -736,6 +784,8 @@ describe("nightly regression package and source contracts", () => {
     expect(failedDiagnosticsUploadBlock).not.toContain("local-browser-route-diagnostics.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-unit-run-summary.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-e2e-run-summary.json");
+    expect(failedDiagnosticsUploadBlock).toContain("nightly-e2e-failure-evidence.json");
+    expect(failedDiagnosticsUploadBlock).not.toContain("nightly-playwright-private-report.json");
 
     const installBlock = sourceBlock(
       localWorkflowSource,
@@ -796,6 +846,7 @@ describe("nightly regression package and source contracts", () => {
       "publication-boundary.txt",
     ]);
     expect(new Set(allowlist).size).toBe(allowlist.length);
+    expect(allowlist).not.toContain("nightly-e2e-failure-evidence.json");
     expect(localWorkflowSource.match(/nightly-local-publication-allowlist\.txt/g)).toHaveLength(3);
     expect(publicationVerifierSource.match(/nightly-local-publication-allowlist\.txt/g)).toHaveLength(1);
     expect(localWorkflowSource).not.toContain("nightly-artifacts/local-stack-reset.json \\\n");
@@ -954,6 +1005,106 @@ describe("nightly regression package and source contracts", () => {
         expect(inconsistent.stderr).toContain("requested nightly lane exit/outcome mismatch");
       } finally {
         rmSync(inconsistentRoot, { recursive: true });
+      }
+    } finally {
+      rmSync(temporaryRoot, { recursive: true });
+    }
+  });
+
+  test("verifies and copies only bounded E2E failure evidence into diagnostics", () => {
+    const block = sourceBlock(
+      localWorkflowSource,
+      "- name: Write bounded nightly lane diagnostics",
+      "- name: Capture bounded Compose runtime diagnostics",
+    );
+    const script = embeddedPython(block);
+    const evidence = {
+      schema: "nightly-playwright-failure-evidence-v1",
+      source: "playwright-json-report-v2",
+      command_exit_code: 1,
+      outcome: "failure",
+      test_count: 2,
+      test_status_counts: { expected: 1, flaky: 0, skipped: 0, unexpected: 1 },
+      result_status_counts: { failed: 1, interrupted: 0, passed: 1, skipped: 0, timedOut: 0 },
+      report_error_count: 0,
+      failure_count: 1,
+      failure_class_counts: {
+        failed: 1,
+        interrupted: 0,
+        no_result: 0,
+        runner_error: 0,
+        timed_out: 0,
+        unexpected_pass: 0,
+      },
+      failures: [{
+        spec_id: "PW-NAV",
+        test_index: 2,
+        classification: "failed",
+        attempt_count: 1,
+        result_error_count: 1,
+      }],
+    };
+    const repositoryRoot = resolve(appRoot, "../..");
+    const temporaryRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-e2e-evidence-"));
+    try {
+      const sourceDirectory = join(temporaryRoot, "apps/web/test-results");
+      mkdirSync(sourceDirectory, { recursive: true });
+      writeFileSync(
+        join(sourceDirectory, "nightly-playwright-failure-evidence.json"),
+        `${JSON.stringify(evidence)}\n`,
+        { mode: 0o600 },
+      );
+      const result = spawnSync("python3", ["-c", script], {
+        cwd: temporaryRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GITHUB_WORKSPACE: repositoryRoot,
+          NIGHTLY_SUITE: "e2e",
+          UNIT_OUTCOME: "skipped",
+          UNIT_EXIT_CODE: "",
+          E2E_OUTCOME: "failure",
+          E2E_EXIT_CODE: "1",
+        },
+      });
+      expect(result.status).toBe(0);
+      const target = join(
+        temporaryRoot,
+        "nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json",
+      );
+      expect(lstatSync(target).mode & 0o777).toBe(0o600);
+      expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(evidence);
+
+      const rejectedRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-e2e-rejected-"));
+      try {
+        const rejectedDirectory = join(rejectedRoot, "apps/web/test-results");
+        mkdirSync(rejectedDirectory, { recursive: true });
+        writeFileSync(
+          join(rejectedDirectory, "nightly-playwright-failure-evidence.json"),
+          `${JSON.stringify({ ...evidence, title: "PRIVATE_TITLE_MARKER" })}\n`,
+          { mode: 0o600 },
+        );
+        const rejected = spawnSync("python3", ["-c", script], {
+          cwd: rejectedRoot,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GITHUB_WORKSPACE: repositoryRoot,
+            NIGHTLY_SUITE: "e2e",
+            UNIT_OUTCOME: "skipped",
+            UNIT_EXIT_CODE: "",
+            E2E_OUTCOME: "failure",
+            E2E_EXIT_CODE: "1",
+          },
+        });
+        expect(rejected.status).not.toBe(0);
+        expect(rejected.stderr).toContain("nightly E2E failure evidence contract mismatch");
+        expect(() => lstatSync(join(
+          rejectedRoot,
+          "nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json",
+        ))).toThrow();
+      } finally {
+        rmSync(rejectedRoot, { recursive: true });
       }
     } finally {
       rmSync(temporaryRoot, { recursive: true });

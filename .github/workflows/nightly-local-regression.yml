@@ -818,6 +818,7 @@ jobs:
           umask 077
           python3 - <<'PY'
           import json
+          import importlib.util
           import os
           from pathlib import Path
           import stat
@@ -874,6 +875,66 @@ jobs:
               target_info = target.lstat()
               if stat.S_ISLNK(target_info.st_mode) or not stat.S_ISREG(target_info.st_mode) or target_info.st_uid != os.getuid() or stat.S_IMODE(target_info.st_mode) != 0o600 or target_info.st_size > 512:
                   raise SystemExit('nightly lane diagnostic custody mismatch')
+
+          evidence_source = Path('apps/web/test-results/nightly-playwright-failure-evidence.json')
+          evidence_target = diagnostics / 'nightly-e2e-failure-evidence.json'
+          if requested['e2e'] and (evidence_source.exists() or evidence_source.is_symlink()):
+              workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+              verifier_path = workspace / '.github/scripts/verify-nightly-local-publication.py'
+              verifier_info = verifier_path.lstat()
+              if stat.S_ISLNK(verifier_info.st_mode) or not stat.S_ISREG(verifier_info.st_mode) or verifier_info.st_uid != os.getuid() or stat.S_IMODE(verifier_info.st_mode) & 0o022:
+                  raise SystemExit('nightly diagnostic verifier custody mismatch')
+              verifier_spec = importlib.util.spec_from_file_location(
+                  'nightly_local_diagnostic_verifier', verifier_path,
+              )
+              if verifier_spec is None or verifier_spec.loader is None:
+                  raise SystemExit('nightly diagnostic verifier is unavailable')
+              verifier = importlib.util.module_from_spec(verifier_spec)
+              verifier_spec.loader.exec_module(verifier)
+              e2e_exit_code = int(os.environ['E2E_EXIT_CODE'])
+              evidence = verifier.verify_e2e_failure_evidence_file(
+                  evidence_source, e2e_exit_code,
+              )
+              evidence_body = (
+                  json.dumps(evidence, sort_keys=True, separators=(',', ':')) + '\n'
+              ).encode('utf-8')
+              if len(evidence_body) > 8 * 1024:
+                  raise SystemExit('nightly E2E failure evidence size mismatch')
+              try:
+                  evidence_descriptor = os.open(
+                      evidence_target,
+                      os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                      0o600,
+                  )
+                  with os.fdopen(evidence_descriptor, 'wb') as handle:
+                      handle.write(evidence_body)
+                  verifier.verify_e2e_failure_evidence_file(
+                      evidence_target, e2e_exit_code,
+                  )
+              except BaseException:
+                  if evidence_target.exists() and not evidence_target.is_symlink():
+                      evidence_target.unlink()
+                  raise
+              summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+              if summary_path:
+                  class_counts = ', '.join(
+                      f'{name}={count}'
+                      for name, count in evidence['failure_class_counts'].items()
+                      if count
+                  ) or 'none'
+                  identities = ', '.join(
+                      f"{failure['spec_id']}#{failure['test_index']}:{failure['classification']}"
+                      for failure in evidence['failures']
+                  ) or 'none'
+                  with open(summary_path, 'a', encoding='utf-8') as summary:
+                      summary.write(
+                          f"- E2E fixed failure classes: {class_counts}\n"
+                          f"- E2E curated failure IDs: {identities}\n"
+                      )
+          elif requested['e2e'] and os.environ['E2E_OUTCOME'] == 'success':
+              raise SystemExit('successful nightly E2E evidence is unavailable')
+          elif evidence_source.exists() or evidence_source.is_symlink() or evidence_target.exists() or evidence_target.is_symlink():
+              raise SystemExit('unrequested nightly E2E evidence mismatch')
           PY
 
       - name: Capture bounded Compose runtime diagnostics
@@ -1529,6 +1590,7 @@ jobs:
             nightly-artifacts/publication-boundary.txt
             nightly-artifacts/failure-diagnostics/nightly-unit-run-summary.json
             nightly-artifacts/failure-diagnostics/nightly-e2e-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json
           if-no-files-found: error
           retention-days: 14
 
@@ -1544,6 +1606,7 @@ jobs:
             nightly-artifacts/failure-diagnostics/local-stack-failure-diagnostics.json
             nightly-artifacts/failure-diagnostics/nightly-unit-run-summary.json
             nightly-artifacts/failure-diagnostics/nightly-e2e-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json
           if-no-files-found: warn
           retention-days: 14
 

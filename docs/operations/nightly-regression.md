@@ -148,7 +148,22 @@ outcome/exit/count summaries. Failed or partial runs contain only the fixed lane
 summaries and bounded failure-class diagnostics; partial builder output is not
 uploaded. Raw unit/E2E logs and the full local migration receipt/readback
 remain only in job-local state and are never copied to an artifact or public
-publication bundle. The workflow never uploads `stack.env`, generated
+publication bundle. The E2E runner additionally writes Playwright's JSON v2
+report to an owner-only private file, derives
+`nightly-e2e-failure-evidence.json`, and deletes the private report before the
+lane returns. The derived evidence contains only the command outcome, bounded
+test/result/error counts, fixed failure classes, and a curated spec ID with a
+zero-based source-order test index. It contains no test/suite title, file path,
+URL, message, stack, stdout/stderr, attachment, header, or provider payload.
+The fixed spec IDs are `PW-SMOKE` (`smoke.spec.ts`), `PW-NAV`
+(`navigation.spec.ts`), `PW-TITLE` (`browser-title.spec.ts`), `PW-MAP`
+(`mobile-home-map.spec.ts`), and `PW-ADMIN`
+(`local-supabase-admin.spec.ts`). This evidence is independently verified and
+may appear only in the short-retention diagnostics artifact; it is deliberately
+absent from `.github/nightly-local-publication-allowlist.txt` and every public
+nightly prerelease. A failure before Playwright produces its JSON report remains
+represented by the fixed lane outcome rather than copying a free-form log.
+The workflow never uploads `stack.env`, generated
 passwords, JWTs, DSNs, raw database rows, raw hostnames or URLs, provider
 payloads, free-form errors, or arbitrary workspace files. After artifact
 collection, the job

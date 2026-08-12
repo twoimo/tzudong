@@ -263,7 +263,13 @@ function runCompiler(kind, profile, rawOutput, attempt) {
     sampler = spawn(process.execPath, [SAMPLER, '--output', rawOutput, '--interval-ms', '10'], { cwd: APP_ROOT, env: { ...process.env, LC_ALL: 'C', LANG: 'C' }, shell: false, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
     sampler.stdout.setEncoding('utf8'); sampler.stdout.on('data', (chunk) => { samplerStdoutBytes += Buffer.byteLength(chunk); pending += chunk; for (;;) { const newline = pending.indexOf('\n'); if (newline < 0) break; const line = pending.slice(0, newline).trim(); pending = pending.slice(newline + 1); if (!line) continue; try { const message = JSON.parse(line); lastControlFrame = typeof message.control === 'string' ? message.control : 'summary'; if (message.control === 'ready' && message.schemaVersion === 1) { if (ready || compilerStarted) return fail(`Sampler readiness protocol failed for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_READY_PROTOCOL'); ready = true; clearTimeout(readyTimer); startCompiler(); } else if (message.control === 'sample' && message.schemaVersion === 1) { if (!usesWindowsGate || !ready || !compilerStarted || !Number.isInteger(message.samples) || message.samples !== recordedSamples + 1) return fail(`Sampler evidence protocol failed for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_EVIDENCE_PROTOCOL'); recordedSamples = message.samples; triggerCompiler(); releaseWindowsGate(); } else if (!ready || !compilerStarted || summary) return fail(`Sampler summary protocol failed for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_SUMMARY_PROTOCOL'); else summary = message; } catch { fail(`Sampler emitted malformed JSON for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_JSON_INVALID'); } } });
     sampler.stderr.setEncoding('utf8'); sampler.stderr.on('data', (chunk) => { samplerStderrBytes += Buffer.byteLength(chunk); samplerStderr = `${samplerStderr}${chunk}`.slice(-4096); });
-    sampler.on('error', () => fail(`Sampler failed to start for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_START_FAILED')); sampler.on('close', (code, signal) => { const errorCode = /(?:^|\s)code=(RSS_SAMPLER_[A-Z_]+)(?:\s|$)/.exec(samplerStderr)?.[1] ?? null; samplerResult = { code: code ?? 1, signal, errorCode }; if (!compilerStarted) fail(`Sampler exited before readiness for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_PREMATURE_EXIT'); else complete(); });
+    sampler.on('error', () => fail(`Sampler failed to start for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_START_FAILED')); sampler.on('close', (code, signal) => {
+      const errorCode = /(?:^|\s)code=(RSS_SAMPLER_[A-Z_]+)(?:\s|$)/.exec(samplerStderr)?.[1] ?? null;
+      samplerResult = { code: code ?? 1, signal, errorCode };
+      if (!compilerStarted) return fail(`Sampler exited before readiness for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_PREMATURE_EXIT', samplerEvidence());
+      if (samplerCloseRequiresImmediateFailure(usesWindowsGate, compilerResult)) return fail(`Sampler exited before terminal compiler evidence for ${kind} attempt ${attempt}`, 'TYPECHECK_SAMPLER_PREMATURE_EXIT', samplerEvidence());
+      complete();
+    });
   });
 }
 function sampleFailure(position, retry, kind, error) {
@@ -278,8 +284,11 @@ function sampleFailure(position, retry, kind, error) {
     cause: { lastFailure },
   });
 }
-function mustAbortSampleRetries(error) {
+export function mustAbortSampleRetries(error) {
   return error?.code === 'TYPECHECK_SAMPLER_EVIDENCE_TIMEOUT';
+}
+export function samplerCloseRequiresImmediateFailure(usesWindowsGate, compilerResult) {
+  return usesWindowsGate && !compilerResult;
 }
 function profileStats(runs) { return Object.fromEntries(['native', 'compat'].map((kind) => { const selected = runs.filter((run) => run.kind === kind); return [kind, { durationMs: stats(selected.map((run) => run.durationMs)), peakRssBytes: stats(selected.map((run) => run.samplerSummary.peakRssBytes)) }]; })); }
 function independentNoiseWindows(runs) {
