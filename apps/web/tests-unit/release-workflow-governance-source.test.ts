@@ -170,10 +170,10 @@ describe("release workflow governance source contracts", () => {
       expect(lane).toContain(`--profile ${profile} --release-id`);
       expect(lane).toContain("ts7-release");
       expect(lane).toMatch(new RegExp(`${profile}[/\\\\]report\\.json`));
-      expect(lane).toContain(`candidate?.profile!==\"${profile}\"`);
-      expect(lane).toContain(`candidate?.platform!==\"${platform}\"`);
-      expect(lane).toContain(`candidate?.installer!==\"${installer}\"`);
-      expect(lane).toContain("acceptance?.passed!==true");
+      expect(lane).toContain("node scripts/verify-typecheck-benchmark-report.mjs");
+      expect(lane).toContain(`--profile ${profile}`);
+      expect(lane).toContain(`--platform ${platform}`);
+      expect(lane).toContain(`--installer ${installer}`);
       expect(lane).not.toContain("workspace-receipt");
       expect(lane).not.toContain("workspace receipt");
       expect(lane).toContain("if-no-files-found: error");

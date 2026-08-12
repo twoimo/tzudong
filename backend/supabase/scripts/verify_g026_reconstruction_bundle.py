@@ -23,7 +23,8 @@ TOP_KEYS = frozenset({
     'transition', 'repairs', 'validationLedger', 'slots',
     'canonicalBodyHashes', 'apiMatrix', 'extensionFingerprint', 'adBanners', 'shortUrls',
     'storyboardBaseTables', 'userBookmarks', 'searchLogs', 'restaurantsDuplicate', 'adminWorkflowPipeline',
-    'roleManagementReplayTransform', 'replayMembershipWindows', 'synthesizedCompatibilityBindings', 'obsoleteOverloadDrops',
+    'roleManagementReplayTransform', 'replayMembershipWindows', 'selfContainedReplay',
+    'synthesizedCompatibilityBindings', 'obsoleteOverloadDrops',
 })
 ARCHIVE = '21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3'
 HISTORICAL = '1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11'
@@ -1327,6 +1328,51 @@ def require_replay_membership_windows(window):
             if (tuple(encoded.count(statement) for statement in catalog_statements) != expected_counts
                     or positions != sorted(positions)):
                 raise ValueError('catalog assertion privilege ordering drifted')
+
+
+def require_self_contained_replay(binding):
+    expected = {
+        'canonicalPath': 'backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
+        'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
+        'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
+        'sourceSha256': 'ae49c1ab076c9e8042866aba8d667e9a89e83f0c2e7724598b4591beb3e91de4',
+        'sourceByteLength': 30040,
+        'transactionClass': 'self_committing',
+    }
+    if binding != expected:
+        raise ValueError('self-contained replay binding drifted')
+    source_path = ROOT / binding['canonicalPath']
+    if source_path.parent != ROOT / 'backend/supabase/migrations' or source_path.name != binding['filename']:
+        raise ValueError('self-contained replay canonical path drifted')
+    raw = source_path.read_bytes()
+    if len(raw) != binding['sourceByteLength'] or hashlib.sha256(raw).hexdigest() != binding['sourceSha256']:
+        raise ValueError('self-contained replay immutable source hash drifted')
+    source = raw.decode('utf-8')
+    executable = re.sub(r'\A(?:\s|--[^\n]*(?:\n|\Z)|/\*.*?\*/)*', '', source, flags=re.DOTALL)
+    if not executable.startswith('BEGIN;\n') or not executable.rstrip().endswith('COMMIT;'):
+        raise ValueError('self-contained replay transaction boundary drifted')
+    ordered = (
+        'DO $membership_acquire$',
+        'ALTER FUNCTION public.publish_youtube_thumbnail_release(',
+        'SET LOCAL ROLE privacy_workflow_owner;',
+        'DO $allowlist_upsert$',
+        'DO $definer_contract$',
+        'DO $catalog_contract$',
+        'RESET ROLE;',
+        'DO $membership_restore$',
+        'DO $membership_postcondition$',
+        'SELECT privacy_retention.assert_g014_public_rpc_allowlist();',
+        'SELECT privacy_retention.assert_g014_catalog_contract();',
+    )
+    if any(source.count(statement) != 1 for statement in ordered):
+        raise ValueError('self-contained replay terminal statement count drifted')
+    positions = [source.index(statement) for statement in ordered]
+    if positions != sorted(positions):
+        raise ValueError('self-contained replay terminal ordering drifted')
+    if source.count('\nBEGIN;\n') != 1 or source.count('\nCOMMIT;\n') != 1:
+        raise ValueError('self-contained replay transaction count drifted')
+
+
 def resolve_repo_path(value, filename):
     expected_relative = PurePosixPath(
         'backend/supabase/baselines/historical/pre-20260214-application',
@@ -1421,6 +1467,7 @@ def main():
             raise ValueError('phase slot drifted')
         require_role_management_replay_transform(data['roleManagementReplayTransform'])
         require_replay_membership_windows(data['replayMembershipWindows'])
+        require_self_contained_replay(data['selfContainedReplay'])
         transition = (BASE / 'G026_RECONSTRUCTION_TRANSITION.v4.sql').read_text(encoding='utf-8')
         repairs = (BASE / 'G026_RECONSTRUCTION_REPAIRS.v4.sql').read_text(encoding='utf-8')
         require_approve_restaurant_signature(repairs, APPROVE_RESTAURANT_PREDECESSOR.read_text(encoding='utf-8'))
