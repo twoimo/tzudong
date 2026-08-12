@@ -2,8 +2,11 @@ import hashlib
 import importlib.util
 import json
 import re
+import stat
 import sys
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 
@@ -109,6 +112,33 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertIsNone(re.match(r"^\d{8,14}(?:_|\.)", "seed.sql"))
         with self.assertRaisesRegex(local_migrate.LocalMigrationError, "source_root_not_canonical"):
             local_migrate.migration_files(ROOT / "backend/supabase")
+
+    def test_docker_context_accepts_github_actions_root_socket_only(self) -> None:
+        socket_info = SimpleNamespace(st_mode=stat.S_IFSOCK | 0o660, st_uid=0)
+        selected = SimpleNamespace(returncode=0, stdout="default\n")
+        inspected = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps([{
+                "Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}},
+            }]),
+        )
+        with (
+            patch.object(local_migrate.subprocess, "run", side_effect=(selected, inspected)),
+            patch.object(local_migrate.Path, "lstat", return_value=socket_info),
+            patch.object(local_migrate.os, "getuid", return_value=1000),
+            patch.dict(local_migrate.os.environ, {"GITHUB_ACTIONS": "true", "CI": "true"}, clear=False),
+        ):
+            local_migrate._assert_local_docker_context("docker")
+
+        with (
+            patch.object(local_migrate.subprocess, "run", side_effect=(selected, inspected)),
+            patch.object(local_migrate.Path, "lstat", return_value=socket_info),
+            patch.object(local_migrate.os, "getuid", return_value=1000),
+            patch.dict(local_migrate.os.environ, {"GITHUB_ACTIONS": "false", "CI": "true"}, clear=False),
+        ):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "docker_context"):
+                local_migrate._assert_local_docker_context("docker")
+
     def test_receipts_bind_runtime_closure_and_readback_sources(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         for token in (

@@ -642,6 +642,15 @@ def _environment_contract_sha256(values: Mapping[str, str]) -> str:
         )
     )
 
+def _github_actions_root_owned_socket(path: Path, owner: int) -> bool:
+    return (
+        path == Path("/var/run/docker.sock")
+        and owner == 0
+        and os.environ.get("GITHUB_ACTIONS") == "true"
+        and os.environ.get("CI") == "true"
+    )
+
+
 def _assert_local_docker_context(docker: str) -> None:
     environment = {
         key: value
@@ -694,7 +703,13 @@ def _assert_local_docker_context(docker: str) -> None:
         info = socket_path.lstat()
     except OSError as error:
         raise LocalMigrationError("docker_context") from error
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+    owned_by_current_user = info.st_uid == os.getuid()
+    owned_by_disposable_ci_root = _github_actions_root_owned_socket(socket_path, info.st_uid)
+    if (
+        stat.S_ISLNK(info.st_mode)
+        or not stat.S_ISSOCK(info.st_mode)
+        or not (owned_by_current_user or owned_by_disposable_ci_root)
+    ):
         raise LocalMigrationError("docker_context")
 
 def _reject_path_custody(path: Path) -> None:
