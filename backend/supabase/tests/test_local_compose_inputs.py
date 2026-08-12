@@ -143,8 +143,9 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('"local-pooler-config:/etc/pooler:Z"', self.overlay_source)
         self.assertIn('entrypoint: ["/app/limits.sh"]', self.overlay_source)
 
-        self.assertIn("CLUSTER_POSTGRES: !reset null", self.overlay_source)
-        self.assertIn("ERL_AFLAGS: !reset null", self.overlay_source)
+        self.assertIn("environment: !override", self.overlay_source)
+        self.assertNotIn("CLUSTER_POSTGRES", self.overlay_source)
+        self.assertNotIn("ERL_AFLAGS", self.overlay_source)
 
     def test_compose_command_uses_project_env_and_all_three_local_files(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
