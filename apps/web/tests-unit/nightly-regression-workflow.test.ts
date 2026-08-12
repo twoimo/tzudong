@@ -81,6 +81,79 @@ describe("nightly regression package and source contracts", () => {
     );
   });
 
+  test("passes only validated GitHub socket admission context to local stack children", () => {
+    const block = sourceBlock(
+      nightlyRunnerSource,
+      "const localDockerBaseEnvironmentKeys =",
+      "function localComposeArguments",
+    );
+    const buildEnvironment = new Function(
+      "pickEnvironment",
+      `${block}\nreturn localDockerEnvironment;`,
+    )((environment: Record<string, string>, keys: string[]) => Object.fromEntries(
+      keys.flatMap((key) => environment[key] === undefined ? [] : [[key, environment[key]]]),
+    )) as (environment: Record<string, string>) => Record<string, string>;
+    const admission = {
+      CI: "true",
+      GITHUB_ACTIONS: "true",
+      GITHUB_REPOSITORY: "twoimo/tzudong",
+      GITHUB_RUN_ID: "123456",
+      GITHUB_RUN_ATTEMPT: "2",
+      TZUDONG_DOCKER_SOCKET_ADMISSION_FILE: "/run/tzudong-nightly-local-admission-123456-2",
+    };
+    const environment = buildEnvironment({
+      PATH: "/fixture/bin",
+      HOME: "/fixture/home",
+      LANG: "C.UTF-8",
+      ...admission,
+      DOCKER_HOST: "tcp://hosted.invalid:2375",
+      DOCKER_CONTEXT: "remote-context",
+      COMPOSE_FILE: "/hosted/compose.yml",
+      NEXT_PUBLIC_SUPABASE_URL: "https://hosted.supabase.co",
+      SUPABASE_SERVICE_ROLE_KEY: "hosted-service-role",
+      DATABASE_URL: "postgresql://hosted.invalid/database",
+      PGHOST: "hosted.invalid",
+      PGPASSWORD: "hosted-password",
+    });
+    expect(environment).toEqual({
+      PATH: "/fixture/bin",
+      HOME: "/fixture/home",
+      LANG: "C.UTF-8",
+      ...admission,
+    });
+
+    expect(buildEnvironment({ PATH: "/fixture/bin", CI: "true" })).toEqual({
+      PATH: "/fixture/bin",
+    });
+    for (const mutation of [
+      { CI: "false" },
+      { GITHUB_ACTIONS: "false" },
+      { GITHUB_REPOSITORY: "other/repository" },
+      { GITHUB_RUN_ID: "0" },
+      { GITHUB_RUN_ATTEMPT: "+2" },
+      { TZUDONG_DOCKER_SOCKET_ADMISSION_FILE: "/run/other-admission" },
+    ]) {
+      expect(() => buildEnvironment({ PATH: "/fixture/bin", ...admission, ...mutation })).toThrow(
+        "Local Docker socket admission context is invalid.",
+      );
+    }
+
+    const privateRuntimeKeys = [
+      "GITHUB_ACTIONS",
+      "GITHUB_REPOSITORY",
+      "GITHUB_RUN_ID",
+      "GITHUB_RUN_ATTEMPT",
+      "TZUDONG_DOCKER_SOCKET_ADMISSION_FILE",
+    ];
+    const runtimeKeyBlock = sourceBlock(
+      nightlyRunnerSource,
+      "const browserEnvironmentKeys = [",
+      "const curatedBrowserSpecs = [",
+    );
+    for (const key of privateRuntimeKeys) expect(runtimeKeyBlock).not.toContain(`'${key}'`);
+    expect(block.match(/'CI'|'GITHUB_ACTIONS'|'GITHUB_REPOSITORY'|'GITHUB_RUN_ID'|'GITHUB_RUN_ATTEMPT'|'TZUDONG_DOCKER_SOCKET_ADMISSION_FILE'/g)).toHaveLength(6);
+  });
+
   test("keeps hosted regression as an explicit manual fallback", () => {
     expect(hostedWorkflowSource).toContain("name: Nightly Regression (Hosted Manual)");
     expect(hostedWorkflowSource).not.toContain("\n  schedule:");
