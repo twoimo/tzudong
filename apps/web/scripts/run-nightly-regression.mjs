@@ -19,10 +19,13 @@ import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { config as loadEnv } from 'dotenv';
 import {
+  completeNightlyCleanupTasks,
   preparePrivatePlaywrightReport,
+  replaceWithNightlyRunnerStageEvidence,
   removePrivatePlaywrightReport,
   removeSanitizedPlaywrightFailureEvidence,
   sanitizePrivatePlaywrightReport,
+  writeNightlyRunnerStageEvidence,
 } from './nightly-playwright-failure-evidence.mjs';
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -1021,13 +1024,18 @@ async function terminateChildren(signal) {
   }
   terminating = true;
   await Promise.all([...activeChildren].map((child) => stopProcess(child)));
+  let cleanupFailed = false;
   try {
-    removePrivatePlaywrightReport(privatePlaywrightReportPath);
     removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
   } catch {
-    process.exit(1);
+    cleanupFailed = true;
   }
-  process.exit(signal === 'SIGINT' ? 130 : 143);
+  try {
+    removePrivatePlaywrightReport(privatePlaywrightReportPath);
+  } catch {
+    cleanupFailed = true;
+  }
+  process.exit(cleanupFailed ? 1 : signal === 'SIGINT' ? 130 : 143);
 }
 
 process.once('SIGINT', () => void terminateChildren('SIGINT'));
@@ -1772,73 +1780,124 @@ function openNightlyWebLog(logPath) {
     throw new Error('nightly-web.log could not be opened in owner-only custody.');
   }
 }
-async function runBrowserRegression(environment, mode) {
-  removePrivatePlaywrightReport(privatePlaywrightReportPath);
-  removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
-  const requestedPort = Number(environment.APP_PORT);
-  if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 65535) {
-    throw new Error('Nightly application APP_PORT must be an integer between 1024 and 65535.');
-  }
-  if (mode === 'local') {
-    await assertLocalStackAdmission(environment);
-  }
-  const appPort = requestedPort;
-  const healthNonce = mode === 'local' ? randomBytes(32).toString('hex') : undefined;
-  const healthToken = mode === 'local'
-    ? createHash('sha256').update(`${environment.NIGHTLY_ENV_PROVENANCE_SHA256}:${healthNonce}`).digest('hex')
-    : undefined;
-  const healthHeaders = mode === 'local'
-    ? {
-      'x-nightly-env-provenance-sha256': environment.NIGHTLY_ENV_PROVENANCE_SHA256,
-      'x-nightly-health-token': healthToken,
-    }
-    : undefined;
-  const healthUrl = `http://127.0.0.1:${appPort}/api/health`;
-  const logPath = path.join(appRoot, 'nightly-web.log');
-  const logStream = openNightlyWebLog(logPath);
-  const appEnvironment = {
-    ...pickEnvironment(
-      environment,
-      [...(mode === 'local' ? localRuntimeKeys : hostedRuntimeKeys)],
-    ),
-    ...(mode === 'local'
-      ? {
-        NIGHTLY_HEALTH_NONCE: healthNonce,
-        NIGHTLY_HEALTH_TOKEN: healthToken,
-        SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
-        SUPABASE_STORAGE_SERVER_KEY: environment.SUPABASE_STORAGE_SERVER_KEY,
-      }
-      : {
-        SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
-      }),
-    APP_PORT: String(appPort),
-    HOST: '127.0.0.1',
-    HOSTNAME: '127.0.0.1',
-    NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${appPort}`,
-    TZUDONG_NEXT_DIST_DIR: `.next-nightly-${mode}-${appPort}`,
-    NODE_ENV: mode === 'local' ? 'test' : environment.NODE_ENV,
-    NIGHTLY_BROWSER_RUNTIME: '1',
-  };
-  const appProcess = spawnTracked('node', [
-    'scripts/clean-next.mjs',
-    '--',
-    'node',
-    'node_modules/next/dist/bin/next',
-    'dev',
-    '--webpack',
-    '--port',
-    String(appPort),
-    '--hostname',
-    '127.0.0.1',
-  ], {
-    env: appEnvironment,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    detached: true,
-  });
-  appProcess.stdout?.pipe(logStream);
-  appProcess.stderr?.pipe(logStream);
 
+function clearStaleNightlyBrowserArtifacts() {
+  let cleanupFailed = false;
   try {
+    removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
+  } catch {
+    cleanupFailed = true;
+  }
+  try {
+    removePrivatePlaywrightReport(privatePlaywrightReportPath);
+  } catch {
+    cleanupFailed = true;
+  }
+  if (cleanupFailed) {
+    try {
+      writeNightlyRunnerStageEvidence(
+        playwrightFailureEvidencePath,
+        'admission',
+        'custody_rejected',
+      );
+    } catch {
+      // An unsafe evidence path remains verifier-rejected; do not expose its details.
+    }
+    throw new Error('Nightly browser artifact cleanup failed.');
+  }
+}
+
+async function cleanupBrowserRegressionResources(
+  privateReportPrepared,
+  appProcess,
+  logStream,
+) {
+  return completeNightlyCleanupTasks([
+    () => {
+      if (privateReportPrepared) removePrivatePlaywrightReport(privatePlaywrightReportPath);
+    },
+    async () => {
+      if (appProcess) await stopProcess(appProcess);
+    },
+    () => {
+      if (logStream) logStream.end();
+    },
+  ]);
+}
+
+async function runBrowserRegression(environment, mode) {
+  let stage = 'admission';
+  let appProcess;
+  let logStream;
+  let privateReportPrepared = false;
+  let preservePlaywrightEvidence = false;
+  let primaryError;
+  try {
+    const requestedPort = Number(environment.APP_PORT);
+    if (!Number.isInteger(requestedPort) || requestedPort < 1024 || requestedPort > 65535) {
+      throw new Error('Nightly application APP_PORT must be an integer between 1024 and 65535.');
+    }
+    if (mode === 'local') {
+      await assertLocalStackAdmission(environment);
+    }
+    const appPort = requestedPort;
+    const healthNonce = mode === 'local' ? randomBytes(32).toString('hex') : undefined;
+    const healthToken = mode === 'local'
+      ? createHash('sha256').update(`${environment.NIGHTLY_ENV_PROVENANCE_SHA256}:${healthNonce}`).digest('hex')
+      : undefined;
+    const healthHeaders = mode === 'local'
+      ? {
+        'x-nightly-env-provenance-sha256': environment.NIGHTLY_ENV_PROVENANCE_SHA256,
+        'x-nightly-health-token': healthToken,
+      }
+      : undefined;
+    const healthUrl = `http://127.0.0.1:${appPort}/api/health`;
+    stage = 'log_open';
+    const logPath = path.join(appRoot, 'nightly-web.log');
+    logStream = openNightlyWebLog(logPath);
+    const appEnvironment = {
+      ...pickEnvironment(
+        environment,
+        [...(mode === 'local' ? localRuntimeKeys : hostedRuntimeKeys)],
+      ),
+      ...(mode === 'local'
+        ? {
+          NIGHTLY_HEALTH_NONCE: healthNonce,
+          NIGHTLY_HEALTH_TOKEN: healthToken,
+          SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
+          SUPABASE_STORAGE_SERVER_KEY: environment.SUPABASE_STORAGE_SERVER_KEY,
+        }
+        : {
+          SUPABASE_SERVICE_ROLE_KEY: environment.SUPABASE_SERVICE_ROLE_KEY,
+        }),
+      APP_PORT: String(appPort),
+      HOST: '127.0.0.1',
+      HOSTNAME: '127.0.0.1',
+      NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${appPort}`,
+      TZUDONG_NEXT_DIST_DIR: `.next-nightly-${mode}-${appPort}`,
+      NODE_ENV: mode === 'local' ? 'test' : environment.NODE_ENV,
+      NIGHTLY_BROWSER_RUNTIME: '1',
+    };
+    stage = 'app_spawn';
+    appProcess = spawnTracked('node', [
+      'scripts/clean-next.mjs',
+      '--',
+      'node',
+      'node_modules/next/dist/bin/next',
+      'dev',
+      '--webpack',
+      '--port',
+      String(appPort),
+      '--hostname',
+      '127.0.0.1',
+    ], {
+      env: appEnvironment,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
+    });
+    appProcess.stdout?.pipe(logStream);
+    appProcess.stderr?.pipe(logStream);
+    stage = 'health';
     await waitForHealth(appProcess, healthUrl, mode, healthHeaders);
     const browserEnvironment = {
       ...pickEnvironment(appEnvironment, browserEnvironmentKeys),
@@ -1847,53 +1906,104 @@ async function runBrowserRegression(environment, mode) {
       PLAYWRIGHT_REUSE_EXISTING_SERVER: '1',
     };
     const diagnosticsStartedAt = Date.now();
+    stage = 'report_prepare';
     preparePrivatePlaywrightReport(privatePlaywrightReportPath);
-    try {
-      const result = await runCommand(
-        'bunx',
-        [
-          'playwright',
-          'test',
-          ...curatedBrowserSpecs,
-          '--project=chromium',
-          '--reporter=line,json',
-        ],
-        {
-          env: {
-            ...browserEnvironment,
-            PLAYWRIGHT_JSON_OUTPUT_FILE: privatePlaywrightReportPath,
-          },
-          detached: true,
+    privateReportPrepared = true;
+    stage = 'playwright';
+    const result = await runCommand(
+      'bunx',
+      [
+        'playwright',
+        'test',
+        ...curatedBrowserSpecs,
+        '--project=chromium',
+        '--reporter=line,json',
+      ],
+      {
+        env: {
+          ...browserEnvironment,
+          PLAYWRIGHT_JSON_OUTPUT_FILE: privatePlaywrightReportPath,
         },
-      );
-      sanitizePrivatePlaywrightReport(
-        privatePlaywrightReportPath,
-        playwrightFailureEvidencePath,
-        result.code,
-      );
-      if (mode === 'local') {
-        collectLocalBrowserDiagnostics(diagnosticsStartedAt);
-      }
-      if (result.code !== 0) {
-        throw new Error(`Nightly browser regressions failed with exit code ${result.code}.`);
-      }
-    } finally {
-      removePrivatePlaywrightReport(privatePlaywrightReportPath);
+        detached: true,
+      },
+    );
+    stage = 'sanitize';
+    sanitizePrivatePlaywrightReport(
+      privatePlaywrightReportPath,
+      playwrightFailureEvidencePath,
+      result.code,
+    );
+    preservePlaywrightEvidence = result.code !== 0;
+    if (mode === 'local') {
+      stage = 'diagnostics';
+      collectLocalBrowserDiagnostics(diagnosticsStartedAt);
     }
-  } finally {
-    await stopProcess(appProcess);
-    logStream.end();
+    if (result.code !== 0) {
+      stage = 'playwright';
+      throw new Error(`Nightly browser regressions failed with exit code ${result.code}.`);
+    }
+  } catch (error) {
+    primaryError = error;
+    if (!preservePlaywrightEvidence) {
+      try {
+        replaceWithNightlyRunnerStageEvidence(
+          playwrightFailureEvidencePath,
+          stage,
+          error,
+          preservePlaywrightEvidence,
+        );
+      } catch {
+        primaryError = new Error('Nightly runner stage evidence could not be written.');
+      }
+    }
   }
+  const cleanupFailed = await cleanupBrowserRegressionResources(
+    privateReportPrepared,
+    appProcess,
+    logStream,
+  );
+  if (cleanupFailed && primaryError === undefined) {
+    stage = 'cleanup';
+    try {
+      replaceWithNightlyRunnerStageEvidence(
+        playwrightFailureEvidencePath,
+        stage,
+        new Error('Nightly browser cleanup failed.'),
+        false,
+      );
+    } catch {
+      // Preserve the fixed cleanup failure without exposing filesystem details.
+    }
+    primaryError = new Error('Nightly browser cleanup failed.');
+  }
+  if (primaryError !== undefined) throw primaryError;
 }
 
 async function main() {
   const { mode, suite, envFile, provenanceFile, validateOnly } = parseArguments(process.argv.slice(2));
-  const loaded = loadExplicitEnvironment(mode, envFile);
-  const provenance = loadProvenance(mode, loaded.envFilePath, provenanceFile);
-  const environment = validateEnvironment(mode, process.env, {
-    ...provenance,
-    envFilePath: loaded.envFilePath,
-  });
+  let environment;
+  try {
+    const loaded = loadExplicitEnvironment(mode, envFile);
+    const provenance = loadProvenance(mode, loaded.envFilePath, provenanceFile);
+    environment = validateEnvironment(mode, process.env, {
+      ...provenance,
+      envFilePath: loaded.envFilePath,
+    });
+  } catch (error) {
+    if (suite === 'all' || suite === 'e2e') {
+      try {
+        replaceWithNightlyRunnerStageEvidence(
+          playwrightFailureEvidencePath,
+          'admission',
+          error,
+          false,
+        );
+      } catch {
+        throw new Error('Nightly runner stage evidence could not be written.');
+      }
+    }
+    throw error;
+  }
 
   if (validateOnly) {
     console.log(`Nightly ${mode} environment validation passed (${suite}).`);
@@ -1907,9 +2017,12 @@ async function main() {
   }
 }
 
-removePrivatePlaywrightReport(privatePlaywrightReportPath);
-removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath);
-main().catch((error) => {
+async function start() {
+  clearStaleNightlyBrowserArtifacts();
+  await main();
+}
+
+start().catch((error) => {
   const message = error instanceof Error ? error.message : 'Nightly regression failed.';
   console.error(`[nightly] ${message}`);
   process.exitCode = 1;

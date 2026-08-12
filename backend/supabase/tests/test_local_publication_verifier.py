@@ -93,6 +93,17 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             }],
         }
 
+    @staticmethod
+    def _e2e_runner_stage_evidence() -> dict[str, object]:
+        return {
+            "schema": "nightly-e2e-runner-stage-evidence-v1",
+            "source": "nightly-runner-stage-v1",
+            "command_exit_code": 1,
+            "outcome": "failure",
+            "stage": "admission",
+            "failure_class": "custody_rejected",
+        }
+
     def test_accepts_exact_owner_only_bounded_e2e_failure_evidence(self) -> None:
         payload = self._e2e_failure_evidence()
         verifier.verify_e2e_failure_evidence(payload, 1)
@@ -124,6 +135,52 @@ class LocalPublicationVerifierTests(unittest.TestCase):
         payload["failure_class_counts"]["runner_error"] = 1
         with self.assertRaisesRegex(SystemExit, "classification mismatch"):
             verifier.verify_e2e_failure_evidence(payload, 1)
+
+    def test_accepts_only_fixed_runner_stage_evidence(self) -> None:
+        payload = self._e2e_runner_stage_evidence()
+        verifier.verify_e2e_failure_evidence(payload, 1)
+        with tempfile.TemporaryDirectory() as raw:
+            evidence_path = Path(raw) / "nightly-e2e-failure-evidence.json"
+            evidence_path.write_text(
+                json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                encoding="utf-8",
+            )
+            evidence_path.chmod(0o600)
+            self.assertEqual(
+                verifier.verify_e2e_failure_evidence_file(evidence_path, 1),
+                payload,
+            )
+
+        for field, value in (
+            ("stage", "private-stage"),
+            ("failure_class", "private-class"),
+            ("command_exit_code", 0),
+            ("title", "PRIVATE_FREE_FORM_MARKER"),
+        ):
+            rejected = self._e2e_runner_stage_evidence()
+            rejected[field] = value
+            with self.assertRaisesRegex(SystemExit, "runner stage evidence contract mismatch"):
+                verifier.verify_e2e_failure_evidence(rejected, 1)
+        with self.assertRaisesRegex(SystemExit, "runner stage evidence contract mismatch"):
+            verifier.verify_e2e_failure_evidence(payload, 0)
+        with self.assertRaisesRegex(SystemExit, "runner stage evidence contract mismatch"):
+            verifier.verify_e2e_failure_evidence(payload, True)
+        for stage, failure_class in (
+            ("health", "custody_rejected"),
+            ("sanitize", "health_timeout"),
+            ("diagnostics", "report_rejected"),
+            ("cleanup", "diagnostics_rejected"),
+        ):
+            rejected = self._e2e_runner_stage_evidence()
+            rejected["stage"] = stage
+            rejected["failure_class"] = failure_class
+            with self.assertRaisesRegex(SystemExit, "runner stage evidence contract mismatch"):
+                verifier.verify_e2e_failure_evidence(rejected, 1)
+
+        cleanup = self._e2e_runner_stage_evidence()
+        cleanup["stage"] = "cleanup"
+        cleanup["failure_class"] = "cleanup_rejected"
+        verifier.verify_e2e_failure_evidence(cleanup, 1)
 
     def test_keeps_e2e_failure_evidence_out_of_publication(self) -> None:
         self.assertNotIn(

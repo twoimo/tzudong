@@ -68,6 +68,8 @@ describe("nightly regression package and source contracts", () => {
     expect(packageSource).toContain('"test:nightly": "node scripts/run-nightly-regression.mjs"');
     expect(nightlyRunnerSource).toContain("function parseArguments(argumentsList)");
     expect(nightlyRunnerSource).toContain("function main()");
+    expect(nightlyRunnerSource).toContain("function clearStaleNightlyBrowserArtifacts()");
+    expect(nightlyRunnerSource).toContain("async function cleanupBrowserRegressionResources(");
   });
 
   test("passes the verified Node 24 supervisor into the unit lane", () => {
@@ -394,7 +396,7 @@ describe("nightly regression package and source contracts", () => {
       "fstatSync(descriptor)",
       "ftruncateSync(descriptor, 0)",
       "nightly-web.log must be an owner-only regular file.",
-      "const logStream = openNightlyWebLog(logPath);",
+      "logStream = openNightlyWebLog(logPath);",
     ]) {
       expect(nightlyRunnerSource).toContain(token);
     }
@@ -497,6 +499,8 @@ describe("nightly regression package and source contracts", () => {
       "preparePrivatePlaywrightReport(privatePlaywrightReportPath)",
       "removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)",
       "sanitizePrivatePlaywrightReport(",
+      "writeNightlyRunnerStageEvidence(",
+      "replaceWithNightlyRunnerStageEvidence(",
       "removePrivatePlaywrightReport(privatePlaywrightReportPath)",
       "nightly-playwright-failure-evidence.json",
     ]) {
@@ -509,10 +513,24 @@ describe("nightly regression package and source contracts", () => {
       "async function runBrowserRegression(environment, mode)",
       "async function main()",
     );
-    expect(browserRunner.indexOf("removePrivatePlaywrightReport(privatePlaywrightReportPath)"))
-      .toBeLessThan(browserRunner.indexOf("await assertLocalStackAdmission(environment)"));
-    expect(browserRunner.indexOf("removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)"))
-      .toBeLessThan(browserRunner.indexOf("await assertLocalStackAdmission(environment)"));
+    const startup = sourceBlock(
+      nightlyRunnerSource,
+      "async function start()",
+      "start().catch((error) =>",
+    );
+    expect(startup.indexOf("clearStaleNightlyBrowserArtifacts()"))
+      .toBeLessThan(startup.indexOf("await main()"));
+    const staleCleanup = sourceBlock(
+      nightlyRunnerSource,
+      "function clearStaleNightlyBrowserArtifacts()",
+      "async function cleanupBrowserRegressionResources(",
+    );
+    expect(staleCleanup).toContain(
+      "removePrivatePlaywrightReport(privatePlaywrightReportPath)",
+    );
+    expect(staleCleanup).toContain(
+      "removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)",
+    );
     const signalHandler = sourceBlock(
       nightlyRunnerSource,
       "async function terminateChildren(signal)",
@@ -521,9 +539,29 @@ describe("nightly regression package and source contracts", () => {
     expect(signalHandler).toContain("removePrivatePlaywrightReport(privatePlaywrightReportPath)");
     expect(signalHandler).toContain("removeSanitizedPlaywrightFailureEvidence(playwrightFailureEvidencePath)");
     expect(signalHandler.indexOf("removePrivatePlaywrightReport(privatePlaywrightReportPath)"))
-      .toBeLessThan(signalHandler.indexOf("process.exit(signal"));
+      .toBeLessThan(signalHandler.indexOf("process.exit(cleanupFailed"));
     expect(playwrightEvidenceSource).toContain("nightly-playwright-failure-evidence-v1");
     expect(playwrightEvidenceSource).toContain("playwright-json-report-v2");
+    expect(playwrightEvidenceSource).toContain("nightly-e2e-runner-stage-evidence-v1");
+    expect(playwrightEvidenceSource).toContain("nightly-runner-stage-v1");
+    for (const stage of [
+      "admission", "log_open", "app_spawn", "health", "report_prepare",
+      "playwright", "sanitize", "diagnostics",
+    ]) {
+      expect(playwrightEvidenceSource).toContain(`'${stage}'`);
+    }
+    const cleanupResources = sourceBlock(
+      nightlyRunnerSource,
+      "async function cleanupBrowserRegressionResources(",
+      "async function runBrowserRegression(environment, mode)",
+    );
+    expect(cleanupResources).toContain("removePrivatePlaywrightReport(privatePlaywrightReportPath)");
+    expect(cleanupResources).toContain("await stopProcess(appProcess)");
+    expect(cleanupResources).toContain("logStream.end()");
+    expect(cleanupResources).toContain("return completeNightlyCleanupTasks([");
+    expect(browserRunner).toContain("preservePlaywrightEvidence = result.code !== 0");
+    expect(browserRunner.indexOf("preservePlaywrightEvidence = result.code !== 0"))
+      .toBeLessThan(browserRunner.indexOf("collectLocalBrowserDiagnostics(diagnosticsStartedAt)"));
     for (const specId of ["PW-SMOKE", "PW-NAV", "PW-TITLE", "PW-MAP", "PW-ADMIN"]) {
       expect(playwrightEvidenceSource).toContain(specId);
     }
@@ -1074,6 +1112,91 @@ describe("nightly regression package and source contracts", () => {
       );
       expect(lstatSync(target).mode & 0o777).toBe(0o600);
       expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(evidence);
+
+      const runnerRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-runner-evidence-"));
+      try {
+        const runnerDirectory = join(runnerRoot, "apps/web/test-results");
+        mkdirSync(runnerDirectory, { recursive: true });
+        const runnerEvidence = {
+          schema: "nightly-e2e-runner-stage-evidence-v1",
+          source: "nightly-runner-stage-v1",
+          command_exit_code: 1,
+          outcome: "failure",
+          stage: "health",
+          failure_class: "application_exit",
+        };
+        writeFileSync(
+          join(runnerDirectory, "nightly-playwright-failure-evidence.json"),
+          `${JSON.stringify(runnerEvidence)}\n`,
+          { mode: 0o600 },
+        );
+        const runnerResult = spawnSync("python3", ["-c", script], {
+          cwd: runnerRoot,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            GITHUB_WORKSPACE: repositoryRoot,
+            NIGHTLY_SUITE: "e2e",
+            UNIT_OUTCOME: "skipped",
+            UNIT_EXIT_CODE: "",
+            E2E_OUTCOME: "failure",
+            E2E_EXIT_CODE: "1",
+            GITHUB_STEP_SUMMARY: join(runnerRoot, "github-step-summary.md"),
+          },
+        });
+        expect(runnerResult.status).toBe(0);
+        expect(JSON.parse(readFileSync(join(
+          runnerRoot,
+          "nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json",
+        ), "utf8"))).toEqual(runnerEvidence);
+        expect(readFileSync(join(runnerRoot, "github-step-summary.md"), "utf8")).toBe(
+          "- E2E fixed runner stage: health\n"
+          + "- E2E fixed runner failure class: application_exit\n",
+        );
+
+        for (const impossibleRunnerEvidence of [
+          { ...runnerEvidence, failure_class: "custody_rejected" },
+          { ...runnerEvidence, stage: "sanitize", failure_class: "health_timeout" },
+        ]) {
+          const impossibleRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-impossible-runner-"));
+          try {
+            const impossibleDirectory = join(impossibleRoot, "apps/web/test-results");
+            mkdirSync(impossibleDirectory, { recursive: true });
+            writeFileSync(
+              join(impossibleDirectory, "nightly-playwright-failure-evidence.json"),
+              `${JSON.stringify(impossibleRunnerEvidence)}\n`,
+              { mode: 0o600 },
+            );
+            const impossibleResult = spawnSync("python3", ["-c", script], {
+              cwd: impossibleRoot,
+              encoding: "utf8",
+              env: {
+                ...process.env,
+                GITHUB_WORKSPACE: repositoryRoot,
+                NIGHTLY_SUITE: "e2e",
+                UNIT_OUTCOME: "skipped",
+                UNIT_EXIT_CODE: "",
+                E2E_OUTCOME: "failure",
+                E2E_EXIT_CODE: "1",
+                GITHUB_STEP_SUMMARY: join(impossibleRoot, "github-step-summary.md"),
+              },
+            });
+            expect(impossibleResult.status).not.toBe(0);
+            expect(impossibleResult.stderr).toContain(
+              "nightly E2E runner stage evidence contract mismatch",
+            );
+            expect(() => lstatSync(join(
+              impossibleRoot,
+              "nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json",
+            ))).toThrow();
+            expect(() => lstatSync(join(impossibleRoot, "github-step-summary.md"))).toThrow();
+          } finally {
+            rmSync(impossibleRoot, { recursive: true });
+          }
+        }
+      } finally {
+        rmSync(runnerRoot, { recursive: true });
+      }
 
       const rejectedRoot = mkdtempSync(join(tmpdir(), "tzudong-nightly-e2e-rejected-"));
       try {

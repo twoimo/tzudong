@@ -2,6 +2,7 @@ import {
   closeSync,
   constants as fsConstants,
   fstatSync,
+  fsyncSync,
   ftruncateSync,
   lstatSync,
   mkdirSync,
@@ -17,6 +18,21 @@ const MAX_EVIDENCE_BYTES = 8 * 1024;
 const MAX_TESTS = 128;
 const MAX_RESULTS_PER_TEST = 8;
 const MAX_REPORT_ERRORS = 64;
+const RUNNER_STAGE_FAILURE_CLASSES = new Map([
+  ['admission', new Set([
+    'contract_rejected', 'custody_rejected', 'runtime_unavailable', 'unexpected_failure',
+  ])],
+  ['log_open', new Set(['custody_rejected'])],
+  ['app_spawn', new Set(['process_spawn_failed'])],
+  ['health', new Set([
+    'application_exit', 'health_timeout', 'process_spawn_failed', 'runtime_unavailable',
+  ])],
+  ['report_prepare', new Set(['custody_rejected'])],
+  ['playwright', new Set(['process_spawn_failed'])],
+  ['sanitize', new Set(['report_rejected'])],
+  ['diagnostics', new Set(['diagnostics_rejected'])],
+  ['cleanup', new Set(['cleanup_rejected'])],
+]);
 
 const SPEC_IDS = new Map([
   ['smoke.spec.ts', 'PW-SMOKE'],
@@ -108,6 +124,61 @@ function openOwnerOnlyForTruncate(filePath, label) {
   }
 }
 
+function writeOwnerOnlyCanonicalFile(filePath, label, body, maxBytes) {
+  const bodyBytes = Buffer.byteLength(body);
+  if (bodyBytes > maxBytes) {
+    fail(`${label} exceeded its size bound.`);
+  }
+  let descriptor;
+  try {
+    descriptor = openSync(
+      filePath,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_NOFOLLOW,
+      0o600,
+    );
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile() || !ownerUidMatches(opened) || (opened.mode & 0o777) !== 0o600) {
+      fail(`${label} custody mismatch.`);
+    }
+    ftruncateSync(descriptor, 0);
+    writeFileSync(descriptor, body, { encoding: 'utf8' });
+    fsyncSync(descriptor);
+    const written = fstatSync(descriptor);
+    const current = lstatSync(filePath);
+    if (
+      !written.isFile()
+      || !ownerUidMatches(written)
+      || (written.mode & 0o777) !== 0o600
+      || written.size !== bodyBytes
+      || !current.isFile()
+      || current.isSymbolicLink()
+      || current.dev !== written.dev
+      || current.ino !== written.ino
+    ) {
+      fail(`${label} custody mismatch.`);
+    }
+  } catch (error) {
+    if (
+      error instanceof Error
+      && (
+        error.message === `${label} custody mismatch.`
+        || error.message === `${label} exceeded its size bound.`
+      )
+    ) {
+      throw error;
+    }
+    fail(`${label} could not be written.`);
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // Preserve the fixed write or custody failure above.
+      }
+    }
+  }
+}
+
 export function preparePrivatePlaywrightReport(filePath) {
   const parent = path.dirname(filePath);
   let parentStat;
@@ -130,6 +201,116 @@ export function preparePrivatePlaywrightReport(filePath) {
     fail('Private Playwright JSON report directory custody mismatch.');
   }
   openOwnerOnlyForTruncate(filePath, 'Private Playwright JSON report');
+}
+
+function prepareEvidenceDirectory(filePath) {
+  const parent = path.dirname(filePath);
+  let parentStat;
+  try {
+    parentStat = lstatSync(parent);
+  } catch {
+    try {
+      mkdirSync(parent, { mode: 0o700 });
+      parentStat = lstatSync(parent);
+    } catch {
+      fail('Sanitized Playwright failure evidence directory could not be prepared.');
+    }
+  }
+  if (
+    !parentStat.isDirectory()
+    || parentStat.isSymbolicLink()
+    || !ownerUidMatches(parentStat)
+    || (parentStat.mode & 0o022) !== 0
+  ) {
+    fail('Sanitized Playwright failure evidence directory custody mismatch.');
+  }
+}
+
+export function writeNightlyRunnerStageEvidence(filePath, stage, failureClass) {
+  if (!RUNNER_STAGE_FAILURE_CLASSES.get(stage)?.has(failureClass)) {
+    fail('Nightly runner stage evidence contract mismatch.');
+  }
+  const evidence = {
+    schema: 'nightly-e2e-runner-stage-evidence-v1',
+    source: 'nightly-runner-stage-v1',
+    command_exit_code: 1,
+    outcome: 'failure',
+    stage,
+    failure_class: failureClass,
+  };
+  const body = `${JSON.stringify(evidence)}\n`;
+  prepareEvidenceDirectory(filePath);
+  writeOwnerOnlyCanonicalFile(
+    filePath,
+    'Nightly runner stage evidence',
+    body,
+    MAX_EVIDENCE_BYTES,
+  );
+  return evidence;
+}
+
+export function replaceWithNightlyRunnerStageEvidence(
+  filePath,
+  stage,
+  error,
+  preservePlaywrightEvidence,
+) {
+  if (preservePlaywrightEvidence) return false;
+  try {
+    removeSanitizedPlaywrightFailureEvidence(filePath);
+  } catch {
+    // The descriptor-bound writer remains the fail-closed authority.
+  }
+  writeNightlyRunnerStageEvidence(
+    filePath,
+    stage,
+    classifyNightlyRunnerStageFailure(stage, error),
+  );
+  return true;
+}
+
+export async function completeNightlyCleanupTasks(tasks) {
+  if (!Array.isArray(tasks) || tasks.length !== 3 || tasks.some((task) => typeof task !== 'function')) {
+    fail('Nightly browser cleanup task contract mismatch.');
+  }
+  let cleanupFailed = false;
+  for (const task of tasks) {
+    try {
+      await task();
+    } catch {
+      cleanupFailed = true;
+    }
+  }
+  return cleanupFailed;
+}
+
+export function classifyNightlyRunnerStageFailure(stage, error) {
+  if (!RUNNER_STAGE_FAILURE_CLASSES.has(stage)) return 'unexpected_failure';
+  const message = error instanceof Error ? error.message : '';
+  if (stage === 'admission') {
+    if (/owner-only|custody|regular file|directory/.test(message)) return 'custody_rejected';
+    if (/receipt|provenance|configuration|source-bound|generated project-scoped/.test(message)) {
+      return 'contract_rejected';
+    }
+    if (/service state|readiness|Compose stack|running and healthy/.test(message)) {
+      return 'runtime_unavailable';
+    }
+  }
+  if (stage === 'log_open' || stage === 'report_prepare') return 'custody_rejected';
+  if (stage === 'app_spawn') return 'process_spawn_failed';
+  if (stage === 'health') {
+    if (message === 'Nightly application exited before the health endpoint became ready.') {
+      return 'application_exit';
+    }
+    if (message.startsWith('Unable to start the nightly app:')) return 'process_spawn_failed';
+    if (message.startsWith('Application did not become ready within ')) return 'health_timeout';
+    return 'runtime_unavailable';
+  }
+  if (stage === 'playwright') return 'process_spawn_failed';
+  if (stage === 'sanitize') return 'report_rejected';
+  if (stage === 'diagnostics') return 'diagnostics_rejected';
+  if (stage === 'cleanup') return 'cleanup_rejected';
+  return 'unexpected_failure';
 }
 
 export function removePrivatePlaywrightReport(filePath) {
@@ -366,14 +547,11 @@ export function sanitizePrivatePlaywrightReport(rawReportPath, outputPath, comma
   }
   const evidence = buildNightlyPlaywrightFailureEvidence(report, commandExitCode);
   const body = `${JSON.stringify(evidence)}\n`;
-  if (Buffer.byteLength(body) > MAX_EVIDENCE_BYTES) {
-    fail('Sanitized Playwright failure evidence exceeded its size bound.');
-  }
-  openOwnerOnlyForTruncate(outputPath, 'Sanitized Playwright failure evidence');
-  writeFileSync(outputPath, body, { encoding: 'utf8', mode: 0o600 });
-  assertOwnerOnlyRegularFile(
+  prepareEvidenceDirectory(outputPath);
+  writeOwnerOnlyCanonicalFile(
     outputPath,
     'Sanitized Playwright failure evidence',
+    body,
     MAX_EVIDENCE_BYTES,
   );
   return evidence;
