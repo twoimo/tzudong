@@ -276,6 +276,7 @@ ON CONFLICT (user_id) DO UPDATE SET
   nickname = EXCLUDED.nickname,
   email = EXCLUDED.email,
   avatar_url = EXCLUDED.avatar_url,
+  created_at = EXCLUDED.created_at,
   last_login = EXCLUDED.last_login,
   username = EXCLUDED.username,
   role = EXCLUDED.role,

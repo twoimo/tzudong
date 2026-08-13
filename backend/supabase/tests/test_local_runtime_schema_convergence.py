@@ -160,6 +160,23 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
         self.assertIn("'admin', '2026-01-01T00:00:00Z'", self.seed)
         self.assertIn("INSERT INTO public.user_account_status", self.seed)
         self.assertIn("'active', NULL, '2026-01-01T00:00:00Z'", self.seed)
+        profile_upsert = re.search(
+            r"INSERT INTO public\.profiles \(.*?\) VALUES \(.*?\)"
+            r"\s+ON CONFLICT \(user_id\) DO UPDATE SET(?P<updates>.*?)"
+            r"\n\nINSERT INTO public\.user_account_status",
+            self.seed,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(profile_upsert)
+        profile_updates = profile_upsert.group("updates")
+        self.assertEqual(
+            profile_updates.count("created_at = EXCLUDED.created_at"),
+            1,
+        )
+        self.assertEqual(
+            profile_updates.count("updated_at = EXCLUDED.updated_at"),
+            1,
+        )
         self.assertIn("receipt_unexpected_admin_role", self.readback)
         self.assertIn("receipt_unexpected_account_status", self.readback)
         self.assertIn("json_build_array('user_roles', 'nightly-ci'", self.readback)
