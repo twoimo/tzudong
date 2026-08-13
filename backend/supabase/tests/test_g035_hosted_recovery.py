@@ -26,22 +26,30 @@ REQUIRED_HOSTED_TABLE_DATA=(
  b"902; 0 1902 TABLE DATA provider_budget_private admin_provider_budget_counters postgres\n",
  b"903; 0 1903 TABLE DATA provider_budget_private admin_provider_budget_decisions postgres\n",
 )
-POSTGRES_TABLE_DATA=REQUIRED_HOSTED_TABLE_DATA+tuple(f"{1000+index}; 0 {2000+index} TABLE DATA public postgres_{index} postgres\n".encode() for index in range(59))
-PRIVACY_TABLE_DATA=tuple(f"{1100+index}; 0 {2100+index} TABLE DATA privacy_retention privacy_{index} privacy_workflow_owner\n".encode() for index in range(46))
+POSTGRES_TABLE_DATA=REQUIRED_HOSTED_TABLE_DATA+tuple(f"{1000+index}; 0 {2000+index} TABLE DATA public postgres_{index} postgres\n".encode() for index in range(46))
+PRIVACY_TABLE_DATA=tuple(f"{1100+index}; 0 {2100+index} TABLE DATA privacy_retention privacy_{index} privacy_workflow_owner\n".encode() for index in range(61))
 NON_TABLE_DATA=(
  b"1200; 0 0 SEQUENCE SET public canonical_id_seq postgres\n"
  b"1201; 0 2201 MATERIALIZED VIEW DATA public canonical_rollup postgres\n"
 )
 SCHEMA_TOC=SCHEMA_ONLY_TOC+b"".join(POSTGRES_TABLE_DATA+PRIVACY_TABLE_DATA)+NON_TABLE_DATA
-EXPECTED_POST_DATA_OWNER_COUNTS=(("postgres",572),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
-EXPECTED_POST_DATA_OWNER_RUNS=(("supabase_auth_admin",33),("postgres",2),("privacy_workflow_owner",97),("postgres",99),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("postgres",2),("privacy_workflow_owner",26),("postgres",156),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",42),("supabase_storage_admin",5),("supabase_auth_admin",18),("postgres",1),("privacy_workflow_owner",61),("postgres",74),("supabase_storage_admin",5),("supabase_auth_admin",16),("postgres",2),("privacy_workflow_owner",110),("postgres",186),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
+EXPECTED_POST_DATA_OWNER_COUNTS=(("postgres",454),("privacy_workflow_owner",474),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
+EXPECTED_POST_DATA_OWNER_RUNS=(("privacy_workflow_owner",1),("supabase_auth_admin",33),("postgres",2),("privacy_workflow_owner",83),("postgres",3),("privacy_workflow_owner",7),("postgres",1),("privacy_workflow_owner",2),("postgres",24),("privacy_workflow_owner",6),("postgres",1),("privacy_workflow_owner",5),("postgres",47),("supabase_storage_admin",9),("postgres",1),("privacy_workflow_owner",1),("supabase_auth_admin",56),("postgres",2),("privacy_workflow_owner",26),("postgres",2),("privacy_workflow_owner",4),("postgres",2),("privacy_workflow_owner",2),("postgres",25),("privacy_workflow_owner",2),("postgres",19),("privacy_workflow_owner",4),("postgres",40),("privacy_workflow_owner",4),("postgres",1),("privacy_workflow_owner",4),("postgres",47),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",57),("postgres",1),("privacy_workflow_owner",2),("postgres",5),("privacy_workflow_owner",13),("postgres",21),("supabase_storage_admin",5),("supabase_auth_admin",18),("postgres",1),("privacy_workflow_owner",61),("postgres",3),("privacy_workflow_owner",3),("postgres",25),("privacy_workflow_owner",9),("postgres",1),("privacy_workflow_owner",9),("postgres",24),("supabase_storage_admin",5),("privacy_workflow_owner",2),("supabase_auth_admin",16),("postgres",2),("privacy_workflow_owner",113),("postgres",36),("privacy_workflow_owner",2),("postgres",4),("privacy_workflow_owner",1),("postgres",9),("privacy_workflow_owner",1),("postgres",1),("privacy_workflow_owner",1),("postgres",4),("privacy_workflow_owner",8),("postgres",5),("privacy_workflow_owner",2),("postgres",28),("privacy_workflow_owner",1),("postgres",2),("privacy_workflow_owner",3),("postgres",9),("privacy_workflow_owner",23),("postgres",5),("privacy_workflow_owner",1),("postgres",4),("privacy_workflow_owner",7),("postgres",1),("privacy_workflow_owner",4),("postgres",39),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
 POST_DATA_ROWS=tuple(f"{3000+index}; {12000+index} {22000+index} CONSTRAINT public object_{index} constraint_{index} {owner}\n".encode() for index,owner in enumerate(owner for owner,count in EXPECTED_POST_DATA_OWNER_RUNS for unused in range(count)))
 POST_DATA_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join(POST_DATA_ROWS)+b"; canonical trailer\n"
-TEST_TRIGGER_RELATIONS=tuple(("privacy_retention" if index%2 else "public",f"trigger_table_{index}") for index in range(38))
-TEST_TRIGGER_DESCRIPTORS=tuple((*relation,f"trigger_{index}") for index,relation in enumerate((*TEST_TRIGGER_RELATIONS[:18],*TEST_TRIGGER_RELATIONS)))
-TEST_TRIGGER_RUN_START=sum(count for unused_owner,count in EXPECTED_POST_DATA_OWNER_RUNS[:12])
-TEST_TRIGGER_ROWS=tuple(f"{3000+TEST_TRIGGER_RUN_START+index}; {12000+TEST_TRIGGER_RUN_START+index} {22000+TEST_TRIGGER_RUN_START+index} TRIGGER {schema} {table} {trigger} privacy_workflow_owner\n".encode() for index,(schema,table,trigger) in enumerate(TEST_TRIGGER_DESCRIPTORS))
-TEST_TRIGGER_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join((*POST_DATA_ROWS[:TEST_TRIGGER_RUN_START],*TEST_TRIGGER_ROWS,*POST_DATA_ROWS[TEST_TRIGGER_RUN_START+56:]))+b"; canonical trailer\n"
+TEST_TRIGGER_RELATIONS=tuple(("privacy_retention" if index%2 else "public",f"trigger_table_{index}") for index in range(50))
+TEST_TRIGGER_DESCRIPTORS_BY_RUN=(
+ (35,tuple((*relation,f"trigger_{index}") for index,relation in enumerate((*TEST_TRIGGER_RELATIONS[:40],*TEST_TRIGGER_RELATIONS[:17])))),
+ (37,((*TEST_TRIGGER_RELATIONS[0],"trigger_57"),(*TEST_TRIGGER_RELATIONS[40],"trigger_58"))),
+ (39,tuple((*relation,f"trigger_{59+index}") for index,relation in enumerate((*TEST_TRIGGER_RELATIONS[1:5],*TEST_TRIGGER_RELATIONS[41:])))),
+)
+TEST_TRIGGER_MUTABLE_ROWS=list(POST_DATA_ROWS); TEST_TRIGGER_ROWS=[]
+for test_run,test_descriptors in TEST_TRIGGER_DESCRIPTORS_BY_RUN:
+ test_start=sum(count for unused_owner,count in EXPECTED_POST_DATA_OWNER_RUNS[:test_run-1])
+ test_rows=tuple(f"{3000+test_start+index}; {12000+test_start+index} {22000+test_start+index} TRIGGER {schema} {table} {trigger} privacy_workflow_owner\n".encode() for index,(schema,table,trigger) in enumerate(test_descriptors))
+ TEST_TRIGGER_MUTABLE_ROWS[test_start:test_start+len(test_rows)]=test_rows; TEST_TRIGGER_ROWS.extend(test_rows)
+TEST_TRIGGER_ROWS=tuple(TEST_TRIGGER_ROWS)
+TEST_TRIGGER_TOC_BYTES=b"; canonical post-data TOC\n\n"+b"".join(TEST_TRIGGER_MUTABLE_ROWS)+b"; canonical trailer\n"
 TEST_TRIGGER_RUNS=recovery._post_data_use_lists(TEST_TRIGGER_TOC_BYTES)
 TEST_TRIGGER_ROOT=hashlib.sha256(recovery.canonical_bytes([list(relation) for relation in TEST_TRIGGER_RELATIONS])).hexdigest()
 def _test_trigger_sha256(payload):
@@ -1036,7 +1044,7 @@ class ControllerTests(unittest.TestCase):
  def test_data_use_lists_partition_exact_source_pinned_owners_and_all_other_data_once(self):
   postgres,privacy,privacy_relations=recovery._data_use_lists(SCHEMA_TOC)
   self.assertEqual((postgres,privacy,privacy_relations),recovery._data_use_lists(SCHEMA_TOC))
-  self.assertEqual(tuple(("privacy_retention",f"privacy_{index}") for index in range(46)),privacy_relations)
+  self.assertEqual(tuple(("privacy_retention",f"privacy_{index}") for index in range(61)),privacy_relations)
   self.assertEqual({
    ("ocr_private","ocr_daily_quota_reservations"),
    ("provider_budget_private","admin_provider_budget_policies"),
@@ -1052,8 +1060,8 @@ class ControllerTests(unittest.TestCase):
   for entry in NON_TABLE_DATA.splitlines(keepends=True):
    self.assertIn(entry,postgres)
    self.assertIn(b";"+entry,privacy)
-  self.assertEqual(63,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in postgres.splitlines()))
-  self.assertEqual(46,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in privacy.splitlines()))
+  self.assertEqual(50,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in postgres.splitlines()))
+  self.assertEqual(61,sum(not line.startswith(b";") and b" TABLE DATA " in line for line in privacy.splitlines()))
 
  def test_data_use_lists_reject_owner_count_owner_alias_managed_data_and_classification_drift(self):
   required_relation_mutations=(
@@ -1081,8 +1089,8 @@ class ControllerTests(unittest.TestCase):
    SCHEMA_TOC.replace(POSTGRES_TABLE_DATA[0],b"",1),
    SCHEMA_TOC.replace(b"privacy_retention privacy_0",b"auth privacy_0",1),
    SCHEMA_TOC.replace(b"TABLE DATA public postgres_0",b"TABLE  DATA public postgres_0",1),
-   SCHEMA_TOC.replace(b"public postgres_58 postgres",b"public postgres_0 postgres",1),
-   SCHEMA_TOC.replace(b"1058; 0 2058 TABLE DATA",b"1000; 0 2058 TABLE DATA",1),
+   SCHEMA_TOC.replace(b"public postgres_45 postgres",b"public postgres_0 postgres",1),
+   SCHEMA_TOC.replace(b"1045; 0 2045 TABLE DATA",b"1000; 0 2045 TABLE DATA",1),
    SCHEMA_TOC.replace(b"privacy_workflow_owner\n",b"privacy_workflow_owner extra\n",1),
   )
   for mutation in mutations:
@@ -1093,7 +1101,7 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(EXPECTED_POST_DATA_OWNER_RUNS,recovery.POST_DATA_OWNER_RUNS)
   use_lists=recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
   self.assertEqual(tuple(owner for owner,unused in use_lists),tuple(owner for owner,unused in EXPECTED_POST_DATA_OWNER_RUNS))
-  self.assertEqual(33,len(use_lists))
+  self.assertEqual(90,len(use_lists))
   source_lines=POST_DATA_TOC_BYTES.splitlines(keepends=True); selected=[]
   for (owner,count),(actual_owner,payload) in zip(EXPECTED_POST_DATA_OWNER_RUNS,use_lists):
    self.assertEqual(owner,actual_owner)
@@ -1119,10 +1127,10 @@ class ControllerTests(unittest.TestCase):
   for raw in malformed:
    with self.subTest(raw=raw[:100]),self.assertRaises(recovery.RecoveryError):
     recovery._post_data_use_lists(raw)
-  runs=list(EXPECTED_POST_DATA_OWNER_RUNS); runs[0]=("supabase_auth_admin",32); runs[1]=("privacy_workflow_owner",98)
+  runs=list(EXPECTED_POST_DATA_OWNER_RUNS); runs[0]=("privacy_workflow_owner",2); runs[3]=("privacy_workflow_owner",82)
   with patch.object(recovery,"POST_DATA_OWNER_RUNS",tuple(runs)),self.assertRaisesRegex(recovery.RecoveryError,"run drift"):
    recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
-  counts=list(EXPECTED_POST_DATA_OWNER_COUNTS); counts[0]=("postgres",571)
+  counts=list(EXPECTED_POST_DATA_OWNER_COUNTS); counts[0]=("postgres",453)
   with patch.object(recovery,"POST_DATA_OWNER_COUNTS",tuple(counts)),self.assertRaisesRegex(recovery.RecoveryError,"count drift"):
    recovery._post_data_use_lists(POST_DATA_TOC_BYTES)
  def test_post_data_use_list_validation_rejects_omission_duplication_and_owner_mutation(self):
@@ -1141,16 +1149,21 @@ class ControllerTests(unittest.TestCase):
   source=(SCRIPTS/"g035_hosted_recovery.py").read_text(encoding="utf-8")
   self.assertIn('post_data_toc=run([restore,"--section=post-data","--list",str(plain)]',source)
   self.assertIn('argv=[restore,"--section=post-data",f"--use-list={path}",f"--role={owner}","--dbname=service=g035-local",str(plain)]',source)
+  self.assertIn('POST_DATA_PRIVACY_TRIGGER_RUNS = ((35,57),(37,2),(39,13))',source)
+  self.assertNotIn('POST_DATA_PRIVACY_TRIGGER_RUN =',source)
   self.assertNotIn('run([restore,"--section=post-data","--dbname=service=g035-local",str(plain)]',source)
   self.assertNotIn("--no-owner",source); self.assertNotIn("--no-acl",source)
  def test_post_data_storage_auth_schema_authority_pins_run_role_schema_owner_and_rejects_mutation(self):
-  self.assertEqual((25,"supabase_storage_admin","auth","supabase_admin"),recovery.POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY)
-  self.assertEqual(("supabase_storage_admin",18),recovery.POST_DATA_OWNER_RUNS[24])
+  self.assertEqual((82,"supabase_storage_admin","auth","supabase_admin"),recovery.POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY)
+  self.assertEqual(("supabase_storage_admin",18),recovery.POST_DATA_OWNER_RUNS[81])
   recovery._validate_post_data_storage_auth_schema_contract()
-  mutations=([25,"supabase_storage_admin","auth","supabase_admin"],(24,"supabase_storage_admin","auth","supabase_admin"),(25,"postgres","auth","supabase_admin"),(25,"supabase_storage_admin","storage","supabase_admin"),(25,"supabase_storage_admin","auth","postgres"))
+  mutations=([82,"supabase_storage_admin","auth","supabase_admin"],(81,"supabase_storage_admin","auth","supabase_admin"),(82,"postgres","auth","supabase_admin"),(82,"supabase_storage_admin","storage","supabase_admin"),(82,"supabase_storage_admin","auth","postgres"))
   for mutation in mutations:
    with self.subTest(mutation=mutation),patch.object(recovery,"POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY",mutation),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
     recovery._validate_post_data_storage_auth_schema_contract()
+  runs=list(recovery.POST_DATA_OWNER_RUNS); runs[81]=("supabase_storage_admin",17)
+  with patch.object(recovery,"POST_DATA_OWNER_RUNS",tuple(runs)),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+   recovery._validate_post_data_storage_auth_schema_contract()
   self.assertIn("coalesce(namespace.nspacl,pg_catalog.acldefault('n',namespace.nspowner))",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
   self.assertIn("pg_catalog.has_schema_privilege(target.oid,namespace.oid,'USAGE')",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
   self.assertIn("EXISTS (SELECT 1 FROM pg_catalog.aclexplode(namespace.nspacl)",recovery.POST_DATA_SCHEMA_AUTHORITY_SQL)
@@ -1193,25 +1206,25 @@ class ControllerTests(unittest.TestCase):
   privilege_sql=[sql for sql in statements if sql.startswith(("GRANT ","REVOKE "))]
   self.assertFalse(any(any(forbidden in sql for forbidden in (" PUBLIC"," ALL "," CREATE ","privacy_workflow_owner")) for sql in privilege_sql))
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
- def test_post_data_storage_auth_schema_window_is_bounded_to_run_25_and_cleans_up_on_failure(self):
+ def test_post_data_storage_auth_schema_window_is_bounded_to_run_82_and_cleans_up_on_failure(self):
   events=[]; baseline=("baseline",)
   def authority(unused_env,operation,*args):
    events.append(("authority",operation,args))
    return baseline if operation is recovery._open_post_data_storage_auth_schema_window else None
   def execute(argv,**unused):
    events.append(("run",argv))
-   if "--use-list=run-25.list" in argv: raise recovery.RecoveryError("run 25 failed")
+   if "--use-list=run-82.list" in argv: raise recovery.RecoveryError("run 82 failed")
   with patch.object(recovery,"_with_post_data_storage_auth_schema_connection",side_effect=authority),patch.object(recovery,"run",side_effect=execute):
-   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},24,"postgres",Path("run-24.list"))
-   with self.assertRaisesRegex(recovery.RecoveryError,"run 25 failed"):
-    recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},25,"supabase_storage_admin",Path("run-25.list"))
-   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},26,"supabase_auth_admin",Path("run-26.list"))
+   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},81,"postgres",Path("run-81.list"))
+   with self.assertRaisesRegex(recovery.RecoveryError,"run 82 failed"):
+    recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},82,"supabase_storage_admin",Path("run-82.list"))
+   recovery._restore_post_data_owner_run("pg_restore",Path("database.pgdump"),{},83,"supabase_auth_admin",Path("run-83.list"))
   self.assertEqual([
-   ("run",["pg_restore","--section=post-data","--use-list=run-24.list","--role=postgres","--dbname=service=g035-local","database.pgdump"]),
+   ("run",["pg_restore","--section=post-data","--use-list=run-81.list","--role=postgres","--dbname=service=g035-local","database.pgdump"]),
    ("authority",recovery._open_post_data_storage_auth_schema_window,()),
-   ("run",["pg_restore","--section=post-data","--use-list=run-25.list","--role=supabase_storage_admin","--dbname=service=g035-local","database.pgdump"]),
+   ("run",["pg_restore","--section=post-data","--use-list=run-82.list","--role=supabase_storage_admin","--dbname=service=g035-local","database.pgdump"]),
    ("authority",recovery._close_post_data_storage_auth_schema_window,(baseline,)),
-   ("run",["pg_restore","--section=post-data","--use-list=run-26.list","--role=supabase_auth_admin","--dbname=service=g035-local","database.pgdump"]),
+   ("run",["pg_restore","--section=post-data","--use-list=run-83.list","--role=supabase_auth_admin","--dbname=service=g035-local","database.pgdump"]),
   ],events)
  def test_post_data_trigger_authority_pins_exact_roles_signatures_owners_and_schema(self):
   self.assertEqual((
@@ -1445,27 +1458,36 @@ class ControllerTests(unittest.TestCase):
   self.assertEqual(20,len(privilege_sql))
   self.assertFalse(any("*" in sql or " PUBLIC" in sql or " ALL " in sql or " CREATE " in sql or any(privilege in sql for privilege in (" INSERT "," SELECT "," UPDATE "," DELETE "," TRIGGER "," TRUNCATE "," MAINTAIN ")) for sql in privilege_sql))
   self.assertEqual(2,conn.commits); self.assertEqual(0,conn.rollbacks)
- def test_post_data_table_trigger_scope_is_strictly_derived_from_exact_run_and_root(self):
-  self.assertEqual(13,recovery.POST_DATA_PRIVACY_TRIGGER_RUN)
-  self.assertEqual(38,recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT)
-  self.assertEqual("b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d",recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT)
+ def test_post_data_table_trigger_scope_is_strictly_derived_from_exact_runs_and_root(self):
+  self.assertEqual(((35,57),(37,2),(39,13)),recovery.POST_DATA_PRIVACY_TRIGGER_RUNS)
+  self.assertEqual(50,recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT)
+  self.assertEqual("cbc67324f680a0e0d5bd9861e69e313dd86f2bc00d0da462fe1861c5c7de3dae",recovery.POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT)
   with patch.object(recovery.hashlib,"sha256",side_effect=_test_trigger_sha256):
    self.assertEqual(TEST_TRIGGER_RELATIONS,recovery._post_data_privacy_trigger_relations(TEST_TRIGGER_RUNS))
-   run_payload=TEST_TRIGGER_RUNS[12][1]
+   run_payload=TEST_TRIGGER_RUNS[34][1]
    mutations=(
     run_payload.replace(b"TRIGGER public trigger_table_0 trigger_0",b"CONSTRAINT public trigger_table_0 trigger_0",1),
-    run_payload.replace(b"TRIGGER public trigger_table_0 trigger_0",b"TRIGGER public trigger_table_0 trigger_18",1),
+    run_payload.replace(b"TRIGGER public trigger_table_0 trigger_0",b"TRIGGER public trigger_table_0 trigger_40",1),
     run_payload.replace(b"TRIGGER public trigger_table_0",b"TRIGGER changed trigger_table_0",1),
     run_payload.replace(b"trigger_0 privacy_workflow_owner\n",b"trigger_0 postgres\n",1),
     run_payload.replace(TEST_TRIGGER_ROWS[0],b";"+TEST_TRIGGER_ROWS[0],1),
-    run_payload.replace(b";"+POST_DATA_ROWS[33],POST_DATA_ROWS[33],1),
+    run_payload.replace(b";"+POST_DATA_ROWS[0],POST_DATA_ROWS[0],1),
    )
    for payload in mutations:
-    runs=(*TEST_TRIGGER_RUNS[:12],(recovery.PRIVACY_DATA_ROLE,payload),*TEST_TRIGGER_RUNS[13:])
+    runs=(*TEST_TRIGGER_RUNS[:34],(recovery.PRIVACY_DATA_ROLE,payload),*TEST_TRIGGER_RUNS[35:])
     with self.subTest(payload=payload),self.assertRaises(recovery.RecoveryError):
+     recovery._post_data_privacy_trigger_relations(runs)
+   for run in (37,39):
+    original=TEST_TRIGGER_RUNS[run-1][1]
+    active=next(line for line in original.splitlines(keepends=True) if not line.startswith(b";") and b" TRIGGER " in line)
+    payload=original.replace(active,active.replace(b" TRIGGER ",b" CONSTRAINT ",1),1)
+    runs=(*TEST_TRIGGER_RUNS[:run-1],(recovery.PRIVACY_DATA_ROLE,payload),*TEST_TRIGGER_RUNS[run:])
+    with self.subTest(run=run),self.assertRaisesRegex(recovery.RecoveryError,"descriptor invalid"):
      recovery._post_data_privacy_trigger_relations(runs)
   self.assertNotIn("relations",recovery._restore_post_data_with_trigger_authority.__code__.co_varnames[:6])
   with patch.object(recovery,"POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT","0"*64),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
+   recovery._validate_post_data_privacy_trigger_contract()
+  with patch.object(recovery,"POST_DATA_PRIVACY_TRIGGER_RUNS",((35,57),(37,2))),self.assertRaisesRegex(recovery.RecoveryError,"contract invalid"):
    recovery._validate_post_data_privacy_trigger_contract()
  def test_post_data_table_trigger_window_preserves_heterogeneous_acl_and_grants_exact_subset(self):
   relations=TEST_TRIGGER_RELATIONS
@@ -1842,7 +1864,7 @@ class ControllerTests(unittest.TestCase):
    self.assertLess(pre_index,data_indices[0])
    self.assertLess(data_indices[0],data_indices[1])
    self.assertLess(data_indices[1],post_index)
-   self.assertEqual(33,len(post_indices))
+   self.assertEqual(90,len(post_indices))
    self.assertEqual(list(range(post_indices[0],post_indices[-1]+1)),post_indices)
    plain_path=events[data_indices[0]][1][-1]
    postgres_list=next(argument.split("=",1)[1] for argument in events[data_indices[0]][1] if argument.startswith("--use-list="))
