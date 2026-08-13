@@ -66,15 +66,19 @@ import {
   issueAccountDeletionReauthenticationProof,
 } from "@/lib/privacy/account-deletion-reauth";
 import {
-  classifyProfileAvatarUrl,
-  getProfileAvatarDeletionKey,
   resolveProfileAvatarUrl,
 } from "@/lib/profile-avatar-url";
+import {
+  clearCurrentProfileAvatar,
+  updateCurrentProfileNickname,
+  uploadCurrentProfileAvatar,
+} from "@/lib/profile-mutation";
+import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 interface Profile {
   nickname: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
 }
 
 const accountDeletionFailureMessages: Record<string, string> = {
@@ -411,8 +415,7 @@ export default function ProfilePage() {
       const data = await readPublicProfileSummaries(supabase, [user.id]);
 
       if (data && data.length > 0) {
-        const profileData = data[0] as Profile;
-        setProfile(profileData);
+        setProfile(data[0]);
       } else {
         setProfile(null);
       }
@@ -461,6 +464,9 @@ export default function ProfilePage() {
 
   const displayName =
     profile?.nickname || userProfile?.nickname || profileNickname || "사용자";
+  const currentAvatarReference = profile !== null
+    ? profile.avatar_url ?? null
+    : userProfile?.avatarUrl ?? null;
 
   useEffect(() => {
     if (!isMobileNicknameEditing) {
@@ -471,6 +477,17 @@ export default function ProfilePage() {
     accountDeletionPollController.current?.abort();
     setDeletionSession(null);
   }, []);
+
+  const refreshProfileAvatarQueries = async () => {
+    if (!user) return;
+    await invalidateProfileDisplayQueries(queryClient, user.id);
+  };
+
+  const refreshLocalProfileState = async () => {
+    if (!user) return;
+    const [latestProfile] = await readPublicProfileSummaries(supabase, [user.id]);
+    setProfile(latestProfile ?? null);
+  };
 
   const handleMobileNicknameChange = async () => {
     if (!user || !mobileNicknameInput.trim()) {
@@ -486,18 +503,17 @@ export default function ProfilePage() {
 
     setMobileNicknameSaving(true);
     try {
-      const { error } = await supabase
-        .from("profiles" as never)
-        .update({ nickname: nextNickname } as never)
-        .eq("user_id", user.id);
+      const receipt = await updateCurrentProfileNickname(
+        supabase,
+        user.id,
+        nextNickname,
+      );
 
-      if (error) throw error;
-
-      setProfile((prev) => ({
-        nickname: nextNickname,
-        avatar_url: prev?.avatar_url,
-      }));
-      await queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+      setProfile({
+        nickname: receipt.profile.nickname,
+        avatar_url: receipt.profile.avatarReference,
+      });
+      await refreshProfileAvatarQueries();
       setIsMobileNicknameEditing(false);
       router.refresh();
       toast.success("닉네임이 변경되었습니다");
@@ -528,50 +544,33 @@ export default function ProfilePage() {
     try {
       const { compressImage } = await import("@/lib/image-utils");
       const compressedBlob = await compressImage(file);
-      const filePath = `${user.id}/avatar.jpg`;
-
-      const oldAvatarDeletionKey = getProfileAvatarDeletionKey(
-        profile?.avatar_url,
+      const result = await uploadCurrentProfileAvatar(
+        supabase,
         user.id,
+        currentAvatarReference,
+        compressedBlob,
       );
-      if (oldAvatarDeletionKey) {
-        await supabase.storage
-          .from("profile-avatars")
-          .remove([oldAvatarDeletionKey]);
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from("profile-avatars")
-        .upload(filePath, compressedBlob, {
-          upsert: true,
-          contentType: "image/jpeg",
-        });
-
-      if (uploadError) throw uploadError;
-
-      const baseUrl = supabase.storage
-        .from("profile-avatars")
-        .getPublicUrl(filePath).data.publicUrl;
-      const publicUrl = resolveProfileAvatarUrl(baseUrl, user.id);
-      if (!publicUrl) throw new Error("profile_avatar_url_unavailable");
-      const { error: updateError } = await supabase
-        .from("profiles" as never)
-        .update({ avatar_url: publicUrl } as never)
-        .eq("user_id", user.id);
-
-      if (updateError) throw updateError;
 
       setProfile((prev) => ({
         nickname: prev?.nickname || displayName,
-        avatar_url: publicUrl,
+        avatar_url: result.receipt.profile.avatarReference,
       }));
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
-      queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
+      await refreshProfileAvatarQueries();
       router.refresh();
-      toast.success("프로필 사진이 변경되었습니다");
+      if (result.cleanup.status === "pending") {
+        toast.warning("프로필 사진은 변경되었지만 이전 사진 정리가 지연되고 있습니다");
+      } else {
+        toast.success("프로필 사진이 변경되었습니다");
+      }
     } catch {
+      try {
+        await Promise.all([
+          refreshLocalProfileState(),
+          refreshProfileAvatarQueries(),
+        ]);
+      } catch {
+        // The fixed failure remains fail closed when authoritative refresh is unavailable.
+      }
       toast.error("프로필 사진 업로드에 실패했습니다");
     } finally {
       setMobileAvatarUploading(false);
@@ -580,41 +579,37 @@ export default function ProfilePage() {
   };
 
   const handleMobileAvatarDelete = async () => {
-    if (!user || !profile?.avatar_url) return;
+    if (!user || currentAvatarReference === null) return;
     if (!confirm("프로필 사진을 삭제하시겠습니까?")) return;
 
     setMobileAvatarUploading(true);
     try {
-      const avatar = classifyProfileAvatarUrl(profile.avatar_url, user.id);
-      if (avatar.kind === "invalid") {
-        throw new Error("profile_avatar_delete_key_unavailable");
-      }
-
-      if (avatar.kind === "owned_storage") {
-        const { error: removeError } = await supabase.storage
-          .from("profile-avatars")
-          .remove([avatar.storageKey]);
-        if (removeError) throw removeError;
-      }
-
-      const { error: updateError } = await supabase
-        .from("profiles" as never)
-        .update({ avatar_url: null } as never)
-        .eq("user_id", user.id);
-
-      if (updateError) throw updateError;
+      const result = await clearCurrentProfileAvatar(
+        supabase,
+        user.id,
+        currentAvatarReference,
+      );
 
       setProfile((prev) => ({
         nickname: prev?.nickname || displayName,
-        avatar_url: undefined,
+        avatar_url: null,
       }));
-      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
-      queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
+      await refreshProfileAvatarQueries();
       router.refresh();
-      toast.success("프로필 사진이 삭제되었습니다");
+      if (result.cleanup.status === "pending") {
+        toast.warning("프로필 사진은 삭제되었지만 이전 사진 정리가 지연되고 있습니다");
+      } else {
+        toast.success("프로필 사진이 삭제되었습니다");
+      }
     } catch {
+      try {
+        await Promise.all([
+          refreshLocalProfileState(),
+          refreshProfileAvatarQueries(),
+        ]);
+      } catch {
+        // The fixed failure remains fail closed when authoritative refresh is unavailable.
+      }
       toast.error("프로필 사진 삭제에 실패했습니다");
     } finally {
       setMobileAvatarUploading(false);
@@ -887,8 +882,8 @@ export default function ProfilePage() {
 
   // Render only a canonical avatar URL bound to the signed-in user.
   const avatarUrl =
-    resolveProfileAvatarUrl(profile?.avatar_url, user.id)
-    ?? resolveProfileAvatarUrl(userProfile?.avatarUrl, user.id);
+    resolveProfileAvatarUrl(currentAvatarReference, user.id);
+  const hasAvatarReference = currentAvatarReference !== null;
   const isMobileNicknameUnchanged = mobileNicknameInput.trim() === displayName;
   const tierProgress = getNextUserTierProgress(userProfile?.qualityScore ?? 0);
   const tierRemainingScore = tierProgress.remainingScore;
@@ -1064,7 +1059,7 @@ export default function ProfilePage() {
                   disabled={mobileAvatarUploading}
                 />
               </label>
-              {avatarUrl && (
+              {hasAvatarReference && (
                 <button
                   type="button"
                   onClick={handleMobileAvatarDelete}

@@ -18,6 +18,7 @@ const playwrightConfigSource = read("playwright.config.ts");
 const healthRouteSource = read("app/api/health/route.ts");
 const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
 const profileReadRpcBoundarySource = read("tests/nightly/local-profile-read-rpc-boundary.ts");
+const profileMutationRpcBoundarySource = read("tests/nightly/local-profile-mutation-rpc-boundary.ts");
 const localSupabaseAdminSpecSource = read("tests/local-supabase-admin.spec.ts");
 const mobileHomeMapSpecSource = read("tests/mobile-home-map.spec.ts");
 const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
@@ -383,6 +384,10 @@ describe("nightly regression package and source contracts", () => {
       "const LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY = '{}'",
       "isAllowedLocalProfileReadRpcRequest({",
       "isAllowedLocalProfileReadRpcPreflightRequest({",
+      "isAllowedLocalProfileMutationRpcRequest({",
+      "isAllowedLocalProfileMutationRpcPreflightRequest({",
+      "isExactLocalDirectProfileTablePath(url)",
+      "isExactLocalProfileMutationRpcPath(url)",
       "hasEncodedOrMalformedPath(url)",
       "isExactLocalProfileReadRpcPath(url)",
       "LOCAL_PROFILE_LEADERBOARD_PAGE_RPC_PATH",
@@ -397,7 +402,11 @@ describe("nightly regression package and source contracts", () => {
       "postData?.toString('utf8') === LOCAL_NIGHTLY_FUNCTION_BODY",
       "LOCAL_NIGHTLY_STORAGE_UPLOAD_PATH.test(url.pathname)",
       "postData?.toString('base64') === LOCAL_NIGHTLY_STORAGE_WEBP_BASE64",
-      "function isAllowedLocalStorageCleanup(postData: string | null): boolean",
+      "LOCAL_NIGHTLY_PROFILE_AVATAR_UPLOAD_PATH.test(url.pathname)",
+      "postData?.toString('base64') === LOCAL_NIGHTLY_PROFILE_AVATAR_JPEG_BASE64",
+      "function isAllowedLocalStorageCleanup(",
+      "LOCAL_NIGHTLY_PROFILE_AVATAR_OBJECT_PREFIX",
+      "url.pathname === '/storage/v1/object/profile-avatars'",
       "url.pathname === '/storage/v1/object/review-photos'",
       "request.postDataBuffer()",
       "request.headers()",
@@ -430,6 +439,11 @@ describe("nightly regression package and source contracts", () => {
     expect(profileReadRpcBoundarySource).toContain('&& !url.search');
     expect(profileReadRpcBoundarySource).toContain("url.pathname.includes('%')");
     expect(profileReadRpcBoundarySource).toContain('hasDuplicateOrInvalidJsonMemberNames(rawBody)');
+    expect(profileMutationRpcBoundarySource).toContain("method === 'POST'");
+    expect(profileMutationRpcBoundarySource).toContain("MAX_PROFILE_MUTATION_RPC_BODY_BYTES = 32_768");
+    expect(profileMutationRpcBoundarySource).toContain("utf8Length(value) <= 4_096");
+    expect(profileMutationRpcBoundarySource).toContain('hasDuplicateOrInvalidJsonMemberNames(rawBody)');
+    expect(profileMutationRpcBoundarySource).toContain("LOCAL_DIRECT_PROFILE_TABLE_PATH = '/rest/v1/profiles'");
     const outerRouterSource = nightlyFixtureSource.slice(
       nightlyFixtureSource.indexOf("await page.route('**/*'"),
       nightlyFixtureSource.indexOf("const diagnosticsPath = testInfo.outputPath"),
@@ -439,6 +453,15 @@ describe("nightly regression package and source contracts", () => {
     );
     const outerProfileDeny = outerRouterSource.indexOf(
       'isLocalProfileReadRpcPath\n                && !isAllowedProfileReadRpc',
+    );
+    const outerDirectProfileDeny = outerRouterSource.indexOf(
+      'if (isLocalDirectProfileTablePath)',
+    );
+    const outerProfileMutationDeny = outerRouterSource.indexOf(
+      'isLocalProfileMutationRpcPath\n                && !isAllowedProfileMutationRpc',
+    );
+    const outerProfileStorageDeny = outerRouterSource.indexOf(
+      'if (isLocalProfileStoragePath(url) && !isAllowedProfileStorageRequest)',
     );
     const outerEncodedPathDeny = outerRouterSource.indexOf('if (hasEncodedLocalSupabasePath)');
     const outerMutationGate = outerRouterSource.indexOf('isMutationMethod(method)\n                && !(');
@@ -450,6 +473,12 @@ describe("nightly regression package and source contracts", () => {
     expect(outerEncodedPathDeny).toBeLessThan(outerProfileDeny);
     expect(outerEncodedPathDeny).toBeLessThan(outerMutationGate);
     expect(outerEncodedPathDeny).toBeLessThan(realLocalContinue);
+    expect(outerDirectProfileDeny).toBeGreaterThan(outerEncodedPathDeny);
+    expect(outerDirectProfileDeny).toBeLessThan(outerMutationGate);
+    expect(outerProfileMutationDeny).toBeGreaterThan(outerDirectProfileDeny);
+    expect(outerProfileMutationDeny).toBeLessThan(outerMutationGate);
+    expect(outerProfileStorageDeny).toBeGreaterThan(outerProfileMutationDeny);
+    expect(outerProfileStorageDeny).toBeLessThan(outerMutationGate);
     expect(outerProfileDeny).toBeGreaterThan(outerProfilePathGate);
     expect(outerProfileDeny).toBeLessThan(outerMutationGate);
     expect(outerProfileDeny).toBeLessThan(realLocalContinue);
@@ -495,7 +524,7 @@ describe("nightly regression package and source contracts", () => {
     const browserBoundary = sourceBlock(
       localSupabaseAdminSpecSource,
       "test('proves real browser CORS for the local function, owned Storage lifecycle, and Realtime self-broadcast'",
-      "test('authenticates the real synthetic admin, hydrates the console, and proves guarded read, preview, apply, readback and audit'",
+      "test('proves authenticated profile nickname and avatar CAS with exact readback and cleanup'",
     );
     for (const token of [
       "page.on('response', (response) =>",
@@ -529,6 +558,44 @@ describe("nightly regression package and source contracts", () => {
     expect(browserBoundary).not.toContain("response.text()");
   });
 
+  test("proves the real local current-profile mutation lifecycle without raw evidence", () => {
+    const profileMutationBoundary = sourceBlock(
+      localSupabaseAdminSpecSource,
+      "test('proves authenticated profile nickname and avatar CAS with exact readback and cleanup'",
+      "test('authenticates the real synthetic admin, hydrates the console, and proves guarded read, preview, apply, readback and audit'",
+    );
+    for (const token of [
+      "LOCAL_DIRECT_PROFILE_TABLE_PATH",
+      "LOCAL_PROFILE_NICKNAME_MUTATION_RPC_PATH",
+      "LOCAL_PROFILE_AVATAR_CAS_RPC_PATH",
+      "LOCAL_PROFILE_SUMMARIES_RPC_PATH",
+      "p_nickname: 'Nightly CI 검증'",
+      "p_expected_avatar_reference: null",
+      "p_next_avatar_operation_id: avatarOperationId",
+      "marker = `profile-avatar://${storageKey}`",
+      "'Content-Type': 'image/jpeg'",
+      "'x-upsert': 'false'",
+      "p_expected_avatar_reference: marker",
+      "p_next_avatar_operation_id: null",
+      "method: 'HEAD'",
+      "absence.status === 400 || absence.status === 404",
+      "p_nickname: 'Nightly CI'",
+      "directProfilesDenied: true",
+      "finalReadback: true",
+      "} finally {",
+    ]) {
+      expect(profileMutationBoundary).toContain(token);
+    }
+    expect(localSupabaseAdminSpecSource).toContain(
+      "const localProfileAvatarOperationId = '00000000-0000-4000-8000-000000000905'",
+    );
+    expect(profileMutationBoundary).not.toContain("console.");
+    expect(profileMutationBoundary).not.toContain("return loginPayload");
+    expect(profileMutationBoundary).not.toContain("return accessToken");
+    expect(profileMutationBoundary).not.toContain("return userId");
+    expect(profileMutationBoundary).not.toContain("response.text()");
+  });
+
   test("requires an explicit non-conflicting local browser port", () => {
     expect(nightlyRunnerSource).toContain("Local nightly mode requires an explicit APP_PORT that is not the protected 8080 listener.");
     expect(nightlyRunnerSource).toContain("Local nightly APP_PORT must not overlap a generated Supabase service port.");
@@ -552,7 +619,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v1'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 76",
+      "receipt.ledger.length !== 77",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -569,7 +636,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(operationsDocSource).toContain("76-unit migration ledger");
+    expect(operationsDocSource).toContain("77-unit migration ledger");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -813,6 +880,8 @@ describe("nightly regression package and source contracts", () => {
       "python3 backend/supabase/scripts/local-migrate.py verify-prerequisite",
       "python3 backend/supabase/scripts/local-migrate.py apply",
       "python3 backend/supabase/scripts/local-function-runtime-scan.py smoke",
+      "backend/supabase/tests/local_profile_mutation_boundary.sql",
+      '"$state/local-profile-mutation-boundary.log"',
       "python3 backend/supabase/scripts/local-migrate.py receipt",
       "Verify generated Supabase types match the local catalog",
       "bun run supabase:gen-types:local",
@@ -926,6 +995,22 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(localWorkflowSource).toContain(token);
     }
+    const leaderboardBoundary = localWorkflowSource.indexOf(
+      "backend/supabase/tests/local_profile_leaderboard_page.sql",
+    );
+    const mutationBoundary = localWorkflowSource.indexOf(
+      "backend/supabase/tests/local_profile_mutation_boundary.sql",
+    );
+    const migrationReceipt = localWorkflowSource.indexOf(
+      "python3 backend/supabase/scripts/local-migrate.py receipt",
+    );
+    expect(leaderboardBoundary).toBeGreaterThanOrEqual(0);
+    expect(mutationBoundary).toBeGreaterThan(leaderboardBoundary);
+    expect(migrationReceipt).toBeGreaterThan(mutationBoundary);
+    expect(localWorkflowSource).toContain(
+      "psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \\\n" +
+        "            < backend/supabase/tests/local_profile_mutation_boundary.sql",
+    );
     for (const action of [
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
@@ -999,7 +1084,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 76",
+      "EXPECTED_LEDGER_UNITS = 77",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1010,7 +1095,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 76");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 77");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));

@@ -40,6 +40,48 @@ VALUES
     '2026-01-01T00:00:00Z'::timestamptz
   );
 
+DO $remove_trigger_created_profile_state$
+BEGIN
+  IF (SELECT pg_catalog.count(*) FROM public.profiles
+      WHERE user_id BETWEEN
+        '00000000-0000-4000-8000-000000000601'::uuid AND
+        '00000000-0000-4000-8000-000000000604'::uuid) <> 4
+     OR (SELECT pg_catalog.count(*) FROM public.user_roles
+         WHERE user_id BETWEEN
+           '00000000-0000-4000-8000-000000000601'::uuid AND
+           '00000000-0000-4000-8000-000000000604'::uuid
+           AND role::text = 'user') <> 4
+     OR (SELECT pg_catalog.count(*) FROM public.user_stats
+         WHERE user_id BETWEEN
+           '00000000-0000-4000-8000-000000000601'::uuid AND
+           '00000000-0000-4000-8000-000000000604'::uuid) <> 4
+     OR (SELECT pg_catalog.count(*) FROM public.user_account_status
+         WHERE user_id BETWEEN
+           '00000000-0000-4000-8000-000000000601'::uuid AND
+           '00000000-0000-4000-8000-000000000604'::uuid
+           AND account_status = 'active') <> 4 THEN
+    RAISE EXCEPTION 'local_profile_read_trigger_fixture_state_drift';
+  END IF;
+
+  DELETE FROM public.user_account_status
+  WHERE user_id BETWEEN
+    '00000000-0000-4000-8000-000000000601'::uuid AND
+    '00000000-0000-4000-8000-000000000604'::uuid;
+  DELETE FROM public.user_stats
+  WHERE user_id BETWEEN
+    '00000000-0000-4000-8000-000000000601'::uuid AND
+    '00000000-0000-4000-8000-000000000604'::uuid;
+  DELETE FROM public.user_roles
+  WHERE user_id BETWEEN
+    '00000000-0000-4000-8000-000000000601'::uuid AND
+    '00000000-0000-4000-8000-000000000604'::uuid;
+  DELETE FROM public.profiles
+  WHERE user_id BETWEEN
+    '00000000-0000-4000-8000-000000000601'::uuid AND
+    '00000000-0000-4000-8000-000000000604'::uuid;
+END
+$remove_trigger_created_profile_state$;
+
 INSERT INTO public.profiles (
   id, user_id, nickname, email, avatar_url, created_at, last_login
 )

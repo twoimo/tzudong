@@ -860,11 +860,11 @@ class G026BundleTests(unittest.TestCase):
         self.assertEqual(
             binding,
             {
-                'canonicalPath': 'backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql',
-                'filename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
-                'predecessorFilename': '20260812000600_local_profile_read_boundary_convergence.sql',
-                'sourceSha256': 'c03c0833294875be06d7cff6d513f7c7ddaf263514b7148bc3db22a29ac3bd17',
-                'sourceByteLength': 29279,
+                'canonicalPath': 'backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql',
+                'filename': '20260813085342_current_profile_mutation_boundary.sql',
+                'predecessorFilename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
+                'sourceSha256': '15f4d240222d4b7abdbfd0b27a5c36142a2f61c4cc9d9fdf4638588fee9b29e3',
+                'sourceByteLength': 56880,
                 'transactionClass': 'self_committing',
             },
         )
@@ -876,13 +876,13 @@ class G026BundleTests(unittest.TestCase):
             ROOT / 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
         ).read_text(encoding='utf8')
         self.assertIn(
-            '20260812000700_local_profile_leaderboard_page_convergence.sql)',
+            '20260813085342_current_profile_mutation_boundary.sql)',
             generator,
         )
         self.assertIn('self-contained-replay:${migration##*/}', generator)
         self.assertIn("jq -er '.selfContainedReplay.canonicalPath'", generator)
         self.assertNotIn(
-            '20260812000700_local_profile_leaderboard_page_convergence.sql)',
+            '20260813085342_current_profile_mutation_boundary.sql)',
             generator[
                 generator.index('20260713002100_g014_privacy_workflows.sql|'):
                 generator.index('20260801000300_g016_onboarding_allowlist_freshness.sql)')

@@ -17,6 +17,8 @@ import { User } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_COMPACT_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
+import { updateCurrentProfileNickname } from "@/lib/profile-mutation";
+import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";
 
 interface NicknameSetupModalProps {
     isOpen: boolean;
@@ -66,31 +68,10 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
 
         setLoading(true);
         try {
-            // 닉네임 중복 확인
-            const { data: existingProfile, error: checkError } = await supabase
-                .from('profiles')
-                .select('nickname')
-                .eq('nickname', nickname.trim())
-                .maybeSingle();
+            await updateCurrentProfileNickname(supabase, user.id, nickname.trim());
 
-            if (existingProfile && !checkError) {
-                toast.error('이미 사용 중인 닉네임입니다');
-                setLoading(false);
-                return;
-            }
-
-            // 프로필 업데이트 (닉네임만)
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    nickname: nickname.trim()
-                } as never)
-                .eq('user_id', user.id);
-
-            if (error) throw error;
-
-            // 리더보드 등 캐시 무효화 - 즉시 반영
-            await queryClient.invalidateQueries({ queryKey: ['leaderboard-all-users'] });
+            // 프로필을 표시하는 모든 활성 화면에 즉시 반영
+            await invalidateProfileDisplayQueries(queryClient, user.id);
 
             toast.success('닉네임이 설정되었습니다! 다시 오신 것을 환영합니다 🎉');
 
@@ -98,15 +79,8 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
             setTimeout(() => {
                 onComplete();
             }, 500);
-        } catch (error) {
-            const err = error as { code?: string; message?: string };
-            if (err.code === '23505') {
-                // UNIQUE constraint violation
-                toast.error('이미 사용 중인 닉네임입니다');
-            } else {
-                toast.error('닉네임 설정에 실패했습니다');
-            }
-            console.error('Nickname setup error:');
+        } catch {
+            toast.error('닉네임 설정에 실패했습니다');
         } finally {
             setLoading(false);
         }
