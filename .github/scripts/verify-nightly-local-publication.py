@@ -904,8 +904,15 @@ def verify_runtime_receipt(payload: dict[str, object], name: str) -> None:
     allowed_case_classes = {
         "closure_candidate", "in_function_guard", "read_only", "mutating", "external",
     }
-    seen_rpcs: set[str] = set()
+    seen_candidate_rpcs: set[str] = set()
+    seen_general_rpcs: set[str] = set()
     for case in cases:
+        case_class = case.get("class") if isinstance(case, dict) else None
+        seen_rpcs = (
+            seen_candidate_rpcs
+            if case_class == "closure_candidate"
+            else seen_general_rpcs
+        )
         if (
             not isinstance(case, dict)
             or set(case) != {"rpc", "class", "status", "errorClass"}

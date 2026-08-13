@@ -616,6 +616,70 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "runtime success contract mismatch"):
                 verifier.verify(root)
 
+    def test_accepts_one_candidate_and_general_proof_for_the_same_rpc(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payloads = self._write_bundle(root)
+            smoke = payloads["local-closure-smoke.json"]["rpcSmoke"]
+            candidate = next(
+                case for case in smoke["cases"]
+                if case["class"] == "closure_candidate"
+            )
+            smoke["cases"].append({
+                "rpc": candidate["rpc"],
+                "class": "read_only",
+                "status": "passed",
+                "errorClass": None,
+            })
+            smoke["passed"] += 1
+            (root / "local-closure-smoke.json").write_text(
+                json.dumps(
+                    payloads["local-closure-smoke.json"],
+                    separators=(",", ":"),
+                ),
+                encoding="utf-8",
+            )
+            verifier.verify(root)
+
+    def test_rejects_duplicate_rpc_proofs_within_candidate_or_general_proofs(self) -> None:
+        for proof_group in ("candidate", "general"):
+            with self.subTest(proof_group=proof_group):
+                with tempfile.TemporaryDirectory() as raw:
+                    root = Path(raw)
+                    payloads = self._write_bundle(root)
+                    smoke = payloads["local-closure-smoke.json"]["rpcSmoke"]
+                    if proof_group == "candidate":
+                        source = next(
+                            case for case in smoke["cases"]
+                            if case["class"] == "closure_candidate"
+                        )
+                        smoke["cases"].append(dict(source))
+                    else:
+                        smoke["cases"].extend((
+                            {
+                                "rpc": "public.duplicate_general_fixture()",
+                                "class": "read_only",
+                                "status": "passed",
+                                "errorClass": None,
+                            },
+                            {
+                                "rpc": "public.duplicate_general_fixture()",
+                                "class": "mutating",
+                                "status": "passed",
+                                "errorClass": None,
+                            },
+                        ))
+                        smoke["passed"] += 2
+                    (root / "local-closure-smoke.json").write_text(
+                        json.dumps(
+                            payloads["local-closure-smoke.json"],
+                            separators=(",", ":"),
+                        ),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(SystemExit, "runtime case mismatch"):
+                        verifier.verify(root)
+
     def test_rejects_failed_image_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
