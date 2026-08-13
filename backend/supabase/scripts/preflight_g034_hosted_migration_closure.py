@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / ".github/g034-hosted-migration-closure.v1.json"
-EXPECTED_MANIFEST_SHA256 = "1f568404418009d191c27a0d8e525306b98b9e1472f4056d1f347907c500a8e1"
+EXPECTED_MANIFEST_SHA256 = "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95"
 TOP_KEYS = {"schemaVersion", "ledgerTerminalVersion", "closureTerminalVersion", "requiredLaterPromotionGate", "migrations", "excludedVersions", "cloneBackupRecoveryRequired"}
 ENTRY_KEYS = {"version", "name", "path", "sha256"}
 HASH = re.compile(r"[0-9a-f]{64}\Z")
@@ -19,7 +19,7 @@ RISK = re.compile(r"(?im)^\s*(?:begin|commit|rollback|savepoint|release\s+savepo
 EXPECTED_SEMANTICS = {
     "schemaVersion": 1,
     "ledgerTerminalVersion": "20260531084516",
-    "closureTerminalVersion": "20260713002400",
+    "closureTerminalVersion": "20260801000300",
     "requiredLaterPromotionGate": "20260713002500_g014_catalog_contract.sql",
     "cloneBackupRecoveryRequired": True,
 }
@@ -246,7 +246,7 @@ def load_manifest(path):
 
 def validate_sources(manifest, report):
     entries = manifest["migrations"]
-    if len(entries) != 28:
+    if len(entries) != 29:
         fail(report, "manifest-closure-count")
     previous_version = None
     source_hashes = []
