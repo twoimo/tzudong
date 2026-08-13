@@ -4207,11 +4207,10 @@ describe("web quality performance source contracts", () => {
     expect(stampSource).not.toContain("queryKey: ['restaurants-stamp']");
 
     expect(leaderboardSource).toContain(
-      ".select('id, user_id, is_verified, created_at, like_count')",
+      "readCompletePublicProfileLeaderboard(supabase, period)",
     );
-    expect(leaderboardSource).not.toContain(
-      "const reviewIds = allReviewsData.map",
-    );
+    expect(leaderboardSource).not.toContain(".from('profiles')");
+    expect(leaderboardSource).not.toContain(".from('reviews')");
     expect(userProfileSource).toContain("USER_PROFILE_RESTAURANT_SELECT");
     expect(userProfileSource).toContain("viewerLikesResult");
     expect(userProfileSource).toContain("likeCount: r.like_count || 0");
@@ -4323,8 +4322,9 @@ describe("web quality performance source contracts", () => {
     expect(proxySecuritySource).toContain("\"frame-ancestors 'none'\"");
     expect(proxySecuritySource).toContain("'strict-dynamic'");
     expect(middlewareSecuritySource).toContain("request: { headers: forwardedRequestHeaders }");
-    expect(layoutSource).toContain('import Script from "next/script"');
-    expect(layoutSource).toContain('<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />');
+    expect(layoutSource).not.toContain('import Script from "next/script"');
+    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).toContain('nonce={nonce}');
     for (const staticRoute of [
       "/images/:path*",
       "/fonts/:path*",
@@ -4398,11 +4398,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
     expect(layoutSource).toContain('href="//static.naver.net"');
-    expect(layoutSource).toContain(
-      '<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />',
-    );
-    expect(layoutSource).toContain('import Script from "next/script"');
-    expect(layoutSource).toContain('strategy="beforeInteractive"');
+    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).toContain('nonce={nonce}');
+    expect(layoutSource).not.toContain('import Script from "next/script"');
+    expect(layoutSource).not.toContain('strategy="beforeInteractive"');
     expect(layoutSource).toContain('import localFont from "next/font/local"');
     expect(layoutSource).toContain(
       'import { Noto_Serif_KR } from "next/font/google"',

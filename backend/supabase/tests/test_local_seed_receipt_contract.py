@@ -81,7 +81,11 @@ def _receipt_rows(include_order_drift: bool = False):
         ["functions", "public", "sample()", "void", False, "volatile", [], "a" * 64],
         ["policies", "public", "sample", "sample_policy", "SELECT", ["anon"], "true", None],
         ["triggers", "public", "sample", "sample_trigger", "BEFORE", ["INSERT"], "CREATE TRIGGER"],
+        ["storage_buckets", "ad-banner-images", "ad-banner-images", True, 52428800, ["image/*", "video/*"]],
         ["storage_buckets", "avatars", "avatars", True, 52428800, ["image/*"]],
+        ["storage_buckets", "profile-avatars", "profile-avatars", True, 2097152, ["image/*"]],
+        ["storage_buckets", "review-photos", "review-photos", True, 5242880, ["image/*"]],
+        ["storage_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False, 10485760, ["image/png"]],
         ["storage_policies", "storage", "objects", "local_nightly_avatar_insert", "INSERT", ["authenticated"], None, "(bucket_id = 'avatars'::text)"],
         [
             "storage_policies",
@@ -93,15 +97,142 @@ def _receipt_rows(include_order_drift: bool = False):
             "(bucket_id = 'avatars'::text)",
             None,
         ],
+        ["storage_policies", "storage", "objects", "tzudong_ad_banner_delete_admin", "DELETE", ["authenticated"], "ad-banner-images user_roles user_account_status active foldername uid()", None],
+        ["storage_policies", "storage", "objects", "tzudong_ad_banner_insert_admin", "INSERT", ["authenticated"], None, "ad-banner-images user_roles user_account_status active foldername uid()"],
+        ["storage_policies", "storage", "objects", "tzudong_ad_banner_update_admin", "UPDATE", ["authenticated"], "ad-banner-images user_roles user_account_status active foldername uid()", "ad-banner-images user_roles user_account_status active foldername uid()"],
+        ["storage_policies", "storage", "objects", "tzudong_profile_avatar_delete_own", "DELETE", ["authenticated"], "profile-avatars foldername uid()", None],
+        ["storage_policies", "storage", "objects", "tzudong_profile_avatar_insert_own", "INSERT", ["authenticated"], None, "profile-avatars foldername uid()"],
+        ["storage_policies", "storage", "objects", "tzudong_profile_avatar_update_own", "UPDATE", ["authenticated"], "profile-avatars foldername uid()", "profile-avatars foldername uid()"],
+        ["storage_policies", "storage", "objects", "tzudong_public_media_read", "SELECT", ["anon", "authenticated"], "ad-banner-images profile-avatars review-photos", None],
+        ["storage_policies", "storage", "objects", "tzudong_review_photo_delete_own", "DELETE", ["authenticated"], "review-photos foldername uid()", None],
+        ["storage_policies", "storage", "objects", "tzudong_review_photo_insert_own", "INSERT", ["authenticated"], None, "review-photos foldername uid()"],
+        ["storage_policies", "storage", "objects", "tzudong_review_photo_update_own", "UPDATE", ["authenticated"], "review-photos foldername uid()", "review-photos foldername uid()"],
+        ["realtime_membership", "supabase_realtime", "public", "notifications"],
         ["realtime_membership", "supabase_realtime", "public", "profiles"],
+        ["realtime_membership", "supabase_realtime", "public", "review_likes"],
+        ["realtime_membership", "supabase_realtime", "public", "reviews"],
+        ["public_read_function_grants", "is_current_user_active_admin()", "anon", False],
+        ["public_read_function_grants", "is_current_user_active_admin()", "authenticated", True],
+        ["public_read_function_grants", "is_current_user_active_admin()", "privacy_workflow_owner", True],
+        ["public_read_function_grants", "is_current_user_active_admin()", "service_role", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "anon", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "authenticated", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "privacy_workflow_owner", True],
+        ["public_read_function_grants", "is_user_admin(uuid)", "service_role", False],
+        ["public_read_table_grants", "ad_banners", "anon", True, False, False, False],
+        ["public_read_table_grants", "ad_banners", "authenticated", True, True, True, True],
+        ["public_read_table_grants", "ad_banners", "service_role", True, True, True, True],
+        ["public_read_table_grants", "announcements", "anon", True, False, False, False],
+        ["public_read_table_grants", "announcements", "authenticated", True, True, True, True],
+        ["public_read_table_grants", "announcements", "service_role", True, True, True, True],
+        ["public_read_policies", "ad_banners", "tzudong_ad_banners_delete_admin", "DELETE", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", None],
+        ["public_read_policies", "ad_banners", "tzudong_ad_banners_insert_admin", "INSERT", ["authenticated"], None, "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)"],
+        ["public_read_policies", "ad_banners", "tzudong_ad_banners_select_active", "SELECT", ["anon", "authenticated"], "(is_active = true)", None],
+        ["public_read_policies", "ad_banners", "tzudong_ad_banners_select_admin", "SELECT", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", None],
+        ["public_read_policies", "ad_banners", "tzudong_ad_banners_update_admin", "UPDATE", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)"],
+        ["public_read_policies", "announcements", "tzudong_announcements_delete_admin", "DELETE", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", None],
+        ["public_read_policies", "announcements", "tzudong_announcements_insert_admin", "INSERT", ["authenticated"], None, "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)"],
+        ["public_read_policies", "announcements", "tzudong_announcements_select_active", "SELECT", ["anon", "authenticated"], "(is_active = true)", None],
+        ["public_read_policies", "announcements", "tzudong_announcements_select_admin", "SELECT", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", None],
+        ["public_read_policies", "announcements", "tzudong_announcements_update_admin", "UPDATE", ["authenticated"], "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)", "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)"],
+        ["caller_bound_admin_policies", "restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_insert", "INSERT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_select", "SELECT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_update", "UPDATE", ["authenticated"], 2, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_refresh_runs", "restaurant_refresh_runs_admin_insert", "INSERT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_refresh_runs", "restaurant_refresh_runs_admin_select", "SELECT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_refresh_runs", "restaurant_refresh_runs_admin_update", "UPDATE", ["authenticated"], 2, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_request_review_audit", "Admins can view request review audit", "SELECT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_requests", "Admins can update requests", "UPDATE", ["authenticated"], 2, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_requests", "Admins can view all requests", "SELECT", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_requests", "Restaurant requests select policy", "SELECT", ["authenticated"], 1, 1, 0],
+        ["caller_bound_admin_policies", "restaurant_submission_items", "Admins can delete submission items", "DELETE", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_submission_items", "Admins can update submission items", "UPDATE", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_submission_items", "Submission items insert policy", "INSERT", ["authenticated"], 1, 1, 0],
+        ["caller_bound_admin_policies", "restaurant_submission_items", "Submission items select policy", "SELECT", ["authenticated"], 1, 1, 0],
+        ["caller_bound_admin_policies", "restaurant_submissions", "Admins can update all submissions", "UPDATE", ["authenticated"], 1, 0, 0],
+        ["caller_bound_admin_policies", "restaurant_submissions", "Restaurant submissions select policy", "SELECT", ["authenticated"], 1, 1, 0],
+        ["caller_bound_admin_policies", "restaurants", "restaurants_authenticated_admin_update", "UPDATE", ["authenticated"], 2, 0, 0],
+        ["caller_bound_admin_policies", "short_urls", "Admins can delete short URLs", "DELETE", ["authenticated"], 1, 0, 0],
+        ["admin_data_rpcs", "public.append_admin_user_audit_event(uuid,uuid,text,text,text,uuid,jsonb,jsonb,timestamp with time zone,text,uuid,text,text)", "uuid", "privacy_workflow_owner", True, "volatile", ['search_path=""'], True, False, False, True],
+        ["admin_data_rpcs", "public.read_admin_user_audit_events(integer)", "TABLE(id uuid, actor_user_id uuid, target_user_id uuid, action text, reason text, status text, correlation_id uuid, applied_at timestamp with time zone, error_code text, created_at timestamp with time zone, audit_counts jsonb, audit_flags jsonb)", "privacy_workflow_owner", True, "stable", ['search_path=""'], True, False, False, True],
+        ["admin_data_rpcs", "public.read_admin_user_ids_for_management()", "TABLE(user_id uuid)", "privacy_workflow_owner", True, "stable", ['search_path=""'], True, False, False, True],
+        ["admin_data_rpcs", "public.read_admin_user_management_metadata(uuid[])", "TABLE(user_id uuid, username text, nickname text, avatar_url text, profile_role text, profile_created_at timestamp with time zone, profile_updated_at timestamp with time zone, is_admin boolean, account_status text)", "privacy_workflow_owner", True, "stable", ['search_path=""'], True, False, False, True],
+        ["admin_data_table_grants", "admin_audit_events", False, False, False, False],
+        ["admin_data_table_grants", "profiles", False, False, False, False],
+        ["admin_data_table_grants", "user_account_status", False, False, False, False],
+        ["admin_data_table_grants", "user_roles", False, False, False, False],
+        ["admin_map_overlay_rpc", "public.apply_admin_restaurant_map_overlay_action(uuid,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone,jsonb,text,text,text,uuid,text,jsonb)", "jsonb", "privacy_workflow_owner", True, "volatile", ['search_path=""'], True, False, False, True, True, False, False, False, True],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlay_audit_events", "anon", False, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlay_audit_events", "authenticated", False, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlay_audit_events", "privacy_workflow_owner", True, True, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlay_audit_events", "service_role", False, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlays", "anon", False, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlays", "authenticated", False, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlays", "privacy_workflow_owner", True, True, True, False, False, False, False],
+        ["admin_map_overlay_table_grants", "admin_restaurant_map_overlays", "service_role", True, False, False, False, False, False, False],
+        ["admin_map_overlay_table_grants", "restaurants", "privacy_workflow_owner", True, False, False, False, False, False, False],
+        ["admin_map_overlay_policies", "admin_restaurant_map_overlay_audit_events", "tzudong_admin_map_overlay_audit_owner_insert", "INSERT", ["privacy_workflow_owner"], None, "true"],
+        ["admin_map_overlay_policies", "admin_restaurant_map_overlay_audit_events", "tzudong_admin_map_overlay_audit_owner_select", "SELECT", ["privacy_workflow_owner"], "true", None],
+        ["admin_map_overlay_policies", "admin_restaurant_map_overlays", "tzudong_admin_map_overlays_owner_insert", "INSERT", ["privacy_workflow_owner"], None, "true"],
+        ["admin_map_overlay_policies", "admin_restaurant_map_overlays", "tzudong_admin_map_overlays_owner_select", "SELECT", ["privacy_workflow_owner"], "true", None],
+        ["admin_map_overlay_policies", "admin_restaurant_map_overlays", "tzudong_admin_map_overlays_owner_update", "UPDATE", ["privacy_workflow_owner"], "true", "true"],
         ["auth_users", "nightly-ci", "nightly-ci@local.invalid", "authenticated", "authenticated", True],
         ["auth_identities", "nightly-ci", "email", "nightly-ci@local.invalid"],
         ["profiles", "nightly-ci", "nightly-ci", "Nightly CI", "user", "nightly-ci@local.invalid", "2026-01-01T00:00:00Z"],
+        ["user_roles", "nightly-ci", "admin"],
+        ["user_account_status", "nightly-ci", "active", True],
+        [
+            "privacy_policy_fixture",
+            "local-nightly-policy",
+            "2026-08-04.1",
+            "ko-KR",
+            "published",
+            "6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b",
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z",
+            "LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:privacy-policy-fixture-v1",
+            True,
+        ],
+        [
+            "privacy_age_profile",
+            "nightly-ci",
+            "age_14_plus",
+            "self_attestation",
+            "eligible",
+            "2026-08-04.1",
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z",
+        ],
+        [
+            "youtube_channel_snapshot",
+            "local-nightly-channel-snapshot",
+            "local-nightly-channel",
+            "[LOCAL TEST] Nightly channel fixture",
+            "@local-nightly",
+            1000,
+            100000,
+            100,
+            False,
+            True,
+            0,
+            0,
+            0,
+            "2026-01-01T00:00:00Z",
+            "2026-01-01T00:00:00Z",
+            "LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:youtube-channel-snapshot-v1",
+        ],
         ["restaurants", "00000000-0000-4000-8000-000000000101", "nightly-trace-1", "정원분식", "approved", ["분식"], "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
         ["restaurants", "00000000-0000-4000-8000-000000000102", "nightly-trace-2", "명동칼국수", "approved", ["한식"], "2026-01-02T00:00:00Z", "2026-01-02T00:00:00Z"],
         ["announcements", "00000000-0000-4000-8000-000000000201", "Local nightly fixture", "Deterministic local regression announcement.", True, True, 1, "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"],
+        ["seed_buckets", "ad-banner-images", "ad-banner-images", True],
         ["seed_buckets", "avatars", "avatars", True],
+        ["seed_buckets", "profile-avatars", "profile-avatars", True],
+        ["seed_buckets", "review-photos", "review-photos", True],
+        ["seed_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False],
+        ["seed_realtime", "supabase_realtime", "public", "notifications"],
         ["seed_realtime", "supabase_realtime", "public", "profiles"],
+        ["seed_realtime", "supabase_realtime", "public", "review_likes"],
+        ["seed_realtime", "supabase_realtime", "public", "reviews"],
     ]
     if include_order_drift:
         rows.insert(5, ["columns", "public", "sample", 2, "name", "text", False, None])
@@ -202,8 +333,16 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
         self.assertTrue(serialized.endswith(b"\n"))
         self.assertNotIn("정원분식".encode("utf-8"), serialized)
         self.assertIn(b"\\uc815\\uc6d0\\ubd84\\uc2dd", serialized)
-        self.assertNotIn(b", ", serialized)
-        self.assertNotIn(b": ", serialized)
+        for line in serialized.splitlines():
+            parsed = json.loads(line)
+            self.assertEqual(
+                line,
+                json.dumps(
+                    parsed,
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                ).encode("ascii"),
+            )
         self.assertEqual(serialized, local_migrate.serialize_receipt_v1(serialized))
 
     def test_receipt_v1_rejects_missing_sections_and_order_drift(self) -> None:
@@ -215,6 +354,130 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
         with self.assertRaises(local_migrate.LocalMigrationError) as order_error:
             local_migrate.parse_readback(_receipt_ndjson(_receipt_rows(include_order_drift=True)))
         self.assertEqual(order_error.exception.code, "receipt_row_order")
+
+    def test_public_read_contract_rejects_grant_and_policy_drift(self) -> None:
+        cases = (
+            (
+                "public_read_function_grants",
+                "is_user_admin(uuid)",
+                3,
+                True,
+                "receipt_public_read_function_grants",
+            ),
+            (
+                "public_read_table_grants",
+                "ad_banners",
+                4,
+                True,
+                "receipt_public_read_table_grants",
+            ),
+            (
+                "public_read_policies",
+                "tzudong_announcements_select_active",
+                5,
+                "is_active OR is_user_admin(arbitrary_uuid)",
+                "receipt_public_read_policies",
+            ),
+        )
+        for section, identity, field, replacement, expected_code in cases:
+            rows = _receipt_rows()
+            target = next(
+                row for row in rows
+                if row[0] == section and identity in row[1:3]
+            )
+            target[field] = replacement
+            with self.subTest(section=section, identity=identity):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(error.exception.code, expected_code)
+
+    def test_admin_boundary_receipt_rejects_policy_rpc_and_table_grant_drift(self) -> None:
+        cases = (
+            (
+                "caller_bound_admin_policies",
+                "Restaurant requests select policy",
+                7,
+                1,
+                "receipt_caller_bound_admin_policies",
+            ),
+            (
+                "admin_data_rpcs",
+                "public.read_admin_user_ids_for_management()",
+                7,
+                False,
+                "receipt_admin_data_rpcs",
+            ),
+            (
+                "admin_data_table_grants",
+                "profiles",
+                2,
+                True,
+                "receipt_admin_data_table_grants",
+            ),
+        )
+        for section, identity, field, replacement, expected_code in cases:
+            rows = _receipt_rows()
+            target = next(
+                row for row in rows
+                if row[0] == section and identity in row[1:3]
+            )
+            target[field] = replacement
+            with self.subTest(section=section, identity=identity):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(error.exception.code, expected_code)
+
+    def test_admin_map_overlay_receipt_rejects_rpc_grant_and_policy_drift(self) -> None:
+        cases = (
+            (
+                "admin_map_overlay_rpc",
+                "public.apply_admin_restaurant_map_overlay_action",
+                13,
+                True,
+                "receipt_admin_map_overlay_rpc",
+            ),
+            (
+                "admin_map_overlay_table_grants",
+                "service_role",
+                4,
+                True,
+                "receipt_admin_map_overlay_table_grants",
+            ),
+            (
+                "admin_map_overlay_policies",
+                "tzudong_admin_map_overlays_owner_update",
+                6,
+                "false",
+                "receipt_admin_map_overlay_policies",
+            ),
+        )
+        for section, identity, field, replacement, expected_code in cases:
+            rows = _receipt_rows()
+            target = next(
+                row for row in rows
+                if row[0] == section and any(
+                    isinstance(value, str) and identity in value
+                    for value in row[1:3]
+                )
+            )
+            target[field] = replacement
+            with self.subTest(section=section, identity=identity):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(error.exception.code, expected_code)
+
+    def test_manifest_contains_exactly_seventy_seven_immutable_units(self) -> None:
+        manifest = local_migrate.build_manifest()
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 77)
+        self.assertEqual(len(manifest["source"]["files"]), 77)
+        self.assertEqual(
+            manifest["source"]["files"][-1]["path"],
+            "backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+        )
+        self.assertEqual(
+            manifest["source"]["files"][-1]["transaction"]["class"],
+            "self_committing",
+        )
 
     def test_two_reset_comparator_compares_ordered_ledger_and_digests(self) -> None:
         project = local_stack._project_name(ROOT)
@@ -365,11 +628,69 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                 index = next(index for index, item in enumerate(rows) if item[0] == "seed_buckets")
                 rows.insert(index, row)
             else:
-                rows.append(row)
+                index = next(
+                    index
+                    for index, item in enumerate(rows)
+                    if item[0] == "seed_realtime" and item[3] > row[3]
+                )
+                rows.insert(index, row)
             with self.subTest(section=section):
                 with self.assertRaises(local_migrate.LocalMigrationError) as error:
                     local_migrate.parse_readback(_receipt_ndjson(rows))
                 self.assertEqual(error.exception.code, code)
+
+    def test_seed_invariants_reject_privacy_fixture_drift_and_provenance_loss(self) -> None:
+        cases = (
+            ("privacy_policy_fixture", 4, "draft", "receipt_privacy_policy_fixture"),
+            ("privacy_policy_fixture", 5, "0" * 64, "receipt_privacy_policy_fixture"),
+            (
+                "privacy_policy_fixture",
+                8,
+                "hosted-approval",
+                "receipt_privacy_policy_fixture",
+            ),
+            ("privacy_age_profile", 2, "under_14", "receipt_privacy_age_profile"),
+            ("privacy_age_profile", 4, "blocked", "receipt_privacy_age_profile"),
+            ("privacy_age_profile", 5, "2026-01-01.1", "receipt_privacy_age_profile"),
+        )
+        for section, field, replacement, expected_code in cases:
+            rows = _receipt_rows()
+            target = next(row for row in rows if row[0] == section)
+            target[field] = replacement
+            with self.subTest(section=section, field=field):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(error.exception.code, expected_code)
+
+    def test_seed_invariants_reject_youtube_snapshot_provenance_drift(self) -> None:
+        for field, replacement in (
+            (2, "hosted-channel"),
+            (3, "Tzuyang"),
+            (15, "youtube-data-api"),
+        ):
+            rows = _receipt_rows()
+            target = next(row for row in rows if row[0] == "youtube_channel_snapshot")
+            target[field] = replacement
+            with self.subTest(field=field):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(
+                    error.exception.code,
+                    "receipt_youtube_channel_snapshot",
+                )
+
+    def test_seed_invariants_reject_weakened_storage_policy_contracts(self) -> None:
+        for field, replacement in ((4, "SELECT"), (5, ["public"]), (7, "bucket only")):
+            rows = _receipt_rows()
+            policy = next(
+                row for row in rows
+                if row[0] == "storage_policies" and row[3] == "tzudong_profile_avatar_insert_own"
+            )
+            policy[field] = replacement
+            with self.subTest(field=field):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate.parse_readback(_receipt_ndjson(rows))
+                self.assertEqual(error.exception.code, "receipt_storage_policy_fixture")
 
     def test_auth_catalog_allowlist_rejects_extra_column(self) -> None:
         rows = [
@@ -401,16 +722,23 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
         source = (ROOT / "backend/supabase/scripts/local-seed.sql").read_text(encoding="utf-8")
         seed_branch = inspect.getsource(local_migrate.main)
         api_source = inspect.getsource(local_migrate._auth_api_create_and_login)
+        login_source = inspect.getsource(local_migrate._auth_api_login_existing)
         self.assertNotIn("INSERT INTO auth.users", source)
         self.assertNotIn("INSERT INTO auth.identities", source)
         self.assertNotIn("CREATE POLICY", source)
         self.assertNotIn("CREATE PUBLICATION", source)
+        self.assertIn(
+            "(SELECT count(*) FROM public.user_account_status) <> 1",
+            source,
+        )
         self.assertIn("nightly_user_id", source)
         self.assertIn("AUTH_API_CREATE_PATH", api_source)
-        self.assertIn("AUTH_API_LOGIN_PATH", api_source)
+        self.assertIn("AUTH_API_LOGIN_PATH", login_source)
         self.assertIn("NIGHTLY_PASSWORD_ENV", seed_branch)
         self.assertIn("SERVICE_ROLE_KEY", api_source)
-        self.assertIn("ANON_KEY", api_source)
+        self.assertIn("ANON_KEY", login_source)
+        self.assertIn("_existing_auth_api_user_id", seed_branch)
+        self.assertIn("_auth_api_ledger_reseed_sql", seed_branch)
         self.assertIn("auth/v1/admin/users", local_migrate.AUTH_API_CREATE_PATH)
         self.assertIn("auth/v1/token?grant_type=password", local_migrate.AUTH_API_LOGIN_PATH)
         payload = local_migrate._psql_stdin(
@@ -421,6 +749,45 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
             payload,
             b"\\set nightly_user_id 00000000-0000-4000-8000-000000000099\nSELECT :'nightly_user_id'::uuid;\n",
         )
+
+    def test_repeat_seed_reuses_only_an_exact_applied_auth_api_receipt(self) -> None:
+        class Executor:
+            def __init__(self, row: str) -> None:
+                self.row = row
+
+            def capture(self, _sql: bytes) -> bytes:
+                return (self.row + "\n").encode("utf-8") if self.row else b""
+
+        user_id = "00000000-0000-4000-8000-000000000099"
+        exact = "|".join((
+            "nightly-ci",
+            "nightly-ci@local.invalid",
+            user_id,
+            "2xx",
+            "none",
+            "2xx",
+            "none",
+            "applied",
+        ))
+        self.assertEqual(
+            local_migrate._existing_auth_api_user_id(Executor(exact)),
+            user_id,
+        )
+        self.assertIsNone(local_migrate._existing_auth_api_user_id(Executor("")))
+        for drifted in (
+            exact.replace("|applied", "|running"),
+            exact.replace("|none|2xx", "|provider_error|2xx"),
+            exact.replace(user_id, "not-a-uuid"),
+        ):
+            with self.subTest(drifted=drifted):
+                with self.assertRaises(local_migrate.LocalMigrationError) as error:
+                    local_migrate._existing_auth_api_user_id(Executor(drifted))
+                self.assertEqual(error.exception.code, "auth_receipt_ledger")
+
+        reseed_sql = local_migrate._auth_api_ledger_reseed_sql(user_id).decode("utf-8")
+        self.assertIn("status='applied'", reseed_sql)
+        self.assertIn("SET status='running'", reseed_sql)
+        self.assertNotIn("create_status=EXCLUDED", reseed_sql)
 
 
 if __name__ == "__main__":

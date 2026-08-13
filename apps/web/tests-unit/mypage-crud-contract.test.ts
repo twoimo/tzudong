@@ -13,18 +13,20 @@ describe("mypage CRUD QA/QC source contracts", () => {
     const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
 
     for (const currentSource of [profileSource, sidebarSource]) {
-      expect(currentSource).toContain('.from("profiles"');
-      expect(currentSource).toContain('update({ nickname: nextNickname }');
-      expect(currentSource).toContain('.eq("user_id", user.id)');
+      expect(currentSource).not.toContain('.from("profiles"');
+      expect(currentSource).toContain('updateCurrentProfileNickname(');
       expect(currentSource).toContain("nextNickname.length < 2");
       expect(currentSource).toContain("nextNickname.length > 20");
-      expect(currentSource).toContain('from("profile-avatars")');
-      expect(currentSource).toContain("upsert: true");
-      expect(currentSource).toContain("update({ avatar_url:");
-      expect(currentSource).toMatch(/queryKey: \["user-profile"(?:, user\.id)?\]/);
-      if (currentSource === sidebarSource) {
-        expect(currentSource).toContain('queryKey: ["user-profile-identity", user.id]');
-      }
+      expect(currentSource).toContain("uploadCurrentProfileAvatar(");
+      expect(currentSource).toContain("clearCurrentProfileAvatar(");
+      expect(currentSource).not.toContain("upsert: true");
+      expect(currentSource).not.toContain("update({ avatar_url:");
+      expect(currentSource).toContain(
+        'import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";',
+      );
+      expect(currentSource).toContain(
+        "await invalidateProfileDisplayQueries(queryClient, user.id)",
+      );
     }
 
     expect(profileSource).toContain("supabase.auth.signInWithPassword");

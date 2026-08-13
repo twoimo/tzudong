@@ -540,7 +540,25 @@ def _absolute_runtime_path(value: str) -> Path:
     path = Path(value)
     if not path.is_absolute():
         raise ValueError("runtime path must be absolute")
-    return Path(os.path.abspath(str(path)))
+    normalized = Path(os.path.abspath(str(path)))
+    # macOS exposes its private temporary trees through two root-owned system
+    # aliases. Walking /var or /tmp with O_NOFOLLOW rejects those aliases
+    # before the operator-owned descendant can be pinned. Canonicalize only
+    # the exact protected targets; arbitrary links remain fail-closed below.
+    if sys.platform == "darwin" and len(normalized.parts) > 1:
+        alias_targets = {
+            "var": Path("/private/var"),
+            "tmp": Path("/private/tmp"),
+        }
+        expected = alias_targets.get(normalized.parts[1])
+        alias = Path(normalized.anchor) / normalized.parts[1]
+        if (
+            expected is not None
+            and alias.is_symlink()
+            and Path(os.path.realpath(str(alias))) == expected
+        ):
+            normalized = expected.joinpath(*normalized.parts[2:])
+    return normalized
 
 
 def _reject_runtime_link_or_reparse(file_stat: os.stat_result, label: str) -> None:

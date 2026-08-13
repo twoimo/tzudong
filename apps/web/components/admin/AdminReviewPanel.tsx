@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/no-toast";
 import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
+import { fetchAdminProfileSummaries } from "@/lib/admin/profile-summaries";
 import {
     CheckCircle2,
     XCircle,
@@ -35,7 +36,6 @@ import {
 } from "./admin-modal-styles";
 
 type ReviewRow = Tables<'reviews'>;
-type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
 type ReviewStatusRow = Pick<Tables<'reviews'>, 'restaurant_id' | 'is_verified'>;
 type AdminReviewRow = Pick<
     ReviewRow,
@@ -110,12 +110,6 @@ function isAdminReviewRow(value: unknown): value is AdminReviewRow {
         && typeof value.is_edited_by_admin === 'boolean'
         && typeof value.created_at === 'string'
         && typeof value.updated_at === 'string';
-}
-
-function isProfileRow(value: unknown): value is ProfileRow {
-    return isRecord(value)
-        && typeof value.user_id === 'string'
-        && typeof value.nickname === 'string';
 }
 
 function isRestaurantSummaryRow(value: unknown): value is RestaurantSummaryRow {
@@ -229,12 +223,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-            const [{ data: profilesData }, { data: restaurantsData }] = await Promise.all([
-                supabase
-                    .from('profiles')
-                    .select('user_id, nickname')
-                    .in('user_id', userIds)
-                    .overrideTypes<ProfileRow[], { merge: false }>(),
+            const [profileSummaries, { data: restaurantsData }] = await Promise.all([
+                fetchAdminProfileSummaries(userIds),
                 supabase
                     .from('restaurants')
                     .select('id, name:approved_name, road_address, jibun_address')
@@ -242,14 +232,11 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     .overrideTypes<RestaurantSummaryRow[], { merge: false }>(),
             ]);
 
-            const typedProfilesData = profilesData
-                ? requireRows(profilesData, isProfileRow, '사용자 데이터 형식이 올바르지 않습니다.')
-                : [];
             const typedRestaurantsData = restaurantsData
                 ? requireRows(restaurantsData, isRestaurantSummaryRow, '레스토랑 데이터 형식이 올바르지 않습니다.')
                 : [];
 
-            const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
+            const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
             const restaurantsMap = new Map(
                 typedRestaurantsData.map(r => [
                     r.id,

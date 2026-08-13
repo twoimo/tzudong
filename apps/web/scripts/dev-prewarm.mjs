@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { constants as osConstants } from 'node:os';
 import process from 'node:process';
 import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
@@ -21,7 +22,9 @@ const shouldPrewarm = !hasFlag('--no-prewarm') && !['0', 'false', 'no', 'off'].i
 const prewarmPaths = ['/api/health', '/', '/scripts/viewport-height-fix.js'];
 const readyPattern = /(?:✓|\u2713) Ready in\s+([0-9.]+)(ms|s)/;
 let prewarmStarted = false;
-let stopping = false;
+let stoppingSignal = null;
+let stopTimer;
+const signalExitCode = (signal) => 128 + (osConstants.signals[signal] ?? 0);
 
 const child = spawn(
   'node',
@@ -35,6 +38,8 @@ const child = spawn(
     ...(shouldUseWebpackDev ? ['--webpack'] : []),
     '--port',
     String(port),
+    '--hostname',
+    host,
   ],
   {
     cwd: process.cwd(),
@@ -107,19 +112,20 @@ child.on('error', (error) => {
 });
 
 child.on('exit', (code, signal) => {
-  if (stopping) return;
-  if (signal) {
-    process.kill(process.pid, signal);
-    return;
-  }
-  process.exit(code ?? 0);
+  if (stopTimer) clearTimeout(stopTimer);
+  const effectiveSignal = stoppingSignal ?? signal;
+  process.exit(effectiveSignal ? signalExitCode(effectiveSignal) : (code ?? 0));
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
-    stopping = true;
+    if (stoppingSignal) return;
+    stoppingSignal = signal;
     child.kill(signal);
-    const timer = setTimeout(() => process.exit(signal === 'SIGINT' ? 130 : 143), 2000);
-    timer.unref();
+    stopTimer = setTimeout(() => {
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      process.exit(signalExitCode(signal));
+    }, 4_000);
+    stopTimer.unref();
   });
 }

@@ -4,7 +4,13 @@ import {
   type AdminPendingCountDomainId,
   type AdminPendingCountsResponse,
 } from '@/lib/admin/pending-counts';
-import type { AdminSystemRunDailyStatus, AdminSystemStatusChecklistItem, AdminSystemStatusResponse } from '@/types/admin-system-status';
+import type {
+  AdminNightlyRegressionStatus,
+  AdminNightlyWorkflowStatus,
+  AdminSystemRunDailyStatus,
+  AdminSystemStatusChecklistItem,
+  AdminSystemStatusResponse,
+} from '@/types/admin-system-status';
 
 export type AdminStatusCenterState = 'healthy' | 'partial' | 'degraded' | 'unknown';
 
@@ -24,7 +30,7 @@ export type AdminStatusCenterPendingCounts =
     };
 
 export type AdminStatusCenterMetric = {
-  id: 'run_daily' | 'artifacts' | 'gdrive' | 'pending';
+  id: 'run_daily' | 'nightly' | 'artifacts' | 'gdrive' | 'pending';
   label: string;
   value: string;
   detail: string;
@@ -330,6 +336,95 @@ function classifyGdriveMetric(runDaily: AdminSystemRunDailyStatus | undefined): 
     state: 'unknown',
   };
 }
+
+function describeNightlyWorkflow(
+  label: string,
+  workflow: AdminNightlyWorkflowStatus,
+): string {
+  if (!workflow.reachable) return `${label}: 실행 이력 조회 실패`;
+  if (!workflow.latestRunId) return `${label}: 실행 이력 없음`;
+
+  const current = workflow.latestRunConclusion ?? workflow.latestRunStatus ?? 'unknown';
+  const lastSuccess = workflow.lastSuccessfulRunId
+    ? `마지막 성공 #${workflow.lastSuccessfulRunId}${workflow.lastSuccessfulRunCreatedAt ? ` (${workflow.lastSuccessfulRunCreatedAt})` : ''}`
+    : workflow.historyWindowTruncated
+      ? `최근 ${workflow.examinedRuns}회 내 성공 없음`
+      : '성공 이력 없음';
+  return `${label}: 최신 #${workflow.latestRunId} ${current} · 연속 실패 ${workflow.consecutiveFailures}회 · ${lastSuccess}`;
+}
+
+function classifyNightlyMetric(
+  nightly: AdminNightlyRegressionStatus,
+): AdminStatusCenterMetric {
+  const local = nightly.localCanonical;
+  const hosted = nightly.hostedManualFallback;
+  const detail = [
+    describeNightlyWorkflow('로컬 canonical', local),
+    describeNightlyWorkflow('호스티드 수동 fallback', hosted),
+  ].join(' / ');
+
+  if (!nightly.enabled || !nightly.configured) {
+    return {
+      id: 'nightly',
+      label: '나이틀리 회귀',
+      value: nightly.enabled ? '설정 필요' : '조회 꺼짐',
+      detail: nightly.enabled
+        ? 'read-only GitHub 저장소/토큰 설정이 없어 실행 상태를 확인할 수 없습니다.'
+        : '나이틀리 운영 상태 조회가 비활성화되어 실행 상태를 확인할 수 없습니다.',
+      state: 'unknown',
+    };
+  }
+
+  if (!local.reachable || !local.latestRunId) {
+    return {
+      id: 'nightly',
+      label: '나이틀리 회귀',
+      value: !local.reachable ? '조회 실패' : '실행 없음',
+      detail,
+      state: 'degraded',
+    };
+  }
+
+  const current = local.latestRunConclusion ?? local.latestRunStatus ?? 'unknown';
+  const value = `${current} · 실패 ${local.consecutiveFailures}회`;
+  if (
+    local.consecutiveFailures > 0
+    || (local.latestRunStatus === 'completed' && local.latestRunConclusion !== 'success')
+  ) {
+    return {
+      id: 'nightly',
+      label: '나이틀리 회귀',
+      value,
+      detail,
+      state: 'degraded',
+    };
+  }
+
+  if (local.latestRunStatus !== 'completed' || local.latestRunConclusion !== 'success') {
+    return {
+      id: 'nightly',
+      label: '나이틀리 회귀',
+      value,
+      detail,
+      state: local.latestRunStatus === 'in_progress' || local.latestRunStatus === 'queued'
+        ? 'partial'
+        : 'unknown',
+    };
+  }
+
+  const hostedFallbackNeedsAttention = !hosted.reachable || (
+    hosted.latestRunStatus === 'completed'
+    && hosted.latestRunConclusion !== 'success'
+  );
+  return {
+    id: 'nightly',
+    label: '나이틀리 회귀',
+    value,
+    detail,
+    state: hostedFallbackNeedsAttention ? 'partial' : 'healthy',
+  };
+}
+
 function buildPendingMetric(
   pending: AdminStatusCenterPendingCounts,
 ): AdminStatusCenterMetric {
@@ -385,8 +480,12 @@ export function buildAdminStatusCenterViewModel(
   const artifactMetric = classifyArtifactMetric(status?.runDaily);
   const gdriveMetric = classifyGdriveMetric(status?.runDaily);
   const pendingMetric = buildPendingMetric(pending);
+  const nightlyMetric = status?.nightlyRegression
+    ? classifyNightlyMetric(status.nightlyRegression)
+    : undefined;
   const overallState = pickWorseState(
     runDailyMetric.state,
+    ...(nightlyMetric ? [nightlyMetric.state] : []),
     artifactMetric.state,
     gdriveMetric.state,
     pendingMetric.state,
@@ -397,13 +496,22 @@ export function buildAdminStatusCenterViewModel(
     overallLabel: buildOverallLabel(overallState),
     summary:
       overallState === 'healthy'
-        ? '현재 확인 가능한 증거 기준으로 run_daily와 운영 큐가 안정적입니다.'
+        ? '현재 확인 가능한 증거 기준으로 run_daily, 나이틀리 회귀, 운영 큐가 안정적입니다.'
         : overallState === 'partial'
           ? '일부 후속 조치가 남아 있어 운영 상태를 보수적으로 봐야 합니다.'
           : overallState === 'degraded'
             ? '현재 증거가 비어 있거나 오래되었거나 실패를 가리켜 즉시 점검이 필요합니다.'
             : '현재 증거를 완전히 읽지 못해 상태를 확정할 수 없습니다.',
-    metrics: [runDailyMetric, artifactMetric, gdriveMetric, pendingMetric],
-    checklist: (status?.checklist ?? []).filter((item) => item.source === 'run_daily').slice(0, 3),
+    metrics: [
+      runDailyMetric,
+      ...(nightlyMetric ? [nightlyMetric] : []),
+      artifactMetric,
+      gdriveMetric,
+      pendingMetric,
+    ],
+    checklist: [
+      ...(status?.checklist ?? []).filter((item) => item.source === 'nightly-regression').slice(0, 2),
+      ...(status?.checklist ?? []).filter((item) => item.source === 'run_daily'),
+    ].slice(0, 3),
   };
 }
