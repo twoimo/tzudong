@@ -2524,6 +2524,59 @@ interface DatabaseSource {
                 }
                 Returns: string
             }
+            append_admin_user_audit_event: {
+                Args: {
+                    p_actor_user_id: string
+                    p_target_user_id: string | null
+                    p_action: string
+                    p_reason: string
+                    p_status: string
+                    p_correlation_id: string | null
+                    p_audit_counts: Json
+                    p_audit_flags: Json
+                    p_applied_at: string | null
+                    p_error_code: string | null
+                    p_request_id: string
+                    p_ip_hash: string | null
+                    p_user_agent_hash: string | null
+                }
+                Returns: string
+            }
+            read_admin_user_management_metadata: {
+                Args: { p_user_ids: string[] }
+                Returns: {
+                    user_id: string
+                    username: string | null
+                    nickname: string | null
+                    avatar_url: string | null
+                    profile_role: string | null
+                    profile_created_at: string | null
+                    profile_updated_at: string | null
+                    is_admin: boolean
+                    account_status: 'active' | 'disabled' | null
+                }[]
+            }
+            read_admin_user_ids_for_management: {
+                Args: Record<string, never>
+                Returns: { user_id: string }[]
+            }
+            read_admin_user_audit_events: {
+                Args: { p_limit: number }
+                Returns: {
+                    id: string
+                    actor_user_id: string | null
+                    target_user_id: string | null
+                    action: string
+                    reason: string
+                    status: string
+                    correlation_id: string | null
+                    applied_at: string | null
+                    error_code: string | null
+                    created_at: string
+                    audit_counts: Json
+                    audit_flags: Json
+                }[]
+            }
         }
     }
 }

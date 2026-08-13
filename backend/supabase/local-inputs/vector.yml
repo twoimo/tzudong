@@ -1,0 +1,12 @@
+api:
+  enabled: true
+  address: 0.0.0.0:9001
+sources:
+  local_metrics:
+    type: internal_metrics
+sinks:
+  local_console:
+    type: console
+    inputs: [local_metrics]
+    encoding:
+      codec: json

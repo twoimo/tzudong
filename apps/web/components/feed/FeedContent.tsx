@@ -17,6 +17,7 @@ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
 import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
+import { readPublicProfileSummaries } from '@/lib/public-profile-read';
 
 const ReviewModal = dynamic(
     () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
@@ -47,12 +48,6 @@ interface FeedReviewRow {
     categories?: string[] | null;
     category?: string | null;
     like_count?: number | null;
-}
-
-interface FeedProfileRow {
-    user_id: string;
-    nickname: string | null;
-    avatar_url: string | null;
 }
 
 interface FeedReviewLikeRow {
@@ -270,11 +265,8 @@ export default function FeedContent({
             const userIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
             const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
-            const [profilesResult, restaurantsResult, userLikesResult] = await Promise.all([
-                supabase
-                    .from('profiles')
-                    .select('user_id, nickname, avatar_url')
-                    .in('user_id', userIds),
+            const [profilesData, restaurantsResult, userLikesResult] = await Promise.all([
+                readPublicProfileSummaries(supabase, userIds).catch(() => []),
                 supabase
                     .from('restaurants')
                     .select(FEED_RESTAURANT_SELECT)
@@ -288,7 +280,6 @@ export default function FeedContent({
                     : Promise.resolve({ data: [] }),
             ]);
 
-            const profilesData = (profilesResult.data ?? []) as FeedProfileRow[];
             const profilesMap = new Map(profilesData.map((profileRow) =>
                 [profileRow.user_id, { nickname: profileRow.nickname, avatarUrl: profileRow.avatar_url }]
             ));

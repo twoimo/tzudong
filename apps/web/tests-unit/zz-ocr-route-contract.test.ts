@@ -458,7 +458,8 @@ describe('OCR extract route privacy and normalization contract', () => {
     expect(processRouteSource).toContain(".select('id, receipt_hash, receipt_data, is_duplicate, ocr_processed_at')");
     expect(processRouteSource).not.toContain('uploadToStorage');
     expect(processRouteSource).not.toContain('ocr-debug/');
-    expect(processRouteSource).toContain("const storage = supabase.storage.from('review-photos')");
+    expect(processRouteSource).toContain("const storage = storageAdmin.from('review-photos')");
+    expect(processRouteSource).not.toContain("supabase.storage.from('review-photos')");
     expect(processRouteSource).toContain('storage.upload(newObjectPath, canonicalImage');
     expect(processRouteSource).not.toContain('raw: ocrData');
     expect(processRouteSource).not.toContain('receipt_data: { ...ocrData');
@@ -674,7 +675,7 @@ describe('OCR extract route privacy and normalization contract', () => {
       'uploadedImage.bytes.equals(canonicalImage)',
       'updateError',
       'currentReadbackError',
-      'removeReplacementObject(supabase, newObjectPath)',
+      'removeReplacementObject(storageAdmin, newObjectPath)',
       'replacementStateIndeterminate',
       'removeOldObjectError',
     ]) {

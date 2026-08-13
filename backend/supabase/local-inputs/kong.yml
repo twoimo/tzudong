@@ -1,0 +1,120 @@
+_format_version: '2.1'
+_transform: true
+services:
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth-v1
+        paths: [ /auth/v1 ]
+        strip_path: true
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://127.0.0.1:8080
+            - http://localhost:8080
+            - http://127.0.0.1:18080
+            - http://localhost:18080
+          methods: [ GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS ]
+          headers:
+            - apikey
+            - authorization
+            - content-type
+            - x-client-info
+            - x-supabase-api-version
+          exposed_headers:
+            - x-total-count
+            - link
+            - x-supabase-api-version
+          credentials: true
+          max_age: 600
+          preflight_continue: false
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest-v1
+        paths: [ /rest/v1 ]
+        strip_path: true
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://127.0.0.1:8080
+            - http://localhost:8080
+            - http://127.0.0.1:18080
+            - http://localhost:18080
+          methods: [ GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS ]
+          headers:
+            - apikey
+            - authorization
+            - content-type
+            - x-client-info
+            - x-retry-count
+            - accept-profile
+            - content-profile
+            - prefer
+            - range
+          exposed_headers: [ content-range ]
+          credentials: false
+          max_age: 600
+          preflight_continue: false
+  - name: storage
+    url: http://storage:5000
+    routes:
+      - name: storage-v1
+        paths: [ /storage/v1 ]
+        strip_path: true
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://127.0.0.1:8080
+            - http://localhost:8080
+            - http://127.0.0.1:18080
+            - http://localhost:18080
+          methods: [ GET, HEAD, POST, PUT, DELETE, OPTIONS ]
+          headers:
+            - apikey
+            - authorization
+            - content-type
+            - x-client-info
+            - x-upsert
+            - cache-control
+          exposed_headers:
+            - content-length
+            - content-range
+            - etag
+          credentials: false
+          max_age: 600
+          preflight_continue: false
+  - name: realtime
+    url: http://realtime-dev.supabase-realtime:4000/socket
+    routes:
+      - name: realtime-v1
+        paths: [ /realtime/v1 ]
+        strip_path: true
+  - name: functions
+    url: http://functions:9000
+    routes:
+      - name: functions-v1
+        paths: [ /functions/v1 ]
+        strip_path: true
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - http://127.0.0.1:8080
+            - http://localhost:8080
+            - http://127.0.0.1:18080
+            - http://localhost:18080
+          methods: [ POST, OPTIONS ]
+          headers:
+            - apikey
+            - authorization
+            - content-type
+            - x-client-info
+          exposed_headers:
+            - x-tzudong-local-fixture
+          credentials: false
+          max_age: 600
+          preflight_continue: false

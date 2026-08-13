@@ -57,9 +57,12 @@ describe('public API security source contracts', () => {
     expect(failureBlock).not.toContain('gitSha');
     expect(failureBlock).not.toContain('deploymentId');
     expect(failureBlock).not.toContain('projectId');
-    expect(failureBlock).toContain(
-      "return NextResponse.json({ ok: false, service: 'tzudong-web' }, { status: 503, headers: { 'cache-control': 'no-store' } });",
-    );
+    expect(failureBlock).toContain('return unavailable();');
+    expect(healthSource).toContain("const unavailable = () => NextResponse.json(");
+    expect(healthSource).toContain("process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1'");
+    expect(healthSource).toContain("process.env.NODE_ENV === 'development'");
+    expect(healthSource).toContain("LOOPBACK_HOSTS.has(host)");
+    expect(healthSource).toContain("mode: 'local-development'");
   });
 
   test('uses one bounded JSON reader for request bodies and keeps shorten request identity fail-closed', async () => {

@@ -59,7 +59,7 @@ export function AdminSystemStatusCenter({
           <div className="space-y-1">
             <CardTitle className="text-sm font-semibold">운영 상태 센터</CardTitle>
             <p className="text-xs text-muted-foreground">
-              run_daily 증거, GDrive 후속, 검수 대기 건수를 한 곳에서 fail-closed로 봅니다.
+              run_daily, 나이틀리 회귀, GDrive 후속, 검수 대기 상태를 한 곳에서 fail-closed로 봅니다.
             </p>
           </div>
           <Badge className={cn('rounded-full px-2 py-1 text-[11px] font-semibold', tone.badge)}>
@@ -99,6 +99,7 @@ export function AdminSystemStatusCenter({
                     data-admin-system-status-metric={metric.id}
                     data-admin-system-status-metric-state={metric.state}
                     data-admin-run-daily-state={metric.id === 'run_daily' ? metric.state : undefined}
+                    data-admin-nightly-regression-state={metric.id === 'nightly' ? metric.state : undefined}
                     data-admin-run-daily-artifact-state={metric.id === 'artifacts' ? metric.state : undefined}
                     data-admin-system-status-pending-counts={metric.id === 'pending' ? 'true' : undefined}
                   >
@@ -130,7 +131,7 @@ export function AdminSystemStatusCenter({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-muted-foreground">run_daily 기준으로 즉시 튀는 경고는 없습니다.</p>
+                <p className="mt-2 text-xs text-muted-foreground">run_daily와 나이틀리 회귀 기준으로 즉시 튀는 경고는 없습니다.</p>
               )}
             </div>
           </>

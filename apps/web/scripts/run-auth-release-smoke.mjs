@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
@@ -487,6 +487,7 @@ try {
 } catch { abort(); }
 `;
 let linuxPidNamespaceLauncher;
+let linuxSupervisorExecutable;
 function probeLinuxPidNamespaceSupervisor() {
     if (linuxPidNamespaceLauncher !== undefined) return linuxPidNamespaceLauncher;
     for (const launcher of ['/usr/bin/unshare', '/bin/unshare']) {
@@ -505,10 +506,43 @@ function probeLinuxPidNamespaceSupervisor() {
     linuxPidNamespaceLauncher = null;
     return linuxPidNamespaceLauncher;
 }
+export function selectLinuxSupervisorExecutable(configured, fallback, versionProbe) {
+    for (const candidate of [configured, fallback]) {
+        if (typeof candidate !== 'string' || !isAbsolute(candidate)) continue;
+        let version;
+        try {
+            version = versionProbe(candidate);
+        } catch {}
+        if (typeof version === 'string' && /^v24\./.test(version.trim())) return candidate;
+    }
+    return null;
+}
+function resolveLinuxSupervisorExecutable() {
+    if (linuxSupervisorExecutable !== undefined) return linuxSupervisorExecutable;
+    const probeVersion = (candidate) => {
+        const result = spawnSync(candidate, ['--version'], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 3_000,
+            shell: false,
+        });
+        return result.status === 0 && !result.error && !result.signal ? result.stdout : null;
+    };
+    linuxSupervisorExecutable = selectLinuxSupervisorExecutable(
+        process.env.TZUDONG_NODE24_EXECUTABLE?.trim(),
+        process.execPath,
+        probeVersion,
+    );
+    return linuxSupervisorExecutable;
+}
 function linuxPidNamespaceSupervisorSpec(launcher, executable, args, cwd, environment, nonce, deadline) {
+    const supervisorExecutable = resolveLinuxSupervisorExecutable();
+    if (!supervisorExecutable) {
+        throw Object.assign(new Error('Linux Node 24 supervisor unavailable'), { code: 'INTERNAL_FAILURE' });
+    }
     return {
         executable: launcher,
-        args: ['--user', '--map-root-user', '--pid', '--fork', '--mount-proc', '--kill-child=SIGKILL', process.execPath, '-e', LINUX_NAMESPACE_SUPERVISOR, nonce, String(deadline), executable, ...args],
+        args: ['--user', '--map-root-user', '--pid', '--fork', '--mount-proc', '--kill-child=SIGKILL', supervisorExecutable, '-e', LINUX_NAMESPACE_SUPERVISOR, nonce, String(deadline), executable, ...args],
         environment,
         cwd,
     };
@@ -832,6 +866,7 @@ return new Promise((resolve, reject) => {
             if (teardown) return teardown;
             teardown = (async () => {
                 const deadline = Date.now() + cleanupTimeoutMs;
+                if (protocolTimer) { clearTimeout(protocolTimer); protocolTimer = undefined; }
                 const localHandlesClosed = drainLocalHandles();
                 const gracefulDeadline = Math.min(
                     deadline,
@@ -937,6 +972,7 @@ return new Promise((resolve, reject) => {
             void teardownChild('child spawn failed');
         });
         child.once('close', (code) => {
+            if (teardown) return;
             clearTimeout(protocolTimer);
             resolveClose();
             const finishAfterProtocol = () => {

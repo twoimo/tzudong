@@ -1,0 +1,221 @@
+{
+  "schema": "local-stack-input-manifest-v1",
+  "generator_version": "local-stack-v1",
+  "inputs": [
+    {
+      "kind": "template",
+      "template": "kong.yml",
+      "template_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
+      "template_mode": "0644",
+      "output": "kong.yml",
+      "output_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
+      "service": "kong",
+      "destination": "/home/kong/temp.yml",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "vector.yml",
+      "template_sha256": "892fd1fbea5531fdb6d67aece9a9f389d2158650329bfcb04ce3266b5ff48907",
+      "template_mode": "0644",
+      "output": "vector.yml",
+      "output_sha256": "892fd1fbea5531fdb6d67aece9a9f389d2158650329bfcb04ce3266b5ff48907",
+      "service": "vector",
+      "destination": "/etc/vector/vector.yml",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "pooler.exs",
+      "template_sha256": "d08dd7dcf5ac32a7e8edbbde9c4f205ca898cfd6382ec4837bdf9bd339cbc91f",
+      "template_mode": "0644",
+      "output": "pooler.exs",
+      "output_sha256": "d08dd7dcf5ac32a7e8edbbde9c4f205ca898cfd6382ec4837bdf9bd339cbc91f",
+      "service": "supavisor",
+      "destination": "/etc/pooler/pooler.exs",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "functions/main/index.ts",
+      "template_sha256": "39d5e24ada1c0f23a158963f19b80daf2f6529cf617852d996d06ce71a4e7895",
+      "template_mode": "0644",
+      "output": "functions/main/index.ts",
+      "output_sha256": "39d5e24ada1c0f23a158963f19b80daf2f6529cf617852d996d06ce71a4e7895",
+      "service": "functions",
+      "destination": "/home/deno/functions",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "functions/naver-geocode/index.ts",
+      "template_sha256": "6f3cef407bc0ad8ad9a85e27a914ef29aaf271ba10717a62272d4075686a8afb",
+      "template_mode": "0644",
+      "output": "functions/naver-geocode/index.ts",
+      "output_sha256": "6f3cef407bc0ad8ad9a85e27a914ef29aaf271ba10717a62272d4075686a8afb",
+      "service": "functions",
+      "destination": "/home/deno/functions",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/realtime.sql",
+      "source_sha256": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+      "source_mode": "0644",
+      "output": "db-realtime.sql",
+      "output_sha256": "7e9e442e7fc4dae05544c07b67bede37a00d84644304dfce4d937134cb4c8f88",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-realtime.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/webhooks.sql",
+      "source_sha256": "b584aaaa0c393f27218f81e01e76e1d07d42f947083249adcd6097ad471cde62",
+      "source_mode": "0644",
+      "output": "db-webhooks.sql",
+      "output_sha256": "b584aaaa0c393f27218f81e01e76e1d07d42f947083249adcd6097ad471cde62",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/roles.sql",
+      "source_sha256": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+      "source_mode": "0644",
+      "output": "db-roles.sql",
+      "output_sha256": "3ad717b225daa38aa982da26750f35641eb404e1eb5e69a763c22236ab96c1b2",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/jwt.sql",
+      "source_sha256": "1cc94a4f16f6e2932b383cd68e211a96bcae298437ca4120d8a5106396c58465",
+      "source_mode": "0644",
+      "output": "db-jwt.sql",
+      "output_sha256": "1cc94a4f16f6e2932b383cd68e211a96bcae298437ca4120d8a5106396c58465",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/_supabase.sql",
+      "source_sha256": "9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f",
+      "source_mode": "0644",
+      "output": "db-supabase.sql",
+      "output_sha256": "9dce462adc04137d6afabcf28efa60a6c355270a4b32d7af58891ac4eb964c5f",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/97-_supabase.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/logs.sql",
+      "source_sha256": "f0463ce5030907acef49326d2bffd36002df0718035071be7c99bd7fc897c63d",
+      "source_mode": "0644",
+      "output": "db-logs.sql",
+      "output_sha256": "f0463ce5030907acef49326d2bffd36002df0718035071be7c99bd7fc897c63d",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-logs.sql",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "source",
+      "source": "volumes/db/pooler.sql",
+      "source_sha256": "df97ebe148d94cfb92a5e37ebf972dfd496be195f0915ecf14396b2cf50efecb",
+      "source_mode": "0644",
+      "output": "db-pooler.sql",
+      "output_sha256": "df97ebe148d94cfb92a5e37ebf972dfd496be195f0915ecf14396b2cf50efecb",
+      "service": "db",
+      "destination": "/docker-entrypoint-initdb.d/migrations/99-pooler.sql",
+      "output_mode": "0600"
+    }
+  ],
+  "functions": {
+    "root": "functions",
+    "files": [
+      "functions/main/index.ts",
+      "functions/naver-geocode/index.ts"
+    ]
+  },
+  "mounts": [
+    {
+      "service": "kong",
+      "source": "local-kong-config",
+      "type": "volume",
+      "destination": "/home/kong"
+    },
+    {
+      "service": "storage",
+      "source": "local-storage-data",
+      "type": "volume",
+      "destination": "/var/lib/storage"
+    },
+    {
+      "service": "imgproxy",
+      "source": "local-storage-data",
+      "type": "volume",
+      "destination": "/var/lib/storage"
+    },
+    {
+      "service": "functions",
+      "source": "local-functions",
+      "type": "volume",
+      "destination": "/home/deno/functions"
+    },
+    {
+      "service": "db",
+      "source": "local-db-init-migrations",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/migrations"
+    },
+    {
+      "service": "db",
+      "source": "local-db-data",
+      "type": "volume",
+      "destination": "/var/lib/postgresql/data"
+    },
+    {
+      "service": "db",
+      "source": "local-db-init-scripts",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts"
+    },
+    {
+      "service": "db",
+      "source": "local-db-config",
+      "type": "volume",
+      "destination": "/etc/postgresql-custom"
+    },
+    {
+      "service": "vector",
+      "source": "local-vector-config",
+      "type": "volume",
+      "destination": "/etc/vector"
+    },
+    {
+      "service": "supavisor",
+      "source": "local-pooler-config",
+      "type": "volume",
+      "destination": "/etc/pooler"
+    }
+  ],
+  "compose_files": [
+    {
+      "path": "backend/supabase/docker-compose.yml",
+      "sha256": "5ec5ef85c420c1195dc707042be90613fda8bd395c5d6f4bd8499591106e6c8b"
+    },
+    {
+      "path": "backend/supabase/docker-compose.local.yml",
+      "sha256": "22e80cb503ef3b39c63dcdb03edd4f2d4724d52ba0333e4ddc2fc9053d07659d"
+    },
+    {
+      "path": "backend/supabase/docker-compose.mail.yml",
+      "sha256": "8ffd827495d1253b9050497ea2c20dcd7a9509288d0dfe07100c921c6e4c023d"
+    }
+  ]
+}

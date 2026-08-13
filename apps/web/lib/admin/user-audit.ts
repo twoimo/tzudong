@@ -237,27 +237,23 @@ export async function recordAdminUserAuditEvent(
   const auditContext = buildAdminUserAuditRequestContext(request);
 
   const { data, error } = await supabase
-    .from('admin_audit_events')
-    .insert({
-      actor_user_id: normalized.actorUserId,
-      target_user_id: normalized.targetUserId,
-      action: normalized.action,
-      reason: normalized.reasonCode,
-      before_state: {},
-      after_state: {},
-      audit_counts: normalized.counts,
-      audit_flags: normalized.flags,
-      status: normalized.status,
-      correlation_id: normalized.correlationId,
-      applied_at: normalized.status === 'applied' ? new Date().toISOString() : null,
-      error_code: normalized.errorCode,
-      request_id: auditContext.requestId,
-      ip_hash: auditContext.ipHash,
-      user_agent_hash: auditContext.userAgentHash,
-    })
-    .select('id')
-    .single();
+    .rpc('append_admin_user_audit_event', {
+      p_actor_user_id: normalized.actorUserId,
+      p_target_user_id: normalized.targetUserId,
+      p_action: normalized.action,
+      p_reason: normalized.reasonCode,
+      p_status: normalized.status,
+      p_correlation_id: normalized.correlationId,
+      p_audit_counts: normalized.counts,
+      p_audit_flags: normalized.flags,
+      p_applied_at: normalized.status === 'applied' ? new Date().toISOString() : null,
+      p_error_code: normalized.errorCode,
+      p_request_id: auditContext.requestId,
+      p_ip_hash: auditContext.ipHash,
+      p_user_agent_hash: auditContext.userAgentHash,
+    });
 
   if (error) throw error;
-  return String((data as { id: string }).id);
+  assertContract(typeof data === 'string' && UUID_PATTERN.test(data));
+  return data;
 }

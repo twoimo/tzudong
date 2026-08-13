@@ -1,4 +1,5 @@
-import { test, expect, devices, type Locator, type Page } from '@playwright/test';
+import { test, expect } from './nightly/nightly-test';
+import { devices, type Locator, type Page } from '@playwright/test';
 import { hidePopupOverlay } from './helpers';
 import {
     clickAnyUnselectedMarker,
@@ -14,8 +15,14 @@ import {
     zoomMockMap,
 } from './mobile-home-map-helpers';
 
+const IPHONE_SE_DEVICE = devices['iPhone SE'];
+
 test.use({
-    ...devices['iPhone SE'],
+    userAgent: IPHONE_SE_DEVICE.userAgent,
+    viewport: IPHONE_SE_DEVICE.viewport,
+    deviceScaleFactor: IPHONE_SE_DEVICE.deviceScaleFactor,
+    isMobile: IPHONE_SE_DEVICE.isMobile,
+    hasTouch: IPHONE_SE_DEVICE.hasTouch,
 });
 test.setTimeout(60000);
 
@@ -181,19 +188,18 @@ test.describe('Phase 1: mobile home map regressions', () => {
             });
         });
 
-        await page.evaluate(() => {
-            window.dispatchEvent(
-                new PopStateEvent('popstate', {
-                    state: {
-                        kind: 'tzudong.home.list.v1',
-                        restaurantId: 'restaurant-search',
-                        mapMode: 'domestic',
-                        restoreKey: 'missing-restore',
-                        createdAt: Date.now(),
-                    },
-                })
-            );
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        const restoreKey = await page.evaluate(() => {
+            const key = window.history.state?.restoreKey;
+            if (typeof key !== 'string' || !key) {
+                throw new Error('Home detail history state did not expose a restore key');
+            }
+            window.sessionStorage.removeItem(`tzudong:home-restore:${key}`);
+            return key;
         });
+
+        await page.goBack();
 
         const failedEvent = await page.waitForFunction(() => {
             const events = (window as typeof window & {
@@ -205,7 +211,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         expect(await failedEvent.jsonValue()).toMatchObject({
             type: 'home.restore.failed',
             detail: {
-                restoreKey: 'missing-restore',
+                restoreKey,
                 reason: 'missing',
             },
         });
@@ -266,7 +272,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
 
 
         await page.getByRole('button', { name: /한식\s*\(\d+\)/ }).click({ force: true });
-        await expect(page.getByLabel(/카테고리 필터 열기/)).toContainText('카테고리 1');
+        await expect(page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ })).toBeVisible();
         const filteredRows = await categoryResponse.then((response) => response.json());
         expect(filteredRows).toHaveLength(1);
         expect(filteredRows[0].approved_name).toBe('명동칼국수');
@@ -276,7 +282,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         });
 
         await page.getByRole('button', { name: /초기화 \(1개 선택됨\)/ }).click();
-        await expect(page.getByLabel(/카테고리 필터 열기/)).not.toContainText('카테고리 1');
+        await expect(page.getByRole('button', { name: /초기화/ })).toHaveCount(0);
     });
     test('MHM-02: search-selected detail can swipe to the next restaurant', async ({ page }) => {
         await openMobileSearchAndSelect(page, '정원분식');

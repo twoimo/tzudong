@@ -12,6 +12,13 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const isNextBuildCommand = process.argv.some((arg) => arg === 'build');
 const shouldUseStandaloneOutput = isNextBuildCommand && process.env.VERCEL !== '1';
+const configuredNextDistDir = process.env.TZUDONG_NEXT_DIST_DIR?.trim();
+if (
+    configuredNextDistDir
+    && !/^\.next-[a-z0-9](?:[a-z0-9-]{0,47})$/.test(configuredNextDistDir)
+) {
+    throw new Error('TZUDONG_NEXT_DIST_DIR must be a bounded repository-local Next.js directory name.');
+}
 
 const securityHeaders = [
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -28,24 +35,52 @@ const securityHeaders = [
 
 const SUPABASE_STORAGE_IMAGE_BUCKETS = ['profile-avatars', 'review-photos'];
 const SUPABASE_CONFIGURATION_ERROR = 'NEXT_PUBLIC_SUPABASE_URL must be a canonical HTTPS *.supabase.co origin without credentials, an explicit port, path, query, or fragment.';
+const LOCAL_LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 export function getValidatedSupabaseImageOrigin(value = process.env.NEXT_PUBLIC_SUPABASE_URL) {
     if (value === undefined) return null;
 
     const origin = resolveConfiguredSupabaseOrigin(value);
-    if (!origin) throw new Error(SUPABASE_CONFIGURATION_ERROR);
-    return origin;
+    if (origin) return origin;
+
+    const localNightly = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1' && process.env.NODE_ENV === 'test';
+    const localDevelopment = process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1' && process.env.NODE_ENV === 'development';
+    if (localNightly || localDevelopment) {
+        try {
+            const url = new URL(value);
+            const canonicalOrigin = url.origin;
+            if (
+                url.protocol === 'http:'
+                && LOCAL_LOOPBACK_HOSTS.has(url.hostname)
+                && !url.username
+                && !url.password
+                && url.pathname === '/'
+                && !url.search
+                && !url.hash
+                && (value === canonicalOrigin || value === `${canonicalOrigin}/`)
+            ) {
+                return canonicalOrigin;
+            }
+        } catch {
+            // Fall through to the same fail-closed configuration error.
+        }
+    }
+
+    throw new Error(SUPABASE_CONFIGURATION_ERROR);
 }
 
 export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL) {
     const supabaseImageOrigin = getValidatedSupabaseImageOrigin(configuredSupabaseUrl);
     const supabaseStoragePatterns = supabaseImageOrigin
-        ? SUPABASE_STORAGE_IMAGE_BUCKETS.map((bucket) => ({
-            protocol: 'https',
-            hostname: new URL(supabaseImageOrigin).hostname,
-            port: '',
-            pathname: `/storage/v1/object/public/${bucket}/**`,
-        }))
+        ? (() => {
+            const url = new URL(supabaseImageOrigin);
+            return SUPABASE_STORAGE_IMAGE_BUCKETS.map((bucket) => ({
+                protocol: url.protocol.slice(0, -1),
+                hostname: url.hostname,
+                port: url.port,
+                pathname: `/storage/v1/object/public/${bucket}/**`,
+            }));
+        })()
         : [];
 
     return [
@@ -73,6 +108,8 @@ export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEX
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
+    allowedDevOrigins: ['127.0.0.1', 'localhost'],
     images: {
         // [OPTIMIZATION] 이미지 최적화 설정 (예상 LCP 개선: ~300ms)
         formats: ['image/avif', 'image/webp'], // AVIF 우선, WebP fallback

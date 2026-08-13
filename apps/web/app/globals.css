@@ -48,6 +48,20 @@
   --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
 }
 
+.dark {
+  --background: 24 10% 10%;
+  --foreground: 38 30% 96%;
+  --card: 24 9% 13%;
+  --card-foreground: 38 30% 96%;
+  --border: 24 6% 24%;
+  --secondary: 24 7% 18%;
+  --secondary-foreground: 38 30% 96%;
+  --muted: 24 7% 18%;
+  --muted-foreground: 24 7% 68%;
+  --accent: 24 7% 18%;
+  --accent-foreground: 38 30% 96%;
+}
+
 @supports (height: 100dvh) {
   :root { --full-height: 100dvh; }
 }

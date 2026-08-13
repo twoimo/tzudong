@@ -6,13 +6,13 @@
   "historicalSourceArchiveSha256": "1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11",
   "transition": {
     "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_TRANSITION.v4.sql",
-    "byteLength": 27693,
-    "sha256": "203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0"
+    "byteLength": 36415,
+    "sha256": "ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd"
   },
   "repairs": {
     "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_REPAIRS.v4.sql",
-    "byteLength": 38549,
-    "sha256": "0d4e0716fba5d65d1ff964ba00758d0f21652ee1ffbdf6e5f07623c42fd1e975"
+    "byteLength": 46700,
+    "sha256": "efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb"
   },
   "validationLedger": [
     {
@@ -29,6 +29,48 @@
   "slots": {
     "phaseAAfterOrdinal": 2,
     "phaseBBeforeMigration": "20260713002000_g014_public_api_private_boundary.sql"
+  },
+  "legacyShapeNormalization": {
+    "kind": "source_only_empty_clean_legacy_shape_normalization",
+    "historicalProof": false,
+    "hostedStateEvidence": false,
+    "reconstructionSource": {
+      "manifestPath": "backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.json",
+      "manifestByteLength": 5331,
+      "manifestSha256": "1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e",
+      "archivePath": "backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.zip",
+      "archiveByteLength": 152235,
+      "archiveSha256": "21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3",
+      "ordinal": 0,
+      "member": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "sourceByteLength": 79793,
+      "sourceSha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33"
+    },
+    "applicationPrerequisites": {
+      "manifestPath": "backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json",
+      "manifestByteLength": 1252,
+      "manifestSha256": "055d31e0d7597ec026e570eaf85adfb2c4a6c5480f80a3ed7a7ca525a6b2a9f3",
+      "sourcePath": "backend/supabase/baselines/pre-20260214-public-schema.sql",
+      "sourceByteLength": 203938,
+      "sourceSha256": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
+      "outputPath": "backend/supabase/baselines/local/application-prerequisites.sql",
+      "outputByteLength": 210374,
+      "outputSha256": "34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15"
+    },
+    "operations": [
+      {
+        "relation": "public.profiles",
+        "precondition": "empty_exact_legacy_profile_picture_text_avatar_url_absent",
+        "operation": "rename_profile_picture_to_avatar_url",
+        "postcondition": "exact_target_avatar_url_text_profile_picture_absent"
+      },
+      {
+        "relation": "public.reviews",
+        "precondition": "empty_exact_legacy_base_like_count_absent",
+        "operation": "add_like_count_integer_not_null_default_zero_check_nonnegative",
+        "postcondition": "exact_target_like_count_default_and_validated_check"
+      }
+    ]
   },
   "canonicalBodyHashes": {
     "approve_submission_item": "42622004a1e1ac15991748639c726ca95fcb9afda8c263044cde57c52b983936",
@@ -520,6 +562,14 @@
       "disposition": "drop_obsolete_overload"
     }
   ],
+  "selfContainedReplay": {
+    "canonicalPath": "backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+    "filename": "20260813085342_current_profile_mutation_boundary.sql",
+    "predecessorFilename": "20260812000700_local_profile_leaderboard_page_convergence.sql",
+    "sourceSha256": "15f4d240222d4b7abdbfd0b27a5c36142a2f61c4cc9d9fdf4638588fee9b29e3",
+    "sourceByteLength": 56880,
+    "transactionClass": "self_committing"
+  },
   "replayMembershipWindows": {
     "authority": "postgres",
     "member": "postgres",
@@ -585,6 +635,36 @@
         "sourceByteLength": 9938,
         "transformedSha256": "9c4add0ea94cb53287e7f70fcc32b90eab789b6747941fe4c42569531df2ec28",
         "transformedByteLength": 11006,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000200_local_public_read_policy_convergence.sql",
+        "sourceSha256": "e847ea7898c9ff77748d65c94c3dc04747ef0b1bbf8ac12ed623bbfc8c5e6233",
+        "sourceByteLength": 22082,
+        "transformedSha256": "dfcf0c3e43bf93128003b85e1114a096eaeb5f1c2e3ca8b3cc521f6cb76cc288",
+        "transformedByteLength": 23150,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000300_local_admin_data_boundary_convergence.sql",
+        "sourceSha256": "b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf",
+        "sourceByteLength": 14421,
+        "transformedSha256": "292815b3be72beb52b70e84a062e9cfbba7909ad82978e55dfb2ae29a522ab9b",
+        "transformedByteLength": 15489,
+        "mode": "wrapper_transaction",
+        "anchor": "",
+        "cleanupAnchor": ""
+      },
+      {
+        "filename": "20260812000400_local_admin_map_overlay_boundary_convergence.sql",
+        "sourceSha256": "f61595514b4218bfa47e3fb5c529f648fe4d16efef1f5ef02f216aff6dd08bcb",
+        "sourceByteLength": 20074,
+        "transformedSha256": "08994cddabb2d0e6aeb1783d84faad868ebaf614de731dff358a8046f2413834",
+        "transformedByteLength": 21142,
         "mode": "wrapper_transaction",
         "anchor": "",
         "cleanupAnchor": ""
