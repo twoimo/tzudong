@@ -78,15 +78,19 @@ export default function HomeMapUserMenu({
   const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  const displayName = useMemo(() => getDisplayName(user), [user]);
-  const { data: profileAvatarUrl = null } = useQuery({
+  const fallbackDisplayName = useMemo(() => getDisplayName(user), [user]);
+  const { data: profileMenuIdentity = null } = useQuery({
     queryKey: ["home-map-user-menu-avatar", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
 
       try {
         const [profile] = await readPublicProfileSummaries(supabase, [user.id]);
-        return resolveProfileAvatarUrl(profile?.avatar_url, user.id);
+        if (!profile) return null;
+        return {
+          nickname: profile.nickname,
+          avatarUrl: resolveProfileAvatarUrl(profile.avatar_url, user.id),
+        };
       } catch {
         console.error("지도 사용자 프로필 사진 조회 실패:");
         return null;
@@ -95,6 +99,8 @@ export default function HomeMapUserMenu({
     enabled: Boolean(user?.id),
     staleTime: 5 * 60 * 1000,
   });
+  const displayName = profileMenuIdentity?.nickname ?? fallbackDisplayName;
+  const profileAvatarUrl = profileMenuIdentity?.avatarUrl ?? null;
 
   const navigateToPage = useCallback(
     (href: string) => {

@@ -62,7 +62,7 @@ test.describe('G003 restaurant submission flow contracts', () => {
         return;
       }
       if (url.pathname.endsWith('/rest/v1/profiles')) {
-        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nickname: 'G003 QA' }) });
+        await route.abort('blockedbyclient');
         return;
       }
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });

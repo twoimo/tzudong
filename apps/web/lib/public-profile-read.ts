@@ -63,7 +63,7 @@ const UUID_PATTERN =
 const MAX_PROFILE_ROWS = 100;
 export const PUBLIC_PROFILE_LEADERBOARD_PAGE_SIZE = MAX_PROFILE_ROWS;
 const MAX_NICKNAME_LENGTH = 100;
-const MAX_AVATAR_URL_LENGTH = 2_048;
+const MAX_AVATAR_REFERENCE_BYTES = 4_096;
 
 function fail(code: PublicProfileReadErrorCode): never {
   throw new PublicProfileReadError(code);
@@ -126,10 +126,14 @@ function isBoundedNickname(value: unknown): value is string {
 }
 
 function isBoundedAvatarUrl(value: unknown): value is string | null {
-  return (
-    value === null ||
-    (typeof value === "string" && value.length <= MAX_AVATAR_URL_LENGTH)
-  );
+  if (value === null) return true;
+  if (typeof value !== "string") return false;
+
+  try {
+    return new TextEncoder().encode(value).byteLength <= MAX_AVATAR_REFERENCE_BYTES;
+  } catch {
+    return false;
+  }
 }
 
 function isBoundedCount(value: unknown): value is number {

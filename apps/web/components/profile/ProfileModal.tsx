@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
@@ -18,6 +19,8 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { updateCurrentProfileNickname } from "@/lib/profile-mutation";
+import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -26,12 +29,13 @@ interface ProfileModalProps {
 
 interface Profile {
     nickname: string;
-    avatar_url?: string;
+    avatar_url?: string | null;
     [key: string]: unknown;
 }
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
+    const queryClient = useQueryClient();
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(false);
@@ -56,7 +60,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
             // 프로필이 존재하는 경우
             if (data && data.length > 0) {
-                const profileData = data[0] as Profile;
+                const profileData = data[0];
                 setProfile(profileData);
                 setNewNickname(profileData.nickname || "");
             } else {
@@ -88,16 +92,17 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         setLoading(true);
         try {
-            const { error } = await supabase
-                .from('profiles' as never)
-                .update({
-                    nickname: newNickname.trim()
-                } as never)
-                .eq('user_id', user.id);
-
-            if (error) throw error;
-
-            setProfile({ ...profile, nickname: newNickname.trim() });
+            const receipt = await updateCurrentProfileNickname(
+                supabase,
+                user.id,
+                newNickname.trim(),
+            );
+            setProfile({
+                ...profile,
+                nickname: receipt.profile.nickname,
+                avatar_url: receipt.profile.avatarReference,
+            });
+            await invalidateProfileDisplayQueries(queryClient, user.id);
             toast.success('닉네임이 성공적으로 변경되었습니다');
         } catch {
             toast.error('닉네임 변경에 실패했습니다');

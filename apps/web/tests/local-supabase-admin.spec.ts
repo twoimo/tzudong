@@ -6,6 +6,12 @@ import {
   mapAdminMapOverlayRouteActionToRpcAction,
   normalizeAdminMapOverlayPreviewRequest,
 } from '../lib/admin-map-overlays';
+import {
+  LOCAL_DIRECT_PROFILE_TABLE_PATH,
+  LOCAL_PROFILE_AVATAR_CAS_RPC_PATH,
+  LOCAL_PROFILE_NICKNAME_MUTATION_RPC_PATH,
+} from './nightly/local-profile-mutation-rpc-boundary';
+import { LOCAL_PROFILE_SUMMARIES_RPC_PATH } from './nightly/local-profile-read-rpc-boundary';
 
 const isLocalNightly = process.env.NIGHTLY_MODE === 'local';
 const localSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -14,6 +20,8 @@ const localAppOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.
 const localSupabaseOrigin = new URL(localSupabaseUrl || 'http://127.0.0.1').origin;
 const localStorageUploadPath = /^\/storage\/v1\/object\/review-photos\/[0-9a-f-]{36}\/nightly-browser-cors\/review\.webp$/;
 const localStoragePublicPath = /^\/storage\/v1\/object\/public\/review-photos\/[0-9a-f-]{36}\/nightly-browser-cors\/review\.webp$/;
+const localProfileAvatarOperationId = '00000000-0000-4000-8000-000000000905';
+const localProfileAvatarJpegBase64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPxB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPxB//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxB//9k=';
 
 test.describe('real local Supabase and admin lifecycle', () => {
   test.skip(!isLocalNightly, 'This contract is restricted to the disposable local stack.');
@@ -405,6 +413,269 @@ test.describe('real local Supabase and admin lifecycle', () => {
       subscribed: true,
       sendAcknowledged: true,
       selfBroadcastReceived: true,
+    });
+  });
+
+  test('proves authenticated profile nickname and avatar CAS with exact readback and cleanup', async ({ page }) => {
+    const email = process.env.NIGHTLY_ADMIN_EMAIL;
+    const password = process.env.NIGHTLY_ADMIN_PASSWORD;
+    expect(email).toBe('nightly-ci@local.invalid');
+    expect(password?.length).toBeGreaterThanOrEqual(16);
+
+    await page.goto('/');
+    const evidence = await page.evaluate(async ({
+      anonKey,
+      avatarJpegBase64,
+      avatarOperationId,
+      avatarRpcPath,
+      directProfilePath,
+      email: loginEmail,
+      nicknameRpcPath,
+      password: loginPassword,
+      profileSummaryPath,
+      supabaseUrl,
+    }) => {
+      const fixedHeaders = (accessToken: string) => ({
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      });
+      const postJson = async (
+        accessToken: string,
+        path: string,
+        body: Readonly<Record<string, unknown>>,
+      ) => {
+        const response = await fetch(`${supabaseUrl}${path}`, {
+          method: 'POST',
+          headers: fixedHeaders(accessToken),
+          body: JSON.stringify(body),
+        });
+        let payload: unknown = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+        return { ok: response.ok, payload };
+      };
+      const isRecord = (value: unknown): value is Record<string, unknown> => (
+        typeof value === 'object' && value !== null && !Array.isArray(value)
+      );
+      const isExactProfile = (
+        value: unknown,
+        userId: string,
+        nickname: string,
+        avatarReference: string | null,
+      ) => isRecord(value)
+        && value.user_id === userId
+        && value.nickname === nickname
+        && value.avatar_url === avatarReference
+        && Object.keys(value).length === 3;
+      const readProfile = async (accessToken: string, userId: string) => {
+        const result = await postJson(accessToken, profileSummaryPath, { p_user_ids: [userId] });
+        return {
+          ok: result.ok,
+          row: Array.isArray(result.payload) && result.payload.length === 1
+            ? result.payload[0]
+            : null,
+        };
+      };
+      const result = {
+        authenticated: false,
+        directProfilesDenied: false,
+        initialReadback: false,
+        nicknameApplied: false,
+        uploadStored: false,
+        avatarApplied: false,
+        avatarReadback: false,
+        avatarPublicRead: false,
+        avatarCleared: false,
+        objectAbsent: false,
+        nicknameRestored: false,
+        finalReadback: false,
+      };
+      let accessToken = '';
+      let userId = '';
+      let marker = '';
+      let storageKey = '';
+      try {
+        const loginResponse = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+        });
+        const loginPayload = await loginResponse.json() as {
+          access_token?: unknown;
+          user?: { id?: unknown };
+        };
+        accessToken = typeof loginPayload.access_token === 'string'
+          ? loginPayload.access_token
+          : '';
+        userId = typeof loginPayload.user?.id === 'string' ? loginPayload.user.id : '';
+        result.authenticated = loginResponse.ok
+          && accessToken.length > 0
+          && /^[0-9a-f-]{36}$/.test(userId);
+        if (!result.authenticated) return result;
+
+        try {
+          await fetch(`${supabaseUrl}${directProfilePath}?select=user_id&limit=1`, {
+            headers: fixedHeaders(accessToken),
+          });
+        } catch {
+          result.directProfilesDenied = true;
+        }
+
+        const initial = await readProfile(accessToken, userId);
+        result.initialReadback = initial.ok
+          && isExactProfile(initial.row, userId, 'Nightly CI', null);
+
+        const nickname = await postJson(accessToken, nicknameRpcPath, {
+          p_nickname: 'Nightly CI 검증',
+        });
+        result.nicknameApplied = nickname.ok
+          && isRecord(nickname.payload)
+          && nickname.payload.status === 'applied'
+          && nickname.payload.reasonCode === 'PROFILE_NICKNAME_UPDATED'
+          && isRecord(nickname.payload.profile)
+          && nickname.payload.profile.nickname === 'Nightly CI 검증'
+          && nickname.payload.profile.avatarReference === null;
+
+        storageKey = `${userId}/avatar-${avatarOperationId}.jpg`;
+        marker = `profile-avatar://${storageKey}`;
+        const objectUrl = `${supabaseUrl}/storage/v1/object/profile-avatars/${storageKey}`;
+        const publicObjectUrl = `${supabaseUrl}/storage/v1/object/public/profile-avatars/${storageKey}`;
+        const cleanupBody = JSON.stringify({ prefixes: [storageKey] });
+        await fetch(`${supabaseUrl}/storage/v1/object/profile-avatars`, {
+          method: 'DELETE',
+          headers: fixedHeaders(accessToken),
+          body: cleanupBody,
+        });
+        const jpegBytes = Uint8Array.from(
+          atob(avatarJpegBase64),
+          (character) => character.charCodeAt(0),
+        );
+        const upload = await fetch(objectUrl, {
+          method: 'POST',
+          headers: {
+            apikey: anonKey,
+            Authorization: `Bearer ${accessToken}`,
+            'cache-control': 'max-age=3600',
+            'Content-Type': 'image/jpeg',
+            'x-upsert': 'false',
+          },
+          body: jpegBytes,
+        });
+        result.uploadStored = upload.ok;
+        await upload.body?.cancel();
+
+        const avatar = await postJson(accessToken, avatarRpcPath, {
+          p_expected_avatar_reference: null,
+          p_next_avatar_operation_id: avatarOperationId,
+        });
+        result.avatarApplied = avatar.ok
+          && isRecord(avatar.payload)
+          && avatar.payload.status === 'applied'
+          && avatar.payload.reasonCode === 'PROFILE_AVATAR_UPDATED'
+          && isRecord(avatar.payload.profile)
+          && avatar.payload.profile.avatarReference === marker;
+
+        const avatarReadback = await readProfile(accessToken, userId);
+        result.avatarReadback = avatarReadback.ok
+          && isExactProfile(avatarReadback.row, userId, 'Nightly CI 검증', marker);
+        const publicRead = await fetch(publicObjectUrl);
+        result.avatarPublicRead = publicRead.ok;
+        await publicRead.body?.cancel();
+
+        const clear = await postJson(accessToken, avatarRpcPath, {
+          p_expected_avatar_reference: marker,
+          p_next_avatar_operation_id: null,
+        });
+        result.avatarCleared = clear.ok
+          && isRecord(clear.payload)
+          && clear.payload.status === 'applied'
+          && clear.payload.reasonCode === 'PROFILE_AVATAR_UPDATED'
+          && isRecord(clear.payload.profile)
+          && clear.payload.profile.avatarReference === null;
+        const cleanup = await fetch(`${supabaseUrl}/storage/v1/object/profile-avatars`, {
+          method: 'DELETE',
+          headers: fixedHeaders(accessToken),
+          body: cleanupBody,
+        });
+        await cleanup.body?.cancel();
+        const absence = await fetch(objectUrl, {
+          method: 'HEAD',
+          headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
+        });
+        result.objectAbsent = cleanup.ok && (absence.status === 400 || absence.status === 404);
+        await absence.body?.cancel();
+
+        const restore = await postJson(accessToken, nicknameRpcPath, {
+          p_nickname: 'Nightly CI',
+        });
+        result.nicknameRestored = restore.ok
+          && isRecord(restore.payload)
+          && (restore.payload.status === 'applied' || restore.payload.status === 'unchanged')
+          && isRecord(restore.payload.profile)
+          && restore.payload.profile.nickname === 'Nightly CI';
+        const finalProfile = await readProfile(accessToken, userId);
+        result.finalReadback = finalProfile.ok
+          && isExactProfile(finalProfile.row, userId, 'Nightly CI', null);
+        return result;
+      } finally {
+        if (accessToken && userId) {
+          if (marker) {
+            try {
+              await postJson(accessToken, avatarRpcPath, {
+                p_expected_avatar_reference: marker,
+                p_next_avatar_operation_id: null,
+              });
+            } catch {
+              // The bounded final readback below remains authoritative.
+            }
+          }
+          if (storageKey) {
+            try {
+              await fetch(`${supabaseUrl}/storage/v1/object/profile-avatars`, {
+                method: 'DELETE',
+                headers: fixedHeaders(accessToken),
+                body: JSON.stringify({ prefixes: [storageKey] }),
+              });
+            } catch {
+              // The test's explicit cleanup/absence evidence decides success.
+            }
+          }
+          try {
+            await postJson(accessToken, nicknameRpcPath, { p_nickname: 'Nightly CI' });
+          } catch {
+            // The test's explicit final readback decides success.
+          }
+        }
+      }
+    }, {
+      anonKey: localSupabaseAnonKey,
+      avatarJpegBase64: localProfileAvatarJpegBase64,
+      avatarOperationId: localProfileAvatarOperationId,
+      avatarRpcPath: LOCAL_PROFILE_AVATAR_CAS_RPC_PATH,
+      directProfilePath: LOCAL_DIRECT_PROFILE_TABLE_PATH,
+      email,
+      nicknameRpcPath: LOCAL_PROFILE_NICKNAME_MUTATION_RPC_PATH,
+      password,
+      profileSummaryPath: LOCAL_PROFILE_SUMMARIES_RPC_PATH,
+      supabaseUrl: localSupabaseUrl,
+    });
+    expect(evidence).toEqual({
+      authenticated: true,
+      directProfilesDenied: true,
+      initialReadback: true,
+      nicknameApplied: true,
+      uploadStored: true,
+      avatarApplied: true,
+      avatarReadback: true,
+      avatarPublicRead: true,
+      avatarCleared: true,
+      objectAbsent: true,
+      nicknameRestored: true,
+      finalReadback: true,
     });
   });
 

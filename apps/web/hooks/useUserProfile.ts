@@ -228,7 +228,7 @@ export function useUserProfileIdentity(userId: string) {
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
-                avatarUrl: typedProfile.avatar_url || undefined,
+                avatarUrl: typedProfile.avatar_url ?? undefined,
             };
         },
         enabled: !!userId,
@@ -278,7 +278,7 @@ export function useUserProfile(userId: string) {
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
-                avatarUrl: typedProfile.avatar_url || undefined,
+                avatarUrl: typedProfile.avatar_url ?? undefined,
                 reviewCount,
                 verifiedReviewCount,
                 totalLikes,
