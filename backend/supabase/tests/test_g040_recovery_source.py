@@ -92,7 +92,7 @@ class G040RecoverySourceTests(unittest.TestCase):
                     path.write_bytes(b"runtime binding\n")
         manifest = self.root / ".github/g034-hosted-migration-closure.v1.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_bytes(json.dumps({
+        manifest.write_bytes((json.dumps({
             "schemaVersion": 1,
             "ledgerTerminalVersion": "20260713002400",
             "closureTerminalVersion": "20260713002400",
@@ -105,7 +105,7 @@ class G040RecoverySourceTests(unittest.TestCase):
             } for fragment in self.fragments],
             "excludedVersions": ["20260713002500"],
             "cloneBackupRecoveryRequired": True,
-        }, separators=(",", ":")).encode("ascii"))
+        }, indent=2) + "\n").encode("ascii"))
         self.git("add", ".")
         self.git("commit", "-qm", "source")
         self.commit = self.git("rev-parse", "HEAD").strip()
@@ -376,6 +376,8 @@ class G040RecoverySourceTests(unittest.TestCase):
         with self.assertRaises(source.RecoverySourceError):
             source.recovery_source_inventory(self.root)
         manifest.write_text(json.dumps(payload, indent=2))
+        self.assertEqual(source.recovery_source_inventory(self.root), inventory)
+        manifest.write_text(json.dumps(payload, indent=4))
         with self.assertRaises(source.RecoverySourceError):
             source.recovery_source_inventory(self.root)
 
