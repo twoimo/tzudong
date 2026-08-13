@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import types
@@ -51,6 +52,17 @@ assert FUNCTION_SCANNER_SPEC is not None and FUNCTION_SCANNER_SPEC.loader is not
 function_scanner = importlib.util.module_from_spec(FUNCTION_SCANNER_SPEC)
 sys.modules[FUNCTION_SCANNER_SPEC.name] = function_scanner
 FUNCTION_SCANNER_SPEC.loader.exec_module(function_scanner)
+LIFECYCLE_WRITER_PATH = (
+    REPOSITORY_ROOT / ".github" / "scripts" / "write-nightly-lifecycle-stage.py"
+)
+LIFECYCLE_WRITER_SPEC = importlib.util.spec_from_file_location(
+    "nightly_lifecycle_stage_writer",
+    LIFECYCLE_WRITER_PATH,
+)
+assert LIFECYCLE_WRITER_SPEC is not None and LIFECYCLE_WRITER_SPEC.loader is not None
+lifecycle_writer = importlib.util.module_from_spec(LIFECYCLE_WRITER_SPEC)
+sys.modules[LIFECYCLE_WRITER_SPEC.name] = lifecycle_writer
+LIFECYCLE_WRITER_SPEC.loader.exec_module(lifecycle_writer)
 
 
 class LocalPublicationVerifierTests(unittest.TestCase):
@@ -63,6 +75,337 @@ class LocalPublicationVerifierTests(unittest.TestCase):
         )
         github_sha_patch.start()
         self.addCleanup(github_sha_patch.stop)
+
+    def test_lifecycle_stage_writer_is_bounded_atomic_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            artifact_root = repository_root / "nightly-artifacts"
+            artifact_root.mkdir(mode=0o700)
+            diagnostics = artifact_root / "failure-diagnostics"
+            running = lifecycle_writer.build_receipt(
+                stage_index=14,
+                stage="profile_mutation",
+                status="running",
+                exit_code=None,
+            )
+            target = lifecycle_writer.write_receipt(diagnostics, running)
+            self.assertEqual(
+                json.loads(target.read_text(encoding="utf-8")),
+                running,
+            )
+            self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(target.stat().st_nlink, 1)
+            self.assertLessEqual(target.stat().st_size, 1024)
+
+            upload = lifecycle_writer.prepare_upload_copy(repository_root)
+            self.assertEqual(
+                upload,
+                repository_root
+                / "nightly-artifacts/validated-failure-diagnostics/local-lifecycle-stage.json",
+            )
+            self.assertEqual(upload.read_bytes(), target.read_bytes())
+            self.assertEqual(upload.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(upload.stat().st_nlink, 1)
+
+            failed = lifecycle_writer.build_receipt(
+                stage_index=14,
+                stage="profile_mutation",
+                status="failed",
+                exit_code=1,
+            )
+            lifecycle_writer.write_receipt(diagnostics, failed)
+            self.assertEqual(
+                set(json.loads(target.read_text(encoding="utf-8"))),
+                lifecycle_writer.RECEIPT_FIELDS,
+            )
+            self.assertEqual(
+                json.loads(target.read_text(encoding="utf-8"))["failure_class"],
+                "command_failed",
+            )
+            with self.assertRaises(lifecycle_writer.LifecycleReceiptError):
+                lifecycle_writer.build_receipt(
+                    stage_index=13,
+                    stage="profile_mutation",
+                    status="failed",
+                    exit_code=1,
+                )
+
+            invalid_receipts = (
+                (14, "profile_mutation", "running", 0),
+                (14, "profile_mutation", "passed", 1),
+                (14, "profile_mutation", "failed", 0),
+                (14, "profile_mutation", "failed", 256),
+                (14, "profile_mutation", "failed", True),
+            )
+            for stage_index, stage, status, exit_code in invalid_receipts:
+                with self.subTest(status=status, exit_code=exit_code):
+                    with self.assertRaises(lifecycle_writer.LifecycleReceiptError):
+                        lifecycle_writer.build_receipt(
+                            stage_index=stage_index,
+                            stage=stage,
+                            status=status,
+                            exit_code=exit_code,
+                        )
+
+            target.unlink()
+            target.symlink_to(Path(temporary) / "outside.json")
+            with self.assertRaises(lifecycle_writer.LifecycleReceiptError):
+                lifecycle_writer.write_receipt(diagnostics, failed)
+
+    def test_lifecycle_stage_upload_staging_rejects_tampering_and_hardlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            artifact_root = repository_root / "nightly-artifacts"
+            artifact_root.mkdir(mode=0o700)
+            diagnostics = artifact_root / "failure-diagnostics"
+            receipt = lifecycle_writer.build_receipt(
+                stage_index=15,
+                stage="receipt",
+                status="passed",
+                exit_code=0,
+            )
+            source = lifecycle_writer.write_receipt(diagnostics, receipt)
+
+            source.write_text('{"private":"raw"}\n', encoding="utf-8")
+            source.chmod(0o600)
+            with self.assertRaises(lifecycle_writer.LifecycleReceiptError):
+                lifecycle_writer.prepare_upload_copy(repository_root)
+            self.assertFalse(
+                (artifact_root / "validated-failure-diagnostics").exists()
+            )
+
+            source.unlink()
+            outside = repository_root / "outside.json"
+            outside.write_text("{}\n", encoding="utf-8")
+            outside.chmod(0o600)
+            os.link(outside, source)
+            with self.assertRaises(lifecycle_writer.LifecycleReceiptError):
+                lifecycle_writer.prepare_upload_copy(repository_root)
+
+    def test_lifecycle_stage_upload_staging_is_optional_before_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            self.assertIsNone(
+                lifecycle_writer.prepare_upload_copy(Path(temporary)),
+            )
+
+    def test_workflow_records_each_lifecycle_stage_before_failure_upload(self) -> None:
+        workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+        previous = -1
+        for index, stage in enumerate(lifecycle_writer.STAGES, start=1):
+            marker = f"begin_lifecycle_stage {index} {stage}"
+            position = workflow.index(marker)
+            self.assertGreater(position, previous)
+            previous = position
+        self.assertEqual(workflow.count("begin_lifecycle_stage "), len(lifecycle_writer.STAGES))
+        self.assertEqual(workflow.count("          complete_lifecycle_stage\n"), len(lifecycle_writer.STAGES))
+        self.assertIn("set -Eeuo pipefail", workflow)
+        self.assertIn("umask 077", workflow)
+        self.assertIn("trap fail_lifecycle_stage ERR", workflow)
+        self.assertIn("record_lifecycle_stage failed \"$exit_code\" || true", workflow)
+        self.assertIn("id: prepare-lifecycle-diagnostic", workflow)
+        prepare_index = workflow.index(
+            "- name: Prepare bounded lifecycle diagnostic for failure persistence"
+        )
+        upload_index = workflow.index(
+            "- name: Upload bounded failed or partial local nightly diagnostics"
+        )
+        self.assertLess(prepare_index, upload_index)
+        self.assertIn("--prepare-upload", workflow[prepare_index:upload_index])
+        self.assertIn(
+            "path=nightly-artifacts/validated-failure-diagnostics/local-lifecycle-stage.json",
+            workflow[prepare_index:upload_index],
+        )
+        success_upload = workflow[
+            workflow.index("- name: Upload verified sanitized local nightly artifacts"):
+            prepare_index
+        ]
+        self.assertNotIn("local-lifecycle-stage.json", success_upload)
+        failed_upload = workflow[
+            upload_index:
+            workflow.index("- name: Upload allowlisted publication bundle")
+        ]
+        self.assertIn(
+            "${{ steps.prepare-lifecycle-diagnostic.outputs.path }}",
+            failed_upload,
+        )
+        self.assertNotIn(
+            "nightly-artifacts/failure-diagnostics/local-lifecycle-stage.json",
+            failed_upload,
+        )
+        begin_function = workflow[
+            workflow.index("          begin_lifecycle_stage() {"):
+            workflow.index("          complete_lifecycle_stage() {")
+        ]
+        complete_function = workflow[
+            workflow.index("          complete_lifecycle_stage() {"):
+            workflow.index("          fail_lifecycle_stage() {")
+        ]
+        self.assertLess(begin_function.index("trap - ERR"), begin_function.index("record_lifecycle_stage running"))
+        self.assertLess(
+            begin_function.index("record_lifecycle_stage running"),
+            begin_function.index("trap fail_lifecycle_stage ERR"),
+        )
+        self.assertLess(complete_function.index("trap - ERR"), complete_function.index("record_lifecycle_stage passed 0"))
+        first_begin = workflow.index("          begin_lifecycle_stage 1 prerequisite_verify")
+        self.assertNotIn(
+            "          trap fail_lifecycle_stage ERR\n",
+            workflow[workflow.index("          fail_lifecycle_stage() {"):first_begin],
+        )
+        lifecycle_step = workflow[
+            workflow.index("      - name: Apply local migrations, close functions, and seed"):
+            workflow.index("      - name: Verify generated Supabase types match the local catalog")
+        ]
+        command_markers = (
+            "local-migrate.py verify-prerequisite",
+            "local-migrate.py manifest",
+            "local-migrate.py verify \\",
+            "local-migrate.py apply-prerequisite",
+            "local-migrate.py apply \\",
+            "local-function-runtime-scan.py generate",
+            "local-function-runtime-scan.py apply",
+            "local-function-runtime-scan.py rescan",
+            "local-function-runtime-scan.py smoke",
+            "local-migrate.py seed",
+            "local_runtime_schema_convergence.sql",
+            "local_profile_read_boundary.sql",
+            "local_profile_leaderboard_page.sql",
+            "local_profile_mutation_boundary.sql",
+            "local-migrate.py receipt",
+        )
+        cursor = 0
+        for index, (stage, command_marker) in enumerate(
+            zip(lifecycle_writer.STAGES, command_markers, strict=True),
+            start=1,
+        ):
+            begin = lifecycle_step.index(
+                f"begin_lifecycle_stage {index} {stage}", cursor
+            )
+            command = lifecycle_step.index(command_marker, begin)
+            complete = lifecycle_step.index("complete_lifecycle_stage", command)
+            self.assertLess(begin, command)
+            self.assertLess(command, complete)
+            cursor = complete + len("complete_lifecycle_stage")
+        self.assertLess(
+            workflow.index("begin_lifecycle_stage 1 prerequisite_verify"),
+            workflow.index("python3 backend/supabase/scripts/local-migrate.py verify-prerequisite"),
+        )
+        self.assertLess(
+            workflow.index("begin_lifecycle_stage 15 receipt"),
+            workflow.index("python3 backend/supabase/scripts/local-migrate.py receipt"),
+        )
+
+    def test_lifecycle_shell_contract_preserves_command_exit_codes(self) -> None:
+        harness = r'''set -Eeuo pipefail
+lifecycle_stage=''
+lifecycle_stage_index=0
+record_lifecycle_stage() {
+  local status="$1"
+  local exit_code="${2:-none}"
+  if [[ "${FAIL_WRITER_STATUS:-}" == "$status" ]]; then
+    return 2
+  fi
+  printf '%s:%s:%s\n' "$lifecycle_stage" "$status" "$exit_code"
+}
+begin_lifecycle_stage() {
+  trap - ERR
+  lifecycle_stage_index="$1"
+  lifecycle_stage="$2"
+  record_lifecycle_stage running
+  trap fail_lifecycle_stage ERR
+}
+complete_lifecycle_stage() {
+  trap - ERR
+  record_lifecycle_stage passed 0
+}
+fail_lifecycle_stage() {
+  local exit_code=$?
+  trap - ERR
+  if [[ -n "$lifecycle_stage" ]]; then
+    record_lifecycle_stage failed "$exit_code" || true
+  fi
+  exit "$exit_code"
+}
+begin_lifecycle_stage 1 prerequisite_verify
+bash -c "exit ${COMMAND_EXIT_CODE}"
+complete_lifecycle_stage
+'''
+        for exit_code in (1, 23, 124, 137):
+            with self.subTest(exit_code=exit_code):
+                result = subprocess.run(
+                    ["bash", "-c", harness],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env={**os.environ, "COMMAND_EXIT_CODE": str(exit_code)},
+                )
+                self.assertEqual(result.returncode, exit_code)
+                self.assertEqual(
+                    result.stdout.splitlines(),
+                    [
+                        "prerequisite_verify:running:none",
+                        f"prerequisite_verify:failed:{exit_code}",
+                    ],
+                )
+
+        for writer_status, expected_lines in (
+            ("running", []),
+            ("passed", ["prerequisite_verify:running:none"]),
+        ):
+            with self.subTest(writer_status=writer_status):
+                result = subprocess.run(
+                    ["bash", "-c", harness],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    env={
+                        **os.environ,
+                        "COMMAND_EXIT_CODE": "0",
+                        "FAIL_WRITER_STATUS": writer_status,
+                    },
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout.splitlines(), expected_lines)
+
+        result = subprocess.run(
+            ["bash", "-c", harness],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={
+                **os.environ,
+                "COMMAND_EXIT_CODE": "23",
+                "FAIL_WRITER_STATUS": "failed",
+            },
+        )
+        self.assertEqual(result.returncode, 23)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            ["prerequisite_verify:running:none"],
+        )
+
+        redirection_harness = harness.replace(
+            'bash -c "exit ${COMMAND_EXIT_CODE}"',
+            ': > "${MISSING_DIRECTORY}/receipt.json"',
+        )
+        result = subprocess.run(
+            ["bash", "-c", redirection_harness],
+            capture_output=True,
+            text=True,
+            check=False,
+            env={
+                **os.environ,
+                "COMMAND_EXIT_CODE": "0",
+                "MISSING_DIRECTORY": "/definitely/missing/nightly-lifecycle",
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            [
+                "prerequisite_verify:running:none",
+                f"prerequisite_verify:failed:{result.returncode}",
+            ],
+        )
 
     @staticmethod
     def _e2e_failure_evidence() -> dict[str, object]:

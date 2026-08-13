@@ -770,58 +770,123 @@ jobs:
       - name: Apply local migrations, close functions, and seed
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          umask 077
           state="$LOCAL_STATE"
           bind=(--project "$LOCAL_PROJECT" --state-dir "$state" --env-file "$state/stack.env")
+          lifecycle_stage=''
+          lifecycle_stage_index=0
+          record_lifecycle_stage() {
+            local status="$1"
+            local exit_code="${2:-}"
+            local arguments=(
+              --stage-index "$lifecycle_stage_index"
+              --stage "$lifecycle_stage"
+              --status "$status"
+            )
+            if [[ -n "$exit_code" ]]; then
+              arguments+=(--exit-code "$exit_code")
+            fi
+            python3 .github/scripts/write-nightly-lifecycle-stage.py "${arguments[@]}"
+          }
+          begin_lifecycle_stage() {
+            trap - ERR
+            lifecycle_stage_index="$1"
+            lifecycle_stage="$2"
+            record_lifecycle_stage running
+            trap fail_lifecycle_stage ERR
+          }
+          complete_lifecycle_stage() {
+            trap - ERR
+            record_lifecycle_stage passed 0
+          }
+          fail_lifecycle_stage() {
+            local exit_code=$?
+            trap - ERR
+            if [[ -n "$lifecycle_stage" ]]; then
+              record_lifecycle_stage failed "$exit_code" || true
+            fi
+            exit "$exit_code"
+          }
+          begin_lifecycle_stage 1 prerequisite_verify
           python3 backend/supabase/scripts/local-migrate.py verify-prerequisite \
             --input backend/supabase/baselines/local/application-prerequisites.sql \
             > "$state/local-prerequisite-verify.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 2 manifest
           python3 backend/supabase/scripts/local-migrate.py manifest \
             --output "$state/local-migration-manifest.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 3 source_verify
           python3 backend/supabase/scripts/local-migrate.py verify \
             --manifest "$state/local-migration-manifest.json" \
             > "$state/local-migration-verify.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 4 prerequisite_apply
           python3 backend/supabase/scripts/local-migrate.py apply-prerequisite \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-migrate-prerequisite.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 5 migration_apply
           python3 backend/supabase/scripts/local-migrate.py apply \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-migrate-apply.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 6 closure_generate
           python3 backend/supabase/scripts/local-function-runtime-scan.py generate \
             --output "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-generate.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 7 closure_apply
           python3 backend/supabase/scripts/local-function-runtime-scan.py apply \
             --container "$LOCAL_DB_CONTAINER" --patch "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-apply.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 8 closure_rescan
           python3 backend/supabase/scripts/local-function-runtime-scan.py rescan \
             --container "$LOCAL_DB_CONTAINER" --patch "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-rescan.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 9 closure_smoke
           python3 backend/supabase/scripts/local-function-runtime-scan.py smoke \
             --container "$LOCAL_DB_CONTAINER" \
             > "$state/local-closure-smoke.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 10 seed
           python3 backend/supabase/scripts/local-migrate.py seed \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-seed.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 11 schema_convergence
           docker exec -i "$LOCAL_DB_CONTAINER" \
             psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < backend/supabase/tests/local_runtime_schema_convergence.sql \
             > "$state/local-runtime-contract.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 12 profile_read
           docker exec -i "$LOCAL_DB_CONTAINER" \
             psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < backend/supabase/tests/local_profile_read_boundary.sql \
             > "$state/local-profile-read-boundary.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 13 profile_leaderboard
           docker exec -i "$LOCAL_DB_CONTAINER" \
             psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < backend/supabase/tests/local_profile_leaderboard_page.sql \
             > "$state/local-profile-leaderboard-page.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 14 profile_mutation
           docker exec -i "$LOCAL_DB_CONTAINER" \
             psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
             < backend/supabase/tests/local_profile_mutation_boundary.sql \
             > "$state/local-profile-mutation-boundary.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 15 receipt
           python3 backend/supabase/scripts/local-migrate.py receipt \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             --output "$state/local-receipt-v1.json" \
             > "$state/local-receipt-command.json"
+          complete_lifecycle_stage
 
       - name: Verify generated Supabase types match the local catalog
         working-directory: apps/web
@@ -1702,6 +1767,24 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Prepare bounded lifecycle diagnostic for failure persistence
+        id: prepare-lifecycle-diagnostic
+        if: ${{ always() && (failure() || cancelled() || env.NIGHTLY_SUITE != 'all') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          result="$(python3 .github/scripts/write-nightly-lifecycle-stage.py --prepare-upload)"
+          case "$result" in
+            prepared)
+              printf '%s\n' \
+                'path=nightly-artifacts/validated-failure-diagnostics/local-lifecycle-stage.json' \
+                >> "$GITHUB_OUTPUT"
+              ;;
+            absent) ;;
+            *) exit 2 ;;
+          esac
+
       - name: Upload bounded failed or partial local nightly diagnostics
         if: ${{ always() && (failure() || cancelled() || env.NIGHTLY_SUITE != 'all') }}
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
@@ -1713,6 +1796,7 @@ jobs:
             nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json
             nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json
             nightly-artifacts/failure-diagnostics/local-stack-failure-diagnostics.json
+            ${{ steps.prepare-lifecycle-diagnostic.outputs.path }}
             nightly-artifacts/failure-diagnostics/nightly-unit-run-summary.json
             nightly-artifacts/failure-diagnostics/nightly-e2e-run-summary.json
             nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json
