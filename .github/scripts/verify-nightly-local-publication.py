@@ -89,7 +89,9 @@ EXPECTED_FIELDS = {
     "local-browser-route-diagnostics.json": {
         "schema", "source", "tests", "record_count", "request_count",
     },
-    "local-image-pull-preflight.json": {"schema", "image_count", "images", "container_probe"},
+    "local-image-pull-preflight.json": {
+        "schema", "image_count", "images", "container_probe", "typegen",
+    },
 }
 EXPECTED_MARKERS = {
     "local-stack-reset.json": ("schema", "local-stack-receipt-v1"),
@@ -140,12 +142,32 @@ EXPECTED_IMAGES = {
     "supabase/storage-api:v1.33.0",
     "darthsim/imgproxy:v3.8.0",
     "supabase/postgres-meta:v0.95.1",
+    "public.ecr.aws/supabase/postgres-meta:v0.96.6",
     "supabase/edge-runtime:v1.69.28",
     "supabase/logflare:1.27.0",
     "supabase/postgres:15.8.1.085",
     "timberio/vector:0.28.1-alpine",
     "supabase/supavisor:2.7.4",
     "inbucket/inbucket:3.0.3",
+}
+EXPECTED_TYPEGEN_IMAGE = {
+    "cli_version": "2.109.1",
+    "registry": "public.ecr.aws",
+    "image": "public.ecr.aws/supabase/postgres-meta:v0.96.6",
+    "pull_reference": (
+        "public.ecr.aws/supabase/postgres-meta@sha256:"
+        "b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed"
+    ),
+    "repo_digest": (
+        "public.ecr.aws/supabase/postgres-meta@sha256:"
+        "b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed"
+    ),
+    "image_id": (
+        "sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a"
+    ),
+    "platform": "linux/amd64",
+    "status": "verified",
+    "failure_class": "none",
 }
 SERVICES_WITHOUT_DOCKER_HEALTHCHECK = {"functions", "rest"}
 READBACK_SECTIONS = (
@@ -1057,6 +1079,7 @@ def verify_image_preflight(payload: dict[str, object]) -> None:
         or len(images) != len(EXPECTED_IMAGES)
         or not isinstance(probe, dict)
         or probe != {"status": "passed", "failure_class": "none"}
+        or payload.get("typegen") != EXPECTED_TYPEGEN_IMAGE
     ):
         fail("local image pull preflight contract mismatch")
     names = set()
