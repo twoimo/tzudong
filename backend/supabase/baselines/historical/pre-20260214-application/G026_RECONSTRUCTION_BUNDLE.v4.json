@@ -6,8 +6,8 @@
   "historicalSourceArchiveSha256": "1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11",
   "transition": {
     "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_TRANSITION.v4.sql",
-    "byteLength": 27693,
-    "sha256": "203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0"
+    "byteLength": 36415,
+    "sha256": "ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd"
   },
   "repairs": {
     "path": "backend/supabase/baselines/historical/pre-20260214-application/G026_RECONSTRUCTION_REPAIRS.v4.sql",
@@ -29,6 +29,48 @@
   "slots": {
     "phaseAAfterOrdinal": 2,
     "phaseBBeforeMigration": "20260713002000_g014_public_api_private_boundary.sql"
+  },
+  "legacyShapeNormalization": {
+    "kind": "source_only_empty_clean_legacy_shape_normalization",
+    "historicalProof": false,
+    "hostedStateEvidence": false,
+    "reconstructionSource": {
+      "manifestPath": "backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.json",
+      "manifestByteLength": 5331,
+      "manifestSha256": "1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e",
+      "archivePath": "backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.zip",
+      "archiveByteLength": 152235,
+      "archiveSha256": "21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3",
+      "ordinal": 0,
+      "member": "supabase/migrations/temp/20251107_complete_migration.sql",
+      "sourceByteLength": 79793,
+      "sourceSha256": "23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33"
+    },
+    "applicationPrerequisites": {
+      "manifestPath": "backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json",
+      "manifestByteLength": 1252,
+      "manifestSha256": "055d31e0d7597ec026e570eaf85adfb2c4a6c5480f80a3ed7a7ca525a6b2a9f3",
+      "sourcePath": "backend/supabase/baselines/pre-20260214-public-schema.sql",
+      "sourceByteLength": 203938,
+      "sourceSha256": "7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119",
+      "outputPath": "backend/supabase/baselines/local/application-prerequisites.sql",
+      "outputByteLength": 210374,
+      "outputSha256": "34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15"
+    },
+    "operations": [
+      {
+        "relation": "public.profiles",
+        "precondition": "empty_exact_legacy_profile_picture_text_avatar_url_absent",
+        "operation": "rename_profile_picture_to_avatar_url",
+        "postcondition": "exact_target_avatar_url_text_profile_picture_absent"
+      },
+      {
+        "relation": "public.reviews",
+        "precondition": "empty_exact_legacy_base_like_count_absent",
+        "operation": "add_like_count_integer_not_null_default_zero_check_nonnegative",
+        "postcondition": "exact_target_like_count_default_and_validated_check"
+      }
+    ]
   },
   "canonicalBodyHashes": {
     "approve_submission_item": "42622004a1e1ac15991748639c726ca95fcb9afda8c263044cde57c52b983936",
