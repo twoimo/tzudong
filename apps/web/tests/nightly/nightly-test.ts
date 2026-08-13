@@ -83,6 +83,7 @@ const LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4
 const LOCAL_NIGHTLY_STORAGE_UPLOAD_PATH = /^\/storage\/v1\/object\/review-photos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/nightly-browser-cors\/review\.webp$/;
 const LOCAL_NIGHTLY_STORAGE_WEBP_BASE64 = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==';
 const LOCAL_NIGHTLY_FUNCTION_BODY = '{"query":"서울특별시 중구 세종대로 110","count":1}';
+const LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY = '{}';
 const LOCAL_SUPABASE_FIXTURE_PATHS = new Set([
     '/rest/v1/ad_banners',
     '/rest/v1/announcements',
@@ -110,8 +111,20 @@ const LOCAL_ADMIN_MUTATION_PATHS = new Set([
     '/api/admin/map-overlays/apply',
 ]);
 const LOCAL_ADMIN_READ_PATHS = new Set([
+    '/admin',
+    '/api/admin/pending-counts',
     '/api/admin/evaluations',
     '/api/admin/map-overlays',
+    '/api/admin/preferences/dashboard-widget-order',
+    '/api/admin/preferences/sidebar-order',
+    '/api/admin/system-status',
+    '/api/admin/youtube-channel',
+    '/api/admin/youtube-kpis',
+    '/api/dashboard/summary',
+]);
+const LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES = new Set([
+    '?period=1M&viewMode=all&metricMode=views',
+    '?period=1M&viewMode=all&metricMode=views&scope=channel-growth',
 ]);
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SUPABASE_FIXTURE_CORS_HEADERS = [
@@ -496,6 +509,12 @@ function isAllowedLocalSupabaseMutation(
     headers: Record<string, string>,
 ): boolean {
     if (!isAllowedLocalSupabaseUrl(url)) return false;
+    if (url.pathname === '/rest/v1/rpc/get_current_privacy_eligibility') {
+        return method === 'POST'
+            && !url.search
+            && headers['content-type'] === 'application/json'
+            && postData?.toString('utf8') === LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY;
+    }
     if (url.pathname === '/auth/v1/token') {
         return method === 'POST' && url.search === '?grant_type=password';
     }
@@ -539,7 +558,23 @@ function isAllowedLocalAdminRead(url: URL, method: string): boolean {
     ) {
         return false;
     }
-    if (url.pathname === '/api/admin/evaluations') return !url.search;
+    if (
+        url.pathname === '/admin'
+        || url.pathname === '/api/admin/pending-counts'
+        || url.pathname === '/api/admin/evaluations'
+        || url.pathname === '/api/admin/preferences/dashboard-widget-order'
+        || url.pathname === '/api/admin/preferences/sidebar-order'
+        || url.pathname === '/api/admin/system-status'
+        || url.pathname === '/api/dashboard/summary'
+    ) {
+        return !url.search;
+    }
+    if (url.pathname === '/api/admin/youtube-channel') {
+        return url.search === '?period=1M';
+    }
+    if (url.pathname === '/api/admin/youtube-kpis') {
+        return LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES.has(url.search);
+    }
     return url.search === '?restaurantIds=00000000-0000-4000-8000-000000000101&types=trend';
 }
 
