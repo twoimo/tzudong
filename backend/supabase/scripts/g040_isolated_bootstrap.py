@@ -55,8 +55,9 @@ def manifest_paths(raw):
     try:
         payload = json.loads(raw.decode("ascii"), object_pairs_hook=lambda pairs: dict(pairs) if len({key for key, _ in pairs}) == len(pairs) else (_ for _ in ()).throw(ValueError()))
         canonical = json.dumps(payload, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+        pretty = json.dumps(payload, indent=2, ensure_ascii=True).encode("ascii")
         rows = payload["migrations"]
-        if raw not in (canonical, canonical + b"\n") or tuple(payload) != ("schemaVersion", "ledgerTerminalVersion", "closureTerminalVersion", "requiredLaterPromotionGate", "migrations", "excludedVersions", "cloneBackupRecoveryRequired") or payload["schemaVersion"] != 1 or type(rows) is not list: fail()
+        if raw not in (canonical, canonical + b"\n", pretty, pretty + b"\n") or tuple(payload) != ("schemaVersion", "ledgerTerminalVersion", "closureTerminalVersion", "requiredLaterPromotionGate", "migrations", "excludedVersions", "cloneBackupRecoveryRequired") or payload["schemaVersion"] != 1 or type(rows) is not list: fail()
         paths = tuple(row["path"] for row in rows)
         if not paths or any(type(row) is not dict or tuple(row) != ("version", "name", "path", "sha256") or not isinstance(row["path"], str) or not row["path"].startswith("backend/supabase/migrations/") or not re.fullmatch(r"[0-9a-f]{64}", row["sha256"]) for row in rows): fail()
         return paths

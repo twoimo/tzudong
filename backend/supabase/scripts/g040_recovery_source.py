@@ -131,7 +131,8 @@ def _manifest_migrations(root: Path) -> tuple[str, ...]:
         raw = path.read_bytes()
         payload = json.loads(raw.decode("ascii"), object_pairs_hook=_no_duplicate_object)
         canonical = json.dumps(payload, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-        if raw not in (canonical, canonical + b"\n"):
+        pretty = json.dumps(payload, indent=2, ensure_ascii=True).encode("ascii")
+        if raw not in (canonical, canonical + b"\n", pretty, pretty + b"\n"):
             _fail()
     except Exception:
         payload = None
