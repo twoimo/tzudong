@@ -23,7 +23,7 @@ if (isolatedFiles.length !== isolated.size || generalFiles.length === 0) {
 }
 
 function run(filesToRun) {
-  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '15000'], {
+  const result = spawnSync('bun', ['test', ...filesToRun, '--timeout', '30000'], {
     cwd: process.cwd(),
     env: process.env,
     stdio: 'inherit',

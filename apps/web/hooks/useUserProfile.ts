@@ -6,6 +6,7 @@ import { Restaurant } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
 import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 // ============================================================================
 // Type Definitions
@@ -177,12 +178,6 @@ function resolveCanonicalReviewedRestaurant({
 // Database Query Types (Supabase response shapes)
 // ============================================================================
 
-interface ProfileRow {
-    user_id: string;
-    nickname: string;
-    avatar_url?: string | null;
-}
-
 interface ReviewRow {
     id: string;
     is_verified: boolean;
@@ -226,20 +221,14 @@ export function useUserProfileIdentity(userId: string) {
         queryFn: async (): Promise<UserProfileIdentity | null> => {
             if (!userId) return null;
 
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('user_id, nickname, avatar_url')
-                .eq('user_id', userId)
-                .single();
-
-            if (error || !profile) return null;
-
-            const typedProfile = profile as ProfileRow;
+            const [typedProfile] = await readPublicProfileSummaries(supabase, [userId])
+                .catch(() => []);
+            if (!typedProfile) return null;
 
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
-                avatarUrl: typedProfile.avatar_url || undefined,
+                avatarUrl: typedProfile.avatar_url ?? undefined,
             };
         },
         enabled: !!userId,
@@ -259,22 +248,16 @@ export function useUserProfile(userId: string) {
             if (!userId) return null;
 
             // 병렬 쿼리: 프로필 + 리뷰 동시 조회
-            const [profileResult, reviewsResult] = await Promise.all([
-                supabase
-                    .from('profiles')
-                    .select('user_id, nickname, avatar_url')
-                    .eq('user_id', userId)
-                    .single(),
+            const [profiles, reviewsResult] = await Promise.all([
+                readPublicProfileSummaries(supabase, [userId]).catch(() => []),
                 supabase
                     .from('reviews')
                     .select('id, is_verified, like_count')
                     .eq('user_id', userId),
             ]);
 
-            const { data: profile, error: profileError } = profileResult;
-            if (profileError || !profile) return null;
-
-            const typedProfile = profile as ProfileRow;
+            const typedProfile = profiles[0];
+            if (!typedProfile) return null;
             const reviews = (reviewsResult.data ?? []) as ReviewRow[];
 
             // 전체 리뷰 수 = 조회된 모든 리뷰의 수
@@ -295,7 +278,7 @@ export function useUserProfile(userId: string) {
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
-                avatarUrl: typedProfile.avatar_url || undefined,
+                avatarUrl: typedProfile.avatar_url ?? undefined,
                 reviewCount,
                 verifiedReviewCount,
                 totalLikes,
@@ -441,15 +424,19 @@ export function useUserLikers(userId: string) {
 
             // 3. 좋아요를 누른 사용자들의 프로필 조회
             const likerIds = Array.from(likerMap.keys());
-            const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('user_id, nickname')
-                .in('user_id', likerIds);
-
-            if (profilesError || !profiles) return [];
+            const profiles = (
+                await Promise.all(
+                    Array.from({ length: Math.ceil(likerIds.length / 100) }, (_, batchIndex) =>
+                        readPublicProfileSummaries(
+                            supabase,
+                            likerIds.slice(batchIndex * 100, (batchIndex + 1) * 100),
+                        ),
+                    ),
+                )
+            ).flat();
 
             // 좋아요 수 기준 내림차순 정렬 후 반환
-            return (profiles as ProfileRow[])
+            return profiles
                 .map(p => ({
                     userId: p.user_id,
                     nickname: p.nickname || '익명',

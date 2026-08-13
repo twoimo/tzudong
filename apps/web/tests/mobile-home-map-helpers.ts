@@ -1,7 +1,90 @@
 import { expect, type Page, type Route } from '@playwright/test';
+import {
+    hasEncodedOrMalformedPath,
+    hasDuplicateOrInvalidJsonMemberNames,
+    isAllowedLocalProfileReadRpcPreflightRequest,
+    isAllowedLocalProfileReadRpcRequest,
+    isExactLocalProfileReadRpcPath,
+} from './nightly/local-profile-read-rpc-boundary';
 
+const LOCAL_REVIEW_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 const SUPABASE_REST_ROUTE = '**/rest/v1/**';
 const SUPABASE_AUTH_ROUTE = '**/auth/v1/**';
+const PROFILE_SUMMARY_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const LOCAL_REST_FIXTURE_PATHS = new Set([
+    '/rest/v1/ad_banners',
+    '/rest/v1/announcements',
+    '/rest/v1/restaurants',
+    '/rest/v1/reviews',
+    '/rest/v1/review_likes',
+    '/rest/v1/bookmarks',
+    '/rest/v1/rpc/increment_search_count',
+    '/rest/v1/rpc/read_public_profile_leaderboard_page',
+    '/rest/v1/rpc/read_public_profile_summaries',
+    '/rest/v1/rpc/search_restaurants_by_youtube_title',
+]);
+const LOCAL_AUTH_FIXTURE_PATHS = new Set(['/auth/v1/user']);
+const LOCAL_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'local' || process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
+const HOSTED_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'hosted';
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+const LOCAL_APP_ORIGIN = (() => {
+    try {
+        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
+        if (
+            (value.protocol === 'http:' || value.protocol === 'https:')
+            && LOOPBACK_HOSTS.has(value.hostname)
+            && value.pathname === '/'
+            && !value.search
+            && !value.hash
+            && !value.username
+            && !value.password
+        ) {
+            return value.origin;
+        }
+    } catch {
+        // Playwright validates its base URL before installing these fixtures.
+    }
+    return undefined;
+})();
+const LOCAL_NIGHTLY_PORTS = new Set([
+    process.env.APP_PORT,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_PUBLIC_URL,
+    process.env.API_EXTERNAL_URL,
+    process.env.PLAYWRIGHT_BASE_URL,
+].flatMap((value) => {
+    if (!value) return [];
+    try {
+        return [new URL(value).port || '80'];
+    } catch {
+        return /^\d{1,5}$/.test(value) ? [value] : [];
+    }
+}));
+const HOSTED_SUPABASE_ORIGINS = new Set(
+    [process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL, process.env.SUPABASE_PUBLIC_URL]
+        .flatMap((value) => {
+            if (!value) return [];
+            try {
+                const parsed = new URL(value);
+                return ['http:', 'https:'].includes(parsed.protocol) ? [parsed.origin] : [];
+            } catch {
+                return [];
+            }
+        }),
+);
+
+function isAllowedLocalNightlyUrl(url: URL): boolean {
+    if (LOCAL_NIGHTLY_MODE) {
+        return ['http:', 'https:'].includes(url.protocol)
+            && LOOPBACK_HOSTS.has(url.hostname)
+            && LOCAL_NIGHTLY_PORTS.has(url.port || (url.protocol === 'https:' ? '443' : '80'));
+    }
+    if (HOSTED_NIGHTLY_MODE) {
+        return HOSTED_SUPABASE_ORIGINS.has(url.origin);
+    }
+    return true;
+}
 
 const RESTAURANT_FIXTURES = [
     {
@@ -67,36 +150,36 @@ const REVIEW_FIXTURES = [
     {
         id: 'review-marker-1',
         restaurant_id: 'restaurant-marker-1',
-        user_id: 'user-reviewer-1',
+        user_id: '11111111-1111-4111-8111-111111111111',
         content: '국물이 진하고 만두가 푸짐해서 재방문하고 싶어요.',
-        food_photos: ['https://images.unsplash.com/photo-1496116218417-1a781b1c416c?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-01T00:00:00.000Z',
         is_pinned: false,
     },
     {
         id: 'review-marker-2',
         restaurant_id: 'restaurant-marker-2',
-        user_id: 'user-reviewer-2',
+        user_id: '22222222-2222-4222-8222-222222222222',
         content: '튀김이 바삭하고 소스가 깔끔했어요.',
-        food_photos: ['https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-02T00:00:00.000Z',
         is_pinned: false,
     },
     {
         id: 'review-search',
         restaurant_id: 'restaurant-search',
-        user_id: 'user-reviewer-3',
+        user_id: '33333333-3333-4333-8333-333333333333',
         content: '분식집 분위기가 좋고 떡볶이가 매콤해요.',
-        food_photos: ['https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=320&q=80'],
+        food_photos: [LOCAL_REVIEW_IMAGE],
         created_at: '2026-02-03T00:00:00.000Z',
         is_pinned: true,
     },
 ] as const;
 
 const PROFILE_FIXTURES = [
-    { user_id: 'user-reviewer-1', nickname: '칼국수러버' },
-    { user_id: 'user-reviewer-2', nickname: '돈까스탐험가' },
-    { user_id: 'user-reviewer-3', nickname: '분식요정' },
+    { user_id: '11111111-1111-4111-8111-111111111111', nickname: '칼국수러버', avatar_url: null },
+    { user_id: '22222222-2222-4222-8222-222222222222', nickname: '돈까스탐험가', avatar_url: null },
+    { user_id: '33333333-3333-4333-8333-333333333333', nickname: '분식요정', avatar_url: null },
 ] as const;
 
 const MOCK_NAVER_MAPS_SOURCE = `
@@ -414,11 +497,25 @@ const MOCK_NAVER_MAPS_SOURCE = `
 })();
 `;
 
+const SUPABASE_FIXTURE_CORS_HEADERS = [
+    'accept-profile',
+    'apikey',
+    'authorization',
+    'content-profile',
+    'content-type',
+    'prefer',
+    'range',
+    'x-client-info',
+    'x-retry-count',
+] as const;
+const SUPABASE_FIXTURE_CORS_HEADER_SET = new Set<string>(SUPABASE_FIXTURE_CORS_HEADERS);
 const RESPONSE_HEADERS = {
-    'access-control-allow-origin': '*',
-    'access-control-allow-headers': '*',
+    'access-control-allow-headers': SUPABASE_FIXTURE_CORS_HEADERS.join(', '),
     'access-control-allow-methods': 'GET,POST,OPTIONS,HEAD',
+    'access-control-expose-headers': 'Content-Range, Link, Location',
+    'access-control-max-age': '3600',
     'content-type': 'application/json',
+    vary: 'Origin, Access-Control-Request-Headers',
 } as const;
 
 type RestaurantFixture = (typeof RESTAURANT_FIXTURES)[number];
@@ -428,10 +525,31 @@ function toJsonBody(data: unknown): string {
 }
 
 async function fulfillJson(route: Route, data: unknown, status = 200) {
+    const request = route.request();
+    const requestHeaders = request.headers();
+    if (!LOCAL_APP_ORIGIN || requestHeaders.origin !== LOCAL_APP_ORIGIN) {
+        throw new Error('Mobile Supabase fixture rejected an untrusted browser origin.');
+    }
+    if (request.method() === 'OPTIONS') {
+        const requestedMethod = requestHeaders['access-control-request-method']?.toUpperCase();
+        if (!requestedMethod || !['GET', 'HEAD', 'POST'].includes(requestedMethod)) {
+            throw new Error('Mobile Supabase fixture rejected an unexpected preflight method.');
+        }
+        const requestedHeaders = (requestHeaders['access-control-request-headers'] ?? '')
+            .split(',')
+            .map((header) => header.trim().toLowerCase())
+            .filter(Boolean);
+        if (requestedHeaders.some((header) => !SUPABASE_FIXTURE_CORS_HEADER_SET.has(header))) {
+            throw new Error('Mobile Supabase fixture rejected an unexpected preflight header.');
+        }
+    }
     await route.fulfill({
         status,
-        headers: RESPONSE_HEADERS,
-        body: route.request().method() === 'HEAD' ? '' : toJsonBody(data),
+        headers: {
+            ...RESPONSE_HEADERS,
+            'access-control-allow-origin': LOCAL_APP_ORIGIN,
+        },
+        body: status === 204 || request.method() === 'HEAD' ? '' : toJsonBody(data),
     });
 }
 
@@ -526,9 +644,58 @@ function filterRestaurantsForRequest(url: URL): RestaurantFixture[] {
 async function handleSupabaseRestRoute(route: Route) {
     const request = route.request();
     const url = new URL(request.url());
+    const method = request.method().toUpperCase();
+    const isMutationFixture = url.pathname.endsWith('/rest/v1/rpc/increment_search_count')
+        || url.pathname.endsWith('/rest/v1/rpc/search_restaurants_by_youtube_title')
+        || url.pathname.endsWith('/rest/v1/rpc/read_public_profile_leaderboard_page')
+        || url.pathname.endsWith('/rest/v1/rpc/read_public_profile_summaries');
 
-    if (request.method() === 'OPTIONS') {
-        await fulfillJson(route, {});
+    if (!isAllowedLocalNightlyUrl(url)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (hasEncodedOrMalformedPath(url)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (!LOCAL_REST_FIXTURE_PATHS.has(url.pathname)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+
+    const isProfileReadRpc = isExactLocalProfileReadRpcPath(url);
+    const isAllowedProfileReadRpc = isAllowedLocalProfileReadRpcRequest({
+        allowedOrigin: url.origin,
+        url,
+        method,
+        postData: request.postDataBuffer(),
+        contentType: request.headers()['content-type'],
+    });
+    const isAllowedProfileReadRpcPreflight = isAllowedLocalProfileReadRpcPreflightRequest({
+        allowedOrigin: url.origin,
+        allowedApplicationOrigin: LOCAL_APP_ORIGIN,
+        url,
+        method,
+        postData: request.postDataBuffer(),
+        headers: request.headers(),
+    });
+    if (isProfileReadRpc && !isAllowedProfileReadRpc && !isAllowedProfileReadRpcPreflight) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+
+    if (isAllowedProfileReadRpcPreflight) {
+        await fulfillJson(route, {}, 204);
+        return;
+    }
+
+    if (method === 'OPTIONS') {
+        await fulfillJson(route, {}, 204);
+        return;
+    }
+
+    if (method !== 'GET' && !(method === 'POST' && isMutationFixture)) {
+        await route.abort('blockedbyclient');
         return;
     }
 
@@ -542,8 +709,123 @@ async function handleSupabaseRestRoute(route: Route) {
         return;
     }
 
-    if (url.pathname.endsWith('/rest/v1/profiles')) {
-        await fulfillJson(route, PROFILE_FIXTURES);
+    if (url.pathname.endsWith('/rest/v1/rpc/read_public_profile_leaderboard_page')) {
+        const rawBody = request.postDataBuffer();
+        if (
+            url.search
+            || request.headers()['content-type'] !== 'application/json'
+            || !rawBody
+            || rawBody.byteLength === 0
+            || rawBody.byteLength > 4_096
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        if (hasDuplicateOrInvalidJsonMemberNames(rawBody.toString('utf8'))) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        let payload: unknown;
+        try {
+            payload = request.postDataJSON();
+        } catch {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        const expectedKeys = [
+            'p_after_quality_score',
+            'p_after_user_id',
+            'p_limit',
+            'p_period',
+        ];
+        if (
+            !payload
+            || typeof payload !== 'object'
+            || Array.isArray(payload)
+            || Object.keys(payload).sort().join(',') !== expectedKeys.join(',')
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        const requestBody = payload as Record<string, unknown>;
+        const cursorIsNull = requestBody.p_after_quality_score === null
+            && requestBody.p_after_user_id === null;
+        const cursorIsValid = typeof requestBody.p_after_quality_score === 'number'
+            && Number.isFinite(requestBody.p_after_quality_score)
+            && requestBody.p_after_quality_score >= 0
+            && typeof requestBody.p_after_user_id === 'string'
+            && PROFILE_SUMMARY_UUID.test(requestBody.p_after_user_id);
+        if (
+            (requestBody.p_period !== 'all' && requestBody.p_period !== 'monthly')
+            || !Number.isInteger(requestBody.p_limit)
+            || Number(requestBody.p_limit) < 1
+            || Number(requestBody.p_limit) > 100
+            || (!cursorIsNull && !cursorIsValid)
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        await fulfillJson(route, []);
+        return;
+    }
+
+    if (url.pathname.endsWith('/rest/v1/rpc/read_public_profile_summaries')) {
+        const rawBody = request.postDataBuffer();
+        if (
+            url.search
+            || request.headers()['content-type'] !== 'application/json'
+            || !rawBody
+            || rawBody.byteLength === 0
+            || rawBody.byteLength > 4_096
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        if (hasDuplicateOrInvalidJsonMemberNames(rawBody.toString('utf8'))) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        let payload: unknown;
+        try {
+            payload = request.postDataJSON();
+        } catch {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        if (
+            !payload
+            || typeof payload !== 'object'
+            || Array.isArray(payload)
+            || Object.keys(payload).length !== 1
+            || !Object.prototype.hasOwnProperty.call(payload, 'p_user_ids')
+            || !Array.isArray((payload as { p_user_ids?: unknown }).p_user_ids)
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        const requestedValues = (payload as { p_user_ids: unknown[] }).p_user_ids;
+        if (
+            requestedValues.length < 1
+            || requestedValues.length > 100
+            || requestedValues.some((value) => (
+                typeof value !== 'string' || !PROFILE_SUMMARY_UUID.test(value)
+            ))
+            || new Set(requestedValues).size !== requestedValues.length
+        ) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        const requestedIds = requestedValues as string[];
+        const profilesById = new Map<string, (typeof PROFILE_FIXTURES)[number]>(
+            PROFILE_FIXTURES.map((profile) => [profile.user_id, profile]),
+        );
+        await fulfillJson(
+            route,
+            requestedIds.flatMap((userId) => {
+                const profile = profilesById.get(userId);
+                return profile ? [profile] : [];
+            }),
+        );
         return;
     }
 
@@ -553,6 +835,14 @@ async function handleSupabaseRestRoute(route: Route) {
     }
 
     if (url.pathname.endsWith('/rest/v1/bookmarks')) {
+        await fulfillJson(route, []);
+        return;
+    }
+
+    if (
+        url.pathname.endsWith('/rest/v1/announcements')
+        || url.pathname.endsWith('/rest/v1/ad_banners')
+    ) {
         await fulfillJson(route, []);
         return;
     }
@@ -576,22 +866,33 @@ async function handleSupabaseRestRoute(route: Route) {
         return;
     }
 
-    await fulfillJson(route, []);
+    await route.abort('blockedbyclient');
 }
 
 async function handleSupabaseAuthRoute(route: Route) {
     const request = route.request();
+    const url = new URL(request.url());
 
-    if (request.method() === 'OPTIONS') {
-        await fulfillJson(route, {});
+    if (!isAllowedLocalNightlyUrl(url)) {
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (!LOCAL_AUTH_FIXTURE_PATHS.has(url.pathname)) {
+        await route.abort('blockedbyclient');
         return;
     }
 
-    await route.fulfill({
-        status: 401,
-        headers: RESPONSE_HEADERS,
-        body: toJsonBody({ message: 'Auth session missing!' }),
-    });
+    if (request.method() === 'OPTIONS') {
+        await fulfillJson(route, {}, 204);
+        return;
+    }
+
+    if (request.method() !== 'GET') {
+        await route.abort('blockedbyclient');
+        return;
+    }
+
+    await fulfillJson(route, { message: 'Auth session missing!' }, 401);
 }
 
 export async function installMobileHomeMapTestMocks(page: Page) {

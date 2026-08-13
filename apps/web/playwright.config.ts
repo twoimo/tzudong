@@ -16,8 +16,52 @@ const runsDependencyModernizationSpec = process.argv.some((argument) =>
 const PLAYWRIGHT_WEB_SERVER_COMMAND =
     process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
     (runsDependencyModernizationSpec ? 'bun run start:playwright' : 'bun run dev:playwright');
+const PLAYWRIGHT_BASE_URL =
+    process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080';
 const PLAYWRIGHT_WEB_SERVER_URL =
-    process.env.PLAYWRIGHT_WEB_SERVER_URL ?? 'http://localhost:8080/api/health';
+    process.env.PLAYWRIGHT_WEB_SERVER_URL ??
+    new URL('/api/health', PLAYWRIGHT_BASE_URL).toString();
+const PLAYWRIGHT_NIGHTLY_MODE = process.env.NIGHTLY_MODE?.trim();
+const isNightlyRegressionRun =
+    PLAYWRIGHT_NIGHTLY_MODE === 'local' || PLAYWRIGHT_NIGHTLY_MODE === 'hosted';
+const NIGHTLY_WEB_SERVER_ENVIRONMENT_KEYS = [
+    'PATH',
+    'HOME',
+    'TMPDIR',
+    'TMP',
+    'TEMP',
+    'NODE_ENV',
+    'NIGHTLY_MODE',
+    'NIGHTLY_LOCAL_ENV_ONLY',
+    'NIGHTLY_ENV_FILE_ONLY',
+    'NIGHTLY_ENV_PROVENANCE',
+    'NIGHTLY_ENV_PROVENANCE_SHA256',
+    'NIGHTLY_ENV_FILE',
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME',
+    'NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL',
+    'SUPABASE_URL',
+    'NIGHTLY_ADMIN_EMAIL',
+    'NIGHTLY_ADMIN_PASSWORD',
+    'SUPABASE_PUBLIC_URL',
+    'API_EXTERNAL_URL',
+    'PLAYWRIGHT_BASE_URL',
+    'PLAYWRIGHT_WEB_SERVER_URL',
+    'PLAYWRIGHT_REUSE_EXISTING_SERVER',
+    'APP_PORT',
+    'HOST',
+    'HOSTNAME',
+] as const;
+const pickEnvironment = (keys: readonly string[]) => Object.fromEntries(
+    keys.flatMap((key) => {
+        const value = process.env[key];
+        return value === undefined ? [] : [[key, value]];
+    }),
+);
+const playwrightWebServerEnvironment = isNightlyRegressionRun
+    ? pickEnvironment(NIGHTLY_WEB_SERVER_ENVIRONMENT_KEYS)
+    : process.env;
 const PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS = Number(
     process.env.PLAYWRIGHT_WEB_SERVER_TIMEOUT_MS ?? '180000'
 );
@@ -191,7 +235,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:8080',
+        baseURL: PLAYWRIGHT_BASE_URL,
         trace: 'on-first-retry',
     },
     projects: [
@@ -207,17 +251,17 @@ export default defineConfig({
         {
             name: 'chromium',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Chrome'] },
+            use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
         },
         {
             name: 'firefox',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Firefox'] },
+            use: { ...devices['Desktop Firefox'], browserName: 'firefox' },
         },
         {
             name: 'webkit',
             testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
-            use: { ...devices['Desktop Safari'] },
+            use: { ...devices['Desktop Safari'], browserName: 'webkit' },
         },
         ...responsiveProjects,
     ],
@@ -230,7 +274,7 @@ export default defineConfig({
         // stays opt-in for deliberate local debugging only.
         reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === '1',
         env: {
-            ...process.env,
+            ...playwrightWebServerEnvironment,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.enabled]: '1',
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.context]: E2E_ADMIN_ROUTE_BYPASS_CONTEXT,
             [E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS.runtime]: E2E_ADMIN_ROUTE_BYPASS_RUNTIME,

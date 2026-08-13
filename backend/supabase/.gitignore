@@ -1,5 +1,5 @@
 # Secrets
-.env
+.env*
 
 # Runtime data
 volumes/
