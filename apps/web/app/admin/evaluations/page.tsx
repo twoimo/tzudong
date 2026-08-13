@@ -37,12 +37,14 @@ import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
+import { fetchAdminProfileSummaries } from '@/lib/admin/profile-summaries';
 import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
   isAdminEvaluationRecordReadyForApproval,
 } from '@/lib/admin/evaluation-records';
 import {
+  ADMIN_PENDING_COUNTS_QUERY_KEY as ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY,
   buildAdminPendingCountsResponse,
   getAdminPendingCountsTotal,
   normalizeAdminPendingCountsResponse,
@@ -664,11 +666,6 @@ const applyRestaurantRequestReadbackToSubmission = (
 
 type SubmissionOriginalRestaurantData = NonNullable<SubmissionRecord['original_restaurant_data']>;
 
-interface ProfileNicknameRow {
-  user_id: string;
-  nickname: string | null;
-}
-
 interface RestaurantLookupRow {
   id: string;
   unique_id: string | null;
@@ -702,12 +699,6 @@ interface RestaurantReviewCountRow {
 
 function isNullableRecord(value: unknown): value is Record<string, unknown> | null {
   return value === null || isRecord(value);
-}
-
-function isProfileNicknameRow(value: unknown): value is ProfileNicknameRow {
-  return isRecord(value)
-    && typeof value.user_id === 'string'
-    && isNullableString(value.nickname);
 }
 
 function isRestaurantLookupRow(value: unknown): value is RestaurantLookupRow {
@@ -1710,7 +1701,7 @@ function AdminEvaluationPage({
   const queryClient = useQueryClient();
   const invalidateAdminPendingCounts = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin-pending-counts'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-overview', 'pending-counts'] });
+    queryClient.invalidateQueries({ queryKey: ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY });
   }, [queryClient]);
 
   // localStorage에서 상태 복원
@@ -2583,25 +2574,20 @@ function AdminEvaluationPage({
       const submissionIds = typedSubmissions.map(s => s.id);
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
-      // 2. items / profiles 병렬 조회
-      const [{ data: itemsData }, { data: profilesData }] = await Promise.all([
+      // 2. items / profile summaries 병렬 조회
+      const [{ data: itemsData }, profileSummaries] = await Promise.all([
         supabase
           .from('restaurant_submission_items')
           .select(ADMIN_SUBMISSION_ITEM_SELECT)
           .in('submission_id', submissionIds)
           .order('created_at', { ascending: true })
           .overrideTypes<Record<string, unknown>[], { merge: false }>(),
-        supabase
-          .from('profiles')
-          .select('user_id, nickname')
-          .in('user_id', userIds)
-          .overrideTypes<Record<string, unknown>[], { merge: false }>(),
+        fetchAdminProfileSummaries(userIds),
       ]);
 
-      const typedProfilesData = parseValidatedRows(profilesData ?? [], isProfileNicknameRow);
       const typedItemsData = parseValidatedRows(itemsData ?? [], isSubmissionItem);
 
-      const profilesMap = new Map(typedProfilesData.map((profile) => [profile.user_id, profile.nickname]));
+      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
       const itemsMap = new Map<string, SubmissionItem[]>();
       typedItemsData.forEach((item) => {
         if (!itemsMap.has(item.submission_id)) {
@@ -2733,16 +2719,8 @@ function AdminEvaluationPage({
       const typedRequests = rawRequests;
       const userIds = [...new Set(typedRequests.map((request) => request.user_id).filter(Boolean))];
 
-      const { data: profilesData } = userIds.length
-        ? await supabase
-          .from('profiles')
-          .select('user_id, nickname')
-          .in('user_id', userIds)
-          .overrideTypes<Record<string, unknown>[], { merge: false }>()
-        : { data: [] };
-
-      const typedProfilesData = parseValidatedRows(profilesData ?? [], isProfileNicknameRow);
-      const profilesMap = new Map(typedProfilesData.map((profile) => [profile.user_id, profile.nickname]));
+      const profileSummaries = await fetchAdminProfileSummaries(userIds);
+      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
 
       return typedRequests.map((request): SubmissionRecord => ({
         id: request.id,
@@ -2818,12 +2796,8 @@ function AdminEvaluationPage({
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-      const [{ data: profilesData }, { data: restaurantsData }] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('user_id, nickname')
-          .in('user_id', userIds)
-          .overrideTypes<Record<string, unknown>[], { merge: false }>(),
+      const [profileSummaries, { data: restaurantsData }] = await Promise.all([
+        fetchAdminProfileSummaries(userIds),
         supabase
           .from('restaurants')
           .select('id, approved_name, road_address, jibun_address')
@@ -2831,10 +2805,9 @@ function AdminEvaluationPage({
           .overrideTypes<Record<string, unknown>[], { merge: false }>(),
       ]);
 
-      const typedProfilesData = parseValidatedRows(profilesData ?? [], isProfileNicknameRow);
       const typedRestaurantsData = parseValidatedRows(restaurantsData ?? [], isReviewRestaurantRow);
 
-      const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
+      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
       const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.approved_name || '이름 없음', address: r.road_address || r.jibun_address || '' }]));
 
       return typedReviewsData.map((review): Review => ({

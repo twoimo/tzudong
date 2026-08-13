@@ -30,7 +30,7 @@ test.describe('Phase 3: Navigation Features', () => {
         await hidePopupOverlay(page);
         const homeTab = page.getByTestId('bottom-nav-home');
         await homeTab.click();
-        await expect(page).toHaveURL(/^http.*:8080\/($|\?)/);
+        expect(new URL(page.url()).pathname).toBe('/');
     });
 
     test('NAV-02: URL 직접 접근 - 각 페이지 정상 로딩', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('Phase 3: Navigation Features', () => {
         // 피드 페이지
         await page.goto('/feed');
         await hidePopupOverlay(page);
-        await expect(page.getByTestId('feed-page-container')).toBeVisible({ timeout: 15000 });
+        await expect(page.getByTestId('feed-content-container')).toBeVisible({ timeout: 15000 });
     });
 
     test('NAV-03: 페이지 타이틀 확인', async ({ page }) => {

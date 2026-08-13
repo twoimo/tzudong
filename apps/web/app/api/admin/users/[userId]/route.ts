@@ -127,13 +127,23 @@ async function recordFailedAuditEvent(
 }
 
 async function getAllAdminUserIds(supabase: ReturnType<typeof createSupabaseServiceRoleClient>) {
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('user_id, role')
-    .eq('role', 'admin');
+  const { data, error } = await supabase.rpc('read_admin_user_ids_for_management');
 
   if (error) throw error;
-  return new Set(((data ?? []) as Array<{ user_id: string }>).map((role) => role.user_id));
+  if ((data?.length ?? 0) > 200) {
+    throw new Error('관리자 계정 범위가 허용된 운영 한도를 초과했습니다.');
+  }
+  const adminUserIds = new Set<string>();
+  for (const row of data ?? []) {
+    if (!row.user_id || adminUserIds.has(row.user_id)) {
+      throw new Error('관리자 계정 목록 응답이 유효하지 않습니다.');
+    }
+    adminUserIds.add(row.user_id);
+  }
+  if (adminUserIds.size === 0) {
+    throw new Error('활성 관리자 잠금 방지를 위한 계정 목록이 비어 있습니다.');
+  }
+  return adminUserIds;
 }
 
 async function getActiveAdminUserIds(

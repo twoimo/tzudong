@@ -8,7 +8,9 @@
   },
   "packageManager": "npm@11.6.2",
   "scripts": {
-    "dev": "node scripts/dev-prewarm.mjs --port 8080",
+    "dev": "node scripts/run-local-dev.mjs --port 8080",
+    "dev:local": "node scripts/run-local-dev.mjs --port 8080",
+    "dev:hosted": "node scripts/dev-prewarm.mjs --port 8080",
     "dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "dev:playwright": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080",
     "build": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next build --webpack && node scripts/verify-route-css-boundaries.mjs",
@@ -18,6 +20,7 @@
     "lint:fix": "node scripts/run-web-tool.mjs eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "analyze": "node scripts/run-web-tool.mjs next-analyze",
     "supabase:gen-types": "node scripts/supabase-gen-types.mjs",
+    "supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs",
     "typecheck:verify": "node scripts/verify-typescript-toolchain.mjs",
     "typecheck:native": "node scripts/run-typecheck.mjs --compiler native",
     "typecheck:compat": "node scripts/run-typecheck.mjs --compiler compat",
@@ -30,6 +33,7 @@
     "release-visual:assemble": "node scripts/assemble-release-visual-evidence.mjs",
     "release-visual:verify": "node scripts/verify-release-visual-evidence.mjs",
     "test:unit": "node scripts/run-unit-tests.mjs",
+    "test:nightly": "node scripts/run-nightly-regression.mjs",
     "test:dependency-modernization": "node scripts/run-dependency-modernization-browser.mjs --package-only",
     "test:dependency-modernization:browser": "node scripts/run-dependency-modernization-browser.mjs",
     "test:responsive": "node scripts/run-responsive-tests.mjs",
@@ -143,10 +147,14 @@
   "overrides": {
     "baseline-browser-mapping": "2.10.43",
     "brace-expansion": "5.0.9",
+    "nanoid": "3.3.18",
     "minimatch@3.1.5": {
       "brace-expansion": "2.1.4"
     },
     "postcss": "$postcss",
     "sharp": "$sharp"
+  },
+  "patchedDependencies": {
+    "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"
   }
 }

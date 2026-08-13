@@ -11,6 +11,7 @@ import {
   type ThumbnailReleaseOptions,
 } from './release-candidates';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import type { AdminProviderReadiness as ProviderReadiness } from '@/types/admin-system-status';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -629,6 +630,7 @@ async function readLocalFallbackDurableRelease(
 
 function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
   const supabase = createSupabaseServiceRoleClient();
+  const storage = createSupabaseStorageServerClient();
   return {
     async readCurrentRelease(releaseKey: string) {
       const { data, error } = await supabase
@@ -675,18 +677,18 @@ function createSupabaseRegistryAdapter(): ThumbnailReleaseRegistryAdapter {
       return published;
     },
     async uploadReleaseAsset(bucket: string, objectPath: string, bytes: Buffer) {
-      const { error } = await supabase.storage.from(bucket).upload(objectPath, bytes, {
+      const { error } = await storage.from(bucket).upload(objectPath, bytes, {
         contentType: 'image/png',
         upsert: true,
       });
       if (error) throw error;
     },
     async deleteReleaseAsset(bucket: string, objectPath: string) {
-      const { error } = await supabase.storage.from(bucket).remove([objectPath]);
+      const { error } = await storage.from(bucket).remove([objectPath]);
       if (error) throw error;
     },
     async downloadReleaseAsset(bucket: string, objectPath: string) {
-      const { data, error } = await supabase.storage.from(bucket).download(objectPath);
+      const { data, error } = await storage.from(bucket).download(objectPath);
       if (error) throw error;
       const bytes = Buffer.from(await data.arrayBuffer());
       return { bytes, contentType: data.type || 'image/png' };

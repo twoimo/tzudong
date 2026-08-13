@@ -16,13 +16,15 @@ import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
 import { NaverMapOverlayStack } from "@/components/map/naver-map-overlay-stack";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import {
     NaverMapDetailPanelShell,
     NaverMapReviewModal,
 } from "@/components/map/naver-map-sidepanels";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
-import { fetchSupabaseRows, postgrestIn } from "@/lib/supabase-rest-client";
+import { fetchSupabaseRows, postgrestIn, supabaseRestRpcClient } from "@/lib/supabase-rest-client";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 import {
     buildDeviceLocationMarkerHtml,
     resolveDeviceLocationMapRenderPlan,
@@ -396,9 +398,7 @@ type VisibleMarkerReviewRow = Pick<
     'id' | 'restaurant_id' | 'user_id' | 'content' | 'food_photos' | 'created_at' | 'is_pinned'
 >;
 
-type VisibleMarkerReviewProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname'>;
 const VISIBLE_MARKER_REVIEW_SELECT = 'id,restaurant_id,user_id,content,food_photos,created_at,is_pinned';
-const VISIBLE_MARKER_REVIEW_PROFILE_SELECT = 'user_id,nickname';
 
 
 function buildVisibleMarkerReviewSeed(
@@ -865,19 +865,16 @@ const NaverMapView = memo(({
                 ),
             ];
             const profilesData = userIds.length > 0
-                ? await fetchSupabaseRows<VisibleMarkerReviewProfileRow>('profiles', [
-                    ['select', VISIBLE_MARKER_REVIEW_PROFILE_SELECT],
-                    ['user_id', postgrestIn(userIds)],
-                ]).catch((error) => {
+                ? await readPublicProfileSummaries(supabaseRestRpcClient, userIds).catch(() => {
                     console.warn('NaverMapView: review bubble profile fetch skipped');
-                    return [] as VisibleMarkerReviewProfileRow[];
+                    return [];
                 })
                 : [];
 
             if (isCancelled) return;
 
             const profilesByUserId = new Map(
-                ((profilesData || []) as VisibleMarkerReviewProfileRow[])
+                profilesData
                     .map((profile) => [profile.user_id, profile.nickname || '익명 사용자'])
             );
             const nextBubbles: Record<string, VisibleMarkerReviewBubble> = {};
@@ -3188,7 +3185,7 @@ const NaverMapView = memo(({
     }, [activeSearchedRestaurant, onRestaurantSelect, restaurants, selectedRestaurant]);
 
     // 로딩 에러 처리
-    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects ? (
+    const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects && !isPublicRestrictedMode ? (
         <Suspense fallback={null}>
             <NaverMapAnnouncementRuntime
                 onAnnouncementToastPayloadChange={setAnnouncementToastPayload}

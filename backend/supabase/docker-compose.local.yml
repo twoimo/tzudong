@@ -1,0 +1,160 @@
+# Local-only overlay. Render with Docker Compose v2.39.4 through scripts/local-stack.py.
+# This file deliberately excludes docker-compose.override.yml and dev/docker-compose.dev.yml.
+name: !reset null
+
+services:
+  studio: !override
+    image: supabase/studio:2025.12.17-sha-43f4f7f
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:${STUDIO_PORT}:3000/tcp"
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})" ]
+      timeout: 10s
+      interval: 5s
+      retries: 3
+    depends_on:
+      analytics:
+        condition: service_healthy
+    environment:
+      HOSTNAME: "::"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
+      LOGFLARE_URL: http://analytics:4000
+      NEXT_PUBLIC_ENABLE_LOGS: "true"
+      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+
+  kong:
+    container_name: !reset null
+    # The local config is already rendered and hash-bound during staging. Run
+    # the image entrypoint directly so the read-only volume is never rewritten.
+    entrypoint: ["/docker-entrypoint.sh"]
+    command: ["kong", "docker-start"]
+    environment:
+      KONG_DECLARATIVE_CONFIG: /home/kong/temp.yml
+    ports: !override
+      - "127.0.0.1:${KONG_HTTP_PORT}:8000/tcp"
+      - "127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp"
+    volumes: !override
+      - "local-kong-config:/home/kong:ro"
+
+  auth:
+    container_name: !reset null
+
+  rest:
+    container_name: !reset null
+
+  realtime:
+    container_name: !reset null
+    networks:
+      default:
+        aliases:
+          - realtime-dev.supabase-realtime
+
+  storage:
+    container_name: !reset null
+    environment:
+      # Storage's internal completion transaction must run as the owner of its
+      # private schema, without restoring G014's revoked service_role table ACL.
+      SERVICE_KEY: ${STORAGE_SERVICE_KEY}
+      DB_SERVICE_ROLE: supabase_storage_admin
+    volumes: !override
+      - "local-storage-data:/var/lib/storage"
+
+  imgproxy:
+    container_name: !reset null
+    volumes: !override
+      - "local-storage-data:/var/lib/storage"
+
+  meta:
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1:${META_PORT}:8080/tcp"
+
+  functions:
+    container_name: !reset null
+    volumes: !override
+      - "local-functions:/home/deno/functions:ro"
+
+  analytics:
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1:${ANALYTICS_PORT}:4000/tcp"
+
+  db:
+    container_name: !reset null
+    volumes: !override
+      - "local-db-init-migrations:/docker-entrypoint-initdb.d/migrations:ro"
+      - "local-db-init-scripts:/docker-entrypoint-initdb.d/init-scripts:ro"
+      - "local-db-data:/var/lib/postgresql/data"
+      - "local-db-config:/etc/postgresql-custom"
+
+  vector:
+    container_name: !reset null
+    volumes: !override
+      - "local-vector-config:/etc/vector:ro"
+
+  supavisor:
+    container_name: !reset null
+    # GitHub-hosted Docker denies Tini's subreaper setup; the image's limits
+    # wrapper preserves bounded startup without requiring that capability.
+    entrypoint: ["/app/limits.sh"]
+    environment: !override
+      PORT: 4000
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: ecto://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      VAULT_ENC_KEY: ${VAULT_ENC_KEY}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      REGION: local
+      ERL_AFLAGS: ""
+      RLIMIT_NOFILE: ""
+      POOLER_TENANT_ID: ${POOLER_TENANT_ID}
+      POOLER_DEFAULT_POOL_SIZE: ${POOLER_DEFAULT_POOL_SIZE}
+      POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
+      POOLER_POOL_MODE: transaction
+      DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
+    ports: !override
+      # POSTGRES_PORT remains the internal 5432 listener; only the host mapping is derived.
+      - "127.0.0.1:${POSTGRES_HOST_PORT}:5432/tcp"
+      - "127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543/tcp"
+    volumes: !override
+      - "local-pooler-config:/etc/pooler:ro"
+
+volumes: !override
+  local-db-data:
+    name: "${PROJECT_NAME}-db-data"
+  local-db-init-migrations:
+    name: "${PROJECT_NAME}-db-init-migrations"
+  local-db-init-scripts:
+    name: "${PROJECT_NAME}-db-init-scripts"
+  local-db-config:
+    name: "${PROJECT_NAME}-db-config"
+  local-functions:
+    name: "${PROJECT_NAME}-functions"
+  local-kong-config:
+    name: "${PROJECT_NAME}-kong-config"
+  local-pooler-config:
+    name: "${PROJECT_NAME}-pooler-config"
+  local-storage-data:
+    name: "${PROJECT_NAME}-storage-data"
+  local-vector-config:
+    name: "${PROJECT_NAME}-vector-config"
