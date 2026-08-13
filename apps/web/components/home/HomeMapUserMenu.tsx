@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import type { HomeMapPanelSide } from "@/lib/home-map-user-preferences";
 import { siteConfig } from "@/lib/site-config";
 import { resolveProfileAvatarUrl } from "@/lib/profile-avatar-url";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 const desktopUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
@@ -83,18 +84,13 @@ export default function HomeMapUserMenu({
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) {
+      try {
+        const [profile] = await readPublicProfileSummaries(supabase, [user.id]);
+        return resolveProfileAvatarUrl(profile?.avatar_url, user.id);
+      } catch {
         console.error("지도 사용자 프로필 사진 조회 실패:");
         return null;
       }
-
-      return resolveProfileAvatarUrl(data?.avatar_url, user.id);
     },
     enabled: Boolean(user?.id),
     staleTime: 5 * 60 * 1000,

@@ -1,5 +1,15 @@
 import { writeFile } from 'node:fs/promises';
 import { expect, test as base, type Page, type Route, type TestInfo } from '@playwright/test';
+import {
+    hasEncodedOrMalformedPath,
+    isAllowedLocalProfileReadRpcPreflightRequest,
+    isAllowedLocalProfileReadRpcRequest,
+    isExactLocalProfileReadRpcPath,
+    LOCAL_PROFILE_LEADERBOARD_RPC_PATH,
+    LOCAL_PROFILE_LEADERBOARD_PAGE_RPC_PATH,
+    LOCAL_PROFILE_READ_RPC_CORS_HEADERS,
+    LOCAL_PROFILE_SUMMARIES_RPC_PATH,
+} from './local-profile-read-rpc-boundary';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isLocalNightlyMode = process.env.NIGHTLY_MODE === 'local'
@@ -92,6 +102,9 @@ const LOCAL_SUPABASE_FIXTURE_PATHS = new Set([
     '/rest/v1/profiles',
     '/rest/v1/review_likes',
     '/rest/v1/bookmarks',
+    LOCAL_PROFILE_SUMMARIES_RPC_PATH,
+    LOCAL_PROFILE_LEADERBOARD_RPC_PATH,
+    LOCAL_PROFILE_LEADERBOARD_PAGE_RPC_PATH,
     '/auth/v1/user',
 ]);
 const LOCAL_APP_PATHS = new Set([
@@ -127,16 +140,7 @@ const LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES = new Set([
     '?period=1M&viewMode=all&metricMode=views&scope=channel-growth',
 ]);
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const SUPABASE_FIXTURE_CORS_HEADERS = [
-    'apikey',
-    'authorization',
-    'content-profile',
-    'content-type',
-    'prefer',
-    'range',
-    'x-client-info',
-    'x-retry-count',
-] as const;
+const SUPABASE_FIXTURE_CORS_HEADERS = LOCAL_PROFILE_READ_RPC_CORS_HEADERS;
 const SUPABASE_FIXTURE_CORS_HEADER_SET = new Set<string>(SUPABASE_FIXTURE_CORS_HEADERS);
 const FORBIDDEN_PUBLIC_DATA_CONSOLE_ERRORS = new Set([
     '활성 공지사항 조회 중 오류:',
@@ -502,6 +506,37 @@ function isAllowedLocalStorageCleanup(postData: string | null): boolean {
         return false;
     }
 }
+function isAllowedLocalProfileReadRpc(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+    headers: Record<string, string>,
+): boolean {
+    return isAllowedLocalSupabaseUrl(url)
+        && isAllowedLocalProfileReadRpcRequest({
+            allowedOrigin: LOCAL_SUPABASE_ORIGIN,
+            url,
+            method,
+            postData,
+            contentType: headers['content-type'],
+        });
+}
+function isAllowedLocalProfileReadRpcPreflight(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+    headers: Record<string, string>,
+): boolean {
+    return isAllowedLocalSupabaseUrl(url)
+        && isAllowedLocalProfileReadRpcPreflightRequest({
+            allowedOrigin: LOCAL_SUPABASE_ORIGIN,
+            allowedApplicationOrigin: LOCAL_APP_ORIGIN,
+            url,
+            method,
+            postData,
+            headers,
+        });
+}
 function isAllowedLocalSupabaseMutation(
     url: URL,
     method: string,
@@ -639,7 +674,12 @@ function recordDiagnostic(
     diagnostics.push({ ...diagnostic, count: 1 });
 }
 
-async function fulfillJson(route: Route, data: unknown, status = 200): Promise<void> {
+async function fulfillJson(
+    route: Route,
+    data: unknown,
+    status = 200,
+    allowPost = false,
+): Promise<void> {
     const request = route.request();
     const requestHeaders = request.headers();
     if (!LOCAL_APP_ORIGIN || requestHeaders.origin !== LOCAL_APP_ORIGIN) {
@@ -647,7 +687,7 @@ async function fulfillJson(route: Route, data: unknown, status = 200): Promise<v
     }
     if (request.method() === 'OPTIONS') {
         const requestedMethod = requestHeaders['access-control-request-method']?.toUpperCase();
-        if (requestedMethod !== 'GET' && requestedMethod !== 'HEAD') {
+        if (requestedMethod !== 'GET' && requestedMethod !== 'HEAD' && !(allowPost && requestedMethod === 'POST')) {
             throw new Error('Nightly Supabase fixture rejected an unexpected preflight method.');
         }
         const requestedHeaders = (requestHeaders['access-control-request-headers'] ?? '')
@@ -662,7 +702,7 @@ async function fulfillJson(route: Route, data: unknown, status = 200): Promise<v
         status,
         headers: {
             'access-control-allow-headers': SUPABASE_FIXTURE_CORS_HEADERS.join(', '),
-            'access-control-allow-methods': 'GET,HEAD,OPTIONS',
+            'access-control-allow-methods': allowPost ? 'GET,HEAD,POST,OPTIONS' : 'GET,HEAD,OPTIONS',
             'access-control-allow-origin': LOCAL_APP_ORIGIN,
             'access-control-expose-headers': 'Content-Range, Link, Location',
             'access-control-max-age': '3600',
@@ -682,7 +722,36 @@ function filterRestaurants(url: URL) {
 async function fulfillSupabase(route: Route, diagnostics: NightlyRouteDiagnostic[]): Promise<void> {
     const request = route.request();
     const url = new URL(request.url());
-    if (isMutationMethod(request.method())) {
+    const method = request.method().toUpperCase();
+    if (hasEncodedOrMalformedPath(url)) {
+        recordDiagnostic(diagnostics, diagnosticForUrl(url, request.method(), 0, 'supabase-path-denied'));
+        await route.abort('blockedbyclient');
+        return;
+    }
+    const isProfileReadRpc = isExactLocalProfileReadRpcPath(url);
+    const isAllowedProfileReadRpc = isAllowedLocalProfileReadRpc(
+        url,
+        method,
+        request.postDataBuffer(),
+        request.headers(),
+    );
+    const isAllowedProfileReadRpcPreflight = isAllowedLocalProfileReadRpcPreflight(
+        url,
+        method,
+        request.postDataBuffer(),
+        request.headers(),
+    );
+    if (isProfileReadRpc && !isAllowedProfileReadRpc && !isAllowedProfileReadRpcPreflight) {
+        recordDiagnostic(diagnostics, diagnosticForUrl(
+            url,
+            request.method(),
+            0,
+            isMutationMethod(method) ? 'mutation-denied' : 'supabase-method-denied',
+        ));
+        await route.abort('blockedbyclient');
+        return;
+    }
+    if (!isProfileReadRpc && isMutationMethod(method)) {
         recordDiagnostic(diagnostics, diagnosticForUrl(url, request.method(), 0, 'mutation-denied'));
         await route.abort('blockedbyclient');
         return;
@@ -694,19 +763,30 @@ async function fulfillSupabase(route: Route, diagnostics: NightlyRouteDiagnostic
         return;
     }
 
-    if (request.method() === 'OPTIONS') {
-        await fulfillJson(route, {}, 204);
+    if (isAllowedProfileReadRpcPreflight) {
+        await fulfillJson(route, {}, 204, true);
         recordDiagnostic(diagnostics, diagnosticForUrl(url, request.method(), 204, 'supabase-offline'));
         return;
     }
 
-    if (request.method() !== 'GET') {
+    if (request.method() === 'OPTIONS') {
+        await fulfillJson(route, {}, 204, isProfileReadRpc);
+        recordDiagnostic(diagnostics, diagnosticForUrl(url, request.method(), 204, 'supabase-offline'));
+        return;
+    }
+
+    if (method !== 'GET' && !isAllowedProfileReadRpc) {
         recordDiagnostic(diagnostics, diagnosticForUrl(url, request.method(), 0, 'supabase-method-denied'));
         await route.abort('blockedbyclient');
         return;
     }
 
     switch (url.pathname) {
+        case LOCAL_PROFILE_SUMMARIES_RPC_PATH:
+        case LOCAL_PROFILE_LEADERBOARD_RPC_PATH:
+        case LOCAL_PROFILE_LEADERBOARD_PAGE_RPC_PATH:
+            await fulfillJson(route, [], 200, true);
+            break;
         case '/rest/v1/restaurants':
             await fulfillJson(route, filterRestaurants(url));
             break;
@@ -801,12 +881,52 @@ export const test = base.extend({
             const request = route.request();
             const url = new URL(request.url());
             const method = request.method().toUpperCase();
+            const hasEncodedLocalSupabasePath = Boolean(LOCAL_SUPABASE_ORIGIN)
+                && url.origin === LOCAL_SUPABASE_ORIGIN
+                && hasEncodedOrMalformedPath(url);
+            const isLocalProfileReadRpcPath = isAllowedLocalSupabaseUrl(url)
+                && isExactLocalProfileReadRpcPath(url);
+            const isAllowedProfileReadRpc = isAllowedLocalProfileReadRpc(
+                url,
+                method,
+                request.postDataBuffer(),
+                request.headers(),
+            );
+            const isAllowedProfileReadRpcPreflight = isAllowedLocalProfileReadRpcPreflight(
+                url,
+                method,
+                request.postDataBuffer(),
+                request.headers(),
+            );
+
+            if (hasEncodedLocalSupabasePath) {
+                recordDiagnostic(diagnostics, diagnosticForUrl(url, method, 0, 'supabase-path-denied'));
+                await route.abort('blockedbyclient');
+                return;
+            }
+
+            if (
+                isLocalProfileReadRpcPath
+                && !isAllowedProfileReadRpc
+                && !isAllowedProfileReadRpcPreflight
+            ) {
+                recordDiagnostic(diagnostics, diagnosticForUrl(
+                    url,
+                    method,
+                    0,
+                    isMutationMethod(method) ? 'mutation-denied' : 'supabase-method-denied',
+                ));
+                await route.abort('blockedbyclient');
+                return;
+            }
 
             if (
                 isMutationMethod(method)
                 && !(
-                    usesRealLocalSupabase
-                    && (
+                    isAllowedProfileReadRpc
+                    || (
+                        usesRealLocalSupabase
+                        && (
                         isAllowedLocalSupabaseMutation(
                             url,
                             method,
@@ -814,6 +934,7 @@ export const test = base.extend({
                             request.headers(),
                         )
                         || isAllowedLocalAdminMutation(url, method)
+                        )
                     )
                 )
             ) {

@@ -6036,6 +6036,43 @@ export type Database = {
         Args: { p_child_user_id: string }
         Returns: Json
       }
+      read_public_profile_leaderboard: {
+        Args: { p_limit: number; p_period: string }
+        Returns: {
+          avg_likes_per_review: number
+          nickname: string
+          quality_score: number
+          review_count: number
+          total_likes: number
+          user_id: string
+          verified_review_count: number
+        }[]
+      }
+      read_public_profile_leaderboard_page: {
+        Args: {
+          p_after_quality_score: number
+          p_after_user_id: string
+          p_limit: number
+          p_period: string
+        }
+        Returns: {
+          avg_likes_per_review: number
+          nickname: string
+          quality_score: number
+          review_count: number
+          total_likes: number
+          user_id: string
+          verified_review_count: number
+        }[]
+      }
+      read_public_profile_summaries: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          nickname: string
+          user_id: string
+        }[]
+      }
       read_release_auth_revocation: {
         Args: {
           p_operation_id: string

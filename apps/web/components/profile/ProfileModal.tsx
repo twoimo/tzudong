@@ -17,6 +17,7 @@ import { Eye, EyeOff, User, Mail, Lock, Trash2, X } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, MobileSheetHeader, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -28,8 +29,6 @@ interface Profile {
     avatar_url?: string;
     [key: string]: unknown;
 }
-
-const PROFILE_SELECT = 'nickname, avatar_url';
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
@@ -53,12 +52,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         if (!user) return;
 
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select(PROFILE_SELECT)
-                .eq('user_id', user.id);
-
-            if (error) throw error;
+            const data = await readPublicProfileSummaries(supabase, [user.id]);
 
             // 프로필이 존재하는 경우
             if (data && data.length > 0) {

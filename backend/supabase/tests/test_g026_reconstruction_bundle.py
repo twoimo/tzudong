@@ -775,11 +775,11 @@ class G026BundleTests(unittest.TestCase):
         self.assertEqual(
             binding,
             {
-                'canonicalPath': 'backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
-                'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
-                'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
-                'sourceSha256': '33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7',
-                'sourceByteLength': 31716,
+                'canonicalPath': 'backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql',
+                'filename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
+                'predecessorFilename': '20260812000600_local_profile_read_boundary_convergence.sql',
+                'sourceSha256': 'c03c0833294875be06d7cff6d513f7c7ddaf263514b7148bc3db22a29ac3bd17',
+                'sourceByteLength': 29279,
                 'transactionClass': 'self_committing',
             },
         )
@@ -791,13 +791,13 @@ class G026BundleTests(unittest.TestCase):
             ROOT / 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
         ).read_text(encoding='utf8')
         self.assertIn(
-            '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql)',
+            '20260812000700_local_profile_leaderboard_page_convergence.sql)',
             generator,
         )
         self.assertIn('self-contained-replay:${migration##*/}', generator)
         self.assertIn("jq -er '.selfContainedReplay.canonicalPath'", generator)
         self.assertNotIn(
-            '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql)',
+            '20260812000700_local_profile_leaderboard_page_convergence.sql)',
             generator[
                 generator.index('20260713002100_g014_privacy_workflows.sql|'):
                 generator.index('20260801000300_g016_onboarding_allowlist_freshness.sql)')
@@ -815,9 +815,9 @@ class G026BundleTests(unittest.TestCase):
             {**binding, 'sourceSha256': '0' * 64},
             {**binding, 'sourceByteLength': binding['sourceByteLength'] + 1},
             {**binding, 'transactionClass': 'transactional'},
-            {**binding, 'predecessorFilename': '20260812000300_local_admin_data_boundary_convergence.sql'},
+            {**binding, 'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql'},
             {**binding, 'canonicalPath': '../outside.sql'},
-            {**binding, 'filename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql'},
+            {**binding, 'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql'},
             {**binding, 'unexpected': True},
         ):
             with self.subTest(mutation=mutation):

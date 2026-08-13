@@ -117,7 +117,8 @@ describe("header action loading source contract", () => {
     expect(userMenuSource).toContain(
       'queryKey: ["home-map-user-menu-avatar", user?.id]',
     );
-    expect(userMenuSource).toContain('.select("avatar_url")');
+    expect(userMenuSource).toContain('readPublicProfileSummaries(supabase, [user.id])');
+    expect(userMenuSource).not.toContain('.from("profiles")');
     expect(userMenuSource).toContain(
       'className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"',
     );
