@@ -28,6 +28,9 @@ const bunLockSource = read("bun.lock");
 const publicationAllowlistSource = read("../../.github/nightly-local-publication-allowlist.txt");
 const publicationVerifierSource = read("../../.github/scripts/verify-nightly-local-publication.py");
 const publicationBuilderSource = read("../../.github/scripts/build-nightly-local-publication.py");
+const lifecycleStageWriterSource = read(
+  "../../.github/scripts/write-nightly-lifecycle-stage.py",
+);
 const localOverlayBoundaryMigrationSource = read(
   "../../backend/supabase/migrations/20260812000400_local_admin_map_overlay_boundary_convergence.sql",
 );
@@ -900,6 +903,12 @@ describe("nightly regression package and source contracts", () => {
       "actions/upload-artifact@v4",
       "publication-boundary.txt",
       "failure-diagnostics/local-stack-failure-diagnostics.json",
+      "steps.prepare-lifecycle-diagnostic.outputs.path",
+      "write-nightly-lifecycle-stage.py",
+      "Prepare bounded lifecycle diagnostic for failure persistence",
+      "--prepare-upload",
+      "trap fail_lifecycle_stage ERR",
+      "record_lifecycle_stage failed \"$exit_code\" || true",
       "local-stack-failure-diagnostics-v1",
       "allowed_services",
       "allowed_states",
@@ -1011,6 +1020,47 @@ describe("nightly regression package and source contracts", () => {
       "psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \\\n" +
         "            < backend/supabase/tests/local_profile_mutation_boundary.sql",
     );
+    for (const token of [
+      'SCHEMA: Final = "nightly-lifecycle-stage-v1"',
+      "MAX_RECEIPT_BYTES: Final = 1024",
+      '"attempt_count"',
+      '"exit_code"',
+      '"failure_class"',
+      '"stage_index"',
+      '"status"',
+      "prepare_upload_copy",
+      "os.replace(temporary, target)",
+      "os.fsync(descriptor)",
+      "info.st_nlink != 1",
+      "O_NOFOLLOW",
+    ]) {
+      expect(lifecycleStageWriterSource).toContain(token);
+    }
+    const successUpload = sourceBlock(
+      localWorkflowSource,
+      "- name: Upload verified sanitized local nightly artifacts",
+      "- name: Prepare bounded lifecycle diagnostic for failure persistence",
+    );
+    const prepareLifecycleUpload = sourceBlock(
+      localWorkflowSource,
+      "- name: Prepare bounded lifecycle diagnostic for failure persistence",
+      "- name: Upload bounded failed or partial local nightly diagnostics",
+    );
+    const failureUpload = sourceBlock(
+      localWorkflowSource,
+      "- name: Upload bounded failed or partial local nightly diagnostics",
+      "- name: Upload allowlisted publication bundle",
+    );
+    expect(successUpload).not.toContain("local-lifecycle-stage.json");
+    expect(prepareLifecycleUpload).toContain("--prepare-upload");
+    expect(prepareLifecycleUpload).toContain(
+      "path=nightly-artifacts/validated-failure-diagnostics/local-lifecycle-stage.json",
+    );
+    expect(failureUpload).toContain("${{ steps.prepare-lifecycle-diagnostic.outputs.path }}");
+    expect(failureUpload).not.toContain(
+      "nightly-artifacts/failure-diagnostics/local-lifecycle-stage.json",
+    );
+    expect(publicationAllowlistSource).not.toContain("local-lifecycle-stage");
     for (const action of [
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
