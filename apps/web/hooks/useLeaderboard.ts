@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfMonth, formatISO } from "date-fns";
+import { readCompletePublicProfileLeaderboard } from "@/lib/public-profile-read";
 
 export interface LeaderboardUser {
     id: string;
@@ -13,21 +13,6 @@ export interface LeaderboardUser {
     avgLikesPerReview: number;
     qualityScore: number;
 }
-
-type ProfileRow = {
-    user_id: string;
-    nickname: string;
-};
-
-type ReviewRow = {
-    id: string;
-    user_id: string;
-    is_verified: boolean;
-    created_at: string;
-    like_count: number | null;
-};
-
-type LeaderboardComputedUser = Omit<LeaderboardUser, 'rank'>;
 
 export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
     const queryClient = useQueryClient();
@@ -62,101 +47,18 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
         queryKey: ['leaderboard-users', period],
         queryFn: async () => {
             try {
-                // [1단계] 모든 프로필 조회 (유령 회원 포함)
-                const { data: profilesRawData, error: profilesError } = await supabase
-                    .from('profiles')
-                    .select('user_id, nickname')
-                    .not('nickname', 'is', null)
-                    .neq('nickname', '탈퇴한 사용자');
-
-                if (profilesError) {
-                    console.warn('프로필 데이터 조회 실패:');
-                    throw new Error('프로필 데이터 조회 실패');
-                }
-
-                const profilesData = (profilesRawData ?? []) as ProfileRow[];
-                if (profilesData.length === 0) {
-                    return [];
-                }
-
-                // [2단계] 모든 리뷰 조회
-                const userIds = profilesData.map((profile) => profile.user_id);
-
-                let reviewsQuery = supabase
-                    .from('reviews')
-                    .select('id, user_id, is_verified, created_at, like_count')
-                    .in('user_id', userIds);
-
-                // 월간 필터 적용
-                if (period === 'monthly') {
-                    const startOfMonthDate = startOfMonth(new Date());
-                    reviewsQuery = reviewsQuery.gte('created_at', formatISO(startOfMonthDate));
-                }
-
-                const { data: allReviewsRawData, error: allReviewsError } = await reviewsQuery;
-
-                if (allReviewsError) {
-                    console.warn('전체 리뷰 데이터 조회 실패:');
-                }
-                const allReviewsData = (allReviewsRawData ?? []) as ReviewRow[];
-
-                // 통계용 Map 생성
-                const reviewCountMap = new Map<string, number>();
-                const verifiedReviewCountMap = new Map<string, number>();
-                const totalLikesMap = new Map<string, number>();
-
-                // 리뷰 통계 계산
-                allReviewsData.forEach((review) => {
-                    // 총 리뷰 수 계산
-                    const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
-                    reviewCountMap.set(review.user_id, currentReviewCount + 1);
-
-                    // 승인된 리뷰 수 계산
-                    if (review.is_verified) {
-                        const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
-                        verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
-                    }
-
-                    // 총 좋아요 수 계산: review_likes 전체를 다시 읽지 않고 reviews.like_count 캐시 사용
-                    const reviewLikes = review.like_count || 0;
-                    const currentLikes = totalLikesMap.get(review.user_id) || 0;
-                    totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
-                });
-
-                // [4단계] 각 사용자별 통계 계산 및 품질 점수 산출
-                const users: LeaderboardComputedUser[] = profilesData.map((profile) => {
-                    const reviewCount = reviewCountMap.get(profile.user_id) || 0;
-                    const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
-                    const totalLikes = totalLikesMap.get(profile.user_id) || 0;
-
-                    // 평균 좋아요 계산
-                    const avgLikesPerReview = verifiedReviewCount > 0
-                        ? totalLikes / verifiedReviewCount
-                        : 0;
-
-                    // 품질 점수 계산
-                    const qualityScore = verifiedReviewCount * (1 + avgLikesPerReview * 0.1);
-
-                    return {
-                        id: profile.user_id,
-                        username: profile.nickname,
-                        reviewCount,
-                        verifiedReviewCount,
-                        totalLikes,
-                        avgLikesPerReview: Math.round(avgLikesPerReview * 10) / 10,
-                        qualityScore: Math.round(qualityScore * 10) / 10,
-                    };
-                });
-
-                // 품질 점수 기준 내림차순 정렬 및 순위 부여
-                return users
-                    .sort((a, b) => b.qualityScore - a.qualityScore)
-                    .map((user, index: number) => ({
-                        ...user,
-                        rank: index + 1,
-                    }));
-
-            } catch (error) {
+                const rows = await readCompletePublicProfileLeaderboard(supabase, period);
+                return rows.map((row, index): LeaderboardUser => ({
+                    id: row.user_id,
+                    rank: index + 1,
+                    username: row.nickname,
+                    reviewCount: row.review_count,
+                    verifiedReviewCount: row.verified_review_count,
+                    totalLikes: row.total_likes,
+                    avgLikesPerReview: row.avg_likes_per_review,
+                    qualityScore: row.quality_score,
+                }));
+            } catch {
                 console.warn('리더보드 데이터 조회 중 오류 발생:');
                 return [];
             }

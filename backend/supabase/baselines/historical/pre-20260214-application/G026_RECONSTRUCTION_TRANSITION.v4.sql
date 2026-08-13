@@ -24,11 +24,190 @@ COMMIT;
 
 -- Phase A runs exactly after ordinal 2 and before ordinal 3.
 BEGIN;
-LOCK TABLE public.restaurants, public.restaurant_submissions, public.restaurant_submission_items IN ACCESS EXCLUSIVE MODE;
+LOCK TABLE public.profiles, public.reviews, public.restaurants, public.restaurant_submissions, public.restaurant_submission_items IN ACCESS EXCLUSIVE MODE;
 DO $$ BEGIN
- IF (SELECT count(*) FROM public.restaurants) <> 0 OR (SELECT count(*) FROM public.restaurant_submissions) <> 0 OR (SELECT count(*) FROM public.restaurant_submission_items) <> 0 THEN RAISE EXCEPTION 'G026 requires an empty clean replay' USING ERRCODE='P0001'; END IF;
+ IF (SELECT count(*) FROM public.profiles) <> 0 OR (SELECT count(*) FROM public.reviews) <> 0 OR (SELECT count(*) FROM public.restaurants) <> 0 OR (SELECT count(*) FROM public.restaurant_submissions) <> 0 OR (SELECT count(*) FROM public.restaurant_submission_items) <> 0 THEN RAISE EXCEPTION 'G026 requires an empty clean replay' USING ERRCODE='P0001'; END IF;
  IF to_regclass('public.restaurants_backup') IS NOT NULL OR to_regclass('public.document_embeddings') IS NOT NULL OR to_regclass('public.document_embeddings_id_seq') IS NOT NULL OR to_regclass('public.ad_banners') IS NOT NULL OR to_regclass('public.short_urls') IS NOT NULL OR to_regclass('public.restaurants_duplicate') IS NOT NULL THEN RAISE EXCEPTION 'G026 phase A relations already exist' USING ERRCODE='P0001'; END IF;
 END $$;
+-- G026 source-only Phase A legacy-shape normalization; not historical or hosted-state evidence.
+-- Legacy shape is bound to RECONSTRUCTION_SOURCES.v1.json sha256=1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e ordinal-0 source sha256=23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33.
+-- Required target columns are bound to APPLICATION_PREREQUISITES.v1.json sha256=055d31e0d7597ec026e570eaf85adfb2c4a6c5480f80a3ed7a7ca525a6b2a9f3 output sha256=34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15.
+DO $g026_legacy_shape$
+DECLARE
+  v_profile_shape text[];
+  v_review_shape text[];
+BEGIN
+  IF to_regclass('public.profiles') IS NULL OR to_regclass('public.reviews') IS NULL THEN
+    RAISE EXCEPTION 'G026 legacy-shape normalization requires profiles and reviews' USING ERRCODE='P0001';
+  END IF;
+  IF (SELECT relation.relkind FROM pg_catalog.pg_class AS relation WHERE relation.oid = 'public.profiles'::regclass) IS DISTINCT FROM 'r'
+     OR (SELECT relation.relkind FROM pg_catalog.pg_class AS relation WHERE relation.oid = 'public.reviews'::regclass) IS DISTINCT FROM 'r' THEN
+    RAISE EXCEPTION 'G026 legacy-shape normalization requires ordinary tables' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.profiles) OR EXISTS (SELECT 1 FROM public.reviews) THEN
+    RAISE EXCEPTION 'G026 legacy-shape normalization requires empty profiles and reviews' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_attribute
+    WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_picture' AND attnum > 0 AND NOT attisdropped
+  ) AND EXISTS (
+    SELECT 1 FROM pg_catalog.pg_attribute
+    WHERE attrelid = 'public.profiles'::regclass AND attname = 'avatar_url' AND attnum > 0 AND NOT attisdropped
+  ) THEN
+    RAISE EXCEPTION 'G026 profiles legacy and target avatar columns both exist' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_attribute
+    WHERE attrelid = 'public.profiles'::regclass AND attname = 'avatar_url' AND attnum > 0 AND NOT attisdropped
+  ) OR NOT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_attribute
+    WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_picture'
+      AND atttypid = 'pg_catalog.text'::regtype AND NOT attnotnull AND attnum > 0 AND NOT attisdropped
+  ) THEN
+    RAISE EXCEPTION 'G026 profiles legacy avatar column shape drifted' USING ERRCODE='P0001';
+  END IF;
+  SELECT pg_catalog.array_agg(
+           pg_catalog.format('%s|%s|%s|%s', attribute.attname, pg_catalog.format_type(attribute.atttypid, attribute.atttypmod), attribute.attnotnull, attribute.atthasdef)
+           ORDER BY attribute.attnum
+         )
+  INTO v_profile_shape
+  FROM pg_catalog.pg_attribute AS attribute
+  WHERE attribute.attrelid = 'public.profiles'::regclass
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped;
+  IF v_profile_shape IS DISTINCT FROM ARRAY[
+    'id|uuid|t|t',
+    'user_id|uuid|t|f',
+    'nickname|text|t|f',
+    'email|text|t|f',
+    'profile_picture|text|f|f',
+    'created_at|timestamp with time zone|t|t',
+    'last_login|timestamp with time zone|t|t'
+  ]::text[] THEN
+    RAISE EXCEPTION 'G026 profiles exact legacy base shape drifted' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_attribute
+    WHERE attrelid = 'public.reviews'::regclass AND attname = 'like_count' AND attnum > 0 AND NOT attisdropped
+  ) THEN
+    RAISE EXCEPTION 'G026 reviews target like_count already exists' USING ERRCODE='P0001';
+  END IF;
+  SELECT pg_catalog.array_agg(
+           pg_catalog.format('%s|%s|%s|%s', attribute.attname, pg_catalog.format_type(attribute.atttypid, attribute.atttypmod), attribute.attnotnull, attribute.atthasdef)
+           ORDER BY attribute.attnum
+         )
+  INTO v_review_shape
+  FROM pg_catalog.pg_attribute AS attribute
+  WHERE attribute.attrelid = 'public.reviews'::regclass
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped;
+  IF v_review_shape IS DISTINCT FROM ARRAY[
+    'id|uuid|t|t',
+    'user_id|uuid|t|f',
+    'restaurant_id|uuid|t|f',
+    'title|text|t|f',
+    'content|text|t|f',
+    'visited_at|timestamp with time zone|t|f',
+    'verification_photo|text|t|f',
+    'food_photos|text[]|f|t',
+    'categories|text[]|f|t',
+    'is_verified|boolean|t|t',
+    'admin_note|text|f|f',
+    'is_pinned|boolean|t|t',
+    'is_edited_by_admin|boolean|t|t',
+    'edited_by_admin_id|uuid|f|f',
+    'edited_at|timestamp with time zone|f|f',
+    'created_at|timestamp with time zone|t|t',
+    'updated_at|timestamp with time zone|t|t'
+  ]::text[] THEN
+    RAISE EXCEPTION 'G026 reviews exact legacy base shape drifted' USING ERRCODE='P0001';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_constraint
+    WHERE conrelid = 'public.reviews'::regclass AND conname = 'reviews_like_count_check'
+  ) THEN
+    RAISE EXCEPTION 'G026 reviews like_count constraint already exists' USING ERRCODE='P0001';
+  END IF;
+
+  ALTER TABLE public.profiles RENAME COLUMN profile_picture TO avatar_url;
+  ALTER TABLE public.reviews ADD COLUMN like_count integer NOT NULL DEFAULT 0;
+  ALTER TABLE public.reviews ADD CONSTRAINT reviews_like_count_check CHECK (like_count >= 0);
+
+  SELECT pg_catalog.array_agg(
+           pg_catalog.format('%s|%s|%s|%s', attribute.attname, pg_catalog.format_type(attribute.atttypid, attribute.atttypmod), attribute.attnotnull, attribute.atthasdef)
+           ORDER BY attribute.attnum
+         )
+  INTO v_profile_shape
+  FROM pg_catalog.pg_attribute AS attribute
+  WHERE attribute.attrelid = 'public.profiles'::regclass
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped;
+  SELECT pg_catalog.array_agg(
+           pg_catalog.format('%s|%s|%s|%s', attribute.attname, pg_catalog.format_type(attribute.atttypid, attribute.atttypmod), attribute.attnotnull, attribute.atthasdef)
+           ORDER BY attribute.attnum
+         )
+  INTO v_review_shape
+  FROM pg_catalog.pg_attribute AS attribute
+  WHERE attribute.attrelid = 'public.reviews'::regclass
+    AND attribute.attnum > 0
+    AND NOT attribute.attisdropped;
+  IF EXISTS (
+       SELECT 1 FROM pg_catalog.pg_attribute
+       WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_picture' AND attnum > 0 AND NOT attisdropped
+     ) OR v_profile_shape IS DISTINCT FROM ARRAY[
+       'id|uuid|t|t',
+       'user_id|uuid|t|f',
+       'nickname|text|t|f',
+       'email|text|t|f',
+       'avatar_url|text|f|f',
+       'created_at|timestamp with time zone|t|t',
+       'last_login|timestamp with time zone|t|t'
+     ]::text[] THEN
+    RAISE EXCEPTION 'G026 profiles normalized shape postcondition failed' USING ERRCODE='P0001';
+  END IF;
+  IF v_review_shape IS DISTINCT FROM ARRAY[
+       'id|uuid|t|t',
+       'user_id|uuid|t|f',
+       'restaurant_id|uuid|t|f',
+       'title|text|t|f',
+       'content|text|t|f',
+       'visited_at|timestamp with time zone|t|f',
+       'verification_photo|text|t|f',
+       'food_photos|text[]|f|t',
+       'categories|text[]|f|t',
+       'is_verified|boolean|t|t',
+       'admin_note|text|f|f',
+       'is_pinned|boolean|t|t',
+       'is_edited_by_admin|boolean|t|t',
+       'edited_by_admin_id|uuid|f|f',
+       'edited_at|timestamp with time zone|f|f',
+       'created_at|timestamp with time zone|t|t',
+       'updated_at|timestamp with time zone|t|t',
+       'like_count|integer|t|t'
+     ]::text[] THEN
+    RAISE EXCEPTION 'G026 reviews normalized shape postcondition failed' USING ERRCODE='P0001';
+  END IF;
+  IF (SELECT pg_catalog.pg_get_expr(default_row.adbin, default_row.adrelid)
+      FROM pg_catalog.pg_attribute AS attribute
+      JOIN pg_catalog.pg_attrdef AS default_row
+        ON default_row.adrelid = attribute.attrelid AND default_row.adnum = attribute.attnum
+      WHERE attribute.attrelid = 'public.reviews'::regclass
+        AND attribute.attname = 'like_count'
+        AND attribute.attnum > 0
+        AND NOT attribute.attisdropped) IS DISTINCT FROM '0' THEN
+    RAISE EXCEPTION 'G026 reviews like_count default postcondition failed' USING ERRCODE='P0001';
+  END IF;
+  IF (SELECT pg_catalog.count(*)
+      FROM pg_catalog.pg_constraint AS constraint_row
+      WHERE constraint_row.conrelid = 'public.reviews'::regclass
+        AND constraint_row.conname = 'reviews_like_count_check'
+        AND constraint_row.contype = 'c'
+        AND constraint_row.convalidated
+        AND pg_catalog.pg_get_constraintdef(constraint_row.oid, true) = 'CHECK (like_count >= 0)') <> 1 THEN
+    RAISE EXCEPTION 'G026 reviews like_count constraint postcondition failed' USING ERRCODE='P0001';
+  END IF;
+END
+$g026_legacy_shape$;
 -- G026 non-historical synthesized Phase A base relation: source-derived solely from backend/supabase/migrations/20260713000100_g013_short_url_security.sql.
 -- G013 lines 7-35 validate code/target_url, lines 38-43 own NOT NULL, uniqueness, and format constraints, and lines 283-294 allocate code, target_url, restaurant_id, and restaurant_name.
 CREATE TABLE public.short_urls (

@@ -97,8 +97,13 @@ describe('admin user-management source contract', () => {
     expect(postSource).not.toContain('password');
 
     expect(listRouteSource).toContain('supabase.auth.admin.listUsers');
-    expect(listRouteSource).toContain('fetchAccountStatusMap');
-    expect(listRouteSource).toContain('user_account_status');
+    expect(listRouteSource).toContain('fetchUserManagementMetadata');
+    expect(listRouteSource).toContain("rpc(\n      'read_admin_user_management_metadata'");
+    expect(listRouteSource).not.toContain(".from('profiles')");
+    expect(listRouteSource).not.toContain(".from('user_roles')");
+    expect(listRouteSource).not.toContain(".from('user_account_status')");
+    expect(listRouteSource).toContain('returnedIds.size !== requestedIds.size');
+    expect(listRouteSource).toContain('metadata ? metadata.account_status !== \'active\'');
     expect(listRouteSource).toContain("code: 'ADMIN_USER_CREATION_ONBOARDING_REQUIRED'");
     expect(listRouteSource).toContain("error: '새 계정은 개인정보 온보딩 가입 절차를 통해서만 만들 수 있습니다.'");
     expect(listRouteSource).toContain("{ status: 409, headers: { 'Cache-Control': 'no-store' } }");
@@ -118,6 +123,8 @@ describe('admin user-management source contract', () => {
     expect(updateRouteSource).toContain('validateAdminUserConfirmation');
     expect(updateRouteSource).toContain('잠금 방지를 위해 변경을 중단합니다.');
     expect(updateRouteSource).toContain('getActiveAdminUserIds');
+    expect(updateRouteSource).toContain("rpc('read_admin_user_ids_for_management')");
+    expect(updateRouteSource).not.toContain(".from('user_roles')");
     expect(updateRouteSource).toContain('마지막 활성 관리자 계정은 권한 회수 또는 비활성화할 수 없습니다.');
     expect(updateRouteSource).toContain('자기 자신의 관리자 권한은 회수할 수 없습니다.');
     expect(serviceRoleSource).toContain("server-only");
@@ -141,9 +148,13 @@ describe('admin user-management source contract', () => {
     expect(middlewareSource).toContain("accountStatusError || accountStatus?.account_status !== 'active'");
     expect(middlewareSource).not.toContain('isMissingOptionalAdminStatusStoreError');
     expect(auditSource).not.toContain('service_role');
+    expect(auditSource).toContain("rpc('append_admin_user_audit_event'");
+    expect(auditSource).toContain("typeof data === 'string' && UUID_PATTERN.test(data)");
+    expect(auditSource).not.toContain(".from('admin_audit_events')");
     expect(auditEventsRouteSource).toContain('await requireAdmin()');
     expect(auditEventsRouteSource).toContain('createSupabaseServiceRoleClient()');
-    expect(auditEventsRouteSource).toContain('.from("admin_audit_events")');
+    expect(auditEventsRouteSource).toContain('.rpc("read_admin_user_audit_events"');
+    expect(auditEventsRouteSource).not.toContain('.from("admin_audit_events")');
     expect(auditEventsRouteSource).toContain('admin-audit-events-read-failed');
     expect(auditEventsRouteSource).toContain('"Cache-Control": "no-store"');
   });

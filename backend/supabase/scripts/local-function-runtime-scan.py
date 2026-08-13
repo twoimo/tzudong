@@ -59,9 +59,21 @@ _FUNCTION_START = re.compile(
 _SEARCH_PATH = re.compile(r"(?is)\bSET\s+search_path\s+(?:TO|=)\s*([^;]+)")
 _TRUSTED_SEARCH_PATH_TOKENS = ("", "pg_catalog", "public", "extensions", "pg_temp")
 _TRUSTED_SEARCH_PATH_SQL_TOKEN = r'(""|pg_catalog|public|extensions|pg_temp)'
+_TRUSTED_SEARCH_PATH_SQL_PATTERN = (
+    r"^search_path="
+    + _TRUSTED_SEARCH_PATH_SQL_TOKEN
+    + r"([[:space:]]*,[[:space:]]*"
+    + _TRUSTED_SEARCH_PATH_SQL_TOKEN
+    + r")*$"
+)
 _FUNCTION_OPERATION_START = re.compile(r"(?is)\b(?:ALTER|DROP)\s+FUNCTION\b")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _REMOTE_DOCKER_ENV = ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "DOCKER_CONFIG", "COMPOSE_PROJECT_NAME", "COMPOSE_FILE", "DATABASE_URL", "SUPABASE_URL", "PGHOST")
+DOCKER_SOCKET_ADMISSION_ENV = "TZUDONG_DOCKER_SOCKET_ADMISSION_FILE"
+GITHUB_ACTIONS_REPOSITORY = "twoimo/tzudong"
+_GITHUB_ACTIONS_ADMISSION_PATH = re.compile(
+    r"^/run/tzudong-nightly-local-admission-([1-9][0-9]*)-([1-9][0-9]*)$"
+)
 LOCAL_STACK_GENERATOR_VERSION = "local-stack-v1"
 LOCAL_ENV_PROVENANCE_SCHEMA = "local-stack-env-provenance-v1"
 LOCAL_INPUT_PROVENANCE_SCHEMA = "local-stack-input-provenance-v2"
@@ -511,6 +523,9 @@ def _candidate_functions(functions: Iterable[dict[str, Any]]) -> list[dict[str, 
                 continue
             tokens.append("extensions")
             desired = ", ".join(dict.fromkeys(token for token in tokens if token))
+            # This is a source/runtime resolution candidate, not authority to
+            # widen an already valid runtime path.  The generated patch below
+            # changes only a runtime identity with no search_path setting.
             reason = "trusted_extension_omitted"
         key = (final_schema + "." + final_proname, final_identity)
         unique[key] = {
@@ -585,11 +600,28 @@ def _patch_sql(
     if patch_sha256 is not None:
         metadata["patchSha256"] = patch_sha256
     lines = ["-- local-function-closure-patch-v1", "-- metadata: " + canonical_json(metadata).decode("ascii"), "BEGIN;"]
+    lines.extend(
+        [
+            "DO $local_function_closure_path_guard$",
+            "DECLARE duplicate_path_count integer;",
+            "BEGIN",
+            "  SELECT count(*) FILTER (WHERE setting ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')::integer",
+            "    INTO duplicate_path_count",
+            "    FROM pg_catalog.unnest(ARRAY['search_path=\"\"','search_path=public']::text[]) AS setting;",
+            "  IF NOT ('search_path=\"\"' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')",
+            "     OR NOT ('search_path=public, extensions' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')",
+            "     OR 'search_path=auth' ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "'",
+            "     OR duplicate_path_count <> 2 THEN",
+            "    RAISE EXCEPTION 'local_closure_runtime_path_guard_invalid';",
+            "  END IF;",
+            "END $local_function_closure_path_guard$;",
+        ]
+    )
     for candidate in candidates:
         lines.extend(
             [
                 "DO $local_function_closure$",
-                "DECLARE target_oid oid; target_count integer;",
+                "DECLARE target_oid oid; target_count integer; target_path_count integer; target_valid_path_count integer;",
                 "BEGIN",
                 "  SELECT count(*)::integer, min(p.oid) INTO target_count, target_oid",
                 "    FROM pg_catalog.pg_proc AS p",
@@ -607,10 +639,33 @@ def _patch_sql(
                 "     );",
                 "  IF target_count = 0 THEN RAISE EXCEPTION 'local_closure_missing'; END IF;",
                 "  IF target_count > 1 THEN RAISE EXCEPTION 'local_closure_ambiguous'; END IF;",
-                "  EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
+                "  SELECT count(*) FILTER (WHERE setting.value ~* '^search_path=')::integer,",
+                "         count(*) FILTER (WHERE setting.value ~* '" + _TRUSTED_SEARCH_PATH_SQL_PATTERN + "')::integer",
+                "    INTO target_path_count, target_valid_path_count",
+                "    FROM pg_catalog.pg_proc AS procedure",
+                "    LEFT JOIN LATERAL pg_catalog.unnest(COALESCE(procedure.proconfig, ARRAY[]::text[])) AS setting(value) ON true",
+                "   WHERE procedure.oid = target_oid;",
+                "  IF target_path_count = 0 THEN",
+                "    EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
+                "  ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+                "    RAISE EXCEPTION 'local_closure_runtime_path_invalid';",
+                "  END IF;",
                 "END $local_function_closure$;",
             ]
         )
+    lines.extend(
+        [
+            "DO $local_function_closure_g014$",
+            "BEGIN",
+            "  IF pg_catalog.to_regprocedure('privacy_retention.assert_g014_definer_contract()') IS NULL",
+            "     OR pg_catalog.to_regprocedure('privacy_retention.assert_g014_catalog_contract()') IS NULL THEN",
+            "    RAISE EXCEPTION 'local_closure_g014_contract_missing';",
+            "  END IF;",
+            "  PERFORM privacy_retention.assert_g014_definer_contract();",
+            "  PERFORM privacy_retention.assert_g014_catalog_contract();",
+            "END $local_function_closure_g014$;",
+        ]
+    )
     lines.extend(["COMMIT;", ""])
     return "\n".join(lines)
 def _patch_executable_body(data: bytes) -> bytes:
@@ -721,6 +776,70 @@ def _filtered_environment() -> dict[str, str]:
     result.setdefault("PATH", "/usr/bin:/bin")
     result.setdefault("HOME", str(Path.home()))
     return result
+
+
+def _github_actions_root_socket_admission() -> bool:
+    admission_value = os.environ.get(DOCKER_SOCKET_ADMISSION_ENV, "")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("CI") != "true"
+        or repository != GITHUB_ACTIONS_REPOSITORY
+        or re.fullmatch(r"[1-9][0-9]*", run_id) is None
+        or re.fullmatch(r"[1-9][0-9]*", run_attempt) is None
+    ):
+        return False
+    match = _GITHUB_ACTIONS_ADMISSION_PATH.fullmatch(admission_value)
+    if (
+        match is None
+        or match.groups() != (run_id, run_attempt)
+        or admission_value
+        != f"/run/tzudong-nightly-local-admission-{run_id}-{run_attempt}"
+    ):
+        return False
+    admission_path = Path(admission_value)
+    try:
+        info = admission_path.lstat()
+    except OSError:
+        return False
+    try:
+        read_result = subprocess.run(
+            ["/usr/bin/sudo", "-n", "--", "/bin/cat", admission_value],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+            env={"PATH": "/usr/bin:/bin", "LANG": "C"},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    payload = read_result.stdout
+    expected = (
+        f"repo={repository}\n"
+        f"run_id={run_id}\n"
+        f"run_attempt={run_attempt}\n"
+    ).encode("ascii")
+    return (
+        not stat.S_ISLNK(info.st_mode)
+        and stat.S_ISREG(info.st_mode)
+        and info.st_uid == 0
+        and stat.S_IMODE(info.st_mode) == 0o400
+        and read_result.returncode == 0
+        and len(payload) <= 256
+        and payload == expected
+    )
+
+
+def _github_actions_root_owned_socket(path: Path, owner: int) -> bool:
+    return (
+        path == Path("/var/run/docker.sock")
+        and owner == 0
+        and _github_actions_root_socket_admission()
+    )
+
+
 def _assert_local_docker_context(docker: str) -> None:
     environment = _filtered_environment()
     try:
@@ -764,7 +883,13 @@ def _assert_local_docker_context(docker: str) -> None:
         info = socket_path.lstat()
     except OSError as error:
         raise RuntimeScanError("docker_context") from error
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+    owned_by_current_user = info.st_uid == os.getuid()
+    owned_by_disposable_ci_root = _github_actions_root_owned_socket(socket_path, info.st_uid)
+    if (
+        stat.S_ISLNK(info.st_mode)
+        or not stat.S_ISSOCK(info.st_mode)
+        or not (owned_by_current_user or owned_by_disposable_ci_root)
+    ):
         raise RuntimeScanError("docker_context")
 def _validate_endpoint_environment() -> None:
     if any(os.environ.get(key) for key in _REMOTE_DOCKER_ENV):
@@ -911,7 +1036,7 @@ def _validate_local_stack_state(
     return state, values, current, receipt
 
 
-def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
+def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str, str]]:
     input_root = state / "inputs"
     try:
         input_info = input_root.lstat()
@@ -941,9 +1066,28 @@ def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
         or manifest.get("schema") != "local-stack-input-manifest-v1"
         or manifest.get("generator_version") != LOCAL_STACK_GENERATOR_VERSION
         or not isinstance(manifest.get("inputs"), list)
+        or not isinstance(manifest.get("mounts"), list)
     ):
         raise RuntimeScanError("local_input_manifest")
-    mounts: set[tuple[str, str]] = set()
+    for mount in manifest.get("mounts", []):
+        if not isinstance(mount, dict) or mount.get("service") != "db":
+            continue
+        source, destination = mount.get("source"), mount.get("destination")
+        if (
+            mount.get("type") != "volume"
+            or not isinstance(source, str)
+            or not source.startswith("local-")
+            or not isinstance(destination, str)
+        ):
+            raise RuntimeScanError("local_input_manifest")
+    mounts: set[tuple[str, str, str]] = set()
+    project = local_project_name(root)
+    for mount in manifest["mounts"]:
+        if not isinstance(mount, dict) or mount.get("service") != "db":
+            continue
+        source = mount["source"]
+        destination = mount["destination"]
+        mounts.add(("volume", destination, f"{project}-{source.removeprefix('local-')}"))
     for entry in manifest["inputs"]:
         if not isinstance(entry, dict) or entry.get("service") != "db":
             continue
@@ -969,7 +1113,6 @@ def _expected_database_mounts(root: Path, state: Path) -> set[tuple[str, str]]:
             or output_resolved.parent != (state / "inputs").resolve()
         ):
             raise RuntimeScanError("local_input_binding")
-        mounts.add((destination, str(output_resolved)))
     if not mounts:
         raise RuntimeScanError("local_input_manifest")
     return mounts
@@ -1105,19 +1248,15 @@ class LocalPsql:
             raise RuntimeScanError("container_not_repository_compose")
         if not isinstance(mounts, list):
             raise RuntimeScanError("container_input_mounts")
-        actual_mounts: set[tuple[str, str]] = set()
+        actual_mounts: set[tuple[str, str, str]] = set()
         for mount in mounts:
             if (
                 isinstance(mount, dict)
-                and mount.get("Type") == "bind"
-                and mount.get("RW") is False
+                and mount.get("Type") == "volume"
                 and isinstance(mount.get("Destination"), str)
-                and isinstance(mount.get("Source"), str)
+                and isinstance(mount.get("Name"), str)
             ):
-                try:
-                    actual_mounts.add((mount["Destination"], str(Path(mount["Source"]).resolve(strict=True))))
-                except OSError as error:
-                    raise RuntimeScanError("container_input_mounts") from error
+                actual_mounts.add(("volume", mount["Destination"], mount["Name"]))
         if not self._expected_mounts.issubset(actual_mounts):
             raise RuntimeScanError("container_input_mounts")
 
@@ -1454,7 +1593,7 @@ WITH funcs AS (
   SELECT funcs.*,
          (SELECT count(*) FROM unnest(config) s(value) WHERE s.value ~* '^search_path=') AS path_count,
          (SELECT count(*) FROM unnest(config) s(value)
-          WHERE s.value ~* '^search_path={_TRUSTED_SEARCH_PATH_SQL_TOKEN}([[:space:]]*,[[:space:]]*{_TRUSTED_SEARCH_PATH_SQL_TOKEN})*$') AS valid_path_count
+          WHERE s.value ~* '{_TRUSTED_SEARCH_PATH_SQL_PATTERN}') AS valid_path_count
     FROM funcs
 ), external_effect_counts AS (
   SELECT
@@ -1493,7 +1632,12 @@ WITH funcs AS (
 ), extensions AS (
   SELECT encode(extensions.digest(convert_to(COALESCE(string_agg(n.nspname || '.' || e.extname || '@' || COALESCE(e.extversion, ''), E'\\n' ORDER BY n.nspname, e.extname), ''), 'UTF8'), 'sha256'), 'hex') AS extension_catalog_sha256
     FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
-){candidate_resolution}
+){candidate_resolution},
+g014_contract AS MATERIALIZED (
+  SELECT privacy_retention.assert_g014_definer_contract(),
+         privacy_retention.assert_g014_catalog_contract(),
+         1::integer AS passed
+)
 SELECT jsonb_build_object(
   'schemaVersion', 'local-function-runtime-scan/v1', 'mode', 'runtime',
   'functionCount', agg.function_count, 'localSearchPathCount', agg.local_search_path_count,
@@ -1514,6 +1658,7 @@ SELECT jsonb_build_object(
   'closureSmoke', jsonb_build_object(
     'status', CASE WHEN agg.unresolved_path_count = 0 AND agg.ambiguous_path_count = 0
         AND candidate_agg.missing_count = 0 AND candidate_agg.ambiguous_count = 0
+        AND g014_contract.passed = 1
       THEN 'passed' ELSE 'failed' END,
     'unresolvedPathCount', agg.unresolved_path_count,
     'ambiguousPathCount', agg.ambiguous_path_count,
@@ -1552,7 +1697,8 @@ SELECT jsonb_build_object(
         THEN 'external_effect_blocked' ELSE 'external_effect_surface_present' END
     ))
   )
-)::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect;
+)::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect
+  CROSS JOIN g014_contract;
 COMMIT;
 """
     if smoke:
@@ -1647,11 +1793,35 @@ SET LOCAL "request.jwt.claim.sub" = '00000000-0000-4000-8000-000000000001';
 SET LOCAL "request.jwt.claim.role" = 'authenticated';
 SET LOCAL "request.jwt.claims" = '{{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}}';
 CREATE TEMP TABLE _local_rpc_smoke (rpc text, class text, status text, error_class text) ON COMMIT DROP;
+GRANT INSERT, SELECT ON TABLE _local_rpc_smoke TO service_role;
 DO $local_candidate_smoke$
 DECLARE ignored text;
 BEGIN
 {candidate_blocks}
 END $local_candidate_smoke$;
+RESET ROLE;
+SET LOCAL ROLE service_role;
+SET LOCAL "request.jwt.claim.sub" = '00000000-0000-4000-8000-000000000001';
+SET LOCAL "request.jwt.claim.role" = 'service_role';
+SET LOCAL "request.jwt.claims" = '{{"sub":"00000000-0000-4000-8000-000000000001","role":"service_role"}}';
+DO $local_privacy_incident_guard_smoke$
+DECLARE ignored text;
+BEGIN
+  BEGIN
+    EXECUTE 'SELECT public.preview_privacy_incident_transition(NULL::uuid,NULL::uuid,NULL::public.privacy_incident_status,NULL::timestamptz,NULL::text,NULL::jsonb,NULL::uuid)' INTO ignored;
+    INSERT INTO _local_rpc_smoke VALUES ('public.preview_privacy_incident_transition:service_role_guard', 'in_function_guard', 'failed', 'guard_did_not_reject');
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLSTATE = 'P0001' THEN
+      INSERT INTO _local_rpc_smoke VALUES ('public.preview_privacy_incident_transition:service_role_guard', 'in_function_guard', 'passed', 'in_function_sqlstate_P0001');
+    ELSE
+      INSERT INTO _local_rpc_smoke VALUES ('public.preview_privacy_incident_transition:service_role_guard', 'in_function_guard', 'failed', 'sqlstate_' || SQLSTATE);
+    END IF;
+  END;
+END $local_privacy_incident_guard_smoke$;
+RESET ROLE;
+SET LOCAL "request.jwt.claim.sub" = '00000000-0000-4000-8000-000000000001';
+SET LOCAL "request.jwt.claim.role" = 'authenticated';
+SET LOCAL "request.jwt.claims" = '{{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}}';
 DO $local_rpc_smoke$
 DECLARE ignored text;
   external_extension_count integer;
@@ -1736,7 +1906,7 @@ ROLLBACK;
 """
 
 
-def _validate_runtime(value: dict[str, Any]) -> None:
+def _validate_runtime(value: dict[str, Any], *, require_smoke: bool = False) -> None:
     if not isinstance(value, dict):
         raise RuntimeScanError("runtime_receipt_invalid")
     rpc_smoke = value.get("rpcSmoke")
@@ -1757,6 +1927,27 @@ def _validate_runtime(value: dict[str, Any]) -> None:
         or external_case.get("errorClass") != "external_effect_blocked"
     ):
         raise RuntimeScanError("runtime_external_effect_failed")
+
+    # Static apply/rescan closure validation intentionally does not invoke RPC
+    # bodies.  Dedicated smoke validation must prove that the permitted service
+    # principal entered the incident RPC and reached its P0001 guard (rather
+    # than being rejected by a GRANT first).
+    if require_smoke:
+        guard_cases = [
+            case for case in cases
+            if isinstance(case, dict)
+            and case.get("rpc") ==
+                "public.preview_privacy_incident_transition:service_role_guard"
+        ]
+        if len(guard_cases) != 1:
+            raise RuntimeScanError("runtime_privacy_incident_guard_failed")
+        guard_case = guard_cases[0]
+        if (
+            guard_case.get("class") != "in_function_guard"
+            or guard_case.get("status") != "passed"
+            or guard_case.get("errorClass") != "in_function_sqlstate_P0001"
+        ):
+            raise RuntimeScanError("runtime_privacy_incident_guard_failed")
 
     closure = value.get("closureSmoke")
     candidate_resolution = value.get("candidateResolution")
@@ -1951,9 +2142,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             client = LocalPsql(args.docker, args.container, args.database, args.timeout)
             candidates = _candidate_functions(_source_inventory())
             runtime = client.query(_runtime_sql(candidates=candidates, smoke=True))
-            _validate_runtime(runtime)
             smoke_status = runtime.get("rpcSmoke", {}).get("status")
             sys.stdout.buffer.write(canonical_json(runtime) + b"\n")
+            _validate_runtime(runtime, require_smoke=True)
             return 0 if smoke_status == "passed" else 2
         if args.command == "apply":
             sql, metadata = _read_patch(Path(args.patch))

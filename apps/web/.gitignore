@@ -29,6 +29,7 @@ design/pencil/drift/**
 
 # next.js
 /.next/
+/.next-*/
 /out/
 /.codex-artifacts/
 
