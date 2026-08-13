@@ -3185,6 +3185,29 @@ class RunDailyRegressionTests(unittest.TestCase):
         result = self._run_mirror_data_root(source, target_link)
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))
         self.assertEqual("unchanged\n", sentinel.read_text(encoding="utf-8"))
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS system path aliases are platform-specific")
+    def test_runtime_paths_admit_only_exact_macos_system_aliases(self) -> None:
+        system_temp = Path(self.tmp.name)
+        self.assertEqual("var", system_temp.parts[1])
+        normalized = run_daily_helpers._absolute_runtime_path(str(system_temp / "logs"))
+
+        self.assertEqual(
+            Path("/private/var").joinpath(*system_temp.parts[2:], "logs"),
+            normalized,
+        )
+
+        external = self.root / "external-alias-target"
+        external.mkdir()
+        user_alias = self.root / "user-alias"
+        user_alias.symlink_to(external, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "must not be a symbolic link"):
+            run_daily_helpers._open_or_create_runtime_root(
+                str(user_alias),
+                create=False,
+                operator_owned=False,
+            )
+
     @unittest.skipUnless(os.name == "nt", "Windows handle pinning is Windows-specific")
     def test_windows_mirror_blocks_mid_operation_root_and_child_junction_swaps(self) -> None:
         source = self.root / "source"
@@ -3376,14 +3399,15 @@ class RunDailyRegressionTests(unittest.TestCase):
     def test_mirror_data_root_returns_non_zero_when_target_list_fails(self) -> None:
         source = self.root / "source"
         target = self.root / "target"
+        blocked_child = target / "blocked"
         source.mkdir()
-        target.mkdir()
-        target.chmod(0)
+        blocked_child.mkdir(parents=True)
+        blocked_child.chmod(0)
 
         result = self._run_mirror_data_root_with_restored_permissions(
             source,
             target,
-            restored_paths=[target],
+            restored_paths=[blocked_child],
         )
 
         self.assertNotEqual(0, result.returncode, self._format_process_output(result))

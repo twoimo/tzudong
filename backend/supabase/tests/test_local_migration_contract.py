@@ -2,8 +2,11 @@ import hashlib
 import importlib.util
 import json
 import re
+import stat
 import sys
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 
@@ -26,6 +29,49 @@ local_migrate = _load_module()
 
 
 class LocalMigrationContractTests(unittest.TestCase):
+    def test_function_source_evidence_binds_both_exact_edge_functions(self) -> None:
+        functions = {
+            "root": "functions",
+            "files": list(local_migrate.FUNCTION_SOURCES),
+        }
+        records = [
+            {
+                "path": path,
+                "source": path,
+                "source_sha256": character * 64,
+            }
+            for path, character in zip(local_migrate.FUNCTION_SOURCES, ("a", "b"))
+        ]
+        expected = hashlib.sha256(json.dumps(
+            [
+                {"path": record["path"], "sha256": record["source_sha256"]}
+                for record in records
+            ],
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("ascii")).hexdigest()
+        self.assertEqual(
+            local_migrate._function_source_evidence(functions, records),
+            expected,
+        )
+
+        for invalid_functions, invalid_records in (
+            ({"root": "functions", "files": [local_migrate.FUNCTION_SOURCES[0]]}, records),
+            (functions, records[:-1]),
+            (functions, list(reversed(records))),
+            (functions, [{**records[0], "source": "functions/other/index.ts"}, records[1]]),
+            (functions, [records[0], {**records[1], "source_sha256": "not-a-digest"}]),
+        ):
+            with self.subTest(functions=invalid_functions, records=invalid_records):
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "receipt_input_provenance",
+                ):
+                    local_migrate._function_source_evidence(
+                        invalid_functions, invalid_records
+                    )
+
     def test_manifest_is_source_bound_hash_bound_and_name_ordered(self) -> None:
         manifest = local_migrate.build_manifest()
         source = manifest["source"]
@@ -109,6 +155,87 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertIsNone(re.match(r"^\d{8,14}(?:_|\.)", "seed.sql"))
         with self.assertRaisesRegex(local_migrate.LocalMigrationError, "source_root_not_canonical"):
             local_migrate.migration_files(ROOT / "backend/supabase")
+
+    def test_docker_context_accepts_github_actions_root_socket_only(self) -> None:
+        socket_info = SimpleNamespace(st_mode=stat.S_IFSOCK | 0o660, st_uid=0)
+        admission_info = SimpleNamespace(st_mode=stat.S_IFREG | 0o400, st_uid=0)
+        selected = SimpleNamespace(returncode=0, stdout="default\n")
+        inspected = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps([{
+                "Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}},
+            }]),
+        )
+        admission_path = Path("/run/tzudong-nightly-local-admission-123-2")
+        admission_payload = b"repo=twoimo/tzudong\nrun_id=123\nrun_attempt=2\n"
+        admission_read = SimpleNamespace(returncode=0, stdout=admission_payload)
+
+        def admitted_lstat(path: Path):
+            return socket_info if path == Path("/var/run/docker.sock") else admission_info
+
+        with (
+            patch.object(
+                local_migrate.subprocess,
+                "run",
+                side_effect=(selected, inspected, admission_read),
+            ),
+            patch.object(local_migrate.Path, "lstat", autospec=True, side_effect=admitted_lstat),
+            patch.object(local_migrate.os, "getuid", return_value=1000),
+            patch.dict(local_migrate.os.environ, {
+                "GITHUB_ACTIONS": "true",
+                "CI": "true",
+                "GITHUB_REPOSITORY": "twoimo/tzudong",
+                "GITHUB_RUN_ID": "123",
+                "GITHUB_RUN_ATTEMPT": "2",
+                local_migrate.DOCKER_SOCKET_ADMISSION_ENV: str(admission_path),
+            }, clear=False),
+        ):
+            local_migrate._assert_local_docker_context("docker")
+
+        with (
+            patch.object(local_migrate.subprocess, "run", side_effect=(selected, inspected)),
+            patch.object(local_migrate.Path, "lstat", return_value=socket_info),
+            patch.object(local_migrate.os, "getuid", return_value=1000),
+            patch.dict(local_migrate.os.environ, {
+                "GITHUB_ACTIONS": "true",
+                "CI": "true",
+                "GITHUB_REPOSITORY": "twoimo/tzudong",
+                "GITHUB_RUN_ID": "123",
+                "GITHUB_RUN_ATTEMPT": "2",
+                local_migrate.DOCKER_SOCKET_ADMISSION_ENV: "",
+            }, clear=False),
+        ):
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "docker_context"):
+                local_migrate._assert_local_docker_context("docker")
+
+    def test_root_socket_admission_rejects_spoofed_file_contract(self) -> None:
+        environment = {
+            "GITHUB_ACTIONS": "true",
+            "CI": "true",
+            "GITHUB_REPOSITORY": "twoimo/tzudong",
+            "GITHUB_RUN_ID": "123",
+            "GITHUB_RUN_ATTEMPT": "2",
+            local_migrate.DOCKER_SOCKET_ADMISSION_ENV:
+                "/run/tzudong-nightly-local-admission-123-2",
+        }
+        for info, payload in (
+            (SimpleNamespace(st_mode=stat.S_IFLNK | 0o400, st_uid=0), b"repo=twoimo/tzudong\nrun_id=123\nrun_attempt=2\n"),
+            (SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_uid=0), b"repo=twoimo/tzudong\nrun_id=123\nrun_attempt=2\n"),
+            (SimpleNamespace(st_mode=stat.S_IFREG | 0o400, st_uid=1000), b"repo=twoimo/tzudong\nrun_id=123\nrun_attempt=2\n"),
+            (SimpleNamespace(st_mode=stat.S_IFREG | 0o400, st_uid=0), b"repo=other/repo\nrun_id=123\nrun_attempt=2\n"),
+        ):
+            with self.subTest(mode=info.st_mode, owner=info.st_uid, payload=payload):
+                with (
+                    patch.dict(local_migrate.os.environ, environment, clear=True),
+                    patch.object(local_migrate.Path, "lstat", return_value=info),
+                    patch.object(
+                        local_migrate.subprocess,
+                        "run",
+                        return_value=SimpleNamespace(returncode=0, stdout=payload),
+                    ),
+                ):
+                    self.assertFalse(local_migrate._github_actions_root_socket_admission())
+
     def test_receipts_bind_runtime_closure_and_readback_sources(self) -> None:
         source = SCRIPT.read_text(encoding="utf-8")
         for token in (

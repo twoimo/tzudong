@@ -145,6 +145,7 @@ public static class ProcessTreeSnapshot {
   const uint TH32CS_SNAPPROCESS=0x00000002;
   const uint CREATE_WAITABLE_TIMER_HIGH_RESOLUTION=0x00000002;
   const uint INFINITE=0xffffffff;
+  const int ROOT_OBSERVATION_GRACE_MS=2000;
   [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Auto)]
   public struct PROCESSENTRY32 {
     public uint dwSize; public uint cntUsage; public uint th32ProcessID; public IntPtr th32DefaultHeapID;
@@ -220,7 +221,12 @@ public static class Program {
       var configurationLine=Console.In.ReadLine();
       if(String.IsNullOrWhiteSpace(configurationLine)) throw new InvalidOperationException("missing sampler configuration");
       var rootPid=int.Parse(configurationLine.Trim(),CultureInfo.InvariantCulture);
-      if(ProcessTreeSnapshot.CaptureJson(rootPid,self.Id,0,0)==null) throw new InvalidOperationException("root process was never observed");
+      var observation=Stopwatch.StartNew(); string firstSample=null;
+      while(firstSample==null&&observation.ElapsedMilliseconds<ROOT_OBSERVATION_GRACE_MS) {
+        firstSample=ProcessTreeSnapshot.CaptureJson(rootPid,self.Id,0,0);
+        if(firstSample==null)ProcessTreeSnapshot.Wait(timer,10.0);
+      }
+      if(firstSample==null) throw new InvalidOperationException("root process was never observed");
       var clock=Stopwatch.StartNew(); var nextSampleMs=0.0; var sampleCount=0;
       while(true) {
         var sample=ProcessTreeSnapshot.CaptureJson(rootPid,self.Id,0,clock.Elapsed.TotalMilliseconds);

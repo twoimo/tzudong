@@ -90,7 +90,7 @@ async function installBasicRestMocks(page: Page) {
       return;
     }
     if (url.pathname.endsWith('/rest/v1/profiles')) {
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ nickname: 'G001 QA' }) });
+      await route.abort('blockedbyclient');
       return;
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });

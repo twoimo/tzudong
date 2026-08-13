@@ -1160,6 +1160,395 @@ describe('admin system status API route', () => {
         }
     });
 
+    test('keeps daily GitHub responses bounded, strict, and fixed-code only', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '1',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '0',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'daily-bounded-secret-token',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+        });
+        const originalFetch = global.fetch;
+        let oversized = false;
+        global.fetch = async (): Promise<Response> => oversized
+            ? new Response('{}', {
+                status: 200,
+                headers: { 'Content-Length': String(256 * 1024 + 1) },
+            })
+            : new Response(JSON.stringify({
+                workflow_runs: [{
+                    id: 1,
+                    status: 'provider-secret-status',
+                    conclusion: 'success',
+                    event: 'schedule',
+                    html_url: 'https://github.com/twoimo/tzudong/actions/runs/1',
+                    created_at: '2026-08-12T00:00:00Z',
+                }],
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+        try {
+            const first = await loadSystemStatusHelper();
+            const malformed: AdminSystemStatusResponse = await first.getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(malformed.githubActions?.reachable).toBe(false);
+            expect(malformed.githubActions?.detail).toBe('response_shape_invalid');
+            expectNoSecretLeak(malformed, ['daily-bounded-secret-token', 'provider-secret-status']);
+
+            oversized = true;
+            const second = await loadSystemStatusHelper();
+            const tooLarge: AdminSystemStatusResponse = await second.getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(tooLarge.githubActions?.reachable).toBe(false);
+            expect(tooLarge.githubActions?.detail).toBe('REQUEST_FAILED');
+            expectNoSecretLeak(tooLarge, ['daily-bounded-secret-token']);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('uses credential-free GitHub reads only in strict local runtime after a rejected token', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '1',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'rejected-local-token-secret',
+            INSIGHT_GITHUB_BRANCH: undefined,
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+            NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1',
+        });
+        const originalFetch = global.fetch;
+        const authorizationStates: boolean[] = [];
+        global.fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            const headers = new Headers(init?.headers);
+            const hasAuthorization = headers.has('Authorization');
+            authorizationStates.push(hasAuthorization);
+            if (hasAuthorization) {
+                return new Response('rejected-provider-body-secret', { status: 401 });
+            }
+            return new Response(JSON.stringify({
+                total_count: 1,
+                workflow_runs: [{
+                    id: 8080,
+                    status: 'completed',
+                    conclusion: 'success',
+                    event: 'schedule',
+                    html_url: 'https://github.com/twoimo/tzudong/actions/runs/8080',
+                    created_at: '2026-08-12T00:00:00Z',
+                }],
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.githubActions?.reachable).toBe(true);
+            expect(payload.nightlyRegression?.reachable).toBe(true);
+            expect(payload.nightlyRegression?.tokenConfigured).toBe(true);
+            expect(payload.nightlyRegression?.localCanonical.branch).toBe('main');
+            expect(payload.nightlyRegression?.hostedManualFallback.branch).toBe('main');
+            expect(authorizationStates).toHaveLength(6);
+            expect(authorizationStates.filter(Boolean)).toHaveLength(3);
+            expect(authorizationStates.filter((state) => !state)).toHaveLength(3);
+            expectNoSecretLeak(payload, [
+                'rejected-local-token-secret',
+                'rejected-provider-body-secret',
+            ]);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('allows public workflow status without a token only in strict local runtime', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '1',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: undefined,
+            GITHUB_TOKEN: undefined,
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+            NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1',
+        });
+        const originalFetch = global.fetch;
+        let requestCount = 0;
+        global.fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            requestCount += 1;
+            expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+            return new Response(JSON.stringify({
+                total_count: 0,
+                workflow_runs: [],
+            }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.githubActions?.configured).toBe(true);
+            expect(payload.githubActions?.reachable).toBe(true);
+            expect(payload.nightlyRegression?.configured).toBe(true);
+            expect(payload.nightlyRegression?.reachable).toBe(true);
+            expect(payload.nightlyRegression?.tokenConfigured).toBe(false);
+            expect(requestCount).toBe(3);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('keeps partial Supabase counts unreachable and returns fixed failure codes', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '0',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '0',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '1',
+            NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+            SUPABASE_SERVICE_ROLE_KEY: 'supabase-fixed-code-secret',
+        });
+        const originalFetch = global.fetch;
+        global.fetch = async (input: RequestInfo | URL): Promise<Response> => {
+            const endpoint = String(input);
+            if (endpoint.includes('evaluation_results=not.is.null')) {
+                return new Response('provider-body-secret', { status: 503 });
+            }
+            return new Response('[]', { status: 206, headers: { 'content-range': '0-0/42' } });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.supabaseCounters?.reachable).toBe(false);
+            expect(payload.supabaseCounters?.restaurantsTotal).toBe(42);
+            expect(payload.supabaseCounters?.evaluatedRestaurants).toBeUndefined();
+            expect(payload.supabaseCounters?.detail).toBe('count_incomplete');
+            expectNoSecretLeak(payload, ['supabase-fixed-code-secret', 'provider-body-secret']);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('reports bounded local canonical and hosted fallback nightly history without leaking tokens', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '0',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'nightly-read-secret-token',
+            INSIGHT_GITHUB_BRANCH: 'main',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+            NEXT_PUBLIC_SUPABASE_URL: undefined,
+            SUPABASE_SERVICE_ROLE_KEY: undefined,
+        });
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+        global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+            const endpoint = String(input);
+            seen.push(`${init?.method ?? 'GET'} ${endpoint}`);
+            if (endpoint.includes('/nightly-local-regression.yml/')) {
+                return new Response(JSON.stringify({
+                    total_count: 3,
+                    workflow_runs: [
+                        {
+                            id: 303,
+                            status: 'completed',
+                            conclusion: 'failure',
+                            event: 'schedule',
+                            html_url: 'https://github.com/twoimo/tzudong/actions/runs/303?token=redacted',
+                            created_at: '2026-08-12T18:30:00Z',
+                            updated_at: '2026-08-12T18:40:00Z',
+                        },
+                        {
+                            id: 302,
+                            status: 'completed',
+                            conclusion: 'startup_failure',
+                            event: 'schedule',
+                            html_url: 'https://github.com/twoimo/tzudong/actions/runs/302',
+                            created_at: '2026-08-11T18:30:00Z',
+                        },
+                        {
+                            id: 301,
+                            status: 'completed',
+                            conclusion: 'success',
+                            event: 'schedule',
+                            html_url: 'https://github.com/twoimo/tzudong/actions/runs/301',
+                            created_at: '2026-08-10T18:30:00Z',
+                        },
+                    ],
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (endpoint.includes('/nightly-regression.yml/')) {
+                return new Response(JSON.stringify({
+                    total_count: 40,
+                    workflow_runs: [
+                        {
+                            id: 402,
+                            status: 'completed',
+                            conclusion: 'startup_failure',
+                            event: 'workflow_dispatch',
+                            html_url: 'https://github.com/twoimo/tzudong/actions/runs/402',
+                            created_at: '2026-08-09T18:30:00Z',
+                        },
+                        {
+                            id: 401,
+                            status: 'completed',
+                            conclusion: 'failure',
+                            event: 'workflow_dispatch',
+                            html_url: 'https://github.com/twoimo/tzudong/actions/runs/401',
+                            created_at: '2026-08-08T18:30:00Z',
+                        },
+                    ],
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            return new Response('not found', { status: 404 });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            const local = payload.nightlyRegression?.localCanonical;
+            const hosted = payload.nightlyRegression?.hostedManualFallback;
+
+            expect(payload.nightlyRegression?.enabled).toBe(true);
+            expect(payload.nightlyRegression?.configured).toBe(true);
+            expect(payload.nightlyRegression?.reachable).toBe(true);
+            expect(local?.workflow).toBe('nightly-local-regression.yml');
+            expect(local?.latestRunId).toBe(303);
+            expect(local?.latestRunConclusion).toBe('failure');
+            expect(local?.consecutiveFailures).toBe(2);
+            expect(local?.lastSuccessfulRunId).toBe(301);
+            expect(local?.lastSuccessfulRunUrl).toBe('https://github.com/twoimo/tzudong/actions/runs/301');
+            expect(hosted?.workflow).toBe('nightly-regression.yml');
+            expect(hosted?.latestRunConclusion).toBe('startup_failure');
+            expect(hosted?.consecutiveFailures).toBe(2);
+            expect(hosted?.lastSuccessfulRunId).toBeUndefined();
+            expect(hosted?.historyWindowTruncated).toBe(true);
+            expect(payload.checklist.some((item) => item.id === 'nightly-local-regression-failing')).toBe(true);
+            expect(payload.checklist.some((item) => item.id === 'nightly-hosted-fallback-failing')).toBe(true);
+            expect(seen).toHaveLength(2);
+            expect(seen.every((entry) => entry.startsWith('GET '))).toBe(true);
+            expect(seen.every((entry) => entry.includes('per_page=25'))).toBe(true);
+            expect(seen.every((entry) => entry.includes('branch=main'))).toBe(true);
+            expect(seen.join('\n')).not.toContain('dispatches');
+            expectNoSecretLeak(payload, ['nightly-read-secret-token', 'token=redacted']);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('fails closed on malformed or unreachable nightly history without returning provider bodies', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '0',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'nightly-fail-closed-token',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+            NEXT_PUBLIC_SUPABASE_URL: undefined,
+            SUPABASE_SERVICE_ROLE_KEY: undefined,
+        });
+        const originalFetch = global.fetch;
+        global.fetch = async (input: RequestInfo | URL): Promise<Response> => {
+            const endpoint = String(input);
+            if (endpoint.includes('/nightly-local-regression.yml/')) {
+                return new Response(JSON.stringify({
+                    workflow_runs: 'raw-provider-secret-body',
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (endpoint.includes('/nightly-regression.yml/')) {
+                return new Response('raw-provider-secret-body', { status: 503 });
+            }
+            return new Response('not found', { status: 404 });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.nightlyRegression?.reachable).toBe(false);
+            expect(payload.nightlyRegression?.detail).toBe('workflow_status_unreachable');
+            expect(payload.nightlyRegression?.localCanonical.detail).toBe('response_shape_invalid');
+            expect(payload.nightlyRegression?.hostedManualFallback.detail).toBe('HTTP_503');
+            expect(payload.nightlyRegression?.localCanonical.branch).toBe('main');
+            expect(payload.nightlyRegression?.hostedManualFallback.branch).toBe('main');
+            expect(payload.checklist.some((item) => item.id === 'nightly-local-status-unreachable')).toBe(true);
+            expect(payload.checklist.some((item) => item.id === 'nightly-hosted-fallback-unreachable')).toBe(true);
+            expectNoSecretLeak(payload, ['nightly-fail-closed-token', 'raw-provider-secret-body']);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
+    test('fails closed on malformed run rows and oversized nightly provider responses', async () => {
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            RUN_DAILY_SCRIPT_PATH: '__invalid__/run_daily_missing.sh',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: '0',
+            INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED: '1',
+            INSIGHT_GITHUB_REPOSITORY: 'twoimo/tzudong',
+            INSIGHT_GITHUB_TOKEN: 'nightly-bounded-secret-token',
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: '0',
+            NEXT_PUBLIC_SUPABASE_URL: undefined,
+            SUPABASE_SERVICE_ROLE_KEY: undefined,
+        });
+        const originalFetch = global.fetch;
+        global.fetch = async (input: RequestInfo | URL): Promise<Response> => {
+            const endpoint = String(input);
+            if (endpoint.includes('/nightly-local-regression.yml/')) {
+                return new Response(JSON.stringify({
+                    total_count: 1,
+                    workflow_runs: [{ raw_provider_secret: 'do-not-return' }],
+                }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+            if (endpoint.includes('/nightly-regression.yml/')) {
+                return new Response('{}', {
+                    status: 200,
+                    headers: { 'Content-Length': String(256 * 1024 + 1) },
+                });
+            }
+            return new Response('not found', { status: 404 });
+        };
+
+        try {
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+
+            expect(payload.nightlyRegression?.reachable).toBe(false);
+            expect(payload.nightlyRegression?.localCanonical.detail).toBe('response_shape_invalid');
+            expect(payload.nightlyRegression?.hostedManualFallback.detail).toBe('REQUEST_FAILED');
+            expectNoSecretLeak(payload, ['nightly-bounded-secret-token', 'do-not-return']);
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+        }
+    });
+
     test('adds stable readiness to Directions local fallback and validation errors', async () => {
         const restoreEnv = withEnv({
             NEXT_NAVER_CLIENT_ID: undefined,
@@ -1388,6 +1777,63 @@ describe('admin system status center view model', () => {
         expect(viewModel.overallState).toBe('degraded');
         expect(viewModel.metrics.find((metric) => metric.id === 'run_daily')?.state).toBe('degraded');
         expect(viewModel.metrics.find((metric) => metric.id === 'artifacts')?.state).toBe('degraded');
+    });
+
+    test('surfaces nightly current conclusion, failure streak, and last success as degraded', async () => {
+        const { buildAdminStatusCenterViewModel } = await import(`../lib/admin/system-status/view-model.ts?cache=${Math.random()}`);
+        const status = buildStatusCenterPayload({
+            gdriveUpload: {
+                status: 'complete',
+                terminalIncomplete: false,
+                completionProof: 'remote_size_check',
+            },
+        });
+        status.nightlyRegression = {
+            enabled: true,
+            configured: true,
+            reachable: true,
+            repositoryConfigured: true,
+            tokenConfigured: true,
+            localCanonical: {
+                role: 'canonical-local',
+                workflow: 'nightly-local-regression.yml',
+                reachable: true,
+                latestRunId: 303,
+                latestRunStatus: 'completed',
+                latestRunConclusion: 'failure',
+                lastSuccessfulRunId: 301,
+                lastSuccessfulRunCreatedAt: '2026-08-10T18:30:00.000Z',
+                consecutiveFailures: 2,
+                examinedRuns: 3,
+                historyWindowTruncated: false,
+                checkedAt: status.asOf,
+            },
+            hostedManualFallback: {
+                role: 'hosted-manual-fallback',
+                workflow: 'nightly-regression.yml',
+                reachable: true,
+                latestRunId: 401,
+                latestRunStatus: 'completed',
+                latestRunConclusion: 'success',
+                lastSuccessfulRunId: 401,
+                consecutiveFailures: 0,
+                examinedRuns: 1,
+                historyWindowTruncated: false,
+                checkedAt: status.asOf,
+            },
+            checkedAt: status.asOf,
+        };
+
+        const viewModel = buildAdminStatusCenterViewModel(status, { submissions: 0, reviews: 0 });
+        const nightlyMetric = viewModel.metrics.find((metric) => metric.id === 'nightly');
+
+        expect(viewModel.overallState).toBe('degraded');
+        expect(nightlyMetric?.state).toBe('degraded');
+        expect(nightlyMetric?.value).toContain('failure');
+        expect(nightlyMetric?.detail).toContain('최신 #303 failure');
+        expect(nightlyMetric?.detail).toContain('연속 실패 2회');
+        expect(nightlyMetric?.detail).toContain('마지막 성공 #301');
+        expect(nightlyMetric?.detail).toContain('호스티드 수동 fallback');
     });
 
     test('keeps WARN and skipped run_daily evidence partial instead of healthy', async () => {

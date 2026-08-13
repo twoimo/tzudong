@@ -15,8 +15,14 @@ import {
     zoomMockMap,
 } from './mobile-home-map-helpers';
 
+const IPHONE_SE_DEVICE = devices['iPhone SE'];
+
 test.use({
-    ...devices['iPhone SE'],
+    userAgent: IPHONE_SE_DEVICE.userAgent,
+    viewport: IPHONE_SE_DEVICE.viewport,
+    deviceScaleFactor: IPHONE_SE_DEVICE.deviceScaleFactor,
+    isMobile: IPHONE_SE_DEVICE.isMobile,
+    hasTouch: IPHONE_SE_DEVICE.hasTouch,
 });
 test.setTimeout(60000);
 
@@ -182,19 +188,18 @@ test.describe('Phase 1: mobile home map regressions', () => {
             });
         });
 
-        await page.evaluate(() => {
-            window.dispatchEvent(
-                new PopStateEvent('popstate', {
-                    state: {
-                        kind: 'tzudong.home.list.v1',
-                        restaurantId: 'restaurant-search',
-                        mapMode: 'domestic',
-                        restoreKey: 'missing-restore',
-                        createdAt: Date.now(),
-                    },
-                })
-            );
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        const restoreKey = await page.evaluate(() => {
+            const key = window.history.state?.restoreKey;
+            if (typeof key !== 'string' || !key) {
+                throw new Error('Home detail history state did not expose a restore key');
+            }
+            window.sessionStorage.removeItem(`tzudong:home-restore:${key}`);
+            return key;
         });
+
+        await page.goBack();
 
         const failedEvent = await page.waitForFunction(() => {
             const events = (window as typeof window & {
@@ -206,7 +211,7 @@ test.describe('Phase 1: mobile home map regressions', () => {
         expect(await failedEvent.jsonValue()).toMatchObject({
             type: 'home.restore.failed',
             detail: {
-                restoreKey: 'missing-restore',
+                restoreKey,
                 reason: 'missing',
             },
         });

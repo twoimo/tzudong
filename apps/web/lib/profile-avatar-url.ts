@@ -1,10 +1,12 @@
 const PROFILE_AVATAR_BUCKET = "profile-avatars";
 const PROFILE_AVATAR_PUBLIC_PATH = `/storage/v1/object/public/${PROFILE_AVATAR_BUCKET}/`;
+const PROFILE_AVATAR_REFERENCE_SCHEME = "profile-avatar://";
 const GOOGLE_OAUTH_AVATAR_ORIGIN = "https://lh3.googleusercontent.com";
 const GOOGLE_OAUTH_AVATAR_PATH_PREFIX = "/a/";
 const MAX_AVATAR_URL_LENGTH = 4_096;
 const MAX_USER_ID_LENGTH = 128;
 const MAX_GOOGLE_AVATAR_KEY_LENGTH = 1_024;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export type ProfileAvatarKind = "owned_storage" | "google_oauth" | "invalid";
 
 export type ProfileAvatarClassification =
@@ -22,14 +24,25 @@ export function resolveConfiguredSupabaseOrigin(
     const url = new URL(configuredUrl);
     const origin = url.origin;
     const isCanonicalOrigin = configuredUrl === origin || configuredUrl === `${origin}/`;
+    const localPort = Number(url.port);
+    const isExplicitUnprivilegedLocalOrigin =
+      process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1"
+      && url.protocol === "http:"
+      && url.hostname === "127.0.0.1"
+      && url.port.length > 0
+      && Number.isSafeInteger(localPort)
+      && localPort >= 1_024
+      && localPort <= 65_535;
+    const isHostedSupabaseOrigin =
+      url.protocol === "https:"
+      && url.hostname.endsWith(".supabase.co")
+      && url.hostname !== "supabase.co"
+      && !url.port;
 
     if (
-      url.protocol !== "https:" ||
-      !url.hostname.endsWith(".supabase.co") ||
-      url.hostname === "supabase.co" ||
+      (!isHostedSupabaseOrigin && !isExplicitUnprivilegedLocalOrigin) ||
       url.username ||
       url.password ||
-      url.port ||
       url.pathname !== "/" ||
       url.search ||
       url.hash ||
@@ -82,6 +95,29 @@ function getCanonicalAvatarStorageKey(authenticatedUserId: unknown): string | nu
     : null;
 }
 
+function isCanonicalUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
+export function getProfileAvatarVersionedStorageKey(
+  authenticatedUserId: unknown,
+  operationId: unknown,
+): string | null {
+  if (!isCanonicalUuid(authenticatedUserId) || !isCanonicalUuid(operationId)) {
+    return null;
+  }
+
+  return `${authenticatedUserId}/avatar-${operationId}.jpg`;
+}
+
+export function getProfileAvatarVersionedReference(
+  authenticatedUserId: unknown,
+  operationId: unknown,
+): string | null {
+  const storageKey = getProfileAvatarVersionedStorageKey(authenticatedUserId, operationId);
+  return storageKey ? `${PROFILE_AVATAR_REFERENCE_SCHEME}${storageKey}` : null;
+}
+
 function isSafeAvatarUrlValue(value: unknown): value is string {
   return typeof value === "string"
     && Boolean(value)
@@ -106,11 +142,9 @@ function resolveStorageAvatarUrl(
   try {
     const url = new URL(value);
     if (
-      url.protocol !== "https:" ||
       url.origin !== configuredOrigin ||
       url.username ||
       url.password ||
-      url.port ||
       url.search ||
       url.hash ||
       url.pathname !== `${PROFILE_AVATAR_PUBLIC_PATH}${storageKey}` ||
@@ -123,6 +157,34 @@ function resolveStorageAvatarUrl(
   } catch {
     return null;
   }
+}
+
+function getVersionedAvatarStorageKey(
+  value: string,
+  authenticatedUserId: unknown,
+): string | null {
+  if (!isCanonicalUuid(authenticatedUserId)) return null;
+
+  const prefix = `${PROFILE_AVATAR_REFERENCE_SCHEME}${authenticatedUserId}/avatar-`;
+  const suffix = ".jpg";
+  if (!value.startsWith(prefix) || !value.endsWith(suffix)) return null;
+
+  const operationId = value.slice(prefix.length, -suffix.length);
+  const storageKey = getProfileAvatarVersionedStorageKey(authenticatedUserId, operationId);
+  if (!storageKey || value !== `${PROFILE_AVATAR_REFERENCE_SCHEME}${storageKey}`) return null;
+
+  return storageKey;
+}
+
+function resolveVersionedStorageAvatarUrl(
+  value: string,
+  authenticatedUserId: unknown,
+): string | null {
+  const configuredOrigin = resolveConfiguredSupabaseOrigin();
+  const storageKey = getVersionedAvatarStorageKey(value, authenticatedUserId);
+  return configuredOrigin && storageKey
+    ? `${configuredOrigin}${PROFILE_AVATAR_PUBLIC_PATH}${storageKey}`
+    : null;
 }
 
 function isCanonicalGoogleAvatarKey(value: string): boolean {
@@ -194,7 +256,8 @@ export function resolveProfileAvatarUrl(
     return null;
   }
 
-  return resolveStorageAvatarUrl(value, authenticatedUserId)
+  return resolveVersionedStorageAvatarUrl(value, authenticatedUserId)
+    ?? resolveStorageAvatarUrl(value, authenticatedUserId)
     ?? resolveGoogleOAuthAvatarUrl(value);
 }
 
@@ -206,11 +269,17 @@ export function getProfileAvatarDeletionKey(
   currentUrl: unknown,
   authenticatedUserId: unknown,
 ): string | null {
-  const storageKey = getCanonicalAvatarStorageKey(authenticatedUserId);
-  if (!storageKey || !isSafeAvatarUrlValue(currentUrl)) return null;
+  const legacyStorageKey = getCanonicalAvatarStorageKey(authenticatedUserId);
+  if (!legacyStorageKey || !isSafeAvatarUrlValue(currentUrl)) return null;
+
+  const versionedStorageKey = getVersionedAvatarStorageKey(
+    currentUrl,
+    authenticatedUserId,
+  );
+  if (versionedStorageKey) return versionedStorageKey;
 
   return resolveStorageAvatarUrl(currentUrl, authenticatedUserId)
-    ? storageKey
+    ? legacyStorageKey
     : null;
 }
 /**

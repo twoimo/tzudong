@@ -268,6 +268,7 @@ export default function HomeClient() {
     openRestaurantDetailSelection,
     releaseSearchSelectionOwnership,
     setFilters,
+    setIsReviewModalOpen,
     setSelectedCategories,
     setSelectedCountry,
     setSelectedRegion,
@@ -556,6 +557,7 @@ export default function HomeClient() {
     openRestaurantDetailSelection: state.openRestaurantDetailSelection,
     clearRestaurantDetailSelection: state.clearRestaurantDetailSelection,
   });
+  const { handleRequestEditRestaurant: openRestaurantEditRequest } = handlers;
 
   // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
   // [OPTIMIZATION] useCallback으로 메모이제이션
@@ -1213,14 +1215,14 @@ export default function HomeClient() {
   const handleRequestEditRestaurant = useCallback(
     (restaurant: Restaurant) => {
       if (isPublicRestrictedMode) return;
-      handlers.handleRequestEditRestaurant(restaurant);
+      openRestaurantEditRequest(restaurant);
     },
-    [handlers.handleRequestEditRestaurant],
+    [openRestaurantEditRequest],
   );
   const handleReviewModalOpen = useCallback(() => {
     if (isPublicRestrictedMode) return;
-    state.setIsReviewModalOpen(true);
-  }, []);
+    setIsReviewModalOpen(true);
+  }, [setIsReviewModalOpen]);
 
   return (
     <>

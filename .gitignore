@@ -19,6 +19,7 @@ output/
 artifacts/
 apps/artifacts/
 apps/web/artifacts/
+nightly-artifacts/
 apps/.release-visual-protected-replay/
 
 # ── 로그 / Logs ──────────────────────────────────────────
