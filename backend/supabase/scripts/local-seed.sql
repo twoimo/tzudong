@@ -116,22 +116,40 @@ BEGIN
     SELECT 1 FROM public.profiles
     WHERE user_id IS NULL
        OR user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
-  ) OR (SELECT count(*) FROM public.profiles) > 1 THEN
+       OR email IS DISTINCT FROM 'nightly-ci@local.invalid'
+       OR nickname = '탈퇴한 사용자'
+       OR nickname IS DISTINCT FROM btrim(nickname)
+       OR char_length(nickname) NOT BETWEEN 2 AND 20
+       OR octet_length(nickname) > 80
+       OR nickname ~ '[[:cntrl:]]'
+       OR avatar_url IS NOT NULL
+       OR username NOT IN ('nightly-ci')
+       OR role IS DISTINCT FROM 'user'
+  ) OR (SELECT count(*) FROM public.profiles) <> 1 THEN
     RAISE EXCEPTION 'local_seed_unexpected_profile';
   END IF;
   IF EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
-       OR role::text IS DISTINCT FROM 'admin'
-  ) OR (SELECT count(*) FROM public.user_roles) > 1 THEN
+       OR role::text NOT IN ('user', 'admin')
+  ) OR (SELECT count(*) FROM public.user_roles) <> 1 THEN
     RAISE EXCEPTION 'local_seed_unexpected_admin_role';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.user_stats
+    WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
+       OR review_count IS DISTINCT FROM 0
+       OR verified_review_count IS DISTINCT FROM 0
+       OR trust_score IS DISTINCT FROM 0
+  ) OR (SELECT count(*) FROM public.user_stats) <> 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_user_stats';
   END IF;
   IF EXISTS (
     SELECT 1 FROM public.user_account_status
     WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
        OR account_status IS DISTINCT FROM 'active'
        OR disabled_at IS NOT NULL
-  ) OR (SELECT count(*) FROM public.user_account_status) > 1 THEN
+  ) OR (SELECT count(*) FROM public.user_account_status) <> 1 THEN
     RAISE EXCEPTION 'local_seed_unexpected_account_status';
   END IF;
   IF EXISTS (
@@ -273,10 +291,28 @@ ON CONFLICT (user_id) DO UPDATE SET
   disabled_at = EXCLUDED.disabled_at,
   updated_at = EXCLUDED.updated_at;
 
+DELETE FROM public.user_roles
+WHERE user_id = :'nightly_user_id'::uuid
+  AND role::text = 'user';
+
 INSERT INTO public.user_roles (user_id, role, created_at)
 VALUES (:'nightly_user_id'::uuid, 'admin', '2026-01-01T00:00:00Z')
 ON CONFLICT (user_id, role) DO UPDATE SET
   created_at = EXCLUDED.created_at;
+
+DELETE FROM public.user_stats
+WHERE user_id = :'nightly_user_id'::uuid;
+
+INSERT INTO public.user_stats (
+  id, user_id, review_count, verified_review_count, trust_score, last_updated
+) VALUES (
+  :'nightly_user_id'::uuid,
+  :'nightly_user_id'::uuid,
+  0,
+  0,
+  0,
+  '2026-01-01T00:00:00Z'
+);
 
 -- Local regression eligibility fixture only. The provenance is deliberately
 -- machine-readable and cannot be mistaken for hosted publication, operator

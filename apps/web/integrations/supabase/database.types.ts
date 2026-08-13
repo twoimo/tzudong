@@ -4868,6 +4868,13 @@ export type Database = {
         Returns: number
       }
       cleanup_old_search_logs: { Args: never; Returns: undefined }
+      compare_and_set_current_profile_avatar: {
+        Args: {
+          p_expected_avatar_reference: string
+          p_next_avatar_operation_id: string
+        }
+        Returns: Json
+      }
       complete_admin_trend_job_request: {
         Args: {
           p_claimed_by: string
@@ -6085,6 +6092,10 @@ export type Database = {
         Args: { p_operation_id: string }
         Returns: Json
       }
+      read_signup_profile_state: {
+        Args: { p_expected_nickname: string; p_user_id: string }
+        Returns: Json
+      }
       reconcile_account_deletion_auth_job: {
         Args: {
           p_actor_user_id: string
@@ -6520,6 +6531,10 @@ export type Database = {
           p_next_state: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      update_current_profile_nickname: {
+        Args: { p_nickname: string }
         Returns: Json
       }
       update_table_statistics: { Args: never; Returns: undefined }

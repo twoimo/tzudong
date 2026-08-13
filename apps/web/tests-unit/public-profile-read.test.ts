@@ -100,6 +100,28 @@ describe("public profile summary RPC boundary", () => {
     }
   });
 
+  test("preserves every bounded raw avatar reference needed for legacy repair", async () => {
+    const repairableReference = `${"x".repeat(4_095)}\n`;
+    const client = {
+      rpc: async () => ({
+        data: [{ user_id: USER_A, nickname: "첫째", avatar_url: repairableReference }],
+        error: null,
+      }),
+    };
+
+    await expect(readPublicProfileSummaries(client, [USER_A])).resolves.toEqual([
+      { user_id: USER_A, nickname: "첫째", avatar_url: repairableReference },
+    ]);
+    await expect(readPublicProfileSummaries({
+      rpc: async () => ({
+        data: [{ user_id: USER_A, nickname: "첫째", avatar_url: "x".repeat(4_097) }],
+        error: null,
+      }),
+    }, [USER_A])).rejects.toMatchObject({
+      code: PUBLIC_PROFILE_READ_ERROR_CODE.invalidResponse,
+    });
+  });
+
   test("bounds inputs before transport and returns no raw provider diagnostic", async () => {
     let callCount = 0;
     const client = {

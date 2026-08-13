@@ -10,6 +10,12 @@ import {
     LOCAL_PROFILE_READ_RPC_CORS_HEADERS,
     LOCAL_PROFILE_SUMMARIES_RPC_PATH,
 } from './local-profile-read-rpc-boundary';
+import {
+    isAllowedLocalProfileMutationRpcPreflightRequest,
+    isAllowedLocalProfileMutationRpcRequest,
+    isExactLocalDirectProfileTablePath,
+    isExactLocalProfileMutationRpcPath,
+} from './local-profile-mutation-rpc-boundary';
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isLocalNightlyMode = process.env.NIGHTLY_MODE === 'local'
@@ -91,7 +97,21 @@ const NAVER_SDK_HOST = 'oapi.map.naver.com';
 const SUPABASE_PATH = /\/(?:rest|auth|storage|realtime|functions)\/v1(?:\/|$)/;
 const LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/nightly-browser-cors\/review\.webp$/;
 const LOCAL_NIGHTLY_STORAGE_UPLOAD_PATH = /^\/storage\/v1\/object\/review-photos\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/nightly-browser-cors\/review\.webp$/;
+const LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID = '00000000-0000-4000-8000-000000000905';
+const LOCAL_NIGHTLY_PROFILE_AVATAR_OBJECT_PREFIX = new RegExp(
+    `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar-${LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID}\\.jpg$`,
+);
+const LOCAL_NIGHTLY_PROFILE_AVATAR_UPLOAD_PATH = new RegExp(
+    `^/storage/v1/object/profile-avatars/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar-${LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID}\\.jpg$`,
+);
+const LOCAL_NIGHTLY_PROFILE_AVATAR_EXISTS_PATH = new RegExp(
+    `^/storage/v1/object/profile-avatars/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar-${LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID}\\.jpg$`,
+);
+const LOCAL_NIGHTLY_PROFILE_AVATAR_PUBLIC_PATH = new RegExp(
+    `^/storage/v1/object/public/profile-avatars/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar-${LOCAL_NIGHTLY_PROFILE_AVATAR_OPERATION_ID}\\.jpg$`,
+);
 const LOCAL_NIGHTLY_STORAGE_WEBP_BASE64 = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/v89WAAAAA==';
+const LOCAL_NIGHTLY_PROFILE_AVATAR_JPEG_BASE64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPxB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPxB//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxB//9k=';
 const LOCAL_NIGHTLY_FUNCTION_BODY = '{"query":"서울특별시 중구 세종대로 110","count":1}';
 const LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY = '{}';
 const LOCAL_SUPABASE_FIXTURE_PATHS = new Set([
@@ -99,7 +119,6 @@ const LOCAL_SUPABASE_FIXTURE_PATHS = new Set([
     '/rest/v1/announcements',
     '/rest/v1/restaurants',
     '/rest/v1/reviews',
-    '/rest/v1/profiles',
     '/rest/v1/review_likes',
     '/rest/v1/bookmarks',
     LOCAL_PROFILE_SUMMARIES_RPC_PATH,
@@ -142,6 +161,11 @@ const LOCAL_ADMIN_YOUTUBE_KPI_SEARCHES = new Set([
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const SUPABASE_FIXTURE_CORS_HEADERS = LOCAL_PROFILE_READ_RPC_CORS_HEADERS;
 const SUPABASE_FIXTURE_CORS_HEADER_SET = new Set<string>(SUPABASE_FIXTURE_CORS_HEADERS);
+const LOCAL_PROFILE_STORAGE_CORS_HEADERS = new Set([
+    ...LOCAL_PROFILE_READ_RPC_CORS_HEADERS,
+    'cache-control',
+    'x-upsert',
+]);
 const FORBIDDEN_PUBLIC_DATA_CONSOLE_ERRORS = new Set([
     '활성 공지사항 조회 중 오류:',
     '배너 공지사항 조회 중 오류:',
@@ -491,7 +515,10 @@ function isAllowedLocalSupabaseUrl(url: URL): boolean {
         && url.origin === LOCAL_SUPABASE_ORIGIN
         && SUPABASE_PATH.test(url.pathname);
 }
-function isAllowedLocalStorageCleanup(postData: string | null): boolean {
+function isAllowedLocalStorageCleanup(
+    postData: string | null,
+    storageObjectPattern: RegExp,
+): boolean {
     if (!postData || postData.length > 256) return false;
     try {
         const value = JSON.parse(postData) as unknown;
@@ -501,7 +528,7 @@ function isAllowedLocalStorageCleanup(postData: string | null): boolean {
             && Array.isArray(record.prefixes)
             && record.prefixes.length === 1
             && typeof record.prefixes[0] === 'string'
-            && LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX.test(record.prefixes[0]);
+            && storageObjectPattern.test(record.prefixes[0]);
     } catch {
         return false;
     }
@@ -537,6 +564,102 @@ function isAllowedLocalProfileReadRpcPreflight(
             headers,
         });
 }
+function isAllowedLocalProfileMutationRpc(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+    headers: Record<string, string>,
+): boolean {
+    return isAllowedLocalSupabaseUrl(url)
+        && isAllowedLocalProfileMutationRpcRequest({
+            allowedOrigin: LOCAL_SUPABASE_ORIGIN,
+            url,
+            method,
+            postData,
+            contentType: headers['content-type'],
+        });
+}
+function isAllowedLocalProfileMutationRpcPreflight(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+    headers: Record<string, string>,
+): boolean {
+    return isAllowedLocalSupabaseUrl(url)
+        && isAllowedLocalProfileMutationRpcPreflightRequest({
+            allowedOrigin: LOCAL_SUPABASE_ORIGIN,
+            allowedApplicationOrigin: LOCAL_APP_ORIGIN,
+            url,
+            method,
+            postData,
+            headers,
+        });
+}
+function isLocalProfileStoragePath(url: URL): boolean {
+    return isAllowedLocalSupabaseUrl(url)
+        && (
+            url.pathname === '/storage/v1/object/profile-avatars'
+            || LOCAL_NIGHTLY_PROFILE_AVATAR_UPLOAD_PATH.test(url.pathname)
+            || LOCAL_NIGHTLY_PROFILE_AVATAR_EXISTS_PATH.test(url.pathname)
+            || LOCAL_NIGHTLY_PROFILE_AVATAR_PUBLIC_PATH.test(url.pathname)
+            || url.pathname.startsWith('/storage/v1/object/profile-avatars/')
+            || url.pathname.startsWith('/storage/v1/object/public/profile-avatars/')
+        );
+}
+function isAllowedLocalProfileStorageRead(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+): boolean {
+    if (!isAllowedLocalSupabaseUrl(url) || url.search || postData !== null) return false;
+    return (method === 'HEAD' && LOCAL_NIGHTLY_PROFILE_AVATAR_EXISTS_PATH.test(url.pathname))
+        || (method === 'GET' && LOCAL_NIGHTLY_PROFILE_AVATAR_PUBLIC_PATH.test(url.pathname));
+}
+function isAllowedLocalProfileStoragePreflight(
+    url: URL,
+    method: string,
+    postData: Buffer | null,
+    headers: Record<string, string>,
+): boolean {
+    if (
+        !LOCAL_APP_ORIGIN
+        || !isAllowedLocalSupabaseUrl(url)
+        || method !== 'OPTIONS'
+        || postData !== null
+        || url.search
+        || headers.origin !== LOCAL_APP_ORIGIN
+    ) return false;
+    const requestedMethod = headers['access-control-request-method'];
+    const requestedHeaders = (headers['access-control-request-headers'] ?? '')
+        .split(',')
+        .map((header) => header.trim().toLowerCase())
+        .filter(Boolean);
+    if (
+        requestedHeaders.length < 1
+        || requestedHeaders.length > LOCAL_PROFILE_STORAGE_CORS_HEADERS.size
+        || new Set(requestedHeaders).size !== requestedHeaders.length
+        || !requestedHeaders.every((header) => LOCAL_PROFILE_STORAGE_CORS_HEADERS.has(header))
+    ) return false;
+    if (
+        requestedMethod === 'POST'
+        && LOCAL_NIGHTLY_PROFILE_AVATAR_UPLOAD_PATH.test(url.pathname)
+    ) {
+        return ['apikey', 'authorization', 'cache-control', 'content-type', 'x-upsert']
+            .every((header) => requestedHeaders.includes(header));
+    }
+    if (requestedMethod === 'DELETE' && url.pathname === '/storage/v1/object/profile-avatars') {
+        return ['apikey', 'authorization', 'content-type']
+            .every((header) => requestedHeaders.includes(header));
+    }
+    if (
+        requestedMethod === 'HEAD'
+        && LOCAL_NIGHTLY_PROFILE_AVATAR_EXISTS_PATH.test(url.pathname)
+    ) {
+        return ['apikey', 'authorization'].every((header) => requestedHeaders.includes(header));
+    }
+    return requestedMethod === 'GET'
+        && LOCAL_NIGHTLY_PROFILE_AVATAR_PUBLIC_PATH.test(url.pathname);
+}
 function isAllowedLocalSupabaseMutation(
     url: URL,
     method: string,
@@ -567,11 +690,33 @@ function isAllowedLocalSupabaseMutation(
             && headers['x-upsert'] === 'false'
             && postData?.toString('base64') === LOCAL_NIGHTLY_STORAGE_WEBP_BASE64;
     }
+    if (LOCAL_NIGHTLY_PROFILE_AVATAR_UPLOAD_PATH.test(url.pathname)) {
+        return method === 'POST'
+            && !url.search
+            && headers['content-type'] === 'image/jpeg'
+            && headers['cache-control'] === 'max-age=3600'
+            && headers['x-upsert'] === 'false'
+            && postData?.toString('base64') === LOCAL_NIGHTLY_PROFILE_AVATAR_JPEG_BASE64;
+    }
+    if (
+        method === 'DELETE'
+        && url.pathname === '/storage/v1/object/profile-avatars'
+        && !url.search
+        && headers['content-type'] === 'application/json'
+    ) {
+        return isAllowedLocalStorageCleanup(
+            postData?.toString('utf8') ?? null,
+            LOCAL_NIGHTLY_PROFILE_AVATAR_OBJECT_PREFIX,
+        );
+    }
     return method === 'DELETE'
         && url.pathname === '/storage/v1/object/review-photos'
         && !url.search
         && headers['content-type'] === 'application/json'
-        && isAllowedLocalStorageCleanup(postData?.toString('utf8') ?? null);
+        && isAllowedLocalStorageCleanup(
+            postData?.toString('utf8') ?? null,
+            LOCAL_NIGHTLY_STORAGE_OBJECT_PREFIX,
+        );
 }
 function isAllowedLocalAdminMutation(url: URL, method: string): boolean {
     const appPort = process.env.APP_PORT?.trim() || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL);
@@ -728,6 +873,16 @@ async function fulfillSupabase(route: Route, diagnostics: NightlyRouteDiagnostic
         await route.abort('blockedbyclient');
         return;
     }
+    if (isExactLocalDirectProfileTablePath(url) || isExactLocalProfileMutationRpcPath(url)) {
+        recordDiagnostic(diagnostics, diagnosticForUrl(
+            url,
+            request.method(),
+            0,
+            isMutationMethod(method) ? 'mutation-denied' : 'supabase-path-denied',
+        ));
+        await route.abort('blockedbyclient');
+        return;
+    }
     const isProfileReadRpc = isExactLocalProfileReadRpcPath(url);
     const isAllowedProfileReadRpc = isAllowedLocalProfileReadRpc(
         url,
@@ -791,7 +946,6 @@ async function fulfillSupabase(route: Route, diagnostics: NightlyRouteDiagnostic
             await fulfillJson(route, filterRestaurants(url));
             break;
         case '/rest/v1/reviews':
-        case '/rest/v1/profiles':
         case '/rest/v1/review_likes':
         case '/rest/v1/bookmarks':
         case '/rest/v1/announcements':
@@ -886,6 +1040,10 @@ export const test = base.extend({
                 && hasEncodedOrMalformedPath(url);
             const isLocalProfileReadRpcPath = isAllowedLocalSupabaseUrl(url)
                 && isExactLocalProfileReadRpcPath(url);
+            const isLocalProfileMutationRpcPath = isAllowedLocalSupabaseUrl(url)
+                && isExactLocalProfileMutationRpcPath(url);
+            const isLocalDirectProfileTablePath = isAllowedLocalSupabaseUrl(url)
+                && isExactLocalDirectProfileTablePath(url);
             const isAllowedProfileReadRpc = isAllowedLocalProfileReadRpc(
                 url,
                 method,
@@ -898,8 +1056,48 @@ export const test = base.extend({
                 request.postDataBuffer(),
                 request.headers(),
             );
+            const isAllowedProfileMutationRpc = usesRealLocalSupabase
+                && isAllowedLocalProfileMutationRpc(
+                    url,
+                    method,
+                    request.postDataBuffer(),
+                    request.headers(),
+                );
+            const isAllowedProfileMutationRpcPreflight = usesRealLocalSupabase
+                && isAllowedLocalProfileMutationRpcPreflight(
+                    url,
+                    method,
+                    request.postDataBuffer(),
+                    request.headers(),
+                );
+            const isAllowedProfileStorageRequest = usesRealLocalSupabase
+                && (
+                    isAllowedLocalSupabaseMutation(
+                        url,
+                        method,
+                        request.postDataBuffer(),
+                        request.headers(),
+                    )
+                    || isAllowedLocalProfileStorageRead(
+                        url,
+                        method,
+                        request.postDataBuffer(),
+                    )
+                    || isAllowedLocalProfileStoragePreflight(
+                        url,
+                        method,
+                        request.postDataBuffer(),
+                        request.headers(),
+                    )
+                );
 
             if (hasEncodedLocalSupabasePath) {
+                recordDiagnostic(diagnostics, diagnosticForUrl(url, method, 0, 'supabase-path-denied'));
+                await route.abort('blockedbyclient');
+                return;
+            }
+
+            if (isLocalDirectProfileTablePath) {
                 recordDiagnostic(diagnostics, diagnosticForUrl(url, method, 0, 'supabase-path-denied'));
                 await route.abort('blockedbyclient');
                 return;
@@ -921,9 +1119,36 @@ export const test = base.extend({
             }
 
             if (
+                isLocalProfileMutationRpcPath
+                && !isAllowedProfileMutationRpc
+                && !isAllowedProfileMutationRpcPreflight
+            ) {
+                recordDiagnostic(diagnostics, diagnosticForUrl(
+                    url,
+                    method,
+                    0,
+                    isMutationMethod(method) ? 'mutation-denied' : 'supabase-method-denied',
+                ));
+                await route.abort('blockedbyclient');
+                return;
+            }
+
+            if (isLocalProfileStoragePath(url) && !isAllowedProfileStorageRequest) {
+                recordDiagnostic(diagnostics, diagnosticForUrl(
+                    url,
+                    method,
+                    0,
+                    isMutationMethod(method) ? 'mutation-denied' : 'supabase-method-denied',
+                ));
+                await route.abort('blockedbyclient');
+                return;
+            }
+
+            if (
                 isMutationMethod(method)
                 && !(
                     isAllowedProfileReadRpc
+                    || isAllowedProfileMutationRpc
                     || (
                         usesRealLocalSupabase
                         && (

@@ -1524,11 +1524,11 @@ def require_replay_membership_windows(window):
 
 def require_self_contained_replay(binding):
     expected = {
-        'canonicalPath': 'backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql',
-        'filename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
-        'predecessorFilename': '20260812000600_local_profile_read_boundary_convergence.sql',
-        'sourceSha256': 'c03c0833294875be06d7cff6d513f7c7ddaf263514b7148bc3db22a29ac3bd17',
-        'sourceByteLength': 29279,
+        'canonicalPath': 'backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql',
+        'filename': '20260813085342_current_profile_mutation_boundary.sql',
+        'predecessorFilename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
+        'sourceSha256': '15f4d240222d4b7abdbfd0b27a5c36142a2f61c4cc9d9fdf4638588fee9b29e3',
+        'sourceByteLength': 56880,
         'transactionClass': 'self_committing',
     }
     if binding != expected:
@@ -1546,12 +1546,15 @@ def require_self_contained_replay(binding):
     ordered = (
         'DO $membership_acquire$',
         'SET LOCAL ROLE privacy_workflow_owner;',
-        'CREATE FUNCTION public.read_public_profile_leaderboard_page(',
-        'DO $allowlist_insert$',
+        'CREATE FUNCTION public.update_current_profile_nickname(',
+        'CREATE FUNCTION public.compare_and_set_current_profile_avatar(',
+        'CREATE FUNCTION public.read_signup_profile_state(',
+        'INSERT INTO privacy_retention.g014_public_rpc_allowlist (',
         'DO $definer_contract$',
         'DO $catalog_contract$',
-        'CREATE TEMPORARY TABLE g014_007_catalog_assertion_guard (',
-        'CREATE FUNCTION pg_temp.g014_007_catalog_assertion_bridge()',
+        'DO $contract_readback$',
+        'CREATE TEMPORARY TABLE g014_profile_catalog_assertion_guard (',
+        'CREATE FUNCTION pg_temp.g014_profile_catalog_assertion_bridge()',
         'RESET ROLE;',
         'DO $membership_restore$',
         'DO $membership_postcondition$',

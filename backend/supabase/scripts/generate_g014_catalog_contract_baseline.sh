@@ -1362,7 +1362,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
-    20260812000700_local_profile_leaderboard_page_convergence.sql)
+    20260813085342_current_profile_mutation_boundary.sql)
       self_contained_path=$(jq -er '.selfContainedReplay.canonicalPath' "$g026_bundle")
       self_contained_filename=$(jq -er '.selfContainedReplay.filename' "$g026_bundle")
       self_contained_predecessor=$(jq -er '.selfContainedReplay.predecessorFilename' "$g026_bundle")
@@ -1371,7 +1371,7 @@ for migration in "${effective_migrations[@]}"; do
       self_contained_transaction=$(jq -er '.selfContainedReplay.transactionClass' "$g026_bundle")
       [[ "$canonical_path" == "$self_contained_path"
          && ${migration##*/} == "$self_contained_filename"
-         && "$self_contained_predecessor" == '20260812000600_local_profile_read_boundary_convergence.sql'
+         && "$self_contained_predecessor" == '20260812000700_local_profile_leaderboard_page_convergence.sql'
          && "$file_hash" == "$self_contained_hash"
          && $(wc -c <"$migration" | tr -d '[:space:]') == "$self_contained_bytes"
          && "$self_contained_transaction" == 'self_committing' ]] || {

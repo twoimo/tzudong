@@ -466,13 +466,13 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                     local_migrate.parse_readback(_receipt_ndjson(rows))
                 self.assertEqual(error.exception.code, expected_code)
 
-    def test_manifest_contains_exactly_seventy_six_immutable_units(self) -> None:
+    def test_manifest_contains_exactly_seventy_seven_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 76)
-        self.assertEqual(len(manifest["source"]["files"]), 76)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 77)
+        self.assertEqual(len(manifest["source"]["files"]), 77)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql",
+            "backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
@@ -727,6 +727,10 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
         self.assertNotIn("INSERT INTO auth.identities", source)
         self.assertNotIn("CREATE POLICY", source)
         self.assertNotIn("CREATE PUBLICATION", source)
+        self.assertIn(
+            "(SELECT count(*) FROM public.user_account_status) <> 1",
+            source,
+        )
         self.assertIn("nightly_user_id", source)
         self.assertIn("AUTH_API_CREATE_PATH", api_source)
         self.assertIn("AUTH_API_LOGIN_PATH", login_source)
