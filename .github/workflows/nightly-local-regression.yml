@@ -716,6 +716,14 @@ jobs:
             psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
             < backend/supabase/tests/local_runtime_schema_convergence.sql \
             > "$state/local-runtime-contract.log"
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < backend/supabase/tests/local_profile_read_boundary.sql \
+            > "$state/local-profile-read-boundary.log"
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < backend/supabase/tests/local_profile_leaderboard_page.sql \
+            > "$state/local-profile-leaderboard-page.log"
           python3 backend/supabase/scripts/local-migrate.py receipt \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             --output "$state/local-receipt-v1.json" \

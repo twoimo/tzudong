@@ -14,6 +14,10 @@ import {
     signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
 import { hasSupabaseAuthSessionHint } from "@/lib/supabase-auth-session-hints";
+import {
+    isPublicProfileInvalidSessionError,
+    readPublicProfileSummaries,
+} from "@/lib/public-profile-read";
 
 export { AnonymousHomeAuthProvider, useAuth } from "@/contexts/AuthContextBase";
 
@@ -84,7 +88,9 @@ const isExpiredJwtError = (error: unknown) => {
 };
 
 const isAuthSessionInvalidError = (error: unknown) => {
-    return isRefreshTokenNotFoundError(error) || isExpiredJwtError(error);
+    return isRefreshTokenNotFoundError(error)
+        || isExpiredJwtError(error)
+        || isPublicProfileInvalidSessionError(error);
 };
 
 const isAuthSessionMissingError = (error: unknown) => {
@@ -133,11 +139,9 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
             .eq("user_id", userId)
             .eq("role", "admin")
             .maybeSingle(),
-        supabase
-            .from("profiles")
-            .select("nickname")
-            .eq("user_id", userId)
-            .maybeSingle(),
+        readPublicProfileSummaries(supabase, [userId])
+            .then((profiles) => ({ data: profiles[0] ?? null, error: null }))
+            .catch((error: unknown) => ({ data: null, error })),
     ]);
 
     if (roleResponse.error && isAuthSessionInvalidError(roleResponse.error)) {
@@ -153,7 +157,7 @@ async function fetchAuthUserState(userId: string): Promise<AuthUserState> {
         });
     }
 
-    const profileData = profileResponse.data as { nickname?: string } | null;
+    const profileData = profileResponse.data;
     const nickname = profileData?.nickname;
     return {
         isEligible: true,

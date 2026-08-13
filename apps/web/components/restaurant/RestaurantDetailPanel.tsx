@@ -50,9 +50,9 @@ import {
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 type ReviewRow = Tables<'reviews'>;
-type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
 
@@ -419,11 +419,8 @@ export function RestaurantDetailPanel({
                 const reviewIds = typedReviewsPageData.map((review) => review.id);
 
                 // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
-                const [profilesResult, userLikesResult] = await Promise.all([
-                    supabase
-                        .from('profiles')
-                        .select('user_id, nickname, avatar_url')
-                        .in('user_id', userIds),
+                const [typedProfilesData, userLikesResult] = await Promise.all([
+                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
                     user
                         ? supabase
                             .from('review_likes')
@@ -432,8 +429,6 @@ export function RestaurantDetailPanel({
                             .eq('user_id', user.id)
                         : Promise.resolve({ data: [] }),
                 ]);
-                const typedProfilesData = (profilesResult.data || []) as ProfileRow[];
-
                 // 4. Map으로 변환
                 const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
                     typedProfilesData.map((profile) => [profile.user_id, { nickname: profile.nickname, avatarUrl: profile.avatar_url }])

@@ -17,6 +17,7 @@ const playwrightEvidenceSource = read("scripts/nightly-playwright-failure-eviden
 const playwrightConfigSource = read("playwright.config.ts");
 const healthRouteSource = read("app/api/health/route.ts");
 const nightlyFixtureSource = read("tests/nightly/nightly-test.ts");
+const profileReadRpcBoundarySource = read("tests/nightly/local-profile-read-rpc-boundary.ts");
 const localSupabaseAdminSpecSource = read("tests/local-supabase-admin.spec.ts");
 const mobileHomeMapSpecSource = read("tests/mobile-home-map.spec.ts");
 const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
@@ -378,6 +379,15 @@ describe("nightly regression package and source contracts", () => {
       "url.search === '?restaurantIds=00000000-0000-4000-8000-000000000101&types=trend'",
       "diagnosticForUrl(url, method, 0, 'mutation-denied')",
       "const LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY = '{}'",
+      "isAllowedLocalProfileReadRpcRequest({",
+      "isAllowedLocalProfileReadRpcPreflightRequest({",
+      "hasEncodedOrMalformedPath(url)",
+      "isExactLocalProfileReadRpcPath(url)",
+      "LOCAL_PROFILE_LEADERBOARD_PAGE_RPC_PATH",
+      "allowedOrigin: LOCAL_SUPABASE_ORIGIN",
+      "contentType: headers['content-type']",
+      "isAllowedLocalProfileReadRpc(",
+      "await fulfillJson(route, [], 200, true)",
       "url.pathname === '/rest/v1/rpc/get_current_privacy_eligibility'",
       "postData?.toString('utf8') === LOCAL_NIGHTLY_PRIVACY_ELIGIBILITY_BODY",
       "url.search === '?grant_type=password'",
@@ -393,6 +403,57 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(nightlyFixtureSource).toContain(token);
     }
+    const fulfillSupabaseSource = nightlyFixtureSource.slice(
+      nightlyFixtureSource.indexOf('async function fulfillSupabase('),
+      nightlyFixtureSource.indexOf('async function fulfillNaverSdk('),
+    );
+    const exactProfileGate = fulfillSupabaseSource.indexOf(
+      'if (isProfileReadRpc && !isAllowedProfileReadRpc && !isAllowedProfileReadRpcPreflight)',
+    );
+    const encodedSupabasePathGate = fulfillSupabaseSource.indexOf(
+      'if (hasEncodedOrMalformedPath(url))',
+    );
+    const genericOptionsGate = fulfillSupabaseSource.indexOf("if (request.method() === 'OPTIONS')");
+    const profileSuccess = fulfillSupabaseSource.indexOf('case LOCAL_PROFILE_SUMMARIES_RPC_PATH:');
+    expect(encodedSupabasePathGate).toBeGreaterThan(-1);
+    expect(encodedSupabasePathGate).toBeLessThan(exactProfileGate);
+    expect(encodedSupabasePathGate).toBeLessThan(genericOptionsGate);
+    expect(exactProfileGate).toBeGreaterThan(-1);
+    expect(exactProfileGate).toBeLessThan(genericOptionsGate);
+    expect(exactProfileGate).toBeLessThan(profileSuccess);
+    expect(fulfillSupabaseSource.slice(exactProfileGate, genericOptionsGate)).toContain(
+      "await route.abort('blockedbyclient');\n        return;",
+    );
+    expect(profileReadRpcBoundarySource).toContain("method === 'POST'");
+    expect(profileReadRpcBoundarySource).toContain('&& !url.search');
+    expect(profileReadRpcBoundarySource).toContain("url.pathname.includes('%')");
+    expect(profileReadRpcBoundarySource).toContain('hasDuplicateOrInvalidJsonMemberNames(rawBody)');
+    const outerRouterSource = nightlyFixtureSource.slice(
+      nightlyFixtureSource.indexOf("await page.route('**/*'"),
+      nightlyFixtureSource.indexOf("const diagnosticsPath = testInfo.outputPath"),
+    );
+    const outerProfilePathGate = outerRouterSource.indexOf(
+      'const isLocalProfileReadRpcPath = isAllowedLocalSupabaseUrl(url)',
+    );
+    const outerProfileDeny = outerRouterSource.indexOf(
+      'isLocalProfileReadRpcPath\n                && !isAllowedProfileReadRpc',
+    );
+    const outerEncodedPathDeny = outerRouterSource.indexOf('if (hasEncodedLocalSupabasePath)');
+    const outerMutationGate = outerRouterSource.indexOf('isMutationMethod(method)\n                && !(');
+    const realLocalContinue = outerRouterSource.indexOf(
+      'if (usesRealLocalSupabase && isAllowedLocalSupabaseUrl(url))',
+    );
+    expect(outerProfilePathGate).toBeGreaterThan(-1);
+    expect(outerEncodedPathDeny).toBeGreaterThan(outerProfilePathGate);
+    expect(outerEncodedPathDeny).toBeLessThan(outerProfileDeny);
+    expect(outerEncodedPathDeny).toBeLessThan(outerMutationGate);
+    expect(outerEncodedPathDeny).toBeLessThan(realLocalContinue);
+    expect(outerProfileDeny).toBeGreaterThan(outerProfilePathGate);
+    expect(outerProfileDeny).toBeLessThan(outerMutationGate);
+    expect(outerProfileDeny).toBeLessThan(realLocalContinue);
+    expect(outerRouterSource.slice(outerProfileDeny, outerMutationGate)).toContain(
+      "await route.abort('blockedbyclient');\n                return;",
+    );
     for (const token of [
       "buildAdminMapOverlayPayloadHash({",
       "buildAdminMapOverlayPreviewHash(expectedNormalized)",
@@ -489,7 +550,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v1'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 74",
+      "receipt.ledger.length !== 76",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -506,7 +567,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(operationsDocSource).toContain("74-unit migration ledger");
+    expect(operationsDocSource).toContain("76-unit migration ledger");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -529,6 +590,7 @@ describe("nightly regression package and source contracts", () => {
       "blockedbyclient",
       "increment_search_count",
       "search_restaurants_by_youtube_title",
+      "read_public_profile_leaderboard_page",
       "method === 'OPTIONS'",
       "method !== 'GET'",
       "method === 'POST'",
@@ -536,6 +598,13 @@ describe("nightly regression package and source contracts", () => {
       "const LOCAL_AUTH_FIXTURE_PATHS",
       "if (!LOCAL_REST_FIXTURE_PATHS.has(url.pathname))",
       "if (!LOCAL_AUTH_FIXTURE_PATHS.has(url.pathname))",
+      "Object.keys(payload).sort().join(',') !== expectedKeys.join(',')",
+      "requestBody.p_after_quality_score === null",
+      "Number.isFinite(requestBody.p_after_quality_score)",
+      "PROFILE_SUMMARY_UUID.test(requestBody.p_after_user_id)",
+      "hasDuplicateOrInvalidJsonMemberNames(rawBody.toString('utf8'))",
+      "hasEncodedOrMalformedPath(url)",
+      "isExactLocalProfileReadRpcPath(url)",
       "'/rest/v1/announcements'",
       "'/rest/v1/ad_banners'",
       "url.pathname.endsWith('/rest/v1/announcements')",
@@ -551,6 +620,38 @@ describe("nightly regression package and source contracts", () => {
     }
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-headers': '*'");
     expect(mobileHomeMapHelpersSource).not.toContain("'access-control-allow-origin': '*'");
+    expect(
+      mobileHomeMapHelpersSource.match(/hasDuplicateOrInvalidJsonMemberNames\(rawBody\.toString\('utf8'\)\)/g),
+    ).toHaveLength(2);
+    const mobileRestRouterSource = mobileHomeMapHelpersSource.slice(
+      mobileHomeMapHelpersSource.indexOf('async function handleSupabaseRestRoute('),
+      mobileHomeMapHelpersSource.indexOf('async function handleSupabaseAuthRoute('),
+    );
+    const mobileProfileGate = mobileRestRouterSource.indexOf(
+      'if (isProfileReadRpc && !isAllowedProfileReadRpc && !isAllowedProfileReadRpcPreflight)',
+    );
+    const mobileEncodedPathGate = mobileRestRouterSource.indexOf(
+      'if (hasEncodedOrMalformedPath(url))',
+    );
+    const mobileFixturePathGate = mobileRestRouterSource.indexOf(
+      'if (!LOCAL_REST_FIXTURE_PATHS.has(url.pathname))',
+    );
+    const mobileGenericOptions = mobileRestRouterSource.indexOf("if (method === 'OPTIONS')");
+    const mobilePageSuccess = mobileRestRouterSource.indexOf(
+      "if (url.pathname.endsWith('/rest/v1/rpc/read_public_profile_leaderboard_page'))",
+    );
+    expect(mobileEncodedPathGate).toBeGreaterThan(-1);
+    expect(mobileEncodedPathGate).toBeLessThan(mobileFixturePathGate);
+    expect(mobileEncodedPathGate).toBeLessThan(mobileProfileGate);
+    expect(mobileEncodedPathGate).toBeLessThan(mobileGenericOptions);
+    expect(mobileProfileGate).toBeGreaterThan(-1);
+    expect(mobileProfileGate).toBeLessThan(mobileGenericOptions);
+    expect(mobileProfileGate).toBeLessThan(mobilePageSuccess);
+    expect(mobileRestRouterSource.slice(mobileProfileGate, mobileGenericOptions)).toContain(
+      "await route.abort('blockedbyclient');\n        return;",
+    );
+    expect(mobileRestRouterSource).toContain('isAllowedLocalProfileReadRpcRequest({');
+    expect(mobileRestRouterSource).toContain('isAllowedLocalProfileReadRpcPreflightRequest({');
   });
 
   test("keeps local health responses redacted to the stable three-field contract", () => {
@@ -885,7 +986,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 74",
+      "EXPECTED_LEDGER_UNITS = 76",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -895,7 +996,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 74");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 76");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));

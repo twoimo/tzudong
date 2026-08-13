@@ -50,6 +50,7 @@ import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRest
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Tables } from "@/integrations/supabase/types";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 type SortColumn = StampRestaurantSortColumn;
 
@@ -76,7 +77,6 @@ const RestaurantDetailPanel = dynamic(
 type SortDirection = StampRestaurantSortDirection;
 type ViewMode = "grid" | "list";
 type ReviewRow = Tables<'reviews'>;
-type ProfileRow = Pick<Tables<'profiles'>, 'user_id' | 'nickname' | 'avatar_url'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
 type RestaurantWithVerifiedCount = Restaurant & { verified_review_count?: number };
 type UserReviewWithRestaurant = UserReview & { restaurant?: RestaurantWithVerifiedCount | null };
@@ -526,11 +526,8 @@ export default function StampPage() {
                 // 사용자 프로필 정보 조회
                 const userIds = [...new Set(typedReviewsData.map((review) => review.user_id))];
                 const reviewIds = typedReviewsData.map((review) => review.id);
-                const [profilesResult, userLikesResult] = await Promise.all([
-                    supabase
-                        .from('profiles')
-                        .select('user_id, nickname, avatar_url')
-                        .in('user_id', userIds),
+                const [profiles, userLikesResult] = await Promise.all([
+                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
                     user
                         ? supabase
                             .from('review_likes')
@@ -540,7 +537,7 @@ export default function StampPage() {
                         : Promise.resolve({ data: [] }),
                 ]);
                 const profilesMap = new Map(
-                    ((profilesResult.data ?? []) as ProfileRow[]).map((profile) => [
+                    profiles.map((profile) => [
                         profile.user_id,
                         { nickname: profile.nickname, avatarUrl: profile.avatar_url },
                     ])
