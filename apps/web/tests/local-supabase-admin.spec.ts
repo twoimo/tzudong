@@ -408,7 +408,7 @@ test.describe('real local Supabase and admin lifecycle', () => {
     });
   });
 
-  test('authenticates the real synthetic admin and proves guarded read, preview, apply, readback and audit', async ({ page }) => {
+  test('authenticates the real synthetic admin, hydrates the console, and proves guarded read, preview, apply, readback and audit', async ({ page }) => {
     const email = process.env.NIGHTLY_ADMIN_EMAIL;
     const password = process.env.NIGHTLY_ADMIN_PASSWORD;
     expect(email).toBe('nightly-ci@local.invalid');
@@ -466,6 +466,43 @@ test.describe('real local Supabase and admin lifecycle', () => {
     expect(login.hasAccessToken).toBe(true);
     expect(login.hasRefreshToken).toBe(true);
     expect(login.userIdIsUuid).toBe(true);
+
+    const pendingCountsResponsePromise = page.waitForResponse(
+      (response) => {
+        const url = new URL(response.url());
+        return url.origin === localAppOrigin
+          && url.pathname === '/api/admin/pending-counts'
+          && response.request().method() === 'GET';
+      },
+      { timeout: 30_000 },
+    );
+    const dashboardSummaryResponsePromise = page.waitForResponse(
+      (response) => {
+        const url = new URL(response.url());
+        return url.origin === localAppOrigin
+          && url.pathname === '/api/dashboard/summary'
+          && response.request().method() === 'GET';
+      },
+      { timeout: 30_000 },
+    );
+    await page.goto('/admin');
+    const [pendingCountsResponse, dashboardSummaryResponse] = await Promise.all([
+      pendingCountsResponsePromise,
+      dashboardSummaryResponsePromise,
+    ]);
+    expect(pendingCountsResponse.status()).toBe(200);
+    expect(dashboardSummaryResponse.status()).toBe(200);
+    const dashboardSummary = await dashboardSummaryResponse.json() as {
+      totals?: { restaurants?: number };
+    };
+    expect(dashboardSummary.totals?.restaurants).toBe(2);
+    await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator('[data-admin-dashboard-kpi-value-size="bounded"]').first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator('[data-admin-dashboard-management-skeleton="true"]')).toHaveCount(0);
 
     const guarded = await page.evaluate(async () => {
       const response = await fetch('/api/admin/evaluations');

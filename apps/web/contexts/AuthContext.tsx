@@ -194,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin(false);
         setNeedsNicknameSetup(false);
         setProfileNickname(null);
+        setIsLoading(false);
         dispatchHomeAuthSessionUpdated({ hasSession: false, source });
     }, []);
 
@@ -258,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAdmin(state.isAdmin);
             setNeedsNicknameSetup(state.needsNicknameSetup);
             setProfileNickname(state.profileNickname);
+            setIsLoading(false);
             dispatchHomeAuthSessionUpdated({ hasSession: true, source: 'auth-eligible-session' });
         } catch {
             if (authEventGenerationRef.current !== generation) return;
