@@ -1336,6 +1336,7 @@ jq -e -s 'length == 10 and
     (.before_canonical_public_catalog_projection_hash | test("^[0-9a-f]{64}$")) and
     (.after_canonical_public_catalog_projection_hash | test("^[0-9a-f]{64}$")))' "$overlap_report" >/dev/null
 g026_phase_b_applied=0
+previous_effective_filename=''
 for migration in "${effective_migrations[@]}"; do
   canonical_path=${migration#"$repo_root"/}
   if [[ ${migration##*/} == '20260713002000_g014_public_api_private_boundary.sql' ]]; then
@@ -1351,7 +1352,7 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply "role-management-transform:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
-    20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql)
+    20260713002100_g014_privacy_workflows.sql|20260713002200_g014_marketing_state_machine.sql|20260713002300_g014_account_deletion_state_machine.sql|20260713002400_g014_retention_adapters_receipts.sql|20260713002500_g014_catalog_contract.sql|20260713002600_g014_account_deletion_receipt_parity.sql|20260812000200_local_public_read_policy_convergence.sql|20260812000300_local_admin_data_boundary_convergence.sql|20260812000400_local_admin_map_overlay_boundary_convergence.sql)
       transformed_migration=$(g026_apply_replay_membership_window "$migration")
       g026_chain_apply "replay-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
@@ -1361,10 +1362,34 @@ for migration in "${effective_migrations[@]}"; do
       g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
+    20260813085342_current_profile_mutation_boundary.sql)
+      self_contained_path=$(jq -er '.selfContainedReplay.canonicalPath' "$g026_bundle")
+      self_contained_filename=$(jq -er '.selfContainedReplay.filename' "$g026_bundle")
+      self_contained_predecessor=$(jq -er '.selfContainedReplay.predecessorFilename' "$g026_bundle")
+      self_contained_hash=$(jq -er '.selfContainedReplay.sourceSha256' "$g026_bundle")
+      self_contained_bytes=$(jq -er '.selfContainedReplay.sourceByteLength' "$g026_bundle")
+      self_contained_transaction=$(jq -er '.selfContainedReplay.transactionClass' "$g026_bundle")
+      [[ "$canonical_path" == "$self_contained_path"
+         && ${migration##*/} == "$self_contained_filename"
+         && "$self_contained_predecessor" == '20260812000700_local_profile_leaderboard_page_convergence.sql'
+         && "$file_hash" == "$self_contained_hash"
+         && $(wc -c <"$migration" | tr -d '[:space:]') == "$self_contained_bytes"
+         && "$self_contained_transaction" == 'self_committing' ]] || {
+        printf 'G026 self-contained terminal replay binding drifted\n' >&2
+        exit 1
+      }
+      [[ "$previous_effective_filename" == "$self_contained_predecessor" ]] || {
+        printf 'G026 self-contained terminal replay predecessor drifted\n' >&2
+        exit 1
+      }
+      g026_chain_apply "self-contained-replay:${migration##*/}" "$migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
+      ;;
     *)
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$migration"
       ;;
   esac
+  previous_effective_filename=${migration##*/}
   if [[ ${migration##*/} == '20260531084516_tighten_public_table_data_api_grants.sql' ]]; then
     compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <<'SQL' >/dev/null
 DO $$
@@ -1392,7 +1417,7 @@ done
   printf 'G026 phase-B slot was not applied exactly once\n' >&2
   exit 1
 }
-jq -c '{schemaVersion,purpose,reconstructionAuthorized,transition,repairs,validationLedger,slots,roleManagementReplayTransform,replayMembershipWindows,canonicalBodyHashes,apiMatrix,extensionFingerprint}' "$g026_bundle" >"$g026_semantic_receipt"
+jq -c '{schemaVersion,purpose,reconstructionAuthorized,transition,repairs,validationLedger,slots,roleManagementReplayTransform,replayMembershipWindows,selfContainedReplay,canonicalBodyHashes,apiMatrix,extensionFingerprint}' "$g026_bundle" >"$g026_semantic_receipt"
 compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c "
   SELECT jsonb_build_object(
     'extensions', (SELECT jsonb_agg(extname ORDER BY extname) FROM pg_extension WHERE extname IN ('vector','fuzzystrmatch','pgcrypto')),

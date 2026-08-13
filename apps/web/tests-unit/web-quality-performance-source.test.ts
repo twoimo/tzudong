@@ -1583,10 +1583,19 @@ describe("web quality performance source contracts", () => {
       'data-desktop-left-panel-announcement="true"',
     );
     expect(homeDesktopControlPanelSource).toContain(
-      'initialRoutePanel === "announcement" ? "announcement" : "map"',
+      'initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map"',
     );
     expect(homeDesktopControlPanelSource).toContain(
       'panelParam !== "announcement"',
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      "!isPublicRestrictedMode",
+    );
+    expect(source("app/home-client-effects.tsx")).toContain(
+      "isPublicRestrictedMode && panelParam === 'announcement'",
+    );
+    expect(homeDesktopControlPanelSource).toContain(
+      'activeLeftPanelView === "announcement" && !isPublicRestrictedMode',
     );
     expect(homeDesktopControlPanelSource).toContain("window.addEventListener(");
     expect(homeDesktopControlPanelSource).toContain('"openAnnouncementDetail"');
@@ -1944,6 +1953,15 @@ describe("web quality performance source contracts", () => {
     expect(source("components/map/NaverMapAnnouncementRuntime.tsx")).toContain(
       "useBannerAnnouncements(true)",
     );
+    expect(source("app/home-client.tsx")).toContain(
+      'panel === "announcement"',
+    );
+    expect(source("components/home/home-desktop-control-panel.tsx")).toContain(
+      "!isPublicRestrictedMode",
+    );
+    expect(source("app/home-client.tsx")).toContain("announcementId");
+    expect(naverMapSource).toContain("!isPublicRestrictedMode");
+    expect(naverMapSource).toContain("!isPublicRestrictedMode");
     expect(naverMapSource).toContain(
       "setShouldRunNoncriticalMapEffects((previous) => previous ? previous : true)",
     );
@@ -1998,6 +2016,54 @@ describe("web quality performance source contracts", () => {
       "import { supabase } from '@/integrations/supabase/client'",
     );
     expect(mapOverlayNoticeSource).toContain("max-w-[calc(100vw-2rem)]");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "const baseNoticeClass = MAP_OVERLAY_NOTICE_CLASS_NAME;",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} text-left",
+    );
+    expect(mapOverlayNoticeSource).toContain(
+      "className={cn(baseNoticeClass, className)}",
+    );
+    expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =\n    '!border !border-border !bg-card/95 !text-foreground !rounded-2xl !px-3 !py-2';",
+    );
+    expect(mapIndicatorsSource).toContain("<MapOverlayNotice");
+    expect(mapIndicatorsSource).toContain("<MapOverlayNoticeButton");
+    expect(mapIndicatorsSource).not.toContain("dark:bg-");
+    for (const visualToken of [
+      "!border",
+      "!border-border",
+      "!bg-card/95",
+      "!text-foreground",
+      "!rounded-2xl",
+      "!px-3 !py-2",
+    ]) {
+      expect(mapOverlayNoticeSource).toContain(visualToken);
+    }
+    expect(mapOverlayNoticeSource).not.toContain("hover:bg-secondary/70");
+    expect(mapOverlayNoticeSource).toContain("sm:hover:!bg-secondary/70");
+    expect(mapOverlayNoticeSource).toContain("appearance-none");
+    expect(mapOverlayNoticeSource).toContain("aria-label={ariaLabel}");
+    expect(mapOverlayNoticeSource).toContain(
+      "export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';",
+    );
+    expect(mapIndicatorsSource).toContain("mobile-map-announcement-toast");
+    expect(mapIndicatorsSource).toContain(
+      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} animate-in",
+    );
+    expect(overlayStackSource).toContain(
+      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} ${floatingToastPositionClass}",
+    );
+    expect(mapIndicatorsSource).toContain(
+      "contentClassName={MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME}",
+    );
+    expect(overlayStackSource).toContain('showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded');
+    expect(overlayStackSource).toContain('showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle');
     expect(mapOverlayNoticeSource).toContain("min-h-9");
     expect(mapOverlayNoticeSource).toContain("w-fit");
     expect(mapOverlayNoticeSource).not.toContain("flex w-[calc(100vw-2rem)]");
@@ -2039,13 +2105,55 @@ describe("web quality performance source contracts", () => {
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
     expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
-    expect(overlayPositionSource).toContain("top-[calc(env(safe-area-inset-top)_+_8.5rem)]");
+    expect(overlayPositionSource).toContain(
+      "const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =",
+    );
+    expect(overlayPositionSource).toContain(
+      "'top-[calc(env(safe-area-inset-top)_+_114px)]'",
+    );
+    expect(overlayPositionSource).toContain(
+      "mobile-map-status-badge fixed ${MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS}",
+    );
     expect(overlayPositionSource).toContain("z-[70]");
     expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-position-helpers.ts";');
     expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
     expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
     expect(homeAppGlobalsSource).toContain('@media (orientation: landscape) and (max-height: 520px)');
+    expect(homeAppGlobalsSource).toContain('margin-top: 0');
+    expect(homeAppGlobalsSource).toContain('max-width: calc(100vw - 2rem)');
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
+    );
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast",
+    );
+    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast .map-overlay-notice-single-line",
+    );
+    expect(homeAppGlobalsSource).toContain("overflow: hidden");
+    expect(homeAppGlobalsSource).toContain("text-overflow: ellipsis");
+    expect(homeAppGlobalsSource).toContain("white-space: nowrap");
+    expect(homeAppGlobalsSource).toContain(
+      "html[data-mobile-search-open] .mobile-map-status-badge {\n    display: none;",
+    );
+    expect(homeAppGlobalsSource).toContain(
+      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
+    );
+    expect(mobileControlSource).toContain(
+      "pt-[calc(env(safe-area-inset-top)+10px)]",
+    );
+    expect(mobileControlSource).toContain("flex h-12");
+    expect(mobileControlSource).toContain(
+      "className=\"pointer-events-auto mt-2 flex w-full",
+    );
+    expect(mobileControlSource).toContain("inline-flex h-9");
+    expect(mobileControlSource).toContain("py-0.5");
+    expect(homeAppGlobalsSource).toContain('overflow-wrap: anywhere');
+    expect(homeAppGlobalsSource).toContain('grid-template-columns: 1.25rem minmax(0, 1fr)');
+    expect(homeAppGlobalsSource).toContain('max-height: min(20rem, calc(100dvh - 24rem))');
+    expect(homeAppGlobalsSource).toContain('overflow-y: auto');
     expect(overlayPositionSource).not.toContain(
       "fixed top-[calc(env(safe-area-inset-top)+114px)] left-1/2 -translate-x-1/2 transition-[left] ease-in-out z-[70]",
     );
@@ -2056,6 +2164,37 @@ describe("web quality performance source contracts", () => {
     expect(overlayLayoutSource).toContain('id="tzudong-map-main"');
     expect(floatingNavSource).toContain('aria-label="지도 화면 보조 탐색"');
     expect(floatingNavSource).toContain("aria-pressed={mapMode ===");
+  });
+  test("mobile toast dark tokens and G007 announcement width stay explicit", () => {
+    const rootGlobalsSource = source("app/globals.css");
+    const homeAppGlobalsSource = source("app/home-app-globals.css");
+    const rootDarkTokenBlock =
+      rootGlobalsSource.match(/\.dark\s*\{[\s\S]*?\n\}/)?.[0] ?? "";
+
+    expect(rootDarkTokenBlock).toContain(".dark {");
+    for (const declaration of [
+      "--background: 24 10% 10%;",
+      "--foreground: 38 30% 96%;",
+      "--card: 24 9% 13%;",
+      "--card-foreground: 38 30% 96%;",
+      "--border: 24 6% 24%;",
+      "--secondary: 24 7% 18%;",
+      "--secondary-foreground: 38 30% 96%;",
+      "--muted: 24 7% 18%;",
+      "--muted-foreground: 24 7% 68%;",
+      "--accent: 24 7% 18%;",
+      "--accent-foreground: 38 30% 96%;",
+    ]) {
+      expect(rootDarkTokenBlock).toContain(declaration);
+    }
+
+    expect(homeAppGlobalsSource).toContain(
+      ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
+    );
+    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
+    expect(homeAppGlobalsSource).toContain(
+      "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
+    );
   });
 
   test("naver marker click centering avoids slow duplicate recenter loops", () => {
@@ -4068,11 +4207,10 @@ describe("web quality performance source contracts", () => {
     expect(stampSource).not.toContain("queryKey: ['restaurants-stamp']");
 
     expect(leaderboardSource).toContain(
-      ".select('id, user_id, is_verified, created_at, like_count')",
+      "readCompletePublicProfileLeaderboard(supabase, period)",
     );
-    expect(leaderboardSource).not.toContain(
-      "const reviewIds = allReviewsData.map",
-    );
+    expect(leaderboardSource).not.toContain(".from('profiles')");
+    expect(leaderboardSource).not.toContain(".from('reviews')");
     expect(userProfileSource).toContain("USER_PROFILE_RESTAURANT_SELECT");
     expect(userProfileSource).toContain("viewerLikesResult");
     expect(userProfileSource).toContain("likeCount: r.like_count || 0");
@@ -4184,8 +4322,9 @@ describe("web quality performance source contracts", () => {
     expect(proxySecuritySource).toContain("\"frame-ancestors 'none'\"");
     expect(proxySecuritySource).toContain("'strict-dynamic'");
     expect(middlewareSecuritySource).toContain("request: { headers: forwardedRequestHeaders }");
-    expect(layoutSource).toContain('import Script from "next/script"');
-    expect(layoutSource).toContain('<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />');
+    expect(layoutSource).not.toContain('import Script from "next/script"');
+    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).toContain('nonce={nonce}');
     for (const staticRoute of [
       "/images/:path*",
       "/fonts/:path*",
@@ -4259,11 +4398,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(layoutSource).toContain('href="//nrbe.map.naver.net"');
     expect(layoutSource).toContain('href="//static.naver.net"');
-    expect(layoutSource).toContain(
-      '<Script src="/scripts/viewport-height-fix.js" strategy="beforeInteractive" />',
-    );
-    expect(layoutSource).toContain('import Script from "next/script"');
-    expect(layoutSource).toContain('strategy="beforeInteractive"');
+    expect(layoutSource).toContain('VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE');
+    expect(layoutSource).toContain('nonce={nonce}');
+    expect(layoutSource).not.toContain('import Script from "next/script"');
+    expect(layoutSource).not.toContain('strategy="beforeInteractive"');
     expect(layoutSource).toContain('import localFont from "next/font/local"');
     expect(layoutSource).toContain(
       'import { Noto_Serif_KR } from "next/font/google"',
@@ -4439,10 +4577,16 @@ describe("web quality performance source contracts", () => {
     expect(authContextSource).not.toContain("const checkProfileStatus");
     expect(authContextSource).not.toContain("import { supabase }");
     expect(source("app/home-runtime-shell.tsx")).toContain(
-      "useState(() => hasSupabaseAuthSessionHint())",
+      "!isPublicRestrictedMode && hasSupabaseAuthSessionHint()",
     );
     expect(source("app/home-runtime-shell.tsx")).toContain(
-      "<AnonymousHomeAuthProvider isLoading={hasStoredSession}>",
+      "<AnonymousHomeAuthProvider isLoading={isPublicRestrictedMode ? false : hasStoredSession}>",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "if (!isPublicRestrictedMode) {",
+    );
+    expect(source("app/home-runtime-shell.tsx")).toContain(
+      "if (isPublicRestrictedMode) return;",
     );
     expect(source("lib/auth-ui-events.ts")).toContain(
       "AUTH_UI_SESSION_HINT_GRACE_MS",

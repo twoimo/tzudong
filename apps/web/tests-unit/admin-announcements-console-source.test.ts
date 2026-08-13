@@ -69,7 +69,9 @@ describe('admin announcements console integration source contract', () => {
     expect(headerSource).toContain('AnnouncementPanelLoadingFallback');
     expect(headerSource).toContain('HeaderAnnouncementPanel ?');
     expect(desktopControlPanelSource).toContain('AnnouncementPanelLoadingFallback');
-    expect(desktopControlPanelSource).toContain('activeLeftPanelView === "announcement" ?');
+    expect(desktopControlPanelSource).toContain(
+      'activeLeftPanelView === "announcement" && !isPublicRestrictedMode ?',
+    );
     expect(homeSidePanelsSource).toContain('loading: () => <AnnouncementPanelLoadingFallback');
   });
 

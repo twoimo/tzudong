@@ -13,6 +13,11 @@ const YOUTUBE_CHANNEL_FETCH_TIMEOUT_MS = 10_000;
 const youtubeChannelCacheHeaders = {
   "Cache-Control": `private, max-age=${YOUTUBE_CHANNEL_CACHE_SECONDS}, stale-while-revalidate=${YOUTUBE_CHANNEL_CACHE_SECONDS * 3}`,
 };
+const youtubeChannelUnavailableHeaders = {
+  "Cache-Control": "private, no-store",
+};
+const LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE =
+  "LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE" as const;
 
 type YouTubeChannelListResponse = {
   items?: Array<{
@@ -109,6 +114,34 @@ async function respondWithYouTubeChannelSnapshotFallback(
         fallbackReason: error,
       },
       { headers: youtubeChannelCacheHeaders },
+    );
+  }
+
+  if (process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1") {
+    return NextResponse.json(
+      {
+        channelId: null,
+        title: null,
+        handle: null,
+        subscriberCount: null,
+        viewCount: null,
+        videoCount: null,
+        hiddenSubscriberCount: false,
+        fetchedAt: null,
+        previousSubscriberCount: null,
+        previousViewCount: null,
+        previousVideoCount: null,
+        previousBucketStartedAt: null,
+        subscriberDelta: null,
+        viewDelta: null,
+        videoDelta: null,
+        comparisonFetchedAt: null,
+        deltaSource: "unavailable",
+        unavailable: {
+          code: LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE,
+        },
+      },
+      { headers: youtubeChannelUnavailableHeaders },
     );
   }
 

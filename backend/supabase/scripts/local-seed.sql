@@ -116,8 +116,91 @@ BEGIN
     SELECT 1 FROM public.profiles
     WHERE user_id IS NULL
        OR user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
-  ) OR (SELECT count(*) FROM public.profiles) > 1 THEN
+       OR email IS DISTINCT FROM 'nightly-ci@local.invalid'
+       OR nickname = '탈퇴한 사용자'
+       OR nickname IS DISTINCT FROM btrim(nickname)
+       OR char_length(nickname) NOT BETWEEN 2 AND 20
+       OR octet_length(nickname) > 80
+       OR nickname ~ '[[:cntrl:]]'
+       OR avatar_url IS NOT NULL
+       OR username NOT IN ('nightly-ci')
+       OR role IS DISTINCT FROM 'user'
+  ) OR (SELECT count(*) FROM public.profiles) <> 1 THEN
     RAISE EXCEPTION 'local_seed_unexpected_profile';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
+       OR role::text NOT IN ('user', 'admin')
+  ) OR (SELECT count(*) FROM public.user_roles) <> 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_admin_role';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.user_stats
+    WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
+       OR review_count IS DISTINCT FROM 0
+       OR verified_review_count IS DISTINCT FROM 0
+       OR trust_score IS DISTINCT FROM 0
+  ) OR (SELECT count(*) FROM public.user_stats) <> 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_user_stats';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.user_account_status
+    WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
+       OR account_status IS DISTINCT FROM 'active'
+       OR disabled_at IS NOT NULL
+  ) OR (SELECT count(*) FROM public.user_account_status) <> 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_account_status';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+      FROM privacy_retention.privacy_policy_versions
+     WHERE id IS DISTINCT FROM '00000000-0000-4000-8000-000000000301'::uuid
+        OR version IS DISTINCT FROM '2026-08-04.1'
+        OR locale IS DISTINCT FROM 'ko-KR'
+        OR status IS DISTINCT FROM 'published'
+        OR content_sha256 IS DISTINCT FROM '6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b'
+        OR effective_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+        OR published_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+        OR supersedes_id IS NOT NULL
+        OR operator_approval_ref IS DISTINCT FROM 'LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:privacy-policy-fixture-v1'
+        OR created_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+  ) OR (SELECT count(*) FROM privacy_retention.privacy_policy_versions) > 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_privacy_policy_fixture';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+      FROM privacy_retention.privacy_age_profiles
+     WHERE user_id IS DISTINCT FROM current_setting('tzudong.local_nightly_user_id', true)::uuid
+        OR age_band IS DISTINCT FROM 'age_14_plus'
+        OR attested_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+        OR method IS DISTINCT FROM 'self_attestation'
+        OR status IS DISTINCT FROM 'eligible'
+        OR policy_version_id IS DISTINCT FROM '00000000-0000-4000-8000-000000000301'::uuid
+        OR updated_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+  ) OR (SELECT count(*) FROM privacy_retention.privacy_age_profiles) > 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_privacy_age_profile';
+  END IF;
+  IF EXISTS (
+    SELECT 1
+      FROM public.youtube_channel_kpi_snapshots
+     WHERE id IS DISTINCT FROM '00000000-0000-4000-8000-000000000401'::uuid
+        OR channel_id IS DISTINCT FROM 'local-nightly-channel'
+        OR channel_title IS DISTINCT FROM '[LOCAL TEST] Nightly channel fixture'
+        OR channel_handle IS DISTINCT FROM '@local-nightly'
+        OR subscriber_count IS DISTINCT FROM 1000
+        OR view_count IS DISTINCT FROM 100000
+        OR video_count IS DISTINCT FROM 100
+        OR hidden_subscriber_count IS DISTINCT FROM false
+        OR previous_bucket_started_at IS NOT NULL
+        OR subscriber_delta IS DISTINCT FROM 0
+        OR view_delta IS DISTINCT FROM 0
+        OR video_delta IS DISTINCT FROM 0
+        OR bucket_started_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+        OR fetched_at IS DISTINCT FROM '2026-01-01T00:00:00Z'::timestamptz
+        OR source IS DISTINCT FROM 'LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:youtube-channel-snapshot-v1'
+  ) OR (SELECT count(*) FROM public.youtube_channel_kpi_snapshots) > 1 THEN
+    RAISE EXCEPTION 'local_seed_unexpected_youtube_channel_snapshot';
   END IF;
   IF EXISTS (
     SELECT 1 FROM public.restaurants
@@ -146,18 +229,35 @@ BEGIN
   ) OR (SELECT count(*) FROM public.announcements) > 11 THEN
     RAISE EXCEPTION 'local_seed_unexpected_announcements';
   END IF;
-  IF EXISTS (SELECT 1 FROM storage.buckets WHERE id <> 'avatars')
-     OR (SELECT count(*) FROM storage.buckets) > 1 THEN
+  IF EXISTS (
+    SELECT 1 FROM storage.buckets
+    WHERE id <> ALL (ARRAY[
+      'ad-banner-images',
+      'avatars',
+      'profile-avatars',
+      'review-photos',
+      'youtube-thumbnail-releases'
+    ]::text[])
+  ) OR (SELECT count(*) FROM storage.buckets) NOT IN (4, 5)
+     OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'ad-banner-images')
+     OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'profile-avatars')
+     OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'review-photos')
+     OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'youtube-thumbnail-releases') THEN
     RAISE EXCEPTION 'local_seed_unexpected_storage_bucket';
   END IF;
   IF EXISTS (
     SELECT 1 FROM pg_catalog.pg_publication_tables
     WHERE pubname = 'supabase_realtime'
-      AND (schemaname <> 'public' OR tablename <> 'profiles')
+      AND (
+        schemaname <> 'public'
+        OR tablename <> ALL (ARRAY[
+          'notifications', 'profiles', 'review_likes', 'reviews'
+        ]::text[])
+      )
   ) OR (
     SELECT count(*) FROM pg_catalog.pg_publication_tables
     WHERE pubname = 'supabase_realtime'
-  ) > 1 THEN
+  ) <> 4 THEN
     RAISE EXCEPTION 'local_seed_unexpected_realtime_membership';
   END IF;
 END
@@ -176,10 +276,115 @@ ON CONFLICT (user_id) DO UPDATE SET
   nickname = EXCLUDED.nickname,
   email = EXCLUDED.email,
   avatar_url = EXCLUDED.avatar_url,
+  created_at = EXCLUDED.created_at,
   last_login = EXCLUDED.last_login,
   username = EXCLUDED.username,
   role = EXCLUDED.role,
   updated_at = EXCLUDED.updated_at;
+
+INSERT INTO public.user_account_status (
+  user_id, account_status, disabled_at, updated_at
+) VALUES (
+  :'nightly_user_id'::uuid, 'active', NULL, '2026-01-01T00:00:00Z'
+)
+ON CONFLICT (user_id) DO UPDATE SET
+  account_status = EXCLUDED.account_status,
+  disabled_at = EXCLUDED.disabled_at,
+  updated_at = EXCLUDED.updated_at;
+
+DELETE FROM public.user_roles
+WHERE user_id = :'nightly_user_id'::uuid
+  AND role::text = 'user';
+
+INSERT INTO public.user_roles (user_id, role, created_at)
+VALUES (:'nightly_user_id'::uuid, 'admin', '2026-01-01T00:00:00Z')
+ON CONFLICT (user_id, role) DO UPDATE SET
+  created_at = EXCLUDED.created_at;
+
+DELETE FROM public.user_stats
+WHERE user_id = :'nightly_user_id'::uuid;
+
+INSERT INTO public.user_stats (
+  id, user_id, review_count, verified_review_count, trust_score, last_updated
+) VALUES (
+  :'nightly_user_id'::uuid,
+  :'nightly_user_id'::uuid,
+  0,
+  0,
+  0,
+  '2026-01-01T00:00:00Z'
+);
+
+-- Local regression eligibility fixture only. The provenance is deliberately
+-- machine-readable and cannot be mistaken for hosted publication, operator
+-- approval, legal approval, or a production consent/age-attestation record.
+INSERT INTO privacy_retention.privacy_policy_versions (
+  id, version, locale, status, content_sha256, effective_at, published_at,
+  supersedes_id, operator_approval_ref, created_at
+) VALUES (
+  '00000000-0000-4000-8000-000000000301',
+  '2026-08-04.1',
+  'ko-KR',
+  'published',
+  '6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b',
+  '2026-01-01T00:00:00Z',
+  '2026-01-01T00:00:00Z',
+  NULL,
+  'LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:privacy-policy-fixture-v1',
+  '2026-01-01T00:00:00Z'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO privacy_retention.privacy_age_profiles (
+  user_id, age_band, attested_at, method, status, policy_version_id, updated_at
+) VALUES (
+  :'nightly_user_id'::uuid,
+  'age_14_plus',
+  '2026-01-01T00:00:00Z',
+  'self_attestation',
+  'eligible',
+  '00000000-0000-4000-8000-000000000301',
+  '2026-01-01T00:00:00Z'
+)
+ON CONFLICT (user_id) DO NOTHING;
+
+-- A deterministic local fallback for the admin channel UI.  Its explicit
+-- provenance prevents this row from being interpreted as a successful
+-- YouTube provider fetch or as hosted/production evidence.
+INSERT INTO public.youtube_channel_kpi_snapshots (
+  id,
+  channel_id,
+  channel_title,
+  channel_handle,
+  subscriber_count,
+  view_count,
+  video_count,
+  hidden_subscriber_count,
+  previous_bucket_started_at,
+  subscriber_delta,
+  view_delta,
+  video_delta,
+  bucket_started_at,
+  fetched_at,
+  source
+) VALUES (
+  '00000000-0000-4000-8000-000000000401',
+  'local-nightly-channel',
+  '[LOCAL TEST] Nightly channel fixture',
+  '@local-nightly',
+  1000,
+  100000,
+  100,
+  false,
+  NULL,
+  0,
+  0,
+  0,
+  '2026-01-01T00:00:00Z',
+  '2026-01-01T00:00:00Z',
+  'LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:youtube-channel-snapshot-v1'
+)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.restaurants (
   id, trace_id, approved_name, road_address, jibun_address,

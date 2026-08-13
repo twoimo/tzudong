@@ -21,9 +21,29 @@ Next.js 16 (App Router) 기반의 맛집 지도 웹 애플리케이션입니다.
 bun install
 ```
 
-### 2. 환경 변수 설정
+### 2. 로컬 Supabase 준비
 
-`.env.local` 파일을 생성하고 다음 변수를 설정하세요:
+기본 개발 명령은 저장소가 생성한 로컬 Supabase 스택만 사용합니다. 먼저
+저장소 루트의 [`backend/supabase/README.md`](../../backend/supabase/README.md)에
+따라 스택을 생성·마이그레이션하세요. `bun run dev`는 owner-only
+`stack.env`와 provenance, 서비스 readiness, 현재 migration ledger를 검증한 뒤
+loopback 값만 자식 프로세스에 전달합니다. 검증에 실패하면 hosted 자격 증명으로
+fallback하지 않고 종료합니다.
+
+로컬 DB를 유지하면서 GitHub 나이틀리 상태 같은 비-DB 운영 설정도 확인해야 하면,
+복사나 자동 탐색 대신 owner-only 파일의 절대 경로를 그 실행에만 명시합니다. 이
+파일의 Supabase/Postgres/DB 연결 값은 제거되고 생성된 loopback 값으로 교체됩니다:
+
+```bash
+bun run dev -- --operator-env-file /absolute/path/to/owner-only.env.local
+```
+
+### 3. Hosted 환경 변수 설정 (명시적 opt-in)
+
+Hosted Supabase를 의도적으로 디버깅할 때만 `.env.local` 파일을 생성하고 아래
+변수를 설정한 뒤 `bun run dev:hosted`를 사용하세요. 기본 로컬 명령은 Bun·Next의
+자동 dotenv 재로딩을 차단하고, 파일에서 필요한 비-DB 운영 설정만 격리해 읽은 뒤
+Supabase/Postgres/DB 연결 변수 전체를 제거하고 생성된 loopback 값을 주입합니다:
 
 ```env
 # Supabase
@@ -83,13 +103,16 @@ STORYBOARD_WEB_SEARCH_URL=https://api.tavily.com/search
 STORYBOARD_BGE_ENABLED=false
 ```
 
-### 3. 실행
+### 4. 실행
 
 ```bash
-# 개발 서버 실행 (기본: production build와 같은 webpack 경로)
+# 기본 개발 서버: 검증된 로컬 Supabase + webpack
 bun run dev
 
-# 캐시를 비우고 개발 서버 재시작
+# hosted .env.local을 명시적으로 사용할 때만
+bun run dev:hosted
+
+# hosted/고급 디버깅용 캐시 정리 경로
 bun run dev:clean
 
 # Turbopack 비교가 필요할 때만 별도 실행

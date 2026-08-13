@@ -61,12 +61,12 @@ class G026BundleTests(unittest.TestCase):
 
     def test_manifest_binds_exact_bytes_and_distinct_canonical_bodies(self):
         bundle = json.loads((BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(encoding='utf8'))
-        self.assertEqual(bundle['transition']['byteLength'], 27693)
-        self.assertEqual(bundle['transition']['sha256'], '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
-        self.assertEqual(verify.TRANSITION_BYTES, 27693)
-        self.assertEqual(verify.TRANSITION_SHA256, '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0')
-        self.assertEqual(bundle['repairs']['byteLength'], 38549)
-        self.assertEqual(bundle['repairs']['sha256'], '0d4e0716fba5d65d1ff964ba00758d0f21652ee1ffbdf6e5f07623c42fd1e975')
+        self.assertEqual(bundle['transition']['byteLength'], 36415)
+        self.assertEqual(bundle['transition']['sha256'], 'ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd')
+        self.assertEqual(verify.TRANSITION_BYTES, 36415)
+        self.assertEqual(verify.TRANSITION_SHA256, 'ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd')
+        self.assertEqual(bundle['repairs']['byteLength'], 46700)
+        self.assertEqual(bundle['repairs']['sha256'], 'efc0c0ea9a8632801c5dbae81da74fe125fa57f1eafba8d4ad0708d03ce698cb')
         for key, filename in (('transition', 'G026_RECONSTRUCTION_TRANSITION.v4.sql'), ('repairs', 'G026_RECONSTRUCTION_REPAIRS.v4.sql')):
             raw = (BASE / filename).read_bytes()
             self.assertEqual(bundle[key]['byteLength'], len(raw))
@@ -75,6 +75,27 @@ class G026BundleTests(unittest.TestCase):
         for name, body_hash in bundle['canonicalBodyHashes'].items():
             self.assertEqual(body_hash, verify.digest(verify.function_body(source, name)))
         self.assertEqual(set(bundle['canonicalBodyHashes']), set(verify.FUNCTIONS))
+
+    def test_source_only_policy_identity_shells_are_exact_and_fail_closed(self):
+        repairs = (BASE / 'G026_RECONSTRUCTION_REPAIRS.v4.sql').read_text(encoding='utf8')
+        verify.require_reconstruction_policy_shells(repairs)
+        self.assertEqual(len(verify.RECONSTRUCTION_POLICY_SHELLS), 7)
+        self.assertTrue(all('(false);' in statement for statement in verify.RECONSTRUCTION_POLICY_SHELLS))
+        self.assertEqual(len(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS), 4)
+        for mutation in (
+            repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[0] + '\n', '', 1),
+            repairs.replace(verify.RECONSTRUCTION_POLICY_SHELLS[1], verify.RECONSTRUCTION_POLICY_SHELLS[1].replace('(false)', '(true)'), 1),
+            repairs.replace("IF v_existing_count <> 0 THEN", "IF v_existing_count < 0 THEN", 1),
+            repairs.replace("      ('short_urls', 'Admins can delete short URLs')\n", '', 1),
+            repairs.replace("WHERE namespace_row.nspname = 'public'", "WHERE namespace_row.nspname = 'not_public'", 1),
+            repairs.replace(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS[0] + '\n', '', 1),
+            repairs.replace("= '(is_active = true)'", "= '(is_active = false)'", 1),
+            repairs.replace(verify.RECONSTRUCTION_OBSOLETE_POLICY_DROPS[3] + '\n', '', 1),
+            repairs + '\nCREATE POLICY unexpected_policy\n  ON public.restaurant_requests FOR SELECT USING (false);\n',
+        ):
+            with self.subTest(mutation=hashlib.sha256(mutation.encode()).hexdigest()):
+                with self.assertRaises(ValueError):
+                    verify.require_reconstruction_policy_shells(mutation)
     def test_approve_restaurant_preserves_immutable_predecessor_parameter_names(self):
         repairs = (BASE / 'G026_RECONSTRUCTION_REPAIRS.v4.sql').read_text(encoding='utf8')
         predecessor = verify.APPROVE_RESTAURANT_PREDECESSOR.read_text(encoding='utf8')
@@ -210,10 +231,12 @@ class G026BundleTests(unittest.TestCase):
                 verify.require_synthesized_compatibility_bindings(repairs, mutation)
         dump_path = 'pre-20260214-' + 'public-schema.sql'
         self.assertNotIn(dump_path, repairs)
-        self.assertNotIn(dump_path, VERIFY.read_text(encoding='utf8'))
-        self.assertNotIn(
-            dump_path,
-            (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(encoding='utf8'),
+        bundle_source = (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(encoding='utf8')
+        self.assertEqual(VERIFY.read_text(encoding='utf8').count(dump_path), 1)
+        self.assertEqual(bundle_source.count(dump_path), 1)
+        self.assertEqual(
+            bundle['legacyShapeNormalization']['applicationPrerequisites']['sourcePath'],
+            f'backend/supabase/baselines/{dump_path}',
         )
         for name, entry in entries.items():
             with self.subTest(name=name):
@@ -251,6 +274,89 @@ class G026BundleTests(unittest.TestCase):
             with self.subTest(statement=statement):
                 with self.assertRaisesRegex(ValueError, 'required restaurant column transition drifted'):
                     verify.require_restaurant_columns(source.replace(statement, '', 1))
+    def test_phase_a_legacy_profile_and_review_shape_normalization_is_source_bound_and_fail_closed(self):
+        source = (BASE / 'G026_RECONSTRUCTION_TRANSITION.v4.sql').read_text(encoding='utf8')
+        bundle = json.loads((BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(encoding='utf8'))
+        binding = bundle['legacyShapeNormalization']
+        verify.require_legacy_shape_normalization(source, binding)
+        self.assertFalse(binding['historicalProof'])
+        self.assertFalse(binding['hostedStateEvidence'])
+        self.assertEqual(
+            binding['reconstructionSource']['sourceSha256'],
+            '23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33',
+        )
+        self.assertEqual(
+            binding['applicationPrerequisites']['outputSha256'],
+            '34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15',
+        )
+        normalization = source.index(verify.LEGACY_SHAPE_NORMALIZATION_LABEL)
+        rename = source.index('ALTER TABLE public.profiles RENAME COLUMN profile_picture TO avatar_url;')
+        add_column = source.index('ALTER TABLE public.reviews ADD COLUMN like_count integer NOT NULL DEFAULT 0;')
+        old_name_postcondition = source.index("attname = 'profile_picture'", rename)
+        next_phase_a_object = source.index(verify.SHORT_URLS_TRANSITION.splitlines()[0])
+        self.assertLess(normalization, rename)
+        self.assertLess(rename, add_column)
+        self.assertLess(add_column, old_name_postcondition)
+        self.assertLess(old_name_postcondition, next_phase_a_object)
+
+        mutations = (
+            source.replace('LOCK TABLE public.profiles, public.reviews,', 'LOCK TABLE public.reviews,', 1),
+            source.replace('(SELECT count(*) FROM public.profiles) <> 0 OR ', '', 1),
+            source.replace("to_regclass('public.profiles') IS NULL OR ", '', 1),
+            source.replace("IS DISTINCT FROM 'r'", "IS DISTINCT FROM 'p'", 1),
+            source.replace('IF EXISTS (SELECT 1 FROM public.profiles) OR EXISTS (SELECT 1 FROM public.reviews) THEN', 'IF false THEN', 1),
+            source.replace(") AND EXISTS (\n    SELECT 1 FROM pg_catalog.pg_attribute\n    WHERE attrelid = 'public.profiles'::regclass AND attname = 'avatar_url'", ") OR EXISTS (\n    SELECT 1 FROM pg_catalog.pg_attribute\n    WHERE attrelid = 'public.profiles'::regclass AND attname = 'avatar_url'", 1),
+            source.replace("atttypid = 'pg_catalog.text'::regtype", "atttypid = 'pg_catalog.varchar'::regtype", 1),
+            source.replace("'profile_picture|text|f|f'", "'profile_picture|character varying|f|f'", 1),
+            source.replace("'last_login|timestamp with time zone|t|t'\n  ]::text[] THEN", "'last_login|timestamp with time zone|t|t',\n    'unknown|text|f|f'\n  ]::text[] THEN", 1),
+            source.replace("AND attname = 'like_count' AND attnum > 0", "AND attname = 'not_like_count' AND attnum > 0", 1),
+            source.replace("'content|text|t|f'", "'content|jsonb|t|f'", 1),
+            source.replace("'updated_at|timestamp with time zone|t|t'\n  ]::text[] THEN", "'updated_at|timestamp with time zone|t|t',\n    'unknown|text|f|f'\n  ]::text[] THEN", 1),
+            source.replace("conname = 'reviews_like_count_check'", "conname = 'unknown_like_count_check'", 1),
+            source.replace('RENAME COLUMN profile_picture TO avatar_url', 'RENAME COLUMN profile_picture TO avatar_uri', 1),
+            source.replace('ADD COLUMN like_count integer NOT NULL DEFAULT 0', 'ADD COLUMN like_count bigint NOT NULL DEFAULT 0', 1),
+            source.replace('ADD COLUMN like_count integer NOT NULL DEFAULT 0', 'ADD COLUMN like_count integer DEFAULT 0', 1),
+            source.replace('ADD COLUMN like_count integer NOT NULL DEFAULT 0', 'ADD COLUMN like_count integer NOT NULL DEFAULT 1', 1),
+            source.replace('CHECK (like_count >= 0);', 'CHECK (like_count > 0);', 1),
+            source.replace("attname = 'profile_picture'", "attname = 'old_profile_picture'", 1),
+            source.replace("'avatar_url|text|f|f'", "'avatar_url|character varying|f|f'", 1),
+            source.replace("'like_count|integer|t|t'", "'like_count|integer|f|t'", 1),
+            source.replace("IS DISTINCT FROM '0' THEN", "IS DISTINCT FROM '1' THEN", 1),
+            source.replace("= 'CHECK (like_count >= 0)') <> 1", "= 'CHECK (like_count > 0)') <> 1", 1),
+        )
+        for mutation in mutations:
+            self.assertNotEqual(mutation, source)
+            with self.subTest(mutation=hashlib.sha256(mutation.encode()).hexdigest()):
+                with self.assertRaises(ValueError):
+                    verify.require_legacy_shape_normalization(mutation, binding)
+
+        binding_mutations = (
+            {**binding, 'historicalProof': True},
+            {
+                **binding,
+                'reconstructionSource': {
+                    **binding['reconstructionSource'],
+                    'sourceSha256': '0' * 64,
+                },
+            },
+            {
+                **binding,
+                'applicationPrerequisites': {
+                    **binding['applicationPrerequisites'],
+                    'outputSha256': '0' * 64,
+                },
+            },
+            {
+                **binding,
+                'operations': [
+                    {**binding['operations'][0], 'precondition': 'accept_any_shape'},
+                    binding['operations'][1],
+                ],
+            },
+        )
+        for mutation in binding_mutations:
+            with self.assertRaisesRegex(ValueError, 'source binding drifted'):
+                verify.require_legacy_shape_normalization(source, mutation)
     def test_ad_banners_historical_member_is_verbatim_and_fail_closed(self):
         source = (BASE / 'G026_RECONSTRUCTION_TRANSITION.v4.sql').read_text(encoding='utf8')
         bundle = json.loads((BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(encoding='utf8'))
@@ -692,6 +798,9 @@ class G026BundleTests(unittest.TestCase):
                 '20260713002400_g014_retention_adapters_receipts.sql',
                 '20260713002500_g014_catalog_contract.sql',
                 '20260713002600_g014_account_deletion_receipt_parity.sql',
+                '20260812000200_local_public_read_policy_convergence.sql',
+                '20260812000300_local_admin_data_boundary_convergence.sql',
+                '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
             ],
         )
         for row in window['files']:
@@ -740,6 +849,65 @@ class G026BundleTests(unittest.TestCase):
                     transformed.index(statements[-1]) + len(statements[-1]),
                     transformed.index(b"NOTIFY pgrst, 'reload schema';\n"),
                 )
+
+    def test_self_contained_terminal_replay_is_exact_and_untransformed(self):
+        bundle = json.loads(
+            (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(
+                encoding='utf8'
+            )
+        )
+        binding = bundle['selfContainedReplay']
+        self.assertEqual(
+            binding,
+            {
+                'canonicalPath': 'backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql',
+                'filename': '20260813085342_current_profile_mutation_boundary.sql',
+                'predecessorFilename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
+                'sourceSha256': '15f4d240222d4b7abdbfd0b27a5c36142a2f61c4cc9d9fdf4638588fee9b29e3',
+                'sourceByteLength': 56880,
+                'transactionClass': 'self_committing',
+            },
+        )
+        verify.require_self_contained_replay(binding)
+        source = (ROOT / binding['canonicalPath']).read_bytes()
+        self.assertEqual(len(source), binding['sourceByteLength'])
+        self.assertEqual(hashlib.sha256(source).hexdigest(), binding['sourceSha256'])
+        generator = (
+            ROOT / 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+        ).read_text(encoding='utf8')
+        self.assertIn(
+            '20260813085342_current_profile_mutation_boundary.sql)',
+            generator,
+        )
+        self.assertIn('self-contained-replay:${migration##*/}', generator)
+        self.assertIn("jq -er '.selfContainedReplay.canonicalPath'", generator)
+        self.assertNotIn(
+            '20260813085342_current_profile_mutation_boundary.sql)',
+            generator[
+                generator.index('20260713002100_g014_privacy_workflows.sql|'):
+                generator.index('20260801000300_g016_onboarding_allowlist_freshness.sql)')
+            ],
+        )
+
+    def test_self_contained_terminal_replay_rejects_binding_and_source_drift(self):
+        bundle = json.loads(
+            (BASE / 'G026_RECONSTRUCTION_BUNDLE.v4.json').read_text(
+                encoding='utf8'
+            )
+        )
+        binding = bundle['selfContainedReplay']
+        for mutation in (
+            {**binding, 'sourceSha256': '0' * 64},
+            {**binding, 'sourceByteLength': binding['sourceByteLength'] + 1},
+            {**binding, 'transactionClass': 'transactional'},
+            {**binding, 'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql'},
+            {**binding, 'canonicalPath': '../outside.sql'},
+            {**binding, 'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql'},
+            {**binding, 'unexpected': True},
+        ):
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(ValueError):
+                    verify.require_self_contained_replay(mutation)
     def test_retention_source_avoids_unsupported_large_regex_repetitions(self):
         source = (
             ROOT

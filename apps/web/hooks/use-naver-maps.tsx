@@ -11,7 +11,8 @@ declare global {
     }
 }
 const LOCAL_NIGHTLY = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1' && process.env.NODE_ENV === 'test';
-const NIGHTLY_SCRIPT_URL = process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL?.trim() || '/__nightly/naver-maps.js';
+const LOCAL_OFFLINE_MAP = LOCAL_NIGHTLY || process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1';
+const LOCAL_SCRIPT_URL = process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL?.trim() || '/__local/naver-maps.js';
 
 interface UseNaverMapsOptions {
     /** true면 즉시 로드, false면 수동 로드 (기본값: false - 지연 로딩) */
@@ -35,8 +36,8 @@ function hasUsableNaverMaps() {
         && maps.Event
     );
 }
-const EFFECTIVE_SCRIPT_URL = LOCAL_NIGHTLY
-    ? NIGHTLY_SCRIPT_URL
+const EFFECTIVE_SCRIPT_URL = LOCAL_OFFLINE_MAP
+    ? LOCAL_SCRIPT_URL
     : `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAPS_CONFIG.clientId}`;
 
 export function useNaverMaps(options: UseNaverMapsOptions = {}) {
@@ -55,7 +56,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
         if (isLoaded || isLoading) return;
 
         // Client ID 검증
-        if (!NAVER_MAPS_CONFIG.clientId && !LOCAL_NIGHTLY) {
+        if (!NAVER_MAPS_CONFIG.clientId && !LOCAL_OFFLINE_MAP) {
             setLoadError(new Error("네이버 지도 Client ID가 설정되지 않았습니다."));
             return;
         }
@@ -68,8 +69,8 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
 
         // 이미 로딩 중인 스크립트가 있는지 확인
         const existingScript = document.querySelector(
-            LOCAL_NIGHTLY
-                ? 'script[data-nightly-naver-maps="true"]'
+            LOCAL_OFFLINE_MAP
+                ? 'script[data-local-naver-maps="true"]'
                 : 'script[src*="oapi.map.naver.com"]'
         );
 
@@ -96,7 +97,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             setIsLoading(true);
             const script = document.createElement("script");
             script.type = "text/javascript";
-            if (LOCAL_NIGHTLY) script.dataset.nightlyNaverMaps = "true";
+            if (LOCAL_OFFLINE_MAP) script.dataset.localNaverMaps = "true";
             script.src = EFFECTIVE_SCRIPT_URL;
             script.async = true;
 
