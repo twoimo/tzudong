@@ -524,7 +524,12 @@ def verify_stack_receipt(payload: dict[str, object], name: str) -> None:
         if not isinstance(service_name, str) or service_name not in STACK_SERVICES:
             fail(f"local stack service name mismatch: {name}")
         service_names.add(service_name)
-        expected_health = "" if service_name in SERVICES_WITHOUT_DOCKER_HEALTHCHECK else "healthy"
+        expected_health = (
+            ""
+            if expected_action == "status"
+            and service_name in SERVICES_WITHOUT_DOCKER_HEALTHCHECK
+            else "healthy"
+        )
         if service.get("state") != "running" or service.get("health") != expected_health:
             fail(f"local stack service readiness mismatch: {name}")
     if service_names != STACK_SERVICES:
