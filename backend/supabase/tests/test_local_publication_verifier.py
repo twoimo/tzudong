@@ -14,6 +14,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 VERIFIER_PATH = (
     REPOSITORY_ROOT / ".github" / "scripts" / "verify-nightly-local-publication.py"
 )
+WORKFLOW_PATH = REPOSITORY_ROOT / ".github" / "workflows" / "nightly-local-regression.yml"
 BUILDER_PATH = (
     REPOSITORY_ROOT / ".github" / "scripts" / "build-nightly-local-publication.py"
 )
@@ -483,6 +484,7 @@ class LocalPublicationVerifierTests(unittest.TestCase):
                 for image in sorted(verifier.EXPECTED_IMAGES)
             ],
             "container_probe": {"status": "passed", "failure_class": "none"},
+            "typegen": dict(verifier.EXPECTED_TYPEGEN_IMAGE),
         }
 
         manifest_digest = verifier.sha256_bytes(verifier.canonical_json(manifest))
@@ -736,6 +738,95 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(SystemExit, "image pull preflight contract mismatch"):
                 verifier.verify(root)
+
+    def test_rejects_typegen_image_or_cli_drift(self) -> None:
+        for field, replacement in (
+            ("cli_version", "2.109.2"),
+            ("image", "supabase/postgres-meta:v0.96.7"),
+            ("pull_reference", "supabase/postgres-meta@sha256:" + "0" * 64),
+            ("repo_digest", "supabase/postgres-meta@sha256:" + "0" * 64),
+            ("image_id", "sha256:" + "0" * 64),
+            ("platform", "linux/arm64"),
+            ("registry", "docker.io"),
+            ("status", "not_attempted"),
+        ):
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                payloads = self._write_bundle(root)
+                payloads["local-image-pull-preflight.json"]["typegen"][field] = replacement
+                (root / "local-image-pull-preflight.json").write_text(
+                    json.dumps(
+                        payloads["local-image-pull-preflight.json"], separators=(",", ":"),
+                    ),
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                    SystemExit, "image pull preflight contract mismatch",
+                ):
+                    verifier.verify(root)
+
+    def test_typegen_preflight_binds_cli_ecr_digest_and_tag_readback(self) -> None:
+        source = WORKFLOW_PATH.read_text(encoding="utf-8")
+        step = source.split("      - name: Pull pinned Compose images\n", 1)[1].split(
+            "      - name: Probe Compose container creation\n", 1,
+        )[0]
+        script = step.split("          python3 - <<'PY'\n", 1)[1].rsplit(
+            "          PY\n", 1,
+        )[0]
+        script = "\n".join(
+            line[10:] if line.startswith("          ") else line
+            for line in script.splitlines()
+        ) + "\n"
+
+        calls: list[tuple[str, ...]] = []
+        expected = verifier.EXPECTED_TYPEGEN_IMAGE
+        readback = "\t".join((
+            expected["image_id"],
+            "linux",
+            "amd64",
+            json.dumps([expected["repo_digest"]], separators=(",", ":")),
+            json.dumps([expected["image"]], separators=(",", ":")),
+        )) + "\n"
+
+        def run(command, **_kwargs):
+            normalized = tuple(str(value) for value in command)
+            calls.append(normalized)
+            if normalized[1:] == ("--version",):
+                return types.SimpleNamespace(returncode=0, stdout="2.109.1\n", stderr="")
+            if normalized[:3] == ("docker", "image", "inspect"):
+                return types.SimpleNamespace(returncode=0, stdout=readback, stderr="")
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "nightly-artifacts").mkdir()
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with mock.patch("subprocess.run", side_effect=run):
+                    exec(compile(script, str(WORKFLOW_PATH), "exec"), {})
+            finally:
+                os.chdir(previous)
+            receipt = json.loads(
+                (root / "nightly-artifacts" / "local-image-pull-preflight.json").read_text(
+                    encoding="utf-8",
+                )
+            )
+
+        verifier.verify_image_preflight(receipt)
+        self.assertIn(
+            (
+                "docker", "pull", "--quiet", "--platform", "linux/amd64",
+                expected["pull_reference"],
+            ),
+            calls,
+        )
+        self.assertIn(
+            ("docker", "image", "tag", expected["pull_reference"], expected["image"]),
+            calls,
+        )
+        inspected = [call[3] for call in calls if call[:3] == ("docker", "image", "inspect")]
+        self.assertEqual(inspected, [expected["pull_reference"], expected["image"]])
 
     def test_rejects_truncated_migration_ledger_count(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
