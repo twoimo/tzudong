@@ -812,7 +812,7 @@ REQUIRED_HOSTED_SCHEMA_TOC = (
  ("ocr_private","postgres"),
  ("provider_budget_private","postgres"),
 )
-TABLE_DATA_OWNER_COUNTS = (("postgres",63),("privacy_workflow_owner",46))
+TABLE_DATA_OWNER_COUNTS = (("postgres",50),("privacy_workflow_owner",61))
 REQUIRED_HOSTED_TABLE_DATA_RELATIONS = frozenset((
  ("ocr_private","ocr_daily_quota_reservations"),
  ("provider_budget_private","admin_provider_budget_policies"),
@@ -821,8 +821,8 @@ REQUIRED_HOSTED_TABLE_DATA_RELATIONS = frozenset((
 ))
 TABLE_DATA_OWNERS = frozenset(owner for owner,_ in TABLE_DATA_OWNER_COUNTS)
 TABLE_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<table_oid>[0-9]+) (?P<object_oid>[0-9]+) TABLE DATA (?P<schema>\S+) (?P<name>\S+) (?P<owner>\S+)$")
-POST_DATA_OWNER_COUNTS = (("postgres",572),("privacy_workflow_owner",350),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
-POST_DATA_OWNER_RUNS = (("supabase_auth_admin",33),("postgres",2),("privacy_workflow_owner",97),("postgres",99),("supabase_storage_admin",9),("postgres",1),("supabase_auth_admin",56),("postgres",2),("privacy_workflow_owner",26),("postgres",156),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",56),("postgres",42),("supabase_storage_admin",5),("supabase_auth_admin",18),("postgres",1),("privacy_workflow_owner",61),("postgres",74),("supabase_storage_admin",5),("supabase_auth_admin",16),("postgres",2),("privacy_workflow_owner",110),("postgres",186),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
+POST_DATA_OWNER_COUNTS = (("postgres",454),("privacy_workflow_owner",474),("supabase_admin",3),("supabase_auth_admin",128),("supabase_storage_admin",45))
+POST_DATA_OWNER_RUNS = (("privacy_workflow_owner",1),("supabase_auth_admin",33),("postgres",2),("privacy_workflow_owner",83),("postgres",3),("privacy_workflow_owner",7),("postgres",1),("privacy_workflow_owner",2),("postgres",24),("privacy_workflow_owner",6),("postgres",1),("privacy_workflow_owner",5),("postgres",47),("supabase_storage_admin",9),("postgres",1),("privacy_workflow_owner",1),("supabase_auth_admin",56),("postgres",2),("privacy_workflow_owner",26),("postgres",2),("privacy_workflow_owner",4),("postgres",2),("privacy_workflow_owner",2),("postgres",25),("privacy_workflow_owner",2),("postgres",19),("privacy_workflow_owner",4),("postgres",40),("privacy_workflow_owner",4),("postgres",1),("privacy_workflow_owner",4),("postgres",47),("supabase_storage_admin",8),("supabase_auth_admin",2),("privacy_workflow_owner",57),("postgres",1),("privacy_workflow_owner",2),("postgres",5),("privacy_workflow_owner",13),("postgres",21),("supabase_storage_admin",5),("supabase_auth_admin",18),("postgres",1),("privacy_workflow_owner",61),("postgres",3),("privacy_workflow_owner",3),("postgres",25),("privacy_workflow_owner",9),("postgres",1),("privacy_workflow_owner",9),("postgres",24),("supabase_storage_admin",5),("privacy_workflow_owner",2),("supabase_auth_admin",16),("postgres",2),("privacy_workflow_owner",113),("postgres",36),("privacy_workflow_owner",2),("postgres",4),("privacy_workflow_owner",1),("postgres",9),("privacy_workflow_owner",1),("postgres",1),("privacy_workflow_owner",1),("postgres",4),("privacy_workflow_owner",8),("postgres",5),("privacy_workflow_owner",2),("postgres",28),("privacy_workflow_owner",1),("postgres",2),("privacy_workflow_owner",3),("postgres",9),("privacy_workflow_owner",23),("postgres",5),("privacy_workflow_owner",1),("postgres",4),("privacy_workflow_owner",7),("postgres",1),("privacy_workflow_owner",4),("postgres",39),("supabase_storage_admin",18),("supabase_auth_admin",3),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",1),("supabase_admin",1),("postgres",4))
 POST_DATA_OWNERS = frozenset(owner for owner,_ in POST_DATA_OWNER_COUNTS)
 POST_DATA_TOC = re.compile(r"^(?P<dump_id>[1-9][0-9]*); (?P<catalog_oid>[0-9]+) (?P<object_oid>[0-9]+) (?P<body>\S(?:.*\S)?) (?P<owner>\S+)$")
 def _post_data_rows(raw):
@@ -843,7 +843,7 @@ def _post_data_rows(raw):
 def _validate_post_data_contract(rows):
  expected_counts=dict(POST_DATA_OWNER_COUNTS)
  if len(expected_counts)!=len(POST_DATA_OWNER_COUNTS) or set(expected_counts)!=POST_DATA_OWNERS or any(type(owner) is not str or type(count) is not int or count<=0 for owner,count in POST_DATA_OWNER_COUNTS): raise RecoveryError("post-data owner count contract invalid")
- if type(POST_DATA_OWNER_RUNS) is not tuple or len(POST_DATA_OWNER_RUNS)!=33 or any(type(run) is not tuple or len(run)!=2 or run[0] not in POST_DATA_OWNERS or type(run[1]) is not int or run[1]<=0 for run in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
+ if type(POST_DATA_OWNER_RUNS) is not tuple or len(POST_DATA_OWNER_RUNS)!=90 or any(type(run) is not tuple or len(run)!=2 or run[0] not in POST_DATA_OWNERS or type(run[1]) is not int or run[1]<=0 for run in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data owner run contract invalid")
  counts={owner:0 for owner in POST_DATA_OWNERS}; observed_runs=[]
  for unused_index,unused_dump_id,owner in rows:
   counts[owner]+=1
@@ -875,28 +875,30 @@ def _post_data_use_lists(raw):
   payload="".join(line if index in active_indices or not line.rstrip("\r\n") or line.startswith(";") else ";"+line for index,line in enumerate(lines)).encode("utf-8")
   result.append((owner,payload)); cursor+=count
  result=tuple(result); _validate_post_data_use_lists(raw,result); return result
-POST_DATA_PRIVACY_TRIGGER_RUN = 13
-POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT = 38
-POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT = "b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d"
+POST_DATA_PRIVACY_TRIGGER_RUNS = ((35,57),(37,2),(39,13))
+POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT = 50
+POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT = "cbc67324f680a0e0d5bd9861e69e313dd86f2bc00d0da462fe1861c5c7de3dae"
 POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR = re.compile(r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$")
 def _validate_post_data_privacy_trigger_contract():
- if POST_DATA_PRIVACY_TRIGGER_RUN!=13 or POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT!=38 or POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT!="b28942637535bd11178674f4821a3f0fad6f49308d43b6e0dc0f7138181f5c4d" or POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.pattern!=r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$": raise RecoveryError("post-data privacy trigger contract invalid")
+ if POST_DATA_PRIVACY_TRIGGER_RUNS!=((35,57),(37,2),(39,13)) or POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT!=50 or POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT!="cbc67324f680a0e0d5bd9861e69e313dd86f2bc00d0da462fe1861c5c7de3dae" or POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.pattern!=r"^TRIGGER (?P<schema>\S+) (?P<table>\S+) (?P<trigger>\S+)$": raise RecoveryError("post-data privacy trigger contract invalid")
 def _post_data_privacy_trigger_relations(runs):
  _validate_post_data_privacy_trigger_contract()
  if type(runs) is not tuple or len(runs)!=len(POST_DATA_OWNER_RUNS) or tuple(owner for owner,unused_payload in runs)!=tuple(owner for owner,unused_count in POST_DATA_OWNER_RUNS): raise RecoveryError("post-data privacy trigger run invalid")
- if POST_DATA_PRIVACY_TRIGGER_RUN!=13 or POST_DATA_OWNER_RUNS[POST_DATA_PRIVACY_TRIGGER_RUN-1]!=(PRIVACY_DATA_ROLE,56): raise RecoveryError("post-data privacy trigger run contract invalid")
- payload=runs[POST_DATA_PRIVACY_TRIGGER_RUN-1][1]
- unused_lines,rows=_post_data_rows(payload)
- if len(rows)!=56 or any(owner!=PRIVACY_DATA_ROLE for unused_index,unused_dump_id,owner in rows): raise RecoveryError("post-data privacy trigger run invalid")
  relations=[]; relation_set=set(); triggers=set()
- for index,unused_dump_id,unused_owner in rows:
-  toc=POST_DATA_TOC.fullmatch(payload.decode("utf-8").splitlines()[index])
-  descriptor=POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.fullmatch(toc.group("body")) if toc is not None else None
-  if descriptor is None: raise RecoveryError("post-data privacy trigger descriptor invalid")
-  relation=(descriptor.group("schema"),descriptor.group("table")); trigger=(*relation,descriptor.group("trigger"))
-  if trigger in triggers: raise RecoveryError("duplicate post-data privacy trigger descriptor")
-  triggers.add(trigger)
-  if relation not in relation_set: relation_set.add(relation); relations.append(relation)
+ for run,row_count in POST_DATA_PRIVACY_TRIGGER_RUNS:
+  if POST_DATA_OWNER_RUNS[run-1]!=(PRIVACY_DATA_ROLE,row_count): raise RecoveryError("post-data privacy trigger run contract invalid")
+  payload=runs[run-1][1]
+  unused_lines,rows=_post_data_rows(payload)
+  if len(rows)!=row_count or any(owner!=PRIVACY_DATA_ROLE for unused_index,unused_dump_id,owner in rows): raise RecoveryError("post-data privacy trigger run invalid")
+  decoded=payload.decode("utf-8").splitlines()
+  for index,unused_dump_id,unused_owner in rows:
+   toc=POST_DATA_TOC.fullmatch(decoded[index])
+   descriptor=POST_DATA_PRIVACY_TRIGGER_DESCRIPTOR.fullmatch(toc.group("body")) if toc is not None else None
+   if descriptor is None: raise RecoveryError("post-data privacy trigger descriptor invalid")
+   relation=(descriptor.group("schema"),descriptor.group("table")); trigger=(*relation,descriptor.group("trigger"))
+   if trigger in triggers: raise RecoveryError("duplicate post-data privacy trigger descriptor")
+   triggers.add(trigger)
+   if relation not in relation_set: relation_set.add(relation); relations.append(relation)
  result=tuple(relations)
  if len(result)!=POST_DATA_PRIVACY_TRIGGER_RELATION_COUNT or hashlib.sha256(canonical_bytes([list(relation) for relation in result])).hexdigest()!=POST_DATA_PRIVACY_TRIGGER_RELATION_ROOT: raise RecoveryError("post-data privacy trigger relation inventory drift")
  return result
@@ -980,11 +982,11 @@ def _owned_restore_use_list(path,payload):
    _unlink_owned_output(fd,path,identity)
    os.close(fd)
   raise
-POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY = (25,"supabase_storage_admin","auth","supabase_admin")
+POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY = (82,"supabase_storage_admin","auth","supabase_admin")
 def _validate_post_data_storage_auth_schema_contract():
- if type(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY) is not tuple or POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY!=(25,"supabase_storage_admin","auth","supabase_admin"): raise RecoveryError("post-data storage auth schema authority contract invalid")
+ if type(POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY) is not tuple or POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY!=(82,"supabase_storage_admin","auth","supabase_admin"): raise RecoveryError("post-data storage auth schema authority contract invalid")
  run,role,unused_schema,unused_owner=POST_DATA_STORAGE_AUTH_SCHEMA_AUTHORITY
- if POST_DATA_OWNER_RUNS[run-1][0]!=role: raise RecoveryError("post-data storage auth schema authority contract invalid")
+ if POST_DATA_OWNER_RUNS[run-1]!=(role,18): raise RecoveryError("post-data storage auth schema authority contract invalid")
 def _restore_post_data_owner_run(restore,plain,env,index,owner,path):
  _validate_post_data_storage_auth_schema_contract()
  if type(index) is not int or index<1 or index>len(POST_DATA_OWNER_RUNS) or owner!=POST_DATA_OWNER_RUNS[index-1][0]: raise RecoveryError("post-data owner run contract invalid")
