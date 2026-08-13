@@ -529,16 +529,6 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         return;
       }
 
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('nickname')
-        .eq('nickname', username.trim())
-        .maybeSingle();
-      if (existingProfile) {
-        toast.error("이미 사용 중인 닉네임입니다. 다른 닉네임을 선택해주세요.");
-        return;
-      }
-
       const response = await fetch("/api/privacy/onboarding", {
         method: "POST",
         credentials: "same-origin",

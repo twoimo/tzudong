@@ -5,6 +5,9 @@ import {
 } from '@/lib/admin/provider-readiness';
 import type {
   AdminGithubActionsStatus,
+  AdminNightlyRegressionStatus,
+  AdminNightlyWorkflowRole,
+  AdminNightlyWorkflowStatus,
   AdminProviderReadiness,
   AdminSystemIntegrationStatus,
   AdminSystemFrameCaptionStatus,
@@ -18,6 +21,10 @@ import type {
 const DEFAULT_TIMEOUT_MS = 2500;
 const DEFAULT_CACHE_TTL_MS = 30_000;
 const DEFAULT_GITHUB_WORKFLOW = 'daily-crawler.yml';
+const LOCAL_NIGHTLY_WORKFLOW = 'nightly-local-regression.yml';
+const HOSTED_NIGHTLY_WORKFLOW = 'nightly-regression.yml';
+const NIGHTLY_HISTORY_LIMIT = 25;
+const MAX_GITHUB_STATUS_RESPONSE_BYTES = 256 * 1024;
 
 type CachedStatusEntry = {
   expiresAt: number;
@@ -51,6 +58,10 @@ function pickFirstEnvValue(env: NodeJS.ProcessEnv, keys: string[]): string | und
     }
   }
   return undefined;
+}
+
+function isStrictLocalRuntime(env: NodeJS.ProcessEnv): boolean {
+  return env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1';
 }
 
 export function sanitizeEndpointForDisplay(raw: string | undefined): string | undefined {
@@ -237,6 +248,15 @@ const ACTIONS_BUDGET_POSTURE_SNIPPET = [
   'cat backend/log/cron/actions-budget-posture.json',
 ].join('\n');
 
+const NIGHTLY_REGRESSION_STATUS_SNIPPET = [
+  '# 나이틀리 회귀 실행 이력 점검 (read-only)',
+  'REPOSITORY="${GITHUB_REPOSITORY:-twoimo/tzudong}"',
+  'gh run list --repo "$REPOSITORY" --workflow nightly-local-regression.yml --limit 25 \\',
+  '  --json databaseId,status,conclusion,event,createdAt,updatedAt,url',
+  'gh run list --repo "$REPOSITORY" --workflow nightly-regression.yml --limit 25 \\',
+  '  --json databaseId,status,conclusion,event,createdAt,updatedAt,url',
+].join('\n');
+
 const GEMINI_KEY_CHECK_SNIPPET = [
   '# Gemini 서버 키 점검 (택1)',
   'GEMINI_API_KEY="${GEMINI_API_KEY:-<GEMINI_KEY>}"',
@@ -354,10 +374,11 @@ async function resolveGithubActionsStatus(
 
   const repository = pickFirstEnvValue(env, ['INSIGHT_GITHUB_REPOSITORY', 'GITHUB_REPOSITORY']);
   const token = pickFirstEnvValue(env, ['INSIGHT_GITHUB_TOKEN', 'GITHUB_TOKEN']);
+  const allowPublicRead = isStrictLocalRuntime(env);
   const workflow = pickFirstEnvValue(env, ['INSIGHT_GITHUB_WORKFLOW']) || DEFAULT_GITHUB_WORKFLOW;
   const branch = pickFirstEnvValue(env, ['INSIGHT_GITHUB_BRANCH']);
 
-  if (!repository || !token) {
+  if (!repository || (!token && !allowPublicRead)) {
     return {
       enabled: true,
       configured: false,
@@ -375,16 +396,7 @@ async function resolveGithubActionsStatus(
   const endpoint = `https://api.github.com/repos/${encodeURIComponent(repository).replace('%2F', '/')}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
 
   try {
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      signal: timeout.signal,
-      cache: 'no-store',
-    });
+    const response = await fetchGithubReadOnly(endpoint, token, timeout.signal, allowPublicRead);
 
     if (!response.ok) {
       return {
@@ -393,43 +405,471 @@ async function resolveGithubActionsStatus(
         reachable: false,
         workflow,
         ...(branch ? { branch } : {}),
-        detail: `HTTP ${response.status}`,
+        detail: `HTTP_${response.status}`,
         checkedAt: asOf,
       };
     }
 
-    const payload = await response.json() as { workflow_runs?: Array<Record<string, unknown>> };
-    const latest = Array.isArray(payload.workflow_runs) ? payload.workflow_runs[0] : undefined;
-    const latestRunUrl = typeof latest?.html_url === 'string' ? sanitizeEndpointForDisplay(latest.html_url) : undefined;
+    const payload = await readBoundedGithubJson(response) as { workflow_runs?: unknown };
+    if (
+      !payload
+      || typeof payload !== 'object'
+      || !Array.isArray(payload.workflow_runs)
+      || payload.workflow_runs.length > 1
+    ) {
+      return {
+        enabled: true,
+        configured: true,
+        reachable: false,
+        workflow,
+        ...(branch ? { branch } : {}),
+        detail: 'response_shape_invalid',
+        checkedAt: asOf,
+      };
+    }
+    const latest = payload.workflow_runs.length === 1
+      ? normalizeNightlyRun(payload.workflow_runs[0])
+      : null;
+    const rawLatest = payload.workflow_runs[0] as Record<string, unknown> | undefined;
+    const latestRunAttempt = rawLatest?.run_attempt;
+    if (
+      (payload.workflow_runs.length === 1 && latest === null)
+      || (
+        latestRunAttempt !== undefined
+        && (!Number.isSafeInteger(latestRunAttempt) || Number(latestRunAttempt) < 1)
+      )
+    ) {
+      return {
+        enabled: true,
+        configured: true,
+        reachable: false,
+        workflow,
+        ...(branch ? { branch } : {}),
+        detail: 'response_shape_invalid',
+        checkedAt: asOf,
+      };
+    }
     return {
       enabled: true,
       configured: true,
       reachable: true,
       workflow,
       ...(branch ? { branch } : {}),
-      ...(typeof latest?.id === 'number' ? { latestRunId: latest.id } : {}),
-      ...(typeof latest?.status === 'string' ? { latestRunStatus: sanitizeTextForDisplay(latest.status) } : {}),
-      ...(typeof latest?.conclusion === 'string' || latest?.conclusion === null ? { latestRunConclusion: latest.conclusion as string | null } : {}),
-      ...(typeof latest?.event === 'string' ? { latestRunEvent: sanitizeTextForDisplay(latest.event) } : {}),
-      ...(typeof latest?.run_attempt === 'number' ? { latestRunAttempt: latest.run_attempt } : {}),
-      ...(latestRunUrl ? { latestRunUrl } : {}),
-      ...(typeof latest?.created_at === 'string' ? { latestRunCreatedAt: latest.created_at } : {}),
-      ...(typeof latest?.updated_at === 'string' ? { latestRunUpdatedAt: latest.updated_at } : {}),
+      ...(latest ? { latestRunId: latest.id } : {}),
+      ...(latest ? { latestRunStatus: latest.status } : {}),
+      ...(latest ? { latestRunConclusion: latest.conclusion } : {}),
+      ...(latest ? { latestRunEvent: latest.event } : {}),
+      ...(typeof latestRunAttempt === 'number' ? { latestRunAttempt } : {}),
+      ...(latest ? { latestRunUrl: latest.htmlUrl } : {}),
+      ...(latest ? { latestRunCreatedAt: latest.createdAt } : {}),
+      ...(latest?.updatedAt ? { latestRunUpdatedAt: latest.updatedAt } : {}),
       checkedAt: asOf,
     };
-  } catch (error) {
+  } catch {
     return {
       enabled: true,
       configured: true,
       reachable: false,
       workflow,
       ...(branch ? { branch } : {}),
-      detail: error instanceof Error ? sanitizeTextForDisplay(error.message) : 'unknown_error',
+      detail: 'REQUEST_FAILED',
       checkedAt: asOf,
     };
   } finally {
     timeout.clear();
   }
+}
+
+const GITHUB_RUN_STATUSES = new Set([
+  'completed',
+  'in_progress',
+  'pending',
+  'queued',
+  'requested',
+  'waiting',
+]);
+const GITHUB_RUN_CONCLUSIONS = new Set([
+  'action_required',
+  'cancelled',
+  'failure',
+  'neutral',
+  'skipped',
+  'stale',
+  'startup_failure',
+  'success',
+  'timed_out',
+]);
+const GITHUB_RUN_EVENTS = new Set([
+  'pull_request',
+  'push',
+  'repository_dispatch',
+  'schedule',
+  'workflow_dispatch',
+  'workflow_run',
+]);
+
+async function fetchGithubReadOnly(
+  endpoint: string,
+  token: string | undefined,
+  signal: AbortSignal,
+  allowPublicRead: boolean,
+): Promise<Response> {
+  const request = (authorizationToken?: string) => fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      ...(authorizationToken ? { Authorization: `Bearer ${authorizationToken}` } : {}),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    signal,
+    cache: 'no-store',
+  });
+  const response = await request(token);
+  if (
+    !allowPublicRead
+    || !token
+    || (response.status !== 401 && response.status !== 403)
+  ) {
+    return response;
+  }
+  await response.body?.cancel().catch(() => undefined);
+  return request();
+}
+
+function normalizeGithubRunText(
+  raw: unknown,
+  allowed: ReadonlySet<string>,
+): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const normalized = raw.trim().toLowerCase();
+  return allowed.has(normalized) ? normalized : undefined;
+}
+
+function normalizeGithubTimestamp(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.length > 64) return undefined;
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : undefined;
+}
+
+function normalizeGithubRunId(raw: unknown): number | undefined {
+  return typeof raw === 'number' && Number.isSafeInteger(raw) && raw > 0
+    ? raw
+    : undefined;
+}
+
+function normalizeGithubRunUrl(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.length > 512) return undefined;
+  const sanitized = sanitizeEndpointForDisplay(raw);
+  if (!sanitized) return undefined;
+  try {
+    const url = new URL(sanitized);
+    if (url.protocol !== 'https:' || url.hostname !== 'github.com') return undefined;
+    if (!url.pathname.includes('/actions/runs/')) return undefined;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+async function readBoundedGithubJson(response: Response): Promise<unknown> {
+  const contentLength = response.headers.get('content-length');
+  if (
+    contentLength !== null
+    && (!/^\d+$/.test(contentLength) || Number(contentLength) > MAX_GITHUB_STATUS_RESPONSE_BYTES)
+  ) {
+    throw new Error('github_response_size');
+  }
+  if (!response.body) throw new Error('github_response_missing');
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_GITHUB_STATUS_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new Error('github_response_size');
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown;
+}
+
+type NormalizedNightlyRun = {
+  id: number;
+  status: string;
+  conclusion: string | null;
+  event: string;
+  htmlUrl: string;
+  createdAt: string;
+  updatedAt?: string;
+};
+
+function normalizeNightlyRun(raw: unknown): NormalizedNightlyRun | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const run = raw as Record<string, unknown>;
+  const id = normalizeGithubRunId(run.id);
+  const status = normalizeGithubRunText(run.status, GITHUB_RUN_STATUSES);
+  const conclusion = run.conclusion === null
+    ? null
+    : normalizeGithubRunText(run.conclusion, GITHUB_RUN_CONCLUSIONS);
+  const event = normalizeGithubRunText(run.event, GITHUB_RUN_EVENTS);
+  const htmlUrl = normalizeGithubRunUrl(run.html_url);
+  const createdAt = normalizeGithubTimestamp(run.created_at);
+  const updatedAt = run.updated_at === undefined
+    ? undefined
+    : normalizeGithubTimestamp(run.updated_at);
+  if (
+    !id
+    || !status
+    || conclusion === undefined
+    || (status === 'completed' && conclusion === null)
+    || !event
+    || !htmlUrl
+    || !createdAt
+    || (run.updated_at !== undefined && !updatedAt)
+  ) {
+    return null;
+  }
+  return {
+    id,
+    status,
+    conclusion,
+    event,
+    htmlUrl,
+    createdAt,
+    ...(updatedAt ? { updatedAt } : {}),
+  };
+}
+
+function makeUnavailableNightlyWorkflowStatus(
+  asOf: string,
+  role: AdminNightlyWorkflowRole,
+  workflow: string,
+  branch: string | undefined,
+  detail: string,
+): AdminNightlyWorkflowStatus {
+  return {
+    role,
+    workflow,
+    ...(branch ? { branch } : {}),
+    reachable: false,
+    consecutiveFailures: 0,
+    examinedRuns: 0,
+    historyWindowTruncated: false,
+    detail,
+    checkedAt: asOf,
+  };
+}
+
+async function resolveNightlyWorkflowStatus(
+  repository: string,
+  token: string | undefined,
+  allowPublicRead: boolean,
+  branch: string | undefined,
+  role: AdminNightlyWorkflowRole,
+  workflow: string,
+  asOf: string,
+  timeoutMs: number,
+): Promise<AdminNightlyWorkflowStatus> {
+  const timeout = withTimeoutSignal(timeoutMs);
+  const params = new URLSearchParams({ per_page: String(NIGHTLY_HISTORY_LIMIT) });
+  if (branch) params.set('branch', branch);
+  const encodedRepository = encodeURIComponent(repository).replace('%2F', '/');
+  const endpoint = `https://api.github.com/repos/${encodedRepository}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
+
+  try {
+    const response = await fetchGithubReadOnly(
+      endpoint,
+      token,
+      timeout.signal,
+      allowPublicRead,
+    );
+
+    if (!response.ok) {
+      return makeUnavailableNightlyWorkflowStatus(
+        asOf,
+        role,
+        workflow,
+        branch,
+        `HTTP_${response.status}`,
+      );
+    }
+
+    const payload = await readBoundedGithubJson(response) as {
+      total_count?: unknown;
+      workflow_runs?: unknown;
+    };
+    if (
+      !payload
+      || typeof payload !== 'object'
+      || !Array.isArray(payload.workflow_runs)
+      || payload.workflow_runs.length > NIGHTLY_HISTORY_LIMIT
+      || typeof payload.total_count !== 'number'
+      || !Number.isSafeInteger(payload.total_count)
+      || payload.total_count < payload.workflow_runs.length
+    ) {
+      return makeUnavailableNightlyWorkflowStatus(
+        asOf,
+        role,
+        workflow,
+        branch,
+        'response_shape_invalid',
+      );
+    }
+
+    const runs = payload.workflow_runs.map(normalizeNightlyRun);
+    if (runs.some((run) => run === null)) {
+      return makeUnavailableNightlyWorkflowStatus(
+        asOf,
+        role,
+        workflow,
+        branch,
+        'response_shape_invalid',
+      );
+    }
+    const normalizedRuns = runs as NormalizedNightlyRun[];
+    const latest = normalizedRuns[0];
+    const lastSuccess = normalizedRuns.find((run) => run.conclusion === 'success');
+    let consecutiveFailures = 0;
+    for (const run of normalizedRuns) {
+      if (run.status !== 'completed') continue;
+      if (run.conclusion === 'success') break;
+      consecutiveFailures += 1;
+    }
+
+    const totalCount = payload.total_count;
+
+    return {
+      role,
+      workflow,
+      ...(branch ? { branch } : {}),
+      reachable: true,
+      ...(latest ? { latestRunId: latest.id } : {}),
+      ...(latest ? { latestRunStatus: latest.status } : {}),
+      ...(latest ? { latestRunConclusion: latest.conclusion } : {}),
+      ...(latest ? { latestRunEvent: latest.event } : {}),
+      ...(latest ? { latestRunUrl: latest.htmlUrl } : {}),
+      ...(latest ? { latestRunCreatedAt: latest.createdAt } : {}),
+      ...(latest?.updatedAt ? { latestRunUpdatedAt: latest.updatedAt } : {}),
+      ...(lastSuccess ? { lastSuccessfulRunId: lastSuccess.id } : {}),
+      ...(lastSuccess ? { lastSuccessfulRunUrl: lastSuccess.htmlUrl } : {}),
+      ...(lastSuccess ? { lastSuccessfulRunCreatedAt: lastSuccess.createdAt } : {}),
+      consecutiveFailures,
+      examinedRuns: normalizedRuns.length,
+      historyWindowTruncated: totalCount > normalizedRuns.length,
+      ...(normalizedRuns.length === 0 ? { detail: 'no_runs' } : {}),
+      checkedAt: asOf,
+    };
+  } catch {
+    return makeUnavailableNightlyWorkflowStatus(
+      asOf,
+      role,
+      workflow,
+      branch,
+      timeout.signal.aborted ? 'TIMEOUT' : 'REQUEST_FAILED',
+    );
+  } finally {
+    timeout.clear();
+  }
+}
+
+async function resolveNightlyRegressionStatus(
+  env: NodeJS.ProcessEnv,
+  asOf: string,
+  timeoutMs: number,
+): Promise<AdminNightlyRegressionStatus> {
+  const enabled = toBooleanFlag(
+    env.INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED,
+    toBooleanFlag(env.INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED, false),
+  );
+  const repository = pickFirstEnvValue(env, ['INSIGHT_GITHUB_REPOSITORY', 'GITHUB_REPOSITORY']);
+  const token = pickFirstEnvValue(env, ['INSIGHT_GITHUB_TOKEN', 'GITHUB_TOKEN']);
+  const allowPublicRead = isStrictLocalRuntime(env);
+  const branch = sanitizeTextForDisplay(
+    pickFirstEnvValue(env, ['INSIGHT_GITHUB_BRANCH']),
+    80,
+  ) || 'main';
+  const missingDetail = !enabled
+    ? 'disabled'
+    : !repository
+      ? 'repository_missing'
+      : 'token_missing';
+
+  if (!enabled || !repository || (!token && !allowPublicRead)) {
+    return {
+      enabled,
+      configured: false,
+      reachable: false,
+      repositoryConfigured: Boolean(repository),
+      tokenConfigured: Boolean(token),
+      localCanonical: makeUnavailableNightlyWorkflowStatus(
+        asOf,
+        'canonical-local',
+        LOCAL_NIGHTLY_WORKFLOW,
+        branch,
+        missingDetail,
+      ),
+      hostedManualFallback: makeUnavailableNightlyWorkflowStatus(
+        asOf,
+        'hosted-manual-fallback',
+        HOSTED_NIGHTLY_WORKFLOW,
+        branch,
+        missingDetail,
+      ),
+      detail: missingDetail,
+      checkedAt: asOf,
+    };
+  }
+
+  const [localCanonical, hostedManualFallback] = await Promise.all([
+    resolveNightlyWorkflowStatus(
+      repository,
+      token,
+      allowPublicRead,
+      branch,
+      'canonical-local',
+      LOCAL_NIGHTLY_WORKFLOW,
+      asOf,
+      timeoutMs,
+    ),
+    resolveNightlyWorkflowStatus(
+      repository,
+      token,
+      allowPublicRead,
+      branch,
+      'hosted-manual-fallback',
+      HOSTED_NIGHTLY_WORKFLOW,
+      asOf,
+      timeoutMs,
+    ),
+  ]);
+  const reachable = localCanonical.reachable && hostedManualFallback.reachable;
+
+  return {
+    enabled: true,
+    configured: true,
+    reachable,
+    repositoryConfigured: true,
+    tokenConfigured: Boolean(token),
+    localCanonical,
+    hostedManualFallback,
+    ...(!reachable ? { detail: 'workflow_status_unreachable' } : {}),
+    checkedAt: asOf,
+  };
 }
 
 function makeDisabledSupabaseCounterStatus(asOf: string, enabled: boolean, detail?: string): AdminSupabaseCounterStatus {
@@ -507,18 +947,18 @@ async function resolveSupabaseCounterStatus(
     return {
       enabled: true,
       configured: true,
-      reachable: restaurantsTotal !== undefined || evaluatedRestaurants !== undefined,
+      reachable: restaurantsTotal !== undefined && evaluatedRestaurants !== undefined,
       ...(restaurantsTotal !== undefined ? { restaurantsTotal } : {}),
       ...(evaluatedRestaurants !== undefined ? { evaluatedRestaurants } : {}),
-      ...(restaurantsTotal === undefined && evaluatedRestaurants === undefined ? { detail: 'count_unavailable' } : {}),
+      ...(restaurantsTotal === undefined || evaluatedRestaurants === undefined ? { detail: 'count_incomplete' } : {}),
       checkedAt: asOf,
     };
-  } catch (error) {
+  } catch {
     return {
       enabled: true,
       configured: true,
       reachable: false,
-      detail: error instanceof Error ? sanitizeTextForDisplay(error.message) : 'unknown_error',
+      detail: 'count_request_failed',
       checkedAt: asOf,
     };
   }
@@ -631,7 +1071,16 @@ async function resolveThumbnailDurableReleaseReadiness(
 }
 
 export function buildAdminOpsChecklist(
-  status: Pick<AdminSystemStatusResponse, 'keys' | 'storyboardAgent' | 'bgeEmbedding' | 'frameCaption' | 'providerReadiness'>,
+  status: Pick<
+    AdminSystemStatusResponse,
+    | 'keys'
+    | 'storyboardAgent'
+    | 'bgeEmbedding'
+    | 'frameCaption'
+    | 'providerReadiness'
+    | 'githubActions'
+    | 'nightlyRegression'
+  >,
   runDaily?: AdminSystemRunDailyStatus,
 ): AdminSystemStatusChecklistItem[] {
   const checklist: AdminSystemStatusChecklistItem[] = [];
@@ -851,7 +1300,7 @@ export function buildAdminOpsChecklist(
     });
   }
 
-  const githubActions = (status as AdminSystemStatusResponse).githubActions;
+  const githubActions = status.githubActions;
   if (
     githubActions?.enabled
     && githubActions.configured
@@ -873,6 +1322,109 @@ export function buildAdminOpsChecklist(
       command: ACTIONS_BUDGET_POSTURE_SNIPPET,
       commandSnippet: ACTIONS_BUDGET_POSTURE_SNIPPET,
       source: 'run_daily',
+    });
+  }
+
+  const nightlyRegression = status.nightlyRegression;
+  const localNightly = nightlyRegression?.localCanonical;
+  const hostedFallback = nightlyRegression?.hostedManualFallback;
+  if (nightlyRegression && !nightlyRegression.enabled) {
+    checklist.push({
+      id: 'nightly-regression-status-disabled',
+      title: '나이틀리 회귀 운영 상태 조회 비활성화',
+      severity: 'high',
+      category: 'integration',
+      action: 'INSIGHT_NIGHTLY_REGRESSION_STATUS_ENABLED를 활성화하고 read-only GitHub 토큰과 저장소를 설정하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  } else if (nightlyRegression && !nightlyRegression.configured) {
+    checklist.push({
+      id: 'nightly-regression-status-unconfigured',
+      title: '나이틀리 회귀 운영 상태 조회 미설정',
+      severity: 'high',
+      category: 'integration',
+      action: '나이틀리 상태 조회용 저장소와 read-only GitHub 토큰 설정을 확인하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  } else if (localNightly && !localNightly.reachable) {
+    checklist.push({
+      id: 'nightly-local-status-unreachable',
+      title: '로컬 나이틀리 실행 이력 조회 실패',
+      severity: 'critical',
+      category: 'integration',
+      action: 'canonical local nightly workflow의 최근 실행 이력을 읽지 못했습니다. 워크플로 존재 여부와 read-only 토큰 권한을 확인하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  } else if (localNightly && !localNightly.latestRunId) {
+    checklist.push({
+      id: 'nightly-local-run-missing',
+      title: '로컬 나이틀리 실행 증거 없음',
+      severity: 'critical',
+      category: 'integration',
+      action: 'canonical local nightly workflow의 실행 증거가 없습니다. 스케줄 트리거와 최초 실행 완료 여부를 확인하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  } else if (
+    localNightly
+    && (
+      localNightly.consecutiveFailures > 0
+      || (
+        localNightly.latestRunStatus === 'completed'
+        && localNightly.latestRunConclusion !== 'success'
+      )
+    )
+  ) {
+    checklist.push({
+      id: 'nightly-local-regression-failing',
+      title: '로컬 나이틀리 회귀 실패',
+      severity: 'critical',
+      category: 'integration',
+      action: `canonical local nightly가 연속 ${localNightly.consecutiveFailures}회 실패 상태입니다. 최신 실행 결론과 실패 아티팩트를 확인하세요.`,
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  }
+
+  if (
+    nightlyRegression?.enabled
+    && nightlyRegression.configured
+    && hostedFallback
+    && !hostedFallback.reachable
+  ) {
+    checklist.push({
+      id: 'nightly-hosted-fallback-unreachable',
+      title: '호스티드 수동 나이틀리 조회 실패',
+      severity: 'medium',
+      category: 'integration',
+      action: 'hosted manual fallback workflow의 실행 이력을 읽지 못했습니다. 수동 fallback 경로와 토큰 권한을 확인하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
+    });
+  } else if (
+    nightlyRegression?.enabled
+    && nightlyRegression.configured
+    && hostedFallback?.latestRunStatus === 'completed'
+    && hostedFallback.latestRunConclusion !== 'success'
+  ) {
+    checklist.push({
+      id: 'nightly-hosted-fallback-failing',
+      title: '호스티드 수동 나이틀리 최신 실행 실패',
+      severity: 'medium',
+      category: 'integration',
+      action: 'hosted manual fallback의 최신 실행이 성공하지 않았습니다. fallback이 필요해지기 전에 복구 여부를 확인하세요.',
+      command: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      commandSnippet: NIGHTLY_REGRESSION_STATUS_SNIPPET,
+      source: 'nightly-regression',
     });
   }
 
@@ -1084,8 +1636,14 @@ export async function getAdminSystemStatus(
       finalStatus: runDailyManifestInfo.finalStatus ?? runDailyLogTailInfo.finalStatus,
       detail: runDailyLogTailInfo.detail ?? runDailyManifestInfo.detail,
     };
-  const [githubActions, supabaseCounters, thumbnailDurableReleaseReadiness] = await Promise.all([
+  const [
+    githubActions,
+    nightlyRegression,
+    supabaseCounters,
+    thumbnailDurableReleaseReadiness,
+  ] = await Promise.all([
     resolveGithubActionsStatus(env, asOf, timeoutMs),
+    resolveNightlyRegressionStatus(env, asOf, timeoutMs),
     resolveSupabaseCounterStatus(env, asOf, timeoutMs),
     resolveThumbnailDurableReleaseReadiness(env, asOf),
   ]);
@@ -1123,6 +1681,7 @@ export async function getAdminSystemStatus(
       checkedAt: asOf,
     },
     githubActions,
+    nightlyRegression,
     supabaseCounters,
     providerReadiness: {
       'naver-directions': naverDirectionsReadiness,

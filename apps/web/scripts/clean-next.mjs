@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
+import { constants as osConstants } from 'node:os';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import {
@@ -12,13 +13,23 @@ import {
 const projectRoot = process.cwd();
 const repoRoot = path.resolve(projectRoot, '..', '..');
 const repoEnvLocalPath = path.join(repoRoot, '.env.local');
-const nextDir = path.join(projectRoot, '.next');
-const stalePrefix = '.next-stale-';
+const configuredNextDistDir = process.env.TZUDONG_NEXT_DIST_DIR?.trim();
+if (
+    configuredNextDistDir
+    && !/^\.next-[a-z0-9](?:[a-z0-9-]{0,47})$/.test(configuredNextDistDir)
+) {
+    process.stderr.write('[clean-next] error=InvalidDistDir\n');
+    process.exit(1);
+}
+const nextDirectoryName = configuredNextDistDir || '.next';
+const nextDir = path.join(projectRoot, nextDirectoryName);
+const stalePrefix = `${nextDirectoryName}-stale-`;
 const verbose = ['1', 'true', 'yes', 'on'].includes((process.env.CLEAN_NEXT_VERBOSE ?? '').toLowerCase());
 const nightlyLocalEnvOnly = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
 const nightlyEnvFileOnly = process.env.NIGHTLY_ENV_FILE_ONLY === '1';
 const nightlyMode = process.env.NIGHTLY_MODE?.trim();
 const nightlyRun = nightlyLocalEnvOnly || nightlyEnvFileOnly || nightlyMode === 'local' || nightlyMode === 'hosted';
+const strictLocalDev = process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1';
 const warnedStaleEntries = new Set();
 const rawArgs = process.argv.slice(2);
 const separatorIndex = rawArgs.indexOf('--');
@@ -165,7 +176,7 @@ if (nightlyRun) {
 }
 
 
-if (!nightlyRun && fs.existsSync(repoEnvLocalPath)) {
+if (!nightlyRun && !strictLocalDev && fs.existsSync(repoEnvLocalPath)) {
     loadEnv({ path: repoEnvLocalPath, override: false });
 }
 
@@ -189,7 +200,7 @@ if (!skipClean) {
         }
 
         try {
-            const fallbackName = `.next-stale-${Date.now()}`;
+            const fallbackName = `${stalePrefix}${Date.now()}`;
             const fallbackPath = path.join(projectRoot, fallbackName);
             fs.renameSync(nextDir, fallbackPath);
             tryRemove(fallbackPath);
@@ -217,8 +228,10 @@ if (commandArgs.length > 0) {
             childEnv.NODE_ENV = 'test';
         }
     }
-    if (nightlyRun) {
+    if (nightlyRun || strictLocalDev) {
         childEnv.__NEXT_PROCESSED_ENV = 'true';
+    }
+    if (nightlyRun) {
         childEnv.NIGHTLY_ENV_FILE_ONLY = '1';
     }
     const child = spawn(command, args, {
@@ -234,12 +247,26 @@ if (commandArgs.length > 0) {
         process.exit(1);
     });
 
-    child.on('exit', (code, signal) => {
-        if (signal) {
-            process.kill(process.pid, signal);
-            return;
-        }
+    let stoppingSignal = null;
+    let stopTimer;
+    const signalExitCode = (signal) => 128 + (osConstants.signals[signal] ?? 0);
 
-        process.exit(code ?? 0);
+    child.on('exit', (code, signal) => {
+        if (stopTimer) clearTimeout(stopTimer);
+        const effectiveSignal = stoppingSignal ?? signal;
+        process.exit(effectiveSignal ? signalExitCode(effectiveSignal) : (code ?? 0));
     });
+
+    for (const signal of ['SIGINT', 'SIGTERM']) {
+        process.on(signal, () => {
+            if (stoppingSignal) return;
+            stoppingSignal = signal;
+            child.kill(signal);
+            stopTimer = setTimeout(() => {
+                if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+                process.exit(signalExitCode(signal));
+            }, 3_000);
+            stopTimer.unref();
+        });
+    }
 }

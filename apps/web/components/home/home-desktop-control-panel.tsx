@@ -33,6 +33,7 @@ import CategoryFilter from "@/components/filters/CategoryFilter";
 import { OVERSEAS_REGION_LIST } from "@/constants/overseas-regions";
 import type { FilterState } from "@/components/filters/filter-state";
 import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-contextual-restaurants";
+import { isPublicRestrictedMode } from "@/lib/site-config";
 import type { Announcement } from "@/types/announcement";
 import type { Region, Restaurant } from "@/types/restaurant";
 import { useOverseasCountryCounts } from "@/components/home/use-overseas-country-counts";
@@ -828,7 +829,7 @@ export default function HomeDesktopControlPanel({
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const [activeLeftPanelView, setActiveLeftPanelView] =
     useState<DesktopLeftPanelView>(() =>
-      initialRoutePanel === "announcement" ? "announcement" : "map",
+      initialRoutePanel === "announcement" && !isPublicRestrictedMode ? "announcement" : "map",
     );
   const [activeProfileUserId, setActiveProfileUserId] = useState<string | null>(
     user?.id ?? null,
@@ -900,7 +901,7 @@ export default function HomeDesktopControlPanel({
     );
   const DeferredAnnouncementPanel =
     useDeferredComponent<AnnouncementPanelComponentProps>(
-      activeLeftPanelView === "announcement",
+      activeLeftPanelView === "announcement" && !isPublicRestrictedMode,
       loadAnnouncementPanel,
     );
   const DeferredAdminReviewPanel =
@@ -923,6 +924,7 @@ export default function HomeDesktopControlPanel({
   }, [activeProfileUserId]);
 
   const revealAnnouncementLeftPanel = useCallback(() => {
+    if (isPublicRestrictedMode) return;
     flushSync(() => {
       setActiveLeftPanelView("announcement");
       setIsDesktopSearchActive(false);
@@ -1024,6 +1026,12 @@ export default function HomeDesktopControlPanel({
 
   useEffect(() => {
     const panelParam = searchParams.get("panel");
+    if (isPublicRestrictedMode) {
+      if (activeRightPanel === null) {
+        setActiveLeftPanelView("map");
+      }
+      return;
+    }
     if (!isDesktopLeftPanelRouteView(panelParam)) {
       if (activeRightPanel === null) {
         setActiveLeftPanelView("map");
@@ -1073,6 +1081,7 @@ export default function HomeDesktopControlPanel({
 
   useEffect(() => {
     if (activeRightPanel === "announcement") {
+    if (isPublicRestrictedMode) return;
       setActiveLeftPanelView("announcement");
       setIsDesktopSearchActive(false);
       revealDesktopLeftPanel();
@@ -1888,9 +1897,10 @@ export default function HomeDesktopControlPanel({
                   setActiveLeftPanelView("profile");
                   router.push("/?panel=profile", { scroll: false });
                 }}
-                onOpenAnnouncements={() =>
-                  router.push("/?panel=announcement", { scroll: false })
-                }
+                onOpenAnnouncements={() => {
+                  if (isPublicRestrictedMode) return;
+                  router.push("/?panel=announcement", { scroll: false });
+                }}
               />
             ) : activeLeftPanelView === "settings" && user ? (
               <DesktopMapSettingsPanel
@@ -1899,7 +1909,7 @@ export default function HomeDesktopControlPanel({
                 onClose={handleReturnToMapPanel}
                 onSetPanelCollapsed={onSetPanelCollapsed}
               />
-            ) : activeLeftPanelView === "announcement" ? (
+            ) : activeLeftPanelView === "announcement" && !isPublicRestrictedMode ? (
               <div
                 className="h-full min-h-0 overflow-hidden bg-background"
                 data-desktop-left-panel-announcement="true"
