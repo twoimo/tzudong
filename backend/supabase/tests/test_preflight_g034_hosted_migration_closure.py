@@ -156,10 +156,18 @@ class G034HostedPreflightTests(unittest.TestCase):
 
     def test_manifest_is_exact_selected_closure_and_later_gate(self):
         data = module.load_manifest(module.MANIFEST)
-        self.assertEqual(28, len(data["migrations"]))
+        self.assertEqual(29, len(data["migrations"]))
         self.assertEqual("20260627080000", data["migrations"][0]["version"])
-        self.assertEqual("20260713002400", data["migrations"][-1]["version"])
-        marketing = data["migrations"][-3]
+        self.assertEqual(
+            {
+                "version": "20260801000300",
+                "name": "g016_onboarding_allowlist_freshness",
+                "path": "backend/supabase/migrations/20260801000300_g016_onboarding_allowlist_freshness.sql",
+                "sha256": "2fae840485d86385b6a97cd588ea09c1db13fb700b2b0b7e044fb6b35698ecd3",
+            },
+            data["migrations"][-1],
+        )
+        marketing = data["migrations"][-4]
         self.assertEqual(
             {
                 "version": "20260713002200",
@@ -169,8 +177,8 @@ class G034HostedPreflightTests(unittest.TestCase):
             },
             marketing,
         )
-        self.assertEqual("20260713002100", data["migrations"][-4]["version"])
-        self.assertEqual("20260713002300", data["migrations"][-2]["version"])
+        self.assertEqual("20260713002100", data["migrations"][-5]["version"])
+        self.assertEqual("20260713002300", data["migrations"][-3]["version"])
         self.assertEqual(module.EXPECTED_EXCLUDED_VERSIONS, tuple(data["excludedVersions"]))
         self.assertNotIn("20260713002200", data["excludedVersions"])
         manifest_bytes = module.MANIFEST.read_bytes().replace(b"\r\n", b"\n")
