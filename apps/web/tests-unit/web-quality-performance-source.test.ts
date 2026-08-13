@@ -4207,11 +4207,10 @@ describe("web quality performance source contracts", () => {
     expect(stampSource).not.toContain("queryKey: ['restaurants-stamp']");
 
     expect(leaderboardSource).toContain(
-      ".select('id, user_id, is_verified, created_at, like_count')",
+      "readCompletePublicProfileLeaderboard(supabase, period)",
     );
-    expect(leaderboardSource).not.toContain(
-      "const reviewIds = allReviewsData.map",
-    );
+    expect(leaderboardSource).not.toContain(".from('profiles')");
+    expect(leaderboardSource).not.toContain(".from('reviews')");
     expect(userProfileSource).toContain("USER_PROFILE_RESTAURANT_SELECT");
     expect(userProfileSource).toContain("viewerLikesResult");
     expect(userProfileSource).toContain("likeCount: r.like_count || 0");

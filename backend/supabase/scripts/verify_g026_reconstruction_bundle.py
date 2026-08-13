@@ -1332,11 +1332,11 @@ def require_replay_membership_windows(window):
 
 def require_self_contained_replay(binding):
     expected = {
-        'canonicalPath': 'backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
-        'filename': '20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql',
-        'predecessorFilename': '20260812000400_local_admin_map_overlay_boundary_convergence.sql',
-        'sourceSha256': '33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7',
-        'sourceByteLength': 31716,
+        'canonicalPath': 'backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql',
+        'filename': '20260812000700_local_profile_leaderboard_page_convergence.sql',
+        'predecessorFilename': '20260812000600_local_profile_read_boundary_convergence.sql',
+        'sourceSha256': 'c03c0833294875be06d7cff6d513f7c7ddaf263514b7148bc3db22a29ac3bd17',
+        'sourceByteLength': 29279,
         'transactionClass': 'self_committing',
     }
     if binding != expected:
@@ -1353,17 +1353,16 @@ def require_self_contained_replay(binding):
         raise ValueError('self-contained replay transaction boundary drifted')
     ordered = (
         'DO $membership_acquire$',
-        'ALTER FUNCTION public.publish_youtube_thumbnail_release(',
         'SET LOCAL ROLE privacy_workflow_owner;',
-        'DO $allowlist_upsert$',
+        'CREATE FUNCTION public.read_public_profile_leaderboard_page(',
+        'DO $allowlist_insert$',
         'DO $definer_contract$',
         'DO $catalog_contract$',
-        'CREATE TEMPORARY TABLE g014_005_catalog_assertion_guard (',
-        'CREATE FUNCTION pg_temp.g014_005_catalog_assertion_bridge()',
+        'CREATE TEMPORARY TABLE g014_007_catalog_assertion_guard (',
+        'CREATE FUNCTION pg_temp.g014_007_catalog_assertion_bridge()',
         'RESET ROLE;',
         'DO $membership_restore$',
         'DO $membership_postcondition$',
-        'SELECT privacy_retention.assert_g014_public_rpc_allowlist();',
         'DO $catalog_assertion_readback$',
     )
     if any(source.count(statement) != 1 for statement in ordered):

@@ -9,7 +9,7 @@ const avatarConsumers = [
   {
     name: "home map user menu",
     path: "components/home/HomeMapUserMenu.tsx",
-    resolverCall: "resolveProfileAvatarUrl(data?.avatar_url, user.id)",
+    resolverCall: "resolveProfileAvatarUrl(profile?.avatar_url, user.id)",
   },
   {
     name: "my page top actions",

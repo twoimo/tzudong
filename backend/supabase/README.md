@@ -37,6 +37,20 @@ local behavior probe performs an apply and identical idempotent replay inside a
 transaction that is rolled back, so it creates no persistent hosted or local
 operator evidence.
 
+Public nickname and avatar reads remain behind the bounded
+`read_public_profile_summaries`, `read_public_profile_leaderboard`, and
+`read_public_profile_leaderboard_page` RPCs.
+They expose no email, role, login, or arbitrary profile columns; direct
+`profiles` reads stay revoked for browser roles. Summary requests admit 1–100
+distinct non-null UUIDs and preserve input order. The leaderboard admits only
+`all` or `monthly`, caps results at 100, uses the Asia/Seoul calendar-month
+boundary, and breaks equal scores by user UUID. The page RPC admits only a
+paired non-negative finite numeric score and UUID cursor, then continues
+strictly after that score/UUID tuple. The local SQL probes verify multiple
+pages, ties, zero-review inclusion, malformed cursor denial,
+anon/authenticated access, and service-role/direct-table denial inside rolled
+back transactions; they are not hosted migration or deployment evidence.
+
 `local-inputs/functions/naver-geocode/index.ts` is the deterministic local-only
 replacement for the hosted Naver geocoder. It returns only coordinates for the
 two synthetic seeded restaurants, never reads provider credentials, and never

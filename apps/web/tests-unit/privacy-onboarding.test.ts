@@ -323,7 +323,7 @@ describe('privacy onboarding challenge', () => {
     );
     const eligibilityLookupIndex = authContext.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     const roleLookupIndex = authContext.indexOf('.from("user_roles")');
-    const profileLookupIndex = authContext.indexOf('.from("profiles")');
+    const profileLookupIndex = authContext.indexOf('readPublicProfileSummaries(supabase, [userId])');
 
     expect(authContext).not.toContain('privacy_age_profiles');
     expect(authContext).not.toContain('as never');

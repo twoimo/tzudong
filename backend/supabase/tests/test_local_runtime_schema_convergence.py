@@ -24,6 +24,14 @@ YOUTUBE_RPC_ALLOWLIST_MIGRATION = (
     ROOT
     / "backend/supabase/migrations/20260812000500_local_youtube_thumbnail_rpc_allowlist_convergence.sql"
 )
+PROFILE_READ_BOUNDARY_MIGRATION = (
+    ROOT
+    / "backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql"
+)
+PROFILE_LEADERBOARD_PAGE_MIGRATION = (
+    ROOT
+    / "backend/supabase/migrations/20260812000700_local_profile_leaderboard_page_convergence.sql"
+)
 SEED = ROOT / "backend/supabase/scripts/local-seed.sql"
 READBACK = ROOT / "backend/supabase/scripts/local_catalog_readback.sql"
 SUPABASE_README = ROOT / "backend/supabase/README.md"
@@ -41,6 +49,12 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
         )
         cls.youtube_rpc_allowlist_migration = (
             YOUTUBE_RPC_ALLOWLIST_MIGRATION.read_text(encoding="utf-8")
+        )
+        cls.profile_read_boundary_migration = (
+            PROFILE_READ_BOUNDARY_MIGRATION.read_text(encoding="utf-8")
+        )
+        cls.profile_leaderboard_page_migration = (
+            PROFILE_LEADERBOARD_PAGE_MIGRATION.read_text(encoding="utf-8")
         )
         cls.seed = SEED.read_text(encoding="utf-8")
         cls.readback = READBACK.read_text(encoding="utf-8")
@@ -92,7 +106,7 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
             r"CREATE POLICY[^;]+youtube-thumbnail-releases",
         )
 
-    def test_youtube_release_allowlist_and_g014_readback_are_terminal(self) -> None:
+    def test_youtube_release_allowlist_and_g014_readback_are_preserved(self) -> None:
         signature = (
             "public.publish_youtube_thumbnail_release(uuid,text,text,text,text,"
             "text,text,text,text,numeric,jsonb,jsonb,jsonb,jsonb,uuid,"
@@ -115,6 +129,20 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
             "allowed.identity_arguments = function_row.proargtypes::text",
             self.readback,
         )
+
+    def test_profile_read_boundary_is_preserved_before_page_convergence(self) -> None:
+        self.assertTrue(PROFILE_READ_BOUNDARY_MIGRATION.is_file())
+        for signature in (
+            "public.read_public_profile_summaries(uuid[])",
+            "public.read_public_profile_leaderboard(text,integer)",
+        ):
+            self.assertIn(signature, self.profile_read_boundary_migration)
+        for assertion in (
+            "privacy_retention.assert_g014_public_rpc_allowlist()",
+            "privacy_retention.assert_g014_definer_contract()",
+            "privacy_retention.assert_g014_catalog_contract()",
+        ):
+            self.assertIn(assertion, self.profile_read_boundary_migration)
 
     def test_realtime_contract_is_the_exact_app_subscription_set(self) -> None:
         self.assertIn(
@@ -278,6 +306,26 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
             "ROLLBACK;",
         ):
             self.assertIn(behavior_contract, self.behavior_sql)
+
+    def test_profile_leaderboard_page_is_cursor_bounded_and_service_denied(self) -> None:
+        migration = self.profile_leaderboard_page_migration
+        for token in (
+            "public.read_public_profile_leaderboard_page",
+            "p_after_quality_score numeric",
+            "p_after_user_id uuid",
+            "p_limit NOT BETWEEN 1 AND 100",
+            "p_after_quality_score = 'NaN'::numeric",
+            "scored.quality_score < p_after_quality_score",
+            "scored.user_id > p_after_user_id",
+            "ORDER BY scored.quality_score DESC, scored.user_id ASC",
+            "TO anon, authenticated",
+            "FROM PUBLIC, anon, authenticated, service_role",
+        ):
+            self.assertIn(token, migration)
+        self.assertNotRegex(
+            migration,
+            r"(?is)\b(?:GRANT|REVOKE)\b[^;]*ON\s+(?:TABLE\s+)?public\.profiles",
+        )
 
     def test_admin_data_boundary_is_bounded_service_rpc_only(self) -> None:
         self.assertTrue(ADMIN_DATA_MIGRATION.is_file())

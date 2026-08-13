@@ -70,13 +70,13 @@ import {
   getProfileAvatarDeletionKey,
   resolveProfileAvatarUrl,
 } from "@/lib/profile-avatar-url";
+import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
 interface Profile {
   nickname: string;
   avatar_url?: string;
 }
 
-const PROFILE_SELECT = "nickname, avatar_url";
 const accountDeletionFailureMessages: Record<string, string> = {
   REAUTH_REQUIRED: "현재 비밀번호를 다시 확인해 주세요.",
   REAUTH_PROOF_UNAVAILABLE: "재인증 증명이 만료되었거나 이미 사용되었습니다. 비밀번호를 다시 확인해 주세요.",
@@ -408,12 +408,7 @@ export default function ProfilePage() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(PROFILE_SELECT)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
+      const data = await readPublicProfileSummaries(supabase, [user.id]);
 
       if (data && data.length > 0) {
         const profileData = data[0] as Profile;
