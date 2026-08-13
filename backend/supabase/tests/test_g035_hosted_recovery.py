@@ -116,7 +116,7 @@ class ContractTests(unittest.TestCase):
   args=recovery.parser().parse_args(["restore-verify","--dump","dump","--capture-receipt","capture","--restore-receipt","/receipt","--service-file","service","--destination-service","g035-local","--identity-fd","3","--decrypt-command","age"])
   self.assertEqual("3",args.identity_fd)
   self.assertIsNone(args.identity_handle)
- def test_runnable_workflow_excludes_restore_and_runbook_requires_pipe_custody(self):
+ def test_runnable_workflow_excludes_restore_and_runbook_requires_tracked_pipe_custody(self):
   workflow=(ROOT/".github/workflows/g035-hosted-recovery.yml").read_text(encoding="utf8")
   runbook=(ROOT/"backend/supabase/docs/g035-hosted-recovery-runbook.md").read_text(encoding="utf8")
   self.assertNotIn("G035_OFFLINE_IDENTITY_FILE",workflow)
@@ -127,9 +127,13 @@ class ContractTests(unittest.TestCase):
   self.assertIn('--entrypoint "$entrypoint" -- "$@"',workflow)
   self.assertNotRegex(workflow,r"(?m)^\s*(?:validate|capture|short-url-remediation-[a-z-]+|clone-apply|local-postflight\))?[^\n]*python\s+backend/supabase/scripts/g035_hosted_recovery\.py")
   self.assertIn("--restore-receipt <fresh-external-restore-receipt.json>",runbook)
-  self.assertIn("--identity-fd 3",runbook)
-  self.assertIn("--identity-handle <canonical-inherited-handle>",runbook)
-  self.assertIn("successful child publishes canonical receipt bytes itself",runbook)
+  self.assertIn("backend/supabase/scripts/g035_dual_restore_custody_launcher.py",runbook)
+  self.assertIn("--custody-config <external-owner-only-custody-config.json>",runbook)
+  self.assertIn("passed as `--identity-fd <read-fd>`",runbook)
+  self.assertNotIn("<approved-selective-inheritance-custodian>",runbook)
+  self.assertNotIn("--identity-handle",runbook)
+  self.assertIn("only executable restore path",runbook)
+  self.assertIn("The dual producer publishes its canonical receipts itself",runbook)
  def test_rotated_custody_pins_new_authority_and_rejects_old_authority(self):
   self.assertEqual("e338e9dbfd309838b16980d62fe72a71c526e329506285f4c5811d725d941213",contract.REMEDIATION_PUBLIC_KEY_SHA256)
   self.assertEqual(contract.REMEDIATION_PUBLIC_KEY_SHA256,hashlib.sha256(contract.REMEDIATION_PUBLIC_KEY_PEM.encode("ascii")).hexdigest())

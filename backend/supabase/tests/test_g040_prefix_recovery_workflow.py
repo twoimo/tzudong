@@ -372,7 +372,7 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
         self.assertIn('git show "$source_commit:$bootstrap" | python -I -', self.g035_workflow_source)
         self.assertIn('--authorized-final-commit "$source_commit"', self.g035_workflow_source)
         self.assertIn('--entrypoint "$entrypoint" -- "$@"', self.g035_workflow_source)
-        for runbook in (self.g035_runbook, self.runbook):
+        for runbook in (self.runbook,):
             lines = runbook.splitlines()
             indexes = [index for index, line in enumerate(lines) if "restore-verify" in line]
             self.assertEqual(1, len(indexes))
@@ -384,7 +384,7 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
                 end += 1
             command = "\n".join(lines[start : end + 1])
             self.assertTrue(command.startswith('git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | <approved-selective-inheritance-custodian>'))
-            self.assertIn("--close-writer-after-write -- python3 -I -", command)
+            self.assertIn("--close-writer-after-write -- python3 -I -B -", command)
             self.assertIn('--repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT"', command)
             self.assertIn('--entrypoint "$RESTORE_ENTRYPOINT" -- restore-verify', command)
             self.assertEqual(2, command.count("--identity-fd 3"))
@@ -398,6 +398,16 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
                 r"(?m)^\s*(?:<[^>]+>\s+--\s+)?(?:[^\s]+\s+)*python(?:3(?:\.\d+)?)?\s+[^\n]*g035_hosted_recovery\.py\s+restore-verify\b",
             )
             self.assertNotRegex(runbook, r"(?i)signer/key-reference path|--inkey\b|<[^>]*(?:private|key)[^>]*path[^>]*>")
+        self.assertIn(
+            "backend/supabase/scripts/g035_dual_restore_custody_launcher.py",
+            self.g035_runbook,
+        )
+        self.assertIn(
+            "the only executable restore path in this runbook is the committed dual-restore",
+            self.g035_runbook,
+        )
+        self.assertNotIn("<approved-selective-inheritance-custodian>", self.g035_runbook)
+        self.assertNotIn("--identity-handle", self.g035_runbook)
         self.assertNotIn("--inkey", self.g035_runbook)
 
 

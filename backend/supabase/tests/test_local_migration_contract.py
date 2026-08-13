@@ -96,6 +96,85 @@ class LocalMigrationContractTests(unittest.TestCase):
 
         canonical = json.dumps(manifest, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
         self.assertEqual(local_migrate.manifest_digest(manifest), hashlib.sha256(canonical).hexdigest())
+        self.assertEqual(manifest["exclusions"], list(local_migrate.LOCAL_MANIFEST_EXCLUSIONS))
+        self.assertEqual(len(manifest["exclusions"]), 8)
+        for name, digest in local_migrate.HOSTED_ONLY_MIGRATION_SOURCE_SHA256.items():
+            self.assertIn(
+                f"backend/supabase/migrations/{name}@sha256:{digest}",
+                manifest["exclusions"],
+            )
+
+    def test_hosted_only_sources_are_exactly_bound_and_never_enter_local_ledger(self) -> None:
+        canonical_root = ROOT / "backend/supabase/migrations"
+        hosted_sources = {
+            name: (canonical_root / name).read_bytes()
+            for name in local_migrate.HOSTED_ONLY_MIGRATION_SOURCE_SHA256
+        }
+
+        def populate(root: Path) -> None:
+            (root / "20260101000000_local_fixture.sql").write_text(
+                "SELECT 1;\n", encoding="utf-8"
+            )
+            for name, data in hosted_sources.items():
+                (root / name).write_bytes(data)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw).resolve()
+            populate(root)
+            with patch.object(local_migrate, "source_root", return_value=root):
+                self.assertEqual(
+                    [path.name for path in local_migrate.migration_files()],
+                    ["20260101000000_local_fixture.sql"],
+                )
+
+                drifted = root / next(iter(local_migrate.HOSTED_ONLY_MIGRATION_SOURCE_SHA256))
+                original = drifted.read_bytes()
+                drifted.write_bytes(original + b"\n")
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "hosted_only_migration_source_drift",
+                ):
+                    local_migrate.migration_files()
+                drifted.write_bytes(original)
+
+                drifted.unlink()
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "hosted_only_migration_missing",
+                ):
+                    local_migrate.migration_files()
+                drifted.write_bytes(original)
+
+                unknown = root / "20260814010400_hosted_unknown.sql"
+                unknown.write_text("SELECT 1;\n", encoding="utf-8")
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "hosted_only_migration_unrecognized",
+                ):
+                    local_migrate.migration_files()
+                unknown.unlink()
+
+                unknown_upper = root / "20260814010401_HOSTED_unknown.sql"
+                unknown_upper.write_text("SELECT 1;\n", encoding="utf-8")
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "hosted_only_migration_unrecognized",
+                ):
+                    local_migrate.migration_files()
+                unknown_upper.unlink()
+
+                # migration_files sorts directory entries before suffix filtering,
+                # so keep the non-SQL symlink target outside the candidate set while
+                # retaining a valid numeric sort prefix.
+                target = root / "20260814019999_hosted-target.bin"
+                target.write_bytes(drifted.read_bytes())
+                drifted.unlink()
+                drifted.symlink_to(target)
+                with self.assertRaisesRegex(
+                    local_migrate.LocalMigrationError,
+                    "source_file_not_regular",
+                ):
+                    local_migrate.migration_files()
 
     def test_transaction_classification_masks_comments_and_literals(self) -> None:
         self.assertEqual(local_migrate.transaction_control("CREATE TABLE sample(id integer);")["class"], "transactional")

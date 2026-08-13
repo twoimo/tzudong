@@ -486,6 +486,13 @@ declare -A excluded_backend_migrations=(
   [20260131_fix_search_rpc.sql]=1
   [20260213_create_announcements_table_and_seed.sql]=1
 )
+declare -A hosted_only_backend_migrations=(
+  [20260814010000_hosted_g016_g041_catalog_reconciliation.sql]='0ade5034224e191dfc15f3a238134606bc29a1bfb9b5cbbbe8c82fa141d318ff'
+  [20260814010100_hosted_runtime_boundary_convergence.sql]='b10708dc52f001676d6d6148dc4ed429d0e84ed4232df33031a312c96a75fec7'
+  [20260814010200_hosted_public_profile_read_convergence.sql]='93738ef218cae9510f5e3989219edf73ca5e837bfba29e3fca1b2df7df26767c'
+  [20260814010300_hosted_current_profile_mutation.sql]='dbcba23cf6d860b668b2bb160ebd6b753fdc77a3c7136d1490fdcd4e18587a67'
+)
+declare -A observed_hosted_only_backend_migrations=()
 declare -A excluded_app_migrations=(
   [20251219_db_performance_optimization.sql]=1
   [20260118_create_ocr_logs.sql]=1
@@ -497,6 +504,11 @@ for source_kind in backend app; do
   esac
   while IFS= read -r -d '' migration; do
     name=${migration##*/}
+    printf 'symlinked %s migration source: %s\n' "$source_kind" "$name" >&2
+    exit 1
+  done < <(find "$source_dir" -maxdepth 1 -type l -name '*.sql' -print0 | LC_ALL=C sort -z)
+  while IFS= read -r -d '' migration; do
+    name=${migration##*/}
     [[ "$name" =~ ^([0-9]{8})([0-9]{0,6})(_[A-Za-z0-9][A-Za-z0-9._-]*)?\.sql$ && -s "$migration" ]] || {
       printf 'empty or nonconforming %s migration: %s\n' "$source_kind" "$name" >&2; exit 1;
     }
@@ -504,6 +516,16 @@ for source_kind in backend app; do
     git -C "$repo_root" ls-files --error-unmatch -- "$relative_migration" >/dev/null || {
       printf 'untracked %s migration source: %s\n' "$source_kind" "$name" >&2; exit 1;
     }
+    if [[ "$source_kind" == backend && "$name" == *_[Hh][Oo][Ss][Tt][Ee][Dd]_* ]]; then
+      [[ -n ${hosted_only_backend_migrations[$name]+x} ]] || {
+        printf 'unrecognized hosted-only backend migration: %s\n' "$name" >&2; exit 1;
+      }
+      [[ "$(sha256sum -- "$migration" | cut -d' ' -f1)" == "${hosted_only_backend_migrations[$name]}" ]] || {
+        printf 'hosted-only backend migration source drift: %s\n' "$name" >&2; exit 1;
+      }
+      observed_hosted_only_backend_migrations[$name]=1
+      continue
+    fi
     migration_date=${BASH_REMATCH[1]}
     if ((10#$migration_date < 20260214)); then
       case "$source_kind" in
@@ -517,6 +539,11 @@ for source_kind in backend app; do
     esac
     all_migration_names[$name]=1
   done < <(find "$source_dir" -maxdepth 1 -type f -name '*.sql' -print0 | LC_ALL=C sort -z)
+done
+for name in "${!hosted_only_backend_migrations[@]}"; do
+  [[ -n ${observed_hosted_only_backend_migrations[$name]+x} ]] || {
+    printf 'missing hosted-only backend migration: %s\n' "$name" >&2; exit 1;
+  }
 done
 for name in "${!excluded_backend_migrations[@]}"; do
   [[ -n ${backend_migrations_by_name[$name]+x} ]] || { printf 'missing excluded pre-cutoff backend migration: %s\n' "$name" >&2; exit 1; }

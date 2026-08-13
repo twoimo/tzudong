@@ -26,6 +26,16 @@ from urllib.parse import urlparse
 
 EXPECTED_SOURCE = Path("backend/supabase/migrations")
 EXPECTED_PREREQUISITE = Path("backend/supabase/baselines/local/application-prerequisites.sql")
+HOSTED_ONLY_MIGRATION_SOURCE_SHA256 = {
+    "20260814010000_hosted_g016_g041_catalog_reconciliation.sql":
+        "0ade5034224e191dfc15f3a238134606bc29a1bfb9b5cbbbe8c82fa141d318ff",
+    "20260814010100_hosted_runtime_boundary_convergence.sql":
+        "b10708dc52f001676d6d6148dc4ed429d0e84ed4232df33031a312c96a75fec7",
+    "20260814010200_hosted_public_profile_read_convergence.sql":
+        "93738ef218cae9510f5e3989219edf73ca5e837bfba29e3fca1b2df7df26767c",
+    "20260814010300_hosted_current_profile_mutation.sql":
+        "dbcba23cf6d860b668b2bb160ebd6b753fdc77a3c7136d1490fdcd4e18587a67",
+}
 SCHEMA_VERSION = "local-function-runtime-scan/v1"
 PATCH_SCHEMA = "local-function-closure-patch/v1"
 TOOL_VERSION = "local-function-runtime-scan-v2"
@@ -282,13 +292,38 @@ def _sql_literal(value: str) -> str:
     return "'" + value + "'"
 
 
-def _source_documents() -> list[Path]:
+def _migration_source_documents() -> list[Path]:
     root = source_root()
-    migration_paths = sorted(root.glob("*.sql"), key=lambda item: item.name.encode("utf-8"))
-    migration_paths = [
-        _validated_source_path(path, "source_file_not_regular")
-        for path in migration_paths
-    ]
+    try:
+        entries = sorted(root.iterdir(), key=lambda item: item.name.encode("utf-8"))
+    except OSError as error:
+        raise RuntimeScanError("source_list_failed") from error
+    migration_paths: list[Path] = []
+    observed_hosted_only: set[str] = set()
+    for declared in entries:
+        if declared.suffix.lower() != ".sql":
+            continue
+        path = _validated_source_path(declared, "source_file_not_regular")
+        try:
+            data = path.read_bytes()
+        except OSError as error:
+            raise RuntimeScanError("source_read_failed") from error
+        expected_digest = HOSTED_ONLY_MIGRATION_SOURCE_SHA256.get(declared.name)
+        if expected_digest is not None:
+            if _sha256(data) != expected_digest:
+                raise RuntimeScanError("hosted_only_migration_source_drift")
+            observed_hosted_only.add(declared.name)
+            continue
+        if "_hosted_" in declared.name.lower():
+            raise RuntimeScanError("hosted_only_migration_unrecognized")
+        migration_paths.append(path)
+    if observed_hosted_only != set(HOSTED_ONLY_MIGRATION_SOURCE_SHA256):
+        raise RuntimeScanError("hosted_only_migration_missing")
+    return migration_paths
+
+
+def _source_documents() -> list[Path]:
+    migration_paths = _migration_source_documents()
     prerequisite_declared = repository_root() / EXPECTED_PREREQUISITE
     prerequisite = _validated_source_path(prerequisite_declared, "prerequisite_source_invalid")
     if prerequisite != prerequisite_declared:

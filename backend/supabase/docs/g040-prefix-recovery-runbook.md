@@ -25,7 +25,7 @@ G040 preserves the hosted `vector` extension in `public` on both restored clones
 ```sh
 # All placeholders are absolute restrictive paths outside the checkout.
 AUTHORIZED_COMMIT='<EXACT_40_HEX_PROTECTED_MAIN_SHA>'
-git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I - \
+git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint backend/supabase/scripts/g037_production_controller.py -- prepare \
   --origin '<EXACT_HTTPS_SUPABASE_ORIGIN>' --freeze-id '<FRESH_FREEZE_ID>' \
@@ -36,7 +36,7 @@ git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.p
   --evidence-no-out-of-band-write '<NO_OUT_OF_BAND_WRITE>'
 
 # Offline signing occurs outside repository tooling. Then:
-git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I - \
+git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint backend/supabase/scripts/g037_production_controller.py -- finalize \
   --origin '<EXACT_HTTPS_SUPABASE_ORIGIN>' --freeze-id '<FRESH_FREEZE_ID>' \
@@ -58,12 +58,12 @@ BOOTSTRAP='backend/supabase/scripts/g040_isolated_bootstrap.py'
 CONTROLLER='backend/supabase/scripts/g040_production_controller.py'
 AUTHORITY='backend/supabase/scripts/g040_recovery_authorization.py'
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- validate-source \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" --source-receipt "$SOURCE_RECEIPT"
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- diagnose \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
@@ -71,7 +71,7 @@ git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
   --service-file "$SERVICE_FILE" --service-name g040-production \
   --nonce-dir "$NONCE_DIR" --observation-receipt "$OBSERVATION"
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- production-backup \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
@@ -84,7 +84,7 @@ git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
   --freeze-evidence "$NO_DASHBOARD_WRITE" --freeze-evidence "$NO_PROVIDER_WRITE" \
   --freeze-evidence "$NO_OUT_OF_BAND_WRITE" --output "$PRODUCTION_BACKUP"
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- prepare \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
@@ -92,7 +92,7 @@ git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
   --observation "$OBSERVATION" --custody "$AGGREGATE_CUSTODY" \
   --authority-template "$AUTHORITY_BINDINGS"
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$AUTHORITY" -- build-request \
   --repository-root "$PWD" --bindings "$AUTHORITY_BINDINGS" \
@@ -103,13 +103,13 @@ git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
 The offline authorization custodian verifies the exact request bytes, target/source/freeze/capture/rehearsal/terminal bindings, journal identifiers, and expiry; signs those exact bytes with the fixed G040 destructive-authorization key; and returns only `$AUTHORIZATION_SIGNATURE` under restrictive custody. The runtime receives no private key or signing command. Fixed-key verification must succeed before execute:
 
 ```sh
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$AUTHORITY" -- verify \
   --repository-root "$PWD" --bindings "$AUTHORITY_BINDINGS" \
   --authorization "$AUTHORIZATION_REQUEST" --signature "$AUTHORIZATION_SIGNATURE"
 
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- execute \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
@@ -129,7 +129,7 @@ git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
 A nonzero execute result, timeout, disconnect, rollback failure, missing final receipt, or `commit_ambiguous_readback_only` is never retried. Preserve the producer stop, journal marker, authorization, prepared receipt, archive, capture, observation, reference, and custody artifacts unchanged. Use only historical non-mutating readback with fresh proof/final destinations to resolve the committed state:
 
 ```sh
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$CONTROLLER" -- readback \
   --repository-root "$PWD" --source-commit "$AUTHORIZED_COMMIT" \
@@ -147,7 +147,7 @@ Readback is historical evidence only: it cannot authorize mutation, recreate a m
 **G035 exact restore key custody.** The offline custodian launches the exact-commit isolated bootstrap with selective inheritance: it creates an anonymous pipe containing the age identity, selectively inherits only its read end into the bootstrap process, writes the complete identity bytes, and closes the writer immediately so age observes EOF. Private-key paths and bytes remain solely in offline custodian memory and never enter child argv, environment, output, or receipts. On POSIX pass the inherited read descriptor as canonical decimal `--identity-fd 3`; on Windows pass the inherited anonymous-pipe HANDLE as canonical decimal `--identity-handle 1234`. The restore runner duplicates and closes the inherited original, then supplies the owned stream only as age stdin. It accepts neither an identity-file option nor stdout receipt redirection.
 ```sh
 RESTORE_ENTRYPOINT='backend/supabase/scripts/g035_hosted_recovery.py'
-git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | <approved-selective-inheritance-custodian> --identity-fd 3 --close-writer-after-write -- python3 -I - \
+git show "$AUTHORIZED_COMMIT:$BOOTSTRAP" | <approved-selective-inheritance-custodian> --identity-fd 3 --close-writer-after-write -- python3 -I -B - \
   --repository-root "$PWD" --authorized-final-commit "$AUTHORIZED_COMMIT" \
   --entrypoint "$RESTORE_ENTRYPOINT" -- restore-verify \
   --dump "$ENCRYPTED_ARCHIVE" --capture-receipt "$CAPTURE_RECEIPT" \

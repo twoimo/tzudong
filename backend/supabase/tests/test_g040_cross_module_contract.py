@@ -165,7 +165,10 @@ class G040CrossModuleContractTests(unittest.TestCase):
                 )
         runbook = (root / "backend/supabase/docs/g040-prefix-recovery-runbook.md").read_text("utf-8")
         self.assertIn("python3 -I", runbook)
-        self.assertIn('git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I -', runbook)
+        self.assertIn(
+            'git show "$AUTHORIZED_COMMIT":backend/supabase/scripts/g040_isolated_bootstrap.py | python3 -I -B -',
+            runbook,
+        )
 
     def test_controller_authorization_calls_are_path_only_and_root_bounded(self):
         path = Path(controller.__file__)
