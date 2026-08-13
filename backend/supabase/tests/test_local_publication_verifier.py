@@ -341,19 +341,24 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             payload[marker_key] = marker_value
             payloads[name] = payload
 
-        services = [
-            {
-                "service": name,
-                "state": "running",
-                "health": "" if name in verifier.SERVICES_WITHOUT_DOCKER_HEALTHCHECK else "healthy",
-            }
-            for name in sorted(verifier.STACK_SERVICES)
-        ]
         digest = "a" * 64
         for name, action in (
             ("local-stack-reset.json", "reset"),
             ("local-stack-status.json", "status"),
         ):
+            services = [
+                {
+                    "service": service_name,
+                    "state": "running",
+                    "health": (
+                        ""
+                        if action == "status"
+                        and service_name in verifier.SERVICES_WITHOUT_DOCKER_HEALTHCHECK
+                        else "healthy"
+                    ),
+                }
+                for service_name in sorted(verifier.STACK_SERVICES)
+            ]
             payloads[name].update(
                 {
                     "action": action,
@@ -566,6 +571,46 @@ class LocalPublicationVerifierTests(unittest.TestCase):
             root = Path(raw)
             self._write_bundle(root)
             verifier.verify(root)
+
+    def test_accepts_action_specific_stack_health_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            payloads = self._write_bundle(Path(raw))
+            reset = payloads["local-stack-reset.json"]
+            status = payloads["local-stack-status.json"]
+
+            verifier.verify_stack_receipt(reset, "local-stack-reset.json")
+            verifier.verify_stack_receipt(status, "local-stack-status.json")
+
+            reset_health = {
+                service["service"]: service["health"]
+                for service in reset["services"]
+            }
+            status_health = {
+                service["service"]: service["health"]
+                for service in status["services"]
+            }
+            for service_name in verifier.SERVICES_WITHOUT_DOCKER_HEALTHCHECK:
+                self.assertEqual(reset_health[service_name], "healthy")
+                self.assertEqual(status_health[service_name], "")
+
+    def test_rejects_stack_health_from_the_other_action_projection(self) -> None:
+        for name, replacement_health in (
+            ("local-stack-reset.json", ""),
+            ("local-stack-status.json", "healthy"),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as raw:
+                payload = self._write_bundle(Path(raw))[name]
+                functions = next(
+                    service
+                    for service in payload["services"]
+                    if service["service"] == "functions"
+                )
+                functions["health"] = replacement_health
+                with self.assertRaisesRegex(
+                    SystemExit,
+                    f"local stack service readiness mismatch: {name}",
+                ):
+                    verifier.verify_stack_receipt(payload, name)
 
     def test_rejects_mismatched_github_commit_binding(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
