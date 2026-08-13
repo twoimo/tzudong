@@ -323,7 +323,7 @@ describe('privacy onboarding challenge', () => {
     );
     const eligibilityLookupIndex = authContext.indexOf('const eligibility = await getCurrentPrivacyEligibility(supabase);');
     const roleLookupIndex = authContext.indexOf('.from("user_roles")');
-    const profileLookupIndex = authContext.indexOf('.from("profiles")');
+    const profileLookupIndex = authContext.indexOf('readPublicProfileSummaries(supabase, [userId])');
 
     expect(authContext).not.toContain('privacy_age_profiles');
     expect(authContext).not.toContain('as never');
@@ -695,6 +695,11 @@ describe('G014 server session release boundaries', () => {
     expect(onboarding).toContain('challengeToken: challenge.challengeToken');
     expect(onboarding).toContain('origin: requestOrigin(request)');
     expect(onboarding).toContain('passwordSignupCreationProvenance(challenge, user)');
+    expect(onboarding).toContain('readSignupProfileState(');
+    expect(onboarding).toContain('isSignupProfileStateReady(signupProfileState)');
+    expect(onboarding.indexOf('readSignupProfileState(')).toBeLessThan(
+      onboarding.indexOf("confirmChallenge(challenge, creationProvenance.userId, 'password_signup')"),
+    );
     expect(onboarding).toContain('user.identities.length === 0');
     expect(compensation).toContain('if (!creationProvenance)');
     expect(compensation).toContain('await revokePasswordSignupSession(signupClient)');

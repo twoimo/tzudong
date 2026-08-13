@@ -1,8 +1,6 @@
-name: Nightly Regression
+name: Nightly Regression (Hosted Manual)
 
 on:
-  schedule:
-    - cron: '30 18 * * *' # 03:30 KST (UTC)
   workflow_dispatch:
     inputs:
       suite:
@@ -19,6 +17,8 @@ concurrency:
   group: nightly-regression
   cancel-in-progress: false
 
+# This is a manual-only hosted fallback. The canonical scheduled lane is
+# nightly-local-regression.yml and consumes no hosted Supabase capacity.
 # This workflow can read source and publish bounded artifacts only. It cannot
 # write source, deployments, releases, or hosted migration state.
 permissions:
@@ -53,10 +53,10 @@ jobs:
       VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.16'
       - name: Install web dependencies
@@ -103,10 +103,10 @@ jobs:
       VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.16'
       - name: Install web dependencies
@@ -133,6 +133,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          import re
           from pathlib import Path
 
           source = Path('nightly-unit.log')
@@ -153,11 +154,25 @@ jobs:
               value = os.environ.get(name, '')
               if value:
                   text = text.replace(value, '[REDACTED]')
+          unsafe_log_line = re.compile(
+              r'(?i)(?:access_token|refresh_token|authorization|cookie|set-cookie|service_role|anon_key|password)'
+              r'|(?:received|expected):\s*(?:\{|\[)'
+              r'|(?:body|records|overlays|restaurants)\s*[:=]\s*(?:\{|\[)',
+          )
+          text = '\n'.join(
+              '[REDACTED PAYLOAD-SHAPED LOG LINE]' if unsafe_log_line.search(line) else line
+              for line in text.splitlines()
+          ) + ('\n' if text.endswith('\n') else '')
+          raw = text.encode('utf-8')
+          max_bytes = 256 * 1024
+          if len(raw) > max_bytes:
+              prefix = b'[TRUNCATED TO LAST 256 KIB]\n'
+              text = prefix.decode('ascii') + raw[-(max_bytes - len(prefix)):].decode('utf-8', errors='ignore')
           output.write_text(text, encoding='utf-8')
           PY
       - name: Upload redacted unit diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
         with:
           name: nightly-unit-diagnostics
           path: apps/web/nightly-artifacts/nightly-unit-redacted.log
@@ -187,15 +202,15 @@ jobs:
       VERCEL_DEPLOYMENT_ID: ${{ secrets.VERCEL_DEPLOYMENT_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
         with:
           bun-version: '1.2.16'
       - name: Install web dependencies
@@ -229,6 +244,7 @@ jobs:
         run: |
           python3 - <<'PY'
           import os
+          import re
           from pathlib import Path
 
           destination = Path('nightly-artifacts')
@@ -248,6 +264,11 @@ jobs:
               )
               if os.environ.get(name, '')
           ]
+          unsafe_log_line = re.compile(
+              r'(?i)(?:access_token|refresh_token|authorization|cookie|set-cookie|service_role|anon_key|password)'
+              r'|(?:received|expected):\s*(?:\{|\[)'
+              r'|(?:body|records|overlays|restaurants)\s*[:=]\s*(?:\{|\[)',
+          )
 
           def redact(path: Path, target: Path) -> None:
               if not path.exists() or not path.is_file():
@@ -258,11 +279,19 @@ jobs:
                   return
               for value in secret_values:
                   text = text.replace(value, '[REDACTED]')
+              text = '\n'.join(
+                  '[REDACTED PAYLOAD-SHAPED LOG LINE]' if unsafe_log_line.search(line) else line
+                  for line in text.splitlines()
+              ) + ('\n' if text.endswith('\n') else '')
+              raw = text.encode('utf-8')
+              max_bytes = 256 * 1024
+              if len(raw) > max_bytes:
+                  prefix = b'[TRUNCATED TO LAST 256 KIB]\n'
+                  text = prefix.decode('ascii') + raw[-(max_bytes - len(prefix)):].decode('utf-8', errors='ignore')
               target.parent.mkdir(parents=True, exist_ok=True)
               target.write_text(text, encoding='utf-8')
 
           redact(Path('nightly-e2e.log'), destination / 'nightly-e2e-redacted.log')
-          redact(Path('nightly-web.log'), destination / 'nightly-web-redacted.log')
           if not any(destination.iterdir()):
               (destination / 'nightly-e2e-redacted.log').write_text(
                   'browser diagnostics were not produced\n', encoding='utf-8'
@@ -270,7 +299,7 @@ jobs:
           PY
       - name: Upload redacted browser diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
         with:
           name: nightly-playwright-diagnostics
           path: apps/web/nightly-artifacts/
@@ -278,11 +307,10 @@ jobs:
           retention-days: 14
 
   summary:
-    name: Nightly summary
+    name: Manual hosted fallback summary
     if: always()
     needs: [preflight, unit, e2e]
     runs-on: ubuntu-24.04
-    environment: nightly-hosted
     timeout-minutes: 5
     permissions:
       contents: read
@@ -293,7 +321,9 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Nightly regression summary'
+            echo '## Manual hosted regression fallback'
+            echo '- Scheduling: disabled; this workflow runs only when explicitly dispatched.'
+            echo '- Canonical nightly: Nightly Regression (Local Supabase).'
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Preflight: ${{ needs.preflight.result }}"

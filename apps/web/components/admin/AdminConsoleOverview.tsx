@@ -100,6 +100,7 @@ import {
 } from "@/lib/admin/sidebar-order";
 import { getMobileScrollNavVisibilityAction } from "@/lib/mobile-scroll-nav-visibility";
 import {
+  ADMIN_PENDING_COUNTS_QUERY_KEY,
   getAdminPendingCountsTotal,
   getAdminPendingReviewCount,
   getAdminPendingSubmissionCount,
@@ -708,6 +709,12 @@ function loadAdminRouteRecommendationModule() {
   );
 }
 
+function loadAdminSystemStatusCenter() {
+  return import("@/components/admin/system-status/AdminSystemStatusCenter").then(
+    (module) => module.AdminSystemStatusCenter,
+  );
+}
+
 const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
 
 function AdminEvaluationModuleStaticShell() {
@@ -892,6 +899,11 @@ const AdminRouteRecommendationModule = dynamic(
     loading: () => null,
   },
 );
+
+const AdminSystemStatusCenter = dynamic(loadAdminSystemStatusCenter, {
+  ssr: false,
+  loading: () => null,
+});
 const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
   "overview",
   "map-overlays",
@@ -960,7 +972,7 @@ type AdminYouTubeChannelStats = {
   viewCount: number | null;
   videoCount: number | null;
   hiddenSubscriberCount: boolean;
-  fetchedAt: string;
+  fetchedAt: string | null;
   previousSubscriberCount?: number | null;
   previousViewCount?: number | null;
   previousVideoCount?: number | null;
@@ -974,6 +986,9 @@ type AdminYouTubeChannelStats = {
     | "derived-live-comparison"
     | "derived-snapshot-comparison"
     | "unavailable";
+  unavailable?: {
+    code: "LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE";
+  };
 };
 
 type AdminYouTubeKpiCollectionRun = {
@@ -1042,16 +1057,14 @@ type AdminAuditEvent = {
   actorUserId: string | null;
   targetUserId: string | null;
   action: string;
-  reason: string | null;
   status: string;
-  domain: string | null;
-  source: string | null;
-  readbackId: string | null;
+  reasonCode: string;
   correlationId: string | null;
   appliedAt: string | null;
   errorCode: string | null;
   createdAt: string | null;
-  afterState: Record<string, unknown>;
+  counts: Record<string, number>;
+  flags: Record<string, boolean>;
 };
 
 type AdminAuditEventsResponse = {
@@ -1101,6 +1114,16 @@ function isAdminAuditEventsResponsePayload(
     isRecordValue(value) &&
     value.source === "admin_audit_events" &&
     Array.isArray(value.events) &&
+    value.events.length <= 50 &&
+    value.events.every((event) => (
+      isRecordValue(event) &&
+      typeof event.id === "string" &&
+      typeof event.action === "string" &&
+      typeof event.status === "string" &&
+      typeof event.reasonCode === "string" &&
+      isRecordValue(event.counts) &&
+      isRecordValue(event.flags)
+    )) &&
     isAdminAuditCoveragePayload(value.coverage) &&
     isAdminAuditUnavailablePayload(value.unavailable)
   );
@@ -1484,7 +1507,7 @@ function useAdminOverviewStats(isAdmin: boolean): {
   hasError: boolean;
 } {
   const pendingCountsQuery = useQuery({
-    queryKey: ["admin-overview", "pending-counts"],
+    queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
     queryFn: fetchAdminPendingCounts,
     enabled: isAdmin,
     staleTime: 15 * 1000,
@@ -4349,7 +4372,10 @@ function AdminDashboardKpiCard({
       ) : (
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="whitespace-nowrap text-[clamp(1.2rem,1.45vw,1.75rem)] font-black leading-none tracking-[-0.035em] tabular-nums text-foreground">
+            <p
+              className="whitespace-nowrap text-lg font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-xl"
+              data-admin-dashboard-kpi-value-size="bounded"
+            >
               {value}
             </p>
             {caption ? (
@@ -6766,6 +6792,8 @@ function AdminDashboardManagementPanel({
     : formatNumber(channelStats?.subscriberCount);
   const subscriberCaption = isSubscriberLoading
     ? "채널 통계 불러오는 중"
+    : channelStats?.unavailable?.code === "LOCAL_CHANNEL_SNAPSHOT_UNAVAILABLE"
+      ? "로컬 채널 스냅샷 없음 · KPI 수집 후 표시"
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
@@ -7931,6 +7959,9 @@ function AdminDashboardManagementPanel({
             )}
           </AdminDashboardDeferredBody>
         </div>
+      </div>
+      <div className="mt-2 shrink-0" data-admin-system-status-slot="true">
+        <AdminSystemStatusCenter isAdmin={isAdmin} />
       </div>
     </section>
   );
@@ -9164,7 +9195,7 @@ function AuditPlaceholder() {
                     </p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {formatDashboardDateTime(event.createdAt)}
-                      {event.reason ? ` · ${event.reason}` : ""}
+                      {event.reasonCode ? ` · ${event.reasonCode}` : ""}
                     </p>
                   </div>
                   <Badge
@@ -9189,13 +9220,14 @@ function AuditPlaceholder() {
                   <div>
                     <dt className="font-semibold text-foreground">범위</dt>
                     <dd className="break-all font-mono">
-                      {event.domain ?? "admin_user_management"} ·{" "}
-                      {event.source ?? "admin_audit_events"}
+                      admin_user_management · admin_audit_events
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-foreground">읽기 확인 ID</dt>
-                    <dd className="break-all font-mono">{event.readbackId ?? "—"}</dd>
+                    <dt className="font-semibold text-foreground">적용 시각</dt>
+                    <dd className="break-all font-mono">
+                      {event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}
+                    </dd>
                   </div>
                   <div>
                     <dt className="font-semibold text-foreground">상관 ID</dt>

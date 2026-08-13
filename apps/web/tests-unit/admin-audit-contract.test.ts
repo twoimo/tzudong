@@ -15,11 +15,8 @@ type AuditEventsSupabaseResult = {
 };
 
 type AuditEventsQueryState = {
-  table: string;
-  selectColumns?: string;
-  orderColumn?: string;
-  ascending?: boolean;
-  limitCount?: number;
+  functionName: string;
+  args?: { p_limit?: number };
 };
 
 function createAuditEventsSupabaseMock(
@@ -33,23 +30,9 @@ function createAuditEventsSupabaseMock(
     });
   }
 
-  function createQuery(state: AuditEventsQueryState): any {
-    return {
-      select(columns: string) {
-        return createQuery({ ...state, selectColumns: columns });
-      },
-      order(column: string, options: { ascending?: boolean } = {}) {
-        return createQuery({ ...state, orderColumn: column, ascending: options.ascending });
-      },
-      limit(limitCount: number) {
-        return resolve({ ...state, limitCount });
-      },
-    };
-  }
-
   return {
-    from(table: string) {
-      return createQuery({ table });
+    rpc(functionName: string, args?: { p_limit?: number }) {
+      return resolve({ functionName, args });
     },
   };
 }
@@ -144,10 +127,8 @@ describe("admin audit coverage contract", () => {
 
       expect(response.status).toBe(200);
       expect(observedState).toMatchObject({
-        table: "admin_audit_events",
-        orderColumn: "created_at",
-        ascending: false,
-        limitCount: 2,
+        functionName: "read_admin_user_audit_events",
+        args: { p_limit: 2 },
       });
       expect(payload.source).toBe("admin_audit_events");
       expect(payload.unavailable).toBeNull();
@@ -204,6 +185,36 @@ describe("admin audit coverage contract", () => {
       expect(logged).not.toContain("42501");
       expect(logged).not.toContain("secret-token");
       expect(logged).not.toContain("do-not-log");
+    } finally {
+      console.error = originalConsoleError;
+      mock.restore();
+    }
+  });
+
+  test("fails closed when the bounded audit RPC returns malformed rows", async () => {
+    const originalConsoleError = console.error;
+    const calls: unknown[][] = [];
+    console.error = (...args: unknown[]) => calls.push(args);
+
+    try {
+      const GET = await loadAuditEventsRoute(() => ({
+        data: [{
+          id: "audit-secret-provider-body",
+          action: "unknown-provider-action",
+          reason: "raw-provider-secret-body",
+          status: "applied",
+        }],
+      }));
+
+      const response = await GET(auditEventsRequest());
+      const payload = await response.json();
+      const serialized = JSON.stringify({ payload, calls });
+
+      expect(response.status).toBe(503);
+      expect(payload.events).toEqual([]);
+      expect(payload.unavailable.reason).toBe("admin-audit-events-read-failed");
+      expect(serialized).not.toContain("audit-secret-provider-body");
+      expect(serialized).not.toContain("raw-provider-secret-body");
     } finally {
       console.error = originalConsoleError;
       mock.restore();

@@ -35,6 +35,10 @@ import {
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createClient } from '@/lib/supabase/server';
+import {
+  isSignupProfileStateReady,
+  readSignupProfileState,
+} from '@/lib/profile-mutation';
 
 export const runtime = 'nodejs';
 
@@ -677,6 +681,27 @@ async function createPasswordAccount(request: NextRequest, body: Record<string, 
   if (error || !creationProvenance) {
     const proof = await compensateFreshPasswordAccount(creationProvenance, signupClient);
     if (!await enforcePasswordCompensation(challenge, userId, proof)) {
+      return errorResponse('ONBOARDING_COMPENSATION_HOLD_UNAVAILABLE', 503, request);
+    }
+    return passwordLoginRecoveryResponse(request);
+  }
+
+  let signupProfileReady = false;
+  try {
+    const admin = createSupabaseServiceRoleClient();
+    const signupProfileState = await readSignupProfileState(
+      admin,
+      creationProvenance.userId,
+      body.nickname.trim(),
+    );
+    signupProfileReady = isSignupProfileStateReady(signupProfileState);
+  } catch {
+    signupProfileReady = false;
+  }
+
+  if (!signupProfileReady) {
+    const proof = await compensateFreshPasswordAccount(creationProvenance, signupClient);
+    if (!await enforcePasswordCompensation(challenge, creationProvenance.userId, proof)) {
       return errorResponse('ONBOARDING_COMPENSATION_HOLD_UNAVAILABLE', 503, request);
     }
     return passwordLoginRecoveryResponse(request);

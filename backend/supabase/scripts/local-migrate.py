@@ -91,6 +91,11 @@ STACK_PROVENANCE_FIELDS = frozenset({
 })
 NIGHTLY_EMAIL = "nightly-ci@local.invalid"
 REMOTE_DOCKER_ENV = ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_TLS_VERIFY", "DOCKER_CERT_PATH", "DOCKER_CONFIG")
+DOCKER_SOCKET_ADMISSION_ENV = "TZUDONG_DOCKER_SOCKET_ADMISSION_FILE"
+GITHUB_ACTIONS_REPOSITORY = "twoimo/tzudong"
+_GITHUB_ACTIONS_ADMISSION_PATH = re.compile(
+    r"^/run/tzudong-nightly-local-admission-([1-9][0-9]*)-([1-9][0-9]*)$"
+)
 PLAN_VERSION = "local-supabase-migration-plan/v1"
 LEDGER_TABLE = "_tzudong_local.migration_ledger"
 EXPECTED_SOURCE = Path("backend/supabase/migrations")
@@ -110,13 +115,18 @@ MIGRATION_ORDER_OVERRIDES = {
 }
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 69
+EXPECTED_LEDGER_UNITS = 77
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
 )
 NIGHTLY_PASSWORD_ENV = "NIGHTLY_ADMIN_PASSWORD"
 NIGHTLY_LOGICAL_ID = "nightly-ci"
+LOCAL_PRIVACY_POLICY_FIXTURE_ID = "local-nightly-policy"
+LOCAL_PRIVACY_POLICY_VERSION = "2026-08-04.1"
+LOCAL_PRIVACY_POLICY_CONTENT_SHA256 = "6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b"
+LOCAL_PRIVACY_POLICY_PROVENANCE = "LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:privacy-policy-fixture-v1"
+LOCAL_YOUTUBE_CHANNEL_PROVENANCE = "LOCAL_TEST_ONLY:NOT_PRODUCTION:nightly-ci:youtube-channel-snapshot-v1"
 PLATFORM_BOOTSTRAP_ID = "local-platform-bootstrap-v1"
 PLATFORM_BOOTSTRAP_SOURCE = "backend/supabase/scripts/local-migrate.py:LOCAL_PLATFORM_BOOTSTRAP_SQL"
 AUTH_API_SCHEMA = "local-gotrue-auth-api-v1"
@@ -167,7 +177,7 @@ FIXTURE_TIMESTAMP = "2026-01-01T00:00:00Z"
 LOCAL_ENV_KEYS = frozenset({
     "PROJECT_NAME", "LOCAL_STATE_ROOT", "LOCAL_INPUT_ROOT",
     "POSTGRES_PASSWORD", "NIGHTLY_ADMIN_EMAIL", "NIGHTLY_ADMIN_PASSWORD",
-    "JWT_SECRET", "ANON_KEY", "SERVICE_ROLE_KEY", "DASHBOARD_USERNAME",
+    "JWT_SECRET", "ANON_KEY", "SERVICE_ROLE_KEY", "STORAGE_SERVICE_KEY", "DASHBOARD_USERNAME",
     "DASHBOARD_PASSWORD", "SECRET_KEY_BASE", "VAULT_ENC_KEY", "PG_META_CRYPTO_KEY",
     "POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_PORT", "POSTGRES_HOST_PORT",
     "POOLER_PROXY_PORT_TRANSACTION", "POOLER_DEFAULT_POOL_SIZE", "POOLER_MAX_CLIENT_CONN",
@@ -182,8 +192,7 @@ LOCAL_ENV_KEYS = frozenset({
     "SUPABASE_PUBLIC_URL", "IMGPROXY_ENABLE_WEBP_DETECTION", "OPENAI_API_KEY",
     "FUNCTIONS_VERIFY_JWT", "LOGFLARE_PUBLIC_ACCESS_TOKEN", "LOGFLARE_PRIVATE_ACCESS_TOKEN",
     "DOCKER_SOCKET_LOCATION", "LOCAL_STACK_GENERATOR_VERSION", "MAIL_SMTP_PORT",
-    "MAIL_WEB_PORT", "MAIL_POP3_PORT", "NIGHTLY_LOCAL_ENV_ONLY", "NIGHTLY_ENV_FILE_ONLY",
-    "NODE_ENV", "SUPABASE_DB_URL",
+    "MAIL_WEB_PORT", "MAIL_POP3_PORT", "SUPABASE_DB_URL",
 })
 RECEIPT_ENV_CONTRACT_KEYS = (
     "PROJECT_NAME",
@@ -235,9 +244,6 @@ RECEIPT_ENV_CONTRACT_KEYS = (
     "FUNCTIONS_VERIFY_JWT",
     "DOCKER_SOCKET_LOCATION",
     "LOCAL_STACK_GENERATOR_VERSION",
-    "NIGHTLY_LOCAL_ENV_ONLY",
-    "NIGHTLY_ENV_FILE_ONLY",
-    "NODE_ENV",
 )
 ENVIRONMENT_CONTRACT_SCHEMA = "local-stack-environment-contract-v1"
 READBACK_SECTIONS = (
@@ -254,16 +260,30 @@ READBACK_SECTIONS = (
     "storage_buckets",
     "storage_policies",
     "realtime_membership",
+    "public_read_function_grants",
+    "public_read_table_grants",
+    "public_read_policies",
+    "caller_bound_admin_policies",
+    "admin_data_rpcs",
+    "admin_data_table_grants",
+    "admin_map_overlay_rpc",
+    "admin_map_overlay_table_grants",
+    "admin_map_overlay_policies",
     "auth_users",
     "auth_identities",
     "profiles",
+    "user_roles",
+    "user_account_status",
+    "privacy_policy_fixture",
+    "privacy_age_profile",
+    "youtube_channel_snapshot",
     "restaurants",
     "announcements",
     "seed_buckets",
     "seed_realtime",
 )
-CATALOG_SECTIONS = READBACK_SECTIONS[:13]
-SEED_SECTIONS = READBACK_SECTIONS[13:]
+CATALOG_SECTIONS = READBACK_SECTIONS[:22]
+SEED_SECTIONS = READBACK_SECTIONS[22:]
 CATALOG_FIELDS = {
     "extensions": ("name", "schema", "version", "owner"),
     "roles": ("name", "superuser", "create_db", "create_role", "can_login", "member_of"),
@@ -286,11 +306,131 @@ CATALOG_FIELDS = {
     "storage_buckets": ("id", "name", "public", "file_size_limit", "allowed_mime_types"),
     "storage_policies": ("schema", "relation", "name", "command", "roles", "normalized_using", "normalized_check"),
     "realtime_membership": ("publication", "schema", "relation"),
+    "public_read_function_grants": ("function", "role", "execute"),
+    "public_read_table_grants": (
+        "relation",
+        "role",
+        "select",
+        "insert",
+        "update",
+        "delete",
+    ),
+    "public_read_policies": (
+        "relation",
+        "name",
+        "command",
+        "roles",
+        "normalized_using",
+        "normalized_check",
+    ),
+    "caller_bound_admin_policies": (
+        "relation",
+        "name",
+        "command",
+        "roles",
+        "helper_dependency_count",
+        "uid_dependency_count",
+        "legacy_dependency_count",
+    ),
+    "admin_data_rpcs": (
+        "function",
+        "result",
+        "owner",
+        "security_definer",
+        "volatility",
+        "declared_search_path",
+        "service_execute",
+        "anon_execute",
+        "authenticated_execute",
+        "allowlisted_service",
+    ),
+    "admin_data_table_grants": (
+        "relation",
+        "select",
+        "insert",
+        "update",
+        "delete",
+    ),
+    "admin_map_overlay_rpc": (
+        "function",
+        "result",
+        "owner",
+        "security_definer",
+        "volatility",
+        "declared_search_path",
+        "service_execute",
+        "anon_execute",
+        "authenticated_execute",
+        "uses_claims_role",
+        "uses_legacy_claim_role",
+        "uses_auth_role",
+        "uses_restaurant_for_share",
+        "owner_auth_schema_usage",
+        "allowlisted_service",
+    ),
+    "admin_map_overlay_table_grants": (
+        "relation",
+        "role",
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "truncate",
+        "references",
+        "trigger",
+    ),
+    "admin_map_overlay_policies": (
+        "relation",
+        "name",
+        "command",
+        "roles",
+        "normalized_using",
+        "normalized_check",
+    ),
 }
 SEED_FIELDS = {
     "auth_users": ("logical_id", "email", "aud", "role", "email_confirmed"),
     "auth_identities": ("logical_id", "provider", "identity_email"),
     "profiles": ("logical_id", "username", "nickname", "role", "email", "updated_at"),
+    "user_roles": ("logical_id", "role"),
+    "user_account_status": ("logical_id", "account_status", "disabled_at_is_null"),
+    "privacy_policy_fixture": (
+        "fixture_id",
+        "version",
+        "locale",
+        "status",
+        "content_sha256",
+        "effective_at",
+        "published_at",
+        "operator_approval_ref",
+        "supersedes_is_null",
+    ),
+    "privacy_age_profile": (
+        "logical_id",
+        "age_band",
+        "method",
+        "status",
+        "policy_version",
+        "attested_at",
+        "updated_at",
+    ),
+    "youtube_channel_snapshot": (
+        "fixture_id",
+        "channel_id",
+        "channel_title",
+        "channel_handle",
+        "subscriber_count",
+        "view_count",
+        "video_count",
+        "hidden_subscriber_count",
+        "previous_bucket_is_null",
+        "subscriber_delta",
+        "view_delta",
+        "video_delta",
+        "bucket_started_at",
+        "fetched_at",
+        "source",
+    ),
     "restaurants": ("id", "trace_id", "approved_name", "status", "categories", "created_at", "updated_at"),
     "announcements": ("id", "title", "content", "is_active", "show_on_banner", "priority", "created_at", "updated_at"),
     "seed_buckets": ("id", "name", "public"),
@@ -387,7 +527,10 @@ AUTH_COLUMN_ALLOWLIST = AUTH_SCHEMA_COLUMN_ALLOWLIST
 AUTH_RELATION_ALLOWLIST = frozenset(AUTH_SCHEMA_COLUMN_ALLOWLIST)
 AUTH_SCHEMA_OWNER = "supabase_admin"
 INPUT_MANIFEST_SOURCE = Path("backend/supabase/local-inputs/manifest.v1.json")
-FUNCTION_SOURCE = Path("backend/supabase/local-inputs/functions/main/index.ts")
+FUNCTION_SOURCES = (
+    "functions/main/index.ts",
+    "functions/naver-geocode/index.ts",
+)
 COMPOSE_SOURCES = (
     Path("backend/supabase/docker-compose.yml"),
     Path("backend/supabase/docker-compose.local.yml"),
@@ -642,6 +785,68 @@ def _environment_contract_sha256(values: Mapping[str, str]) -> str:
         )
     )
 
+def _github_actions_root_socket_admission() -> bool:
+    admission_value = os.environ.get(DOCKER_SOCKET_ADMISSION_ENV, "")
+    repository = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    run_attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "")
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("CI") != "true"
+        or repository != GITHUB_ACTIONS_REPOSITORY
+        or re.fullmatch(r"[1-9][0-9]*", run_id) is None
+        or re.fullmatch(r"[1-9][0-9]*", run_attempt) is None
+    ):
+        return False
+    match = _GITHUB_ACTIONS_ADMISSION_PATH.fullmatch(admission_value)
+    if (
+        match is None
+        or match.groups() != (run_id, run_attempt)
+        or admission_value
+        != f"/run/tzudong-nightly-local-admission-{run_id}-{run_attempt}"
+    ):
+        return False
+    admission_path = Path(admission_value)
+    try:
+        info = admission_path.lstat()
+    except OSError:
+        return False
+    try:
+        read_result = subprocess.run(
+            ["/usr/bin/sudo", "-n", "--", "/bin/cat", admission_value],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+            env={"PATH": "/usr/bin:/bin", "LANG": "C"},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    payload = read_result.stdout
+    expected = (
+        f"repo={repository}\n"
+        f"run_id={run_id}\n"
+        f"run_attempt={run_attempt}\n"
+    ).encode("ascii")
+    return (
+        not stat.S_ISLNK(info.st_mode)
+        and stat.S_ISREG(info.st_mode)
+        and info.st_uid == 0
+        and stat.S_IMODE(info.st_mode) == 0o400
+        and read_result.returncode == 0
+        and len(payload) <= 256
+        and payload == expected
+    )
+
+
+def _github_actions_root_owned_socket(path: Path, owner: int) -> bool:
+    return (
+        path == Path("/var/run/docker.sock")
+        and owner == 0
+        and _github_actions_root_socket_admission()
+    )
+
+
 def _assert_local_docker_context(docker: str) -> None:
     environment = {
         key: value
@@ -694,7 +899,13 @@ def _assert_local_docker_context(docker: str) -> None:
         info = socket_path.lstat()
     except OSError as error:
         raise LocalMigrationError("docker_context") from error
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
+    owned_by_current_user = info.st_uid == os.getuid()
+    owned_by_disposable_ci_root = _github_actions_root_owned_socket(socket_path, info.st_uid)
+    if (
+        stat.S_ISLNK(info.st_mode)
+        or not stat.S_ISSOCK(info.st_mode)
+        or not (owned_by_current_user or owned_by_disposable_ci_root)
+    ):
         raise LocalMigrationError("docker_context")
 
 def _reject_path_custody(path: Path) -> None:
@@ -1282,9 +1493,6 @@ class PsqlExecutor:
             "OPENAI_API_KEY": "",
             "DOCKER_SOCKET_LOCATION": "/var/empty/local-stack.sock",
             "LOCAL_STACK_GENERATOR_VERSION": LOCAL_STACK_GENERATOR_VERSION,
-            "NIGHTLY_LOCAL_ENV_ONLY": "1",
-            "NIGHTLY_ENV_FILE_ONLY": "1",
-            "NODE_ENV": "test",
         }
         if any(values.get(key) != expected for key, expected in fixed_values.items()):
             raise LocalMigrationError("local_env_provenance")
@@ -2275,9 +2483,23 @@ def _receipt_row_key(section: str, row: list[Any]) -> tuple[Any, ...]:
         "storage_buckets": (1, 2),
         "storage_policies": (1, 2, 3),
         "realtime_membership": (1, 2, 3),
+        "public_read_function_grants": (1, 2),
+        "public_read_table_grants": (1, 2),
+        "public_read_policies": (1, 2),
+        "caller_bound_admin_policies": (1, 2),
+        "admin_data_rpcs": (1,),
+        "admin_data_table_grants": (1,),
+        "admin_map_overlay_rpc": (1,),
+        "admin_map_overlay_table_grants": (1, 2),
+        "admin_map_overlay_policies": (1, 2),
         "auth_users": (1, 2),
         "auth_identities": (2, 3),
         "profiles": (2, 5),
+        "user_roles": (1, 2),
+        "user_account_status": (1, 2),
+        "privacy_policy_fixture": (1,),
+        "privacy_age_profile": (1,),
+        "youtube_channel_snapshot": (1,),
         "restaurants": (1,),
         "announcements": (1,),
         "seed_buckets": (1, 2),
@@ -2309,7 +2531,13 @@ def _normalize_auth_logical_ids(records: list[list[Any]]) -> None:
         user[1] = NIGHTLY_LOGICAL_ID
     if user[3:] != ["authenticated", "authenticated", True]:
         _receipt_error("receipt_auth_values")
-    for section in ("auth_identities", "profiles"):
+    for section in (
+        "auth_identities",
+        "profiles",
+        "user_roles",
+        "user_account_status",
+        "privacy_age_profile",
+    ):
         rows = [row for row in records if row[0] == section]
         if len(rows) != 1:
             _receipt_error("receipt_" + section + "_count")
@@ -2355,8 +2583,361 @@ def _validate_auth_catalog(records: list[list[Any]]) -> None:
         if actual != list(expected) or len(set(actual)) != len(actual):
             _receipt_error("receipt_auth_columns")
 
+
+def _validate_public_read_contract(records: list[list[Any]]) -> None:
+    function_grants = [
+        row for row in records if row[0] == "public_read_function_grants"
+    ]
+    if function_grants != [
+        ["public_read_function_grants", "is_current_user_active_admin()", "anon", False],
+        ["public_read_function_grants", "is_current_user_active_admin()", "authenticated", True],
+        ["public_read_function_grants", "is_current_user_active_admin()", "privacy_workflow_owner", True],
+        ["public_read_function_grants", "is_current_user_active_admin()", "service_role", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "anon", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "authenticated", False],
+        ["public_read_function_grants", "is_user_admin(uuid)", "privacy_workflow_owner", True],
+        ["public_read_function_grants", "is_user_admin(uuid)", "service_role", False],
+    ]:
+        _receipt_error("receipt_public_read_function_grants")
+
+    expected_table_grants: list[list[Any]] = []
+    for relation in ("ad_banners", "announcements"):
+        expected_table_grants.extend([
+            ["public_read_table_grants", relation, "anon", True, False, False, False],
+            ["public_read_table_grants", relation, "authenticated", True, True, True, True],
+            ["public_read_table_grants", relation, "service_role", True, True, True, True],
+        ])
+    if [row for row in records if row[0] == "public_read_table_grants"] != expected_table_grants:
+        _receipt_error("receipt_public_read_table_grants")
+
+    admin_expression = (
+        "( SELECT is_current_user_active_admin() AS is_current_user_active_admin)"
+    )
+    expected_policies: list[list[Any]] = []
+    for relation in ("ad_banners", "announcements"):
+        policy_prefix = f"tzudong_{relation}"
+        expected_policies.extend([
+            [
+                "public_read_policies",
+                relation,
+                f"{policy_prefix}_delete_admin",
+                "DELETE",
+                ["authenticated"],
+                admin_expression,
+                None,
+            ],
+            [
+                "public_read_policies",
+                relation,
+                f"{policy_prefix}_insert_admin",
+                "INSERT",
+                ["authenticated"],
+                None,
+                admin_expression,
+            ],
+            [
+                "public_read_policies",
+                relation,
+                f"{policy_prefix}_select_active",
+                "SELECT",
+                ["anon", "authenticated"],
+                "(is_active = true)",
+                None,
+            ],
+            [
+                "public_read_policies",
+                relation,
+                f"{policy_prefix}_select_admin",
+                "SELECT",
+                ["authenticated"],
+                admin_expression,
+                None,
+            ],
+            [
+                "public_read_policies",
+                relation,
+                f"{policy_prefix}_update_admin",
+                "UPDATE",
+                ["authenticated"],
+                admin_expression,
+                admin_expression,
+            ],
+        ])
+    if [row for row in records if row[0] == "public_read_policies"] != expected_policies:
+        _receipt_error("receipt_public_read_policies")
+
+    policy_contracts = (
+        ("restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_insert", "INSERT", 1, 0),
+        ("restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_select", "SELECT", 1, 0),
+        ("restaurant_refresh_candidates", "restaurant_refresh_candidates_admin_update", "UPDATE", 2, 0),
+        ("restaurant_refresh_runs", "restaurant_refresh_runs_admin_insert", "INSERT", 1, 0),
+        ("restaurant_refresh_runs", "restaurant_refresh_runs_admin_select", "SELECT", 1, 0),
+        ("restaurant_refresh_runs", "restaurant_refresh_runs_admin_update", "UPDATE", 2, 0),
+        ("restaurant_request_review_audit", "Admins can view request review audit", "SELECT", 1, 0),
+        ("restaurant_requests", "Admins can update requests", "UPDATE", 2, 0),
+        ("restaurant_requests", "Admins can view all requests", "SELECT", 1, 0),
+        ("restaurant_requests", "Restaurant requests select policy", "SELECT", 1, 1),
+        ("restaurant_submission_items", "Admins can delete submission items", "DELETE", 1, 0),
+        ("restaurant_submission_items", "Admins can update submission items", "UPDATE", 1, 0),
+        ("restaurant_submission_items", "Submission items insert policy", "INSERT", 1, 1),
+        ("restaurant_submission_items", "Submission items select policy", "SELECT", 1, 1),
+        ("restaurant_submissions", "Admins can update all submissions", "UPDATE", 1, 0),
+        ("restaurant_submissions", "Restaurant submissions select policy", "SELECT", 1, 1),
+        ("restaurants", "restaurants_authenticated_admin_update", "UPDATE", 2, 0),
+        ("short_urls", "Admins can delete short URLs", "DELETE", 1, 0),
+    )
+    expected_caller_bound_policies = [
+        [
+            "caller_bound_admin_policies",
+            relation,
+            policy,
+            command,
+            ["authenticated"],
+            helper_count,
+            uid_count,
+            0,
+        ]
+        for relation, policy, command, helper_count, uid_count in policy_contracts
+    ]
+    if [
+        row for row in records if row[0] == "caller_bound_admin_policies"
+    ] != expected_caller_bound_policies:
+        _receipt_error("receipt_caller_bound_admin_policies")
+
+    expected_admin_rpcs = [
+        [
+            "admin_data_rpcs",
+            "public.append_admin_user_audit_event(uuid,uuid,text,text,text,uuid,jsonb,jsonb,timestamp with time zone,text,uuid,text,text)",
+            "uuid",
+            "privacy_workflow_owner",
+            True,
+            "volatile",
+            ['search_path=""'],
+            True,
+            False,
+            False,
+            True,
+        ],
+        [
+            "admin_data_rpcs",
+            "public.read_admin_user_audit_events(integer)",
+            "TABLE(id uuid, actor_user_id uuid, target_user_id uuid, action text, reason text, status text, correlation_id uuid, applied_at timestamp with time zone, error_code text, created_at timestamp with time zone, audit_counts jsonb, audit_flags jsonb)",
+            "privacy_workflow_owner",
+            True,
+            "stable",
+            ['search_path=""'],
+            True,
+            False,
+            False,
+            True,
+        ],
+        [
+            "admin_data_rpcs",
+            "public.read_admin_user_ids_for_management()",
+            "TABLE(user_id uuid)",
+            "privacy_workflow_owner",
+            True,
+            "stable",
+            ['search_path=""'],
+            True,
+            False,
+            False,
+            True,
+        ],
+        [
+            "admin_data_rpcs",
+            "public.read_admin_user_management_metadata(uuid[])",
+            "TABLE(user_id uuid, username text, nickname text, avatar_url text, profile_role text, profile_created_at timestamp with time zone, profile_updated_at timestamp with time zone, is_admin boolean, account_status text)",
+            "privacy_workflow_owner",
+            True,
+            "stable",
+            ['search_path=""'],
+            True,
+            False,
+            False,
+            True,
+        ],
+    ]
+    if [row for row in records if row[0] == "admin_data_rpcs"] != expected_admin_rpcs:
+        _receipt_error("receipt_admin_data_rpcs")
+
+    if [row for row in records if row[0] == "admin_data_table_grants"] != [
+        ["admin_data_table_grants", relation, False, False, False, False]
+        for relation in (
+            "admin_audit_events",
+            "profiles",
+            "user_account_status",
+            "user_roles",
+        )
+    ]:
+        _receipt_error("receipt_admin_data_table_grants")
+
+
+def _validate_admin_map_overlay_contract(records: list[list[Any]]) -> None:
+    expected_rpc = [[
+        "admin_map_overlay_rpc",
+        "public.apply_admin_restaurant_map_overlay_action(uuid,text,uuid,text,text,text,timestamp with time zone,timestamp with time zone,jsonb,text,text,text,uuid,text,jsonb)",
+        "jsonb",
+        "privacy_workflow_owner",
+        True,
+        "volatile",
+        ['search_path=""'],
+        True,
+        False,
+        False,
+        True,
+        True,
+        False,
+        False,
+        False,
+        True,
+    ]]
+    if [row for row in records if row[0] == "admin_map_overlay_rpc"] != expected_rpc:
+        _receipt_error("receipt_admin_map_overlay_rpc")
+
+    expected_grants = [
+        [
+            "admin_map_overlay_table_grants",
+            "admin_restaurant_map_overlay_audit_events",
+            role,
+            role == "privacy_workflow_owner",
+            role == "privacy_workflow_owner",
+            False,
+            False,
+            False,
+            False,
+            False,
+        ]
+        for role in ("anon", "authenticated", "privacy_workflow_owner", "service_role")
+    ]
+    expected_grants.extend([
+        [
+            "admin_map_overlay_table_grants",
+            "admin_restaurant_map_overlays",
+            role,
+            role in ("privacy_workflow_owner", "service_role"),
+            role == "privacy_workflow_owner",
+            role == "privacy_workflow_owner",
+            False,
+            False,
+            False,
+            False,
+        ]
+        for role in ("anon", "authenticated", "privacy_workflow_owner", "service_role")
+    ])
+    expected_grants.append([
+        "admin_map_overlay_table_grants",
+        "restaurants",
+        "privacy_workflow_owner",
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+    ])
+    if [
+        row for row in records if row[0] == "admin_map_overlay_table_grants"
+    ] != expected_grants:
+        _receipt_error("receipt_admin_map_overlay_table_grants")
+
+    expected_policies = [
+        [
+            "admin_map_overlay_policies",
+            "admin_restaurant_map_overlay_audit_events",
+            "tzudong_admin_map_overlay_audit_owner_insert",
+            "INSERT",
+            ["privacy_workflow_owner"],
+            None,
+            "true",
+        ],
+        [
+            "admin_map_overlay_policies",
+            "admin_restaurant_map_overlay_audit_events",
+            "tzudong_admin_map_overlay_audit_owner_select",
+            "SELECT",
+            ["privacy_workflow_owner"],
+            "true",
+            None,
+        ],
+        [
+            "admin_map_overlay_policies",
+            "admin_restaurant_map_overlays",
+            "tzudong_admin_map_overlays_owner_insert",
+            "INSERT",
+            ["privacy_workflow_owner"],
+            None,
+            "true",
+        ],
+        [
+            "admin_map_overlay_policies",
+            "admin_restaurant_map_overlays",
+            "tzudong_admin_map_overlays_owner_select",
+            "SELECT",
+            ["privacy_workflow_owner"],
+            "true",
+            None,
+        ],
+        [
+            "admin_map_overlay_policies",
+            "admin_restaurant_map_overlays",
+            "tzudong_admin_map_overlays_owner_update",
+            "UPDATE",
+            ["privacy_workflow_owner"],
+            "true",
+            "true",
+        ],
+    ]
+    if [row for row in records if row[0] == "admin_map_overlay_policies"] != expected_policies:
+        _receipt_error("receipt_admin_map_overlay_policies")
+
+
 def _validate_seed_invariants(records: list[list[Any]]) -> None:
     _normalize_auth_logical_ids(records)
+    if [row for row in records if row[0] == "privacy_policy_fixture"] != [[
+        "privacy_policy_fixture",
+        LOCAL_PRIVACY_POLICY_FIXTURE_ID,
+        LOCAL_PRIVACY_POLICY_VERSION,
+        "ko-KR",
+        "published",
+        LOCAL_PRIVACY_POLICY_CONTENT_SHA256,
+        FIXTURE_TIMESTAMP,
+        FIXTURE_TIMESTAMP,
+        LOCAL_PRIVACY_POLICY_PROVENANCE,
+        True,
+    ]]:
+        _receipt_error("receipt_privacy_policy_fixture")
+    if [row for row in records if row[0] == "privacy_age_profile"] != [[
+        "privacy_age_profile",
+        NIGHTLY_LOGICAL_ID,
+        "age_14_plus",
+        "self_attestation",
+        "eligible",
+        LOCAL_PRIVACY_POLICY_VERSION,
+        FIXTURE_TIMESTAMP,
+        FIXTURE_TIMESTAMP,
+    ]]:
+        _receipt_error("receipt_privacy_age_profile")
+    if [row for row in records if row[0] == "youtube_channel_snapshot"] != [[
+        "youtube_channel_snapshot",
+        "local-nightly-channel-snapshot",
+        "local-nightly-channel",
+        "[LOCAL TEST] Nightly channel fixture",
+        "@local-nightly",
+        1000,
+        100000,
+        100,
+        False,
+        True,
+        0,
+        0,
+        0,
+        FIXTURE_TIMESTAMP,
+        FIXTURE_TIMESTAMP,
+        LOCAL_YOUTUBE_CHANNEL_PROVENANCE,
+    ]]:
+        _receipt_error("receipt_youtube_channel_snapshot")
     restaurants = [row for row in records if row[0] == "restaurants"]
     expected_restaurants = [
         [
@@ -2399,33 +2980,85 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         _receipt_error("receipt_announcement_fixture")
     if [row for row in announcements if row[1] == expected_announcement[1]] != [expected_announcement]:
         _receipt_error("receipt_announcement_fixture")
+    expected_buckets = [
+        ["seed_buckets", "ad-banner-images", "ad-banner-images", True],
+        ["seed_buckets", "avatars", "avatars", True],
+        ["seed_buckets", "profile-avatars", "profile-avatars", True],
+        ["seed_buckets", "review-photos", "review-photos", True],
+        ["seed_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False],
+    ]
     buckets = [row for row in records if row[0] == "seed_buckets"]
-    if buckets != [["seed_buckets", "avatars", "avatars", True]]:
+    if buckets != expected_buckets:
         _receipt_error("receipt_bucket_fixture")
     storage_buckets = [row for row in records if row[0] == "storage_buckets"]
-    if storage_buckets != [["storage_buckets", "avatars", "avatars", True, 52428800, ["image/*"]]]:
+    if [(row[1], row[2], row[3]) for row in storage_buckets] != [
+        ("ad-banner-images", "ad-banner-images", True),
+        ("avatars", "avatars", True),
+        ("profile-avatars", "profile-avatars", True),
+        ("review-photos", "review-photos", True),
+        ("youtube-thumbnail-releases", "youtube-thumbnail-releases", False),
+    ]:
         _receipt_error("receipt_bucket_fixture")
     storage_policies = [row for row in records if row[0] == "storage_policies"]
-    if sorted((row[1], row[2], row[3]) for row in storage_policies) != [
-        ("storage", "objects", "local_nightly_avatar_insert"),
-        ("storage", "objects", "local_nightly_avatar_read"),
-    ]:
+    if len(storage_policies) != 12 or any(row[1:3] != ["storage", "objects"] for row in storage_policies):
         _receipt_error("receipt_storage_policy_fixture")
+    policy_names = {row[3] for row in storage_policies}
+    expected_policy_names = {
+        "local_nightly_avatar_insert", "local_nightly_avatar_read",
+        "tzudong_ad_banner_delete_admin", "tzudong_ad_banner_insert_admin",
+        "tzudong_ad_banner_update_admin", "tzudong_profile_avatar_delete_own",
+        "tzudong_profile_avatar_insert_own", "tzudong_profile_avatar_update_own",
+        "tzudong_public_media_read", "tzudong_review_photo_delete_own",
+        "tzudong_review_photo_insert_own", "tzudong_review_photo_update_own",
+    }
+    if policy_names != expected_policy_names:
+        _receipt_error("receipt_storage_policy_fixture")
+    policy_contracts = {
+        "local_nightly_avatar_insert": ("INSERT", ["authenticated"], None, ("avatars",)),
+        "local_nightly_avatar_read": ("SELECT", ["anon", "authenticated"], ("avatars",), None),
+        "tzudong_ad_banner_delete_admin": ("DELETE", ["authenticated"], ("ad-banner-images", "user_roles", "user_account_status", "active", "foldername", "uid()"), None),
+        "tzudong_ad_banner_insert_admin": ("INSERT", ["authenticated"], None, ("ad-banner-images", "user_roles", "user_account_status", "active", "foldername", "uid()")),
+        "tzudong_ad_banner_update_admin": ("UPDATE", ["authenticated"], ("ad-banner-images", "user_roles", "user_account_status", "active", "foldername", "uid()"), ("ad-banner-images", "user_roles", "user_account_status", "active", "foldername", "uid()")),
+        "tzudong_profile_avatar_delete_own": ("DELETE", ["authenticated"], ("profile-avatars", "foldername", "uid()"), None),
+        "tzudong_profile_avatar_insert_own": ("INSERT", ["authenticated"], None, ("profile-avatars", "foldername", "uid()")),
+        "tzudong_profile_avatar_update_own": ("UPDATE", ["authenticated"], ("profile-avatars", "foldername", "uid()"), ("profile-avatars", "foldername", "uid()")),
+        "tzudong_public_media_read": ("SELECT", ["anon", "authenticated"], ("ad-banner-images", "profile-avatars", "review-photos"), None),
+        "tzudong_review_photo_delete_own": ("DELETE", ["authenticated"], ("review-photos", "foldername", "uid()"), None),
+        "tzudong_review_photo_insert_own": ("INSERT", ["authenticated"], None, ("review-photos", "foldername", "uid()")),
+        "tzudong_review_photo_update_own": ("UPDATE", ["authenticated"], ("review-photos", "foldername", "uid()"), ("review-photos", "foldername", "uid()")),
+    }
     for row in storage_policies:
-        expected_command = "SELECT" if row[3].endswith("_read") else "INSERT"
-        expected_roles = ["anon", "authenticated"] if expected_command == "SELECT" else ["authenticated"]
-        if row[4] != expected_command or row[5] != expected_roles:
+        command, roles, using_tokens, check_tokens = policy_contracts[row[3]]
+        if row[4] != command or row[5] != roles:
             _receipt_error("receipt_storage_policy_fixture")
-        using = row[6] or ""
-        check = row[7] or ""
-        if "avatars" not in using + check:
-            _receipt_error("receipt_storage_policy_fixture")
+        for expression, tokens in ((row[6], using_tokens), (row[7], check_tokens)):
+            if tokens is None:
+                if expression is not None:
+                    _receipt_error("receipt_storage_policy_fixture")
+            elif not isinstance(expression, str) or any(token not in expression for token in tokens):
+                _receipt_error("receipt_storage_policy_fixture")
     realtime = [row for row in records if row[0] == "seed_realtime"]
-    if realtime != [["seed_realtime", "supabase_realtime", "public", "profiles"]]:
+    expected_realtime = [
+        ["seed_realtime", "supabase_realtime", "public", "notifications"],
+        ["seed_realtime", "supabase_realtime", "public", "profiles"],
+        ["seed_realtime", "supabase_realtime", "public", "review_likes"],
+        ["seed_realtime", "supabase_realtime", "public", "reviews"],
+    ]
+    if realtime != expected_realtime:
         _receipt_error("receipt_realtime_fixture")
     realtime_membership = [row for row in records if row[0] == "realtime_membership"]
-    if realtime_membership != [["realtime_membership", "supabase_realtime", "public", "profiles"]]:
+    if realtime_membership != [
+        ["realtime_membership", *row[1:]] for row in expected_realtime
+    ]:
         _receipt_error("receipt_realtime_fixture")
+    if [row for row in records if row[0] == "user_roles"] != [
+        ["user_roles", NIGHTLY_LOGICAL_ID, "admin"]
+    ]:
+        _receipt_error("receipt_admin_fixture")
+    if [row for row in records if row[0] == "user_account_status"] != [
+        ["user_account_status", NIGHTLY_LOGICAL_ID, "active", True]
+    ]:
+        _receipt_error("receipt_account_status_fixture")
 
 
 def parse_readback(value: bytes | str | Sequence[Any]) -> list[list[Any]]:
@@ -2482,6 +3115,8 @@ def parse_readback(value: bytes | str | Sequence[Any]) -> list[list[Any]]:
     if seen_sections != set(READBACK_SECTIONS):
         _receipt_error("receipt_section_missing")
     _validate_auth_catalog(records)
+    _validate_public_read_contract(records)
+    _validate_admin_map_overlay_contract(records)
     _validate_seed_invariants(records)
     return records
 
@@ -2741,6 +3376,33 @@ def _auth_api_create_and_login(
         or created.get("email") != email
     ):
         raise LocalMigrationError("auth_create_response_shape")
+    _auth_api_login_existing(values, password, created_id)
+    return created_id, {
+        "schema": AUTH_API_SCHEMA,
+        "create_status": "2xx",
+        "create_error_class": "none",
+        "login_status": "2xx",
+        "login_error_class": "none",
+    }
+
+def _auth_api_login_existing(
+    values: Mapping[str, str],
+    password: str,
+    expected_user_id: str,
+) -> None:
+    email = values.get("NIGHTLY_ADMIN_EMAIL")
+    anon_key = values.get("ANON_KEY")
+    if email != NIGHTLY_EMAIL:
+        raise LocalMigrationError("auth_email_invalid")
+    if (
+        not isinstance(password, str)
+        or len(password) < 16
+        or any(char in password for char in "\x00\r\n")
+        or not re.fullmatch(r"[A-Za-z0-9_./:=+@,-]+", password)
+    ):
+        raise LocalMigrationError("nightly_password_missing")
+    if not isinstance(expected_user_id, str) or not _UUID.fullmatch(expected_user_id):
+        raise LocalMigrationError("auth_user_id_invalid")
     _, logged_in = _auth_api_request(
         values,
         AUTH_API_LOGIN_PATH,
@@ -2752,19 +3414,28 @@ def _auth_api_create_and_login(
     access_token = logged_in.get("access_token")
     if (
         not isinstance(login_user, dict)
-        or login_user.get("id") != created_id
+        or login_user.get("id") != expected_user_id
         or login_user.get("email") != email
         or not isinstance(access_token, str)
         or not access_token
     ):
         raise LocalMigrationError("auth_login_response_shape")
-    return created_id, {
-        "schema": AUTH_API_SCHEMA,
-        "create_status": "2xx",
-        "create_error_class": "none",
-        "login_status": "2xx",
-        "login_error_class": "none",
-    }
+
+def _existing_auth_api_user_id(executor: PsqlExecutor) -> str | None:
+    rows = _capture_lines(executor, _AUTH_API_LEDGER_READBACK_SQL, 8)
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise LocalMigrationError("auth_receipt_ledger")
+    row = rows[0]
+    if (
+        row[0] != NIGHTLY_LOGICAL_ID
+        or row[1] != NIGHTLY_EMAIL
+        or not _UUID.fullmatch(row[2])
+        or row[3:] != ["2xx", "none", "2xx", "none", "applied"]
+    ):
+        raise LocalMigrationError("auth_receipt_ledger")
+    return row[2].lower()
 
 def _auth_api_ledger_sql(user_id: str, receipt: Mapping[str, str]) -> bytes:
     if not isinstance(user_id, str) or not _UUID.fullmatch(user_id):
@@ -2800,6 +3471,21 @@ def _auth_api_ledger_sql(user_id: str, receipt: Mapping[str, str]) -> bytes:
         "create_status=EXCLUDED.create_status,create_error_class=EXCLUDED.create_error_class,"
         "login_status=EXCLUDED.login_status,login_error_class=EXCLUDED.login_error_class,"
         "status='running',updated_at=clock_timestamp();\nCOMMIT;\n"
+    ).encode("utf-8")
+
+def _auth_api_ledger_reseed_sql(user_id: str) -> bytes:
+    if not isinstance(user_id, str) or not _UUID.fullmatch(user_id):
+        raise LocalMigrationError("auth_user_id_invalid")
+    return (
+        "BEGIN; DO $reseed$ BEGIN "
+        "UPDATE _tzudong_local.auth_api_ledger SET status='running',"
+        "updated_at=clock_timestamp() WHERE logical_id='nightly-ci' "
+        "AND email='nightly-ci@local.invalid' AND user_id="
+        + _q(user_id.lower())
+        + "::uuid AND create_status='2xx' AND create_error_class='none' "
+        "AND login_status='2xx' AND login_error_class='none' AND status='applied'; "
+        "IF NOT FOUND THEN RAISE EXCEPTION 'local_seed_auth_ledger_reuse'; END IF; "
+        "END $reseed$; COMMIT;\n"
     ).encode("utf-8")
 
 def _auth_api_ledger_applied_sql() -> bytes:
@@ -2838,6 +3524,38 @@ def _repository_commit() -> str | None:
         return None
     value = result.stdout.decode("ascii", "ignore").strip()
     return value if _HEX40.fullmatch(value) else None
+
+
+def _function_source_evidence(
+    functions: Any,
+    records: Sequence[Mapping[str, Any]],
+) -> str:
+    """Bind every staged Edge Function source under one legacy receipt field."""
+    if (
+        not isinstance(functions, dict)
+        or functions.get("root") != "functions"
+        or functions.get("files") != list(FUNCTION_SOURCES)
+    ):
+        raise LocalMigrationError("receipt_input_provenance")
+    function_records = [
+        record for record in records
+        if record.get("path") in FUNCTION_SOURCES
+    ]
+    if (
+        len(function_records) != len(FUNCTION_SOURCES)
+        or [record.get("path") for record in function_records] != list(FUNCTION_SOURCES)
+        or any(
+            record.get("source") != record.get("path")
+            or not isinstance(record.get("source_sha256"), str)
+            or not _HEX64.fullmatch(record["source_sha256"])
+            for record in function_records
+        )
+    ):
+        raise LocalMigrationError("receipt_input_provenance")
+    return _sha256_bytes(canonical_json([
+        {"path": record["path"], "sha256": record["source_sha256"]}
+        for record in function_records
+    ]))
 
 
 def _generated_input_evidence(state: Path, project: str) -> dict[str, Any]:
@@ -2938,24 +3656,9 @@ def _generated_input_evidence(state: Path, project: str) -> dict[str, Any]:
         if item.get("sha256") != digest:
             raise LocalMigrationError("receipt_input_provenance")
         current_compose.append({"path": relative, "sha256": digest})
-    functions = source_manifest.get("functions")
-    if (
-        not isinstance(functions, dict)
-        or functions.get("root") != "functions"
-        or functions.get("files") != [FUNCTION_SOURCE.relative_to(Path("backend/supabase/local-inputs")).as_posix()]
-    ):
-        raise LocalMigrationError("receipt_input_provenance")
-    function_path = repository_root() / FUNCTION_SOURCE
-    try:
-        function_path = _require_owned_regular_file(function_path, "receipt_input_provenance")
-    except LocalMigrationError:
-        raise
-    function_source_sha256 = _sha256_file(function_path)[0]
-    function_records = [record for record in expected_records if record["path"] in functions["files"]]
-    if len(function_records) != len(functions["files"]):
-        raise LocalMigrationError("receipt_input_provenance")
-    if function_records[0]["source_sha256"] != function_source_sha256:
-        raise LocalMigrationError("receipt_input_provenance")
+    function_source_sha256 = _function_source_evidence(
+        source_manifest.get("functions"), expected_records
+    )
     return {
         "input_source_manifest_sha256": source_manifest_sha256,
         "input_evidence_sha256": _sha256_bytes(canonical_json(expected_records)),
@@ -3032,9 +3735,9 @@ def _current_source_bindings() -> dict[str, str]:
         if item.get("sha256") != digest:
             raise LocalMigrationError("receipt_input_provenance")
         compose_evidence.append({"path": relative, "sha256": digest})
-    function_path = repository_root() / FUNCTION_SOURCE
-    function_path = _require_owned_regular_file(function_path, "receipt_input_provenance")
-    function_sha256 = _sha256_file(function_path)[0]
+    function_sha256 = _function_source_evidence(
+        input_manifest.get("functions"), records
+    )
     _, prerequisite_manifest = _verify_generated_prerequisite(PREREQUISITE_OUTPUT)
     seed_path = _require_owned_regular_file(
         repository_root() / SEED_SOURCE,
@@ -3612,8 +4315,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise LocalMigrationError("nightly_password_missing")
             try:
                 _assert_sequence_prefix(executor, manifest, prerequisite_sha256, 4)
-                nightly_user_id, auth_receipt = _auth_api_create_and_login(values, password)
-                executor.run(_auth_api_ledger_sql(nightly_user_id, auth_receipt))
+                nightly_user_id = _existing_auth_api_user_id(executor)
+                if nightly_user_id is None:
+                    nightly_user_id, auth_receipt = _auth_api_create_and_login(values, password)
+                    executor.run(_auth_api_ledger_sql(nightly_user_id, auth_receipt))
+                else:
+                    # A repeat seed must prove the same disposable Auth user can
+                    # still log in while preserving the original 2xx creation
+                    # receipt; it never fabricates a second create response.
+                    _auth_api_login_existing(values, password, nightly_user_id)
+                    executor.run(_auth_api_ledger_reseed_sql(nightly_user_id))
                 executor.run(
                     data,
                     variables={"nightly_user_id": nightly_user_id.lower()},

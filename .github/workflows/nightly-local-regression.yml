@@ -1,8 +1,8 @@
-name: Nightly Local Regression
+name: Nightly Regression (Local Supabase)
 
 on:
   schedule:
-    - cron: '30 19 * * *' # 04:30 KST (UTC)
+    - cron: '30 18 * * *' # 03:30 KST (UTC); canonical nightly schedule
   workflow_dispatch:
     inputs:
       suite:
@@ -16,13 +16,13 @@ on:
           - e2e
 
 concurrency:
-  group: nightly-local-regression
+  group: nightly-regression-local-canonical
   cancel-in-progress: false
 
 # This job reconstructs a disposable local stack on Linux. It does not use
 # hosted credentials, publish source, or run migrations against hosted services.
-# A successful run publishes a public prerelease containing only the explicit
-# sanitized artifact allowlist below.
+# A successful run publishes a public prerelease containing only the entries in
+# .github/nightly-local-publication-allowlist.txt.
 permissions:
   contents: read
   actions: read
@@ -43,11 +43,15 @@ jobs:
     permissions:
       contents: read
       actions: read
+      issues: write
     steps:
       - name: Checkout source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
           persist-credentials: false
+
+      - name: Verify publication boundary implementation
+        run: python3 -m unittest backend.supabase.tests.test_local_publication_verifier
 
       - name: Install Node 24
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
@@ -66,8 +70,14 @@ jobs:
         run: |
           set -euo pipefail
           case "$(uname -m)" in
-            x86_64) compose_arch=x86_64 ;;
-            aarch64|arm64) compose_arch=aarch64 ;;
+            x86_64)
+              compose_arch=x86_64
+              compose_sha256=7af95166a730b87e172d4fc9aefea8725d3c6c7327d59149267b452114ddb7d4
+              ;;
+            aarch64|arm64)
+              compose_arch=aarch64
+              compose_sha256=49082844b87f03cdcd5f5bbef1ba8c9c897b7a2dfb80cea18d61ec8ca6117e0c
+              ;;
             *) echo 'Unsupported runner architecture for pinned Compose.' >&2; exit 1 ;;
           esac
           plugin="$HOME/.docker/cli-plugins/docker-compose"
@@ -75,6 +85,7 @@ jobs:
           curl --fail --silent --show-error --location --retry 3 \
             "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${compose_arch}" \
             --output "$plugin"
+          printf '%s  %s\n' "$compose_sha256" "$plugin" | sha256sum --check --status
           chmod 0755 "$plugin"
           test "$(docker compose version --short)" = "${COMPOSE_VERSION#v}"
       - name: Enable disposable runner user namespaces
@@ -101,6 +112,23 @@ jobs:
           unshare --user --map-root-user --pid --fork --mount-proc sh -c \
             'test "$(id -u)" = 0 && test -r /proc/1/status'
 
+      - name: Create scoped Docker socket admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          admission="/run/tzudong-nightly-local-admission-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          source="$RUNNER_TEMP/docker-socket-admission"
+          trap 'rm -f -- "$source"' EXIT
+          test ! -e "$admission"
+          umask 077
+          printf 'repo=%s\nrun_id=%s\nrun_attempt=%s\n' \
+            "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
+            > "$source"
+          sudo install -o root -g root -m 0400 "$source" "$admission"
+          rm -f -- "$source"
+          test "$(sudo stat -c '%u:%a' "$admission")" = '0:400'
+          printf 'TZUDONG_DOCKER_SOCKET_ADMISSION_FILE=%s\n' "$admission" >> "$GITHUB_ENV"
+
       - name: Install Python runtime dependencies
         shell: bash
         run: |
@@ -111,6 +139,11 @@ jobs:
       - name: Install web dependencies
         working-directory: apps/web
         run: bun install --frozen-lockfile
+
+      - name: Install Chromium for the browser lane
+        if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
+        working-directory: apps/web
+        run: bunx playwright install --with-deps chromium
 
       - name: Pull pinned Compose images
         shell: bash
@@ -124,6 +157,17 @@ jobs:
           import time
           from pathlib import Path
 
+          typegen = {
+              'cli_version': '2.109.1',
+              'registry': 'public.ecr.aws',
+              'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6',
+              'pull_reference': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'repo_digest': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'image_id': 'sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a',
+              'platform': 'linux/amd64',
+              'status': 'not_attempted',
+              'failure_class': 'not_attempted',
+          }
           images = (
               'supabase/studio:2025.12.17-sha-43f4f7f',
               'kong:2.8.1',
@@ -133,6 +177,7 @@ jobs:
               'supabase/storage-api:v1.33.0',
               'darthsim/imgproxy:v3.8.0',
               'supabase/postgres-meta:v0.95.1',
+              typegen['image'],
               'supabase/edge-runtime:v1.69.28',
               'supabase/logflare:1.27.0',
               'supabase/postgres:15.8.1.085',
@@ -164,13 +209,37 @@ jobs:
           safe_env.setdefault('HOME', str(Path.home()))
           records = []
           failed = False
+          cli = Path('apps/web/node_modules/.bin/supabase')
+          cli_returncode = None
+          try:
+              cli_result = subprocess.run(
+                  [str(cli), '--version'],
+                  capture_output=True,
+                  text=True,
+                  timeout=30,
+                  check=False,
+                  env=safe_env,
+              )
+              cli_returncode = cli_result.returncode
+              cli_version = cli_result.stdout.strip()
+          except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+              cli_version = ''
+          if cli_returncode != 0 or cli_version != typegen['cli_version']:
+              typegen['status'] = 'failed'
+              typegen['failure_class'] = 'cli_version_mismatch'
+              failed = True
           for image in images:
               record = {'image': image, 'status': 'not_attempted', 'failure_class': 'not_attempted'}
               if not failed:
+                  pull_reference = typegen['pull_reference'] if image == typegen['image'] else image
+                  pull_command = ['docker', 'pull', '--quiet']
+                  if image == typegen['image']:
+                      pull_command.extend(('--platform', typegen['platform']))
+                  pull_command.append(pull_reference)
                   for attempt in range(2):
                       try:
                           result = subprocess.run(
-                              ['docker', 'pull', '--quiet', image],
+                              pull_command,
                               capture_output=True,
                               text=True,
                               timeout=180,
@@ -191,6 +260,59 @@ jobs:
                       record['failure_class'] = classify(result.stderr)
                       if attempt == 0:
                           time.sleep(10)
+                  if record['status'] == 'pulled' and image == typegen['image']:
+                      try:
+                          tag_result = subprocess.run(
+                              ['docker', 'image', 'tag', typegen['pull_reference'], typegen['image']],
+                              capture_output=True,
+                              text=True,
+                              timeout=30,
+                              check=False,
+                              env=safe_env,
+                          )
+                          if tag_result.returncode != 0:
+                              raise ValueError('typegen image tag unavailable')
+
+                          def inspect_image(reference):
+                              result = subprocess.run(
+                                  [
+                                      'docker', 'image', 'inspect', reference, '--format',
+                                      '{{.Id}}\t{{.Os}}\t{{.Architecture}}\t{{json .RepoDigests}}\t{{json .RepoTags}}',
+                                  ],
+                                  capture_output=True,
+                                  text=True,
+                                  timeout=30,
+                                  check=False,
+                                  env=safe_env,
+                              )
+                              readback = result.stdout.strip()
+                              fields = readback.split('\t', 4)
+                              if result.returncode != 0 or len(readback) > 4096 or len(fields) != 5:
+                                  raise ValueError('bounded image readback unavailable')
+                              image_id, image_os, image_arch, raw_digests, raw_tags = fields
+                              repo_digests = json.loads(raw_digests)
+                              repo_tags = json.loads(raw_tags)
+                              if not isinstance(repo_digests, list) or not isinstance(repo_tags, list):
+                                  raise ValueError('image readback shape mismatch')
+                              return image_id, image_os, image_arch, repo_digests, repo_tags
+
+                          source_readback = inspect_image(typegen['pull_reference'])
+                          tag_readback = inspect_image(typegen['image'])
+                          if (
+                              source_readback[:4] != tag_readback[:4]
+                              or tag_readback[0] != typegen['image_id']
+                              or f'{tag_readback[1]}/{tag_readback[2]}' != typegen['platform']
+                              or typegen['repo_digest'] not in tag_readback[3]
+                              or typegen['image'] not in tag_readback[4]
+                          ):
+                              raise ValueError('image identity mismatch')
+                          typegen['status'] = 'verified'
+                          typegen['failure_class'] = 'none'
+                      except (FileNotFoundError, OSError, subprocess.TimeoutExpired, TypeError, ValueError, json.JSONDecodeError):
+                          record['status'] = 'failed'
+                          record['failure_class'] = 'typegen_image_readback'
+                          typegen['status'] = 'failed'
+                          typegen['failure_class'] = 'image_readback'
                   if record['status'] != 'pulled':
                       failed = True
               records.append(record)
@@ -224,6 +346,7 @@ jobs:
               'image_count': len(images),
               'images': records,
               'container_probe': container_probe,
+              'typegen': typegen,
           }
           Path('nightly-artifacts/local-image-pull-preflight.json').write_text(
               json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n',
@@ -242,6 +365,7 @@ jobs:
           import json
           import os
           import pathlib
+          import re
           import subprocess
           import sys
 
@@ -249,7 +373,7 @@ jobs:
           project = receipt.get('project_name')
           if receipt.get('schema') != 'local-stack-receipt-v1' or receipt.get('action') != 'render' or receipt.get('ok') is not True:
               raise SystemExit(2)
-          if not isinstance(project, str) or not project.startswith('tzudong-local-'):
+          if not isinstance(project, str) or re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project) is None:
               raise SystemExit(2)
           state = pathlib.Path('backend/supabase/volumes/.local-stack') / project
           with pathlib.Path(os.environ['GITHUB_ENV']).open('a', encoding='utf-8') as handle:
@@ -262,7 +386,7 @@ jobs:
               '-f', 'backend/supabase/docker-compose.yml',
               '-f', 'backend/supabase/docker-compose.local.yml',
               '-f', 'backend/supabase/docker-compose.mail.yml',
-              'create', '--no-start',
+              'create', '--pull=never',
               'analytics', 'auth', 'db', 'functions', 'imgproxy', 'kong', 'mail',
               'meta', 'realtime', 'rest', 'storage', 'supavisor', 'vector',
           ]
@@ -315,17 +439,308 @@ jobs:
               )
               raise SystemExit(2)
           PY
+      - name: Probe Compose service startup
+        shell: bash
+        run: |
+          set -euo pipefail
+          render_receipt="$RUNNER_TEMP/local-stack-render-preflight.json"
+          python3 backend/supabase/scripts/local-stack.py render > "$render_receipt"
+          python3 - "$render_receipt" <<'PY'
+          import json
+          import importlib.util
+          import os
+          import pathlib
+          import re
+          import subprocess
+          import sys
+          import time
+
+          receipt = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+          project = receipt.get('project_name')
+          if receipt.get('schema') != 'local-stack-receipt-v1' or receipt.get('action') != 'render' or receipt.get('ok') is not True:
+              raise SystemExit(2)
+          if not isinstance(project, str) or re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project) is None:
+              raise SystemExit(2)
+          state = pathlib.Path('backend/supabase/volumes/.local-stack') / project
+          command_prefix = [
+              'docker', 'compose',
+              '--project-name', project,
+              '--env-file', str(state / 'stack.env'),
+              '-f', 'backend/supabase/docker-compose.yml',
+              '-f', 'backend/supabase/docker-compose.local.yml',
+              '-f', 'backend/supabase/docker-compose.mail.yml',
+          ]
+          service_phases = (
+              ('vector',),
+              ('db',),
+              ('analytics',),
+              ('imgproxy', 'auth', 'functions', 'kong', 'mail', 'meta', 'realtime', 'rest', 'storage', 'supavisor'),
+          )
+          services = tuple(service for phase in service_phases for service in phase)
+          markers = (
+              ('port_conflict', ('address already in use', 'port is already allocated')),
+              ('mount_invalid', ('invalid mount config', 'bind source path does not exist', 'failed to mount local volume')),
+              ('network_create', ('failed to create network', 'failed to set up container networking', 'network not found')),
+              ('runtime_create', ('failed to create shim task', 'oci runtime create failed', 'failed to start shim')),
+              ('exec_invalid', ('exec format error', 'executable file not found')),
+              ('permission_denied', ('permission denied', 'operation not permitted')),
+          )
+
+          def classify(stderr):
+              normalized = stderr.casefold()
+              for suffix, values in markers:
+                  if any(value in normalized for value in values):
+                      return suffix
+              return 'unknown'
+
+          def run_bounded(command, *, timeout, retries):
+              last_result = None
+              last_failure = 'unknown'
+              for attempt in range(retries + 1):
+                  try:
+                      last_result = subprocess.run(
+                          command,
+                          capture_output=True,
+                          text=True,
+                          timeout=timeout,
+                          check=False,
+                          env=safe_env,
+                      )
+                      if last_result.returncode == 0:
+                          return last_result, 'none'
+                      last_failure = classify(last_result.stderr)
+                  except FileNotFoundError:
+                      return None, 'docker_not_found'
+                  except subprocess.TimeoutExpired:
+                      last_result = None
+                      last_failure = 'timeout'
+                  if attempt < retries:
+                      time.sleep(2)
+              return last_result, last_failure
+
+          def service_readback(service):
+              deadline = time.monotonic() + 90
+              stable_running = 0
+              last = {
+                  'service': service,
+                  'status': 'failed',
+                  'failure_class': 'state_unavailable',
+                  'state': 'unknown',
+                  'health': 'unknown',
+              }
+              while time.monotonic() < deadline:
+                  try:
+                      probe = subprocess.run(
+                          [*command_prefix, 'ps', '--format', 'json', service],
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                          env=safe_env,
+                      )
+                  except FileNotFoundError:
+                      return {**last, 'failure_class': 'docker_not_found'}
+                  except subprocess.TimeoutExpired:
+                      return {**last, 'failure_class': 'readback_timeout'}
+                  if probe.returncode != 0:
+                      return {**last, 'failure_class': 'readback_failed'}
+                  try:
+                      parsed = json.loads(probe.stdout)
+                      rows = parsed if isinstance(parsed, list) else [parsed]
+                  except (TypeError, ValueError):
+                      return {**last, 'failure_class': 'readback_invalid'}
+                  rows = [row for row in rows if isinstance(row, dict)]
+                  if len(rows) != 1:
+                      return {**last, 'failure_class': 'readback_ambiguous'}
+                  state_value = str(rows[0].get('State') or '').lower()
+                  health_value = str(rows[0].get('Health') or '').lower()
+                  state_value = state_value if state_value in {'running', 'created', 'exited', 'restarting', 'paused', 'dead'} else 'unknown'
+                  health_value = health_value if health_value in {'', 'healthy', 'unhealthy', 'starting'} else 'unknown'
+                  last = {
+                      'service': service,
+                      'status': 'failed',
+                      'failure_class': 'service_not_ready',
+                      'state': state_value,
+                      'health': health_value,
+                  }
+                  if state_value == 'running' and health_value == 'healthy':
+                      return {**last, 'status': 'passed', 'failure_class': 'none'}
+                  if state_value == 'running' and health_value == '':
+                      stable_running += 1
+                      if stable_running >= 2:
+                          return {**last, 'status': 'passed', 'failure_class': 'none'}
+                  else:
+                      stable_running = 0
+                  if state_value in {'exited', 'dead'} or health_value == 'unhealthy':
+                      return last
+                  time.sleep(1)
+              return {**last, 'failure_class': 'readiness_timeout'}
+
+          safe_env = {
+              key: os.environ[key]
+              for key in ('PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM')
+              if os.environ.get(key)
+          }
+          safe_env.setdefault('PATH', '/usr/bin:/bin')
+          safe_env.setdefault('HOME', str(pathlib.Path.home()))
+          spec = importlib.util.spec_from_file_location(
+              'nightly_local_stack_preflight',
+              pathlib.Path('backend/supabase/scripts/local-stack.py'),
+          )
+          if spec is None or spec.loader is None:
+              raise SystemExit('local stack preflight implementation is unavailable')
+          local_stack = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = local_stack
+          spec.loader.exec_module(local_stack)
+          results = []
+          failed = False
+          collective = {'status': 'not_attempted', 'failure_class': 'input_stage_failed'}
+          try:
+              local_stack._assert_project_volumes(command_prefix, project, require_existing=True)
+              local_stack._stage_input_files(project, state)
+          except (local_stack.LocalStackError, OSError, ValueError):
+              results.append({
+                  'service': '__input_stage__',
+                  'status': 'failed',
+                  'failure_class': 'input_stage_failed',
+                  'state': 'unknown',
+                  'health': 'unknown',
+              })
+              failed = True
+          if not failed:
+              _collective_result, collective_failure = run_bounded(
+                  [*command_prefix, 'up', '-d', '--pull=never', *services],
+                  timeout=600,
+                  retries=2,
+              )
+              collective = {
+                  'status': 'passed' if collective_failure == 'none' else 'failed',
+                  'failure_class': collective_failure,
+              }
+          _teardown_result, teardown_failure = run_bounded(
+              [*command_prefix, 'down', '--volumes', '--remove-orphans'],
+              timeout=120,
+              retries=2,
+          )
+          if teardown_failure != 'none':
+              results.append({
+                  'service': '__teardown__',
+                  'status': 'failed',
+                  'failure_class': teardown_failure,
+                  'state': 'unknown',
+                  'health': 'unknown',
+              })
+              failed = True
+          if not failed:
+              _recreate_result, recreate_failure = run_bounded(
+                  [*command_prefix, 'create', '--pull=never', *services],
+                  timeout=300,
+                  retries=2,
+              )
+              if recreate_failure != 'none':
+                  results.append({
+                      'service': '__recreate__',
+                      'status': 'failed',
+                      'failure_class': recreate_failure,
+                      'state': 'unknown',
+                      'health': 'unknown',
+                  })
+                  failed = True
+              else:
+                  try:
+                      local_stack._assert_project_volumes(command_prefix, project, require_existing=True)
+                      local_stack._stage_input_files(project, state)
+                  except (local_stack.LocalStackError, OSError, ValueError):
+                      results.append({
+                          'service': '__input_stage__',
+                          'status': 'failed',
+                          'failure_class': 'input_stage_failed',
+                          'state': 'unknown',
+                          'health': 'unknown',
+                      })
+                      failed = True
+          for phase in service_phases if not failed else ():
+              for service in phase:
+                  _start_result, start_failure_class = run_bounded(
+                      [*command_prefix, 'start', service],
+                      timeout=120,
+                      retries=2,
+                  )
+                  record = service_readback(service)
+                  if start_failure_class != 'none':
+                      record['status'] = 'failed'
+                      record['failure_class'] = start_failure_class
+                  results.append(record)
+                  if record['status'] != 'passed':
+                      failed = True
+                      break
+              if failed:
+                  break
+          _final_teardown_result, final_teardown_failure = run_bounded(
+                  [*command_prefix, 'down', '--volumes', '--remove-orphans'],
+                  timeout=120,
+                  retries=2,
+          )
+          if final_teardown_failure != 'none':
+              results.append({
+                  'service': '__final_teardown__',
+                  'status': 'failed',
+                  'failure_class': final_teardown_failure,
+                  'state': 'unknown',
+                  'health': 'unknown',
+              })
+              failed = True
+          report = {
+              'schema': 'local-compose-start-preflight-v1',
+              'project_name': project,
+              'collective': collective,
+              'services': results,
+          }
+          target = pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json')
+          target.parent.mkdir(parents=True, exist_ok=True)
+          target.write_text(
+              json.dumps(report, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
+          )
+          if failed:
+              print('Compose startup diagnostics recorded; continuing lifecycle acceptance.', file=sys.stderr)
+          PY
       - name: Reset disposable local stack
+        env:
+          LOCAL_STACK_PRESERVE_FAILURE_STATE: '1'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p nightly-artifacts
+          if [[ -n "${LOCAL_PROJECT:-}" ]]; then
+            for volume in \
+              "${LOCAL_PROJECT}-db-data" \
+              "${LOCAL_PROJECT}-db-config" \
+              "${LOCAL_PROJECT}-db-init-migrations" \
+              "${LOCAL_PROJECT}-db-init-scripts" \
+              "${LOCAL_PROJECT}-functions" \
+              "${LOCAL_PROJECT}-kong-config" \
+              "${LOCAL_PROJECT}-pooler-config" \
+              "${LOCAL_PROJECT}-storage-data" \
+              "${LOCAL_PROJECT}-vector-config"; do
+              mapfile -t consumers < <(docker ps -aq --filter "volume=$volume")
+              if ((${#consumers[@]})); then
+                docker rm -f "${consumers[@]}"
+              fi
+              docker volume rm -f "$volume" || true
+              if docker volume inspect "$volume"; then
+                echo "disposable volume remained after scoped cleanup: $volume" >&2
+                exit 2
+              fi
+            done
+          fi
           python3 backend/supabase/scripts/local-stack.py reset \
             > nightly-artifacts/local-stack-reset.json
           python3 - nightly-artifacts/local-stack-reset.json <<'PY'
           import json
           import os
           import pathlib
+          import re
           import subprocess
           import sys
 
@@ -333,7 +748,7 @@ jobs:
           if receipt.get('schema') != 'local-stack-receipt-v1' or receipt.get('action') != 'reset' or receipt.get('ok') is not True:
               raise SystemExit('local stack reset did not produce a successful sanitized receipt')
           project = receipt.get('project_name')
-          if not isinstance(project, str) or not project.startswith('tzudong-local-'):
+          if not isinstance(project, str) or re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project) is None:
               raise SystemExit('local stack reset project identity is invalid')
           state = pathlib.Path('backend/supabase/volumes/.local-stack') / project
           db = subprocess.check_output([
@@ -355,58 +770,818 @@ jobs:
       - name: Apply local migrations, close functions, and seed
         shell: bash
         run: |
-          set -euo pipefail
+          set -Eeuo pipefail
+          umask 077
           state="$LOCAL_STATE"
           bind=(--project "$LOCAL_PROJECT" --state-dir "$state" --env-file "$state/stack.env")
-          python3 backend/supabase/scripts/local-migrate.py generate-prerequisite \
-            --input backend/supabase/baselines/pre-20260214-public-schema.sql \
-            --output backend/supabase/baselines/local/application-prerequisites.sql \
-            --manifest-output backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json \
-            > "$state/local-prerequisite-generate.json"
+          lifecycle_stage=''
+          lifecycle_stage_index=0
+          record_lifecycle_stage() {
+            local status="$1"
+            local exit_code="${2:-}"
+            local arguments=(
+              --stage-index "$lifecycle_stage_index"
+              --stage "$lifecycle_stage"
+              --status "$status"
+            )
+            if [[ -n "$exit_code" ]]; then
+              arguments+=(--exit-code "$exit_code")
+            fi
+            python3 .github/scripts/write-nightly-lifecycle-stage.py "${arguments[@]}"
+          }
+          begin_lifecycle_stage() {
+            trap - ERR
+            lifecycle_stage_index="$1"
+            lifecycle_stage="$2"
+            record_lifecycle_stage running
+            trap fail_lifecycle_stage ERR
+          }
+          complete_lifecycle_stage() {
+            trap - ERR
+            record_lifecycle_stage passed 0
+          }
+          fail_lifecycle_stage() {
+            local exit_code=$?
+            trap - ERR
+            if [[ -n "$lifecycle_stage" ]]; then
+              record_lifecycle_stage failed "$exit_code" || true
+            fi
+            exit "$exit_code"
+          }
+          begin_lifecycle_stage 1 prerequisite_verify
+          python3 backend/supabase/scripts/local-migrate.py verify-prerequisite \
+            --input backend/supabase/baselines/local/application-prerequisites.sql \
+            > "$state/local-prerequisite-verify.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 2 manifest
           python3 backend/supabase/scripts/local-migrate.py manifest \
             --output "$state/local-migration-manifest.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 3 source_verify
           python3 backend/supabase/scripts/local-migrate.py verify \
             --manifest "$state/local-migration-manifest.json" \
             > "$state/local-migration-verify.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 4 prerequisite_apply
           python3 backend/supabase/scripts/local-migrate.py apply-prerequisite \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-migrate-prerequisite.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 5 migration_apply
           python3 backend/supabase/scripts/local-migrate.py apply \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-migrate-apply.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 6 closure_generate
           python3 backend/supabase/scripts/local-function-runtime-scan.py generate \
             --output "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-generate.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 7 closure_apply
           python3 backend/supabase/scripts/local-function-runtime-scan.py apply \
             --container "$LOCAL_DB_CONTAINER" --patch "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-apply.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 8 closure_rescan
           python3 backend/supabase/scripts/local-function-runtime-scan.py rescan \
             --container "$LOCAL_DB_CONTAINER" --patch "$state/local-function-path-patch-local.sql" \
             > "$state/local-closure-rescan.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 9 closure_smoke
           python3 backend/supabase/scripts/local-function-runtime-scan.py smoke \
             --container "$LOCAL_DB_CONTAINER" \
             > "$state/local-closure-smoke.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 10 seed
           python3 backend/supabase/scripts/local-migrate.py seed \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             > "$state/local-seed.json"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 11 schema_convergence
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < backend/supabase/tests/local_runtime_schema_convergence.sql \
+            > "$state/local-runtime-contract.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 12 profile_read
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < backend/supabase/tests/local_profile_read_boundary.sql \
+            > "$state/local-profile-read-boundary.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 13 profile_leaderboard
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+            < backend/supabase/tests/local_profile_leaderboard_page.sql \
+            > "$state/local-profile-leaderboard-page.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 14 profile_mutation
+          docker exec -i "$LOCAL_DB_CONTAINER" \
+            psql -v ON_ERROR_STOP=1 -U supabase_admin -d postgres \
+            < backend/supabase/tests/local_profile_mutation_boundary.sql \
+            > "$state/local-profile-mutation-boundary.log"
+          complete_lifecycle_stage
+          begin_lifecycle_stage 15 receipt
           python3 backend/supabase/scripts/local-migrate.py receipt \
             --container "$LOCAL_DB_CONTAINER" --allow-local "${bind[@]}" \
             --output "$state/local-receipt-v1.json" \
             > "$state/local-receipt-command.json"
+          complete_lifecycle_stage
 
-      - name: Run local nightly regression
+      - name: Verify generated Supabase types match the local catalog
         working-directory: apps/web
         shell: bash
         run: |
+          set -euo pipefail
+          bun run supabase:gen-types:local
+          git diff --exit-code -- integrations/supabase/database.types.ts
+
+      - name: Run local nightly unit regression
+        id: nightly-unit
+        if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'unit' }}
+        continue-on-error: true
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
           export TZUDONG_NODE24_EXECUTABLE="$(command -v node)"
+          umask 077
           bun run test:nightly -- \
             --mode local \
-            --suite "$NIGHTLY_SUITE" \
+            --suite unit \
             --env-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env" \
             --provenance-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env.provenance.json" \
-            > nightly-run.log
+            > nightly-unit-run.log 2>&1
+          exit_code=$?
+          [[ "$exit_code" =~ ^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ ]] || exit 2
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT" || exit 2
+          exit "$exit_code"
 
-      - name: Capture sanitized local receipts
+      - name: Run local nightly browser regression
+        id: nightly-e2e
+        if: ${{ env.NIGHTLY_SUITE == 'all' || env.NIGHTLY_SUITE == 'e2e' }}
+        continue-on-error: true
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          export TZUDONG_NODE24_EXECUTABLE="$(command -v node)"
+          umask 077
+          bun run test:nightly -- \
+            --mode local \
+            --suite e2e \
+            --env-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env" \
+            --provenance-file "../../${LOCAL_STATE#"$GITHUB_WORKSPACE/"}/stack.env.provenance.json" \
+            > nightly-e2e-run.log 2>&1
+          exit_code=$?
+          [[ "$exit_code" =~ ^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$ ]] || exit 2
+          printf 'exit_code=%s\n' "$exit_code" >> "$GITHUB_OUTPUT" || exit 2
+          exit "$exit_code"
+
+      - name: Aggregate local nightly lane outcomes
+        if: always()
+        shell: bash
+        env:
+          UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}
+          E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}
+        run: |
+          set -euo pipefail
+          failed=0
+          case "$NIGHTLY_SUITE" in
+            all)
+              test "$UNIT_OUTCOME" = 'success' || failed=1
+              test "$E2E_OUTCOME" = 'success' || failed=1
+              ;;
+            unit)
+              test "$UNIT_OUTCOME" = 'success' || failed=1
+              test "$E2E_OUTCOME" = 'skipped' || failed=1
+              ;;
+            e2e)
+              test "$UNIT_OUTCOME" = 'skipped' || failed=1
+              test "$E2E_OUTCOME" = 'success' || failed=1
+              ;;
+            *) failed=1 ;;
+          esac
+          {
+            echo '## Canonical local nightly lanes'
+            echo "- Requested suite: ${NIGHTLY_SUITE}"
+            echo "- Unit outcome: ${UNIT_OUTCOME}"
+            echo "- E2E outcome: ${E2E_OUTCOME}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$failed"
+
+      - name: Write bounded nightly lane diagnostics
+        if: always()
+        shell: bash
+        env:
+          UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}
+          UNIT_EXIT_CODE: ${{ steps.nightly-unit.outputs.exit_code }}
+          E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}
+          E2E_EXIT_CODE: ${{ steps.nightly-e2e.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import json
+          import importlib.util
+          import os
+          from pathlib import Path
+          import stat
+
+          suite = os.environ['NIGHTLY_SUITE']
+          requested = {
+              'unit': suite in {'all', 'unit'},
+              'e2e': suite in {'all', 'e2e'},
+          }
+          output = Path('nightly-artifacts')
+          output.mkdir(mode=0o700, exist_ok=True)
+          output_info = output.lstat()
+          if stat.S_ISLNK(output_info.st_mode) or not stat.S_ISDIR(output_info.st_mode) or output_info.st_uid != os.getuid():
+              raise SystemExit('nightly artifact root custody mismatch')
+          diagnostics = output / 'failure-diagnostics'
+          diagnostics.mkdir(mode=0o700, exist_ok=True)
+          diagnostics_info = diagnostics.lstat()
+          if stat.S_ISLNK(diagnostics_info.st_mode) or not stat.S_ISDIR(diagnostics_info.st_mode) or diagnostics_info.st_uid != os.getuid():
+              raise SystemExit('nightly lane diagnostic root custody mismatch')
+
+          for lane, outcome_name, exit_name in (
+              ('unit', 'UNIT_OUTCOME', 'UNIT_EXIT_CODE'),
+              ('e2e', 'E2E_OUTCOME', 'E2E_EXIT_CODE'),
+          ):
+              target = diagnostics / f'nightly-{lane}-run-summary.json'
+              outcome = os.environ.get(outcome_name, '')
+              exit_text = os.environ.get(exit_name, '')
+              if not requested[lane]:
+                  if outcome != 'skipped' or exit_text or target.exists() or target.is_symlink():
+                      raise SystemExit('unrequested nightly lane outcome mismatch')
+                  continue
+              if outcome not in {'success', 'failure'} or not exit_text.isascii() or not exit_text.isdigit():
+                  raise SystemExit('requested nightly lane outcome is unavailable')
+              exit_code = int(exit_text)
+              if not 0 <= exit_code <= 255 or (exit_code == 0) != (outcome == 'success'):
+                  raise SystemExit('requested nightly lane exit/outcome mismatch')
+              payload = {
+                  'schema': 'nightly-lane-outcome-v1',
+                  'lane': lane,
+                  'outcome': outcome,
+                  'failure_code': 'none' if exit_code == 0 else 'command_failed',
+                  'exit_code': exit_code,
+                  'attempt_count': 1,
+                  'failure_count': 0 if exit_code == 0 else 1,
+              }
+              descriptor = os.open(
+                  target,
+                  os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                  0o600,
+              )
+              with os.fdopen(descriptor, 'w', encoding='utf-8') as handle:
+                  json.dump(payload, handle, sort_keys=True, separators=(',', ':'))
+                  handle.write('\n')
+              target_info = target.lstat()
+              if stat.S_ISLNK(target_info.st_mode) or not stat.S_ISREG(target_info.st_mode) or target_info.st_uid != os.getuid() or stat.S_IMODE(target_info.st_mode) != 0o600 or target_info.st_size > 512:
+                  raise SystemExit('nightly lane diagnostic custody mismatch')
+
+          evidence_source = Path('apps/web/test-results/nightly-playwright-failure-evidence.json')
+          evidence_target = diagnostics / 'nightly-e2e-failure-evidence.json'
+          if requested['e2e'] and (evidence_source.exists() or evidence_source.is_symlink()):
+              workspace = Path(os.environ['GITHUB_WORKSPACE']).resolve(strict=True)
+              verifier_path = workspace / '.github/scripts/verify-nightly-local-publication.py'
+              verifier_info = verifier_path.lstat()
+              if stat.S_ISLNK(verifier_info.st_mode) or not stat.S_ISREG(verifier_info.st_mode) or verifier_info.st_uid != os.getuid() or stat.S_IMODE(verifier_info.st_mode) & 0o022:
+                  raise SystemExit('nightly diagnostic verifier custody mismatch')
+              verifier_spec = importlib.util.spec_from_file_location(
+                  'nightly_local_diagnostic_verifier', verifier_path,
+              )
+              if verifier_spec is None or verifier_spec.loader is None:
+                  raise SystemExit('nightly diagnostic verifier is unavailable')
+              verifier = importlib.util.module_from_spec(verifier_spec)
+              verifier_spec.loader.exec_module(verifier)
+              e2e_exit_code = int(os.environ['E2E_EXIT_CODE'])
+              evidence = verifier.verify_e2e_failure_evidence_file(
+                  evidence_source, e2e_exit_code,
+              )
+              evidence_body = (
+                  json.dumps(evidence, sort_keys=True, separators=(',', ':')) + '\n'
+              ).encode('utf-8')
+              if len(evidence_body) > 8 * 1024:
+                  raise SystemExit('nightly E2E failure evidence size mismatch')
+              try:
+                  evidence_descriptor = os.open(
+                      evidence_target,
+                      os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                      0o600,
+                  )
+                  with os.fdopen(evidence_descriptor, 'wb') as handle:
+                      handle.write(evidence_body)
+                  verifier.verify_e2e_failure_evidence_file(
+                      evidence_target, e2e_exit_code,
+                  )
+              except BaseException:
+                  if evidence_target.exists() and not evidence_target.is_symlink():
+                      evidence_target.unlink()
+                  raise
+              summary_path = os.environ.get('GITHUB_STEP_SUMMARY')
+              if summary_path:
+                  with open(summary_path, 'a', encoding='utf-8') as summary:
+                      if evidence['schema'] == 'nightly-e2e-runner-stage-evidence-v1':
+                          summary.write(
+                              f"- E2E fixed runner stage: {evidence['stage']}\n"
+                              f"- E2E fixed runner failure class: {evidence['failure_class']}\n"
+                          )
+                      else:
+                          class_counts = ', '.join(
+                              f'{name}={count}'
+                              for name, count in evidence['failure_class_counts'].items()
+                              if count
+                          ) or 'none'
+                          identities = ', '.join(
+                              f"{failure['spec_id']}#{failure['test_index']}:{failure['classification']}"
+                              for failure in evidence['failures']
+                          ) or 'none'
+                          summary.write(
+                              f"- E2E fixed failure classes: {class_counts}\n"
+                              f"- E2E curated failure IDs: {identities}\n"
+                          )
+          elif requested['e2e'] and os.environ['E2E_OUTCOME'] == 'success':
+              raise SystemExit('successful nightly E2E evidence is unavailable')
+          elif evidence_source.exists() or evidence_source.is_symlink() or evidence_target.exists() or evidence_target.is_symlink():
+              raise SystemExit('unrequested nightly E2E evidence mismatch')
+          PY
+
+      - name: Capture bounded Compose runtime diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p nightly-artifacts/failure-diagnostics
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+          project = os.environ.get('LOCAL_PROJECT', '')
+          records = []
+          safe_env = {
+              key: os.environ[key]
+              for key in ('PATH', 'HOME', 'USER', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM')
+              if os.environ.get(key)
+          }
+          safe_env.setdefault('PATH', '/usr/bin:/bin')
+          safe_env.setdefault('HOME', str(pathlib.Path.home()))
+          container_discovery = {'status': 'not_attempted', 'failure_class': 'not_attempted'}
+          container_inspection = {'status': 'not_attempted', 'failure_class': 'not_attempted', 'failed_count': 0}
+          allowed_states = {'created', 'running', 'paused', 'restarting', 'removing', 'exited', 'dead'}
+          allowed_health = {'', 'starting', 'healthy', 'unhealthy', 'none'}
+          markers = (
+              ('database_permission', ('permission denied for schema', 'permission denied for table', 'permission denied for relation', 'insufficient privilege')),
+              ('config_permission', ('permission denied: /etc', 'permission denied opening', 'eacces')),
+              ('auth_failure', ('password authentication failed', 'authentication failed')),
+              ('tini_runtime', ('pr_set_child_subreaper', 'subreaper', 'tini')),
+              ('thread_create', ('failed to create thread', 'pthread_create', 'clone3', 'resource temporarily unavailable')),
+              ('scheduler_permission', ('setpriority', 'sched_', 'scheduler')),
+              ('procfs_permission', ('/proc', 'cgroup', 'sysfs')),
+              ('socket_permission', ('failed to bind', 'bind: permission denied', 'listen: permission denied', 'socket permission denied')),
+              ('signal_permission', ('prctl', 'signal')),
+              ('namespace_permission', ('user namespace', 'setns', 'namespace')),
+              ('operation_not_permitted', ('operation not permitted',)),
+              ('erl_runtime', ('cpu_sup', 'memsup', 'inet_gethost', 'failed to start epmd', 'could not start application')),
+              ('permission_denied', ('permission denied',)),
+              ('mount_invalid', ('invalid mount', 'no such file or directory')),
+              ('runtime_error', ('failed to start', 'failed to create', 'exec format error')),
+              ('database_connection', ('connection refused', 'econnrefused', 'failed to connect')),
+              ('database_missing', ('database "_supabase" does not exist', 'database "postgres" does not exist')),
+              ('boot_error', ('could not start', 'failed to boot', 'uncaught exception')),
+          )
+
+          def classify(value):
+              normalized = str(value or '').casefold()
+              for suffix, values in markers:
+                  if any(marker in normalized for marker in values):
+                      return suffix
+              return 'none' if not normalized else 'unknown'
+
+          def signatures(value):
+              normalized = str(value or '').casefold()
+              return [
+                  suffix for suffix, values in markers
+                  if any(marker in normalized for marker in values)
+              ][:4]
+
+          if re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project):
+              try:
+                  discovery = subprocess.run(
+                      [
+                          'docker', 'ps', '-aq',
+                          '--filter', f'label=com.docker.compose.project={project}',
+                      ],
+                      capture_output=True,
+                      text=True,
+                      timeout=30,
+                      check=False,
+                      env=safe_env,
+                  )
+                  if discovery.returncode == 0:
+                      ids = [
+                          value for value in discovery.stdout.splitlines()
+                          if re.fullmatch(r'[0-9a-f]{12,64}', value)
+                      ]
+                      container_discovery = {'status': 'passed', 'failure_class': 'none'}
+                  else:
+                      ids = []
+                      container_discovery = {'status': 'failed', 'failure_class': 'command_failed'}
+              except FileNotFoundError:
+                  ids = []
+                  container_discovery = {'status': 'failed', 'failure_class': 'docker_not_found'}
+              except subprocess.TimeoutExpired:
+                  ids = []
+                  container_discovery = {'status': 'failed', 'failure_class': 'timeout'}
+              db_container_id = None
+              service_payloads = {}
+              inspection_failures = 0
+              inspection_failure_classes = set()
+              for container_id in ids:
+                  try:
+                      raw = subprocess.check_output(
+                          ['docker', 'inspect', container_id],
+                          text=True,
+                          timeout=30,
+                          env=safe_env,
+                      )
+                      payload = json.loads(raw)[0]
+                  except FileNotFoundError:
+                      inspection_failures += 1
+                      inspection_failure_classes.add('docker_not_found')
+                      continue
+                  except OSError:
+                      inspection_failures += 1
+                      inspection_failure_classes.add('docker_error')
+                      continue
+                  except subprocess.TimeoutExpired:
+                      inspection_failures += 1
+                      inspection_failure_classes.add('timeout')
+                      continue
+                  except (subprocess.CalledProcessError, ValueError, IndexError, KeyError):
+                      inspection_failures += 1
+                      inspection_failure_classes.add('inspect_failed')
+                      continue
+                  labels = (payload.get('Config') or {}).get('Labels') or {}
+                  service = labels.get('com.docker.compose.service')
+                  if service not in {
+                      'analytics', 'auth', 'db', 'functions', 'imgproxy', 'kong',
+                      'mail', 'meta', 'realtime', 'rest', 'storage', 'studio',
+                      'supavisor', 'vector',
+                  }:
+                      continue
+                  if service in service_payloads:
+                      inspection_failures += 1
+                      inspection_failure_classes.add('duplicate_service')
+                      continue
+                  if service == 'db':
+                      db_container_id = container_id
+                  service_payloads[service] = payload
+                  state = payload.get('State') or {}
+                  raw_health = state.get('Health')
+                  health = raw_health if isinstance(raw_health, dict) else {}
+                  health_status = (
+                      'none'
+                      if not isinstance(raw_health, dict)
+                      else health.get('Status') if health.get('Status') in allowed_health else 'unknown'
+                  )
+                  health_log = health.get('Log') or []
+                  try:
+                      log_probe = subprocess.run(
+                          ['docker', 'logs', '--tail', '200', container_id],
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                          env=safe_env,
+                      )
+                      if log_probe.returncode == 0:
+                          logs = f'{log_probe.stdout}\n{log_probe.stderr}'
+                          log_probe_failure_class = 'none'
+                      else:
+                          logs = ''
+                          log_probe_failure_class = 'command_failed'
+                  except FileNotFoundError:
+                      logs = ''
+                      log_probe_failure_class = 'docker_not_found'
+                  except OSError:
+                      logs = ''
+                      log_probe_failure_class = 'docker_error'
+                  except subprocess.TimeoutExpired:
+                      logs = ''
+                      log_probe_failure_class = 'timeout'
+                  records.append({
+                      'service': service,
+                      'state': state.get('Status') if state.get('Status') in allowed_states else 'unknown',
+                      'exit_code': state.get('ExitCode') if isinstance(state.get('ExitCode'), int) and 0 <= state.get('ExitCode') <= 255 else None,
+                      'state_error_class': classify(state.get('Error')),
+                      'oom_killed': state.get('OOMKilled') is True,
+                      'restart_count': payload.get('RestartCount') if isinstance(payload.get('RestartCount'), int) and payload.get('RestartCount') >= 0 else None,
+                      'log_failure_class': classify(logs) if log_probe_failure_class == 'none' else log_probe_failure_class,
+                      'log_probe_failure_class': log_probe_failure_class,
+                      'log_signatures': signatures(logs) if log_probe_failure_class == 'none' else [],
+                      'health': health_status,
+                      'health_failing_streak': health.get('FailingStreak') if isinstance(health.get('FailingStreak'), int) and health.get('FailingStreak') >= 0 else None,
+                      'health_log_exit_codes': [
+                          item.get('ExitCode')
+                          for item in health_log[-5:]
+                          if isinstance(item, dict) and isinstance(item.get('ExitCode'), int) and 0 <= item.get('ExitCode') <= 255
+                      ],
+                      'entrypoint_class': (
+                          'limits_wrapper'
+                          if service == 'supavisor' and (payload.get('Config') or {}).get('Entrypoint') == ['/app/limits.sh']
+                          else 'overridden' if service == 'supavisor'
+                          else 'not_evaluated'
+                      ),
+                  })
+              if container_discovery['status'] != 'passed':
+                  container_inspection = {
+                      'status': 'not_attempted',
+                      'failure_class': 'discovery_failed',
+                      'failed_count': 0,
+                  }
+              else:
+                  container_inspection = {
+                      'status': 'passed' if inspection_failures == 0 else 'failed',
+                      'failure_class': (
+                          'none' if inspection_failures == 0
+                          else next(iter(inspection_failure_classes))
+                          if len(inspection_failure_classes) == 1
+                          else 'multiple_failures'
+                      ),
+                      'failed_count': inspection_failures,
+                  }
+              database_bootstrap = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
+              database_presence = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
+              database_init_files = {
+                  'status': 'unavailable',
+                  'supabase': 'unknown',
+                  'logs': 'unknown',
+                  'failure_class': 'unknown',
+              }
+
+              def run_runtime_probe(command):
+                  try:
+                      return subprocess.run(
+                          command,
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                          env=safe_env,
+                      ), 'none'
+                  except FileNotFoundError:
+                      return None, 'docker_not_found'
+                  except OSError:
+                      return None, 'docker_error'
+                  except subprocess.TimeoutExpired:
+                      return None, 'timeout'
+
+              def command_failure(result):
+                  fixed = classify(result.stderr)
+                  return fixed if fixed != 'none' else 'command_failed'
+
+              runtime_input_checks = {}
+              runtime_env_presence = {}
+              for service in ('supavisor',):
+                  payload = service_payloads.get(service)
+                  env_values = (payload.get('Config') or {}).get('Env') if isinstance(payload, dict) else None
+                  env_names = {
+                      item.split('=', 1)[0]: item.split('=', 1)[1]
+                      for item in env_values
+                      if isinstance(item, str) and '=' in item
+                  } if isinstance(env_values, list) else {}
+                  runtime_env_presence[service] = {
+                      key: (
+                          'absent' if key not in env_names
+                          else 'empty' if env_names[key] == ''
+                          else 'nonempty'
+                      )
+                      for key in ('CLUSTER_POSTGRES', 'ERL_AFLAGS', 'ERL_FLAGS', 'RLIMIT_NOFILE', 'CLUSTER_NODES', 'DNS_POLL')
+                  }
+              for service, destination, path in (
+                  ('kong', '/home/kong', '/home/kong/temp.yml'),
+                  ('supavisor', '/etc/pooler', '/etc/pooler/pooler.exs'),
+              ):
+                  payload = service_payloads.get(service)
+                  mounts = payload.get('Mounts') if isinstance(payload, dict) else None
+                  mount = next(
+                      (
+                          item for item in mounts
+                          if isinstance(item, dict) and item.get('Destination') == destination
+                      ),
+                      None,
+                  ) if isinstance(mounts, list) else None
+                  expected_name = f'{project}-{ "kong-config" if service == "kong" else "pooler-config" }'
+                  mount_passed = (
+                      isinstance(mount, dict)
+                      and mount.get('Type') == 'volume'
+                      and mount.get('Name') == expected_name
+                  )
+                  runtime_input_checks[service] = {
+                      'mount': 'passed' if mount_passed else 'failed',
+                      'mount_failure_class': 'none' if mount_passed else 'mount_mismatch',
+                      'file': 'unavailable',
+                      'file_failure_class': 'container_unavailable',
+                  }
+                  container_id = None
+                  container_state = 'unknown'
+                  if isinstance(payload, dict):
+                      container_id = payload.get('Id')
+                      state = payload.get('State') or {}
+                      if isinstance(state, dict):
+                          container_state = state.get('Status')
+                  if container_state != 'running':
+                      runtime_input_checks[service]['file_failure_class'] = 'container_not_running'
+                  elif isinstance(container_id, str) and re.fullmatch(r'[0-9a-f]{12,64}', container_id):
+                      probe, probe_failure = run_runtime_probe(
+                          ['docker', 'exec', container_id, 'test', '-r', path],
+                      )
+                      if probe is None:
+                          runtime_input_checks[service]['file_failure_class'] = probe_failure
+                      elif probe.returncode == 0:
+                          runtime_input_checks[service].update({
+                              'file': 'passed',
+                              'file_failure_class': 'none',
+                          })
+                      elif probe.returncode == 1 and not probe.stdout.strip() and not probe.stderr.strip():
+                          runtime_input_checks[service].update({
+                              'file': 'missing',
+                              'file_failure_class': 'file_missing',
+                          })
+                      else:
+                          runtime_input_checks[service]['file_failure_class'] = command_failure(probe)
+              db_payload = service_payloads.get('db')
+              db_state = (
+                  (db_payload.get('State') or {}).get('Status')
+                  if isinstance(db_payload, dict)
+                  else None
+              )
+              if db_container_id is None:
+                  db_unavailable_class = 'container_unavailable'
+              elif db_state != 'running':
+                  db_unavailable_class = 'container_not_running'
+              else:
+                  db_unavailable_class = 'none'
+              if db_unavailable_class != 'none':
+                  database_presence['failure_class'] = db_unavailable_class
+                  database_init_files['failure_class'] = db_unavailable_class
+                  database_bootstrap['failure_class'] = db_unavailable_class
+              else:
+                  presence, presence_failure = run_runtime_probe(
+                      [
+                          'docker', 'exec', '--user', 'postgres', db_container_id,
+                          'psql', '-U', 'postgres', '-d', 'postgres',
+                          '-Atqc',
+                          "select case when exists (select 1 from pg_database where datname = '_supabase') then 'supabase_db_present' else 'supabase_db_missing' end",
+                      ],
+                  )
+                  if presence is None:
+                      database_presence['failure_class'] = presence_failure
+                  else:
+                      presence_result = presence.stdout.strip()
+                      if presence.returncode == 0 and presence_result == 'supabase_db_present':
+                          database_presence = {
+                              'status': 'passed',
+                              'result': presence_result,
+                              'failure_class': 'none',
+                              'exit_code': presence.returncode,
+                          }
+                      elif presence.returncode == 0 and presence_result == 'supabase_db_missing':
+                          database_presence = {
+                              'status': 'failed',
+                              'result': presence_result,
+                              'failure_class': 'supabase_db_missing',
+                              'exit_code': presence.returncode,
+                          }
+                      else:
+                          database_presence = {
+                              'status': 'failed',
+                              'result': 'unknown',
+                              'failure_class': command_failure(presence) if presence.returncode != 0 else 'invalid_result',
+                              'exit_code': presence.returncode if 0 <= presence.returncode <= 255 else None,
+                          }
+
+                  init_paths = (
+                      ('supabase', '/docker-entrypoint-initdb.d/migrations/97-_supabase.sql'),
+                      ('logs', '/docker-entrypoint-initdb.d/migrations/99-logs.sql'),
+                  )
+                  init_results = {}
+                  init_failures = []
+                  for key, path in init_paths:
+                      init_probe, init_probe_failure = run_runtime_probe(
+                          ['docker', 'exec', '--user', 'postgres', db_container_id, 'test', '-r', path],
+                      )
+                      if init_probe is None:
+                          init_results[key] = 'unavailable'
+                          init_failures.append(init_probe_failure)
+                      elif init_probe.returncode == 0:
+                          init_results[key] = 'present'
+                      elif init_probe.returncode == 1 and not init_probe.stdout.strip() and not init_probe.stderr.strip():
+                          init_results[key] = 'missing'
+                          init_failures.append('init_file_missing')
+                      else:
+                          init_results[key] = 'unavailable'
+                          init_failures.append(command_failure(init_probe))
+                  database_init_files = {
+                      'status': 'passed' if all(value == 'present' for value in init_results.values()) else 'failed',
+                      **init_results,
+                      'failure_class': (
+                          'none' if not init_failures
+                          else init_failures[0] if len(set(init_failures)) == 1
+                          else 'multiple_failures'
+                      ),
+                  }
+
+                  bootstrap, bootstrap_failure = run_runtime_probe(
+                      [
+                          'docker', 'exec', '--user', 'postgres', db_container_id,
+                          'psql', '-U', 'postgres', '-d', '_supabase',
+                          '-Atqc',
+                          "select case when exists (select 1 from pg_namespace where nspname = '_analytics') then 'analytics_schema_present' else 'analytics_schema_missing' end",
+                      ],
+                  )
+                  if bootstrap is None:
+                      database_bootstrap['failure_class'] = bootstrap_failure
+                  else:
+                      bootstrap_result = bootstrap.stdout.strip()
+                      if bootstrap.returncode == 0 and bootstrap_result == 'analytics_schema_present':
+                          database_bootstrap = {
+                              'status': 'passed',
+                              'result': bootstrap_result,
+                              'failure_class': 'none',
+                              'exit_code': bootstrap.returncode,
+                          }
+                      elif bootstrap.returncode == 0 and bootstrap_result == 'analytics_schema_missing':
+                          database_bootstrap = {
+                              'status': 'failed',
+                              'result': bootstrap_result,
+                              'failure_class': 'analytics_schema_missing',
+                              'exit_code': bootstrap.returncode,
+                          }
+                      else:
+                          database_bootstrap = {
+                              'status': 'failed',
+                              'result': 'unknown',
+                              'failure_class': command_failure(bootstrap) if bootstrap.returncode != 0 else 'invalid_result',
+                              'exit_code': bootstrap.returncode if 0 <= bootstrap.returncode <= 255 else None,
+                          }
+          else:
+              database_bootstrap = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
+              database_presence = {
+                  'status': 'unavailable',
+                  'result': 'unknown',
+                  'failure_class': 'unknown',
+                  'exit_code': None,
+              }
+              database_init_files = {
+                  'status': 'unavailable',
+                  'supabase': 'unknown',
+                  'logs': 'unknown',
+                  'failure_class': 'unknown',
+              }
+              runtime_input_checks = {}
+              runtime_env_presence = {}
+          records.sort(key=lambda item: item['service'])
+          pathlib.Path('nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json').write_text(
+              json.dumps({
+                  'schema': 'local-compose-runtime-diagnostics-v1',
+                  'project_name': project if re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project) else 'unknown',
+                  'container_discovery': container_discovery,
+                  'container_inspection': container_inspection,
+                  'database_bootstrap': database_bootstrap,
+                  'database_presence': database_presence,
+                  'database_init_files': database_init_files,
+                  'runtime_input_checks': runtime_input_checks,
+                  'runtime_env_presence': runtime_env_presence,
+                  'containers': records,
+              }, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Capture bounded local diagnostics
         if: always()
         shell: bash
         run: |
@@ -415,26 +1590,16 @@ jobs:
           if [[ -n "${LOCAL_STATE:-}" && -d "$LOCAL_STATE" ]]; then
             python3 backend/supabase/scripts/local-stack.py status \
               > "$LOCAL_STATE/local-stack-status.json" || true
-            set -a
-            . "$LOCAL_STATE/stack.env"
-            set +a
           fi
           python3 - <<'PY'
           import os
           from pathlib import Path
           import json
+          import re
           import subprocess
 
           output = Path('nightly-artifacts')
           output.mkdir(parents=True, exist_ok=True)
-          values = [
-              os.environ.get(name, '')
-              for name in (
-                  'POSTGRES_PASSWORD', 'NIGHTLY_ADMIN_PASSWORD', 'ANON_KEY',
-                  'SERVICE_ROLE_KEY', 'JWT_SECRET', 'SUPABASE_DB_URL',
-              )
-              if os.environ.get(name, '')
-          ]
           reset_path = Path('nightly-artifacts/local-stack-reset.json')
           try:
               reset = json.loads(reset_path.read_text(encoding='utf-8'))
@@ -444,8 +1609,7 @@ jobs:
               project = reset.get('project_name')
               valid_project = (
                   isinstance(project, str)
-                  and project.startswith('tzudong-local-')
-                  and len(project) == len('tzudong-local-') + 12
+                  and re.fullmatch(r'tzudong-local-[0-9a-f]{12}', project) is not None
               )
               diagnostics = {
                   'schema': 'local-stack-failure-diagnostics-v1',
@@ -528,81 +1692,374 @@ jobs:
                   json.dumps(diagnostics, sort_keys=True, separators=(',', ':')) + '\n',
                   encoding='utf-8',
               )
-          sources = []
-          state = os.environ.get('LOCAL_STATE', '')
-          if state:
-              root = Path(state)
-              for name in (
-                  'last-receipt.json', 'local-stack-status.json',
-                  'stack.env.provenance.json', 'stack.inputs.provenance.json',
-                  'local-migration-manifest.json', 'local-migration-verify.json',
-                  'local-migrate-prerequisite.json', 'local-migrate-apply.json',
-                  'local-closure-generate.json', 'local-closure-apply.json',
-                  'local-closure-rescan.json', 'local-closure-smoke.json',
-                  'local-seed.json', 'local-receipt-command.json', 'local-receipt-v1.json',
-              ):
-                  sources.append((root / name, Path(name)))
-          sources.extend([
-              (Path('nightly-artifacts/local-stack-reset.json'), Path('local-stack-reset.json')),
-              (Path('apps/web/test-results/local-browser-route-diagnostics.json'), Path('local-browser-route-diagnostics.json')),
-          ])
-          for source, relative in sources:
-              if not source.is_file() or source.is_symlink():
-                  continue
-              try:
-                  text = source.read_text(encoding='utf-8')
-              except UnicodeDecodeError:
-                  continue
-              for value in values:
-                  text = text.replace(value, '[REDACTED]')
-              target = output / relative
-              target.parent.mkdir(parents=True, exist_ok=True)
-              target.write_text(text, encoding='utf-8')
-          (output / 'publication-boundary.txt').write_text(
-              'Local-only sanitized receipts; stack.env and credentials excluded.\n',
-              encoding='utf-8',
-          )
           PY
 
-      - name: Upload sanitized local nightly artifacts
-        if: always()
+      - name: Build row-free local publication evidence
+        if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${LOCAL_STATE:-}"
+          python3 .github/scripts/build-nightly-local-publication.py \
+            --state-root "$LOCAL_STATE" \
+            --artifacts-root nightly-artifacts \
+            --browser-source "apps/web/test-results/local-browser-route-diagnostics.json"
+
+      - name: Prepare allowlisted publication bundle
+        if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import shutil
+
+          allowlist_path = pathlib.Path('.github/nightly-local-publication-allowlist.txt')
+          source_root = pathlib.Path('nightly-artifacts')
+          destination_root = pathlib.Path('nightly-publication')
+          entries = [
+              line.strip()
+              for line in allowlist_path.read_text(encoding='utf-8').splitlines()
+              if line.strip()
+          ]
+          if not entries or len(entries) != len(set(entries)):
+              raise SystemExit('publication allowlist must be non-empty and unique')
+          if any(not re.fullmatch(r'[a-z0-9][a-z0-9.-]*', entry) for entry in entries):
+              raise SystemExit('publication allowlist contains an invalid basename')
+          destination_root.mkdir(mode=0o700)
+          for entry in entries:
+              source = source_root / entry
+              if not source.is_file() or source.is_symlink():
+                  raise SystemExit(f'allowlisted publication artifact is missing or unsafe: {entry}')
+              shutil.copyfile(source, destination_root / entry)
+          copied = sorted(path.name for path in destination_root.iterdir() if path.is_file())
+          if copied != sorted(entries):
+              raise SystemExit('publication bundle does not match its allowlist')
+          PY
+
+      - name: Verify publication bundle before artifact persistence
+        if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/verify-nightly-local-publication.py \
+            --root nightly-publication
+
+      - name: Upload verified sanitized local nightly artifacts
+        if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
         with:
-          name: nightly-local-${{ github.run_id }}
-          path: nightly-artifacts/
+          name: nightly-local-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            nightly-artifacts/local-stack-reset.json
+            nightly-artifacts/local-image-pull-preflight.json
+            nightly-artifacts/local-stack-status.json
+            nightly-artifacts/local-migration-manifest.json
+            nightly-artifacts/local-migration-summary.json
+            nightly-artifacts/local-closure-rescan.json
+            nightly-artifacts/local-closure-smoke.json
+            nightly-artifacts/local-browser-route-diagnostics.json
+            nightly-artifacts/publication-boundary.txt
+            nightly-artifacts/failure-diagnostics/nightly-unit-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Prepare bounded lifecycle diagnostic for failure persistence
+        id: prepare-lifecycle-diagnostic
+        if: ${{ always() && (failure() || cancelled() || env.NIGHTLY_SUITE != 'all') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          result="$(python3 .github/scripts/write-nightly-lifecycle-stage.py --prepare-upload)"
+          case "$result" in
+            prepared)
+              printf '%s\n' \
+                'path=nightly-artifacts/validated-failure-diagnostics/local-lifecycle-stage.json' \
+                >> "$GITHUB_OUTPUT"
+              ;;
+            absent) ;;
+            *) exit 2 ;;
+          esac
+
+      - name: Upload bounded failed or partial local nightly diagnostics
+        if: ${{ always() && (failure() || cancelled() || env.NIGHTLY_SUITE != 'all') }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        with:
+          name: nightly-local-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            nightly-artifacts/local-image-pull-preflight.json
+            nightly-artifacts/failure-diagnostics/local-compose-create-preflight.json
+            nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json
+            nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json
+            nightly-artifacts/failure-diagnostics/local-stack-failure-diagnostics.json
+            ${{ steps.prepare-lifecycle-diagnostic.outputs.path }}
+            nightly-artifacts/failure-diagnostics/nightly-unit-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-run-summary.json
+            nightly-artifacts/failure-diagnostics/nightly-e2e-failure-evidence.json
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Upload allowlisted publication bundle
+        if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        with:
+          name: nightly-local-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: nightly-publication/
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Stop and remove disposable local stack
+        id: nightly-cleanup
         if: always()
+        continue-on-error: true
         shell: bash
         run: |
-          set +e
-          if [[ -n "${LOCAL_STATE:-}" && -f "$LOCAL_STATE/stack.env" ]]; then
-            python3 backend/supabase/scripts/local-stack.py stop
-            docker compose \
-              --project-name "$LOCAL_PROJECT" \
-              --env-file "$LOCAL_STATE/stack.env" \
-              -f backend/supabase/docker-compose.yml \
-              -f backend/supabase/docker-compose.local.yml \
-              -f backend/supabase/docker-compose.mail.yml \
-              down --volumes --remove-orphans
-            rm -rf -- "$LOCAL_STATE"
+          set -uo pipefail
+          failed=0
+          expected_project="$(python3 - "$GITHUB_WORKSPACE" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+
+          root = pathlib.Path(sys.argv[1]).resolve(strict=True)
+          print('tzudong-local-' + hashlib.sha256(str(root).encode('utf-8')).hexdigest()[:12])
+          PY
+          )" || failed=1
+          if [[ ! "$expected_project" =~ ^tzudong-local-[0-9a-f]{12}$ ]]; then
+            echo 'Disposable project identity is invalid; refusing project cleanup.' >&2
+            failed=1
+            expected_project=''
           fi
+          project="${LOCAL_PROJECT:-$expected_project}"
+          if [[ -z "$expected_project" || "$project" != "$expected_project" ]]; then
+            echo 'Disposable project identity does not match the repository identity.' >&2
+            failed=1
+            project="$expected_project"
+          fi
+          expected_state="${GITHUB_WORKSPACE}/backend/supabase/volumes/.local-stack/${project}"
+          state="${LOCAL_STATE:-$expected_state}"
+          if [[ -z "$project" || "$state" != "$expected_state" || -L "$state" ]]; then
+            echo 'Disposable state identity is invalid; refusing state cleanup.' >&2
+            failed=1
+            state=''
+          fi
+
+          volumes=()
+          if [[ -n "$project" ]]; then
+            volumes=(
+              "${project}-db-data"
+              "${project}-db-config"
+              "${project}-db-init-migrations"
+              "${project}-db-init-scripts"
+              "${project}-functions"
+              "${project}-kong-config"
+              "${project}-pooler-config"
+              "${project}-storage-data"
+              "${project}-vector-config"
+            )
+            if [[ -n "$state" && -f "$state/stack.env" ]]; then
+              python3 backend/supabase/scripts/local-stack.py stop >/dev/null || failed=1
+              docker compose \
+                --project-name "$project" \
+                --env-file "$state/stack.env" \
+                -f backend/supabase/docker-compose.yml \
+                -f backend/supabase/docker-compose.local.yml \
+                -f backend/supabase/docker-compose.mail.yml \
+                down --volumes --remove-orphans >/dev/null || failed=1
+            fi
+
+            container_output=''
+            if ! container_output="$(docker ps -aq --filter "label=com.docker.compose.project=${project}")"; then
+              failed=1
+            elif [[ -n "$container_output" ]]; then
+              mapfile -t containers <<< "$container_output"
+              for container in "${containers[@]}"; do
+                if [[ ! "$container" =~ ^[0-9a-f]{12,64}$ ]]; then
+                  echo 'Unexpected residual container identity.' >&2
+                  failed=1
+                  continue
+                fi
+                docker rm -f -- "$container" >/dev/null || failed=1
+              done
+            fi
+
+            for volume in "${volumes[@]}"; do
+              docker volume rm -f -- "$volume" >/dev/null 2>&1 || true
+            done
+            labeled_volume_output=''
+            if ! labeled_volume_output="$(docker volume ls -q --filter "label=com.docker.compose.project=${project}")"; then
+              failed=1
+            elif [[ -n "$labeled_volume_output" ]]; then
+              mapfile -t labeled_volumes <<< "$labeled_volume_output"
+              for volume in "${labeled_volumes[@]}"; do
+                known=0
+                for expected_volume in "${volumes[@]}"; do
+                  [[ "$volume" == "$expected_volume" ]] && known=1
+                done
+                if ((known)); then
+                  docker volume rm -f -- "$volume" >/dev/null || failed=1
+                else
+                  echo 'Unexpected project-labeled volume remains; refusing unallowlisted removal.' >&2
+                  failed=1
+                fi
+              done
+            fi
+
+            network_output=''
+            if ! network_output="$(docker network ls -q --filter "label=com.docker.compose.project=${project}")"; then
+              failed=1
+            elif [[ -n "$network_output" ]]; then
+              mapfile -t networks <<< "$network_output"
+              for network in "${networks[@]}"; do
+                if [[ ! "$network" =~ ^[0-9a-f]{12,64}$ ]]; then
+                  echo 'Unexpected residual network identity.' >&2
+                  failed=1
+                  continue
+                fi
+                docker network rm -- "$network" >/dev/null || failed=1
+              done
+            fi
+
+            residual=''
+            if ! residual="$(docker ps -aq --filter "label=com.docker.compose.project=${project}")" || [[ -n "$residual" ]]; then
+              echo 'Disposable containers remain after cleanup or readback failed.' >&2
+              failed=1
+            fi
+            for volume in "${volumes[@]}"; do
+              if docker volume inspect "$volume" >/dev/null 2>&1; then
+                echo 'Disposable volume remains after cleanup.' >&2
+                failed=1
+              fi
+            done
+            if ! residual="$(docker volume ls -q --filter "label=com.docker.compose.project=${project}")" || [[ -n "$residual" ]]; then
+              echo 'Project-labeled volumes remain after cleanup or readback failed.' >&2
+              failed=1
+            fi
+            if ! residual="$(docker network ls -q --filter "label=com.docker.compose.project=${project}")" || [[ -n "$residual" ]]; then
+              echo 'Project-labeled networks remain after cleanup or readback failed.' >&2
+              failed=1
+            fi
+          fi
+
+          if [[ -n "$state" && -e "$state" ]]; then
+            if [[ -d "$state" ]]; then
+              rm -rf -- "$state" || failed=1
+            else
+              echo 'Disposable state is not a directory; refusing removal.' >&2
+              failed=1
+            fi
+          fi
+          if [[ -n "$state" && -e "$state" ]]; then
+            echo 'Disposable state remains after cleanup.' >&2
+            failed=1
+          fi
+
+          expected_admission="/run/tzudong-nightly-local-admission-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          admission="${TZUDONG_DOCKER_SOCKET_ADMISSION_FILE:-$expected_admission}"
+          if [[ ! "$GITHUB_RUN_ID" =~ ^[1-9][0-9]*$ || ! "$GITHUB_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ || "$admission" != "$expected_admission" ]]; then
+            echo 'Docker socket admission identity is invalid.' >&2
+            failed=1
+          fi
+          if [[ "$GITHUB_RUN_ID" =~ ^[1-9][0-9]*$ && "$GITHUB_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]; then
+            sudo rm -f -- "$expected_admission" || failed=1
+            if sudo test -e "$expected_admission"; then
+              echo 'Docker socket admission remains after cleanup.' >&2
+              failed=1
+            fi
+          fi
+          exit "$failed"
+
+      - name: Manage scheduled nightly incident
+        if: ${{ always() && github.event_name == 'schedule' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_JOB_STATUS: ${{ job.status }}
+          UNIT_OUTCOME: ${{ steps.nightly-unit.outcome }}
+          E2E_OUTCOME: ${{ steps.nightly-e2e.outcome }}
+          CLEANUP_OUTCOME: ${{ steps.nightly-cleanup.outcome }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          title='[nightly] Local regression incident'
+          issue_number="$(
+            gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --limit 100 \
+              --json number,title \
+              --jq ".[] | select(.title == \"$title\") | .number" \
+              | head -n 1
+          )"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if [[ "$CURRENT_JOB_STATUS" == 'success' && "$NIGHTLY_SUITE" == 'all' && "$UNIT_OUTCOME" == 'success' && "$E2E_OUTCOME" == 'success' && "$CLEANUP_OUTCOME" == 'success' ]]; then
+            if [[ -n "$issue_number" ]]; then
+              gh issue close "$issue_number" \
+                --repo "$GITHUB_REPOSITORY" \
+                --comment "Recovered on run ${run_url} (attempt ${GITHUB_RUN_ATTEMPT})."
+            fi
+            exit 0
+          fi
+          body="$(cat <<EOF
+          Canonical local nightly regression needs attention.
+
+          - Run: ${run_url}
+          - Attempt: ${GITHUB_RUN_ATTEMPT}
+          - Commit: ${GITHUB_SHA}
+          - Requested suite: ${NIGHTLY_SUITE}
+          - Job status before incident management: ${CURRENT_JOB_STATUS:-unknown}
+          - Unit outcome: ${UNIT_OUTCOME:-not-run}
+          - E2E outcome: ${E2E_OUTCOME:-not-run}
+          - Cleanup outcome: ${CLEANUP_OUTCOME:-not-run}
+
+          The bounded diagnostic artifact is named nightly-local-diagnostics-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}. No credentials or provider payloads are included.
+          EOF
+          )"
+          if [[ -n "$issue_number" ]]; then
+            gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            issue_url="$(gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body")"
+            if [[ "$REPOSITORY_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ && "$GITHUB_REPOSITORY" == "${REPOSITORY_OWNER}/tzudong" ]]; then
+              if ! gh issue edit "$issue_url" \
+                --repo "$GITHUB_REPOSITORY" \
+                --add-assignee "$REPOSITORY_OWNER" >/dev/null 2>&1; then
+                echo 'Nightly incident exists, but repository-owner assignment failed.' >> "$GITHUB_STEP_SUMMARY"
+              fi
+            else
+              echo 'Nightly incident exists, but repository-owner identity was invalid.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+      - name: Fail when disposable stack cleanup failed
+        if: ${{ always() && steps.nightly-cleanup.outcome != 'success' }}
+        shell: bash
+        run: exit 1
   publish:
     name: Publish sanitized nightly prerelease
     needs: local
-    if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' }}
+    if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.suite == 'all') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
       actions: read
     steps:
-      - name: Download sanitized local nightly artifacts
+      - name: Checkout publication policy
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download allowlisted local nightly artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # actions/download-artifact@v4.3.0
         with:
-          name: nightly-local-${{ github.run_id }}
+          name: nightly-local-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: nightly-artifacts
 
       - name: Verify trusted publication ref and artifact boundary
@@ -615,145 +2072,8 @@ jobs:
           main_sha="$(git ls-remote "https://github.com/${GITHUB_REPOSITORY}.git" refs/heads/main | cut -f1)"
           test -n "$main_sha"
           test "${GITHUB_SHA}" = "$main_sha"
-          python3 - <<'PY'
-          import json
-          import pathlib
-          import re
-
-          root = pathlib.Path('nightly-artifacts')
-          all_paths = list(root.rglob('*'))
-          if any(path.is_symlink() for path in all_paths):
-              raise SystemExit('publication artifact tree contains a symlink')
-          allowed = {
-              'local-stack-reset.json',
-              'local-image-pull-preflight.json',
-              'local-stack-status.json',
-              'local-migration-manifest.json',
-              'local-receipt-v1.json',
-              'local-closure-rescan.json',
-              'local-closure-smoke.json',
-              'local-browser-route-diagnostics.json',
-              'publication-boundary.txt',
-          }
-          stack_receipt_fields = {
-              'action',
-              'config_sha256',
-              'env_provenance_sha256',
-              'error_code',
-              'generator_version',
-              'input_provenance_sha256',
-              'ok',
-              'project_name',
-              'renderer',
-              'schema',
-              'services',
-          }
-          migration_receipt_fields = {
-              'catalog_sha256',
-              'closure_binding_sha256',
-              'commit_sha256',
-              'compose_evidence_sha256',
-              'config_sha256',
-              'env_provenance_sha256',
-              'environment_contract_sha256',
-              'function_source_sha256',
-              'image_digests',
-              'image_service_digests',
-              'input_evidence_sha256',
-              'input_provenance_sha256',
-              'input_source_manifest_sha256',
-              'ledger',
-              'ledger_sha256',
-              'platform_bootstrap_evidence_sha256',
-              'platform_bootstrap_sha256',
-              'prerequisite_sha256',
-              'project_name',
-              'readback',
-              'readback_sha256',
-              'readback_sql_sha256',
-              'schema',
-              'seed_sha256',
-              'seed_source_sha256',
-              'sequence',
-              'sequence_sha256',
-              'serializer',
-              'service',
-              'service_sha256',
-              'source_chain_sha256',
-              'source_manifest_sha256',
-              'stack_provenance',
-          }
-          runtime_fields = {
-              'schemaVersion',
-              'mode',
-              'functionCount',
-              'localSearchPathCount',
-              'unresolvedPathCount',
-              'ambiguousPathCount',
-              'definerMissingSearchPathCount',
-              'functionMetadataDigest',
-              'definitionHash',
-              'extensionCatalogSha256',
-              'externalEffectBindingSha256',
-              'candidateResolution',
-              'closureSmoke',
-              'rpcSmoke',
-              'candidateRpcSmoke',
-          }
-          expected_fields = {
-              'local-stack-reset.json': stack_receipt_fields,
-              'local-stack-status.json': stack_receipt_fields,
-              'local-migration-manifest.json': {'schemaVersion', 'source', 'exclusions'},
-              'local-receipt-v1.json': migration_receipt_fields,
-              'local-closure-rescan.json': runtime_fields | {'closureBinding'},
-              'local-closure-smoke.json': runtime_fields,
-              'local-browser-route-diagnostics.json': {'schema', 'source', 'tests', 'record_count'},
-              'local-image-pull-preflight.json': {'schema', 'image_count', 'images', 'container_probe'},
-          }
-          expected_markers = {
-              'local-stack-reset.json': ('schema', 'local-stack-receipt-v1'),
-              'local-stack-status.json': ('schema', 'local-stack-receipt-v1'),
-              'local-migration-manifest.json': ('schemaVersion', 'local-supabase-migration-manifest/v1'),
-              'local-receipt-v1.json': ('schema', 'local-receipt-v1'),
-              'local-closure-rescan.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
-              'local-closure-smoke.json': ('schemaVersion', 'local-function-runtime-scan/v1'),
-              'local-browser-route-diagnostics.json': ('schema', 'local-browser-route-diagnostics-v1'),
-              'local-image-pull-preflight.json': ('schema', 'local-image-pull-preflight-v1'),
-          }
-          files = {
-              path.relative_to(root).as_posix()
-              for path in all_paths
-              if path.is_file()
-          }
-          if files != allowed:
-              raise SystemExit(f'unexpected publication artifacts: {sorted(files ^ allowed)}')
-          forbidden = re.compile(r'(?i)(?:password|secret|authorization|bearer|service[_-]?role|database[_-]?url|postgres(?:ql)?://|jwt)')
-          for name in sorted(allowed):
-              path = root / name
-              data = path.read_bytes()
-              if len(data) > 256 * 1024:
-                  raise SystemExit(f'publication artifact exceeds size bound: {name}')
-              if name == 'publication-boundary.txt':
-                  if data != b'Local-only sanitized receipts; stack.env and credentials excluded.\n':
-                      raise SystemExit('publication boundary marker is not canonical')
-                  continue
-              try:
-                  payload = json.loads(data)
-              except json.JSONDecodeError as error:
-                  raise SystemExit(f'publication artifact is not JSON: {name}') from error
-              expected = expected_fields[name]
-              if not isinstance(payload, dict) or set(payload) != expected:
-                  raise SystemExit(f'publication artifact schema mismatch: {name}')
-              marker_key, marker_value = expected_markers[name]
-              if payload.get(marker_key) != marker_value:
-                  raise SystemExit(f'publication artifact marker mismatch: {name}')
-              if name == 'local-stack-reset.json' and payload.get('action') != 'reset':
-                  raise SystemExit('local stack reset receipt action mismatch')
-              if name == 'local-stack-status.json' and payload.get('action') != 'status':
-                  raise SystemExit('local stack status receipt action mismatch')
-              if forbidden.search(json.dumps(payload, separators=(',', ':'))):
-                  raise SystemExit(f'publication artifact contains a forbidden secret marker: {name}')
-          PY
+          python3 .github/scripts/verify-nightly-local-publication.py \
+            --root nightly-artifacts
       - name: Publish sanitized nightly prerelease
         env:
           GH_TOKEN: ${{ github.token }}
@@ -770,17 +2090,18 @@ jobs:
           Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
           Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
           EOF
+          mapfile -t publication_files < <(
+            sed '/^[[:space:]]*$/d' .github/nightly-local-publication-allowlist.txt
+          )
+          test "${#publication_files[@]}" -gt 0
+          for index in "${!publication_files[@]}"; do
+            publication_files[$index]="nightly-artifacts/${publication_files[$index]}"
+            test -f "${publication_files[$index]}"
+          done
           gh release create "$tag" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "$title" \
             --notes-file "$notes" \
             --prerelease \
-            nightly-artifacts/local-stack-reset.json \
-            nightly-artifacts/local-stack-status.json \
-            nightly-artifacts/local-migration-manifest.json \
-            nightly-artifacts/local-receipt-v1.json \
-            nightly-artifacts/local-closure-rescan.json \
-            nightly-artifacts/local-closure-smoke.json \
-            nightly-artifacts/local-browser-route-diagnostics.json \
-            nightly-artifacts/publication-boundary.txt
+            "${publication_files[@]}"

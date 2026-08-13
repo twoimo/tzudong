@@ -25,10 +25,14 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/lib/no-toast";
 import {
-  classifyProfileAvatarUrl,
-  getProfileAvatarDeletionKey,
   resolveProfileAvatarUrl,
 } from "@/lib/profile-avatar-url";
+import {
+  clearCurrentProfileAvatar,
+  updateCurrentProfileNickname,
+  uploadCurrentProfileAvatar,
+} from "@/lib/profile-mutation";
+import { invalidateProfileDisplayQueries } from "@/lib/profile-display-cache";
 import { cn } from "@/lib/utils";
 
 interface SidebarItemProps {
@@ -82,6 +86,11 @@ export function MyPageSidebar() {
     }
   }, [displayName, isNicknameEditing]);
 
+  const refreshProfileAvatarQueries = async () => {
+    if (!user) return;
+    await invalidateProfileDisplayQueries(queryClient, user.id);
+  };
+
   const handleNicknameChange = async () => {
     if (!user || !nicknameInput.trim()) {
       toast.error("닉네임을 입력해주세요");
@@ -96,19 +105,9 @@ export function MyPageSidebar() {
 
     setNicknameSaving(true);
     try {
-      const { error } = await supabase
-        .from("profiles" as never)
-        .update({ nickname: nextNickname } as never)
-        .eq("user_id", user.id);
+      await updateCurrentProfileNickname(supabase, user.id, nextNickname);
 
-      if (error) throw error;
-
-      await queryClient.invalidateQueries({
-        queryKey: ["user-profile", user.id],
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["user-profile-identity", user.id],
-      });
+      await refreshProfileAvatarQueries();
       setIsNicknameEditing(false);
       router.refresh();
       toast.success("닉네임이 변경되었습니다");
@@ -137,49 +136,26 @@ export function MyPageSidebar() {
     try {
       const { compressImage } = await import("@/lib/image-utils");
       const compressedBlob = await compressImage(file);
-      const filePath = `${user.id}/avatar.jpg`;
-
-      const oldAvatarDeletionKey = getProfileAvatarDeletionKey(
-        profile?.avatarUrl,
+      const result = await uploadCurrentProfileAvatar(
+        supabase,
         user.id,
+        profile?.avatarUrl ?? null,
+        compressedBlob,
       );
-      if (oldAvatarDeletionKey) {
-        await supabase.storage
-          .from("profile-avatars")
-          .remove([oldAvatarDeletionKey]);
-      }
 
-      const { error: uploadError } = await supabase.storage
-        .from("profile-avatars")
-        .upload(filePath, compressedBlob, {
-          upsert: true,
-          contentType: "image/jpeg",
-        });
-
-      if (uploadError) throw uploadError;
-
-      const baseUrl = supabase.storage
-        .from("profile-avatars")
-        .getPublicUrl(filePath).data.publicUrl;
-      const publicUrl = resolveProfileAvatarUrl(baseUrl, user.id);
-      if (!publicUrl) throw new Error("profile_avatar_url_unavailable");
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: publicUrl } as never)
-        .eq("user_id", user.id);
-
-      if (updateError) throw updateError;
-
-      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
-      queryClient.invalidateQueries({
-        queryKey: ["user-profile-identity", user.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["review-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
-      queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
+      await refreshProfileAvatarQueries();
       router.refresh();
-      toast.success("프로필 사진이 변경되었습니다");
+      if (result.cleanup.status === "pending") {
+        toast.warning("프로필 사진은 변경되었지만 이전 사진 정리가 지연되고 있습니다");
+      } else {
+        toast.success("프로필 사진이 변경되었습니다");
+      }
     } catch {
+      try {
+        await refreshProfileAvatarQueries();
+      } catch {
+        // The fixed failure remains fail closed when authoritative refresh is unavailable.
+      }
       toast.error("이미지 업로드에 실패했습니다");
     } finally {
       setAvatarUploading(false);
@@ -188,40 +164,30 @@ export function MyPageSidebar() {
   };
 
   const handleAvatarDelete = async () => {
-    if (!user || !profile?.avatarUrl) return;
+    if (!user || profile?.avatarUrl === null || profile?.avatarUrl === undefined) return;
     if (!confirm("프로필 사진을 삭제하시겠습니까?")) return;
 
     setAvatarUploading(true);
     try {
-      const avatar = classifyProfileAvatarUrl(profile.avatarUrl, user.id);
-      if (avatar.kind === "invalid") {
-        throw new Error("profile_avatar_delete_key_unavailable");
-      }
+      const result = await clearCurrentProfileAvatar(
+        supabase,
+        user.id,
+        profile.avatarUrl,
+      );
 
-      if (avatar.kind === "owned_storage") {
-        const { error: removeError } = await supabase.storage
-          .from("profile-avatars")
-          .remove([avatar.storageKey]);
-        if (removeError) throw removeError;
-      }
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: null } as never)
-        .eq("user_id", user.id);
-
-      if (updateError) throw updateError;
-
-      queryClient.invalidateQueries({ queryKey: ["user-profile", user.id] });
-      queryClient.invalidateQueries({
-        queryKey: ["user-profile-identity", user.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["review-feed"] });
-      queryClient.invalidateQueries({ queryKey: ["review-feed-panel"] });
-      queryClient.invalidateQueries({ queryKey: ["restaurant-reviews"] });
+      await refreshProfileAvatarQueries();
       router.refresh();
-      toast.success("프로필 사진이 삭제되었습니다");
+      if (result.cleanup.status === "pending") {
+        toast.warning("프로필 사진은 삭제되었지만 이전 사진 정리가 지연되고 있습니다");
+      } else {
+        toast.success("프로필 사진이 삭제되었습니다");
+      }
     } catch {
+      try {
+        await refreshProfileAvatarQueries();
+      } catch {
+        // The fixed failure remains fail closed when authoritative refresh is unavailable.
+      }
       toast.error("프로필 사진 삭제에 실패했습니다");
     } finally {
       setAvatarUploading(false);
@@ -285,6 +251,8 @@ export function MyPageSidebar() {
   if (!user) return null;
 
   const avatarUrl = resolveProfileAvatarUrl(profile?.avatarUrl, user.id);
+  const hasAvatarReference =
+    profile?.avatarUrl !== null && profile?.avatarUrl !== undefined;
   const isNicknameUnchanged = nicknameInput.trim() === displayName;
 
   return (
@@ -344,7 +312,7 @@ export function MyPageSidebar() {
             />
           </label>
 
-          {avatarUrl && (
+          {hasAvatarReference && (
             <button
               type="button"
               onClick={(e) => {

@@ -5,10 +5,10 @@
     {
       "kind": "template",
       "template": "kong.yml",
-      "template_sha256": "1de8eae7cf14be297323d2975a3ca4ee703e69757f53fee3abe6f9c43514d08c",
+      "template_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
       "template_mode": "0644",
       "output": "kong.yml",
-      "output_sha256": "1de8eae7cf14be297323d2975a3ca4ee703e69757f53fee3abe6f9c43514d08c",
+      "output_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
       "service": "kong",
       "destination": "/home/kong/temp.yml",
       "output_mode": "0600"
@@ -38,10 +38,21 @@
     {
       "kind": "template",
       "template": "functions/main/index.ts",
-      "template_sha256": "e254581f71f38371c5ef69b42df4c612e4e8e1ff88f44b4b59b9ee19aca5ec7a",
+      "template_sha256": "39d5e24ada1c0f23a158963f19b80daf2f6529cf617852d996d06ce71a4e7895",
       "template_mode": "0644",
       "output": "functions/main/index.ts",
-      "output_sha256": "e254581f71f38371c5ef69b42df4c612e4e8e1ff88f44b4b59b9ee19aca5ec7a",
+      "output_sha256": "39d5e24ada1c0f23a158963f19b80daf2f6529cf617852d996d06ce71a4e7895",
+      "service": "functions",
+      "destination": "/home/deno/functions",
+      "output_mode": "0600"
+    },
+    {
+      "kind": "template",
+      "template": "functions/naver-geocode/index.ts",
+      "template_sha256": "6f3cef407bc0ad8ad9a85e27a914ef29aaf271ba10717a62272d4075686a8afb",
+      "template_mode": "0644",
+      "output": "functions/naver-geocode/index.ts",
+      "output_sha256": "6f3cef407bc0ad8ad9a85e27a914ef29aaf271ba10717a62272d4075686a8afb",
       "service": "functions",
       "destination": "/home/deno/functions",
       "output_mode": "0600"
@@ -127,15 +138,16 @@
   "functions": {
     "root": "functions",
     "files": [
-      "functions/main/index.ts"
+      "functions/main/index.ts",
+      "functions/naver-geocode/index.ts"
     ]
   },
   "mounts": [
     {
       "service": "kong",
-      "source": "kong.yml",
-      "type": "bind",
-      "destination": "/home/kong/temp.yml"
+      "source": "local-kong-config",
+      "type": "volume",
+      "destination": "/home/kong"
     },
     {
       "service": "storage",
@@ -151,33 +163,15 @@
     },
     {
       "service": "functions",
-      "source": "functions",
-      "type": "bind",
+      "source": "local-functions",
+      "type": "volume",
       "destination": "/home/deno/functions"
     },
     {
       "service": "db",
-      "source": "db-realtime.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-realtime.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-webhooks.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-roles.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-roles.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-jwt.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql"
+      "source": "local-db-init-migrations",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/migrations"
     },
     {
       "service": "db",
@@ -187,21 +181,9 @@
     },
     {
       "service": "db",
-      "source": "db-supabase.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/97-_supabase.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-logs.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-logs.sql"
-    },
-    {
-      "service": "db",
-      "source": "db-pooler.sql",
-      "type": "bind",
-      "destination": "/docker-entrypoint-initdb.d/migrations/99-pooler.sql"
+      "source": "local-db-init-scripts",
+      "type": "volume",
+      "destination": "/docker-entrypoint-initdb.d/init-scripts"
     },
     {
       "service": "db",
@@ -211,15 +193,15 @@
     },
     {
       "service": "vector",
-      "source": "vector.yml",
-      "type": "bind",
-      "destination": "/etc/vector/vector.yml"
+      "source": "local-vector-config",
+      "type": "volume",
+      "destination": "/etc/vector"
     },
     {
       "service": "supavisor",
-      "source": "pooler.exs",
-      "type": "bind",
-      "destination": "/etc/pooler/pooler.exs"
+      "source": "local-pooler-config",
+      "type": "volume",
+      "destination": "/etc/pooler"
     }
   ],
   "compose_files": [
@@ -229,7 +211,7 @@
     },
     {
       "path": "backend/supabase/docker-compose.local.yml",
-      "sha256": "ba8ad34ed798b306bdfba45c9b0c6410f91ca74b44361afc29b8b531ee555086"
+      "sha256": "22e80cb503ef3b39c63dcdb03edd4f2d4724d52ba0333e4ddc2fc9053d07659d"
     },
     {
       "path": "backend/supabase/docker-compose.mail.yml",
