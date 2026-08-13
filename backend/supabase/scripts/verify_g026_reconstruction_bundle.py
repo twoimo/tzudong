@@ -21,6 +21,7 @@ TOP_KEYS = frozenset({
     'schemaVersion', 'purpose', 'reconstructionAuthorized',
     'reconstructionArchiveSha256', 'historicalSourceArchiveSha256',
     'transition', 'repairs', 'validationLedger', 'slots',
+    'legacyShapeNormalization',
     'canonicalBodyHashes', 'apiMatrix', 'extensionFingerprint', 'adBanners', 'shortUrls',
     'storyboardBaseTables', 'userBookmarks', 'searchLogs', 'restaurantsDuplicate', 'adminWorkflowPipeline',
     'roleManagementReplayTransform', 'replayMembershipWindows', 'selfContainedReplay',
@@ -28,8 +29,8 @@ TOP_KEYS = frozenset({
 })
 ARCHIVE = '21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3'
 HISTORICAL = '1b221e44a5a7de028a6a3eeec160562f7dc6172c6b7eb83c630a00c7149e5e11'
-TRANSITION_BYTES = 27693
-TRANSITION_SHA256 = '203168d618018f9ed2fd5b73b44fbfab29a5be9040b1671d06e5008da45d0ca0'
+TRANSITION_BYTES = 36415
+TRANSITION_SHA256 = 'ee1e2cd1219c56c162793aa1ecd46245e7683fc7d95c726bd2fe9a01f8a170bd'
 APPROVE_RESTAURANT_PREDECESSOR = ROOT / 'backend/supabase/migrations/20260124_fix_approved_name_sync.sql'
 SYNTHESIZED_COMPATIBILITY_NAMES = (
     'approve_restaurant_submission', 'approve_edit_restaurant_submission',
@@ -111,6 +112,53 @@ ADMIN_WORKFLOW_SOURCE = {
     'publicationTables': ['admin_workflow_runs', 'admin_workflow_steps'],
     'publicationExcluded': ['admin_workflow_signals'],
 }
+LEGACY_SHAPE_NORMALIZATION = {
+    'kind': 'source_only_empty_clean_legacy_shape_normalization',
+    'historicalProof': False,
+    'hostedStateEvidence': False,
+    'reconstructionSource': {
+        'manifestPath': 'backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.json',
+        'manifestByteLength': 5331,
+        'manifestSha256': '1f87d2bb4d64b9c4771bacad881a8c6effdca072ba0b22732a8373123a6f836e',
+        'archivePath': 'backend/supabase/baselines/historical/pre-20260214-application/RECONSTRUCTION_SOURCES.v1.zip',
+        'archiveByteLength': 152235,
+        'archiveSha256': '21a2b4b6050c05f405a158bf81287b56d4de349189abcb6419090f4dc54c3fc3',
+        'ordinal': 0,
+        'member': 'supabase/migrations/temp/20251107_complete_migration.sql',
+        'sourceByteLength': 79793,
+        'sourceSha256': '23de25dcbe84612ca032b680608d671ffdfa0a72eac44b823e8d001b59919f33',
+    },
+    'applicationPrerequisites': {
+        'manifestPath': 'backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json',
+        'manifestByteLength': 1252,
+        'manifestSha256': '055d31e0d7597ec026e570eaf85adfb2c4a6c5480f80a3ed7a7ca525a6b2a9f3',
+        'sourcePath': 'backend/supabase/baselines/pre-20260214-public-schema.sql',
+        'sourceByteLength': 203938,
+        'sourceSha256': '7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119',
+        'outputPath': 'backend/supabase/baselines/local/application-prerequisites.sql',
+        'outputByteLength': 210374,
+        'outputSha256': '34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15',
+    },
+    'operations': [
+        {
+            'relation': 'public.profiles',
+            'precondition': 'empty_exact_legacy_profile_picture_text_avatar_url_absent',
+            'operation': 'rename_profile_picture_to_avatar_url',
+            'postcondition': 'exact_target_avatar_url_text_profile_picture_absent',
+        },
+        {
+            'relation': 'public.reviews',
+            'precondition': 'empty_exact_legacy_base_like_count_absent',
+            'operation': 'add_like_count_integer_not_null_default_zero_check_nonnegative',
+            'postcondition': 'exact_target_like_count_default_and_validated_check',
+        },
+    ],
+}
+LEGACY_SHAPE_NORMALIZATION_LABEL = '-- G026 source-only Phase A legacy-shape normalization; not historical or hosted-state evidence.'
+LEGACY_SHAPE_NORMALIZATION_BYTES = 8596
+LEGACY_SHAPE_NORMALIZATION_SHA256 = '4681a8f777fa658dec2f76ab468658bb08a80fa0eefbe5e9a600a6ee3ad93abe'
+PHASE_A_LEGACY_SHAPE_PREAMBLE_BYTES = 1030
+PHASE_A_LEGACY_SHAPE_PREAMBLE_SHA256 = 'f817bc6833e8df6aafaa6d0501bf7232cf19c8141f6d43b473bfb8ae603773e6'
 TRANSITION_OPERATOR = "to_regoperator('extensions.<=>(extensions.vector,extensions.vector)')"
 PRIOR_SPACED_TRANSITION_OPERATOR = "to_regoperator('extensions.<=> (extensions.vector,extensions.vector)')"
 REALTIME_PUBLICATION_ENVELOPE = """DO $$
@@ -642,6 +690,150 @@ def require_restaurant_columns(source):
     expected = '\n'.join(REQUIRED_RESTAURANT_COLUMNS)
     if start < 0 or end < 0 or source[start + len(rename):end].strip() != expected:
         raise ValueError('required restaurant column transition drifted')
+
+def table_definition(source, name):
+    marker = f'CREATE TABLE public.{name} ('
+    start = source.find(marker)
+    if start < 0 or source.find(marker, start + len(marker)) >= 0:
+        raise ValueError(f'{name} source table definition count drifted')
+    end = source.find('\n);', start + len(marker))
+    if end < 0:
+        raise ValueError(f'{name} source table definition terminator drifted')
+    return source[start:end + 3]
+
+def require_legacy_shape_normalization(transition, bundle_source):
+    if bundle_source != LEGACY_SHAPE_NORMALIZATION:
+        raise ValueError('legacy-shape normalization source binding drifted')
+    reconstruction = LEGACY_SHAPE_NORMALIZATION['reconstructionSource']
+    application = LEGACY_SHAPE_NORMALIZATION['applicationPrerequisites']
+    reconstruction_manifest_path = ROOT / reconstruction['manifestPath']
+    reconstruction_archive_path = ROOT / reconstruction['archivePath']
+    application_manifest_path = ROOT / application['manifestPath']
+    application_source_path = ROOT / application['sourcePath']
+    application_output_path = ROOT / application['outputPath']
+    bound_files = (
+        (reconstruction_manifest_path, reconstruction['manifestByteLength'], reconstruction['manifestSha256']),
+        (reconstruction_archive_path, reconstruction['archiveByteLength'], reconstruction['archiveSha256']),
+        (application_manifest_path, application['manifestByteLength'], application['manifestSha256']),
+        (application_source_path, application['sourceByteLength'], application['sourceSha256']),
+        (application_output_path, application['outputByteLength'], application['outputSha256']),
+    )
+    for path, expected_length, expected_sha256 in bound_files:
+        raw = path.read_bytes()
+        if len(raw) != expected_length or hashlib.sha256(raw).hexdigest() != expected_sha256:
+            raise ValueError(f'legacy-shape immutable source binding drifted: {path.name}')
+
+    reconstruction_manifest = json.loads(
+        reconstruction_manifest_path.read_text(encoding='utf-8'), object_pairs_hook=pairs
+    )
+    if reconstruction_manifest.get('archiveSha256') != reconstruction['archiveSha256']:
+        raise ValueError('legacy-shape reconstruction archive manifest binding drifted')
+    entries = [
+        entry for entry in reconstruction_manifest.get('entries', [])
+        if entry.get('ordinal') == reconstruction['ordinal']
+    ]
+    if len(entries) != 1 or entries[0] != {
+        'ordinal': 0,
+        'path': reconstruction['member'],
+        'blobSha1': 'b286fb1589b46203a0010d44c29ce65a39188fbc',
+        'byteLength': reconstruction['sourceByteLength'],
+        'sha256': reconstruction['sourceSha256'],
+        'role': 'historical_baseline_candidate',
+    }:
+        raise ValueError('legacy-shape reconstruction ordinal-0 binding drifted')
+    with zipfile.ZipFile(reconstruction_archive_path) as source_archive:
+        legacy_source = source_archive.read(reconstruction['member'])
+    if (len(legacy_source) != reconstruction['sourceByteLength']
+            or hashlib.sha256(legacy_source).hexdigest() != reconstruction['sourceSha256']):
+        raise ValueError('legacy-shape reconstruction member binding drifted')
+
+    application_manifest = json.loads(
+        application_manifest_path.read_text(encoding='utf-8'), object_pairs_hook=pairs
+    )
+    if application_manifest.get('source') != {
+        'byteLength': application['sourceByteLength'],
+        'path': application['sourcePath'],
+        'sha256': application['sourceSha256'],
+    } or application_manifest.get('output') != {
+        'byteLength': application['outputByteLength'],
+        'path': application['outputPath'],
+        'sha256': application['outputSha256'],
+    }:
+        raise ValueError('legacy-shape application-prerequisites manifest binding drifted')
+
+    legacy_text = legacy_source.decode('utf-8')
+    legacy_profiles = table_definition(legacy_text, 'profiles')
+    legacy_reviews = table_definition(legacy_text, 'reviews')
+    target_source = application_source_path.read_text(encoding='utf-8')
+    target_output = application_output_path.read_text(encoding='utf-8')
+    for target_text in (target_source, target_output):
+        target_profiles = table_definition(target_text, 'profiles')
+        target_reviews = table_definition(target_text, 'reviews')
+        if 'avatar_url text' not in target_profiles or 'profile_picture' in target_profiles:
+            raise ValueError('legacy-shape application profile target evidence drifted')
+        if ('like_count integer DEFAULT 0 NOT NULL' not in target_reviews
+                or 'CONSTRAINT reviews_like_count_check CHECK ((like_count >= 0))' not in target_reviews):
+            raise ValueError('legacy-shape application reviews target evidence drifted')
+    if 'profile_picture text NULL' not in legacy_profiles or 'avatar_url' in legacy_profiles:
+        raise ValueError('legacy-shape reconstruction profile evidence drifted')
+    if 'like_count' in legacy_reviews:
+        raise ValueError('legacy-shape reconstruction reviews evidence drifted')
+
+    phase_label = '-- Phase A runs exactly after ordinal 2 and before ordinal 3.'
+    next_label = SHORT_URLS_TRANSITION.splitlines()[0]
+    if (transition.count(phase_label) != 1
+            or transition.count(LEGACY_SHAPE_NORMALIZATION_LABEL) != 1
+            or transition.count(next_label) != 1):
+        raise ValueError('legacy-shape normalization transition boundary drifted')
+    phase_start = transition.index(phase_label)
+    normalization_start = transition.index(LEGACY_SHAPE_NORMALIZATION_LABEL)
+    next_start = transition.index(next_label)
+    begin_position = transition.find('BEGIN;', phase_start, normalization_start)
+    lock_position = transition.find('LOCK TABLE public.profiles, public.reviews, public.restaurants, public.restaurant_submissions, public.restaurant_submission_items IN ACCESS EXCLUSIVE MODE;', phase_start, normalization_start)
+    empty_position = transition.find('(SELECT count(*) FROM public.profiles) <> 0 OR (SELECT count(*) FROM public.reviews) <> 0', phase_start, normalization_start)
+    if not phase_start < begin_position < lock_position < empty_position < normalization_start < next_start:
+        raise ValueError('legacy-shape normalization ordering drifted')
+    preamble = transition[phase_start:normalization_start].encode('utf-8')
+    normalization = transition[normalization_start:next_start].encode('utf-8')
+    if (len(preamble) != PHASE_A_LEGACY_SHAPE_PREAMBLE_BYTES
+            or hashlib.sha256(preamble).hexdigest() != PHASE_A_LEGACY_SHAPE_PREAMBLE_SHA256):
+        raise ValueError('legacy-shape normalization preamble drifted')
+    if (len(normalization) != LEGACY_SHAPE_NORMALIZATION_BYTES
+            or hashlib.sha256(normalization).hexdigest() != LEGACY_SHAPE_NORMALIZATION_SHA256):
+        raise ValueError('legacy-shape normalization SQL drifted')
+    ordered = (
+        'requires profiles and reviews',
+        'requires ordinary tables',
+        'requires empty profiles and reviews',
+        'legacy and target avatar columns both exist',
+        'profiles legacy avatar column shape drifted',
+        'profiles exact legacy base shape drifted',
+        'reviews target like_count already exists',
+        'reviews exact legacy base shape drifted',
+        'reviews like_count constraint already exists',
+        'ALTER TABLE public.profiles RENAME COLUMN profile_picture TO avatar_url;',
+        'ALTER TABLE public.reviews ADD COLUMN like_count integer NOT NULL DEFAULT 0;',
+        'ALTER TABLE public.reviews ADD CONSTRAINT reviews_like_count_check CHECK (like_count >= 0);',
+        'profiles normalized shape postcondition failed',
+        'reviews normalized shape postcondition failed',
+        'reviews like_count default postcondition failed',
+        'reviews like_count constraint postcondition failed',
+    )
+    normalization_text = normalization.decode('utf-8')
+    positions = [normalization_text.index(token) for token in ordered]
+    if positions != sorted(positions):
+        raise ValueError('legacy-shape normalization structural ordering drifted')
+    rename_position = normalization_text.index(
+        'ALTER TABLE public.profiles RENAME COLUMN profile_picture TO avatar_url;'
+    )
+    old_name_postcondition = normalization_text.find(
+        "attname = 'profile_picture'", rename_position
+    )
+    if not rename_position < old_name_postcondition < normalization_text.index(
+        'profiles normalized shape postcondition failed'
+    ):
+        raise ValueError('legacy-shape old profile column postcondition ordering drifted')
+
 def require_ad_banners_source(transition, bundle_source):
     if bundle_source != AD_BANNERS_SOURCE:
         raise ValueError('ad_banners source binding drifted')
@@ -1480,6 +1672,7 @@ def main():
             repairs, data['synthesizedCompatibilityBindings']
         )
         require_reconstruction_policy_shells(repairs)
+        require_legacy_shape_normalization(transition, data['legacyShapeNormalization'])
         require_ad_banners_source(transition, data['adBanners'])
         require_user_bookmarks_source(transition, data['userBookmarks'])
         require_short_urls_source(transition, data['shortUrls'])
@@ -1487,7 +1680,7 @@ def main():
         require_search_logs_source(transition, data['searchLogs'])
         require_restaurants_duplicate_source(transition, data['restaurantsDuplicate'])
         require_admin_workflow_pipeline_source(transition, data['adminWorkflowPipeline'])
-        require(transition, 'BEGIN;', 'CREATE SCHEMA IF NOT EXISTS extensions AUTHORIZATION postgres;', 'CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;', 'CREATE EXTENSION IF NOT EXISTS fuzzystrmatch WITH SCHEMA extensions;', 'CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;', TRANSITION_OPERATOR, 'SAVEPOINT g026_hnsw_probe;', 'CREATE INDEX g026_hnsw_probe_vectors_embedding_hnsw_idx ON public.g026_hnsw_probe_vectors USING hnsw', 'ROLLBACK TO SAVEPOINT g026_hnsw_probe;', 'RELEASE SAVEPOINT g026_hnsw_probe;', "to_regclass('public.g026_hnsw_probe_vectors') IS NOT NULL", 'LOCK TABLE public.restaurants, public.restaurant_submissions, public.restaurant_submission_items IN ACCESS EXCLUSIVE MODE;', 'ALTER TABLE public.restaurants RENAME COLUMN name TO approved_name;', 'ALTER TABLE public.restaurants RENAME COLUMN unique_id TO trace_id;', 'ALTER TABLE public.restaurants_backup OWNER TO postgres;', 'FORCE ROW LEVEL SECURITY', 'target_restaurant_id uuid', *EXTENSION_ASSERTION_MESSAGES)
+        require(transition, 'BEGIN;', 'CREATE SCHEMA IF NOT EXISTS extensions AUTHORIZATION postgres;', 'CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;', 'CREATE EXTENSION IF NOT EXISTS fuzzystrmatch WITH SCHEMA extensions;', 'CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;', TRANSITION_OPERATOR, 'SAVEPOINT g026_hnsw_probe;', 'CREATE INDEX g026_hnsw_probe_vectors_embedding_hnsw_idx ON public.g026_hnsw_probe_vectors USING hnsw', 'ROLLBACK TO SAVEPOINT g026_hnsw_probe;', 'RELEASE SAVEPOINT g026_hnsw_probe;', "to_regclass('public.g026_hnsw_probe_vectors') IS NOT NULL", 'LOCK TABLE public.profiles, public.reviews, public.restaurants, public.restaurant_submissions, public.restaurant_submission_items IN ACCESS EXCLUSIVE MODE;', 'ALTER TABLE public.restaurants RENAME COLUMN name TO approved_name;', 'ALTER TABLE public.restaurants RENAME COLUMN unique_id TO trace_id;', 'ALTER TABLE public.restaurants_backup OWNER TO postgres;', 'FORCE ROW LEVEL SECURITY', 'target_restaurant_id uuid', *EXTENSION_ASSERTION_MESSAGES)
         require_restaurant_columns(transition)
         checkpoint_start = transition.index('DO $$ BEGIN')
         checkpoint = transition[checkpoint_start:transition.index('END $$;', checkpoint_start)]
