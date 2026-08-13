@@ -430,7 +430,11 @@ This workflow and the local runner **do not invoke or certify**:
   Preview → Confirm → Apply → Readback → Audit contract is the sole admitted
   admin mutation;
 - hosted migration apply, hosted migration preflight, release migration, or
-  hosted recovery/restore tools.
+  hosted recovery/restore tools. The four source-bound
+  `20260814010*_hosted_*.sql` convergence migrations are carried for the
+  provider ledger-50 recovery path, but the local manifest excludes each by
+  exact filename and SHA-256; missing, additional, symlinked, or changed
+  hosted-only sources fail closed while the local ledger remains 77 units.
 
 Those controls have separate owners, credentials, and verification. Adding one
 to nightly requires a new scope/security review; it must not be smuggled into

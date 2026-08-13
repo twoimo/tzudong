@@ -116,6 +116,26 @@ MIGRATION_ORDER_OVERRIDES = {
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
 EXPECTED_LEDGER_UNITS = 77
+HOSTED_ONLY_MIGRATION_SOURCE_SHA256 = {
+    "20260814010000_hosted_g016_g041_catalog_reconciliation.sql":
+        "0ade5034224e191dfc15f3a238134606bc29a1bfb9b5cbbbe8c82fa141d318ff",
+    "20260814010100_hosted_runtime_boundary_convergence.sql":
+        "b10708dc52f001676d6d6148dc4ed429d0e84ed4232df33031a312c96a75fec7",
+    "20260814010200_hosted_public_profile_read_convergence.sql":
+        "93738ef218cae9510f5e3989219edf73ca5e837bfba29e3fca1b2df7df26767c",
+    "20260814010300_hosted_current_profile_mutation.sql":
+        "dbcba23cf6d860b668b2bb160ebd6b753fdc77a3c7136d1490fdcd4e18587a67",
+}
+LOCAL_MANIFEST_EXCLUSIONS = (
+    "apps/web/supabase/migrations",
+    "backend/supabase/baselines/historical",
+    "hosted release manifests",
+    "historical replay-authorized-false bundles",
+    *(
+        f"{(EXPECTED_SOURCE / name).as_posix()}@sha256:{digest}"
+        for name, digest in HOSTED_ONLY_MIGRATION_SOURCE_SHA256.items()
+    ),
+)
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -981,6 +1001,7 @@ def migration_files(root: Path | None = None) -> list[Path]:
         )
     except OSError as error:
         raise LocalMigrationError("source_list_failed") from error
+    observed_hosted_only: set[str] = set()
     for path in entries:
         if path.suffix.lower() != ".sql":
             continue
@@ -992,8 +1013,22 @@ def migration_files(root: Path | None = None) -> list[Path]:
             raise LocalMigrationError("source_file_not_regular")
         if not re.match(r"^\d{8,14}(?:_|\.)", path.name):
             raise LocalMigrationError("migration_filename_invalid")
-        _reject_source_text(path.read_bytes())
+        try:
+            data = path.read_bytes()
+        except OSError as error:
+            raise LocalMigrationError("source_read_failed") from error
+        _reject_source_text(data)
+        expected_hosted_digest = HOSTED_ONLY_MIGRATION_SOURCE_SHA256.get(path.name)
+        if expected_hosted_digest is not None:
+            if _sha256_bytes(data) != expected_hosted_digest:
+                raise LocalMigrationError("hosted_only_migration_source_drift")
+            observed_hosted_only.add(path.name)
+            continue
+        if "_hosted_" in path.name.lower():
+            raise LocalMigrationError("hosted_only_migration_unrecognized")
         result.append(path)
+    if observed_hosted_only != set(HOSTED_ONLY_MIGRATION_SOURCE_SHA256):
+        raise LocalMigrationError("hosted_only_migration_missing")
     if not result:
         raise LocalMigrationError("no_migrations")
     return result
@@ -1142,12 +1177,7 @@ def build_manifest(root: Path | None = None) -> dict[str, Any]:
             "chainSha256": chain_sha,
             "files": files,
         },
-        "exclusions": [
-            "apps/web/supabase/migrations",
-            "backend/supabase/baselines/historical",
-            "hosted release manifests",
-            "historical replay-authorized-false bundles",
-        ],
+        "exclusions": list(LOCAL_MANIFEST_EXCLUSIONS),
     }
 
 

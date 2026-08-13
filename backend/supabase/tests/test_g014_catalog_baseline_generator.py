@@ -29,6 +29,29 @@ class G014CatalogBaselineGeneratorTests(unittest.TestCase):
         self.assertIn("g016-catalog-assertion-membership-window", case)
         self.assertNotIn('psql -X', case.split("transformed_migration=", 1)[0])
 
+    def test_hosted_only_recovery_migrations_are_exactly_bound_and_excluded(self):
+        self.assertIn("declare -A hosted_only_backend_migrations=(", self.source)
+        self.assertIn("declare -A observed_hosted_only_backend_migrations=()", self.source)
+        for name in (
+            "20260814010000_hosted_g016_g041_catalog_reconciliation.sql",
+            "20260814010100_hosted_runtime_boundary_convergence.sql",
+            "20260814010200_hosted_public_profile_read_convergence.sql",
+            "20260814010300_hosted_current_profile_mutation.sql",
+        ):
+            self.assertIn(name, self.source)
+        self.assertIn("unrecognized hosted-only backend migration", self.source)
+        self.assertIn("hosted-only backend migration source drift", self.source)
+        self.assertIn("missing hosted-only backend migration", self.source)
+        self.assertIn("symlinked %s migration source", self.source)
+        self.assertLess(
+            self.source.index("-type l -name '*.sql'"),
+            self.source.index("-type f -name '*.sql'"),
+        )
+        self.assertLess(
+            self.source.index("continue\n    fi", self.source.index("hosted_only_backend_migrations")),
+            self.source.index("backend_migrations_by_name[$name]=$migration"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import stat
@@ -47,6 +48,87 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         self.assertEqual(events[0]["key"], ("public", "legacy", "text"))
         self.assertEqual(events[1]["action"], "move")
         self.assertEqual(events[1]["newKey"], ("public", "legacy_renamed", "text"))
+
+    def test_hosted_only_migrations_are_exactly_bound_and_excluded(self):
+        scanner = self.scanner
+        canonical_root = REPOSITORY_ROOT / "backend/supabase/migrations"
+        self.assertEqual(
+            set(scanner.HOSTED_ONLY_MIGRATION_SOURCE_SHA256),
+            {
+                "20260814010000_hosted_g016_g041_catalog_reconciliation.sql",
+                "20260814010100_hosted_runtime_boundary_convergence.sql",
+                "20260814010200_hosted_public_profile_read_convergence.sql",
+                "20260814010300_hosted_current_profile_mutation.sql",
+            },
+        )
+        hosted_sources = {
+            name: (canonical_root / name).read_bytes()
+            for name in scanner.HOSTED_ONLY_MIGRATION_SOURCE_SHA256
+        }
+        for name, data in hosted_sources.items():
+            self.assertEqual(
+                scanner.HOSTED_ONLY_MIGRATION_SOURCE_SHA256[name],
+                hashlib.sha256(data).hexdigest(),
+            )
+
+        def populate(root: Path) -> None:
+            (root / "20260101000000_local_fixture.sql").write_text(
+                "SELECT 1;\n", encoding="utf-8"
+            )
+            for name, data in hosted_sources.items():
+                (root / name).write_bytes(data)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw).resolve()
+            populate(root)
+            with patch.object(scanner, "source_root", return_value=root):
+                self.assertEqual(
+                    [path.name for path in scanner._migration_source_documents()],
+                    ["20260101000000_local_fixture.sql"],
+                )
+
+                hosted = root / next(
+                    iter(scanner.HOSTED_ONLY_MIGRATION_SOURCE_SHA256)
+                )
+                original = hosted.read_bytes()
+                hosted.write_bytes(original + b"\n")
+                with self.assertRaisesRegex(
+                    scanner.RuntimeScanError,
+                    "hosted_only_migration_source_drift",
+                ):
+                    scanner._migration_source_documents()
+                hosted.write_bytes(original)
+
+                hosted.unlink()
+                with self.assertRaisesRegex(
+                    scanner.RuntimeScanError,
+                    "hosted_only_migration_missing",
+                ):
+                    scanner._migration_source_documents()
+                hosted.write_bytes(original)
+
+                for unknown_name in (
+                    "20260814010400_hosted_unknown.sql",
+                    "20260814010401_HOSTED_unknown.SQL",
+                ):
+                    unknown = root / unknown_name
+                    unknown.write_text("SELECT 1;\n", encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        scanner.RuntimeScanError,
+                        "hosted_only_migration_unrecognized",
+                    ):
+                        scanner._migration_source_documents()
+                    unknown.unlink()
+
+                target = root / "hosted-target.bin"
+                target.write_bytes(original)
+                hosted.unlink()
+                hosted.symlink_to(target)
+                with self.assertRaisesRegex(
+                    scanner.RuntimeScanError,
+                    "source_file_not_regular",
+                ):
+                    scanner._migration_source_documents()
 
     def test_candidate_smoke_binds_every_argument_with_explicit_types(self):
         sql = self.scanner._smoke_candidate_blocks(

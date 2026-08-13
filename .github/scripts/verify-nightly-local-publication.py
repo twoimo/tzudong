@@ -126,6 +126,16 @@ STACK_SERVICES = {
     "vector",
 }
 EXPECTED_LEDGER_UNITS = 77
+EXPECTED_MANIFEST_EXCLUSIONS = [
+    "apps/web/supabase/migrations",
+    "backend/supabase/baselines/historical",
+    "hosted release manifests",
+    "historical replay-authorized-false bundles",
+    "backend/supabase/migrations/20260814010000_hosted_g016_g041_catalog_reconciliation.sql@sha256:0ade5034224e191dfc15f3a238134606bc29a1bfb9b5cbbbe8c82fa141d318ff",
+    "backend/supabase/migrations/20260814010100_hosted_runtime_boundary_convergence.sql@sha256:b10708dc52f001676d6d6148dc4ed429d0e84ed4232df33031a312c96a75fec7",
+    "backend/supabase/migrations/20260814010200_hosted_public_profile_read_convergence.sql@sha256:93738ef218cae9510f5e3989219edf73ca5e837bfba29e3fca1b2df7df26767c",
+    "backend/supabase/migrations/20260814010300_hosted_current_profile_mutation.sql@sha256:dbcba23cf6d860b668b2bb160ebd6b753fdc77a3c7136d1490fdcd4e18587a67",
+]
 SEQUENCE_MARKERS = (
     "prerequisite",
     "migration",
@@ -627,12 +637,7 @@ def verify_manifest(payload: dict[str, object]) -> None:
         or source.get("migrationCount") != EXPECTED_LEDGER_UNITS
         or not isinstance(source.get("chainSha256"), str)
         or SHA256.fullmatch(source["chainSha256"]) is None
-        or exclusions != [
-            "apps/web/supabase/migrations",
-            "backend/supabase/baselines/historical",
-            "hosted release manifests",
-            "historical replay-authorized-false bundles",
-        ]
+        or exclusions != EXPECTED_MANIFEST_EXCLUSIONS
     ):
         fail("local migration manifest contract mismatch")
     files = source.get("files")

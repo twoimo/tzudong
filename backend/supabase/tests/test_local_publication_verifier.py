@@ -76,6 +76,13 @@ class LocalPublicationVerifierTests(unittest.TestCase):
         github_sha_patch.start()
         self.addCleanup(github_sha_patch.stop)
 
+    def test_manifest_exclusions_bind_every_hosted_only_source(self) -> None:
+        self.assertEqual(
+            verifier.EXPECTED_MANIFEST_EXCLUSIONS,
+            list(local_migrate.LOCAL_MANIFEST_EXCLUSIONS),
+        )
+        self.assertEqual(len(verifier.EXPECTED_MANIFEST_EXCLUSIONS), 8)
+
     def test_lifecycle_stage_writer_is_bounded_atomic_and_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repository_root = Path(temporary)
