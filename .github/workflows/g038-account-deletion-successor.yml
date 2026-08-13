@@ -63,7 +63,7 @@ jobs:
         with:
           subject-path: ${{ runner.temp }}/g038-source-receipt/receipt.json
       - name: Upload authenticated source receipt and exact attestation bundle
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: g038-account-deletion-successor-source-receipt
           path: |

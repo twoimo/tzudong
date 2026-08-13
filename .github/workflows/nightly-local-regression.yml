@@ -1748,7 +1748,7 @@ jobs:
 
       - name: Upload verified sanitized local nightly artifacts
         if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: nightly-local-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -1787,7 +1787,7 @@ jobs:
 
       - name: Upload bounded failed or partial local nightly diagnostics
         if: ${{ always() && (failure() || cancelled() || env.NIGHTLY_SUITE != 'all') }}
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: nightly-local-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -1805,7 +1805,7 @@ jobs:
 
       - name: Upload allowlisted publication bundle
         if: ${{ success() && env.NIGHTLY_SUITE == 'all' }}
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: nightly-local-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: nightly-publication/

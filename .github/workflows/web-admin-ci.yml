@@ -192,7 +192,7 @@ jobs:
           )
       - name: Upload clean-install lock evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: dependency-modernization-lock-evidence-${{ github.run_id }}
           path: ${{ runner.temp }}/dependency-modernization-proof/**/dependency-modernization-lock-hashes-*.txt
@@ -239,7 +239,7 @@ jobs:
           node scripts/verify-typecheck-benchmark-report.mjs --report "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json" --tree "$tree" --profile ubuntu-npm --platform linux-x64 --installer npm
       - name: Upload npm benchmark evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: ts7-benchmark-ubuntu-npm-${{ github.run_id }}
           path: ${{ runner.temp }}/ts7-release
@@ -290,7 +290,7 @@ jobs:
           node scripts/verify-typecheck-benchmark-report.mjs --report "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json" --tree "$tree" --profile ubuntu-bun --platform linux-x64 --installer bun
       - name: Upload Bun benchmark evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: ts7-benchmark-ubuntu-bun-${{ github.run_id }}
           path: ${{ runner.temp }}/ts7-release
@@ -350,7 +350,7 @@ jobs:
           node scripts/verify-typecheck-benchmark-report.mjs --report $report --tree $tree --profile windows-npm --platform win32-x64 --installer npm
       - name: Upload npm benchmark evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: ts7-benchmark-windows-npm-${{ github.run_id }}
           path: ${{ runner.temp }}/ts7-release
@@ -403,7 +403,7 @@ jobs:
           node scripts/verify-typecheck-benchmark-report.mjs --report $report --tree $tree --profile windows-bun --platform win32-x64 --installer bun
       - name: Upload Bun benchmark evidence
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: ts7-benchmark-windows-bun-${{ github.run_id }}
           path: ${{ runner.temp }}/ts7-release

@@ -36,7 +36,7 @@ jobs:
         run: python backend/supabase/scripts/read_hosted_migration_ledger.py --validate-artifact artifacts/hosted-migration-ledger.json
 
       - name: Upload migration-ledger artifact
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: hosted-migration-ledger
           path: artifacts/hosted-migration-ledger.json

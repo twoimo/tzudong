@@ -172,7 +172,7 @@ jobs:
           PY
       - name: Upload redacted unit diagnostics
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: nightly-unit-diagnostics
           path: apps/web/nightly-artifacts/nightly-unit-redacted.log
@@ -299,7 +299,7 @@ jobs:
           PY
       - name: Upload redacted browser diagnostics
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: nightly-playwright-diagnostics
           path: apps/web/nightly-artifacts/

@@ -41,7 +41,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: python backend/supabase/scripts/preflight_g034_hosted_migration_closure.py --artifact g034-hosted-preflight.json
       - name: Upload sanitized bounded preflight artifact
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
           name: g034-hosted-preflight-${{ github.sha }}

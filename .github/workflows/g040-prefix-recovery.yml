@@ -76,7 +76,7 @@ jobs:
           PY
       - name: Upload bounded sanitized source receipt
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: g040-prefix-recovery-source-receipt
           path: ${{ runner.temp }}/g040-receipts/receipt.json

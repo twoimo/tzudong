@@ -52,7 +52,7 @@ jobs:
           python backend/supabase/scripts/g037_hosted_closure_executor.py validate > "$RUNNER_TEMP/g037-receipts/validate-${GITHUB_SHA}.json"
       - name: Upload sanitized source-validation receipt
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: g037-hosted-closure-validate-${{ github.sha }}
           path: ${{ runner.temp }}/g037-receipts/validate-${{ github.sha }}.json
@@ -97,7 +97,7 @@ jobs:
           timeout --signal=TERM --kill-after=5s 120s python backend/supabase/scripts/g037_hosted_closure_executor.py "$REQUESTED_MODE" --db-env SUPABASE_DB_URL > "$RUNNER_TEMP/g037-receipts/${REQUESTED_MODE}-${GITHUB_SHA}.json"
       - name: Upload sanitized hosted receipt
         if: always()
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v4
         with:
           name: g037-hosted-closure-${{ inputs.mode }}-${{ github.sha }}
           path: ${{ runner.temp }}/g037-receipts/${{ inputs.mode }}-${{ github.sha }}.json
