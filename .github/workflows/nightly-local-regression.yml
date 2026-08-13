@@ -157,6 +157,17 @@ jobs:
           import time
           from pathlib import Path
 
+          typegen = {
+              'cli_version': '2.109.1',
+              'registry': 'public.ecr.aws',
+              'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6',
+              'pull_reference': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'repo_digest': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
+              'image_id': 'sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a',
+              'platform': 'linux/amd64',
+              'status': 'not_attempted',
+              'failure_class': 'not_attempted',
+          }
           images = (
               'supabase/studio:2025.12.17-sha-43f4f7f',
               'kong:2.8.1',
@@ -166,6 +177,7 @@ jobs:
               'supabase/storage-api:v1.33.0',
               'darthsim/imgproxy:v3.8.0',
               'supabase/postgres-meta:v0.95.1',
+              typegen['image'],
               'supabase/edge-runtime:v1.69.28',
               'supabase/logflare:1.27.0',
               'supabase/postgres:15.8.1.085',
@@ -197,13 +209,37 @@ jobs:
           safe_env.setdefault('HOME', str(Path.home()))
           records = []
           failed = False
+          cli = Path('apps/web/node_modules/.bin/supabase')
+          cli_returncode = None
+          try:
+              cli_result = subprocess.run(
+                  [str(cli), '--version'],
+                  capture_output=True,
+                  text=True,
+                  timeout=30,
+                  check=False,
+                  env=safe_env,
+              )
+              cli_returncode = cli_result.returncode
+              cli_version = cli_result.stdout.strip()
+          except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+              cli_version = ''
+          if cli_returncode != 0 or cli_version != typegen['cli_version']:
+              typegen['status'] = 'failed'
+              typegen['failure_class'] = 'cli_version_mismatch'
+              failed = True
           for image in images:
               record = {'image': image, 'status': 'not_attempted', 'failure_class': 'not_attempted'}
               if not failed:
+                  pull_reference = typegen['pull_reference'] if image == typegen['image'] else image
+                  pull_command = ['docker', 'pull', '--quiet']
+                  if image == typegen['image']:
+                      pull_command.extend(('--platform', typegen['platform']))
+                  pull_command.append(pull_reference)
                   for attempt in range(2):
                       try:
                           result = subprocess.run(
-                              ['docker', 'pull', '--quiet', image],
+                              pull_command,
                               capture_output=True,
                               text=True,
                               timeout=180,
@@ -224,6 +260,59 @@ jobs:
                       record['failure_class'] = classify(result.stderr)
                       if attempt == 0:
                           time.sleep(10)
+                  if record['status'] == 'pulled' and image == typegen['image']:
+                      try:
+                          tag_result = subprocess.run(
+                              ['docker', 'image', 'tag', typegen['pull_reference'], typegen['image']],
+                              capture_output=True,
+                              text=True,
+                              timeout=30,
+                              check=False,
+                              env=safe_env,
+                          )
+                          if tag_result.returncode != 0:
+                              raise ValueError('typegen image tag unavailable')
+
+                          def inspect_image(reference):
+                              result = subprocess.run(
+                                  [
+                                      'docker', 'image', 'inspect', reference, '--format',
+                                      '{{.Id}}\t{{.Os}}\t{{.Architecture}}\t{{json .RepoDigests}}\t{{json .RepoTags}}',
+                                  ],
+                                  capture_output=True,
+                                  text=True,
+                                  timeout=30,
+                                  check=False,
+                                  env=safe_env,
+                              )
+                              readback = result.stdout.strip()
+                              fields = readback.split('\t', 4)
+                              if result.returncode != 0 or len(readback) > 4096 or len(fields) != 5:
+                                  raise ValueError('bounded image readback unavailable')
+                              image_id, image_os, image_arch, raw_digests, raw_tags = fields
+                              repo_digests = json.loads(raw_digests)
+                              repo_tags = json.loads(raw_tags)
+                              if not isinstance(repo_digests, list) or not isinstance(repo_tags, list):
+                                  raise ValueError('image readback shape mismatch')
+                              return image_id, image_os, image_arch, repo_digests, repo_tags
+
+                          source_readback = inspect_image(typegen['pull_reference'])
+                          tag_readback = inspect_image(typegen['image'])
+                          if (
+                              source_readback[:4] != tag_readback[:4]
+                              or tag_readback[0] != typegen['image_id']
+                              or f'{tag_readback[1]}/{tag_readback[2]}' != typegen['platform']
+                              or typegen['repo_digest'] not in tag_readback[3]
+                              or typegen['image'] not in tag_readback[4]
+                          ):
+                              raise ValueError('image identity mismatch')
+                          typegen['status'] = 'verified'
+                          typegen['failure_class'] = 'none'
+                      except (FileNotFoundError, OSError, subprocess.TimeoutExpired, TypeError, ValueError, json.JSONDecodeError):
+                          record['status'] = 'failed'
+                          record['failure_class'] = 'typegen_image_readback'
+                          typegen['status'] = 'failed'
+                          typegen['failure_class'] = 'image_readback'
                   if record['status'] != 'pulled':
                       failed = True
               records.append(record)
@@ -257,6 +346,7 @@ jobs:
               'image_count': len(images),
               'images': records,
               'container_probe': container_probe,
+              'typegen': typegen,
           }
           Path('nightly-artifacts/local-image-pull-preflight.json').write_text(
               json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n',
@@ -1614,6 +1704,7 @@ jobs:
         with:
           name: nightly-local-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
+            nightly-artifacts/local-image-pull-preflight.json
             nightly-artifacts/failure-diagnostics/local-compose-create-preflight.json
             nightly-artifacts/failure-diagnostics/local-compose-start-preflight.json
             nightly-artifacts/failure-diagnostics/local-compose-runtime-diagnostics.json

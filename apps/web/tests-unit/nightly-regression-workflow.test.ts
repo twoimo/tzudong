@@ -22,6 +22,8 @@ const localSupabaseAdminSpecSource = read("tests/local-supabase-admin.spec.ts");
 const mobileHomeMapSpecSource = read("tests/mobile-home-map.spec.ts");
 const mobileHomeMapHelpersSource = read("tests/mobile-home-map-helpers.ts");
 const localWorkflowSource = read("../../.github/workflows/nightly-local-regression.yml");
+const packageLockSource = read("package-lock.json");
+const bunLockSource = read("bun.lock");
 const publicationAllowlistSource = read("../../.github/nightly-local-publication-allowlist.txt");
 const publicationVerifierSource = read("../../.github/scripts/verify-nightly-local-publication.py");
 const publicationBuilderSource = read("../../.github/scripts/build-nightly-local-publication.py");
@@ -835,6 +837,17 @@ describe("nightly regression package and source contracts", () => {
       "allowed_health",
       "Pull pinned Compose images",
       "docker', 'pull'",
+      "'cli_version': '2.109.1'",
+      "cli_returncode != 0",
+      "'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6'",
+      "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
+      "sha256:c496f84f24947250e706f03aca4af956a099d8f7e5521279f47e4077964d339a",
+      "'platform': 'linux/amd64'",
+      "'registry': 'public.ecr.aws'",
+      "['docker', 'image', 'tag'",
+      "'docker', 'image', 'inspect'",
+      "source_readback[:4] != tag_readback[:4]",
+      "typegen_image_readback",
       "local-image-pull-preflight-v1",
       "container_probe",
       "docker', 'run'",
@@ -991,6 +1004,7 @@ describe("nightly regression package and source contracts", () => {
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
       "def verify_image_preflight(",
+      "EXPECTED_TYPEGEN_IMAGE = {",
       "def verify_e2e_failure_evidence(",
       "def verify_e2e_failure_evidence_file(",
     ]) {
@@ -1041,6 +1055,17 @@ describe("nightly regression package and source contracts", () => {
     expect(failedDiagnosticsUploadBlock).not.toContain(".log");
     expect(failedDiagnosticsUploadBlock).not.toContain("local-receipt-v1.json");
     expect(failedDiagnosticsUploadBlock).not.toContain("local-migration-summary.json");
+    expect(failedDiagnosticsUploadBlock).toContain(
+      "nightly-artifacts/local-image-pull-preflight.json",
+    );
+    expect(packageLockSource).toContain('"node_modules/supabase": {\n      "version": "2.109.1"');
+    expect(packageLockSource).toContain(
+      '"node_modules/@supabase/cli-linux-x64": {\n      "version": "2.109.1"',
+    );
+    expect(bunLockSource).toContain('"supabase": ["supabase@2.109.1"');
+    expect(bunLockSource).toContain(
+      '"@supabase/cli-linux-x64": ["@supabase/cli-linux-x64@2.109.1"',
+    );
     expect(failedDiagnosticsUploadBlock).not.toContain("local-browser-route-diagnostics.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-unit-run-summary.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-e2e-run-summary.json");
