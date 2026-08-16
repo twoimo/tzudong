@@ -425,7 +425,7 @@ class G034HostedPreflightWorkflowTests(unittest.TestCase):
         )
         self.assertEqual({"contents": "read"}, self.workflow["permissions"])
         self.assertEqual({"preflight"}, set(self.workflow["jobs"]))
-        self.assertEqual("production-database", self.job["environment"])
+        self.assertNotIn("environment", self.job)
         self.assertEqual({"contents": "read"}, self.job["permissions"])
         self.assertIn("github.ref == 'refs/heads/main'", self.job["if"])
         self.assertIn("github.sha == inputs.commit_sha", self.job["if"])
