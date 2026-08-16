@@ -265,6 +265,10 @@ export function resolveStoryboardAgentPythonForPlatform(
 }
 
 function resolveStoryboardAgentPython(env: NodeJS.ProcessEnv = process.env) {
+  const configured = env.STORYBOARD_AGENT_PYTHON?.trim();
+  if (configured && /^python3(?:\.\d+)?$/.test(configured)) {
+    return configured;
+  }
   return resolveStoryboardAgentPythonForPlatform(env, process.platform);
 }
 

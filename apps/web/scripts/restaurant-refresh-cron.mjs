@@ -69,8 +69,8 @@ function createSupabaseClientFromEnv() {
 
 function stripHtml(value) {
   return String(value ?? '')
-    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ')
-    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ')
+    .split(/<\/?script\b/i)[0]
+    .split(/<\/?style\b/i)[0]
     .replace(/<[^>]*>/g, ' ')
     .replace(/[<>]/g, '')
     .replace(/&nbsp;/gi, ' ')

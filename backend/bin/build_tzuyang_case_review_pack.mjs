@@ -202,8 +202,8 @@ function htmlToAnchorItems(html) {
       .replace(/&#39;/g, "'")
       .replace(/&amp;/g, '&');
     const text = norm(match[2]
-      .replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ')
-      .replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ')
+      .split(/<\/?script\b/i)[0]
+      .split(/<\/?style\b/i)[0]
       .replace(/<[^>]+>/g, ' ')
       .replace(/[<>]/g, '')
       .replace(/&nbsp;/g, ' ')

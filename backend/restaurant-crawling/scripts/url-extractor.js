@@ -183,7 +183,7 @@ export async function searchNaverApi(query) {
             // 실제로 표준 API는 mapx, mapy (TM128)를 반환합니다. 필요하다면 변환하거나 주소를 사용해 별도로 지오코딩해야 합니다.
             // 하지만 Gemini에 제공할 "컨텍스트"로는 상호명과 도로명 주소가 가장 중요합니다.
             return {
-                name: String(item.title || '').replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim(),
+                name: String(item.title || '').split(/<\/?script\b/i)[0].replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim(),
                 address: item.roadAddress || item.address,
                 category: item.category,
                 mapx: item.mapx,

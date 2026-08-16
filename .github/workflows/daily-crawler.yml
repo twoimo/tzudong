@@ -155,6 +155,11 @@ jobs:
               sys.exit(1)
           PY
 
+      - name: Install crawler runtime tools
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg rclone jq
       - name: Verify approved runtime prerequisites
         run: |
           set -euo pipefail
@@ -373,7 +378,7 @@ jobs:
           REMOTE_PROOF_JSON="$UPLOAD_LOG_DIR/current-upload-remote-proof.json"
           STAGING_MANIFEST_FOR_STATUS=""
           STAGING_PUBLISH_NOTE=""
-          mkdir -p "$UPLOAD_LOG_DIR" "$BATCH_DIR" "$STAGING_DIR"
+          mkdir -p "$UPLOAD_LOG_DIR" "$BATCH_DIR" "$STAGING_DIR" "$FRAMES_DIR"
           : > "$VERIFIED_FILES"
           : > "$RCLONE_LOG"
           STATUS_SCOPE="main"
