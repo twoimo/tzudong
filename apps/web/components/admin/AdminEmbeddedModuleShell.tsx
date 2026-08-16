@@ -33,6 +33,8 @@ export function AdminEmbeddedModuleShell({
   contentClassName,
   scrollOwner,
 }: AdminEmbeddedModuleShellProps) {
+  const hideHeader = moduleId === "overview";
+
   return (
     <section
       aria-labelledby={titleId}
@@ -44,42 +46,48 @@ export function AdminEmbeddedModuleShell({
       data-admin-embedded-module-id={moduleId}
       data-layout-primitives="stack"
     >
-      <div
-        className={cn(
-          "shrink-0 border-b border-border bg-card px-2 py-1.5",
-          headerClassName,
-        )}
-        data-admin-module-header="compact"
-        data-admin-module-header-module={moduleId}
-      >
-        <div className="flex min-w-0 flex-row items-start justify-between gap-1.5 lg:items-center">
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-              <h2
-                id={titleId}
-                className="min-w-0 truncate whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent"
+      {hideHeader ? (
+        <h2 id={titleId} className="sr-only">
+          {title}
+        </h2>
+      ) : (
+        <div
+          className={cn(
+            "shrink-0 border-b border-border bg-card px-2 py-1.5",
+            headerClassName,
+          )}
+          data-admin-module-header="compact"
+          data-admin-module-header-module={moduleId}
+        >
+          <div className="flex min-w-0 flex-row items-start justify-between gap-1.5 lg:items-center">
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                <h2
+                  id={titleId}
+                  className="min-w-0 truncate whitespace-nowrap bg-gradient-primary bg-clip-text text-sm font-bold text-transparent"
+                >
+                  {title}
+                </h2>
+              </div>
+              <div
+                className="mt-0.5 min-w-0 truncate text-[11px] text-muted-foreground"
+                data-admin-module-summary="true"
               >
-                {title}
-              </h2>
+                {summary}
+              </div>
             </div>
-            <div
-              className="mt-0.5 min-w-0 truncate text-xs text-muted-foreground"
-              data-admin-module-summary="true"
-            >
-              {summary}
-            </div>
+            {actions ? (
+              <div
+                className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5"
+                data-admin-module-actions="top-right"
+              >
+                {actions}
+              </div>
+            ) : null}
           </div>
-          {actions ? (
-            <div
-              className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5"
-              data-admin-module-actions="top-right"
-            >
-              {actions}
-            </div>
-          ) : null}
         </div>
-      </div>
+      )}
       <div
         className={cn("min-h-0 min-w-0 flex-1 overflow-hidden", contentClassName)}
         data-admin-module-content="bounded"
