@@ -18,8 +18,6 @@ jobs:
     if: github.ref_name == github.event.repository.default_branch && vars.G037_WRITE_FREEZE != 'active'
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    environment:
-      name: production-kpi
     defaults:
       run:
         working-directory: apps/web

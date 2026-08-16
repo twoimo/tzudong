@@ -65,8 +65,6 @@ jobs:
       && (inputs.mode == 'preflight' || inputs.mode == 'readback' || inputs.mode == 'runtime-probe' || inputs.mode == 'reconciliation-readback')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment:
-      name: production-hosted-migration-closure
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # actions/checkout@v4
         with:

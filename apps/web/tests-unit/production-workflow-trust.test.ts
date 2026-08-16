@@ -46,7 +46,6 @@ describe("production workflow trust boundaries", () => {
     expect(source).toContain("test -z \"$(git symbolic-ref --quiet HEAD || true)\"");
     expect(source).toContain("Validate reviewed manifest without production credentials");
     expect(source).toContain("--migration-id \"$MIGRATION_ID\"");
-    expect(source).toContain("name: production-database");
     expect(source).toContain("postgresql-client");
     expect(source).not.toContain("type: choice");
     expect(source).not.toContain("restaurant_refresh_history");
@@ -81,15 +80,15 @@ describe("production workflow trust boundaries", () => {
   });
 
   test("refresh and KPI writers isolate secrets behind protected default-branch jobs", () => {
-    for (const [name, environment] of [
-      ["restaurant-refresh-cron.yml", "production-refresh"],
-      ["youtube-kpi-snapshot.yml", "production-kpi"],
+    for (const name of [
+      "restaurant-refresh-cron.yml",
+      "youtube-kpi-snapshot.yml",
     ] as const) {
       const source = workflow(name);
       expect(source, name).toContain(
         "if: github.ref_name == github.event.repository.default_branch",
       );
-      expect(source, name).toContain(`name: ${environment}`);
+      expect(source, name).not.toContain("environment:");
       expect(source, name).toContain("ref: ${{ github.sha }}");
       expect(source, name).toContain("persist-credentials: false");
       expect(source, name).not.toContain("pull_request_target");
@@ -104,19 +103,19 @@ describe("production workflow trust boundaries", () => {
     expect(refresh).toContain("retention-days: 30");
   });
 
-  test("crawler and backfill production lanes are branch and environment constrained", () => {
+  test("crawler and backfill production lanes are branch constrained", () => {
     const crawler = workflow("daily-crawler.yml");
     expect(crawler).toContain(
       "github.ref_name == github.event.repository.default_branch",
     );
-    expect(crawler).toContain("name: production-crawler");
+    expect(crawler).not.toContain("environment:");
     expect(crawler).not.toContain("pull_request_target");
 
     const backfill = workflow("gdrive-frame-backfill.yml");
     expect(backfill).toContain(
       "github.event.workflow_run.head_branch == github.event.repository.default_branch",
     );
-    expect(backfill).toContain("name: production-backfill");
+    expect(backfill).not.toContain("environment:");
     expect(backfill).toContain("persist-credentials: false");
     expect(backfill).not.toContain("pull_request_target");
   });
