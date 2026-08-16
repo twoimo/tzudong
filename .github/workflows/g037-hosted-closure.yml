@@ -1,4 +1,5 @@
 name: Closure
+run-name: Closure · ${{ inputs.mode || 'validate' }}
 
 on:
   workflow_dispatch:

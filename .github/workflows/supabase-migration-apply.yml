@@ -1,4 +1,5 @@
 name: Migrations
+run-name: Migrations · ${{ inputs.migration_id }}
 
 on:
   workflow_dispatch:

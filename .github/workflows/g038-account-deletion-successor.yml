@@ -1,4 +1,5 @@
 name: Successor
+run-name: Successor · ${{ inputs.commit_sha }}
 
 on:
   workflow_dispatch:
