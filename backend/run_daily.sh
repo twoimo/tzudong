@@ -72,6 +72,21 @@ SYNC_WORKTREE_DIR=""
 NO_WORK_SHORT_CIRCUIT=false
 PHASE3_TIMEOUT_SKIP=false
 
+# [Hybrid] 경량 모드: 무거운 단계(프레임 추출, Chunk Multimodal)를 건너뛴다.
+# GitHub Actions에서는 true로 설정하고, 로컬 대용량 작업에서는 false(기본값).
+RUN_DAILY_SKIP_HEAVY_COMPUTE="${RUN_DAILY_SKIP_HEAVY_COMPUTE:-false}"
+SKIP_HEAVY_COMPUTE=false
+case "$RUN_DAILY_SKIP_HEAVY_COMPUTE" in
+    0|false|FALSE|no|NO|"") ;;
+    1|true|TRUE|yes|YES) SKIP_HEAVY_COMPUTE=true ;;
+esac
+
+# [Hybrid] 개별 단계 건너뛰기 (로컬에서 선택적 실행용)
+SKIP_FRAMES_ONLY=false
+SKIP_CHUNK_ONLY=false
+case "${RUN_DAILY_SKIP_FRAMES:-}" in 1|true|TRUE|yes|YES) SKIP_FRAMES_ONLY=true ;; esac
+case "${RUN_DAILY_SKIP_CHUNK:-}" in 1|true|TRUE|yes|YES) SKIP_CHUNK_ONLY=true ;; esac
+
 # [Local Config] Python 런타임 탐색
 python_cmd_usable() {
     local cmd="$1"
@@ -1523,8 +1538,15 @@ else
     node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang > "$TEMP_LOG_3" 2>&1 &
     PID_3=$!
     STEP4_START_TIME=$(date +%s)
-    node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
-    PID_4=$!
+    if [ "$SKIP_HEAVY_COMPUTE" = "true" ] || [ "$SKIP_FRAMES_ONLY" = "true" ]; then
+        log "INFO" "[Step 4] 경량 모드: 프레임 추출 건너뜀 (SKIP_HEAVY_COMPUTE=true)"
+        record_optional_skip "Step 4 (Heatmap & Frames)" "경량 모드(SKIP_HEAVY_COMPUTE) — 로컬 머신에서 실행"
+        echo "[SKIP] lightweight mode" > "$TEMP_LOG_4"
+        PID_4=""
+    else
+        node backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js --channel tzuyang --delete-cache > "$TEMP_LOG_4" 2>&1 &
+        PID_4=$!
+    fi
 
     # Step 3 완료 대기 -> 로그 출력
     wait $PID_3; EXIT_3=$?
@@ -1572,17 +1594,22 @@ echo "::endgroup::"
 echo "::group::[Step 4] Heatmap & Frames (Awaiting)"
 log "INFO" "--- [Step 4 Frames] (실시간 로그) ---"
 if [ -n "$TEMP_LOG_4" ]; then
-    tail -f "$TEMP_LOG_4" 2>/dev/null &
-    TAIL_PID=$!
-    wait $PID_4; EXIT_4=$?
-    STEP4_END_TIME=$(date +%s)
-    step_duration_from "Step 4 (Heatmap & Frames)" "$STEP4_START_TIME" "$STEP4_END_TIME"
-    sleep 1
-    kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
-    cat "$TEMP_LOG_4" | append_daily_log_quiet
-    if [ $EXIT_4 -ne 0 ]; then
-        log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
-        record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
+    if [ -n "$PID_4" ]; then
+        tail -f "$TEMP_LOG_4" 2>/dev/null &
+        TAIL_PID=$!
+        wait $PID_4; EXIT_4=$?
+        STEP4_END_TIME=$(date +%s)
+        step_duration_from "Step 4 (Heatmap & Frames)" "$STEP4_START_TIME" "$STEP4_END_TIME"
+        sleep 1
+        kill $TAIL_PID 2>/dev/null; wait $TAIL_PID 2>/dev/null
+        cat "$TEMP_LOG_4" | append_daily_log_quiet
+        if [ $EXIT_4 -ne 0 ]; then
+            log "WARN" "[Step 4] Frames 비정상 종료 (exit: $EXIT_4)"
+            record_required_failure "Step 4 (Heatmap & Frames)" "exit=$EXIT_4"
+        fi
+    else
+        # SKIP_HEAVY_COMPUTE 모드에서는 PID가 없으므로 skip 로그만 출력
+        step_duration_from "Step 4 (Heatmap & Frames)" "$STEP4_START_TIME"
     fi
     rm -f "$TEMP_LOG_4"
 else
@@ -1642,7 +1669,12 @@ echo "::group::[Step 08] Chunk Multimodal Crawling"
 step_start
 log "INFO" "[Step 08] Chunk Multimodal 분석 중..."
 STEP08_NODE_MISSING=""
-if STEP08_NODE_MISSING="$(missing_backend_node_packages @google/genai 2>/dev/null)"; then
+if [ "$SKIP_HEAVY_COMPUTE" = "true" ] || [ "$SKIP_CHUNK_ONLY" = "true" ]; then
+    log "INFO" "[Step 08] 경량 모드: Chunk Multimodal 건너뜀 (SKIP_HEAVY_COMPUTE=true)"
+    record_optional_skip "Step 08 (Chunk Multimodal)" "경량 모드(SKIP_HEAVY_COMPUTE) — 로컬 머신에서 실행"
+    SKIP_EVALUATION=true
+    record_downstream_skip "Step 09~13 (Evaluation)" "경량 모드로 Step 08 건너똀" "Step 08 (Chunk Multimodal)"
+elif STEP08_NODE_MISSING="$(missing_backend_node_packages @google/genai 2>/dev/null)"; then
     record_required_failure "Step 08 (Chunk Multimodal)" "$(render_step08_message node-prerequisite-failure "$STEP08_NODE_MISSING")"
     SKIP_EVALUATION=true
     record_downstream_skip "Step 09~13 (Evaluation)" "$(render_step08_message node-prerequisite-downstream-reason)" "Step 08 (Chunk Multimodal)"
