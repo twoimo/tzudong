@@ -24,3 +24,9 @@ test-results/
 /backend/
 /supabase/
 /docs/
+/tmp/
+/artifacts/
+/scripts/
+/DESIGN.md
+/SECURITY.md
+/AGENTS.md
