@@ -523,7 +523,8 @@ describe("release workflow governance source contracts", () => {
     expect(privacy.hasPullRequest).toBe(false);
     const retain = privacy.jobs.get("retain")!.block;
     expect(retain).toContain("github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == true)");
-    expect(retain).toMatch(/^    environment:\n      name: production-retention$/m);
+    expect(retain).not.toMatch(/^\s{4}environment:/m);
+    expect(retain).not.toContain("production-retention");
     expect(retain).toContain("Run scheduled privacy retention");
     const manualDryRun = retain.match(/      - name: Run manual privacy retention dry run[\s\S]*?(?=\n      - |\n?$)/)?.[0] ?? "";
     expect(manualDryRun).toContain("action: 'preview'");
