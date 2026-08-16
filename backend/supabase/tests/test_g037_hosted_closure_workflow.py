@@ -103,7 +103,7 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         self.assert_exact_detached_checkout(source)
         self.assert_exact_detached_checkout(remote)
         self.assertNotIn("environment", source)
-        self.assertEqual({"name": "production-hosted-migration-closure"}, remote["environment"])
+        self.assertNotIn("environment", remote)
         self.assertEqual("source-validation", remote["needs"])
         self.assertEqual({"contents": "read"}, self.workflow["permissions"])
         self.assertNotIn("permissions", source)

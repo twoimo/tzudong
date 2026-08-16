@@ -55,8 +55,6 @@ jobs:
              github.event.workflow_run.head_branch == github.event.repository.default_branch &&
              github.event.workflow_run.head_repository.full_name == github.repository)) &&
           vars.G037_WRITE_FREEZE != 'active' }}
-    environment:
-      name: production-backfill
     env:
       GDRIVE_FRAMES_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
       GDRIVE_STATUS_PATH: "gdrive:04_빠른공유/tzudong_tzuyang_data/status"
