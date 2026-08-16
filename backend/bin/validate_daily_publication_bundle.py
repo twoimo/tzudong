@@ -35,6 +35,10 @@ EXCLUDED_BASENAMES = {"credentials.json", "cookies.txt"}
 ALLOWED_MODES = {"0600", "0640", "0644", "0660", "0664"}
 FORBIDDEN_COMPONENTS = {"frames", "video_cache", "temp_video", "thumbnails", "log", "logs"}
 FORBIDDEN_NAME_PARTS = ("credential", "cookie", "secret", "token", "password", "log")
+FORBIDDEN_NAME_RE = re.compile(
+    r"(?:^|[_\-.])(?:" + "|".join(re.escape(p) for p in FORBIDDEN_NAME_PARTS) + r")s?(?:[_\-.]|$)",
+    re.IGNORECASE,
+)
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 ARTIFACT_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -90,13 +94,13 @@ def _portable_path(value: object) -> str:
 
 def _is_allowed_data_path(path: str) -> bool:
     components = path.split("/")
-    name = Path(path).name.lower()
+    stem = Path(path).stem
     return (
         path.startswith(ALLOWED_ROOTS)
         and path.endswith(ALLOWED_SUFFIXES)
         and Path(path).name not in EXCLUDED_BASENAMES
         and not any(component.lower() in FORBIDDEN_COMPONENTS for component in components)
-        and not any(part in name for part in FORBIDDEN_NAME_PARTS)
+        and not bool(FORBIDDEN_NAME_RE.search(stem))
     )
 
 
