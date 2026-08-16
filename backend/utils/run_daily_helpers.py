@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import secrets
 import sys
 import stat
@@ -5360,6 +5361,13 @@ PUBLICATION_FORBIDDEN_COMPONENTS = {
     "logs",
 }
 PUBLICATION_FORBIDDEN_NAME_PARTS = ("credential", "cookie", "secret", "token", "password", "log")
+# Match forbidden keywords at separator boundaries (_, -, ., start, end) with
+# optional trailing 's'.  This avoids false positives on YouTube video IDs where
+# keywords like 'log' appear embedded in Base64-like alphanumeric strings.
+_PUBLICATION_FORBIDDEN_NAME_RE = re.compile(
+    r"(?:^|[_\-.])(?:" + "|".join(re.escape(p) for p in PUBLICATION_FORBIDDEN_NAME_PARTS) + r")s?(?:[_\-.]|$)",
+    re.IGNORECASE,
+)
 
 
 def _publication_error(code: str) -> ValueError:
@@ -5420,7 +5428,7 @@ def _publication_file_entry(path: Path, project_root: Path) -> dict:
         or not relative.endswith(PUBLICATION_ALLOWED_SUFFIXES)
         or path.name in MIRROR_EXCLUDED_NAMES
         or any(component.lower() in PUBLICATION_FORBIDDEN_COMPONENTS for component in relative_components)
-        or any(part in path.name.lower() for part in PUBLICATION_FORBIDDEN_NAME_PARTS)
+        or bool(_PUBLICATION_FORBIDDEN_NAME_RE.search(path.stem))
     ):
         raise _publication_error("PATH")
     return {
@@ -5442,13 +5450,17 @@ def _publication_inventory(project_root: Path) -> List[dict]:
             directory_path = Path(directory)
             directories.sort()
             filenames.sort()
-            for directory_name in directories:
-                directory_stat = os.lstat(directory_path / directory_name)
-                if stat.S_ISLNK(directory_stat.st_mode):
-                    raise _publication_error("DIRECTORY_SYMLINK")
+            directories[:] = [
+                d for d in directories
+                if d.lower() not in PUBLICATION_FORBIDDEN_COMPONENTS
+                and not stat.S_ISLNK(os.lstat(directory_path / d).st_mode)
+            ]
             for filename in filenames:
                 candidate = directory_path / filename
                 if not filename.endswith(PUBLICATION_ALLOWED_SUFFIXES) or filename in MIRROR_EXCLUDED_NAMES:
+                    continue
+                # Skip files whose stem matches forbidden name patterns
+                if bool(_PUBLICATION_FORBIDDEN_NAME_RE.search(Path(filename).stem)):
                     continue
                 entries.append(_publication_file_entry(candidate, project_root))
                 if len(entries) > PUBLICATION_MAX_FILES:
