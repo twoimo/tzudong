@@ -704,7 +704,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertEqual(1, workflow.count("cron: '0 23 * * *'"))
         self.assertEqual(2, workflow.count("cron: '0 "))
         self.assertIn("workflow_run:", workflow)
-        self.assertIn('workflows: ["Daily Data Collection"]', workflow)
+        self.assertIn('workflows: ["Crawler"]', workflow)
         self.assertIn("types: [completed]", workflow)
         self.assertIn("github.event.workflow_run.event == 'schedule'", workflow)
         self.assertIn("github.event.workflow_run.head_branch == github.event.repository.default_branch", workflow)
@@ -1014,7 +1014,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             "--github-run-url",
             "https://github.com/twoimo/tzudong/actions/runs/25206693886",
             "--github-workflow",
-            "Daily Data Collection",
+            "Crawler",
             "--github-event-name",
             "workflow_dispatch",
             "--execution-branch",

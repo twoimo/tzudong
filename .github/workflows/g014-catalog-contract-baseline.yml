@@ -1,4 +1,4 @@
-name: G014 Catalog Contract Baseline
+name: Catalog
 
 on:
   pull_request:
