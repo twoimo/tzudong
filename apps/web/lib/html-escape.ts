@@ -129,8 +129,8 @@ export function escapeHtmlAttribute(value: string): string {
 }
 export function stripUnsafeMarkup(value: string): string {
     return String(value ?? "")
-        .replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
-        .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ")
+        .split(/<\/?script\b/i)[0]
+        .split(/<\/?style\b/i)[0]
         .replace(/<[^>]*>/g, " ")
         .replace(/[<>]/g, "")
         .replace(/\s+/g, " ")

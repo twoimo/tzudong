@@ -27,22 +27,6 @@ function isTokenMatch(actual: string, expected: string) {
   return mismatch === 0
 }
 
-function createBootstrapHtml(nextPath: string) {
-  const nextJson = JSON.stringify(nextPath)
-  const nextHref = encodeURI(nextPath)
-  return `<!doctype html>
-<html lang="ko">
-<head><meta charset="utf-8"><title>썸네일 개발자 모드로 이동 중</title></head>
-<body>
-<p>유튜브 썸네일 생성기 개발자 모드로 이동 중입니다…</p>
-<script>
-try { window.localStorage.setItem("tzudong:e2e-admin-shell-bypass", "1"); } catch (error) {}
-window.location.replace(${nextJson});
-</script>
-<noscript><a href="${nextHref}">유튜브 썸네일 생성기 열기</a></noscript>
-</body>
-</html>`
-}
 
 export async function GET(request: NextRequest) {
   if (!isE2EAdminRouteBypassEnvEnabled()) return forbidden(404)
@@ -56,13 +40,7 @@ export async function GET(request: NextRequest) {
   const nextPath = resolveDevAdminBootstrapNext(request.nextUrl.searchParams.get('next'))
   if (!nextPath) return NextResponse.json({ error: 'Unsafe redirect target' }, { status: 400 })
 
-  const response = new NextResponse(createBootstrapHtml(nextPath), {
-    status: 200,
-    headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  })
+  const response = NextResponse.redirect(new URL(nextPath, request.nextUrl.origin), 303)
   response.cookies.set(DEV_ADMIN_BYPASS_COOKIE_NAME, await createDevAdminBypassCookieValue(), {
     httpOnly: true,
     maxAge: DEV_ADMIN_BYPASS_MAX_AGE_SECONDS,
