@@ -15,7 +15,6 @@ jobs:
   preflight:
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.sha == inputs.commit_sha
     runs-on: ubuntu-24.04
-    environment: production-database
     permissions:
       contents: read
     steps:
