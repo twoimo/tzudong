@@ -32,7 +32,7 @@ function requireEnv(name) {
 }
 
 function norm(value) {
-  return String(value || '').replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '').replace(/&gt;/g, '').replace(/&amp;/g, '&').trim().replace(/\s+/g, ' ');
+  return String(value || '').split(/<\/?script\b/i)[0].split(/<\/?style\b/i)[0].replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '').replace(/&gt;/g, '').replace(/&amp;/g, '&').trim().replace(/\s+/g, ' ');
 }
 
 function tokens(value) {
