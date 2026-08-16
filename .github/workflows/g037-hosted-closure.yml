@@ -1,4 +1,4 @@
-name: G037 hosted closure
+name: G037 Hosted Closure
 
 on:
   workflow_dispatch:
