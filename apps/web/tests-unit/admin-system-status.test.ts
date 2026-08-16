@@ -970,7 +970,7 @@ describe('admin system status API route', () => {
             runtime: {
                 githubRunId: '25206693886',
                 githubRunUrl: 'https://github.com/twoimo/tzudong/actions/runs/25206693886',
-                githubWorkflow: 'Daily Data Collection',
+                githubWorkflow: 'Crawler',
                 executionBranch: 'main',
                 targetBranch: 'data',
             },

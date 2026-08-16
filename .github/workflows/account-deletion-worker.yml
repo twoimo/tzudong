@@ -1,4 +1,4 @@
-name: Account Deletion Worker
+name: Account Deletion
 
 on:
   schedule:
