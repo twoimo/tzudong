@@ -1,4 +1,5 @@
 name: Ledger
+run-name: Ledger · ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
