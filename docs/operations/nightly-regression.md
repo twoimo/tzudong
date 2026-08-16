@@ -8,8 +8,8 @@ crawler, recovery, or production data-publication job.
 
 ## Security boundary
 
-- The manual hosted fallback maps only `NIGHTLY_*` test-project secrets from the
-  `nightly-hosted` GitHub environment. It does not map `SUPABASE_SERVICE_ROLE_KEY`,
+- The manual hosted fallback maps only `NIGHTLY_*` test-project secrets from
+  repository secrets. It does not map `SUPABASE_SERVICE_ROLE_KEY`,
   a database DSN, production credentials, crawler credentials, provider keys, or
   any deployment token.
 - `NIGHTLY_SUPABASE_PROJECT_REF` and `NIGHTLY_SUPABASE_URL` identify one isolated,
@@ -34,7 +34,7 @@ crawler, recovery, or production data-publication job.
 
 ## Hosted manual fallback
 
-Store only these values in the `nightly-hosted` environment:
+Store only these values as repository secrets for the hosted fallback:
 
 | Secret | Purpose |
 | --- | --- |

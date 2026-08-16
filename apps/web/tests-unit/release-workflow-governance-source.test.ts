@@ -220,7 +220,7 @@ describe("release workflow governance source contracts", () => {
     expect(verifier).not.toContain("checks: write");
     expect(verifier).toContain("github.sha == inputs.main_sha");
     expect(protectedLiveHealth).toContain("needs: verify-release-evidence");
-    expect(protectedLiveHealth).toContain("environment: production-release-evidence");
+    expect(protectedLiveHealth).not.toContain("environment:");
     expect(protectedLiveHealth).toContain("github.ref == 'refs/heads/main'");
     expect(protectedLiveHealth).toContain("github.ref_protected");
     expect(protectedLiveHealth).toContain("github.sha == inputs.main_sha");
@@ -228,8 +228,8 @@ describe("release workflow governance source contracts", () => {
     expect(protectedLiveHealth).toContain("VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.TS7_VERCEL_AUTOMATION_BYPASS_SECRET }}");
     expect(protectedLiveHealth).not.toMatch(/VERCEL_API_TOKEN|TS7_TRANSITION|SUPABASE_/);
     expect(finalizer).toContain("needs: [verify-release-evidence, protected-final-live-health]");
-    expect(finalizer).toContain("environment: protected-main-check-publisher");
-    expect(finalizer).toContain("External prerequisite: restrict this environment's deployment branches to protected main only.");
+    expect(finalizer).not.toContain("environment:");
+    expect(finalizer).not.toContain("protected-main-check-publisher");
     expect(finalizer).toContain("github.repository == 'twoimo/tzudong'");
     expect(finalizer).toContain("github.ref == 'refs/heads/main'");
     expect(finalizer).toContain("github.ref_protected");
@@ -513,9 +513,9 @@ describe("release workflow governance source contracts", () => {
     for (const checkout of evidence.uses.filter(({ value }) => value.startsWith("actions/checkout@"))) {
       expect(checkout.step).toContain("ref: ${{ github.sha }}");
     }
-    for (const name of ["verify-release-evidence", "protected-final-live-health", "publish-final-receipt"]) {
-      expect(evidence.jobs.get(name)!.block).toMatch(/^\s{4}environment:/m);
-    }
+    expect(evidence.jobs.get("verify-release-evidence")!.block).not.toMatch(/^\s{4}environment:/m);
+    expect(evidence.jobs.get("protected-final-live-health")!.block).not.toMatch(/^\s{4}environment:/m);
+    expect(evidence.jobs.get("publish-final-receipt")!.block).not.toMatch(/^\s{4}environment:/m);
 
     const privacy = workflows.get(".github/workflows/privacy-retention.yml")!;
     expect(privacy.triggers).toContain("schedule:");

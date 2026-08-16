@@ -2080,15 +2080,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="nightly-local-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          title="Nightly Local Regression ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}"
+          short_sha="${GITHUB_SHA:0:12}"
+          tag="v1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"
+          title="Tzudong Nightly 1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"
           notes="nightly-artifacts/release-notes.md"
           cat > "$notes" <<EOF
-          Local-only nightly regression prerelease.
-          Commit: ${GITHUB_SHA}
-          Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-          Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
-          Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
+          ## Highlights
+
+          Local-only nightly regression prerelease from protected \`main\`.
+
+          ## Release Engineering
+
+          - Commit: ${GITHUB_SHA}
+          - Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          - Scope: disposable loopback Compose stack, synthetic fixtures, and bounded local regression checks.
+          - Credentials, stack.env, raw rows, provider payloads, and hosted/production state are excluded.
+
+          **Full Changelog**: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}
           EOF
           mapfile -t publication_files < <(
             sed '/^[[:space:]]*$/d' .github/nightly-local-publication-allowlist.txt
