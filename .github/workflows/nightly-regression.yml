@@ -1,4 +1,4 @@
-name: Nightly Hosted Regression
+name: Nightly Hosted
 
 on:
   workflow_dispatch:
@@ -320,7 +320,7 @@ jobs:
           {
             echo '## Manual hosted regression fallback'
             echo '- Scheduling: disabled; this workflow runs only when explicitly dispatched.'
-            echo '- Canonical nightly: Nightly Local Regression.'
+            echo '- Canonical nightly: Nightly.'
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Preflight: ${{ needs.preflight.result }}"

@@ -33,7 +33,7 @@ The remote status scope is `GDRIVE_STATUS_PATH/<scope>`, where production uses
 
 ## Backfill operation
 
-Use the `GDrive Frame Backfill` workflow with:
+Use the `Backfill` workflow with:
 
 - `status_scope`: normally `main`.
 - `max_batches`: staged shard limit for one run.
