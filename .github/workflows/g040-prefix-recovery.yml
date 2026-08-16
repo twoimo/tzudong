@@ -1,4 +1,4 @@
-name: G040 prefix recovery source validation
+name: G040 Prefix Recovery
 
 on:
   workflow_dispatch:

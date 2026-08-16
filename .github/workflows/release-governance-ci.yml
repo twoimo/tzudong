@@ -1,4 +1,4 @@
-name: Release governance contract
+name: Release Governance Contract
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   governance-contract:
-    name: Release governance contract
+    name: Release Governance Contract
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

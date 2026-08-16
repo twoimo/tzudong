@@ -195,7 +195,7 @@ The release is always marked prerelease and never becomes the repository's
 latest stable release. Release notes and assets contain no credentials,
 `stack.env`, raw rows, DSNs, provider payloads, or hosted/production state.
 
-To run the same lane manually, dispatch **Nightly Regression (Local Supabase)** and choose
+To run the same lane manually, dispatch **Nightly Local Regression** and choose
 `all`, `unit`, or `e2e`. A GitHub-hosted Ubuntu runner must pass the namespace
 preflight; a self-hosted runner is not a silent fallback.
 A manual dispatch from any non-main ref is read-only and cannot publish a
