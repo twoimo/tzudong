@@ -393,7 +393,7 @@ async function resolveGithubActionsStatus(
   const timeout = withTimeoutSignal(timeoutMs);
   const params = new URLSearchParams({ per_page: '1' });
   if (branch) params.set('branch', branch);
-  const endpoint = `https://api.github.com/repos/${encodeURIComponent(repository).replace('%2F', '/')}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
+  const endpoint = `https://api.github.com/repos/${encodeURIComponent(repository).replaceAll('%2F', '/')}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
 
   try {
     const response = await fetchGithubReadOnly(endpoint, token, timeout.signal, allowPublicRead);
@@ -688,7 +688,7 @@ async function resolveNightlyWorkflowStatus(
   const timeout = withTimeoutSignal(timeoutMs);
   const params = new URLSearchParams({ per_page: String(NIGHTLY_HISTORY_LIMIT) });
   if (branch) params.set('branch', branch);
-  const encodedRepository = encodeURIComponent(repository).replace('%2F', '/');
+  const encodedRepository = encodeURIComponent(repository).replaceAll('%2F', '/');
   const endpoint = `https://api.github.com/repos/${encodedRepository}/actions/workflows/${encodeURIComponent(workflow)}/runs?${params.toString()}`;
 
   try {

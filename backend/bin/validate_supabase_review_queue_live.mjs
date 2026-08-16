@@ -25,7 +25,7 @@ function parseArgs(argv) {
   return args;
 }
 function requireEnv(name) { const value = process.env[name]; if (!value) throw new Error(`${name} is required`); return value; }
-function norm(value) { return String(value || '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim().replace(/\s+/g, ' '); }
+function norm(value) { return String(value || '').replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '').replace(/&gt;/g, '').replace(/&amp;/g, '&').trim().replace(/\s+/g, ' '); }
 function cleanName(value) { return norm(value).replace(/^\[비공개\]\s*/, '').replace(/\([^)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim(); }
 function num(value) { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
 function naverCoord(value) { const n = num(value); if (n === null) return null; return Math.abs(n) > 1000 ? n / 10000000 : n; }

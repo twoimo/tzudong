@@ -128,7 +128,7 @@ afterAll(() => {
 });
 
 function escapeCssClass(className: string) {
-  return className.replace(/([:,.[\]()+/%])/g, "\\$1");
+  return className.replace(/\\/g, '\\\\').replace(/([:,.[\]()+/%])/g, "\\$1");
 }
 
 function compactCss(value: string) {

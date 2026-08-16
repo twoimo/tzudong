@@ -120,7 +120,7 @@ function validateApplicationName(applicationName) {
 function validatePem(value, code) {
   if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > MAX_CA_BYTES) throw fixedError(code);
   const trimmed = value.trim();
-  if (!trimmed || trimmed.includes('PRIVATE KEY') || !/^(?:-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----\s*)+$/.test(trimmed)) {
+  if (!trimmed || trimmed.includes('PRIVATE KEY') || !trimmed.startsWith('-----BEGIN CERTIFICATE-----') || !trimmed.includes('-----END CERTIFICATE-----')) {
     throw fixedError(code);
   }
   return trimmed;

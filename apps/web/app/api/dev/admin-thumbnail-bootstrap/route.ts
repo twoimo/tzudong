@@ -29,6 +29,7 @@ function isTokenMatch(actual: string, expected: string) {
 
 function createBootstrapHtml(nextPath: string) {
   const nextJson = JSON.stringify(nextPath)
+  const nextHref = encodeURI(nextPath)
   return `<!doctype html>
 <html lang="ko">
 <head><meta charset="utf-8"><title>썸네일 개발자 모드로 이동 중</title></head>
@@ -38,7 +39,7 @@ function createBootstrapHtml(nextPath: string) {
 try { window.localStorage.setItem("tzudong:e2e-admin-shell-bypass", "1"); } catch (error) {}
 window.location.replace(${nextJson});
 </script>
-<noscript><a href="${nextPath.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}">유튜브 썸네일 생성기 열기</a></noscript>
+<noscript><a href="${nextHref}">유튜브 썸네일 생성기 열기</a></noscript>
 </body>
 </html>`
 }
