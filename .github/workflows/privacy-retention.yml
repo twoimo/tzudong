@@ -26,8 +26,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    environment:
-      name: production-retention
     defaults:
       run:
         working-directory: apps/web
