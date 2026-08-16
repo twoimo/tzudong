@@ -1,4 +1,4 @@
-name: Restaurant Refresh Cron
+name: Refresh
 
 on:
   schedule:

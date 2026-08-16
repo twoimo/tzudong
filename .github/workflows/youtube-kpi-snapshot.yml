@@ -1,4 +1,4 @@
-name: YouTube KPI Snapshot
+name: KPI
 
 on:
   schedule:

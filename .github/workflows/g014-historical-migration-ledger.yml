@@ -1,4 +1,4 @@
-name: G014 Historical Migration Ledger
+name: Ledger
 
 on:
   workflow_dispatch:

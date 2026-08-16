@@ -1,4 +1,4 @@
-name: G035 Hosted Recovery
+name: Recovery
 on:
   workflow_dispatch:
     inputs:

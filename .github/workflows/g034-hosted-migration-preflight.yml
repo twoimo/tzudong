@@ -1,4 +1,4 @@
-name: G034 Hosted Migration Preflight
+name: Preflight
 
 on:
   workflow_dispatch:
