@@ -69,10 +69,17 @@ function createSupabaseClientFromEnv() {
 
 function stripHtml(value) {
   return String(value ?? '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[<>]/g, '')
+    .replace(/&nbsp;/gi, ' ')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '')
+    .replace(/&gt;/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 

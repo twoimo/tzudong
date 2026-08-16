@@ -193,24 +193,25 @@ function extractNaverMapPlace(href) {
 
 function htmlToAnchorItems(html) {
   const anchors = [];
-  const anchorRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  const anchorRegex = /<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi;
   let match;
   while ((match = anchorRegex.exec(html))) {
     const attrs = match[1] || '';
     const href = (attrs.match(/\bhref=(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i)?.slice(1).find(Boolean) || '')
-      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"');
+      .replace(/&amp;/g, '&');
     const text = norm(match[2]
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ')
+      .replace(/<style\b[\s\S]*?<\/style\s*>/gi, ' ')
       .replace(/<[^>]+>/g, ' ')
+      .replace(/[<>]/g, '')
       .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
       .replace(/&#39;/g, "'")
       .replace(/&quot;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>'));
+      .replace(/&lt;/g, '')
+      .replace(/&gt;/g, '')
+      .replace(/&amp;/g, '&'));
     if (text || href) anchors.push({ text, href });
   }
   return anchors;

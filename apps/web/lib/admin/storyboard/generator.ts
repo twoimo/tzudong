@@ -795,7 +795,7 @@ function normalizeStoryboardMarkdownText(value: unknown) {
 }
 
 function escapeStoryboardMarkdownTableCell(value: unknown) {
-  return normalizeStoryboardMarkdownText(value).replace(/\|/g, '\\|');
+  return normalizeStoryboardMarkdownText(value).replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 }
 
 function formatStoryboardCutNo(sceneNo: number) {

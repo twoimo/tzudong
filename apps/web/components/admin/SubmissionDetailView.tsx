@@ -21,6 +21,7 @@ import {
 import { YouTubeIcon } from '@/components/icons/YouTubeIcon';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
+import { decodeBasicHtmlEntities, stripUnsafeMarkup } from '@/lib/html-escape';
 import { formatCategoryText } from '@/lib/category-utils';
 import { supabase } from '@/integrations/supabase/client';
 import { extractCanonicalYouTubeVideoId, normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
@@ -223,7 +224,7 @@ function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult
 }
 
 function sanitizePlainText(input: string): string {
-    return input.replace(/<[^>]*>/g, '').trim();
+    return decodeBasicHtmlEntities(stripUnsafeMarkup(input));
 }
 
 async function geocodeAddressMultiple(name: string, address: string, maxResults: number = 3): Promise<GeocodingResult[]> {

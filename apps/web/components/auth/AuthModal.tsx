@@ -45,8 +45,10 @@ const generateRandomNickname = (): string => {
     '5인분혼밥러', '배터지기직전', '밥도둑잡아라', '냠냠폭격기', '칼로리는숫자',
     '야식은기본', '다이어트내일부터'
   ];
-  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  const randomPrefix = prefixes[bytes[0] % prefixes.length];
+  const randomSuffix = String(((bytes[1] << 8) | bytes[2]) % 10000).padStart(4, '0');
   return `${randomPrefix}_${randomSuffix}`;
 };
 
