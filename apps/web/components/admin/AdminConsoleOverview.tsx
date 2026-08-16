@@ -709,11 +709,6 @@ function loadAdminRouteRecommendationModule() {
   );
 }
 
-function loadAdminSystemStatusCenter() {
-  return import("@/components/admin/system-status/AdminSystemStatusCenter").then(
-    (module) => module.AdminSystemStatusCenter,
-  );
-}
 
 const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
 
@@ -900,10 +895,6 @@ const AdminRouteRecommendationModule = dynamic(
   },
 );
 
-const AdminSystemStatusCenter = dynamic(loadAdminSystemStatusCenter, {
-  ssr: false,
-  loading: () => null,
-});
 const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
   "overview",
   "map-overlays",
@@ -2998,7 +2989,7 @@ const adminDashboardFocusPalette = {
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
-  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const adminDashboardFullscreenCardClassName =
   "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto scrollbar-hide rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
@@ -3447,7 +3438,7 @@ function AdminDashboardImpactRankLegend() {
     <div
       className={cn(
         adminDashboardControlGroupClassName,
-        "gap-1 px-2.5 text-[11px] font-extrabold leading-none text-muted-foreground shadow-sm",
+        "gap-1 px-2 text-[10px] font-extrabold leading-none text-muted-foreground shadow-sm",
       )}
       aria-label="상위 영상 영향도 색상 범례: 순위 구분"
       data-admin-dashboard-rank-legend="impact"
@@ -3513,7 +3504,7 @@ function AdminDashboardScrollTable<Row>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-[11px] font-extrabold text-muted-foreground",
+                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-[10px] font-extrabold text-muted-foreground",
                   column.align === "right" && "text-right",
                   column.className,
                 )}
@@ -3804,7 +3795,7 @@ function AdminDashboardManagementSkeleton() {
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
-          <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
+          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
             Tzuyang KPI Dashboard
           </h1>
         </div>
@@ -3823,7 +3814,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
               disabled
             >
               카드 순서
@@ -3832,7 +3823,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
               disabled
             >
               초기화
@@ -3846,7 +3837,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold"
+              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-bold"
               disabled
             >
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3867,7 +3858,7 @@ function AdminDashboardManagementSkeleton() {
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground md:hidden"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-extrabold text-muted-foreground md:hidden"
             aria-label="대시보드 타임프레임 로딩 중: 1개월"
             disabled
           >
@@ -3884,7 +3875,7 @@ function AdminDashboardManagementSkeleton() {
                 type="button"
                 variant={option.value === "1M" ? "default" : "outline"}
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-7 shrink-0 rounded-full px-2 text-[10px]"
                 aria-pressed={option.value === "1M"}
                 disabled
               >
@@ -4151,7 +4142,7 @@ function AdminDashboardCardTitle({
         data-admin-dashboard-card-title-row="single-line"
       >
         <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
-          <p className="truncate whitespace-nowrap text-xs font-extrabold leading-none text-foreground">
+          <p className="truncate whitespace-nowrap text-[11px] font-extrabold leading-none text-foreground">
             {title}
             {metric ? (
               <span
@@ -4320,7 +4311,7 @@ function AdminDashboardKpiCard({
           data-admin-dashboard-kpi-title-row="single-line"
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <p className="truncate whitespace-nowrap text-xs font-extrabold tracking-[0.04em] text-muted-foreground">
+            <p className="truncate whitespace-nowrap text-[11px] font-extrabold tracking-[0.04em] text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
@@ -4373,7 +4364,7 @@ function AdminDashboardKpiCard({
         <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <p
-              className="whitespace-nowrap text-lg font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-xl"
+              className="whitespace-nowrap text-sm font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-base"
               data-admin-dashboard-kpi-value-size="bounded"
             >
               {value}
@@ -5601,7 +5592,7 @@ function AdminDashboardPeriodSelector({
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px] font-bold"
+              className="h-7 shrink-0 rounded-full px-2 text-[10px] font-bold"
               aria-pressed={isSelected}
               data-admin-dashboard-period-option={option.value}
               onClick={() => onChange(option.value)}
@@ -5617,7 +5608,7 @@ function AdminDashboardPeriodSelector({
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground md:hidden"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-extrabold text-muted-foreground hover:text-foreground md:hidden"
             aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
             data-admin-dashboard-period-select-trigger="true"
           >
@@ -5651,7 +5642,7 @@ function AdminDashboardPeriodSelector({
                   type="button"
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-[11px] font-bold"
+                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-[10px] font-bold"
                   style={{ minWidth: 44 }}
                   aria-pressed={isSelected}
                   data-admin-dashboard-period-option={option.value}
@@ -7237,7 +7228,7 @@ function AdminDashboardManagementPanel({
     >
       <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div className="hidden min-w-0 md:block">
-          <h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
+          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
             Tzuyang KPI Dashboard
           </h1>
         </div>
@@ -7256,7 +7247,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant={isDashboardOrderEditorOpen ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
               aria-label="KPI 카드 직접 드래그 순서 설정"
               aria-pressed={isDashboardOrderEditorOpen}
               disabled={isDashboardOrderLoading}
@@ -7277,7 +7268,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
               disabled={
                 isDashboardOrderLoading ||
                 isDashboardOrderSaving ||
@@ -7959,9 +7950,6 @@ function AdminDashboardManagementPanel({
             )}
           </AdminDashboardDeferredBody>
         </div>
-      </div>
-      <div className="mt-2 shrink-0" data-admin-system-status-slot="true">
-        <AdminSystemStatusCenter isAdmin={isAdmin} />
       </div>
     </section>
   );

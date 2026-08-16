@@ -4411,7 +4411,7 @@ describe("web quality performance source contracts", () => {
     expect(layoutSource).toContain('src: "./fonts/pretendard/PretendardVariable.woff2"');
     expect(layoutSource).toContain('weight: "45 920"');
     expect(layoutSource).toContain("preload: false");
-    expect(layoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
+    expect(layoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable} ${pretendard.className}`}");
     expect(layoutSource).not.toContain("QueryProvider");
     expect(layoutSource).not.toContain("AppProviders");
     expect(layoutSource).not.toContain("MainLayout");
@@ -4876,7 +4876,7 @@ describe("web quality performance source contracts", () => {
       expect(rootLayoutSource).not.toContain(staticWeightFile);
     }
     expect(rootLayoutSource).not.toContain("cdn.jsdelivr.net/gh/orioncactus/pretendard");
-    expect(rootLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
+    expect(rootLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable} ${pretendard.className}`}");
     expect(rootGlobalsSource).toContain("--font-sans: var(--font-pretendard");
     expect(rootGlobalsSource).toContain("--font-noto-serif-kr: var(--font-display");
     expect(rootGlobalsSource).toContain("font-family: var(--font-sans);");
