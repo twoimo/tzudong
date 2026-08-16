@@ -1,4 +1,5 @@
 name: Nightly Hosted
+run-name: Nightly Hosted · ${{ inputs.suite || 'all' }}
 
 on:
   workflow_dispatch:
@@ -31,7 +32,7 @@ env:
 
 jobs:
   preflight:
-    name: Preflight isolated hosted environment
+    name: Preflight
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -80,7 +81,7 @@ jobs:
           --validate-only
 
   unit:
-    name: Unit regression
+    name: Unit
     needs: preflight
     if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'unit'
     runs-on: ubuntu-24.04
@@ -178,7 +179,7 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: Curated Playwright regression
+    name: Playwright
     needs: preflight
     if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'e2e'
     runs-on: ubuntu-24.04
@@ -304,7 +305,7 @@ jobs:
           retention-days: 14
 
   summary:
-    name: Manual hosted fallback summary
+    name: Summary
     if: always()
     needs: [preflight, unit, e2e]
     runs-on: ubuntu-24.04

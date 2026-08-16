@@ -1,4 +1,5 @@
 name: CI
+run-name: ${{ github.event.pull_request.title || format('CI · {0}', github.ref_name) }}
 
 on:
   pull_request:
@@ -129,7 +130,7 @@ env:
 
 jobs:
   dependency-modernization-proof:
-    name: Dependency modernization clean-install proof
+    name: Install
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -199,7 +200,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
   ubuntu-npm-authority:
-    name: Ubuntu npm authority
+    name: Ubuntu npm
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -253,7 +254,7 @@ jobs:
       - run: npm run build
 
   ubuntu-bun-compatibility:
-    name: Ubuntu Bun 1.2.16 compatibility
+    name: Ubuntu Bun
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -302,7 +303,7 @@ jobs:
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
   windows-npm-tooling:
-    name: Windows npm tooling
+    name: Windows npm
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -362,7 +363,7 @@ jobs:
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
 
   windows-bun-compatibility:
-    name: Windows Bun 1.2.16 compatibility
+    name: Windows Bun
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -414,7 +415,7 @@ jobs:
         run: if ('${{ steps.benchmark.outcome }}' -ne 'success' -or '${{ steps.report.outcome }}' -ne 'success') { exit 1 }
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
   admin-address-consistency:
-    name: Admin address consistency regression
+    name: Admin
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:

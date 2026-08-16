@@ -1,4 +1,5 @@
 name: Release Evidence
+run-name: Release Evidence · ${{ inputs.release_id }}
 
 on:
   workflow_dispatch:
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   verify-release-evidence:
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && github.event_name == 'workflow_dispatch'
-    name: Verify exact release evidence
+    name: Verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -108,7 +109,7 @@ jobs:
           retention-days: 7
 
   protected-final-live-health:
-    name: Strict protected final live health
+    name: Health
     needs: verify-release-evidence
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success'
     runs-on: ubuntu-latest
@@ -150,7 +151,7 @@ jobs:
             if (!result.passed) core.setFailed(`RELEASE_EVIDENCE_${result.reason}`);
 
   publish-final-receipt:
-    name: Publish exact-head final receipt check
+    name: Publish
     needs: [verify-release-evidence, protected-final-live-health]
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success' && needs.protected-final-live-health.result == 'success' && needs.protected-final-live-health.outputs.outcome == 'success' && needs.protected-final-live-health.outputs.reason == 'VERIFIED'
     runs-on: ubuntu-latest

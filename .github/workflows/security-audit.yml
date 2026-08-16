@@ -1,4 +1,5 @@
 name: Security
+run-name: ${{ github.event.pull_request.title || format('Security · {0}', github.ref_name) }}
 
 on:
   pull_request:
