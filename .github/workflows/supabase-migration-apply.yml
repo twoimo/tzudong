@@ -52,7 +52,7 @@ jobs:
       validated_sha: ${{ steps.checkout.outputs.sha }}
     steps:
       - name: Checkout exact triggering commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v6
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
@@ -116,7 +116,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout validated triggering commit
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v6
         with:
           ref: ${{ needs.validate.outputs.validated_sha }}
           persist-credentials: false
