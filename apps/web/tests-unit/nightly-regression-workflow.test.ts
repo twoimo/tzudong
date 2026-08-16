@@ -163,7 +163,7 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("keeps hosted regression as an explicit manual fallback", () => {
-    expect(hostedWorkflowSource).toContain("name: Nightly Hosted Regression");
+    expect(hostedWorkflowSource).toContain("name: Nightly Hosted");
     expect(hostedWorkflowSource).not.toContain("\n  schedule:");
     expect(hostedWorkflowSource).toContain("workflow_dispatch:");
     expect(hostedWorkflowSource).toContain("- all");
@@ -184,7 +184,7 @@ describe("nightly regression package and source contracts", () => {
     expect(hostedWorkflowSource).toContain("contents: read");
     expect(hostedWorkflowSource).toContain("actions: read");
     expect(hostedWorkflowSource).toContain("Scheduling: disabled; this workflow runs only when explicitly dispatched.");
-    expect(hostedWorkflowSource).toContain("Canonical nightly: Nightly Local Regression.");
+    expect(hostedWorkflowSource).toContain("Canonical nightly: Nightly.");
     expect(hostedWorkflowSource).toContain("Notification failed; see GitHub summary.");
     const summaryIndex = hostedWorkflowSource.indexOf("\n  summary:");
     expect(summaryIndex).toBeGreaterThan(0);
@@ -867,7 +867,7 @@ describe("nightly regression package and source contracts", () => {
 
   test("reconstructs local Docker nightly and uploads only sanitized artifacts", () => {
     for (const token of [
-      "name: Nightly Local Regression",
+      "name: Nightly",
       "cron: '30 18 * * *'",
       "runs-on: ubuntu-24.04",
       "docker-compose-linux-${compose_arch}",

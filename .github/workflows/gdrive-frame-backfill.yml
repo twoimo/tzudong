@@ -1,13 +1,13 @@
-name: GDrive Frame Backfill
+name: Backfill
 
 on:
   schedule:
-    # Budget-safe catch-up windows after Daily Data Collection (UTC 19:00 / KST 04:00).
+    # Budget-safe catch-up windows after Crawler (UTC 19:00 / KST 04:00).
     # Do not add more default windows without re-checking the monthly Actions budget.
     - cron: '0 21 * * *'
     - cron: '0 23 * * *'
   workflow_run:
-    workflows: ["Daily Data Collection"]
+    workflows: ["Crawler"]
     types: [completed]
   workflow_dispatch:
     inputs:

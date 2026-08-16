@@ -1,4 +1,4 @@
-name: G038 Account Deletion Successor
+name: Successor
 
 on:
   workflow_dispatch:
