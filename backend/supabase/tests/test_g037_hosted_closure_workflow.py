@@ -53,7 +53,7 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         self.assertEqual(1, len(checkouts))
         self.assertEqual(
             {
-                "ref": "${{ inputs.commit_sha }}",
+                "ref": "${{ github.sha }}",
                 "fetch-depth": 1,
                 "persist-credentials": False,
             },

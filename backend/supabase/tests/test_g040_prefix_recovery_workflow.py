@@ -117,7 +117,7 @@ class G040PrefixRecoveryWorkflowTests(unittest.TestCase):
         checkouts = [step for step in job["steps"] if step.get("uses") == CHECKOUT]
         self.assertEqual(1, len(checkouts))
         self.assertEqual(
-            {"ref": "${{ inputs.commit_sha }}", "fetch-depth": 1, "persist-credentials": False},
+            {"ref": "${{ github.sha }}", "fetch-depth": 1, "persist-credentials": False},
             checkouts[0]["with"],
         )
         verification = next(step for step in job["steps"] if step["name"] == "Verify detached SHA binding")
