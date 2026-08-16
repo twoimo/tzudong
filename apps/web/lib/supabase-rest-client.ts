@@ -15,11 +15,11 @@ function assertSupabaseRestConfig() {
 }
 
 export function postgrestIn(values: readonly string[]) {
-    return `in.(${values.map((value) => `"${String(value).replace(/"/g, '\\"')}"`).join(',')})`;
+    return `in.(${values.map((value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`;
 }
 
 export function postgrestArrayOverlap(values: readonly string[]) {
-    return `ov.{${values.map((value) => `"${String(value).replace(/"/g, '\\"')}"`).join(',')}}`;
+    return `ov.{${values.map((value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')}}`;
 }
 
 export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQuery): Promise<T[]> {

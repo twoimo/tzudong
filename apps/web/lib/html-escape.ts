@@ -127,3 +127,30 @@ export function escapeHtmlAttribute(value: string): string {
         }
     });
 }
+export function stripUnsafeMarkup(value: string): string {
+    return String(value ?? "")
+        .replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
+        .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/[<>]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+export function decodeBasicHtmlEntities(value: string): string {
+    return String(value ?? "")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "")
+        .replace(/&gt;/g, "")
+        .replace(/&amp;/g, "&");
+}
+
+export function hostnameOf(value: string): string | null {
+    try {
+        return new URL(value).hostname.toLowerCase();
+    } catch {
+        return null;
+    }
+}

@@ -448,7 +448,7 @@ function createStoryboardLocalBridgeHelperSessionId() {
   ) {
     return crypto.randomUUID();
   }
-  return `storyboard-local-bridge-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return crypto.randomUUID();
 }
 
 function getStoryboardLocalBridgeReconnectRequiredMessage() {
@@ -1249,6 +1249,7 @@ function normalizeStoryboardCopyText(
 ) {
   const normalized = (value ?? "")
     .replace(/\s+/g, " ")
+    .replace(/\\/g, "\\\\")
     .replace(/\|/g, "\\|")
     .trim();
   return normalized

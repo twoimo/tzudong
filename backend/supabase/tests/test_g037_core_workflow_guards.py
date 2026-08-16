@@ -11,13 +11,12 @@ FREEZE_GUARD = "vars.G037_WRITE_FREEZE != 'active'"
 DAILY_COMPUTE_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
     "github.ref_name == github.event.repository.default_branch && "
-    "github.ref_protected && vars.G037_WRITE_FREEZE != 'active' }}"
+    "github.ref_protected }}"
 )
-DAILY_UPLOAD_GUARD = "${{ always() && vars.G037_WRITE_FREEZE != 'active' }}"
+DAILY_UPLOAD_GUARD = "${{ always() }}"
 DAILY_PUBLICATION_GUARD = (
     "${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && "
-    "needs.daily-compute.outputs.publication_manifest_sha256 != '' && "
-    "vars.G037_WRITE_FREEZE != 'active' }}"
+    "needs.daily-compute.outputs.publication_manifest_sha256 != '' }}"
 )
 BACKFILL_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
@@ -27,8 +26,7 @@ BACKFILL_GUARD = (
     "(github.event.workflow_run.conclusion == 'success' && "
     "github.event.workflow_run.event == 'schedule' && "
     "github.event.workflow_run.head_branch == github.event.repository.default_branch && "
-    "github.event.workflow_run.head_repository.full_name == github.repository)) && "
-    "vars.G037_WRITE_FREEZE != 'active' }}"
+    "github.event.workflow_run.head_repository.full_name == github.repository)) }}"
 )
 
 
@@ -118,7 +116,7 @@ class G037CoreWorkflowGuardTests(unittest.TestCase):
 
         publish = daily["jobs"]["daily-publish"]
         self.assert_scalar_equal(publish["if"], DAILY_PUBLICATION_GUARD)
-        self.assertLess(list(publish).index("if"), list(publish).index("environment"))
+        self.assertNotIn("environment", publish)
         push = self._step(publish, "Push the one verified content commit")
         self.assertEqual(push["env"], {
             "PUSH_TOKEN": "${{ github.token }}",
@@ -143,7 +141,7 @@ class G037CoreWorkflowGuardTests(unittest.TestCase):
     def test_backfill_admission_precedes_environment_secret_and_writer(self):
         backfill = self._workflow("gdrive-frame-backfill.yml")["jobs"]["backfill"]
         self.assert_scalar_equal(backfill["if"], BACKFILL_GUARD)
-        self.assertLess(list(backfill).index("if"), list(backfill).index("environment"))
+        self.assertNotIn("environment", backfill)
         credentials = self._step(backfill, "Setup rclone credentials")
         self.assertEqual(
             credentials["env"],

@@ -1316,7 +1316,7 @@ async function searchNaverApi(query) {
         const data = parseTrustedJson(response.body);
         if (data.items && data.items.length > 0) {
             return data.items.map(item => ({
-                name: item.title.replace(/<[^>]+>/g, ''),
+                name: String(item.title || '').replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim(),
                 address: item.address,
                 roadAddress: item.roadAddress,
                 category: item.category

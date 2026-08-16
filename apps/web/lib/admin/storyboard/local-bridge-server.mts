@@ -438,7 +438,7 @@ function assertAllowedOrigin(
 function bearerToken(request: IncomingMessage) {
   const value = request.headers.authorization;
   if (typeof value !== 'string') return null;
-  const match = /^Bearer\s+(.+)$/i.exec(value.trim());
+  const match = /^Bearer[ \t]+(\S+)$/i.exec(value.trim());
   return match?.[1]?.trim() || null;
 }
 

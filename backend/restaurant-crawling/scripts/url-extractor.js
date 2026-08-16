@@ -57,11 +57,12 @@ export async function extractDataFromUrl(url) {
         console.log('[URL Extractor] Resolved map URL');
 
         // 네이버 지도 처리
-        if (finalUrl.includes('map.naver.com') || finalUrl.includes('place.naver.com')) {
+        let hostname = '';
+        try { hostname = new URL(finalUrl).hostname.toLowerCase(); } catch { hostname = ''; }
+        if (hostname === 'map.naver.com' || hostname === 'place.naver.com' || hostname.endsWith('.map.naver.com') || hostname.endsWith('.place.naver.com')) {
             return await extractNaverMap(page, finalUrl);
         }
-        // 카카오맵 처리
-        else if (finalUrl.includes('map.kakao.com') || finalUrl.includes('place.map.kakao.com')) {
+        else if (hostname === 'map.kakao.com' || hostname === 'place.map.kakao.com' || hostname.endsWith('.map.kakao.com')) {
             return await extractKakaoMap(page, finalUrl);
         }
 
@@ -182,7 +183,7 @@ export async function searchNaverApi(query) {
             // 실제로 표준 API는 mapx, mapy (TM128)를 반환합니다. 필요하다면 변환하거나 주소를 사용해 별도로 지오코딩해야 합니다.
             // 하지만 Gemini에 제공할 "컨텍스트"로는 상호명과 도로명 주소가 가장 중요합니다.
             return {
-                name: item.title.replace(/<[^>]+>/g, ''),
+                name: String(item.title || '').replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim(),
                 address: item.roadAddress || item.address,
                 category: item.category,
                 mapx: item.mapx,

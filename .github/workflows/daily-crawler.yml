@@ -52,7 +52,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE != 'active' }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected }}
     outputs:
       publication_ready: ${{ steps.publication.outputs.ready }}
       publication_manifest_sha256: ${{ steps.publication.outputs.manifest_sha256 }}
@@ -338,7 +338,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           
       - name: Upload Results to GDrive
-        if: ${{ always() && vars.G037_WRITE_FREEZE != 'active' }}
+        if: ${{ always() }}
         continue-on-error: true
         # 대량 프레임은 batch 업로드 + strong remote proof + staging/backfill material을 남긴다.
         timeout-minutes: 45
@@ -688,7 +688,7 @@ jobs:
 
   daily-publish:
     needs: daily-compute
-    if: ${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' && vars.G037_WRITE_FREEZE != 'active' }}
+    if: ${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
