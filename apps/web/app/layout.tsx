@@ -98,7 +98,7 @@ export default async function RootLayout({
     return (
         <html
             lang="ko"
-            className={`${pretendard.variable} ${notoSerifKr.variable}`}
+            className={`${pretendard.variable} ${notoSerifKr.variable} ${pretendard.className}`}
             suppressHydrationWarning
         >
             <head>
