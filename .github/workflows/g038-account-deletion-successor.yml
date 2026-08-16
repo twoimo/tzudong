@@ -60,7 +60,7 @@ jobs:
             --source-receipt "$RUNNER_TEMP/g038-source-receipt/receipt.json"
       - name: Attest exact source receipt
         id: source-attestation
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: ${{ runner.temp }}/g038-source-receipt/receipt.json
       - name: Upload authenticated source receipt and exact attestation bundle
