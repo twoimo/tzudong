@@ -13,6 +13,7 @@ import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
+import { decodeBasicHtmlEntities, stripUnsafeMarkup } from '@/lib/html-escape';
 import {
   canAutoSoftDeleteDuplicateSource,
   findActiveRestaurantIdentityConflict,
@@ -144,14 +145,7 @@ function getEvaluationAddressElements(
 }
 
 const sanitizeNaverPlaceTitle = (title: string | undefined) =>
-  (title || '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
+  decodeBasicHtmlEntities(stripUnsafeMarkup(title || ''));
 
 const normalizePlaceAddress = (address: string | undefined) =>
   (address || '')
