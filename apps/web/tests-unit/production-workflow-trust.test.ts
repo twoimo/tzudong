@@ -69,7 +69,8 @@ describe("production workflow trust boundaries", () => {
     const source = workflow("privacy-retention.yml");
 
     expect(source).toContain("github.ref_name == github.event.repository.default_branch");
-    expect(source).toContain("name: production-retention");
+    expect(source).not.toContain("environment:");
+    expect(source).not.toContain("production-retention");
     expect(source).toContain("ref: ${{ github.sha }}");
     expect(source).toContain("persist-credentials: false");
     expect(source).not.toContain("pull_request_target");
