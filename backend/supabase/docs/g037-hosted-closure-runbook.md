@@ -2,7 +2,7 @@
 
 ## Authority, scope, and hard stops
 
-GitHub Actions is read-only for G037. It is dispatch-only from the exact detached SHA of protected `main`, uses the `g037-hosted-closure` concurrency group and protected `production-hosted-migration-closure` environment, and permits only source `validate` plus remote `preflight`, `readback`, `runtime-probe`, and `reconciliation-readback`. `validate` is the default and has no credentials. Never run production execution or any production apply in Actions; Actions has no private signing-key, authorization, recovery, or freeze-evidence path.
+GitHub Actions is read-only for G037. It is dispatch-only from the exact detached SHA of protected `main`, uses the `g037-hosted-closure` concurrency group, and permits only source `validate` plus remote `preflight`, `readback`, `runtime-probe`, and `reconciliation-readback`. `validate` is the default and has no credentials. Never run production execution or any production apply in Actions; Actions has no private signing-key, authorization, recovery, or freeze-evidence path.
 
 The controller binds the current commit to the authoritative G034 manifest: exactly 28 migrations, in its pinned order and hashes. G026 and versions `20260713002500`, `20260713002600`, and `20260713002700` are excluded and must never enter the selected ledger. `public.restaurants_backup` absence is a hard preflight stop. G035 receipts are recovery evidence only; they do not authorize production execution. G036 recovery closure must be bound before local execution.
 

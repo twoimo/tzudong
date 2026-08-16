@@ -57,8 +57,6 @@ jobs:
       publication_manifest_sha256: ${{ steps.publication.outputs.manifest_sha256 }}
       artifact_digest: ${{ steps.upload-publication.outputs.artifact-digest }}
       pipeline_exit_code: ${{ steps.pipeline.outputs.exit_code }}
-    environment:
-      name: production-crawler
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
     steps:
@@ -694,8 +692,6 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment:
-      name: production-data-publication
     steps:
       - name: Checkout exact trusted publisher source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
