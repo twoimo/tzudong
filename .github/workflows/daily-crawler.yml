@@ -160,6 +160,11 @@ jobs:
           set -euo pipefail
           sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
           sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends ffmpeg rclone jq
+      - name: Install crawler Python dependencies
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --upgrade pip
+          python3 -m pip install --disable-pip-version-check -r backend/restaurant-crawling/scripts/requirements.txt
       - name: Verify approved runtime prerequisites
         run: |
           set -euo pipefail
