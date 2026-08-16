@@ -1,4 +1,4 @@
-name: TS7 release evidence
+name: Release Evidence
 
 on:
   workflow_dispatch:
