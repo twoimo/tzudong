@@ -434,7 +434,7 @@ class G034HostedPreflightWorkflowTests(unittest.TestCase):
         checkout = next(step for step in self.job["steps"] if step.get("uses") == CHECKOUT)
         self.assertEqual(
             {
-                "ref": "${{ inputs.commit_sha }}",
+                "ref": "${{ github.sha }}",
                 "fetch-depth": 1,
                 "persist-credentials": False,
             },
