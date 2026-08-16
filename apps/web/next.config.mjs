@@ -211,6 +211,11 @@ const nextConfig = {
         ];
     },
     webpack: (config, { dev }) => {
+        config.resolve ??= {};
+        config.resolve.alias = {
+            ...(config.resolve.alias ?? {}),
+            '@': __dirname,
+        };
         if (dev) {
             config.devtool = false;
             config.cache = false;
