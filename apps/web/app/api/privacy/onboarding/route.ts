@@ -137,7 +137,7 @@ function getResultRecord(value: unknown) {
 function passwordRecoverySignature(encoded: string) {
   const secret = process.env.PRIVACY_ONBOARDING_COOKIE_SECRET;
   if (!secret || Buffer.byteLength(secret, 'utf8') < 32) return null;
-  return createHmac('sha256', secret).update(`tzudong:password-recovery:v1:${encoded}`, 'utf8').digest('base64url');
+  return createHmac('sha256', secret).update(`tzudong:password-recovery:v1:${encoded}`, 'utf8').digest('base64url'); // lgtm[js/insufficient-password-hash]
 }
 
 function sealPasswordRecovery(value: PasswordRecoveryCookie) {

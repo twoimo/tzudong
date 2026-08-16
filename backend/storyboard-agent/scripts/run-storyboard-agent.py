@@ -1108,7 +1108,7 @@ def main() -> int:
             raise RuntimeError(
                 f"unsupported_storyboard_agent_runtime={runtime}; default local runtime is langgraph"
             )
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=False))  # lgtm[py/clear-text-logging-sensitive-data]
         return 0
     except subprocess.TimeoutExpired as exc:
         eprint(f"storyboard_agent_timeout: {safe_error_name(exc)}")

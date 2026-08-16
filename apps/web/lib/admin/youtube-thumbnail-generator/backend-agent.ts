@@ -181,11 +181,15 @@ function backendAgentPath(relativePath: string) {
 }
 
 function resolveThumbnailAgentPython(env: NodeJS.ProcessEnv = process.env) {
-  return env.THUMBNAIL_AGENT_PYTHON?.trim() || env.PYTHON?.trim() || DEFAULT_THUMBNAIL_AGENT_PYTHON;
+  const configured = env.THUMBNAIL_AGENT_PYTHON?.trim() || env.PYTHON?.trim();
+  if (configured && /^python3(?:\.\d+)?$/.test(configured)) {
+    return configured;
+  }
+  return DEFAULT_THUMBNAIL_AGENT_PYTHON;
 }
 
-function resolveThumbnailAgentNode(env: NodeJS.ProcessEnv = process.env) {
-  return env.NODE?.trim() || process.env.NODE?.trim() || (process.versions.bun ? 'node' : process.execPath);
+function resolveThumbnailAgentNode() {
+  return process.execPath;
 }
 
 function resolveThumbnailAgentBash() {
@@ -246,7 +250,7 @@ function toShellScriptArg(command: string) {
 function resolveScriptCommand(command: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   const extension = path.extname(command).toLowerCase();
   if (extension === '.js' || extension === '.mjs' || extension === '.cjs') {
-    return { executable: resolveThumbnailAgentNode(env), args: [command, ...args] };
+    return { executable: resolveThumbnailAgentNode(), args: [command, ...args] };
   }
   if (extension === '.py') {
     return { executable: resolveThumbnailAgentPython(env), args: [command, ...args] };

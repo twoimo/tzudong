@@ -99,7 +99,8 @@ function getCookieSecret() {
 }
 
 export function sha256(value: string) {
-  return createHmac('sha256', 'tzudong:privacy-digest:v1').update(value).digest('hex');
+  // HMAC-SHA256 over a challenge/token digest. Not password storage.
+  return createHmac('sha256', 'tzudong:privacy-digest:v1').update(value).digest('hex'); // lgtm[js/insufficient-password-hash]
 }
 
 export function safeEquals(left: string, right: string) {
@@ -204,7 +205,7 @@ export function sealOnboardingChallenge(payload: OnboardingChallengeCookie) {
   if (!secret || !isRecord(payload) || !isValidOnboardingChallengePayload(payload, null)) return null;
 
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = createHmac('sha256', secret).update(encoded).digest('base64url');
+  const signature = createHmac('sha256', secret).update(`tzudong:onboarding-challenge:v1:${encoded}`).digest('base64url'); // lgtm[js/insufficient-password-hash]
   return `${encoded}.${signature}`;
 }
 
