@@ -113,8 +113,6 @@ jobs:
        github.event.inputs.verify_terminal_state == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment:
-      name: production-database
     steps:
       - name: Checkout validated triggering commit
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
