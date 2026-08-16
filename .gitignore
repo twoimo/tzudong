@@ -90,6 +90,7 @@ apps/web/tests/temp-*.spec.ts
 .omc/
 .omx/
 .codex/
+.agent/
 .agents/
 .gemini/
 AGENTS.md
@@ -103,6 +104,9 @@ OMX_MODERNIZATION_WORKLOG.md
 .tmp-g036-*.json
 .venv-storyboard-rag/
 gajae-code-coding-agent-*.tgz
+/x
+telegram-connection-test.txt
+g028-quality-gate.json
 
 # Root has no package.json; keep accidental root npm lockfiles out of public branches.
 package-lock.json
