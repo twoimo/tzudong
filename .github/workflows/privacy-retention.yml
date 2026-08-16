@@ -1,4 +1,5 @@
 name: Retention
+run-name: Retention · ${{ github.ref_name }}
 
 on:
   schedule:

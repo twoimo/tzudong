@@ -1,4 +1,5 @@
 name: Preflight
+run-name: Preflight · ${{ inputs.commit_sha }}
 
 on:
   workflow_dispatch:

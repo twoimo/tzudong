@@ -1,4 +1,5 @@
 name: Nightly
+run-name: Nightly · ${{ github.ref_name }}
 
 on:
   schedule:
@@ -37,7 +38,7 @@ env:
 
 jobs:
   local:
-    name: Disposable local Supabase regression
+    name: Local
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
@@ -2042,7 +2043,7 @@ jobs:
         shell: bash
         run: exit 1
   publish:
-    name: Publish sanitized nightly prerelease
+    name: Publish
     needs: local
     if: ${{ needs.local.result == 'success' && github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.suite == 'all') }}
     runs-on: ubuntu-24.04
