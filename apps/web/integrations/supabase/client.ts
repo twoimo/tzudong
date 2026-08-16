@@ -15,7 +15,19 @@ function createSupabaseBrowserClient(): SupabaseClient<Database> {
     )
   }
 
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    isSingleton: true,
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 2,
+      },
+    },
+  })
 }
 
 export function getSupabaseBrowserClient(): SupabaseClient<Database> {

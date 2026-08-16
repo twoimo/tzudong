@@ -39,6 +39,10 @@ export function createClientForCookieStore(
                 }
             },
         },
+        auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+        },
     });
 }
 
