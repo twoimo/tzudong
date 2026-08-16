@@ -2566,6 +2566,30 @@ class DailyPublicationContractTests(unittest.TestCase):
         self.assertNotEqual(0, extra_member.returncode)
         self.assertIn("unexpected member", extra_member.stderr)
 
+    def test_publication_forbidden_name_regex_allows_video_id_with_log_substring(self) -> None:
+        """Video IDs like kvXlRgISLog or ZddLoGspggw contain 'log' but are not secrets."""
+        regex = run_daily_helpers._PUBLICATION_FORBIDDEN_NAME_RE
+        # Must NOT match: video IDs that happen to contain 'log'/'token' as substring
+        self.assertIsNone(regex.search("kvXlRgISLog"))
+        self.assertIsNone(regex.search("ZddLoGspggw"))
+        self.assertIsNone(regex.search("aTokenBig123"))  # camelCase embedded
+        self.assertIsNone(regex.search("xLoGy"))
+        self.assertIsNone(regex.search("blogpost"))
+        # MUST match: actual secret/log filenames
+        self.assertIsNotNone(regex.search("credentials"))
+        self.assertIsNotNone(regex.search("oauth_credentials"))
+        self.assertIsNotNone(regex.search("cookies"))
+        self.assertIsNotNone(regex.search("secret_key"))
+        self.assertIsNotNone(regex.search("access_token"))
+        self.assertIsNotNone(regex.search("api-token"))
+        self.assertIsNotNone(regex.search("password"))
+        self.assertIsNotNone(regex.search("user_password"))
+        self.assertIsNotNone(regex.search("run.log"))  # stem is 'run'
+        self.assertIsNotNone(regex.search("upload-log"))
+        self.assertIsNotNone(regex.search("pipeline_log"))
+        self.assertIsNotNone(regex.search("cookie.bak"))
+        self.assertIsNotNone(regex.search("credential"))
+
 
 class BackendGuardrailScriptTests(unittest.TestCase):
     maxDiff = None
