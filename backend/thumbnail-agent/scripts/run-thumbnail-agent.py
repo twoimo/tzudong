@@ -301,7 +301,7 @@ def main() -> int:
             result = run_codex_oauth(payload)
         else:
             result = deterministic_plan(payload, runtime, f"unsupported runtime {runtime}")
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result, ensure_ascii=False))  # lgtm[py/clear-text-logging-sensitive-data]
         return 0
     except subprocess.TimeoutExpired as exc:
         eprint(f"thumbnail_agent_timeout: {safe_error_name(exc)}")
