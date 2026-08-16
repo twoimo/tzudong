@@ -1,4 +1,5 @@
 name: Recovery
+run-name: Recovery · ${{ inputs.mode }}
 on:
   workflow_dispatch:
     inputs:

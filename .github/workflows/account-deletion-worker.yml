@@ -1,4 +1,5 @@
 name: Account Deletion
+run-name: Account Deletion · ${{ github.ref_name }}
 
 on:
   schedule:
