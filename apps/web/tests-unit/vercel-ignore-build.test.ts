@@ -24,6 +24,7 @@ describe("Vercel ignored build branch policy", () => {
         deploymentEnabled?: Record<string, boolean>;
       };
       ignoreCommand?: string;
+      regions?: string[];
     };
 
     expect(config.git?.deploymentEnabled).toEqual({
@@ -31,6 +32,7 @@ describe("Vercel ignored build branch policy", () => {
       main: true,
       develop: true,
     });
+    expect(config.regions).toEqual(["icn1"]);
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
   });
 
