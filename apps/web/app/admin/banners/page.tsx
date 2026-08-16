@@ -97,8 +97,18 @@ function BannerListItemSkeleton({ index }: { index: number }) {
 }
 
 const revokeObjectUrlIfNeeded = (url: string | null) => {
-    if (url?.startsWith('blob:')) {
+    if (url?.startsWith('blob:https:') || url?.startsWith('blob:http:')) {
         URL.revokeObjectURL(url);
+    }
+};
+
+const isSafePreviewUrl = (url: string | null): url is string => {
+    if (!url) return false;
+    try {
+        const parsed = new URL(url, 'https://tzudong.app');
+        return parsed.protocol === 'blob:' || parsed.protocol === 'https:' || parsed.protocol === 'http:';
+    } catch {
+        return false;
     }
 };
 
@@ -667,7 +677,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                     >
                                         {isUploading ? (
                                             <div className="flex items-center justify-center gap-2 py-5 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />{compressionProgress > 0 ? `압축 중 ${compressionProgress}%` : '미디어 처리 중'}</div>
-                                        ) : videoPreview ? (
+                                        ) : isSafePreviewUrl(videoPreview) ? (
                                             <div className="space-y-2"><video src={videoPreview} controls className="aspect-video w-full rounded-md border object-cover" /><Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>
                                         ) : imagePreview ? (
                                             <div className="space-y-2"><div className="relative aspect-video w-full overflow-hidden rounded-md border"><Image src={imagePreview} alt="미리보기" fill unoptimized sizes="(max-width: 768px) 100vw, 768px" className="object-cover" /></div><Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={(e) => { e.stopPropagation(); handleMediaRemove(); }}>미디어 제거</Button></div>

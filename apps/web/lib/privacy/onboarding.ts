@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 export const ONBOARDING_CHALLENGE_COOKIE = 'tzudong_onboarding_challenge';
@@ -99,7 +99,7 @@ function getCookieSecret() {
 }
 
 export function sha256(value: string) {
-  return createHash('sha256').update(value).digest('hex');
+  return createHmac('sha256', 'tzudong:privacy-digest:v1').update(value).digest('hex');
 }
 
 export function safeEquals(left: string, right: string) {

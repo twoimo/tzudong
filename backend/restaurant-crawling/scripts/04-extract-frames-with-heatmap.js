@@ -1133,14 +1133,17 @@ async function fetchPage(url, cookieHeader, redirectCount = 0, retryCount = 0) {
                 if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
                     let redirectUrl = res.headers.location;
 
+                    let redirectHost = '';
+                    try { redirectHost = new URL(redirectUrl, url).hostname.toLowerCase(); } catch { redirectHost = ''; }
+
                     // Google Abuse Redirect Check
-                    if (redirectUrl.includes('google.com/sorry')) {
+                    if (redirectHost === 'google.com' || redirectHost.endsWith('.google.com') && redirectUrl.includes('/sorry')) {
                         reject(new Error('429_GOOGLE_SORRY_REDIRECT'));
                         return;
                     }
 
                     // [Fix] Cookie Mismatch or Auth Redirect Check
-                    if (redirectUrl.includes('CookieMismatch') || redirectUrl.includes('accounts.google.com')) {
+                    if (redirectUrl.includes('CookieMismatch') || redirectHost === 'accounts.google.com' || redirectHost.endsWith('.accounts.google.com')) {
                         log('warn', 'FRAME_HEATMAP_AUTH_REDIRECT');
                         if (cookieHeader && cookieHeader.length > 0) {
                             log('info', 'FRAME_HEATMAP_COOKIE_RETRY');

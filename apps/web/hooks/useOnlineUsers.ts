@@ -27,7 +27,7 @@ export function useOnlineUsers() {
 
     useEffect(() => {
         // [최적화] 고유 anonymous ID 생성 (탭당 1회)
-        const anonymousId = `anonymous-${Math.random().toString(36).slice(2)}`;
+        const anonymousId = `anonymous-${crypto.randomUUID()}`;
 
         const channel = supabase.channel('online-users-global')
             .on('presence', { event: 'sync' }, () => {

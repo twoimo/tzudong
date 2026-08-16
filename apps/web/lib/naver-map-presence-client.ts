@@ -17,7 +17,7 @@ export function startNaverMapPresence({ onSync, onInterval, intervalMs }: NaverM
         .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
                 await channel.track({
-                    user_id: `map-user-${Math.random().toString(36).slice(2)}`,
+                    user_id: `map-user-${crypto.randomUUID()}`,
                     online_at: new Date().toISOString(),
                 });
             }
