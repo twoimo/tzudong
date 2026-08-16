@@ -1128,8 +1128,8 @@ describe("nightly regression package and source contracts", () => {
       .toBeLessThan(localWorkflowSource.indexOf("Fail when disposable stack cleanup failed"));
     expect(localWorkflowSource).toContain("gh release create");
     expect(localWorkflowSource).toContain("--prerelease");
-    expect(localWorkflowSource).toContain('tag="v1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
-    expect(localWorkflowSource).toContain('title="Tzudong Nightly 1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
+    expect(localWorkflowSource).toContain('tag="v1.2.4-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
+    expect(localWorkflowSource).toContain('title="Tzudong Nightly 1.2.4-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
     expect(localWorkflowSource).toContain("## Highlights");
     expect(localWorkflowSource).toContain("**Full Changelog**");
     expect(localWorkflowSource).not.toContain("stack.env/\\n");
