@@ -32,6 +32,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      skip_heavy_compute:
+        description: '경량 모드: 프레임 추출 / Chunk Multimodal을 건너뜁니다 (대용량은 로컬 머신)'
+        required: false
+        default: 'true'
+        type: boolean
 
 permissions:
   contents: read
@@ -56,7 +61,7 @@ jobs:
     outputs:
       publication_ready: ${{ steps.publication.outputs.ready }}
       publication_manifest_sha256: ${{ steps.publication.outputs.manifest_sha256 }}
-      artifact_digest: ${{ steps.upload-publication.outputs.artifact-digest }}
+      artifact_digest: sha256:${{ steps.upload-publication.outputs.artifact-digest }}
       pipeline_exit_code: ${{ steps.pipeline.outputs.exit_code }}
     env:
       MAX_CONTEXT_VIDEOS: ${{ github.event.inputs.max_videos || '-1' }}
@@ -305,6 +310,7 @@ jobs:
           RUN_DAILY_PUBLICATION_BASE_TREE: ${{ steps.bind.outputs.base_tree }}
           RUN_DAILY_PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
           HEATMAP_RATE_LIMIT_STORM_LIMIT: "5"
+          RUN_DAILY_SKIP_HEAVY_COMPUTE: ${{ github.event.inputs.skip_heavy_compute || 'true' }}
         run: |
           set +e
           bash backend/run_daily.sh
