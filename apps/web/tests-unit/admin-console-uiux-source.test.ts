@@ -571,6 +571,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(shellSource).toContain("bg-gradient-primary bg-clip-text");
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
+    expect(shellSource).toContain('moduleId === "overview"');
 
     for (const moduleId of [
       "overview",
@@ -1459,7 +1460,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '[data-admin-console-content="true"] .font-serif',
     );
     expect(appGlobalsSource).toContain("font-family: inherit;");
-    expect(appLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable}`}");
+    expect(appLayoutSource).toContain("className={`${pretendard.variable} ${notoSerifKr.variable} ${pretendard.className}`}");
     expect(appLayoutSource).toContain('variable: "--font-pretendard"');
     expect(appLayoutSource).toContain('variable: "--font-display"');
     expect(appGlobalsSource).toContain(
@@ -1592,11 +1593,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<div className="hidden min-w-0 md:block">',
     );
     expect(consoleSource).toContain(
-      '<h1 className="text-xl font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
+      '<h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">',
     );
     expect(consoleSource).toContain("data-admin-dashboard-kpi-value-size=\"bounded\"");
-    expect(consoleSource).toContain("text-lg font-black");
-    expect(consoleSource).toContain("sm:text-xl");
+    expect(consoleSource).toContain("text-sm font-black");
+    expect(consoleSource).toContain("sm:text-base");
     expect(consoleSource).not.toContain("text-[clamp(1.2rem,1.45vw,1.75rem)]");
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("min-w-44 space-y-1");
@@ -1678,7 +1679,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'const adminDashboardControlGroupClassName =\n  "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5"',
     );
     expect(consoleSource).toContain(
-      'const adminDashboardControlButtonClassName =\n  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2.5 text-[11px] font-extrabold leading-none transition',
+      'const adminDashboardControlButtonClassName =\n  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition',
     );
     expect(consoleSource).toContain(
       '"h-7 w-7 border border-border bg-background p-0 text-muted-foreground shadow-sm hover:text-foreground"',
@@ -1700,7 +1701,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-card-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-xs font-extrabold leading-none text-foreground",
+      "truncate whitespace-nowrap text-[11px] font-extrabold leading-none text-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-card-title-actions="single-line-scroll"',
@@ -2680,7 +2681,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-kpi-title-row="single-line"',
     );
     expect(consoleSource).toContain(
-      "truncate whitespace-nowrap text-xs font-extrabold tracking-[0.04em] text-muted-foreground",
+      "truncate whitespace-nowrap text-[11px] font-extrabold tracking-[0.04em] text-muted-foreground",
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-actions="single-line-scroll"',
@@ -2969,11 +2970,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const viewModelSource = source("lib/admin/system-status/view-model.ts");
     const routeSource = source("app/api/admin/system-status/route.ts");
 
-    expect(consoleSource).toContain(
+    expect(consoleSource).not.toContain(
       'import("@/components/admin/system-status/AdminSystemStatusCenter")',
     );
-    expect(consoleSource).toContain("<AdminSystemStatusCenter isAdmin={isAdmin} />");
-    expect(consoleSource).toContain('data-admin-system-status-slot="true"');
+    expect(consoleSource).not.toContain("<AdminSystemStatusCenter isAdmin={isAdmin} />");
+    expect(consoleSource).not.toContain('data-admin-system-status-slot="true"');
     expect(consoleSource).not.toContain("운영 상태 센터");
     expect(centerSource).toContain('data-admin-system-status-center="true"');
     expect(centerSource).toContain("data-admin-run-daily-state=");
