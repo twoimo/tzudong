@@ -178,7 +178,7 @@ function parseVtt(content) {
         const timeMatch = line.match(timeRegex);
         if (timeMatch) {
             if (currentSegment) {
-                currentSegment.text = currentSegment.text.replace(/<[^>]+>/g, '').trim();
+                currentSegment.text = currentSegment.text.replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim();
                 if (currentSegment.text && (!segments.length || segments[segments.length - 1].text !== currentSegment.text)) {
                     segments.push(currentSegment);
                 }
@@ -194,7 +194,7 @@ function parseVtt(content) {
     }
 
     if (currentSegment) {
-        currentSegment.text = currentSegment.text.replace(/<[^>]+>/g, '').trim();
+        currentSegment.text = currentSegment.text.replace(/<script\b[\s\S]*?<\/script\s*>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/[<>]/g, '').trim();
         if (currentSegment.text) segments.push(currentSegment);
     }
 

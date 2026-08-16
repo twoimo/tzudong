@@ -56,6 +56,7 @@ import {
 } from '@/lib/admin/submission-queue-safety';
 import { resolveReviewPhotoUrl, type ReviewPhotoOwnership } from '@/lib/review-photo-url';
 import { normalizeCanonicalYouTubeWatchUrl } from '@/lib/youtube-url';
+import { decodeBasicHtmlEntities, stripUnsafeMarkup } from '@/lib/html-escape';
 
 type SubmissionAdminTab = 'new' | 'edit' | 'recommend' | 'reviews';
 
@@ -1687,7 +1688,7 @@ export function SubmissionListView({
             .filter((result) => result.isMatch)
             .slice(0, 3)
             .map((result, index) => {
-                const title = result.title.replace(/<[^>]+>/g, '').trim() || 'unknown';
+                const title = decodeBasicHtmlEntities(stripUnsafeMarkup(result.title)) || 'unknown';
                 const address = result.roadAddress || result.address || 'unknown-address';
                 return `browser-local-search-evidence:not-backend-truth:${index + 1}:${title}:${address}`;
             });
@@ -1867,7 +1868,7 @@ export function SubmissionListView({
                             <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-white/70 p-2 dark:border-amber-900/50 dark:bg-background/50">
                                 {naverSearchResults.map((result, idx) => (
                                     <div key={idx} className="rounded border bg-background p-2 text-xs">
-                                        <p className="font-medium">{result.title.replace(/<[^>]+>/g, '')}</p>
+                                        <p className="font-medium">{decodeBasicHtmlEntities(stripUnsafeMarkup(result.title))}</p>
                                         <p className="text-muted-foreground">{result.address}</p>
                                         {result.roadAddress && <p className="text-muted-foreground">{result.roadAddress}</p>}
                                     </div>

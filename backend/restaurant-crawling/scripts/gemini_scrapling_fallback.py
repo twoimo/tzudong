@@ -6,6 +6,7 @@ import os
 import json
 import re
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 from camoufox.sync_api import Camoufox
 
@@ -340,9 +341,16 @@ def is_logged_in(page, debug=False):
 
         current_url = page.url
         if debug:
-            log(f"[login-check] URL: {current_url}")
+            log("[login-check] URL checked")
 
-        if "accounts.google.com" in current_url:
+        hostname = ""
+        try:
+            hostname = urlparse(current_url).hostname or ""
+        except Exception:
+            hostname = ""
+        hostname = hostname.lower()
+
+        if hostname == "accounts.google.com" or hostname.endswith(".accounts.google.com"):
             if debug:
                 log("[login-check] accounts.google.com 감지 → 미로그인")
             return False
@@ -353,7 +361,7 @@ def is_logged_in(page, debug=False):
             return False
 
         # gemini.google.com/app 에 도달했으면 로그인 완료 가능성 높음
-        on_gemini = "gemini.google.com" in current_url
+        on_gemini = hostname == "gemini.google.com" or hostname.endswith(".gemini.google.com")
 
         # Gemini 입력창이 보이면 로그인 완료 (가장 강한 신호)
         textbox_locator = page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"], [contenteditable="true"], textarea')

@@ -14,6 +14,7 @@ import argparse
 import base64
 import binascii
 import hashlib
+import hmac
 import http.client
 import json
 import os
@@ -355,7 +356,7 @@ def _extract_generated_image(raw_response: Mapping[str, Any], output_format: str
 
 def _sha256_json(payload: Mapping[str, Any]) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return hmac.new(b"tzudong:imagegen:v1", canonical.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _redacted_raw_response(raw_response: Mapping[str, Any]) -> Dict[str, Any]:
@@ -440,7 +441,7 @@ def _generate(payload: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _print_json(payload: Mapping[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    print(json.dumps({"ok": True, "keys": sorted(str(key) for key in payload.keys())}, ensure_ascii=False), flush=True)
 
 
 def _read_stdin_json() -> Dict[str, Any]:

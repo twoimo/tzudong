@@ -354,7 +354,7 @@ describe('admin system status helper', () => {
                 });
             }
 
-            if (endpoint.includes('bge.example.com')) {
+            if (new URL(endpoint).hostname === 'bge.example.com') {
                 return new Response(JSON.stringify([]), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' },
@@ -1111,7 +1111,7 @@ describe('admin system status API route', () => {
         global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
             const endpoint = String(input);
             seen.push(`${init?.method ?? 'GET'} ${endpoint}`);
-            if (endpoint.includes('api.github.com')) {
+            if (new URL(endpoint).hostname === 'api.github.com') {
                 return new Response(JSON.stringify({
                     workflow_runs: [{
                         id: 24834262595,
