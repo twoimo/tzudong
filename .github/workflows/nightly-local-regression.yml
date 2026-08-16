@@ -1,4 +1,4 @@
-name: Nightly Local Regression
+name: Nightly
 
 on:
   schedule:
