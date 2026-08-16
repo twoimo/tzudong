@@ -1,4 +1,4 @@
-name: G038 account-deletion successor source validation
+name: G038 Account Deletion Successor
 
 on:
   workflow_dispatch:

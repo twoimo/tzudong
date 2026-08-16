@@ -1,4 +1,4 @@
-name: Nightly Regression (Local Supabase)
+name: Nightly Local Regression
 
 on:
   schedule:
