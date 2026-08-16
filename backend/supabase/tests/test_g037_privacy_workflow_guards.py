@@ -28,7 +28,8 @@ class G037PrivacyWorkflowGuardTests(unittest.TestCase):
     def assert_job_admission_guard(self, job: dict) -> None:
         self.assertEqual(next(iter(job)), "if")
         self.assertIn(FREEZE_GUARD, job["if"])
-        self.assertLess(list(job).index("if"), list(job).index("environment"))
+        self.assertLess(list(job).index("if"), list(job).index("runs-on"))
+        self.assertNotIn("environment", job)
 
     def test_account_deletion_writer_job_is_guarded_before_environment_or_secrets(self):
         self.assertEqual(set(self.account["jobs"]), {"dispatch"})

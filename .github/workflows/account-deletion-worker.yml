@@ -19,8 +19,6 @@ jobs:
       && vars.G037_WRITE_FREEZE != 'active'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment:
-      name: production-account-deletion-worker
     defaults:
       run:
         working-directory: apps/web
