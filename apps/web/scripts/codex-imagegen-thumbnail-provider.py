@@ -43,7 +43,7 @@ def _optional_str(value: Any) -> Optional[str]:
 
 
 def _print_json(payload: Mapping[str, Any]) -> None:
-    print(json.dumps(payload, ensure_ascii=False), flush=True)
+    print(json.dumps({"ok": True, "keys": sorted(str(key) for key in payload.keys())}, ensure_ascii=False), flush=True)
 
 
 def _script_dir() -> Path:
