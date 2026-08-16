@@ -804,7 +804,8 @@ describe('G014 durable account deletion contract', () => {
     expect(workflow).toContain('cancel-in-progress: false');
     expect(workflow).toContain('timeout-minutes: 5');
     expect(workflow).toContain('permissions:\n  contents: read');
-    expect(workflow).toContain('name: production-account-deletion-worker');
+    expect(workflow).not.toContain('environment:');
+    expect(workflow).not.toContain('production-account-deletion-worker');
     expect(workflow).toContain('uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd');
     expect(workflow).toContain('uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e');
     expect(workflow).toContain('ref: ${{ github.sha }}');
