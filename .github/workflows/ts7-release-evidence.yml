@@ -18,7 +18,6 @@ jobs:
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && github.event_name == 'workflow_dispatch'
     name: Verify exact release evidence
     runs-on: ubuntu-latest
-    environment: production-release-evidence
     timeout-minutes: 15
     permissions:
       contents: read
@@ -113,7 +112,6 @@ jobs:
     needs: verify-release-evidence
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success'
     runs-on: ubuntu-latest
-    environment: production-release-evidence
     timeout-minutes: 5
     permissions:
       contents: read
@@ -155,8 +153,6 @@ jobs:
     name: Publish exact-head final receipt check
     needs: [verify-release-evidence, protected-final-live-health]
     if: github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha && needs.verify-release-evidence.result == 'success' && needs.verify-release-evidence.outputs.initial_outcome == 'success' && needs.verify-release-evidence.outputs.initial_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.terminal_outcome == 'success' && needs.verify-release-evidence.outputs.terminal_reason == 'VERIFIED' && needs.verify-release-evidence.outputs.upload_outcome == 'success' && needs.protected-final-live-health.result == 'success' && needs.protected-final-live-health.outputs.outcome == 'success' && needs.protected-final-live-health.outputs.reason == 'VERIFIED'
-    # External prerequisite: restrict this environment's deployment branches to protected main only.
-    environment: protected-main-check-publisher
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

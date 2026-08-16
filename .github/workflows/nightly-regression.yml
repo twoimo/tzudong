@@ -33,15 +33,14 @@ jobs:
   preflight:
     name: Preflight isolated hosted environment
     runs-on: ubuntu-24.04
-    environment: nightly-hosted
     timeout-minutes: 10
     permissions:
       contents: read
     outputs:
       suite: ${{ steps.selection.outputs.suite }}
     env:
-      # The nightly-hosted environment contains only disposable test-project
-      # values. Production Supabase, service-role, crawler, and migration
+      # Disposable nightly test-project values come from repository secrets.
+      # Production Supabase, service-role, crawler, and migration
       # credentials are deliberately not mapped into this workflow.
       NIGHTLY_SUPABASE_PROJECT_REF: ${{ secrets.NIGHTLY_SUPABASE_PROJECT_REF }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NIGHTLY_SUPABASE_URL }}
@@ -85,7 +84,6 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'unit'
     runs-on: ubuntu-24.04
-    environment: nightly-hosted
     timeout-minutes: 25
     permissions:
       contents: read
@@ -184,7 +182,6 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.suite == 'all' || needs.preflight.outputs.suite == 'e2e'
     runs-on: ubuntu-24.04
-    environment: nightly-hosted
     timeout-minutes: 50
     permissions:
       contents: read

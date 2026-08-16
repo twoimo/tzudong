@@ -188,7 +188,8 @@ describe("nightly regression package and source contracts", () => {
     expect(hostedWorkflowSource).toContain("Notification failed; see GitHub summary.");
     const summaryIndex = hostedWorkflowSource.indexOf("\n  summary:");
     expect(summaryIndex).toBeGreaterThan(0);
-    expect(hostedWorkflowSource.slice(summaryIndex)).not.toContain("environment: nightly-hosted");
+    expect(hostedWorkflowSource).not.toContain("environment: nightly-hosted");
+    expect(hostedWorkflowSource).not.toMatch(/^\s{4}environment:/m);
     for (const action of [
       "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
       "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
@@ -1127,6 +1128,10 @@ describe("nightly regression package and source contracts", () => {
       .toBeLessThan(localWorkflowSource.indexOf("Fail when disposable stack cleanup failed"));
     expect(localWorkflowSource).toContain("gh release create");
     expect(localWorkflowSource).toContain("--prerelease");
+    expect(localWorkflowSource).toContain('tag="v1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
+    expect(localWorkflowSource).toContain('title="Tzudong Nightly 1.2.3-nightly.${GITHUB_RUN_ID}.g${short_sha}"');
+    expect(localWorkflowSource).toContain("## Highlights");
+    expect(localWorkflowSource).toContain("**Full Changelog**");
     expect(localWorkflowSource).not.toContain("stack.env/\\n");
     for (const token of [
       'all_paths = list(root.rglob("*"))',
