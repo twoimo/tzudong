@@ -20,7 +20,7 @@ if [ -f "$RUNTIME_PATHS_SH" ]; then
 fi
 
 BACKEND_DIR="${TZUDONG_BACKEND_ROOT:-$PROJECT_ROOT/backend}"
-RUN_DAILY_SCRIPT_PATH="${RUN_DAILY_SCRIPT_PATH:-$BACKEND_DIR/run_daily.sh}"
+RUN_DAILY_SCRIPT_PATH="${RUN_DAILY_SCRIPT_PATH:-python3 -m backend.pipeline_control.worker}"
 LOG_DIR="${RUN_DAILY_LOG_DIR:-$BACKEND_DIR/log/cron}"
 CURRENT_LOG_LINK="${RUN_DAILY_CURRENT_LOG_LINK:-$LOG_DIR/current.log}"
 
@@ -31,6 +31,8 @@ RUN_DAILY_PID_FILE="${RUN_DAILY_PID_FILE:-$LOG_DIR/run_daily.pid}"
 
 CHECK_INTERVAL_SEC="${RUN_DAILY_MONITOR_INTERVAL_SEC:-30}"
 STALL_THRESHOLD_SEC="${RUN_DAILY_STALL_THRESHOLD_SEC:-1800}"  # 30분
+NOWORK_TTL_SEC="${RUN_DAILY_NOWORK_TTL_SEC:-21600}"
+MANIFEST_PATH="${RUN_DAILY_MANIFEST_PATH:-$LOG_DIR/current-summary.json}"
 
 if declare -f tzudong_runtime_paths_ensure >/dev/null 2>&1; then
   tzudong_runtime_paths_ensure
@@ -65,7 +67,7 @@ is_run_daily_pid() {
   [ -n "$pid" ] || return 1
   local cmd
   cmd="$(ps -p "$pid" -o cmd= 2>/dev/null || true)"
-  [[ "$cmd" == *"$RUN_DAILY_SCRIPT_PATH"* || "$cmd" == *"backend/run_daily.sh"* ]]
+  [[ "$cmd" == *"$RUN_DAILY_SCRIPT_PATH"* || "$cmd" == *"backend.pipeline_control.worker"* || "$cmd" == *"backend.pipeline_control.live_run"* ]]
 }
 
 # PID 파일이 없어도 기존 run_daily 프로세스를 탐지해서 중복 실행을 방지
@@ -127,28 +129,26 @@ is_log_stale() {
 
 start_run_daily() {
   local reuse_existing="${1:-1}"
-  log "INFO" "run_daily.sh 시작 시도"
-
-  if [ ! -f "$RUN_DAILY_SCRIPT_PATH" ]; then
-    log "ERROR" "run_daily 스크립트를 찾을 수 없습니다: $RUN_DAILY_SCRIPT_PATH"
-    return 1
-  fi
+  log "INFO" "pipeline-control worker 시작 시도"
 
   if [ "$reuse_existing" = "1" ]; then
     local existing_pid
     existing_pid="$(find_existing_run_daily_pid 2>/dev/null || true)"
     if [ -n "$existing_pid" ] && is_pid_alive "$existing_pid" && is_run_daily_pid "$existing_pid"; then
       echo "$existing_pid" > "$RUN_DAILY_PID_FILE"
-      log "INFO" "기존 run_daily 프로세스 재사용 (pid=$existing_pid)"
+      log "INFO" "기존 pipeline-control 프로세스 재사용 (pid=$existing_pid)"
       return 0
     fi
   fi
 
-  # 새 실행은 세션 분리(setsid)하여 프로세스 그룹 단위로 제어 가능하게 함
   (
     cd "$PROJECT_ROOT"
     env -u SHELLOPTS PIPELINE_STDOUT_MODE=off \
-      setsid bash "$RUN_DAILY_SCRIPT_PATH" >/dev/null 2>&1 &
+      TZUDONG_DATA_ENV="${TZUDONG_DATA_ENV:-local_db}" \
+      TZUDONG_PIPELINE_LIVE="${TZUDONG_PIPELINE_LIVE:-0}" \
+      TZUDONG_PIPELINE_COUNT="${TZUDONG_PIPELINE_COUNT:-1}" \
+      PIPELINE_CONTROL_DSN="${PIPELINE_CONTROL_DSN:-postgresql://postgres@127.0.0.1:5432/postgres}" \
+      setsid python3 -m backend.pipeline_control.worker >/dev/null 2>&1 &
     echo "$!" > "$RUN_DAILY_PID_FILE"
   )
 
@@ -182,6 +182,23 @@ stop_run_daily_tree() {
     kill -KILL "-$pid" 2>/dev/null || kill -KILL "$pid" 2>/dev/null || true
   fi
 }
+recent_success_manifest() {
+  [ -f "$MANIFEST_PATH" ] || return 1
+  python3 - "$MANIFEST_PATH" "$NOWORK_TTL_SEC" <<'PY'
+import json, sys, time
+from pathlib import Path
+path = Path(sys.argv[1])
+ttl = int(sys.argv[2])
+try:
+    payload = json.loads(path.read_text())
+except Exception:
+    sys.exit(1)
+if payload.get("finalStatus") != "OK":
+    sys.exit(1)
+age = time.time() - path.stat().st_mtime
+sys.exit(0 if age <= ttl else 1)
+PY
+}
 
 ensure_run_daily() {
   local pid
@@ -210,6 +227,10 @@ ensure_run_daily() {
 
   if [ -n "$pid" ]; then
     log "WARN" "stale pid 정리 (pid=$pid)"
+  fi
+  if recent_success_manifest; then
+    log "INFO" "no-work short-circuit: recent OK current-summary.json within ${NOWORK_TTL_SEC}s"
+    return 0
   fi
   rm -f "$RUN_DAILY_PID_FILE"
   start_run_daily
