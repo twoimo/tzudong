@@ -378,7 +378,7 @@ get_channels() {
 }
 
 has_gemini_web_fallback_session() {
-    [ -s "$RUNTIME_DATA_DIR/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
+    [ -s "$RUNTIME_DATA_DIR/gemini_cookies.local.json" ] || [ -s "$RUNTIME_DATA_DIR/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
 }
 
 get_channel_data_path() {
