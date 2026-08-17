@@ -58,6 +58,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       publication_ready: ${{ steps.publication.outputs.ready }}
       publication_manifest_sha256: ${{ steps.publication.outputs.manifest_sha256 }}
@@ -253,7 +265,11 @@ jobs:
           OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
           GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
           GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
-        run: python3 backend/bin/check_env_contract.py --profile daily
+          TZUDONG_DATA_ENV: local_db
+          PIPELINE_CONTROL_DSN: postgresql://postgres@127.0.0.1:5432/postgres
+        run: |
+          python3 backend/bin/check_env_contract.py --profile daily
+          python3 backend/bin/check_env_contract.py --profile pipeline-control
 
       - name: Preflight approved Gemini API runtime
         env:
@@ -311,9 +327,16 @@ jobs:
           RUN_DAILY_PUBLICATION_DIR: ${{ runner.temp }}/daily-data-publication
           HEATMAP_RATE_LIMIT_STORM_LIMIT: "5"
           RUN_DAILY_SKIP_HEAVY_COMPUTE: ${{ github.event.inputs.skip_heavy_compute || 'true' }}
+          TZUDONG_DATA_ENV: local_db
+          TZUDONG_COMPUTE_PROFILE: lite_gha
+          TZUDONG_PIPELINE_LIVE: "1"
+          TZUDONG_PIPELINE_COUNT: "1"
+          PIPELINE_CONTROL_DSN: postgresql://postgres@127.0.0.1:5432/postgres
+          SUPABASE_REST_ALLOW_LOOPBACK_HTTP: "1"
+          NODE_ENV: development
         run: |
           set +e
-          bash backend/run_daily.sh
+          python3 -m backend.pipeline_control.worker
           pipeline_exit=$?
           set -e
           printf 'exit_code=%s\n' "$pipeline_exit" >> "$GITHUB_OUTPUT"

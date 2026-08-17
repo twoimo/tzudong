@@ -588,6 +588,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "audit",
       "youtube-thumbnail-generator",
       "llm",
+      "pipeline",
     ]) {
       expect(routeSource).toContain(`"${moduleId}"`);
     }
@@ -1419,7 +1420,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["map-overlays", "users", "banners", "insights"])',
+      'getSidebarConsoleItems(["map-overlays", "users", "banners", "insights", "pipeline"])',
     );
     expect(opsSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"storyboard"');
@@ -3116,6 +3117,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '"audit"',
       '"youtube-thumbnail-generator"',
       '"llm"',
+      '"pipeline"',
     ]) {
       expect(consoleSource).toContain(moduleId);
     }
@@ -3388,7 +3390,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
     );
     expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights"]',
+      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
     );
     expect(sidebarOrderSource).toContain(
       '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
@@ -8431,7 +8433,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights"]',
+      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(

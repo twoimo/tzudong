@@ -1,10 +1,10 @@
 # tzudong backend 운영 가이드
 
-이 백엔드는 `restaurant-crawling/`, `restaurant-evaluation/`, `run_daily.sh`가 함께 움직이는 데이터 파이프라인입니다. 현재 방향은 대규모 폴더 이동이 아니라 **경계 문서 + 계약 테스트 + 작은 helper 추출**로 안정화하는 것입니다.
+이 백엔드는 `restaurant-crawling/`, `restaurant-evaluation/`, `pipeline-api` + `pipeline-worker`가 함께 움직이는 데이터 파이프라인입니다. `run_daily.sh`는 isolated 컷오버 이후 운영 엔트리포인트가 아닙니다.
 
 ## 구조 원칙
 
-- `run_daily.sh`는 GitHub Actions와 로컬 운영자가 호출하는 안정적인 엔트리포인트로 유지합니다.
+- 운영/CI 엔트리포인트는 `python3 -m backend.pipeline_control.worker` (또는 `POST /v1/runs`)입니다. 레거시 `.sh`는 `backend/utils/tests/fixtures/` 스냅샷으로만 남습니다.
 - 새 로직은 가능한 한 `backend/utils/run_daily_helpers.py` 또는 `backend/bin/*`의 작은 stdlib 도구로 분리합니다.
 - 데이터 경계는 `ARCHITECTURE.md`와 `DATA_CONTRACTS.md`에 먼저 기록하고, 동작 변경은 회귀 테스트로 잠급니다.
 - 물리적 디렉터리 재편은 현재 우선순위가 아닙니다. 운영 안정성이 확인된 뒤 단계적으로 검토합니다.
@@ -38,7 +38,7 @@ python3 backend/bin/check_env_contract.py --profile gdrive-backfill
 
 ## run_daily 요약 manifest
 
-`run_daily.sh`는 종료 직전에 `backend/log/cron/current-summary.json` 형식의 요약 manifest를 씁니다. 핵심 필드:
+`pipeline-worker`는 종료 직전에 `backend/log/cron/current-summary.json` 형식의 요약 manifest를 씁니다. 핵심 필드:
 
 - `finalStatus`, `finalExitCode`
 - `failedRequiredSteps[]`, `optionalSkips[]`, `downstreamSkips[]`
@@ -56,8 +56,8 @@ Admin ops status는 manifest를 우선 읽고, 없거나 파싱 실패하면 bou
 백엔드 변경 후 최소 검증:
 
 ```bash
-python -m unittest backend.utils.tests.test_run_daily_regression
-bash -n backend/run_daily.sh
+python -m unittest backend.pipeline_control.tests.test_slice0_control_plane
+python3 backend/bin/check_env_contract.py --profile pipeline-control --json
 python3 backend/bin/check_env_contract.py --profile daily --json
 ```
 

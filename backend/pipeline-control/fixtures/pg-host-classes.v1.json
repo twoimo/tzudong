@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "directDatabaseHostPattern": "^db\\.[a-z0-9]{20}\\.supabase\\.co$",
+  "poolerHostPattern": "^aws-\\d+-(?:[a-z]+-)+\\d+\\.pooler\\.supabase\\.com$",
+  "loopbackExact": ["localhost", "::1", "db"],
+  "loopbackIpv4Octet0": 127,
+  "forbiddenLocalProjectRefs": ["aqlcofblfxdrjhhdmarw"],
+  "source": "backend/utils/verified-pg-client.mjs"
+}

@@ -7,7 +7,7 @@ MIGRATION = (
     ROOT
     / "backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql"
 )
-WRAPPER = ROOT / "backend/run_local_heavy.sh"
+WRAPPER = ROOT / "backend/utils/tests/fixtures/run_local_heavy.sh.legacy"
 
 
 class RestaurantIdentityHelperWriterGrantTests(unittest.TestCase):
