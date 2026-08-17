@@ -228,7 +228,7 @@ test('processSingleVideo fails closed when no usable media fallback exists', asy
                 extractFramesFn: async () => ({ totalSegments: 1, failedSegments: 0, totalFrames: 1 }),
             }
         ),
-        /FRAME_VIDEO_PROCESSING_FAILED/
+        /FRAME_VIDEO_UNAVAILABLE/
     );
 
     const failedUrlsPath = path.join(channelDir, 'failed_urls.txt');
@@ -462,4 +462,168 @@ test('yt-dlp timeout helpers prefer explicit millisecond override', async () => 
 
     fs.rmSync(cacheDir, { recursive: true, force: true });
     fs.rmSync(framesDir, { recursive: true, force: true });
+});
+test('unusable static ffprobe falls back to a runnable PATH tool', async () => {
+    if (process.platform === 'win32') return;
+
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const toolDir = makeTempDir('heatmap-tools-');
+    const previousPath = process.env.PATH;
+    const { resolveMediaTools, isRunnableMediaTool } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+        FFMPEG_CMD: undefined,
+        FFPROBE_CMD: undefined,
+    });
+
+    try {
+        const ffmpegShim = path.join(toolDir, 'ffmpeg');
+        const ffprobeShim = path.join(toolDir, 'ffprobe');
+        const deadStatic = path.join(toolDir, 'dead-ffprobe');
+        fs.writeFileSync(ffmpegShim, '#!/bin/sh\necho "ffmpeg version 6.0 test"\n', 'utf8');
+        fs.writeFileSync(ffprobeShim, '#!/bin/sh\necho "ffprobe version 6.0 test"\n', 'utf8');
+        fs.writeFileSync(deadStatic, '', 'utf8');
+        fs.chmodSync(ffmpegShim, 0o755);
+        fs.chmodSync(ffprobeShim, 0o755);
+
+        process.env.PATH = `${toolDir}${path.delimiter}${previousPath || ''}`;
+
+        assert.equal(isRunnableMediaTool(deadStatic), false);
+        assert.equal(isRunnableMediaTool(ffprobeShim), true);
+
+        const tools = resolveMediaTools(process.env, {
+            ffmpegStaticPath: deadStatic,
+            ffprobeStaticPath: deadStatic,
+        });
+        assert.equal(tools.ffmpegPath, 'ffmpeg');
+        assert.equal(tools.ffprobePath, 'ffprobe');
+
+        await assert.rejects(
+            async () => resolveMediaTools({
+                ...process.env,
+                FFPROBE_CMD: deadStatic,
+            }, {
+                ffmpegStaticPath: ffmpegShim,
+                ffprobeStaticPath: deadStatic,
+            }),
+            /FRAME_INVALID_FFPROBE_CMD/
+        );
+    } finally {
+        if (previousPath === undefined) {
+            delete process.env.PATH;
+        } else {
+            process.env.PATH = previousPath;
+        }
+        fs.rmSync(cacheDir, { recursive: true, force: true });
+        fs.rmSync(framesDir, { recursive: true, force: true });
+        fs.rmSync(toolDir, { recursive: true, force: true });
+    }
+});
+test('processBatch continues after expected unavailable videos and still fails closed on extraction errors', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const channel = `heatmap-unavailable-continue-${Date.now()}`;
+    const channelDir = path.join(DATA_ROOT, channel);
+    fs.mkdirSync(channelDir, { recursive: true });
+    fs.writeFileSync(
+        path.join(channelDir, 'urls.txt'),
+        [
+            'https://www.youtube.com/watch?v=Unavail0001',
+            'https://www.youtube.com/watch?v=Extract0001',
+        ].join('\n') + '\n',
+        'utf8'
+    );
+
+    const { processBatch, isExpectedVideoUnavailable } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+    });
+    const previousMaxJobs = process.env.MAX_JOBS;
+    process.env.MAX_JOBS = '1';
+
+    const attempted = [];
+    try {
+        assert.equal(isExpectedVideoUnavailable(Object.assign(new Error('FRAME_VIDEO_UNAVAILABLE'), { code: 'FRAME_VIDEO_UNAVAILABLE' })), true);
+        assert.equal(isExpectedVideoUnavailable(Object.assign(new Error('FRAME_SEGMENT_EXTRACTION_FAILED'), { code: 'FRAME_SEGMENT_EXTRACTION_FAILED' })), false);
+
+        await assert.rejects(
+            processBatch(
+                {
+                    channel,
+                    fps: 1.0,
+                    buffer: 0.0,
+                    quality: ['360p'],
+                    ext: ['jpg'],
+                    force: true,
+                },
+                {
+                    collectPredicate: () => true,
+                    processVideo: async (videoId) => {
+                        attempted.push(videoId);
+                        if (videoId === 'Unavail0001') {
+                            throw Object.assign(new Error('FRAME_VIDEO_UNAVAILABLE'), { code: 'FRAME_VIDEO_UNAVAILABLE' });
+                        }
+                        throw Object.assign(new Error('FRAME_SEGMENT_EXTRACTION_FAILED'), { code: 'FRAME_SEGMENT_EXTRACTION_FAILED' });
+                    },
+                }
+            ),
+            /FRAME_BATCH_FAILED/
+        );
+    } finally {
+        if (previousMaxJobs === undefined) delete process.env.MAX_JOBS;
+        else process.env.MAX_JOBS = previousMaxJobs;
+    }
+
+    assert.deepEqual(attempted, ['Unavail0001', 'Extract0001']);
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(channelDir, { recursive: true, force: true });
+});
+
+test('processBatch succeeds when the only failures are unavailable videos', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const channel = `heatmap-unavailable-ok-${Date.now()}`;
+    const channelDir = path.join(DATA_ROOT, channel);
+    fs.mkdirSync(channelDir, { recursive: true });
+    fs.writeFileSync(
+        path.join(channelDir, 'urls.txt'),
+        'https://www.youtube.com/watch?v=Unavail0001\n',
+        'utf8'
+    );
+
+    const { processBatch } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+    });
+    const previousMaxJobs = process.env.MAX_JOBS;
+    process.env.MAX_JOBS = '1';
+
+    try {
+        await processBatch(
+            {
+                channel,
+                fps: 1.0,
+                buffer: 0.0,
+                quality: ['360p'],
+                ext: ['jpg'],
+                force: true,
+            },
+            {
+                collectPredicate: () => true,
+                processVideo: async () => {
+                    throw Object.assign(new Error('FRAME_VIDEO_UNAVAILABLE'), { code: 'FRAME_VIDEO_UNAVAILABLE' });
+                },
+            }
+        );
+    } finally {
+        if (previousMaxJobs === undefined) delete process.env.MAX_JOBS;
+        else process.env.MAX_JOBS = previousMaxJobs;
+    }
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(channelDir, { recursive: true, force: true });
 });

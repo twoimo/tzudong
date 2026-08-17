@@ -26,15 +26,19 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import https from 'https';
 // [추가] 정적 빌드 FFmpeg/FFprobe 경로 로드
 import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
 import { safeErrorName } from '../../utils/privacy-log.mjs';
 
-const ffmpegPath = ffmpegStatic;
-const ffprobePath = ffprobeStatic.path;
+const STATIC_FFMPEG_PATH = typeof ffmpegStatic === 'string' ? ffmpegStatic : '';
+const STATIC_FFPROBE_PATH = typeof ffprobeStatic?.path === 'string' ? ffprobeStatic.path : '';
+const ALLOWLISTED_FFMPEG_NAMES = ['ffmpeg', 'ffmpeg.exe'];
+const ALLOWLISTED_FFPROBE_NAMES = ['ffprobe', 'ffprobe.exe'];
+const MEDIA_TOOL_VERSION_RE = /\b(?:ffmpeg|ffprobe) version\b/i;
+const MEDIA_TOOL_PROBE_TIMEOUT_MS = 5_000;
 const SUPPORTED_VIDEO_CONTAINER_RE = /\.(mp4|webm|mkv)$/i;
 const YTDLP_FRAGMENT_FILE_RE = /\.f\d+\.(mp4|webm|mkv)$/i;
 const YOUTUBE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
@@ -62,6 +66,23 @@ function createOperationError(code) {
     const error = new Error(code);
     error.code = code;
     return error;
+}
+const EXPECTED_VIDEO_UNAVAILABLE_CODES = new Set([
+    'FRAME_VIDEO_UNAVAILABLE',
+]);
+
+function getFrameErrorCode(error) {
+    if (typeof error?.code === 'string' && error.code.startsWith('FRAME_')) {
+        return error.code;
+    }
+    if (typeof error?.message === 'string' && error.message.startsWith('FRAME_')) {
+        return error.message.split(/\s/, 1)[0];
+    }
+    return '';
+}
+
+function isExpectedVideoUnavailable(error) {
+    return EXPECTED_VIDEO_UNAVAILABLE_CODES.has(getFrameErrorCode(error));
 }
 
 function hasControlCharacters(value) {
@@ -168,6 +189,112 @@ function resolveConfiguredExecutable(value, label, allowlistedNames) {
     } catch {
         throw createOperationError(`FRAME_INVALID_${label}`);
     }
+}
+function collectMediaToolVersionText(result) {
+    return `${result.stdout || ''}\n${result.stderr || ''}`;
+}
+
+function mediaToolReportsVersion(result) {
+    return result.status === 0 && MEDIA_TOOL_VERSION_RE.test(collectMediaToolVersionText(result));
+}
+
+function probeMediaTool(file) {
+    try {
+        return spawnSync(file, ['-version'], {
+            shell: false,
+            windowsHide: true,
+            encoding: 'utf8',
+            timeout: MEDIA_TOOL_PROBE_TIMEOUT_MS,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: getStageEnvironment(),
+        });
+    } catch {
+        return { status: 1, error: new Error('FRAME_PROCESS_START_FAILED'), stdout: '', stderr: '' };
+    }
+}
+
+function isRunnableMediaTool(file) {
+    if (typeof file !== 'string' || file.length === 0) {
+        return false;
+    }
+    const result = probeMediaTool(file);
+    if (result.error && (result.error.code === 'ENOENT' || result.error.code === 'EACCES')) {
+        return false;
+    }
+    if (typeof result.error?.message === 'string' && /Bad CPU type in executable/i.test(result.error.message)) {
+        return false;
+    }
+    if (typeof result.stderr === 'string' && /Bad CPU type in executable/i.test(result.stderr)) {
+        return false;
+    }
+    if (result.status === 126 || result.status === 127) {
+        return false;
+    }
+    return mediaToolReportsVersion(result);
+}
+
+function resolvePathMediaTool(allowlistedNames) {
+    for (const name of allowlistedNames) {
+        if (isRunnableMediaTool(name)) {
+            return name;
+        }
+    }
+    return null;
+}
+
+function resolveOptionalMediaToolOverride(value, label, allowlistedNames) {
+    const configured = resolveConfiguredExecutable(value, label, allowlistedNames);
+    if (!configured) {
+        return null;
+    }
+    if (!isRunnableMediaTool(configured)) {
+        throw createOperationError(`FRAME_INVALID_${label}`);
+    }
+    return configured;
+}
+
+function resolveRequiredMediaTool({ configuredValue, label, allowlistedNames, staticPath }) {
+    const configured = resolveOptionalMediaToolOverride(configuredValue, label, allowlistedNames);
+    if (configured) {
+        return configured;
+    }
+    if (staticPath && isRunnableMediaTool(staticPath)) {
+        return staticPath;
+    }
+    const pathTool = resolvePathMediaTool(allowlistedNames);
+    if (pathTool) {
+        return pathTool;
+    }
+    throw createOperationError(`FRAME_UNAVAILABLE_${label}`);
+}
+
+function resolveMediaTools(env = process.env, options = {}) {
+    return {
+        ffmpegPath: resolveRequiredMediaTool({
+            configuredValue: env.FFMPEG_CMD,
+            label: 'FFMPEG_CMD',
+            allowlistedNames: ALLOWLISTED_FFMPEG_NAMES,
+            staticPath: Object.hasOwn(options, 'ffmpegStaticPath') ? options.ffmpegStaticPath : STATIC_FFMPEG_PATH,
+        }),
+        ffprobePath: resolveRequiredMediaTool({
+            configuredValue: env.FFPROBE_CMD,
+            label: 'FFPROBE_CMD',
+            allowlistedNames: ALLOWLISTED_FFPROBE_NAMES,
+            staticPath: Object.hasOwn(options, 'ffprobeStaticPath') ? options.ffprobeStaticPath : STATIC_FFPROBE_PATH,
+        }),
+    };
+}
+
+let cachedMediaTools = null;
+
+function getMediaTools(env = process.env) {
+    if (env !== process.env) {
+        return resolveMediaTools(env);
+    }
+    if (!cachedMediaTools) {
+        cachedMediaTools = resolveMediaTools(env);
+    }
+    return cachedMediaTools;
 }
 
 function resolveYtDlpInvocation(env = process.env) {
@@ -290,6 +417,7 @@ function runProcess(file, args, options = {}) {
             child = spawn(file, args, {
                 shell: false,
                 windowsHide: true,
+                detached: process.platform !== 'win32',
                 env,
                 stdio: ['ignore', 'pipe', 'pipe'],
             });
@@ -306,20 +434,29 @@ function runProcess(file, args, options = {}) {
         let terminationTimer = null;
         let timeoutTimer = null;
 
-        const requestTermination = (error) => {
-            if (failure) return;
-            failure = error;
+        const killChild = (signal) => {
+            const pid = child.pid;
+            if (process.platform !== 'win32' && Number.isInteger(pid) && pid > 0) {
+                try {
+                    process.kill(-pid, signal);
+                    return;
+                } catch {
+                    // Fall back to the direct child when it is not a process-group leader.
+                }
+            }
             try {
-                child.kill('SIGTERM');
+                child.kill(signal);
             } catch {
                 // Close handling below reports the bounded failure code.
             }
+        };
+
+        const requestTermination = (error) => {
+            if (failure) return;
+            failure = error;
+            killChild('SIGTERM');
             terminationTimer = setTimeout(() => {
-                try {
-                    child.kill('SIGKILL');
-                } catch {
-                    // Close handling below reports the bounded failure code.
-                }
+                killChild('SIGKILL');
             }, PROCESS_TERMINATION_GRACE_MS);
             terminationTimer.unref?.();
         };
@@ -480,7 +617,7 @@ async function hasVideoStream(mediaPath) {
         }
 
         const { stdout } = await runProcess(
-            ffprobePath,
+            getMediaTools().ffprobePath,
             ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_type', '-of', 'csv=p=0', mediaPath],
             { timeoutMs: FFPROBE_TIMEOUT_MS }
         );
@@ -1600,7 +1737,7 @@ async function downloadVideo(videoId, outputDir, quality, options = {}) {
 
     const ytDlpArgs = [
         ...ytDlpInvocation.args,
-        '--ffmpeg-location', ffmpegPath,
+        '--ffmpeg-location', getMediaTools().ffmpegPath,
         ...cookieArgs,
         '--js-runtimes', `node:${process.execPath}`,
         '--remote-components', 'ejs:github',
@@ -1671,7 +1808,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     let duration = 0;
     try {
         const { stdout } = await runProcess(
-            ffprobePath,
+            getMediaTools().ffprobePath,
             ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', videoPath],
             { timeoutMs: FFPROBE_TIMEOUT_MS }
         );
@@ -1716,7 +1853,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         assertPathContainmentBeforeMutation(segDirPath, outputPattern);
         try {
             await runProcess(
-                ffmpegPath,
+                getMediaTools().ffmpegPath,
                 [
                     '-y',
                     '-ss', String(startTime),
@@ -1920,8 +2057,7 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
             if (!videoPath) {
                 log('error', 'FRAME_VIDEO_UNAVAILABLE');
                 logFailedUrl(channel, canonicalVideoUrl);
-                videoHadFailure = true;
-                continue;
+                throw createOperationError('FRAME_VIDEO_UNAVAILABLE');
             }
 
             for (const currentExt of extensions) {
@@ -1932,6 +2068,9 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
                 log('info', 'FRAME_EXTRACTION_COMPLETED');
             }
         } catch (e) {
+            if (isExpectedVideoUnavailable(e)) {
+                throw e;
+            }
             logOperationError('error', 'FRAME_VIDEO_PROCESSING_FAILED', e);
             logFailedUrl(channel, canonicalVideoUrl);
             videoHadFailure = true;
@@ -2179,6 +2318,7 @@ async function processBatch(params, dependencies = {}) {
     log('info', 'FRAME_CONCURRENCY_CONFIGURED');
 
     let failedCount = 0;
+    let expectedUnavailableCount = 0;
     let urlIndex = 0;
     const heatmapRateLimitStormLimit = getHeatmapRateLimitStormLimit();
     let heatmapRateLimitErrors = 0;
@@ -2208,6 +2348,11 @@ async function processBatch(params, dependencies = {}) {
                 }
             } catch (e) {
                 logOperationError('error', 'FRAME_VIDEO_PROCESSING_FAILED', e);
+                if (isExpectedVideoUnavailable(e)) {
+                    expectedUnavailableCount++;
+                    log('warn', 'FRAME_VIDEO_UNAVAILABLE_CONTINUED');
+                    continue;
+                }
                 if (isHeatmapRateLimitError(e)) {
                     heatmapRateLimitErrors++;
                     logFailedUrl(channel, url);
@@ -2230,6 +2375,9 @@ async function processBatch(params, dependencies = {}) {
     await Promise.all(workers);
 
     log('info', 'FRAME_BATCH_COMPLETED');
+    if (expectedUnavailableCount > 0) {
+        log('warn', 'FRAME_BATCH_UNAVAILABLE_RECORDED');
+    }
     if (heatmapRateLimitStormTripped) {
         log('error', 'FRAME_BATCH_SCHEDULING_STOPPED');
         throw new Error('FRAME_BATCH_RATE_LIMIT_BREAKER_TRIPPED');
@@ -2263,4 +2411,7 @@ export {
     processBatch,
     processSingleVideo,
     sortVideoCandidates,
+    resolveMediaTools,
+    isRunnableMediaTool,
+    isExpectedVideoUnavailable,
 };

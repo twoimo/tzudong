@@ -39,7 +39,9 @@ const O_DIRECTORY = fs.constants.O_DIRECTORY || 0;
 const PROC_SELF_FD = '/proc/self/fd';
 
 function fixedError(code) {
-    return new Error(code);
+    const error = new Error(code);
+    error.code = code;
+    return error;
 }
 
 function sameIdentity(left, right) {
@@ -464,6 +466,31 @@ export function computeTimeoutMs(durationSec) {
 }
 
 /** Validate the existing array schema while enforcing a non-overlapping media-bound plan. */
+export function clampChunkPlanToMedia(value, mediaDurationSec) {
+    if (!Array.isArray(value) || value.length === 0 ||
+        !Number.isFinite(mediaDurationSec) || mediaDurationSec <= 0 ||
+        mediaDurationSec > SPLIT_VIDEO_LIMITS.maxVideoDurationSec) {
+        throw fixedError('SPLIT_VIDEO_CHUNK_PLAN_INVALID');
+    }
+    const clamped = [];
+    for (const chunk of value) {
+        if (!chunk || typeof chunk !== 'object' || Array.isArray(chunk)) {
+            throw fixedError('SPLIT_VIDEO_CHUNK_PLAN_INVALID');
+        }
+        const startSec = chunk.start_sec;
+        let endSec = chunk.end_sec;
+        if (!Number.isFinite(startSec) || !Number.isFinite(endSec) || startSec < 0 || endSec <= startSec) {
+            throw fixedError('SPLIT_VIDEO_CHUNK_PLAN_INVALID');
+        }
+        if (startSec >= mediaDurationSec) continue;
+        if (endSec > mediaDurationSec) endSec = mediaDurationSec;
+        if (endSec <= startSec) continue;
+        clamped.push({ ...chunk, start_sec: startSec, end_sec: endSec });
+    }
+    if (clamped.length === 0) throw fixedError('SPLIT_VIDEO_CHUNK_PLAN_INVALID');
+    return clamped;
+}
+
 export function validateChunkPlan(value, mediaDurationSec = SPLIT_VIDEO_LIMITS.maxVideoDurationSec, limits = SPLIT_VIDEO_LIMITS) {
     if (!Array.isArray(value) || value.length === 0 || value.length > limits.maxChunks ||
         !Number.isFinite(mediaDurationSec) || mediaDurationSec <= 0 || mediaDurationSec > limits.maxVideoDurationSec) {
@@ -810,7 +837,7 @@ async function probeMediaDuration(supervisor, binding, sourceHandle, windowsExec
     return parseMediaDuration(`${result.stdout}\n${result.stderr}`);
 }
 
-function buildFfmpegArgs(chunk, sourcePath, tempOutFile, windowsExecutable) {
+export function buildFfmpegArgs(chunk, sourcePath, tempOutFile, windowsExecutable) {
     const duration = chunk.end_sec - chunk.start_sec;
     const sourceArgument = toWindowsPath(sourcePath, windowsExecutable);
     const outputArgument = toWindowsPath(tempOutFile, windowsExecutable);
@@ -820,20 +847,17 @@ function buildFfmpegArgs(chunk, sourcePath, tempOutFile, windowsExecutable) {
         '-t', String(duration),
         '-i', sourceArgument,
     ];
-    if (path.extname(sourcePath).toLowerCase() === '.mp4') {
-        return [...common, '-c', 'copy', '-avoid_negative_ts', 'make_zero', outputArgument];
-    }
     return [
         ...common,
         '-c:v', 'libx264',
-        '-vf', 'scale=-2:360:force_original_aspect_ratio=decrease',
-        '-r', '30',
-        '-preset', 'ultrafast',
-        '-crf', '28',
+        '-vf', 'scale=-2:240:force_original_aspect_ratio=decrease',
+        '-r', '15',
+        '-preset', 'veryfast',
+        '-crf', '32',
         '-c:a', 'aac',
         '-ac', '1',
-        '-ar', '44100',
-        '-b:a', '128k',
+        '-ar', '22050',
+        '-b:a', '48k',
         '-movflags', '+faststart',
         outputArgument,
     ];
@@ -972,7 +996,7 @@ export async function runSplitVideoChunks({ videoPath, chunksJsonPath, outputDir
         privateHome = createPrivateHome(outputRoot);
         const supervisor = new ChildSupervisor(buildFfmpegEnv(privateHome));
         const mediaDurationSec = await probeMediaDuration(supervisor, binding, sourceHandle, windowsExecutable);
-        const chunks = validateChunkPlan(rawPlan, mediaDurationSec);
+        const chunks = validateChunkPlan(clampChunkPlanToMedia(rawPlan, mediaDurationSec), mediaDurationSec);
         const budget = new OutputBudget(outputRoot);
         console.log(`[분할] 총 ${chunks.length}개 청크, 소스: ${path.extname(sourceHandle.path).toLowerCase()}`);
         await runChunks({ chunks, sourceHandle, planHandle, binding, outputRoot, supervisor, budget, windowsExecutable });

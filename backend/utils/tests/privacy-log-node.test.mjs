@@ -44,3 +44,17 @@ test('logSafeError emits only an allowlisted name and code', () => {
   assert.equal(output, line);
   assert.equal(safeErrorName(new Proxy({}, { get() { throw new Error('blocked'); } })), 'backend_error');
 });
+test('logSafeError promotes a safe Error message into code', () => {
+  const error = new Error('SPLIT_VIDEO_FFMPEG_FAILED');
+  let output = '';
+  const line = logSafeError(error, (value) => { output += value; });
+  assert.equal(line, 'error=Error code=SPLIT_VIDEO_FFMPEG_FAILED\n');
+  assert.equal(output, line);
+});
+test('logSafeError promotes numeric SDK HTTP status into code', () => {
+  const error = Object.assign(new Error('[GoogleGenerativeAI Error]: fetch failed'), { status: 403 });
+  let output = '';
+  const line = logSafeError(error, (value) => { output += value; });
+  assert.equal(line, 'error=Error code=HTTP_403\n');
+  assert.equal(output, line);
+});

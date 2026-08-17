@@ -107,6 +107,21 @@ class GeminiWebFallbackRegressionTests(unittest.TestCase):
             "gemini_issue_banner",
             gemini_scrapling_fallback.detect_retryable_ui_problem(page),
         )
+    def test_new_gemini_ui_selectors_are_present(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        self.assertIn('button[aria-label="업로드 및 도구"]', source)
+        self.assertIn('div.ql-editor.textarea[contenteditable="true"]', source)
+        self.assertIn('div[role="textbox"][aria-label*="프롬프트"]', source)
+        self.assertIn("composer.focus()", source)
+        self.assertIn("open_upload_and_tools_menu", source)
+        self.assertIn("click_upload_menu_item", source)
+        self.assertIn('button[role="menuitem"]:has-text("파일 업로드")', source)
+        self.assertIn("upload_via_plus_menu", source)
+        self.assertIn('print(f"[{time.strftime(\'%H:%M:%S\')}] [WebFallback] {msg}", file=sys.stderr)', source)
+        self.assertIn("try_dropzone_upload", source)
+        self.assertIn("모델 변경 건너뜀", source)
+        self.assertIn("try_js_drop_upload", source)
+        self.assertIn("new DragEvent", source)
 
 
 if __name__ == "__main__":
