@@ -76,12 +76,25 @@ function resolveRegularFile(candidate, code) {
   }
 }
 
+function resolveTrustedExecutableFile(candidate, code) {
+  if (!path.isAbsolute(candidate)) throw fixedError(code);
+  try {
+    const resolved = fs.realpathSync.native(candidate);
+    const after = fs.lstatSync(resolved);
+    if (after.isSymbolicLink() || !after.isFile()) throw fixedError(code);
+    return resolved;
+  } catch (error) {
+    if (error?.code === code) throw error;
+    throw fixedError(code);
+  }
+}
+
 export function resolveTrustedPythonCommand(value = 'python') {
   if (typeof value !== 'string' || !value.trim() || value !== value.trim()) {
     throw fixedError('TRANSCRIPT_PYTHON_COMMAND_INVALID');
   }
   if (FIXED_PYTHON_COMMANDS.has(value)) return value;
-  return resolveRegularFile(value, 'TRANSCRIPT_PYTHON_COMMAND_INVALID');
+  return resolveTrustedExecutableFile(value, 'TRANSCRIPT_PYTHON_COMMAND_INVALID');
 }
 
 export function buildTranscriptYtDlpInvocation({
