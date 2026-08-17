@@ -14,7 +14,7 @@ const PHONE = /(^|[^\d])(?:\+?82[-.\s]?)?(?:0?1[016789]|0?2|0?[3-6][1-5]|0?70)[-
 const LOCATION = /(?:\b(?:lat|latitude|lng|lon|longitude|coordinates?|coords?)\b|위도|경도|좌표)\s*[:=]\s*\(?\s*-?\d{1,3}(?:\.\d+)?(?:\s*[,/]\s*-?\d{1,3}(?:\.\d+)?)?\s*\)?/gi;
 const RAW_OCR = /\b(?:raw[_\s-]?ocr|ocr[_\s-]?(?:raw|text|result|content))\s*[:=]\s*(?:"[^"]*"|'[^']*'|.*)$/gim;
 const SAFE_ERROR_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/;
-const SAFE_ERROR_CODE = /^(?:[A-Z][A-Z0-9_]{1,79}|\d{5}|[a-z][a-z0-9_]{2,79})$/;
+const SAFE_ERROR_CODE = /^(?:[A-Z][A-Z0-9_]{1,79}|\d{3,5}|[a-z][a-z0-9_]{2,79})$/;
 
 function ownString(value, key) {
   if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return null;
@@ -26,6 +26,24 @@ function ownString(value, key) {
   } catch {
     return null;
   }
+}
+
+function ownHttpStatus(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return null;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, 'status');
+    if (!descriptor || !('value' in descriptor)) return null;
+    const status = descriptor.value;
+    if (typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599) {
+      return `HTTP_${status}`;
+    }
+    if (typeof status === 'string' && /^\d{3}$/.test(status)) {
+      return `HTTP_${status}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function boundedLength(value) {
@@ -67,8 +85,13 @@ export function safeErrorName(error) {
 
 export function logSafeError(error, write = (line) => process.stderr.write(line)) {
   const name = safeErrorName(error);
-  const code = ownString(error, 'code');
-  const line = `error=${name}${code && SAFE_ERROR_CODE.test(code) ? ` code=${code}` : ''}\n`;
+  const ownCode = ownString(error, 'code');
+  const message = typeof error?.message === 'string' ? error.message : '';
+  const messageCode = SAFE_ERROR_CODE.test(message) ? message : null;
+  const code = (ownCode && SAFE_ERROR_CODE.test(ownCode) ? ownCode : null)
+    || ownHttpStatus(error)
+    || messageCode;
+  const line = `error=${name}${code ? ` code=${code}` : ''}\n`;
   write(line);
   return line;
 }

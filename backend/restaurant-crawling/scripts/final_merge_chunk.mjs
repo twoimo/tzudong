@@ -56,16 +56,18 @@ async function main() {
             .replace('{FULL_TRANSCRIPT}', fullTranscriptText);
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
+        const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
         const thinkingLevel = resolveThinkingLevel(
             process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL,
             process.env.GEMINI_THINKING_LEVEL,
-            'HIGH',
+            'MEDIUM',
         );
 
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 8192,
                 responseMimeType: "application/json",
                 thinkingConfig: { thinkingLevel },
             }

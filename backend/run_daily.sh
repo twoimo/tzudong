@@ -101,6 +101,8 @@ python_cmd_usable() {
 
 if [ -n "$PYTHON_CMD" ] && python_cmd_usable "$PYTHON_CMD"; then
     : # 이미 환경변수로 설정된 PYTHON_CMD 유지
+elif [ -x "$PROJECT_ROOT/.venv/bin/python" ] && python_cmd_usable "$PROJECT_ROOT/.venv/bin/python"; then
+    PYTHON_CMD="$PROJECT_ROOT/.venv/bin/python"
 elif python_cmd_usable python.exe; then
     PYTHON_CMD="python.exe"
 elif python_cmd_usable python; then
@@ -948,7 +950,7 @@ render_step08_message() {
             echo "Step 08 Node prerequisite 미충족"
             ;;
         gemini-runtime-prerequisite-failure)
-            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/Chrome CDP) 미설정으로 실행 생략"
             ;;
         gemini-runtime-prerequisite-downstream-reason)
             echo "Step 08 Gemini runtime prerequisite 미충족"
@@ -1046,7 +1048,7 @@ has_gemini_api_key() {
 }
 
 has_gemini_web_fallback_session() {
-    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || [ -d "$PROJECT_ROOT/backend/restaurant-crawling/data/camoufox_profile" ]
+    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
 }
 
 has_gemini_chunk_runtime() {
@@ -1566,12 +1568,8 @@ echo "::endgroup::"
 echo "::group::[Step 3.1] Context Generation"
 STEP31_START_TIME=$(date +%s)
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
-# [Config] 실행 모드에 따른 배치 크기 제한
-if [ -z "$CI" ]; then
-    MAX_VIDEOS=-1
-else
-    MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
-fi
+# [Config] MAX_CONTEXT_VIDEOS가 있으면 그 수만큼만 처리한다. 0은 무제한. -1은 건너뜀.
+MAX_VIDEOS="${MAX_CONTEXT_VIDEOS:-0}"
 
 if [ $EXIT_3 -ne 0 ]; then
     record_downstream_skip "Step 3.1 (Context Generation)" "Step 3 transcript 실패" "Step 3 (Transcript)"
