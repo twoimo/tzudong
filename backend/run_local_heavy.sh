@@ -52,7 +52,16 @@ done
 # SKIP_HEAVY_COMPUTE=false → 모든 단계 실행
 export RUN_DAILY_SKIP_HEAVY_COMPUTE=false
 export RUN_DAILY_TARGET_BRANCH=data
+export RUN_DAILY_EXECUTION_BRANCH="${RUN_DAILY_EXECUTION_BRANCH:-develop}"
 export RUN_DAILY_POLICY_MODE=end_to_end
+if [ -x "$PROJECT_ROOT/.venv/bin/python" ]; then
+    PYTHON_CMD="$PROJECT_ROOT/.venv/bin/python"
+    export PYTHON_CMD
+fi
+export TRANSCRIPT_CONTEXT_BACKEND="${TRANSCRIPT_CONTEXT_BACKEND:-openai}"
+export TRANSCRIPT_CONTEXT_BASE_URL="${TRANSCRIPT_CONTEXT_BASE_URL:-http://127.0.0.1:8080/v1}"
+export TRANSCRIPT_CONTEXT_MODEL="${TRANSCRIPT_CONTEXT_MODEL:-Qwen3.6-35B-A3B-4bit}"
+export MAX_CONTEXT_VIDEOS="${MAX_CONTEXT_VIDEOS:-0}"
 
 # 개별 단계 건너뛰기는 환경변수로 전달
 if [ "$SKIP_FRAMES" = "true" ]; then
@@ -67,6 +76,8 @@ echo " 쯔동여지도 로컬 대용량 크롤링"
 echo "============================================================"
 echo " 프레임 추출(Step 4):      $([ "$SKIP_FRAMES" = "true" ] && echo "건너뜀" || echo "실행")"
 echo " Chunk Multimodal(Step 08): $([ "$SKIP_CHUNK" = "true" ] && echo "건너뜀" || echo "실행")"
+echo " 문맥 생성(Step 3.1):      $TRANSCRIPT_CONTEXT_BACKEND $TRANSCRIPT_CONTEXT_MODEL"
+echo " 문맥 엔드포인트:           $TRANSCRIPT_CONTEXT_BASE_URL"
 echo " 데이터 브랜치:             $RUN_DAILY_TARGET_BRANCH"
 echo "============================================================"
 echo ""

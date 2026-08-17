@@ -7,7 +7,7 @@ function fixedModelError() {
   return error;
 }
 
-export function resolveGeminiModel(value, fallback = 'gemini-3.6-flash') {
+export function resolveGeminiModel(value, fallback = 'gemini-3.7-flash') {
   const candidate = typeof value === 'string' && value.trim() ? value.trim() : fallback;
   if (
     typeof candidate !== 'string'

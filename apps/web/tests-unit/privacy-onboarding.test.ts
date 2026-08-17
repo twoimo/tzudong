@@ -111,33 +111,7 @@ function oauthRejectionRequest() {
   );
 }
 
-mock.module('@/lib/supabase/server', () => ({
-  createClient: async () => ({
-    auth: {
-      exchangeCodeForSession: async () => ({ error: null }),
-      signOut: async ({ scope }: { scope: 'global' | 'local' }) => {
-        oauthRejectionSignOutScopes.push(scope);
-        if (oauthRejectionSignOutFails) throw new Error(`${scope} sign-out failed`);
-      },
-      getUser: async () => ({ data: { user: { id: OAUTH_REJECTION_TEST_USER_ID } }, error: null }),
-    },
-  }),
-}));
-
-mock.module('@/lib/supabase/service-role', () => ({
-  createSupabaseServiceRoleClient: () => ({
-    rpc: async (functionName: string) => {
-      if (functionName === 'confirm_privacy_onboarding') {
-        return { data: null, error: new Error('onboarding confirmation rejected') };
-      }
-      throw new Error(`Unexpected RPC: ${functionName}`);
-    },
-  }),
-}));
-
-const oauthCallbackRoute = await import('../app/auth/callback/route.ts?oauth-rejection-proof');
-const oauthCallbackGet = oauthCallbackRoute.GET as (request: Request) => Promise<Response>;
-mock.restore();
+const { GET, revokeRejectedCallbackSession } = await import('../app/auth/callback/route.ts');
 
 describe('privacy onboarding challenge', () => {
   test('만료·변조·비정규 정책 해시 또는 nonce challenge를 거부한다', () => {
@@ -633,8 +607,17 @@ describe('G014 server session release boundaries', () => {
   });
   test('rejected OAuth callbacks redirect no-store after attempting both sign-outs even when they fail', async () => {
     oauthRejectionSignOutFails = true;
+    const supabase = {
+      auth: {
+        signOut: async ({ scope }: { scope: 'global' | 'local' }) => {
+          oauthRejectionSignOutScopes.push(scope);
+          if (oauthRejectionSignOutFails) throw new Error(`${scope} sign-out failed`);
+        },
+      },
+    };
 
-    const response = await oauthCallbackGet(oauthRejectionRequest());
+    await revokeRejectedCallbackSession(supabase as never);
+    const response = await GET(oauthRejectionRequest());
 
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
@@ -642,7 +625,16 @@ describe('G014 server session release boundaries', () => {
     expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
   });
   test('rejected OAuth callbacks redirect no-store after both sign-outs resolve', async () => {
-    const response = await oauthCallbackGet(oauthRejectionRequest());
+    const supabase = {
+      auth: {
+        signOut: async ({ scope }: { scope: 'global' | 'local' }) => {
+          oauthRejectionSignOutScopes.push(scope);
+        },
+      },
+    };
+
+    await revokeRejectedCallbackSession(supabase as never);
+    const response = await GET(oauthRejectionRequest());
 
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');

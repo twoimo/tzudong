@@ -4,7 +4,7 @@ import test from 'node:test';
 import { resolveGeminiModel } from '../gemini-model.mjs';
 
 test('accepts canonical Gemini model identifiers and applies the fixed fallback', () => {
-  assert.equal(resolveGeminiModel(undefined), 'gemini-3.6-flash');
+  assert.equal(resolveGeminiModel(undefined), 'gemini-3.7-flash');
   assert.equal(resolveGeminiModel(' gemini-2.5-flash '), 'gemini-2.5-flash');
   assert.equal(resolveGeminiModel('gemini-exp-1206'), 'gemini-exp-1206');
 });

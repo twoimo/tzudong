@@ -402,7 +402,7 @@ class GDriveUploadContractTests(unittest.TestCase):
             (("node-prerequisite-downstream-reason", ""), "Step 08 Node prerequisite 미충족"),
             (
                 ("gemini-runtime-prerequisite-failure", ""),
-                "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략",
+                "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/Chrome CDP) 미설정으로 실행 생략",
             ),
             (("gemini-runtime-prerequisite-downstream-reason", ""), "Step 08 Gemini runtime prerequisite 미충족"),
             (
@@ -538,43 +538,6 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", daily_workflow)
         self.assertNotIn("AGY_SETTINGS_JSON: ${{ secrets.AGY_SETTINGS_JSON }}", daily_workflow)
         self.assertNotIn("AGY_CREDENTIAL_B64: ${{ secrets.AGY_CREDENTIAL_B64 }}", daily_workflow)
-
-    def test_gemini_defaults_prefer_36_flash_with_35_flash_fallback(self) -> None:
-        config = (REPO_ROOT / "backend" / "config" / "channels.yaml").read_text(encoding="utf-8")
-        crawling_script = (
-            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
-        ).read_text(encoding="utf-8")
-        laaj_script = (
-            REPO_ROOT / "backend" / "restaurant-evaluation" / "scripts" / "11-laaj-evaluation.sh"
-        ).read_text(encoding="utf-8")
-        final_merge = (
-            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "final_merge_chunk.mjs"
-        ).read_text(encoding="utf-8")
-        map_crawling = (
-            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "05-map-url-crawling.js"
-        ).read_text(encoding="utf-8")
-        runtime_preflight = (REPO_ROOT / "backend" / "bin" / "check_gemini_runtime.mjs").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn('- "gemini-3.6-flash"', config)
-        self.assertIn('- "gemini-3.5-flash"', config)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', crawling_script)
-        self.assertIn('FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.5-flash}"', crawling_script)
-        self.assertIn('GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"', crawling_script)
-        self.assertIn('GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"', crawling_script)
-        self.assertIn('GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-HIGH}"', crawling_script)
-        self.assertIn("process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL", final_merge)
-        self.assertIn("'HIGH'", final_merge)
-        self.assertIn("process.env.GEMINI_MAP_THINKING_LEVEL", map_crawling)
-        self.assertIn("'HIGH'", map_crawling)
-        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"', laaj_script)
-        self.assertIn('FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.5-flash}"', laaj_script)
-        self.assertIn('LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-HIGH}"', laaj_script)
-        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.6-flash'", runtime_preflight)
-        self.assertIn("process.env.GEMINI_PREFLIGHT_THINKING_LEVEL", runtime_preflight)
-        self.assertIn("'MEDIUM'", runtime_preflight)
-
     def test_env_contract_guard_fails_closed_without_printing_values(self) -> None:
         env = os.environ.copy()
         for name in (
@@ -2593,6 +2556,42 @@ class DailyPublicationContractTests(unittest.TestCase):
 
 class BackendGuardrailScriptTests(unittest.TestCase):
     maxDiff = None
+    def test_gemini_defaults_prefer_37_flash_only(self) -> None:
+        config = (REPO_ROOT / "backend" / "config" / "channels.yaml").read_text(encoding="utf-8")
+        crawling_script = (
+            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "08-chunk-multimodal-crawling.sh"
+        ).read_text(encoding="utf-8")
+        laaj_script = (
+            REPO_ROOT / "backend" / "restaurant-evaluation" / "scripts" / "11-laaj-evaluation.sh"
+        ).read_text(encoding="utf-8")
+        final_merge = (
+            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "final_merge_chunk.mjs"
+        ).read_text(encoding="utf-8")
+        map_crawling = (
+            REPO_ROOT / "backend" / "restaurant-crawling" / "scripts" / "05-map-url-crawling.js"
+        ).read_text(encoding="utf-8")
+        runtime_preflight = (REPO_ROOT / "backend" / "bin" / "check_gemini_runtime.mjs").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('- "gemini-3.7-flash"', config)
+        self.assertNotIn('- "gemini-3.6-flash"', config)
+        self.assertNotIn('- "gemini-3.5-flash"', config)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"', crawling_script)
+        self.assertIn('FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.7-flash}"', crawling_script)
+        self.assertIn('GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"', crawling_script)
+        self.assertIn('GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"', crawling_script)
+        self.assertIn('GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-MEDIUM}"', crawling_script)
+        self.assertIn("process.env.GEMINI_FINAL_MERGE_THINKING_LEVEL", final_merge)
+        self.assertIn("'MEDIUM'", final_merge)
+        self.assertIn("process.env.GEMINI_MAP_THINKING_LEVEL", map_crawling)
+        self.assertIn("'MEDIUM'", map_crawling)
+        self.assertIn('PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"', laaj_script)
+        self.assertIn('FALLBACK_MODEL="${LAAJ_FALLBACK_MODEL:-gemini-3.7-flash}"', laaj_script)
+        self.assertIn('LAAJ_THINKING_LEVEL="${LAAJ_THINKING_LEVEL:-MEDIUM}"', laaj_script)
+        self.assertIn("process.env.CURRENT_MODEL || process.env.PRIMARY_MODEL || 'gemini-3.7-flash'", runtime_preflight)
+        self.assertIn("process.env.GEMINI_PREFLIGHT_THINKING_LEVEL", runtime_preflight)
+        self.assertIn("'LOW'", runtime_preflight)
 
     def setUp(self) -> None:
         self.tmp = TemporaryDirectory()
