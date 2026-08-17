@@ -10,7 +10,10 @@ transcript-document-with-context/{video_id}.jsonl로 저장합니다.
 - 기존 문서가 있으면 recollect_id가 더 높은 경우에만 추가
 
 사용법:
-    python 03-1-generate-transcript-context.py --model cookieshake/a.x-4.0-light-imatrix:Q8_0
+    python 03-1-generate-transcript-context.py
+    python 03-1-generate-transcript-context.py --model Qwen3.6-35B-A3B-4bit
+    TRANSCRIPT_CONTEXT_BACKEND=openai TRANSCRIPT_CONTEXT_BASE_URL=http://127.0.0.1:8080/v1 \\
+        python 03-1-generate-transcript-context.py --check-connection-only
 """
 
 import json
@@ -43,6 +46,12 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from utils.chunk_utils import create_chunks_with_overlap
+
+DEFAULT_OLLAMA_MODEL = "cookieshake/a.x-4.0-light-imatrix:Q8_0"
+DEFAULT_OMLX_MODEL = "Qwen3.6-35B-A3B-4bit"
+DEFAULT_OMLX_BASE_URL = "http://127.0.0.1:8080/v1"
+DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434"
+OPENAI_COMPATIBLE_BACKENDS = {"openai", "omlx"}
 
 
 def read_jsonl(data_path: str) -> dict | None:
@@ -91,16 +100,70 @@ def get_latest_doc_recollect_id(doc_path: str) -> int | None:
     return None
 
 
-def parse_error_context(model: str, error_context: str, max_retries: int = 3) -> str:
+def resolve_transcript_context_backend() -> str:
+    raw = (os.environ.get("TRANSCRIPT_CONTEXT_BACKEND") or "").strip().lower()
+    if raw in OPENAI_COMPATIBLE_BACKENDS or raw == "ollama":
+        return raw
+    if (os.environ.get("TRANSCRIPT_CONTEXT_BASE_URL") or "").strip():
+        return "openai"
+    return "openai"
+
+
+def resolve_transcript_context_base_url(backend: str) -> str:
+    explicit = (os.environ.get("TRANSCRIPT_CONTEXT_BASE_URL") or "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    if backend in OPENAI_COMPATIBLE_BACKENDS:
+        return DEFAULT_OMLX_BASE_URL
+    return (os.environ.get("OLLAMA_HOST") or DEFAULT_OLLAMA_BASE_URL).rstrip("/")
+
+
+def resolve_transcript_context_model(backend: str, requested: str | None) -> str:
+    if requested and requested.strip():
+        return requested.strip()
+    env_model = (os.environ.get("TRANSCRIPT_CONTEXT_MODEL") or "").strip()
+    if env_model:
+        return env_model
+    if backend in OPENAI_COMPATIBLE_BACKENDS:
+        return DEFAULT_OMLX_MODEL
+    return DEFAULT_OLLAMA_MODEL
+
+
+def openai_compatible_root(base_url: str) -> str:
+    return base_url[:-3] if base_url.endswith("/v1") else base_url
+
+
+def build_context_llm(backend: str, model: str, base_url: str):
+    if backend in OPENAI_COMPATIBLE_BACKENDS:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model,
+            base_url=base_url,
+            api_key=os.environ.get("TRANSCRIPT_CONTEXT_API_KEY") or "omlx",
+            temperature=0,
+            timeout=120,
+        )
+    return ChatOllama(model=model, base_url=base_url, temperature=0, timeout=120)
+
+
+def parse_error_context(
+    model: str,
+    error_context: str,
+    max_retries: int = 3,
+    *,
+    backend: str,
+    base_url: str,
+) -> str:
     """문맥을 파싱하여 마크다운 형식으로 변환 (재시도 포함)"""
     prompts_dir = SCRIPT_DIR / "../prompts"
     parse_error_prompt = load_prompt(str(prompts_dir / "parse_error_context.yaml"))
     parse_error_chain = (
-        parse_error_prompt | ChatOllama(model=model, temperature=0) | StrOutputParser()
+        parse_error_prompt | build_context_llm(backend, model, base_url) | StrOutputParser()
     )
-    error_context_result = error_context  # 초기값
+    error_context_result = error_context
 
-    for attempt in range(max_retries):
+    for _attempt in range(max_retries):
         error_context_result = parse_error_chain.invoke(
             {"error_context": error_context}
         )
@@ -108,25 +171,42 @@ def parse_error_context(model: str, error_context: str, max_retries: int = 3) ->
         if is_valid_context(error_context_result):
             return error_context_result
 
-
-    # 3회 실패 시 마지막 결과 반환
     return error_context_result.strip()
 
 
 def is_valid_context(text: str) -> bool:
     """문맥이 유효한지 확인 (마크다운 형식 포함 여부)"""
-    # 마크다운 패턴 감지
     invalid_patterns = [
-        r"^\s*[-*•]\s",  # 불릿포인트
-        r"\*\*.*?\*\*",  # **bold**
-        r"^#",  # 헤더
-        r":\s*$",  # "상황 설명:" 같은 패턴
-        r"^\d+\.\s",  # 숫자 리스트
+        r"^\s*[-*•]\s",
+        r"\*\*.*?\*\*",
+        r"^#",
+        r":\s*$",
+        r"^\d+\.\s",
     ]
     for pattern in invalid_patterns:
         if re.search(pattern, text, re.MULTILINE):
             return False
     return True
+
+
+def check_openai_compatible_connection(base_url: str, model: str) -> bool:
+    try:
+        resp = requests.get(f"{openai_compatible_root(base_url)}/v1/models", timeout=5)
+        if resp.status_code != 200:
+            print("op=openai_connection_http_failed")
+            return False
+
+        models = resp.json().get("data", [])
+        found = any(m.get("id") == model for m in models)
+        if not found:
+            print("op=openai_model_unavailable")
+            return False
+
+        print("op=openai_connection_succeeded")
+        return True
+    except requests.exceptions.RequestException as error:
+        print(f"op=openai_connection_failed error={safe_error_name(error)}")
+        return False
 
 
 def check_ollama_connection(base_url: str, model: str) -> bool:
@@ -141,13 +221,19 @@ def check_ollama_connection(base_url: str, model: str) -> bool:
         found = any(m.get("name") == model for m in models)
         if not found:
             print("op=ollama_model_unavailable")
+            return False
 
         print("op=ollama_connection_succeeded")
         return True
-
     except requests.exceptions.RequestException as error:
         print(f"op=ollama_connection_failed error={safe_error_name(error)}")
         return False
+
+
+def check_context_backend_connection(backend: str, base_url: str, model: str) -> bool:
+    if backend in OPENAI_COMPATIBLE_BACKENDS:
+        return check_openai_compatible_connection(base_url, model)
+    return check_ollama_connection(base_url, model)
 
 
 def run_chain(
@@ -157,10 +243,11 @@ def run_chain(
     full_transcript: str,
     chunk_transcript: str,
     prompt,
+    *,
+    backend: str,
 ) -> str:
     """문맥 생성"""
-    # LLM 설정 (base_url 지원)
-    llm = ChatOllama(model=model, base_url=base_url, temperature=0, timeout=120)
+    llm = build_context_llm(backend, model, base_url)
 
     # chain 구성
     chain = prompt | llm | StrOutputParser()
@@ -189,25 +276,38 @@ def run_chain_with_retry(
     prompt,
     max_retries: int = 1,
     max_chars: int = 300,
+    *,
+    backend: str,
 ) -> str:
     """재시도 로직이 포함된 문맥 생성"""
     result = ""
     for attempt in range(max_retries + 1):
-        result = run_chain(model, base_url, title, full_transcript, chunk, prompt)
+        result = run_chain(
+            model,
+            base_url,
+            title,
+            full_transcript,
+            chunk,
+            prompt,
+            backend=backend,
+        )
 
         if not result:
             continue
 
-        # 유효성 검사
         if is_valid_context(result) and len(result) <= max_chars:
             return result
 
         if attempt < max_retries:
             time.sleep(1)
 
-    # 마지막 시도 실패 시 parse_error_context 시도
     if result:
-        result = parse_error_context(model, error_context=result).strip()
+        result = parse_error_context(
+            model,
+            error_context=result,
+            backend=backend,
+            base_url=base_url,
+        ).strip()
     return result
 
 
@@ -238,6 +338,8 @@ def process_video(
     base_url: str,
     prompt,
     output_dir: str,
+    *,
+    backend: str,
 ):
     """단일 비디오 처리"""
     transcript = transcript_data.get("transcript", [])
@@ -271,6 +373,7 @@ def process_video(
             prompt=prompt,
             max_retries=1,
             max_chars=300,
+            backend=backend,
         )
 
         # [후처리] LLM 생성 문맥에서 이름 오타 수정
@@ -302,15 +405,15 @@ def process_video(
     save_documents_for_video(video_id, documents, output_dir, recollect_id)
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="YouTube 자막 문맥 생성 스크립트 (tzuyang 전용)"
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="cookieshake/a.x-4.0-light-imatrix:Q8_0",
-        help="사용할 Ollama 모델명",
+        default=None,
+        help="로컬 문맥 생성 모델 ID. 기본값은 TRANSCRIPT_CONTEXT_MODEL 또는 백엔드 기본 모델.",
     )
     parser.add_argument(
         "--prompt", type=str, default="generate_context_en.yaml", help="프롬프트 파일명"
@@ -326,16 +429,17 @@ def main():
     )
     args = parser.parse_args()
 
-    # 환경 변수에서 OLLAMA_HOST 가져오기 (없으면 기본값)
-    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+    backend = resolve_transcript_context_backend()
+    base_url = resolve_transcript_context_base_url(backend)
+    model = resolve_transcript_context_model(backend, args.model)
+    print(f"op=transcript_context_backend backend={backend} model={model}")
 
-    # 연결 확인
-    if not check_ollama_connection(ollama_host, args.model):
-        print("op=ollama_unavailable")
-        return
+    if not check_context_backend_connection(backend, base_url, model):
+        print("op=transcript_context_backend_unavailable")
+        return 1
 
     if args.check_connection_only:
-        return
+        return 0
 
     # tzuyang 전용 (다른 유튜버는 이 스크립트 사용 불가)
     YOUTUBER = "tzuyang"
@@ -525,10 +629,11 @@ def main():
                 video_id=video_id,
                 transcript_data=transcript_data,
                 metadata=metadata,
-                model=args.model,
-                base_url=ollama_host,
+                model=model,
+                base_url=base_url,
                 prompt=prompt,
                 output_dir=str(output_dir),
+                backend=backend,
             )
             processed_count += 1
         except Exception as error:
@@ -543,11 +648,12 @@ def main():
         f"skipped={skipped_count} errors={error_count} total={len(transcript_paths)}",
         flush=True,
     )
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        main()
+        sys.exit(main())
     except Exception as error:
         print(f"op=transcript_context_failed error={safe_error_name(error)}", file=sys.stderr)
         sys.exit(1)

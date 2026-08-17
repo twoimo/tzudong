@@ -62,6 +62,21 @@ test('builds literal shell-free yt-dlp arguments and rejects hostile executable 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+test('resolveTrustedPythonCommand follows a venv-style symlink to a regular file', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'transcript-python-'));
+  try {
+    const realPython = path.join(root, 'python3.14');
+    const venvPython = path.join(root, 'python');
+    fs.writeFileSync(realPython, '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(realPython, 0o755);
+    fs.symlinkSync(realPython, venvPython);
+
+    assert.equal(resolveTrustedPythonCommand(venvPython), fs.realpathSync.native(venvPython));
+    assert.throws(() => resolveTrustedPythonCommand(`${venvPython};calc`), { code: 'TRANSCRIPT_PYTHON_COMMAND_INVALID' });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 const TREE_TIMEOUT_MS = 12_000;
 
