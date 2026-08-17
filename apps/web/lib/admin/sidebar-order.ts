@@ -9,6 +9,7 @@ export const ADMIN_SIDEBAR_ITEM_IDS = [
   "users",
   "banners",
   "insights",
+  "pipeline",
   "youtube-thumbnail-generator",
   "storyboard",
   "routes",
@@ -29,7 +30,7 @@ export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
   items: {
     홈: ["overview"],
     검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"],
-    운영: ["map-overlays", "users", "banners", "insights"],
+    운영: ["map-overlays", "users", "banners", "insights", "pipeline"],
     실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"],
   },
 };

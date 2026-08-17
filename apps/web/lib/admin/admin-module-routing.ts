@@ -13,6 +13,7 @@ export const ADMIN_CONSOLE_MODULE_IDS = [
   "audit",
   "youtube-thumbnail-generator",
   "llm",
+  "pipeline",
 ] as const;
 
 export type AdminConsoleRouteModuleId = (typeof ADMIN_CONSOLE_MODULE_IDS)[number];

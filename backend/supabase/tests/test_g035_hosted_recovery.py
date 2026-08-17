@@ -569,7 +569,7 @@ class ControllerTests(unittest.TestCase):
    def wait(self,*unused): return 0
   with tempfile.TemporaryDirectory() as raw,patch.object(recovery.subprocess,"Popen",side_effect=(Process(),Process())) as popen,patch.object(recovery,"_windows_restrict_temporary_file"),patch.object(recovery,"_restrictive",return_value=True),patch.object(recovery,"_unlink_owned_output",side_effect=lambda fd,path,identity:path.unlink(missing_ok=True)):
    argv=recovery._dump_to_encrypted("pg_dump","age","age1"+"q"*58,"snapshot",{},Path(raw))[0]
-  self.assertEqual(("public","shortener_private","account_deletion_private","privacy_retention","ocr_private","provider_budget_private"),contract.APPLICATION_SCHEMAS)
+  self.assertEqual(("public","shortener_private","account_deletion_private","privacy_retention","ocr_private","provider_budget_private","pipeline_control"),contract.APPLICATION_SCHEMAS)
   self.assertEqual(["pg_dump","--format=custom","--snapshot=snapshot","--blobs",*[f"--schema={schema}" for schema in [*contract.APPLICATION_SCHEMAS,"supabase_migrations","auth","storage"]],"--exclude-table-data=auth.*","--exclude-table-data=storage.*","--extension=pg_trgm","--extension=uuid-ossp","--extension=btree_gin","--extension=vector","--extension=pgcrypto","--dbname=service=g035"],argv)
   self.assertEqual((("pg_trgm","extensions"),("uuid-ossp","extensions"),("btree_gin","extensions"),("vector","public"),("pgcrypto","extensions")),recovery.RECOVERY_EXTENSIONS)
   self.assertEqual(("auth","storage"),contract.MANAGED_METADATA_SCHEMAS)

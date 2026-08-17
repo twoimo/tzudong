@@ -9,7 +9,7 @@ MANIFEST_RELATIVE_PATH = ".github/g034-hosted-migration-closure.v1.json"
 MANIFEST_SHA256 = "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95"
 SELF_COMMIT_VERSIONS = ("20260712000400", "20260713002400")
 FORBIDDEN_VERSIONS = frozenset({"20260531105250", "20260612075100", "20260627150000", "20260702000200", "20260707000700", "20260713000400", "20260713002500", "20260713002600", "20260713002700"})
-APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention", "ocr_private", "provider_budget_private")
+APPLICATION_SCHEMAS = ("public", "shortener_private", "account_deletion_private", "privacy_retention", "ocr_private", "provider_budget_private", "pipeline_control")
 MANAGED_METADATA_SCHEMAS = ("auth", "storage")
 REMEDIATION_AUTHORIZATION_SCHEMA = "g035-short-url-remediation-authorization-v1"
 REMEDIATION_PUBLIC_KEY_PEM = "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAlwdyr+FhaV/2M2G6DV0cDcvNY96fGC6dwwjKRw8WVqY=\n-----END PUBLIC KEY-----\n"
