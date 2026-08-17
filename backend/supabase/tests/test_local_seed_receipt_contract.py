@@ -466,17 +466,17 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                     local_migrate.parse_readback(_receipt_ndjson(rows))
                 self.assertEqual(error.exception.code, expected_code)
 
-    def test_manifest_contains_exactly_seventy_seven_immutable_units(self) -> None:
+    def test_manifest_contains_exactly_seventy_eight_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 77)
-        self.assertEqual(len(manifest["source"]["files"]), 77)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 78)
+        self.assertEqual(len(manifest["source"]["files"]), 78)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20260813085342_current_profile_mutation_boundary.sql",
+            "backend/supabase/migrations/20260817000100_restaurant_identity_helper_writer_grants.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
-            "self_committing",
+            "transactional",
         )
 
     def test_two_reset_comparator_compares_ordered_ledger_and_digests(self) -> None:

@@ -17,7 +17,7 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_MIGRATE_PATH = REPOSITORY_ROOT / "backend" / "supabase" / "scripts" / "local-migrate.py"
 PUBLICATION_VERIFIER_PATH = REPOSITORY_ROOT / ".github" / "scripts" / "verify-nightly-local-publication.py"
-EXPECTED_LEDGER_UNITS = 77
+EXPECTED_LEDGER_UNITS = 78
 HEX64 = re.compile(r"[a-f0-9]{64}")
 LOCAL_PROJECT = re.compile(r"tzudong-local-[a-f0-9]{12}")
 SUMMARY_FIELDS = {
