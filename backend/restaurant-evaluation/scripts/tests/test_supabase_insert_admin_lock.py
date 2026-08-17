@@ -848,5 +848,16 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         )
 
 
+    def test_readback_ignores_row_owned_created_at_mismatch(self):
+        payload = {"origin_name": "청기와집", "created_at": "2018-01-01T00:00:00+09:00", "review_count": 0}
+        row = {"origin_name": "청기와집", "created_at": "2026-08-17T19:00:00+09:00", "review_count": 3}
+        self.assertTrue(supabase_insert.restaurant_readback_matches_payload(row, payload))
+        self.assertFalse(
+            supabase_insert.restaurant_readback_matches_payload(
+                {"origin_name": "다른집", "created_at": row["created_at"], "review_count": 3},
+                payload,
+            )
+        )
+
 if __name__ == "__main__":
     unittest.main()

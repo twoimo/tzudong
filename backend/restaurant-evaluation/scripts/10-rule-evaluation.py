@@ -127,7 +127,7 @@ NON_RESTAURANT_HINTS = (
     "CU",
 )
 
-GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.7-flash")
 GEMINI_TIMEOUT_SEC = int(os.getenv("GEMINI_FALLBACK_TIMEOUT_SEC", "90") or "90")
 
 
