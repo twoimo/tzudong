@@ -35,16 +35,13 @@ describe('dev admin thumbnail bootstrap route', () => {
         enableEnv()
 
         const response = await GET(request(`/api/dev/admin-thumbnail-bootstrap?token=${token}&next=%2Fadmin%3Fmodule%3Dyoutube-thumbnail-generator`))
-        const html = await response.text()
 
-        expect(response.status).toBe(200)
-        expect(response.headers.get('content-type')).toContain('text/html')
+        expect(response.status).toBe(303)
+        expect(response.headers.get('location')).toContain('/admin?module=youtube-thumbnail-generator')
         expect(response.headers.get('cache-control')).toBe('no-store')
         expect(response.headers.get('set-cookie')).toContain(`${DEV_ADMIN_BYPASS_COOKIE_NAME}=`)
         expect(response.headers.get('set-cookie')).toContain('HttpOnly')
         expect(response.headers.get('set-cookie')?.toLowerCase()).toContain('samesite=lax')
-        expect(html).toContain('tzudong:e2e-admin-shell-bypass')
-        expect(html).toContain('/admin?module=youtube-thumbnail-generator')
     })
 
     test('fails closed when env, token, host, or redirect target is unsafe', async () => {
