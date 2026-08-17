@@ -9,17 +9,17 @@ MODULE_PATH = Path(__file__).resolve().parents[1] / "gemini_scrapling_fallback.p
 
 
 def load_module():
-    fake_camoufox = types.ModuleType("camoufox")
-    fake_sync_api = types.ModuleType("camoufox.sync_api")
+    fake_playwright = types.ModuleType("playwright")
+    fake_sync_api = types.ModuleType("playwright.sync_api")
 
-    class FakeCamoufox:  # pragma: no cover - import shim only
-        pass
+    def fake_sync_playwright():  # pragma: no cover - import shim only
+        raise RuntimeError("playwright unavailable in unit tests")
 
-    fake_sync_api.Camoufox = FakeCamoufox
-    fake_camoufox.sync_api = fake_sync_api
+    fake_sync_api.sync_playwright = fake_sync_playwright
+    fake_playwright.sync_api = fake_sync_api
 
-    sys.modules.setdefault("camoufox", fake_camoufox)
-    sys.modules.setdefault("camoufox.sync_api", fake_sync_api)
+    sys.modules.setdefault("playwright", fake_playwright)
+    sys.modules.setdefault("playwright.sync_api", fake_sync_api)
 
     spec = importlib.util.spec_from_file_location("gemini_scrapling_fallback", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -122,6 +122,8 @@ class GeminiWebFallbackRegressionTests(unittest.TestCase):
         self.assertIn("모델 변경 건너뜀", source)
         self.assertIn("try_js_drop_upload", source)
         self.assertIn("new DragEvent", source)
+        self.assertIn("connect_over_cdp", source)
+        self.assertIn("resolve_existing_chrome_cdp_url", source)
 
 
 if __name__ == "__main__":
