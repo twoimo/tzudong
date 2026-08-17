@@ -101,6 +101,8 @@ python_cmd_usable() {
 
 if [ -n "$PYTHON_CMD" ] && python_cmd_usable "$PYTHON_CMD"; then
     : # 이미 환경변수로 설정된 PYTHON_CMD 유지
+elif [ -x "$PROJECT_ROOT/.venv/bin/python" ] && python_cmd_usable "$PROJECT_ROOT/.venv/bin/python"; then
+    PYTHON_CMD="$PROJECT_ROOT/.venv/bin/python"
 elif python_cmd_usable python.exe; then
     PYTHON_CMD="python.exe"
 elif python_cmd_usable python; then
@@ -1566,12 +1568,8 @@ echo "::endgroup::"
 echo "::group::[Step 3.1] Context Generation"
 STEP31_START_TIME=$(date +%s)
 log "INFO" "[Step 3.1] 자막 문맥 생성 중..."
-# [Config] 실행 모드에 따른 배치 크기 제한
-if [ -z "$CI" ]; then
-    MAX_VIDEOS=-1
-else
-    MAX_VIDEOS=${MAX_CONTEXT_VIDEOS:-0}
-fi
+# [Config] MAX_CONTEXT_VIDEOS가 있으면 그 수만큼만 처리한다. 0은 무제한. -1은 건너뜀.
+MAX_VIDEOS="${MAX_CONTEXT_VIDEOS:-0}"
 
 if [ $EXIT_3 -ne 0 ]; then
     record_downstream_skip "Step 3.1 (Context Generation)" "Step 3 transcript 실패" "Step 3 (Transcript)"
