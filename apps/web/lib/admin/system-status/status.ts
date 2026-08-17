@@ -194,12 +194,10 @@ function buildFrameCaptionGdriveChecklistSnippet(): string {
 
 function buildRunDailyChecklistSnippet(): string {
   return [
-    '# run_daily 스크립트 체크',
-    'RUN_DAILY_SCRIPT_PATH="${RUN_DAILY_SCRIPT_PATH:-/path/to/backend/run_daily.sh}"',
-    '[ -x "$RUN_DAILY_SCRIPT_PATH" ] || chmod +x "$RUN_DAILY_SCRIPT_PATH"',
-    'ls -l "$RUN_DAILY_SCRIPT_PATH"',
-    'crontab -l 2>/dev/null | grep -F "$RUN_DAILY_SCRIPT_PATH" || \\',
-    '  (crontab -l 2>/dev/null; echo "0 4 * * * $RUN_DAILY_SCRIPT_PATH >> /path/to/backend/logs/run_daily.log 2>&1") | crontab -',
+    '# pipeline-control worker 체크',
+    'python3 -m backend.pipeline_control.worker',
+    'crontab -l 2>/dev/null | grep -F "backend.pipeline_control.worker" || \\',
+    '  (crontab -l 2>/dev/null; echo "0 4 * * * python3 -m backend.pipeline_control.worker >> /path/to/backend/logs/run_daily.log 2>&1") | crontab -',
   ].join('\n');
 }
 
@@ -1121,7 +1119,7 @@ export function buildAdminOpsChecklist(
       severity: 'high',
       category: 'environment',
       action:
-        'run_daily 자동 수집 파이프라인이 감지되지 않았습니다. 운영 서버에서 `backend/run_daily.sh`(또는 RUN_DAILY_SCRIPT_PATH)를 배치하고, `chmod +x` 후 crontab(`0 4 * * * /path/to/backend/run_daily.sh >> ...`)에 등록해 실행되게 설정하세요.',
+        '자동 수집 파이프라인이 감지되지 않았습니다. crontab에 `python3 -m backend.pipeline_control.worker` 를 등록하세요.',
       command: buildRunDailyChecklistSnippet(),
       commandSnippet: buildRunDailyChecklistSnippet(),
       source: 'run_daily',
@@ -1688,6 +1686,10 @@ export async function getAdminSystemStatus(
       'youtube-thumbnail-durable-release': thumbnailDurableReleaseReadiness,
     },
     checklist: [],
+    pipelineControl: {
+      reachable: Boolean(env.PIPELINE_CONTROL_API_URL),
+      source: env.PIPELINE_CONTROL_API_URL ? "job_api" : "manifest",
+    },
   };
   response.checklist = buildAdminOpsChecklist(response, response.runDaily);
 

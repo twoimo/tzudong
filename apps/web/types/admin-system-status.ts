@@ -208,4 +208,8 @@ export type AdminSystemStatusResponse = {
   supabaseCounters?: AdminSupabaseCounterStatus;
   providerReadiness: AdminProviderReadinessMap;
   checklist: AdminSystemStatusChecklistItem[];
+  pipelineControl?: {
+    reachable: boolean;
+    source: "job_api" | "manifest" | "none";
+  };
 };

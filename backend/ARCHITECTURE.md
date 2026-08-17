@@ -10,7 +10,7 @@ make the seams explicit, and move only testable responsibilities across seams.
 2. Do **not** migrate the long-running backend batch pipeline into Next.js
    request/response APIs.
 3. Use Next.js Route Handlers only for authenticated, bounded admin/ops APIs.
-4. Keep `run_daily.sh` as the cron/CI entrypoint, but make it thinner over time.
+4. Operator/CI entrypoint is `pipeline-api` (`POST /v1/runs`, 202) plus `pipeline-worker`. Isolated cutover removed `run_daily.sh` / `run_local_heavy.sh` from crontab/GHA after N=3 healthy live parity.
 5. Treat data contracts between crawling, evaluation, Supabase, and web admin as
    first-class interfaces.
 6. Do not rewrite crawling/evaluation internals with Paperclip or another
@@ -23,15 +23,15 @@ make the seams explicit, and move only testable responsibilities across seams.
 | --- | --- | --- |
 | Python | Crawling/evaluation data transforms, validation, manifest parsing, skip/no-op policy, failure aggregation, media/image preprocessing helpers | Browser automation SDK glue that already depends on Node-only packages |
 | Node/JS/MJS | Gemini SDK usage, Puppeteer/browser automation, `ffmpeg-static`/media helpers where Node packages are already the integration point | Whole-pipeline orchestration policy or durable batch state |
-| Shell | Cron/CI entrypoint, environment loading, runtime path setup, invoking the main pipeline, preserving exit codes | Complex branching policy, manifest construction, data-contract validation |
+| Shell | Deprecated shim / env load / path defaults until Slice 6 cutover | Complex branching policy, durable job state, HTTP entrypoint |
 | Next.js Route Handlers | Authenticated admin/ops/status/read-only APIs with bounded latency and sanitized output | Daily crawler execution, ffmpeg processing, Gemini bulk evaluation, long Supabase inserts, GDrive bulk uploads |
 | SQL/Supabase | Migrations, RPCs, database constraints, data persistence semantics | Runtime orchestration or file-system batch state |
 
 ## Batch versus API boundary
 
-The daily pipeline remains a backend batch workflow. It may be launched by cron,
-GitHub Actions, or another batch/control-plane runner, but not by a normal
-admin HTTP request.
+The daily pipeline remains a backend batch workflow executed by `pipeline-worker`.
+It may be launched by the control-plane API, GitHub Actions `lite_gha` one-shot,
+or a local `heavy_local` worker — never inline in a Next.js admin HTTP request.
 
 Good Next.js admin/ops API candidates:
 
@@ -54,16 +54,16 @@ If a manual trigger is needed later, prefer a two-step control-plane design:
 record an authenticated trigger request, then let a batch runner claim and
 execute it asynchronously.
 
-## `run_daily.sh` thinning policy
+## `run_daily.sh` thinning / abolition policy
 
-`run_daily.sh` remains the stable entrypoint while responsibilities move out of
-Shell in small, reversible slices.
+`run_daily.sh` is no longer the operator/CI entrypoint on the isolated cutover
+branch. crontab/GHA call `python3 -m backend.pipeline_control.worker`. Legacy
+shell snapshots remain only under `backend/utils/tests/fixtures/`.
 
-Keep in Shell:
-
+Keep in Shell only until cutover:
 - source `.env` and runtime path defaults
 - choose the Python runtime
-- initialize logs and call the pipeline entrypoint
+- invoke the existing numbered scripts when the shim is still the caller
 - propagate final exit code
 
 Move to Python helpers over time:

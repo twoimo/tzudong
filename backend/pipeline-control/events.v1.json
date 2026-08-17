@@ -1,0 +1,11 @@
+{
+  "topics": [
+    "tzudong.pipeline.run.lifecycle.v1",
+    "tzudong.pipeline.step.progress.v1",
+    "tzudong.pipeline.record.upserted.v1"
+  ],
+  "elasticsearchIndices": ["pipeline-logs-*", "pipeline-raw-*"],
+  "structuredSourceOfTruth": "supabase.pipeline_control",
+  "rawPayloadStore": "elasticsearch",
+  "adminIframePolicy": "forbidden_until_csp_auth_gate"
+}

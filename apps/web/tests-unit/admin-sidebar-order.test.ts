@@ -20,6 +20,7 @@ describe("admin sidebar order normalization", () => {
       "users",
       "banners",
       "insights",
+      "pipeline",
     ]);
 
     expect(DEFAULT_ADMIN_SIDEBAR_ORDER.items["실험실"]).toEqual([
@@ -76,6 +77,7 @@ describe("admin sidebar order normalization", () => {
       "users",
       "banners",
       "insights",
+      "pipeline",
     ]);
 
     expect(normalized.items["실험실"]).toEqual([
@@ -109,6 +111,7 @@ describe("admin sidebar order normalization", () => {
       "banners",
       "users",
       "insights",
+      "pipeline",
     ]);
   });
 });

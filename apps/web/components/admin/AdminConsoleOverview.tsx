@@ -50,6 +50,7 @@ import {
   UserRound,
   UsersRound,
   XCircle,
+  Workflow,
 } from "lucide-react";
 import {
   Area,
@@ -132,6 +133,7 @@ import {
 } from "@/lib/admin/admin-module-routing";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
+import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -261,6 +263,16 @@ const consoleModules: ConsoleModule[] = [
     icon: BarChart2,
     badge: "분석",
     actionLabel: "핵심 인사이트 보기",
+  },
+  {
+    id: "pipeline",
+    title: "크롤러 파이프라인",
+    description:
+      "비동기 control-plane 상태와 대상별 실행을 관리합니다.",
+    href: "/admin?module=pipeline",
+    icon: Workflow,
+    badge: "파이프라인",
+    actionLabel: "파이프라인 보기",
   },
   {
     id: "audit",
@@ -401,7 +413,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["map-overlays", "users", "banners", "insights"]),
+    items: getSidebarConsoleItems(["map-overlays", "users", "banners", "insights", "pipeline"]),
   },
   {
     label: "실험실",
@@ -925,6 +937,8 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
       return loadAdminUsersModule();
     case "insights":
       return loadInsightsModule();
+    case "pipeline":
+      return Promise.resolve();
     case "routes":
       return loadAdminRouteRecommendationModule();
     default: {
@@ -9440,6 +9454,8 @@ function InlineModulePanel({
         return <AdminUsersModule key="admin-users" />;
       case "insights":
         return <InsightsModule key="admin-insights" embedded />;
+      case "pipeline":
+        return <AdminPipelineDashboard key="admin-pipeline" />;
       default: {
         const exhaustiveModuleId: never = module.id;
         return exhaustiveModuleId;
@@ -9478,7 +9494,8 @@ type AdminConsoleCanvasSkeletonVariant =
   | "insights-grid"
   | "route-map"
   | "llm-workspace"
-  | "audit-log";
+  | "audit-log"
+  | "pipeline-ops";
 
 type AdminConsoleCanvasSkeletonModuleId = AdminModuleId | "generic";
 
@@ -9600,6 +9617,14 @@ function getAdminConsoleCanvasSkeletonConfig({
         description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
         icon: BarChart2,
         variant: "insights-grid",
+      };
+    case "pipeline":
+      return {
+        moduleId,
+        title: title ?? "크롤러 파이프라인",
+        description: "control-plane 대상 상태와 환경 칩을 준비합니다.",
+        icon: Workflow,
+        variant: "pipeline-ops",
       };
     case "routes":
       return {
