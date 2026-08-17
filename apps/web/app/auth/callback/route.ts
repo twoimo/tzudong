@@ -97,7 +97,7 @@ function getTrustedRedirectOrigin(requestOrigin: string) {
 
 
 
-async function revokeRejectedCallbackSession(supabase: CallbackSupabaseClient) {
+export async function revokeRejectedCallbackSession(supabase: CallbackSupabaseClient) {
   try {
     await supabase.auth.signOut({ scope: 'global' });
   } catch {

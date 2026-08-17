@@ -464,7 +464,7 @@ async function main() {
   const outputDir = resolveOutputDirectory(options.outputDir, runId);
   mkdirSync(outputDir, { recursive: true });
 
-  const dirtyFiles = classifyDirtyFiles(safeGitStatus());
+  const dirtyFiles = classifyDirtyFiles(safeGitStatus()).filter((entry) => entry.scope !== 'other');
   const trustedImages = collectTrustedSeedImages(options.seedFile);
   const selectedScenarios = SCENARIOS.slice(0, options.cases);
   const cases = selectedScenarios.map((scenario, index) => {
