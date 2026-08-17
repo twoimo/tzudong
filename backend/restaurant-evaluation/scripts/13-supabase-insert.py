@@ -526,7 +526,12 @@ def restaurant_snapshot_matches(row: dict[str, Any], snapshot: dict[str, Any]) -
 
 
 def restaurant_readback_matches_payload(row: dict[str, Any], payload: dict[str, Any]) -> bool:
-    return all(row.get(field) == value for field, value in payload.items())
+    comparable = {
+        field: value
+        for field, value in payload.items()
+        if field not in ROW_OWNED_FIELDS
+    }
+    return all(row.get(field) == value for field, value in comparable.items())
 
 
 def response_rows(response: Any) -> list[dict[str, Any]]:
