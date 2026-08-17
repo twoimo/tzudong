@@ -5,13 +5,16 @@ import argparse
 import os
 import json
 import re
+import base64
+from pathlib import Path
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
 from camoufox.sync_api import Camoufox
 
 def log(msg):
-    print(f"[{time.strftime('%H:%M:%S')}] [WebFallback] {msg}")
+    print(f"[{time.strftime('%H:%M:%S')}] [WebFallback] {msg}", file=sys.stderr)
+
 
 def human_delay(min_sec=1.5, max_sec=3.5):
     """구글 봇 탐지 회피를 위한 인간적인 랜덤 대기"""
@@ -562,6 +565,68 @@ def is_subpath(target_path, base_path):
         return False
 
 
+def try_js_drop_upload(page, file_path):
+    """Dispatch a real File drop onto Gemini's custom dropzone."""
+    path_obj = Path(file_path)
+    payload = path_obj.read_bytes()
+    if not payload:
+        raise RuntimeError("empty_video")
+    if len(payload) > 40 * 1024 * 1024:
+        raise RuntimeError("video_too_large_for_js_drop")
+    b64 = base64.b64encode(payload).decode("ascii")
+    page.evaluate(
+        """
+        ({ b64, name }) => {
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            const file = new File([bytes], name, { type: "video/mp4" });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            const target = document.querySelector("[xapfileselectordropzone]")
+                || document.querySelector("file-drop-indicator")
+                || document.querySelector(".text-input-field")
+                || document.body;
+            const ev = { bubbles: true, cancelable: true, dataTransfer: dt };
+            target.dispatchEvent(new DragEvent("dragenter", ev));
+            target.dispatchEvent(new DragEvent("dragover", ev));
+            target.dispatchEvent(new DragEvent("drop", ev));
+            return Boolean(target);
+        }
+        """,
+        {"b64": b64, "name": path_obj.name},
+    )
+    human_delay(1.0, 2.0)
+    log("JS drop 업로드 이벤트 전송 완료")
+    return True
+
+
+def try_dropzone_upload(page, file_path):
+    """Prefer a synthetic drop. Visible file inputs are gone in the new Gemini UI."""
+    try:
+        return try_js_drop_upload(page, file_path)
+    except Exception as error:
+        log(f"JS drop 업로드 실패: {compact_error(error)}")
+    last_error = None
+    for selector in ('input[type="file"]',):
+        locator = page.locator(selector)
+        try:
+            if locator.count() == 0:
+                continue
+            locator.first.set_input_files(file_path)
+            log(f"file input 업로드 성공: {selector}")
+            return True
+        except Exception as error:
+            last_error = error
+            log(f"file input 업로드 실패({selector}): {compact_error(error)}")
+    if last_error:
+        raise last_error
+    raise RuntimeError("dropzone_missing")
+
+
+
 def try_direct_file_input_upload(page, file_path):
     """DOM의 file input을 직접 순회하며 업로드를 시도한다."""
     input_selectors = [
@@ -626,6 +691,109 @@ def expose_hidden_upload_trigger(page, selector, idx):
         """,
         {"selector": selector, "idx": idx},
     )
+
+
+def open_upload_and_tools_menu(page):
+    """Open the redesigned Gemini plus menu that replaced the old upload button."""
+    selectors = (
+        'button[aria-label="업로드 및 도구"]',
+        'button[aria-label*="업로드 및 도구"]',
+        'button[aria-label*="Upload and tools"]',
+        'button[aria-haspopup="menu"][aria-label*="업로드"]',
+        'button[aria-haspopup="menu"][aria-label*="Upload"]',
+    )
+    for selector in selectors:
+        btn = page.locator(selector).first
+        try:
+            if btn.count() == 0:
+                continue
+            try:
+                btn.click(timeout=5000, force=True)
+            except Exception:
+                page.evaluate(
+                    """
+                    () => {
+                        const btn = document.querySelector('button[aria-label="업로드 및 도구"]')
+                            || document.querySelector('button[aria-label*="업로드 및 도구"]');
+                        if (!btn) return false;
+                        btn.click();
+                        return true;
+                    }
+                    """
+                )
+            human_delay(0.4, 0.9)
+            menu = page.locator('[role="menu"], .mat-mdc-menu-panel, [role="menuitem"], mat-menu-item').first
+            try:
+                menu.wait_for(state="visible", timeout=4000)
+            except Exception:
+                log(f"업로드 및 도구 클릭 후 메뉴가 아직 안 보임({selector})")
+            return selector
+        except Exception as error:
+            log(f"업로드 및 도구 메뉴 열기 실패({selector}): {compact_error(error)}")
+    return None
+
+
+def click_upload_menu_item(page):
+    """Click a computer/file upload item after the plus menu is open."""
+    item_selectors = (
+        'button[role="menuitem"]:has-text("파일 업로드")',
+        'button[role="menuitem"]:has-text("컴퓨터에서")',
+        'button[role="menuitem"]:has-text("Upload file")',
+        'button[role="menuitem"]:has-text("From computer")',
+        'button[role="menuitem"]:has-text("파일")',
+        '[role="menuitem"]:has-text("파일")',
+        '[role="menuitem"]:has-text("Upload")',
+        '[role="menuitem"]:has-text("Computer")',
+        'mat-menu-item:has-text("파일")',
+        'mat-menu-item:has-text("Upload")',
+        '[role="menuitem"]',
+        'mat-menu-item',
+    )
+    for selector in item_selectors:
+        items = page.locator(selector)
+        try:
+            count = items.count()
+        except Exception as error:
+            log(f"업로드 메뉴 항목 조회 실패({selector}): {compact_error(error)}")
+            continue
+        for idx in range(min(count, 8)):
+            item = items.nth(idx)
+            try:
+                if not item.is_visible():
+                    continue
+                disabled = False
+                try:
+                    disabled = bool(item.get_attribute("disabled") or item.get_attribute("aria-disabled") == "true")
+                except Exception:
+                    disabled = False
+                if disabled:
+                    continue
+                text = ""
+                try:
+                    text = (item.inner_text() or "").strip()
+                except Exception:
+                    text = ""
+                item.click(timeout=4000)
+                log(f"업로드 메뉴 항목 클릭: {selector} idx={idx} text={text[:40]}")
+                return selector
+            except Exception as error:
+                log(f"업로드 메뉴 항목 클릭 실패({selector} idx={idx}): {compact_error(error)}")
+    return None
+
+
+def upload_via_plus_menu(page, video_abs_path):
+    """Open + menu first, then click a file item under a file-chooser waiter."""
+    opened = open_upload_and_tools_menu(page)
+    if not opened:
+        raise RuntimeError("upload_and_tools_menu_missing")
+    with page.expect_file_chooser(timeout=8000) as fc_info:
+        clicked = click_upload_menu_item(page)
+        if not clicked:
+            raise RuntimeError("upload_menu_item_missing")
+    fc_info.value.set_files(video_abs_path)
+    log(f"업로드 및 도구 메뉴 경로 성공 ({opened} -> {clicked})")
+    return True
+
 
 
 def click_hidden_upload_trigger(page, hidden_trigger_selectors):
@@ -817,33 +985,23 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                 return "RETRY"
 
             if target_model:
-                log(f"모델 변경 시도: {target_model}")
-                try:
-                    import re
-                    mode_picker_btn = page.locator('button[aria-label="Open mode picker"], button.input-area-switch').first
-                    if mode_picker_btn.is_visible():
-                        mode_picker_btn.click()
-                        human_delay(1, 2)
+                log(f"모델 변경 건너뜀: 새 Gemini UI에서 모드 피커가 업로드 메뉴를 깨뜨림 ({target_model})")
 
-                        menu_items = page.locator('mat-menu-item, [role="menuitem"], .mat-mdc-menu-item').all()
-                        model_clicked = False
-                        for item in menu_items:
-                            text = item.inner_text()
-                            if re.search(r'\b' + re.escape(target_model) + r'\b', text, re.IGNORECASE):
-                                item.click()
-                                log(f"모델 선택 완료: {text.strip().split(chr(10))[0]}")
-                                model_clicked = True
-                                human_delay(1, 2)
-                                break
 
-                        if not model_clicked:
-                            page.mouse.click(0, 0)
-                except Exception as e:
-                    log(f"모델 변경 오류 (무시): {compact_error(e)}")
 
             try:
-                page.wait_for_selector('div.ql-editor[contenteditable="true"], div[role="textbox"]', timeout=30000)
-                page.locator('div.ql-editor[contenteditable="true"], div[role="textbox"]').first.click()
+                composer = page.locator(
+                    'div.ql-editor.textarea[contenteditable="true"], '
+                    'div.ql-editor.new-input-ui[contenteditable="true"], '
+                    'div[role="textbox"][aria-label*="프롬프트"], '
+                    'div[role="textbox"][aria-label*="물어보기"], '
+                    'div[role="textbox"][data-placeholder]'
+                ).first
+                composer.wait_for(state="visible", timeout=30000)
+                try:
+                    composer.click(timeout=5000)
+                except Exception:
+                    composer.focus()
                 human_delay(0.5, 1.5)
                 accept_upload_disclaimer_if_present(page)
 
@@ -854,12 +1012,24 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                     'button[data-test-id="hidden-local-image-upload-button"]',
                     'button[xapfileselectortrigger]',
                 ]
+                try:
+                    uploaded = try_dropzone_upload(page, video_abs_path)
+                except Exception as error:
+                    log(f"드롭존 업로드 실패: {compact_error(error)}")
+                if not uploaded:
+                    try:
+                        uploaded = upload_via_plus_menu(page, video_abs_path)
+                    except Exception as error:
+                        log(f"업로드 및 도구 메뉴 경로 실패: {compact_error(error)}")
+                        try:
+                            page.keyboard.press("Escape")
+                        except Exception:
+                            pass
                 upload_button_selectors = [
                     'button[aria-label="Open upload file menu"]',
                     'button[aria-label*="Upload file"]',
                     'button[aria-label*="upload file menu"]',
                     'button[aria-label*="Upload image"]',
-                    'button[aria-label*="Upload"]',
                     'button[mattooltip*="Upload"]',
                     'button.upload-button',
                     'button[aria-label*="파일 업로드 메뉴"]',
@@ -938,6 +1108,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                                     continue
                                 log(f"업로드 버튼 경로 실패({selector}, idx={btn_idx}): {compact_error(e)}")
                                 break
+
 
                 if not uploaded:
                     # 버튼 경로 실패 시 DOM의 file input을 직접 순회

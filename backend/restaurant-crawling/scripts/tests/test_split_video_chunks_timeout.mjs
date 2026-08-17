@@ -15,6 +15,8 @@ import {
   bindTrustedExecutable,
   bindTrustedRegularFile,
   bindTrustedRoot,
+  buildFfmpegArgs,
+  clampChunkPlanToMedia,
   buildFfmpegEnv,
   computeTimeoutMs,
   prepareOutputRoot,
@@ -52,6 +54,14 @@ test('computes bounded integer ffmpeg timeouts', () => {
   }
 });
 
+test('clamps a slightly overrun last chunk to probed media duration', () => {
+  const clamped = clampChunkPlanToMedia([
+    { chunk_index: 0, start_sec: 0, end_sec: 351 },
+  ], 350);
+  assert.equal(clamped[0].end_sec, 350);
+  const plan = validateChunkPlan(clamped, 350);
+  assert.equal(plan[0].end_sec, 350);
+});
 test('rejects overlap, media overrun, count, and aggregate-duration plan abuse', () => {
   const plan = validateChunkPlan([
     { chunk_index: 0, start_sec: 0, end_sec: 180 },
@@ -438,6 +448,38 @@ if (start === '0') {
     assert.equal(fs.existsSync(path.join(output, 'grandchild-survived')), false);
     const outputEntries = fs.existsSync(output) ? fs.readdirSync(output) : [];
     assert.deepEqual(outputEntries.filter(name => name.endsWith('.tmp.mp4') || /^chunk_\d+\.mp4$/.test(name)), []);
+  } finally {
+    removeSandbox(sandbox);
+  }
+});
+test('re-encodes every chunk instead of stream-copying YouTube mp4s', () => {
+  const args = buildFfmpegArgs(
+    { chunk_index: 0, start_sec: 0, end_sec: 2 },
+    '/tmp/source.mp4',
+    '/tmp/.chunk_0.tmp.mp4',
+    false,
+  );
+  assert.equal(args.includes('-c'), false);
+  assert.equal(args.includes('copy'), false);
+  assert.equal(args.includes('libx264'), true);
+  assert.equal(args.includes('scale=-2:240:force_original_aspect_ratio=decrease'), true);
+  assert.equal(args.includes('48k'), true);
+});
+
+test('split logs a fixed error code when ffmpeg cannot decode the source', async () => {
+  const sandbox = makeSandbox();
+  try {
+    const source = path.join(sandbox, 'source.mp4');
+    const plan = path.join(sandbox, 'chunks.json');
+    const output = path.join(sandbox, 'segments');
+    fs.writeFileSync(source, 'not-a-real-video');
+    fs.writeFileSync(plan, JSON.stringify([{ chunk_index: 0, start_sec: 0, end_sec: 1 }]));
+    const run = spawnSync(process.execPath, [SPLITTER_PATH, source, plan, output], {
+      encoding: 'utf8',
+      timeout: 15_000,
+    });
+    assert.notEqual(run.status, 0);
+    assert.match(`${run.stdout}\n${run.stderr}`, /SPLIT_VIDEO_PROCESS_FAILED error=Error code=SPLIT_VIDEO_/);
   } finally {
     removeSandbox(sandbox);
   }

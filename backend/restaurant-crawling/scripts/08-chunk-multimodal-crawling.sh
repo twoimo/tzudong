@@ -197,32 +197,54 @@ run_with_timeout() {
         gtimeout "${timeout_sec}s" "$@"
         return $?
     fi
-    # Fallback for macOS/Windows where timeout is missing or incompatible
+    # Fallback for macOS/Windows where timeout is missing or incompatible.
+    # Watchdog must not inherit the daily-log pipe, or leftover sleep keeps
+    # append-daily-log blocked after this script exits.
+    # Kill the sleep child first. Killing the watchdog bash leaves PPID=1
+    # sleep 900 leftovers that accumulate across videos.
+    set +m
     "$@" &
     local pid=$!
-    ( sleep "$timeout_sec"; kill -9 $pid 2>/dev/null ) &
+    (
+        exec >/dev/null 2>&1
+        sleep "$timeout_sec"
+        kill -9 "$pid" 2>/dev/null
+    ) &
     local watchdog_pid=$!
-    wait $pid 2>/dev/null
+    disown "$watchdog_pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null
     local exit_code=$?
-    kill -9 $watchdog_pid 2>/dev/null
+    local sleep_pid
+    sleep_pid="$(pgrep -P "$watchdog_pid" -x sleep 2>/dev/null | head -n 1)"
+    if [ -n "$sleep_pid" ]; then
+        kill -9 "$sleep_pid" 2>/dev/null
+        wait "$sleep_pid" 2>/dev/null || true
+    fi
+    pkill -9 -P "$watchdog_pid" 2>/dev/null || true
+    kill -9 "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
     return $exit_code
 }
 
 get_web_fallback_python() {
     if [ -n "${WEB_FALLBACK_PYTHON:-}" ] && command -v "${WEB_FALLBACK_PYTHON}" >/dev/null 2>&1; then
         echo "$WEB_FALLBACK_PYTHON"
+    elif [ -n "${PYTHON_CMD:-}" ] && command -v "${PYTHON_CMD}" >/dev/null 2>&1; then
+        echo "$PYTHON_CMD"
     elif [ "$OS_NAME" != "Windows" ] && command -v python3 >/dev/null 2>&1; then
         echo "python3"
     else
-        echo "$PYTHON_CMD"
+        echo "python3"
     fi
 }
 
 get_local_python_cmd() {
-    if [ "$OS_NAME" != "Windows" ] && command -v python3 >/dev/null 2>&1; then
+    if [ -n "${PYTHON_CMD:-}" ] && command -v "${PYTHON_CMD}" >/dev/null 2>&1; then
+        echo "$PYTHON_CMD"
+    elif [ "$OS_NAME" != "Windows" ] && command -v python3 >/dev/null 2>&1; then
         echo "python3"
     else
-        echo "$PYTHON_CMD"
+        echo "python3"
     fi
 }
 
@@ -300,9 +322,15 @@ run_chunk_api_with_cooldown() {
             return 0
         fi
 
+        if [ $exit_code -eq 44 ]; then
+            log_warning "  [API_KEY_REJECTED] ${chunk_label} Gemini API 키가 거절되어 웹 폴백으로 전환합니다."
+            return 44
+        fi
+
         if [ $exit_code -ne 42 ] && [ $exit_code -ne 43 ]; then
             return $exit_code
         fi
+
 
         if [ $api_attempt -lt $max_attempts ]; then
             if [ $exit_code -eq 42 ]; then
@@ -464,15 +492,32 @@ download_video() {
     if $yt_dlp_cmd --list-impersonate-targets 2>/dev/null | grep -Eq '^[[:space:]]*Chrome-[^[:space:]]+[[:space:]]'; then
         yt_impersonate_flags=(--impersonate Chrome)
     else
-        log_warn "yt-dlp Chrome impersonation target unavailable → continuing without impersonation"
+        log_warning "yt-dlp Chrome impersonation target unavailable → continuing without impersonation"
     fi
-    $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg \
+    local extractor_args="youtube:player_client=web,android"
+    local browser_cookie_arg=""
+    if [ -z "$cookie_arg" ] && [ -n "${YTDLP_COOKIES_FROM_BROWSER:-}" ]; then
+        browser_cookie_arg="--cookies-from-browser ${YTDLP_COOKIES_FROM_BROWSER}"
+        log_warning "cookies.txt 없음 → YTDLP_COOKIES_FROM_BROWSER=${YTDLP_COOKIES_FROM_BROWSER} 사용"
+    fi
+    $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg $browser_cookie_arg \
         "${yt_impersonate_flags[@]}" \
+        --extractor-args "$extractor_args" \
         --no-part --ignore-errors \
         "${yt_quiet_flags[@]}" \
-        -f "b[ext=mp4][height<=360]/b[height<=360]/b" \
+        -f "b[ext=mp4][height<=360]/b[height<=360]/18/b" \
         -o "$output_template" \
         "https://www.youtube.com/watch?v=$video_id" >&2
+    if [ ! -f "$output_dir/${video_id}.mp4" ] && [ ! -f "$output_dir/${video_id}.webm" ] && [ ! -f "$output_dir/${video_id}.mkv" ]; then
+        log_warning "첫 다운로드 실패 → android player client로 재시도"
+        $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg $browser_cookie_arg \
+            --extractor-args "youtube:player_client=android" \
+            --no-part --ignore-errors \
+            "${yt_quiet_flags[@]}" \
+            -f "18/b[height<=360]/b" \
+            -o "$output_template" \
+            "https://www.youtube.com/watch?v=$video_id" >&2
+    fi
 
     # 정확한 파일명 또는 형식 코드 포함 파일명(*.f396.mp4 등) 모두 탐색
     for ext in mp4 webm mkv; do
@@ -662,12 +707,7 @@ process_video_chunks() {
         local prompt_file="$temp_dir/prompt_chunk_${i}.txt"
         local response_file="$responses_dir/chunk_response_${i}.json"
         
-        local segment_file
-        if [ "$total_chunks" -eq 1 ]; then
-            segment_file="$video_path"
-        else
-            segment_file="$segments_dir/chunk_${i}.mp4"
-        fi
+        local segment_file="$segments_dir/chunk_${i}.mp4"
 
         cat > "$prompt_file" <<PROMPT_EOF
 $chunk_prompt
@@ -722,9 +762,11 @@ PROMPT_EOF
     
                 if [ $exit_code -eq 0 ] && [ -s "$response_file" ]; then
                     log_success "  청크 $((i + 1)) 성공"
-                elif [ $exit_code -eq 42 ] || [ $exit_code -eq 43 ]; then
+                elif [ $exit_code -eq 42 ] || [ $exit_code -eq 43 ] || [ $exit_code -eq 44 ]; then
                     if [ $exit_code -eq 42 ]; then
                         log_warning "  [QUOTA_ERROR] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                    elif [ $exit_code -eq 44 ]; then
+                        log_warning "  [API_KEY_REJECTED] API 키가 거절됨. 현재 청크만 웹 자동화 폴백으로 시도합니다."
                     else
                         log_warning "  [API_UNAVAILABLE] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
                     fi
@@ -745,9 +787,11 @@ PROMPT_EOF
     
                         if [ $fb_exit -eq 0 ] && [ -s "$response_file" ]; then
                             log_success "  청크 $((i + 1)) 폴백 성공"
-                        elif [ $fb_exit -eq 42 ] || [ $fb_exit -eq 43 ]; then
+                        elif [ $fb_exit -eq 42 ] || [ $fb_exit -eq 43 ] || [ $fb_exit -eq 44 ]; then
                             if [ $fb_exit -eq 42 ]; then
                                 log_warning "  [QUOTA_ERROR] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
+                            elif [ $fb_exit -eq 44 ]; then
+                                log_warning "  [API_KEY_REJECTED] API 키가 거절됨. 현재 청크만 웹 자동화 폴백으로 시도합니다."
                             else
                                 log_warning "  [API_UNAVAILABLE] API 재시도 소진. 현재 청크만 웹 자동화 폴백으로 시도합니다."
                             fi
@@ -1011,10 +1055,13 @@ process_channel() {
     log_error "  실패: $failed_count"
     log_info "  총 소요: $(format_duration $total_time)"
 
-    if [ $failed_count -gt 0 ]; then
+    if [ $failed_count -gt 0 ] && [ $success_count -eq 0 ] && [ $skip_already_processed -eq 0 ]; then
+        log_error "처리 가능한 영상이 없고 신규 처리도 실패했습니다."
         return 1
     fi
-
+    if [ $failed_count -gt 0 ]; then
+        log_warning "일부 영상 실패($failed_count). 이미 처리된/성공한 결과는 유지하고 배치를 완료합니다."
+    fi
     return 0
 }
 
