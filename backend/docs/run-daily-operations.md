@@ -2,11 +2,9 @@
 
 ## 목적
 
-`backend/run_daily.sh`는 GitHub Actions와 로컬 운영자가 호출하는 안정적인
-배치 엔트리포인트입니다. 이 런북은 실행 후 성공/실패를 판정할 때 어떤
-증거를 먼저 볼지 정리합니다. 장기 목표는 `run_daily.sh`를 한 번에
-재작성하지 않고, 작은 helper 추출과 회귀 테스트로 안전하게 얇게 만드는
-것입니다.
+운영/CI 엔트리포인트는 `python3 -m backend.pipeline_control.worker`입니다.
+`backend/run_daily.sh`는 N=3 live 패리티 컷오버 이후 crontab/GHA 경로에서 제거되었습니다.
+이 런북은 실행 후 성공/실패를 판정할 때 어떤 증거를 먼저 볼지 정리합니다.
 
 ## 1차 증거: summary manifest
 
@@ -106,7 +104,7 @@ PY
 
 ## 변경 원칙
 
-- `run_daily.sh`는 안정적인 cron/CI entrypoint로 유지합니다.
+- crontab/GHA는 `python3 -m backend.pipeline_control.worker`를 호출합니다.
 - 새로운 파싱/집계 로직은 가능한 한 `backend/utils/run_daily_helpers.py`로
   이동합니다.
 - 실패 정책, skip 정책, manifest schema 변경은 회귀 테스트를 먼저 둡니다.
