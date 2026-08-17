@@ -53,8 +53,8 @@ async function main() {
         console.log("DEBUG: Reading prompt file...");
         const prompt = fs.readFileSync(promptFile, 'utf8');
         console.log(`DEBUG: Prompt Size=${prompt.length}`);
-        const modelName = process.env.PRIMARY_MODEL || 'gemini-3.6-flash';
-        const thinkingLevel = resolveThinkingLevel(process.env.LAAJ_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'HIGH');
+        const modelName = process.env.PRIMARY_MODEL || 'gemini-3.7-flash';
+        const thinkingLevel = resolveThinkingLevel(process.env.LAAJ_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -65,6 +65,8 @@ async function main() {
                 const model = genAI.getGenerativeModel({
                     model: modelName,
                     generationConfig: {
+                        temperature: 0.1,
+                        maxOutputTokens: 4096,
                         thinkingConfig: { thinkingLevel },
                     },
                 });

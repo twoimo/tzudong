@@ -59,10 +59,10 @@ if [ "$ENV_LOADED" = false ]; then
 fi
 
 # Gemini 모델 설정 (최신 안정 모델 우선)
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.5-flash}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.7-flash}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
-export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
+export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
 
 # 한국 시간대 설정
 export TZ="Asia/Seoul"
