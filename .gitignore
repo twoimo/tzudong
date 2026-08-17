@@ -46,6 +46,9 @@ pids/
 *.env.local
 backend/.env
 backend/.env.gemini-file-api.local
+backend/restaurant-crawling/data/gemini_cookies.local.json
+backend/restaurant-crawling/data/gemini_accounts.local.json
+backend/restaurant-crawling/data/gemini_cookies.json
 
 # ── OS 메타데이터 / OS Meta ──────────────────────────────
 .DS_Store

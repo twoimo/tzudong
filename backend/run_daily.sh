@@ -1048,7 +1048,7 @@ has_gemini_api_key() {
 }
 
 has_gemini_web_fallback_session() {
-    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
+    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.local.json" ] || [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
 }
 
 has_gemini_chunk_runtime() {
