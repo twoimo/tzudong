@@ -48,7 +48,7 @@ def save_cookies_securely(cookie_file, cookies):
         raise
 
 def main():
-    cookie_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
+    cookie_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.local.json"))
     
     log("Gemini 웹 브라우저 자동 로그인 및 쿠키 추출기")
     log("쿠키 저장소 준비 완료")

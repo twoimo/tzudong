@@ -2763,7 +2763,7 @@ def render_step08_message(message_kind: str, detail: str = "") -> str:
         ),
         "node-prerequisite-downstream-reason": "Step 08 Node prerequisite 미충족",
         "gemini-runtime-prerequisite-failure": (
-            "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/Chrome CDP) 미설정으로 실행 생략"
+            "Gemini API 키 또는 Web fallback 세션(gemini_cookies.local.json/Chrome CDP) 미설정으로 실행 생략"
         ),
         "gemini-runtime-prerequisite-downstream-reason": "Step 08 Gemini runtime prerequisite 미충족",
         "quota-detected-warning": (
