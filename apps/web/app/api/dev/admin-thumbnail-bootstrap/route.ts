@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
   if (!nextPath) return NextResponse.json({ error: 'Unsafe redirect target' }, { status: 400 })
 
   const response = NextResponse.redirect(new URL(nextPath, request.nextUrl.origin), 303)
+  response.headers.set('Cache-Control', 'no-store')
   response.cookies.set(DEV_ADMIN_BYPASS_COOKIE_NAME, await createDevAdminBypassCookieValue(), {
     httpOnly: true,
     maxAge: DEV_ADMIN_BYPASS_MAX_AGE_SECONDS,
