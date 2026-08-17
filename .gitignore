@@ -45,6 +45,7 @@ pids/
 .env.local
 *.env.local
 backend/.env
+backend/.env.gemini-file-api.local
 
 # ── OS 메타데이터 / OS Meta ──────────────────────────────
 .DS_Store
