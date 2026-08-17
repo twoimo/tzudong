@@ -9,17 +9,17 @@ MODULE_PATH = Path(__file__).resolve().parents[1] / "gemini_scrapling_fallback.p
 
 
 def load_module():
-    fake_camoufox = types.ModuleType("camoufox")
-    fake_sync_api = types.ModuleType("camoufox.sync_api")
+    fake_playwright = types.ModuleType("playwright")
+    fake_sync_api = types.ModuleType("playwright.sync_api")
 
-    class FakeCamoufox:  # pragma: no cover - import shim only
-        pass
+    def fake_sync_playwright():  # pragma: no cover - import shim only
+        raise RuntimeError("playwright unavailable in unit tests")
 
-    fake_sync_api.Camoufox = FakeCamoufox
-    fake_camoufox.sync_api = fake_sync_api
+    fake_sync_api.sync_playwright = fake_sync_playwright
+    fake_playwright.sync_api = fake_sync_api
 
-    sys.modules.setdefault("camoufox", fake_camoufox)
-    sys.modules.setdefault("camoufox.sync_api", fake_sync_api)
+    sys.modules.setdefault("playwright", fake_playwright)
+    sys.modules.setdefault("playwright.sync_api", fake_sync_api)
 
     spec = importlib.util.spec_from_file_location("gemini_scrapling_fallback", MODULE_PATH)
     module = importlib.util.module_from_spec(spec)
@@ -107,6 +107,23 @@ class GeminiWebFallbackRegressionTests(unittest.TestCase):
             "gemini_issue_banner",
             gemini_scrapling_fallback.detect_retryable_ui_problem(page),
         )
+    def test_new_gemini_ui_selectors_are_present(self) -> None:
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        self.assertIn('button[aria-label="업로드 및 도구"]', source)
+        self.assertIn('div.ql-editor.textarea[contenteditable="true"]', source)
+        self.assertIn('div[role="textbox"][aria-label*="프롬프트"]', source)
+        self.assertIn("composer.focus()", source)
+        self.assertIn("open_upload_and_tools_menu", source)
+        self.assertIn("click_upload_menu_item", source)
+        self.assertIn('button[role="menuitem"]:has-text("파일 업로드")', source)
+        self.assertIn("upload_via_plus_menu", source)
+        self.assertIn('print(f"[{time.strftime(\'%H:%M:%S\')}] [WebFallback] {msg}", file=sys.stderr)', source)
+        self.assertIn("try_dropzone_upload", source)
+        self.assertIn("모델 변경 건너뜀", source)
+        self.assertIn("try_js_drop_upload", source)
+        self.assertIn("new DragEvent", source)
+        self.assertIn("connect_over_cdp", source)
+        self.assertIn("resolve_existing_chrome_cdp_url", source)
 
 
 if __name__ == "__main__":
