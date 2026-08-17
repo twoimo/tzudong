@@ -73,7 +73,9 @@ def validate_response_payload(text):
     return True, payload
 
 # --- 설정 ---
-COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
+COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.local.json"))
+if not os.path.exists(COOKIE_FILE):
+    COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
 ALLOWED_IO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 WEB_DUMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temp", "web_fallback_dumps"))
 DEFAULT_CHROME_USER_DATA_DIR = os.path.expanduser("~/.gjc/chrome-gcp")
