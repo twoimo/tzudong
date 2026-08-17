@@ -10,7 +10,7 @@ from pathlib import Path
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
-from camoufox.sync_api import Camoufox
+from playwright.sync_api import sync_playwright
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] [WebFallback] {msg}", file=sys.stderr)
@@ -74,10 +74,11 @@ def validate_response_payload(text):
 
 # --- 설정 ---
 COOKIE_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "gemini_cookies.json"))
-BROWSER_PROFILE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "camoufox_profile"))
 ALLOWED_IO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PROFILE_LOCK_FILE = os.path.join(BROWSER_PROFILE_DIR, ".session.lock")
 WEB_DUMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "temp", "web_fallback_dumps"))
+DEFAULT_CHROME_USER_DATA_DIR = os.path.expanduser("~/.gjc/chrome-gcp")
+DEFAULT_CHROME_PROFILE_DIRECTORY = "Default"
+PROFILE_LOCK_FILE = os.path.join(DEFAULT_CHROME_USER_DATA_DIR, ".session.lock")
 
 
 def resolve_headless_mode():
@@ -98,23 +99,67 @@ def resolve_headless_mode():
     return True
 
 
-def _create_camoufox(headless=False):
-    """Camoufox 영구 프로필 컨텍스트 생성.
+def resolve_chrome_launch_config():
+    user_data_dir = (
+        os.getenv("WEB_FALLBACK_CHROME_USER_DATA_DIR")
+        or os.getenv("CHROME_USER_DATA_DIR")
+        or DEFAULT_CHROME_USER_DATA_DIR
+    ).strip()
+    profile_directory = (
+        os.getenv("WEB_FALLBACK_CHROME_PROFILE_DIRECTORY")
+        or os.getenv("CHROME_PROFILE_DIRECTORY")
+        or DEFAULT_CHROME_PROFILE_DIRECTORY
+    ).strip() or DEFAULT_CHROME_PROFILE_DIRECTORY
+    return user_data_dir, profile_directory
+def resolve_existing_chrome_cdp_url():
+    """Reuse the already-authenticated Chrome tab when CDP is exposed."""
+    raw = (os.getenv("WEB_FALLBACK_CDP_URL") or os.getenv("CHROME_CDP_URL") or "").strip()
+    if raw:
+        return raw.rstrip("/")
+    try:
+        import urllib.request
 
-    Firefox 기반이므로 Google의 CDP(Chrome DevTools Protocol) 탐지 완전 회피.
-    persistent_context로 LocalStorage, IndexedDB, 쿠키 등 모든 브라우저 상태 보존.
-    """
-    os.makedirs(BROWSER_PROFILE_DIR, exist_ok=True)
-    return Camoufox(
-        persistent_context=True,
-        user_data_dir=BROWSER_PROFILE_DIR,
-        headless=headless,
-        humanize=True,
-        block_webrtc=True,
-        enable_cache=True,
-        locale="ko-KR",
-        i_know_what_im_doing=True,
-    )
+        with urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=1.5) as resp:
+            if resp.status == 200:
+                return "http://127.0.0.1:9222"
+    except Exception:
+        return None
+    return None
+
+
+@contextmanager
+def _open_gemini_browser(headless=False):
+    """Use only Chrome: attach to the logged-in CDP session, or launch that profile."""
+    cdp_url = resolve_existing_chrome_cdp_url()
+    if cdp_url:
+        log("기존 Chrome CDP 세션에 연결")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.connect_over_cdp(cdp_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            try:
+                yield context
+            finally:
+                pass
+        return
+
+    user_data_dir, profile_directory = resolve_chrome_launch_config()
+    os.makedirs(user_data_dir, exist_ok=True)
+    log(f"Chrome 프로필 세션 시작 (headless={headless})")
+    with sync_playwright() as playwright:
+        context = playwright.chromium.launch_persistent_context(
+            user_data_dir,
+            channel="chrome",
+            headless=headless,
+            locale="ko-KR",
+            args=[
+                f"--profile-directory={profile_directory}",
+                "--remote-debugging-port=9222",
+            ],
+        )
+        try:
+            yield context
+        finally:
+            context.close()
 
 
 def should_use_profile_lock():
@@ -173,7 +218,7 @@ def _release_lock(lock_fp):
 @contextmanager
 def profile_session_lock(timeout_sec=600, poll_sec=0.5):
     """동일 프로필 동시 실행을 막아 쿠키/세션 손상을 방지."""
-    os.makedirs(BROWSER_PROFILE_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(PROFILE_LOCK_FILE), exist_ok=True)
     lock_fp = open(PROFILE_LOCK_FILE, "a+", encoding="utf-8")
     start = time.time()
     acquired = False
@@ -832,14 +877,15 @@ def click_hidden_upload_trigger(page, hidden_trigger_selectors):
 
 
 def manual_login():
-    """Camoufox(Firefox) 영구 프로필 기반 수동 로그인"""
+    """Chrome 프로필/CDP 기반 수동 로그인"""
     import threading
-    log("🔑 수동 로그인 모드 시작 (Camoufox Firefox 기반)")
-    log(f"프로필 경로: {BROWSER_PROFILE_DIR}")
-    log("Firefox 브라우저가 열리면 구글 계정으로 로그인해 주세요.")
+    log("수동 로그인 모드 시작 (Chrome)")
+    user_data_dir, profile_directory = resolve_chrome_launch_config()
+    log(f"프로필 경로: {user_data_dir} ({profile_directory})")
+    log("Chrome 창에서 구글 계정으로 로그인해 주세요.")
 
     with optional_profile_session_lock(timeout_sec=120):
-        with _create_camoufox(headless=False) as context:
+        with _open_gemini_browser(headless=False) as context:
             load_cookie_backup(context)
             page = context.pages[0] if context.pages else context.new_page()
             try:
@@ -940,10 +986,8 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
     authenticated = False
 
     headless_mode = resolve_headless_mode()
-    log(f"Camoufox(Firefox) 영구 프로필 세션 시작 (headless={headless_mode})")
-
     with optional_profile_session_lock(timeout_sec=120):
-        with _create_camoufox(headless=headless_mode) as context:
+        with _open_gemini_browser(headless=headless_mode) as context:
             restored_cookies = load_cookie_backup(context)
             page = context.pages[0] if context.pages else context.new_page()
 
@@ -1340,7 +1384,7 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Gemini Web Fallback via Camoufox (Firefox Stealth)")
+    parser = argparse.ArgumentParser(description="Gemini Web Fallback via Chrome CDP")
     parser.add_argument("-p", "--prompt", help="Prompt file path")
     parser.add_argument("-v", "--video", help="Video segment file path")
     parser.add_argument("-o", "--output", help="Output file path")

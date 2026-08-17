@@ -152,6 +152,8 @@ async function generateChunkContent(ai, modelName, promptText, processedFile, mi
     };
     if (thinkingLevel) {
         request.config = {
+            temperature: 0.2,
+            maxOutputTokens: 4096,
             thinkingConfig: { thinkingLevel },
         };
     }
@@ -234,7 +236,7 @@ async function runSingleAttempt(apiKey, modelName, promptText, videoPath, output
         const processedFile = await waitForProcessing(ai, uploadedName);
         console.log('GEMINI_FILE_READY');
 
-        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_CHUNK_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
+        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_CHUNK_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'LOW');
         console.log('GEMINI_GENERATION_STARTED');
         let result;
         try {
@@ -295,7 +297,7 @@ async function main() {
         process.exit(1);
     }
 
-    const modelName = process.env.CURRENT_MODEL || 'gemini-3.6-flash';
+    const modelName = process.env.CURRENT_MODEL || 'gemini-3.7-flash';
     console.log('GEMINI_CHUNK_REQUEST_STARTED');
 
     const promptText = fs.readFileSync(promptFile, 'utf8');

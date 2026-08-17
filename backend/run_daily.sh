@@ -950,7 +950,7 @@ render_step08_message() {
             echo "Step 08 Node prerequisite 미충족"
             ;;
         gemini-runtime-prerequisite-failure)
-            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/camoufox_profile) 미설정으로 실행 생략"
+            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/Chrome CDP) 미설정으로 실행 생략"
             ;;
         gemini-runtime-prerequisite-downstream-reason)
             echo "Step 08 Gemini runtime prerequisite 미충족"
@@ -1048,7 +1048,7 @@ has_gemini_api_key() {
 }
 
 has_gemini_web_fallback_session() {
-    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || [ -d "$PROJECT_ROOT/backend/restaurant-crawling/data/camoufox_profile" ]
+    [ -s "$PROJECT_ROOT/backend/restaurant-crawling/data/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
 }
 
 has_gemini_chunk_runtime() {

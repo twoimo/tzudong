@@ -43,12 +43,12 @@ for env_file in "$PROJECT_ROOT/.env" "$PROJECT_ROOT/../.env"; do
 done
 
 # Gemini 모델 설정
-export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.6-flash}"
-export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.5-flash}"
+export PRIMARY_MODEL="${PRIMARY_MODEL:-gemini-3.7-flash}"
+export FALLBACK_MODEL="${FALLBACK_MODEL:-gemini-3.7-flash}"
 export CURRENT_MODEL="$PRIMARY_MODEL"
-export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-MEDIUM}"
+export GEMINI_THINKING_LEVEL="${GEMINI_THINKING_LEVEL:-LOW}"
 export GEMINI_CHUNK_THINKING_LEVEL="${GEMINI_CHUNK_THINKING_LEVEL:-$GEMINI_THINKING_LEVEL}"
-export GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-HIGH}"
+export GEMINI_FINAL_MERGE_THINKING_LEVEL="${GEMINI_FINAL_MERGE_THINKING_LEVEL:-MEDIUM}"
 export TZ="Asia/Seoul"
 # 로그 모드: normal(기본) | debug
 LOG_VERBOSITY="${CRAWL_LOG_VERBOSITY:-normal}"
@@ -257,7 +257,7 @@ run_chunk_web_fallback() {
     local fallback_prompt
     local fallback_segment
     local fallback_response
-    local web_model="${WEB_GEMINI_MODEL:-Pro}"
+    local web_model="${WEB_GEMINI_MODEL:-gemini-3.7-flash}"
     local web_fallback_timeout_sec="${WEB_FALLBACK_TIMEOUT_SEC:-1200}"
 
     if ! [[ "$web_fallback_timeout_sec" =~ ^[0-9]+$ ]] || [ "$web_fallback_timeout_sec" -lt 1 ]; then
@@ -378,7 +378,7 @@ get_channels() {
 }
 
 has_gemini_web_fallback_session() {
-    [ -s "$RUNTIME_DATA_DIR/gemini_cookies.json" ] || [ -d "$RUNTIME_DATA_DIR/camoufox_profile" ]
+    [ -s "$RUNTIME_DATA_DIR/gemini_cookies.json" ] || curl -fsS --max-time 1 "http://127.0.0.1:9222/json/version" >/dev/null 2>&1
 }
 
 get_channel_data_path() {
@@ -1126,7 +1126,7 @@ main() {
 import { GoogleGenAI } from '@google/genai';
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const r = await ai.models.generateContent({
-    model: process.env.CURRENT_MODEL || 'gemini-3.6-flash',
+    model: process.env.CURRENT_MODEL || 'gemini-3.7-flash',
     contents: '1+1=?'
 });
 console.log(r.text);

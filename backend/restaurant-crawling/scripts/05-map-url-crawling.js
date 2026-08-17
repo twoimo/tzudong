@@ -1966,10 +1966,11 @@ Return exactly one JSON object with only a reviews array. Every review must have
     try {
         const { GoogleGenerativeAI } = await import('@google/generative-ai');
         const genAI = new GoogleGenerativeAI(geminiApiKey);
-        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_MAP_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'HIGH');
+        const thinkingLevel = resolveThinkingLevel(process.env.GEMINI_MAP_THINKING_LEVEL, process.env.GEMINI_THINKING_LEVEL, 'MEDIUM');
         const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
+                temperature: 0.2,
                 maxOutputTokens: GEMINI_LIMITS.maxOutputTokens,
                 responseMimeType: 'application/json',
                 thinkingConfig: { thinkingLevel }
