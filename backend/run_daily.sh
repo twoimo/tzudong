@@ -950,7 +950,7 @@ render_step08_message() {
             echo "Step 08 Node prerequisite 미충족"
             ;;
         gemini-runtime-prerequisite-failure)
-            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.json/Chrome CDP) 미설정으로 실행 생략"
+            echo "Gemini API 키 또는 Web fallback 세션(gemini_cookies.local.json/Chrome CDP) 미설정으로 실행 생략"
             ;;
         gemini-runtime-prerequisite-downstream-reason)
             echo "Step 08 Gemini runtime prerequisite 미충족"
