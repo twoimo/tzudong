@@ -270,7 +270,7 @@ describe('admin system status helper', () => {
                 expectChecklistHasAction(
                     payload,
                     'run-daily-script-missing',
-                    'run_daily 자동 수집 파이프라인이 감지되지 않았습니다. 운영 서버에서 `backend/run_daily.sh`(또는 RUN_DAILY_SCRIPT_PATH)를 배치하고, `chmod +x` 후 crontab(`0 4 * * * /path/to/backend/run_daily.sh >> ...`)에 등록해 실행되게 설정하세요.',
+                    '자동 수집 파이프라인이 감지되지 않았습니다. crontab에 `python3 -m backend.pipeline_control.worker` 를 등록하세요.',
                 );
             }
             expect(findChecklistItem(payload, 'provider-key-anthropic')?.category).toBe('provider-key');
@@ -313,7 +313,7 @@ describe('admin system status helper', () => {
             const { getAdminSystemStatus } = await loadSystemStatusHelper();
             const payload: AdminSystemStatusResponse = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
 
-            expectChecklistHasCommand(payload, 'run-daily-script-missing', 'run_daily.sh');
+            expectChecklistHasCommand(payload, 'run-daily-script-missing', 'pipeline_control.worker');
             expectChecklistHasCommand(payload, 'run-daily-script-missing', 'crontab');
             expectChecklistHasCommand(payload, 'storyboard-url-missing', 'STORYBOARD_AGENT_API_URL');
             expectChecklistHasCommand(payload, 'storyboard-url-missing', 'health');
@@ -823,7 +823,7 @@ describe('admin system status API route', () => {
             expectChecklistHasAction(
                 payload,
                 'run-daily-script-missing',
-                'run_daily 자동 수집 파이프라인이 감지되지 않았습니다. 운영 서버에서 `backend/run_daily.sh`(또는 RUN_DAILY_SCRIPT_PATH)를 배치하고, `chmod +x` 후 crontab(`0 4 * * * /path/to/backend/run_daily.sh >> ...`)에 등록해 실행되게 설정하세요.',
+                '자동 수집 파이프라인이 감지되지 않았습니다. crontab에 `python3 -m backend.pipeline_control.worker` 를 등록하세요.',
             );
             expect(findChecklistItem(payload, 'provider-key-openai')?.severity).toBe('medium');
             expect(findChecklistItem(payload, 'provider-key-openai')?.source).toBe('provider-key');

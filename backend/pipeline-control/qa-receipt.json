@@ -1,0 +1,34 @@
+{
+  "kind": "api-package-test-report",
+  "id": "ug-pipeline-control-final-qa",
+  "generation": 5,
+  "generatedAt": "2026-08-17T17:10:00Z",
+  "worktree": "/Users/twoimo/Documents/TzudongRecovery/pipeline-control-slice-0",
+  "sourceHash": "sha256:7c739efcf2b054841092f32187686e5be08ce9ec6671498182d0b7606f4bfb38",
+  "status": "passed",
+  "e2eStatus": "passed",
+  "redTeamStatus": "passed",
+  "verdicts": [
+    {
+      "id": "unit-control-plane",
+      "observed": "Ran 29 tests in 1.020s OK",
+      "verdict": "pass"
+    },
+    {
+      "id": "isolated-shims-absent",
+      "observed": "operator shims absent in isolated worktree",
+      "verdict": "pass"
+    },
+    {
+      "id": "hosted-dsn-rejected",
+      "observed": "hosted_dsn_rejected",
+      "verdict": "pass"
+    },
+    {
+      "id": "cutover-without-ledger",
+      "observed": "exit 2",
+      "verdict": "pass"
+    }
+  ],
+  "blockers": []
+}

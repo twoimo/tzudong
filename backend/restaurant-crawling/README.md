@@ -62,12 +62,12 @@
 
 ## 🤖 자동화 (Daily Pipeline)
 
-**`backend/run_daily.sh`** 스크립트를 통해 매일 새벽 4시에 전체 파이프라인이 순차적으로 실행됩니다.
+**`python3 -m backend.pipeline_control.worker`** 가 일일 파이프라인 엔트리포인트입니다.
 
 ### Crontab 설정
 ```bash
 # 매일 새벽 4시 00분 실행 (로그 저장)
-0 4 * * * /home/ubuntu/tzudong/backend/run_daily.sh >> /home/ubuntu/tzudong/backend/log/cron/daily_$(date +\%Y-\%m-\%d).log 2>&1
+0 4 * * * python3 -m backend.pipeline_control.worker >> /home/ubuntu/tzudong/backend/log/cron/daily_$(date +\%Y-\%m-\%d).log 2>&1
 ```
 
 ### 실행 순서

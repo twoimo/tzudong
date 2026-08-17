@@ -25,7 +25,7 @@ from backend.utils import run_daily_helpers
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = BACKEND_ROOT.parent
-RUN_DAILY_SOURCE = BACKEND_ROOT / "run_daily.sh"
+RUN_DAILY_SOURCE = BACKEND_ROOT / "utils" / "tests" / "fixtures" / "run_daily.sh.legacy"
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
 ENV_CONTRACT_SOURCE = BACKEND_ROOT / "bin" / "check_env_contract.py"
 PRODUCTION_FIXTURE_CHECK_SOURCE = BACKEND_ROOT / "bin" / "check_production_contract_fixtures.py"

@@ -41,6 +41,16 @@ PROFILES = {
         "optional": [],
         "allowed_aliases": [],
     },
+    "pipeline-control": {
+        "required": [
+            "TZUDONG_DATA_ENV",
+            "PIPELINE_CONTROL_DSN",
+        ],
+        "optional": [
+            "TZUDONG_COMPUTE_PROFILE",
+        ],
+        "allowed_aliases": [],
+    },
 }
 
 FORBIDDEN_ENV_NAMES = [
