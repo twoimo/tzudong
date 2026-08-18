@@ -82,6 +82,14 @@ class FileStore(MemoryStore):
                 self._load_unlocked()
                 return super().get(run_id)
 
+    def operator_snapshot(self, admitted: list[dict[str, Any]]) -> dict[str, Any]:
+        if self._nested():
+            return super().operator_snapshot(admitted)
+        with self._gate:
+            with _Lock(self.path):
+                self._load_unlocked()
+                return super().operator_snapshot(admitted)
+
     def control(self, run_id: str, action: str, *, actor: str, request_id: str) -> RunRecord:
         return self._mutate(
             lambda: super(FileStore, self).control(

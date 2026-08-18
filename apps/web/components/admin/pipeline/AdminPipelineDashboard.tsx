@@ -6,7 +6,7 @@ type PipelineStatusResponse = {
   targets?: Array<{ id: string; status?: string }>;
   hardware?: string;
   dataEnv?: string;
-  failures?: Array<{ code?: string }>;
+  failures?: Array<{ target?: string; error_code?: string }>;
 };
 
 export function AdminPipelineDashboard() {
@@ -50,11 +50,13 @@ export function AdminPipelineDashboard() {
         ))}
       </ul>
       <div data-admin-pipeline-failures="true" className="text-xs">
-        {(query.data?.failures ?? []).length === 0
-          ? "최근 실패 없음"
-          : (query.data?.failures ?? [])
-              .map((row) => row.code ?? "failed")
-              .join(", ")}
+        {query.isError
+          ? "상태를 불러올 수 없음"
+          : (query.data?.failures ?? []).length === 0
+            ? "최근 실패 없음"
+            : (query.data?.failures ?? [])
+                .map((row) => `${row.target ?? ""} ${row.error_code ?? "failed"}`.trim())
+                .join(", ")}
       </div>
     </section>
   );
