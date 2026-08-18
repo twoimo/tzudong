@@ -251,7 +251,12 @@ class HttpLoopTests(unittest.TestCase):
     def setUp(self) -> None:
         self._orig_env = {
             key: os.environ.get(key)
-            for key in ("PIPELINE_CONTROL_STORE_PATH", "TZUDONG_DATA_ENV", "PIPELINE_CONTROL_DSN")
+            for key in (
+                "PIPELINE_CONTROL_STORE_PATH",
+                "TZUDONG_DATA_ENV",
+                "PIPELINE_CONTROL_DSN",
+                "TZUDONG_PIPELINE_PERSIST",
+            )
         }
         self._store_dir = tempfile.TemporaryDirectory()
         os.environ["PIPELINE_CONTROL_STORE_PATH"] = str(Path(self._store_dir.name) / "store.json")
@@ -334,6 +339,17 @@ class HttpLoopTests(unittest.TestCase):
         self.assertIsNotNone(current)
         self.assertNotEqual(current, self._orig_env["PIPELINE_CONTROL_STORE_PATH"])
         self.assertTrue(str(current).startswith(self._store_dir.name))
+    def test_persist_misconfig_returns_bounded_json(self) -> None:
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ.pop("PIPELINE_CONTROL_DSN", None)
+        status, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httppersist1", "X-Actor": "qa"},
+        )
+        self.assertEqual(status, 503)
+        self.assertEqual(body, {"error": "persist_dsn_required"})
 
 
 class OverlayAndDocsTests(unittest.TestCase):

@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from backend.pipeline_control.dsn_guard import DsnGuardError, admit_dsn
+from backend.pipeline_control.persist import PersistError
 from backend.pipeline_control.state_machine import ControlPlaneError
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.targets import assert_admitted, load_targets
@@ -74,7 +75,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 run = store.get(run_id)
                 return _json(self, 200, store.public_run(run))
             return _json(self, 404, {"error": "not_found"})
-        except (ControlPlaneError, DsnGuardError, ValueError) as exc:
+        except (ControlPlaneError, DsnGuardError, PersistError, ValueError) as exc:
             return self._error(exc)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -128,7 +129,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 run = store.control(run_id, action, actor=actor, request_id=request_id)
                 return _json(self, 200, store.public_run(run))
             return _json(self, 404, {"error": "not_found"})
-        except (ControlPlaneError, DsnGuardError, ValueError) as exc:
+        except (ControlPlaneError, DsnGuardError, PersistError, ValueError) as exc:
             return self._error(exc)
 
     def _error(self, exc: Exception) -> None:
@@ -136,6 +137,8 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
             return _json(self, exc.http_status, {"error": exc.code})
         if isinstance(exc, DsnGuardError):
             return _json(self, 403, {"error": exc.code})
+        if isinstance(exc, PersistError):
+            return _json(self, 503, {"error": exc.code})
         if isinstance(exc, ValueError):
             return _json(self, 400, {"error": str(exc)})
         return _json(self, 500, {"error": safe_error_name(exc)})
