@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from backend.pipeline_control.adapter import ADAPTER_STEPS, execute_steps
+from backend.pipeline_control import adapter as adapter_mod
 from backend.pipeline_control.events import (
     ENVELOPE_ALLOWLIST,
     KafkaPublishError,
@@ -355,6 +356,228 @@ class EventSinkTests(unittest.TestCase):
         with self.assertRaises(KafkaPublishError) as ctx:
             publish({"type": "run.lifecycle"})
         self.assertEqual(ctx.exception.code, "kafka_publish_failed")
+    def test_envelope_allowlist_unchanged(self) -> None:
+        self.assertEqual(
+            ENVELOPE_ALLOWLIST,
+            frozenset(
+                {
+                    "type",
+                    "job_id",
+                    "status",
+                    "step",
+                    "index",
+                    "skipped",
+                    "target",
+                    "profile",
+                    "request_id",
+                    "ts",
+                    "timestamp",
+                }
+            ),
+        )
+
+    def test_live_insert_emits_one_record_upserted_in_order(self) -> None:
+        for key in ("RUN_DAILY_SKIP_FRAMES", "RUN_DAILY_SKIP_HEAVY_COMPUTE", "RUN_DAILY_SKIP_CHUNK"):
+            os.environ.pop(key, None)
+        seen: list[dict] = []
+        result = execute_steps(
+            _run(),
+            should_stop=lambda: None,
+            emit=seen.append,
+            live=True,
+            runner=lambda _argv: 0,
+        )
+        self.assertEqual(result, "Succeeded")
+        upserts = [event for event in seen if event.get("type") == "record.upserted"]
+        self.assertEqual(len(upserts), 1)
+        upsert = upserts[0]
+        self.assertEqual(set(upsert), {"type", "job_id", "step", "status", "index"})
+        self.assertTrue(set(upsert) <= ENVELOPE_ALLOWLIST)
+        self.assertEqual(upsert["status"], "Succeeded")
+        self.assertEqual(upsert["step"], "13-supabase-insert")
+        self.assertEqual(upsert["index"], ADAPTER_STEPS.index("13-supabase-insert"))
+        self.assertNotIn("origin_name", upsert)
+        self.assertNotIn("youtube_link", upsert)
+        self.assertNotIn("road_address", upsert)
+        self.assertNotIn("dsn", str(upsert))
+        progress = [event for event in seen if event.get("type") == "step.progress"]
+        lifecycle = [event for event in seen if event.get("type") == "run.lifecycle"]
+        self.assertEqual(len(progress), len(ADAPTER_STEPS))
+        self.assertEqual(lifecycle[-1]["status"], "Succeeded")
+        upsert_at = seen.index(upsert)
+        self.assertEqual(seen[upsert_at - 1]["type"], "step.progress")
+        self.assertEqual(seen[upsert_at - 1]["step"], "13-supabase-insert")
+        self.assertEqual(seen[upsert_at + 1]["type"], "run.lifecycle")
+        self.assertEqual(seen[upsert_at + 1]["status"], "Succeeded")
+
+    def test_dry_run_skip_fail_and_halt_do_not_emit_record_upserted(self) -> None:
+        dry: list[dict] = []
+        execute_steps(_run(), should_stop=lambda: None, emit=dry.append, live=False)
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in dry))
+
+        skipped: list[dict] = []
+        orig_skip = adapter_mod.skipped_live_steps
+        adapter_mod.skipped_live_steps = lambda: {"13-supabase-insert"}  # type: ignore[method-assign]
+        try:
+            execute_steps(
+                _run(),
+                should_stop=lambda: None,
+                emit=skipped.append,
+                live=True,
+                runner=lambda _argv: 0,
+            )
+        finally:
+            adapter_mod.skipped_live_steps = orig_skip  # type: ignore[method-assign]
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in skipped))
+
+        failed: list[dict] = []
+        result = execute_steps(
+            _run(),
+            should_stop=lambda: None,
+            emit=failed.append,
+            live=True,
+            runner=lambda argv: 1 if any("13-supabase-insert.py" in part for part in argv) else 0,
+        )
+        self.assertEqual(result, "Failed")
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in failed))
+
+        early: list[dict] = []
+        result = execute_steps(
+            _run(),
+            should_stop=lambda: None,
+            emit=early.append,
+            live=True,
+            runner=lambda _argv: 1,
+        )
+        self.assertEqual(result, "Failed")
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in early))
+
+        halted: list[dict] = []
+        calls = {"n": 0}
+
+        def should_stop() -> str | None:
+            calls["n"] += 1
+            if calls["n"] == ADAPTER_STEPS.index("13-supabase-insert") + 1:
+                return "Paused"
+            return None
+
+        result = execute_steps(
+            _run(),
+            should_stop=should_stop,
+            emit=halted.append,
+            live=True,
+            runner=lambda _argv: 0,
+        )
+        self.assertEqual(result, "Paused")
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in halted))
+        self.assertFalse(any(event.get("step") == "13-supabase-insert" for event in halted))
+
+    def test_insert_script_is_unmodified_and_has_no_stdout_parse(self) -> None:
+        source = (ROOT.parent / "backend" / "restaurant-evaluation" / "scripts" / "13-supabase-insert.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("record.upserted", source)
+        self.assertNotIn("pipeline_control.events", source)
+        self.assertNotIn("noop_event_sink", source)
+
+    def test_sink_spies_publish_and_index_record_upserted(self) -> None:
+        published: list[dict] = []
+        indexed: list[dict] = []
+        orig_publish = adapter_mod.publish
+        orig_index = adapter_mod.index_document
+        adapter_mod.publish = lambda event: published.append(dict(event))  # type: ignore[method-assign]
+        adapter_mod.index_document = lambda document: indexed.append(dict(document))  # type: ignore[method-assign]
+        try:
+            result = execute_steps(
+                _run(),
+                should_stop=lambda: None,
+                emit=adapter_mod.noop_event_sink,
+                live=True,
+                runner=lambda _argv: 0,
+            )
+        finally:
+            adapter_mod.publish = orig_publish  # type: ignore[method-assign]
+            adapter_mod.index_document = orig_index  # type: ignore[method-assign]
+        self.assertEqual(result, "Succeeded")
+        self.assertEqual(sum(1 for event in published if event.get("type") == "record.upserted"), 1)
+        self.assertEqual(sum(1 for document in indexed if document.get("type") == "record.upserted"), 1)
+
+    def test_injected_producer_receives_upsert_topic(self) -> None:
+        from backend.pipeline_control import events as events_mod
+
+        os.environ["TZUDONG_PIPELINE_EVENTS"] = "kafka"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_KAFKA_BOOTSTRAP"] = "127.0.0.1:9092"
+        sent: list[str] = []
+
+        class FakeProducer:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def send(self, topic: str, value: bytes) -> None:
+                sent.append(topic)
+
+            def flush(self) -> None:
+                return None
+
+            def close(self) -> None:
+                return None
+
+        events_mod._load_kafka_producer = lambda: FakeProducer  # type: ignore[method-assign]
+        execute_steps(
+            _run(),
+            should_stop=lambda: None,
+            emit=adapter_mod.noop_event_sink,
+            live=True,
+            runner=lambda _argv: 0,
+        )
+        self.assertIn("tzudong.pipeline.record.upserted.v1", sent)
+
+    def test_record_upserted_publish_failure_fail_closes_job(self) -> None:
+        from backend.pipeline_control import events as events_mod
+
+        os.environ["TZUDONG_PIPELINE_EVENTS"] = "kafka"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_KAFKA_BOOTSTRAP"] = "kafka:9092"
+
+        class SelectiveBoom:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def send(self, topic: str, _value: bytes) -> None:
+                if topic == "tzudong.pipeline.record.upserted.v1":
+                    raise RuntimeError("upsert-send-failed")
+
+            def flush(self) -> None:
+                return None
+
+            def close(self) -> None:
+                return None
+
+        events_mod._load_kafka_producer = lambda: SelectiveBoom  # type: ignore[method-assign]
+        store = MemoryStore()
+        created, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="events-upsert-fail",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-euf",
+            dry_run=False,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "current-summary.json"
+            result = process_one(store, live=True, runner=lambda _argv: 0, manifest_path=dest)
+            self.assertEqual(result, "Failed")
+            self.assertEqual(store.get(created.id).status, "Failed")
+            self.assertEqual(store.get(created.id).error_code, "kafka_publish_failed")
+
+    def test_contract_documents_process_exit_zero_upsert(self) -> None:
+        contract = CONTRACT.read_text(encoding="utf-8")
+        self.assertIn("record.upserted", contract)
+        self.assertIn("process exit 0", contract)
+        self.assertIn("possibly zero rows", contract)
+        self.assertIn("losable", contract)
 
 
 if __name__ == "__main__":
