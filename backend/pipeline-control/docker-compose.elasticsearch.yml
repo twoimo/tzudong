@@ -1,0 +1,22 @@
+# Slice 2 Elasticsearch fragment. Start independently of Grafana/OTel/Prometheus.
+# Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
+# ES documents are non-authoritative diagnostics, not job state.
+# MUST NOT declare a postgres service.
+name: tzudong-pipeline-elasticsearch
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ports:
+      - "127.0.0.1:9200:9200"
+    networks:
+      - supabase_network_local
+
+networks:
+  supabase_network_local:
+    external: true
+    name: ${TZUDONG_LOCAL_SUPABASE_NETWORK:-tzudong-local-7a6f86ca1e63_default}

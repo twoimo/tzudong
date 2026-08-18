@@ -13,6 +13,7 @@ from backend.pipeline_control.adapter import (
     noop_event_sink,
 )
 from backend.pipeline_control.events import KafkaPublishError
+from backend.pipeline_control.es_index import EsIndexError
 from backend.pipeline_control.manifest import write_compatible_summary
 from backend.pipeline_control.store import MemoryStore
 
@@ -144,6 +145,10 @@ def process_one(
             runner=runner,
         )
     except KafkaPublishError as exc:
+        store.finish_failed(run.id, exc.code)
+        write_run_manifest("Failed", manifest_path, events=collected)
+        return "Failed"
+    except EsIndexError as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest("Failed", manifest_path, events=collected)
         return "Failed"
