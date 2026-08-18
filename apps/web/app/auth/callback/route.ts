@@ -12,8 +12,11 @@ import {
   hasLivePrivacyEligibilityReceipt,
 } from '@/lib/privacy/eligibility';
 import { buildHomePrivacyOnboardingPath, getSafeAuthNextPath } from '@/lib/auth/auth-redirect';
+import {
+  createCallbackSupabaseClient,
+  revokeRejectedCallbackSession,
+} from '@/lib/auth/callback-session';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
-import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -70,7 +73,7 @@ function parseCallbackQuery(searchParams: URLSearchParams): CallbackQuery | null
   };
 }
 
-type CallbackSupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type CallbackSupabaseClient = Awaited<ReturnType<typeof createCallbackSupabaseClient>>;
 type OnboardingChallenge = NonNullable<ReturnType<typeof readOnboardingChallenge>>;
 
 function getTrustedRedirectOrigin(requestOrigin: string) {
@@ -96,20 +99,6 @@ function getTrustedRedirectOrigin(requestOrigin: string) {
 
 
 
-
-export async function revokeRejectedCallbackSession(supabase: CallbackSupabaseClient) {
-  try {
-    await supabase.auth.signOut({ scope: 'global' });
-  } catch {
-    // A rejected callback must still attempt local cookie cleanup.
-  }
-
-  try {
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch {
-    // The rejection redirect clears onboarding and browser auth cookies.
-  }
-}
 
 function redirectWithOnboardingCookiesCleared(origin: string, path = '/') {
   const response = NextResponse.redirect(`${getTrustedRedirectOrigin(origin)}${path}`);
@@ -174,7 +163,7 @@ export async function GET(request: Request) {
 
     let supabase: CallbackSupabaseClient | null = null;
     try {
-      supabase = await createClient();
+      supabase = await createCallbackSupabaseClient();
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError) {
         await revokeRejectedCallbackSession(supabase);
@@ -205,7 +194,7 @@ export async function GET(request: Request) {
 
   let supabase: CallbackSupabaseClient | null = null;
   try {
-    supabase = await createClient();
+    supabase = await createCallbackSupabaseClient();
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       await rejectOAuthCallbackSession(supabase);
