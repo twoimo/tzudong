@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, createHmac } from 'node:crypto';
@@ -111,7 +111,8 @@ function oauthRejectionRequest() {
   );
 }
 
-const { GET, revokeRejectedCallbackSession } = await import('../app/auth/callback/route.ts');
+const { GET } = await import('../app/auth/callback/route.ts');
+const { revokeRejectedCallbackSession } = await import('../lib/auth/callback-session.ts');
 
 describe('privacy onboarding challenge', () => {
   test('만료·변조·비정규 정책 해시 또는 nonce challenge를 거부한다', () => {
@@ -231,7 +232,8 @@ describe('privacy onboarding challenge', () => {
     expect(callbackRoute).not.toContain("'onboarding'");
     expect(callbackRoute).toContain("const onboardingRequested = challenge?.intent === 'oauth'");
     expect(callbackRoute).toContain("if (!challenge || !challenge.oauthNonce || challenge.origin !== origin)");
-    expect(callbackRoute).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(callbackRoute).not.toContain('export async function revokeRejectedCallbackSession');
   });
 
   test('no-challenge OAuth sessions without a live receipt enter only exact onboarding without revocation', () => {
@@ -586,8 +588,9 @@ describe('G014 server session release boundaries', () => {
     );
     expect(callback).toContain('eligibility.receipt.policyVersionId !== challenge.policyVersionId');
     expect(callback).toContain('eligibility.receipt.contentSha256 !== challenge.contentSha256');
-    expect(callback).toContain("await supabase.auth.signOut({ scope: 'global' })");
-    expect(callback).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'global' })");
+    expect(source('lib/auth/callback-session.ts')).toContain("await supabase.auth.signOut({ scope: 'local' })");
+    expect(callback).not.toContain('export async function revokeRejectedCallbackSession');
     expect(callback).not.toContain('hold_privacy_onboarding_compensation');
     expect(callback).not.toContain('ONBOARDING_COMPENSATION_HOLD_UNAVAILABLE');
     expect(callback).not.toContain('deleteUser');
@@ -615,14 +618,14 @@ describe('G014 server session release boundaries', () => {
         },
       },
     };
-
     await revokeRejectedCallbackSession(supabase as never);
     const response = await GET(oauthRejectionRequest());
-
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('location')).toBe('https://www.tzudong.app/');
     expect(oauthRejectionSignOutScopes).toEqual(['global', 'local']);
+    expect(source('app/auth/callback/route.ts')).toContain('await revokeRejectedCallbackSession(supabase)');
+    expect(source('app/auth/callback/route.ts')).toContain('await createCallbackSupabaseClient()');
   });
   test('rejected OAuth callbacks redirect no-store after both sign-outs resolve', async () => {
     const supabase = {
@@ -632,10 +635,8 @@ describe('G014 server session release boundaries', () => {
         },
       },
     };
-
     await revokeRejectedCallbackSession(supabase as never);
     const response = await GET(oauthRejectionRequest());
-
     expect(response.status).toBe(307);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(response.headers.get('location')).toBe('https://www.tzudong.app/');

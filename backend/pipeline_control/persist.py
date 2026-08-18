@@ -1,28 +1,53 @@
-"""Optional durable persist into schema pipeline_control. MemoryStore remains default."""
+"""Optional durable persist into schema pipeline_control. Off by default."""
 
 from __future__ import annotations
 
 import os
+from typing import Any
+from urllib.parse import urlparse
 
-from backend.pipeline_control.dsn_guard import admit_dsn
+from backend.pipeline_control.dsn_guard import (
+    HOSTED_PROJECT_REF,
+    DsnGuardError,
+    admit_dsn,
+    extract_project_ref,
+    load_host_class_fixture,
+)
 from backend.pipeline_control.state_machine import RunRecord
+
+
+class PersistError(Exception):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
 
 
 def persist_enabled() -> bool:
     return os.environ.get("TZUDONG_PIPELINE_PERSIST", "").strip() in {"1", "true", "TRUE", "yes"}
 
 
+def _load_psycopg2() -> Any:
+    import psycopg2
+
+    return psycopg2
+
+
 def upsert_job(run: RunRecord) -> None:
     if not persist_enabled():
         return
     dsn = os.environ.get("PIPELINE_CONTROL_DSN")
-    if not dsn:
-        return
+    if not dsn or not str(dsn).strip():
+        raise PersistError("persist_dsn_required")
     admit_dsn(data_env=os.environ.get("TZUDONG_DATA_ENV", "local_db"), dsn=dsn)
+    parsed = urlparse(str(dsn).strip())
+    ref = extract_project_ref(parsed.hostname or "", parsed.username or "")
+    forbidden = set(load_host_class_fixture()["forbiddenLocalProjectRefs"])
+    if HOSTED_PROJECT_REF in str(dsn) or ref in forbidden or ref == HOSTED_PROJECT_REF:
+        raise DsnGuardError("hosted_dsn_rejected")
     try:
-        import psycopg2
-    except ImportError:
-        return
+        psycopg2 = _load_psycopg2()
+    except ImportError as exc:
+        raise PersistError("psycopg2_missing") from exc
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
