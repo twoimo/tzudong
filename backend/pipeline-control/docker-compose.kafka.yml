@@ -1,7 +1,8 @@
 # Slice 1 Kafka fragment. Start before the observability overlay.
 # Job rows remain in schema pipeline_control / Supabase.
 # kafka-ui is an operator browser, not an admin iframe.
-# Container-only listeners: do not publish host 9092.
+# Dual listeners: container PLAINTEXT://kafka:9092, host 127.0.0.1:29092.
+# Do not publish host 9092.
 # MUST NOT declare a postgres service.
 name: tzudong-pipeline-kafka
 
@@ -11,12 +12,15 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://127.0.0.1:29092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "127.0.0.1:29092:29092"
     networks:
       - supabase_network_local
 
