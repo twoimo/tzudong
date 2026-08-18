@@ -4,15 +4,70 @@ import { join } from "node:path";
 
 import {
   PIPELINE_CONTROL_CONFIRMATION_TEXT,
+  PIPELINE_LIVE_ENQUEUE_CONFIRMATION,
+  PUBLIC_LIST_KEYS,
   assertPipelineGuardedBody,
   buildPipelinePreviewHash,
 } from "../lib/admin/pipeline-control";
 import { GUARDED_MUTATION_CONFIRMATION } from "../lib/admin/guarded-mutation-contract";
 
 const root = process.cwd();
+const RUN_ID = "22222222-2222-4222-8222-222222222222";
+const OTHER_RUN_ID = "33333333-3333-4333-8333-333333333333";
 
 function source(rel: string) {
   return readFileSync(join(root, rel), "utf8");
+}
+
+function enqueueBody(overrides: Record<string, unknown> = {}) {
+  const dryRun =
+    overrides.dryRun === undefined ? true : Boolean(overrides.dryRun);
+  const previewHash =
+    typeof overrides.previewHash === "string"
+      ? overrides.previewHash
+      : buildPipelinePreviewHash({
+          action: "enqueue",
+          target: "tzuyang",
+          profile: "heavy_local",
+          dryRun,
+        });
+  return {
+    action: "enqueue",
+    target: "tzuyang",
+    profile: "heavy_local",
+    confirmationText: PIPELINE_CONTROL_CONFIRMATION_TEXT,
+    previewHash,
+    correlationId: "11111111-1111-4111-8111-111111111111",
+    idempotencyKey: "idemkey01",
+    ...overrides,
+  };
+}
+
+function controlBody(
+  action: "pause" | "resume" | "cancel",
+  overrides: Record<string, unknown> = {},
+) {
+  const runId = String(overrides.runId ?? RUN_ID);
+  const previewHash =
+    typeof overrides.previewHash === "string"
+      ? overrides.previewHash
+      : buildPipelinePreviewHash({
+          action,
+          target: "tzuyang",
+          profile: "heavy_local",
+          runId,
+        });
+  return {
+    action,
+    target: "tzuyang",
+    profile: "heavy_local",
+    confirmationText: PIPELINE_CONTROL_CONFIRMATION_TEXT,
+    previewHash,
+    correlationId: "11111111-1111-4111-8111-111111111111",
+    idempotencyKey: "idemkey01",
+    runId,
+    ...overrides,
+  };
 }
 
 describe("admin pipeline control contract", () => {
@@ -32,6 +87,7 @@ describe("admin pipeline control contract", () => {
       idempotencyKey: "idemkey01",
     });
     expect(body.previewHash).toHaveLength(64);
+    expect(body.dryRun).toBe(true);
     expect(PIPELINE_CONTROL_CONFIRMATION_TEXT).toBe(GUARDED_MUTATION_CONFIRMATION);
     expect(() =>
       assertPipelineGuardedBody({
@@ -39,6 +95,88 @@ describe("admin pipeline control contract", () => {
         previewHash: "0".repeat(64),
       }),
     ).toThrow("preview_hash_mismatch");
+  });
+
+  test("pause/resume/cancel require UUID runId and enqueue rejects runId", () => {
+    for (const action of ["pause", "resume", "cancel"] as const) {
+      expect(() => assertPipelineGuardedBody(controlBody(action, { runId: "" }))).toThrow(
+        "invalid_pipeline_run_id",
+      );
+      expect(() =>
+        assertPipelineGuardedBody(controlBody(action, { runId: "not-a-uuid" })),
+      ).toThrow("invalid_pipeline_run_id");
+      const ok = assertPipelineGuardedBody(controlBody(action));
+      expect(ok.runId).toBe(RUN_ID);
+      expect(ok.action).toBe(action);
+    }
+    expect(() =>
+      assertPipelineGuardedBody(enqueueBody({ runId: RUN_ID })),
+    ).toThrow("invalid_pipeline_run_id");
+  });
+
+  test("previewHash changes with runId and dryRun and keeps enqueue hash shape", () => {
+    const pauseA = buildPipelinePreviewHash({
+      action: "pause",
+      target: "tzuyang",
+      profile: "heavy_local",
+      runId: RUN_ID,
+    });
+    const pauseB = buildPipelinePreviewHash({
+      action: "pause",
+      target: "tzuyang",
+      profile: "heavy_local",
+      runId: OTHER_RUN_ID,
+    });
+    expect(pauseA).not.toBe(pauseB);
+    const enqueueDry = buildPipelinePreviewHash({
+      action: "enqueue",
+      target: "tzuyang",
+      profile: "heavy_local",
+      dryRun: true,
+    });
+    const enqueueLive = buildPipelinePreviewHash({
+      action: "enqueue",
+      target: "tzuyang",
+      profile: "heavy_local",
+      dryRun: false,
+    });
+    expect(enqueueDry).not.toBe(enqueueLive);
+    const enqueueDefault = buildPipelinePreviewHash({
+      action: "enqueue",
+      target: "tzuyang",
+      profile: "heavy_local",
+    });
+    expect(enqueueDefault).toBe(enqueueDry);
+    const controlWithProfile = buildPipelinePreviewHash({
+      action: "pause",
+      target: "tzuyang",
+      profile: "lite_gha",
+      runId: RUN_ID,
+    });
+    expect(controlWithProfile).not.toBe(pauseA);
+  });
+
+  test("dryRun defaults true and live requires LIVE_ENQUEUE", () => {
+    const omitted = assertPipelineGuardedBody(enqueueBody());
+    expect(omitted.dryRun).toBe(true);
+    expect(() =>
+      assertPipelineGuardedBody(enqueueBody({ dryRun: false })),
+    ).toThrow("invalid_pipeline_live_confirmation");
+    expect(() =>
+      assertPipelineGuardedBody(
+        enqueueBody({
+          dryRun: false,
+          liveConfirmationText: GUARDED_MUTATION_CONFIRMATION,
+        }),
+      ),
+    ).toThrow("invalid_pipeline_live_confirmation");
+    const live = assertPipelineGuardedBody(
+      enqueueBody({
+        dryRun: false,
+        liveConfirmationText: PIPELINE_LIVE_ENQUEUE_CONFIRMATION,
+      }),
+    );
+    expect(live.dryRun).toBe(false);
   });
 
   test("BFF forwards Idempotency-Key and never embeds Grafana iframe", () => {
@@ -49,7 +187,13 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("isTrustedSameOriginMutation");
     expect(route).toContain("requireAdmin");
     expect(route).toContain("Cache-Control");
-    expect(route).toContain("dryRun: true");
+    expect(route).toContain("X-Actor");
+    expect(route).toContain("dryRun: normalized.dryRun");
+    expect(route).not.toContain("TZUDONG_PIPELINE_LIVE");
+    expect(route).not.toContain("dryRun: false");
+    expect(route).not.toContain("dryRun false");
+    expect(route).toContain("normalized.runId");
+    expect(route).not.toContain("bounded.value.runId");
     expect(dashboard).not.toContain("<iframe");
     expect(dashboard).toContain("Grafana iframe은 CSP/auth gate 전까지 금지");
     expect(consoleSource).not.toContain(
@@ -57,6 +201,33 @@ describe("admin pipeline control contract", () => {
     );
     expect(consoleSource).toContain('id: "pipeline"');
     expect(consoleSource).toContain("AdminPipelineDashboard");
+  });
+
+  test("POST echo path allowlists PUBLIC_LIST_KEYS and forbids public_run secrets", () => {
+    const route = source("app/api/admin/pipeline/route.ts");
+    const control = source("lib/admin/pipeline-control.ts");
+    const post = route.slice(route.indexOf("export async function POST"));
+    expect(control).toContain("PUBLIC_LIST_KEYS");
+    expect(post).toContain("allowlistedPipelineJob");
+    for (const key of [
+      "actor",
+      "payload_hash",
+      "idempotency_key",
+      "request_id",
+      "lease_until",
+      "heartbeat_at",
+    ]) {
+      expect(post).not.toContain(key);
+    }
+    expect(PUBLIC_LIST_KEYS).toEqual([
+      "id",
+      "target",
+      "profile",
+      "status",
+      "error_code",
+      "dry_run",
+      "adapter_index",
+    ]);
   });
 
   test("source test forbids Grafana iframe until CSP gate", () => {
@@ -73,10 +244,17 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("payload.jobs");
   });
 
-  test("dashboard renders error_code and keeps empty-state copy", () => {
+  test("dashboard renders jobs controls error_code and keeps empty-state copy", () => {
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
     expect(dashboard).toContain("error_code");
     expect(dashboard).toContain("최근 실패 없음");
+    expect(dashboard).toContain("data-admin-pipeline-jobs");
+    expect(dashboard).toContain("data-admin-pipeline-job");
+    expect(dashboard).toContain("data-admin-pipeline-pause");
+    expect(dashboard).toContain("data-admin-pipeline-resume");
+    expect(dashboard).toContain("data-admin-pipeline-cancel");
+    expect(dashboard).toContain("data-admin-pipeline-enqueue");
+    expect(dashboard).toContain("state already changed, refreshed");
   });
 
   test("502 bodies are error-only and query.isError gates empty failures", () => {
