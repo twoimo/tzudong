@@ -10,6 +10,7 @@ from pathlib import Path
 from backend.pipeline_control.adapter import execute_steps
 from backend.pipeline_control.es_index import (
     EsIndexError,
+    INDICES,
     allowlisted_raw_doc,
     index_document,
 )
@@ -326,6 +327,78 @@ class EsIndexTests(unittest.TestCase):
         self.assertIn("non-authoritative", contract)
         self.assertNotIn("later Slice 2 ES ingest", contract)
         self.assertIn("losable", contract)
+
+
+    def test_record_upserted_uses_logs_index(self) -> None:
+        self.assertEqual(INDICES["record.upserted"], "pipeline-logs-v1")
+        self.assertEqual(
+            index_document({"type": "record.upserted", "job_id": "j1", "status": "Succeeded"}),
+            "noop:pipeline-logs-v1",
+        )
+
+    def test_injected_client_indexes_upsert_on_logs_not_raw(self) -> None:
+        from backend.pipeline_control import adapter as adapter_mod
+        from backend.pipeline_control import es_index as es_mod
+
+        os.environ["TZUDONG_PIPELINE_ES"] = "es"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_ES_URL"] = "http://127.0.0.1:9200"
+        sent: list[tuple[str, dict]] = []
+
+        class FakeClient:
+            def __init__(self, *_args: object, **_kwargs: object) -> None:
+                pass
+
+            def index(self, index: str, document: dict) -> None:
+                sent.append((index, document))
+
+        es_mod._load_es_client = lambda: FakeClient  # type: ignore[method-assign]
+        result = execute_steps(
+            _run(),
+            should_stop=lambda: None,
+            emit=adapter_mod.noop_event_sink,
+            live=True,
+            runner=lambda _argv: 0,
+        )
+        self.assertEqual(result, "Succeeded")
+        upserts = [(index, doc) for index, doc in sent if doc.get("type") == "record.upserted"]
+        self.assertEqual(len(upserts), 1)
+        self.assertEqual(upserts[0][0], "pipeline-logs-v1")
+        self.assertNotEqual(upserts[0][0], "pipeline-raw-v1")
+        self.assertTrue(all(index != "pipeline-raw-v1" or doc.get("type") == "adapter.raw" for index, doc in sent))
+
+    def test_record_upserted_index_failure_fail_closes_job(self) -> None:
+        from backend.pipeline_control import es_index as es_mod
+
+        os.environ["TZUDONG_PIPELINE_ES"] = "es"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_ES_URL"] = "http://127.0.0.1:9200"
+
+        class SelectiveBoom:
+            def __init__(self, *_args: object, **_kwargs: object) -> None:
+                pass
+
+            def index(self, _index: str, document: dict) -> None:
+                if document.get("type") == "record.upserted":
+                    raise EsIndexError("es_index_failed")
+
+        es_mod._load_es_client = lambda: SelectiveBoom  # type: ignore[method-assign]
+        store = MemoryStore()
+        created, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="es-upsert-fail",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-esuf",
+            dry_run=False,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "current-summary.json"
+            result = process_one(store, live=True, runner=lambda _argv: 0, manifest_path=dest)
+            self.assertEqual(result, "Failed")
+            self.assertEqual(store.get(created.id).status, "Failed")
+            self.assertEqual(store.get(created.id).error_code, "es_index_failed")
 
 
 if __name__ == "__main__":
