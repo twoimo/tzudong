@@ -1,37 +1,10 @@
-# Slice 1–3 overlay. Do not start with Slice 0.
+# Slice 2–3 overlay. Start docker-compose.kafka.yml first.
 # Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
-# kafka-ui and Grafana are operator browsers, not admin iframes.
+# Grafana is an operator browser, not an admin iframe.
+# Kafka lives only in docker-compose.kafka.yml.
 name: tzudong-pipeline-observability
 
 services:
-  kafka:
-    image: apache/kafka:3.9.0
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "127.0.0.1:9092:9092"
-    networks:
-      - supabase_network_local
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:v0.7.2
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-    ports:
-      - "127.0.0.1:8088:8080"
-    depends_on:
-      - kafka
-    networks:
-      - supabase_network_local
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
     environment:
