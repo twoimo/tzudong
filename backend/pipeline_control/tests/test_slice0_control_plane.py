@@ -376,8 +376,11 @@ class OverlayAndDocsTests(unittest.TestCase):
         self.assertEqual(payload_hash({"a": 1, "b": 2}), payload_hash({"b": 2, "a": 1}))
     def test_observability_overlay_is_separate_and_has_no_postgres(self) -> None:
         obs = (ROOT / "pipeline-control" / "docker-compose.observability.yml").read_text(encoding="utf-8")
+        kafka = (ROOT / "pipeline-control" / "docker-compose.kafka.yml").read_text(encoding="utf-8")
         events = json.loads((ROOT / "pipeline-control" / "events.v1.json").read_text(encoding="utf-8"))
         self.assertNotRegex(obs, r"(?im)^\s+postgres:")
+        self.assertNotRegex(obs, r"(?m)^\s+kafka:")
+        self.assertRegex(kafka, r"(?m)^\s+kafka:")
         self.assertIn("tzudong.pipeline.run.lifecycle.v1", events["topics"])
         self.assertEqual(events["structuredSourceOfTruth"], "supabase.pipeline_control")
         dashboard = (
