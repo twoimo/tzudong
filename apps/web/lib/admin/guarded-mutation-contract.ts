@@ -16,6 +16,7 @@ export const GUARDED_MUTATION_DOMAINS = Object.freeze([
   "restaurant_submission",
   "ocr_receipt",
   "restaurant_request_review",
+  "pipeline_control",
 ] as const);
 
 export type GuardedMutationStep = (typeof GUARDED_MUTATION_STEPS)[number];
