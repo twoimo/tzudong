@@ -58,7 +58,7 @@ def classify_events_mode(raw: str | None) -> str:
 
 
 def _bootstrap_host(raw: str) -> str:
-    token = str(raw).split(",", 1)[0].strip()
+    token = str(raw).strip()
     if not token:
         raise KafkaPublishError("kafka_bootstrap_required")
     if "://" not in token:
@@ -76,10 +76,16 @@ def admit_bootstrap(*, data_env: str | None, bootstrap: str | None) -> str:
         raise KafkaPublishError("kafka_bootstrap_host_rejected")
     if not bootstrap or not str(bootstrap).strip():
         raise KafkaPublishError("kafka_bootstrap_required")
-    host = _bootstrap_host(str(bootstrap).strip())
-    if host not in ALLOWED_BOOTSTRAP_HOSTS:
-        raise KafkaPublishError("kafka_bootstrap_host_rejected")
-    return host
+    tokens = str(bootstrap).split(",")
+    if not tokens:
+        raise KafkaPublishError("kafka_bootstrap_required")
+    hosts: list[str] = []
+    for token in tokens:
+        host = _bootstrap_host(token)
+        if host not in ALLOWED_BOOTSTRAP_HOSTS:
+            raise KafkaPublishError("kafka_bootstrap_host_rejected")
+        hosts.append(host)
+    return hosts[0]
 
 
 def allowlisted_event(event: dict[str, Any]) -> dict[str, Any]:
@@ -114,16 +120,32 @@ def publish(event: dict[str, Any]) -> str:
     except ImportError as exc:
         raise KafkaPublishError("kafka_client_missing") from exc
     payload = envelope(allowlisted_event(event))
+    producer = None
+    caught: KafkaPublishError | None = None
     try:
         producer = producer_cls(bootstrap_servers=str(bootstrap).strip())
         producer.send(topic, payload.encode("utf-8"))
         producer.flush()
-    except KafkaPublishError:
+    except KafkaPublishError as exc:
+        caught = exc
         raise
     except Exception as exc:
-        raise KafkaPublishError("kafka_publish_failed") from type(exc)(
-            safe_error_name(exc)
-        )
+        caught = KafkaPublishError("kafka_publish_failed")
+        raise caught from RuntimeError(safe_error_name(exc))
+    finally:
+        if producer is not None:
+            try:
+                closer = getattr(producer, "close", None)
+                if closer is not None:
+                    closer()
+            except KafkaPublishError:
+                if caught is None:
+                    raise
+            except Exception as exc:
+                if caught is None:
+                    raise KafkaPublishError("kafka_publish_failed") from RuntimeError(
+                        safe_error_name(exc)
+                    )
     return f"kafka:{topic}"
 
 

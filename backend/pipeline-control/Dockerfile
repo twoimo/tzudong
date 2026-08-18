@@ -1,8 +1,11 @@
 # Harbor-ready multi-stage image. Tags: image.registry/tzudong/pipeline-{api,worker}:<gitsha>
+# Bakes exactly one pinned kafka client from requirements.txt; otherwise copy-only.
 FROM python:3.12-slim AS base
 WORKDIR /workspace
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
+COPY backend/pipeline-control/requirements.txt /workspace/backend/pipeline-control/requirements.txt
+RUN pip install --no-cache-dir -r /workspace/backend/pipeline-control/requirements.txt
 COPY backend/pipeline_control /workspace/backend/pipeline_control
 COPY backend/utils /workspace/backend/utils
 COPY backend/config /workspace/backend/config
