@@ -13,6 +13,7 @@ from backend.pipeline_control.state_machine import (
     ControlPlaneError,
     Profile,
     RunRecord,
+    TARGET_IDLE,
     apply_transition,
     heartbeat,
     lock_key,
@@ -22,6 +23,19 @@ from backend.pipeline_control.state_machine import (
 from backend.pipeline_control.persist import upsert_job
 
 LEASE_TTL_SECONDS = 30.0
+PUBLIC_LIST_KEYS = (
+    "id",
+    "target",
+    "profile",
+    "status",
+    "error_code",
+    "dry_run",
+    "adapter_index",
+)
+OPERATOR_FAILURE_CAP = 20
+_OPERATOR_PROFILES = ("heavy_local", "lite_gha")
+_STATUS_RANK = {"Inserting": 3, "Fetching": 2, "Queued": 1, "Paused": 0}
+_PROFILE_RANK = {"heavy_local": 1, "lite_gha": 0}
 
 
 class MemoryStore:
@@ -180,3 +194,54 @@ class MemoryStore:
         body = asdict(run)
         body.pop("events", None)
         return body
+
+    def list_run_view(self, run: RunRecord) -> dict[str, Any]:
+        return {key: getattr(run, key) for key in PUBLIC_LIST_KEYS}
+
+    def _live_lock_holder(self, run_id: str) -> RunRecord | None:
+        run = self.runs.get(run_id)
+        if run is None:
+            return None
+        if run.status not in ACTIVE_LOCK_STATUSES:
+            return None
+        if stale_reclaim_eligible(run, self.now()):
+            return None
+        return run
+
+    def operator_snapshot(self, admitted: list[dict[str, Any]]) -> dict[str, Any]:
+        admitted_ids = [str(row["id"]) for row in admitted]
+        admitted_set = set(admitted_ids)
+        jobs: list[RunRecord] = []
+        overlay: dict[str, str] = {target_id: TARGET_IDLE for target_id in admitted_ids}
+        for target_id in admitted_ids:
+            live: list[RunRecord] = []
+            for profile in _OPERATOR_PROFILES:
+                holder = self.locks.get(lock_key(target_id, profile))
+                if not holder:
+                    continue
+                run = self._live_lock_holder(holder)
+                if run is None:
+                    continue
+                live.append(run)
+                jobs.append(run)
+            if live:
+                live.sort(
+                    key=lambda run: (
+                        _STATUS_RANK.get(run.status, -1),
+                        _PROFILE_RANK.get(run.profile, -1),
+                    ),
+                    reverse=True,
+                )
+                overlay[target_id] = live[0].status
+        failures = [
+            run
+            for run in self.runs.values()
+            if run.status == "Failed" and run.target in admitted_set
+        ]
+        jobs.sort(key=lambda run: (-run.heartbeat_at, run.id))
+        failures.sort(key=lambda run: (-run.heartbeat_at, run.id))
+        return {
+            "targets": [{"id": target_id, "status": overlay[target_id]} for target_id in admitted_ids],
+            "jobs": [self.list_run_view(run) for run in jobs],
+            "failures": [self.list_run_view(run) for run in failures[:OPERATOR_FAILURE_CAP]],
+        }

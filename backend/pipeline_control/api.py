@@ -68,7 +68,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 )
                 return _json(self, 200, {"ready": True})
             if path == "/v1/targets":
-                return _json(self, 200, {"targets": load_targets()})
+                return _json(self, 200, current_store().operator_snapshot(load_targets()))
             if path.startswith("/v1/runs/"):
                 run_id = path.rsplit("/", 1)[-1]
                 store = current_store()
