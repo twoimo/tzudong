@@ -62,7 +62,7 @@ def emit_raw_document(run: RunRecord, *, step: str, status: str, skipped: bool) 
 
 def noop_event_sink(event: dict[str, Any]) -> None:
     publish(event)
-    if event.get("type") in {"run.lifecycle", "step.progress"}:
+    if event.get("type") in {"run.lifecycle", "step.progress", "record.upserted"}:
         index_document(event)
 
 
@@ -130,6 +130,16 @@ def execute_steps(
             if code != 0:
                 emit({"type": "run.lifecycle", "job_id": run.id, "status": "Failed", "step": step})
                 return "Failed"
+            if step == "13-supabase-insert":
+                emit(
+                    {
+                        "type": "record.upserted",
+                        "job_id": run.id,
+                        "step": step,
+                        "status": "Succeeded",
+                        "index": index,
+                    }
+                )
         else:
             run_daily_helper_dry_run(step)
         run.adapter_index = index + 1
