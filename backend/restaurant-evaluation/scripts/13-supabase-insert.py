@@ -108,6 +108,7 @@ RESTAURANT_CAS_JSONB_FIELDS = {
     "evaluation_results",
 }
 RESTAURANT_CAS_TEXT_ARRAY_FIELDS = {"categories"}
+RESTAURANT_CAS_PREDICATE_FIELDS = ("id", "trace_id", "updated_at")
 RESTAURANT_CAS_READBACK_FIELDS = ",".join(RESTAURANT_CAS_FIELDS)
 
 
@@ -397,11 +398,14 @@ def fetch_existing_rows_by_trace_id(supabase: Client, trace_ids: list[str]) -> d
     if not trace_ids:
         return {}
 
-    response = supabase.table("restaurants").select("*").in_("trace_id", trace_ids).execute()
-    if not response.data:
-        return {}
-
-    return {row["trace_id"]: row for row in response.data if row.get("trace_id")}
+    found: dict[str, dict[str, Any]] = {}
+    for lookup_chunk in chunked(list(dict.fromkeys(trace_ids)), YOUTUBE_LOOKUP_CHUNK_SIZE):
+        response = supabase.table("restaurants").select("*").in_("trace_id", lookup_chunk).execute()
+        for row in response.data or []:
+            trace_id = row.get("trace_id")
+            if trace_id:
+                found[trace_id] = row
+    return found
 
 
 def fetch_review_rebind_candidates(supabase: Client, youtube_links: list[str]) -> dict[tuple[str, str], list[dict[str, Any]]]:
@@ -510,7 +514,9 @@ def reviewed_snapshot(existing: dict[str, Any]) -> dict[str, Any]:
 
 
 def bind_restaurant_compare_and_set(query: Any, snapshot: dict[str, Any]) -> Any:
-    for field in RESTAURANT_CAS_FIELDS:
+    # Keep CAS predicates compact. Binding evaluation_results/address JSON
+    # as query filters overflows local PostgREST (HTTP 414).
+    for field in RESTAURANT_CAS_PREDICATE_FIELDS:
         query = bind_exact_value(
             query,
             field,
