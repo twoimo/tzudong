@@ -406,6 +406,104 @@ class HttpLoopTests(unittest.TestCase):
         self.assertNotEqual(raw["runs"][run.id]["status"], "Failed")
 
 
+
+    def test_post_enqueue_omitted_dry_run_stores_true(self) -> None:
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local"},
+            {"Idempotency-Key": "httpenqomit1", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        path = Path(os.environ["PIPELINE_CONTROL_STORE_PATH"])
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        self.assertTrue(raw["runs"][body["id"]]["dry_run"])
+
+    def test_post_enqueue_dry_run_overlays_allowlisted_queued_job(self) -> None:
+        from backend.pipeline_control.store import PUBLIC_LIST_KEYS
+
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httpenqdry01", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        status, snap, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        tzuyang = next(item for item in snap["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Queued")
+        self.assertEqual(len(snap["jobs"]), 1)
+        job = snap["jobs"][0]
+        self.assertEqual(job["id"], body["id"])
+        self.assertTrue(job["dry_run"])
+        self.assertTrue(set(job).issubset(set(PUBLIC_LIST_KEYS)))
+        missing, miss_body, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(missing, 404)
+        self.assertEqual(miss_body["error"], "not_found")
+
+    def test_post_pause_resume_cancel_file_store_cycle(self) -> None:
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httpcycle0001", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        run_id = body["id"]
+        pause, paused, _ = self._request("POST", f"/v1/runs/{run_id}/pause")
+        self.assertEqual(pause, 200)
+        self.assertEqual(paused["status"], "Paused")
+        status, snap, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        tzuyang = next(item for item in snap["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Paused")
+        self.assertEqual(snap["jobs"][0]["id"], run_id)
+        self.assertEqual(snap["jobs"][0]["status"], "Paused")
+        resume, resumed, _ = self._request("POST", f"/v1/runs/{run_id}/resume")
+        self.assertEqual(resume, 200)
+        self.assertEqual(resumed["status"], "Queued")
+        status, snap, _ = self._request("GET", "/v1/targets")
+        tzuyang = next(item for item in snap["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Queued")
+        cancel, cancelled, _ = self._request("POST", f"/v1/runs/{run_id}/cancel")
+        self.assertEqual(cancel, 200)
+        self.assertEqual(cancelled["status"], "Cancelled")
+        status, snap, _ = self._request("GET", "/v1/targets")
+        tzuyang = next(item for item in snap["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Idle")
+        self.assertEqual(snap["jobs"], [])
+
+    def test_post_hosted_dsn_rejected_on_enqueue(self) -> None:
+        os.environ["PIPELINE_CONTROL_DSN"] = (
+            "postgresql://postgres.aqlcofblfxdrjhhdmarw@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+        )
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httphosted01", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 403)
+        self.assertEqual(body["error"], "hosted_dsn_rejected")
+
+    def test_illegal_pause_on_cancelled_returns_409(self) -> None:
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httpillegal01", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        run_id = body["id"]
+        cancel, cancelled, _ = self._request("POST", f"/v1/runs/{run_id}/cancel")
+        self.assertEqual(cancel, 200)
+        self.assertEqual(cancelled["status"], "Cancelled")
+        pause, paused, _ = self._request("POST", f"/v1/runs/{run_id}/pause")
+        self.assertEqual(pause, 409)
+        self.assertEqual(paused["error"], "illegal_transition")
+
+
 class OverlayAndDocsTests(unittest.TestCase):
     def test_compose_has_no_postgres(self) -> None:
         text = COMPOSE.read_text(encoding="utf-8")
