@@ -130,3 +130,7 @@ backend/restaurant-evaluation/reports/
 .vercel
 .gjc/
 tmp/
+
+# Isolated recovery worktrees and local operator artifacts. Never commit
+# dumps, keys, or hosted receipts from this tree.
+.recovery/
