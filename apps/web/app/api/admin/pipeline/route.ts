@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   PIPELINE_API_BASE,
+  allowlistedPipelineJob,
   assertPipelineGuardedBody,
 } from "@/lib/admin/pipeline-control";
 import { getAdminSafeErrorName } from "@/lib/admin/guarded-mutation-contract";
@@ -77,38 +78,45 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const path =
-    normalized.action === "enqueue"
-      ? "/v1/runs"
-      : `/v1/runs/${String((bounded.value as { runId?: string }).runId ?? "")}/${normalized.action}`;
+  const isEnqueue = normalized.action === "enqueue";
+  const path = isEnqueue
+    ? "/v1/runs"
+    : `/v1/runs/${normalized.runId}/${normalized.action}`;
   try {
-    const response = await fetch(`${PIPELINE_API_BASE}${path}`, {
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Idempotency-Key": normalized.idempotencyKey,
+      "X-Request-Id": normalized.correlationId,
+      "X-Actor": auth.userId ?? "admin",
+    };
+    const init: RequestInit = {
       method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "Idempotency-Key": normalized.idempotencyKey,
-        "X-Request-Id": normalized.correlationId,
-        "X-Actor": auth.userId ?? "admin",
-      },
-      body: JSON.stringify({
+      headers,
+      cache: "no-store",
+    };
+    if (isEnqueue) {
+      headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify({
         target: normalized.target,
         profile: normalized.profile,
-        dryRun: true,
-      }),
-      cache: "no-store",
-    });
+        dryRun: normalized.dryRun,
+      });
+    }
+    const response = await fetch(`${PIPELINE_API_BASE}${path}`, init);
     const payload = (await response.json().catch(() => ({}))) as Record<
       string,
       unknown
     >;
-    if (response.status === 409) {
-      return noStore({ error: payload.error ?? "conflict" }, { status: 409 });
+    if (response.status < 200 || response.status >= 300) {
+      return noStore(
+        { error: payload.error ?? (response.status === 409 ? "conflict" : "pipeline_write_failed") },
+        { status: response.status === 409 ? 409 : response.status },
+      );
     }
     return noStore(
       {
         accepted: true,
-        job: payload,
+        job: allowlistedPipelineJob(payload),
         audit: "pipeline_control.audit",
       },
       { status: response.status === 202 ? 202 : response.status },
