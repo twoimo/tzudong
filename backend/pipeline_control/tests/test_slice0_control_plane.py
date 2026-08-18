@@ -249,16 +249,16 @@ class StoreMatrixTests(unittest.TestCase):
 
 class HttpLoopTests(unittest.TestCase):
     def setUp(self) -> None:
+        self._orig_env = {
+            key: os.environ.get(key)
+            for key in ("PIPELINE_CONTROL_STORE_PATH", "TZUDONG_DATA_ENV", "PIPELINE_CONTROL_DSN")
+        }
         self._store_dir = tempfile.TemporaryDirectory()
         os.environ["PIPELINE_CONTROL_STORE_PATH"] = str(Path(self._store_dir.name) / "store.json")
         from backend.pipeline_control import api as api_mod
         from backend.pipeline_control.file_store import FileStore
 
         self._orig_store = api_mod.STORE
-        self._orig_env = {
-            key: os.environ.get(key)
-            for key in ("PIPELINE_CONTROL_STORE_PATH", "TZUDONG_DATA_ENV", "PIPELINE_CONTROL_DSN")
-        }
         api_mod.STORE = FileStore()
         self._queue = tempfile.TemporaryDirectory()
         from backend.pipeline_control import queue as queue_mod
@@ -329,6 +329,11 @@ class HttpLoopTests(unittest.TestCase):
     def test_privacy_sanitize_on_errors(self) -> None:
         leaked = sanitize_log_value("password=super-secret-value")
         self.assertNotIn("super-secret-value", json.dumps(leaked))
+    def test_setup_snapshots_store_path_before_mutation(self) -> None:
+        current = os.environ.get("PIPELINE_CONTROL_STORE_PATH")
+        self.assertIsNotNone(current)
+        self.assertNotEqual(current, self._orig_env["PIPELINE_CONTROL_STORE_PATH"])
+        self.assertTrue(str(current).startswith(self._store_dir.name))
 
 
 class OverlayAndDocsTests(unittest.TestCase):
