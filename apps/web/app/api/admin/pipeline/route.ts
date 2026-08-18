@@ -32,12 +32,17 @@ export async function GET() {
     if (!response.ok) {
       return noStore({ error: "pipeline_status_unavailable" }, { status: 502 });
     }
-    const payload = (await response.json()) as { targets?: unknown };
+    const payload = (await response.json()) as {
+      targets?: unknown;
+      jobs?: unknown;
+      failures?: unknown;
+    };
     return noStore({
       targets: payload.targets ?? [],
+      jobs: payload.jobs ?? [],
+      failures: payload.failures ?? [],
       hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "macbook_m5_max",
       dataEnv: process.env.TZUDONG_DATA_ENV ?? "local_db",
-      failures: [],
     });
   } catch (error) {
     return noStore(

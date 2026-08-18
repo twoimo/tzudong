@@ -352,6 +352,60 @@ class HttpLoopTests(unittest.TestCase):
         self.assertEqual(body, {"error": "persist_dsn_required"})
 
 
+    def test_get_targets_overlays_enqueued_job(self) -> None:
+        status, empty, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        self.assertEqual(empty.get("jobs"), [])
+        self.assertEqual(empty.get("failures"), [])
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httpoverlay1", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        status, snap, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        tzuyang = next(item for item in snap["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Queued")
+        self.assertEqual(len(snap["jobs"]), 1)
+        self.assertEqual(snap["jobs"][0]["id"], body["id"])
+        missing, miss_body, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(missing, 404)
+        self.assertEqual(miss_body["error"], "not_found")
+
+    def test_get_targets_does_not_reclaim_when_persist_on(self) -> None:
+        from backend.pipeline_control import api as api_mod
+        from backend.pipeline_control.file_store import FileStore
+
+        now = {"t": 1_000.0}
+        path = Path(os.environ["PIPELINE_CONTROL_STORE_PATH"])
+        store = FileStore(path=path, clock=lambda: now["t"])
+        api_mod.STORE = store
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="httpleas11",
+            payload={},
+            actor="qa",
+            request_id="req-lease",
+        )
+        claimed = store.claim()
+        assert claimed is not None
+        self.assertEqual(store.get(run.id).status, "Fetching")
+        now["t"] = 10_000.0
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ.pop("PIPELINE_CONTROL_DSN", None)
+        status, body, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        tzuyang = next(item for item in body["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Idle")
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(raw["runs"][run.id]["status"], "Fetching")
+        self.assertNotEqual(raw["runs"][run.id].get("error_code"), "lease_expired")
+        self.assertNotEqual(raw["runs"][run.id]["status"], "Failed")
+
+
 class OverlayAndDocsTests(unittest.TestCase):
     def test_compose_has_no_postgres(self) -> None:
         text = COMPOSE.read_text(encoding="utf-8")
@@ -591,6 +645,226 @@ class PersistSoTTests(unittest.TestCase):
         persist_mod.upsert_job(run)
         self.assertEqual(seen, ["postgresql://tzudong@127.0.0.1:54322/postgres"])
         self.assertTrue(any("INSERT INTO pipeline_control.jobs" in sql for sql in statements))
+
+class OperatorSnapshotTests(unittest.TestCase):
+    FORBIDDEN = {
+        "actor",
+        "payload_hash",
+        "events",
+        "idempotency_key",
+        "request_id",
+        "lease_until",
+        "heartbeat_at",
+    }
+
+    def _status(self, snap: dict, target: str) -> str:
+        return next(item["status"] for item in snap["targets"] if item["id"] == target)
+
+    def _allowlisted(self, rows: list[dict]) -> None:
+        from backend.pipeline_control.store import PUBLIC_LIST_KEYS
+
+        for row in rows:
+            self.assertEqual(set(row), set(PUBLIC_LIST_KEYS))
+            for key in self.FORBIDDEN:
+                self.assertNotIn(key, row)
+
+    def test_overlay_live_queued(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapq0001",
+            payload={},
+            actor="admin",
+            request_id="req-q",
+        )
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Queued")
+        self.assertEqual(self._status(snap, "meatcreator"), "Idle")
+        self.assertEqual(len(snap["jobs"]), 1)
+        self._allowlisted(snap["jobs"])
+
+    def test_overlay_claim_fetching(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapf0001",
+            payload={},
+            actor="admin",
+            request_id="req-f",
+        )
+        store.claim()
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Fetching")
+
+    def test_overlay_pause_holds(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapp0001",
+            payload={},
+            actor="admin",
+            request_id="req-p",
+        )
+        store.control(run.id, "pause", actor="admin", request_id="req-p2")
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Paused")
+        self.assertEqual(len(snap["jobs"]), 1)
+
+    def test_overlay_idle_after_success_and_fail(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        ok, _ = store.create_run(
+            target="meatcreator",
+            profile="lite_gha",
+            idempotency_key="snaps0001",
+            payload={},
+            actor="admin",
+            request_id="req-ok",
+        )
+        store.finish_dry_run(ok.id)
+        failed, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapx0001",
+            payload={},
+            actor="admin",
+            request_id="req-x",
+        )
+        store.finish_failed(failed.id, "adapter_failed")
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Idle")
+        self.assertEqual(self._status(snap, "meatcreator"), "Idle")
+        self.assertEqual(len(snap["failures"]), 1)
+        self.assertEqual(snap["failures"][0]["error_code"], "adapter_failed")
+        self.assertEqual(snap["failures"][0]["id"], failed.id)
+        self._allowlisted(snap["failures"])
+
+    def test_stale_missing_holder_and_unadmitted_lock(self) -> None:
+        now = {"t": 1_000.0}
+        store = MemoryStore(clock=lambda: now["t"])
+        ghost, _ = store.create_run(
+            target="ghost",
+            profile="heavy_local",
+            idempotency_key="snapghost1",
+            payload={},
+            actor="admin",
+            request_id="req-g",
+        )
+        store.finish_failed(ghost.id, "gone")
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapstale1",
+            payload={},
+            actor="admin",
+            request_id="req-st",
+        )
+        store.claim()
+        now["t"] = 10_000.0
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Idle")
+        self.assertEqual(store.get(run.id).status, "Fetching")
+        self.assertEqual(snap["jobs"], [])
+        self.assertFalse(any(row["id"] == run.id for row in snap["failures"]))
+        self.assertNotIn("ghost", {item["id"] for item in snap["targets"]})
+        self.assertFalse(any(row["target"] == "ghost" for row in snap["jobs"]))
+        self.assertFalse(any(row["target"] == "ghost" for row in snap["failures"]))
+        store.locks["tzuyang:lite_gha"] = "missing-holder"
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Idle")
+        self.assertFalse(any(row["id"] == "missing-holder" for row in snap["jobs"]))
+
+    def test_dual_profile_rank(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        heavy, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapdual01",
+            payload={},
+            actor="admin",
+            request_id="req-dh",
+        )
+        lite, _ = store.create_run(
+            target="tzuyang",
+            profile="lite_gha",
+            idempotency_key="snapdual02",
+            payload={},
+            actor="admin",
+            request_id="req-dl",
+        )
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Queued")
+        heavy.status = "Fetching"
+        lite.status = "Inserting"
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Inserting")
+        heavy.status = "Fetching"
+        lite.status = "Fetching"
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(self._status(snap, "tzuyang"), "Fetching")
+        self.assertEqual(len(snap["jobs"]), 2)
+
+    def test_allowlist_keys(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="snapkeys01",
+            payload={},
+            actor="admin@example.com",
+            request_id="req-k",
+        )
+        snap = store.operator_snapshot(load_targets())
+        self.assertTrue(snap["jobs"])
+        self._allowlisted(snap["jobs"])
+        store.finish_failed(run.id, "boom")
+        snap = store.operator_snapshot(load_targets())
+        self.assertTrue(snap["failures"])
+        self._allowlisted(snap["failures"])
+
+    def test_failure_cap_keeps_newest(self) -> None:
+        from backend.pipeline_control.store import OPERATOR_FAILURE_CAP
+
+        now = {"t": 1_000.0}
+        store = MemoryStore(clock=lambda: now["t"])
+        ids: list[str] = []
+        for index in range(25):
+            now["t"] += 1
+            run, _ = store.create_run(
+                target="tzuyang",
+                profile="heavy_local",
+                idempotency_key=f"snapcap{index:05d}",
+                payload={"n": index},
+                actor="admin",
+                request_id=f"req-c{index}",
+            )
+            store.finish_failed(run.id, f"e{index}")
+            ids.append(run.id)
+        snap = store.operator_snapshot(load_targets())
+        self.assertEqual(len(snap["failures"]), OPERATOR_FAILURE_CAP)
+        self.assertEqual([row["id"] for row in snap["failures"]], list(reversed(ids[-20:])))
+
+    def test_filestore_reload_same_path(self) -> None:
+        from backend.pipeline_control.file_store import FileStore
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "store.json"
+            writer = FileStore(path=path, clock=lambda: 1_000.0)
+            writer.create_run(
+                target="tzuyang",
+                profile="heavy_local",
+                idempotency_key="snapfile01",
+                payload={},
+                actor="admin",
+                request_id="req-file",
+            )
+            reader = FileStore(path=path, clock=lambda: 1_000.0)
+            snap = reader.operator_snapshot(load_targets())
+            self.assertEqual(self._status(snap, "tzuyang"), "Queued")
+
+
 
 if __name__ == "__main__":
     unittest.main()
