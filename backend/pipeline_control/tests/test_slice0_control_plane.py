@@ -254,6 +254,11 @@ class HttpLoopTests(unittest.TestCase):
         from backend.pipeline_control import api as api_mod
         from backend.pipeline_control.file_store import FileStore
 
+        self._orig_store = api_mod.STORE
+        self._orig_env = {
+            key: os.environ.get(key)
+            for key in ("PIPELINE_CONTROL_STORE_PATH", "TZUDONG_DATA_ENV", "PIPELINE_CONTROL_DSN")
+        }
         api_mod.STORE = FileStore()
         self._queue = tempfile.TemporaryDirectory()
         from backend.pipeline_control import queue as queue_mod
@@ -268,8 +273,16 @@ class HttpLoopTests(unittest.TestCase):
         self.thread.start()
 
     def tearDown(self) -> None:
+        from backend.pipeline_control import api as api_mod
         from backend.pipeline_control import queue as queue_mod
+
         queue_mod.DEFAULT_QUEUE = self._orig_queue
+        api_mod.STORE = self._orig_store
+        for key, value in self._orig_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
         self._queue.cleanup()
         self._store_dir.cleanup()
         self.server.shutdown()
@@ -365,6 +378,165 @@ class OverlayAndDocsTests(unittest.TestCase):
         self.assertIn("TZUDONG_COMPUTE_PROFILE: lite_gha", workflow)
         self.assertNotIn("bash backend/run_daily.sh", workflow)
 
+
+class PersistSoTTests(unittest.TestCase):
+    def setUp(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+
+        self._orig = {
+            key: os.environ.get(key)
+            for key in ("TZUDONG_PIPELINE_PERSIST", "PIPELINE_CONTROL_DSN", "TZUDONG_DATA_ENV")
+        }
+        self._orig_load = persist_mod._load_psycopg2
+
+    def tearDown(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+
+        persist_mod._load_psycopg2 = self._orig_load
+        for key, value in self._orig.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_default_persist_is_off(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+
+        os.environ.pop("TZUDONG_PIPELINE_PERSIST", None)
+        self.assertFalse(persist_mod.persist_enabled())
+
+    def test_enabled_without_psycopg2_fails_closed(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+
+        def missing() -> object:
+            raise ImportError("no-psycopg2")
+
+        persist_mod._load_psycopg2 = missing  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-000000000001",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist01",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-p1",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        with self.assertRaises(persist_mod.PersistError) as ctx:
+            persist_mod.upsert_job(run)
+        self.assertEqual(ctx.exception.code, "psycopg2_missing")
+
+    def test_enabled_hosted_dsn_rejected(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = (
+            "postgresql://postgres.aqlcofblfxdrjhhdmarw@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+        )
+        run = RunRecord(
+            id="00000000-0000-4000-8000-000000000002",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist02",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-p2",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        with self.assertRaises(dsn_guard.DsnGuardError) as ctx:
+            persist_mod.upsert_job(run)
+        self.assertEqual(ctx.exception.code, "hosted_dsn_rejected")
+
+    def test_enabled_hosted_dsn_rejected_even_for_hosting_db(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "hosting_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = (
+            "postgresql://postgres.aqlcofblfxdrjhhdmarw@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+        )
+        run = RunRecord(
+            id="00000000-0000-4000-8000-000000000002",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist02",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-p2",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        with self.assertRaises(dsn_guard.DsnGuardError) as ctx:
+            persist_mod.upsert_job(run)
+        self.assertEqual(ctx.exception.code, "hosted_dsn_rejected")
+
+    def test_local_upsert_does_not_use_hosted_dsn(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        seen: list[str] = []
+        statements: list[str] = []
+
+        class FakeCursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                return None
+
+            def execute(self, sql: str, params: tuple) -> None:
+                statements.append(sql)
+                self.params = params
+
+        class FakeConn:
+            def cursor(self):
+                return FakeCursor()
+
+            def commit(self) -> None:
+                return None
+
+            def close(self) -> None:
+                return None
+
+        class FakePsycopg2:
+            @staticmethod
+            def connect(dsn: str) -> FakeConn:
+                seen.append(dsn)
+                self.assertNotIn("aqlcofblfxdrjhhdmarw", dsn)
+                return FakeConn()
+
+        persist_mod._load_psycopg2 = lambda: FakePsycopg2()  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-000000000003",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist03",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-p3",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        persist_mod.upsert_job(run)
+        self.assertEqual(seen, ["postgresql://tzudong@127.0.0.1:54322/postgres"])
+        self.assertTrue(any("INSERT INTO pipeline_control.jobs" in sql for sql in statements))
 
 if __name__ == "__main__":
     unittest.main()
