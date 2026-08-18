@@ -58,6 +58,7 @@ describe("admin guarded mutation contract", () => {
       "restaurant_submission",
       "ocr_receipt",
       "restaurant_request_review",
+      "pipeline_control",
     ]);
   });
 
