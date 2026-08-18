@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from backend.pipeline_control.state_machine import ADAPTER_STEPS, RunRecord
 from backend.pipeline_control.events import publish
+from backend.pipeline_control.es_index import index_document
 
 STEP_COMMANDS = {
     "01-collect-urls": ["{python}", "backend/restaurant-crawling/scripts/01-collect-urls.py", "--channel", "{target}"],
@@ -45,8 +46,24 @@ CANONICAL_STEP_NAMES = {
 SKIP_HEAVY_REASON = "경량 모드(SKIP_HEAVY_COMPUTE) — 로컬 머신에서 실행"
 
 
+def emit_raw_document(run: RunRecord, *, step: str, status: str, skipped: bool) -> None:
+    index_document(
+        {
+            "type": "adapter.raw",
+            "job_id": run.id,
+            "step": step,
+            "status": status,
+            "skipped": skipped,
+            "request_id": run.request_id,
+            "payload_hash": run.payload_hash,
+        }
+    )
+
+
 def noop_event_sink(event: dict[str, Any]) -> None:
     publish(event)
+    if event.get("type") in {"run.lifecycle", "step.progress"}:
+        index_document(event)
 
 
 def run_daily_helper_dry_run(step: str) -> dict[str, str]:
@@ -96,6 +113,12 @@ def execute_steps(
                 "index": index,
                 "skipped": skipped,
             }
+        )
+        emit_raw_document(
+            run,
+            step=step,
+            status="skipped" if skipped else "ok",
+            skipped=skipped,
         )
         if skipped:
             run.adapter_index = index + 1
