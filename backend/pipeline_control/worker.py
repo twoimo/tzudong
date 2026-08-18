@@ -12,6 +12,7 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
 )
+from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.manifest import write_compatible_summary
 from backend.pipeline_control.store import MemoryStore
 
@@ -134,13 +135,18 @@ def process_one(
         collected.append(event)
         noop_event_sink(event)
 
-    result = execute_steps(
-        run,
-        should_stop=should_stop,
-        emit=emit,
-        live=use_live and not run.dry_run,
-        runner=runner,
-    )
+    try:
+        result = execute_steps(
+            run,
+            should_stop=should_stop,
+            emit=emit,
+            live=use_live and not run.dry_run,
+            runner=runner,
+        )
+    except KafkaPublishError as exc:
+        store.finish_failed(run.id, exc.code)
+        write_run_manifest("Failed", manifest_path, events=collected)
+        return "Failed"
     if result == "Succeeded":
         store.finish_dry_run(run.id)
     elif result == "Failed":
