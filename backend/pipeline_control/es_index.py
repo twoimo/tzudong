@@ -12,6 +12,7 @@ from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 INDICES = {
     "run.lifecycle": "pipeline-logs-v1",
     "step.progress": "pipeline-logs-v1",
+    "record.upserted": "pipeline-logs-v1",
     "adapter.raw": "pipeline-raw-v1",
 }
 
