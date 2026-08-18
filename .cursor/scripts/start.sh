@@ -37,15 +37,18 @@ start_docker_daemon() {
     tail -n 20 /tmp/tzudong-dockerd.log >&2 || true
     return 1
   fi
-  sudo chown "$(id -u):$(id -g)" "${TZUDONG_DOCKER_SOCK}"
 
   docker context inspect "${TZUDONG_DOCKER_CONTEXT}" >/dev/null 2>&1 \
     || docker context create "${TZUDONG_DOCKER_CONTEXT}" \
          --docker "host=unix://${TZUDONG_DOCKER_SOCK}" >/dev/null
   docker context use "${TZUDONG_DOCKER_CONTEXT}" >/dev/null
 
+  # The daemon may recreate the socket root-owned after startup, so re-chown on
+  # every readiness attempt until docker responds through the user context.
   local j
-  for j in $(seq 1 30); do
+  for j in $(seq 1 40); do
+    [ -S "${TZUDONG_DOCKER_SOCK}" ] \
+      && sudo chown "$(id -u):$(id -g)" "${TZUDONG_DOCKER_SOCK}" 2>/dev/null || true
     tzudong_docker_ready && break
     sleep 1
   done
@@ -74,20 +77,53 @@ running=[s for s in services if s.get("state")=="running"]
 sys.exit(0 if d.get("ok") and len(running)==14 else 1)'
 }
 
+# Deterministic project name (bound to the repository path) even before start.
+stack_project_name() {
+  python3 backend/supabase/scripts/local-stack.py status 2>/dev/null \
+    | python3 -c 'import sys,json
+try:
+    print(json.load(sys.stdin).get("project_name",""))
+except Exception:
+    pass'
+}
+
+# Bring the stack to a fully-running state, tolerating warm-boot restarts.
+# local-stack.py start binds host ports, so calling it against an already
+# (partly) running stack fails port_in_use; only start when no project
+# containers are running, and recreate a stuck partial stack.
+ensure_stack_running() {
+  local i project running
+  # Settle first: on a warm boot services may still be restarting.
+  for i in $(seq 1 12); do stack_running && return 0; sleep 3; done
+
+  project="$(stack_project_name)"
+  running=0
+  if [ -n "${project}" ]; then
+    running="$(docker ps --filter "label=com.docker.compose.project=${project}" -q 2>/dev/null | wc -l)"
+  fi
+  if [ "${running:-0}" -gt 0 ]; then
+    log "start: existing stack containers present; waiting for health"
+    for i in $(seq 1 30); do stack_running && return 0; sleep 5; done
+    log "start: existing stack partial/unhealthy; recreating"
+    python3 backend/supabase/scripts/local-stack.py stop >/dev/null 2>&1 || true
+  fi
+
+  log "start: starting local Supabase stack (may pull images on first boot)"
+  python3 backend/supabase/scripts/local-stack.py start >/tmp/tzudong-stack-start.json 2>&1 || true
+  for i in $(seq 1 12); do stack_running && return 0; sleep 5; done
+  return 1
+}
+
 bring_up_supabase_stack() {
   cd "${TZUDONG_REPO_ROOT}"
   python3 backend/supabase/scripts/local-stack.py render >/dev/null
-  # local-stack.py start binds host ports, so it is not safe to run against an
-  # already-running stack (it fails port_in_use). Only start when not running.
-  if stack_running; then
-    log "start: local Supabase stack already running"
-  else
-    log "start: starting local Supabase stack (may pull images on first boot)"
-    python3 backend/supabase/scripts/local-stack.py start >/tmp/tzudong-stack-start.json
+  if ! ensure_stack_running; then
+    log "start: FATAL local Supabase stack did not reach a running state"
+    tail -c 800 /tmp/tzudong-stack-start.json 2>/dev/null >&2 || true
+    return 1
   fi
   local project state db
-  project="$(python3 backend/supabase/scripts/local-stack.py status 2>/dev/null \
-    | python3 -c 'import sys,json;print(json.load(sys.stdin)["project_name"])')"
+  project="$(stack_project_name)"
   state="backend/supabase/volumes/.local-stack/${project}"
   db="$(docker ps --filter "label=com.docker.compose.project=${project}" \
         --filter 'label=com.docker.compose.service=db' --format '{{.ID}}')"
