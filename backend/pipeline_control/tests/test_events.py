@@ -159,6 +159,9 @@ class EventSinkTests(unittest.TestCase):
             def flush(self) -> None:
                 return None
 
+            def close(self) -> None:
+                sent.append(("closed", b""))
+
         events_mod._load_kafka_producer = lambda: FakeProducer  # type: ignore[method-assign]
         result = publish(
             {
@@ -176,6 +179,7 @@ class EventSinkTests(unittest.TestCase):
         self.assertIn('"index":0', body)
         self.assertIn('"skipped":false', body)
         self.assertNotIn("super-secret-value", body)
+        self.assertEqual(sent[-1][0], "closed")
         self.assertEqual(resolve_topic("record.upserted"), "tzudong.pipeline.record.upserted.v1")
 
     def test_adapter_emitted_keys_are_allowlisted(self) -> None:
@@ -227,21 +231,130 @@ class EventSinkTests(unittest.TestCase):
                 r"(?m)^\s+TZUDONG_PIPELINE_EVENTS\s*:",
                 msg=path.name,
             )
+            self.assertNotRegex(
+                text,
+                r"(?m)^\s+TZUDONG_KAFKA_",
+                msg=path.name,
+            )
 
-    def test_kafka_fragment_owns_broker_without_host_port_or_postgres(self) -> None:
+    def test_kafka_fragment_owns_broker_without_host_9092_or_postgres(self) -> None:
         kafka = KAFKA_COMPOSE.read_text(encoding="utf-8")
         obs = OBS_COMPOSE.read_text(encoding="utf-8")
         pipeline = PIPELINE_COMPOSE.read_text(encoding="utf-8")
         contract = CONTRACT.read_text(encoding="utf-8")
+        dockerfile = (ROOT / "pipeline-control" / "Dockerfile").read_text(encoding="utf-8")
+        reqs = (ROOT / "pipeline-control" / "requirements.txt").read_text(encoding="utf-8")
         self.assertRegex(kafka, r"(?m)^\s+kafka:")
         self.assertRegex(kafka, r"(?m)^\s+kafka-ui:")
         self.assertNotRegex(kafka, r"(?im)^\s+postgres:")
         self.assertNotIn("127.0.0.1:9092", kafka)
         self.assertIn("PLAINTEXT://kafka:9092", kafka)
+        self.assertIn("PLAINTEXT_HOST:PLAINTEXT", kafka)
+        self.assertIn("KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT", kafka)
+        self.assertIn("127.0.0.1:29092:29092", kafka)
+        self.assertIn("127.0.0.1:8088:8080", kafka)
+        self.assertEqual(kafka.count("127.0.0.1:29092:29092"), 1)
         self.assertNotRegex(obs, r"(?m)^\s+kafka:")
         self.assertNotRegex(obs, r"(?m)^\s+kafka-ui:")
         self.assertNotRegex(pipeline, r"(?im)^\s+postgres:")
         self.assertIn("losable", contract)
+        self.assertIn("29092", contract)
+        self.assertIn("kafka-python==3.0.11", reqs)
+        self.assertIn("exactly one pinned kafka client", dockerfile)
+
+    def test_multi_token_bootstrap_admits_allowlisted_hosts(self) -> None:
+        from backend.pipeline_control.events import admit_bootstrap
+
+        self.assertEqual(
+            admit_bootstrap(data_env="local_db", bootstrap="kafka:9092,127.0.0.1:29092"),
+            "kafka",
+        )
+
+    def test_multi_token_bootstrap_rejects_remote_token(self) -> None:
+        from backend.pipeline_control.events import admit_bootstrap
+
+        with self.assertRaises(KafkaPublishError) as ctx:
+            admit_bootstrap(data_env="local_db", bootstrap="kafka:9092,broker.example.com:9092")
+        self.assertEqual(ctx.exception.code, "kafka_bootstrap_host_rejected")
+
+    def test_empty_bootstrap_tokens_fail_closed(self) -> None:
+        from backend.pipeline_control.events import admit_bootstrap
+
+        for raw in ("kafka:9092,", "kafka:9092,,127.0.0.1:29092", "  ,kafka:9092"):
+            with self.subTest(raw=raw):
+                with self.assertRaises(KafkaPublishError) as ctx:
+                    admit_bootstrap(data_env="local_db", bootstrap=raw)
+                self.assertEqual(ctx.exception.code, "kafka_bootstrap_required")
+
+    def test_close_after_success_maps_to_publish_failed(self) -> None:
+        from backend.pipeline_control import events as events_mod
+
+        os.environ["TZUDONG_PIPELINE_EVENTS"] = "kafka"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_KAFKA_BOOTSTRAP"] = "kafka:9092"
+
+        class CloseBoom:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def send(self, *_args: object, **_kwargs: object) -> None:
+                return None
+
+            def flush(self) -> None:
+                return None
+
+            def close(self) -> None:
+                raise RuntimeError("close-failed")
+
+        events_mod._load_kafka_producer = lambda: CloseBoom  # type: ignore[method-assign]
+        with self.assertRaises(KafkaPublishError) as ctx:
+            publish({"type": "run.lifecycle"})
+        self.assertEqual(ctx.exception.code, "kafka_publish_failed")
+
+    def test_close_does_not_mask_existing_publish_error(self) -> None:
+        from backend.pipeline_control import events as events_mod
+
+        os.environ["TZUDONG_PIPELINE_EVENTS"] = "kafka"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_KAFKA_BOOTSTRAP"] = "kafka:9092"
+
+        class SendBoom:
+            def __init__(self, **_kwargs: object) -> None:
+                pass
+
+            def send(self, *_args: object, **_kwargs: object) -> None:
+                raise RuntimeError("send-failed")
+
+            def flush(self) -> None:
+                return None
+
+            def close(self) -> None:
+                raise RuntimeError("close-failed")
+
+        events_mod._load_kafka_producer = lambda: SendBoom  # type: ignore[method-assign]
+        with self.assertRaises(KafkaPublishError) as ctx:
+            publish({"type": "run.lifecycle"})
+        self.assertEqual(ctx.exception.code, "kafka_publish_failed")
+
+    def test_publish_wrap_does_not_need_one_arg_ctor(self) -> None:
+        from backend.pipeline_control import events as events_mod
+
+        os.environ["TZUDONG_PIPELINE_EVENTS"] = "kafka"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_KAFKA_BOOTSTRAP"] = "kafka:9092"
+
+        class NoOneArg(Exception):
+            def __init__(self) -> None:
+                super().__init__("no-arg")
+
+        class CtorBoom:
+            def __init__(self, **_kwargs: object) -> None:
+                raise NoOneArg()
+
+        events_mod._load_kafka_producer = lambda: CtorBoom  # type: ignore[method-assign]
+        with self.assertRaises(KafkaPublishError) as ctx:
+            publish({"type": "run.lifecycle"})
+        self.assertEqual(ctx.exception.code, "kafka_publish_failed")
 
 
 if __name__ == "__main__":
