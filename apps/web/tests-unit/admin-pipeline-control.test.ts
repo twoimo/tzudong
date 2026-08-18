@@ -49,6 +49,7 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("isTrustedSameOriginMutation");
     expect(route).toContain("requireAdmin");
     expect(route).toContain("Cache-Control");
+    expect(route).toContain("dryRun: true");
     expect(dashboard).not.toContain("<iframe");
     expect(dashboard).toContain("Grafana iframe은 CSP/auth gate 전까지 금지");
     expect(consoleSource).not.toContain(
@@ -62,5 +63,45 @@ describe("admin pipeline control contract", () => {
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
     expect(dashboard).not.toContain("<iframe");
     expect(dashboard).not.toContain("kafka-ui");
+    expect(dashboard).not.toContain("Grafana embed");
+  });
+
+  test("BFF forwards SoT jobs/failures and does not hardcode empty failures", () => {
+    const route = source("app/api/admin/pipeline/route.ts");
+    expect(route).not.toContain("failures: []");
+    expect(route).toContain("payload.failures");
+    expect(route).toContain("payload.jobs");
+  });
+
+  test("dashboard renders error_code and keeps empty-state copy", () => {
+    const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
+    expect(dashboard).toContain("error_code");
+    expect(dashboard).toContain("최근 실패 없음");
+  });
+
+  test("502 bodies are error-only and query.isError gates empty failures", () => {
+    const route = source("app/api/admin/pipeline/route.ts");
+    const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
+    const unavailable = route.slice(
+      route.indexOf('if (!response.ok)'),
+      route.indexOf("const payload"),
+    );
+    expect(unavailable).toContain('noStore({ error: "pipeline_status_unavailable" }');
+    expect(unavailable).not.toContain("failures");
+    expect(unavailable).not.toContain("jobs");
+    expect(unavailable).not.toContain("targets");
+    const getCatch = route.slice(
+      route.indexOf("} catch (error) {"),
+      route.indexOf("export async function POST"),
+    );
+    expect(getCatch).toContain("getAdminSafeErrorName(error)");
+    expect(getCatch).not.toContain("failures");
+    expect(getCatch).not.toContain("jobs");
+    expect(getCatch).not.toContain("targets");
+    expect(dashboard).toContain("query.isError");
+    const errorBranch = dashboard.indexOf("query.isError");
+    const emptyState = dashboard.indexOf("최근 실패 없음");
+    expect(errorBranch).toBeGreaterThan(-1);
+    expect(emptyState).toBeGreaterThan(errorBranch);
   });
 });
