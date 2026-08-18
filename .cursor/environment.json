@@ -1,0 +1,16 @@
+{
+  "name": "Tzudong (web + local Supabase stack)",
+  "install": "bash .cursor/scripts/install.sh",
+  "start": "bash .cursor/scripts/start.sh",
+  "terminals": [
+    {
+      "name": "web-dev",
+      "command": "bash .cursor/scripts/dev.sh",
+      "description": "Next.js dev server (apps/web) on http://127.0.0.1:8080, admitted against the local Supabase stack. Restart this terminal to restart the app."
+    }
+  ],
+  "ports": [
+    { "name": "web", "port": 8080 },
+    { "name": "supabase-kong", "port": 8000 }
+  ]
+}
