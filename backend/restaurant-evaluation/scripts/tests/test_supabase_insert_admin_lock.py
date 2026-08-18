@@ -782,7 +782,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual("admin-7", supabase.rows[0]["updated_by_admin_id"])
         self.assertEqual("2025-01-03T00:00:00Z", supabase.rows[0]["updated_at"])
         self.assertEqual(
-            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+            set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
             {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
         )
         self.assertIn("[ERROR] restaurants compare-and-set conflict; batch aborted.", output.getvalue())
@@ -802,7 +802,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertEqual("pending", supabase.rows[0]["status"])
         self.assertEqual(
             {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
-            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+            set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
         )
 
     def test_execute_upsert_rows_retries_without_optional_google_name_field(self):
@@ -843,7 +843,7 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         self.assertIn("google_name", supabase.update_attempts[0]["payload"])
         self.assertNotIn("google_name", supabase.update_attempts[1]["payload"])
         self.assertEqual(
-            set(supabase_insert.RESTAURANT_CAS_FIELDS),
+            set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
             {field for _kind, field, _value in supabase.update_attempts[1]["filters"]},
         )
 
