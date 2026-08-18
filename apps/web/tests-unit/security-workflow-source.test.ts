@@ -49,6 +49,7 @@ describe('security audit workflow source contract', () => {
     expect(jobBlock('pip-audit')).toContain("'pip-audit==2.10.1'");
     expect(jobBlock('pip-audit')).toContain('python -m pip_audit -r "${{ matrix.requirements }}" --strict');
     expect(jobBlock('pip-audit')).toContain('backend/supabase/scripts/g037-hosted-closure-requirements.txt');
+    expect(jobBlock('pip-audit')).toContain('backend/pipeline-control/requirements.txt');
     expect(jobBlock('secret-pattern-scan')).toContain('python3 scripts/security/scan_tracked_secrets.py');
 
     const sbom = jobBlock('sbom');
