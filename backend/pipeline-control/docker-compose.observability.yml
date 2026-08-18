@@ -1,21 +1,11 @@
-# Slice 2–3 overlay. Start docker-compose.kafka.yml first.
+# Slice 3 overlay. Start docker-compose.kafka.yml and docker-compose.elasticsearch.yml first.
 # Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
 # Grafana is an operator browser, not an admin iframe.
 # Kafka lives only in docker-compose.kafka.yml.
+# Elasticsearch lives only in docker-compose.elasticsearch.yml.
 name: tzudong-pipeline-observability
 
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
-    ports:
-      - "127.0.0.1:9200:9200"
-    networks:
-      - supabase_network_local
-
   otel-collector:
     image: otel/opentelemetry-collector:0.120.0
     command: ["--config=/etc/otelcol/config.yaml"]
