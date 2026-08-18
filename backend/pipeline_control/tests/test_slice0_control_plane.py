@@ -453,6 +453,36 @@ class PersistSoTTests(unittest.TestCase):
         with self.assertRaises(persist_mod.PersistError) as ctx:
             persist_mod.upsert_job(run)
         self.assertEqual(ctx.exception.code, "psycopg2_missing")
+    def test_enabled_without_dsn_fails_closed(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ.pop("PIPELINE_CONTROL_DSN", None)
+        loads = {"n": 0}
+
+        def missing() -> object:
+            loads["n"] += 1
+            raise ImportError("no-psycopg2")
+
+        persist_mod._load_psycopg2 = missing  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-00000000000d",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist0d",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-pd",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        with self.assertRaises(persist_mod.PersistError) as ctx:
+            persist_mod.upsert_job(run)
+        self.assertEqual(ctx.exception.code, "persist_dsn_required")
+        self.assertEqual(loads["n"], 0)
 
     def test_enabled_hosted_dsn_rejected(self) -> None:
         from backend.pipeline_control import persist as persist_mod
