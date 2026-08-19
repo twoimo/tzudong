@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
-
 import { GUARDED_MUTATION_CONFIRMATION } from "@/lib/admin/guarded-mutation-contract";
+import { sha256Hex } from "@/lib/admin/sha256-hex";
 
 export const PIPELINE_CONTROL_CONFIRMATION_TEXT = GUARDED_MUTATION_CONFIRMATION;
 export const PIPELINE_LIVE_ENQUEUE_CONFIRMATION = "LIVE_ENQUEUE";
@@ -83,9 +82,7 @@ export function buildPipelinePreviewHash(input: {
   } else {
     payload.runId = input.runId;
   }
-  return createHash("sha256")
-    .update(JSON.stringify(payload))
-    .digest("hex");
+  return sha256Hex(JSON.stringify(payload));
 }
 
 export function assertPipelineGuardedBody(body: Record<string, unknown>): {
