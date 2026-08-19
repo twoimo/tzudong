@@ -32,7 +32,13 @@ def _load_psycopg2() -> Any:
     return psycopg2
 
 
-def upsert_job(run: RunRecord) -> None:
+def persist_mutation(
+    run: RunRecord,
+    *,
+    lock_held: bool,
+    lock_key: str,
+    audit: dict[str, Any] | None,
+) -> None:
     if not persist_enabled():
         return
     dsn = os.environ.get("PIPELINE_CONTROL_DSN")
@@ -44,6 +50,8 @@ def upsert_job(run: RunRecord) -> None:
     forbidden = set(load_host_class_fixture()["forbiddenLocalProjectRefs"])
     if HOSTED_PROJECT_REF in str(dsn) or ref in forbidden or ref == HOSTED_PROJECT_REF:
         raise DsnGuardError("hosted_dsn_rejected")
+    if not str(lock_key).strip():
+        raise PersistError("persist_lock_key_required")
     try:
         psycopg2 = _load_psycopg2()
     except ImportError as exc:
@@ -84,6 +92,35 @@ def upsert_job(run: RunRecord) -> None:
                     run.error_code,
                 ),
             )
+            if lock_held:
+                cur.execute(
+                    """
+                    INSERT INTO pipeline_control.locks (lock_key, job_id)
+                    VALUES (%s, %s)
+                    ON CONFLICT (lock_key) DO UPDATE SET
+                        job_id = EXCLUDED.job_id
+                    """,
+                    (lock_key, run.id),
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM pipeline_control.locks WHERE lock_key = %s",
+                    (lock_key,),
+                )
+            if audit is not None:
+                cur.execute(
+                    """
+                    INSERT INTO pipeline_control.audit (
+                        actor, job_id, transition, request_id
+                    ) VALUES (%s, %s, %s, %s)
+                    """,
+                    (
+                        audit["actor"],
+                        audit["job_id"],
+                        audit["transition"],
+                        audit.get("X-Request-Id") or audit.get("request_id"),
+                    ),
+                )
         conn.commit()
     finally:
         conn.close()
