@@ -79,3 +79,11 @@ Do not fabricate these receipts, weaken fail-closed behavior, bypass branch prot
 - `apps/web/tests` contains Playwright public/admin/responsive coverage. Evidence must exclude cookies, headers, local storage, raw admin body/table content, and Supabase payloads.
 - Verify observable branches, error paths, idempotency, and readback—not defaults or tautologies.
 - Keep unexpected worktree changes as user work. Never reset, stash, clean, commit, push, or delete them unless explicitly authorized.
+
+## Cursor Cloud specific instructions
+
+The Cloud Agent environment lives in `.cursor/` (`environment.json` + `scripts/`). `install.sh` pins Node 24, Bun, Docker engine, and Docker Compose `v2.39.4` (the exact version `local-stack.py` requires) and runs `bun install`; `start.sh` brings up the local Docker daemon and the 14-service Supabase stack + migrations + seed; `dev.sh` runs `bun run dev`.
+
+- The runtime injects an `/exec-daemon` node (v22) at the front of `PATH`. Resolve the repo's Node 24 by sourcing `.cursor/scripts/lib.sh` and calling `tzudong_activate_toolchain`; it also exports `TZUDONG_NODE24_EXECUTABLE`, which `bun run test:unit` needs (under Bun `process.execPath` is not Node, so the Linux PID-namespace supervisor test fails without it).
+- The local Docker daemon listens on a user-owned socket (`~/.docker/run/docker.sock`, context `tzudong-local`); `local-stack.py` rejects the default socket. Inter-container connectivity in this nested VM requires `net.bridge.bridge-nf-call-iptables=0` (set by `start.sh`).
+- The local dev path intentionally serves an **offline Naver map stub** (`NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME=1` forces `NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL=/__local/naver-maps.js`), so real map tiles never render. To render real Naver tiles with the local seeded data, set the public `NEXT_PUBLIC_NAVER_CLIENT_ID` (Naver Cloud ncpKeyId) and run `.cursor/scripts/dev-realmap.sh` (stop the default `web-dev` terminal first; both use port 8080). The ncpKeyId's Naver console "Web service URL" allowlist must include `http://127.0.0.1:8080` and `http://localhost:8080`, or Naver returns 401.
