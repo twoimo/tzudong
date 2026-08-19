@@ -20,7 +20,7 @@ from backend.pipeline_control.state_machine import (
     payload_hash,
     stale_reclaim_eligible,
 )
-from backend.pipeline_control.persist import upsert_job
+from backend.pipeline_control.persist import persist_mutation
 
 LEASE_TTL_SECONDS = 30.0
 PUBLIC_LIST_KEYS = (
@@ -59,6 +59,21 @@ class MemoryStore:
             }
         )
 
+    def _persist(
+        self,
+        run: RunRecord,
+        *,
+        lock_held: bool,
+        audit: dict[str, Any] | None,
+        held_lock_key: str | None = None,
+    ) -> None:
+        persist_mutation(
+            run,
+            lock_held=lock_held,
+            lock_key=held_lock_key if held_lock_key is not None else lock_key(run.target, run.profile),
+            audit=audit,
+        )
+
     def _reclaim(self) -> None:
         now = self.now()
         for key, run_id in list(self.locks.items()):
@@ -73,7 +88,12 @@ class MemoryStore:
                     transition="lease_reclaim",
                     request_id=run.request_id,
                 )
-                upsert_job(run)
+                self._persist(
+                    run,
+                    lock_held=False,
+                    held_lock_key=key,
+                    audit=self.audit[-1],
+                )
 
     def create_run(
         self,
@@ -118,7 +138,7 @@ class MemoryStore:
         self.locks[key] = run.id
         self.idempotency[idempotency_key] = run.id
         self._audit(actor=actor, job_id=run.id, transition="enqueue", request_id=request_id)
-        upsert_job(run)
+        self._persist(run, lock_held=True, audit=self.audit[-1])
         return run, True
 
     def get(self, run_id: str) -> RunRecord:
@@ -133,13 +153,17 @@ class MemoryStore:
         if run.status == "Cancelled":
             self.locks.pop(lock_key(run.target, run.profile), None)
         self._audit(actor=actor, job_id=run.id, transition=action, request_id=request_id)
-        upsert_job(run)
+        self._persist(
+            run,
+            lock_held=run.status != "Cancelled",
+            audit=self.audit[-1],
+        )
         return run
 
     def beat(self, run_id: str) -> RunRecord:
         run = self.get(run_id)
         heartbeat(run, self.now(), LEASE_TTL_SECONDS)
-        upsert_job(run)
+        self._persist(run, lock_held=True, audit=None)
         return run
 
     def claim(self) -> RunRecord | None:
@@ -154,7 +178,7 @@ class MemoryStore:
                     transition="claim",
                     request_id=run.request_id,
                 )
-                upsert_job(run)
+                self._persist(run, lock_held=True, audit=self.audit[-1])
                 return run
         return None
 
@@ -173,7 +197,7 @@ class MemoryStore:
             transition="dry_run_succeeded",
             request_id=run.request_id,
         )
-        upsert_job(run)
+        self._persist(run, lock_held=False, audit=self.audit[-1])
         return run
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
@@ -187,7 +211,7 @@ class MemoryStore:
             transition="failed",
             request_id=run.request_id,
         )
-        upsert_job(run)
+        self._persist(run, lock_held=False, audit=self.audit[-1])
         return run
 
     def public_run(self, run: RunRecord) -> dict[str, Any]:
