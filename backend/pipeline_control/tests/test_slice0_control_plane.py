@@ -815,15 +815,55 @@ class PersistSoTTests(unittest.TestCase):
             def __exit__(self, *exc: object) -> None:
                 return None
 
+            def __init__(self) -> None:
+                self._jobs: dict[str, tuple] = {}
+                self._locks: dict[str, str] = {}
+                self._fetch: tuple | None = None
+
             def execute(self, sql: str, params: tuple) -> None:
                 statements.append(sql)
                 self.params = params
+                compact = " ".join(sql.split())
+                if "INSERT INTO pipeline_control.jobs" in compact:
+                    self._jobs[params[0]] = (
+                        params[0],
+                        params[1],
+                        params[2],
+                        params[3],
+                        params[4],
+                        params[5],
+                        params[6],
+                        params[7],
+                        params[10],
+                        params[11],
+                        params[12],
+                    )
+                    self._fetch = None
+                elif "INSERT INTO pipeline_control.locks" in compact:
+                    self._locks[params[0]] = params[1]
+                    self._fetch = None
+                elif "DELETE FROM pipeline_control.locks" in compact:
+                    self._locks.pop(params[0], None)
+                    self._fetch = None
+                elif "FROM pipeline_control.jobs" in compact:
+                    self._fetch = self._jobs.get(params[0])
+                elif "FROM pipeline_control.locks" in compact:
+                    job_id = self._locks.get(params[0])
+                    self._fetch = None if job_id is None else (job_id,)
+                else:
+                    self._fetch = None
+
+            def fetchone(self):
+                return self._fetch
 
         class FakeConn:
             def cursor(self):
                 return FakeCursor()
 
             def commit(self) -> None:
+                return None
+
+            def rollback(self) -> None:
                 return None
 
             def close(self) -> None:
@@ -851,6 +891,8 @@ class PersistSoTTests(unittest.TestCase):
         self.assertIn("INSERT INTO pipeline_control.jobs", joined)
         self.assertIn("INSERT INTO pipeline_control.locks", joined)
         self.assertIn("INSERT INTO pipeline_control.audit", joined)
+        self.assertIn("FROM pipeline_control.jobs", joined)
+        self.assertIn("FROM pipeline_control.locks", joined)
         claimed = store.claim()
         self.assertIsNotNone(claimed)
         statements.clear()
@@ -859,11 +901,15 @@ class PersistSoTTests(unittest.TestCase):
         self.assertIn("INSERT INTO pipeline_control.jobs", beat_sql)
         self.assertIn("INSERT INTO pipeline_control.locks", beat_sql)
         self.assertNotIn("INSERT INTO pipeline_control.audit", beat_sql)
+        self.assertIn("FROM pipeline_control.jobs", beat_sql)
+        self.assertIn("FROM pipeline_control.locks", beat_sql)
         statements.clear()
         store.finish_dry_run(claimed.id)
         finish_sql = "\n".join(statements)
         self.assertIn("DELETE FROM pipeline_control.locks", finish_sql)
         self.assertIn("INSERT INTO pipeline_control.audit", finish_sql)
+        self.assertIn("FROM pipeline_control.jobs", finish_sql)
+        self.assertIn("FROM pipeline_control.locks", finish_sql)
 
     def test_enabled_empty_lock_key_fails_closed(self) -> None:
         from backend.pipeline_control import persist as persist_mod
@@ -900,6 +946,201 @@ class PersistSoTTests(unittest.TestCase):
             )
         self.assertEqual(ctx.exception.code, "persist_lock_key_required")
         self.assertEqual(loads["n"], 0)
+
+    def test_readback_status_mismatch_fails_closed(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        rolled = {"n": 0}
+
+        class FakeCursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                return None
+
+            def execute(self, sql: str, params: tuple) -> None:
+                self.sql = sql
+                self.params = params
+
+            def fetchone(self):
+                compact = " ".join(self.sql.split())
+                if "FROM pipeline_control.jobs" in compact:
+                    return (
+                        self.params[0],
+                        "tzuyang",
+                        "heavy_local",
+                        "Failed",
+                        "persist-div-1",
+                        "abc",
+                        "qa",
+                        "req-div-1",
+                        0,
+                        True,
+                        None,
+                    )
+                if "FROM pipeline_control.locks" in compact:
+                    return ("00000000-0000-4000-8000-0000000000d1",)
+                return None
+
+        class FakeConn:
+            def cursor(self):
+                return FakeCursor()
+
+            def commit(self) -> None:
+                raise AssertionError("diverging persist must not commit")
+
+            def rollback(self) -> None:
+                rolled["n"] += 1
+
+            def close(self) -> None:
+                return None
+
+        class FakePg:
+            @staticmethod
+            def connect(dsn: str) -> FakeConn:
+                return FakeConn()
+
+        persist_mod._load_psycopg2 = lambda: FakePg()  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-0000000000d1",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist-div-1",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-div-1",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+            dry_run=True,
+        )
+        with self.assertRaises(persist_mod.PersistError) as ctx:
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
+        self.assertEqual(ctx.exception.code, "persist_divergence")
+        self.assertEqual(rolled["n"], 1)
+
+    def test_readback_missing_lock_fails_closed(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        rolled = {"n": 0}
+
+        class FakeCursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                return None
+
+            def execute(self, sql: str, params: tuple) -> None:
+                self.sql = sql
+                self.params = params
+
+            def fetchone(self):
+                compact = " ".join(self.sql.split())
+                if "FROM pipeline_control.jobs" in compact:
+                    return (
+                        self.params[0],
+                        "tzuyang",
+                        "heavy_local",
+                        "Queued",
+                        "persist-div-2",
+                        "abc",
+                        "qa",
+                        "req-div-2",
+                        0,
+                        True,
+                        None,
+                    )
+                return None
+
+        class FakeConn:
+            def cursor(self):
+                return FakeCursor()
+
+            def commit(self) -> None:
+                raise AssertionError("diverging persist must not commit")
+
+            def rollback(self) -> None:
+                rolled["n"] += 1
+
+            def close(self) -> None:
+                return None
+
+        class FakePg:
+            @staticmethod
+            def connect(dsn: str) -> FakeConn:
+                return FakeConn()
+
+        persist_mod._load_psycopg2 = lambda: FakePg()  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-0000000000d2",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist-div-2",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-div-2",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+            dry_run=True,
+        )
+        with self.assertRaises(persist_mod.PersistError) as ctx:
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
+        self.assertEqual(ctx.exception.code, "persist_divergence")
+        self.assertEqual(rolled["n"], 1)
+
+    def test_persist_off_skips_readback(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ.pop("TZUDONG_PIPELINE_PERSIST", None)
+        loads = {"n": 0}
+
+        def missing() -> object:
+            loads["n"] += 1
+            raise AssertionError("persist off must not load psycopg2")
+
+        persist_mod._load_psycopg2 = missing  # type: ignore[method-assign]
+        run = RunRecord(
+            id="00000000-0000-4000-8000-0000000000d3",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Queued",
+            idempotency_key="persist-div-3",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req-div-3",
+            lease_until=1.0,
+            heartbeat_at=1.0,
+        )
+        persist_mod.persist_mutation(
+            run,
+            lock_held=True,
+            lock_key="tzuyang:heavy_local",
+            audit=None,
+        )
+        self.assertEqual(loads["n"], 0)
+
 
 class OperatorSnapshotTests(unittest.TestCase):
     FORBIDDEN = {
