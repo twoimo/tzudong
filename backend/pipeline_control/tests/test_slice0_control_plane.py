@@ -404,6 +404,67 @@ class HttpLoopTests(unittest.TestCase):
         self.assertEqual(raw["runs"][run.id]["status"], "Fetching")
         self.assertNotEqual(raw["runs"][run.id].get("error_code"), "lease_expired")
         self.assertNotEqual(raw["runs"][run.id]["status"], "Failed")
+    def test_get_targets_persist_on_with_local_dsn_does_not_connect(self) -> None:
+        from backend.pipeline_control import api as api_mod
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.file_store import FileStore
+
+        now = {"t": 1_000.0}
+        path = Path(os.environ["PIPELINE_CONTROL_STORE_PATH"])
+        store = FileStore(path=path, clock=lambda: now["t"])
+        api_mod.STORE = store
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="getpersist1",
+            payload={},
+            actor="qa",
+            request_id="req-gp",
+        )
+        store.claim()
+        now["t"] = 10_000.0
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        connects: list[str] = []
+        statements: list[str] = []
+
+        class FakeCursor:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def execute(self, sql: str, params: tuple) -> None:
+                statements.append(sql)
+
+        class FakeConn:
+            def cursor(self):
+                return FakeCursor()
+
+            def commit(self) -> None:
+                return None
+
+            def close(self) -> None:
+                return None
+
+        class FakePsycopg2:
+            @staticmethod
+            def connect(dsn: str) -> FakeConn:
+                connects.append(dsn)
+                return FakeConn()
+
+        persist_mod._load_psycopg2 = lambda: FakePsycopg2()  # type: ignore[method-assign]
+        status, body, _ = self._request("GET", "/v1/targets")
+        self.assertEqual(status, 200)
+        tzuyang = next(item for item in body["targets"] if item["id"] == "tzuyang")
+        self.assertEqual(tzuyang["status"], "Idle")
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(raw["runs"][run.id]["status"], "Fetching")
+        self.assertEqual(connects, [])
+        self.assertEqual(statements, [])
+
 
 
 
@@ -512,6 +573,11 @@ class OverlayAndDocsTests(unittest.TestCase):
         self.assertIn("supabase_network_local", text)
         self.assertIn("pipeline-api", text)
         self.assertIn("pipeline-worker", text)
+        self.assertNotIn("TZUDONG_PIPELINE_PERSIST", text)
+        workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("TZUDONG_PIPELINE_PERSIST", workflow)
 
     def test_migration_and_allowlist(self) -> None:
         sql = MIGRATION.read_text(encoding="utf-8")
@@ -616,7 +682,12 @@ class PersistSoTTests(unittest.TestCase):
             heartbeat_at=1.0,
         )
         with self.assertRaises(persist_mod.PersistError) as ctx:
-            persist_mod.upsert_job(run)
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
         self.assertEqual(ctx.exception.code, "psycopg2_missing")
     def test_enabled_without_dsn_fails_closed(self) -> None:
         from backend.pipeline_control import persist as persist_mod
@@ -645,7 +716,12 @@ class PersistSoTTests(unittest.TestCase):
             heartbeat_at=1.0,
         )
         with self.assertRaises(persist_mod.PersistError) as ctx:
-            persist_mod.upsert_job(run)
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
         self.assertEqual(ctx.exception.code, "persist_dsn_required")
         self.assertEqual(loads["n"], 0)
 
@@ -671,7 +747,12 @@ class PersistSoTTests(unittest.TestCase):
             heartbeat_at=1.0,
         )
         with self.assertRaises(dsn_guard.DsnGuardError) as ctx:
-            persist_mod.upsert_job(run)
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
         self.assertEqual(ctx.exception.code, "hosted_dsn_rejected")
 
     def test_enabled_hosted_dsn_rejected_even_for_hosting_db(self) -> None:
@@ -696,12 +777,16 @@ class PersistSoTTests(unittest.TestCase):
             heartbeat_at=1.0,
         )
         with self.assertRaises(dsn_guard.DsnGuardError) as ctx:
-            persist_mod.upsert_job(run)
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="tzuyang:heavy_local",
+                audit=None,
+            )
         self.assertEqual(ctx.exception.code, "hosted_dsn_rejected")
 
     def test_local_upsert_does_not_use_hosted_dsn(self) -> None:
         from backend.pipeline_control import persist as persist_mod
-        from backend.pipeline_control.state_machine import RunRecord
 
         os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
         os.environ["TZUDONG_DATA_ENV"] = "local_db"
@@ -738,21 +823,69 @@ class PersistSoTTests(unittest.TestCase):
                 return FakeConn()
 
         persist_mod._load_psycopg2 = lambda: FakePsycopg2()  # type: ignore[method-assign]
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="persist03",
+            payload={},
+            actor="qa",
+            request_id="req-p3",
+        )
+        self.assertEqual(seen, ["postgresql://tzudong@127.0.0.1:54322/postgres"])
+        joined = "\n".join(statements)
+        self.assertIn("INSERT INTO pipeline_control.jobs", joined)
+        self.assertIn("INSERT INTO pipeline_control.locks", joined)
+        self.assertIn("INSERT INTO pipeline_control.audit", joined)
+        claimed = store.claim()
+        self.assertIsNotNone(claimed)
+        statements.clear()
+        store.beat(claimed.id)
+        beat_sql = "\n".join(statements)
+        self.assertIn("INSERT INTO pipeline_control.jobs", beat_sql)
+        self.assertIn("INSERT INTO pipeline_control.locks", beat_sql)
+        self.assertNotIn("INSERT INTO pipeline_control.audit", beat_sql)
+        statements.clear()
+        store.finish_dry_run(claimed.id)
+        finish_sql = "\n".join(statements)
+        self.assertIn("DELETE FROM pipeline_control.locks", finish_sql)
+        self.assertIn("INSERT INTO pipeline_control.audit", finish_sql)
+
+    def test_enabled_empty_lock_key_fails_closed(self) -> None:
+        from backend.pipeline_control import persist as persist_mod
+        from backend.pipeline_control.state_machine import RunRecord
+
+        os.environ["TZUDONG_PIPELINE_PERSIST"] = "1"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        loads = {"n": 0}
+
+        def missing() -> object:
+            loads["n"] += 1
+            raise ImportError("psycopg2")
+
+        persist_mod._load_psycopg2 = missing  # type: ignore[method-assign]
         run = RunRecord(
-            id="00000000-0000-4000-8000-000000000003",
+            id="00000000-0000-4000-8000-00000000000e",
             target="tzuyang",
             profile="heavy_local",
             status="Queued",
-            idempotency_key="persist03",
+            idempotency_key="persist04",
             payload_hash="abc",
             actor="qa",
-            request_id="req-p3",
+            request_id="req-p4",
             lease_until=1.0,
             heartbeat_at=1.0,
         )
-        persist_mod.upsert_job(run)
-        self.assertEqual(seen, ["postgresql://tzudong@127.0.0.1:54322/postgres"])
-        self.assertTrue(any("INSERT INTO pipeline_control.jobs" in sql for sql in statements))
+        with self.assertRaises(persist_mod.PersistError) as ctx:
+            persist_mod.persist_mutation(
+                run,
+                lock_held=True,
+                lock_key="   ",
+                audit=None,
+            )
+        self.assertEqual(ctx.exception.code, "persist_lock_key_required")
+        self.assertEqual(loads["n"], 0)
 
 class OperatorSnapshotTests(unittest.TestCase):
     FORBIDDEN = {
