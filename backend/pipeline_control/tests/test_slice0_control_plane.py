@@ -370,9 +370,11 @@ class HttpLoopTests(unittest.TestCase):
         self.assertEqual(tzuyang["status"], "Queued")
         self.assertEqual(len(snap["jobs"]), 1)
         self.assertEqual(snap["jobs"][0]["id"], body["id"])
-        missing, miss_body, _ = self._request("GET", "/v1/runs")
-        self.assertEqual(missing, 404)
-        self.assertEqual(miss_body["error"], "not_found")
+        listed_status, listed, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(listed_status, 200)
+        self.assertNotIn("targets", listed)
+        self.assertEqual(listed["jobs"][0]["id"], body["id"])
+        self.assertEqual(listed["failures"], [])
 
     def test_get_targets_does_not_reclaim_when_persist_on(self) -> None:
         from backend.pipeline_control import api as api_mod
@@ -499,9 +501,45 @@ class HttpLoopTests(unittest.TestCase):
         self.assertEqual(job["id"], body["id"])
         self.assertTrue(job["dry_run"])
         self.assertTrue(set(job).issubset(set(PUBLIC_LIST_KEYS)))
-        missing, miss_body, _ = self._request("GET", "/v1/runs")
+        listed_status, listed, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(listed_status, 200)
+        self.assertNotIn("targets", listed)
+        self.assertEqual(listed["jobs"], snap["jobs"])
+        self.assertEqual(listed["failures"], snap["failures"])
+        self.assertEqual(set(listed["jobs"][0]), set(PUBLIC_LIST_KEYS))
+
+    def test_get_runs_collection_is_filestore_snapshot_and_non_mutating(self) -> None:
+        from backend.pipeline_control.store import PUBLIC_LIST_KEYS
+
+        empty_status, empty, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(empty_status, 200)
+        self.assertEqual(empty, {"jobs": [], "failures": []})
+        self.assertNotIn("targets", empty)
+
+        post, body, _ = self._request(
+            "POST",
+            "/v1/runs",
+            {"target": "tzuyang", "profile": "heavy_local", "dryRun": True},
+            {"Idempotency-Key": "httprunslist1", "X-Actor": "qa"},
+        )
+        self.assertEqual(post, 202)
+        path = Path(os.environ["PIPELINE_CONTROL_STORE_PATH"])
+        before = path.read_text(encoding="utf-8")
+        status, listed, _ = self._request("GET", "/v1/runs")
+        self.assertEqual(status, 200)
+        self.assertNotIn("targets", listed)
+        self.assertEqual(len(listed["jobs"]), 1)
+        self.assertEqual(listed["jobs"][0]["id"], body["id"])
+        self.assertEqual(set(listed["jobs"][0]), set(PUBLIC_LIST_KEYS))
+        self.assertEqual(listed["failures"], [])
+        self.assertEqual(path.read_text(encoding="utf-8"), before)
+        item_status, item, _ = self._request("GET", f"/v1/runs/{body['id']}")
+        self.assertEqual(item_status, 200)
+        self.assertEqual(item["id"], body["id"])
+        missing, miss_body, _ = self._request("GET", "/v1/runs/not-a-run")
         self.assertEqual(missing, 404)
-        self.assertEqual(miss_body["error"], "not_found")
+        self.assertEqual(miss_body["error"], "run_not_found")
+
 
     def test_post_pause_resume_cancel_file_store_cycle(self) -> None:
         post, body, _ = self._request(
