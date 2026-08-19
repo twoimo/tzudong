@@ -12,6 +12,12 @@ services:
       TZUDONG_DATA_ENV: local_db
       PIPELINE_CONTROL_DSN: postgresql://postgres@db:5432/postgres
       TZUDONG_COMPUTE_PROFILE: heavy_local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_SERVICE_NAME: pipeline-api
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -31,6 +37,12 @@ services:
       TZUDONG_DATA_ENV: local_db
       PIPELINE_CONTROL_DSN: postgresql://postgres@db:5432/postgres
       TZUDONG_COMPUTE_PROFILE: heavy_local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_SERVICE_NAME: pipeline-worker
     volumes:
       # heavy_local: repo tree, numbered scripts, node/ffmpeg available on the host mount
       - ../..:/workspace

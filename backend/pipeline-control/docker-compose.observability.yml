@@ -1,4 +1,4 @@
-# Slice 3 overlay. Start docker-compose.kafka.yml and docker-compose.elasticsearch.yml first.
+# Slice 3 overlay. Kafka/ES are not required to see the four frozen pipeline counters.
 # Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
 # Grafana is an operator browser, not an admin iframe.
 # Anonymous auth is off. Embedding is off. CSP is on. Admin password comes from GRAFANA_ADMIN_PASSWORD.
@@ -30,6 +30,9 @@ services:
     image: grafana/grafana:11.5.2
     ports:
       - "127.0.0.1:3001:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"

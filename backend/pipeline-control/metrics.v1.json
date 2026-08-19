@@ -9,6 +9,6 @@
     "tzudong_pipeline_kafka_lag",
     "tzudong_pipeline_es_rows_per_sec"
   ],
-  "exporter": "noop; no OpenTelemetry SDK in the pipeline image",
+  "exporter": "otlp_http; OpenTelemetry SDK in the pipeline image; default export off",
   "adminIframePolicy": "forbidden_until_csp_auth_gate"
 }
