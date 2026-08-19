@@ -633,7 +633,9 @@ class OverlayAndDocsTests(unittest.TestCase):
         )
         self.assertIn("tzudong_pipeline_kafka_lag", metrics["deferred"])
         self.assertRegex(obs, r"(?m)^\s+otel-collector:")
-        self.assertRegex(obs, r"(?m)^\s+prometheus:")    def test_lite_gha_workflow_has_postgres_service_and_worker(self) -> None:
+        self.assertRegex(obs, r"(?m)^\s+prometheus:")
+
+    def test_lite_gha_workflow_has_postgres_service_and_worker(self) -> None:
         workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
             encoding="utf-8"
         )

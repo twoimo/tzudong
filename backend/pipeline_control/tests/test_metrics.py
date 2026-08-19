@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.pipeline_control.metrics import (
     CATALOG_PATH,
@@ -95,6 +96,108 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertIn("forbidden_until_csp_auth_gate", events)
         self.assertNotIn("<iframe", dashboard)
         self.assertEqual(CATALOG_PATH.name, "metrics.v1.json")
+        store_src = (ROOT / "pipeline_control" / "store.py").read_text(encoding="utf-8")
+        self.assertIn("from backend.pipeline_control.metrics import record", store_src)
+        self.assertIn("tzudong_pipeline_runs_enqueued_total", store_src)
+        self.assertIn("tzudong_pipeline_runs_claimed_total", store_src)
+        self.assertIn("tzudong_pipeline_runs_succeeded_total", store_src)
+        self.assertIn("tzudong_pipeline_runs_failed_total", store_src)
+        self.assertNotIn("tzudong_pipeline_kafka_lag", store_src)
+        self.assertNotIn("tzudong_pipeline_es_rows_per_sec", store_src)
+        self.assertIn("MemoryStore enqueue/claim/Succeeded/Failed call record() as noop", contract)
+
+
+class MetricCallSiteTests(unittest.TestCase):
+    def test_store_records_frozen_names_without_export(self) -> None:
+        from backend.pipeline_control.store import MemoryStore
+        from backend.pipeline_control.worker import process_one
+
+        seen: list[str] = []
+
+        def capture(name: str, value: int = 1) -> str:
+            seen.append(name)
+            return record(name, value)
+
+        store = MemoryStore(clock=lambda: 1_000.0)
+        with patch("backend.pipeline_control.store.record", side_effect=capture):
+            first, created = store.create_run(
+                target="tzuyang",
+                profile="heavy_local",
+                idempotency_key="metrics01",
+                payload={},
+                actor="admin",
+                request_id="req-m1",
+            )
+            self.assertTrue(created)
+            replay, created_again = store.create_run(
+                target="tzuyang",
+                profile="heavy_local",
+                idempotency_key="metrics01",
+                payload={},
+                actor="admin",
+                request_id="req-m1b",
+            )
+            self.assertFalse(created_again)
+            self.assertEqual(first.id, replay.id)
+            self.assertEqual(process_one(store), "Succeeded")
+
+            failed, _ = store.create_run(
+                target="tzuyang",
+                profile="lite_gha",
+                idempotency_key="metrics02",
+                payload={},
+                actor="admin",
+                request_id="req-m2",
+            )
+            claimed = store.claim()
+            self.assertEqual(claimed.id, failed.id)
+            store.finish_failed(failed.id, "adapter_failed")
+
+            cancelled, _ = store.create_run(
+                target="meatcreator",
+                profile="lite_gha",
+                idempotency_key="metrics03",
+                payload={},
+                actor="admin",
+                request_id="req-m3",
+            )
+            store.claim()
+            store.control(cancelled.id, "cancel", actor="admin", request_id="req-m3c")
+            store.finish_dry_run(cancelled.id)
+
+            paused, _ = store.create_run(
+                target="tzuyang",
+                profile="heavy_local",
+                idempotency_key="metrics04",
+                payload={},
+                actor="admin",
+                request_id="req-m4",
+            )
+            store.claim()
+            store.control(paused.id, "pause", actor="admin", request_id="req-m4p")
+            store.finish_dry_run(paused.id)
+
+        self.assertEqual(
+            seen,
+            [
+                "tzudong_pipeline_runs_enqueued_total",
+                "tzudong_pipeline_runs_claimed_total",
+                "tzudong_pipeline_runs_succeeded_total",
+                "tzudong_pipeline_runs_enqueued_total",
+                "tzudong_pipeline_runs_claimed_total",
+                "tzudong_pipeline_runs_failed_total",
+                "tzudong_pipeline_runs_enqueued_total",
+                "tzudong_pipeline_runs_claimed_total",
+                "tzudong_pipeline_runs_enqueued_total",
+                "tzudong_pipeline_runs_claimed_total",
+            ],
+        )
+        self.assertNotIn("tzudong_pipeline_kafka_lag", seen)
+        self.assertNotIn("tzudong_pipeline_es_rows_per_sec", seen)
+        self.assertEqual(
+            record("tzudong_pipeline_runs_enqueued_total"),
+            "noop:tzudong_pipeline_runs_enqueued_total",
+        )
 
 
 if __name__ == "__main__":

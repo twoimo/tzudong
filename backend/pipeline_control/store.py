@@ -20,6 +20,7 @@ from backend.pipeline_control.state_machine import (
     payload_hash,
     stale_reclaim_eligible,
 )
+from backend.pipeline_control.metrics import record
 from backend.pipeline_control.persist import persist_mutation
 
 LEASE_TTL_SECONDS = 30.0
@@ -139,6 +140,7 @@ class MemoryStore:
         self.idempotency[idempotency_key] = run.id
         self._audit(actor=actor, job_id=run.id, transition="enqueue", request_id=request_id)
         self._persist(run, lock_held=True, audit=self.audit[-1])
+        record("tzudong_pipeline_runs_enqueued_total")
         return run, True
 
     def get(self, run_id: str) -> RunRecord:
@@ -179,6 +181,7 @@ class MemoryStore:
                     request_id=run.request_id,
                 )
                 self._persist(run, lock_held=True, audit=self.audit[-1])
+                record("tzudong_pipeline_runs_claimed_total")
                 return run
         return None
 
@@ -198,6 +201,7 @@ class MemoryStore:
             request_id=run.request_id,
         )
         self._persist(run, lock_held=False, audit=self.audit[-1])
+        record("tzudong_pipeline_runs_succeeded_total")
         return run
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
@@ -212,6 +216,7 @@ class MemoryStore:
             request_id=run.request_id,
         )
         self._persist(run, lock_held=False, audit=self.audit[-1])
+        record("tzudong_pipeline_runs_failed_total")
         return run
 
     def public_run(self, run: RunRecord) -> dict[str, Any]:
