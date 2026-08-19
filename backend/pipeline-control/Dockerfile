@@ -1,5 +1,5 @@
 # Harbor-ready multi-stage image. Tags: image.registry/tzudong/pipeline-{api,worker}:<gitsha>
-# Bakes exactly one pinned kafka client from requirements.txt; otherwise copy-only.
+# Bakes kafka-python==3.0.11 plus the pinned OpenTelemetry SDK and OTLP HTTP exporter from requirements.txt.
 FROM python:3.12-slim AS base
 WORKDIR /workspace
 ENV PYTHONUNBUFFERED=1 \
