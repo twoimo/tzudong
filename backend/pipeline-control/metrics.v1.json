@@ -1,0 +1,14 @@
+{
+  "metrics": [
+    "tzudong_pipeline_runs_enqueued_total",
+    "tzudong_pipeline_runs_claimed_total",
+    "tzudong_pipeline_runs_succeeded_total",
+    "tzudong_pipeline_runs_failed_total"
+  ],
+  "deferred": [
+    "tzudong_pipeline_kafka_lag",
+    "tzudong_pipeline_es_rows_per_sec"
+  ],
+  "exporter": "noop; no OpenTelemetry SDK in the pipeline image",
+  "adminIframePolicy": "forbidden_until_csp_auth_gate"
+}

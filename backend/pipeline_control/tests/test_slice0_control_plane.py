@@ -621,6 +621,20 @@ class OverlayAndDocsTests(unittest.TestCase):
         self.assertNotRegex(obs, r"(?i)GF_SECURITY_ADMIN_PASSWORD:\s*['\"]?(admin|password|changeme)")
         self.assertNotIn("TZUDONG_PIPELINE_PERSIST", obs)
 
+        metrics = json.loads((ROOT / "pipeline-control" / "metrics.v1.json").read_text(encoding="utf-8"))
+        self.assertEqual(
+            metrics["metrics"],
+            [
+                "tzudong_pipeline_runs_enqueued_total",
+                "tzudong_pipeline_runs_claimed_total",
+                "tzudong_pipeline_runs_succeeded_total",
+                "tzudong_pipeline_runs_failed_total",
+            ],
+        )
+        self.assertIn("tzudong_pipeline_kafka_lag", metrics["deferred"])
+        self.assertRegex(obs, r"(?m)^\s+otel-collector:")
+        self.assertRegex(obs, r"(?m)^\s+prometheus:")
+
     def test_lite_gha_workflow_has_postgres_service_and_worker(self) -> None:
         workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
             encoding="utf-8"
