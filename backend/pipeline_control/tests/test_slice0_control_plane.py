@@ -545,6 +545,16 @@ class OverlayAndDocsTests(unittest.TestCase):
             / "AdminPipelineDashboard.tsx"
         ).read_text(encoding="utf-8")
         self.assertNotIn("<iframe", dashboard)
+        self.assertIn("127.0.0.1:3001:3000", obs)
+        self.assertIn('GF_AUTH_ANONYMOUS_ENABLED: "false"', obs)
+        self.assertIn('GF_USERS_ALLOW_SIGN_UP: "false"', obs)
+        self.assertIn('GF_SECURITY_ALLOW_EMBEDDING: "false"', obs)
+        self.assertIn('GF_SECURITY_CONTENT_SECURITY_POLICY: "true"', obs)
+        self.assertIn('GF_SECURITY_COOKIE_SAMESITE: "strict"', obs)
+        self.assertIn("${GRAFANA_ADMIN_PASSWORD:?", obs)
+        self.assertNotRegex(obs, r"(?i)GF_SECURITY_ADMIN_PASSWORD:\s*['\"]?(admin|password|changeme)")
+        self.assertNotIn("TZUDONG_PIPELINE_PERSIST", obs)
+
     def test_lite_gha_workflow_has_postgres_service_and_worker(self) -> None:
         workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
             encoding="utf-8"

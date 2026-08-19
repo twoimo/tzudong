@@ -1,6 +1,7 @@
 # Slice 3 overlay. Start docker-compose.kafka.yml and docker-compose.elasticsearch.yml first.
 # Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
 # Grafana is an operator browser, not an admin iframe.
+# Anonymous auth is off. Embedding is off. CSP is on. Admin password comes from GRAFANA_ADMIN_PASSWORD.
 # Kafka lives only in docker-compose.kafka.yml.
 # Elasticsearch lives only in docker-compose.elasticsearch.yml.
 name: tzudong-pipeline-observability
@@ -29,6 +30,13 @@ services:
     image: grafana/grafana:11.5.2
     ports:
       - "127.0.0.1:3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "false"
+      GF_SECURITY_CONTENT_SECURITY_POLICY: "true"
+      GF_SECURITY_COOKIE_SAMESITE: "strict"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     networks:
       - supabase_network_local
 
