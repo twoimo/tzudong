@@ -132,6 +132,45 @@ function resolveHealthEndpoint(baseUrl: string | undefined, path: string): strin
   }
 }
 
+
+async function resolvePipelineControlStatus(
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+  manifestStatus: 'available' | 'missing' | 'unreadable' | undefined,
+): Promise<{ reachable: boolean; source: 'job_api' | 'manifest' | 'none' }> {
+  const jobApiEndpoint = resolveHealthEndpoint(env.PIPELINE_CONTROL_API_URL, '/v1/targets');
+  if (jobApiEndpoint) {
+    const timeout = withTimeoutSignal(timeoutMs);
+    try {
+      const response = await fetch(jobApiEndpoint, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: timeout.signal,
+        cache: 'no-store',
+      });
+      if (response.ok) {
+        const payload = await response.json().catch(() => null);
+        if (
+          payload
+          && typeof payload === 'object'
+          && Array.isArray((payload as { targets?: unknown }).targets)
+        ) {
+          return { reachable: true, source: 'job_api' };
+        }
+      }
+    } catch {
+      // Job API is optional; fall through to manifest / none.
+    } finally {
+      timeout.clear();
+    }
+  }
+
+  if (manifestStatus === 'available') {
+    return { reachable: false, source: 'manifest' };
+  }
+  return { reachable: false, source: 'none' };
+}
+
 function buildRunDailyStaleWarningSnippet(): string {
   return [
     '# run_daily 최신 로그 점검',
@@ -1623,6 +1662,11 @@ export async function getAdminSystemStatus(
   const runDailyScriptPath = runtime.resolveRunDailyScriptPath(env);
   const runDailyLogInfo = runtime.resolveRunDailyLogInfo(env, runDailyScriptPath);
   const runDailyManifestInfo = runtime.resolveRunDailyManifestStatus(env, runDailyScriptPath);
+  const pipelineControl = await resolvePipelineControlStatus(
+    env,
+    timeoutMs,
+    runDailyManifestInfo.manifestStatus,
+  );
   const hasReadableRunDailyManifest = runDailyManifestInfo.manifestStatus === 'available';
   const runDailyLogTailInfo = hasReadableRunDailyManifest
     ? { failedRequiredSteps: [], optionalSkips: [], downstreamSkips: [] }
@@ -1686,10 +1730,7 @@ export async function getAdminSystemStatus(
       'youtube-thumbnail-durable-release': thumbnailDurableReleaseReadiness,
     },
     checklist: [],
-    pipelineControl: {
-      reachable: Boolean(env.PIPELINE_CONTROL_API_URL),
-      source: env.PIPELINE_CONTROL_API_URL ? "job_api" : "manifest",
-    },
+    pipelineControl,
   };
   response.checklist = buildAdminOpsChecklist(response, response.runDaily);
 
