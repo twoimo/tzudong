@@ -50,6 +50,17 @@ services:
     networks:
       - supabase_network_local
 
+  pipeline-indexer:
+    build:
+      context: ../..
+      dockerfile: backend/pipeline-control/Dockerfile
+      target: indexer
+    environment:
+      TZUDONG_DATA_ENV: local_db
+      TZUDONG_PIPELINE_ES: noop
+    networks:
+      - supabase_network_local
+
 networks:
   supabase_network_local:
     external: true
