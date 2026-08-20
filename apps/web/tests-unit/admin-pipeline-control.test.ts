@@ -205,10 +205,12 @@ describe("admin pipeline control contract", () => {
     expect(live.dryRun).toBe(false);
   });
 
-  test("BFF forwards Idempotency-Key and never embeds Grafana iframe", () => {
+  test("BFF forwards Idempotency-Key and dashboard gates loopback Grafana iframe", () => {
     const route = source("app/api/admin/pipeline/route.ts");
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const proxySource = source("proxy.ts");
+    const nextConfig = source("next.config.mjs");
     expect(route).toContain('"Idempotency-Key": normalized.idempotencyKey');
     expect(route).toContain("isTrustedSameOriginMutation");
     expect(route).toContain("requireAdmin");
@@ -220,8 +222,52 @@ describe("admin pipeline control contract", () => {
     expect(route).not.toContain("dryRun false");
     expect(route).toContain("normalized.runId");
     expect(route).not.toContain("bounded.value.runId");
-    expect(dashboard).not.toContain("<iframe");
-    expect(dashboard).toContain("Grafana iframe은 CSP/auth gate 전까지 금지");
+    expect(route).toContain('phase === "preview"');
+    expect(route).toContain("pipeline_preview_stale");
+    expect(route).toContain("pipeline_upstream_timeout");
+    expect(route).toContain("readback");
+    expect(route).toContain("audit");
+    expect(route).toContain("sealPreviewTicket");
+    expect(route).toContain("openPreviewTicket");
+    expect(route).toContain("createHmac");
+    expect(route).toContain("timingSafeEqual");
+    expect(route).toContain("previewTicketSecret");
+    expect(route).toContain("pipeline_preview_secret_missing");
+    expect(route).not.toContain("previewTicketKey");
+    expect(route).not.toContain(".update(PIPELINE_API_BASE");
+    expect(route).toContain("const body = await response.text()");
+    expect(route).not.toContain("previewTickets");
+    expect(route).not.toContain("new Map<string, PreviewTicket>");
+    const applySuccess = route.slice(route.indexOf("const job = allowlistedPipelineJob"));
+    expect(applySuccess).toContain("accepted: true");
+    expect(applySuccess).toContain("} catch {");
+    expect(applySuccess).not.toContain("throw readbackError");
+    expect(applySuccess.slice(0, applySuccess.indexOf("accepted: true"))).not.toContain(
+      "pipeline_upstream_timeout",
+    );
+    expect(route).not.toContain("3001");
+    expect(route).not.toContain("grafana");
+    expect(route).not.toContain("iframe");
+    expect(route).not.toContain("prometheus");
+    expect(route).not.toContain("elasticsearch");
+    expect(route).not.toContain("kafka-ui");
+    expect(dashboard).toContain("<iframe");
+    expect(dashboard).toContain('data-admin-pipeline-grafana="true"');
+    expect(dashboard).toContain("http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters");
+    expect(dashboard).toContain('hostname === "127.0.0.1"');
+    expect(dashboard).toContain('process.env.NODE_ENV !== "production"');
+    expect(dashboard).not.toContain("process.env.VERCEL");
+    expect(dashboard).not.toContain("http://localhost");
+    expect(dashboard).not.toContain("kafka-ui");
+    expect(dashboard).not.toContain(":8088");
+    expect(dashboard).toContain("2_000");
+    expect(proxySource).toContain("http://127.0.0.1:3001");
+    expect(proxySource).toContain("process.env.NODE_ENV !== 'production'");
+    expect(proxySource).toContain("process.env.VERCEL !== '1'");
+    expect(proxySource).toContain("frame-ancestors 'none'");
+    expect(nextConfig).toContain("{ key: 'X-Frame-Options', value: 'DENY' }");
+    expect(nextConfig).not.toContain("3001");
+    expect(nextConfig).not.toContain("grafana");
     expect(consoleSource).not.toContain(
       'import("@/components/admin/system-status/AdminSystemStatusCenter")',
     );
@@ -256,9 +302,10 @@ describe("admin pipeline control contract", () => {
     ]);
   });
 
-  test("source test forbids Grafana iframe until CSP gate", () => {
+  test("source test requires gated Grafana iframe after CSP gate", () => {
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
-    expect(dashboard).not.toContain("<iframe");
+    expect(dashboard).toContain("<iframe");
+    expect(dashboard).toContain("http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters");
     expect(dashboard).not.toContain("kafka-ui");
     expect(dashboard).not.toContain("Grafana embed");
   });
@@ -281,6 +328,19 @@ describe("admin pipeline control contract", () => {
     expect(dashboard).toContain("data-admin-pipeline-cancel");
     expect(dashboard).toContain("data-admin-pipeline-enqueue");
     expect(dashboard).toContain("state already changed, refreshed");
+  });
+
+  test("proxy production frame-src omits loopback Grafana and keeps frame-ancestors none", () => {
+    const proxySource = source("proxy.ts");
+    const frameSrcAssign = proxySource.slice(
+      proxySource.indexOf("const loopbackGrafanaFrameSrc"),
+      proxySource.indexOf("`frame-src 'self' https://www.youtube.com"),
+    );
+    expect(frameSrcAssign).toContain("process.env.NODE_ENV !== 'production'");
+    expect(frameSrcAssign).toContain("process.env.VERCEL !== '1'");
+    expect(frameSrcAssign).toContain("' http://127.0.0.1:3001'");
+    expect(frameSrcAssign).toContain(": ''");
+    expect(proxySource).toContain("frame-ancestors 'none'");
   });
 
   test("502 bodies are error-only and query.isError gates empty failures", () => {
