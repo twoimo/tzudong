@@ -15,6 +15,7 @@ from utils.supabase_rest import (
     MAX_SERVICE_ROLE_KEY_LENGTH,
     SUPABASE_REST_CONFIGURATION_ERROR,
     SupabaseRestConfigurationError,
+    admit_pipeline_supabase_boundary,
     resolve_privileged_supabase_rest_credentials,
 )
 
@@ -49,6 +50,58 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
 
         self.assertEqual(VALID_URL, credentials.url)
         self.assertEqual(VALID_SERVICE_ROLE_KEY, credentials.service_role_key)
+
+    def test_local_and_artifact_pipeline_boundaries_reject_hosted_url(self) -> None:
+        for data_sink in ("local_db", "artifact_only"):
+            with self.subTest(data_sink=data_sink), self.assertRaises(
+                SupabaseRestConfigurationError
+            ) as raised:
+                admit_pipeline_supabase_boundary(
+                    environment(
+                        TZUDONG_DATA_SINK=data_sink,
+                        TZUDONG_EXECUTION_MODE="live",
+                    )
+                )
+            self.assertEqual(SUPABASE_REST_CONFIGURATION_ERROR, str(raised.exception))
+
+    def test_pipeline_boundary_allows_only_loopback_for_local_sink(self) -> None:
+        boundary = admit_pipeline_supabase_boundary(
+            environment(
+                SUPABASE_URL="http://127.0.0.1:54321",
+                TZUDONG_DATA_SINK="local_db",
+                TZUDONG_EXECUTION_MODE="live",
+            )
+        )
+        self.assertEqual(boundary.data_sink, "local_db")
+        self.assertEqual(boundary.execution_mode, "live")
+
+    def test_pipeline_boundary_derives_artifact_sink_from_lite_profile(self) -> None:
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(
+                environment(
+                    TZUDONG_COMPUTE_PROFILE="lite_gha",
+                    TZUDONG_DATA_ENV="hosting_db",
+                    TZUDONG_EXECUTION_MODE="live",
+                )
+            )
+
+    def test_hosted_apply_remains_disabled_even_with_environment_approval(self) -> None:
+        values = environment(
+            TZUDONG_DATA_SINK="hosted_apply",
+            TZUDONG_EXECUTION_MODE="live",
+            TZUDONG_HOSTED_APPLY_APPROVED="1",
+            TZUDONG_HOSTED_PROJECT_REF="abcdefghijklmnopqrst",
+        )
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(values)
+        self.assert_invalid(values)
+
+    def test_pipeline_mode_marker_cannot_fall_through_to_ordinary_hosted_client(self) -> None:
+        marked = environment(TZUDONG_EXECUTION_MODE="live")
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(marked)
+        with self.assertRaises(SupabaseRestConfigurationError):
+            resolve_privileged_supabase_rest_credentials(marked)
 
     def test_rejects_attacker_host_suffixes(self) -> None:
         for url in (
