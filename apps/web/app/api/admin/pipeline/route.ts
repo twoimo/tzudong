@@ -1,3 +1,4 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -32,8 +33,6 @@ type PreviewTicket = {
   dryRun: boolean;
 };
 
-const previewTickets = new Map<string, PreviewTicket>();
-
 function noStore(body: unknown, init: ResponseInit = {}) {
   const response = NextResponse.json(body, init);
   response.headers.set("Cache-Control", "no-store");
@@ -44,14 +43,95 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
+function previewTicketKey(): Buffer {
+  const explicit =
+    process.env.PIPELINE_PREVIEW_TICKET_SECRET?.trim() ||
+    process.env.PRIVACY_ONBOARDING_COOKIE_SECRET?.trim() ||
+    process.env.PRIVACY_AUDIT_HASH_KEY?.trim() ||
+    "";
+  if (Buffer.byteLength(explicit, "utf8") >= 32) {
+    return Buffer.from(explicit, "utf8");
+  }
+  return createHash("sha256")
+    .update("tzudong:pipeline-preview-ticket:v1\n", "utf8")
+    .update(PIPELINE_API_BASE, "utf8")
+    .digest();
+}
+
+function sealPreviewTicket(ticket: PreviewTicket): string {
+  const encoded = Buffer.from(JSON.stringify(ticket), "utf8").toString("base64url");
+  const signature = createHmac("sha256", previewTicketKey())
+    .update(`tzudong:pipeline-preview:v1:${encoded}`, "utf8")
+    .digest("base64url");
+  return `${encoded}.${signature}`;
+}
+
+function openPreviewTicket(token: string): PreviewTicket | null {
+  const separator = token.indexOf(".");
+  if (separator <= 0 || token.indexOf(".", separator + 1) !== -1) {
+    return null;
+  }
+  const encoded = token.slice(0, separator);
+  const signature = token.slice(separator + 1);
+  const expected = createHmac("sha256", previewTicketKey())
+    .update(`tzudong:pipeline-preview:v1:${encoded}`, "utf8")
+    .digest("base64url");
+  const left = Buffer.from(signature);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || !timingSafeEqual(left, right)) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    if (
+      typeof parsed.previewHash !== "string" ||
+      typeof parsed.revision !== "string" ||
+      typeof parsed.expiresAt !== "number" ||
+      !Number.isFinite(parsed.expiresAt) ||
+      typeof parsed.action !== "string" ||
+      typeof parsed.target !== "string" ||
+      typeof parsed.profile !== "string" ||
+      typeof parsed.dryRun !== "boolean"
+    ) {
+      return null;
+    }
+    const runIdRaw = parsed.runId;
+    const runId =
+      runIdRaw === undefined || runIdRaw === null || runIdRaw === ""
+        ? undefined
+        : String(runIdRaw);
+    return {
+      previewHash: parsed.previewHash,
+      revision: parsed.revision,
+      expiresAt: parsed.expiresAt,
+      action: parsed.action,
+      target: parsed.target,
+      profile: parsed.profile,
+      runId,
+      dryRun: parsed.dryRun,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function pipelineFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PIPELINE_UPSTREAM_TIMEOUT_MS);
   try {
-    return await fetch(`${PIPELINE_API_BASE}${path}`, {
+    const response = await fetch(`${PIPELINE_API_BASE}${path}`, {
       ...init,
       signal: controller.signal,
       cache: "no-store",
+    });
+    const body = await response.text();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
     });
   } finally {
     clearTimeout(timer);
@@ -139,11 +219,11 @@ export async function POST(request: NextRequest) {
         dryRun: preview.dryRun,
       });
       const revision = snapshotRevision(snapshot);
-      const operationId = crypto.randomUUID();
-      previewTickets.set(operationId, {
+      const expiresAt = Date.now() + PIPELINE_PREVIEW_TTL_MS;
+      const operationId = sealPreviewTicket({
         previewHash,
         revision,
-        expiresAt: Date.now() + PIPELINE_PREVIEW_TTL_MS,
+        expiresAt,
         action: preview.action,
         target: preview.target,
         profile: preview.profile,
@@ -155,7 +235,7 @@ export async function POST(request: NextRequest) {
         operationId,
         previewHash,
         revision,
-        expiresAt: new Date(Date.now() + PIPELINE_PREVIEW_TTL_MS).toISOString(),
+        expiresAt: new Date(expiresAt).toISOString(),
         requiredConfirmation: true,
       });
     } catch (error) {
@@ -177,7 +257,7 @@ export async function POST(request: NextRequest) {
   }
 
   const operationId = String(body.operationId ?? "");
-  const ticket = previewTickets.get(operationId);
+  const ticket = openPreviewTicket(operationId);
   if (
     !ticket ||
     ticket.previewHash !== normalized.previewHash ||
@@ -190,7 +270,6 @@ export async function POST(request: NextRequest) {
     return noStore({ error: "pipeline_preview_stale" }, { status: 409 });
   }
   if (ticket.expiresAt <= Date.now()) {
-    previewTickets.delete(operationId);
     return noStore({ error: "pipeline_preview_expired" }, { status: 409 });
   }
 
@@ -210,7 +289,6 @@ export async function POST(request: NextRequest) {
       jobs?: unknown;
     };
     if (snapshotRevision(snapshot) !== ticket.revision) {
-      previewTickets.delete(operationId);
       return noStore({ error: "pipeline_preview_stale" }, { status: 409 });
     }
 
@@ -247,18 +325,23 @@ export async function POST(request: NextRequest) {
     const runId = String(job.id ?? normalized.runId ?? "");
     let readback: Record<string, unknown> = job;
     if (runId) {
-      const readbackResponse = await pipelineFetch(`/v1/runs/${runId}`, {
-        headers: { Accept: "application/json" },
-      });
-      if (readbackResponse.ok) {
-        const readbackPayload = (await readbackResponse.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        readback = allowlistedPipelineJob(readbackPayload);
+      try {
+        const readbackResponse = await pipelineFetch(`/v1/runs/${runId}`, {
+          headers: { Accept: "application/json" },
+        });
+        if (readbackResponse.ok) {
+          const readbackPayload = (await readbackResponse.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          readback = allowlistedPipelineJob(readbackPayload);
+        }
+      } catch (readbackError) {
+        if (!isAbortError(readbackError)) {
+          throw readbackError;
+        }
       }
     }
-    previewTickets.delete(operationId);
     return noStore(
       {
         accepted: true,
