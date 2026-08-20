@@ -73,6 +73,10 @@ class RunRecord:
     dry_run: bool = True
     error_code: str | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
+    pause_requested: bool = False
+    cancel_requested: bool = False
+    claimed_by: str | None = None
+    checkpoint: dict[str, Any] = field(default_factory=dict)
 
 
 def can_pause(status: str) -> bool:

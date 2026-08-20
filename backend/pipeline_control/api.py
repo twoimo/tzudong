@@ -22,6 +22,21 @@ STORE = FileStore()
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 
 
+def build_store():
+    mode = os.environ.get("TZUDONG_PIPELINE_STORE", "file").strip() or "file"
+    if mode == "postgres":
+        from backend.pipeline_control.pg_store import PostgresStore
+
+        return PostgresStore()
+    if mode not in {"file", "memory"}:
+        raise ControlPlaneError("store_mode_invalid", 400)
+    if mode == "memory":
+        from backend.pipeline_control.store import MemoryStore
+
+        return MemoryStore()
+    return FileStore()
+
+
 def current_store():
     return STORE
 
@@ -174,4 +189,5 @@ def serve(host: str = "127.0.0.1", port: int = 8091) -> ThreadingHTTPServer:
 
 
 if __name__ == "__main__":
+    STORE = build_store()
     serve().serve_forever()
