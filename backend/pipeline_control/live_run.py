@@ -10,6 +10,7 @@ from backend.pipeline_control.dsn_guard import admit_dsn
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.manifest import is_live_execution_success, load_json
 from backend.pipeline_control.store import MemoryStore
+from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
 from backend.pipeline_control.worker import process_one, write_run_manifest
 from backend.pipeline_control.queue import drain
@@ -38,7 +39,7 @@ def run_once(
     try:
         run, _created = store.create_run(
             target=target,
-            profile="lite_gha" if os.environ.get("TZUDONG_COMPUTE_PROFILE") == "lite_gha" else "heavy_local",
+            profile=resolve_compute_profile(),
             idempotency_key=f"liverun{index:02d}-{target}",
             payload={"index": index, "live": live},
             actor="live_run",
@@ -50,7 +51,7 @@ def run_once(
             store.finish_failed(held, "stale_live_retry")
         run, _created = store.create_run(
             target=target,
-            profile="lite_gha" if os.environ.get("TZUDONG_COMPUTE_PROFILE") == "lite_gha" else "heavy_local",
+            profile=resolve_compute_profile(),
             idempotency_key=f"liverun{index:02d}-{target}-retry",
             payload={"index": index, "live": live, "retry": True},
             actor="live_run",
