@@ -295,6 +295,7 @@ describe("admin responsive CSS guard", () => {
       (match) => match[1],
     );
     expect(homeSourcePaths.length).toBeGreaterThan(0);
+    expect(homeSourcePaths).toContain("../lib/naver-map-overlay-timings.ts");
     for (const sourcePath of homeSourcePaths) {
       expect(
         existsSync(resolve(appRoot, "app", sourcePath)),
@@ -318,6 +319,9 @@ describe("admin responsive CSS guard", () => {
     expect(rootCss).not.toContain("--tw-");
     expect(rootCss).not.toContain(".md\\:");
     expect(homeCss).not.toContain(ADMIN_SIDEBAR_MARKER);
+    expect(homeCss).toContain("mapOverlayFade_12s");
+    expect(homeCss).toContain("mapOverlayFade_3s");
+    expect(homeCss).toContain("mapOverlayFade_4s");
     expect(Buffer.byteLength(homeCss)).toBeLessThanOrEqual(HOME_ROUTE_CSS_MAX_BYTES);
     expect(deferredCss).toContain(".scrollbar-hide");
     expect(detailCss.length).toBeGreaterThan(0);

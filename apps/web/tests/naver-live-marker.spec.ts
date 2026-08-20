@@ -1,6 +1,4 @@
 import { expect, test, devices } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { hidePopupOverlay } from './helpers';
 import {
     clickAnyUnselectedMarker,
@@ -9,21 +7,8 @@ import {
     waitForVisibleMarkers,
 } from './mobile-home-map-helpers';
 
-function readEnvFileValue(name: string): string | null {
-    const envPath = resolve(process.cwd(), '.env.local');
-    if (!existsSync(envPath)) return null;
-
-    const line = readFileSync(envPath, 'utf8')
-        .split(/\r?\n/)
-        .find((candidate) => candidate.trim().startsWith(`${name}=`));
-    if (!line) return null;
-
-    return line.slice(line.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '');
-}
-
-const liveNaverClientId =
-    process.env.NEXT_PUBLIC_NAVER_CLIENT_ID?.trim()
-    || readEnvFileValue('NEXT_PUBLIC_NAVER_CLIENT_ID')?.trim();
+const isDedicatedLiveProviderSmoke = process.env.PLAYWRIGHT_NAVER_LIVE_PROVIDER_SMOKE === '1';
+const liveNaverClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID?.trim();
 const hasLiveNaverClientId = Boolean(
     liveNaverClientId
     && !/^your[-_]/i.test(liveNaverClientId)
@@ -35,6 +20,7 @@ test.use({
 });
 
 test.describe('Naver Maps live provider marker flow', () => {
+    test.skip(!isDedicatedLiveProviderSmoke, 'the dedicated live-provider Playwright command is required');
     test.skip(!hasLiveNaverClientId, 'NEXT_PUBLIC_NAVER_CLIENT_ID is required for live Naver Maps provider smoke');
 
     test('loads the real Naver Maps provider and opens another restaurant from a marker click', async ({ page }) => {
@@ -55,6 +41,7 @@ test.describe('Naver Maps live provider marker flow', () => {
             undefined,
             { timeout: 30000 }
         );
+        await expect(page.locator('script[data-local-naver-maps="true"]')).toHaveCount(0);
 
         await openMobileSearchAndSelect(page, '정원분식');
         await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');

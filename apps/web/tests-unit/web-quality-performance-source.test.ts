@@ -19,6 +19,7 @@ import {
   parseClientReferenceManifest,
   verifyBuildRouteCssBoundaries,
 } from "../scripts/verify-route-css-boundaries.mjs";
+import { NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES } from "../lib/naver-map-overlay-timings";
 
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
@@ -57,6 +58,7 @@ const tailwindEntries = {
       '"../components/map"', '"../components/search"', '"../components/filters"',
       '"../components/region"', '"../components/skeletons"', '"../components/ui"',
       '"../lib/naver-map-overlay-position-helpers.ts"',
+      '"../lib/naver-map-overlay-timings.ts"',
     ],
     exclusions: [],
   },
@@ -114,6 +116,17 @@ describe("Tailwind v4 source contracts", () => {
     for (const utility of retainedUtilities) {
       const selector = escapedClassSelector(utility);
       expect(selectors.some((value) => value.includes(selector))).toBe(true);
+    }
+
+    const homeSelectors: string[] = [];
+    postcss.parse(compiledEntries.get("app/home-app-globals.css")!).walkRules((rule) => {
+      homeSelectors.push(rule.selector);
+    });
+    for (const animationClasses of Object.values(NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES)) {
+      for (const utility of animationClasses.split(/\s+/)) {
+        const selector = escapedClassSelector(utility);
+        expect(homeSelectors.some((value) => value.includes(selector)), utility).toBe(true);
+      }
     }
 
     const tailwindConfigSource = source("tailwind.config.ts");
@@ -509,6 +522,7 @@ describe("web quality performance source contracts", () => {
     const mapIndicatorsSource = source(
       "components/map/naver-map-overlay-indicators.tsx",
     );
+    const mapOverlayTimingsSource = source("lib/naver-map-overlay-timings.ts");
     const mapOverlayNoticeSource = source(
       "components/map/map-overlay-notice.tsx",
     );
@@ -2015,18 +2029,15 @@ describe("web quality performance source contracts", () => {
     expect(source("components/home/MobileControlOverlay.tsx")).not.toContain(
       "import { supabase } from '@/integrations/supabase/client'",
     );
-    expect(mapOverlayNoticeSource).toContain("max-w-[calc(100vw-2rem)]");
+    expect(mapOverlayNoticeSource).toContain("max-w-[min(26rem,calc(100vw-2rem))]");
     expect(mapOverlayNoticeSource).toContain(
       "export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =",
     );
     expect(mapOverlayNoticeSource).toContain(
-      "const baseNoticeClass = MAP_OVERLAY_NOTICE_CLASS_NAME;",
+      "export const MAP_OVERLAY_TOAST_CLASS_NAME = MAP_OVERLAY_NOTICE_CLASS_NAME;",
     );
     expect(mapOverlayNoticeSource).toContain(
-      "MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} text-left",
-    );
-    expect(mapOverlayNoticeSource).toContain(
-      "className={cn(baseNoticeClass, className)}",
+      "className={cn(MAP_OVERLAY_NOTICE_CLASS_NAME, className)}",
     );
     expect(mapOverlayNoticeSource).toContain("export const MAP_OVERLAY_NOTICE_CLASS_NAME =");
     expect(mapOverlayNoticeSource).toContain(
@@ -2054,20 +2065,36 @@ describe("web quality performance source contracts", () => {
     );
     expect(mapIndicatorsSource).toContain("mobile-map-announcement-toast");
     expect(mapIndicatorsSource).toContain(
-      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} animate-in",
+      "className={`pointer-events-auto mobile-map-announcement-toast ${NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.announcement}`}",
     );
     expect(overlayStackSource).toContain(
-      "className={`${MAP_OVERLAY_TOAST_CLASS_NAME} ${floatingToastPositionClass}",
+      "className={badgePositionClass} data-map-overlay-kind={overlayKind}",
+    );
+    expect(overlayStackSource).toContain(
+      "<RestaurantCountBadge count={restaurantCountToastCount} />",
     );
     expect(mapIndicatorsSource).toContain(
       "contentClassName={MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME}",
     );
-    expect(overlayStackSource).toContain('showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded');
-    expect(overlayStackSource).toContain('showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle');
-    expect(mapOverlayNoticeSource).toContain("min-h-9");
+    expect(overlayStackSource).toContain("if (isLoadingRestaurants || !isLoaded) return 'loading'");
+    expect(overlayStackSource).toContain("if (isMapToastVisible) return 'map-toast'");
+    expect(overlayStackSource).toContain("if (showAnnouncementToast && hasAnnouncementTitle) return 'announcement'");
+    expect(overlayStackSource).toContain("if (restaurantsLength > 0 && showRestaurantCount) return 'restaurant-count'");
+    expect(overlayStackSource).toContain("if (showOnlineUsers) return 'online-users'");
+    expect(overlayStackSource).toContain("if (restaurantsLength === 0) return 'empty'");
+    expect(overlayStackSource).toContain("lowerPriorityOnPreemption: 'drop'");
+    expect(overlayStackSource).toContain("timedOccurrenceResume: 'never'");
+    expect(overlayStackSource).toContain("persistentEmptyResume: 'when-timed-slot-clears'");
+    expect(naverMapSource).toContain('resolveNaverMapTimedOverlayDropPlan(activeMapOverlayKind)');
+    expect(naverMapSource).toContain('showMapToast.dismiss()');
+    expect(naverMapSource).toContain('showMapToast.activate()');
+    expect(naverMapSource).toContain('showMapToast.dispose()');
+    expect(naverMapSource).toContain('isAnnouncementToastVisible={showAnnouncementToast}');
+    expect(naverMapSource).toContain('isOnlineUsersToastVisible={showOnlineUsers}');
+    expect(mapOverlayNoticeSource).toContain("min-h-8");
     expect(mapOverlayNoticeSource).toContain("w-fit");
     expect(mapOverlayNoticeSource).not.toContain("flex w-[calc(100vw-2rem)]");
-    expect(mapOverlayNoticeSource).toContain("grid-cols-[1.25rem_max-content]");
+    expect(mapOverlayNoticeSource).toContain("grid-cols-[1rem_minmax(0,max-content)]");
     expect(mapOverlayNoticeSource).toContain("max-w-full");
     expect(mapOverlayNoticeSource).toContain("whitespace-nowrap");
     expect(mapOverlayNoticeSource).not.toContain("whitespace-normal");
@@ -2077,17 +2104,19 @@ describe("web quality performance source contracts", () => {
     expect(mapOverlayNoticeSource).toContain("aria-busy={ariaBusy}");
     expect(mapOverlayNoticeSource).toContain('aria-hidden="true">');
     expect(mapIndicatorsSource).toContain("MapOverlayNotice");
-    expect(mapIndicatorsSource).toContain("motion-reduce:animate-none");
+    expect(mapOverlayTimingsSource).toContain("motion-reduce:animate-none");
     expect(mapIndicatorsSource).toContain("isBusy = !isLoaded");
-    expect(mapIndicatorsSource).toContain(
-      "animate-[fadeInOut_3s_ease-in-out_forwards]",
-    );
+    expect(mapIndicatorsSource).toContain("NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.restaurantCount");
+    expect(mapIndicatorsSource).toContain("NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.onlineUsers");
+    expect(mapIndicatorsSource).toContain("NAVER_MAP_OVERLAY_ANIMATION_CLASS_NAMES.announcement");
+    expect(mapIndicatorsSource).toContain("<MapOverlayNotice>\n        {message}");
     expect(mapIndicatorsSource).not.toContain("animation: 'fadeInOut");
+    expect(mapIndicatorsSource).not.toContain("animate-[fadeInOut_3s_ease-in-out_forwards]");
     expect(mapIndicatorsSource).not.toContain("🔥 {count}개의 맛집 발견");
     expect(mapViewIndicatorsSource).toContain("ariaBusy");
     expect(mapViewIndicatorsSource).toContain("motion-reduce:animate-none");
     expect(overlayStackSource).toContain(
-      "isBusy={isLoadingRestaurants || !isLoaded}",
+      "isBusy",
     );
     expect(overlayStackSource).toContain(
       "role={mapToast.type === 'error' ? 'alert' : 'status'}",
@@ -2096,7 +2125,6 @@ describe("web quality performance source contracts", () => {
       "ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}",
     );
     expect(overlayStackSource).toContain("emptyStateMessage?: string");
-    expect(overlayStackSource).toContain("className={floatingToastPositionClass}");
     expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
     expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
@@ -2104,7 +2132,7 @@ describe("web quality performance source contracts", () => {
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
     );
-    expect(overlayPositionSource).toContain("absolute right-4 bottom-4");
+    expect(overlayPositionSource).toContain("absolute right-4 top-[4.75rem]");
     expect(overlayPositionSource).toContain(
       "const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =",
     );
@@ -2116,6 +2144,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(overlayPositionSource).toContain("z-[70]");
     expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-position-helpers.ts";');
+    expect(homeAppGlobalsSource).toContain('@source "../lib/naver-map-overlay-timings.ts";');
     expect(mobileControlSource).toContain("document.documentElement.toggleAttribute('data-mobile-search-open', activeSheet === 'search')");
     expect(homeAppGlobalsSource).toContain('.mobile-map-status-badge');
     expect(homeAppGlobalsSource).toContain('@media (max-width: 1279px)');
@@ -2128,7 +2157,6 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast",
     );
-    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast .map-overlay-notice-single-line",
     );
@@ -2191,7 +2219,6 @@ describe("web quality performance source contracts", () => {
     expect(homeAppGlobalsSource).toContain(
       ".mobile-map-status-badge.mobile-map-announcement-toast {\n  width: max-content;\n  max-width: calc(100vw - 2rem);",
     );
-    expect(homeAppGlobalsSource).toContain("height: 2.25rem");
     expect(homeAppGlobalsSource).toContain(
       "10px safe area + 48px search row + 8px gap + 40px filter reel + 8px toast gap = 114px.",
     );
@@ -4459,7 +4486,7 @@ describe("web quality performance source contracts", () => {
     expect(noToastSource).toContain("createElement(AppToaster)");
     expect(noToastSource).not.toContain("toast-disabled");
     expect(appToasterSource).toContain(
-      '<ToastProvider swipeDirection="right">',
+      '<ToastProvider swipeDirection="right" duration={12000}>',
     );
     expect(appToasterSource).toContain("usePathname()");
     expect(appToasterSource).toContain(
