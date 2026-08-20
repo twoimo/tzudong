@@ -249,6 +249,10 @@ function buildImageSources() {
 function buildContentSecurityPolicy(nonce: string) {
     const developmentScriptSource = process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''
     const developmentConnectSources = process.env.NODE_ENV === 'development' ? ' http: ws:' : ''
+    const loopbackGrafanaFrameSrc =
+        process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1'
+            ? ' http://127.0.0.1:3001'
+            : ''
     const directives = [
         "default-src 'self'",
         `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${developmentScriptSource} https://maps.googleapis.com https://oapi.map.naver.com`,
@@ -259,7 +263,7 @@ function buildContentSecurityPolicy(nonce: string) {
         `connect-src 'self'${developmentConnectSources} https://api.openai.com https://*.supabase.co wss://*.supabase.co https://*.googleapis.com https://*.gstatic.com https://*.naver.com https://*.naver.net https://*.pstatic.net`,
         "media-src 'self' blob: https://*.supabase.co",
         "worker-src 'self' blob:",
-        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
+        `frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com${loopbackGrafanaFrameSrc}`,
         "object-src 'none'",
         "base-uri 'none'",
         "form-action 'self'",
