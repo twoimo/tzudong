@@ -43,8 +43,8 @@ const itemizedOutcomes = [
 
 export default function DataDeletionPage() {
   return (
-    <main className="min-h-screen bg-muted/30 px-4 py-10 text-foreground">
-      <article className="mx-auto w-full max-w-3xl rounded-2xl border bg-background p-5 shadow-sm sm:p-8">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-muted/30 px-4 py-10 text-foreground" data-legal-page="true">
+      <article className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-8">
         <header className="mb-8 border-b pb-6">
           <p className="text-sm font-medium text-primary">{siteConfig.name}</p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">데이터 삭제 요청 안내</h1>
@@ -64,7 +64,7 @@ export default function DataDeletionPage() {
         <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
           <p className="font-semibold">처리방침 버전 연결</p>
           <p className="mt-1">버전: {PRIVACY_POLICY_PUBLICATION.version}</p>
-          <p className="break-all font-mono text-xs">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
+          <p className="min-w-0 break-all font-mono text-xs">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
           <p className="mt-1">공개 효력 발생일과 게시 시각은 개인정보 처리방침 화면에서 일치하는 배포 읽기검증이 확인될 때만 표시합니다.</p>
         </section>
 
@@ -111,7 +111,7 @@ export default function DataDeletionPage() {
 
         <footer className="mt-8 rounded-xl bg-muted/40 p-4 text-xs leading-5 text-muted-foreground">
           <p>처리방침 연결 버전: {PRIVACY_POLICY_PUBLICATION.version}</p>
-          <p className="mt-1 break-all font-mono">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
+          <p className="mt-1 min-w-0 break-all font-mono">내용 SHA-256: {PRIVACY_POLICY_CONTENT_SHA256}</p>
           <p className="mt-1">문의처: {siteConfig.contact.email}</p>
         </footer>
       </article>

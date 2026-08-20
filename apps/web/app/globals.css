@@ -1,5 +1,7 @@
 /* Minimal home-first root CSS. Full Tailwind utilities load only with AppRuntimeShell. */
 
+@import "../styles/light-root-tokens.css";
+
 :root {
   --vh: 1vh;
   --full-height: 100vh;
@@ -7,45 +9,6 @@
   --font-display-fallback: "Noto Serif KR", "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-
-  --background: 38 30% 98%;
-  --foreground: 24 10% 10%;
-  --card: 38 30% 98%;
-  --card-foreground: 24 10% 10%;
-  --popover: 38 30% 98%;
-  --popover-foreground: 24 10% 10%;
-  --primary: 0 74% 42%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 24 6% 90%;
-  --secondary-foreground: 24 10% 10%;
-  --muted: 24 6% 90%;
-  --muted-foreground: 24 5% 45%;
-  --accent: 24 6% 90%;
-  --accent-foreground: 24 10% 10%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 24 5% 83%;
-  --input: 24 5% 83%;
-  --ring: 0 74% 42%;
-  --radius: 0.5rem;
-  --mobile-bottom-nav-height: 60px;
-  --mobile-bottom-nav-effective-height: 60px;
-  --mobile-sheet-hide-bottom-nav: 0;
-  --mobile-sheet-header-progress: 0;
-  --mobile-sheet-header-offset: 0px;
-  --app-header-height: 56px;
-  --sidebar-background: 38 30% 98%;
-  --sidebar-foreground: 24 10% 10%;
-  --sidebar-primary: 0 74% 42%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 24 6% 90%;
-  --sidebar-accent-foreground: 24 10% 10%;
-  --sidebar-border: 24 5% 83%;
-  --sidebar-ring: 0 74% 42%;
-  --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
-  --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
-  --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
-  --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
 }
 
 .dark {
@@ -108,6 +71,95 @@ button {
 :focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
+}
+
+html:has([data-legal-page="true"]),
+body:has([data-legal-page="true"]) {
+  overflow-x: hidden;
+}
+
+[data-legal-page="true"],
+[data-legal-page="true"] article,
+[data-legal-page="true"] .font-mono {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+[data-centered-error-state="viewport"] {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 2rem 1rem;
+}
+
+[data-centered-error-state="viewport"] > section {
+  width: 100%;
+  max-width: 360px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 1rem;
+  background: hsl(var(--card) / 0.95);
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 18px 60px hsl(24 10% 10% / 0.10);
+}
+
+[data-centered-error-state="viewport"] h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+[data-centered-error-state="viewport"] p {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+[data-centered-error-state="viewport"] [data-centered-error-icon="true"] {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0 auto 1rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: hsl(var(--destructive) / 0.10);
+  color: hsl(var(--destructive));
+}
+
+[data-centered-error-state="viewport"] [data-centered-error-actions="true"] {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+[data-centered-error-state="viewport"] a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  margin-top: 0;
+  padding: 0 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 @keyframes storyboard-glass-shimmer {
