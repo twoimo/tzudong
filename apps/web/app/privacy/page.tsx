@@ -14,8 +14,8 @@ export const metadata: Metadata = buildPublicMetadata({
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen bg-muted/30 px-4 py-10 text-foreground">
-      <article className="mx-auto w-full max-w-3xl rounded-2xl border bg-background p-5 shadow-sm sm:p-8">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-muted/30 px-4 py-10 text-foreground" data-legal-page="true">
+      <article className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-8">
         <header className="mb-6 border-b pb-5">
           <p className="text-sm font-medium text-primary">{siteConfig.name}</p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">개인정보 처리방침</h1>

@@ -48,7 +48,8 @@ describe('repo design contract source', () => {
     expect(appGlobalsSource).toContain('@apply bg-background text-foreground font-sans tracking-normal;');
     expect(appGlobalsSource).not.toContain("font-family: 'Noto Serif KR'");
     expect(appGlobalsSource).not.toContain('@apply bg-background text-foreground font-serif tracking-tight;');
-    expect(appGlobalsSource).toContain('--primary: 0 74% 42%');
+    expect(appGlobalsSource).toContain('@import "../styles/light-root-tokens.css";');
+    expect(appSource('styles/light-root-tokens.css')).toContain('--primary: 0 74% 42%');
     expect(appGlobalsSource).toContain('--shadow-primary');
     expect(adminConsoleSource).toContain('rounded-2xl border border-border');
     expect(adminConsoleSource).toContain('shadow-primary');
@@ -63,5 +64,14 @@ describe('repo design contract source', () => {
     expect(designSource).toContain('data-horizontal-scroll-owner');
     expect(designSource).toContain('mobile-theme-filter-reel');
     expect(designSource).toContain('command-surface');
+  });
+
+  test('public surface inventory contract exists as the slice-1 page matrix owner', () => {
+    expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
+      'page inventory is exactly the 27-row matrix',
+    );
+    expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
+      'pins all five CSS owner-to-importer mappings',
+    );
   });
 });

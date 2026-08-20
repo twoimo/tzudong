@@ -15,7 +15,11 @@ import { REGION_MAP_CONFIG } from "@/config/maps";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { NaverMapLoadErrorState } from "@/components/map/map-view-status-panels";
 import { NaverMapSurface } from "@/components/map/naver-map-surface";
-import { NaverMapOverlayStack } from "@/components/map/naver-map-overlay-stack";
+import {
+    NaverMapOverlayStack,
+    resolveNaverMapOverlayKind,
+    resolveNaverMapTimedOverlayDropPlan,
+} from "@/components/map/naver-map-overlay-stack";
 import { isPublicRestrictedMode } from "@/lib/site-config";
 import {
     NaverMapDetailPanelShell,
@@ -157,6 +161,7 @@ import {
 import {
     buildNaverMapToastTrigger,
 } from "@/lib/naver-map-toast-helpers";
+import { NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS } from "@/lib/naver-map-overlay-timings";
 import { getNaverPanelStateFlags } from "@/lib/naver-map-panel-state-helpers";
 import { getNaverViewportOffset } from "@/lib/naver-map-viewport-helpers";
 import { resolveNaverMobileVerticalOffset } from "@/lib/naver-map-mobile-offset-helpers";
@@ -605,7 +610,6 @@ function areStringArraysEqual(previous: readonly string[], next: readonly string
     return previous.length === next.length && previous.every((value, index) => value === next[index]);
 }
 
-const RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS = 3000;
 const RESTAURANT_COUNT_TOAST_SETTLE_DELAY_MS = 1200;
 
 const NaverMapView = memo(({
@@ -1202,6 +1206,11 @@ const NaverMapView = memo(({
         []
     );
 
+    useEffect(() => {
+        showMapToast.activate();
+        return () => showMapToast.dispose();
+    }, [showMapToast]);
+
     const handleCloseInternalPanel = useMemo(
         () => buildNaverMapInternalPanelCloseHandler(setInternalPanelOpen),
         []
@@ -1249,9 +1258,7 @@ const NaverMapView = memo(({
     // 유효 패널 너비 (오프셋 계산용)
     const {
         effectivePanelOffset,
-        centerOffsetStyle,
         floatingBadgePositionClass,
-        floatingToastPositionClass,
     } = getNaverOverlayPositioning({
         isExternalPanelOpen,
         isGridMode,
@@ -1879,7 +1886,7 @@ const NaverMapView = memo(({
     useEffect(() => {
         const countUpdatePlan = resolveNaverRestaurantCountUpdatePlan({
             hasAlreadyShownCount: hasShownRestaurantCountRef.current,
-            hideDelayMs: RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS,
+            hideDelayMs: NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS,
             isMobileOrTablet,
             isNoncriticalEffectsActive: shouldRunNoncriticalMapEffects,
             isLoadingRestaurants: isLoadingRestaurants || isFetchingRestaurants,
@@ -1920,7 +1927,7 @@ const NaverMapView = memo(({
 
         const hideTimer = setTimeout(() => {
             setShowRestaurantCount(false);
-        }, RESTAURANT_COUNT_TOAST_HIDE_DELAY_MS);
+        }, NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS);
 
         return () => {
             clearTimeout(hideTimer);
@@ -1930,6 +1937,32 @@ const NaverMapView = memo(({
     const showRestaurantCountRef = useRef(showRestaurantCount);
 
     useEffect(() => { showRestaurantCountRef.current = showRestaurantCount; }, [showRestaurantCount]);
+
+    const activeMapOverlayKind = resolveNaverMapOverlayKind({
+        hasAnnouncementTitle: Boolean(announcementToastTitle),
+        isLoaded,
+        isLoadingRestaurants,
+        isMapToastVisible: mapToast?.isVisible === true,
+        restaurantsLength: restaurants.length,
+        showAnnouncementToast,
+        showOnlineUsers,
+        showRestaurantCount,
+    });
+
+    useEffect(() => {
+        const dropPlan = resolveNaverMapTimedOverlayDropPlan(activeMapOverlayKind);
+        if (dropPlan.dropMapToast && mapToast?.isVisible) showMapToast.dismiss();
+        if (dropPlan.dropAnnouncement && showAnnouncementToast) setShowAnnouncementToast(false);
+        if (dropPlan.dropRestaurantCount && showRestaurantCount) setShowRestaurantCount(false);
+        if (dropPlan.dropOnlineUsers && showOnlineUsers) setShowOnlineUsers(false);
+    }, [
+        activeMapOverlayKind,
+        mapToast?.isVisible,
+        showAnnouncementToast,
+        showMapToast,
+        showOnlineUsers,
+        showRestaurantCount,
+    ]);
 
     const handleAnnouncementToastClick = useCallback(() => {
         if (!announcementToastPayload) return;
@@ -3188,11 +3221,13 @@ const NaverMapView = memo(({
     const auxiliaryRuntimes = isLoaded && shouldRunNoncriticalMapEffects && !isPublicRestrictedMode ? (
         <Suspense fallback={null}>
             <NaverMapAnnouncementRuntime
+                isAnnouncementToastVisible={showAnnouncementToast}
                 onAnnouncementToastPayloadChange={setAnnouncementToastPayload}
                 onAnnouncementToastTitleChange={setAnnouncementToastTitle}
                 onShowAnnouncementToastChange={setShowAnnouncementToast}
             />
             <NaverMapPresenceRuntime
+                isOnlineUsersToastVisible={showOnlineUsers}
                 onOnlineUsersCountChange={setOnlineUsersCount}
                 onShowOnlineUsersChange={setShowOnlineUsers}
             />
@@ -3217,10 +3252,8 @@ const NaverMapView = memo(({
                 <NaverMapSurface
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={floatingBadgePositionClass}
-                    centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
                     dataTestId="map-container"
-                    floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
                     mapRef={mapRef}
@@ -3239,9 +3272,7 @@ const NaverMapView = memo(({
                     <NaverMapOverlayStack
                         announcementToastTitle={announcementToastTitle}
                         badgePositionClass={floatingBadgePositionClass}
-                        centerOffsetStyle={centerOffsetStyle}
                         count={onlineUsersCount}
-                        floatingToastPositionClass={floatingToastPositionClass}
                         isLoaded={isLoaded}
                         isLoadingRestaurants={isLoadingRestaurants}
                         isMobileOverlayReady={shouldRunNoncriticalMapEffects}
@@ -3267,11 +3298,9 @@ const NaverMapView = memo(({
             <NaverMapSurface
                 announcementToastTitle={announcementToastTitle}
                 badgePositionClass={floatingBadgePositionClass}
-                centerOffsetStyle={centerOffsetStyle}
                 className="flex-1 h-full relative z-0"
                 count={onlineUsersCount}
                 dataTestId="map-container"
-                floatingToastPositionClass={floatingToastPositionClass}
                 isLoaded={isLoaded}
                 isLoadingRestaurants={isLoadingRestaurants}
                 mapRef={mapRef}
@@ -3291,9 +3320,7 @@ const NaverMapView = memo(({
                 <NaverMapOverlayStack
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={floatingBadgePositionClass}
-                    centerOffsetStyle={centerOffsetStyle}
                     count={onlineUsersCount}
-                    floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
                     isMobileOverlayReady={shouldRunNoncriticalMapEffects}

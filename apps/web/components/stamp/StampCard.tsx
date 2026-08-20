@@ -232,7 +232,7 @@ export const StampCard = memo(function StampCard({
     return (
         <Card
             className={cn(
-                "relative overflow-hidden transition-[box-shadow,border-color,transform] duration-300 group",
+                "relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm transition-[box-shadow,border-color,transform] duration-300 group",
                 isGuideCard ? "cursor-default" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
                 isSelected && "ring-2 ring-primary"

@@ -26,7 +26,7 @@ export function AppToaster() {
     : APP_MOBILE_TOAST_VIEWPORT_CLASS_NAME;
 
   return (
-    <ToastProvider swipeDirection="right">
+    <ToastProvider swipeDirection="right" duration={12000}>
       {toasts.map(({ id, title, description, action, ...props }) => (
         <Toast key={id} {...props}>
           <div className="min-w-0 flex-1 space-y-1">
