@@ -30,6 +30,137 @@ from backend.pipeline.validators import (
 
 
 class ValidatorsRegressionTests(unittest.TestCase):
+    def test_validate_gemini_output_accepts_canonical_category_lists(self) -> None:
+        errors = validate_gemini_output(
+            "vid-category-list",
+            {
+                "youtube_link": "https://www.youtube.com/watch?v=category-list",
+                "restaurants": [
+                    {
+                        "origin_name": "복합카테고리식당",
+                        "address": "서울특별시 중구 세종대로 1",
+                        "lat": 37.566,
+                        "lng": 126.978,
+                        "category": ["한식", "야식", "도시락"],
+                        "reasoning_basis": "영상과 자막에서 방문 위치와 상호가 명확하게 확인됩니다.",
+                        "youtuber_review": "여러 메뉴를 직접 먹고 맛과 구성에 관해 구체적으로 평가했습니다.",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual([], errors)
+
+    def test_validate_gemini_output_keeps_legacy_scalar_category_compatible(self) -> None:
+        errors = validate_gemini_output(
+            "vid-legacy-scalar-category",
+            {
+                "youtube_link": "https://www.youtube.com/watch?v=legacy-scalar",
+                "restaurants": [
+                    {
+                        "origin_name": "레거시분류식당",
+                        "address": "서울특별시 중구 세종대로 1",
+                        "lat": 37.566,
+                        "lng": 126.978,
+                        "category": "일식",
+                        "reasoning_basis": "영상과 자막에서 방문 위치와 상호가 명확하게 확인됩니다.",
+                        "youtuber_review": "메뉴를 직접 먹고 맛과 구성에 관해 구체적으로 평가했습니다.",
+                    }
+                ],
+            },
+        )
+
+        self.assertEqual([], errors)
+
+    def test_validate_gemini_output_rejects_legacy_label_inside_canonical_list(self) -> None:
+        errors = validate_gemini_output(
+            "vid-legacy-list-category",
+            {
+                "youtube_link": "https://www.youtube.com/watch?v=legacy-list",
+                "restaurants": [
+                    {
+                        "origin_name": "레거시배열분류식당",
+                        "address": "서울특별시 중구 세종대로 1",
+                        "category": ["일식"],
+                    }
+                ],
+            },
+        )
+
+        invalid_categories = [
+            error for error in errors if error["rule"] == "invalid_category"
+        ]
+        self.assertEqual(1, len(invalid_categories))
+        self.assertEqual("일식", invalid_categories[0]["actual_value"])
+
+    def test_validate_gemini_output_reports_unknown_category_inside_list(self) -> None:
+        errors = validate_gemini_output(
+            "vid-category-list-invalid",
+            {
+                "youtube_link": "https://www.youtube.com/watch?v=list-invalid",
+                "restaurants": [
+                    {
+                        "origin_name": "분류검증식당",
+                        "address": "서울특별시 중구 세종대로 1",
+                        "category": ["한식", "외계음식"],
+                    }
+                ],
+            },
+        )
+
+        invalid_categories = [
+            error for error in errors if error["rule"] == "invalid_category"
+        ]
+        self.assertEqual(1, len(invalid_categories))
+        self.assertEqual("외계음식", invalid_categories[0]["actual_value"])
+
+    def test_validate_gemini_output_reports_malformed_category_without_crashing(self) -> None:
+        errors = validate_gemini_output(
+            "vid-category-list-malformed",
+            {
+                "youtube_link": "https://www.youtube.com/watch?v=list-malformed",
+                "restaurants": [
+                    {
+                        "origin_name": "분류형식검증식당",
+                        "address": "서울특별시 중구 세종대로 1",
+                        "category": ["한식", {"name": "분식"}],
+                    }
+                ],
+            },
+        )
+
+        invalid_categories = [
+            error for error in errors if error["rule"] == "invalid_category"
+        ]
+        self.assertEqual(1, len(invalid_categories))
+        self.assertEqual({"name": "분식"}, invalid_categories[0]["actual_value"])
+
+    def test_validate_gemini_output_rejects_falsy_members_inside_category_list(self) -> None:
+        for category_item in ("", None, 0, False):
+            with self.subTest(category_item=category_item):
+                errors = validate_gemini_output(
+                    "vid-category-list-falsy",
+                    {
+                        "youtube_link": "https://www.youtube.com/watch?v=list-falsy",
+                        "restaurants": [
+                            {
+                                "origin_name": "빈분류검증식당",
+                                "address": "서울특별시 중구 세종대로 1",
+                                "category": [category_item],
+                            }
+                        ],
+                    },
+                )
+                invalid_categories = [
+                    error for error in errors if error["rule"] == "invalid_category"
+                ]
+                self.assertEqual(1, len(invalid_categories))
+                self.assertEqual(category_item, invalid_categories[0]["actual_value"])
+                self.assertIs(
+                    type(category_item),
+                    type(invalid_categories[0]["actual_value"]),
+                )
+
     def test_validate_gemini_output_handles_missing_required_and_structure_errors(self) -> None:
         errors = validate_gemini_output(
             "vid-1",
