@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import re
+import signal
+import threading
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -184,10 +186,30 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
         return _json(self, 500, {"error": safe_error_name(exc)})
 
 
+ALLOWED_API_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "0.0.0.0"})
+
+
+def api_bind_host(raw: str | None = None) -> str:
+    value = (raw if raw is not None else os.environ.get("PIPELINE_API_HOST", "127.0.0.1")).strip() or "127.0.0.1"
+    if value not in ALLOWED_API_BIND_HOSTS:
+        raise ValueError("pipeline_api_host_rejected")
+    return value
+
+
 def serve(host: str = "127.0.0.1", port: int = 8091) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((host, port), PipelineApiHandler)
 
 
+def main() -> None:
+    server = serve(host=api_bind_host())
+    def _stop(_signum: int, _frame: object) -> None:
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
-    STORE = build_store()
-    serve().serve_forever()
+    globals()["STORE"] = build_store()
+    main()

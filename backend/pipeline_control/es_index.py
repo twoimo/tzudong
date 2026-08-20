@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import signal
+import threading
+
 import json
 import os
 from typing import Any
@@ -173,3 +176,21 @@ def index_document(document: dict[str, Any]) -> str:
     if isinstance(result, int) and 300 <= result < 400:
         raise EsIndexError("es_index_failed")
     return f"es:{index}"
+
+
+def main() -> int:
+    stop = threading.Event()
+
+    def _stop(_signum: int, _frame: object) -> None:
+        stop.set()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    while not stop.wait(30):
+        pass
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
