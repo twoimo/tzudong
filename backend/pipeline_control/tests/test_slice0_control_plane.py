@@ -717,7 +717,7 @@ class OverlayAndDocsTests(unittest.TestCase):
                 "tzudong_pipeline_runs_failed_total",
             ],
         )
-        self.assertIn("tzudong_pipeline_kafka_lag", metrics["deferred"])
+        self.assertIn("tzudong_pipeline_kafka_lag", metrics["gauges"])
         self.assertRegex(obs, r"(?m)^\s+otel-collector:")
         self.assertRegex(obs, r"(?m)^\s+prometheus:")
 
