@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   PIPELINE_CONTROL_CONFIRMATION_TEXT,
   PIPELINE_LIVE_ENQUEUE_CONFIRMATION,
+  type PipelineFailureFrame,
   type PipelineListJob,
   type PipelineRunAction,
   buildPipelinePreviewHash,
@@ -17,14 +18,27 @@ type PipelineStatusResponse = {
   hardware?: string;
   dataEnv?: string;
   failures?: Array<{ target?: string; error_code?: string }>;
+  failureFrames?: PipelineFailureFrame[];
+  gauges?: Record<string, number>;
 };
 
 const PAUSE_FROM = new Set(["Queued", "Fetching", "Inserting"]);
 const RESUME_FROM = new Set(["Paused"]);
 const CANCEL_FROM = new Set(["Queued", "Fetching", "Inserting", "Paused"]);
+const ACTIVE_JOB_STATUSES = new Set(["Queued", "Fetching", "Inserting"]);
+const LOOPBACK_GRAFANA_DASHBOARD_PREFIX =
+  "http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters";
 
 function newIdempotencyKey() {
   return `pipe-${crypto.randomUUID()}`;
+}
+
+function allowLoopbackGrafanaIframe() {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    typeof window !== "undefined" &&
+    window.location.hostname === "127.0.0.1"
+  );
 }
 
 async function postPipeline(body: Record<string, unknown>) {
@@ -40,6 +54,9 @@ async function postPipeline(body: Record<string, unknown>) {
   const payload = (await response.json().catch(() => ({}))) as {
     error?: string;
     accepted?: boolean;
+    previewHash?: string;
+    operationId?: string;
+    revision?: string;
   };
   return { ok: response.ok, status: response.status, payload };
 }
@@ -48,7 +65,7 @@ export function AdminPipelineDashboard() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["admin-pipeline-status"],
-    queryFn: async (): Promise<PipelineStatusResponse> => {
+    queryFn: async () => {
       const response = await fetch("/api/admin/pipeline", {
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -57,6 +74,11 @@ export function AdminPipelineDashboard() {
       return (await response.json()) as PipelineStatusResponse;
     },
     staleTime: 15_000,
+    refetchInterval: (current) => {
+      const jobs = current.state.data?.jobs ?? [];
+      const active = jobs.some((job) => ACTIVE_JOB_STATUSES.has(job.status));
+      return active ? 2_000 : 15_000;
+    },
   });
 
   const [confirmationText, setConfirmationText] = useState("");
@@ -67,6 +89,11 @@ export function AdminPipelineDashboard() {
   );
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showGrafana, setShowGrafana] = useState(false);
+
+  useEffect(() => {
+    setShowGrafana(allowLoopbackGrafanaIframe());
+  }, []);
 
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["admin-pipeline-status"] });
@@ -83,28 +110,59 @@ export function AdminPipelineDashboard() {
     setMessage(null);
     try {
       const dryRun = input.action === "enqueue" ? !input.live : true;
-      const previewHash = buildPipelinePreviewHash({
+      const correlationId = crypto.randomUUID();
+      const idempotencyKey = newIdempotencyKey();
+      const previewRequest: Record<string, unknown> = {
+        phase: "preview",
+        action: input.action,
+        target: input.target,
+        profile: input.profile,
+        correlationId,
+        idempotencyKey,
+      };
+      if (input.runId) previewRequest.runId = input.runId;
+      if (input.action === "enqueue") previewRequest.dryRun = dryRun;
+      const preview = await postPipeline(previewRequest);
+      if (preview.status === 409) {
+        await refresh();
+        setMessage("state already changed, refreshed");
+        return;
+      }
+      if (!preview.ok || !preview.payload.previewHash || !preview.payload.operationId) {
+        await refresh();
+        setMessage(String(preview.payload.error ?? "pipeline_write_failed"));
+        return;
+      }
+      const expectedHash = buildPipelinePreviewHash({
         action: input.action,
         target: input.target,
         profile: input.profile,
         runId: input.runId,
         dryRun,
       });
-      const body: Record<string, unknown> = {
+      const applyBody: Record<string, unknown> = {
+        phase: "apply",
         action: input.action,
         target: input.target,
         profile: input.profile,
         confirmationText,
-        previewHash,
-        correlationId: crypto.randomUUID(),
-        idempotencyKey: newIdempotencyKey(),
+        previewHash: preview.payload.previewHash,
+        operationId: preview.payload.operationId,
+        revision: preview.payload.revision,
+        correlationId,
+        idempotencyKey,
       };
-      if (input.runId) body.runId = input.runId;
+      if (input.runId) applyBody.runId = input.runId;
       if (input.action === "enqueue") {
-        body.dryRun = dryRun;
-        if (input.live) body.liveConfirmationText = liveConfirmationText;
+        applyBody.dryRun = dryRun;
+        if (input.live) applyBody.liveConfirmationText = liveConfirmationText;
       }
-      const result = await postPipeline(body);
+      if (expectedHash !== preview.payload.previewHash) {
+        await refresh();
+        setMessage("pipeline_preview_stale");
+        return;
+      }
+      const result = await postPipeline(applyBody);
       await refresh();
       if (result.status === 409) {
         setMessage("state already changed, refreshed");
@@ -124,7 +182,8 @@ export function AdminPipelineDashboard() {
 
   const jobs = query.data?.jobs ?? [];
   const targets = query.data?.targets ?? [];
-
+  const gauges = query.data?.gauges ?? {};
+  const frames = query.data?.failureFrames ?? [];
   return (
     <section
       data-admin-pipeline-dashboard="true"
@@ -133,7 +192,7 @@ export function AdminPipelineDashboard() {
       <header>
         <h2 className="text-sm font-semibold">크롤러 파이프라인</h2>
         <p className="text-xs text-muted-foreground">
-          control-plane 상태. Grafana iframe은 CSP/auth gate 전까지 금지.
+          control-plane 상태. Grafana iframe은 127.0.0.1 비프로덕션 admin에서만 허용.
         </p>
       </header>
       <div className="flex flex-wrap gap-2 text-[11px]">
@@ -142,6 +201,27 @@ export function AdminPipelineDashboard() {
         </span>
         <span data-admin-pipeline-data-env={query.data?.dataEnv ?? "unknown"}>
           data: {query.data?.dataEnv ?? "unknown"}
+        </span>
+        <span data-admin-pipeline-compute-profile="true">
+          compute: {jobs[0]?.profile ?? enqueueProfile}
+        </span>
+        <span data-admin-pipeline-data-sink="true">
+          sink: {query.data?.dataEnv ?? "unknown"}
+        </span>
+        <span data-admin-pipeline-active-step="true">
+          step: {jobs[0]?.adapter_index ?? 0}
+        </span>
+        <span data-admin-pipeline-kafka-lag="true">
+          kafka lag: {gauges.tzudong_pipeline_kafka_lag ?? "—"}
+        </span>
+        <span data-admin-pipeline-es-rows="true">
+          es rows/sec: {gauges.tzudong_pipeline_es_rows_per_sec ?? "—"}
+        </span>
+        <span data-admin-pipeline-cpu="true">
+          cpu: {gauges.tzudong_pipeline_process_cpu_ratio ?? "—"}
+        </span>
+        <span data-admin-pipeline-rss="true">
+          rss: {gauges.tzudong_pipeline_process_rss_bytes ?? "—"}
         </span>
       </div>
       <ul className="space-y-1 text-xs">
@@ -220,29 +300,23 @@ export function AdminPipelineDashboard() {
           </li>
         ))}
       </ul>
-      <div className="flex flex-col gap-2 text-xs">
-        <label className="flex flex-wrap items-center gap-2">
-          target
-          <select
+      <div className="space-y-2 text-xs">
+        <label className="block space-y-1">
+          <span>target</span>
+          <input
             value={enqueueTarget}
             onChange={(event) => setEnqueueTarget(event.target.value)}
-            className="rounded border px-1 py-0.5"
-          >
-            {targets.map((target) => (
-              <option key={target.id} value={target.id}>
-                {target.id}
-              </option>
-            ))}
-          </select>
+            className="w-full rounded border p-2"
+          />
         </label>
-        <label className="flex flex-wrap items-center gap-2">
-          profile
+        <label className="block space-y-1">
+          <span>profile</span>
           <select
             value={enqueueProfile}
             onChange={(event) =>
               setEnqueueProfile(event.target.value as "heavy_local" | "lite_gha")
             }
-            className="rounded border px-1 py-0.5"
+            className="w-full rounded border p-2"
           >
             <option value="heavy_local">heavy_local</option>
             <option value="lite_gha">lite_gha</option>
@@ -306,12 +380,23 @@ export function AdminPipelineDashboard() {
       <div data-admin-pipeline-failures="true" className="text-xs">
         {query.isError
           ? "상태를 불러올 수 없음"
-          : (query.data?.failures ?? []).length === 0
+          : frames.length === 0 && (query.data?.failures ?? []).length === 0
             ? "최근 실패 없음"
-            : (query.data?.failures ?? [])
+            : (frames.length > 0 ? frames : []).map((row) =>
+                [row.module, row.function, row.line, row.errorCode].filter(Boolean).join(":"),
+              ).join(", ") ||
+              (query.data?.failures ?? [])
                 .map((row) => `${row.target ?? ""} ${row.error_code ?? "failed"}`.trim())
                 .join(", ")}
       </div>
+      {showGrafana ? (
+        <iframe
+          data-admin-pipeline-grafana="true"
+          title="pipeline frozen counters"
+          src={`${LOOPBACK_GRAFANA_DASHBOARD_PREFIX}?orgId=1`}
+          className="h-64 w-full border border-border"
+        />
+      ) : null}
     </section>
   );
 }

@@ -72,7 +72,7 @@ class MetricNameFreezeTests(unittest.TestCase):
             catalog["exporter"],
             "otlp_http; OpenTelemetry SDK in the pipeline image; default export off",
         )
-        self.assertEqual(catalog["adminIframePolicy"], "forbidden_until_csp_auth_gate")
+        self.assertEqual(catalog["adminIframePolicy"], "loopback_admin_iframe_after_csp_auth_gate")
         self.assertTrue(set(DEFERRED).isdisjoint(FROZEN))
         self.assertTrue(set(GAUGES).isdisjoint(FROZEN))
 
@@ -224,7 +224,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         )
         self.assertIn("not required to see the four frozen pipeline counters", obs)
         self.assertIn("./grafana/provisioning:/etc/grafana/provisioning:ro", obs)
-        self.assertIn("GF_SECURITY_ALLOW_EMBEDDING: \"false\"", obs)
+        self.assertIn("GF_SECURITY_ALLOW_EMBEDDING: \"true\"", obs)
         self.assertIn("http://prometheus:9090", grafana_ds)
         for name in FROZEN:
             self.assertIn(name, grafana_dash)
@@ -235,8 +235,11 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertIn("Gauges record queue depth/age, active jobs, step duration, Kafka consumer lag, Elasticsearch rows/sec, and process CPU/RSS", contract)
         self.assertIn("record() exports via SDK when overlay OTEL endpoint is set", contract)
         self.assertIn("image is no longer copy-only-only-kafka-python", contract)
-        self.assertIn("forbidden_until_csp_auth_gate", events)
-        self.assertNotIn("<iframe", dashboard)
+        self.assertIn("loopback_admin_iframe_after_csp_auth_gate", events)
+        self.assertIn("<iframe", dashboard)
+        self.assertIn("data-admin-pipeline-grafana", dashboard)
+        self.assertIn("http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters", dashboard)
+        self.assertNotIn("kafka-ui", dashboard)
         self.assertEqual(CATALOG_PATH.name, "metrics.v1.json")
         store_src = (ROOT / "pipeline_control" / "store.py").read_text(encoding="utf-8")
         self.assertIn("from backend.pipeline_control.metrics import record", store_src)
