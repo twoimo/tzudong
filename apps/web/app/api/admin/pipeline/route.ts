@@ -336,10 +336,8 @@ export async function POST(request: NextRequest) {
           >;
           readback = allowlistedPipelineJob(readbackPayload);
         }
-      } catch (readbackError) {
-        if (!isAbortError(readbackError)) {
-          throw readbackError;
-        }
+      } catch {
+        // Apply already succeeded; degraded readback must not fail the mutation.
       }
     }
     return noStore(
