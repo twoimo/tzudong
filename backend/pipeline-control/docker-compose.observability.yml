@@ -1,7 +1,7 @@
 # Slice 3 overlay. Kafka/ES are not required to see the four frozen pipeline counters.
 # Job rows remain in schema pipeline_control / Supabase — never Elasticsearch SoT.
-# Grafana is an operator browser, not an admin iframe.
-# Anonymous auth is off. Embedding is off. CSP is on. Admin password comes from GRAFANA_ADMIN_PASSWORD.
+# Grafana is a loopback admin iframe after CSP/auth gate (127.0.0.1:3000 → 127.0.0.1:3001).
+# Anonymous auth is off. Embedding is on. CSP is on. SameSite is lax. Admin password comes from GRAFANA_ADMIN_PASSWORD.
 # Kafka lives only in docker-compose.kafka.yml.
 # Elasticsearch lives only in docker-compose.elasticsearch.yml.
 name: tzudong-pipeline-observability
@@ -36,9 +36,10 @@ services:
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SECURITY_ALLOW_EMBEDDING: "false"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_SECURITY_CONTENT_SECURITY_POLICY: "true"
-      GF_SECURITY_COOKIE_SAMESITE: "strict"
+      GF_SECURITY_CONTENT_SECURITY_POLICY_TEMPLATE: "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://127.0.0.1:3000;manifest-src 'self';media-src 'none';form-action 'self';frame-ancestors http://127.0.0.1:3000"
+      GF_SECURITY_COOKIE_SAMESITE: "lax"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     networks:
       - supabase_network_local
