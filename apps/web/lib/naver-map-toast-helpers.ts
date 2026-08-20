@@ -1,25 +1,81 @@
+import {
+    NAVER_MAP_ANNOUNCEMENT_HIDE_DELAY_MS,
+    NAVER_MAP_TOAST_HIDE_DELAY_MS,
+} from '@/lib/naver-map-overlay-timings';
+
 type MapToast = {
     message: string;
     type: 'success' | 'error' | 'info';
     isVisible: boolean;
 } | null;
 
+export type NaverMapToastTrigger = ((
+    message: string,
+    type?: 'success' | 'error' | 'info',
+) => void) & {
+    activate: () => void;
+    dismiss: () => void;
+    dispose: () => void;
+};
+
 export function buildNaverMapToastTrigger(
     setMapToast: (value: MapToast | ((prev: MapToast) => MapToast)) => void,
-) {
-    return (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    {
+        hideDelayMs = NAVER_MAP_TOAST_HIDE_DELAY_MS,
+        clearTimeoutFn = clearTimeout,
+        setTimeoutFn = setTimeout,
+    }: {
+        hideDelayMs?: number;
+        clearTimeoutFn?: typeof clearTimeout;
+        setTimeoutFn?: typeof setTimeout;
+    } = {},
+): NaverMapToastTrigger {
+    let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+    let version = 0;
+
+    const clearActiveTimeout = () => {
+        if (activeTimeout === null) return;
+        clearTimeoutFn(activeTimeout);
+        activeTimeout = null;
+    };
+
+    const trigger = ((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        if (disposed) return;
+        version += 1;
+        const scheduledVersion = version;
+        clearActiveTimeout();
         setMapToast({ message, type, isVisible: true });
 
-        setTimeout(() => {
+        activeTimeout = setTimeoutFn(() => {
+            if (disposed || version !== scheduledVersion) return;
+            activeTimeout = null;
             setMapToast(prev => prev ? { ...prev, isVisible: false } : null);
-        }, 3000);
+        }, hideDelayMs);
+    }) as NaverMapToastTrigger;
+
+    trigger.activate = () => {
+        disposed = false;
     };
+    trigger.dismiss = () => {
+        if (disposed) return;
+        version += 1;
+        clearActiveTimeout();
+        setMapToast(prev => prev ? { ...prev, isVisible: false } : null);
+    };
+    trigger.dispose = () => {
+        if (disposed) return;
+        disposed = true;
+        version += 1;
+        clearActiveTimeout();
+    };
+    return trigger;
 }
 
 export function resolveNaverAnnouncementToastPlan<TAnnouncement extends { id: string; title: string }>({
     announcements,
     currentIndex,
-    hideDelayMs = 4200,
+    hideDelayMs = NAVER_MAP_ANNOUNCEMENT_HIDE_DELAY_MS,
 }: {
     announcements: TAnnouncement[];
     currentIndex: number;

@@ -1,6 +1,3 @@
-import type { CSSProperties } from 'react';
-
-import { MAP_OVERLAY_TOAST_CLASS_NAME, MapOverlayNotice } from '@/components/map/map-overlay-notice';
 import {
     AnnouncementToastBadge,
     EmptyStateIndicator,
@@ -8,14 +5,70 @@ import {
     OnlineUsersBadge,
     RestaurantCountBadge,
 } from '@/components/map/naver-map-overlay-indicators';
+import { MapOverlayNotice } from '@/components/map/map-overlay-notice';
+
+export type NaverMapOverlayKind = 'loading' | 'map-toast' | 'announcement' | 'restaurant-count' | 'online-users' | 'empty';
+
+export const NAVER_MAP_TIMED_OVERLAY_LIFECYCLE_POLICY = {
+    lowerPriorityOnPreemption: 'drop',
+    timedOccurrenceResume: 'never',
+    persistentEmptyResume: 'when-timed-slot-clears',
+} as const;
+
+export type NaverMapTimedOverlayDropPlan = {
+    dropAnnouncement: boolean;
+    dropMapToast: boolean;
+    dropOnlineUsers: boolean;
+    dropRestaurantCount: boolean;
+};
+
+export function resolveNaverMapTimedOverlayDropPlan(
+    overlayKind: NaverMapOverlayKind | null,
+): NaverMapTimedOverlayDropPlan {
+    return {
+        dropMapToast: overlayKind === 'loading',
+        dropAnnouncement: overlayKind === 'loading' || overlayKind === 'map-toast',
+        dropRestaurantCount: overlayKind === 'loading' || overlayKind === 'map-toast' || overlayKind === 'announcement',
+        dropOnlineUsers: overlayKind === 'loading'
+            || overlayKind === 'map-toast'
+            || overlayKind === 'announcement'
+            || overlayKind === 'restaurant-count',
+    };
+}
+
+export function resolveNaverMapOverlayKind({
+    hasAnnouncementTitle,
+    isLoaded,
+    isLoadingRestaurants,
+    isMapToastVisible,
+    restaurantsLength,
+    showAnnouncementToast,
+    showOnlineUsers,
+    showRestaurantCount,
+}: {
+    hasAnnouncementTitle: boolean;
+    isLoaded: boolean;
+    isLoadingRestaurants: boolean;
+    isMapToastVisible: boolean;
+    restaurantsLength: number;
+    showAnnouncementToast: boolean;
+    showOnlineUsers: boolean;
+    showRestaurantCount: boolean;
+}): NaverMapOverlayKind | null {
+    if (isLoadingRestaurants || !isLoaded) return 'loading';
+    if (isMapToastVisible) return 'map-toast';
+    if (showAnnouncementToast && hasAnnouncementTitle) return 'announcement';
+    if (restaurantsLength > 0 && showRestaurantCount) return 'restaurant-count';
+    if (showOnlineUsers) return 'online-users';
+    if (restaurantsLength === 0) return 'empty';
+    return null;
+}
 
 export function NaverMapOverlayStack({
     announcementToastTitle,
     badgePositionClass,
-    centerOffsetStyle,
     count,
     emptyStateMessage,
-    floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
     isMobileOverlayReady = true,
@@ -29,10 +82,8 @@ export function NaverMapOverlayStack({
 }: {
     announcementToastTitle: string;
     badgePositionClass: string;
-    centerOffsetStyle: CSSProperties;
     count: number;
     emptyStateMessage?: string;
-    floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
     isMobileOverlayReady?: boolean;
@@ -48,57 +99,59 @@ export function NaverMapOverlayStack({
         return null;
     }
 
+    const overlayKind = resolveNaverMapOverlayKind({
+        hasAnnouncementTitle: Boolean(announcementToastTitle),
+        isLoaded,
+        isLoadingRestaurants,
+        isMapToastVisible: mapToast?.isVisible === true,
+        restaurantsLength,
+        showAnnouncementToast,
+        showOnlineUsers,
+        showRestaurantCount,
+    });
+
+    if (!overlayKind) {
+        return null;
+    }
+
     return (
-        <>
-            {(isLoadingRestaurants || !isLoaded) && (
-                <MapLoadingIndicator
-                    isLoaded={isLoaded}
-                    isBusy={isLoadingRestaurants || !isLoaded}
-                    style={centerOffsetStyle}
-                    className={badgePositionClass}
-                />
-            )}
+        <div className="pointer-events-none absolute inset-0 z-[70]">
+            <div className={badgePositionClass} data-map-overlay-kind={overlayKind}>
+                {overlayKind === 'loading' ? (
+                    <MapLoadingIndicator
+                        isLoaded={isLoaded}
+                        isBusy
+                    />
+                ) : null}
 
-            {!isLoadingRestaurants && isLoaded && restaurantsLength > 0 && showRestaurantCount && (
-                <RestaurantCountBadge
-                    count={restaurantCountToastCount}
-                    style={centerOffsetStyle}
-                    className={badgePositionClass}
-                />
-            )}
+                {overlayKind === 'restaurant-count' ? (
+                    <RestaurantCountBadge count={restaurantCountToastCount} />
+                ) : null}
 
-            {showOnlineUsers && !showRestaurantCount && !isLoadingRestaurants && isLoaded && (
-                <OnlineUsersBadge
-                    count={count}
-                    style={centerOffsetStyle}
-                    className={badgePositionClass}
-                />
-            )}
+                {overlayKind === 'online-users' ? (
+                    <OnlineUsersBadge count={count} />
+                ) : null}
 
-            {showAnnouncementToast && !showRestaurantCount && !showOnlineUsers && !isLoadingRestaurants && isLoaded && announcementToastTitle && (
-                <AnnouncementToastBadge
-                    title={announcementToastTitle}
-                    style={centerOffsetStyle}
-                    className={badgePositionClass}
-                    onClick={onAnnouncementToastClick}
-                />
-            )}
+                {overlayKind === 'announcement' ? (
+                    <AnnouncementToastBadge
+                        title={announcementToastTitle}
+                        onClick={onAnnouncementToastClick}
+                    />
+                ) : null}
 
-            {isMobileOverlayReady && !isLoadingRestaurants && isLoaded && restaurantsLength === 0 && (
-                <div className={floatingToastPositionClass}>
+                {overlayKind === 'empty' ? (
                     <EmptyStateIndicator message={emptyStateMessage} />
-                </div>
-            )}
+                ) : null}
 
-            {mapToast && mapToast.isVisible && (
-                <MapOverlayNotice
-                    className={`${MAP_OVERLAY_TOAST_CLASS_NAME} ${floatingToastPositionClass} animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none`}
-                    role={mapToast.type === 'error' ? 'alert' : 'status'}
-                    ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}
-                >
-                    {mapToast.message}
-                </MapOverlayNotice>
-            )}
-        </>
+                {overlayKind === 'map-toast' && mapToast ? (
+                    <MapOverlayNotice
+                        role={mapToast.type === 'error' ? 'alert' : 'status'}
+                        ariaLive={mapToast.type === 'error' ? 'assertive' : 'polite'}
+                    >
+                        {mapToast.message}
+                    </MapOverlayNotice>
+                ) : null}
+            </div>
+        </div>
     );
 }
