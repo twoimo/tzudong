@@ -236,7 +236,8 @@ describe("admin pipeline control contract", () => {
     expect(route).not.toContain("new Map<string, PreviewTicket>");
     const applySuccess = route.slice(route.indexOf("const job = allowlistedPipelineJob"));
     expect(applySuccess).toContain("accepted: true");
-    expect(applySuccess).toContain("if (!isAbortError(readbackError))");
+    expect(applySuccess).toContain("} catch {");
+    expect(applySuccess).not.toContain("throw readbackError");
     expect(applySuccess.slice(0, applySuccess.indexOf("accepted: true"))).not.toContain(
       "pipeline_upstream_timeout",
     );
