@@ -590,6 +590,7 @@ export function buildLocalNightlyEnvironment(local, inherited = process.env) {
     NIGHTLY_ADMIN_PASSWORD: local.values.NIGHTLY_ADMIN_PASSWORD,
     NIGHTLY_LOCAL_ENV_ONLY: '1',
     NIGHTLY_ENV_FILE_ONLY: '1',
+    NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: '/__local/naver-maps.js',
     NIGHTLY_ENV_FILE: local.envFile,
     NIGHTLY_ENV_PROVENANCE: local.provenanceSha256,
     NIGHTLY_ENV_PROVENANCE_SHA256: local.provenanceSha256,

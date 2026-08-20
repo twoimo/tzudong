@@ -4,6 +4,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { resolveLocalDevDistDir } from './local-dev-dist-dir.mjs';
 import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const projectRoot = process.cwd();
@@ -316,11 +317,10 @@ function detectMountInfo() {
 }
 
 
-async function removeNextCacheForColdIteration() {
-  const nextPath = path.join(projectRoot, '.next');
+async function removeNextCacheForColdIteration(nextDistDir) {
   for (let attempt = 1; attempt <= 6; attempt += 1) {
     try {
-      fs.rmSync(nextPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 150 });
+      fs.rmSync(nextDistDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 150 });
       return;
     } catch {
       if (attempt === 6) throw statusError('DEV_ROUTE_CACHE_CLEAR_FAILED');
@@ -329,7 +329,7 @@ async function removeNextCacheForColdIteration() {
   }
 }
 
-function collectEnvironmentSnapshot(stage) {
+function collectEnvironmentSnapshot(stage, nextDistDir) {
   const diskLine = redactCliText(
     commandOutput('df', ['-Pk', projectRoot])?.split('\n').at(-1) ?? '',
     512,
@@ -348,9 +348,10 @@ function collectEnvironmentSnapshot(stage) {
     free_memory_bytes: os.freemem(),
     total_memory_bytes: os.totalmem(),
     cwd: projectRoot,
+    next_dist_dir: path.relative(projectRoot, nextDistDir),
     mount: detectMountInfo(),
     disk_df_pk: diskLine,
-    next_dir_size_bytes: directorySizeBytes(path.join(projectRoot, '.next')),
+    next_dir_size_bytes: directorySizeBytes(nextDistDir),
     process_count_matching_next_node_bun: processLines.length,
     trace_enabled: trace,
     measurement_mode: measurementMode,
@@ -422,14 +423,15 @@ function writeArtifacts(result) {
   lines.push('');
 
   lines.push('## Environment snapshot');
-  const env = result.environment_start;
+  const env = result.iterations[0]?.environment_before ?? result.environment_start;
   lines.push(`- platform/release: ${env.platform} ${env.release}`);
   lines.push(`- cpus: ${env.cpus}`);
   lines.push(`- loadavg: ${env.loadavg.map((value) => value.toFixed(2)).join(', ')}`);
   lines.push(`- memory free/total: ${(env.free_memory_bytes / 1024 / 1024).toFixed(0)}MiB / ${(env.total_memory_bytes / 1024 / 1024).toFixed(0)}MiB`);
   lines.push(`- mount: ${env.mount ? `${env.mount.mount_point} (${env.mount.type})` : 'unknown'}`);
   lines.push(`- disk: ${env.disk_df_pk ?? 'unknown'}`);
-  lines.push(`- .next size at start: ${(env.next_dir_size_bytes / 1024 / 1024).toFixed(1)}MiB`);
+  lines.push(`- effective Next dist dir: \`${env.next_dist_dir}\``);
+  lines.push(`- effective Next dist size before first measured iteration: ${(env.next_dir_size_bytes / 1024 / 1024).toFixed(1)}MiB`);
   lines.push(`- matching next/node/bun processes at start: ${env.process_count_matching_next_node_bun}`);
   lines.push('- interpretation: compare medians and p75s across repeated runs; treat single-run or high-CV results as noisy local evidence, not an absolute performance claim.');
   lines.push('');
@@ -474,14 +476,14 @@ function writeArtifacts(result) {
   fs.writeFileSync(mdPath, `${lines.join('\n')}\n`);
 }
 
-async function runIteration({ iteration, routes, port, command, env, result }) {
-  if (cold) await removeNextCacheForColdIteration();
+async function runIteration({ iteration, routes, port, command, env, nextDistDir, result }) {
+  if (cold) await removeNextCacheForColdIteration(nextDistDir);
 
   const iterationResult = {
     iteration,
     started_at: new Date().toISOString(),
     ready_ms: null,
-    environment_before: collectEnvironmentSnapshot(`iteration-${iteration}-before`),
+    environment_before: collectEnvironmentSnapshot(`iteration-${iteration}-before`, nextDistDir),
     environment_after: null,
     exit_code: null,
     exit_signal: null,
@@ -563,7 +565,7 @@ async function runIteration({ iteration, routes, port, command, env, result }) {
   } finally {
     await stopChild();
     await delay(150);
-    iterationResult.environment_after = collectEnvironmentSnapshot(`iteration-${iteration}-after`);
+    iterationResult.environment_after = collectEnvironmentSnapshot(`iteration-${iteration}-after`, nextDistDir);
     const log = getLog();
     result.error_like_lines.push(
       ...log
@@ -583,7 +585,8 @@ async function main() {
 
   const routes = discoverRoutes();
   const port = await choosePort();
-  const command = ['node', 'scripts/clean-next.mjs', '--skip-clean', '--', 'node', 'node_modules/next/dist/bin/next', 'dev', '--port', String(port)];
+  const nextDistDir = resolveLocalDevDistDir(projectRoot, port);
+  const command = ['node', 'scripts/run-local-dev.mjs', '--port', String(port)];
   const env = { ...process.env };
   if (trace) env.NEXT_TURBOPACK_TRACING = '1';
 
@@ -595,6 +598,7 @@ async function main() {
     order,
     measurement_mode: measurementMode,
     port,
+    next_dist_dir: path.relative(projectRoot, nextDistDir),
     cold,
     trace,
     repeat,
@@ -606,7 +610,7 @@ async function main() {
     iterations: [],
     requests: [],
     summaries: null,
-    environment_start: collectEnvironmentSnapshot('run-start'),
+    environment_start: collectEnvironmentSnapshot('run-start', nextDistDir),
     environment_end: null,
     error_like_lines: [],
     raw_log_path: logPath,
@@ -620,9 +624,9 @@ async function main() {
 
   fs.writeFileSync(logPath, '');
   for (let iteration = 1; iteration <= repeat; iteration += 1) {
-    await runIteration({ iteration, routes, port, command, env, result });
+    await runIteration({ iteration, routes, port, command, env, nextDistDir, result });
   }
-  result.environment_end = collectEnvironmentSnapshot('run-end');
+  result.environment_end = collectEnvironmentSnapshot('run-end', nextDistDir);
   result.exit_code = result.iterations.at(-1)?.exit_code ?? null;
   result.exit_signal = result.iterations.at(-1)?.exit_signal ?? null;
 

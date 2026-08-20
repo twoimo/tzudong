@@ -11,17 +11,25 @@ import {
 const ONLINE_USERS_TOAST_INTERVAL_MS = 30000;
 
 type NaverMapPresenceRuntimeProps = {
+    isOnlineUsersToastVisible: boolean;
     onOnlineUsersCountChange: (count: number) => void;
     onShowOnlineUsersChange: (shouldShow: boolean) => void;
 };
 
 export default function NaverMapPresenceRuntime({
+    isOnlineUsersToastVisible,
     onOnlineUsersCountChange,
     onShowOnlineUsersChange,
 }: NaverMapPresenceRuntimeProps) {
     const hasShownInitialToastRef = useRef(false);
     const initialTimerRef = useRef<NodeJS.Timeout | null>(null);
     const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (isOnlineUsersToastVisible || !hideTimerRef.current) return;
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+    }, [isOnlineUsersToastVisible]);
 
     useEffect(() => {
         hasShownInitialToastRef.current = false;
@@ -51,7 +59,10 @@ export default function NaverMapPresenceRuntime({
 
             onShowOnlineUsersChange(toastDisplayPlan.shouldShowOnlineUsers);
             hideTimerRef.current = setTimeout(
-                () => onShowOnlineUsersChange(false),
+                () => {
+                    hideTimerRef.current = null;
+                    onShowOnlineUsersChange(false);
+                },
                 toastDisplayPlan.hideDelayMs,
             );
         };
