@@ -49,6 +49,9 @@ jobs:
         run: bun test tests-unit/performance-backlog-governance.test.ts
       - name: Check governance workflow source contracts
         run: bun test tests-unit/release-workflow-governance-source.test.ts
+      - name: Reject tracked document read-tool corruption
+        working-directory: .
+        run: python3 -m unittest backend.utils.tests.test_tracked_document_integrity
       - name: Retain sanitized scored governance artifact only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

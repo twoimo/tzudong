@@ -42,6 +42,8 @@ describe('content-security-policy image source boundary', () => {
     }
 
     expect(policy).not.toContain("img-src 'self' data: blob: https:");
+    expect(policy).not.toContain('http://static.naver.net/');
+    expect(policy).not.toMatch(/['"]http:\/\//);
     expect(policy).not.toMatch(/['"]https:['"]/);
     expect(policy).not.toContain('https://*.');
   });
