@@ -696,13 +696,19 @@ class OverlayAndDocsTests(unittest.TestCase):
             / "pipeline"
             / "AdminPipelineDashboard.tsx"
         ).read_text(encoding="utf-8")
-        self.assertNotIn("<iframe", dashboard)
+        self.assertIn("<iframe", dashboard)
+        self.assertIn("data-admin-pipeline-grafana", dashboard)
+        self.assertIn("http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters", dashboard)
+        self.assertNotIn("kafka-ui", dashboard)
         self.assertIn("127.0.0.1:3001:3000", obs)
         self.assertIn('GF_AUTH_ANONYMOUS_ENABLED: "false"', obs)
         self.assertIn('GF_USERS_ALLOW_SIGN_UP: "false"', obs)
-        self.assertIn('GF_SECURITY_ALLOW_EMBEDDING: "false"', obs)
+        self.assertIn('GF_SECURITY_ALLOW_EMBEDDING: "true"', obs)
         self.assertIn('GF_SECURITY_CONTENT_SECURITY_POLICY: "true"', obs)
-        self.assertIn('GF_SECURITY_COOKIE_SAMESITE: "strict"', obs)
+        self.assertIn("frame-ancestors http://127.0.0.1:3000", obs)
+        self.assertNotIn("frame-ancestors *", obs)
+        self.assertIn('GF_SECURITY_COOKIE_SAMESITE: "lax"', obs)
+        self.assertNotIn('GF_SECURITY_COOKIE_SAMESITE: "none"', obs)
         self.assertIn("${GRAFANA_ADMIN_PASSWORD:?", obs)
         self.assertNotRegex(obs, r"(?i)GF_SECURITY_ADMIN_PASSWORD:\s*['\"]?(admin|password|changeme)")
         self.assertNotIn("TZUDONG_PIPELINE_PERSIST", obs)
@@ -717,7 +723,7 @@ class OverlayAndDocsTests(unittest.TestCase):
                 "tzudong_pipeline_runs_failed_total",
             ],
         )
-        self.assertIn("tzudong_pipeline_kafka_lag", metrics["deferred"])
+        self.assertIn("tzudong_pipeline_kafka_lag", metrics["gauges"])
         self.assertRegex(obs, r"(?m)^\s+otel-collector:")
         self.assertRegex(obs, r"(?m)^\s+prometheus:")
 

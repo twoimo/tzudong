@@ -5,10 +5,20 @@
     "tzudong_pipeline_runs_succeeded_total",
     "tzudong_pipeline_runs_failed_total"
   ],
-  "deferred": [
+  "gauges": [
+    "tzudong_pipeline_queue_depth",
+    "tzudong_pipeline_queue_age_seconds",
+    "tzudong_pipeline_active_jobs",
+    "tzudong_pipeline_step_duration_seconds",
     "tzudong_pipeline_kafka_lag",
-    "tzudong_pipeline_es_rows_per_sec"
+    "tzudong_pipeline_es_rows_per_sec",
+    "tzudong_pipeline_process_cpu_ratio",
+    "tzudong_pipeline_process_rss_bytes"
   ],
+  "extraCounters": [
+    "tzudong_pipeline_step_failures_total"
+  ],
+  "deferred": [],
   "exporter": "otlp_http; OpenTelemetry SDK in the pipeline image; default export off",
-  "adminIframePolicy": "forbidden_until_csp_auth_gate"
+  "adminIframePolicy": "loopback_admin_iframe_after_csp_auth_gate"
 }
