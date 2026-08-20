@@ -81,7 +81,7 @@ function getPopularRankTrendBadge(trend?: PopularRankTrend | null) {
 
 function DesktopRestaurantCardSkeleton() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+    <div className="relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
       <Skeleton className="aspect-video w-full rounded-none" />
       <div className="space-y-1.5 p-3">
         <div className="flex items-center justify-between gap-2">
@@ -494,7 +494,7 @@ export default function DesktopLeftPanelMapHome({
               }
             >
               <SelectTrigger
-                className="h-8 w-[88px] shrink-0 rounded-full border-primary/15 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-primary [&>span]:line-clamp-1"
+                className="!h-7 !w-[4.75rem] shrink-0 gap-1 rounded-full border-primary/15 bg-primary/10 !px-2 !text-[10px] !leading-none font-semibold text-primary shadow-none hover:bg-primary/15 focus:ring-1 focus:ring-primary [&>span]:line-clamp-1 [&>span]:text-[10px] [&>svg]:!h-3 [&>svg]:!w-3"
                 aria-label="최근 맛집 정렬"
               >
                 <SelectValue placeholder="정렬" />

@@ -14,7 +14,7 @@ describe('naver map overlay position helpers', () => {
             panelWidth: 400,
         });
 
-        expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 0px)' });
+        expect(result.centerOffsetStyle).toEqual({});
         expect(result.floatingBadgePositionClass).toContain('safe-area-inset-top');
         expect(result.floatingBadgePositionClass).toContain('top-[calc(env(safe-area-inset-top)_+_114px)]');
         expect(result.floatingBadgePositionClass).toContain('z-[70]');
@@ -35,8 +35,9 @@ describe('naver map overlay position helpers', () => {
             panelWidth: 400,
         });
 
-        expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 0px)' });
-        expect(result.floatingBadgePositionClass).toContain('top-4');
+        expect(result.centerOffsetStyle).toEqual({});
+        expect(result.floatingBadgePositionClass).toContain('left-1/2');
+        expect(result.floatingBadgePositionClass).toContain('top-[4.75rem]');
     });
 
     test('applies half panel offset on desktop when panel is open', () => {
@@ -50,8 +51,9 @@ describe('naver map overlay position helpers', () => {
             panelWidth: 400,
         });
 
-        expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 200px)' });
-        expect(result.floatingToastPositionClass).toContain('bottom-4');
+        expect(result.centerOffsetStyle).toEqual({});
+        expect(result.floatingBadgePositionClass).toContain('left-1/2');
+        expect(result.floatingToastPositionClass).toContain('top-[4.75rem]');
     });
 
     test('keeps zero offset in grid mode', () => {
@@ -65,6 +67,6 @@ describe('naver map overlay position helpers', () => {
             panelWidth: 400,
         });
 
-        expect(result.centerOffsetStyle).toEqual({ left: 'calc(50% - 0px)' });
+        expect(result.centerOffsetStyle).toEqual({});
     });
 });

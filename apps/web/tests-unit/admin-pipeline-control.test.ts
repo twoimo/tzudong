@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -10,6 +11,7 @@ import {
   buildPipelinePreviewHash,
 } from "../lib/admin/pipeline-control";
 import { GUARDED_MUTATION_CONFIRMATION } from "../lib/admin/guarded-mutation-contract";
+import { sha256Hex } from "../lib/admin/sha256-hex";
 
 const root = process.cwd();
 const RUN_ID = "22222222-2222-4222-8222-222222222222";
@@ -154,6 +156,30 @@ describe("admin pipeline control contract", () => {
       runId: RUN_ID,
     });
     expect(controlWithProfile).not.toBe(pauseA);
+  });
+
+  test("preview hash uses browser-safe SHA-256 that matches node:crypto", () => {
+    const abc = sha256Hex("abc");
+    expect(abc).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    expect(abc).toBe(createHash("sha256").update("abc", "utf8").digest("hex"));
+    const payload = JSON.stringify({
+      action: "enqueue",
+      target: "tzuyang",
+      profile: "heavy_local",
+      dryRun: true,
+    });
+    expect(sha256Hex(payload)).toBe(createHash("sha256").update(payload, "utf8").digest("hex"));
+    expect(buildPipelinePreviewHash({
+      action: "enqueue",
+      target: "tzuyang",
+      profile: "heavy_local",
+    })).toBe(sha256Hex(payload));
+  });
+
+  test("pipeline client helpers do not import node:crypto", () => {
+    expect(source("lib/admin/pipeline-control.ts")).not.toContain("node:crypto");
+    expect(source("lib/admin/sha256-hex.ts")).not.toContain("node:crypto");
+    expect(source("components/admin/pipeline/AdminPipelineDashboard.tsx")).not.toContain("node:crypto");
   });
 
   test("dryRun defaults true and live requires LIVE_ENQUEUE", () => {

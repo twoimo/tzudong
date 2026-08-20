@@ -1,3 +1,5 @@
+import { NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS } from '@/lib/naver-map-overlay-timings';
+
 type NaverPresenceEntry = {
     presence_ref?: string;
     user_id?: string;
@@ -37,7 +39,7 @@ export function countUniqueNaverPresenceUsers(state: NaverPresenceState) {
 
 export function resolveNaverOnlineToastDisplayPlan({
     hasExistingHideTimer,
-    hideDelayMs = 4000,
+    hideDelayMs = NAVER_MAP_ONLINE_USERS_HIDE_DELAY_MS,
 }: {
     hasExistingHideTimer: boolean;
     hideDelayMs?: number;

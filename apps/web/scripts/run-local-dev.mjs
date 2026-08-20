@@ -8,16 +8,36 @@ import {
   loadLocalSupabaseEnvironment,
   loadLocalWebInputEnvironment,
 } from './local-supabase-runtime.mjs';
+import { localDevDistDirName } from './local-dev-dist-dir.mjs';
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--');
 let rawPort = '8080';
 let operatorEnvFile;
+let turbopack = false;
+let skipClean = true;
+let liveNaverProviderSmoke = false;
 for (let index = 0; index < args.length; index += 1) {
   const name = args[index];
   const value = args[index + 1];
   if (name === '--port' && value) {
     rawPort = value;
     index += 1;
+    continue;
+  }
+  if (name === '--turbopack' || name === '--turbo') {
+    turbopack = true;
+    continue;
+  }
+  if (name === '--clean') {
+    skipClean = false;
+    continue;
+  }
+  if (name === '--skip-clean') {
+    skipClean = true;
+    continue;
+  }
+  if (name === '--live-naver-provider-smoke') {
+    liveNaverProviderSmoke = true;
     continue;
   }
   if (name === '--operator-env-file' && value) {
@@ -53,7 +73,15 @@ process.stdout.write(
 );
 const child = spawn(
   'node',
-  ['scripts/dev-prewarm.mjs', '--port', String(port), '--host', '127.0.0.1'],
+  [
+    'scripts/dev-prewarm.mjs',
+    '--port',
+    String(port),
+    '--host',
+    '127.0.0.1',
+    ...(turbopack ? ['--turbopack'] : []),
+    ...(skipClean ? [] : ['--clean']),
+  ],
   {
     cwd: process.cwd(),
     env: {
@@ -63,7 +91,9 @@ const child = spawn(
       })),
       __NEXT_PROCESSED_ENV: 'true',
       NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`,
-      TZUDONG_NEXT_DIST_DIR: `.next-local-${port}`,
+      NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: liveNaverProviderSmoke ? '' : '/__local/naver-maps.js',
+      NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE: liveNaverProviderSmoke ? '1' : '0',
+      TZUDONG_NEXT_DIST_DIR: localDevDistDirName(port),
     },
     stdio: 'inherit',
   },

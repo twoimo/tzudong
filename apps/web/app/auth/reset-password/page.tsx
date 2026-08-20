@@ -198,8 +198,11 @@ export default function ResetPasswordPage() {
         return (
             <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-muted/30 px-4 py-10">
                 <div className="w-full max-w-md rounded-2xl border bg-background p-6 text-center shadow-sm">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-2xl">
-                        🔒
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
                     </div>
                     <h1 className="text-xl font-bold text-foreground">비밀번호 재설정 링크를 확인해주세요</h1>
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -218,8 +221,10 @@ export default function ResetPasswordPage() {
             <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
                 <DialogHeader className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                            <span className="text-xl sm:text-2xl">🔥</span>
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground sm:h-10 sm:w-10" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 2 15 8l6 .5-4.5 4 1.5 6L12 16l-6 2.5 1.5-6L3 8.5 9 8z" />
+                            </svg>
                         </div>
                         <DialogTitle className="text-xl sm:text-2xl bg-gradient-primary bg-clip-text text-transparent">
                             쯔동여지도
