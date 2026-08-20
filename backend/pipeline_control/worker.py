@@ -17,6 +17,8 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
 )
+from backend.pipeline_control.graph import AdapterGraphError
+from backend.pipeline_control.profiles import ProfileError, resolve_compute_profile
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.es_index import EsIndexError
 from backend.pipeline_control.manifest import (
@@ -166,8 +168,14 @@ def write_run_manifest(
             emitted_migrate = True
             name = "Step 2.1+2.5 (Migration+Cleanup)"
         if event.get("skipped"):
-            step_events.append({"name": name, "status": "optional_skipped", "reason": SKIP_HEAVY_REASON})
-            optional.append(f"{name} - {SKIP_HEAVY_REASON}")
+            skip_kind = event.get("skipKind") or "optional"
+            reason = str(event.get("reason") or SKIP_HEAVY_REASON)
+            status = "downstream_skipped" if skip_kind == "downstream" else "optional_skipped"
+            step_events.append({"name": name, "status": status, "reason": reason})
+            if status == "downstream_skipped":
+                downstream.append(f"{name} - {reason}")
+            else:
+                optional.append(f"{name} - {reason}")
         else:
             status = "failed" if run_status == "Failed" and slug == failed_slug else "completed"
             if run_status != "Failed":
@@ -286,19 +294,6 @@ def process_one(
             execution_mode=execution_mode,
         )
         return "Failed"
-    if execution_mode == "live" and data_sink == "artifact_only":
-        # Slice 0 has no sink-aware graph: its live adapter still contains the
-        # local database migration/read and Step 13 mutators.  Fail closed until
-        # P3 supplies a graph that can prove those steps are absent.
-        store.finish_failed(run.id, "artifact_only_live_unsupported")
-        write_run_manifest(
-            "Failed",
-            manifest_path,
-            run=run,
-            execution_mode=execution_mode,
-            data_sink=data_sink,
-        )
-        return "Failed"
     collected: list[dict] = []
 
     def emit(event: dict) -> None:
@@ -317,8 +312,10 @@ def process_one(
                 emit=emit,
                 live=use_live and not run.dry_run,
                 runner=runner,
+                data_sink=data_sink,
+                compute_profile=run.profile,
             )
-    except KafkaPublishError as exc:
+    except (KafkaPublishError, AdapterGraphError, ProfileError) as exc:
         store.finish_failed(run.id, exc.code)
         write_run_manifest(
             "Failed",
@@ -358,7 +355,7 @@ def process_one(
 def main() -> int:
     from backend.pipeline_control.live_run import main as live_main
 
-    profile = os.environ.get("TZUDONG_COMPUTE_PROFILE", "heavy_local")
+    profile = resolve_compute_profile()
     if profile == "heavy_local" and not all(heavy_local_runtime_ready().values()):
         raise SystemExit("heavy_local_runtime_missing")
     return live_main()
