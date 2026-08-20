@@ -10,7 +10,9 @@ from unittest.mock import patch
 from backend.pipeline_control.metrics import (
     CATALOG_PATH,
     DEFERRED,
+    EXTRA_COUNTERS,
     FROZEN,
+    GAUGES,
     MetricsError,
     load_catalog,
     reader_snapshot,
@@ -63,13 +65,16 @@ class MetricNameFreezeTests(unittest.TestCase):
     def test_catalog_matches_frozen_python_names(self) -> None:
         catalog = load_catalog()
         self.assertEqual(catalog["metrics"], list(FROZEN))
+        self.assertEqual(catalog["gauges"], list(GAUGES))
+        self.assertEqual(catalog["extraCounters"], list(EXTRA_COUNTERS))
         self.assertEqual(catalog["deferred"], list(DEFERRED))
         self.assertEqual(
             catalog["exporter"],
             "otlp_http; OpenTelemetry SDK in the pipeline image; default export off",
         )
-        self.assertEqual(catalog["adminIframePolicy"], "forbidden_until_csp_auth_gate")
+        self.assertEqual(catalog["adminIframePolicy"], "loopback_admin_iframe_after_csp_auth_gate")
         self.assertTrue(set(DEFERRED).isdisjoint(FROZEN))
+        self.assertTrue(set(GAUGES).isdisjoint(FROZEN))
 
     def test_record_is_noop_and_rejects_unknown_or_deferred(self) -> None:
         reset_for_tests()
@@ -86,7 +91,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertEqual(unknown.exception.code, "metrics_name_unknown")
         with self.assertRaises(MetricsError) as deferred:
             record("tzudong_pipeline_kafka_lag")
-        self.assertEqual(deferred.exception.code, "metrics_deferred")
+        self.assertEqual(deferred.exception.code, "metrics_not_counter")
         with self.assertRaises(MetricsError):
             record("tzudong_pipeline_es_rows_per_sec")
 
@@ -177,7 +182,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertEqual(set(snap), set(FROZEN))
         self.assertTrue(all(snap[name] == 1 for name in FROZEN))
 
-    def test_overlay_scrapes_collector_and_forbids_iframe_and_postgres(self) -> None:
+    def test_overlay_scrapes_collector_and_allows_loopback_admin_iframe_without_postgres(self) -> None:
         obs = OBS.read_text(encoding="utf-8")
         otel = OTEL.read_text(encoding="utf-8")
         prom = PROM.read_text(encoding="utf-8")
@@ -219,7 +224,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         )
         self.assertIn("not required to see the four frozen pipeline counters", obs)
         self.assertIn("./grafana/provisioning:/etc/grafana/provisioning:ro", obs)
-        self.assertIn("GF_SECURITY_ALLOW_EMBEDDING: \"false\"", obs)
+        self.assertIn("GF_SECURITY_ALLOW_EMBEDDING: \"true\"", obs)
         self.assertIn("http://prometheus:9090", grafana_ds)
         for name in FROZEN:
             self.assertIn(name, grafana_dash)
@@ -227,11 +232,14 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertNotIn("tzudong_pipeline_es_rows_per_sec", grafana_dash)
         self.assertNotIn("iframe", grafana_dash.lower())
         self.assertIn("tzudong_pipeline_runs_enqueued_total", contract)
-        self.assertIn("Kafka lag / ES rows/sec remain deferred", contract)
+        self.assertIn("Gauges record queue depth/age, active jobs, step duration, Kafka consumer lag, Elasticsearch rows/sec, and process CPU/RSS", contract)
         self.assertIn("record() exports via SDK when overlay OTEL endpoint is set", contract)
         self.assertIn("image is no longer copy-only-only-kafka-python", contract)
-        self.assertIn("forbidden_until_csp_auth_gate", events)
-        self.assertNotIn("<iframe", dashboard)
+        self.assertIn("loopback_admin_iframe_after_csp_auth_gate", events)
+        self.assertIn("<iframe", dashboard)
+        self.assertIn("data-admin-pipeline-grafana", dashboard)
+        self.assertIn("http://127.0.0.1:3001/d/tzudong-pipeline-frozen-counters", dashboard)
+        self.assertNotIn("kafka-ui", dashboard)
         self.assertEqual(CATALOG_PATH.name, "metrics.v1.json")
         store_src = (ROOT / "pipeline_control" / "store.py").read_text(encoding="utf-8")
         self.assertIn("from backend.pipeline_control.metrics import record", store_src)
