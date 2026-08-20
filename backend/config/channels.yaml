@@ -5,6 +5,12 @@ channels:
     name: "쯔양"
     data_path: "restaurant-crawling/data/tzuyang"
     evaluation_data_path: "restaurant-evaluation/data/tzuyang"
+    enabled: true
+    capabilities:
+      - collect
+      - evaluate
+      - insert
+      - heavy_compute
 
   meatcreator:
     channel_id: "UC1oXmhvYHVI2bApphh3IzuQ"
@@ -12,6 +18,12 @@ channels:
     name: "정육왕 MeatCreator"
     data_path: "restaurant-crawling/data/meatcreator"
     evaluation_data_path: "restaurant-evaluation/data/meatcreator"
+    enabled: true
+    capabilities:
+      - collect
+      - evaluate
+      - insert
+      - heavy_compute
 
 # API 설정
 api:

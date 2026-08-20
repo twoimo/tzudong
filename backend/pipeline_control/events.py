@@ -25,6 +25,8 @@ ENVELOPE_ALLOWLIST = frozenset(
         "step",
         "index",
         "skipped",
+        "skipKind",
+        "reason",
         "target",
         "profile",
         "request_id",
