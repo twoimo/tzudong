@@ -182,7 +182,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertEqual(set(snap), set(FROZEN))
         self.assertTrue(all(snap[name] == 1 for name in FROZEN))
 
-    def test_overlay_scrapes_collector_and_forbids_iframe_and_postgres(self) -> None:
+    def test_overlay_scrapes_collector_and_allows_loopback_admin_iframe_without_postgres(self) -> None:
         obs = OBS.read_text(encoding="utf-8")
         otel = OTEL.read_text(encoding="utf-8")
         prom = PROM.read_text(encoding="utf-8")
