@@ -6,7 +6,9 @@ lightweight environments as the existing backend regression tests.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
 import re
 import sys
@@ -40,6 +42,46 @@ from backend.pipeline.validators import (
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = BACKEND_ROOT.parent
+RECOVERY_RECONCILIATION_MANIFEST = (
+    BACKEND_ROOT / "data/recovery/20260818-reconciliation-manifest.json"
+)
+EMAIL_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}"
+    r"(?![A-Za-z0-9._%+-])"
+)
+TRUNCATION_MARKER_PATTERN = re.compile(
+    r"\[Showing (?:first|last)|(?:tokens?|outputs?) truncated|truncated output",
+    re.IGNORECASE,
+)
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _jsonl_rows(path: Path) -> list[dict]:
+    return [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8-sig").splitlines()
+        if line.strip()
+    ]
+
+
+def _reconciled_payload(path: Path, item: dict) -> str:
+    reason = item["reasonCode"]
+    if "/meta/" in item["path"]:
+        return json.dumps(_jsonl_rows(path)[-1], ensure_ascii=False)
+    if reason == "append_absent_video_ids":
+        count = item["addedRecordCount"]
+        return "\n".join(path.read_text(encoding="utf-8").splitlines()[-count:])
+    if reason == "append_retry_threshold_records":
+        count = item["addedRecordCount"]
+        return json.dumps(json.loads(path.read_text(encoding="utf-8"))[-count:], ensure_ascii=False)
+    if reason == "regenerated_with_current_transformer":
+        return json.dumps(_jsonl_rows(path)[-item["addedRecordCount"]:], ensure_ascii=False)
+    if item["baseSha256"] is None:
+        return path.read_text(encoding="utf-8-sig")
+    raise AssertionError(f"unhandled reconciliation payload: {item['path']}")
 
 
 def _load_script_module(script_path: Path, module_name: str, *, fake_supabase: bool = False):
@@ -83,7 +125,11 @@ class DataContractBaselineTests(unittest.TestCase):
 
     def test_documented_codebase_paths_exist(self) -> None:
         docs = (BACKEND_ROOT / "DATA_CONTRACTS.md").read_text(encoding="utf-8")
-        documented_paths = re.findall(r"`((?:apps|restaurant-[^`]+|pipeline)[^`]*)`", docs)
+        documented_paths = [
+            path
+            for path in re.findall(r"`((?:apps|restaurant-[^`]+|pipeline)[^`]*)`", docs)
+            if "/" in path
+        ]
 
         self.assertTrue(documented_paths, "expected DATA_CONTRACTS.md to document codebase paths")
         missing: list[str] = []
@@ -97,6 +143,7 @@ class DataContractBaselineTests(unittest.TestCase):
 
         self.assertEqual([], missing)
 
+
     def test_happy_path_contract_fixtures_pass_current_validators(self) -> None:
         video_id = "contract-video-1"
         restaurant_name = "계약식당"
@@ -109,7 +156,7 @@ class DataContractBaselineTests(unittest.TestCase):
                     "address": "서울특별시 강남구 테헤란로 123",
                     "lat": 37.501,
                     "lng": 127.039,
-                    "category": "한식",
+                    "category": ["한식"],
                     "reasoning_basis": "영상 자막과 설명에서 식당 방문 맥락이 충분히 확인됩니다.",
                     "youtuber_review": "음식과 위치에 대한 구체적인 방문 후기가 충분히 포함되어 있습니다.",
                 }
@@ -665,6 +712,69 @@ class DataContractBaselineTests(unittest.TestCase):
 
         for key in sorted(LAAJ_EXPECTED_KEYS):
             self.assertIn(key, docs)
+
+
+class RecoveryDataReconciliationManifestTests(unittest.TestCase):
+    def test_reconciliation_manifest_binds_inventory_results_and_privacy(self) -> None:
+        manifest_bytes = RECOVERY_RECONCILIATION_MANIFEST.read_bytes()
+        manifest_text = manifest_bytes.decode("utf-8")
+        manifest = json.loads(manifest_text)
+        items = manifest["items"]
+        summary = manifest["summary"]
+
+        self.assertEqual(223, summary["inventoryPathCount"])
+        self.assertEqual(220, summary["admittedPathCount"])
+        self.assertEqual(3, summary["excludedPathCount"])
+        self.assertEqual(278, summary["admittedLogicalRecordCount"])
+        self.assertEqual(173, summary["sanitizedMetaPathCount"])
+        self.assertEqual(173, summary["redactedEmailPatternCount"])
+        self.assertEqual(0, summary["unresolvedConflictCount"])
+        self.assertEqual(223, len(items))
+        self.assertEqual(223, len({item["path"] for item in items}))
+        self.assertEqual(220, sum(item["disposition"] == "admitted" for item in items))
+        self.assertEqual(3, sum(item["disposition"] == "excluded" for item in items))
+
+        excluded_paths = {
+            item["path"] for item in items if item["disposition"] == "excluded"
+        }
+        self.assertEqual(
+            {
+                "backend/restaurant-crawling/data/tzuyang/checked_cache.json",
+                "backend/restaurant-evaluation/data/tzuyang/evaluation/errors/IS6z1fyxCyI.jsonl",
+                "backend/restaurant-evaluation/data/tzuyang/evaluation/errors/KS_53b_YcvA.jsonl",
+            },
+            excluded_paths,
+        )
+
+        sanitized_paths = 0
+        replacement_count = 0
+        for item in items:
+            result_path = REPO_ROOT / item["path"]
+            if item["resultSha256"] is None:
+                self.assertFalse(result_path.exists(), item["path"])
+                continue
+
+            self.assertTrue(result_path.is_file(), item["path"])
+            self.assertEqual(item["resultSha256"], _sha256(result_path), item["path"])
+            if item["disposition"] != "admitted":
+                continue
+
+            payload = _reconciled_payload(result_path, item)
+            self.assertFalse(bool(EMAIL_PATTERN.search(payload)), item["path"])
+            self.assertFalse(
+                bool(TRUNCATION_MARKER_PATTERN.search(payload)), item["path"]
+            )
+            privacy_transform = item.get("privacyTransform")
+            if privacy_transform is not None:
+                sanitized_paths += 1
+                replacement_count += privacy_transform["replacementCount"]
+                self.assertEqual("new_record.description", privacy_transform["scope"])
+                self.assertIn(privacy_transform["replacement"], payload)
+
+        self.assertEqual(173, sanitized_paths)
+        self.assertEqual(173, replacement_count)
+        self.assertFalse(bool(EMAIL_PATTERN.search(manifest_text)))
+        self.assertFalse(bool(TRUNCATION_MARKER_PATTERN.search(manifest_text)))
 
 
 if __name__ == "__main__":

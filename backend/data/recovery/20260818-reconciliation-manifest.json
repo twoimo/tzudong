@@ -1,0 +1,3858 @@
+{
+  "schemaVersion": 1,
+  "reconciliationId": "tzuyang-20260818-recovery",
+  "reconciledOn": "2026-08-20",
+  "baseGitSha": "9e03feae7b6afac1de7bad079777ca681506f590",
+  "source": {
+    "logicalId": "pipeline-control-slice-0",
+    "collectionDate": "2026-08-18",
+    "absolutePathRecorded": false
+  },
+  "policy": {
+    "admitOnly": [
+      "exact append with a strictly newer recollect_id and collected_at, with email patterns redacted from the new description",
+      "absent stable video_id accepted by the current stage validator",
+      "absent trace_id reproduced by the current transformer and accepted by the current validator"
+    ],
+    "exclude": [
+      "ephemeral daily caches",
+      "transient provider error artifacts superseded by valid downstream records",
+      "ambiguous identity or version conflicts"
+    ]
+  },
+  "summary": {
+    "inventoryPathCount": 223,
+    "admittedPathCount": 220,
+    "excludedPathCount": 3,
+    "admittedLogicalRecordCount": 278,
+    "metaRecordCount": 204,
+    "newVideoUrlCount": 26,
+    "permanentNoTranscriptRecordCount": 29,
+    "stageRecordCount": 13,
+    "transformRecordCount": 6,
+    "regeneratedTransformDifferenceCount": 1,
+    "unresolvedConflictCount": 0,
+    "sanitizedMetaPathCount": 173,
+    "redactedEmailPatternCount": 173
+  },
+  "validationNotes": [
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/crawling/FmJ7NUQ5W6Y.jsonl",
+      "severity": "warning",
+      "code": "missing_address",
+      "resolution": "retained because the paired selection marks the restaurant not selected and the transform remains explicitly non-ready"
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/transforms.jsonl",
+      "stableVideoId": "2gyc0Q7iUw4",
+      "severity": "warning",
+      "code": "pending_geocoding",
+      "resolution": "retained as an explicit pending record under the transform contract"
+    }
+  ],
+  "conflicts": [],
+  "items": [
+    {
+      "path": "backend/data/no_transcript_link/no_transcript_permanent.json",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "1d140d391f86a129b9a9bb526512f49cf1f3aad08b003abbcbac5376f64e3bab",
+      "sourceSha256": "41c99faffbaeb27e3e42b7289221572c91f15485825476d9f68968ffc4be7bbd",
+      "resultSha256": "41c99faffbaeb27e3e42b7289221572c91f15485825476d9f68968ffc4be7bbd",
+      "reasonCode": "append_retry_threshold_records",
+      "addedRecordCount": 29,
+      "addedStableIds": [
+        "VhtW-DbY0j8",
+        "iUR-yFWu3fU",
+        "EuSqOJ1YjSQ",
+        "DxQ7Lhi6dHE",
+        "hxzpt-Itf_Q",
+        "hTCv2OkDNSE",
+        "TTIuTAaMPaY",
+        "JLPZ8NXLk2o",
+        "kwYy3vzJaeE",
+        "iCG5X1FF7Ek",
+        "jkMs-U187T0",
+        "KiWU8i-lwlU",
+        "uG5qD8ayEYg",
+        "jclR0QeDr54",
+        "Vo0o025xUKE",
+        "W8zkwvIrWoY",
+        "uc8P7dz-tFg",
+        "5dx66EjCG4I",
+        "N5bkiunc3uw",
+        "Hw2IzWvWDGM",
+        "G-4AtmmJ9BQ",
+        "5brnQKkvSr4",
+        "HxOwbR-CxwM",
+        "UmyzuxLkMqc",
+        "JPEWVoGyT6s",
+        "FMF0BGNbA-k",
+        "O2TPP2TUvJo",
+        "AxFqN2pg4DE",
+        "nB6QYKjrGyw"
+      ]
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/checked_cache.json",
+      "disposition": "excluded",
+      "reasonCode": "ephemeral_daily_cache_not_canonical",
+      "sourceStatus": "M",
+      "baseSha256": "067d7688ab4ee0ec6f7338f2b6389cab391cd0531f7b02ff8885c87fe15335b5",
+      "sourceSha256": "9d748d08c0b6aa1418a0303abd9dc79ff0ac6cb1d398b251429c4402f572dcd6",
+      "resultSha256": "067d7688ab4ee0ec6f7338f2b6389cab391cd0531f7b02ff8885c87fe15335b5"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/-1OU4tkFJns.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "0a7340a0550a540097024c3c72e173ead9bbd1dbc51423dbb784bc4f5e17f9ba",
+      "sourceSha256": "f1434931ad16ebe2ff2c5a1caa242e92b201181b33deeaa114784874738b66ab",
+      "resultSha256": "61e98abc873335f3ec5182135f81a0a21c9a9144446a249abd21d3a249a4b461",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "-1OU4tkFJns",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:42.596725+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/-HyRSLWcOeA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "dd1970962e7ca9ecd0e04d46069c55855ccbfa243784b75b7030a151838c7d81",
+      "sourceSha256": "7a8ce00717ccc3528948be86d0e454072c821858b891d9ce5e4f8459dbce5a62",
+      "resultSha256": "3d61bd0554abf2197c65b4853f86c8b8cb73ba2194af3afa729e465620ff153e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "-HyRSLWcOeA",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:15.471339+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/-fE1mGc-W8w.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "26b9910513c5aa1f1d9e4e720c6a9d7c18727a60b845c3e69833432260651e7c",
+      "sourceSha256": "460260ff8cbf866c11feb81ea144059e0c80eae88a229f25d5fc0b1adf614084",
+      "resultSha256": "460260ff8cbf866c11feb81ea144059e0c80eae88a229f25d5fc0b1adf614084",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "-fE1mGc-W8w",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:17.754699+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/-l9V6O2kaBU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e383352637cadcd9c1d5529132aa5c0a99cc6243da4be5bdb3ac3bf699c31cb9",
+      "sourceSha256": "1929ce03fa11f1d834a410c3797804e7f190895c61cad30066fc55c0be3fe6e5",
+      "resultSha256": "4c83109225ae304a03298872956cd65456a2ce78a87c7aa699422c79155c3e60",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "-l9V6O2kaBU",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:19:34.328140+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/0Ewq0-AyjcE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "368fb8e38d6ded6a7e3936ee3ea2773fb84ec837d5a1d40d9a99e826351db4d3",
+      "sourceSha256": "8be6d564c91cbac67d268f23b32ed6f76d5b8d4bf2c47739ddc6c4f864287cab",
+      "resultSha256": "8be6d564c91cbac67d268f23b32ed6f76d5b8d4bf2c47739ddc6c4f864287cab",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "0Ewq0-AyjcE",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:45.134847+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/0SZw-PZq7xo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a610b3902de973c79518f298b91b224f0af433e451b427b541be2cc36be3c4ee",
+      "sourceSha256": "83e25c09292e8d71585506967916e2e69d37efb349c989bfc058f807838216ca",
+      "resultSha256": "3d8524187cf43df0d6526b86045da73131df8884a560eab0188a926b6217d9a4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "0SZw-PZq7xo",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:43.479921+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/0VmT9F7y81s.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a5ac6fb574694c8a0961f1bd678d07bca4de84bab8bceb349fab913286c68144",
+      "sourceSha256": "96418a78e64f027e33a74b30855405bf36562b1d12fdc845b91ec7fbf13bdf3f",
+      "resultSha256": "96418a78e64f027e33a74b30855405bf36562b1d12fdc845b91ec7fbf13bdf3f",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "0VmT9F7y81s",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:45.135480+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/1DnKb2BrsTg.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "f6c167ad50ac3a7d9dd95c7bcf6cf4fd03e620246d9105e235ca29cb71beeae7",
+      "sourceSha256": "f99f7afe5173a2eb1ad813cc908b575b6287387b5d64167e4ad5f89ba8fa8076",
+      "resultSha256": "23e185f066ba7558c5fc9a5f7a0aa414bdbe789c6df036d472492541e0d6a09e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "1DnKb2BrsTg",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:19.098703+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/1WWZmyl9NoA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "ae43dc8d7a7f594277a66aa9cb5efd8ff0bd79627ac6cce8c3ea733da32acbf5",
+      "sourceSha256": "4995b9df1a356e747eb012faa6bd276680e53b2bf00ea96ae9e47de23d43a4ab",
+      "resultSha256": "c0c92cb31cdcdb95dc149b59c121a3415c762a9cd865d1add1c92d48338a9106",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "1WWZmyl9NoA",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:18.810983+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/1l2ERypH5Ls.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d722662f6f52000c5e061d7c2bea7909ff9954bc782a158460237a5b112ffc53",
+      "sourceSha256": "6fabd4169d2e323cbb5a8052ab726c57bee830e5b4dbbe16ecbe9ce0c66a8867",
+      "resultSha256": "7200fb0364d0972a3728669c0635a13bd47b94038149522e7452a7424bd0805d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "1l2ERypH5Ls",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:49.270929+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/2C_Cboo8oUM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "0e609db6acabbd370464f3ce1da2583069ba98e9f5d0d7da7890cf01109bf8ae",
+      "sourceSha256": "5005a9b07bf5c9c95e91749fe6a225fae1b7d906b876fd0eac52da2dbdb0c2de",
+      "resultSha256": "d0ecca4dbc63f4e2d120036cd00f3dd2c7a6d57688cd30962d5da99cae5f34aa",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "2C_Cboo8oUM",
+      "recollectId": 21,
+      "collectedAt": "2026-08-18T00:20:08.843320+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/2TYa1R-kcpc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5f848980a7376cab1bcaab5adc355b5b53d374fce21f4551f80d25023e6cc71a",
+      "sourceSha256": "fae1da8aff54e05681d28c7b9725862099838276c0a085826ee389f9829d9da2",
+      "resultSha256": "8103d1ca9411f804147dfa57370ef081b7e9f41003513dcb650c83d1ad57fa95",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "2TYa1R-kcpc",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:25.124615+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/2gyc0Q7iUw4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b9b9c70a0ac8e0cdf8bc3a18d51b51a8ebdc901d82b4ff8a992240b46aae2004",
+      "sourceSha256": "e5729c425a21cf298abed0e4c53890954c0a0564a0a416707ccd228b1de6e206",
+      "resultSha256": "c605bc9b80fc512828e0d2787df4b1e1e4bc0d7b56664cf78c8e68ad39e88dbd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "2gyc0Q7iUw4",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:24:56.975986+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/387DTnvUyTg.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "05860836aed92b4fc84aa6cf066424375200479bd81700da55dc6a28247e7ece",
+      "sourceSha256": "416c60165d63df36a2d47c8f2c90df04c450780be4f558d8e499508e78d895ba",
+      "resultSha256": "4f4e33b6ed87e7210664c92aa102c4d832b72f99d4e170c9cbfafe53110ab8df",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "387DTnvUyTg",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:45.791440+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/3B_7UgMwjn8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8a3fe942a3833da7f8f000e1de6ce89cfdd1f0c2325ec724a1df4db3495c5f5c",
+      "sourceSha256": "0d5edfa04285040b9611aa83027de8e49d36f13acb9df8fd3324d0394b16eec2",
+      "resultSha256": "1df641bd6848fe387426796e115eb107bccc945fd266fcccfc96468a0cceabc4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "3B_7UgMwjn8",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:23:13.161079+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/4JfhLX3GdBk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a13f5f4f4bdd0a0fae199791d45d6eb2e2d7e12585ef5f41b750870b7cda2ff4",
+      "sourceSha256": "8c0c7ccedacad8ac2813d2a09884b2137c7241409c0c3399baed25b960eb330e",
+      "resultSha256": "9a4e1b9deff7fe4f623b2530a79bb24618af9a678fd38049402874c5f1f57005",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "4JfhLX3GdBk",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:07.781263+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/4lig9G57PH4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "eb82a99a0040b8b31fce2a14231315e65df57aec3d6c91f2aceac2ed08d7dfc4",
+      "sourceSha256": "8e219b7162d3ed1df8c21c0e412fcdd4d738f156796eb3be9f5425d4a50f2cbc",
+      "resultSha256": "8e219b7162d3ed1df8c21c0e412fcdd4d738f156796eb3be9f5425d4a50f2cbc",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "4lig9G57PH4",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:18.778840+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/57ctQLkl1ts.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e0a8056dbc7b6d9526dfe54e4d6897624ffd6dad22af9665efc0e1feeba0e048",
+      "sourceSha256": "52e72debfb3d2fe141b9764ca84955f8955318ec89dcae802acd1fe1ae53c25d",
+      "resultSha256": "52e72debfb3d2fe141b9764ca84955f8955318ec89dcae802acd1fe1ae53c25d",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "57ctQLkl1ts",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:22:45.640241+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/5DSkyXrEYqA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "44529ab8536f52b95afb41ef07550d9eadf9313fc0b4f817eb5babf29ec9f241",
+      "sourceSha256": "6b9533b6c2a22b81434e31869b902db171eb9fab317148f35491aecbc30b282b",
+      "resultSha256": "676bd46a86ca6225117480aad0e5f8ecf8f6950e49ffa80134591bdda58947d0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "5DSkyXrEYqA",
+      "recollectId": 6,
+      "collectedAt": "2026-08-18T00:19:39.375217+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/6DOjRkBeZGw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "f68d04ec65a136b306a8fef8bd96caf6e2a947a57fb0016929b969b7990a3e67",
+      "sourceSha256": "aa6363bc5c4280996e5ed7d33b53e2150dfd4f91ab01097f2a44e7fa83beda32",
+      "resultSha256": "403f6cd19bd4fa8f9b38cc3468477a6e8d97aa766609b4f751e5569a14d7e66a",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "6DOjRkBeZGw",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:54.522952+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/6sYv8CqGvFo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b1e27052dec3ba260fab9e54c24c5aada6b349c80c4446d142162c468b15951b",
+      "sourceSha256": "33839b818f3ded882825050ae6e72cd3173a5c54d0e731064cd206c745491680",
+      "resultSha256": "093b33fbdb4992d804a2f7b02abc1f2561886e7f72b9383263eaa077cc6e8b8c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "6sYv8CqGvFo",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:47.641116+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/7-BpFy4N2Fk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "02fab4dfd2a2cb550943e51962bcd7531dc06019fc652a7ec188f453b8a2af01",
+      "sourceSha256": "4683e6707f8dfd38392aeb64006124c10cda3aa14abd858ced10b1b2a4b3e65f",
+      "resultSha256": "38b2f6f64ca57b069691f496eeab2de12e5a3cdad96c590921e4b6662a3f7e45",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "7-BpFy4N2Fk",
+      "recollectId": 8,
+      "collectedAt": "2026-08-18T00:19:44.574660+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/7ZHp5Na_tCc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "1ba8a562bd14abd5ef4394e8f09754ea1190a5666c654f5e2f638b17367acea9",
+      "sourceSha256": "3edb0c295383a074d70582c1bf42b257f8b3364d99fcae7d01e6f1a13a8b2fd0",
+      "resultSha256": "24f6ca324ccedcd7b3dc6ae0f12ee123f1b92c4ad7a003fdbba10043bdd4dd0c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "7ZHp5Na_tCc",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:24:11.141526+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/80eJ-umeJqA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8edf0ba30e3d9769834df264744f3723c82220649320411f6ee7f3284614feb4",
+      "sourceSha256": "c6879737711f65eceba7ca67e64ea3cb48c8764df7fb6b41e8a4720ad96800ac",
+      "resultSha256": "c6879737711f65eceba7ca67e64ea3cb48c8764df7fb6b41e8a4720ad96800ac",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "80eJ-umeJqA",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:44.265126+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/82O0kkLjo_w.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "824a2b3e1cd7cf4214314f31b5b81638e8598dd99fc99f3f8ea2ca76d6c3c846",
+      "sourceSha256": "5b13ce8c3576ea858df5eef72de7d46a691bd13d2d83cfbfa22809e2bd934fa1",
+      "resultSha256": "c16580a42c49fae9f12c666d93c424dc96c58f7e846afe1920d2cc168b049d3b",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "82O0kkLjo_w",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:23:59.229622+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/8RBTyjDnbfk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "63971b56635073327909e1dabebee8d881ed25ffb824278dfb08e8f3674fbfe7",
+      "sourceSha256": "681811f4d05d974b23d8b2026e9e78ca85f0a29ceb9432b11bf9ec63d82348d4",
+      "resultSha256": "d699d5f4b5c7a2a109210e55009979eb340e2fcc93ee7be1326f97d0365f5608",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "8RBTyjDnbfk",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:43.798324+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/90NJAyFx09A.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "bb63bdbd34b1ecab9d86eab41fa01d1ff8e867187bc661ab03ad1d949f72110f",
+      "sourceSha256": "dd63ad7dcd19ef11276c0240b83df4e0881b5958e6dfcaa19595683eef93e11f",
+      "resultSha256": "dd63ad7dcd19ef11276c0240b83df4e0881b5958e6dfcaa19595683eef93e11f",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "90NJAyFx09A",
+      "recollectId": 19,
+      "collectedAt": "2026-08-18T00:20:00.482991+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/9Hshc4Uo2Jk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8b8ce484998f9d687b2f0d220507947efbf41be548bdbc3fca78230034073bbe",
+      "sourceSha256": "61aae7e28fbab7a085cd247aa95152a1638b37ff085ea3a8ee9f961850032eff",
+      "resultSha256": "517b189ff75deeb7cce7353acb2ff72c00a19481883787a8d3ba08c0ad21cd47",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "9Hshc4Uo2Jk",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:13.062356+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/9eJHNTya2pQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d67292b98d53c2358298bb3c1249181c5994b5bc5cdf951295062d5cdfa2b2a8",
+      "sourceSha256": "4d077174db9bec29048e4a2e39cdbae05e972f38d4af174c06a74ba9f4248699",
+      "resultSha256": "c17e21c7a870dc439078eb1f2a0c23b7270bf7448f846f82b3259bfe25d09060",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "9eJHNTya2pQ",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:20:02.434094+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/9gVyvPCGQNA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "97427e77e7ba565d3af0d0e2bf1a7d2459c023995b81d20532c7db60483a440f",
+      "sourceSha256": "410339ffacad96f1961733ee50d23420faba13623cb2f4a09827ca196465ba03",
+      "resultSha256": "e723aeeea555eb559c8cc6ff996d83d543e8ac10c5811c3280cf8e8eb591330f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "9gVyvPCGQNA",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:20:28.261802+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/9oZUTH09vv8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d73b6a2c931358d4cc4bacf733ccde03ed6257961615c0821250ce165b849206",
+      "sourceSha256": "7a41da3e62ac4a7b52b50d2a7a60aa0bba6bfc9d70c8dd9e1cfef2a770f627dc",
+      "resultSha256": "0a52f1446fdecd64825e0309df5504a6b02778bfc2116e43aba0269eda4588d4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "9oZUTH09vv8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:33.831499+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/A6Eek_QDG_4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "57b7420c7ee340a8de6d777985c4f0d3fd89e12d4c2f8d40ece61a10de7e8063",
+      "sourceSha256": "c05cbb9e56b08b768ea2e7bc1790267cc63510d9e78bfc532d5cfa9e2c9bbb16",
+      "resultSha256": "9bae4e4e55a09487e159f677b3547e1bee709a55da49c6655b2c0d98fe7acc1e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "A6Eek_QDG_4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:51.899309+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/AL6cbIJzdos.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "7024934a6d4d394cb5238745a11586fff62e30aed8192b27ac7bef588dd12e0c",
+      "sourceSha256": "05104aade8f6633c594f3a746ec22dd810bd5b1ff7c46f03f2e73e3fd476c50d",
+      "resultSha256": "05104aade8f6633c594f3a746ec22dd810bd5b1ff7c46f03f2e73e3fd476c50d",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "AL6cbIJzdos",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:46.472967+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/AOvTwDyl9dU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "36bb2e8abc7695d6ccd7e57edbf89dfc1e0bf536ee121566a2e36278a3e45e82",
+      "sourceSha256": "1cbb4c803dab46fdc1a3840b1e4f7901fa44be193d132d7f10c0a20e21d48d1b",
+      "resultSha256": "f9ee701a9f3a7b6b9852268a6bdf4fabbaf335f562875490d3702b21b11ded06",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "AOvTwDyl9dU",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:19:33.536601+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/BCnteF--YUo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c9fdfc1059cf564e84c15f6bdb143603712bd98762bc2c56a019e47ce8120ec4",
+      "sourceSha256": "c50f3f0c86ee8017f491f45c097a908b8f0afb1a3526ed13e8ad6b1b93ed3371",
+      "resultSha256": "c50f3f0c86ee8017f491f45c097a908b8f0afb1a3526ed13e8ad6b1b93ed3371",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "BCnteF--YUo",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:22:14.531067+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/BTkB2PiuKeA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "6d626280cc97a6b21939c5404a8f903d1e85be28b2f3ce33aadc485c90c3a3bf",
+      "sourceSha256": "2657a6feeb70557982f65594b16f863f6069ec3e01cd7c906e055e6da92f0679",
+      "resultSha256": "82a146caa095a52d8b4075581808047ad1523e31eeac749933a3282260fbabfb",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "BTkB2PiuKeA",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:23:27.877174+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/CQpxJhN16pM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "7c86c393257230a92b672811bb52b3a24fd101f96cc0915ae8e30d3b72cee70c",
+      "sourceSha256": "24d0ec12f95dadc92329b354af8bd57253ff331c5ae52c3437c98ab13dd67101",
+      "resultSha256": "214cb06aa494284959780ac7268fe1639d4d2199e345a0c04e8096505b7a9b21",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "CQpxJhN16pM",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:59.228982+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/C_8zXGpHb6s.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5a0f53264b04aa550aa56883d27eb990d3c97e0eee3ccec1e2ab8ad06097f436",
+      "sourceSha256": "ca74cb5c2643a2779907425acdde7dd3b90520ff8838a34f71619a989924ade1",
+      "resultSha256": "56e4724827ef92b5dd35299cf992a3ed95b45f62f1d2ef4e95969f3f5dfab89f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "C_8zXGpHb6s",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:21:02.805658+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/CtXnLfien1Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c57633e20678c34707be6285d09a1d28ca706e18a43ccd6d4926d66a8ef0919a",
+      "sourceSha256": "1912d9fffabd8fdf7911c801059ddb2694609045de8c11e48e736b20cde746a7",
+      "resultSha256": "ff311da36944a29d5da75f0b5981d95f11c6a0354f8e408eefaea7c4bf8de8bb",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "CtXnLfien1Y",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:00.660747+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/D-ibX5vxe6M.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "157c098ab9c1453fe8c99df234c9688074b1bcfed22a87ba0af8c29e6ca6c494",
+      "sourceSha256": "cd4ffa2b0efb0e2f39aa8b00fda9851644400520cc477455251b5a12fa87bac5",
+      "resultSha256": "b8facb67d32a0faad9d1cf5b34e92dabc20a34249ad454c4934258967658e64d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "D-ibX5vxe6M",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:02.316207+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/DA3BPjYPUGY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "87a2ecfd502c33cb4435f0b4b56cff575ca53078411ccdc94d24d14773c29b7c",
+      "sourceSha256": "54014a6e7266b92926b2cdb305920f1d78f6b0bcc27e893558c48d09edb63825",
+      "resultSha256": "67bb314bf75237e53983b069989b8e278c9be84aa724c8b9ab974291659666ca",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "DA3BPjYPUGY",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:12.741247+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/DZXKCO_REJ4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "f071e5ed0a1711a46a41ca5845d46807ed1cad808dadccfa988930761fada3ad",
+      "sourceSha256": "ef3397a2a54a79f3b68784818f07ac11647ccf0b9e66fc890335478176f495d9",
+      "resultSha256": "d13f8b412425cd029fbab321f8a2cf759bf225e3e19d5eecea844aa44ed7185e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "DZXKCO_REJ4",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:47.212181+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/EWCbmaIodXk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "581915e5248cfe4cef8662f52cc106f429a46057184a8337ac25631b71d9f795",
+      "sourceSha256": "35ff715af7ed89a8d065825f3e1822943129876441727ac4ee458f8589e951d4",
+      "resultSha256": "9280bb07a2d36d2225feb19d5c84f301abc214e840c31d7d2e0c14d7b3103f2d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "EWCbmaIodXk",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:23:37.446853+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ElSXrUBEng4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "dacf5a34b8e338daf6faa60779353d08762f2d6cc43e67da8392d2eaa8c5c4df",
+      "sourceSha256": "baa4e8d1cdbe934020e1b062d7164d17bfbccdc7eeb1cd42d120e420f7275a78",
+      "resultSha256": "baa4e8d1cdbe934020e1b062d7164d17bfbccdc7eeb1cd42d120e420f7275a78",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "ElSXrUBEng4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:14.131823+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Eru0qdlHTAU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c2de478c17203c4756dcb8854a7a9f93b386c7df023eb3ccb1d8a361d7dfad3b",
+      "sourceSha256": "b85c5d5767c0823bf8dc1aace95b6fd113abcdf5b2d0894ef7a98fe4c5a350b2",
+      "resultSha256": "61701e76a20c557179b4636ffaf9f632cacb59b5cb0a052c6d0ce88cc0b56e7f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Eru0qdlHTAU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:17.922224+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/EtvrIMKvzWU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e559991f001a38df09f8b58512ae09f0d94947c6141e3f86debcdd8acd2317a3",
+      "sourceSha256": "92891946bc5d05ed13e633815e6cc207f59dafefe434ddfddcca942552310ace",
+      "resultSha256": "92891946bc5d05ed13e633815e6cc207f59dafefe434ddfddcca942552310ace",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "EtvrIMKvzWU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:53.385372+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/EuSqOJ1YjSQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cd1991bc46b3864ae1891cf9acbaa172c6e6b3f4fd3ccc4404b9887959a7ffdc",
+      "sourceSha256": "fac367dda9ce79ec68e04d66d09dce3683ba42a14944803eabfaa2eb312a5817",
+      "resultSha256": "63185009e393b3b0dfd0bcf590eb69ec88fd3b01708bb3be55c6e1c4c743b4ea",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "EuSqOJ1YjSQ",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:21:50.260248+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/F7sPLM-ThnA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "1134d4eb924a2821d2131074d9ed1e1f9af20ab61ddf05edb9a1f0a85b1221a0",
+      "sourceSha256": "e575dee28f1c6ac19611d2a432685e743a9721ef477a6d585ec04f2060d05477",
+      "resultSha256": "9c98ab3194b2cd6847f1be03a9b92fff7cdd63665160db424184447a75d765d9",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "F7sPLM-ThnA",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:57.938935+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/FSsr6NanwkM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3e7f22da3b218358a2ed7770355c45c8a5603d14855f270edde2f65ddd158c04",
+      "sourceSha256": "d669b3186fb7fc6207daea8a3b1006bceee96d826e6e68ec23fb0a80aad7ea6e",
+      "resultSha256": "079875d027565d7036fa40e0e24146bdabbfdbe948d6f7e3772a8c7a22fc8331",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "FSsr6NanwkM",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:40.770889+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/FgDCbXyv0UY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "9bfd1e5e5b5764c3f95eaad61f8d906fe16d39984b58ee57120686ed731dd007",
+      "sourceSha256": "23c615623a416112ec2df354b8e99e981038698372edfc25441d6c7ae1a6e896",
+      "resultSha256": "2e9cc87eb6a24f7b1ae163687735f7795b4cf9de623eefc890a50e9c3d4b7986",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "FgDCbXyv0UY",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:16.961423+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/FmJ7NUQ5W6Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "34da70a213e46425de72ff15d36eceacfb64773f677d94cc041c7c7dcdb3acf8",
+      "sourceSha256": "9a7742d03836aed3bf30d2a9c8a445f3b5475850fd2f473fd22586b96d6fac55",
+      "resultSha256": "9a7742d03836aed3bf30d2a9c8a445f3b5475850fd2f473fd22586b96d6fac55",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "FmJ7NUQ5W6Y",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:24:56.975771+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/GBRoyvoSfAY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "6595649d91119a344d8b0f9cf113714976519731864402a6fcfcb65c8d59e3d0",
+      "sourceSha256": "4609f480bd12328018142c1033b3808b58e4bf648a40375a9fa8546c3d7393ee",
+      "resultSha256": "2a30d3e98c3adeb743973988c87fe04dc9b9fbfc2d16f7ad2fdbfea980a6eb77",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "GBRoyvoSfAY",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:03.442903+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Gz-nspfstFI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "68d3c8a89fb42735693285ed64eabb6960d73d1d4673df32d8daff094950f436",
+      "sourceSha256": "830c07cbcf0968a98d85fbbe4a61645c87370bfe747881e5160faae020ce869c",
+      "resultSha256": "b53f3eaa485e9c9f117e79825b69cb542fdcc8310f9f541d1eb179bec15c6ee9",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Gz-nspfstFI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:18.465082+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/H9mug1r0UcY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b63a97b3a3b8e93281f4119e9dd55fd76a4c37e15c4e0d867231116d39ad8b5e",
+      "sourceSha256": "6d815afb4fb33125cc9f619e22924eb2ec7e1bdb8952142c672a505a304120dd",
+      "resultSha256": "7bb688cc162f6dda4fe583b75b1bfeba068e9d65f986c4a6f17235fa7581e310",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "H9mug1r0UcY",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:23:38.847108+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HOzoiAOaJKA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "4fa2697f3ebd34acf76a2433351791b184fb72cca14779a8ba0af96b19d2cf32",
+      "sourceSha256": "dd2781090fe1157b2844f8a977bdd64c178e8232ef931b8e2aa5f9f2eb75dc13",
+      "resultSha256": "96b9f1bf56a00fdf36ac2fe7414ad684b54add6b42e3f57d2b0c70559fe47be6",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HOzoiAOaJKA",
+      "recollectId": 3,
+      "collectedAt": "2026-08-18T00:24:56.974918+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HY4EmkarhMo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "065cce6a262f95cd3a3e77c8ebf950bf42291f56df37aede18eddf483ef804c9",
+      "sourceSha256": "a173079a0ceb1663689009f8f74fc8d15020cadcf8e1f4e19f1c65fcf6d26527",
+      "resultSha256": "c5007c73dc894f3ee081f69bc00d94039fe40f97f3774e7d6354de9595f79ba3",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HY4EmkarhMo",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:42.191357+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HZaDW00sldo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "335d471a6b53af0d226544a9a6278cbe5b08be4adcd3d8b2f23715dcc065b3c7",
+      "sourceSha256": "5194a1b31f1eb6a93f847b1a25f8ec47949ead4ad0aff58ce951197fa05bc8c3",
+      "resultSha256": "f0e6d1fc793e4bb4fb22a53bf19f5bdbf6843754c327a37ee685d8aec76b03aa",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HZaDW00sldo",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:45.239680+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HfHQyMb-kvQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "2a454f6aebbd3ba43c08625e1f78d32c19b08ff311ab5a9bc2614b53456961a7",
+      "sourceSha256": "54cc8f636c1579aa9f81bb8a00ff11f9115839a419d221befa0f5908063e082e",
+      "resultSha256": "37e4abf63da2162d5557c261fca5e89218df5643d7f9a4e853d4231e9427d73e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HfHQyMb-kvQ",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:21:33.424281+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HvTLbeasXS4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "96d66aa7a5c07308e84d625919bcf1a824ac8a2b17ffdc5b9ed61021fa1ca840",
+      "sourceSha256": "716e7b7b0e5f2b47b16838b36089d736ee2602f08aaad9707caa887bec61d457",
+      "resultSha256": "56c2b397068709af782ec3623eedcf274ce76f2f2116142be40baf5678ff4660",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HvTLbeasXS4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:40.348634+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HyWn4MjoxXU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b53d251b341de13e3ca9efac07117cbf9ee19b8283a04f8932319c6e09418495",
+      "sourceSha256": "708e57aa84008593f12c1f06fdeae50d656e5ac94caed737be390b2184f95258",
+      "resultSha256": "3285122fa40a23e816accc409ebfa718e46b70dd94d673addb178d4d05ca87e2",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HyWn4MjoxXU",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:19.688792+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/IS6z1fyxCyI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "6048e614227e0cd86d2c1096afe0cc7f75db0cb860b31a76cc2b82ad96a81baf",
+      "sourceSha256": "62ffc212179dde0ebfe8cfb6b328dc3e919d72022462627e25d1dac6274ef454",
+      "resultSha256": "4b9c4aa4640f080af2984f85ca95dae52680a14916364188a172456e15266c74",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "IS6z1fyxCyI",
+      "recollectId": 2,
+      "collectedAt": "2026-08-18T00:24:56.975555+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JQUWY-z9Q2E.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "efaf538868c37f74dcd89d6d38c6800320fcbd62bfca1f3bf3119a198e7e0a6c",
+      "sourceSha256": "f1dc1dc50075e23bfa02046535d5b5ca5c1c751a7b00aa1fe0efcc47113b4077",
+      "resultSha256": "a010d1234a8cad24fa3530c55f975ef2d7126e06bab23a0320afed9fed59b346",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JQUWY-z9Q2E",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:20:25.452469+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JSZznsO7t9o.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e62ed5177984800f49b3a5cac4261511ad02dfa606c86c47e2eb4beca9266939",
+      "sourceSha256": "0f4781a1452b5f7b1039b6969e19ee97714f72c43f241e04eb8e8962c25c523d",
+      "resultSha256": "8cc1966da47c26bfb98b002c1086c5e77425469d9aeb32558f33c99ae4d15861",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JSZznsO7t9o",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:57.422001+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JTRm4YWo8IU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "1957157e23aeeaf6ec8437000c5f6b6e7141d341651960a701d59a6d618f8c53",
+      "sourceSha256": "bff14e954ac464b8cb67007e1c35714ae74d0c0bdcff56d07109c0951074d083",
+      "resultSha256": "a64228aeb5ca0f55ab516c4425ce90cb3ebe22c5b01c8f8977404a6b2b226062",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JTRm4YWo8IU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:14.131241+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JZU3p0Gmsio.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3abbe8edab84f32d93c9e244d36bb35b7b212236ce91746cf438fcb151411020",
+      "sourceSha256": "c0f70f879d9735bb4229d3e1ef367eaf5fc39a89223f315c185afd5cec9ba487",
+      "resultSha256": "c0f70f879d9735bb4229d3e1ef367eaf5fc39a89223f315c185afd5cec9ba487",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "JZU3p0Gmsio",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:39.696342+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JruMgt9YEqM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "add66beebf2de94403fdf9c65587d1d9f1144551d5cbe8c3439362928978240c",
+      "sourceSha256": "64254722b52a60b6de880fb6f7f7e619fe2985eeb14a3a087c8e89291780d19e",
+      "resultSha256": "6a37b484d359bfc611483d30d2cc2dabaa0a0d95e5a6fd8a4eb91cfc782592a7",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JruMgt9YEqM",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:23:22.259159+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JsAkfDf4_Gk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "2aa9a92059d3aa2eba7f0c038f184b9daec54b732d0098823e0b432b83f29057",
+      "sourceSha256": "b00c1af949288d4694ed0c7c8af05f760d5ae714737e78d5d01aa5a497764f53",
+      "resultSha256": "23bf1392133ba94700246bf0c9d109f16f67b68f48aa6cf232fe0e7437891fc7",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JsAkfDf4_Gk",
+      "recollectId": 3,
+      "collectedAt": "2026-08-18T00:19:35.747550+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Jxw2W_w6sSc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3bb89dc733fad18c9d997ee0b80c2e60043002285ea2f434911f170f8c6d597b",
+      "sourceSha256": "15ed5161c5d32fd1ca71d622e65477cba3c6df81c3d865e0cb2a28402c68a7d7",
+      "resultSha256": "bf9c93e9276d44b975e96b80527f5468e4cd324ef6ea613ac3ee0f0d3e1b1205",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Jxw2W_w6sSc",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:22:15.999024+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/KKBTfD0jPHA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "9b59918266834072b7179897246dad4714273d0d5d34ad9a6903d004b4365dba",
+      "sourceSha256": "d9ad925f6b65b32adc5de509b872c17408f1037179b4ceb73c0bf11541fbaae0",
+      "resultSha256": "d9ad925f6b65b32adc5de509b872c17408f1037179b4ceb73c0bf11541fbaae0",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "KKBTfD0jPHA",
+      "recollectId": 21,
+      "collectedAt": "2026-08-18T00:20:10.764517+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/KNrfkcA8vzY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "47467b10977eb828abaa36177ea800026bb7af5171268159119a15de91b91a36",
+      "sourceSha256": "c9086e2cebcec5f540fbf8f03453c9f2631dec7924ff8e2189ff7a38ed74a086",
+      "resultSha256": "8eb0055108e3acc41b87bc7e72c2c6fb212add2fd2924c12cb7b2184f6410357",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "KNrfkcA8vzY",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:21:02.805981+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/KQdyVGZnKeU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c5b5727f3bee374c5a33d4698149f0f88837a2eafa6410918b83b9c56bcc95c5",
+      "sourceSha256": "97697d6013dae7015db97f0527b470153c8acd685c10dafb218a6069732a575b",
+      "resultSha256": "c68d3e8e66290ce84c1b1ba0a7590d9d3b9629d8e3921f970662b3726cb40004",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "KQdyVGZnKeU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:17.022023+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/KS_53b_YcvA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8c783bcb4a6ce5f3e88a913df3d1b98cbf693c9a3a1c9a4740cd43a94735c6c4",
+      "sourceSha256": "7491b0f8154051a188b11633ec68522c1a5d30373fb1088b7902e59db1713aef",
+      "resultSha256": "bc0ee926a39092625955c059d8505a3b7d4d72d3526c7ed45f5b2a3739b0b41e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "KS_53b_YcvA",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:24:56.976574+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/LIdodV1ybrY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8717ced4a7f654fac3cf873e4bbaf7c9f8cb79b5501185f9c9be054de2d0071a",
+      "sourceSha256": "7386327e183fdb62400bb864970a11a8065e3081f586cddb947cc3b7f583a8ea",
+      "resultSha256": "7386327e183fdb62400bb864970a11a8065e3081f586cddb947cc3b7f583a8ea",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "LIdodV1ybrY",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:38.386011+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/LUWUxyIkDls.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "1f23e88afb090973c31f4844d91da59120bb4a81036af407ebd8204a4f9917cc",
+      "sourceSha256": "3f1bace9a833d54b592884acbc3caefbbd8a22eeda06e25bcfec5ace4d969e5d",
+      "resultSha256": "c935048b4c9c35a8c4c6aeb96597cafbca64b5d7620c57ffbc3649e2cba1e911",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "LUWUxyIkDls",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:22:42.759263+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/LqgWTu6NmzE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "dda6dd8810657c94b4b9f26a13b2d059c894929f6d89fa18dea3fe0365ea3d9c",
+      "sourceSha256": "bb0160f3fd427965c759528e5fc189ec34bc12914fdd38c5283db9b35981a885",
+      "resultSha256": "b8b7115e18eabfa52aaca4b44691651128c973b15755387527f83c58f05c82d9",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "LqgWTu6NmzE",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:29.903077+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/LyxdItZU_4I.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "ed152465706125c583657e26a540d4d2b5afcfb030df906258ff1bcf8f7939d8",
+      "sourceSha256": "15469afa1f983e4eee3c13681203679085ca38226ea86ac23b9dde4133d63adb",
+      "resultSha256": "15469afa1f983e4eee3c13681203679085ca38226ea86ac23b9dde4133d63adb",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "LyxdItZU_4I",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:22:40.038437+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/MJnLz9-rPrU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "7ff23bbb1f08b4b810cceb4c6b43821886dd2fc6d7dcdc541da10ae237071fa6",
+      "sourceSha256": "f6ea9864c4cfdc8ba59ebefbd9107a5ec243d3b467e770fb1d7e9b02ab329e36",
+      "resultSha256": "07e178c01223d5e03d764c94e66907e1a8382dd697ddea71b3129c64308cfe14",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "MJnLz9-rPrU",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:57.941087+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/MN5cxevTa_M.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c077d1b4cb60a8c14cec7754ee0cac9aebfdcdae6ba71b798536f23a51c51c01",
+      "sourceSha256": "35bad42e4a0aac0e89fcfa70f533e6fde1e8b8f6596c7713f47962886f112ea3",
+      "resultSha256": "e91e60df37baf97f197b0677ae40856316ec8968fc5260d39420577b26e62521",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "MN5cxevTa_M",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:35.779427+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/MboGWV6Y7Mg.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "eaadefc7ec8730740a844fa505a47e882d57fc7b5cd2322888811c6e14587ada",
+      "sourceSha256": "efffb675ad5e829672870c84e0b7f8d7202b55b5e6d3db45bd31c247c5024940",
+      "resultSha256": "1775aa05d3213098bfdd4b13e537f15d865a6854caad17555ab24a5ce9838628",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "MboGWV6Y7Mg",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:21:08.893738+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/N82HhUgsV6I.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "fcbde097754e8e938a41d77c7fc915421d48103acc11007e96380f9d9be1a015",
+      "sourceSha256": "a27f219be8d17c5ab1be57cab7223ea366aa7f5226b05c6d341f4c1742a3669a",
+      "resultSha256": "2f226541c7cb97ae121fe051c006e8d60bc6de529fbb89301288e37bd3017727",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "N82HhUgsV6I",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:15.471716+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Om03_CPNF9Q.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5a5f0c51fd6ca36bc8aae8177ba573c2bade1c569831ca4ccc05a318d2a31a6e",
+      "sourceSha256": "47d9e76dc845bb493c6324da8af1765ec46668ee504397d50484983faf7bf812",
+      "resultSha256": "47d9e76dc845bb493c6324da8af1765ec46668ee504397d50484983faf7bf812",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "Om03_CPNF9Q",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:50.104954+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/PsNzvEiW5nc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "27f50b7dc3062aec737ff355c671900989092aa9afdcb8a0a835cd5791d0ca41",
+      "sourceSha256": "0bae79aac9559ecdc2d6cc632d62ddbfe9925aa6e5412933131267f3080152f0",
+      "resultSha256": "b61a66f1fbcc4d2aaffb16f9672e420db36e10719395231bea43daa182af369c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "PsNzvEiW5nc",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:26.498635+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/QTmPGMaNOxI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5f92f591adc624ccb4f137535b1cf098957303c6fae1a818dc8df0684e4ec3e4",
+      "sourceSha256": "4b52a28699b2ad4e2ef9933b62a43b2f905586d1448209c06b03bb7cada14626",
+      "resultSha256": "0306afe24d47442a3a50ec935ce4779622079458ac17ee2e0219c131e645551e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "QTmPGMaNOxI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:30.281105+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Qe5w3eSHhUE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3d1d8f421a597d3994b8b641935ddf53948cebeccc2d053d98a629c9b39e3e4c",
+      "sourceSha256": "586dbb7aacfe2bc43ab4b414bad6068c69a9790db999a67ee493183f629d11d0",
+      "resultSha256": "586dbb7aacfe2bc43ab4b414bad6068c69a9790db999a67ee493183f629d11d0",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "Qe5w3eSHhUE",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:38.636063+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/RPPNx7ApOug.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "abcc1be5d5ff851cc0cb2969d1c23d94b2618bfd87e65102043c053486cbd6a1",
+      "sourceSha256": "a2bc4d9c4063fe761432a80f047e8d2f042c43fbaabfaee55cea70bbff401951",
+      "resultSha256": "b57ec1f9b558a36ba856dc51999c23518d512f48fe4faf529189233a401d99fd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "RPPNx7ApOug",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:55.330914+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/RiQrl1R2EFE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "74e7b57028bf21be056f1974c38d012a1278c8f1f8b9e9f50bd6fbcb7e45b197",
+      "sourceSha256": "a5e03504f5b6c79212d0afba111b346a87f50469871527e42792f9289d275ed7",
+      "resultSha256": "8fdf0dc3be5b63b559ee3ba16a3a8410e04be5cd46f6317e3c931530fd8745e8",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "RiQrl1R2EFE",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:48.428467+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/RrUpuJXPX7k.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "7f73b499be26a5cb8fc90c7574fcfae89cfa582bcdc89b4ea54f803d4e5eac08",
+      "sourceSha256": "8591656657d252838eede52a13d921b88f1ded3351c392f11e326838cedbd795",
+      "resultSha256": "0bcfd32b3218bf75504775b7b0077d7f7a1c597fd9c856e21fc09379ef9343fc",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "RrUpuJXPX7k",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:24:02.316791+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/SSAkcsiJDak.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "47a53caa666b0a1b4b24e754f7f94b9915414f8982a3741d43a48db7cb24e37d",
+      "sourceSha256": "cbf201cdede28d473e33fabbfaad50199cb8d22ac95cf73e9067680a8c075edf",
+      "resultSha256": "a245c68691524478c365135eed3b445ad58ae9091e59285582e6adf8146cb6b2",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "SSAkcsiJDak",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:14.334751+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/SVtf7xT5J64.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5044aa8dea057dc72c341a5ece1b7ed5f93ca2494384512c15381aadb5062227",
+      "sourceSha256": "a3d96923aa0e50089d9562bb887412e97b13892b0e8309499de313aec4787c19",
+      "resultSha256": "3470499568266a9127e894266e2dda47ac57785376397983319d06fa623c89b8",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "SVtf7xT5J64",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:41.898066+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/SbjywgoDGF4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "108e944176cbc17da59d1d8a33a34fcd21a881ed0a8ab9b171888e87a0f898dc",
+      "sourceSha256": "308c1391a3411f64cf5a4287ca9b992c0b2dbed86c6cda5c03dcccdf5f37d7bd",
+      "resultSha256": "308c1391a3411f64cf5a4287ca9b992c0b2dbed86c6cda5c03dcccdf5f37d7bd",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "SbjywgoDGF4",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:20:04.272446+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Tiw7_yiBiX8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5f67c77bd3cbc493d693e1b3660aed7f075d11ff7d85bf728a654d442dfeee6c",
+      "sourceSha256": "1eade678f8e9a930df9818bc0895ab921bce589f8d956a24417885c737fd8747",
+      "resultSha256": "bf760ceb67b13537095cccd18439fc640673f69b0353c744d0418c954a1e3a06",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Tiw7_yiBiX8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:15.470838+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Ufm1dMLahZs.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "9ae635ba185e4a51a7aaede115255817b3c472970ae877f13b8b6a0b4e946f96",
+      "sourceSha256": "708aa6e5f081366cdce641ffba93f0ea5648d44b397abdf67f197b70db0a6c37",
+      "resultSha256": "a462453c96641a6bf8e3d5d0de5603ab1d41deb812c3b5c5ca9b55166625ce4a",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Ufm1dMLahZs",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:42.479738+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/UpeQmYJCpMQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "65918aca7c91232304989a42e63b90eeb629add0e4f7ed37158f19fc75822a37",
+      "sourceSha256": "30f4d03116ad4038b10bbc600fcb23aa1ba9593d863cbf95e0435e7a536379d2",
+      "resultSha256": "30f4d03116ad4038b10bbc600fcb23aa1ba9593d863cbf95e0435e7a536379d2",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "UpeQmYJCpMQ",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:45.638133+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/UuCiN7QSDbQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "ef1431e80140fe683c37205e42bceaf664484a438b5fed0b6ca02c893c548600",
+      "sourceSha256": "8a23ba31f87936cf20da39e750f218dcbf33d6b460610a012cb2429b16208414",
+      "resultSha256": "add7dba4e197e666c237a62ce30c0ce3aa48ddf5c60a3ceaadcc4c9f6afa1871",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "UuCiN7QSDbQ",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:17.790594+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/VAkPFJY1etA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b07c2064092fbecffb3adc6aaa383142227004df415831961b95f75402bc9d27",
+      "sourceSha256": "5814acba8e887a080f424fcae0edee388f53df15ffc7b2a735658a0616e4ea99",
+      "resultSha256": "43917c20ee29cacd4e7eb414101a0bd669d8ef419e24cb9058d555ab20ecf464",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "VAkPFJY1etA",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:02.316542+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/VhtW-DbY0j8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d071bc3c61d0e5ffc74ce926791caa8dd98efe86202d593a01cb1226b4d69c40",
+      "sourceSha256": "012a0537186f496179aa4440cb58275952306eb436236783dc0e599f950b9801",
+      "resultSha256": "5b6fb361a889457955110683d340e43d3d6ccb489f47358e180f1399226b9be9",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "VhtW-DbY0j8",
+      "recollectId": 6,
+      "collectedAt": "2026-08-18T00:19:31.893361+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/VwdegbFqNaI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e8f68e9eb845d2e6a76f3792871443df7147e5b3e8f88abc8dd2a5ec49290896",
+      "sourceSha256": "5a68a9cea6163d02e81d0a339e40c17206fd2fcc6227f499dcda3fd1783fe5d1",
+      "resultSha256": "d60a0accbc7b915f725fa6121576a78691fd4d5514dfd7df7c265907529a53d0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "VwdegbFqNaI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:40.040428+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/W1Q42bEDfEU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "ce2c45376fae13576b3369f4d5100273a03c1565fd2b7664a15eae30182f5afe",
+      "sourceSha256": "8fe273b75ba646ee2e4bbfb997d21c23d7f3f110770f13d67e7fb78ff07ff59f",
+      "resultSha256": "b60e264afcfebf67081af1fdb8420798e60006885bbdc4f1120e1e8e6ee5dc76",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "W1Q42bEDfEU",
+      "recollectId": 18,
+      "collectedAt": "2026-08-18T00:20:14.056540+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Xvf7fTt9MFA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8b199ad4ac2fb91ad7b5539de5826b227ffbcad55daeda7ac0b9979d156e633f",
+      "sourceSha256": "07ce4ad691499a7a34e988729079d235cfb6105790dd747467a8e5405794b34c",
+      "resultSha256": "511cdc0c44bd32deb80aa33ff4b0e4cfc775022becb2915514cdc5695df3bccb",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Xvf7fTt9MFA",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:44.999668+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/XySE2tuCoaQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "77d2089a22f12ff46f4d355f01a970ad53c1d9386cf5e3b034cdcdbfe2788ea7",
+      "sourceSha256": "01d2d25d5c74a0f0750b6c4ddff32b4ca011a15ceffc431788e0dae0e9bf8ae3",
+      "resultSha256": "afd972fcad7c69e365ffdd309ccaaad5e3467dfde5a4411b295a8e5b7f24f563",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "XySE2tuCoaQ",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:42.881648+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/YXiBcp0Fo4Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b353cf58f30eaffdb3861869d327c9a71e714ff3c3a7109e8dab1739524a763f",
+      "sourceSha256": "7b47672fd440304b685b743ebb9e898576d26a1c5b314486a0886b0b082aca1a",
+      "resultSha256": "f6b962a7f23d8e8a4e1b2ce6768ca9183f7d34532f3bffca32e453c193a87ada",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "YXiBcp0Fo4Y",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:20:54.151256+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Ybz9loB46ew.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "37cd5a2d096873adb21f0df7e5ef0a9dfbb8b412d773c25f4492e18573d95cb4",
+      "sourceSha256": "3380ba41ab869b52679eea4d11969eda466b2cec032dfd5f5e0321c09c3ea301",
+      "resultSha256": "baecd93fb04ae9dd4ea619db38ff292cdc4652f615c05cad0467ac9080d1d370",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Ybz9loB46ew",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:22:33.858382+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ZAxRMiIosV0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "6a927d4321e89554520594712e075b65520d843a5f0a86cf8e9f049c6a6c4a0a",
+      "sourceSha256": "60fea9561f36481fc67423b3fb73833504e4be61e6b798d7cfabfbfddf154e2f",
+      "resultSha256": "1eeddc2661a0667f058a5eb8bbf37372a83116db8e2e04e312ac6cd8cebf8d34",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ZAxRMiIosV0",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:20:58.727300+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ZNg4ydyfUqY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b7d0b7252fcf3373219adee3658af83bc135197b8bb606e17aee4ae82359c25f",
+      "sourceSha256": "7f3469b9cbca4dae10940f16c4bab9c79bc9b975bdd3ef37741903a02580e5f5",
+      "resultSha256": "a1f7f25e184493ade4990c006cffccb58c67459e5e3a11f802730d0d99ee7971",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ZNg4ydyfUqY",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:15.100535+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/a9TiXc5cpWc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5b701f3cbe65b3d8ecf2bc275003171e4ecdfc4b1bf0fd7863fa0b6339b92e90",
+      "sourceSha256": "c4c9683ffc940a25bc962e36499619059d2c5cc73309b7312f7ec4e513d4774c",
+      "resultSha256": "c02a9505f405b199aac9aaea24147d4fff6cfaf3c3d205b033f0548a43fd5282",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "a9TiXc5cpWc",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:54.293813+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/aOtNLZ05ypw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cce0fbfc9aca378767bb104ea2067cc2c6ae5a680a9b24414aa71105f1509aa9",
+      "sourceSha256": "b73dab11a958c2eb4d87e123cca85792a77a5d1b72b489ebb864d80d5b50cc55",
+      "resultSha256": "8c37bb6a53d3fbc6f057e0a13c6d1fe10387be815957edb6744d2fa56a4903d0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "aOtNLZ05ypw",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:50.620930+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/aeL16L0Fl5U.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cf48c51055a71efce5283960efede8a5685a309fdcf2f33fb5c6164992950440",
+      "sourceSha256": "a7661a29aef8b2031a803321d40de2dcb780e5233196f6890ebec28cb1624ad1",
+      "resultSha256": "2959144e816f39da70381d8ca3a5ab54e78d4753948fe1c7a0e57d03f444a15d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "aeL16L0Fl5U",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:45.001748+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/bmhPsEmz2Ss.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e6e1a2542195454f8037556ee2ea41b2301908e6c0892b98b13ad28d1dd04846",
+      "sourceSha256": "5dc4bd3fd116aa7b7d6cc20656e3bb48b64402bc27a4b6a27bff94711a62e88d",
+      "resultSha256": "7ac4e42945d7fe48aadd65f2a867a7cd05caa792188e84112c015a20c85100a0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "bmhPsEmz2Ss",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:19.454843+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/c6a7h6AXQ7M.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "79ffbe7f0dbc15b6998c1d0c3f4af0ae8ab050dfb63a2e3f17fd2896c700e42e",
+      "sourceSha256": "15bd21d47c1443f80de991fa5b177b650fd51684160283f84c6be2e0d4ca6c53",
+      "resultSha256": "964ccda87757b27767a340105da700a72b8599a72ce159183fc9a1546197d63b",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "c6a7h6AXQ7M",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:24.888676+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/cUb0w-1JLdk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d0ae3ef69986f7e631489f5d4957e8281aa0ee5d1d75b5ae4cbdf798cb04eb5a",
+      "sourceSha256": "3f1ef5cb3c781ee64cdffa5ea143b46bf51da6bcda3b3e71e76c367205b4f4da",
+      "resultSha256": "a576c12028497bd6912ac1228c00b990efc76224fdd4069c4b35473699c49a9d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "cUb0w-1JLdk",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:50.942495+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/cr4rGpM9HcQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "aa40ab5d634aaef27ed85b57a9716b27efb8fedede0e34c03a967c4e86e06377",
+      "sourceSha256": "e2ebfa3344b20c4b3c1fc37c138386246c362dac880e67820381856f7096c752",
+      "resultSha256": "d3de598bbf565e3a833e4e11911fbd70e1b7405948f168b883d060cc5cb38aeb",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "cr4rGpM9HcQ",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:20:59.846854+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/dBb9tq3xMT4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d909d13cefc7ef7bc25f14349478b1900d0ba31bc9812e3e051ae77d039b6bc1",
+      "sourceSha256": "8784a19d8f30a1d578599dea74eb643aa017faa59f28545f27348bcac7791a83",
+      "resultSha256": "ed114d22610ace74654e579f08a2bf43e21647fb17bd48dc95c837c4aaaa8da1",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "dBb9tq3xMT4",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:24:13.175905+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/dJONr8ZpwhM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cbde488765b609211227acd6fcab8b75e10f48ca32585eb51eff1809c8df6aea",
+      "sourceSha256": "5b1537f6405f816be5f122ceff152183600f110abcd0115253efe6d7eb4f3469",
+      "resultSha256": "fed12e2f33b1a34074f716a23300733dcfe4e3ec6b12fa7fb75847304907956d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "dJONr8ZpwhM",
+      "recollectId": 3,
+      "collectedAt": "2026-08-18T00:24:56.975298+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/dafYPuBJ5fE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "719d3d8a1dbfba147016fc12902c4329da41d5b6c910c0759674a7069a00bd58",
+      "sourceSha256": "c049def70279b67cabf9a6b7ad428f6008df1432458b7e1c1a55c4b8decee9ab",
+      "resultSha256": "8b3c832605542b355c01f015d0904f81980b8f1dd16be38b0cebfe60d7927550",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "dafYPuBJ5fE",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:29.899966+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/dbDeFwNox5A.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5ec8a028affaec96befd5da0a7e9aed8953c564b20f110924384ee659f8f009f",
+      "sourceSha256": "6204238e2ac02a26c4615ac880f2681519b8143645d00cc0b4b0977b6f35639f",
+      "resultSha256": "0d59cb9fc9cd2e632ac0eb220c5c569b953c856e01c27c20b6b126f13d3f728c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "dbDeFwNox5A",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:14.809046+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/e8IACC60ADc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "78e4a44e9e448e703b1adedee90b58a742fa084862a0bb86aa6cb181eef5382f",
+      "sourceSha256": "e6efb71cfcaddfe3cb051139b7feb7f3b5205961b6aea0c937ce428f8f2af38e",
+      "resultSha256": "5a7959d7bbfbcd75e0d67d1996b9f00bccbf11f0371da7879c00f19c995b7788",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "e8IACC60ADc",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:26.228399+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/eGVT1G_5HeA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c1d2fdd0c704e51cc73d41a50b586846402704a86b9266c7374d5a93c1385819",
+      "sourceSha256": "6c9bbd182877b7494819e1b0d39a68c77ac746ce5bae5d13aa1d8c7e8ac571ca",
+      "resultSha256": "f2723e7f0b0a127b24b1d4b355d185155c36ef6f8ee0bbb60f26fad2c2f2d3a0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "eGVT1G_5HeA",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:19:47.719439+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ezWrb7bK4vU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "825f23a5a2bc8a43cdab331464e60e2d8c641b411bb9e082da1335c4074c4c45",
+      "sourceSha256": "18a837b7416bdbf73007ef58df03b2bc69500b464ef938b62833395df91b9195",
+      "resultSha256": "fdfce037907bdb6cb726ede78c1e5b37d582d7d6d480401e2c6cc750aaea7efb",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ezWrb7bK4vU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:02.806336+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/gE6KJbIpj2k.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cff16e910a621d12742fbf3cede9c2cb5383191fe4c598b3d1816f4159c15dea",
+      "sourceSha256": "8fbeda4c628b479197fe6481a39069ddaa0dd88907c8904562922451d9441178",
+      "resultSha256": "cc7fde1c7d86baf116483899022f61da7d8c5dd19491dc340b7e5c6e85ad1659",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "gE6KJbIpj2k",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:20:35.421887+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/gHE7_aGHE8I.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a33fd87d3c331979e30cd1f09be7fee31cc885d5b36f9ee486461581a043b1e7",
+      "sourceSha256": "48a6cfed7cd4c2170d7222de47da627b640c2206f44dadde387ececa0bdff161",
+      "resultSha256": "ef8621b941e44fb4b99361315f334728ffe41eb2cf641f26c04d01db3364a19f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "gHE7_aGHE8I",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:22:59.162451+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/gKHd2I0KmgQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8879bc0768ff296a9dc9652d9132fe2cd7a0b1b1cf6d4b16d1618e10a6b5483d",
+      "sourceSha256": "d6862c17ffad007698503b6bcb25ee709a30805ce5b8ed3edcab5e2507abb712",
+      "resultSha256": "4d8756bfcef69751952cce161d05b69ade0253a792575c18eca383086e6e29b7",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "gKHd2I0KmgQ",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:23:37.156952+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/gldiNIUx6e4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "24073f495097469885b46198edac34d6c99993fea9a9cd56b368cb4ba01fa6d2",
+      "sourceSha256": "964d198c64250e793db7714f29fb7265c2c9373f0eec15af00236731f76c9330",
+      "resultSha256": "bb9d56caafcf2582f0c79e2f2484d2960a6e949d29c26d1963710a4879c2f255",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "gldiNIUx6e4",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:21:33.140379+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/h6Lf1PG3kT8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "71f07239c72edb6f350c8461fa9a1a57cc8572565ff622b7112ed2c196b537c3",
+      "sourceSha256": "e7e9b6a12b9030a5cd1aab1e938977fb9fe41badf627b3ab9d95cac3b0e3c35b",
+      "resultSha256": "e7e9b6a12b9030a5cd1aab1e938977fb9fe41badf627b3ab9d95cac3b0e3c35b",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "h6Lf1PG3kT8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:56.685168+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/hGNe_5lp-xI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "bce56124f200b5d43e584b2adb0bd6a1c9b01d6fee411d68fd2fbe09f98c5277",
+      "sourceSha256": "87e5671688e0e00b560431bd797ed06bcc6c59063040423d74f9debae38a170b",
+      "resultSha256": "fcd2dbfc490433b3a4d512dcbb958a2cf39741bdb068b87175b08fbf5c8475f6",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "hGNe_5lp-xI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:00.139168+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/hbfFuvNyvp8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "011be8c6dc81e713e24ef1d882a34a7416897e231056df91136c668e12055aab",
+      "sourceSha256": "d62c5c2ae7cd35178f82918c4d5b0344ce94f41c3a326d5d1d7b588ca31ceed5",
+      "resultSha256": "4bc14db7e7fde060c45403960c2911a713c37df4474dc8837771307d064ba00f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "hbfFuvNyvp8",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:21:34.360438+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/i36szK00iEQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "4da9ec7396d17fc289abb1e2cab7797180ff250d74a8f4870eb92a327c6e26bf",
+      "sourceSha256": "227f000741db23693579676f56a7a7894cafad83dd02bb889712b166397119f8",
+      "resultSha256": "da5fa55db0b0bb31e9b21ea80ff79aa54d0672ed8a3970b60a017e3d122a189e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "i36szK00iEQ",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:00.661060+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/iFUD5LHQbqw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8135b189131f99dab7fb0553aa7079a3e583d7a4a95600b6a85768179bf81861",
+      "sourceSha256": "f574c8b74ccbfdb712dda6480bf0fd427d91f5598fdecd635af93156929329af",
+      "resultSha256": "33a90b8393853e3726c59e02cc75cd42184192316207807d6d0b5a442e8d3b4f",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "iFUD5LHQbqw",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:58.041854+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/iHLbt58PEPo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "4a593de1653ecab7639bd9c1a4aece8985b9be2f16a459b9a3d7757e8b4cba6a",
+      "sourceSha256": "03c9ab963aef53d6080327c918db932ccaa6ca15a310d843058c365fd5028560",
+      "resultSha256": "159af576e5a667b698e5ec0bcb5a57b21acb9c6a8289704e514ebcdc00fcf14d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "iHLbt58PEPo",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:52.651282+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/iHe1JvsRGls.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "0571ddc77dc53683e99fb537d8f2af359d213ca8d6824e091e94fb92446928fc",
+      "sourceSha256": "62b96adb276a162927558f35156e5df0d974b7265a8ac2df2366a9863cb03533",
+      "resultSha256": "6470ed81ae37de611d0ce1cf9aed03131f08fad25706cf43f6cacbdd0606f79a",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "iHe1JvsRGls",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:56.556313+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/iUR-yFWu3fU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "cea422fec2a76d8506334bde692f367eb325813ae2ee242f012d622ef9c465af",
+      "sourceSha256": "be356318d43a800db30730970679a962170ffb0831c58c49af0113533411038b",
+      "resultSha256": "be356318d43a800db30730970679a962170ffb0831c58c49af0113533411038b",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "iUR-yFWu3fU",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:19:33.537043+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ixi_hfZlEWE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "529df26ff267db7c7b6093cb4b1d1bb9116f6346adc4177eef027fcd9cdeb04c",
+      "sourceSha256": "99a24e7d7a594b97fed74d090c31cb89ec854a0798edaf678a6c6800a727a3b5",
+      "resultSha256": "c95c9daf850dd47c169418c7791629e10bc5a5cc07891a2356615bac6eeb27b4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ixi_hfZlEWE",
+      "recollectId": 19,
+      "collectedAt": "2026-08-18T00:20:01.417216+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/j3k6vNtyARs.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a6b5860e08267663ec75461b5ca1cf37655806b76210de3297675e6d07718f1e",
+      "sourceSha256": "bd8095dc9e1e7db1d319e70ada8b4941d8bbb3951066293cb9c96c28f6d2578e",
+      "resultSha256": "e37bfed10b8c904393051c0fd252a2153175151bfaf25eb1b9aec9e9f2780f3c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "j3k6vNtyARs",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:10.058452+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/kf1zff2xJuA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "94dbfc2522c1f3af57ec09ced046182a81094b03e910e4dc8718def9429fbdd6",
+      "sourceSha256": "74cf62a4be47567e8aebf1e2f7dd276e485a9c4a70b69860a2845fb3ece37a68",
+      "resultSha256": "4db01a0238278eff4aa7304d35f8838d9a3c8bd6617a335108f277b06e1b1f7e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "kf1zff2xJuA",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:40.600418+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/kyCVDemYa7U.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "41d85e5d6f8ffb863ae5e1d8feb598d9803fb64a7759c0e325f320470e53dfe3",
+      "sourceSha256": "9c2e48b6d84466d2db72b6e9729b1db19715ffa0b3c4e453b25b75b316fa0dc8",
+      "resultSha256": "cf1b98c42ea7f084a02aba691bfd19ee37f97d0733b903a3b301b66edb3a1a53",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "kyCVDemYa7U",
+      "recollectId": 21,
+      "collectedAt": "2026-08-18T00:20:12.112165+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/l8-RIG3yEb8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "f028dc244b48f91160528dd4947b8293fad82ffaefcd3520591744a6eff26512",
+      "sourceSha256": "b81b688b5b67adffa47ded49519c72b6e1f93e2e3c6a53bb29223d9c45b4e6b8",
+      "resultSha256": "1896e29bcbc37540bc7052e8aad7326b05a557634e78c6f2ac0bf09f839c578e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "l8-RIG3yEb8",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:20:57.031033+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/m_NAMq7X3fI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "2bd8a67cae43529b0f8b961ca49b2a5e1c5bb21600f548da353aec9aab6bdac0",
+      "sourceSha256": "8ce838f3d91574109d431c19008c1318ffdf7be06f75b4e66beadafdce502e0a",
+      "resultSha256": "8ce838f3d91574109d431c19008c1318ffdf7be06f75b4e66beadafdce502e0a",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "m_NAMq7X3fI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:49.608859+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/mtGRwDtU35E.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e6cbb808565bd82661df1ec24c491357bbda9c68d86c6f23c68da884ba551f50",
+      "sourceSha256": "d32903bc072444e738ed9fde6ff153f074efe3b7ac2414e630c9f349823de9ed",
+      "resultSha256": "0e5ec28b7b2de1f9dba5347dd3a0f3ee0636f72d440c02d92b8a1da9255da30d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "mtGRwDtU35E",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:22:34.908671+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/nAAuuWU4Ql0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "15ab076a38ca780bf4f084cd2727c3b856027841847d12e4596710a7a1d2eae7",
+      "sourceSha256": "8ffa1dcf6c44cd7cf7c96955623882db5717d3c09f3e29a5704616248df2a8c9",
+      "resultSha256": "ee8b03d026b8d01aad2e4ff6568f5b9105178a422eec5b3113d6520be5ebc370",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "nAAuuWU4Ql0",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:20:54.523384+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ndSTgDyMbVM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "73f307152f1d12bbb5055ee4a257c9f03eceec123aa0109f833b77b5df9d35c6",
+      "sourceSha256": "7c6e7ec58dcd78c035aed8a67100f52f93946f32294b775c49e0177be4171b2b",
+      "resultSha256": "7c6e7ec58dcd78c035aed8a67100f52f93946f32294b775c49e0177be4171b2b",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "ndSTgDyMbVM",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:29.428062+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/oKIenUI_Qdw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "0a03cc939397e1915d42d213a904ff02d2e3425c231a5e6f01fb14e7360773e9",
+      "sourceSha256": "c04dc40a33cb0f0a99830595085e9eceb8605eb128b2c47de14669107134c979",
+      "resultSha256": "b8f105e2a83231e514fe11accd45f6bbbe82df263a7b7bd661d986b4b27cc403",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "oKIenUI_Qdw",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:21:55.029609+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/p8ydLqn8pR4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "ac9bd9724478a3e385d9c071a23512d9b2e1ed78775232743c117745e9e684c4",
+      "sourceSha256": "ed491eb9328e66aa1787d3ee313117a6c3c3b9ab7f9e23fbcdd8c29882798616",
+      "resultSha256": "3c068a343b32ae208ceaf6e831386fda9c611d6d9e6c2320205c804c7b90a321",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "p8ydLqn8pR4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:53.639927+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/pZtl70DR8Cs.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "13bf682eb544c916a15a1d18d52533940f2786bcd8abe1430a11f48d31ed7ef8",
+      "sourceSha256": "2662a1c70eb151cccd8befc58720687488953ebc887802fe3e7415e4d3fe4802",
+      "resultSha256": "18eb2781cfec9da907e067e9f99a12d0cbec4d98e4ef4e5bac8ecba0f3c1456e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "pZtl70DR8Cs",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:58.778067+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/pxgZvKkngFQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "47b9b91d553480e50f4354be12425dcca5c148e5dc03df5d37d19f88caa1a521",
+      "sourceSha256": "1f663fd694467517e7cb9b3e9ae0f7abf00fa300f4fa70c11321936ad67e8dae",
+      "resultSha256": "346b9ff8c0de6529524e541df858def8141e6c630d6eecb14bd4bf0829a86e1c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "pxgZvKkngFQ",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:37.157324+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/qUljlf9ym0g.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "6bfd02d648b91d5cfb160fc486264de70bc846d6e54ddba272c0ee711d5cdbb1",
+      "sourceSha256": "c3951f2556834b8c3ea2569f5919c47384edf43db383b02546c9df354fa5d132",
+      "resultSha256": "33b0d72e197890daccccd798ba4f1c2e3e7d3950a4ba6bf70b664a800eca6767",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "qUljlf9ym0g",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:20:53.252725+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/qYKCtBTpPNc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "32e55e070f46dd5fda4657d6663d27093d34bb2b70cea62e0c80ad3532c3ed4f",
+      "sourceSha256": "c6d929e072bf8f70392929c6fc588c268ad65b80c84f21249e156a356b43c556",
+      "resultSha256": "5011347cd6d03f55d6af5d4f23d17e95e27d2f28d8114df98002d564f17dcf0d",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "qYKCtBTpPNc",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:31.310311+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/r-fV0eHaV_4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a80ce95d94474d6eb99f6d5693bfa414461b041e7daec1f46f670b9a9ebde420",
+      "sourceSha256": "47a001c23252d5e9ad68968a648cb9a661c342f18a7a80e150fa6d423da2dc51",
+      "resultSha256": "ec17e2ccf35d5ae78b63744e4cf83d08271fae48c3340ffdc96e918d1665ffe3",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "r-fV0eHaV_4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:03.442580+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/r23NV582e8Q.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "dee8949ff90d59de5fcb82712650b3f0e66e95bf924570c7693a100f4100e01f",
+      "sourceSha256": "cfffa360ae846c627c0b1ab42cd2a68399a95841fc65c5f94178b7c6ad806f09",
+      "resultSha256": "c55fe140ebadec47329894058cb15a15c93a49225d578ffe3aa38c7c844703cd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "r23NV582e8Q",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:17.112071+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/rOVZ4kDCWmw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "d2ff0bc3d293f1984b9039094e018b21b777f64328aeabcb515892c3c869b9ae",
+      "sourceSha256": "6f0bb1391e8e299e8f306d6dabf4641f298847eb68eccbe00d67f169533ebc3d",
+      "resultSha256": "e664afc8f15cf53e60ced19652517986cc13a77207fce36a2cf819d8d8a23737",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "rOVZ4kDCWmw",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:28.509033+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/riRXjujqrZs.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "bd184f0aae389b70ba79538adfec774ad503d30fec916b60d99a95764e501e9b",
+      "sourceSha256": "70afa05744a74fd77ffa224a76dbdc0fdb5cc98cc98d175b783342e21b86ba59",
+      "resultSha256": "58b9c1c011b5a24d8822f056716cc360b3609804e8cfaf77fbe903927f0b57a8",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "riRXjujqrZs",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:57.691697+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/seDyRioy4P0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "bccd887d832b8e987d3a5ddfce5ec4a7c76c742d777e41bc6486f1d4b39a212a",
+      "sourceSha256": "b2076fd34e7fc9092528424b4118eaec07074e708854bc341d7832fdc879d56d",
+      "resultSha256": "7ea8952d49c6b63877852f321e3b974dee7682b44062872020f7310fd932b0d2",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "seDyRioy4P0",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:35.209809+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tFFtj7P3_fk.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "609280548950f1309bcf0624c3fd847d961373c74dcf60c091ba9c5281d83d15",
+      "sourceSha256": "15832235a422e6509b67bbc68acd2aa9df463ee32743838befd51bda4e0656ed",
+      "resultSha256": "bc2f8e393115aa00f96edfc522e5f71bfc042ae24d4244ac2c0a1c7376810976",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "tFFtj7P3_fk",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:24:03.195910+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tHHPFZkwF4g.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "4e3c2e565d43c4a881232016c4c194e1a33f853dc486e01e21ddfd4045cd5614",
+      "sourceSha256": "df817cfaa2dd00459031c8f9dc127dfa862aaeaa72f62fea73777b3619b22feb",
+      "resultSha256": "df817cfaa2dd00459031c8f9dc127dfa862aaeaa72f62fea73777b3619b22feb",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "tHHPFZkwF4g",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:19:57.466070+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tKrnOGzewVI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "683ac301a68c0c3072300099ab00998039fb243b667ab35d96913f6c4c446a06",
+      "sourceSha256": "62904efbbe740f70e05d182ccc541178b79524c876c40da033b5741b3ba70110",
+      "resultSha256": "c842f6f64851b2bfbf125695d9f225e483c7c40719a5f1abd40474ec81e8dd39",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "tKrnOGzewVI",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:08.876059+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tgsGUDC-Gd8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "70f5d3353ec7d51aae8721ab5db113ef0ae10ebddd801bafd020c4d63b4f59a0",
+      "sourceSha256": "53484bf1549a9b4a79815a8dea5f6faf4c7b7edfa7506ea12d6ddc442f3cc0b4",
+      "resultSha256": "b1fa98532d3cb7c3ff190bf1fc809d6f1104e357f23e6d5b789a391c815f5d12",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "tgsGUDC-Gd8",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:15.313522+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tlhanCh6kKU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "845d4fc227b4b2f99ba0e18c04bebf48a07b52eb5e8b7ffa25c7952c8affde2d",
+      "sourceSha256": "f40c86b251a4ef04225022578f1e350af245364d51fe5a7209b7a7f09a7cb6ab",
+      "resultSha256": "89219d66bcff5275190812ab8a74aa4264ba8ba15f197d9f1e6d394a139720f2",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "tlhanCh6kKU",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:48.932507+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/tw-DkeT-BT8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "9b2d5f50480f078f6fa36bdd1ce6a0742d666fb0ebd007c9bd4fd8e651b7277e",
+      "sourceSha256": "7faae606fba278be5edb7e0347f747ab21406aa3758e3ccdefe4d3329f8bb7db",
+      "resultSha256": "7ff0e32b89fa502eb7bbc2a9ce494cbbddc3c5f613b70af5f0b4b0fe2c61da14",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "tw-DkeT-BT8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:20:29.613049+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/twNrW673xWM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8549d8328c44223a274b964524d89e8678682f7b546f07002077d48ccad050ab",
+      "sourceSha256": "6a48d64327e4f480004bea764c895ca6d2e63848cfdd9c313a5c03f27f85f296",
+      "resultSha256": "3e811eccde63860e10c02b5db65cf8ceed141b50aae9e1953db0e378ab9e5688",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "twNrW673xWM",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:23:57.940583+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/u-2h75PBQP4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "20b0c03d4760d69e378c86b2c6a351d485ba537739fba58fa030186012b3a607",
+      "sourceSha256": "eb23f44a96368f15c6dacd5b7eb4e6e59da486c6b00a3adaf1f15b4292e577bb",
+      "resultSha256": "eb23f44a96368f15c6dacd5b7eb4e6e59da486c6b00a3adaf1f15b4292e577bb",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "u-2h75PBQP4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:24:26.128096+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/uy7x69pauZE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "9e77cc61dc4ce79982df62d49d0dc26bc8b46b273360b96baa1630a19adc49fe",
+      "sourceSha256": "7e00b8153a85358289fe648cf7dfcc5167fd2ee732930ae256a7c62ee4a960da",
+      "resultSha256": "2d940230a7c4f20650a76f7a10314207bbf9a8cf6eda7b31313fe5cf2c785200",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "uy7x69pauZE",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:03.196468+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/vEdJ0N7iI2I.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "59f8134386c73598e4c3939b64a904b7e920590e742a5cd4a3bce6cdf196d425",
+      "sourceSha256": "1334731cddf1052aae178c1b2292a1cb386b0c99a3234ac0f6f274cbc5222137",
+      "resultSha256": "a7d53927ccbbb1bbe8718f81c6d7d2e5646001f769de2fae7488e3491c3c5a3c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "vEdJ0N7iI2I",
+      "recollectId": 1,
+      "collectedAt": "2026-08-18T00:24:56.976370+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/vZnL1qrf2zs.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5c9d8ed978891c89ac33e09507adf092d861241d18d394f364cd60b9fc0ce74d",
+      "sourceSha256": "ed6f38cd1a07fa21ab94a1e8671cf9d5942fb789794ab288213f12a0861d430d",
+      "resultSha256": "659c21049ccafcbe11d138fb269cc2793f74c628bd7b861ce482685e5021b39e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "vZnL1qrf2zs",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:20:28.593233+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/vpxPTnUK1SY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "84be1ddb032300042883858a0f4b5770a6d3466815e4fa506d7bccd6f162ea36",
+      "sourceSha256": "cb9d24198610634908c19bd3315348ed05583264030b469b223909f7708e3517",
+      "resultSha256": "426950ae189d1720a17f8de02cffc2b685b26acdff8d6ad4adb01f4d4d502acd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "vpxPTnUK1SY",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:22:42.758543+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/wFQQP2WpDys.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5d612014ed009c3c0ff2cb7c551a70329d33daa6d18135576b42d32772d45a5c",
+      "sourceSha256": "d3882d5b6f7d8c4c5b8a7d671c62d7d12eeb767d81fca1b9c08ded2ec20b609a",
+      "resultSha256": "d3882d5b6f7d8c4c5b8a7d671c62d7d12eeb767d81fca1b9c08ded2ec20b609a",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "wFQQP2WpDys",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:21:42.480087+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/wuFvLCQPMUY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "c5957c2bf8944abfbfab9bbb6475cfcaa3d69537441b9084dc3b298af9104c03",
+      "sourceSha256": "2e58429c923d9ae383db274d4897a486cbbb3adce6bb03121b2a4d74b1125371",
+      "resultSha256": "bc0f094721cbaeac5934ea25a9f578d8302f5a281de6bee53fcac9ea53b76a42",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "wuFvLCQPMUY",
+      "recollectId": 2,
+      "collectedAt": "2026-08-18T00:19:31.893899+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/xOIdJ4N5CTw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "827633cc82b068f1e54a9eb74ba9df39fc6d2c16be081b661765d464eb5dfb83",
+      "sourceSha256": "b844832da224d71a2b68872fdbdabac453c019ccfdaf986d2e3bed061d6be9d9",
+      "resultSha256": "fd2efb4d0689caf8daad1ca57a3a0cba349b255b32bcbb959715d8654820df37",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "xOIdJ4N5CTw",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:57.691118+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/xcBRA39XB5s.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a88a9188a82fcd62a7294a62a72a7ef661c64813f29c0e0a1988b2e4ca9b886f",
+      "sourceSha256": "cf68ccb4473dc504f1eafea027bba36844a2b5437aa6de652068c587c941cecc",
+      "resultSha256": "1c668a27bea38c9aade64b0257f9198f778f177535f050efc33dac8e20ab0682",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "xcBRA39XB5s",
+      "recollectId": 12,
+      "collectedAt": "2026-08-18T00:21:26.030588+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/xg2PrsU0MZ0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3a3e01ea38c86d315abd0e16cd277fd95841c93dc3769c9ae9450f471e233a0b",
+      "sourceSha256": "2ddd62fc040b0e0d0962713b4ac53525daa77b7ba2d1c6d587e3dcd53867b48e",
+      "resultSha256": "2f09d257dd87b25e214a467b06afe75471e6eef24aa3c23341013c4036a1b3d8",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "xg2PrsU0MZ0",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:23:15.593246+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/xtyFyJfAnSY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "66b172234f8c6049dba73371c73caf051bcf40e1b2906ff09744f5691d8a0879",
+      "sourceSha256": "ff4791830a5f562e5a508473972ca86f2e220157910c2225ee70a575f2c1fb94",
+      "resultSha256": "bc05fc6e3efdf3128d5420d845ccdd972919132ec97639a0cdb3ffe12f1b40fa",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "xtyFyJfAnSY",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:21:14.131576+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/yJ4SKcvYTe4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "698e6ba870d717a591bdc137d7d9b11c69c02458a8cec02adc6794e3076b1c63",
+      "sourceSha256": "cf47af23f41da33e2940250a4cf7b1520d4724364b2e463d4faaafc7aaf3c791",
+      "resultSha256": "d621ac053fe786dd7a12d571f253ff9c2504cc9ef01feabff62e9365e763922e",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "yJ4SKcvYTe4",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:27.586922+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ycDPxQMqI8A.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "804e8dfa2c520cbeeecd0344c53609e5da66925ae10f14cbc4eea35037cfb96c",
+      "sourceSha256": "6b0eba055d892c0e8191e1cc937d2e9506a75faa70d2d4523879fc07e8da76e1",
+      "resultSha256": "65781aca368967bb4e229b36eba80084c074168638dfbcbe48c7c57e911c9c02",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ycDPxQMqI8A",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:57.422367+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/yiWPCX7Qwug.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "8f8d00b0dfa6be9f2ac6a9abf3cf3647d0a9c2afbb918ed9de4fa45630faf307",
+      "sourceSha256": "effe0e959d18b99ebef436b2bb033482bc67d9cee6dfaebbfb85794d0e3b365f",
+      "resultSha256": "84181b6c5cceb35d550084ef9477b059aaf4aa31dd5564562281c8b0fe727476",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "yiWPCX7Qwug",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:21:51.573272+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/ytgDdVzUUy8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "0213fa38ca14eac97b2b34aebb2ec28280e7f10464a655da45044f833e5bc436",
+      "sourceSha256": "997f99f01e1a3de359e8f988472244f527a75d7aa5b83e1b75805422918200d8",
+      "resultSha256": "28a44b07d4af9280cfcebe05b7ec22441197cdc8ec4d0f7ae2b1ab41585185d7",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "ytgDdVzUUy8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:32.687248+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/yz-mR2f4NfU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "b663d22047101c838ff7cf08b250940b0cc8ad990d8b48f430691c561f9e374a",
+      "sourceSha256": "b98242fdcbb2b209fa3a88d8bf73a52005cd9a8f1d1f77470ad1909b9ac26e6c",
+      "resultSha256": "9a2c8095b4870779f8d38dcacf1b9dbb5a78a5b556af9eac104dfd6d2eb92c80",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "yz-mR2f4NfU",
+      "recollectId": 13,
+      "collectedAt": "2026-08-18T00:24:12.265630+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/zFFdNu6cUB4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "5971656c370f6c53916048d28495751ef623f5c214407d89bfac9f9f83caf094",
+      "sourceSha256": "9261efcdc9c51f3bb34897e7be5b4c2104e74c95331e0f164f9a844cc9a1d89a",
+      "resultSha256": "d8e5fbe6e03f9ed7cb35af9e9c46ea4d8e63d050c7e8222d0a70e9f2dfc509b9",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "zFFdNu6cUB4",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:21:46.280957+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/zHluIc1ix-4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "51b8a5d73ed992862889e3655abc097f1a7196bc986860b34fe59e0d4da96418",
+      "sourceSha256": "91684095da3bbf156bee294f4c5f7f8c6b7ae33105250a03d523bfd63d400d65",
+      "resultSha256": "91684095da3bbf156bee294f4c5f7f8c6b7ae33105250a03d523bfd63d400d65",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "zHluIc1ix-4",
+      "recollectId": 16,
+      "collectedAt": "2026-08-18T00:24:53.384997+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/zLXawaUk8R4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "a80edb14e96a3866ab6c0c0068b642138f5ee40beff6629f6ae618202aafee7f",
+      "sourceSha256": "aec2763a01f2bde1ffac97bb245b49e5714cf9b776fd7c66a788d2b5e56679a0",
+      "resultSha256": "aec2763a01f2bde1ffac97bb245b49e5714cf9b776fd7c66a788d2b5e56679a0",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "zLXawaUk8R4",
+      "recollectId": 15,
+      "collectedAt": "2026-08-18T00:24:21.257302+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/zMmOvMdfvS0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "27a19ed602022899b44436182be62f459ce300b7f71f8edf186f60d2bd3b5b46",
+      "sourceSha256": "64bc0a5c8032143ea1cbf12b0137255b3054ddd2b6b7c001cf1c17ee295e74e3",
+      "resultSha256": "47201182811aa3a5878783001aea91c1116951a601dae6eae0bf8e87a94b45de",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "zMmOvMdfvS0",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:53.077293+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/zwsgaOHP-v8.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "3bfe9b91aef0b19baeca400858e738ffcf63cfc233c9f12761104cf7f1cb4361",
+      "sourceSha256": "84428b36115cc18de6e5574d037ee6b25123f6ce053dccd05a67bfebc011abcc",
+      "resultSha256": "a00568a92b7a80db32e4a74b0c9dcde3798aecfb5f1dc6c385d9570934ba2f5a",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "zwsgaOHP-v8",
+      "recollectId": 14,
+      "collectedAt": "2026-08-18T00:23:10.027847+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/urls.txt",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e6651f6df293a2c9b252d53c0ba58e79513bc9d23207ed7d9edec2a5c886dff4",
+      "sourceSha256": "27db4db4ab47eae7006bf6e05129d921256766eeec23a294321e5c529f0f6891",
+      "resultSha256": "27db4db4ab47eae7006bf6e05129d921256766eeec23a294321e5c529f0f6891",
+      "reasonCode": "append_absent_video_ids",
+      "addedRecordCount": 26,
+      "addedStableIds": [
+        "DxQ7Lhi6dHE",
+        "hxzpt-Itf_Q",
+        "hTCv2OkDNSE",
+        "TTIuTAaMPaY",
+        "JLPZ8NXLk2o",
+        "kwYy3vzJaeE",
+        "iCG5X1FF7Ek",
+        "jkMs-U187T0",
+        "KiWU8i-lwlU",
+        "uG5qD8ayEYg",
+        "jclR0QeDr54",
+        "Vo0o025xUKE",
+        "W8zkwvIrWoY",
+        "uc8P7dz-tFg",
+        "5dx66EjCG4I",
+        "N5bkiunc3uw",
+        "Hw2IzWvWDGM",
+        "G-4AtmmJ9BQ",
+        "5brnQKkvSr4",
+        "HxOwbR-CxwM",
+        "UmyzuxLkMqc",
+        "JPEWVoGyT6s",
+        "FMF0BGNbA-k",
+        "O2TPP2TUvJo",
+        "AxFqN2pg4DE",
+        "nB6QYKjrGyw"
+      ]
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/transforms.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "M",
+      "baseSha256": "e2f3ad5a3f26c1dcee031ba359976f019df6e728f79b774c7025464841be5f89",
+      "sourceSha256": "c5ca2497604b50ce155b4c2a1274a24a39c184e134041214430eb77faa3a9d4f",
+      "resultSha256": "2c69441ba1e3ce74f49ba756b6346ec3fee35e9efb54733fe4a3b1357698ca9f",
+      "reasonCode": "regenerated_with_current_transformer",
+      "addedRecordCount": 6,
+      "addedStableIds": [
+        "510fb134a284459d4a7997908e3f891334ba78bff3166d70f0a8caa6da187429",
+        "134d2566e32b6a39f1c788e8781e58a172507dd83fcf03a03aaac22ada63a934",
+        "0703b78aeff00177dc278f6baa10ac2cfd95f5828c725c0deb9572d8c9e172e6",
+        "fd133e68f15d726846eb8023b2eb459c6e0841259db85e88b7ad9b693081bd86",
+        "70ec62e3313ac167923a21127ddb1d6b3103b68fef2284f3d8961ad53fa03183",
+        "5857cb40fcd9f75541fdd7a4cc43434b0538d0fe9d714e6a04b483ef1a1ed664"
+      ],
+      "regeneratedDifferenceCount": 1,
+      "regeneratedDifferenceStableIds": [
+        "510fb134a284459d4a7997908e3f891334ba78bff3166d70f0a8caa6da187429"
+      ]
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/crawling/2gyc0Q7iUw4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "884d5559a1384ba6ad892c4779106cd7c581e8f62ee2f45030912efb3957dcc2",
+      "resultSha256": "884d5559a1384ba6ad892c4779106cd7c581e8f62ee2f45030912efb3957dcc2",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "2gyc0Q7iUw4",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/crawling/FmJ7NUQ5W6Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "df7556c07e244c83099de30a4780bb105b8ac843e748a619a9e88a6a165b1586",
+      "resultSha256": "df7556c07e244c83099de30a4780bb105b8ac843e748a619a9e88a6a165b1586",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "FmJ7NUQ5W6Y",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/crawling/IS6z1fyxCyI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "7652c9b115b692a8d52657b8507a25670869f4468ee90fc02b67bc1ed1c2653f",
+      "resultSha256": "7652c9b115b692a8d52657b8507a25670869f4468ee90fc02b67bc1ed1c2653f",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "IS6z1fyxCyI",
+      "recollectVersion": {
+        "meta": 2,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/crawling/KS_53b_YcvA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "a421db193dc3c611a11c9d8858b512d83e2ecc39b7b3fecd2e04b8ad0f58b2ed",
+      "resultSha256": "a421db193dc3c611a11c9d8858b512d83e2ecc39b7b3fecd2e04b8ad0f58b2ed",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "KS_53b_YcvA",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/5brnQKkvSr4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "85db4c112656f31faee2e5bd478af087beca6a1967bcc3baf4142c14fe778ed1",
+      "resultSha256": "cd1564ef23c1e151eb54f92e397b202e522eb6a20cd4a95f43e08bf59989fbcd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "5brnQKkvSr4",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:04.365386+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/5dx66EjCG4I.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "a48a81399cc0c47dec9d322530f09c0b3095385270483b455f61c499168e378b",
+      "resultSha256": "bcabb5b8ef0257cf99d9fda95c70d0acdffe6ea73567fbb86f8ed73d819688a4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "5dx66EjCG4I",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:01.965136+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/AxFqN2pg4DE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "f954439cd0239813c25c8ca054021bd05f747cfbc0be48feb6b0907124af1c8c",
+      "resultSha256": "09ca9a89582c471273148377b8d6cc63c962a89b0de3a0aad1adf7440915d6a0",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "AxFqN2pg4DE",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:06.419074+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/DxQ7Lhi6dHE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "8810c10e11ce1da25abbf331993ff142f500ef695613282242f19b5d4acf5b81",
+      "resultSha256": "e4ca6491f2ee9d4ceb42bbd77c4366ad99ad8be6b164b94ed9bf1db4b4daefb7",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "DxQ7Lhi6dHE",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:57.314761+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/FMF0BGNbA-k.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "f2d0e0582daa959eabd20a98e41c1e03339feb8691c3d6289ae84a80377bcbf5",
+      "resultSha256": "464c6babb6097a6942d8a93548559efb27d2dc1f286ef3ebd1bc71fac45dd5fd",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "FMF0BGNbA-k",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:05.704142+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/G-4AtmmJ9BQ.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "f008dd60c4f4672ff4ef08815585d832a7d0afd897e07d797fd2c52682d35b35",
+      "resultSha256": "f008dd60c4f4672ff4ef08815585d832a7d0afd897e07d797fd2c52682d35b35",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "G-4AtmmJ9BQ",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:04.024189+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Hw2IzWvWDGM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "3c35c4f92a8d87b44c6d8c7f4d5801aeff96c3790458ba94fe58ebc91069f177",
+      "resultSha256": "379cc13d172e07e8085a9cfeb965d297d994d2df529c96c88b64929022886ef5",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Hw2IzWvWDGM",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:03.686625+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/HxOwbR-CxwM.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "a24e256db0aded9faeb338dcfdaa73271c69fb60f70c740e7a993a0f18f08db3",
+      "resultSha256": "bf94e0cb85cb85281c675551f8e293da99293d411302b613772326554040ebc2",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "HxOwbR-CxwM",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:04.724701+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JLPZ8NXLk2o.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "959a7f19c3f3fa641bfc97a05f4db2334fa17ea57649181fb9152d9ce17d1004",
+      "resultSha256": "52f4d16eede92774ffef3cd22e6c08ade29c0252c8ce2e860d1d1b9a38280366",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "JLPZ8NXLk2o",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:58.525949+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/JPEWVoGyT6s.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "5385e643bf48508ff875cda740437a3f74d491477e12417ebbfe06d02f48865a",
+      "resultSha256": "5385e643bf48508ff875cda740437a3f74d491477e12417ebbfe06d02f48865a",
+      "reasonCode": "append_newer_recollect_record",
+      "stableId": "JPEWVoGyT6s",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:05.374498+09:00"
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/KiWU8i-lwlU.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "c220a6f0141e315cc5638c8209d9c8f4d272b5ddedab61777ad592250d1aba41",
+      "resultSha256": "2ef644412ed9d4c9ec20b89364aefc446359f93d041e5a3d2ed3a01a23200130",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "KiWU8i-lwlU",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:59.799903+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/N5bkiunc3uw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "79af260031e027951640360026b9563266f8963eea058c4816c7771b153feda4",
+      "resultSha256": "ebee7af57fccba3838e5b086e10703948691de501aec5350b3cf7d73d501befe",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "N5bkiunc3uw",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:03.355274+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/O2TPP2TUvJo.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "e078aeff93e65c38ee26e42874bc50bdb4c0ac5d82e5226ba10f46a83f8d64d3",
+      "resultSha256": "cca0a6a1e76d6206271472d4007598cd007358f30ce18834dff453541a1d6279",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "O2TPP2TUvJo",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:06.024893+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/TTIuTAaMPaY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "da830ae9447e6f1d0c9fa9079287d405a3a0c205ecabd2a1c8150ae45df4f7eb",
+      "resultSha256": "a495f6f094842684e4dd8dc048ebf576e8c0a523111cd0c6a4461f6ef47c1057",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "TTIuTAaMPaY",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:58.247920+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/UmyzuxLkMqc.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "2a27fe806e989daad05d5024642e177579b6305f00c93b091f2e63720580b544",
+      "resultSha256": "86c8aadc83761e80724b238807da772d598de3e3a57413f8be162cf9479fee79",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "UmyzuxLkMqc",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:05.024243+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/Vo0o025xUKE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "cbef510fe6d798a464939f71334c472c406e7d238359a48dc5d4c2d53f19b3b3",
+      "resultSha256": "df3d402413408b8a264d26e053fc62b919c47ebdebaf87f10b7310136df802fc",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "Vo0o025xUKE",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:00.847412+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/W8zkwvIrWoY.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "47953b8509e673b7bc256d7a8995bc7e623b7e3544eca406290638d1aa1a6b40",
+      "resultSha256": "14a9cacf839d353f0037dd1cc0b0bc8cd20e80be11dc5f3029e29c19d9a744c3",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "W8zkwvIrWoY",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:01.194545+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/hTCv2OkDNSE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "1dd749fbf37053dc6fd5791cb40cf75c6d726e43fff76115689282bf75639118",
+      "resultSha256": "0851f02875f3b4917d8ec51c02214e5dcb710809093fc825a1ab19ea34434dd8",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "hTCv2OkDNSE",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:57.984407+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/hxzpt-Itf_Q.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "765387aefb56535bd9f9867f58fcb1d0fb648625068ec38f92919d0dafc27fc7",
+      "resultSha256": "266786fc6626ed56a8790559524b0c536db8dc6ce171c7692dd139f339a18fb4",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "hxzpt-Itf_Q",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:57.644666+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/iCG5X1FF7Ek.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "95b84b66797c9845b9b4bb478b9ff634e9a38db1eac2b52b10ba9400cbaff4da",
+      "resultSha256": "2dab54329b0ba8628eca70b760e451d239f4fbf9f9eb1a7101818b859487fc70",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "iCG5X1FF7Ek",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:59.079255+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/jclR0QeDr54.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "42a697ae2576b3dad201ba0fbe52fcaf747628c51b88dd5e89f904b80d150250",
+      "resultSha256": "92543bec61ffdb4f927338079960aa75fd94ed4a6430a98cf458582df900d5fc",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "jclR0QeDr54",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:00.480992+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/jkMs-U187T0.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "58a4cdffe9d71255f36723bc01ef4ffb6d43ca9e77d36e6f2869dcfe72a9cded",
+      "resultSha256": "ed894a9c440d04aaf400f8d754397c1d8569010c3d717120da84ba44bd782cc3",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "jkMs-U187T0",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:59.384710+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/kwYy3vzJaeE.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "ed0eee6a92243336a6bb89e69315a730ca44f6dd2f7d02cf637616d31c03d96c",
+      "resultSha256": "a654187334d3a02900b89c3870a9278738396cf49f1cc6c34a435f11c9d8117c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "kwYy3vzJaeE",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:24:58.844494+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/nB6QYKjrGyw.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "39702e3ae2e1715a5a50cf5c3bfe3e329dbed4fdb4a3242b00e85bc9ebd7f0d2",
+      "resultSha256": "84bfc448aad923bc5b653d869f21b553bed379145b6c4ec6b83d3d42ad19d1a1",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "nB6QYKjrGyw",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:06.754353+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/uG5qD8ayEYg.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "289e1c1dea3c43ab7a903cf876b1ab2647b09aa61bdf3dd978a1e8e884afc29b",
+      "resultSha256": "ae5eb000459ada3852acc51d09a4c0b7600e207760b53bd7edd494c28a03a623",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "uG5qD8ayEYg",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:00.124635+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-crawling/data/tzuyang/meta/uc8P7dz-tFg.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "361e6c6afdd4907360dafac360e392c64d9d8d85515658c2ec324368a3d2ddca",
+      "resultSha256": "3495fd80babfe1d7d067fd50aa81b4bf8a04966496797944b761ac16d30f5d9c",
+      "reasonCode": "append_sanitized_newer_recollect_record",
+      "stableId": "uc8P7dz-tFg",
+      "recollectId": 0,
+      "collectedAt": "2026-08-18T00:25:01.586332+09:00",
+      "privacyTransform": {
+        "kind": "email_pattern_redaction",
+        "scope": "new_record.description",
+        "replacement": "[contact redacted]",
+        "replacementCount": 1
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/errors/IS6z1fyxCyI.jsonl",
+      "disposition": "excluded",
+      "reasonCode": "transient_provider_error_superseded_by_valid_stage_output",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "56a91d9db7ec1675cbbca5ad6f0c2c277ab3495749ed645f9b57f337637909d9",
+      "resultSha256": null
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/errors/KS_53b_YcvA.jsonl",
+      "disposition": "excluded",
+      "reasonCode": "transient_provider_error_superseded_by_valid_stage_output",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "1d828f830bd3f7fe382e688f9a2e36f072e59fc7f87bd670c52d0cc60a50418e",
+      "resultSha256": null
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/laaj_results/2gyc0Q7iUw4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "47a2659c50ee6608752510aaaf9864ff85d50c5da8a118180ce2277bce1ddee7",
+      "resultSha256": "47a2659c50ee6608752510aaaf9864ff85d50c5da8a118180ce2277bce1ddee7",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "2gyc0Q7iUw4",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/notSelection/FmJ7NUQ5W6Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "6e960e68f0b1ce76056ed613951f27386b4ccf12d295f7d8b8b0596508fb346d",
+      "resultSha256": "6e960e68f0b1ce76056ed613951f27386b4ccf12d295f7d8b8b0596508fb346d",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "FmJ7NUQ5W6Y",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/2gyc0Q7iUw4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "185e869f13b86b3607d41a852108b8759281154431f231340544f08fc920659c",
+      "resultSha256": "185e869f13b86b3607d41a852108b8759281154431f231340544f08fc920659c",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "2gyc0Q7iUw4",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/IS6z1fyxCyI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "322707aa5def063b5af3b94bb26a6157c3cd03ba266a3d9a074e00350837e7e2",
+      "resultSha256": "322707aa5def063b5af3b94bb26a6157c3cd03ba266a3d9a074e00350837e7e2",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "IS6z1fyxCyI",
+      "recollectVersion": {
+        "meta": 2,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/rule_results/KS_53b_YcvA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "64903d27ce84312312af8ca4629335cd98dce524b029b4275c0825cd99d34274",
+      "resultSha256": "64903d27ce84312312af8ca4629335cd98dce524b029b4275c0825cd99d34274",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "KS_53b_YcvA",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/selection/2gyc0Q7iUw4.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "94fcc6aac230aac8384cefcc8a894adbd043fb8eb19bc1dc5c1242adf1d40713",
+      "resultSha256": "94fcc6aac230aac8384cefcc8a894adbd043fb8eb19bc1dc5c1242adf1d40713",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "2gyc0Q7iUw4",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/selection/FmJ7NUQ5W6Y.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "6e960e68f0b1ce76056ed613951f27386b4ccf12d295f7d8b8b0596508fb346d",
+      "resultSha256": "6e960e68f0b1ce76056ed613951f27386b4ccf12d295f7d8b8b0596508fb346d",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "FmJ7NUQ5W6Y",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/selection/IS6z1fyxCyI.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "adf4e3080448aae76fb8773b680bac25da844a73258120c56d06f38c8040ea86",
+      "resultSha256": "adf4e3080448aae76fb8773b680bac25da844a73258120c56d06f38c8040ea86",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "IS6z1fyxCyI",
+      "recollectVersion": {
+        "meta": 2,
+        "transcript": 0
+      }
+    },
+    {
+      "path": "backend/restaurant-evaluation/data/tzuyang/evaluation/selection/KS_53b_YcvA.jsonl",
+      "disposition": "admitted",
+      "sourceStatus": "??",
+      "baseSha256": null,
+      "sourceSha256": "c72bec81980c215de19d6dcc738addf8d869d159f39d1348bda4d2ccccb90d15",
+      "resultSha256": "c72bec81980c215de19d6dcc738addf8d869d159f39d1348bda4d2ccccb90d15",
+      "reasonCode": "absent_stable_video_id_current_validator",
+      "stableId": "KS_53b_YcvA",
+      "recollectVersion": {
+        "meta": 1,
+        "transcript": 0
+      }
+    }
+  ],
+  "privacy": {
+    "newMetaDescriptionEmailPattern": "redacted",
+    "replacement": "[contact redacted]",
+    "sourceSha256Retained": true,
+    "rawMatchedValueRecorded": false
+  }
+}
