@@ -227,6 +227,19 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("pipeline_upstream_timeout");
     expect(route).toContain("readback");
     expect(route).toContain("audit");
+    expect(route).toContain("sealPreviewTicket");
+    expect(route).toContain("openPreviewTicket");
+    expect(route).toContain("createHmac");
+    expect(route).toContain("timingSafeEqual");
+    expect(route).toContain("const body = await response.text()");
+    expect(route).not.toContain("previewTickets");
+    expect(route).not.toContain("new Map<string, PreviewTicket>");
+    const applySuccess = route.slice(route.indexOf("const job = allowlistedPipelineJob"));
+    expect(applySuccess).toContain("accepted: true");
+    expect(applySuccess).toContain("if (!isAbortError(readbackError))");
+    expect(applySuccess.slice(0, applySuccess.indexOf("accepted: true"))).not.toContain(
+      "pipeline_upstream_timeout",
+    );
     expect(route).not.toContain("3001");
     expect(route).not.toContain("grafana");
     expect(route).not.toContain("iframe");
