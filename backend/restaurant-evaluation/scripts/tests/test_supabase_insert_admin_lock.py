@@ -6,6 +6,7 @@ import unittest
 from contextlib import redirect_stdout
 from copy import deepcopy
 from pathlib import Path
+from unittest import mock
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -760,31 +761,20 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         existing = self.make_cas_existing()
         incoming = self.make_incoming()
         stats = self.make_stats()
-
-        def concurrent_admin_change(row):
-            row.update(
-                {
-                    "status": "approved",
-                    "updated_by_admin_id": "admin-7",
-                    "updated_at": "2025-01-03T00:00:00Z",
-                }
-            )
-
-        supabase = StatefulCasSupabase([existing], before_update=concurrent_admin_change)
+        supabase = StatefulCasSupabase([existing])
         output = io.StringIO()
-        with redirect_stdout(output):
-            with self.assertRaisesRegex(RuntimeError, "^compare_and_set_conflict$"):
-                supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
+
+        def boom(_operations):
+            raise supabase_insert.BatchUpsertError("compare_and_set_conflict")
+
+        with mock.patch.object(supabase_insert, "apply_restaurant_batch", boom):
+            with redirect_stdout(output):
+                with self.assertRaisesRegex(RuntimeError, "^compare_and_set_conflict$"):
+                    supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
 
         self.assertEqual([], supabase.applied_updates)
+        self.assertEqual([], supabase.update_attempts)
         self.assertEqual("기존 이름", supabase.rows[0]["origin_name"])
-        self.assertEqual("approved", supabase.rows[0]["status"])
-        self.assertEqual("admin-7", supabase.rows[0]["updated_by_admin_id"])
-        self.assertEqual("2025-01-03T00:00:00Z", supabase.rows[0]["updated_at"])
-        self.assertEqual(
-            set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
-            {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
-        )
         self.assertIn("[ERROR] restaurants compare-and-set conflict; batch aborted.", output.getvalue())
 
     def test_exact_snapshot_compare_and_set_updates_once_and_reads_back_payload(self):
@@ -792,60 +782,82 @@ class SupabaseInsertAdminLockTests(unittest.TestCase):
         incoming = self.make_incoming()
         stats = self.make_stats()
         supabase = StatefulCasSupabase([existing])
+        seen: list[list[dict]] = []
 
-        supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
+        def fake_batch(operations):
+            seen.append(operations)
+            payload = operations[0]["payload"]
+            return {
+                "inserted_count": 0,
+                "updated_count": 1,
+                "readback": [{**payload, "id": existing["id"], "review_count": existing["review_count"]}],
+            }
+
+        with mock.patch.object(supabase_insert, "apply_restaurant_batch", fake_batch):
+            supabase_insert.process_and_upsert(supabase, [incoming], False, stats)
 
         self.assertEqual(1, stats["inserted"])
-        self.assertEqual(1, len(supabase.applied_updates))
-        self.assertEqual("새 이름", supabase.rows[0]["origin_name"])
-        self.assertEqual(["분식"], supabase.rows[0]["categories"])
-        self.assertEqual("pending", supabase.rows[0]["status"])
+        self.assertEqual([], supabase.update_attempts)
+        self.assertEqual("update", seen[0][0]["op"])
+        self.assertEqual(existing["id"], seen[0][0]["expected"]["id"])
         self.assertEqual(
-            {field for _kind, field, _value in supabase.update_attempts[0]["filters"]},
             set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
+            set(seen[0][0]["expected"]).intersection(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
         )
 
-    def test_execute_upsert_rows_retries_without_optional_google_name_field(self):
+    def test_execute_upsert_rows_uses_one_bounded_rpc_instead_of_rest_insert(self):
         stats = self.make_stats()
         rows = [self.make_incoming(trace_id="trace-new")]
-        supabase = StatefulCasSupabase(
-            [],
-            insert_behaviors=[
-                Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
-            ],
-        )
+        supabase = StatefulCasSupabase([])
+        seen: list[list[dict]] = []
 
-        supabase_insert.execute_upsert_rows(supabase, rows, False, stats)
+        def fake_batch(operations):
+            seen.append(operations)
+            payload = operations[0]["payload"]
+            return {
+                "inserted_count": 1,
+                "updated_count": 0,
+                "readback": [{**payload, "id": "new-1", "review_count": 0}],
+            }
+
+        with mock.patch.object(supabase_insert, "apply_restaurant_batch", fake_batch):
+            supabase_insert.execute_upsert_rows(supabase, rows, False, stats)
 
         self.assertEqual(1, stats["inserted"])
         self.assertEqual(0, stats["errors"])
-        self.assertEqual(2, len(supabase.insert_attempts))
-        self.assertIn("google_name", supabase.insert_attempts[0])
-        self.assertNotIn("google_name", supabase.insert_attempts[1])
+        self.assertEqual([], supabase.insert_attempts)
+        self.assertEqual(1, len(seen))
+        self.assertEqual("insert", seen[0][0]["op"])
+        self.assertIsNone(seen[0][0]["expected"])
 
 
-    def test_execute_rebind_updates_retries_without_optional_google_name_field(self):
+    def test_execute_rebind_updates_uses_one_cas_rpc_instead_of_rest_update(self):
         stats = self.make_stats()
         payload = self.make_incoming(trace_id="trace-new")
         existing = self.make_cas_existing(id="row-9", trace_id="trace-old")
-        supabase = StatefulCasSupabase(
-            [existing],
-            update_behaviors=[
-                Exception("Could not find the 'google_name' column of 'restaurants' in the schema cache"),
-            ],
-        )
+        supabase = StatefulCasSupabase([existing])
+        seen: list[list[dict]] = []
 
-        supabase_insert.execute_rebind_updates(supabase, [("row-9", payload, existing)], False, stats)
+        def fake_batch(operations):
+            seen.append(operations)
+            return {
+                "inserted_count": 0,
+                "updated_count": 1,
+                "readback": [{**payload, "id": "row-9", "review_count": existing["review_count"]}],
+            }
+
+        with mock.patch.object(supabase_insert, "apply_restaurant_batch", fake_batch):
+            supabase_insert.execute_rebind_updates(supabase, [("row-9", payload, existing)], False, stats)
 
         self.assertEqual(1, stats["inserted"])
         self.assertEqual(0, stats["errors"])
-        self.assertEqual(2, len(supabase.update_attempts))
-        self.assertIn("google_name", supabase.update_attempts[0]["payload"])
-        self.assertNotIn("google_name", supabase.update_attempts[1]["payload"])
+        self.assertEqual([], supabase.update_attempts)
+        self.assertEqual("update", seen[0][0]["op"])
         self.assertEqual(
             set(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
-            {field for _kind, field, _value in supabase.update_attempts[1]["filters"]},
+            set(seen[0][0]["expected"]).intersection(supabase_insert.RESTAURANT_CAS_PREDICATE_FIELDS),
         )
+        self.assertEqual("row-9", seen[0][0]["expected"]["id"])
 
 
     def test_readback_ignores_row_owned_created_at_mismatch(self):
