@@ -231,6 +231,10 @@ describe("admin pipeline control contract", () => {
     expect(route).toContain("openPreviewTicket");
     expect(route).toContain("createHmac");
     expect(route).toContain("timingSafeEqual");
+    expect(route).toContain("previewTicketSecret");
+    expect(route).toContain("pipeline_preview_secret_missing");
+    expect(route).not.toContain("previewTicketKey");
+    expect(route).not.toContain(".update(PIPELINE_API_BASE");
     expect(route).toContain("const body = await response.text()");
     expect(route).not.toContain("previewTickets");
     expect(route).not.toContain("new Map<string, PreviewTicket>");
