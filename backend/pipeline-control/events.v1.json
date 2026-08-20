@@ -7,6 +7,6 @@
   "elasticsearchIndices": ["pipeline-logs-*", "pipeline-raw-*"],
   "structuredSourceOfTruth": "supabase.pipeline_control",
   "rawPayloadStore": "elasticsearch",
-  "elasticsearchWriter": "opt-in TZUDONG_PIPELINE_ES sink; not SoT; not a Kafka consumer",
+  "elasticsearchWriter": "pipeline-indexer consumer group bulk API; deterministic document IDs; not SoT",
   "adminIframePolicy": "forbidden_until_csp_auth_gate"
 }

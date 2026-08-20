@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Callable
 
 from backend.pipeline_control.es_index import index_document
-from backend.pipeline_control.events import publish
+from backend.pipeline_control.events import classify_events_mode, publish
+from backend.pipeline_control.metrics import observe, record as record_metric
 from backend.pipeline_control.graph import (
     ADAPTER_STEPS,
     CANONICAL_STEP_NAMES,
@@ -46,7 +48,8 @@ def emit_raw_document(run: RunRecord, *, step: str, status: str, skipped: bool) 
 def noop_event_sink(event: dict[str, Any]) -> None:
     publish(event)
     if event.get("type") in {"run.lifecycle", "step.progress", "record.upserted"}:
-        index_document(event)
+        if classify_events_mode(os.environ.get("TZUDONG_PIPELINE_EVENTS")) != "kafka":
+            index_document(event)
 
 
 def run_daily_helper_dry_run(step: str) -> dict[str, str]:
@@ -140,8 +143,11 @@ def execute_steps(
             except AdapterGraphError:
                 emit({"type": "run.lifecycle", "job_id": run.id, "status": "Failed", "step": spec.id})
                 return "Failed"
+            started = time.monotonic()
             code = invoke(argv)
+            observe("tzudong_pipeline_step_duration_seconds", time.monotonic() - started)
             if code != 0:
+                record_metric("tzudong_pipeline_step_failures_total")
                 blocked.add(spec.id)
                 if spec.id == "08-chunk":
                     required_failed = True

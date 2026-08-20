@@ -104,14 +104,7 @@ def _load_kafka_producer() -> Any:
     return KafkaProducer
 
 
-def publish(event: dict[str, Any]) -> str:
-    event_type = event.get("type")
-    if not isinstance(event_type, str) or not event_type.strip():
-        raise KafkaPublishError("kafka_topic_unknown")
-    topic = resolve_topic(event_type.strip())
-    mode = classify_events_mode(os.environ.get("TZUDONG_PIPELINE_EVENTS"))
-    if mode != "kafka":
-        return f"noop:{topic}"
+def publish_bytes(topic: str, payload: bytes) -> None:
     bootstrap = os.environ.get("TZUDONG_KAFKA_BOOTSTRAP")
     admit_bootstrap(
         data_env=os.environ.get("TZUDONG_DATA_ENV", "local_db"),
@@ -121,12 +114,11 @@ def publish(event: dict[str, Any]) -> str:
         producer_cls = _load_kafka_producer()
     except ImportError as exc:
         raise KafkaPublishError("kafka_client_missing") from exc
-    payload = envelope(allowlisted_event(event))
     producer = None
     caught: KafkaPublishError | None = None
     try:
         producer = producer_cls(bootstrap_servers=str(bootstrap).strip())
-        producer.send(topic, payload.encode("utf-8"))
+        producer.send(topic, payload)
         producer.flush()
     except KafkaPublishError as exc:
         caught = exc
@@ -148,6 +140,23 @@ def publish(event: dict[str, Any]) -> str:
                     raise KafkaPublishError("kafka_publish_failed") from RuntimeError(
                         safe_error_name(exc)
                     )
+
+
+def publish(event: dict[str, Any]) -> str:
+    event_type = event.get("type")
+    if not isinstance(event_type, str) or not event_type.strip():
+        raise KafkaPublishError("kafka_topic_unknown")
+    topic = resolve_topic(event_type.strip())
+    from backend.pipeline_control.outbox import classify_outbox_mode, enqueue_event
+
+    if classify_outbox_mode() != "none":
+        enqueue_event(event)
+        return f"outbox:{topic}"
+    mode = classify_events_mode(os.environ.get("TZUDONG_PIPELINE_EVENTS"))
+    if mode != "kafka":
+        return f"noop:{topic}"
+    payload = envelope(allowlisted_event(event))
+    publish_bytes(topic, payload.encode("utf-8"))
     return f"kafka:{topic}"
 
 
