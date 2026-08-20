@@ -257,12 +257,16 @@ def process_one(
         return None
 
     def should_stop() -> str | None:
-        current = store.get(run.id)
+        checkpoint = getattr(store, "checkpoint", None)
+        if checkpoint is not None:
+            current = checkpoint(run.id, adapter_index=run.adapter_index)
+        else:
+            current = store.get(run.id)
+            store.beat(run.id)
         if current.status == "Cancelled":
             return "Cancelled"
         if current.status == "Paused":
             return "Paused"
-        store.beat(run.id)
         return None
 
     use_live = live_enabled() if live is None else live
