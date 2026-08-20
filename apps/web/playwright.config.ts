@@ -10,12 +10,21 @@ const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
 const ADMIN_STORAGE_STATE = 'tests/.auth/admin.json';
 const DEPENDENCY_MODERNIZATION_SPEC = /dependency-modernization\.spec\.ts$/;
+const NAVER_LIVE_PROVIDER_SPEC = /naver-live-marker\.spec\.ts$/;
 const runsDependencyModernizationSpec = process.argv.some((argument) =>
     DEPENDENCY_MODERNIZATION_SPEC.test(argument.replaceAll('\\', '/'))
 );
+const runsNaverLiveProviderSpec = process.argv.some((argument) =>
+    NAVER_LIVE_PROVIDER_SPEC.test(argument.replaceAll('\\', '/'))
+);
+const runsDedicatedNaverLiveProviderSmoke =
+    runsNaverLiveProviderSpec
+    && process.env.PLAYWRIGHT_NAVER_LIVE_PROVIDER_SMOKE === '1';
 const PLAYWRIGHT_WEB_SERVER_COMMAND =
-    process.env.PLAYWRIGHT_WEB_SERVER_COMMAND ??
-    (runsDependencyModernizationSpec ? 'bun run start:playwright' : 'bun run dev:playwright');
+    runsDedicatedNaverLiveProviderSmoke
+        ? 'bun run dev:playwright:naver-live'
+        : process.env.PLAYWRIGHT_WEB_SERVER_COMMAND
+            ?? (runsDependencyModernizationSpec ? 'bun run start:playwright' : 'bun run dev:playwright');
 const PLAYWRIGHT_BASE_URL =
     process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080';
 const PLAYWRIGHT_WEB_SERVER_URL =
@@ -250,17 +259,17 @@ export default defineConfig({
         },
         {
             name: 'chromium',
-            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC, ...(runsDedicatedNaverLiveProviderSmoke ? [] : [NAVER_LIVE_PROVIDER_SPEC])],
             use: { ...devices['Desktop Chrome'], browserName: 'chromium' },
         },
         {
             name: 'firefox',
-            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC, NAVER_LIVE_PROVIDER_SPEC],
             use: { ...devices['Desktop Firefox'], browserName: 'firefox' },
         },
         {
             name: 'webkit',
-            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC],
+            testIgnore: [RESPONSIVE_SPEC, ADMIN_SETUP_SPEC, NAVER_LIVE_PROVIDER_SPEC],
             use: { ...devices['Desktop Safari'], browserName: 'webkit' },
         },
         ...responsiveProjects,

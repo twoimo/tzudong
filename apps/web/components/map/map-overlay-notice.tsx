@@ -5,15 +5,18 @@ import { cn } from '@/lib/utils';
 export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =
     '!border !border-border !bg-card/95 !text-foreground !rounded-2xl !px-3 !py-2';
 export const MAP_OVERLAY_NOTICE_CLASS_NAME =
-    `z-10 flex min-h-9 w-fit max-w-[calc(100vw-2rem)] items-center justify-center ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} text-sm font-medium leading-5 shadow-sm backdrop-blur-sm sm:max-w-[26rem] sm:!rounded-full`;
+    `z-10 inline-flex min-h-8 w-fit max-w-[min(26rem,calc(100vw-2rem))] items-center justify-center ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} !text-[13px] !font-semibold !leading-4 shadow-sm backdrop-blur-sm sm:!rounded-full`;
 export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';
-export const MAP_OVERLAY_TOAST_CLASS_NAME =
-    `pointer-events-auto relative flex w-[min(360px,calc(100vw-1.5rem))] max-w-[min(360px,calc(100vw-1.5rem))] items-start justify-start ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} text-left text-sm font-medium leading-5 shadow-lg backdrop-blur-sm sm:w-max sm:max-w-[min(42rem,calc(100vw-2rem))]`;
+export const MAP_OVERLAY_TOAST_CLASS_NAME = MAP_OVERLAY_NOTICE_CLASS_NAME;
+export const MAP_OVERLAY_STATUS_DOT_CLASS_NAME = 'h-2 w-2 rounded-full bg-primary/80';
 
-const baseNoticeClass = MAP_OVERLAY_NOTICE_CLASS_NAME;
-const noticeContentClass = 'grid max-w-full min-w-0 grid-cols-[1.25rem_max-content] items-center gap-1.5 pr-1';
-const noticeIconClass = 'flex h-5 w-5 shrink-0 items-center justify-center text-[15px] leading-none';
-const noticeTextClass = 'min-w-0 whitespace-nowrap break-keep text-center';
+const noticeContentClass = 'grid max-w-full min-w-0 grid-cols-[1rem_minmax(0,max-content)] items-center gap-1.5';
+const noticeIconClass = 'flex h-4 w-4 shrink-0 items-center justify-center';
+const noticeTextClass = 'min-w-0 whitespace-nowrap break-keep text-center !text-[13px] !font-semibold !leading-4';
+
+export function MapOverlayStatusDot() {
+    return <span className={MAP_OVERLAY_STATUS_DOT_CLASS_NAME} />;
+}
 
 type MapOverlayNoticeProps = {
     children: ReactNode;
@@ -32,27 +35,23 @@ export const MapOverlayNotice = memo(({
     children,
     className,
     contentClassName,
-    icon,
+    icon = <MapOverlayStatusDot />,
     role = 'status',
     style,
 }: MapOverlayNoticeProps) => (
     <div
         style={style}
-        className={cn(baseNoticeClass, className)}
+        className={cn(MAP_OVERLAY_NOTICE_CLASS_NAME, className)}
         role={role}
         aria-live={ariaLive}
         aria-busy={ariaBusy}
     >
-        {icon ? (
-            <span className={noticeContentClass}>
-                <span className={noticeIconClass} aria-hidden="true">
-                    {icon}
-                </span>
-                <span className={cn(noticeTextClass, contentClassName)}>{children}</span>
+        <span className={noticeContentClass}>
+            <span className={noticeIconClass} aria-hidden="true">
+                {icon}
             </span>
-        ) : (
-            <span className={cn(noticeTextClass, contentClassName, 'max-w-full')}>{children}</span>
-        )}
+            <span className={cn(noticeTextClass, contentClassName)}>{children}</span>
+        </span>
     </div>
 ));
 MapOverlayNotice.displayName = 'MapOverlayNotice';
@@ -68,7 +67,7 @@ export const MapOverlayNoticeButton = memo(({
     children,
     className,
     contentClassName,
-    icon,
+    icon = <MapOverlayStatusDot />,
     onClick,
     style,
 }: MapOverlayNoticeButtonProps) => (
@@ -77,7 +76,7 @@ export const MapOverlayNoticeButton = memo(({
         onClick={onClick}
         style={style}
         className={cn(
-            baseNoticeClass,
+            MAP_OVERLAY_NOTICE_CLASS_NAME,
             'appearance-none',
             onClick ? 'cursor-pointer sm:hover:!bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2' : '',
             className,
@@ -85,16 +84,12 @@ export const MapOverlayNoticeButton = memo(({
         aria-label={ariaLabel}
         aria-live={ariaLive}
     >
-        {icon ? (
-            <span className={noticeContentClass}>
-                <span className={noticeIconClass} aria-hidden="true">
-                    {icon}
-                </span>
-                <span className={cn(noticeTextClass, contentClassName)}>{children}</span>
+        <span className={noticeContentClass}>
+            <span className={noticeIconClass} aria-hidden="true">
+                {icon}
             </span>
-        ) : (
-            <span className={cn(noticeTextClass, contentClassName, 'max-w-full')}>{children}</span>
-        )}
+            <span className={cn(noticeTextClass, contentClassName)}>{children}</span>
+        </span>
     </button>
 ));
 MapOverlayNoticeButton.displayName = 'MapOverlayNoticeButton';

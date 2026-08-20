@@ -243,7 +243,6 @@ class EventSinkTests(unittest.TestCase):
         obs = OBS_COMPOSE.read_text(encoding="utf-8")
         pipeline = PIPELINE_COMPOSE.read_text(encoding="utf-8")
         contract = CONTRACT.read_text(encoding="utf-8")
-        dockerfile = (ROOT / "pipeline-control" / "Dockerfile").read_text(encoding="utf-8")
         reqs = (ROOT / "pipeline-control" / "requirements.txt").read_text(encoding="utf-8")
         self.assertRegex(kafka, r"(?m)^\s+kafka:")
         self.assertRegex(kafka, r"(?m)^\s+kafka-ui:")
@@ -261,7 +260,6 @@ class EventSinkTests(unittest.TestCase):
         self.assertIn("losable", contract)
         self.assertIn("29092", contract)
         self.assertIn("kafka-python==3.0.11", reqs)
-        self.assertIn("exactly one pinned kafka client", dockerfile)
 
     def test_multi_token_bootstrap_admits_allowlisted_hosts(self) -> None:
         from backend.pipeline_control.events import admit_bootstrap

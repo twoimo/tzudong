@@ -726,6 +726,126 @@ describe('admin system status helper', () => {
             expect(JSON.stringify(readiness)).not.toContain('storage_object_path');
         }
     });
+
+    test('dual-reads pipelineControl from job API snapshot or current-summary manifest', async () => {
+        const runDailyScriptPath = detectRunDailyScriptPath();
+        const tempDir = withTempDir('tzudong-pipeline-control-dual-read-');
+        const manifestPath = path.join(tempDir.dir, 'current-summary.json');
+        await Bun.write(manifestPath, JSON.stringify({
+            generatedAt: '2026-08-19T00:00:00.000Z',
+            date: '2026-08-19',
+            finalStatus: 'OK',
+            finalExitCode: 0,
+            failedRequiredSteps: [],
+            optionalSkips: [],
+            downstreamSkips: [],
+            stepEvents: [],
+        }));
+        const missingManifestPath = path.join(tempDir.dir, 'missing-current-summary.json');
+        const restoreEnv = withEnv({
+            STORYBOARD_AGENT_ENABLED: 'false',
+            STORYBOARD_BGE_ENABLED: 'false',
+            INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+            INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
+            INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+            INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+            RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
+            RUN_DAILY_MANIFEST_PATH: manifestPath,
+            PIPELINE_CONTROL_API_URL: undefined,
+        });
+        const originalFetch = global.fetch;
+        const seen: string[] = [];
+
+        try {
+            global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+                seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+                throw new Error('pipeline dual-read must not fetch when job API URL is unset');
+            };
+            const { getAdminSystemStatus } = await loadSystemStatusHelper();
+            const manifestOnly = await getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(manifestOnly.pipelineControl).toEqual({ reachable: false, source: 'manifest' });
+            expect(seen).toEqual([]);
+
+            restoreEnv();
+            withEnv({
+                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_BGE_ENABLED: 'false',
+                INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+                INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
+                INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+                INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+                RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
+                RUN_DAILY_MANIFEST_PATH: manifestPath,
+                PIPELINE_CONTROL_API_URL: 'http://127.0.0.1:8091',
+            });
+            seen.length = 0;
+            global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+                seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+                const endpoint = String(input);
+                if (endpoint.includes('/v1/targets') && (init?.method ?? 'GET') === 'GET') {
+                    return new Response(JSON.stringify({ targets: [{ name: 'tzuyang', status: 'Idle' }], jobs: [], failures: [] }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                }
+                return new Response('unexpected dual-read probe', { status: 500 });
+            };
+            const jobApi = await (await loadSystemStatusHelper()).getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(jobApi.pipelineControl).toEqual({ reachable: true, source: 'job_api' });
+            expect(seen.some((entry) => entry.startsWith('GET ') && entry.includes('/v1/targets'))).toBe(true);
+            expect(seen.some((entry) => entry.startsWith('POST ') || entry.startsWith('PUT '))).toBe(false);
+            expect(seen.join('\n')).not.toContain('kafka');
+            expect(seen.join('\n')).not.toContain('elasticsearch');
+            expect(seen.join('\n')).not.toContain('5432');
+
+            restoreEnv();
+            withEnv({
+                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_BGE_ENABLED: 'false',
+                INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+                INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
+                INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+                INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+                RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
+                RUN_DAILY_MANIFEST_PATH: manifestPath,
+                PIPELINE_CONTROL_API_URL: 'http://127.0.0.1:8091',
+            });
+            seen.length = 0;
+            global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+                seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+                return new Response(JSON.stringify({ error: 'down' }), { status: 503 });
+            };
+            const fallbackManifest = await (await loadSystemStatusHelper()).getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(fallbackManifest.pipelineControl).toEqual({ reachable: false, source: 'manifest' });
+            expect(seen.some((entry) => entry.includes('/v1/targets'))).toBe(true);
+
+            restoreEnv();
+            withEnv({
+                STORYBOARD_AGENT_ENABLED: 'false',
+                STORYBOARD_BGE_ENABLED: 'false',
+                INSIGHT_SYSTEM_STATUS_CACHE_TTL_MS: '0',
+                INSIGHT_SYSTEM_STATUS_TIMEOUT_MS: '500',
+                INSIGHT_GITHUB_ACTIONS_STATUS_ENABLED: undefined,
+                INSIGHT_SUPABASE_COUNTER_STATUS_ENABLED: undefined,
+                RUN_DAILY_SCRIPT_PATH: runDailyScriptPath ?? '',
+                RUN_DAILY_MANIFEST_PATH: missingManifestPath,
+                PIPELINE_CONTROL_API_URL: 'http://127.0.0.1:8091',
+            });
+            seen.length = 0;
+            global.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+                seen.push(`${init?.method ?? 'GET'} ${String(input)}`);
+                return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            };
+            const noneSource = await (await loadSystemStatusHelper()).getAdminSystemStatus(process.env as NodeJS.ProcessEnv);
+            expect(noneSource.pipelineControl).toEqual({ reachable: false, source: 'none' });
+            expect(noneSource.pipelineControl?.source).not.toBe('job_api');
+        } finally {
+            global.fetch = originalFetch;
+            restoreEnv();
+            tempDir.cleanup();
+        }
+    });
+
 });
 
 describe('admin system status API route', () => {

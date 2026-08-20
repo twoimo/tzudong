@@ -13,12 +13,14 @@ import type { Announcement } from '@/types/announcement';
 const ANNOUNCEMENT_TOAST_INTERVAL_MS = 70000;
 
 type NaverMapAnnouncementRuntimeProps = {
+    isAnnouncementToastVisible: boolean;
     onAnnouncementToastPayloadChange: (announcement: Announcement | null) => void;
     onAnnouncementToastTitleChange: (title: string) => void;
     onShowAnnouncementToastChange: (show: boolean) => void;
 };
 
 export default function NaverMapAnnouncementRuntime({
+    isAnnouncementToastVisible,
     onAnnouncementToastPayloadChange,
     onAnnouncementToastTitleChange,
     onShowAnnouncementToastChange,
@@ -27,6 +29,12 @@ export default function NaverMapAnnouncementRuntime({
     const announcementToastIndexRef = useRef(0);
     const announcementToastHideTimerRef = useRef<NodeJS.Timeout | null>(null);
     const announcementToastInitialTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (isAnnouncementToastVisible || !announcementToastHideTimerRef.current) return;
+        clearTimeout(announcementToastHideTimerRef.current);
+        announcementToastHideTimerRef.current = null;
+    }, [isAnnouncementToastVisible]);
 
     useEffect(() => {
         if (bannerAnnouncements.length === 0) {
@@ -63,6 +71,7 @@ export default function NaverMapAnnouncementRuntime({
 
             if (announcementToastHideTimerRef.current) clearTimeout(announcementToastHideTimerRef.current);
             announcementToastHideTimerRef.current = setTimeout(() => {
+                announcementToastHideTimerRef.current = null;
                 onShowAnnouncementToastChange(false);
             }, announcementPlan.hideDelayMs);
         };
