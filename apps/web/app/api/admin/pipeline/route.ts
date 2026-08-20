@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -43,37 +43,46 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
 }
 
-function previewTicketKey(): Buffer {
+function previewTicketSecret(): Buffer | null {
   const explicit =
     process.env.PIPELINE_PREVIEW_TICKET_SECRET?.trim() ||
     process.env.PRIVACY_ONBOARDING_COOKIE_SECRET?.trim() ||
     process.env.PRIVACY_AUDIT_HASH_KEY?.trim() ||
     "";
-  if (Buffer.byteLength(explicit, "utf8") >= 32) {
-    return Buffer.from(explicit, "utf8");
+  if (Buffer.byteLength(explicit, "utf8") < 32) {
+    return null;
   }
-  return createHash("sha256")
-    .update("tzudong:pipeline-preview-ticket:v1\n", "utf8")
-    .update(PIPELINE_API_BASE, "utf8")
-    .digest();
+  return Buffer.from(explicit, "utf8");
+}
+
+function missingPreviewTicketSecretResponse() {
+  return noStore({ error: "pipeline_preview_secret_missing" }, { status: 503 });
 }
 
 function sealPreviewTicket(ticket: PreviewTicket): string {
+  const key = previewTicketSecret();
+  if (!key) {
+    throw new Error("pipeline_preview_secret_missing");
+  }
   const encoded = Buffer.from(JSON.stringify(ticket), "utf8").toString("base64url");
-  const signature = createHmac("sha256", previewTicketKey())
+  const signature = createHmac("sha256", key)
     .update(`tzudong:pipeline-preview:v1:${encoded}`, "utf8")
     .digest("base64url");
   return `${encoded}.${signature}`;
 }
 
 function openPreviewTicket(token: string): PreviewTicket | null {
+  const key = previewTicketSecret();
+  if (!key) {
+    return null;
+  }
   const separator = token.indexOf(".");
   if (separator <= 0 || token.indexOf(".", separator + 1) !== -1) {
     return null;
   }
   const encoded = token.slice(0, separator);
   const signature = token.slice(separator + 1);
-  const expected = createHmac("sha256", previewTicketKey())
+  const expected = createHmac("sha256", key)
     .update(`tzudong:pipeline-preview:v1:${encoded}`, "utf8")
     .digest("base64url");
   const left = Buffer.from(signature);
@@ -239,6 +248,9 @@ export async function POST(request: NextRequest) {
         requiredConfirmation: true,
       });
     } catch (error) {
+      if (error instanceof Error && error.message === "pipeline_preview_secret_missing") {
+        return missingPreviewTicketSecretResponse();
+      }
       if (isAbortError(error)) {
         return noStore({ error: "pipeline_upstream_timeout" }, { status: 504 });
       }
@@ -257,6 +269,9 @@ export async function POST(request: NextRequest) {
   }
 
   const operationId = String(body.operationId ?? "");
+  if (!previewTicketSecret()) {
+    return missingPreviewTicketSecretResponse();
+  }
   const ticket = openPreviewTicket(operationId);
   if (
     !ticket ||
