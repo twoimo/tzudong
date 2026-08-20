@@ -8,6 +8,7 @@ from pathlib import Path
 
 from backend.pipeline_control.dsn_guard import admit_dsn
 from backend.pipeline_control.file_store import FileStore
+from backend.pipeline_control.manifest import is_live_execution_success, load_json
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.targets import assert_admitted
 from backend.pipeline_control.worker import process_one, write_run_manifest
@@ -102,8 +103,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         results.append(result)
         manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
-        if manifest.exists() and not (job.get("queued") and job.get("dry_run") is True):
-            last_live_manifest = manifest
+        if manifest.exists():
+            try:
+                candidate = load_json(manifest)
+            except (OSError, ValueError):
+                candidate = {}
+            if is_live_execution_success(candidate):
+                last_live_manifest = manifest
     if last_live_manifest is not None:
         default = Path(__file__).resolve().parents[2] / "backend" / "log" / "cron" / "current-summary.json"
         default.parent.mkdir(parents=True, exist_ok=True)
