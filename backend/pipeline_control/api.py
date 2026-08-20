@@ -6,6 +6,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 import re
+import signal
+import threading
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -16,10 +18,26 @@ from backend.pipeline_control.state_machine import ControlPlaneError
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.targets import assert_admitted, load_targets
 from backend.utils.privacy_log import safe_error_name, sanitize_log_value
+from backend.pipeline_control.metrics import gauge_snapshot
 from backend.pipeline_control.queue import enqueue
 
 STORE = FileStore()
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+
+
+def build_store():
+    mode = os.environ.get("TZUDONG_PIPELINE_STORE", "file").strip() or "file"
+    if mode == "postgres":
+        from backend.pipeline_control.pg_store import PostgresStore
+
+        return PostgresStore()
+    if mode not in {"file", "memory"}:
+        raise ControlPlaneError("store_mode_invalid", 400)
+    if mode == "memory":
+        from backend.pipeline_control.store import MemoryStore
+
+        return MemoryStore()
+    return FileStore()
 
 
 def current_store():
@@ -86,7 +104,9 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 )
                 return _json(self, 200, {"ready": True})
             if path == "/v1/targets":
-                return _json(self, 200, current_store().operator_snapshot(load_targets()))
+                snap = current_store().operator_snapshot(load_targets())
+                snap["gauges"] = gauge_snapshot()
+                return _json(self, 200, snap)
             if path == "/v1/runs":
                 snap = current_store().operator_snapshot(load_targets())
                 return _json(
@@ -169,9 +189,30 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
         return _json(self, 500, {"error": safe_error_name(exc)})
 
 
+ALLOWED_API_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "0.0.0.0"})
+
+
+def api_bind_host(raw: str | None = None) -> str:
+    value = (raw if raw is not None else os.environ.get("PIPELINE_API_HOST", "127.0.0.1")).strip() or "127.0.0.1"
+    if value not in ALLOWED_API_BIND_HOSTS:
+        raise ValueError("pipeline_api_host_rejected")
+    return value
+
+
 def serve(host: str = "127.0.0.1", port: int = 8091) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((host, port), PipelineApiHandler)
 
 
+def main() -> None:
+    server = serve(host=api_bind_host())
+    def _stop(_signum: int, _frame: object) -> None:
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
-    serve().serve_forever()
+    globals()["STORE"] = build_store()
+    main()
