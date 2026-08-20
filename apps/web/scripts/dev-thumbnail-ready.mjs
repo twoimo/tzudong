@@ -46,10 +46,7 @@ console.log(`브라우저 부트스트랩 경로: ${bootstrapNext} (일회용 �
 console.log('실제 이미지 생성은 exact gpt-image-2 provenance가 증명될 때까지 provider_unavailable로 차단됩니다.\n')
 
 const child = spawn(process.execPath, [
-  'scripts/clean-next.mjs',
-  '--',
-  process.execPath,
-  'scripts/dev-prewarm.mjs',
+  'scripts/run-local-dev.mjs',
   '--port',
   PORT,
 ], {
