@@ -50,6 +50,47 @@ services:
     networks:
       - supabase_network_local
 
+  pipeline-indexer:
+    build:
+      context: ../..
+      dockerfile: backend/pipeline-control/Dockerfile
+      target: indexer
+    environment:
+      TZUDONG_DATA_ENV: local_db
+      TZUDONG_PIPELINE_ES: noop
+      TZUDONG_KAFKA_BOOTSTRAP: kafka:9092
+      TZUDONG_ES_URL: http://elasticsearch:9200
+      PIPELINE_CONTROL_DSN: postgresql://postgres@db:5432/postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_SERVICE_NAME: pipeline-indexer
+    command: ["python", "-m", "backend.pipeline_control.es_index"]
+    networks:
+      - supabase_network_local
+
+  pipeline-publisher:
+    build:
+      context: ../..
+      dockerfile: backend/pipeline-control/Dockerfile
+      target: worker
+    environment:
+      TZUDONG_DATA_ENV: local_db
+      TZUDONG_PIPELINE_EVENTS: noop
+      TZUDONG_KAFKA_BOOTSTRAP: kafka:9092
+      PIPELINE_CONTROL_DSN: postgresql://postgres@db:5432/postgres
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      OTEL_TRACES_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_SERVICE_NAME: pipeline-publisher
+    command: ["python", "-m", "backend.pipeline_control.publisher"]
+    networks:
+      - supabase_network_local
+
 networks:
   supabase_network_local:
     external: true

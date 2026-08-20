@@ -326,7 +326,7 @@ class EsIndexTests(unittest.TestCase):
         self.assertNotRegex(pipeline, r"(?im)^\s+postgres:")
         self.assertIn("non-authoritative", contract)
         self.assertNotIn("later Slice 2 ES ingest", contract)
-        self.assertIn("losable", contract)
+        self.assertIn("deterministic document IDs", contract)
 
 
     def test_record_upserted_uses_logs_index(self) -> None:

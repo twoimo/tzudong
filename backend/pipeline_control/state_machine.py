@@ -7,6 +7,8 @@ from hashlib import sha256
 import json
 from typing import Any, Literal
 
+from backend.pipeline_control.graph import ADAPTER_STEPS
+
 RUN_STATUSES = (
     "Queued",
     "Fetching",
@@ -19,22 +21,6 @@ RUN_STATUSES = (
 ACTIVE_LOCK_STATUSES = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
 TARGET_IDLE = "Idle"
 ILLEGAL_TRANSITION = "illegal_transition"
-ADAPTER_STEPS = (
-    "01-collect-urls",
-    "02-collect-meta",
-    "02-1-migrate",
-    "02-5-cleanup",
-    "03-transcript",
-    "03-1-context",
-    "04-frames",
-    "06-1-enrich",
-    "08-chunk",
-    "09-target",
-    "10-rule",
-    "11-laaj",
-    "12-transform",
-    "13-supabase-insert",
-)
 PAUSE_FROM = frozenset({"Queued", "Fetching", "Inserting"})
 CANCEL_FROM = frozenset({"Queued", "Fetching", "Inserting", "Paused"})
 
@@ -73,6 +59,10 @@ class RunRecord:
     dry_run: bool = True
     error_code: str | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
+    pause_requested: bool = False
+    cancel_requested: bool = False
+    claimed_by: str | None = None
+    checkpoint: dict[str, Any] = field(default_factory=dict)
 
 
 def can_pause(status: str) -> bool:
