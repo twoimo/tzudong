@@ -30,6 +30,7 @@ const nightlyEnvFileOnly = process.env.NIGHTLY_ENV_FILE_ONLY === '1';
 const nightlyMode = process.env.NIGHTLY_MODE?.trim();
 const nightlyRun = nightlyLocalEnvOnly || nightlyEnvFileOnly || nightlyMode === 'local' || nightlyMode === 'hosted';
 const strictLocalDev = process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1';
+const hostedDev = process.env.TZUDONG_HOSTED_DEV === '1';
 const warnedStaleEntries = new Set();
 const rawArgs = process.argv.slice(2);
 const separatorIndex = rawArgs.indexOf('--');
@@ -178,6 +179,28 @@ if (nightlyRun) {
 
 if (!nightlyRun && !strictLocalDev && fs.existsSync(repoEnvLocalPath)) {
     loadEnv({ path: repoEnvLocalPath, override: false });
+}
+
+const isDevPrewarmCommand = () => commandArgs.some((arg) => arg.endsWith('scripts/dev-prewarm.mjs'));
+const isGuardedNextDevLaunch = () => isNextDevCommand() || isDevPrewarmCommand();
+const assembledSupabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+const assembledSupabaseIsHosted = assembledSupabaseUrl.includes('.supabase.co');
+const assembledSupabaseIsLoopback = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(assembledSupabaseUrl);
+if (isGuardedNextDevLaunch()) {
+    const localAdmitted = strictLocalDev && !hostedDev;
+    const hostedAdmitted = hostedDev && !strictLocalDev;
+    if (!nightlyRun && !localAdmitted && !hostedAdmitted) {
+        process.stderr.write('[clean-next] error=NextDevAdmissionRequired\n');
+        process.exit(2);
+    }
+    if (!nightlyRun && hostedAdmitted && assembledSupabaseIsLoopback) {
+        process.stderr.write('[clean-next] error=HostedMarkerLoopbackConflict\n');
+        process.exit(2);
+    }
+    if (!nightlyRun && !hostedAdmitted && assembledSupabaseIsHosted) {
+        process.stderr.write('[clean-next] error=HostedUrlWithoutHostedMarker\n');
+        process.exit(2);
+    }
 }
 
 process.env.BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA ??= 'true';

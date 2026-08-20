@@ -5,11 +5,11 @@ const MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS =
 const MOBILE_BADGE_POSITION_CLASS =
     `mobile-map-status-badge fixed ${MOBILE_MAP_STATUS_BADGE_STACK_OFFSET_CLASS} left-1/2 -translate-x-1/2 transition-[left] duration-300 ease-in-out z-[70]`;
 const DESKTOP_BADGE_POSITION_CLASS =
-    'absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out';
+    'absolute left-1/2 top-[4.75rem] -translate-x-1/2 transition-[left] duration-300 ease-in-out';
 const MOBILE_TOAST_POSITION_CLASS =
     'fixed right-3 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))_+_env(safe-area-inset-bottom)_+_0.75rem)] transition-[right,bottom] ease-in-out z-[70]';
 const DESKTOP_TOAST_POSITION_CLASS =
-    'absolute right-4 bottom-4 transition-[right,bottom] ease-in-out';
+    'absolute right-4 top-[4.75rem] transition-[right,top] ease-in-out';
 
 export function getNaverOverlayPositioning({
     isExternalPanelOpen,
@@ -36,9 +36,7 @@ export function getNaverOverlayPositioning({
 
     return {
         effectivePanelOffset,
-        centerOffsetStyle: {
-            left: `calc(50% - ${effectivePanelOffset / 2}px)`,
-        } satisfies CSSProperties,
+        centerOffsetStyle: {} satisfies CSSProperties,
         floatingBadgePositionClass: isMobileOrTablet
             ? MOBILE_BADGE_POSITION_CLASS
             : DESKTOP_BADGE_POSITION_CLASS,

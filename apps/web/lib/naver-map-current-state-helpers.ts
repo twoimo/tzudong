@@ -1,3 +1,5 @@
+import { NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS } from '@/lib/naver-map-overlay-timings';
+
 export function buildNaverCurrentStateSnapshot({
     effectivePanelOffset,
     externalPanelOpen,
@@ -46,7 +48,7 @@ export function getNaverCurrentPanelOffset(currentState: { effectivePanelOffset:
 
 export function resolveNaverRestaurantCountUpdatePlan({
     hasAlreadyShownCount = false,
-    hideDelayMs = 3000,
+    hideDelayMs = NAVER_MAP_RESTAURANT_COUNT_HIDE_DELAY_MS,
     settleDelayMs = 1200,
     isMobileOrTablet = false,
     isNoncriticalEffectsActive = true,

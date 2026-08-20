@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const source = readFileSync(join(import.meta.dir, '..', 'scripts/measure-dev-routes.mjs'), 'utf8');
+const compileSource = readFileSync(join(import.meta.dir, '..', 'scripts/measure-dev-compile.mjs'), 'utf8');
 
 describe('measure-dev-routes source contract', () => {
     test('fails closed on HTTP status failures unless explicitly overridden', () => {
@@ -12,12 +13,25 @@ describe('measure-dev-routes source contract', () => {
         expect(source).toContain('process.exitCode = 1');
     });
 
-    test('removes the full Next cache for cold measurements', () => {
-        expect(source).toContain("path.join(projectRoot, '.next')");
-        expect(source).not.toContain("path.join(projectRoot, '.next', 'dev')");
-        expect(source).toContain('async function removeNextCacheForColdIteration()');
+    test('resolves the effective port before clearing and measuring its isolated Next cache', () => {
+        expect(source).toContain('const nextDistDir = resolveLocalDevDistDir(projectRoot, port)');
+        expect(source.indexOf('const port = await choosePort()')).toBeLessThan(
+            source.indexOf('const nextDistDir = resolveLocalDevDistDir(projectRoot, port)'),
+        );
+        expect(source).toContain('async function removeNextCacheForColdIteration(nextDistDir)');
+        expect(source).toContain('directorySizeBytes(nextDistDir)');
+        expect(source).toContain("collectEnvironmentSnapshot('run-start', nextDistDir)");
+        expect(source).toContain('result.iterations[0]?.environment_before ?? result.environment_start');
+        expect(source).not.toContain("path.join(projectRoot, '.next')");
         expect(source).toContain('maxRetries: 3');
-        expect(source).toContain('await removeNextCacheForColdIteration()');
+        expect(source).toContain('await removeNextCacheForColdIteration(nextDistDir)');
+
+        expect(compileSource.indexOf('const port = await choosePort()')).toBeLessThan(
+            compileSource.indexOf('const nextDistDir = resolveLocalDevDistDir(projectRoot, port)'),
+        );
+        expect(compileSource).toContain('fs.rmSync(nextDistDir, { recursive: true, force: true })');
+        expect(compileSource).toContain('next_dist_dir: path.relative(projectRoot, nextDistDir)');
+        expect(compileSource).not.toContain("path.join(projectRoot, '.next', 'dev')");
     });
 
     test('retries transient dev-server failures and records retry metadata', () => {
@@ -38,7 +52,7 @@ describe('measure-dev-routes source contract', () => {
     });
 
     test('captures environment context for noisy local benchmarks', () => {
-        expect(source).toContain('function collectEnvironmentSnapshot(stage)');
+        expect(source).toContain('function collectEnvironmentSnapshot(stage, nextDistDir)');
         expect(source).toContain('free_memory_bytes');
         expect(source).toContain('next_dir_size_bytes');
         expect(source).toContain('process_count_matching_next_node_bun');

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { resolveLocalDevDistDir } from './local-dev-dist-dir.mjs';
 import { logCliError, redactCliText } from './privacy-safe-cli-log.mjs';
 
 const projectRoot = process.cwd();
@@ -122,19 +123,15 @@ async function waitForReady({ getLog, processExited, timeoutAt }) {
 async function main() {
   fs.mkdirSync(outputDir, { recursive: true });
 
+  const port = await choosePort();
+  const nextDistDir = resolveLocalDevDistDir(projectRoot, port);
   if (hasFlag('--cold')) {
-    fs.rmSync(path.join(projectRoot, '.next', 'dev'), { recursive: true, force: true });
+    fs.rmSync(nextDistDir, { recursive: true, force: true });
   }
 
-  const port = await choosePort();
   const command = [
     'node',
-    'scripts/clean-next.mjs',
-    '--skip-clean',
-    '--',
-    'node',
-    'node_modules/next/dist/bin/next',
-    'dev',
+    'scripts/run-local-dev.mjs',
     '--port',
     String(port),
   ];
@@ -144,6 +141,7 @@ async function main() {
     cwd: projectRoot,
     command: command.join(' '),
     port,
+    next_dist_dir: path.relative(projectRoot, nextDistDir),
     cache_policy: cachePolicy,
     label: safeLabel,
     ready_ms: null,
