@@ -395,16 +395,16 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION pipeline_control.enqueue_job(text, text, text, text, text, text, boolean, text, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION pipeline_control.claim_job(text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION pipeline_control.control_job(uuid, text, text, text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION pipeline_control.checkpoint_job(uuid, integer, text, jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION pipeline_control._job_json(pipeline_control.jobs) FROM PUBLIC;
+REVOKE ALL ON FUNCTION pipeline_control.enqueue_job(text, text, text, text, text, text, boolean, text, text)
+    FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION pipeline_control.claim_job(text)
+    FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION pipeline_control.control_job(uuid, text, text, text)
+    FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION pipeline_control.checkpoint_job(uuid, integer, text, jsonb)
+    FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION pipeline_control._job_json(pipeline_control.jobs)
+    FROM PUBLIC, anon, authenticated, service_role;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA pipeline_control TO service_role;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA pipeline_control TO service_role;
-GRANT EXECUTE ON FUNCTION pipeline_control.enqueue_job(text, text, text, text, text, text, boolean, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION pipeline_control.claim_job(text) TO service_role;
-GRANT EXECUTE ON FUNCTION pipeline_control.control_job(uuid, text, text, text) TO service_role;
-GRANT EXECUTE ON FUNCTION pipeline_control.checkpoint_job(uuid, integer, text, jsonb) TO service_role;
-GRANT EXECUTE ON FUNCTION pipeline_control._job_json(pipeline_control.jobs) TO service_role;

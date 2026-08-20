@@ -38,6 +38,8 @@ class AtomicSqlContractTests(unittest.TestCase):
         self.assertIn("pause_requested", sql)
         self.assertIn("pipeline_control.job_steps", sql)
         self.assertIn("pipeline_control.control_requests", sql)
+        self.assertIn("FROM PUBLIC, anon, authenticated, service_role", sql)
+        self.assertNotIn("GRANT EXECUTE ON FUNCTION pipeline_control.", sql)
         base = BASE_MIGRATION.read_text(encoding="utf-8")
         self.assertNotIn("FOR UPDATE SKIP LOCKED", base)
 
