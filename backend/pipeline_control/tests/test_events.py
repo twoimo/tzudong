@@ -257,7 +257,7 @@ class EventSinkTests(unittest.TestCase):
         self.assertNotRegex(obs, r"(?m)^\s+kafka:")
         self.assertNotRegex(obs, r"(?m)^\s+kafka-ui:")
         self.assertNotRegex(pipeline, r"(?im)^\s+postgres:")
-        self.assertIn("losable", contract)
+        self.assertIn("unpublished outbox rows survive broker outage", contract)
         self.assertIn("29092", contract)
         self.assertIn("kafka-python==3.0.11", reqs)
 
@@ -579,7 +579,7 @@ class EventSinkTests(unittest.TestCase):
         self.assertIn("record.upserted", contract)
         self.assertIn("process exit 0", contract)
         self.assertIn("possibly zero rows", contract)
-        self.assertIn("losable", contract)
+        self.assertIn("unpublished outbox rows survive broker outage", contract)
 
 
 if __name__ == "__main__":
