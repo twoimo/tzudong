@@ -26,8 +26,11 @@ except Exception:
 
 # shared utils import (backend/utils)
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = BACKEND_ROOT.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
@@ -35,6 +38,12 @@ from utils.supabase_rest import (
     SupabaseRestConfigurationError,
     resolve_privileged_supabase_rest_credentials,
 )
+from backend.pipeline_control.batch_upsert import (
+    BATCH_LIMIT as RESTAURANT_BATCH_LIMIT,
+    BatchUpsertError,
+    apply_restaurant_batch,
+)
+
 
 Client = Any
 create_client = None
@@ -547,6 +556,8 @@ def restaurant_readback_matches_payload(row: dict[str, Any], payload: dict[str, 
         field: value
         for field, value in payload.items()
         if field not in ROW_OWNED_FIELDS
+        and field not in {"id", "updated_at"}
+        and (field not in OPTIONAL_SCHEMA_COMPAT_FIELDS or field in row)
     }
     return all(row.get(field) == value for field, value in comparable.items())
 
@@ -651,6 +662,33 @@ def execute_conditional_insert(supabase: Client, payload: dict[str, Any]) -> Non
 
 
 
+def _run_restaurant_batch(operations: list[dict[str, Any]], payloads: list[dict[str, Any]]) -> None:
+    if not operations:
+        return
+    if len(operations) > RESTAURANT_BATCH_LIMIT:
+        raise RuntimeError("batch_upsert_limit")
+    try:
+        result = apply_restaurant_batch(operations)
+    except BatchUpsertError as exc:
+        if exc.code == "compare_and_set_conflict":
+            raise_compare_and_set_conflict()
+        if exc.code == "conditional_write_failed":
+            raise_conditional_write_failed()
+        raise RuntimeError(exc.code) from exc
+    except RuntimeError as exc:
+        if str(exc) == COMPARE_AND_SET_CONFLICT:
+            raise_compare_and_set_conflict()
+        if str(exc) == CONDITIONAL_WRITE_FAILED:
+            raise_conditional_write_failed()
+        raise
+    readback = result.get("readback") if isinstance(result, dict) else None
+    if not isinstance(readback, list) or len(readback) != len(payloads):
+        raise_compare_and_set_conflict()
+    for row, payload in zip(readback, payloads):
+        if not isinstance(row, dict) or not restaurant_readback_matches_payload(row, payload):
+            raise_compare_and_set_conflict()
+
+
 def execute_upsert_rows(
     supabase: Client,
     rows: list[dict[str, Any]],
@@ -666,13 +704,26 @@ def execute_upsert_rows(
         return
 
     existing_map = existing_map or {}
+    operations: list[dict[str, Any]] = []
+    payloads: list[dict[str, Any]] = []
     for payload in rows:
         existing = existing_map.get(payload.get("trace_id"))
         if existing is None:
-            execute_conditional_insert(supabase, payload)
+            operations.append({"op": "insert", "payload": payload, "expected": None})
         else:
-            execute_conditional_update(supabase, existing["id"], payload, existing)
-        stats["inserted"] += 1
+            snapshot = reviewed_snapshot(existing)
+            operations.append(
+                {
+                    "op": "update",
+                    "payload": payload,
+                    "expected": {
+                        field: snapshot[field] for field in RESTAURANT_CAS_PREDICATE_FIELDS
+                    },
+                }
+            )
+        payloads.append(payload)
+    _run_restaurant_batch(operations, payloads)
+    stats["inserted"] += len(rows)
 
 
 def execute_rebind_updates(
@@ -688,9 +739,22 @@ def execute_rebind_updates(
         stats["inserted"] += len(updates)
         return
 
-    for row_id, payload, existing in updates:
-        execute_conditional_update(supabase, row_id, payload, existing)
-        stats["inserted"] += 1
+    operations: list[dict[str, Any]] = []
+    payloads: list[dict[str, Any]] = []
+    for _row_id, payload, existing in updates:
+        snapshot = reviewed_snapshot(existing)
+        operations.append(
+            {
+                "op": "update",
+                "payload": payload,
+                "expected": {
+                    field: snapshot[field] for field in RESTAURANT_CAS_PREDICATE_FIELDS
+                },
+            }
+        )
+        payloads.append(payload)
+    _run_restaurant_batch(operations, payloads)
+    stats["inserted"] += len(updates)
 
 
 
@@ -858,7 +922,7 @@ def main() -> None:
         "ambiguous_rebind_skips": 0,
     }
 
-    batch_size = 200
+    batch_size = RESTAURANT_BATCH_LIMIT
     batch: list[dict[str, Any]] = []
 
     with open(input_file, "r", encoding="utf-8") as f:
