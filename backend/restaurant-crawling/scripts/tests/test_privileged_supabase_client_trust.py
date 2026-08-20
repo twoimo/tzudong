@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import ast
 import importlib.util
 import io
 import json
@@ -27,6 +28,9 @@ SCRIPTS_DIR = Path(__file__).resolve().parents[1]
 SCRIPT_PATHS = (
     SCRIPTS_DIR / "02-1-migrate-meta-to-supabase.py",
     SCRIPTS_DIR / "06-1-transcript-document-with-meta.py",
+)
+EVALUATION_INSERT_SCRIPT = (
+    BACKEND_ROOT / "restaurant-evaluation" / "scripts" / "13-supabase-insert.py"
 )
 VALID_URL = "https://abcdefghijklmnopqrst.supabase.co"
 VALID_SERVICE_ROLE_KEY = "sb_" + "secret_service_role_key_for_tests_only"
@@ -112,6 +116,18 @@ class PrivilegedSupabaseClientTrustTests(unittest.TestCase):
                 "SUPABASE_URL": VALID_URL,
                 "SUPABASE_SERVICE_ROLE_KEY": MALFORMED_SERVICE_ROLE_KEY,
             },
+            "pipeline_local_sink_with_hosted_url": {
+                "SUPABASE_URL": VALID_URL,
+                "SUPABASE_SERVICE_ROLE_KEY": VALID_SERVICE_ROLE_KEY,
+                "TZUDONG_DATA_SINK": "local_db",
+                "TZUDONG_EXECUTION_MODE": "live",
+            },
+            "pipeline_artifact_sink_with_hosted_url": {
+                "SUPABASE_URL": VALID_URL,
+                "SUPABASE_SERVICE_ROLE_KEY": VALID_SERVICE_ROLE_KEY,
+                "TZUDONG_DATA_SINK": "artifact_only",
+                "TZUDONG_EXECUTION_MODE": "live",
+            },
             "missing_canonical_configuration": {},
         }
 
@@ -194,6 +210,44 @@ class PrivilegedSupabaseClientTrustTests(unittest.TestCase):
 
         get_client.assert_not_called()
         migrate_meta.assert_called_once_with(None, "tzuyang", dry_run=True)
+
+    def test_sdk_import_is_lazy_and_follows_configuration_admission(self) -> None:
+        cases = (
+            (SCRIPT_PATHS[0], "get_supabase_client"),
+            (SCRIPT_PATHS[1], "get_supabase_client"),
+            (EVALUATION_INSERT_SCRIPT, "main"),
+        )
+        for script_path, guarded_function_name in cases:
+            with self.subTest(script=script_path.name):
+                tree = ast.parse(script_path.read_text(encoding="utf-8"))
+                top_level_supabase_imports = [
+                    node
+                    for node in tree.body
+                    if isinstance(node, ast.ImportFrom) and node.module == "supabase"
+                ]
+                self.assertEqual([], top_level_supabase_imports)
+                guarded = next(
+                    node
+                    for node in tree.body
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and node.name == guarded_function_name
+                )
+                calls = [
+                    node
+                    for node in ast.walk(guarded)
+                    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                ]
+                resolver_line = next(
+                    node.lineno
+                    for node in calls
+                    if node.func.id == "resolve_privileged_supabase_rest_credentials"
+                )
+                sdk_loader_line = next(
+                    node.lineno
+                    for node in calls
+                    if node.func.id == "_load_supabase_runtime"
+                )
+                self.assertLess(resolver_line, sdk_loader_line)
 
 
 if __name__ == "__main__":

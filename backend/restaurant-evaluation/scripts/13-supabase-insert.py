@@ -36,13 +36,24 @@ from utils.supabase_rest import (
     resolve_privileged_supabase_rest_credentials,
 )
 
+Client = Any
+create_client = None
 SUPABASE_IMPORT_ERROR = None
-try:
-    from supabase import Client, create_client
-except ImportError as exc:
-    SUPABASE_IMPORT_ERROR = exc
-    Client = Any
-    create_client = None
+
+
+def _load_supabase_runtime() -> None:
+    """Import the network-capable SDK only after configuration admission."""
+
+    global Client, create_client, SUPABASE_IMPORT_ERROR
+    if create_client is not None:
+        return
+    try:
+        from supabase import Client as SupabaseClient, create_client as supabase_create_client
+    except ImportError as error:
+        SUPABASE_IMPORT_ERROR = error
+        raise
+    Client = SupabaseClient
+    create_client = supabase_create_client
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -799,17 +810,22 @@ def main() -> None:
     if loaded_env is not None:
         print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드 완료")
 
-    if create_client is None:
+    try:
+        credentials = resolve_privileged_supabase_rest_credentials()
+    except SupabaseRestConfigurationError:
+        print("[ERROR] Supabase REST configuration invalid.")
+        sys.exit(1)
+
+    try:
+        _load_supabase_runtime()
+    except ImportError:
         print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
         print("   pip install supabase 실행")
         if SUPABASE_IMPORT_ERROR is not None:
             print(f"   상세: {safe_error_name(SUPABASE_IMPORT_ERROR)}")
         sys.exit(1)
-
-    try:
-        credentials = resolve_privileged_supabase_rest_credentials()
-    except SupabaseRestConfigurationError:
-        print("[ERROR] Supabase REST configuration invalid.")
+    if create_client is None:
+        print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
         sys.exit(1)
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] Supabase 설정 완료")
