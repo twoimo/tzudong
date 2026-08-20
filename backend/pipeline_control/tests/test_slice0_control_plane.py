@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
 import threading
 import tempfile
 import unittest
@@ -13,7 +14,12 @@ from pathlib import Path
 
 from backend.pipeline_control import dsn_guard
 from backend.pipeline_control.adapter import execute_dry_run
-from backend.pipeline_control.api import PipelineApiHandler, STORE, serve
+from backend.pipeline_control.api import (
+    PipelineApiHandler,
+    STORE,
+    _bounded_request_id,
+    serve,
+)
 from backend.pipeline_control.state_machine import ControlPlaneError, payload_hash
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.targets import load_targets
@@ -330,6 +336,48 @@ class HttpLoopTests(unittest.TestCase):
         )
         self.assertEqual(replay, 202)
         self.assertEqual(replay_body["id"], body["id"])
+
+    def test_request_id_header_is_strictly_bounded_and_crlf_safe(self) -> None:
+        self.assertEqual(_bounded_request_id("request-01:attempt_2"), "request-01:attempt_2")
+        for value in (
+            "ok\r\nX-Injected: true",
+            "x" * 129,
+            "contains space",
+            "요청-1",
+            None,
+        ):
+            with self.subTest(value=value):
+                replacement = _bounded_request_id(value)
+                self.assertRegex(
+                    replacement,
+                    r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                )
+                self.assertNotIn("\r", replacement)
+                self.assertNotIn("\n", replacement)
+
+    def test_folded_request_id_cannot_split_raw_http_response(self) -> None:
+        request = (
+            "GET /healthz HTTP/1.1\r\n"
+            f"Host: 127.0.0.1:{self.port}\r\n"
+            "X-Request-Id: safe-prefix\r\n"
+            " X-Injected: true\r\n"
+            "Connection: close\r\n\r\n"
+        ).encode("ascii")
+        with socket.create_connection(("127.0.0.1", self.port), timeout=5) as client:
+            client.sendall(request)
+            chunks: list[bytes] = []
+            while True:
+                chunk = client.recv(4096)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        response = b"".join(chunks)
+        head = response.split(b"\r\n\r\n", 1)[0]
+        self.assertNotIn(b"\r\nX-Injected:", head)
+        self.assertRegex(
+            head.decode("ascii"),
+            r"(?im)^X-Request-Id: [0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\r?$",
+        )
 
     def test_privacy_sanitize_on_errors(self) -> None:
         leaked = sanitize_log_value("password=super-secret-value")

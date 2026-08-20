@@ -17,12 +17,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-try:
-    from supabase import create_client, Client
-except ImportError:
-    print("supabase 패키지가 필요합니다: pip install supabase")
-    sys.exit(1)
-
 # shared utils import (backend/utils)
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
@@ -45,9 +39,34 @@ loaded_env = load_backend_env(backend_root, prefer_local=False)
 if loaded_env is not None:
     print("[INFO] .env 로드 완료")
 
+Client = Any
+create_client = None
+SUPABASE_IMPORT_ERROR = None
+
+
+def _load_supabase_runtime() -> None:
+    """Import the network-capable SDK only after configuration admission."""
+
+    global Client, create_client, SUPABASE_IMPORT_ERROR
+    if create_client is not None:
+        return
+    try:
+        from supabase import Client as SupabaseClient, create_client as supabase_create_client
+    except ImportError as error:
+        SUPABASE_IMPORT_ERROR = error
+        raise
+    Client = SupabaseClient
+    create_client = supabase_create_client
+
 def get_supabase_client() -> Client:
     """Create a client only from validated privileged REST credentials."""
     credentials = resolve_privileged_supabase_rest_credentials()
+    try:
+        _load_supabase_runtime()
+    except ImportError as error:
+        raise RuntimeError("supabase_dependency_missing") from error
+    if create_client is None:
+        raise RuntimeError("supabase_dependency_missing")
     return create_client(credentials.url, credentials.service_role_key)
 
 def parse_timestamp(ts_str: Optional[str]) -> Optional[str]:

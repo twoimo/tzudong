@@ -33,6 +33,7 @@ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQue
     const response = await fetch(url.toString(), {
         headers: {
             apikey: SUPABASE_PUBLIC_KEY!,
+            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
         },
     });
 
@@ -58,6 +59,7 @@ export const supabaseRestRpcClient = {
             method: 'POST',
             headers: {
                 apikey: SUPABASE_PUBLIC_KEY!,
+                Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(args),
@@ -84,6 +86,7 @@ export async function fetchSupabaseExactCount(table: string, query: SupabaseRest
         method: 'HEAD',
         headers: {
             apikey: SUPABASE_PUBLIC_KEY!,
+            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
             Prefer: 'count=exact',
         },
     });

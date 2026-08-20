@@ -5,6 +5,7 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import re
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -18,15 +19,32 @@ from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 from backend.pipeline_control.queue import enqueue
 
 STORE = FileStore()
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
 
 
 def current_store():
     return STORE
 
 
+def _bounded_request_id(value: object) -> str:
+    """Return an echo-safe request ID or a server-generated replacement.
+
+    ``BaseHTTPRequestHandler.send_header`` does not reject CR/LF itself.  Keep
+    the explicit replacements here so response-header safety does not depend on
+    caller behavior, then apply a narrow ASCII allowlist and length bound.
+    """
+
+    if not isinstance(value, str):
+        return str(uuid.uuid4())
+    sanitized = value.replace("\n", "").replace("\r", "")
+    if sanitized != value or _REQUEST_ID_RE.fullmatch(sanitized) is None:
+        return str(uuid.uuid4())
+    return sanitized
+
+
 def _json(handler: BaseHTTPRequestHandler, status: int, body: dict[str, Any]) -> None:
     payload = json.dumps(sanitize_log_value(body), ensure_ascii=True).encode("utf-8")
-    request_id = handler.headers.get("X-Request-Id") or str(uuid.uuid4())
+    request_id = _bounded_request_id(handler.headers.get("X-Request-Id"))
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Cache-Control", "no-store")
@@ -88,7 +106,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         try:
             path = urlparse(self.path).path
-            request_id = self.headers.get("X-Request-Id") or str(uuid.uuid4())
+            request_id = _bounded_request_id(self.headers.get("X-Request-Id"))
             actor = self.headers.get("X-Actor") or "anonymous"
             if path == "/v1/runs":
                 body = _read_json(self)

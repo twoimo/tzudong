@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -154,7 +154,7 @@ describe('local Supabase runtime source contract', () => {
     const eslintConfig = readFileSync(path.resolve(import.meta.dir, '../eslint.config.mjs'), 'utf8');
     expect(packageSource).toContain('"dev": "node scripts/run-local-dev.mjs --port 8080"');
     expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 8080"');
-    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080"');
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
     expect(packageSource).toContain('"supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs"');
     const localTypeRunner = readFileSync(
       path.resolve(import.meta.dir, '../scripts/run-local-supabase-types.mjs'),
@@ -185,9 +185,11 @@ describe('local Supabase runtime source contract', () => {
       INSIGHT_GITHUB_TOKEN: 'hosted-insight-token',
       GITHUB_OWNER: 'fixture-owner',
       GITHUB_REPO: 'fixture-repository',
+      NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: 'https://hostile.invalid/naver-maps.js',
       KEEP_ME: 'safe',
     });
     expect(environment.NEXT_PUBLIC_SUPABASE_URL).toBe('http://127.0.0.1:8000');
+    expect(environment.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL).toBe('/__local/naver-maps.js');
     expect(environment.SUPABASE_ACCESS_TOKEN).toBeUndefined();
     expect(environment.SERVICE_ROLE_KEY).toBeUndefined();
     expect(environment.SUPABASE_STORAGE_SERVER_KEY).toBe('local-storage');
@@ -210,18 +212,58 @@ describe('local Supabase runtime source contract', () => {
     expect(runner).toContain("TZUDONG_LOCAL_SUPABASE_DEV: '1'");
     expect(runner).toContain("NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME: '1'");
     expect(runner).toContain("NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: '/__local/naver-maps.js'");
+    expect(runner).toContain("export function buildLocalNightlyEnvironment(local, inherited = process.env) {");
+    expect(runner).toContain("export function buildLocalNightlyEnvironment");
     expect(runner).toContain("SUPABASE_SERVICE_ROLE_KEY: local.values.SERVICE_ROLE_KEY");
     expect(runner).toContain("SUPABASE_STORAGE_SERVER_KEY: local.values.STORAGE_SERVICE_KEY");
     expect(runner).toContain('env: localStackStatusEnvironment(),');
     expect(nextConfig).toContain("process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1'");
     expect(nextConfig).toContain("process.env.NODE_ENV === 'development'");
     expect(localDevRunner).toContain('NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`');
-    expect(localDevRunner).toContain('TZUDONG_NEXT_DIST_DIR: `.next-local-${port}`');
+    expect(localDevRunner).toContain('TZUDONG_NEXT_DIST_DIR: localDevDistDirName(port)');
+    expect(localDevRunner).toContain("name === '--live-naver-provider-smoke'");
+    expect(localDevRunner).toContain("NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE: liveNaverProviderSmoke ? '1' : '0'");
+    expect(localDevRunner).toContain("NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: liveNaverProviderSmoke ? '' : '/__local/naver-maps.js'");
     expect(localDevRunner).toContain("__NEXT_PROCESSED_ENV: 'true'");
     expect(localDevRunner).not.toContain('process.kill(process.pid');
     expect(gitignore).toContain('/.next-*/');
     expect(eslintConfig).toContain("'.next-local-*/**'");
     expect(eslintConfig).toContain("'.next-nightly-*/**'");
+  });
+
+  test('fails closed on unadmitted next-dev spawners and pins the hosted argv marker', () => {
+    const packageSource = readFileSync(path.resolve(import.meta.dir, '../package.json'), 'utf8');
+    const scriptsDir = path.resolve(import.meta.dir, '../scripts');
+    const scriptFiles = readdirSync(scriptsDir).filter((name) => name.endsWith('.mjs'));
+    const allowlistedDirectNextDev = new Set(['run-nightly-regression.mjs']);
+    const nextDevSpawners = scriptFiles.filter((name) => {
+      const source = readFileSync(path.join(scriptsDir, name), 'utf8');
+      return /node_modules\/next\/dist\/bin\/next['"`\s,]*dev|['"`]dev['"`].*next/.test(source)
+        && source.includes("node_modules/next/dist/bin/next")
+        && /\bdev\b/.test(source);
+    });
+    for (const name of nextDevSpawners) {
+      if (allowlistedDirectNextDev.has(name)) continue;
+      const source = readFileSync(path.join(scriptsDir, name), 'utf8');
+      const admitted = source.includes('run-local-dev.mjs')
+        || source.includes('assertLocalSupabaseReady')
+        || source.includes('TZUDONG_LOCAL_SUPABASE_DEV')
+        || source.includes('TZUDONG_HOSTED_DEV')
+        || source.includes('nightlyRun');
+      expect(admitted, name).toBe(true);
+    }
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
+    const cleanNext = readFileSync(path.resolve(import.meta.dir, '../scripts/clean-next.mjs'), 'utf8');
+    const prewarm = readFileSync(path.resolve(import.meta.dir, '../scripts/dev-prewarm.mjs'), 'utf8');
+    const localDev = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');
+    expect(prewarm).toContain("const hosted = hasFlag('--hosted')");
+    expect(prewarm).toContain("TZUDONG_HOSTED_DEV: '1'");
+    expect(cleanNext).toContain("error=NextDevAdmissionRequired");
+    expect(cleanNext).toContain('TZUDONG_HOSTED_DEV');
+    expect(cleanNext).not.toContain('npm_lifecycle_event');
+    expect(localDev).toContain("name === '--turbopack'");
+    expect(localDev).toContain("name === '--clean'");
+    expect(packageSource).not.toContain('next dev --webpack --port 8080');
   });
 
   test('rejects malformed GitHub repository inputs while keeping status fail closed', () => {

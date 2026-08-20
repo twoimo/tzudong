@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { NAVER_MAPS_CONFIG } from "@/config/maps";
+import {
+    isLocalNaverStyleFallbackHost,
+    resolveNaverMapScriptUrl,
+    rewriteNaverStyleUrlForLocalhost,
+    shouldUseLocalNaverMapStub,
+} from '@/lib/naver-map-provider-mode';
 
 declare global {
     interface Window {
@@ -11,8 +17,11 @@ declare global {
     }
 }
 const LOCAL_NIGHTLY = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1' && process.env.NODE_ENV === 'test';
-const LOCAL_OFFLINE_MAP = LOCAL_NIGHTLY || process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1';
-const LOCAL_SCRIPT_URL = process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL?.trim() || '/__local/naver-maps.js';
+const LOCAL_OFFLINE_MAP = shouldUseLocalNaverMapStub({
+    isLiveProviderSmoke: process.env.NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE === '1',
+    isLocalNightly: LOCAL_NIGHTLY,
+    isLocalRuntime: process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1',
+});
 
 interface UseNaverMapsOptions {
     /** true면 즉시 로드, false면 수동 로드 (기본값: false - 지연 로딩) */
@@ -23,6 +32,59 @@ interface UseNaverMapsOptions {
 
 type IdleCallbackHandle = number;
 type RequestIdleCallbackLike = (callback: () => void, options?: { timeout: number }) => IdleCallbackHandle;
+
+function installLocalNaverStyleHostFallback() {
+    if (typeof window === 'undefined') return;
+    const hostname = window.location.hostname;
+    if (!isLocalNaverStyleFallbackHost(hostname)) return;
+    const flaggedWindow = window as Window & { __tzudongNrbeFallback?: boolean };
+    if (flaggedWindow.__tzudongNrbeFallback) return;
+    flaggedWindow.__tzudongNrbeFallback = true;
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        const raw = typeof input === 'string'
+            ? input
+            : input instanceof URL
+                ? input.toString()
+                : input.url;
+        const redirected = rewriteNaverStyleUrlForLocalhost(raw, hostname);
+        if (redirected === raw) return nativeFetch(input, init);
+        if (typeof input === 'string') return nativeFetch(redirected, init);
+        if (input instanceof URL) return nativeFetch(new URL(redirected), init);
+        return nativeFetch(new Request(redirected, input), init);
+    }) as typeof window.fetch;
+
+    const NativeXHR = window.XMLHttpRequest;
+    class LocalNaverStyleXHR extends NativeXHR {
+        open(method: string, url: string | URL, async?: boolean, username?: string | null, password?: string | null) {
+            const raw = typeof url === 'string' ? url : url.toString();
+            return super.open(method, rewriteNaverStyleUrlForLocalhost(raw, hostname), async ?? true, username, password);
+        }
+    }
+    window.XMLHttpRequest = LocalNaverStyleXHR;
+
+    const patchUrlAccessor = (proto: typeof HTMLScriptElement.prototype | typeof HTMLImageElement.prototype) => {
+        const descriptor = Object.getOwnPropertyDescriptor(proto, 'src');
+        if (!descriptor?.set || !descriptor.get || (descriptor.set as { __tzudongNrbeFallback?: boolean }).__tzudongNrbeFallback) {
+            return;
+        }
+        const nativeSet = descriptor.set;
+        const nativeGet = descriptor.get;
+        const patchedSet = function patchedSrc(this: HTMLScriptElement | HTMLImageElement, value: string) {
+            nativeSet.call(this, rewriteNaverStyleUrlForLocalhost(String(value), hostname));
+        };
+        (patchedSet as { __tzudongNrbeFallback?: boolean }).__tzudongNrbeFallback = true;
+        Object.defineProperty(proto, 'src', {
+            configurable: true,
+            enumerable: descriptor.enumerable,
+            get: nativeGet,
+            set: patchedSet,
+        });
+    };
+    patchUrlAccessor(HTMLScriptElement.prototype);
+    patchUrlAccessor(HTMLImageElement.prototype);
+}
 
 function hasUsableNaverMaps() {
     if (typeof window === 'undefined') return false;
@@ -36,9 +98,11 @@ function hasUsableNaverMaps() {
         && maps.Event
     );
 }
-const EFFECTIVE_SCRIPT_URL = LOCAL_OFFLINE_MAP
-    ? LOCAL_SCRIPT_URL
-    : `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAPS_CONFIG.clientId}`;
+const EFFECTIVE_SCRIPT_URL = resolveNaverMapScriptUrl({
+    clientId: NAVER_MAPS_CONFIG.clientId,
+    configuredScriptUrl: process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL,
+    useLocalStub: LOCAL_OFFLINE_MAP,
+});
 
 export function useNaverMaps(options: UseNaverMapsOptions = {}) {
     const { autoLoad = false, strategy = 'afterInteractive' } = options;
@@ -77,6 +141,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
         if (existingScript) {
             setIsLoading(true);
             existingScript.addEventListener("load", () => {
+                installLocalNaverStyleHostFallback();
                 if (hasUsableNaverMaps()) {
                     setIsLoaded(true);
                     setIsLoading(false);
@@ -94,6 +159,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
 
         // 스크립트 로드 실행 함수
         const injectScript = () => {
+            installLocalNaverStyleHostFallback();
             setIsLoading(true);
             const script = document.createElement("script");
             script.type = "text/javascript";
@@ -102,6 +168,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             script.async = true;
 
             script.onload = () => {
+                installLocalNaverStyleHostFallback();
                 if (hasUsableNaverMaps()) {
                     setIsLoaded(true);
                     setIsLoading(false);
