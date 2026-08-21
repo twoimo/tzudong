@@ -14,7 +14,7 @@ from backend.pipeline_control.manifest import (
     refuse_shim_deletion,
 )
 
-DEFAULT_BASELINE = Path("/Users/twoimo/Documents/projects/tzudong/backend/log/cron/current-summary.json")
+DEFAULT_BASELINE = Path("backend/log/cron/sh-baseline-current-summary.json")
 DEFAULT_CANDIDATE = Path("backend/log/cron/current-summary.json")
 DEFAULT_LEDGER = Path("backend/log/cron/pipeline-parity-ledger.json")
 
