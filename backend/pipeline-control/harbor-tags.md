@@ -1,13 +1,13 @@
 # Harbor-ready tags
 
-- `image.registry/tzudong/pipeline-api:<gitsha>`
-- `image.registry/tzudong/pipeline-worker:<gitsha>`
+- `harbor.local/tzudong/pipeline-api:<gitsha>`
+- `harbor.local/tzudong/pipeline-worker:<gitsha>`
 
 Build:
 
 ```
-docker build -f backend/pipeline-control/Dockerfile --target api -t image.registry/tzudong/pipeline-api:local .
-docker build -f backend/pipeline-control/Dockerfile --target worker -t image.registry/tzudong/pipeline-worker:local .
+docker build -f backend/pipeline-control/Dockerfile --target api -t harbor.local/tzudong/pipeline-api:local .
+docker build -f backend/pipeline-control/Dockerfile --target worker -t harbor.local/tzudong/pipeline-worker:local .
 ```
 
 `lite_gha` uses the worker target as a one-shot after a Postgres service is healthy.
