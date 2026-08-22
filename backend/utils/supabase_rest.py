@@ -307,6 +307,63 @@ def admit_pipeline_supabase_boundary(
     return PipelineSupabaseBoundary(data_sink=data_sink, execution_mode=mode)
 
 
+
+HOSTED_PROJECT_REF = "aqlcofblfxdrjhhdmarw"
+HOSTED_REST_REJECTED = "hosted_rest_rejected"
+
+
+class HostedRestRejected(SupabaseRestConfigurationError):
+    """Hosted REST is refused for local_db or live pipeline execution."""
+
+    def __init__(self) -> None:
+        super().__init__(HOSTED_REST_REJECTED)
+
+
+def live_pipeline_enabled(environment: Mapping[str, object] | None = None) -> bool:
+    env = os.environ if environment is None else environment
+    return str(env.get("TZUDONG_PIPELINE_LIVE") or "").strip() == "1"
+
+
+def local_or_live_forbids_hosted_rest(environment: Mapping[str, object] | None = None) -> bool:
+    env = os.environ if environment is None else environment
+    return str(env.get("TZUDONG_DATA_ENV") or "").strip() == "local_db" or live_pipeline_enabled(env)
+
+
+def hosted_rest_exit_code(environment: Mapping[str, object] | None = None) -> int:
+    return 1
+
+
+def live_insert_quota(environment: Mapping[str, object] | None = None) -> int | None:
+    """Max new live writes, or None when the pipeline is not live."""
+
+    env = os.environ if environment is None else environment
+    if not live_pipeline_enabled(env):
+        return None
+    raw = str(env.get("LIVE_MAX_NEW_ITEMS") or "1").strip()
+    return int(raw) if raw.isdigit() else 1
+
+
+def rest_url_is_hosted(url: str) -> bool:
+    host = url.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0].lower()
+    return host.endswith(".supabase.co") or HOSTED_PROJECT_REF in host
+
+
+def bind_local_rest_environment(
+    environment: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """Prefer operator loopback REST when local_db or live forbids hosted writes."""
+
+    bound: dict[str, object] = dict(os.environ if environment is None else environment)
+    if not local_or_live_forbids_hosted_rest(bound):
+        return bound
+    local_url = bound.get("TZUDONG_LOCAL_SUPABASE_URL")
+    local_key = bound.get("TZUDONG_LOCAL_SUPABASE_SERVICE_ROLE_KEY")
+    if isinstance(local_url, str) and local_url.strip():
+        bound["SUPABASE_URL"] = local_url.strip()
+    if isinstance(local_key, str) and local_key.strip():
+        bound["SUPABASE_SERVICE_ROLE_KEY"] = local_key.strip()
+    return bound
+
 def resolve_privileged_supabase_rest_credentials(
     environment: Mapping[str, object] | None = None,
 ) -> SupabaseRestCredentials:
@@ -316,9 +373,7 @@ def resolve_privileged_supabase_rest_credentials(
     limited to explicitly enabled loopback development or test runtimes.
     """
 
-    resolved_environment: Mapping[str, object] = (
-        os.environ if environment is None else environment
-    )
+    resolved_environment = bind_local_rest_environment(environment)
     url = _environment_value(resolved_environment, "SUPABASE_URL")
     key = _validate_service_role_key(resolved_environment)
     parsed = _parse_url(url)
@@ -334,4 +389,6 @@ def resolve_privileged_supabase_rest_credentials(
         canonical_url = _loopback_url(parsed)
     if canonical_url is None:
         _configuration_error()
+    if local_or_live_forbids_hosted_rest(resolved_environment) and rest_url_is_hosted(canonical_url):
+        raise HostedRestRejected()
     return SupabaseRestCredentials(url=canonical_url, service_role_key=key)
