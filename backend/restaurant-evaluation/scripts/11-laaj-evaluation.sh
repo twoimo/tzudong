@@ -331,7 +331,12 @@ if [ -z "$GEMINI_API_KEY" ]; then
         FORCE_CLI_FALLBACK=true
     else
         log_error "GEMINI_API_KEY 또는 OAuth CLI 자격 증명이 없습니다."
-        exit 1
+        if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then
+            log_warning "live bounded: no Gemini credentials; cap new LAAJ to 0"
+            LIVE_MAX_NEW_ITEMS=0
+        else
+            exit 1
+        fi
     fi
 fi
 
@@ -559,6 +564,15 @@ for i in "${!VIDEO_IDS[@]}"; do
             log_warning "[$INDEX/$TOTAL] 이미 처리됨 (누적 스킵 ${SKIPPED_EXISTS}개)"
         fi
         continue
+    fi
+
+    if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then
+        max_new="${LIVE_MAX_NEW_ITEMS:-1}"
+        if [ "${GEMINI_CALLS:-0}" -ge "$max_new" ]; then
+            SKIPPED_NO_TARGET=$((SKIPPED_NO_TARGET + 1))
+            log_info "[$INDEX/$TOTAL] SKIP: live_bounded ($VIDEO_ID)"
+            continue
+        fi
     fi
     
     # 재시도 로직

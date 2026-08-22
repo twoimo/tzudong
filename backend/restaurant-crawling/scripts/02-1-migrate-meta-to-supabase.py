@@ -25,7 +25,10 @@ if str(BACKEND_ROOT) not in sys.path:
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.supabase_rest import (
+    HostedRestRejected,
     SupabaseRestConfigurationError,
+    hosted_rest_exit_code,
+    live_insert_quota,
     resolve_privileged_supabase_rest_credentials,
 )
 
@@ -97,8 +100,13 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
     batch_data = []
     total_processed = 0
     total_upserted = 0
+    quota = live_insert_quota()
+    flush_at = 1 if quota is not None else batch_size
     
     for idx, jsonl_file in enumerate(jsonl_files, 1):
+        if quota is not None and total_upserted >= quota:
+            print(f"[INFO] live_bounded: reached LIVE_MAX_NEW_ITEMS={quota}; remaining videos skipped")
+            break
         if idx % 50 == 0:
             print(f"  처리 중: {idx}/{total}")
         
@@ -170,13 +178,14 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
         
         batch_data.append(row_data)
         
-        if len(batch_data) >= batch_size:
+        if len(batch_data) >= flush_at:
             if not dry_run:
                 try:
                     supabase.table("videos").upsert(batch_data).execute()
                     total_upserted += len(batch_data)
                 except Exception as error:
-                    print(f"[WARN] 배치 업서트 실패 ({len(batch_data)}개): {safe_error_name(error)}")
+                    print(f"[ERROR] 배치 업서트 실패 ({len(batch_data)}개): {safe_error_name(error)}")
+                    raise
             batch_data = []
             
     # 남은 데이터 처리
@@ -186,7 +195,8 @@ def migrate_meta(supabase: Optional[Client], channel: str, dry_run: bool = False
                 supabase.table("videos").upsert(batch_data).execute()
                 total_upserted += len(batch_data)
             except Exception as error:
-                print(f"[WARN] 마지막 배치 업서트 실패: {safe_error_name(error)}")
+                print(f"[ERROR] 마지막 배치 업서트 실패: {safe_error_name(error)}")
+                raise
                 
     print(f"[OK] 총 {total_upserted}개 비디오 메타데이터 마이그레이션 완료")
 
@@ -230,6 +240,9 @@ def main():
 
         print("\n완료!")
 
+    except HostedRestRejected:
+        print("\n[WARN] hosted_rest_rejected: refusing hosted Supabase REST writes")
+        sys.exit(hosted_rest_exit_code())
     except SupabaseRestConfigurationError:
         print("\n[ERROR] Supabase REST configuration invalid.")
         sys.exit(1)
