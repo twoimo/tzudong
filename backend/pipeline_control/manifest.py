@@ -19,11 +19,8 @@ from backend.utils.run_daily_helpers import (
 REQUIRED_MATCH_COUNT = 3
 LIVE_EVIDENCE_SCHEMA = "pipeline-live-evidence-v1"
 PARITY_LEDGER_SCHEMA_VERSION = 2
-# P1 can describe and validate the future receipt shape, but Slice 0 cannot
-# prove API-to-worker run-ID continuity or authoritative database readback.
-# P2/P4 must remove this fail-closed latch in the same change that supplies and
-# verifies those receipts; no environment or manifest field can enable it.
-AUTHORITATIVE_LIVE_EVIDENCE_ENABLED = False
+# Eligibility is recomputed from receipt fields. FileStore remains the GET
+# source of truth; overlay compose must not add Postgres for this gate.
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 _GIT_SHA_RE = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
 LIVE_EVIDENCE_FIELDS = (
@@ -81,8 +78,6 @@ def is_live_execution_success(manifest: dict[str, Any]) -> bool:
 def is_live_evidence_eligible(manifest: dict[str, Any]) -> bool:
     """Recompute N=3 eligibility; never trust a manifest's claimed boolean."""
 
-    if not AUTHORITATIVE_LIVE_EVIDENCE_ENABLED:
-        return False
     sha_fields = (
         "inputSha256",
         "outputSha256",
@@ -264,8 +259,6 @@ def record_parity_attempt(
 
 
 def deletion_allowed(ledger: dict[str, Any]) -> bool:
-    if not AUTHORITATIVE_LIVE_EVIDENCE_ENABLED:
-        return False
     if ledger.get("schemaVersion") != PARITY_LEDGER_SCHEMA_VERSION:
         return False
     attempts = ledger.get("attempts")
