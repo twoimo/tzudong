@@ -1198,13 +1198,13 @@ describe("nightly regression package and source contracts", () => {
     expect(failedDiagnosticsUploadBlock).toContain(
       "nightly-artifacts/local-image-pull-preflight.json",
     );
-    expect(packageLockSource).toContain('"node_modules/supabase": {\n      "version": "2.109.1"');
+    expect(packageLockSource).toContain('"node_modules/supabase": {\n      "version": "2.115.0"');
     expect(packageLockSource).toContain(
-      '"node_modules/@supabase/cli-linux-x64": {\n      "version": "2.109.1"',
+      '"node_modules/@supabase/cli-linux-x64": {\n      "version": "2.115.0"',
     );
-    expect(bunLockSource).toContain('"supabase": ["supabase@2.109.1"');
+    expect(bunLockSource).toContain('"supabase": ["supabase@2.115.0"');
     expect(bunLockSource).toContain(
-      '"@supabase/cli-linux-x64": ["@supabase/cli-linux-x64@2.109.1"',
+      '"@supabase/cli-linux-x64": ["@supabase/cli-linux-x64@2.115.0"',
     );
     expect(failedDiagnosticsUploadBlock).not.toContain("local-browser-route-diagnostics.json");
     expect(failedDiagnosticsUploadBlock).toContain("nightly-unit-run-summary.json");

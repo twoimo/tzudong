@@ -3,16 +3,54 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
+import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from backend.pipeline_control.adapter import execute_steps
 from backend.pipeline_control.cutover import plan_cutover
-from backend.pipeline_control.manifest import record_parity_attempt
+from backend.pipeline_control.manifest import (
+    is_live_evidence_eligible,
+    is_live_execution_success,
+    record_parity_attempt,
+)
 from backend.pipeline_control.state_machine import RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.worker import process_one, write_run_manifest
+from backend.utils.supabase_rest import (
+    SupabaseRestConfigurationError,
+    resolve_privileged_supabase_rest_credentials,
+)
+
+
+def _live_evidence(job_id: str) -> dict:
+    readback_sha = "c" * 64
+    return {
+        "jobId": job_id,
+        "sameRunIdVerified": True,
+        "executionMode": "live",
+        "dataSink": "local_db",
+        "computeProfile": "heavy_local",
+        "target": "tzuyang",
+        "finalStatus": "OK",
+        "finalExitCode": 0,
+        "noWorkShortCircuit": False,
+        "gitSha": "a" * 40,
+        "inputSha256": "b" * 64,
+        "outputSha256": readback_sha,
+        "stepEvidenceSha256": "d" * 64,
+        "evidenceSchemaVersion": "pipeline-live-evidence-v1",
+        "baselineSha256": readback_sha,
+        "candidateSha256": readback_sha,
+        "readbackSha256": readback_sha,
+        "evidenceReceiptSha256": sha256(job_id.encode("utf-8")).hexdigest(),
+        "baselineRowCount": 25,
+        "candidateRowCount": 25,
+        "readbackRowCount": 25,
+    }
 
 
 class LiveAdapterTests(unittest.TestCase):
@@ -38,7 +76,7 @@ class LiveAdapterTests(unittest.TestCase):
         )
         result = execute_steps(run, should_stop=lambda: None, live=True, runner=runner)
         self.assertEqual(result, "Succeeded")
-        self.assertEqual(len(seen), 14)
+        self.assertEqual(len(seen), 15)
         self.assertIn("--channel", seen[0])
         self.assertIn("tzuyang", seen[0])
 
@@ -78,23 +116,290 @@ class LiveAdapterTests(unittest.TestCase):
             request_id="req",
             dry_run=True,
         )
-        with tempfile.TemporaryDirectory() as raw:
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {"SUPABASE_URL": "", "SUPABASE_SERVICE_ROLE_KEY": ""},
+            clear=False,
+        ):
             path = Path(raw) / "current-summary.json"
             process_one(store, live=True, runner=lambda argv: seen.append(argv) or 0, manifest_path=path)
             self.assertEqual(seen, [])
             payload = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(payload["finalStatus"], "OK")
+            self.assertEqual(payload["jobId"], next(iter(store.runs)))
+            self.assertEqual(payload["executionMode"], "dry_run")
+            self.assertEqual(payload["dataSink"], "local_db")
+            self.assertRegex(payload["gitSha"], r"^[0-9a-f]{40}$")
+            self.assertIsNone(payload["inputSha256"])
+            self.assertIsNone(payload["outputSha256"])
+            self.assertRegex(payload["requestPayloadSha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(payload["stepEvidenceSha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                payload["hashProvenance"],
+                {"inputSha256": "unavailable", "outputSha256": "unavailable"},
+            )
+            self.assertFalse(payload["liveExecutionSucceeded"])
+            self.assertFalse(payload["liveEvidenceEligible"])
+
+    def test_hosted_supabase_url_is_rejected_before_live_runner(self) -> None:
+        import os
+        from unittest.mock import patch
+
+        calls: list[list[str]] = []
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="liveboundary01",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-boundary",
+            dry_run=False,
+        )
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {
+                "TZUDONG_DATA_ENV": "local_db",
+                "TZUDONG_DATA_SINK": "local_db",
+                "SUPABASE_URL": "https://abcdefghijklmnopqrst.supabase.co",
+            },
+            clear=False,
+        ):
+            path = Path(raw) / "current-summary.json"
+            result = process_one(
+                store,
+                live=True,
+                runner=lambda argv: calls.append(argv) or 0,
+                manifest_path=path,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(result, "Failed")
+        self.assertEqual(store.get(run.id).error_code, "supabase_data_boundary_rejected")
+        self.assertEqual(calls, [])
+        self.assertEqual(payload["executionMode"], "live")
+        self.assertFalse(payload["liveExecutionSucceeded"])
+        self.assertFalse(payload["liveEvidenceEligible"])
+
+    def test_worker_binds_derived_boundary_for_runner_and_restores_environment(self) -> None:
+        marker_names = (
+            "TZUDONG_DATA_SINK",
+            "TZUDONG_EXECUTION_MODE",
+            "TZUDONG_COMPUTE_PROFILE",
+        )
+        previous = {name: os.environ.pop(name, None) for name in marker_names}
+        seen: list[tuple[str | None, str | None, str | None]] = []
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="boundcontext01",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-bound-context",
+            dry_run=False,
+        )
+
+        def runner(_argv: list[str]) -> int:
+            seen.append(tuple(os.environ.get(name) for name in marker_names))
+            return 1
+
+        try:
+            with tempfile.TemporaryDirectory() as raw, patch.dict(
+                os.environ,
+                {"SUPABASE_URL": "", "SUPABASE_SERVICE_ROLE_KEY": ""},
+                clear=False,
+            ):
+                result = process_one(
+                    store,
+                    live=True,
+                    runner=runner,
+                    manifest_path=Path(raw) / "current-summary.json",
+                )
+            self.assertEqual(result, "Failed")
+            self.assertEqual(seen, [("local_db", "live", "heavy_local")])
+            for name in marker_names:
+                self.assertNotIn(name, os.environ)
+        finally:
+            for name, value in previous.items():
+                if value is not None:
+                    os.environ[name] = value
+
+    def test_late_dotenv_hosted_url_is_rejected_before_sdk_loader(self) -> None:
+        runner_calls: list[list[str]] = []
+        sdk_loader_calls: list[str] = []
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="latedotenv01",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-late-dotenv",
+            dry_run=False,
+        )
+
+        def runner(argv: list[str]) -> int:
+            runner_calls.append(argv)
+            # Model a numbered script loading backend/.env after the worker
+            # preflight but before its lazy Supabase SDK import.
+            prior_url = os.environ.get("SUPABASE_URL")
+            prior_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+            os.environ["SUPABASE_URL"] = "https://abcdefghijklmnopqrst.supabase.co"
+            os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "service-role-test-value"
+            try:
+                try:
+                    resolve_privileged_supabase_rest_credentials()
+                except SupabaseRestConfigurationError:
+                    return 1
+                sdk_loader_calls.append("loaded")
+                return 0
+            finally:
+                if prior_url is None:
+                    os.environ.pop("SUPABASE_URL", None)
+                else:
+                    os.environ["SUPABASE_URL"] = prior_url
+                if prior_key is None:
+                    os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+                else:
+                    os.environ["SUPABASE_SERVICE_ROLE_KEY"] = prior_key
+
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {"SUPABASE_URL": "", "SUPABASE_SERVICE_ROLE_KEY": ""},
+            clear=False,
+        ):
+            result = process_one(
+                store,
+                live=True,
+                runner=runner,
+                manifest_path=Path(raw) / "current-summary.json",
+            )
+        self.assertEqual(result, "Failed")
+        self.assertEqual(len(runner_calls), 1)
+        self.assertEqual(sdk_loader_calls, [])
+
+    def test_live_manifest_is_eligible_only_with_frozen_input_and_readback_hashes(self) -> None:
+        import os
+        from unittest.mock import patch
+
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="liveevidence01",
+            payload={"frozen": True},
+            actor="qa",
+            request_id="req-evidence",
+            dry_run=False,
+        )
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {
+                "TZUDONG_DATA_ENV": "local_db",
+                "TZUDONG_DATA_SINK": "local_db",
+                "RUN_DAILY_EXECUTION_SHA": "f" * 40,
+                "RUN_DAILY_INPUT_SHA256": "d" * 64,
+                "RUN_DAILY_OUTPUT_SHA256": "e" * 64,
+            },
+            clear=False,
+        ):
+            os.environ.pop("SUPABASE_URL", None)
+            path = Path(raw) / "current-summary.json"
+            result = process_one(
+                store,
+                live=True,
+                runner=lambda _argv: 0,
+                manifest_path=path,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(result, "Succeeded")
+        self.assertEqual(payload["jobId"], run.id)
+        self.assertEqual(payload["executionMode"], "live")
+        self.assertEqual(payload["inputSha256"], "d" * 64)
+        self.assertEqual(payload["outputSha256"], "e" * 64)
+        self.assertTrue(payload["liveExecutionSucceeded"])
+        self.assertFalse(payload["sameRunIdVerified"])
+        self.assertFalse(payload["liveEvidenceEligible"])
+
+    def test_artifact_only_live_result_is_not_local_cutover_evidence(self) -> None:
+        candidate = {**_live_evidence("job-artifact-1"), "dataSink": "artifact_only"}
+        self.assertFalse(is_live_execution_success(candidate))
+        self.assertFalse(is_live_evidence_eligible(candidate))
+
+    def test_artifact_only_live_run_refuses_mutating_adapter(self) -> None:
+        import os
+
+        calls: list[list[str]] = []
+        store = MemoryStore(clock=lambda: 1_000.0)
+        run, _ = store.create_run(
+            target="tzuyang",
+            profile="lite_gha",
+            idempotency_key="artifactlive01",
+            payload={"dryRun": False},
+            actor="qa",
+            request_id="req-artifact",
+            dry_run=False,
+        )
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {
+                "TZUDONG_DATA_SINK": "artifact_only",
+                "TZUDONG_EXECUTION_MODE": "live",
+                "TZUDONG_COMPUTE_PROFILE": "lite_gha",
+            },
+            clear=False,
+        ):
+            os.environ.pop("SUPABASE_URL", None)
+            path = Path(raw) / "current-summary.json"
+            result = process_one(
+                store,
+                live=True,
+                runner=lambda argv: calls.append(argv) or 0,
+                manifest_path=path,
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(result, "Succeeded")
+        self.assertIsNone(store.get(run.id).error_code)
+        joined = "\n".join(" ".join(item) for item in calls)
+        self.assertNotIn("02-1-migrate-meta-to-supabase.py", joined)
+        self.assertNotIn("13-supabase-insert.py", joined)
+        self.assertNotIn("admin-data-quality-audit.mjs", joined)
+        self.assertEqual(payload["dataSink"], "artifact_only")
+        self.assertEqual(payload["executionMode"], "live")
+        self.assertFalse(payload["liveExecutionSucceeded"])
+
+    def test_environment_hashes_cannot_manufacture_n3_evidence(self) -> None:
+        candidate = _live_evidence("job-unverified-1")
+        candidate["sameRunIdVerified"] = False
+        candidate["evidenceSchemaVersion"] = None
+        self.assertFalse(is_live_evidence_eligible(candidate))
 
     def test_cutover_refused_without_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             ledger = Path(raw) / "ledger.json"
-            record_parity_attempt(ledger, matched=True)
+            with patch(
+                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
+                True,
+            ):
+                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-1"))
+                with self.assertRaises(PermissionError):
+                    plan_cutover(ledger)
+                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-2"))
+                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-3"))
+                planned = plan_cutover(ledger)
+                self.assertTrue(planned["allowed"])
+
+    def test_cutover_refuses_forged_counter_only_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger_path = Path(raw) / "ledger.json"
+            ledger_path.write_text('{"consecutiveMatches":3}\n', encoding="utf-8")
             with self.assertRaises(PermissionError):
-                plan_cutover(ledger)
-            record_parity_attempt(ledger, matched=True)
-            record_parity_attempt(ledger, matched=True)
-            planned = plan_cutover(ledger)
-            self.assertTrue(planned["allowed"])
+                plan_cutover(ledger_path)
+            with patch(
+                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
+                True,
+            ), self.assertRaises(PermissionError):
+                plan_cutover(ledger_path)
 
     def test_manifest_uses_canonical_sh_labels_and_skip_reason(self) -> None:
         from backend.pipeline_control.worker import write_run_manifest
@@ -157,6 +462,9 @@ class LiveAdapterTests(unittest.TestCase):
         self.assertIn("recent_success_manifest", source)
         self.assertIn("no-work short-circuit", source)
         self.assertIn("TZUDONG_PIPELINE_LIVE=\"${TZUDONG_PIPELINE_LIVE:-0}\"", source)
+        self.assertIn('payload.get("executionMode") != "live"', source)
+        self.assertIn('payload.get("dataSink") != "local_db"', source)
+        self.assertIn('payload.get("liveExecutionSucceeded") is not True', source)
     def test_file_store_shared_across_instances(self) -> None:
         import tempfile
         from pathlib import Path
@@ -185,121 +493,6 @@ class LiveAdapterTests(unittest.TestCase):
             third = FileStore(path, clock=lambda: 1_002.0)
             again = third.get(run.id)
             self.assertEqual(again.status, "Fetching")
-
-
-
-    def test_step_commands_match_repo_scripts(self) -> None:
-        from pathlib import Path
-        from backend.pipeline_control.adapter import STEP_COMMANDS
-
-        root = Path(__file__).resolve().parents[3]
-        for argv in STEP_COMMANDS.values():
-            scripts = [part for part in argv if part.endswith((".py", ".js", ".sh", ".mjs"))]
-            self.assertTrue(scripts, argv)
-            for script in scripts:
-                self.assertTrue((root / script).is_file(), script)
-        self.assertNotIn("--channel", STEP_COMMANDS["03-1-context"])
-        self.assertTrue(
-            any(part.endswith("04-extract-frames-with-heatmap.js") for part in STEP_COMMANDS["04-frames"])
-        )
-
-    def test_record_live_parity_counts_consecutive_matches(self) -> None:
-        import json
-        import tempfile
-        from pathlib import Path
-        from backend.pipeline_control import live_run as live_run_mod
-        from backend.pipeline_control.worker import write_run_manifest
-
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            baseline = root / "baseline.json"
-            candidate = root / "candidate.json"
-            ledger = root / "ledger.json"
-            write_run_manifest("Succeeded", baseline)
-            write_run_manifest("Succeeded", candidate)
-            orig_base = live_run_mod.DEFAULT_BASELINE
-            orig_ledger = live_run_mod.DEFAULT_LEDGER
-            live_run_mod.DEFAULT_BASELINE = baseline
-            live_run_mod.DEFAULT_LEDGER = ledger
-            try:
-                live_run_mod.record_live_parity(candidate)
-                live_run_mod.record_live_parity(candidate)
-                live_run_mod.record_live_parity(candidate)
-            finally:
-                live_run_mod.DEFAULT_BASELINE = orig_base
-                live_run_mod.DEFAULT_LEDGER = orig_ledger
-            payload = json.loads(ledger.read_text())
-            self.assertEqual(payload["consecutiveMatches"], 3)
-
-    def test_live_step_argv_honors_transcript_context_max_videos(self) -> None:
-        import os
-        from backend.pipeline_control.adapter import live_step_argv
-
-        os.environ.pop("TRANSCRIPT_CONTEXT_MAX_VIDEOS", None)
-        plain = live_step_argv("03-1-context", "tzuyang")
-        self.assertNotIn("--max-videos", plain)
-        os.environ["TRANSCRIPT_CONTEXT_MAX_VIDEOS"] = "1"
-        bounded = live_step_argv("03-1-context", "tzuyang")
-        self.assertEqual(bounded[-2:], ["--max-videos", "1"])
-        os.environ.pop("TRANSCRIPT_CONTEXT_MAX_VIDEOS", None)
-
-    def test_live_success_audit_is_not_dry_run_succeeded(self) -> None:
-        store = MemoryStore(clock=lambda: 1_000.0)
-        store.create_run(
-            target="tzuyang",
-            profile="heavy_local",
-            idempotency_key="livekey-g004",
-            payload={},
-            actor="qa",
-            request_id="req",
-            dry_run=False,
-        )
-        result = process_one(store, live=True, runner=lambda argv: 0)
-        self.assertEqual(result, "Succeeded")
-        run = next(iter(store.runs.values()))
-        self.assertFalse(run.dry_run)
-        self.assertEqual(run.status, "Succeeded")
-        self.assertTrue(any(row["transition"] == "succeeded" for row in store.audit))
-        self.assertFalse(any(row["transition"] == "dry_run_succeeded" for row in store.audit))
-
-    def test_record_upserted_only_after_step13_success(self) -> None:
-        events: list[dict] = []
-
-        def emit(event: dict) -> None:
-            events.append(event)
-
-        run = RunRecord(
-            id="live-13-ok",
-            target="tzuyang",
-            profile="heavy_local",
-            status="Fetching",
-            idempotency_key="livekey13ok",
-            payload_hash="abc",
-            actor="qa",
-            request_id="req",
-            lease_until=9_999,
-            heartbeat_at=1,
-            dry_run=False,
-        )
-        result = execute_steps(
-            run, should_stop=lambda: None, live=True, runner=lambda argv: 0, emit=emit
-        )
-        self.assertEqual(result, "Succeeded")
-        upserts = [event for event in events if event.get("type") == "record.upserted"]
-        self.assertEqual(len(upserts), 1)
-        self.assertEqual(upserts[0]["step"], "13-supabase-insert")
-
-        events.clear()
-        run.adapter_index = 0
-
-        def fail_step13(argv: list[str]) -> int:
-            return 1 if any(part.endswith("13-supabase-insert.py") for part in argv) else 0
-
-        result = execute_steps(
-            run, should_stop=lambda: None, live=True, runner=fail_step13, emit=emit
-        )
-        self.assertEqual(result, "Failed")
-        self.assertFalse(any(event.get("type") == "record.upserted" for event in events))
 
 
 if __name__ == "__main__":

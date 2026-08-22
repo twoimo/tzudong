@@ -2,41 +2,82 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
     directory: "/apps/web"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
     groups:
       web-runtime:
+        applies-to: "version-updates"
         dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
       web-development:
+        applies-to: "version-updates"
         dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+    # Node 24 is the repository runtime authority, and the current Next.js
+    # lint stack does not yet admit ESLint 10. Keep those breaking upgrades as
+    # deliberate migration work instead of recurring incompatible bot PRs.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
+      # Next 16.3.x currently rejects the repository's exact TypeScript 6 npm
+      # alias during install. Keep the aligned runtime/plugin family on 16.2.x
+      # until a dedicated toolchain migration updates and verifies all three.
+      - dependency-name: "next"
+        versions:
+          - ">=16.3.0"
+      - dependency-name: "@next/bundle-analyzer"
+        versions:
+          - ">=16.3.0"
+      - dependency-name: "eslint-config-next"
+        versions:
+          - ">=16.3.0"
+      # The verification manifest intentionally pins this package exactly;
+      # lift the hold only in the same change that updates that contract.
+      - dependency-name: "typescript-eslint"
+        versions:
+          - ">8.63.0"
 
   - package-ecosystem: "npm"
     directory: "/backend"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/pipeline"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/restaurant-crawling/scripts"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "pip"
     directory: "/backend/pipeline-control"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

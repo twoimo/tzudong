@@ -25,8 +25,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--candidate", type=Path, default=DEFAULT_CANDIDATE)
     parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
     args = parser.parse_args(argv)
-    result = compare_policy(load_json(args.baseline), load_json(args.candidate))
-    ledger = record_parity_attempt(args.ledger, matched=bool(result["matched"]))
+    baseline = load_json(args.baseline)
+    candidate = load_json(args.candidate)
+    result = compare_policy(baseline, candidate)
+    ledger = record_parity_attempt(
+        args.ledger,
+        matched=bool(result["matched"]),
+        candidate=candidate,
+    )
     print(
         json.dumps(
             {

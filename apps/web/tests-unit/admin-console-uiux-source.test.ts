@@ -401,16 +401,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(devPrewarmSource).toContain("'--hostname'");
     expect(devPrewarmSource).toContain(
-      "env: { ...process.env, NODE_ENV: 'development' }",
+      "...(hosted ? { TZUDONG_HOSTED_DEV: '1' } : {}),",
     );
     expect(packageSource).toContain(
-      '"dev:clean": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080"',
+      '"dev:clean": "node scripts/run-local-dev.mjs --port 8080 --clean"',
     );
     expect(packageSource).toContain(
-      '"dev:playwright": "node scripts/clean-next.mjs -- node node_modules/next/dist/bin/next dev --webpack --port 8080"',
+      '"dev:playwright": "node scripts/run-local-dev.mjs --port 8080"',
     );
     expect(packageSource).toContain(
-      '"dev:turbopack": "node scripts/dev-prewarm.mjs --port 8080 --turbopack"',
+      '"dev:turbopack": "node scripts/run-local-dev.mjs --port 8080 --turbopack"',
     );
   });
   test("keeps admin module state URL-backed and easy to recover", () => {

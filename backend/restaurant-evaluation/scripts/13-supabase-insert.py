@@ -26,8 +26,11 @@ except Exception:
 
 # shared utils import (backend/utils)
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = BACKEND_ROOT.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
@@ -38,14 +41,31 @@ from utils.supabase_rest import (
     live_insert_quota,
     resolve_privileged_supabase_rest_credentials,
 )
+from backend.pipeline_control.batch_upsert import (
+    BATCH_LIMIT as RESTAURANT_BATCH_LIMIT,
+    BatchUpsertError,
+    apply_restaurant_batch,
+)
 
+
+Client = Any
+create_client = None
 SUPABASE_IMPORT_ERROR = None
-try:
-    from supabase import Client, create_client
-except ImportError as exc:
-    SUPABASE_IMPORT_ERROR = exc
-    Client = Any
-    create_client = None
+
+
+def _load_supabase_runtime() -> None:
+    """Import the network-capable SDK only after configuration admission."""
+
+    global Client, create_client, SUPABASE_IMPORT_ERROR
+    if create_client is not None:
+        return
+    try:
+        from supabase import Client as SupabaseClient, create_client as supabase_create_client
+    except ImportError as error:
+        SUPABASE_IMPORT_ERROR = error
+        raise
+    Client = SupabaseClient
+    create_client = supabase_create_client
 
 # 한국 시간대
 KST = timezone(timedelta(hours=9))
@@ -539,6 +559,8 @@ def restaurant_readback_matches_payload(row: dict[str, Any], payload: dict[str, 
         field: value
         for field, value in payload.items()
         if field not in ROW_OWNED_FIELDS
+        and field not in {"id", "updated_at"}
+        and (field not in OPTIONAL_SCHEMA_COMPAT_FIELDS or field in row)
     }
     return all(row.get(field) == value for field, value in comparable.items())
 
@@ -643,6 +665,33 @@ def execute_conditional_insert(supabase: Client, payload: dict[str, Any]) -> Non
 
 
 
+def _run_restaurant_batch(operations: list[dict[str, Any]], payloads: list[dict[str, Any]]) -> None:
+    if not operations:
+        return
+    if len(operations) > RESTAURANT_BATCH_LIMIT:
+        raise RuntimeError("batch_upsert_limit")
+    try:
+        result = apply_restaurant_batch(operations)
+    except BatchUpsertError as exc:
+        if exc.code == "compare_and_set_conflict":
+            raise_compare_and_set_conflict()
+        if exc.code == "conditional_write_failed":
+            raise_conditional_write_failed()
+        raise RuntimeError(exc.code) from exc
+    except RuntimeError as exc:
+        if str(exc) == COMPARE_AND_SET_CONFLICT:
+            raise_compare_and_set_conflict()
+        if str(exc) == CONDITIONAL_WRITE_FAILED:
+            raise_conditional_write_failed()
+        raise
+    readback = result.get("readback") if isinstance(result, dict) else None
+    if not isinstance(readback, list) or len(readback) != len(payloads):
+        raise_compare_and_set_conflict()
+    for row, payload in zip(readback, payloads):
+        if not isinstance(row, dict) or not restaurant_readback_matches_payload(row, payload):
+            raise_compare_and_set_conflict()
+
+
 def execute_upsert_rows(
     supabase: Client,
     rows: list[dict[str, Any]],
@@ -653,35 +702,31 @@ def execute_upsert_rows(
     if not rows:
         return
 
-    quota = live_insert_quota()
     if dry_run:
-        if quota is None:
-            stats["inserted"] += len(rows)
-            return
-        remaining = max(0, quota - stats.get("live_new_writes", 0))
-        take = min(len(rows), remaining)
-        stats["inserted"] += take
-        stats["live_new_writes"] = stats.get("live_new_writes", 0) + take
-        stats["skipped"] += len(rows) - take
+        stats["inserted"] += len(rows)
         return
 
     existing_map = existing_map or {}
+    operations: list[dict[str, Any]] = []
+    payloads: list[dict[str, Any]] = []
     for payload in rows:
-        if quota is not None and stats.get("live_new_writes", 0) >= quota:
-            stats["skipped"] += 1
-            continue
         existing = existing_map.get(payload.get("trace_id"))
         if existing is None:
-            execute_conditional_insert(supabase, payload)
-            stats["inserted"] += 1
-            if quota is not None:
-                stats["live_new_writes"] = stats.get("live_new_writes", 0) + 1
+            operations.append({"op": "insert", "payload": payload, "expected": None})
         else:
-            if quota is not None:
-                stats["skipped"] += 1
-                continue
-            execute_conditional_update(supabase, existing["id"], payload, existing)
-            stats["inserted"] += 1
+            snapshot = reviewed_snapshot(existing)
+            operations.append(
+                {
+                    "op": "update",
+                    "payload": payload,
+                    "expected": {
+                        field: snapshot[field] for field in RESTAURANT_CAS_PREDICATE_FIELDS
+                    },
+                }
+            )
+        payloads.append(payload)
+    _run_restaurant_batch(operations, payloads)
+    stats["inserted"] += len(rows)
 
 
 def execute_rebind_updates(
@@ -693,18 +738,26 @@ def execute_rebind_updates(
     if not updates:
         return
 
-    quota = live_insert_quota()
-    if quota is not None:
-        stats["skipped"] += len(updates)
-        return
-
     if dry_run:
         stats["inserted"] += len(updates)
         return
 
-    for row_id, payload, existing in updates:
-        execute_conditional_update(supabase, row_id, payload, existing)
-        stats["inserted"] += 1
+    operations: list[dict[str, Any]] = []
+    payloads: list[dict[str, Any]] = []
+    for _row_id, payload, existing in updates:
+        snapshot = reviewed_snapshot(existing)
+        operations.append(
+            {
+                "op": "update",
+                "payload": payload,
+                "expected": {
+                    field: snapshot[field] for field in RESTAURANT_CAS_PREDICATE_FIELDS
+                },
+            }
+        )
+        payloads.append(payload)
+    _run_restaurant_batch(operations, payloads)
+    stats["inserted"] += len(updates)
 
 
 
@@ -824,13 +877,6 @@ def main() -> None:
     if loaded_env is not None:
         print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] .env 로드 완료")
 
-    if create_client is None:
-        print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
-        print("   pip install supabase 실행")
-        if SUPABASE_IMPORT_ERROR is not None:
-            print(f"   상세: {safe_error_name(SUPABASE_IMPORT_ERROR)}")
-        sys.exit(1)
-
     try:
         credentials = resolve_privileged_supabase_rest_credentials()
     except HostedRestRejected:
@@ -838,6 +884,18 @@ def main() -> None:
         sys.exit(hosted_rest_exit_code())
     except SupabaseRestConfigurationError:
         print("[ERROR] Supabase REST configuration invalid.")
+        sys.exit(1)
+
+    try:
+        _load_supabase_runtime()
+    except ImportError:
+        print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
+        print("   pip install supabase 실행")
+        if SUPABASE_IMPORT_ERROR is not None:
+            print(f"   상세: {safe_error_name(SUPABASE_IMPORT_ERROR)}")
+        sys.exit(1)
+    if create_client is None:
+        print("[ERROR] supabase 패키지가 설치되지 않았습니다.")
         sys.exit(1)
 
     print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] [OK] Supabase 설정 완료")
@@ -868,25 +926,24 @@ def main() -> None:
         "legacy_review_locks": 0,
         "trace_rebinds": 0,
         "ambiguous_rebind_skips": 0,
-        "live_new_writes": 0,
     }
 
     quota = live_insert_quota()
-    batch_size = 1 if quota is not None else 200
+    batch_size = 1 if quota is not None else RESTAURANT_BATCH_LIMIT
     batch: list[dict[str, Any]] = []
 
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
-            if quota is not None and stats.get("live_new_writes", 0) >= quota:
-                print("[INFO] live_bounded: reached LIVE_MAX_NEW_ITEMS; remaining transforms skipped")
-                batch = []
-                break
             stats["total_records"] += 1
 
             try:
                 data = json.loads(line.strip())
                 batch.append(build_record(data, channel))
 
+                if quota is not None and stats["inserted"] >= quota:
+                    print("[INFO] live_bounded: reached LIVE_MAX_NEW_ITEMS; remaining transforms skipped")
+                    batch = []
+                    break
                 if len(batch) >= batch_size:
                     process_and_upsert(supabase, batch, dry_run, stats)
                     batch = []

@@ -5,6 +5,9 @@ from __future__ import annotations
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
+import re
+import signal
+import threading
 import uuid
 from typing import Any
 from urllib.parse import urlparse
@@ -15,18 +18,51 @@ from backend.pipeline_control.state_machine import ControlPlaneError
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.targets import assert_admitted, load_targets
 from backend.utils.privacy_log import safe_error_name, sanitize_log_value
+from backend.pipeline_control.metrics import gauge_snapshot
 from backend.pipeline_control.queue import enqueue
 
 STORE = FileStore()
+_REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+
+
+def build_store():
+    mode = os.environ.get("TZUDONG_PIPELINE_STORE", "file").strip() or "file"
+    if mode == "postgres":
+        from backend.pipeline_control.pg_store import PostgresStore
+
+        return PostgresStore()
+    if mode not in {"file", "memory"}:
+        raise ControlPlaneError("store_mode_invalid", 400)
+    if mode == "memory":
+        from backend.pipeline_control.store import MemoryStore
+
+        return MemoryStore()
+    return FileStore()
 
 
 def current_store():
     return STORE
 
 
+def _bounded_request_id(value: object) -> str:
+    """Return an echo-safe request ID or a server-generated replacement.
+
+    ``BaseHTTPRequestHandler.send_header`` does not reject CR/LF itself.  Keep
+    the explicit replacements here so response-header safety does not depend on
+    caller behavior, then apply a narrow ASCII allowlist and length bound.
+    """
+
+    if not isinstance(value, str):
+        return str(uuid.uuid4())
+    sanitized = value.replace("\n", "").replace("\r", "")
+    if sanitized != value or _REQUEST_ID_RE.fullmatch(sanitized) is None:
+        return str(uuid.uuid4())
+    return sanitized
+
+
 def _json(handler: BaseHTTPRequestHandler, status: int, body: dict[str, Any]) -> None:
     payload = json.dumps(sanitize_log_value(body), ensure_ascii=True).encode("utf-8")
-    request_id = handler.headers.get("X-Request-Id") or str(uuid.uuid4())
+    request_id = _bounded_request_id(handler.headers.get("X-Request-Id"))
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Cache-Control", "no-store")
@@ -68,7 +104,16 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 )
                 return _json(self, 200, {"ready": True})
             if path == "/v1/targets":
-                return _json(self, 200, current_store().operator_snapshot(load_targets()))
+                snap = current_store().operator_snapshot(load_targets())
+                snap["gauges"] = gauge_snapshot()
+                return _json(self, 200, snap)
+            if path == "/v1/runs":
+                snap = current_store().operator_snapshot(load_targets())
+                return _json(
+                    self,
+                    200,
+                    {"jobs": snap["jobs"], "failures": snap["failures"]},
+                )
             if path.startswith("/v1/runs/"):
                 run_id = path.rsplit("/", 1)[-1]
                 store = current_store()
@@ -81,7 +126,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         try:
             path = urlparse(self.path).path
-            request_id = self.headers.get("X-Request-Id") or str(uuid.uuid4())
+            request_id = _bounded_request_id(self.headers.get("X-Request-Id"))
             actor = self.headers.get("X-Actor") or "anonymous"
             if path == "/v1/runs":
                 body = _read_json(self)
@@ -144,9 +189,30 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
         return _json(self, 500, {"error": safe_error_name(exc)})
 
 
+ALLOWED_API_BIND_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "0.0.0.0"})
+
+
+def api_bind_host(raw: str | None = None) -> str:
+    value = (raw if raw is not None else os.environ.get("PIPELINE_API_HOST", "127.0.0.1")).strip() or "127.0.0.1"
+    if value not in ALLOWED_API_BIND_HOSTS:
+        raise ValueError("pipeline_api_host_rejected")
+    return value
+
+
 def serve(host: str = "127.0.0.1", port: int = 8091) -> ThreadingHTTPServer:
     return ThreadingHTTPServer((host, port), PipelineApiHandler)
 
 
+def main() -> None:
+    server = serve(host=api_bind_host())
+    def _stop(_signum: int, _frame: object) -> None:
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
-    serve().serve_forever()
+    globals()["STORE"] = build_store()
+    main()

@@ -1,4 +1,4 @@
-import type { CSSProperties, RefObject } from 'react';
+import type { RefObject } from 'react';
 
 import { NaverMapOverlayStack } from '@/components/map/naver-map-overlay-stack';
 import { cn } from '@/lib/utils';
@@ -6,12 +6,10 @@ import { cn } from '@/lib/utils';
 export function NaverMapSurface({
     announcementToastTitle,
     badgePositionClass,
-    centerOffsetStyle,
     className,
     count,
     dataTestId,
     emptyStateMessage,
-    floatingToastPositionClass,
     isLoaded,
     isLoadingRestaurants,
     mapRef,
@@ -26,12 +24,10 @@ export function NaverMapSurface({
 }: {
     announcementToastTitle: string;
     badgePositionClass: string;
-    centerOffsetStyle: CSSProperties;
     className?: string;
     count: number;
     emptyStateMessage?: string;
     dataTestId?: string;
-    floatingToastPositionClass: string;
     isLoaded: boolean;
     isLoadingRestaurants: boolean;
     mapRef: RefObject<HTMLDivElement | null>;
@@ -61,9 +57,7 @@ export function NaverMapSurface({
                 <NaverMapOverlayStack
                     announcementToastTitle={announcementToastTitle}
                     badgePositionClass={badgePositionClass}
-                    centerOffsetStyle={centerOffsetStyle}
                     count={count}
-                    floatingToastPositionClass={floatingToastPositionClass}
                     isLoaded={isLoaded}
                     isLoadingRestaurants={isLoadingRestaurants}
                     mapToast={mapToast}
