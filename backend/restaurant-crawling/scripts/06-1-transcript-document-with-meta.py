@@ -32,7 +32,9 @@ if str(BACKEND_ROOT) not in sys.path:
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.supabase_rest import (
+    HostedRestRejected,
     SupabaseRestConfigurationError,
+    hosted_rest_exit_code,
     resolve_privileged_supabase_rest_credentials,
 )
 
@@ -555,6 +557,9 @@ def main():
     print("op=supabase_connection_started")
     try:
         supabase = get_supabase_client()
+    except HostedRestRejected:
+        print("op=hosted_rest_rejected")
+        raise SystemExit(hosted_rest_exit_code())
     except SupabaseRestConfigurationError:
         print("op=supabase_rest_configuration_invalid")
         return
