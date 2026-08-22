@@ -100,11 +100,14 @@ class FileStore(MemoryStore):
     def beat(self, run_id: str) -> RunRecord:
         return self._mutate(lambda: super(FileStore, self).beat(run_id))
 
-    def claim(self) -> RunRecord | None:
-        return self._mutate(lambda: super(FileStore, self).claim())
+    def claim(self, run_id: str | None = None) -> RunRecord | None:
+        return self._mutate(lambda: super(FileStore, self).claim(run_id))
 
     def finish_dry_run(self, run_id: str) -> RunRecord:
         return self._mutate(lambda: super(FileStore, self).finish_dry_run(run_id))
+
+    def finish_succeeded(self, run_id: str) -> RunRecord:
+        return self._mutate(lambda: super(FileStore, self).finish_succeeded(run_id))
 
     def finish_failed(self, run_id: str, error_code: str = "adapter_failed") -> RunRecord:
         return self._mutate(lambda: super(FileStore, self).finish_failed(run_id, error_code))

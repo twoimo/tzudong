@@ -1017,6 +1017,16 @@ process_channel() {
             continue
         fi
 
+        if [ "${TZUDONG_PIPELINE_LIVE:-0}" = "1" ]; then
+            max_new="${LIVE_MAX_NEW_ITEMS:-1}"
+            if [ "${live_new_count:-0}" -ge "$max_new" ]; then
+                skipped_count=$((skipped_count + 1))
+                log_info "[$index/$total] SKIP: live_bounded ($video_id)"
+                continue
+            fi
+            live_new_count=$((live_new_count + 1))
+        fi
+
         log_info "[$index/$total] 청크 분석 시작: $video_id"
         local video_start
         video_start=$(date +%s)

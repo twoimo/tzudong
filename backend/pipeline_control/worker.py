@@ -15,6 +15,7 @@ from backend.pipeline_control.adapter import (
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.es_index import EsIndexError
 from backend.pipeline_control.manifest import write_compatible_summary
+from backend.pipeline_control.state_machine import ControlPlaneError
 from backend.pipeline_control.store import MemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -115,13 +116,17 @@ def process_one(
     live: bool | None = None,
     runner=None,
     manifest_path: Path | None = None,
+    run_id: str | None = None,
 ) -> str | None:
-    run = store.claim()
+    run = store.claim(run_id)
     if run is None:
         return None
 
     def should_stop() -> str | None:
-        current = store.get(run.id)
+        try:
+            current = store.get(run.id)
+        except ControlPlaneError:
+            return "Failed"
         if current.status == "Cancelled":
             return "Cancelled"
         if current.status == "Paused":
@@ -153,7 +158,10 @@ def process_one(
         write_run_manifest("Failed", manifest_path, events=collected)
         return "Failed"
     if result == "Succeeded":
-        store.finish_dry_run(run.id)
+        if use_live and not run.dry_run:
+            store.finish_succeeded(run.id)
+        else:
+            store.finish_dry_run(run.id)
     elif result == "Failed":
         store.finish_failed(run.id)
     write_run_manifest(result, manifest_path, events=collected)

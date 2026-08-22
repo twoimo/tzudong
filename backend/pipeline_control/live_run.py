@@ -10,11 +10,25 @@ from backend.pipeline_control.dsn_guard import admit_dsn
 from backend.pipeline_control.file_store import FileStore
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.targets import assert_admitted
-from backend.pipeline_control.worker import process_one, write_run_manifest
+from backend.pipeline_control.manifest import compare_policy, load_json, record_parity_attempt
+from backend.pipeline_control.parity import DEFAULT_BASELINE, DEFAULT_LEDGER
 from backend.pipeline_control.queue import drain
+from backend.pipeline_control.worker import process_one, write_run_manifest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CANDIDATE_DIR = REPO_ROOT / "backend" / "log" / "cron" / "live-runs"
+
+
+def record_live_parity(candidate: Path) -> None:
+    if not candidate.exists() or not DEFAULT_BASELINE.exists():
+        return
+    matched = bool(compare_policy(load_json(DEFAULT_BASELINE), load_json(candidate))["matched"])
+    ledger = record_parity_attempt(DEFAULT_LEDGER, matched=matched)
+    print(
+        f"op=live_parity matched={str(matched).lower()} "
+        f"consecutiveMatches={ledger['consecutiveMatches']}",
+        flush=True,
+    )
 
 
 def run_once(
@@ -61,6 +75,7 @@ def run_once(
         live=use_live,
         runner=runner,
         manifest_path=manifest,
+        run_id=run.id,
     )
     if result is None:
         write_run_manifest("Failed", manifest)
@@ -104,6 +119,8 @@ def main(argv: list[str] | None = None) -> int:
         manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
         if manifest.exists() and not (job.get("queued") and job.get("dry_run") is True):
             last_live_manifest = manifest
+            if live and result == "Succeeded":
+                record_live_parity(manifest)
     if last_live_manifest is not None:
         default = Path(__file__).resolve().parents[2] / "backend" / "log" / "cron" / "current-summary.json"
         default.parent.mkdir(parents=True, exist_ok=True)

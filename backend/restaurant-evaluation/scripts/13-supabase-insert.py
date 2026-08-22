@@ -32,7 +32,10 @@ if str(BACKEND_ROOT) not in sys.path:
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.supabase_rest import (
+    HostedRestRejected,
     SupabaseRestConfigurationError,
+    hosted_rest_exit_code,
+    live_insert_quota,
     resolve_privileged_supabase_rest_credentials,
 )
 
@@ -650,18 +653,35 @@ def execute_upsert_rows(
     if not rows:
         return
 
+    quota = live_insert_quota()
     if dry_run:
-        stats["inserted"] += len(rows)
+        if quota is None:
+            stats["inserted"] += len(rows)
+            return
+        remaining = max(0, quota - stats.get("live_new_writes", 0))
+        take = min(len(rows), remaining)
+        stats["inserted"] += take
+        stats["live_new_writes"] = stats.get("live_new_writes", 0) + take
+        stats["skipped"] += len(rows) - take
         return
 
     existing_map = existing_map or {}
     for payload in rows:
+        if quota is not None and stats.get("live_new_writes", 0) >= quota:
+            stats["skipped"] += 1
+            continue
         existing = existing_map.get(payload.get("trace_id"))
         if existing is None:
             execute_conditional_insert(supabase, payload)
+            stats["inserted"] += 1
+            if quota is not None:
+                stats["live_new_writes"] = stats.get("live_new_writes", 0) + 1
         else:
+            if quota is not None:
+                stats["skipped"] += 1
+                continue
             execute_conditional_update(supabase, existing["id"], payload, existing)
-        stats["inserted"] += 1
+            stats["inserted"] += 1
 
 
 def execute_rebind_updates(
@@ -671,6 +691,11 @@ def execute_rebind_updates(
     stats: dict[str, int],
 ) -> None:
     if not updates:
+        return
+
+    quota = live_insert_quota()
+    if quota is not None:
+        stats["skipped"] += len(updates)
         return
 
     if dry_run:
@@ -808,6 +833,9 @@ def main() -> None:
 
     try:
         credentials = resolve_privileged_supabase_rest_credentials()
+    except HostedRestRejected:
+        print("[WARN] hosted_rest_rejected: refusing hosted Supabase REST writes")
+        sys.exit(hosted_rest_exit_code())
     except SupabaseRestConfigurationError:
         print("[ERROR] Supabase REST configuration invalid.")
         sys.exit(1)
@@ -840,13 +868,19 @@ def main() -> None:
         "legacy_review_locks": 0,
         "trace_rebinds": 0,
         "ambiguous_rebind_skips": 0,
+        "live_new_writes": 0,
     }
 
-    batch_size = 200
+    quota = live_insert_quota()
+    batch_size = 1 if quota is not None else 200
     batch: list[dict[str, Any]] = []
 
     with open(input_file, "r", encoding="utf-8") as f:
         for line in f:
+            if quota is not None and stats.get("live_new_writes", 0) >= quota:
+                print("[INFO] live_bounded: reached LIVE_MAX_NEW_ITEMS; remaining transforms skipped")
+                batch = []
+                break
             stats["total_records"] += 1
 
             try:
