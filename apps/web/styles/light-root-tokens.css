@@ -1,0 +1,41 @@
+/* Shared light-mode :root tokens. No Tailwind. Dark tokens stay in the CSS owners. */
+:root {
+  --background: 38 30% 98%;
+  --foreground: 24 10% 10%;
+  --card: 38 30% 98%;
+  --card-foreground: 24 10% 10%;
+  --popover: 38 30% 98%;
+  --popover-foreground: 24 10% 10%;
+  --primary: 0 74% 42%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 24 6% 90%;
+  --secondary-foreground: 24 10% 10%;
+  --muted: 24 6% 90%;
+  --muted-foreground: 24 5% 45%;
+  --accent: 24 6% 90%;
+  --accent-foreground: 24 10% 10%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 24 5% 83%;
+  --input: 24 5% 83%;
+  --ring: 0 74% 42%;
+  --radius: 0.5rem;
+  --mobile-bottom-nav-height: 60px;
+  --mobile-bottom-nav-effective-height: 60px;
+  --mobile-sheet-hide-bottom-nav: 0;
+  --mobile-sheet-header-progress: 0;
+  --mobile-sheet-header-offset: 0px;
+  --app-header-height: 56px;
+  --sidebar-background: 38 30% 98%;
+  --sidebar-foreground: 24 10% 10%;
+  --sidebar-primary: 0 74% 42%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 24 6% 90%;
+  --sidebar-accent-foreground: 24 10% 10%;
+  --sidebar-border: 24 5% 83%;
+  --sidebar-ring: 0 74% 42%;
+  --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
+  --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
+  --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
+  --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
+}

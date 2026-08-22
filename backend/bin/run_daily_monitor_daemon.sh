@@ -185,7 +185,7 @@ stop_run_daily_tree() {
 recent_success_manifest() {
   [ -f "$MANIFEST_PATH" ] || return 1
   python3 - "$MANIFEST_PATH" "$NOWORK_TTL_SEC" <<'PY'
-import json, sys, time
+import json, re, sys, time
 from pathlib import Path
 path = Path(sys.argv[1])
 ttl = int(sys.argv[2])
@@ -193,7 +193,17 @@ try:
     payload = json.loads(path.read_text())
 except Exception:
     sys.exit(1)
-if payload.get("finalStatus") != "OK":
+if payload.get("finalStatus") != "OK" or payload.get("finalExitCode") != 0:
+    sys.exit(1)
+if payload.get("executionMode") != "live" or payload.get("noWorkShortCircuit") is not False:
+    sys.exit(1)
+if payload.get("dataSink") != "local_db":
+    sys.exit(1)
+if not isinstance(payload.get("jobId"), str) or not payload["jobId"].strip():
+    sys.exit(1)
+if re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", payload.get("gitSha") or "") is None:
+    sys.exit(1)
+if payload.get("liveExecutionSucceeded") is not True:
     sys.exit(1)
 age = time.time() - path.stat().st_mtime
 sys.exit(0 if age <= ttl else 1)

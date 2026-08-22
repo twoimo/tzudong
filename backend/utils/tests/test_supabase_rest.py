@@ -12,15 +12,14 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from utils.supabase_rest import (
-    HOSTED_REST_REJECTED,
     MAX_SERVICE_ROLE_KEY_LENGTH,
     SUPABASE_REST_CONFIGURATION_ERROR,
     HostedRestRejected,
     SupabaseRestConfigurationError,
+    admit_pipeline_supabase_boundary,
     hosted_rest_exit_code,
     live_insert_quota,
     resolve_privileged_supabase_rest_credentials,
-    rest_url_is_hosted,
 )
 
 
@@ -54,6 +53,58 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
 
         self.assertEqual(VALID_URL, credentials.url)
         self.assertEqual(VALID_SERVICE_ROLE_KEY, credentials.service_role_key)
+
+    def test_local_and_artifact_pipeline_boundaries_reject_hosted_url(self) -> None:
+        for data_sink in ("local_db", "artifact_only"):
+            with self.subTest(data_sink=data_sink), self.assertRaises(
+                SupabaseRestConfigurationError
+            ) as raised:
+                admit_pipeline_supabase_boundary(
+                    environment(
+                        TZUDONG_DATA_SINK=data_sink,
+                        TZUDONG_EXECUTION_MODE="live",
+                    )
+                )
+            self.assertEqual(SUPABASE_REST_CONFIGURATION_ERROR, str(raised.exception))
+
+    def test_pipeline_boundary_allows_only_loopback_for_local_sink(self) -> None:
+        boundary = admit_pipeline_supabase_boundary(
+            environment(
+                SUPABASE_URL="http://127.0.0.1:54321",
+                TZUDONG_DATA_SINK="local_db",
+                TZUDONG_EXECUTION_MODE="live",
+            )
+        )
+        self.assertEqual(boundary.data_sink, "local_db")
+        self.assertEqual(boundary.execution_mode, "live")
+
+    def test_pipeline_boundary_derives_artifact_sink_from_lite_profile(self) -> None:
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(
+                environment(
+                    TZUDONG_COMPUTE_PROFILE="lite_gha",
+                    TZUDONG_DATA_ENV="hosting_db",
+                    TZUDONG_EXECUTION_MODE="live",
+                )
+            )
+
+    def test_hosted_apply_remains_disabled_even_with_environment_approval(self) -> None:
+        values = environment(
+            TZUDONG_DATA_SINK="hosted_apply",
+            TZUDONG_EXECUTION_MODE="live",
+            TZUDONG_HOSTED_APPLY_APPROVED="1",
+            TZUDONG_HOSTED_PROJECT_REF="abcdefghijklmnopqrst",
+        )
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(values)
+        self.assert_invalid(values)
+
+    def test_pipeline_mode_marker_cannot_fall_through_to_ordinary_hosted_client(self) -> None:
+        marked = environment(TZUDONG_EXECUTION_MODE="live")
+        with self.assertRaises(SupabaseRestConfigurationError):
+            admit_pipeline_supabase_boundary(marked)
+        with self.assertRaises(SupabaseRestConfigurationError):
+            resolve_privileged_supabase_rest_credentials(marked)
 
     def test_rejects_attacker_host_suffixes(self) -> None:
         for url in (
@@ -156,21 +207,25 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
             )
         )
 
-    def test_rejects_hosted_rest_when_local_db(self) -> None:
+
+if __name__ == "__main__":
+    unittest.main()
+
+def test_rejects_hosted_rest_when_local_db(self) -> None:
         with self.assertRaises(HostedRestRejected) as raised:
             resolve_privileged_supabase_rest_credentials(environment(TZUDONG_DATA_ENV="local_db"))
         self.assertEqual(HOSTED_REST_REJECTED, str(raised.exception))
 
-    def test_rejects_hosted_rest_when_pipeline_live(self) -> None:
+def test_rejects_hosted_rest_when_pipeline_live(self) -> None:
         with self.assertRaises(HostedRestRejected) as raised:
             resolve_privileged_supabase_rest_credentials(environment(TZUDONG_PIPELINE_LIVE="1"))
         self.assertEqual(HOSTED_REST_REJECTED, str(raised.exception))
 
-    def test_allows_hosted_rest_without_local_or_live_flags(self) -> None:
+def test_allows_hosted_rest_without_local_or_live_flags(self) -> None:
         credentials = resolve_privileged_supabase_rest_credentials(environment())
         self.assertEqual(VALID_URL, credentials.url)
 
-    def test_allows_loopback_rest_for_local_db(self) -> None:
+def test_allows_loopback_rest_for_local_db(self) -> None:
         credentials = resolve_privileged_supabase_rest_credentials(
             environment(
                 SUPABASE_URL="http://127.0.0.1:54321/",
@@ -182,19 +237,19 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
         )
         self.assertEqual("http://127.0.0.1:54321", credentials.url)
 
-    def test_hosted_rest_exit_code_is_fail_closed(self) -> None:
+def test_hosted_rest_exit_code_is_fail_closed(self) -> None:
         self.assertEqual(1, hosted_rest_exit_code({"TZUDONG_PIPELINE_LIVE": "1"}))
         self.assertEqual(1, hosted_rest_exit_code({"TZUDONG_DATA_ENV": "local_db"}))
         self.assertTrue(rest_url_is_hosted("https://aqlcofblfxdrjhhdmarw.supabase.co"))
         self.assertFalse(rest_url_is_hosted("http://127.0.0.1:54321"))
 
-    def test_live_insert_quota_defaults_to_one(self) -> None:
+def test_live_insert_quota_defaults_to_one(self) -> None:
         self.assertIsNone(live_insert_quota({}))
         self.assertEqual(1, live_insert_quota({"TZUDONG_PIPELINE_LIVE": "1"}))
         self.assertEqual(0, live_insert_quota({"TZUDONG_PIPELINE_LIVE": "1", "LIVE_MAX_NEW_ITEMS": "0"}))
         self.assertEqual(3, live_insert_quota({"TZUDONG_PIPELINE_LIVE": "1", "LIVE_MAX_NEW_ITEMS": "3"}))
 
-    def test_local_override_wins_over_hosted_url(self) -> None:
+def test_local_override_wins_over_hosted_url(self) -> None:
         credentials = resolve_privileged_supabase_rest_credentials(
             environment(
                 TZUDONG_DATA_ENV="local_db",
@@ -205,7 +260,7 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
         )
         self.assertEqual("http://127.0.0.1:18000", credentials.url)
 
-    def test_loopback_rest_for_local_db_without_node_env_test(self) -> None:
+def test_loopback_rest_for_local_db_without_node_env_test(self) -> None:
         credentials = resolve_privileged_supabase_rest_credentials(
             environment(
                 SUPABASE_URL="http://127.0.0.1:18000/",
@@ -213,7 +268,3 @@ class SupabaseRestCredentialsTests(unittest.TestCase):
             )
         )
         self.assertEqual("http://127.0.0.1:18000", credentials.url)
-
-
-if __name__ == "__main__":
-    unittest.main()

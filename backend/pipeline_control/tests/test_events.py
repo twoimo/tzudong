@@ -243,7 +243,6 @@ class EventSinkTests(unittest.TestCase):
         obs = OBS_COMPOSE.read_text(encoding="utf-8")
         pipeline = PIPELINE_COMPOSE.read_text(encoding="utf-8")
         contract = CONTRACT.read_text(encoding="utf-8")
-        dockerfile = (ROOT / "pipeline-control" / "Dockerfile").read_text(encoding="utf-8")
         reqs = (ROOT / "pipeline-control" / "requirements.txt").read_text(encoding="utf-8")
         self.assertRegex(kafka, r"(?m)^\s+kafka:")
         self.assertRegex(kafka, r"(?m)^\s+kafka-ui:")
@@ -258,10 +257,9 @@ class EventSinkTests(unittest.TestCase):
         self.assertNotRegex(obs, r"(?m)^\s+kafka:")
         self.assertNotRegex(obs, r"(?m)^\s+kafka-ui:")
         self.assertNotRegex(pipeline, r"(?im)^\s+postgres:")
-        self.assertIn("losable", contract)
+        self.assertIn("unpublished outbox rows survive broker outage", contract)
         self.assertIn("29092", contract)
         self.assertIn("kafka-python==3.0.11", reqs)
-        self.assertIn("exactly one pinned kafka client", dockerfile)
 
     def test_multi_token_bootstrap_admits_allowlisted_hosts(self) -> None:
         from backend.pipeline_control.events import admit_bootstrap
@@ -367,6 +365,8 @@ class EventSinkTests(unittest.TestCase):
                     "step",
                     "index",
                     "skipped",
+                    "skipKind",
+                    "reason",
                     "target",
                     "profile",
                     "request_id",
@@ -407,8 +407,10 @@ class EventSinkTests(unittest.TestCase):
         upsert_at = seen.index(upsert)
         self.assertEqual(seen[upsert_at - 1]["type"], "step.progress")
         self.assertEqual(seen[upsert_at - 1]["step"], "13-supabase-insert")
-        self.assertEqual(seen[upsert_at + 1]["type"], "run.lifecycle")
-        self.assertEqual(seen[upsert_at + 1]["status"], "Succeeded")
+        self.assertEqual(seen[upsert_at + 1]["type"], "step.progress")
+        self.assertEqual(seen[upsert_at + 1]["step"], "13-quality-gate")
+        self.assertEqual(lifecycle[-1]["type"], "run.lifecycle")
+        self.assertEqual(lifecycle[-1]["status"], "Succeeded")
 
     def test_dry_run_skip_fail_and_halt_do_not_emit_record_upserted(self) -> None:
         dry: list[dict] = []
@@ -577,7 +579,7 @@ class EventSinkTests(unittest.TestCase):
         self.assertIn("record.upserted", contract)
         self.assertIn("process exit 0", contract)
         self.assertIn("possibly zero rows", contract)
-        self.assertIn("losable", contract)
+        self.assertIn("unpublished outbox rows survive broker outage", contract)
 
 
 if __name__ == "__main__":

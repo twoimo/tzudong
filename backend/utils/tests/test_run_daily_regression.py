@@ -753,6 +753,25 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("backend/pipeline-control/requirements.txt", security_workflow)
         self.assertIn('directory: "/backend/pipeline-control"', dependabot)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
+        self.assertEqual(dependabot.count('target-branch: "develop"'), 6)
+        self.assertEqual(dependabot.count('applies-to: "version-updates"'), 2)
+        self.assertEqual(dependabot.count('          - "minor"'), 2)
+        self.assertEqual(dependabot.count('          - "patch"'), 2)
+        self.assertIn('dependency-name: "@types/node"', dependabot)
+        self.assertIn('dependency-name: "eslint"', dependabot)
+        self.assertEqual(
+            dependabot.count('          - "version-update:semver-major"'),
+            2,
+        )
+        for dependency in (
+            "next",
+            "@next/bundle-analyzer",
+            "eslint-config-next",
+            "typescript-eslint",
+        ):
+            self.assertIn(f'dependency-name: "{dependency}"', dependabot)
+        self.assertEqual(dependabot.count('          - ">=16.3.0"'), 3)
+        self.assertEqual(dependabot.count('          - ">8.63.0"'), 1)
         self.assertNotIn("git+https://github.com/yt-dlp/yt-dlp.git@master", crawling_requirements)
         self.assertIn("yt-dlp[default]==", crawling_requirements)
         self.assertNotIn("\nrequests\n", crawling_requirements)
@@ -3550,7 +3569,7 @@ class RunDailyRegressionTests(unittest.TestCase):
         script_path = shlex.quote(_to_bash_path(project_root / "backend" / "run_daily.sh"))
         fixture_bin = shlex.quote(_to_bash_path(project_root / "bin"))
         return subprocess.run(
-            [BASH_BIN, "-lc", f"export PATH={fixture_bin}:$PATH; exec {script_path}"],
+            [BASH_BIN, "-lc", f"export PATH={fixture_bin}:$PATH; exec bash {script_path}"],
             cwd=project_root,
             capture_output=True,
             text=True,

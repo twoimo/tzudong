@@ -18,13 +18,22 @@ from .state import ValidationSeverity
 KOREA_LAT_MIN, KOREA_LAT_MAX = 33.0, 39.0
 KOREA_LNG_MIN, KOREA_LNG_MAX = 124.0, 132.0
 
-# 허용 카테고리 목록
-VALID_CATEGORIES = {
-    "한식", "중식", "일식", "양식", "분식", "카페", "디저트",
-    "패스트푸드", "치킨", "피자", "해산물", "고기", "뷔페",
-    "아시안", "베이커리", "술집", "기타", "간식",
-    "브런치", "샐러드", "샌드위치", "면", "국밥",
-}
+# Canonical producer vocabulary. List-shaped category values may only use
+# these labels.
+CANONICAL_CATEGORIES = frozenset({
+    "치킨", "중식", "돈까스·회", "피자", "패스트푸드",
+    "찜·탕", "족발·보쌈", "분식", "카페·디저트", "한식",
+    "고기", "양식", "아시안", "야식", "도시락",
+})
+
+# Historical scalar values remain readable, but producers must not place
+# these compatibility-only labels inside canonical category lists.
+LEGACY_SCALAR_CATEGORIES = frozenset({
+    "일식", "카페", "디저트", "해산물", "뷔페", "베이커리",
+    "술집", "기타", "간식", "브런치", "샐러드", "샌드위치",
+    "면", "국밥",
+})
+VALID_CATEGORIES = CANONICAL_CATEGORIES | LEGACY_SCALAR_CATEGORIES
 
 # 주소 패턴 (한국 도/시/구/군/동 포함 여부 체크)
 KOREAN_ADDRESS_PATTERN = re.compile(
@@ -150,11 +159,21 @@ def validate_gemini_output(video_id: str, data: dict) -> list[dict]:
 
         # 카테고리 검증
         category = r.get("category")
-        if category and category not in VALID_CATEGORIES:
-            errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
-                              "invalid_category", f"알 수 없는 카테고리: {category}",
-                              restaurant_name=name, field_path=f"{prefix}.category",
-                              actual_value=category))
+        category_is_list = isinstance(category, list)
+        categories = category if category_is_list else [category]
+        allowed_categories = (
+            CANONICAL_CATEGORIES if category_is_list else VALID_CATEGORIES
+        )
+        for category_item in categories:
+            invalid_category = (
+                not isinstance(category_item, str)
+                or category_item not in allowed_categories
+            )
+            if invalid_category and (category_is_list or bool(category_item)):
+                errors.append(_err(step, video_id, ValidationSeverity.WARNING.value,
+                                  "invalid_category", f"알 수 없는 카테고리: {category_item}",
+                                  restaurant_name=name, field_path=f"{prefix}.category",
+                                  actual_value=category_item))
 
         # 주소 형식 검증 (한국 주소인지)
         address = r.get("address")
