@@ -8,7 +8,12 @@ from pathlib import Path
 
 from backend.pipeline_control.dsn_guard import admit_dsn
 from backend.pipeline_control.file_store import FileStore
-from backend.pipeline_control.manifest import is_live_execution_success, load_json
+from backend.pipeline_control.manifest import (
+    compare_policy,
+    is_live_execution_success,
+    load_json,
+    record_parity_attempt,
+)
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.profiles import resolve_compute_profile
 from backend.pipeline_control.targets import assert_admitted
@@ -65,7 +70,7 @@ def run_once(
         manifest_path=manifest,
     )
     if result is None:
-        write_run_manifest("Failed", manifest)
+        write_run_manifest("Failed", manifest, run=run, store=store)
         return "Failed"
     return result
 
@@ -111,6 +116,24 @@ def main(argv: list[str] | None = None) -> int:
                 candidate = {}
             if is_live_execution_success(candidate):
                 last_live_manifest = manifest
+                baseline_path = REPO_ROOT / "backend" / "log" / "cron" / "sh-baseline-current-summary.json"
+                ledger_path = REPO_ROOT / "backend" / "log" / "cron" / "pipeline-parity-ledger.json"
+                policy_matched = True
+                if baseline_path.exists():
+                    try:
+                        policy_matched = (
+                            compare_policy(load_json(baseline_path), candidate).get(
+                                "policyMatched"
+                            )
+                            is True
+                        )
+                    except (OSError, ValueError, TypeError):
+                        policy_matched = False
+                record_parity_attempt(
+                    ledger_path,
+                    matched=policy_matched,
+                    candidate=candidate,
+                )
     if last_live_manifest is not None:
         default = Path(__file__).resolve().parents[2] / "backend" / "log" / "cron" / "current-summary.json"
         default.parent.mkdir(parents=True, exist_ok=True)
