@@ -6,7 +6,6 @@ import json
 from hashlib import sha256
 import tempfile
 import unittest
-from unittest.mock import patch
 from pathlib import Path
 
 from backend.pipeline_control.manifest import (
@@ -74,31 +73,27 @@ class ManifestParityTests(unittest.TestCase):
             ledger_path = Path(raw) / "parity.json"
             live = _ok_payload()
             dry = _ok_payload(execution_mode="dry_run", job_id="job-dry-1")
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ):
-                ledger = record_parity_attempt(ledger_path, matched=True)
-                self.assertEqual(ledger["consecutiveMatches"], 0)
-                ledger = record_parity_attempt(ledger_path, matched=True, candidate=dry)
-                self.assertEqual(ledger["consecutiveMatches"], 0)
-                self.assertFalse(deletion_allowed(ledger))
-                ledger = record_parity_attempt(ledger_path, matched=False, candidate=live)
-                self.assertEqual(ledger["consecutiveMatches"], 0)
-                ledger = record_parity_attempt(ledger_path, matched=True, candidate=live)
-                ledger = record_parity_attempt(
-                    ledger_path,
-                    matched=True,
-                    candidate=_ok_payload(job_id="job-live-2"),
-                )
-                ledger = record_parity_attempt(
-                    ledger_path,
-                    matched=True,
-                    candidate=_ok_payload(job_id="job-live-3"),
-                )
-                self.assertEqual(ledger["consecutiveMatches"], REQUIRED_MATCH_COUNT)
-                self.assertTrue(deletion_allowed(ledger))
-                refuse_shim_deletion(ledger)
+            ledger = record_parity_attempt(ledger_path, matched=True)
+            self.assertEqual(ledger["consecutiveMatches"], 0)
+            ledger = record_parity_attempt(ledger_path, matched=True, candidate=dry)
+            self.assertEqual(ledger["consecutiveMatches"], 0)
+            self.assertFalse(deletion_allowed(ledger))
+            ledger = record_parity_attempt(ledger_path, matched=False, candidate=live)
+            self.assertEqual(ledger["consecutiveMatches"], 0)
+            ledger = record_parity_attempt(ledger_path, matched=True, candidate=live)
+            ledger = record_parity_attempt(
+                ledger_path,
+                matched=True,
+                candidate=_ok_payload(job_id="job-live-2"),
+            )
+            ledger = record_parity_attempt(
+                ledger_path,
+                matched=True,
+                candidate=_ok_payload(job_id="job-live-3"),
+            )
+            self.assertEqual(ledger["consecutiveMatches"], REQUIRED_MATCH_COUNT)
+            self.assertTrue(deletion_allowed(ledger))
+            refuse_shim_deletion(ledger)
             with self.assertRaises(PermissionError):
                 refuse_shim_deletion({"consecutiveMatches": 2})
 
@@ -106,15 +101,11 @@ class ManifestParityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             ledger_path = Path(raw) / "parity.json"
             live = _ok_payload(job_id="job-live-once")
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ):
-                first = record_parity_attempt(ledger_path, matched=True, candidate=live)
-                self.assertEqual(first["consecutiveMatches"], 1)
-                replay = record_parity_attempt(ledger_path, matched=True, candidate=live)
-                self.assertEqual(replay["consecutiveMatches"], 0)
-                self.assertTrue(replay["attempts"][-1]["duplicateJob"])
+            first = record_parity_attempt(ledger_path, matched=True, candidate=live)
+            self.assertEqual(first["consecutiveMatches"], 1)
+            replay = record_parity_attempt(ledger_path, matched=True, candidate=live)
+            self.assertEqual(replay["consecutiveMatches"], 0)
+            self.assertTrue(replay["attempts"][-1]["duplicateJob"])
 
     def test_n3_resets_when_frozen_input_or_git_cohort_changes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -122,16 +113,12 @@ class ManifestParityTests(unittest.TestCase):
             first = _ok_payload(job_id="job-cohort-1")
             second = _ok_payload(job_id="job-cohort-2")
             second["inputSha256"] = "e" * 64
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ):
-                record_parity_attempt(ledger_path, matched=True, candidate=first)
-                ledger = record_parity_attempt(ledger_path, matched=True, candidate=second)
+            record_parity_attempt(ledger_path, matched=True, candidate=first)
+            ledger = record_parity_attempt(ledger_path, matched=True, candidate=second)
             self.assertEqual(ledger["consecutiveMatches"], 0)
             self.assertFalse(ledger["attempts"][-1]["cohortMatched"])
 
-    def test_complete_manifest_shape_stays_blocked_until_authoritative_producer_lands(self) -> None:
+    def test_complete_manifest_shape_counts_once_authoritative_producer_lands(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             ledger_path = Path(raw) / "parity.json"
             for index in range(3):
@@ -140,8 +127,8 @@ class ManifestParityTests(unittest.TestCase):
                     matched=True,
                     candidate=_ok_payload(job_id=f"blocked-live-{index}"),
                 )
-            self.assertEqual(ledger["consecutiveMatches"], 0)
-            self.assertFalse(deletion_allowed(ledger))
+            self.assertEqual(ledger["consecutiveMatches"], REQUIRED_MATCH_COUNT)
+            self.assertTrue(deletion_allowed(ledger))
 
     def test_incomplete_hex_only_evidence_never_counts(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -169,19 +156,15 @@ class ManifestParityTests(unittest.TestCase):
     def test_deletion_read_path_revalidates_attempt_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             ledger_path = Path(raw) / "parity.json"
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ):
-                for index in range(3):
-                    ledger = record_parity_attempt(
-                        ledger_path,
-                        matched=True,
-                        candidate=_ok_payload(job_id=f"tamper-live-{index}"),
-                    )
-                self.assertTrue(deletion_allowed(ledger))
-                ledger["attempts"][-1]["evidence"]["readbackSha256"] = "f" * 64
-                self.assertFalse(deletion_allowed(ledger))
+            for index in range(3):
+                ledger = record_parity_attempt(
+                    ledger_path,
+                    matched=True,
+                    candidate=_ok_payload(job_id=f"tamper-live-{index}"),
+                )
+            self.assertTrue(deletion_allowed(ledger))
+            ledger["attempts"][-1]["evidence"]["readbackSha256"] = "f" * 64
+            self.assertFalse(deletion_allowed(ledger))
 
 
 if __name__ == "__main__":
