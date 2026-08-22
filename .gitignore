@@ -103,6 +103,7 @@ OMX_MODERNIZATION_WORKLOG.md
 # Local AI/browser helper state and packaged agent drops
 .antigravitycli/
 .tmp-gjc-*/
+.local-*
 .tmp-g034-*/
 .tmp-g035-*.json
 .tmp-g036-*.json
@@ -123,6 +124,17 @@ backend/restaurant-crawling/data/*/thumbnails/
 backend/restaurant-crawling/data/frames/
 backend/restaurant-crawling/data/credentials.json
 backend/restaurant-crawling/data/cookies.txt
+backend/restaurant-crawling/data/*.local.json
+backend/restaurant-crawling/data/gemini_cookies.json
+backend/restaurant-crawling/data/gemini_accounts.local.json
+backend/restaurant-crawling/data/camoufox_profile/
+# Local crawl/evaluation dumps. Tracked snapshots stay in git; restore
+# mutations instead of committing blobs. Untracked jsonl stays ignored.
+backend/restaurant-crawling/data/**/*.jsonl
+backend/restaurant-evaluation/data/**/*.jsonl
+
+# Operator timestamp, not a product file.
+backend/.sync_trigger
 
 # Local generated backend review/export reports; may contain live operational data.
 backend/restaurant-evaluation/reports/

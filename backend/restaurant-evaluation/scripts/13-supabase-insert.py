@@ -35,7 +35,10 @@ if str(REPO_ROOT) not in sys.path:
 from utils.privacy_log import safe_error_name
 from utils.runtime_paths import load_backend_env, resolve_backend_root
 from utils.supabase_rest import (
+    HostedRestRejected,
     SupabaseRestConfigurationError,
+    hosted_rest_exit_code,
+    live_insert_quota,
     resolve_privileged_supabase_rest_credentials,
 )
 from backend.pipeline_control.batch_upsert import (
@@ -876,6 +879,9 @@ def main() -> None:
 
     try:
         credentials = resolve_privileged_supabase_rest_credentials()
+    except HostedRestRejected:
+        print("[WARN] hosted_rest_rejected: refusing hosted Supabase REST writes")
+        sys.exit(hosted_rest_exit_code())
     except SupabaseRestConfigurationError:
         print("[ERROR] Supabase REST configuration invalid.")
         sys.exit(1)
@@ -922,7 +928,8 @@ def main() -> None:
         "ambiguous_rebind_skips": 0,
     }
 
-    batch_size = RESTAURANT_BATCH_LIMIT
+    quota = live_insert_quota()
+    batch_size = 1 if quota is not None else RESTAURANT_BATCH_LIMIT
     batch: list[dict[str, Any]] = []
 
     with open(input_file, "r", encoding="utf-8") as f:
@@ -933,6 +940,10 @@ def main() -> None:
                 data = json.loads(line.strip())
                 batch.append(build_record(data, channel))
 
+                if quota is not None and stats["inserted"] >= quota:
+                    print("[INFO] live_bounded: reached LIVE_MAX_NEW_ITEMS; remaining transforms skipped")
+                    batch = []
+                    break
                 if len(batch) >= batch_size:
                     process_and_upsert(supabase, batch, dry_run, stats)
                     batch = []
