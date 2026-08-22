@@ -21,7 +21,14 @@ from backend.pipeline_control.graph import AdapterGraphError
 from backend.pipeline_control.profiles import ProfileError, resolve_compute_profile
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.es_index import EsIndexError
+from backend.pipeline_control.live_evidence import (
+    canonical_sha256,
+    independent_local_db_snapshots,
+    same_run_id_verified,
+)
 from backend.pipeline_control.manifest import (
+    LIVE_EVIDENCE_FIELDS,
+    LIVE_EVIDENCE_SCHEMA,
     is_live_evidence_eligible,
     is_live_execution_success,
     write_compatible_summary,
@@ -141,6 +148,7 @@ def write_run_manifest(
     run: RunRecord | None = None,
     execution_mode: str = "dry_run",
     data_sink: str | None = None,
+    store: MemoryStore | None = None,
 ) -> Path:
     if execution_mode not in {"dry_run", "live"}:
         raise ValueError("execution_mode_invalid")
@@ -213,10 +221,9 @@ def write_run_manifest(
         "stepEvents": step_events,
         "jobId": run.id if run is not None else None,
         "jobIdScope": "worker_execution",
-        # The Slice-0 FileStore/queue bridge does not preserve the API-created
-        # ID.  P2 must set this true only after one PostgreSQL run ID survives
-        # enqueue, claim, checkpoint, manifest, readback, and audit.
-        "sameRunIdVerified": False,
+        # FileStore GET SoT: true only when enqueue, claim, and success share
+        # one job id on the same store. Overlay compose must not add Postgres.
+        "sameRunIdVerified": same_run_id_verified(store, run),
         "executionMode": execution_mode,
         "dataSink": data_sink,
         "computeProfile": run.profile if run is not None else None,
@@ -248,6 +255,39 @@ def write_run_manifest(
             "targetBranch": os.environ.get("RUN_DAILY_TARGET_BRANCH", "data"),
         },
     }
+    input_provenance = payload["hashProvenance"]["inputSha256"]
+    output_provenance = payload["hashProvenance"]["outputSha256"]
+    if ok and execution_mode == "live" and data_sink == "local_db":
+        snapshots = independent_local_db_snapshots()
+        if (
+            len(snapshots) == 3
+            and snapshots[0] == snapshots[1] == snapshots[2]
+        ):
+            baseline_sha, baseline_count = snapshots[0]
+            candidate_sha, candidate_count = snapshots[1]
+            readback_sha, readback_count = snapshots[2]
+            payload["evidenceSchemaVersion"] = LIVE_EVIDENCE_SCHEMA
+            payload["baselineSha256"] = baseline_sha
+            payload["candidateSha256"] = candidate_sha
+            payload["readbackSha256"] = readback_sha
+            payload["baselineRowCount"] = baseline_count
+            payload["candidateRowCount"] = candidate_count
+            payload["readbackRowCount"] = readback_count
+            if payload["inputSha256"] is None:
+                payload["inputSha256"] = baseline_sha
+                input_provenance = "local_db.restaurants.snapshot"
+            if payload["outputSha256"] is None:
+                payload["outputSha256"] = readback_sha
+                output_provenance = "local_db.restaurants.snapshot"
+    payload["hashProvenance"]["inputSha256"] = input_provenance
+    payload["hashProvenance"]["outputSha256"] = output_provenance
+    receipt_fields = {
+        field: payload.get(field)
+        for field in LIVE_EVIDENCE_FIELDS
+        if field != "evidenceReceiptSha256"
+    }
+    if payload.get("evidenceSchemaVersion") == LIVE_EVIDENCE_SCHEMA:
+        payload["evidenceReceiptSha256"] = canonical_sha256(receipt_fields)
     payload["liveExecutionSucceeded"] = is_live_execution_success(payload)
     payload["liveEvidenceEligible"] = is_live_evidence_eligible(payload)
     return write_compatible_summary(destination, payload)
@@ -292,6 +332,7 @@ def process_one(
             manifest_path,
             run=run,
             execution_mode=execution_mode,
+            store=store,
         )
         return "Failed"
     collected: list[dict] = []
@@ -324,6 +365,7 @@ def process_one(
             run=run,
             execution_mode=execution_mode,
             data_sink=data_sink,
+            store=store,
         )
         return "Failed"
     except EsIndexError as exc:
@@ -335,10 +377,14 @@ def process_one(
             run=run,
             execution_mode=execution_mode,
             data_sink=data_sink,
+            store=store,
         )
         return "Failed"
     if result == "Succeeded":
-        store.finish_dry_run(run.id)
+        if execution_mode == "live":
+            store.finish_succeeded(run.id)
+        else:
+            store.finish_dry_run(run.id)
     elif result == "Failed":
         store.finish_failed(run.id)
     write_run_manifest(
@@ -348,6 +394,7 @@ def process_one(
         run=run,
         execution_mode=execution_mode,
         data_sink=data_sink,
+        store=store,
     )
     return result
 
