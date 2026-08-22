@@ -318,7 +318,7 @@ class LiveAdapterTests(unittest.TestCase):
         self.assertEqual(payload["inputSha256"], "d" * 64)
         self.assertEqual(payload["outputSha256"], "e" * 64)
         self.assertTrue(payload["liveExecutionSucceeded"])
-        self.assertFalse(payload["sameRunIdVerified"])
+        self.assertTrue(payload["sameRunIdVerified"])
         self.assertFalse(payload["liveEvidenceEligible"])
 
     def test_artifact_only_live_result_is_not_local_cutover_evidence(self) -> None:
@@ -377,17 +377,13 @@ class LiveAdapterTests(unittest.TestCase):
     def test_cutover_refused_without_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             ledger = Path(raw) / "ledger.json"
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ):
-                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-1"))
-                with self.assertRaises(PermissionError):
-                    plan_cutover(ledger)
-                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-2"))
-                record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-3"))
-                planned = plan_cutover(ledger)
-                self.assertTrue(planned["allowed"])
+            record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-1"))
+            with self.assertRaises(PermissionError):
+                plan_cutover(ledger)
+            record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-2"))
+            record_parity_attempt(ledger, matched=True, candidate=_live_evidence("job-live-3"))
+            planned = plan_cutover(ledger)
+            self.assertTrue(planned["allowed"])
 
     def test_cutover_refuses_forged_counter_only_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -395,10 +391,7 @@ class LiveAdapterTests(unittest.TestCase):
             ledger_path.write_text('{"consecutiveMatches":3}\n', encoding="utf-8")
             with self.assertRaises(PermissionError):
                 plan_cutover(ledger_path)
-            with patch(
-                "backend.pipeline_control.manifest.AUTHORITATIVE_LIVE_EVIDENCE_ENABLED",
-                True,
-            ), self.assertRaises(PermissionError):
+            with self.assertRaises(PermissionError):
                 plan_cutover(ledger_path)
 
     def test_manifest_uses_canonical_sh_labels_and_skip_reason(self) -> None:
@@ -493,6 +486,54 @@ class LiveAdapterTests(unittest.TestCase):
             third = FileStore(path, clock=lambda: 1_002.0)
             again = third.get(run.id)
             self.assertEqual(again.status, "Fetching")
+
+    def test_authoritative_producer_emits_eligible_live_receipt(self) -> None:
+        from backend.pipeline_control.live_run import run_once
+        from backend.pipeline_control import live_run as live_run_mod
+
+        snap = ("c" * 64, 25)
+        store = MemoryStore(clock=lambda: 1_000.0)
+        with tempfile.TemporaryDirectory() as raw, patch.dict(
+            os.environ,
+            {
+                "PIPELINE_CONTROL_DSN": "postgresql://tzudong@127.0.0.1:54322/postgres",
+                "TZUDONG_DATA_ENV": "local_db",
+                "TZUDONG_DATA_SINK": "local_db",
+                "TZUDONG_PIPELINE_LIVE": "1",
+                "RUN_DAILY_EXECUTION_SHA": "a" * 40,
+            },
+            clear=False,
+        ):
+            os.environ.pop("SUPABASE_URL", None)
+            os.environ.pop("RUN_DAILY_INPUT_SHA256", None)
+            os.environ.pop("RUN_DAILY_OUTPUT_SHA256", None)
+            previous_dir = live_run_mod.CANDIDATE_DIR
+            live_run_mod.CANDIDATE_DIR = Path(raw)
+            try:
+                with patch(
+                    "backend.pipeline_control.live_evidence.snapshot_restaurants_relation",
+                    return_value=snap,
+                ):
+                    result = run_once(
+                        store,
+                        target="tzuyang",
+                        index=1,
+                        live=True,
+                        runner=lambda argv: 0,
+                    )
+            finally:
+                live_run_mod.CANDIDATE_DIR = previous_dir
+            payload = json.loads((Path(raw) / "run-1-current-summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(result, "Succeeded")
+        self.assertTrue(payload["sameRunIdVerified"])
+        self.assertEqual(payload["evidenceSchemaVersion"], "pipeline-live-evidence-v1")
+        self.assertEqual(payload["baselineSha256"], snap[0])
+        self.assertEqual(payload["candidateSha256"], snap[0])
+        self.assertEqual(payload["readbackSha256"], snap[0])
+        self.assertEqual(payload["baselineRowCount"], 25)
+        self.assertTrue(is_live_evidence_eligible(payload))
+        self.assertTrue(payload["liveEvidenceEligible"])
+
 
 
 if __name__ == "__main__":
