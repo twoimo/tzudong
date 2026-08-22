@@ -2291,6 +2291,14 @@ async function processBatch(params, dependencies = {}) {
     log('info', 'FRAME_SCAN_COMPLETED');
 
 
+    if (String(process.env.TZUDONG_PIPELINE_LIVE || '').trim() === '1' && pendingUrls.length > 0) {
+        const raw = String(process.env.LIVE_MAX_NEW_ITEMS || '1').trim();
+        const maxNew = /^\d+$/.test(raw) ? Number.parseInt(raw, 10) : 1;
+        if (pendingUrls.length > maxNew) {
+            log('info', 'FRAME_LIVE_CAP_PENDING_DOWNLOADS', { kept: maxNew, dropped: pendingUrls.length - maxNew });
+            pendingUrls.length = maxNew;
+        }
+    }
     if (pendingUrls.length === 0) {
         log('info', 'FRAME_NO_PENDING_WORK');
         return;
