@@ -442,12 +442,14 @@ describe("release workflow governance source contracts", () => {
         retain: ["contents: read"],
       },
       ".github/workflows/web-admin-ci.yml": {
+        "affected-paths": ["contents: read"],
         "dependency-modernization-proof": ["contents: read"],
         "ubuntu-npm-authority": ["contents: read"],
         "ubuntu-bun-compatibility": ["contents: read"],
         "windows-npm-tooling": ["contents: read"],
         "windows-bun-compatibility": ["contents: read"],
         "admin-address-consistency": ["contents: read"],
+        "ci-complete": ["contents: read"],
       },
     };
 
@@ -500,6 +502,25 @@ describe("release workflow governance source contracts", () => {
     expect(web.imageReferences).toEqual([
       "postgres@sha256:be01cf82fc7dbba824acf0a82e150b4b360f3ff93c6631d7844af431e841a95c",
     ]);
+    expect(web.source).toContain("dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d");
+    expect(web.source).toContain("actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830");
+    expect(web.source).toContain("github.base_ref == 'develop'");
+    expect(web.source).toContain("github.event_name == 'pull_request' && github.base_ref == 'develop'");
+    expect(web.jobs.get("dependency-modernization-proof")!.block).toContain("cache: npm");
+    expect(web.jobs.get("dependency-modernization-proof")!.block).toContain(
+      "cache-dependency-path: apps/web/package-lock.json",
+    );
+    expect(web.jobs.get("dependency-modernization-proof")!.block).toContain("~/.cache/ms-playwright");
+    expect(web.jobs.get("dependency-modernization-proof")!.block).toContain(
+      "needs.affected-paths.outputs.run-install == 'true'",
+    );
+    expect(web.jobs.get("ubuntu-npm-authority")!.block).toContain(
+      "needs.affected-paths.outputs.run-web-matrix == 'true'",
+    );
+    expect(web.jobs.get("admin-address-consistency")!.block).toContain(
+      "needs.affected-paths.outputs.run-admin == 'true'",
+    );
+    expect(web.jobs.get("ci-complete")!.block).toContain("if: always()");
 
     const evidence = workflows.get(".github/workflows/ts7-release-evidence.yml")!;
     const verifier = evidence.jobs.get("verify-release-evidence")!.block;

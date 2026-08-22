@@ -129,8 +129,87 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
+  affected-paths:
+    name: Affected
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      run-install: ${{ steps.decide.outputs.run-install }}
+      run-web-matrix: ${{ steps.decide.outputs.run-web-matrix }}
+      run-admin: ${{ steps.decide.outputs.run-admin }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'pull_request' && github.base_ref == 'develop'
+        with:
+          filters: |
+            ci_config:
+              - '.github/workflows/web-admin-ci.yml'
+              - '.github/scripts/**'
+              - 'apps/web/package.json'
+              - 'apps/web/package-lock.json'
+              - 'apps/web/bun.lock'
+              - 'apps/web/tsconfig.json'
+              - 'apps/web/eslint.config.mjs'
+              - 'apps/web/playwright.config.ts'
+              - 'apps/web/playwright.release.config.ts'
+            web_code:
+              - 'apps/web/**'
+              - '!apps/web/**/*.md'
+            admin_backend:
+              - 'backend/bin/apply_tzuyang_address_evidence_ledger.mjs'
+              - 'backend/bin/build_tzuyang_address_evidence_ledger.mjs'
+              - 'backend/bin/build_tzuyang_case_review_pack.mjs'
+              - 'backend/bin/naver_scrapling_fetch.py'
+              - 'backend/bin/build_tzuyang_operator_review_package.mjs'
+              - 'backend/bin/validate_tzuyang_address_evidence_ledger.mjs'
+              - 'backend/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
+              - 'apps/web/supabase/migrations/20260531105250_restaurant_refresh_history.sql'
+              - 'backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs'
+              - 'backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs'
+              - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs'
+              - 'backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs'
+      - id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          CI_CONFIG: ${{ steps.filter.outputs.ci_config }}
+          WEB_CODE: ${{ steps.filter.outputs.web_code }}
+          ADMIN_BACKEND: ${{ steps.filter.outputs.admin_backend }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ] || [ "$BASE_REF" != "develop" ]; then
+            echo "run-install=true" >> "$GITHUB_OUTPUT"
+            echo "run-web-matrix=true" >> "$GITHUB_OUTPUT"
+            echo "run-admin=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          install=false
+          matrix=false
+          admin=false
+          if [ "$CI_CONFIG" = "true" ] || [ "$WEB_CODE" = "true" ]; then
+            install=true
+            matrix=true
+            admin=true
+          fi
+          if [ "$ADMIN_BACKEND" = "true" ]; then
+            admin=true
+          fi
+          echo "run-install=$install" >> "$GITHUB_OUTPUT"
+          echo "run-web-matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "run-admin=$admin" >> "$GITHUB_OUTPUT"
+
   dependency-modernization-proof:
     name: Install
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-install == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -143,9 +222,18 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: '1.2.16'
+      - name: Cache Playwright Chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-1.62.1-${{ hashFiles('apps/web/package-lock.json') }}
+          restore-keys: |
+            playwright-chromium-${{ runner.os }}-1.62.1-
       - name: Create independent clean workspaces
         run: |
           set -euo pipefail
@@ -201,6 +289,8 @@ jobs:
           retention-days: 90
   ubuntu-npm-authority:
     name: Ubuntu npm
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-web-matrix == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -255,6 +345,8 @@ jobs:
 
   ubuntu-bun-compatibility:
     name: Ubuntu Bun
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-web-matrix == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -304,6 +396,8 @@ jobs:
 
   windows-npm-tooling:
     name: Windows npm
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-web-matrix == 'true' }}
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -364,6 +458,8 @@ jobs:
 
   windows-bun-compatibility:
     name: Windows Bun
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-web-matrix == 'true' }}
     runs-on: windows-latest
     timeout-minutes: 45
     permissions:
@@ -416,6 +512,8 @@ jobs:
       - run: bun test tests-unit/cross-platform-web-tooling-source.test.ts tests-unit/typescript-toolchain-source.test.ts tests-unit/typecheck-benchmark-source.test.ts tests-unit/typecheck-benchmark-fixtures.test.ts tests-unit/performance-backlog-governance.test.ts tests-unit/auth-release-smoke-source.test.ts tests-unit/release-visual-privacy-source.test.ts tests-unit/release-visual-runner-source.test.ts tests-unit/release-workflow-governance-source.test.ts
   admin-address-consistency:
     name: Admin
+    needs: affected-paths
+    if: ${{ needs.affected-paths.outputs.run-admin == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -456,3 +554,48 @@ jobs:
       - run: cd ../.. && node --test backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-case-review-pack.test.mjs backend/restaurant-evaluation/scripts/tests/tzuyang-operator-review-package.test.mjs
       - run: cd ../.. && TZUYANG_LEDGER_CI_FIXTURE=1 SUPABASE_DB_HOST=localhost SUPABASE_DB_PORT=5432 SUPABASE_DB_NAME=tzudong_ci SUPABASE_DB_USER=postgres SUPABASE_DB_PASSWORD=${{ github.run_id }} SUPABASE_DB_SSL=disable node backend/restaurant-evaluation/scripts/tests/tzuyang-address-evidence-ledger-cli-fixture.mjs
       - run: bun test tests-unit/admin-address-consistency.test.ts tests-unit/admin-evaluation-address-filter-source.test.ts tests-unit/admin-restaurant-refresh-history-source.test.ts tests-unit/admin-sidebar-order.test.ts tests-unit/restaurant-refresh-cron.test.ts tests-unit/supabase-migration-apply-source.test.ts tests-unit/mobile-desktop-parity-source.test.ts tests-unit/web-quality-performance-source.test.ts tests-unit/vercel-ignore-build.test.ts tests-unit/backend-npm-ci-retry-source.test.ts
+
+  ci-complete:
+    name: Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    needs:
+      - affected-paths
+      - dependency-modernization-proof
+      - ubuntu-npm-authority
+      - ubuntu-bun-compatibility
+      - windows-npm-tooling
+      - windows-bun-compatibility
+      - admin-address-consistency
+    if: always()
+    steps:
+      - name: Require skipped or successful matrix jobs
+        env:
+          AFFECTED_PATHS_RESULT: ${{ needs.affected-paths.result }}
+          INSTALL_RESULT: ${{ needs.dependency-modernization-proof.result }}
+          UBUNTU_NPM_RESULT: ${{ needs.ubuntu-npm-authority.result }}
+          UBUNTU_BUN_RESULT: ${{ needs.ubuntu-bun-compatibility.result }}
+          WINDOWS_NPM_RESULT: ${{ needs.windows-npm-tooling.result }}
+          WINDOWS_BUN_RESULT: ${{ needs.windows-bun-compatibility.result }}
+          ADMIN_RESULT: ${{ needs.admin-address-consistency.result }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import sys
+
+          if os.environ["AFFECTED_PATHS_RESULT"] != "success":
+              sys.exit(1)
+          for key in (
+              "INSTALL_RESULT",
+              "UBUNTU_NPM_RESULT",
+              "UBUNTU_BUN_RESULT",
+              "WINDOWS_NPM_RESULT",
+              "WINDOWS_BUN_RESULT",
+              "ADMIN_RESULT",
+          ):
+              if os.environ[key] not in {"success", "skipped"}:
+                  sys.exit(1)
+          PY
