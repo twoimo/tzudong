@@ -22,6 +22,7 @@ import os
 import re
 import glob
 import argparse
+import concurrent.futures
 import requests
 from tqdm import tqdm
 import sys
@@ -93,8 +94,19 @@ def get_latest_doc_recollect_id(doc_path: str) -> int | None:
                 last_line = lines[-1].strip()
                 if last_line:
                     last_docs = json.loads(last_line)
+                    if isinstance(last_docs, dict):
+                        metadata = last_docs.get("metadata")
+                        if not isinstance(metadata, dict):
+                            metadata = {}
+                        rec = metadata.get("recollect_id", last_docs.get("recollect_id"))
+                        return rec
                     if last_docs and len(last_docs) > 0:
-                        return last_docs[0].get("metadata", {}).get("recollect_id")
+                        first = last_docs[0]
+                        if isinstance(first, dict):
+                            metadata = first.get("metadata")
+                            if not isinstance(metadata, dict):
+                                metadata = {}
+                            return metadata.get("recollect_id", first.get("recollect_id"))
     except Exception as error:
         print(f"op=document_jsonl_read_failed error={safe_error_name(error)}")
     return None
@@ -133,6 +145,20 @@ def openai_compatible_root(base_url: str) -> str:
     return base_url[:-3] if base_url.endswith("/v1") else base_url
 
 
+def ollama_num_ctx() -> int | None:
+    raw = (os.environ.get("OLLAMA_NUM_CTX") or os.environ.get("OLLAMA_CONTEXT_LENGTH") or "").strip()
+    if raw.isdigit() and int(raw) > 0:
+        return int(raw)
+    return None
+
+
+def ollama_num_predict() -> int:
+    raw = (os.environ.get("OLLAMA_NUM_PREDICT") or "").strip()
+    if raw.isdigit() and int(raw) > 0:
+        return int(raw)
+    return 128
+
+
 def build_context_llm(backend: str, model: str, base_url: str):
     if backend in OPENAI_COMPATIBLE_BACKENDS:
         from langchain_openai import ChatOpenAI
@@ -144,7 +170,17 @@ def build_context_llm(backend: str, model: str, base_url: str):
             temperature=0,
             timeout=120,
         )
-    return ChatOllama(model=model, base_url=base_url, temperature=0, timeout=120)
+    kwargs = {
+        "model": model,
+        "base_url": base_url,
+        "temperature": 0,
+        "timeout": 120,
+    }
+    num_ctx = ollama_num_ctx()
+    if num_ctx is not None:
+        kwargs["num_ctx"] = num_ctx
+    kwargs["num_predict"] = ollama_num_predict()
+    return ChatOllama(**kwargs)
 
 
 def parse_error_context(
@@ -253,18 +289,34 @@ def run_chain(
     chain = prompt | llm | StrOutputParser()
 
     # 실행
-    try:
+    timeout_raw = (os.environ.get("OLLAMA_INVOKE_TIMEOUT") or "").strip()
+    timeout_s = float(timeout_raw) if timeout_raw.replace(".", "", 1).isdigit() else 45.0
+    bounded = bool((os.environ.get("TRANSCRIPT_CONTEXT_MAX_CHUNKS") or "").strip())
+    prompt_full = full_transcript[:1200] if bounded else full_transcript
+    prompt_chunk = chunk_transcript[:1200] if bounded else chunk_transcript
+
+    def _invoke() -> str:
         result = chain.invoke(
             {
                 "title": title,
-                "full_transcript": full_transcript,
-                "chunk": chunk_transcript,
+                "full_transcript": prompt_full,
+                "chunk": prompt_chunk,
             }
         )
         return result.strip()
+
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    try:
+        future = pool.submit(_invoke)
+        return future.result(timeout=timeout_s)
+    except concurrent.futures.TimeoutError:
+        print("op=llm_context_generation_timeout", flush=True)
+        return ""
     except Exception as error:
         print(f"op=llm_context_generation_failed error={safe_error_name(error)}")
         return ""
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
 
 def run_chain_with_retry(
@@ -358,9 +410,14 @@ def process_video(
     new_chunks = create_chunks_with_overlap(transcript, video_duration=video_duration)
 
     documents = []
+    max_chunks_raw = (os.environ.get("TRANSCRIPT_CONTEXT_MAX_CHUNKS") or "").strip()
+    max_chunks = int(max_chunks_raw) if max_chunks_raw.isdigit() and int(max_chunks_raw) > 0 else 0
 
     # 문맥 생성
     for chunk in new_chunks:
+        if max_chunks > 0 and len(documents) >= max_chunks:
+            print(f"op=transcript_context_chunk_limit max_chunks={max_chunks}", flush=True)
+            break
         chunk_index = chunk["chunk_index"]
         chunk_transcript = chunk["content"]
 
@@ -428,17 +485,18 @@ def main() -> int:
         "--check-connection-only", action="store_true", help="연결 확인 후 종료"
     )
     args = parser.parse_args()
+    if args.max_videos > 0 and not (os.environ.get("TRANSCRIPT_CONTEXT_MAX_CHUNKS") or "").strip():
+        os.environ["TRANSCRIPT_CONTEXT_MAX_CHUNKS"] = "1"
 
     backend = resolve_transcript_context_backend()
     base_url = resolve_transcript_context_base_url(backend)
     model = resolve_transcript_context_model(backend, args.model)
     print(f"op=transcript_context_backend backend={backend} model={model}")
 
-    if not check_context_backend_connection(backend, base_url, model):
-        print("op=transcript_context_backend_unavailable")
-        return 1
-
     if args.check_connection_only:
+        if not check_context_backend_connection(backend, base_url, model):
+            print("op=transcript_context_backend_unavailable")
+            return 1
         return 0
 
     # tzuyang 전용 (다른 유튜버는 이 스크립트 사용 불가)
@@ -548,6 +606,26 @@ def main() -> int:
         f"op=transcript_context_scan_complete total={len(transcript_paths)} "
         f"pending={len(pending_paths)} skipped={len(transcript_paths) - len(pending_paths)}"
     )
+
+    if args.max_videos > 0:
+        pending_paths = pending_paths[: args.max_videos]
+        print(
+            f"op=transcript_context_pending_capped max_videos={args.max_videos} "
+            f"pending={len(pending_paths)}",
+            flush=True,
+        )
+
+    if not pending_paths:
+        print(
+            f"op=transcript_context_complete processed=0 skipped={skipped_count} "
+            f"errors=0 total={len(transcript_paths)}",
+            flush=True,
+        )
+        return 0
+
+    if not check_context_backend_connection(backend, base_url, model):
+        print("op=transcript_context_backend_unavailable")
+        return 1
 
     print(f"op=transcript_context_start pending={len(pending_paths)}", flush=True)
 
