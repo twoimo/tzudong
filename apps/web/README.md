@@ -41,9 +41,13 @@ bun run dev -- --operator-env-file /absolute/path/to/owner-only.env.local
 ### 3. Hosted 환경 변수 설정 (명시적 opt-in)
 
 Hosted Supabase를 의도적으로 디버깅할 때만 `.env.local` 파일을 생성하고 아래
-변수를 설정한 뒤 `bun run dev:hosted`를 사용하세요. 기본 로컬 명령은 Bun·Next의
-자동 dotenv 재로딩을 차단하고, 파일에서 필요한 비-DB 운영 설정만 격리해 읽은 뒤
-Supabase/Postgres/DB 연결 변수 전체를 제거하고 생성된 loopback 값을 주입합니다:
+변수를 설정한 뒤 `bun run dev:hosted`를 사용하세요. 이 명령은 `--hosted` 표시가
+있어야 하는 명시적 원격 디버깅 경로입니다. 앱에서 수행한 동작에 따라 해당
+Supabase project를 변경할 수 있으므로 production 자격 증명을 사용하지 마세요.
+기본 Next-dev 명령은 Bun·Next의 자동 dotenv 재로딩을 차단하고, 파일에서 필요한 비-DB 운영 설정만
+격리해 읽은 뒤 Supabase/Postgres/DB 연결 변수 전체를 제거하고 생성된
+loopback 값을 주입합니다. `bun run build` / `bun run start`는 이번 기본값
+변경 범위가 아닙니다.
 
 ```env
 # Supabase
@@ -109,16 +113,18 @@ STORYBOARD_BGE_ENABLED=false
 # 기본 개발 서버: 검증된 로컬 Supabase + webpack
 bun run dev
 
-# hosted .env.local을 명시적으로 사용할 때만
+# hosted .env.local을 명시적으로 사용할 때만 (원격 디버깅)
 bun run dev:hosted
 
-# hosted/고급 디버깅용 캐시 정리 경로
+# 로컬 Supabase는 유지하면서 owner-only 파일의 Client ID로 실제 Naver provider를 확인하는 명시적 smoke 경로
+bun run dev -- --live-naver-provider-smoke --operator-env-file /absolute/path/to/owner-only.env.local
+
+# 승인된 실제 Client ID를 현재 프로세스에 명시한 뒤, 전용 server mode와 Chromium spec을 결합한 Playwright smoke 실행
+NEXT_PUBLIC_NAVER_CLIENT_ID="$NAVER_APPROVED_CLIENT_ID" bun run test:naver-live-provider
+
+# 아래 Next-dev 별칭도 로컬 스택 검증을 통과해야 함
 bun run dev:clean
-
-# Turbopack 비교가 필요할 때만 별도 실행
 bun run dev:turbopack
-
-# webpack 개발 서버를 명시적으로 실행
 bun run dev:webpack
 
 # 프로덕션 빌드 및 실행

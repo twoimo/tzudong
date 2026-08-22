@@ -32,6 +32,73 @@ def _load_psycopg2() -> Any:
     return psycopg2
 
 
+
+JOB_READBACK_FIELDS = (
+    "id",
+    "target",
+    "profile",
+    "status",
+    "idempotency_key",
+    "payload_hash",
+    "actor",
+    "request_id",
+    "adapter_index",
+    "dry_run",
+    "error_code",
+)
+
+
+def _field_equal(got: Any, expected: Any) -> bool:
+    if expected is None:
+        return got is None
+    if isinstance(expected, bool):
+        return bool(got) is expected
+    if isinstance(expected, int) and not isinstance(expected, bool):
+        try:
+            return int(got) == expected
+        except (TypeError, ValueError):
+            return False
+    return str(got) == str(expected)
+
+
+def verify_persisted(cur: Any, run: RunRecord, *, lock_held: bool, lock_key: str) -> None:
+    """Read back jobs+locks and compare to the FileStore RunRecord. GET stays FileStore."""
+    try:
+        cur.execute(
+            """
+            SELECT id, target, profile, status, idempotency_key, payload_hash,
+                   actor, request_id, adapter_index, dry_run, error_code
+            FROM pipeline_control.jobs
+            WHERE id = %s
+            """,
+            (run.id,),
+        )
+        job_row = cur.fetchone()
+        cur.execute(
+            "SELECT job_id FROM pipeline_control.locks WHERE lock_key = %s",
+            (lock_key,),
+        )
+        lock_row = cur.fetchone()
+    except PersistError:
+        raise
+    except Exception as exc:
+        raise PersistError("persist_divergence") from exc
+
+    expected = tuple(getattr(run, name) for name in JOB_READBACK_FIELDS)
+    if job_row is None:
+        raise PersistError("persist_divergence")
+    got = tuple(job_row)
+    if len(got) != len(expected):
+        raise PersistError("persist_divergence")
+    if any(not _field_equal(left, right) for left, right in zip(got, expected)):
+        raise PersistError("persist_divergence")
+    if lock_held:
+        if lock_row is None or not _field_equal(lock_row[0], run.id):
+            raise PersistError("persist_divergence")
+    elif lock_row is not None:
+        raise PersistError("persist_divergence")
+
+
 def persist_mutation(
     run: RunRecord,
     *,
@@ -121,6 +188,17 @@ def persist_mutation(
                         audit.get("X-Request-Id") or audit.get("request_id"),
                     ),
                 )
-        conn.commit()
+            verify_persisted(cur, run, lock_held=lock_held, lock_key=lock_key)
+        try:
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    except PersistError:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     finally:
         conn.close()
