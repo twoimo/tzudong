@@ -168,9 +168,13 @@ class MemoryStore:
         self._persist(run, lock_held=True, audit=None)
         return run
 
-    def claim(self) -> RunRecord | None:
+    def claim(self, run_id: str | None = None) -> RunRecord | None:
         self._reclaim()
-        for run in self.runs.values():
+        if run_id is not None:
+            queued = [run for run in self.runs.values() if run.id == run_id and run.status == "Queued"]
+        else:
+            queued = [run for run in self.runs.values() if run.status == "Queued"]
+        for run in queued:
             if run.status == "Queued":
                 run.status = "Fetching"
                 heartbeat(run, self.now(), LEASE_TTL_SECONDS)
@@ -198,6 +202,25 @@ class MemoryStore:
             actor="worker",
             job_id=run.id,
             transition="dry_run_succeeded",
+            request_id=run.request_id,
+        )
+        self._persist(run, lock_held=False, audit=self.audit[-1])
+        record("tzudong_pipeline_runs_succeeded_total")
+        return run
+
+    def finish_succeeded(self, run_id: str) -> RunRecord:
+        run = self.get(run_id)
+        if run.status == "Cancelled":
+            return run
+        if run.status == "Paused":
+            return run
+        run.adapter_index = len(ADAPTER_STEPS)
+        run.status = "Succeeded"
+        self.locks.pop(lock_key(run.target, run.profile), None)
+        self._audit(
+            actor="worker",
+            job_id=run.id,
+            transition="succeeded",
             request_id=run.request_id,
         )
         self._persist(run, lock_held=False, audit=self.audit[-1])

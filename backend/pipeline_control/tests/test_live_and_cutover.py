@@ -187,5 +187,120 @@ class LiveAdapterTests(unittest.TestCase):
             self.assertEqual(again.status, "Fetching")
 
 
+
+    def test_step_commands_match_repo_scripts(self) -> None:
+        from pathlib import Path
+        from backend.pipeline_control.adapter import STEP_COMMANDS
+
+        root = Path(__file__).resolve().parents[3]
+        for argv in STEP_COMMANDS.values():
+            scripts = [part for part in argv if part.endswith((".py", ".js", ".sh", ".mjs"))]
+            self.assertTrue(scripts, argv)
+            for script in scripts:
+                self.assertTrue((root / script).is_file(), script)
+        self.assertNotIn("--channel", STEP_COMMANDS["03-1-context"])
+        self.assertTrue(
+            any(part.endswith("04-extract-frames-with-heatmap.js") for part in STEP_COMMANDS["04-frames"])
+        )
+
+    def test_record_live_parity_counts_consecutive_matches(self) -> None:
+        import json
+        import tempfile
+        from pathlib import Path
+        from backend.pipeline_control import live_run as live_run_mod
+        from backend.pipeline_control.worker import write_run_manifest
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            baseline = root / "baseline.json"
+            candidate = root / "candidate.json"
+            ledger = root / "ledger.json"
+            write_run_manifest("Succeeded", baseline)
+            write_run_manifest("Succeeded", candidate)
+            orig_base = live_run_mod.DEFAULT_BASELINE
+            orig_ledger = live_run_mod.DEFAULT_LEDGER
+            live_run_mod.DEFAULT_BASELINE = baseline
+            live_run_mod.DEFAULT_LEDGER = ledger
+            try:
+                live_run_mod.record_live_parity(candidate)
+                live_run_mod.record_live_parity(candidate)
+                live_run_mod.record_live_parity(candidate)
+            finally:
+                live_run_mod.DEFAULT_BASELINE = orig_base
+                live_run_mod.DEFAULT_LEDGER = orig_ledger
+            payload = json.loads(ledger.read_text())
+            self.assertEqual(payload["consecutiveMatches"], 3)
+
+    def test_live_step_argv_honors_transcript_context_max_videos(self) -> None:
+        import os
+        from backend.pipeline_control.adapter import live_step_argv
+
+        os.environ.pop("TRANSCRIPT_CONTEXT_MAX_VIDEOS", None)
+        plain = live_step_argv("03-1-context", "tzuyang")
+        self.assertNotIn("--max-videos", plain)
+        os.environ["TRANSCRIPT_CONTEXT_MAX_VIDEOS"] = "1"
+        bounded = live_step_argv("03-1-context", "tzuyang")
+        self.assertEqual(bounded[-2:], ["--max-videos", "1"])
+        os.environ.pop("TRANSCRIPT_CONTEXT_MAX_VIDEOS", None)
+
+    def test_live_success_audit_is_not_dry_run_succeeded(self) -> None:
+        store = MemoryStore(clock=lambda: 1_000.0)
+        store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="livekey-g004",
+            payload={},
+            actor="qa",
+            request_id="req",
+            dry_run=False,
+        )
+        result = process_one(store, live=True, runner=lambda argv: 0)
+        self.assertEqual(result, "Succeeded")
+        run = next(iter(store.runs.values()))
+        self.assertFalse(run.dry_run)
+        self.assertEqual(run.status, "Succeeded")
+        self.assertTrue(any(row["transition"] == "succeeded" for row in store.audit))
+        self.assertFalse(any(row["transition"] == "dry_run_succeeded" for row in store.audit))
+
+    def test_record_upserted_only_after_step13_success(self) -> None:
+        events: list[dict] = []
+
+        def emit(event: dict) -> None:
+            events.append(event)
+
+        run = RunRecord(
+            id="live-13-ok",
+            target="tzuyang",
+            profile="heavy_local",
+            status="Fetching",
+            idempotency_key="livekey13ok",
+            payload_hash="abc",
+            actor="qa",
+            request_id="req",
+            lease_until=9_999,
+            heartbeat_at=1,
+            dry_run=False,
+        )
+        result = execute_steps(
+            run, should_stop=lambda: None, live=True, runner=lambda argv: 0, emit=emit
+        )
+        self.assertEqual(result, "Succeeded")
+        upserts = [event for event in events if event.get("type") == "record.upserted"]
+        self.assertEqual(len(upserts), 1)
+        self.assertEqual(upserts[0]["step"], "13-supabase-insert")
+
+        events.clear()
+        run.adapter_index = 0
+
+        def fail_step13(argv: list[str]) -> int:
+            return 1 if any(part.endswith("13-supabase-insert.py") for part in argv) else 0
+
+        result = execute_steps(
+            run, should_stop=lambda: None, live=True, runner=fail_step13, emit=emit
+        )
+        self.assertEqual(result, "Failed")
+        self.assertFalse(any(event.get("type") == "record.upserted" for event in events))
+
+
 if __name__ == "__main__":
     unittest.main()

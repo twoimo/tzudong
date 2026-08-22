@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import os
+import threading
 
 from typing import Any, Callable
 
@@ -15,8 +16,8 @@ STEP_COMMANDS = {
     "02-1-migrate": ["{python}", "backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py", "--channel", "{target}"],
     "02-5-cleanup": ["{python}", "backend/restaurant-crawling/scripts/02-5-cleanup-orphans.py", "--channel", "{target}"],
     "03-transcript": ["node", "backend/restaurant-crawling/scripts/03-collect-transcript.js", "--channel", "{target}"],
-    "03-1-context": ["{python}", "backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py", "--channel", "{target}"],
-    "04-frames": ["node", "backend/restaurant-crawling/scripts/04-heatmap-and-frames.js", "--channel", "{target}"],
+    "03-1-context": ["{python}", "backend/restaurant-crawling/scripts/03-1-generate-transcript-context.py"],
+    "04-frames": ["node", "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js", "--channel", "{target}"],
     "06-1-enrich": ["{python}", "backend/restaurant-crawling/scripts/06-1-transcript-document-with-meta.py", "--channel", "{target}"],
     "08-chunk": ["bash", "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh", "--channel", "{target}"],
     "09-target": ["{python}", "backend/restaurant-evaluation/scripts/09-target-selection.py", "--channel", "{target}", "--crawling-path", "backend/restaurant-crawling/data/{target}", "--evaluation-path", "backend/restaurant-evaluation/data/{target}"],
@@ -76,8 +77,10 @@ def run_daily_helper_dry_run(step: str) -> dict[str, str]:
 def default_live_runner(argv: list[str]) -> int:
     import subprocess
 
-    completed = subprocess.run(argv, check=False)
+    completed = subprocess.run(argv, check=False, env=os.environ.copy())
     return int(completed.returncode)
+
+
 def skipped_live_steps() -> set[str]:
     skipped: set[str] = set()
     frames = os.environ.get("RUN_DAILY_SKIP_FRAMES", "").strip().lower()
@@ -89,6 +92,16 @@ def skipped_live_steps() -> set[str]:
     if chunk in truthy or heavy in truthy:
         skipped.add("08-chunk")
     return skipped
+
+
+def live_step_argv(step: str, target: str) -> list[str]:
+    python = os.environ.get("PYTHON_CMD", "python3")
+    argv = [part.format(target=target, python=python) for part in STEP_COMMANDS[step]]
+    if step == "03-1-context":
+        max_videos = os.environ.get("TRANSCRIPT_CONTEXT_MAX_VIDEOS", "").strip()
+        if max_videos.isdigit() and int(max_videos) > 0:
+            argv.extend(["--max-videos", max_videos])
+    return argv
 
 
 def execute_steps(
@@ -124,9 +137,21 @@ def execute_steps(
             run.adapter_index = index + 1
             continue
         if live:
-            python = os.environ.get("PYTHON_CMD", "python3")
-            argv = [part.format(target=run.target, python=python) for part in STEP_COMMANDS[step]]
-            code = invoke(argv)
+            argv = live_step_argv(step, run.target)
+            stop_beat = threading.Event()
+
+            def _heartbeat_until_done() -> None:
+                while not stop_beat.wait(10.0):
+                    if should_stop():
+                        break
+
+            beater = threading.Thread(target=_heartbeat_until_done, daemon=True)
+            beater.start()
+            try:
+                code = invoke(argv)
+            finally:
+                stop_beat.set()
+                beater.join(timeout=1.0)
             if code != 0:
                 emit({"type": "run.lifecycle", "job_id": run.id, "status": "Failed", "step": step})
                 return "Failed"

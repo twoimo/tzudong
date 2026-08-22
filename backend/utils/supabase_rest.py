@@ -19,6 +19,8 @@ SUPABASE_REST_ALLOW_LOOPBACK_HTTP_ENV = "SUPABASE_REST_ALLOW_LOOPBACK_HTTP"
 NODE_ENV = "NODE_ENV"
 MAX_SERVICE_ROLE_KEY_LENGTH = 4096
 PROJECT_HOST_RE = re.compile(r"^[a-z0-9]{20}\.supabase\.co$")
+HOSTED_PROJECT_REF = "aqlcofblfxdrjhhdmarw"
+HOSTED_REST_REJECTED = "hosted_rest_rejected"
 
 
 class SupabaseRestConfigurationError(RuntimeError):
@@ -26,6 +28,13 @@ class SupabaseRestConfigurationError(RuntimeError):
 
     def __init__(self) -> None:
         super().__init__(SUPABASE_REST_CONFIGURATION_ERROR)
+
+
+class HostedRestRejected(SupabaseRestConfigurationError):
+    """Raised when local_db or live pipeline would use hosted Supabase REST."""
+
+    def __init__(self) -> None:
+        RuntimeError.__init__(self, HOSTED_REST_REJECTED)
 
 
 @dataclass(frozen=True)
@@ -128,6 +137,8 @@ def _production_url(parsed: SplitResult) -> str | None:
 
 
 def _loopback_http_is_explicitly_allowed(environment: Mapping[str, object]) -> bool:
+    if str(environment.get("TZUDONG_DATA_ENV") or "").strip() == "local_db":
+        return True
     return (
         environment.get(SUPABASE_REST_ALLOW_LOOPBACK_HTTP_ENV) == "1"
         and environment.get(NODE_ENV) in {"development", "test"}
@@ -154,16 +165,70 @@ def _loopback_url(parsed: SplitResult) -> str | None:
     return f"http://{rendered_host}{rendered_port}"
 
 
+def rest_url_is_hosted(url: str) -> bool:
+    """True when a REST URL targets hosted supabase.co, including the locked project ref."""
+
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    return host.endswith(".supabase.co") or HOSTED_PROJECT_REF in host
+
+
+def live_pipeline_enabled(environment: Mapping[str, object] | None = None) -> bool:
+    env = os.environ if environment is None else environment
+    return str(env.get("TZUDONG_PIPELINE_LIVE") or "").strip().lower() in {"1", "true", "yes"}
+
+
+def local_or_live_forbids_hosted_rest(environment: Mapping[str, object] | None = None) -> bool:
+    env = os.environ if environment is None else environment
+    data_env = str(env.get("TZUDONG_DATA_ENV") or "").strip()
+    return data_env == "local_db" or live_pipeline_enabled(env)
+
+
+def hosted_rest_exit_code(environment: Mapping[str, object] | None = None) -> int:
+    """Hosted REST is fail-closed for live and local_db alike."""
+
+    return 1
+
+
+def live_insert_quota(environment: Mapping[str, object] | None = None) -> int | None:
+    """Max new live writes, or None when the pipeline is not live."""
+
+    env = os.environ if environment is None else environment
+    if not live_pipeline_enabled(env):
+        return None
+    raw = str(env.get("LIVE_MAX_NEW_ITEMS") or "1").strip()
+    return int(raw) if raw.isdigit() else 1
+
+
+def bind_local_rest_environment(
+    environment: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    """Prefer operator loopback REST when local_db or live forbids hosted writes."""
+
+    bound: dict[str, object] = dict(os.environ if environment is None else environment)
+    if not local_or_live_forbids_hosted_rest(bound):
+        return bound
+    local_url = bound.get("TZUDONG_LOCAL_SUPABASE_URL")
+    local_key = bound.get("TZUDONG_LOCAL_SUPABASE_SERVICE_ROLE_KEY")
+    if isinstance(local_url, str) and local_url.strip():
+        bound["SUPABASE_URL"] = local_url.strip()
+    if isinstance(local_key, str) and local_key.strip():
+        bound["SUPABASE_SERVICE_ROLE_KEY"] = local_key.strip()
+    return bound
+
+
 def resolve_privileged_supabase_rest_credentials(
     environment: Mapping[str, object] | None = None,
 ) -> SupabaseRestCredentials:
     """Resolve the sole privileged Supabase endpoint/key pair or fail closed.
 
     Only ``SUPABASE_URL`` and ``SUPABASE_SERVICE_ROLE_KEY`` are accepted. HTTP is
-    limited to explicitly enabled loopback development or test runtimes.
+    limited to explicitly enabled loopback development or test runtimes. When
+    ``TZUDONG_DATA_ENV=local_db`` or live pipeline is on, hosted supabase.co is
+    rejected and ``TZUDONG_LOCAL_SUPABASE_URL`` wins over dotenv hosted URL.
     """
 
-    resolved_environment: Mapping[str, object] = os.environ if environment is None else environment
+    resolved_environment = bind_local_rest_environment(environment)
     url = _environment_value(resolved_environment, "SUPABASE_URL")
     key = _validate_service_role_key(resolved_environment)
     parsed = _parse_url(url)
@@ -173,4 +238,6 @@ def resolve_privileged_supabase_rest_credentials(
         canonical_url = _loopback_url(parsed)
     if canonical_url is None:
         _configuration_error()
+    if local_or_live_forbids_hosted_rest(resolved_environment) and rest_url_is_hosted(canonical_url):
+        raise HostedRestRejected()
     return SupabaseRestCredentials(url=canonical_url, service_role_key=key)
