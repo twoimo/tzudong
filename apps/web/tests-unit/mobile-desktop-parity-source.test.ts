@@ -130,7 +130,7 @@ describe("mobile and desktop parity source contracts", () => {
       "grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden",
     );
     expect(tableSource).toContain("hidden rounded-lg border lg:block");
-    expect(tableSource).toContain('aria-label="영상 제목 검색"');
+    expect(tableSource).toContain('aria-label="상호·영상 ID 검색"');
     expect(tableSource).toContain('aria-label="검색어 지우기"');
     expect(tableSource).toContain("필터 초기화");
     expect(tableSource).toContain("상세 필터");
