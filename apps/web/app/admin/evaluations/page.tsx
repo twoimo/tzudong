@@ -794,38 +794,28 @@ type ParsedYoutubeMeta = NonNullable<EvaluationRecord['youtube_meta']>;
 function parseNumericEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['visit_authenticity'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'number'
-    || typeof value.eval_basis !== 'string'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'number') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    eval_basis: value.eval_basis,
+    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
   };
 }
 
 function parseBooleanEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['rb_grounding_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'boolean'
-    || typeof value.eval_basis !== 'string'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    eval_basis: value.eval_basis,
+    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
   };
 }
 
@@ -834,18 +824,19 @@ function parseCategoryEvaluationMetric(
 ): ParsedEvaluationResults['category_TF'] {
   if (
     !isRecord(value)
-    || typeof value.name !== 'string'
     || typeof value.eval_value !== 'boolean'
-    || !isNullableString(value.category_revision)
+    || (value.category_revision !== undefined && !isNullableString(value.category_revision))
     || (value.eval_basis !== undefined && typeof value.eval_basis !== 'string')
   ) {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    category_revision: value.category_revision,
+    category_revision: typeof value.category_revision === 'string' || value.category_revision === null
+      ? value.category_revision
+      : null,
     ...(typeof value.eval_basis === 'string' ? { eval_basis: value.eval_basis } : {}),
   };
 }
@@ -853,16 +844,12 @@ function parseCategoryEvaluationMetric(
 function parseCategoryValidityEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['category_validity_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'boolean'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
   };
 }
