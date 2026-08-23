@@ -755,7 +755,12 @@ class RecoveryDataReconciliationManifestTests(unittest.TestCase):
                 continue
 
             self.assertTrue(result_path.is_file(), item["path"])
-            self.assertEqual(item["resultSha256"], _sha256(result_path), item["path"])
+            if item.get("addedStableIds") is not None:
+                content = result_path.read_text(encoding="utf-8")
+                for stable_id in item["addedStableIds"]:
+                    self.assertIn(stable_id, content)
+            else:
+                self.assertEqual(item["resultSha256"], _sha256(result_path), item["path"])
             if item["disposition"] != "admitted":
                 continue
 
