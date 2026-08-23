@@ -80,6 +80,15 @@ STEP_SPECS: tuple[StepSpec, ...] = (
         ("--max-videos", "{max_videos}"),
     ),
     StepSpec(
+        "03-2-visual",
+        "Step 3.2 (Visual Location)",
+        "python3",
+        "backend/restaurant-crawling/scripts/03-2-visual-location.py",
+        ("--channel", "{target}"),
+        frozenset({HEAVY_CAPABILITY}),
+        skip_when_lite=True,
+    ),
+    StepSpec(
         "04-frames",
         "Step 4 (Heatmap & Frames)",
         "node",
