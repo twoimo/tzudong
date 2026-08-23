@@ -60,6 +60,14 @@ class GraphContractTests(unittest.TestCase):
         frames = build_argv(STEP_BY_ID["04-frames"], target="tzuyang")
         self.assertIn("--delete-cache", frames)
         self.assertTrue(any(part.endswith("04-extract-frames-with-heatmap.js") for part in frames))
+        self.assertEqual(
+            STEP_BY_ID["03-2-visual"].script,
+            "backend/restaurant-crawling/scripts/03-2-visual-location.py",
+        )
+        visual = build_argv(STEP_BY_ID["03-2-visual"], target="tzuyang")
+        self.assertIn("--channel", visual)
+        self.assertNotIn("--video-id", visual)
+        self.assertTrue(any(part.endswith("03-2-visual-location.py") for part in visual))
 
     def test_python_override_must_remain_python3(self) -> None:
         with patch.dict(os.environ, {"PYTHON_CMD": "python"}, clear=False):
