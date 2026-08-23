@@ -21,6 +21,17 @@ describe("mobile and desktop parity source contracts", () => {
       "admin route responsive cases will be skipped",
     );
   });
+
+  test("admin evaluation metric parsers accept LAAJ objects without name", () => {
+    const pageSource = source("app/admin/evaluations/page.tsx");
+    const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
+    expect(numeric).toContain("typeof value.eval_value !== 'number'");
+    expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
+    expect(numeric).toContain("typeof value.name === 'string' ? value.name : ''");
+    const bool = pageSource.split("function parseBooleanEvaluationMetric")[1] ?? "";
+    expect(bool.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
+    expect(bool).toContain("typeof value.eval_value !== 'boolean'");
+  });
   test("responsive runner emits only fixed failure codes and allowlisted library facts", () => {
     const runner = source("scripts/run-responsive-tests.mjs");
 

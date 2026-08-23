@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { ADMIN_EVALUATION_RECORD_SELECT } from '@/lib/admin/evaluation-records';
+import { ADMIN_EVALUATION_RECORD_SELECT, compareAdminEvaluationRecordsByPublishedAtDesc } from '@/lib/admin/evaluation-records';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 
 export const runtime = 'nodejs';
@@ -36,6 +36,8 @@ export async function GET() {
 
       if (data.length < PAGE_LIMIT) break;
     }
+
+    records.sort(compareAdminEvaluationRecordsByPublishedAtDesc);
 
     return NextResponse.json({ records });
   } catch (error) {
