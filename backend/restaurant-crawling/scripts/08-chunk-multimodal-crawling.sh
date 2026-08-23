@@ -846,7 +846,12 @@ PROMPT_EOF
     local win_merge=$(maybe_normalize "$local_python" "$MERGE_RESULTS")
     local win_responses_dir=$(maybe_normalize "$local_python" "$responses_dir")
     local win_raw_merged_response=$(maybe_normalize "$local_python" "$raw_merged_response")
-    if ! "$local_python" "$win_merge" --dir "$win_responses_dir" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
+    local visual_file="$full_data_path/visual-location/${video_id}.jsonl"
+    local merge_args=(--dir "$win_responses_dir")
+    if [ -f "$visual_file" ]; then
+        merge_args+=(--visual-location "$(maybe_normalize "$local_python" "$visual_file")")
+    fi
+    if ! "$local_python" "$win_merge" "${merge_args[@]}" > "$raw_merged_response" || [ ! -s "$raw_merged_response" ]; then
         log_error "결과 병합 실패"
         rm -rf "$temp_dir"
         return 1
