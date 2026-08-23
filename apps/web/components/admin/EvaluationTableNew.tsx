@@ -38,6 +38,7 @@ import {
 import {
   needsEvaluationRerun,
 } from '@/lib/admin-evaluation-completeness';
+import { getAdminEvaluationVideoLabel, hasAdminEvaluationYoutubeTitle } from '@/lib/admin-evaluation-name';
 import {
   extractCanonicalYouTubeVideoId,
   normalizeCanonicalYouTubeWatchUrl,
@@ -389,9 +390,10 @@ const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableR
             )}
             <div className="min-w-0 flex-1">
               <div className="line-clamp-2 text-xs font-medium sm:text-sm">
-                {record.youtube_meta?.title || canonicalYoutubeUrl || '영상 링크 없음'}
+                {getAdminEvaluationVideoLabel(record)}
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground sm:text-xs">
+                {hasAdminEvaluationYoutubeTitle(record) ? null : '제목 없음 · '}
                 {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
               </div>
             </div>
@@ -899,8 +901,8 @@ export function EvaluationTable({
           <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="text"
-            aria-label="영상 제목 검색"
-            placeholder="영상 제목 검색..."
+            aria-label="상호·영상 ID 검색"
+            placeholder="상호·영상 ID 검색..."
             value={searchQuery}
             onChange={(e) => onSearchChange?.(e.target.value)}
             className="h-9 pl-8 pr-8 text-sm"
@@ -1204,8 +1206,11 @@ export function EvaluationTable({
 
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {record.youtube_meta?.title || canonicalYoutubeUrl || '영상 링크 없음'}
+                  {getAdminEvaluationVideoLabel(record)}
                 </p>
+                {!hasAdminEvaluationYoutubeTitle(record) && (
+                  <p className="mt-1 text-[11px] text-amber-700">제목 없음 · 메타 백필 필요</p>
+                )}
                 {canonicalYoutubeUrl && (
                   <a
                     href={canonicalYoutubeUrl}
@@ -1489,8 +1494,8 @@ export function EvaluationTable({
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="text"
-                      aria-label="영상 제목 검색"
-                      placeholder="영상 제목 검색..."
+                      aria-label="상호·영상 ID 검색"
+                      placeholder="상호·영상 ID 검색..."
                       value={searchQuery}
                       onChange={(e) => onSearchChange?.(e.target.value)}
                       className="pl-8 pr-8 h-8 text-sm"
