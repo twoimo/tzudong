@@ -10,6 +10,7 @@ import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
   isAdminEvaluationRecordReadyForApproval,
+  compareAdminEvaluationRecordsByPublishedAtDesc,
 } from '@/lib/admin/evaluation-records';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
@@ -172,6 +173,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(evaluationApiRouteSource).toContain('requireAdmin()');
     expect(evaluationApiRouteSource).toContain('createSupabaseServiceRoleClient');
     expect(evaluationApiRouteSource).toContain('ADMIN_EVALUATION_RECORD_SELECT');
+    expect(evaluationApiRouteSource).toContain('compareAdminEvaluationRecordsByPublishedAtDesc');
     expect(evaluationApiRouteSource).toContain('range(from, from + PAGE_LIMIT - 1)');
     expect(evaluationRecordHelperSource).toContain('export function isAdminEvaluationRecordMissing');
     expect(evaluationRecordHelperSource).toContain("record.is_missing === true || record.status === 'missing' || record.status === 'geocoding_failed'");
@@ -179,5 +181,27 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(evaluationRecordHelperSource).toContain("record.is_not_selected === true || record.status === 'not_selected'");
     expect(categorySidebarSource).toContain('justify-end overflow-x-auto');
     expect(categorySidebarSource).not.toContain('통계 펼치기');
+  });
+});
+
+describe('compareAdminEvaluationRecordsByPublishedAtDesc', () => {
+  test('orders newer youtube publishedAt before insert created_at', () => {
+    const newerVideo = {
+      id: 'a',
+      youtube_meta: { publishedAt: '2026-08-20T00:00:00Z' },
+      created_at: '2026-01-01T00:00:00Z',
+    };
+    const olderVideoInsertedLater = {
+      id: 'b',
+      youtube_meta: { publishedAt: '2026-03-19T00:00:00Z' },
+      created_at: '2026-08-23T00:00:00Z',
+    };
+
+    expect(compareAdminEvaluationRecordsByPublishedAtDesc(newerVideo, olderVideoInsertedLater)).toBeLessThan(0);
+    expect(
+      [olderVideoInsertedLater, newerVideo]
+        .sort(compareAdminEvaluationRecordsByPublishedAtDesc)
+        .map((row) => row.id),
+    ).toEqual(['a', 'b']);
   });
 });
