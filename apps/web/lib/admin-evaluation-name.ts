@@ -107,3 +107,45 @@ export function getAdminEvaluationDisplayName(source: EvaluationNameSource): str
 export function getAdminEvaluationApprovalName(source: EvaluationNameSource): string {
   return getAdminEvaluationDisplayName(source);
 }
+
+export function hasAdminEvaluationYoutubeTitle(source: {
+  youtube_meta?: { title?: string | null } | null;
+}): boolean {
+  return firstNonEmptyString([source.youtube_meta?.title]) !== null;
+}
+
+export function getAdminEvaluationVideoLabel(source: EvaluationNameSource & {
+  youtube_meta?: { title?: string | null } | null;
+  youtube_link?: string | null;
+}): string {
+  const title = firstNonEmptyString([source.youtube_meta?.title]);
+  if (title) return title;
+  const restaurantName = getAdminEvaluationDisplayName(source);
+  if (restaurantName !== '이름 없음') return restaurantName;
+  return '영상 제목 없음';
+}
+
+export function matchesAdminEvaluationSearch(
+  source: EvaluationNameSource & {
+    youtube_meta?: { title?: string | null } | null;
+    youtube_link?: string | null;
+  },
+  query: string,
+): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+
+  const haystacks = [
+    getAdminEvaluationVideoLabel(source),
+    getAdminEvaluationDisplayName(source),
+    source.origin_name,
+    source.approved_name,
+    source.restaurant_name,
+    source.name,
+    source.naver_name,
+    source.youtube_meta?.title,
+    source.youtube_link,
+  ];
+
+  return haystacks.some((value) => typeof value === 'string' && value.toLowerCase().includes(needle));
+}
