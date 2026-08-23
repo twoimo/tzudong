@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""First-party opening-screen location extractor.
+"""First-party location-hint extractor.
 
-Downloads only the first 90 seconds of a YouTube video, extracts frames with
-ffmpeg, and records on-screen text into visual-location/{video_id}.jsonl.
-
-This owns the opening-screen method in-repo. Heatmaps are unused.
+Samples opening, heatmap-peak, and ending windows. Does not confirm addresses.
 """
 
 from __future__ import annotations
@@ -38,7 +35,10 @@ NOISE_HINT_RE = re.compile(
     re.IGNORECASE,
 )
 OPENING_SECONDS = 90
+ENDING_SECONDS = 30
+PEAK_PAD_SECONDS = 5
 FRAME_INTERVAL_SECONDS = 3
+MAX_SAMPLED_SECONDS = 80
 VISION_SWIFT = SCRIPT_DIR / "03-2-visual-ocr.swift"
 
 
@@ -91,14 +91,86 @@ def default_cookies_path() -> Path | None:
     return candidate if candidate.is_file() else None
 
 
-def download_opening(video_id: str, dest: Path, cookies: Path | None) -> Path:
+def last_jsonl(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    last = None
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.strip():
+            try:
+                last = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+    return last if isinstance(last, dict) else None
+
+
+def video_duration_seconds(data_root: Path, video_id: str) -> int | None:
+    meta = last_jsonl(data_root / "meta" / f"{video_id}.jsonl")
+    if not meta:
+        return None
+    duration = meta.get("duration")
+    if isinstance(duration, (int, float)) and duration > 0:
+        return int(duration)
+    return None
+
+
+def heatmap_peak_seconds(data_root: Path, video_id: str) -> list[int]:
+    heat = last_jsonl(data_root / "heatmap" / f"{video_id}.jsonl")
+    if not heat:
+        return []
+    markers = heat.get("most_replayed_markers")
+    if not isinstance(markers, list):
+        return []
+    peaks: list[int] = []
+    for marker in markers[:3]:
+        if not isinstance(marker, dict):
+            continue
+        millis = marker.get("peakMillis")
+        if isinstance(millis, (int, float)) and millis >= 0:
+            peaks.append(int(millis / 1000))
+    return peaks
+
+
+def sample_seconds(duration: int | None, peaks: list[int]) -> list[int]:
+    seconds: list[int] = []
+    seen: set[int] = set()
+
+    def add(value: int) -> None:
+        if value < 0:
+            return
+        if duration is not None and value > duration:
+            return
+        if value not in seen:
+            seen.add(value)
+            seconds.append(value)
+
+    for second in range(0, OPENING_SECONDS + 1, FRAME_INTERVAL_SECONDS):
+        add(second)
+    for peak in peaks:
+        for second in range(max(0, peak - PEAK_PAD_SECONDS), peak + PEAK_PAD_SECONDS + 1, FRAME_INTERVAL_SECONDS):
+            add(second)
+    if duration and duration > OPENING_SECONDS:
+        start = max(0, duration - ENDING_SECONDS)
+        for second in range(start, duration + 1, FRAME_INTERVAL_SECONDS):
+            add(second)
+    seconds.sort()
+    if len(seconds) > MAX_SAMPLED_SECONDS:
+        opening = [s for s in seconds if s <= OPENING_SECONDS]
+        rest = [s for s in seconds if s > OPENING_SECONDS]
+        keep_rest = MAX_SAMPLED_SECONDS - len(opening)
+        if keep_rest < 0:
+            return opening[:MAX_SAMPLED_SECONDS]
+        step = max(1, len(rest) // keep_rest) if rest and keep_rest else 1
+        return opening + rest[::step][:keep_rest]
+    return seconds
+
+
+def download_sampled_video(video_id: str, dest: Path, cookies: Path | None, duration: int | None, peaks: list[int]) -> Path:
     yt_dlp = resolve_tool("yt-dlp")
-    output = dest / "opening.%(ext)s"
+    output = dest / "sample.%(ext)s"
     command = [
         yt_dlp,
         "--no-playlist",
-        "--download-sections",
-        f"*0-{OPENING_SECONDS}",
         "-f",
         "best[height<=720]/best",
         "-o",
@@ -107,21 +179,24 @@ def download_opening(video_id: str, dest: Path, cookies: Path | None) -> Path:
     ]
     if cookies:
         command[1:1] = ["--cookies", str(cookies)]
-    result = subprocess.run(command, cwd=dest, capture_output=True, text=True, timeout=180)
+    needs_full = bool(peaks) or (duration is not None and duration > OPENING_SECONDS)
+    if not needs_full:
+        command[1:1] = ["--download-sections", f"*0-{OPENING_SECONDS}"]
+    result = subprocess.run(command, cwd=dest, capture_output=True, text=True, timeout=300)
     if result.returncode != 0:
         fail("download_failed")
-    videos = sorted(dest.glob("opening.*"))
+    videos = sorted(dest.glob("sample.*"))
     if not videos:
         fail("download_missing")
     return videos[0]
 
 
-def extract_frames(video_path: Path, frames_dir: Path) -> list[tuple[int, Path]]:
+def extract_frames(video_path: Path, frames_dir: Path, seconds: list[int]) -> list[tuple[int, Path]]:
     ffmpeg = resolve_tool("ffmpeg")
     frames_dir.mkdir(parents=True, exist_ok=True)
     extracted: list[tuple[int, Path]] = []
-    for second in range(0, OPENING_SECONDS + 1, FRAME_INTERVAL_SECONDS):
-        frame = frames_dir / f"t{second:02d}.jpg"
+    for second in seconds:
+        frame = frames_dir / f"t{second:04d}.jpg"
         result = subprocess.run(
             [
                 ffmpeg,
@@ -258,10 +333,16 @@ def build_record(video_id: str, frames: list[tuple[int, Path, list[str]]]) -> di
         )
     hints = collect_sign_hints(all_texts)
     origin_name = choose_origin_name(hints)
+    windows = sorted({
+        "opening" if second <= OPENING_SECONDS else "later"
+        for second, _frame, _texts in frames
+    })
     return {
         "video_id": video_id,
         "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
         "window_seconds": OPENING_SECONDS,
+        "sampled_seconds": [second for second, _frame, _texts in frames],
+        "windows": windows,
         "origin_name": origin_name,
         "sign_hints": hints,
         "address_status": "unknown",
@@ -281,12 +362,16 @@ def run(args: argparse.Namespace) -> dict:
     output_path = data_root_for(args) / "visual-location" / f"{args.video_id}.jsonl"
     with tempfile.TemporaryDirectory(prefix="tzudong-visual-") as temp:
         work = Path(temp)
+        data_root = data_root_for(args)
+        duration = video_duration_seconds(data_root, args.video_id)
+        peaks = heatmap_peak_seconds(data_root, args.video_id)
+        seconds = sample_seconds(duration, peaks)
         if args.source_video:
             video = Path(args.source_video)
         else:
-            video = download_opening(args.video_id, work, cookies)
+            video = download_sampled_video(args.video_id, work, cookies, duration, peaks)
         frames_dir = work / "frames"
-        extracted = extract_frames(video, frames_dir)
+        extracted = extract_frames(video, frames_dir, seconds)
         framed: list[tuple[int, Path, list[str]]] = []
         keep_dir = None
         if args.keep_frames:

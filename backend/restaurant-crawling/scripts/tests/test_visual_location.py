@@ -51,6 +51,15 @@ class VisualLocationTests(unittest.TestCase):
         self.assertEqual(record["evidence"]["external"], [])
         self.assertEqual(record["evidence"]["visual"][0]["t"], 18)
 
+    def test_sample_seconds_include_opening_peak_and_ending(self) -> None:
+        seconds = mod.sample_seconds(200, [150])
+        self.assertIn(0, seconds)
+        self.assertIn(90, seconds)
+        self.assertTrue(any(145 <= value <= 155 for value in seconds))
+        self.assertTrue(any(value >= 170 for value in seconds))
+        self.assertLessEqual(len(seconds), mod.MAX_SAMPLED_SECONDS)
+        self.assertEqual(mod.build_record("x", [(18, Path("a.jpg"), ["요기라면"]), (170, Path("b.jpg"), ["보물섬"])])["address"], None)
+
     def test_invalid_video_id_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             self.assertEqual(
