@@ -43,6 +43,34 @@ export const ADMIN_EVALUATION_RECORD_SELECT = [
   'updated_at',
 ].join(', ');
 
+export function getAdminEvaluationPublishedAtMs(record: {
+  youtube_meta?: { publishedAt?: string | null } | null;
+  created_at?: string | null;
+}): number {
+  const publishedAt = record.youtube_meta?.publishedAt;
+  if (typeof publishedAt === 'string' && publishedAt.trim()) {
+    const publishedMs = Date.parse(publishedAt);
+    if (Number.isFinite(publishedMs)) return publishedMs;
+  }
+
+  const createdAt = record.created_at;
+  if (typeof createdAt === 'string' && createdAt.trim()) {
+    const createdMs = Date.parse(createdAt);
+    if (Number.isFinite(createdMs)) return createdMs;
+  }
+
+  return 0;
+}
+
+export function compareAdminEvaluationRecordsByPublishedAtDesc(
+  left: { id?: string; youtube_meta?: { publishedAt?: string | null } | null; created_at?: string | null },
+  right: { id?: string; youtube_meta?: { publishedAt?: string | null } | null; created_at?: string | null },
+): number {
+  const publishedDelta = getAdminEvaluationPublishedAtMs(right) - getAdminEvaluationPublishedAtMs(left);
+  if (publishedDelta !== 0) return publishedDelta;
+  return String(right.id ?? '').localeCompare(String(left.id ?? ''));
+}
+
 type AdminEvaluationRecordClassifierInput = Pick<
   EvaluationRecord,
   'status' | 'is_missing' | 'is_not_selected' | 'geocoding_success' | 'evaluation_results'
