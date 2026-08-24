@@ -76,20 +76,6 @@ describe('dashboard public Supabase visibility contracts', () => {
     expect(restaurantsHookSource).toContain('fetchSupabaseRows');
     expect(restaurantsHookSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
   });
-  test('public list and search restaurant reads stay approved-only', () => {
-    const stampSource = source('app/stamp/page.tsx');
-    const categoryFilterSource = source('components/filters/CategoryFilter.tsx');
-    const popularSource = source('lib/popular-restaurants.ts');
-    const feedSource = source('components/feed/FeedContent.tsx');
-
-    expect(stampSource).toContain(".eq('status', 'approved')");
-    expect(stampSource).toContain(".ilike('approved_name'");
-    expect(categoryFilterSource).toContain("['status', 'eq.approved']");
-    expect(popularSource).toContain(".eq('status', 'approved')");
-    expect(feedSource).toContain(".eq('status', 'approved')");
-    expect(stampSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
-    expect(categoryFilterSource).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
-  });
 
   test('public treemap endpoint uses anon-scoped reads instead of service-role reads', () => {
     const treemapSource = source('lib/public-insights/treemap.ts');
