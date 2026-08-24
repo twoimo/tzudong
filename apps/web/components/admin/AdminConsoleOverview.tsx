@@ -134,7 +134,6 @@ import {
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
-import { AdminOpsReadbackStrip } from "@/components/admin/AdminOpsReadbackStrip";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -9408,14 +9407,11 @@ function InlineModulePanel({
     switch (module.id) {
       case "restaurants":
         return (
-          <div data-admin-restaurants-ops-canvas="true">
-            <AdminOpsReadbackStrip />
-            <AdminEvaluationModule
-              key="restaurants"
-              embedded
-              initialView="evaluations"
-            />
-          </div>
+          <AdminEvaluationModule
+            key="restaurants"
+            embedded
+            initialView="evaluations"
+          />
         );
       case "restaurant-refresh-history":
         return (
