@@ -35,8 +35,25 @@ export function formatHostedApplyPreviewHash(hash: string | null | undefined): s
   return /^[a-f0-9]{64}$/.test(value) ? value : OPS_READBACK_MISSING;
 }
 
-export function countHumanVideoReviewQueue(
-  records: Array<Parameters<typeof isAdminEvaluationRecordReadyForApproval>[0]>,
-): number {
-  return records.filter(isAdminEvaluationRecordReadyForApproval).length;
+export type HumanVideoReviewRecord = {
+  status?: string | null;
+  is_missing?: boolean | null;
+  is_not_selected?: boolean | null;
+  geocoding_success?: boolean | null;
+  evaluation_results?: {
+    visit_authenticity?: { eval_value?: number | null } | null;
+    rb_inference_score?: { eval_value?: number | null } | null;
+    rb_grounding_TF?: { eval_value?: boolean | null } | null;
+    review_faithfulness_score?: { eval_value?: number | null } | null;
+    category_validity_TF?: { eval_value?: boolean | null } | null;
+    category_TF?: { eval_value?: boolean | null } | null;
+  } | null;
+};
+
+export function countHumanVideoReviewQueue(records: HumanVideoReviewRecord[]): number {
+  return records.filter((record) =>
+    isAdminEvaluationRecordReadyForApproval(
+      record as Parameters<typeof isAdminEvaluationRecordReadyForApproval>[0],
+    ),
+  ).length;
 }
