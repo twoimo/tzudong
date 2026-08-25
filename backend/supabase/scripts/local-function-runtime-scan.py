@@ -1629,6 +1629,17 @@ WITH funcs AS (
          encode(extensions.digest(convert_to(COALESCE(string_agg(schema_name || '.' || proname || '(' || identity_args || ')|' || prosecdef::text || '|' || array_to_string(config, ',', '') || '|' || md5(definition), E'\\n' ORDER BY schema_name, proname, identity_args), ''), 'UTF8'), 'sha256'), 'hex') AS function_metadata_digest,
          encode(extensions.digest(convert_to(COALESCE(string_agg(md5(definition), E'\\n' ORDER BY schema_name, proname, identity_args), ''), 'UTF8'), 'sha256'), 'hex') AS definition_hash
     FROM path_stats
+), unresolved AS (
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'schema', schema_name,
+           'proname', proname,
+           'identityArguments', identity_args,
+           'pathCount', path_count,
+           'validPathCount', valid_path_count,
+           'securityDefiner', prosecdef
+         ) ORDER BY schema_name, proname, identity_args), '[]'::jsonb) AS functions
+    FROM path_stats
+   WHERE path_count = 0 OR valid_path_count = 0
 ), extensions AS (
   SELECT encode(extensions.digest(convert_to(COALESCE(string_agg(n.nspname || '.' || e.extname || '@' || COALESCE(e.extversion, ''), E'\\n' ORDER BY n.nspname, e.extname), ''), 'UTF8'), 'sha256'), 'hex') AS extension_catalog_sha256
     FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
@@ -1696,9 +1707,10 @@ SELECT jsonb_build_object(
          AND external_effect.source_count = 0
         THEN 'external_effect_blocked' ELSE 'external_effect_surface_present' END
     ))
-  )
+  ),
+  'unresolvedFunctions', unresolved.functions
 )::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect
-  CROSS JOIN g014_contract;
+  CROSS JOIN g014_contract CROSS JOIN unresolved;
 COMMIT;
 """
     if smoke:
@@ -2157,6 +2169,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 expected_closure_binding=expected_closure_binding,
             )
             after = client.query(_runtime_sql(candidates=candidates))
+            unresolved = after.get("unresolvedFunctions") or []
+            if unresolved:
+                print(
+                    "unresolved_functions="
+                    + ",".join(
+                        f"{item.get('schema')}.{item.get('proname')}({item.get('identityArguments')})"
+                        for item in unresolved
+                        if isinstance(item, dict)
+                    ),
+                    file=sys.stderr,
+                )
+            print(
+                "candidate_resolution="
+                + json.dumps(after.get("candidateResolution"), separators=(",", ":"), default=str),
+                file=sys.stderr,
+            )
             _validate_runtime(after)
             receipt = {
                 "schemaVersion": SCHEMA_VERSION,
