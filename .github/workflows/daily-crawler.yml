@@ -949,17 +949,13 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
-      - name: Evaluate youtube IDs absent from hosted
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          python3 backend/bin/evaluate_new_youtube_videos.py --channel tzuyang --limit 1
-      - name: Preview then apply only new pending restaurants
+      - name: Evaluate new videos then pending-apply
+        env:
+          TZUDONG_PIPELINE_SOURCE: github_actions
         run: |
           set -euo pipefail
           mkdir -p backend/log/cron
-          python3 backend/bin/apply_hosted_pending_candidates.py \
-            --preview-out backend/log/cron/hosted-apply-preview.json \
-            --dry-run
-          python3 backend/bin/apply_hosted_pending_candidates.py \
+          python3 backend/bin/run_hosted_new_video_pipeline.py \
+            --channel tzuyang \
+            --limit 1 \
             --preview-out backend/log/cron/hosted-apply-preview.json
