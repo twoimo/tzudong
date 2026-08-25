@@ -33,6 +33,7 @@ Korean: [CHANGELOG.ko.md](CHANGELOG.ko.md).
 - Production build: close `readGithubCrawlerSnapshot` before `GET` in `apps/web/app/api/admin/pipeline/route.ts` (#2735).
 - Hosted evaluate: install crawler PyYAML + `backend` `npm ci` on the apply job (#2732–#2739).
 - Preview write path `backend/log/cron/` created before apply.
+- Nightly local publication verifier/builder ledger count 78 → 82 to match `backend/supabase/migrations` (issue #2592).
 
 ### Operations (not in git)
 
