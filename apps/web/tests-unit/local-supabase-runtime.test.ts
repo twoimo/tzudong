@@ -87,6 +87,7 @@ describe('local Supabase runtime source contract', () => {
       repositoryRoot: '/fixture/repository',
       values: {
         SUPABASE_DB_URL: 'postgresql://postgres:local-password@127.0.0.1:13432/postgres',
+        META_PORT: '18085',
         POOLER_TENANT_ID: 'fixture-tenant',
       },
     }, {
@@ -133,6 +134,7 @@ describe('local Supabase runtime source contract', () => {
       TERM: 'xterm-256color',
       SUPABASE_DB_URL:
         'postgresql://postgres:local-password@127.0.0.1:13432/postgres',
+      SUPABASE_PG_META_URL: 'http://127.0.0.1:18085',
       SUPABASE_SCHEMAS: 'public,auth,storage',
       SUPABASE_CLI: path.join(
         '/fixture/repository',
