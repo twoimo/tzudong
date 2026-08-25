@@ -13,7 +13,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _repo_root() -> Path:
+    override = os.environ.get("TZUDONG_REPO_ROOT", "").strip()
+    if override:
+        return Path(override).resolve()
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _repo_root()
 sys.path.insert(0, str(REPO_ROOT / "backend" / "supabase" / "scripts"))
 
 from hosted_data_plane import (  # noqa: E402
