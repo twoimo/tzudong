@@ -67,6 +67,17 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             code = module.main(["--channel", "tzuyang", "--limit", "1"])
         self.assertEqual(code, 0)
         self.assertTrue(any("08-chunk-multimodal-crawling.sh" in " ".join(call) for call in calls))
+    def test_laaj_script_keeps_absolute_evaluation_path(self) -> None:
+        script = (
+            ROOT
+            / "backend"
+            / "restaurant-evaluation"
+            / "scripts"
+            / "11-laaj-evaluation.sh"
+        )
+        text = script.read_text(encoding="utf-8")
+        self.assertIn('if [[ "$EVALUATION_PATH" = /* ]]; then', text)
+        self.assertIn('FULL_EVALUATION_PATH="$EVALUATION_PATH"', text)
 
 if __name__ == "__main__":
     unittest.main()
