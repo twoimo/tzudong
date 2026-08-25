@@ -518,6 +518,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("apply_hosted_pending_candidates.py", daily_workflow)
         self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
+        self.assertIn("Lite GHA skips Gemini API availability as a hard gate.", daily_workflow)
         self.assertIn("--require-api-available", daily_workflow)
         self.assertIn("allow_budget_risk", daily_workflow)
         self.assertIn('GEMINI_CLI_TRUST_WORKSPACE: "false"', daily_workflow)
