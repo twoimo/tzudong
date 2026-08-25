@@ -256,9 +256,9 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             "reason": "missing_search_path",
         }
         sql = scanner._patch_sql("a" * 64, [candidate], "b" * 64)
-        self.assertIn("IF target_path_count = 0 THEN", sql)
+        self.assertIn("IF target_path_count = 0 OR target_valid_path_count <> 1 THEN", sql)
         self.assertIn(
-            "ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+            "ELSIF target_path_count <> 1 THEN",
             sql,
         )
         self.assertIn("local_closure_runtime_path_invalid", sql)
@@ -279,7 +279,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             sql,
         )
         self.assertLess(
-            sql.index("IF target_path_count = 0 THEN"),
+            sql.index("IF target_path_count = 0 OR target_valid_path_count <> 1 THEN"),
             sql.index("ALTER FUNCTION %s SET search_path TO"),
         )
 
