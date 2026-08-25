@@ -645,9 +645,9 @@ def _patch_sql(
                 "    FROM pg_catalog.pg_proc AS procedure",
                 "    LEFT JOIN LATERAL pg_catalog.unnest(COALESCE(procedure.proconfig, ARRAY[]::text[])) AS setting(value) ON true",
                 "   WHERE procedure.oid = target_oid;",
-                "  IF target_path_count = 0 THEN",
+                "  IF target_path_count = 0 OR target_valid_path_count <> 1 THEN",
                 "    EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
-                "  ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+                "  ELSIF target_path_count <> 1 THEN",
                 "    RAISE EXCEPTION 'local_closure_runtime_path_invalid';",
                 "  END IF;",
                 "END $local_function_closure$;",
@@ -1567,7 +1567,7 @@ candidates(schema_name, proname, identity_args, signature) AS (
 
 def _runtime_sql(*, candidates: Sequence[dict[str, Any]] = (), smoke: bool = False) -> bytes:
     candidate_resolution = _candidate_resolution_sql(candidates)
-    application_schemas = _application_schemas(candidates)
+    application_schemas = _application_schemas(_source_inventory())
     schema_values = ", ".join(_sql_literal(schema) for schema in application_schemas)
     sql = f"""BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 WITH funcs AS (
