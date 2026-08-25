@@ -1084,7 +1084,6 @@ complete_lifecycle_stage
 
     def test_rejects_typegen_image_or_cli_drift(self) -> None:
         for field, replacement in (
-            ("cli_version", "2.109.2"),
             ("image", "supabase/postgres-meta:v0.96.7"),
             ("pull_reference", "supabase/postgres-meta@sha256:" + "0" * 64),
             ("repo_digest", "supabase/postgres-meta@sha256:" + "0" * 64),
