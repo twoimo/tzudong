@@ -2022,20 +2022,36 @@ jobs:
           )"
           if [[ -n "$issue_number" ]]; then
             gh issue comment "$issue_number" --repo "$GITHUB_REPOSITORY" --body "$body"
-          else
-            issue_url="$(gh issue create \
+            exit 0
+          fi
+          previous_failed="$(
+            gh run list \
               --repo "$GITHUB_REPOSITORY" \
-              --title "$title" \
-              --body "$body")"
-            if [[ "$REPOSITORY_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ && "$GITHUB_REPOSITORY" == "${REPOSITORY_OWNER}/tzudong" ]]; then
-              if ! gh issue edit "$issue_url" \
-                --repo "$GITHUB_REPOSITORY" \
-                --add-assignee "$REPOSITORY_OWNER" >/dev/null 2>&1; then
-                echo 'Nightly incident exists, but repository-owner assignment failed.' >> "$GITHUB_STEP_SUMMARY"
-              fi
-            else
-              echo 'Nightly incident exists, but repository-owner identity was invalid.' >> "$GITHUB_STEP_SUMMARY"
+              --workflow nightly-local-regression.yml \
+              --branch "${GITHUB_REF_NAME}" \
+              --event schedule \
+              --status failure \
+              --limit 2 \
+              --json databaseId,conclusion \
+              --jq '[.[] | select(.databaseId != '"${GITHUB_RUN_ID}"' and .conclusion == "failure")] | length'
+          )"
+          if [[ "${previous_failed:-0}" -lt 1 ]]; then
+            echo "First scheduled nightly failure; recording in summary without opening an issue."
+            echo "$body" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          issue_url="$(gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body "$body")"
+          if [[ "$REPOSITORY_OWNER" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ && "$GITHUB_REPOSITORY" == "${REPOSITORY_OWNER}/tzudong" ]]; then
+            if ! gh issue edit "$issue_url" \
+              --repo "$GITHUB_REPOSITORY" \
+              --add-assignee "$REPOSITORY_OWNER" >/dev/null 2>&1; then
+              echo 'Nightly incident exists, but repository-owner assignment failed.' >> "$GITHUB_STEP_SUMMARY"
             fi
+          else
+            echo 'Nightly incident exists, but repository-owner identity was invalid.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Fail when disposable stack cleanup failed
