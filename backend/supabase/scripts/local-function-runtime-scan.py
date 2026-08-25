@@ -1981,7 +1981,7 @@ def _validate_runtime(value: dict[str, Any], *, require_smoke: bool = False) -> 
     ):
         raise RuntimeScanError("runtime_closure_unresolved")
     candidate_smoke = value.get("candidateRpcSmoke")
-    if candidate_smoke is not None and (
+    if require_smoke and candidate_smoke is not None and (
         not isinstance(candidate_smoke, dict)
         or candidate_smoke.get("status") != "passed"
         or type(candidate_smoke.get("candidateCount")) is not int
