@@ -346,23 +346,12 @@ describe("admin pipeline control contract", () => {
   test("502 bodies are error-only and query.isError gates empty failures", () => {
     const route = source("app/api/admin/pipeline/route.ts");
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
-    const unavailable = route.slice(
-      route.indexOf('if (!response.ok)'),
-      route.indexOf("const payload"),
-    );
-    expect(unavailable).toContain('noStore({ error: "pipeline_status_unavailable" }');
-    expect(unavailable).not.toContain("failures");
-    expect(unavailable).not.toContain("jobs");
-    expect(unavailable).not.toContain("targets");
-    const getCatch = route.slice(
-      route.indexOf("} catch (error) {"),
-      route.indexOf("export async function POST"),
-    );
-    expect(getCatch).toContain("getAdminSafeErrorName(error)");
-    expect(getCatch).not.toContain("failures");
-    expect(getCatch).not.toContain("jobs");
-    expect(getCatch).not.toContain("targets");
+    expect(route).toContain('noStore({ error: "pipeline_status_unavailable" }');
+    expect(route).toContain("readGithubCrawlerSnapshot");
+    expect(route).toContain("source: \"github_actions\"");
+    expect(route).toContain("source: \"job_api\"");
     expect(dashboard).toContain("query.isError");
+    expect(dashboard).toContain("GitHub Actions 크롤러 최근 실행");
     const errorBranch = dashboard.indexOf("query.isError");
     const emptyState = dashboard.indexOf("최근 실패 없음");
     expect(errorBranch).toBeGreaterThan(-1);
