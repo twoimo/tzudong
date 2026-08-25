@@ -11,6 +11,8 @@
     ·
     <a href="README.md">English</a>
     ·
+    <a href="CHANGELOG.ko.md">변경 기록</a>
+    ·
     <a href="LICENSE">MIT</a>
   </p>
   <p>
@@ -41,6 +43,7 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자�
 - 웹 런타임: Node 24.x. 일상 설치/유닛은 Bun을 쓸 수 있고, 릴리스 패키지 권위는 npm 11.6.2, `package.json`, `package-lock.json`입니다.
 - TypeScript: 네이티브 CLI `@typescript/native` `7.0.2`, 안정 API/호환 브리지는 `6.0.2` (`npm run typecheck:parity`).
 - 직렬 승격: `develop -> data -> main`. 이 트리는 hosted apply, 법령 준수, 라이브 URL 상태를 주장하지 않습니다.
+- 변경 기록: [CHANGELOG.ko.md](CHANGELOG.ko.md) / [CHANGELOG.md](CHANGELOG.md).
 
 ## 제품 투어
 
