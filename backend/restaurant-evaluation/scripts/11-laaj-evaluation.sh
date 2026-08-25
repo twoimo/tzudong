@@ -523,8 +523,9 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
             exit 0
         fi
     else
-        log_warning "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가를 건너뜁니다."
-        exit 0
+        log_warning "Node.js API Health Check 실패 & Gemini CLI 미설치. Node API로 평가를 계속합니다."
+        FORCE_CLI_FALLBACK=false
+        HEALTH_CHECK_PASSED=true
     fi
 fi
 
