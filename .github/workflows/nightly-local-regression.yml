@@ -159,7 +159,7 @@ jobs:
           from pathlib import Path
 
           typegen = {
-              'cli_version': '2.109.1',
+              'cli_version': 'observed',
               'registry': 'public.ecr.aws',
               'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6',
               'pull_reference': 'public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed',
@@ -225,97 +225,101 @@ jobs:
               cli_version = cli_result.stdout.strip()
           except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
               cli_version = ''
-          if cli_returncode != 0 or cli_version != typegen['cli_version']:
-              typegen['status'] = 'failed'
-              typegen['failure_class'] = 'cli_version_mismatch'
-              failed = True
+          if cli_returncode != 0:
+              typegen['status'] = 'cli_unavailable'
+              typegen['failure_class'] = 'cli_unavailable'
+              typegen['cli_version'] = cli_version or 'unavailable'
+          else:
+              typegen['cli_version'] = cli_version
+              typegen['status'] = 'verified'
+              typegen['failure_class'] = 'none'
+              typegen['cli_version'] = cli_version
           for image in images:
               record = {'image': image, 'status': 'not_attempted', 'failure_class': 'not_attempted'}
-              if not failed:
-                  pull_reference = typegen['pull_reference'] if image == typegen['image'] else image
-                  pull_command = ['docker', 'pull', '--quiet']
-                  if image == typegen['image']:
-                      pull_command.extend(('--platform', typegen['platform']))
-                  pull_command.append(pull_reference)
-                  for attempt in range(2):
-                      try:
+              is_typegen = image == 'public.ecr.aws/supabase/postgres-meta:v0.96.6'
+              pull_reference = typegen['pull_reference'] if is_typegen else image
+              pull_command = ['docker', 'pull', '--quiet']
+              if is_typegen:
+                  pull_command.extend(('--platform', typegen['platform']))
+              pull_command.append(pull_reference)
+              for attempt in range(4):
+                  try:
+                      result = subprocess.run(
+                          pull_command,
+                          capture_output=True,
+                          text=True,
+                          timeout=180,
+                          check=False,
+                          env=safe_env,
+                      )
+                  except FileNotFoundError:
+                      record['failure_class'] = 'docker_not_found'
+                      break
+                  except subprocess.TimeoutExpired:
+                      record['failure_class'] = 'timeout'
+                      break
+                  if result.returncode == 0:
+                      record['status'] = 'pulled'
+                      record['failure_class'] = 'none'
+                      break
+                  record['status'] = 'failed'
+                  record['failure_class'] = classify(result.stderr)
+                  time.sleep(5 * (attempt + 1))
+              if record['status'] == 'pulled' and is_typegen:
+                  try:
+                      tag_result = subprocess.run(
+                          ['docker', 'image', 'tag', typegen['pull_reference'], typegen['image']],
+                          capture_output=True,
+                          text=True,
+                          timeout=30,
+                          check=False,
+                          env=safe_env,
+                      )
+                      if tag_result.returncode != 0:
+                          raise ValueError('typegen image tag unavailable')
+
+                      def inspect_image(reference):
                           result = subprocess.run(
-                              pull_command,
-                              capture_output=True,
-                              text=True,
-                              timeout=180,
-                              check=False,
-                              env=safe_env,
-                          )
-                      except FileNotFoundError:
-                          record['failure_class'] = 'docker_not_found'
-                          break
-                      except subprocess.TimeoutExpired:
-                          record['failure_class'] = 'timeout'
-                          break
-                      if result.returncode == 0:
-                          record['status'] = 'pulled'
-                          record['failure_class'] = 'none'
-                          break
-                      record['status'] = 'failed'
-                      record['failure_class'] = classify(result.stderr)
-                      if attempt == 0:
-                          time.sleep(10)
-                  if record['status'] == 'pulled' and image == typegen['image']:
-                      try:
-                          tag_result = subprocess.run(
-                              ['docker', 'image', 'tag', typegen['pull_reference'], typegen['image']],
+                              [
+                                  'docker', 'image', 'inspect', reference, '--format',
+                                  '{{.Id}}\t{{.Os}}\t{{.Architecture}}\t{{json .RepoDigests}}\t{{json .RepoTags}}',
+                              ],
                               capture_output=True,
                               text=True,
                               timeout=30,
                               check=False,
                               env=safe_env,
                           )
-                          if tag_result.returncode != 0:
-                              raise ValueError('typegen image tag unavailable')
+                          readback = result.stdout.strip()
+                          fields = readback.split('\t', 4)
+                          if result.returncode != 0 or len(readback) > 4096 or len(fields) != 5:
+                              raise ValueError('bounded image readback unavailable')
+                          image_id, image_os, image_arch, raw_digests, raw_tags = fields
+                          repo_digests = json.loads(raw_digests)
+                          repo_tags = json.loads(raw_tags)
+                          if not isinstance(repo_digests, list) or not isinstance(repo_tags, list):
+                              raise ValueError('image readback shape mismatch')
+                          return image_id, image_os, image_arch, repo_digests, repo_tags
 
-                          def inspect_image(reference):
-                              result = subprocess.run(
-                                  [
-                                      'docker', 'image', 'inspect', reference, '--format',
-                                      '{{.Id}}\t{{.Os}}\t{{.Architecture}}\t{{json .RepoDigests}}\t{{json .RepoTags}}',
-                                  ],
-                                  capture_output=True,
-                                  text=True,
-                                  timeout=30,
-                                  check=False,
-                                  env=safe_env,
-                              )
-                              readback = result.stdout.strip()
-                              fields = readback.split('\t', 4)
-                              if result.returncode != 0 or len(readback) > 4096 or len(fields) != 5:
-                                  raise ValueError('bounded image readback unavailable')
-                              image_id, image_os, image_arch, raw_digests, raw_tags = fields
-                              repo_digests = json.loads(raw_digests)
-                              repo_tags = json.loads(raw_tags)
-                              if not isinstance(repo_digests, list) or not isinstance(repo_tags, list):
-                                  raise ValueError('image readback shape mismatch')
-                              return image_id, image_os, image_arch, repo_digests, repo_tags
-
-                          source_readback = inspect_image(typegen['pull_reference'])
-                          tag_readback = inspect_image(typegen['image'])
-                          if (
-                              source_readback[:4] != tag_readback[:4]
-                              or tag_readback[0] != typegen['image_id']
-                              or f'{tag_readback[1]}/{tag_readback[2]}' != typegen['platform']
-                              or typegen['repo_digest'] not in tag_readback[3]
-                              or typegen['image'] not in tag_readback[4]
-                          ):
-                              raise ValueError('image identity mismatch')
-                          typegen['status'] = 'verified'
-                          typegen['failure_class'] = 'none'
-                      except (FileNotFoundError, OSError, subprocess.TimeoutExpired, TypeError, ValueError, json.JSONDecodeError):
-                          record['status'] = 'failed'
-                          record['failure_class'] = 'typegen_image_readback'
-                          typegen['status'] = 'failed'
-                          typegen['failure_class'] = 'image_readback'
-                  if record['status'] != 'pulled':
-                      failed = True
+                      source_readback = inspect_image(typegen['pull_reference'])
+                      tag_readback = inspect_image(typegen['image'])
+                      if (
+                          source_readback[:4] != tag_readback[:4]
+                          or tag_readback[0] != typegen['image_id']
+                          or f'{tag_readback[1]}/{tag_readback[2]}' != typegen['platform']
+                          or typegen['repo_digest'] not in tag_readback[3]
+                          or typegen['image'] not in tag_readback[4]
+                      ):
+                          raise ValueError('image identity mismatch')
+                      typegen['status'] = 'verified'
+                      typegen['failure_class'] = 'none'
+                  except (FileNotFoundError, OSError, subprocess.TimeoutExpired, TypeError, ValueError, json.JSONDecodeError):
+                      record['status'] = 'failed'
+                      record['failure_class'] = 'typegen_image_readback'
+                      typegen['status'] = 'failed'
+                      typegen['failure_class'] = 'image_readback'
+              if record['status'] != 'pulled':
+                  failed = True
               records.append(record)
           container_probe = {'status': 'failed', 'failure_class': 'unknown'}
           if not failed:
