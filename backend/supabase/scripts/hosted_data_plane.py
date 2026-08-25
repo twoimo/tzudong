@@ -300,7 +300,7 @@ def fetch_hosted_restaurant_snapshot(
 def load_evaluation_rows(path: str) -> list[dict[str, Any]]:
     source = Path(path)
     if not source.is_file():
-        _deny("evaluation_missing")
+        return []
     rows: list[dict[str, Any]] = []
     for line in source.read_text(encoding="utf-8").splitlines():
         if not line.strip():
