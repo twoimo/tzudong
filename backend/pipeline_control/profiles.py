@@ -72,10 +72,10 @@ def default_data_sink(profile: str) -> str:
 def mutating_steps_allowed(data_sink: str | None) -> bool:
     if data_sink is None:
         return True
-    if data_sink not in PIPELINE_DATA_SINKS:
-        raise ProfileError("data_sink_invalid")
     if data_sink == HOSTED_APPLY_SINK:
         raise ProfileError("hosted_apply_not_admitted")
+    if data_sink not in PIPELINE_DATA_SINKS:
+        raise ProfileError("data_sink_invalid")
     return data_sink == LOCAL_SINK
 
 
@@ -98,6 +98,10 @@ def skip_reason_for_step(
         from backend.pipeline_control.graph import SKIP_HEAVY_REASON
 
         return ("optional", SKIP_HEAVY_REASON)
+    if spec.channel_capabilities and admitted is not None:
+        missing = sorted(spec.channel_capabilities - set(admitted))
+        if missing:
+            return ("optional", f"target_lacks_{missing[0]}_capability")
     if MUTATING_CAPABILITY in spec.capabilities and not mutating_steps_allowed(data_sink):
         return ("downstream", "artifact_only_skips_mutating_step")
     if MUTATING_CAPABILITY in spec.capabilities and admitted is not None and "insert" not in admitted:

@@ -15,7 +15,9 @@ REQUIRED_FIELDS = (
     "enabled",
 )
 PATH_FIELDS = ("data_path", "evaluation_data_path")
-ALLOWED_CAPABILITIES = frozenset({"collect", "evaluate", "insert", "heavy_compute"})
+ALLOWED_CAPABILITIES = frozenset(
+    {"collect", "evaluate", "insert", "heavy_compute", "map_url", "frame_caption", "chunk"}
+)
 
 
 class TargetSchemaError(ValueError):
