@@ -9,10 +9,15 @@ const SOURCE = readFileSync(
 
 test('classifyGenTypesFailure is module-scoped for the gen-types catch', () => {
   const fn = SOURCE.indexOf('function classifyGenTypesFailure(error)');
-  const tryBlock = SOURCE.indexOf('\ntry {\n');
-  const catchBlock = SOURCE.indexOf('} catch (error) {');
+  const mainCall = SOURCE.indexOf('main().catch((error) => {');
   expect(fn).toBeGreaterThan(-1);
-  expect(tryBlock).toBeGreaterThan(fn);
-  expect(catchBlock).toBeGreaterThan(tryBlock);
+  expect(mainCall).toBeGreaterThan(fn);
   expect(SOURCE.includes('failure_class=${classifyGenTypesFailure(error)}')).toBe(true);
+});
+
+test('local typegen prefers loopback postgres-meta over a Docker pg-meta sidecar', () => {
+  expect(SOURCE).toContain("parsed.hostname !== '127.0.0.1'");
+  expect(SOURCE).toContain('/generators/typescript?included_schemas=');
+  expect(SOURCE).toContain('family: 4');
+  expect(SOURCE).not.toContain('host.docker.internal');
 });
