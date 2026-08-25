@@ -144,10 +144,10 @@ Completed after the initial report-only scan:
 
 1. Ran privacy-sensitive details scans for WSL and Windows Codex homes to identify large session themes. Raw thread IDs are not repeated in handoff docs.
 2. Created additional handoff documents:
-   - `docs/codex-handoffs/2026-05-05-important-codex-sessions-before-archive.md`
-   - `docs/codex-handoffs/2026-05-05-tzudong-large-session-handoff.md`
-   - `docs/codex-handoffs/2026-05-05-llm-wiki-large-session-handoff.md`
-   - `docs/codex-handoffs/2026-05-05-windows-codex-state-handoff.md`
+   - `apps/web/docs/codex-handoffs/2026-05-05-important-codex-sessions-before-archive.md`
+   - `apps/web/docs/codex-handoffs/2026-05-05-tzudong-large-session-handoff.md`
+   - `apps/web/docs/codex-handoffs/2026-05-05-llm-wiki-large-session-handoff.md`
+   - `apps/web/docs/codex-handoffs/2026-05-05-windows-codex-state-handoff.md`
 3. Confirmed and created Google Drive private holding folder for later archive/backup artifacts:
    - Windows path: `H:\My Drive\Codex Backups\keep-codex-fast\2026-05-05`
    - Created marker: `README-KEEP-PRIVATE.txt`
