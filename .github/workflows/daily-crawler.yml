@@ -940,6 +940,7 @@ jobs:
       - name: Preview then apply only new pending restaurants
         run: |
           set -euo pipefail
+          mkdir -p backend/log/cron
           python3 backend/bin/apply_hosted_pending_candidates.py \
             --preview-out backend/log/cron/hosted-apply-preview.json \
             --dry-run
