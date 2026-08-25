@@ -51,6 +51,21 @@ PROFILES = {
         ],
         "allowed_aliases": [],
     },
+    "hosted-pending-apply": {
+        "required": [
+            "SUPABASE_URL",
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "TZUDONG_HOSTED_DATA_PLANE_APPROVED",
+        ],
+        "optional": [
+            "YOUTUBE_API_KEY_BYEON",
+            "GEMINI_API_KEY",
+        ],
+        "allowed_aliases": [
+            "YOUTUBE_API_KEY",
+            "GEMINI_API_KEY_BYEON",
+        ],
+    },
 }
 
 FORBIDDEN_ENV_NAMES = [
