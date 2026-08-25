@@ -68,7 +68,7 @@ done
 - Modified: `/home/twoimo/.codex/skills/keep-codex-fast/scripts/keep_codex_fast.py`
 - Backup created: `/home/twoimo/.codex/skills/keep-codex-fast/scripts/keep_codex_fast.py.bak-20260518-182622`
 - Backup-only output: `/home/twoimo/Documents/Codex/codex-backups/keep-codex-fast-20260518-182729`
-- Added handoff: `docs/codex-handoffs/2026-05-18-keep-codex-fast.md`
+- Added handoff: `docs/archive/handoffs/codex/2026-05-18-keep-codex-fast.md`
 
 ## Known warnings / blockers
 
