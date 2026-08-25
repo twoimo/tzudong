@@ -8,6 +8,10 @@ Korean: [CHANGELOG.ko.md](CHANGELOG.ko.md).
 
 ---
 
+## 2026-08-26 — v1.2.5
+
+GitHub Release `v1.2.5` on `origin/main` (pipeline + nightly closure work since `v1.2.4`).
+
 ## 2026-08-25 — Hosted new-video pipeline
 
 **Main tip:** `64d669f6e1a3`  
