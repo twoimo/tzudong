@@ -870,3 +870,40 @@ jobs:
           GIT_ASKPASS="$askpass" GIT_TERMINAL_PROMPT=0 GIT_PASSWORD="$PUSH_TOKEN" \
             git -C "$TARGET_WORKTREE" -c credential.helper= push \
             "https://github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/data
+
+  hosted-pending-apply:
+    needs: daily-compute
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    permissions:
+      contents: read
+    env:
+      TZUDONG_HOSTED_DATA_PLANE_APPROVED: ${{ vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+      NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+      NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+      NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
+      NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
+      LIVE_MAX_NEW_ITEMS: "1"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Preflight hosted pending apply env
+        run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
+      - name: Preview then apply only new pending restaurants
+        run: |
+          set -euo pipefail
+          python3 backend/bin/apply_hosted_pending_candidates.py \
+            --preview-out backend/log/cron/hosted-apply-preview.json \
+            --dry-run
+          python3 backend/bin/apply_hosted_pending_candidates.py \
+            --preview-out backend/log/cron/hosted-apply-preview.json

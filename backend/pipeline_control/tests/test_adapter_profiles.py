@@ -60,6 +60,13 @@ class GraphContractTests(unittest.TestCase):
         frames = build_argv(STEP_BY_ID["04-frames"], target="tzuyang")
         self.assertIn("--delete-cache", frames)
         self.assertTrue(any(part.endswith("04-extract-frames-with-heatmap.js") for part in frames))
+        self.assertEqual(
+            STEP_BY_ID["03-2-visual"].script,
+            "backend/restaurant-crawling/scripts/03-2-visual-location.py",
+        )
+        visual = build_argv(STEP_BY_ID["03-2-visual"], target="tzuyang")
+        self.assertIn("--channel", visual)
+        self.assertTrue(any(part.endswith("03-2-visual-location.py") for part in visual))
 
     def test_python_override_must_remain_python3(self) -> None:
         with patch.dict(os.environ, {"PYTHON_CMD": "python"}, clear=False):
@@ -71,8 +78,12 @@ class GraphContractTests(unittest.TestCase):
         text = CONTRACTS.read_text(encoding="utf-8")
         self.assertIn("pipeline_control adapter graph and profiles", text)
         self.assertIn("04-extract-frames-with-heatmap.js", text)
+        self.assertIn("05-map-url-crawling.js", text)
+        self.assertIn("06-frame-caption.py", text)
+        self.assertIn("jobIdScope", text)
         self.assertNotIn("[Showing last", text)
         self.assertNotIn("artifact://", text)
+        self.assertNotIn("07-gemini-crawling.sh", STEP_BY_ID)
 
 
 class TargetSchemaTests(unittest.TestCase):
@@ -84,6 +95,13 @@ class TargetSchemaTests(unittest.TestCase):
             self.assertTrue(item["enabled"])
             self.assertTrue(item["handle"].startswith("@"))
             self.assertIn("insert", item["capabilities"])
+        tzuyang = next(item for item in records if item["id"] == "tzuyang")
+        meat = next(item for item in records if item["id"] == "meatcreator")
+        self.assertIn("frame_caption", tzuyang["capabilities"])
+        self.assertIn("chunk", tzuyang["capabilities"])
+        self.assertNotIn("map_url", tzuyang["capabilities"])
+        self.assertIn("map_url", meat["capabilities"])
+        self.assertNotIn("chunk", meat["capabilities"])
         self.assertEqual(assert_admitted("tzuyang"), "tzuyang")
         self.assertEqual(assert_admitted("meatcreator"), "meatcreator")
 
@@ -101,6 +119,16 @@ class ProfilePolicyTests(unittest.TestCase):
         self.assertEqual(default_data_sink("lite_gha"), "artifact_only")
         self.assertEqual(default_data_sink("heavy_local"), "local_db")
         self.assertEqual(resolve_control_store({"TZUDONG_PIPELINE_STORE": "postgres"}), "postgres")
+    def test_hosted_apply_env_override_stays_rejected(self) -> None:
+        from backend.pipeline_control.profiles import ProfileError, mutating_steps_allowed
+
+        with self.assertRaises(ProfileError) as ctx:
+            mutating_steps_allowed("hosted_apply")
+        self.assertEqual(ctx.exception.code, "hosted_apply_not_admitted")
+        with patch.dict(os.environ, {"TZUDONG_DATA_SINK": "hosted_apply"}, clear=False):
+            with self.assertRaises(ProfileError) as env_ctx:
+                mutating_steps_allowed(os.environ["TZUDONG_DATA_SINK"])
+            self.assertEqual(env_ctx.exception.code, "hosted_apply_not_admitted")
 
     def test_lite_skips_heavy_and_evaluation_downstream(self) -> None:
         blocked: set[str] = set()
@@ -113,7 +141,7 @@ class ProfilePolicyTests(unittest.TestCase):
                 compute_profile="lite_gha",
                 data_sink="artifact_only",
                 skipped_or_failed=blocked,
-                capabilities={"collect", "evaluate", "insert", "heavy_compute"},
+                capabilities={"collect", "evaluate", "insert", "heavy_compute", "chunk", "frame_caption"},
             )
             if skip:
                 blocked.add(spec.id)
@@ -135,13 +163,37 @@ class LiveGraphTests(unittest.TestCase):
 
         result = execute_steps(_run(), should_stop=lambda: None, live=True, runner=runner, data_sink="local_db")
         self.assertEqual(result, "Succeeded")
-        self.assertEqual(len(seen), len(ADAPTER_STEPS))
         joined = [" ".join(item) for item in seen]
         self.assertTrue(any("04-extract-frames-with-heatmap.js" in item for item in joined))
         self.assertFalse(any("04-heatmap-and-frames.js" in item for item in joined))
+        self.assertFalse(any("05-map-url-crawling.js" in item for item in joined))
+        self.assertTrue(any("06-frame-caption.py" in item for item in joined))
         context = next(item for item in seen if any("03-1-generate-transcript-context.py" in part for part in item))
         self.assertNotIn("--channel", context)
         self.assertTrue(any("admin-data-quality-audit.mjs" in item for item in joined))
+
+    def test_channel_capability_skips_wrong_crawling_path(self) -> None:
+        tzuyang: list[str] = []
+        meat: list[str] = []
+        execute_steps(
+            _run("tzuyang"),
+            should_stop=lambda: None,
+            live=True,
+            runner=lambda argv: tzuyang.append(" ".join(argv)) or 0,
+            data_sink="local_db",
+        )
+        execute_steps(
+            _run("meatcreator"),
+            should_stop=lambda: None,
+            live=True,
+            runner=lambda argv: meat.append(" ".join(argv)) or 0,
+            data_sink="local_db",
+        )
+        self.assertFalse(any("05-map-url-crawling.js" in item for item in tzuyang))
+        self.assertTrue(any("08-chunk-multimodal-crawling.sh" in item for item in tzuyang))
+        self.assertTrue(any("05-map-url-crawling.js" in item for item in meat))
+        self.assertFalse(any("08-chunk-multimodal-crawling.sh" in item for item in meat))
+        self.assertFalse(any("06-frame-caption.py" in item for item in meat))
 
     def test_step08_failure_skips_evaluation_downstream(self) -> None:
         seen: list[str] = []
