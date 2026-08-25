@@ -443,7 +443,7 @@ describe('public surface design contract', () => {
     expect(owners).toEqual([...APPROVED_HORIZONTAL_SCROLL_OWNERS].sort());
     expect(owners).not.toContain('naver-cluster');
     expect(owners).not.toContain('naver-map-cluster');
-    const designSource = readFileSync(resolve(appRoot, '..', '..', 'DESIGN.md'), 'utf8');
+    const designSource = readFileSync(resolve(appRoot, '..', '..', 'docs/product/DESIGN.md'), 'utf8');
     expect(designSource).toContain(
       'Naver map cluster marker overflow remains a provider-specific exception outside this policy',
     );
