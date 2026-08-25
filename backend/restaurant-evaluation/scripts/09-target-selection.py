@@ -131,6 +131,7 @@ def main():
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--crawling-path", required=True, help="크롤링 데이터 경로")
     parser.add_argument("--evaluation-path", required=True, help="평가 결과 저장 경로")
+    parser.add_argument("--video-id", default="", help="이 영상만 선정. 기존 selection이 있어도 다시 씀")
     args = parser.parse_args()
 
     channel = args.channel
@@ -161,6 +162,10 @@ def main():
     if not video_ids:
         print(f"[ERROR] crawling/visual-location 후보 없음: {crawling_path}")
         return
+    requested = (args.video_id or "").strip()
+    if requested:
+        video_ids = {requested}
+        print(f"video-id filter: {requested}")
 
     print(f"대상 비디오: {len(video_ids)}개")
 
@@ -178,8 +183,8 @@ def main():
         selection_file = selection_dir / f"{video_id}.jsonl"
         not_selection_file = not_selection_dir / f"{video_id}.jsonl"
 
-        # 중복 검사: 이미 처리됨
-        if selection_file.exists() or not_selection_file.exists():
+        # 중복 검사: 이미 처리됨. --video-id 지정 시 재작성.
+        if not requested and (selection_file.exists() or not_selection_file.exists()):
             stats["skipped"] += 1
             if stats["skipped"] % 50 == 1:
                 print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
