@@ -164,22 +164,6 @@ try {
   fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
 
   console.log(`[supabase-gen-types] Wrote ${outFile}`);
-function classifyGenTypesFailure(error) {
-  const text = `${error?.stderr?.toString?.() || ''} ${error?.message || ''}`.toLowerCase();
-  if (text.includes('password authentication failed') || text.includes('does not exist')) {
-    return 'database_auth';
-  }
-  if (text.includes('connection refused') || text.includes('econnrefused')) {
-    return 'database_unreachable';
-  }
-  if (text.includes('cannot connect to the docker') || text.includes('docker daemon')) {
-    return 'docker_unavailable';
-  }
-  if (typeof error?.status === 'number') {
-    return `cli_exit_${error.status}`;
-  }
-  return 'cli_failed';
-}
 
 } catch (error) {
   const message = error?.stderr?.toString?.() || error?.message || String(error);
