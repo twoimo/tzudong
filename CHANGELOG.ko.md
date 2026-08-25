@@ -8,6 +8,10 @@ English: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
+## 2026-08-26 — v1.2.5
+
+GitHub 릴리즈 `v1.2.5` (`origin/main`, `v1.2.4` 이후 파이프라인·나이트리 클로저 작업).
+
 ## 2026-08-25 — 호스티드 새 영상 파이프라인
 
 **main 팁:** `64d669f6e1a3`  
