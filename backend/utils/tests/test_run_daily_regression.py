@@ -514,6 +514,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
+        self.assertIn("evaluate_new_youtube_videos.py", daily_workflow)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
         self.assertIn("apply_hosted_pending_candidates.py", daily_workflow)
         self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
