@@ -247,7 +247,7 @@ function budgets(value){
   return rows;
 }
 function productFile(path){
-  if(['AGENTS.md','DESIGN.md','README.md','README.ko.md','SECURITY.md'].includes(path))return false;
+  if(['AGENTS.md','docs/product/DESIGN.md','README.md','README.ko.md','SECURITY.md'].includes(path))return false;
   return !/(^|\/)(?:tests?|tests-unit|fixtures|artifacts|evidence|generated)(?:\/|$)|\.(?:test|spec)\.[^.]+$/.test(path);
 }
 const PROSE_ALLOWED=/^[A-Za-z0-9](?:[A-Za-z0-9 ,;!?()']|\.(?= |$))*$/;
