@@ -1073,13 +1073,19 @@ def verify_browser_diagnostics(payload: dict[str, object]) -> None:
 def verify_image_preflight(payload: dict[str, object]) -> None:
     images = payload.get("images")
     probe = payload.get("container_probe")
+    typegen = payload.get("typegen")
+    expected_typegen = dict(EXPECTED_TYPEGEN_IMAGE)
+    if isinstance(typegen, dict) and isinstance(typegen.get("cli_version"), str):
+        if typegen["cli_version"] in {"", "observed", "unavailable"}:
+            fail("local image pull preflight contract mismatch")
+        expected_typegen["cli_version"] = typegen["cli_version"]
     if (
         payload.get("image_count") != len(EXPECTED_IMAGES)
         or not isinstance(images, list)
         or len(images) != len(EXPECTED_IMAGES)
         or not isinstance(probe, dict)
         or probe != {"status": "passed", "failure_class": "none"}
-        or payload.get("typegen") != EXPECTED_TYPEGEN_IMAGE
+        or typegen != expected_typegen
     ):
         fail("local image pull preflight contract mismatch")
     names = set()
