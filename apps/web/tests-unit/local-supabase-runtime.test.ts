@@ -132,7 +132,7 @@ describe('local Supabase runtime source contract', () => {
       LC_ALL: 'C.UTF-8',
       TERM: 'xterm-256color',
       SUPABASE_DB_URL:
-        'postgresql://postgres.fixture-tenant:local-password@127.0.0.1:13432/postgres',
+        'postgresql://postgres:local-password@127.0.0.1:13432/postgres',
       SUPABASE_SCHEMAS: 'public,auth,storage',
       SUPABASE_CLI: path.join(
         '/fixture/repository',
@@ -162,9 +162,8 @@ describe('local Supabase runtime source contract', () => {
     );
     expect(localTypeRunner).toContain('env: buildLocalTypeGenerationEnvironment(local)');
     expect(localTypeRunner).not.toContain('...process.env');
-    expect(runner).toContain(
-      'databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`',
-    );
+    expect(runner).toContain("SUPABASE_DB_URL: local.values.SUPABASE_DB_URL");
+    expect(runner).not.toContain('databaseUrl.username = `${databaseUrl.username}.${local.values.POOLER_TENANT_ID}`');
     const environment = buildLocalWebEnvironment({
       supabaseOrigin: 'http://127.0.0.1:8000',
       stateRoot: '/local/state',
