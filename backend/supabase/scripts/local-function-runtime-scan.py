@@ -1733,7 +1733,7 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
     ("pipeline_control", "claim_job", "text"): ("42501",),
     ("pipeline_control", "claim_outbox", "integer,uuid"): ("22023", "42501"),
     ("pipeline_control", "control_job", "uuid,text,text,text"): ("P0001", "42501"),
-    ("pipeline_control", "enqueue_job", "text,text,text,text,text,text,boolean,text,text"): ("42501", "22023"),
+    ("pipeline_control", "enqueue_job", "text,text,text,text,text,text,boolean,text,text"): ("42501", "22023", "23502", "P0001"),
     ("pipeline_control", "enqueue_outbox", "jsonb"): ("22023", "42501"),
     ("privacy_retention", "g014_confirm_privacy_onboarding_legacy", "uuid,text,uuid,text,uuid"): ("42501",),
     ("public", "apply_admin_user_db_mutation", "uuid,uuid,text,text,jsonb,jsonb,uuid,jsonb,text,text,text,text,text"): ("22023",),
@@ -1799,7 +1799,22 @@ def _smoke_candidate_blocks(candidates: Sequence[dict[str, Any]]) -> str:
                 item = "extensions.vector"
             typed_args.append("NULL::" + item)
         argument_values = ", ".join(typed_args)
-        call = f"SELECT {schema}.{proname}({argument_values})"
+        if proname_name in {
+            "enqueue_job",
+            "get_all_approved_restaurant_names",
+            "get_categories_by_restaurant_name_or_youtube_url",
+            "get_ncp_monthly_usage",
+            "get_table_sizes",
+            "get_video_captions_for_range",
+            "get_video_metadata_filtered",
+            "search_restaurants_by_category",
+            "search_restaurants_by_name",
+            "search_restaurants_by_youtube_title",
+            "search_video_ids_by_query",
+        }:
+            call = f"SELECT * FROM {schema}.{proname}({argument_values})"
+        else:
+            call = f"SELECT {schema}.{proname}({argument_values})"
         signature = str(candidate["signature"])
         expected_states = EXPECTED_CANDIDATE_SQLSTATES.get(
             (schema_name, proname_name, identity_arguments),
