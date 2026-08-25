@@ -37,10 +37,11 @@ SCRIPTS = {
 }
 
 
-def _run(argv: list[str], env: dict[str, str]) -> None:
+def _run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
     completed = subprocess.run(argv, cwd=REPO_ROOT, env=env, check=False)
-    if completed.returncode != 0:
+    if required and completed.returncode != 0:
         raise SystemExit(completed.returncode)
+    return completed.returncode
 
 
 def _load_urls(path: Path) -> list[str]:
@@ -111,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env)
         _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
-        _run(
+        context_exit = _run(
             [
                 python,
                 str(SCRIPTS["context"]),
@@ -119,7 +120,12 @@ def main(argv: list[str] | None = None) -> int:
                 str(args.limit),
             ],
             env,
+            required=False,
         )
+        if context_exit != 0:
+            print(f"transcript_context=skipped exit={context_exit}")
+        else:
+            print("transcript_context=ok")
         _run(["bash", str(SCRIPTS["chunk"]), "--channel", args.channel], env)
         _run(
             [
