@@ -55,6 +55,9 @@ Pipeline step identifiers are part of the executable contract:
 The `pipeline-control` profile additionally requires `TZUDONG_DATA_ENV` and
 `PIPELINE_CONTROL_DSN` (presence only; never print values). `TZUDONG_DATA_ENV=local_db`
 must reject hosted project ref `aqlcofblfxdrjhhdmarw`.
+The `hosted-pending-apply` job evaluates at most one youtube ID absent from
+hosted, then inserts preview-selected `pending` restaurants. Guard:
+`backend.bin.tests.test_evaluate_new_youtube_videos`.
 The `hosted-pending-apply` profile requires `SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY`, and `TZUDONG_HOSTED_DATA_PLANE_APPROVED` (presence
 only). It inserts only preview-selected `pending` restaurants for youtube IDs
