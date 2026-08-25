@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from pathlib import Path
 from typing import Any, Iterable, Mapping
 from urllib.parse import urlsplit
 
@@ -90,6 +91,20 @@ def classify_evaluation_row(
         return "skip_notSelected"
     geo = bool(row.get("geocoding_success"))
     has_coords = row.get("lat") not in (None, "") and row.get("lng") not in (None, "")
+    pending_reason = None
+    location_match = row.get("evaluation_results")
+    if isinstance(location_match, Mapping):
+        location_match = location_match.get("location_match_TF")
+    if isinstance(location_match, Mapping):
+        raw_reason = location_match.get("pending_reason")
+        pending_reason = raw_reason if isinstance(raw_reason, str) else None
+    match_status = None
+    if isinstance(location_match, Mapping):
+        raw_status = location_match.get("match_status")
+        match_status = raw_status if isinstance(raw_status, str) else None
+    if pending_reason in {"ambiguous_chain", "multi_candidate", "insufficient_evidence"}:
+        if match_status != "confirmed_from_video":
+            return "skip_unconfirmed_map"
     if not geo or not has_coords:
         return "skip_no_geocode"
     return "apply_candidate_pending_geocoded"
@@ -210,3 +225,145 @@ def r2_public_object_url(account_hash: str, key: str) -> str:
     if not key or key.startswith("/") or ".." in key:
         _deny("r2_key_invalid")
     return f"https://pub-{account_hash}.r2.dev/{key}"
+
+
+def _json_request(
+    url: str,
+    *,
+    key: str,
+    method: str = "GET",
+    payload: Mapping[str, Any] | None = None,
+    extra_headers: Mapping[str, str] | None = None,
+) -> tuple[int, Any]:
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
+
+    headers = {
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
+        "Accept": "application/json",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
+    body = None
+    if payload is not None:
+        headers["Content-Type"] = "application/json"
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = Request(url, data=body, headers=headers, method=method)
+    try:
+        with urlopen(request, timeout=30) as response:
+            raw = response.read()
+            parsed = json.loads(raw.decode("utf-8")) if raw else None
+            return int(response.status), parsed
+    except HTTPError as exc:
+        raw = exc.read()
+        try:
+            parsed = json.loads(raw.decode("utf-8")) if raw else None
+        except ValueError:
+            parsed = None
+        return int(exc.code), parsed
+
+
+def fetch_hosted_restaurant_snapshot(
+    *,
+    url: str,
+    service_role_key: str,
+) -> tuple[list[str], list[str]]:
+    assert_hosted_target(url)
+    if not service_role_key.strip():
+        _deny("hosted_key_missing")
+    rows: list[dict[str, Any]] = []
+    start = 0
+    page = 1000
+    while True:
+        end = start + page - 1
+        status, payload = _json_request(
+            f"{url.rstrip('/')}/rest/v1/restaurants?select=id,youtube_link,youtube_meta&order=id.asc",
+            key=service_role_key,
+            extra_headers={"Range": f"{start}-{end}", "Prefer": "count=exact"},
+        )
+        if status not in {200, 206}:
+            _deny("hosted_snapshot_failed")
+        if not isinstance(payload, list):
+            _deny("hosted_snapshot_failed")
+        rows.extend(item for item in payload if isinstance(item, dict))
+        if len(payload) < page:
+            break
+        start += page
+        if start > 50_000:
+            _deny("hosted_snapshot_unbounded")
+    ids = [str(row["id"]) for row in rows if row.get("id")]
+    youtube_ids = [vid for row in rows if (vid := row_youtube_id(row))]
+    return ids, youtube_ids
+
+
+def load_evaluation_rows(path: str) -> list[dict[str, Any]]:
+    source = Path(path)
+    if not source.is_file():
+        _deny("evaluation_missing")
+    rows: list[dict[str, Any]] = []
+    for line in source.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        parsed = json.loads(line)
+        if isinstance(parsed, dict):
+            rows.append(parsed)
+    return rows
+
+
+def apply_pending_candidates(
+    *,
+    preview: Mapping[str, Any],
+    evaluation_rows: Iterable[Mapping[str, Any]],
+    url: str,
+    service_role_key: str,
+    environment: Mapping[str, str],
+    presented_preview_sha256: str,
+    fetch=None,
+) -> dict[str, Any]:
+    """Insert preview-selected pending rows only. Never overwrite existing restaurants."""
+    assert_hosted_target(url)
+    assert_apply_authorized(
+        preview,
+        environment=environment,
+        presented_preview_sha256=presented_preview_sha256,
+    )
+    allowed = set(preview.get("applyCandidateVideoIds") or [])
+    if preview.get("applyCandidateCount") != len(allowed):
+        _deny("candidate_count_mismatch")
+    if preview.get("dockerRestaurantApply"):
+        _deny("forbidden_local_docker_apply")
+    inserted: list[str] = []
+    skipped: list[str] = []
+    requester = fetch or _json_request
+    for row in evaluation_rows:
+        video_id = row_youtube_id(row)
+        if video_id is None or video_id not in allowed:
+            continue
+        payload = pending_insert_payload(row)
+        if payload["status"] != "pending":
+            _deny("approved_status_forbidden")
+        status, _body = requester(
+            f"{url.rstrip('/')}/rest/v1/restaurants?on_conflict=trace_id",
+            key=service_role_key,
+            method="POST",
+            payload=payload,
+            extra_headers={
+                "Prefer": "return=minimal,resolution=ignore-duplicates",
+            },
+        )
+        if status in {201, 200}:
+            inserted.append(video_id)
+        elif status == 409:
+            skipped.append(video_id)
+        else:
+            _deny("hosted_insert_failed")
+    unexpected = sorted(allowed - set(inserted) - set(skipped))
+    if unexpected:
+        _deny("candidate_not_applied")
+    return {
+        "insertedVideoIds": inserted,
+        "skippedExistingVideoIds": skipped,
+        "insertedCount": len(inserted),
+        "previewSha256": presented_preview_sha256,
+    }

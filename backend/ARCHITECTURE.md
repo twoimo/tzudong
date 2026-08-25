@@ -10,7 +10,7 @@ make the seams explicit, and move only testable responsibilities across seams.
 2. Do **not** migrate the long-running backend batch pipeline into Next.js
    request/response APIs.
 3. Use Next.js Route Handlers only for authenticated, bounded admin/ops APIs.
-4. Operator/CI entrypoint is `pipeline-api` (`POST /v1/runs`, 202) plus `pipeline-worker`. Isolated cutover removed `run_daily.sh` / `run_local_heavy.sh` from crontab/GHA after N=3 healthy live parity.
+4. Operator/CI entrypoint is `pipeline-api` (`POST /v1/runs`, 202) plus `pipeline-worker`. crontab/GHA already call `python3 -m backend.pipeline_control.worker`. Isolated cutover of leftover `run_daily.sh` / `run_local_heavy.sh` snapshots remains gated on a real N=3 `pipeline-parity-ledger.json` of distinct `heavy_local`/`local_db` live receipts. `liveEvidenceEligible` stays false until those receipts exist. Do not treat the worker entrypoint as completed N=3 parity.
 5. Treat data contracts between crawling, evaluation, Supabase, and web admin as
    first-class interfaces.
 6. Do not rewrite crawling/evaluation internals with Paperclip or another
@@ -56,9 +56,11 @@ execute it asynchronously.
 
 ## `run_daily.sh` thinning / abolition policy
 
-`run_daily.sh` is no longer the operator/CI entrypoint on the isolated cutover
-branch. crontab/GHA call `python3 -m backend.pipeline_control.worker`. Legacy
-shell snapshots remain only under `backend/utils/tests/fixtures/`.
+`run_daily.sh` is no longer the operator/CI entrypoint. crontab/GHA call
+`python3 -m backend.pipeline_control.worker`. Legacy shell snapshots remain
+under `backend/utils/tests/fixtures/`. Isolated deletion of leftover shim
+files still requires a real N=3 parity ledger; the worker entrypoint is not
+that proof. `liveEvidenceEligible` stays false until those receipts exist.
 
 Keep in Shell only until cutover:
 - source `.env` and runtime path defaults
