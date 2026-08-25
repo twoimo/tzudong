@@ -66,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.preview_out:
-        Path(args.preview_out).write_text(
+        out = Path(args.preview_out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
             json.dumps(preview, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
