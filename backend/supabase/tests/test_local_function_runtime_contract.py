@@ -285,7 +285,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_frozen_source_closure_candidate_receipt_is_exact(self):
         candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 42)
+        self.assertEqual(len(candidates), 47)
         target = [
             item for item in candidates
             if item["name"] == "public.approve_submission_item"
