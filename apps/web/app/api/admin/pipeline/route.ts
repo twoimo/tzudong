@@ -214,6 +214,7 @@ async function readGithubCrawlerSnapshot() {
   } finally {
     clearTimeout(timer);
   }
+}
 
 export async function GET() {
   const auth = await requireAdmin();
