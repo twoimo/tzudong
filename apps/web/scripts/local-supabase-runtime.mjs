@@ -250,17 +250,25 @@ function safeProcessEnvironment(inherited = process.env) {
   return selected;
 }
 
+function loopbackPgMetaUrl(values) {
+  const port = String(values?.META_PORT ?? '');
+  if (!/^[1-9][0-9]{0,4}$/.test(port) || Number(port) > 65535) return null;
+  return `http://127.0.0.1:${port}`;
+}
+
 export function buildLocalTypeGenerationEnvironment(local, inherited = process.env) {
   const webRoot = path.join(local.repositoryRoot, 'apps', 'web');
+  const pgMetaUrl = loopbackPgMetaUrl(local.values);
 
   // Local stack.env already points at the loopback Postgres host port with the
-  // `postgres` role. Do not rewrite that user as pooler `postgres.<tenant>` —
-  // `supabase gen types --db-url` talks to that port, not Supavisor.
-  // The CLI still starts pg-meta in a one-shot container on the default Docker
-  // context, so cloud credentials and Docker overrides stay absent.
+  // `postgres` role. Do not rewrite that user as pooler `postgres.<tenant>`.
+  // Postgres is published on 127.0.0.1 only, so CLI `gen types --db-url` cannot
+  // reach it from a one-shot pg-meta container. Use the stack's loopback meta
+  // service instead. Cloud credentials and Docker overrides stay absent.
   return {
     ...safeProcessEnvironment(inherited),
     SUPABASE_DB_URL: local.values.SUPABASE_DB_URL,
+    ...(pgMetaUrl ? { SUPABASE_PG_META_URL: pgMetaUrl } : {}),
     SUPABASE_SCHEMAS: 'public,auth,storage',
     SUPABASE_CLI: path.join(
       webRoot,
