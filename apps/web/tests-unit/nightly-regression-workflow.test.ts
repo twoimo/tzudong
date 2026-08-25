@@ -1146,7 +1146,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 82",
+      "EXPECTED_LEDGER_UNITS = 83",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1157,7 +1157,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 82");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 83");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
