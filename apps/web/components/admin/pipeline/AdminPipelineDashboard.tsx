@@ -192,7 +192,7 @@ export function AdminPipelineDashboard() {
       <header>
         <h2 className="text-sm font-semibold">크롤러 파이프라인</h2>
         <p className="text-xs text-muted-foreground">
-          control-plane 상태. Grafana iframe은 127.0.0.1 비프로덕션 admin에서만 허용.
+          로컬 control-plane이 없으면 GitHub Actions 크롤러 최근 실행을 보여 줍니다. enqueue는 로컬 API가 있을 때만 동작합니다.
         </p>
       </header>
       <div className="flex flex-wrap gap-2 text-[11px]">
