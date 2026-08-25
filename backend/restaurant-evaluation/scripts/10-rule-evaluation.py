@@ -1291,6 +1291,7 @@ def main():
     parser = argparse.ArgumentParser(description="Rule 기반 평가")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
+    parser.add_argument("--video-id", default="", help="이 영상만 평가. 기존 rule_results가 있어도 다시 씀")
     args = parser.parse_args()
 
     channel = args.channel
@@ -1311,6 +1312,10 @@ def main():
     video_ids = set()
     for f in selection_dir.glob("*.jsonl"):
         video_ids.add(f.stem)
+    requested = (args.video_id or "").strip()
+    if requested:
+        video_ids = {requested}
+        print(f"video-id filter: {requested}")
 
     print(f"대상 비디오: {len(video_ids)}개")
 
@@ -1328,8 +1333,7 @@ def main():
         input_file = selection_dir / f"{video_id}.jsonl"
         output_file = output_dir / f"{video_id}.jsonl"
 
-        # 중복 검사: 이미 처리됨
-        if output_file.exists():
+        if not requested and output_file.exists():
             stats["skipped"] += 1
             if stats["skipped"] % 50 == 1:
                 print(f"이미 처리됨 (스킵 {stats['skipped']}개)")
