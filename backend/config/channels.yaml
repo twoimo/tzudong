@@ -11,6 +11,8 @@ channels:
       - evaluate
       - insert
       - heavy_compute
+      - frame_caption
+      - chunk
 
   meatcreator:
     channel_id: "UC1oXmhvYHVI2bApphh3IzuQ"
@@ -24,6 +26,7 @@ channels:
       - evaluate
       - insert
       - heavy_compute
+      - map_url
 
 # API 설정
 api:
