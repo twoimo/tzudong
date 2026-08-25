@@ -147,6 +147,74 @@ async function pipelineFetch(path: string, init: RequestInit = {}): Promise<Resp
   }
 }
 
+async function readGithubCrawlerSnapshot() {
+  const repository = process.env.GITHUB_REPOSITORY?.trim() || "twoimo/tzudong";
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    return null;
+  }
+  const token = process.env.GITHUB_TOKEN?.trim() || process.env.INSIGHT_GITHUB_TOKEN?.trim() || "";
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "tzudong-admin-pipeline",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PIPELINE_UPSTREAM_TIMEOUT_MS);
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${repository}/actions/workflows/daily-crawler.yml/runs?per_page=1&branch=main`,
+      { headers, signal: controller.signal, cache: "no-store" },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as {
+      workflow_runs?: Array<{
+        id?: number;
+        status?: string;
+        conclusion?: string | null;
+        html_url?: string;
+        display_title?: string;
+        created_at?: string;
+      }>;
+    };
+    const run = payload.workflow_runs?.[0];
+    if (!run?.id) {
+      return null;
+    }
+    const conclusion = String(run.conclusion ?? run.status ?? "unknown").slice(0, 32);
+    return {
+      targets: [],
+      jobs: [
+        {
+          id: String(run.id),
+          target: "tzuyang",
+          profile: "lite_gha",
+          status: conclusion === "success" ? "Succeeded" : "Failed",
+          error_code: conclusion === "success" ? null : "github_crawler",
+          dry_run: false,
+          adapter_index: 0,
+        },
+      ],
+      failures:
+        conclusion === "success"
+          ? []
+          : [{ errorCode: "github_crawler", line: "1" }],
+      gauges: {},
+      failureFrames:
+        conclusion === "success" ? [] : [{ errorCode: "github_crawler", line: "1" }],
+      hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "github_actions",
+      dataEnv: "hosted_read",
+      source: "github_actions",
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) {
@@ -157,33 +225,34 @@ export async function GET() {
     const response = await pipelineFetch("/v1/targets", {
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) {
-      return noStore({ error: "pipeline_status_unavailable" }, { status: 502 });
+    if (response.ok) {
+      const payload = (await response.json()) as {
+        targets?: unknown;
+        jobs?: unknown;
+        failures?: unknown;
+        gauges?: unknown;
+      };
+      return noStore({
+        targets: payload.targets ?? [],
+        jobs: payload.jobs ?? [],
+        failures: payload.failures ?? [],
+        gauges: allowlistedGauges(payload.gauges),
+        failureFrames: allowlistedFailureFrames(payload.failures),
+        hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "macbook_m5_max",
+        dataEnv: process.env.TZUDONG_DATA_ENV ?? "local_db",
+        source: "job_api",
+      });
     }
-    const payload = (await response.json()) as {
-      targets?: unknown;
-      jobs?: unknown;
-      failures?: unknown;
-      gauges?: unknown;
-    };
-    return noStore({
-      targets: payload.targets ?? [],
-      jobs: payload.jobs ?? [],
-      failures: payload.failures ?? [],
-      gauges: allowlistedGauges(payload.gauges),
-      failureFrames: allowlistedFailureFrames(payload.failures),
-      hardware: process.env.TZUDONG_HARDWARE_CHIP ?? "macbook_m5_max",
-      dataEnv: process.env.TZUDONG_DATA_ENV ?? "local_db",
-    });
   } catch (error) {
     if (isAbortError(error)) {
       return noStore({ error: "pipeline_upstream_timeout" }, { status: 504 });
     }
-    return noStore(
-      { error: getAdminSafeErrorName(error) },
-      { status: 502 },
-    );
   }
+  const github = await readGithubCrawlerSnapshot();
+  if (github) {
+    return noStore(github);
+  }
+  return noStore({ error: "pipeline_status_unavailable" }, { status: 502 });
 }
 
 export async function POST(request: NextRequest) {
