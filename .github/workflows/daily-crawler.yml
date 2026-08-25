@@ -939,9 +939,18 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check -r backend/restaurant-crawling/scripts/requirements.txt
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install locked Node dependencies for evaluate
+        working-directory: backend
+        run: npm ci --ignore-scripts
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
       - name: Evaluate youtube IDs absent from hosted
+        continue-on-error: true
         run: |
           set -euo pipefail
           python3 backend/bin/evaluate_new_youtube_videos.py --channel tzuyang --limit 1
