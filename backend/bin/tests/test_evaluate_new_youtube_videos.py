@@ -77,6 +77,8 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         )
         text = script.read_text(encoding="utf-8")
         self.assertIn('if [[ "$EVALUATION_PATH" = /* ]]; then', text)
+        self.assertIn('--video-id) VIDEO_ID_FILTER="$2"; shift 2 ;;', text)
+        self.assertIn('VIDEO_IDS=("$VIDEO_ID_FILTER")', text)
         self.assertIn('FULL_EVALUATION_PATH="$EVALUATION_PATH"', text)
         self.assertIn(
             "Node.js API Health Check 실패 & Gemini CLI 미설치. Node API로 평가를 계속합니다.",
