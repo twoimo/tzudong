@@ -292,9 +292,11 @@ class AtomicMemoryStore:
             )
             return run
 
-    def claim(self) -> RunRecord | None:
+    def claim(self, run_id: str | None = None) -> RunRecord | None:
         with self._gate:
             for run in self.runs.values():
+                if run_id is not None and run.id != run_id:
+                    continue
                 if run.status == "Queued" and not run.pause_requested and not run.cancel_requested:
                     run.status = "Fetching"
                     run.claimed_by = self.worker_id
@@ -453,7 +455,40 @@ class PostgresStore:
             payload = json.loads(payload)
         return run_from_job(payload)
 
-    def claim(self) -> RunRecord | None:
+    def claim(self, run_id: str | None = None) -> RunRecord | None:
+        if run_id is not None:
+            rows = self._execute(
+                """
+                UPDATE pipeline_control.jobs
+                SET status = 'Fetching',
+                    claimed_by = %s,
+                    worker_id = %s,
+                    lease_until = now() + interval '30 seconds',
+                    heartbeat_at = now(),
+                    updated_at = now()
+                WHERE id = %s::uuid
+                  AND status = 'Queued'
+                  AND pause_requested = false
+                  AND cancel_requested = false
+                RETURNING pipeline_control._job_json(pipeline_control.jobs)
+                """,
+                (self.worker_id, self.worker_id, run_id),
+            )
+            if not rows:
+                return None
+            payload = rows[0][0]
+            if isinstance(payload, str):
+                payload = json.loads(payload)
+            claimed = run_from_job(payload)
+            self._execute(
+                """
+                INSERT INTO pipeline_control.audit (actor, job_id, transition, request_id)
+                VALUES (%s, %s::uuid, 'claim', %s)
+                """,
+                (self.worker_id, claimed.id, claimed.request_id),
+            )
+            record("tzudong_pipeline_runs_claimed_total")
+            return claimed
         rows = self._execute("SELECT pipeline_control.claim_job(%s)", (self.worker_id,))
         payload = rows[0][0] if rows else None
         if payload is None:
