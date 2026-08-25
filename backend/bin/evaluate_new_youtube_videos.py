@@ -129,30 +129,29 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("transcript_context=ok")
         _run(["bash", str(SCRIPTS["chunk"]), "--channel", args.channel], env)
-        _run(
-            [
-                python,
-                str(SCRIPTS["target"]),
-                "--channel",
-                args.channel,
-                "--crawling-path",
-                str(crawling),
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
-        _run(
-            [
-                python,
-                str(SCRIPTS["rule"]),
-                "--channel",
-                args.channel,
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
+        target_cmd = [
+            python,
+            str(SCRIPTS["target"]),
+            "--channel",
+            args.channel,
+            "--crawling-path",
+            str(crawling),
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        rule_cmd = [
+            python,
+            str(SCRIPTS["rule"]),
+            "--channel",
+            args.channel,
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        if primary_id:
+            target_cmd.extend(["--video-id", primary_id])
+            rule_cmd.extend(["--video-id", primary_id])
+        _run(target_cmd, env)
+        _run(rule_cmd, env)
         laaj_cmd = [
             "bash",
             str(SCRIPTS["laaj"]),
