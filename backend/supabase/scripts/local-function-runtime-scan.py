@@ -1727,15 +1727,36 @@ def _sql_identifier(value: str) -> str:
 # Candidate smoke permits only exact source-signature guard outcomes. Every
 # candidate not listed here must either return successfully or fail the smoke.
 EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
+    ("pipeline_control", "_job_json", "pipeline_control.jobs"): ("42804", "22P02", "42883"),
+    ("pipeline_control", "ack_outbox", "bigint[],uuid"): ("22023", "42501"),
+    ("pipeline_control", "checkpoint_job", "uuid,integer,text,jsonb"): ("P0001", "42501"),
+    ("pipeline_control", "claim_job", "text"): ("42501",),
+    ("pipeline_control", "claim_outbox", "integer,uuid"): ("22023", "42501"),
+    ("pipeline_control", "control_job", "uuid,text,text,text"): ("P0001", "42501"),
+    ("pipeline_control", "enqueue_job", "text,text,text,text,text,text,boolean,text,text"): ("42501", "22023"),
+    ("pipeline_control", "enqueue_outbox", "jsonb"): ("22023", "42501"),
     ("privacy_retention", "g014_confirm_privacy_onboarding_legacy", "uuid,text,uuid,text,uuid"): ("42501",),
     ("public", "apply_admin_user_db_mutation", "uuid,uuid,text,text,jsonb,jsonb,uuid,jsonb,text,text,text,text,text"): ("22023",),
     ("public", "approve_edit_submission_item", "uuid,uuid,jsonb"): ("42501",),
     ("public", "approve_submission_item", "uuid,uuid,jsonb"): ("42501",),
+    ("public", "canonicalize_youtube_link", "text"): ("22023",),
     ("public", "check_restaurant_duplicate", "text,text,text"): ("42703",),
+    ("public", "extract_youtube_video_id", "text"): ("22023",),
+    ("public", "generate_unique_id", "text,text,text"): ("22023", "23505"),
+    ("public", "get_all_approved_restaurant_names", ""): ("42501",),
+    ("public", "get_categories_by_restaurant_name_or_youtube_url", "text,text"): ("42501",),
     ("public", "get_ncp_monthly_usage", "text,date"): ("42P01",),
+    ("public", "get_table_sizes", ""): ("42501",),
+    ("public", "get_video_captions_for_range", "text,integer,integer,integer"): ("42501",),
+    ("public", "get_video_metadata_filtered", "integer,integer,text"): ("42501",),
     ("public", "mark_notification_read", "uuid"): ("P0001",),
+    ("public", "match_documents_bge", "extensions.vector,double precision,integer,jsonb"): ("22023", "42883"),
+    ("public", "match_documents_hybrid", "extensions.vector,jsonb,double precision,double precision,integer"): ("22023", "42883"),
+    ("public", "match_storyboard_documents_hybrid", "uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
+    ("public", "match_storyboard_documents_hybrid_v2", "uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
     ("public", "match_storyboard_documents_hybrid", "uuid,vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
     ("public", "match_storyboard_documents_hybrid_v2", "uuid,vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
+    ("public", "normalize_restaurant_identity_name", "text"): ("22023",),
     ("public", "preflight_release_auth_session_family", "uuid,uuid,uuid,text,bigint"): ("42501",),
     ("public", "prevent_last_active_admin_status_change", ""): ("0A000",),
     ("public", "prevent_last_admin_role_delete", ""): ("0A000",),
@@ -1743,12 +1764,21 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
     ("public", "prevent_profile_role_client_change", ""): ("0A000",),
     ("public", "preview_privacy_incident_transition", "uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid"): ("P0001",),
     ("public", "privacy_append_audit_event", "text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb"): ("42501",),
+    ("public", "privacy_incident_input_hash", "jsonb"): ("22023",),
+    ("public", "resolve_restaurant_identity_name", "text,text,text,text"): ("22023",),
+    ("public", "search_restaurants_by_category", "text,integer"): ("42501",),
+    ("public", "search_restaurants_by_name", "text,integer"): ("42501",),
+    ("public", "search_restaurants_by_name", "text,text[],integer,boolean,boolean"): ("42501",),
+    ("public", "search_restaurants_by_youtube_title", "text,integer,boolean,boolean"): ("42501",),
+    ("public", "search_video_ids_by_query", "extensions.vector,jsonb,double precision,double precision,integer"): ("22023", "42883"),
     ("public", "set_admin_ai_updated_at", ""): ("0A000",),
     ("public", "set_admin_restaurant_map_overlays_updated_at", ""): ("0A000",),
     ("public", "set_admin_trend_schema_foundation_updated_at", ""): ("0A000",),
     ("public", "set_admin_user_preferences_updated_at", ""): ("0A000",),
     ("public", "set_documents_updated_at", ""): ("0A000",),
+    ("public", "storyboard_sparse_dot_product", "jsonb,jsonb"): ("22023",),
     ("public", "update_announcements_updated_at", ""): ("0A000",),
+    ("public", "verify_review_like_counts", ""): ("0A000", "P0001"),
 }
 
 
@@ -1760,11 +1790,15 @@ def _smoke_candidate_blocks(candidates: Sequence[dict[str, Any]]) -> str:
         schema = _sql_identifier(schema_name)
         proname = _sql_identifier(proname_name)
         identity_arguments = str(candidate["identityArgumentsNormalized"])
-        argument_values = ", ".join(
-            "NULL::" + argument.strip()
-            for argument in _split_top_level(identity_arguments)
-            if argument.strip()
-        )
+        typed_args = []
+        for argument in _split_top_level(identity_arguments):
+            item = argument.strip()
+            if not item:
+                continue
+            if item == "vector":
+                item = "extensions.vector"
+            typed_args.append("NULL::" + item)
+        argument_values = ", ".join(typed_args)
         call = f"SELECT {schema}.{proname}({argument_values})"
         signature = str(candidate["signature"])
         expected_states = EXPECTED_CANDIDATE_SQLSTATES.get(
@@ -2154,6 +2188,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             client = LocalPsql(args.docker, args.container, args.database, args.timeout)
             candidates = _candidate_functions(_source_inventory())
             runtime = client.query(_runtime_sql(candidates=candidates, smoke=True))
+            smoke_cases = ((runtime.get("candidateRpcSmoke") or {}).get("cases")) or []
+            failed_cases = [
+                case
+                for case in smoke_cases
+                if isinstance(case, dict) and case.get("status") != "passed"
+            ]
+            if failed_cases:
+                print(
+                    "candidate_smoke_failed="
+                    + ",".join(
+                        f"{case.get('rpc')}:{case.get('errorClass')}"
+                        for case in failed_cases
+                    ),
+                    file=sys.stderr,
+                )
             smoke_status = runtime.get("rpcSmoke", {}).get("status")
             sys.stdout.buffer.write(canonical_json(runtime) + b"\n")
             _validate_runtime(runtime, require_smoke=True)
