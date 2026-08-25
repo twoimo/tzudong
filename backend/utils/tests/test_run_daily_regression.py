@@ -516,6 +516,7 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
         self.assertIn("evaluate_new_youtube_videos.py", daily_workflow)
         self.assertIn("Install crawler Python deps for evaluate", daily_workflow)
+        self.assertIn("Install locked Node dependencies for evaluate", daily_workflow)
         hosted_apply = daily_workflow[daily_workflow.find("hosted-pending-apply"):]
         self.assertNotIn("python3 -m pip install --disable-pip-version-check --upgrade pip", hosted_apply)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
