@@ -9,6 +9,7 @@ from hosted_data_plane import (
     APPROVAL_ENV,
     HOSTED_URL,
     HostedDataPlaneError,
+    apply_pending_candidates,
     assert_apply_authorized,
     assert_hosted_target,
     build_apply_preview,
@@ -67,6 +68,43 @@ class HostedDataPlaneTests(unittest.TestCase):
             "lng": None,
         }
         self.assertEqual(classify_evaluation_row(row, []), "skip_no_geocode")
+
+    def test_unconfirmed_map_row_is_not_applied(self) -> None:
+        row = {
+            "youtube_link": "https://youtu.be/chainstore1",
+            "geocoding_success": True,
+            "lat": 37.5,
+            "lng": 127.0,
+            "is_missing": False,
+            "is_notSelected": False,
+            "evaluation_results": {
+                "location_match_TF": {
+                    "pending_reason": "ambiguous_chain",
+                    "match_status": None,
+                }
+            },
+        }
+        self.assertEqual(classify_evaluation_row(row, []), "skip_unconfirmed_map")
+
+    def test_video_confirmed_unconfirmed_reason_can_apply(self) -> None:
+        row = {
+            "youtube_link": "https://youtu.be/confirmed11",
+            "geocoding_success": True,
+            "lat": 37.5,
+            "lng": 127.0,
+            "is_missing": False,
+            "is_notSelected": False,
+            "evaluation_results": {
+                "location_match_TF": {
+                    "pending_reason": "insufficient_evidence",
+                    "match_status": "confirmed_from_video",
+                }
+            },
+        }
+        self.assertEqual(
+            classify_evaluation_row(row, []),
+            "apply_candidate_pending_geocoded",
+        )
 
     def test_large_crawl_blob_is_r2_not_postgres(self) -> None:
         self.assertEqual(
@@ -157,6 +195,84 @@ class HostedDataPlaneTests(unittest.TestCase):
         )
         self.assertEqual(payload["status"], "pending")
         self.assertIn("newvideo111", payload["youtube_link"])
+
+    def test_apply_pending_candidates_posts_only_preview_ids(self) -> None:
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[
+                {
+                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+                    "trace_id": "trace-new",
+                    "geocoding_success": True,
+                    "lat": 1,
+                    "lng": 2,
+                    "is_missing": False,
+                    "is_notSelected": False,
+                    "status": "approved",
+                    "origin_name": "신규집",
+                }
+            ],
+        )
+        calls: list[tuple[str, object]] = []
+
+        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+            calls.append((method, payload))
+            return 201, None
+
+        result = apply_pending_candidates(
+            preview=preview,
+            evaluation_rows=[
+                {
+                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+                    "trace_id": "trace-new",
+                    "geocoding_success": True,
+                    "lat": 1,
+                    "lng": 2,
+                    "origin_name": "신규집",
+                    "status": "approved",
+                },
+                {
+                    "youtube_link": "https://www.youtube.com/watch?v=oldvideo222",
+                    "trace_id": "trace-old",
+                    "geocoding_success": True,
+                    "lat": 3,
+                    "lng": 4,
+                    "origin_name": "기존집",
+                },
+            ],
+            url=HOSTED_URL,
+            service_role_key="service-role",
+            environment={APPROVAL_ENV: "1"},
+            presented_preview_sha256=preview["previewSha256"],
+            fetch=fake_fetch,
+        )
+        self.assertEqual(result["insertedVideoIds"], ["newvideo111"])
+        self.assertEqual(result["insertedCount"], 1)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], "POST")
+        self.assertEqual(calls[0][1]["status"], "pending")
+        self.assertEqual(calls[0][1]["trace_id"], "trace-new")
+
+    def test_apply_pending_candidates_refuses_without_approval(self) -> None:
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[],
+        )
+        with self.assertRaises(HostedDataPlaneError) as raised:
+            apply_pending_candidates(
+                preview=preview,
+                evaluation_rows=[],
+                url=HOSTED_URL,
+                service_role_key="service-role",
+                environment={},
+                presented_preview_sha256=preview["previewSha256"],
+                fetch=lambda *args, **kwargs: (201, None),
+            )
+        self.assertEqual(str(raised.exception), "approval_missing")
 
     def test_hosted_url_must_match_project_ref(self) -> None:
         assert_hosted_target(HOSTED_URL)

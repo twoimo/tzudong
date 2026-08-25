@@ -10,6 +10,9 @@ from typing import FrozenSet
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MUTATING_CAPABILITY = "mutating_db"
 HEAVY_CAPABILITY = "heavy_compute"
+MAP_URL_CAPABILITY = "map_url"
+FRAME_CAPTION_CAPABILITY = "frame_caption"
+CHUNK_CAPABILITY = "chunk"
 ALLOWED_INTERPRETERS = frozenset({"python3", "node", "bash"})
 ALLOWED_PYTHON_NAMES = frozenset({"python3", "python3.exe"})
 ALLOWED_TEMPLATES = frozenset({"target", "python", "max_videos"})
@@ -31,6 +34,7 @@ class StepSpec:
     script: str
     extra_args: tuple[str, ...]
     capabilities: FrozenSet[str] = frozenset()
+    channel_capabilities: FrozenSet[str] = frozenset()
     skip_when_lite: bool = False
     skip_after: str | None = None
 
@@ -98,6 +102,27 @@ STEP_SPECS: tuple[StepSpec, ...] = (
         skip_when_lite=True,
     ),
     StepSpec(
+        "05-map-url",
+        "Step 5 (Map URL Crawling)",
+        "node",
+        "backend/restaurant-crawling/scripts/05-map-url-crawling.js",
+        ("--channel", "{target}"),
+        frozenset({HEAVY_CAPABILITY}),
+        frozenset({MAP_URL_CAPABILITY}),
+        skip_when_lite=True,
+    ),
+    StepSpec(
+        "06-frame-caption",
+        "Step 6 (Frame Caption)",
+        "python3",
+        "backend/restaurant-crawling/scripts/06-frame-caption.py",
+        ("--youtuber", "{target}"),
+        frozenset({HEAVY_CAPABILITY}),
+        frozenset({FRAME_CAPTION_CAPABILITY}),
+        skip_when_lite=True,
+        skip_after="04-frames",
+    ),
+    StepSpec(
         "06-1-enrich",
         "Step 6.1 (Enrich)",
         "python3",
@@ -111,6 +136,7 @@ STEP_SPECS: tuple[StepSpec, ...] = (
         "backend/restaurant-crawling/scripts/08-chunk-multimodal-crawling.sh",
         ("--channel", "{target}"),
         frozenset({HEAVY_CAPABILITY}),
+        frozenset({CHUNK_CAPABILITY}),
         skip_when_lite=True,
     ),
     StepSpec(
