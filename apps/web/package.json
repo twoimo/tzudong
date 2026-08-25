@@ -59,7 +59,7 @@
     "@emnapi/runtime": "^1.11.3",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@google/genai": "^2.17.1",
+    "@google/genai": "^2.18.0",
     "@radix-ui/react-accordion": "^1.2.20",
     "@radix-ui/react-alert-dialog": "^1.1.23",
     "@radix-ui/react-aspect-ratio": "^1.1.15",
@@ -99,7 +99,7 @@
     "d3-hierarchy": "^3.1.2",
     "date-fns": "^4.4.0",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.42.2",
+    "framer-motion": "^13.1.1",
     "idb": "^8.0.3",
     "input-otp": "^1.4.2",
     "lucide-react": "^1.31.0",
@@ -136,7 +136,7 @@
     "@types/supercluster": "^7.1.3",
     "@typescript/native": "npm:typescript@7.0.2",
     "@typescript/old": "npm:typescript@6.0.2",
-    "baseline-browser-mapping": "2.11.14",
+    "baseline-browser-mapping": "2.11.16",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.12",
@@ -147,7 +147,7 @@
     "typescript-eslint": "8.63.0"
   },
   "overrides": {
-    "baseline-browser-mapping": "2.11.14",
+    "baseline-browser-mapping": "2.11.16",
     "brace-expansion": "5.0.9",
     "nanoid": "3.3.18",
     "minimatch@3.1.5": {
