@@ -88,6 +88,25 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가를 건너뜁니다.",
             text,
         )
+    def test_target_and_rule_accept_video_id(self) -> None:
+        target = (
+            ROOT / "backend/restaurant-evaluation/scripts/09-target-selection.py"
+        ).read_text(encoding="utf-8")
+        rule = (
+            ROOT / "backend/restaurant-evaluation/scripts/10-rule-evaluation.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('--video-id', target)
+        self.assertIn("if not requested and (selection_file.exists()", target)
+        self.assertIn('--video-id', rule)
+        self.assertIn("if not requested and output_file.exists()", rule)
+
+    def test_shared_runner_calls_evaluate_then_apply(self) -> None:
+        runner = (
+            ROOT / "backend/bin/run_hosted_new_video_pipeline.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("evaluate_new_youtube_videos.py", runner)
+        self.assertIn("apply_hosted_pending_candidates.py", runner)
+        self.assertIn("TZUDONG_PIPELINE_SOURCE", runner)
 
 if __name__ == "__main__":
     unittest.main()

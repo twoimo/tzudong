@@ -514,13 +514,15 @@ class GDriveUploadContractTests(unittest.TestCase):
         backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
-        self.assertIn("evaluate_new_youtube_videos.py", daily_workflow)
+        self.assertIn("run_hosted_new_video_pipeline.py", daily_workflow)
         self.assertIn("Install crawler Python deps for evaluate", daily_workflow)
         self.assertIn("Install locked Node dependencies for evaluate", daily_workflow)
         hosted_apply = daily_workflow[daily_workflow.find("hosted-pending-apply"):]
         self.assertNotIn("python3 -m pip install --disable-pip-version-check --upgrade pip", hosted_apply)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
-        self.assertIn("apply_hosted_pending_candidates.py", daily_workflow)
+        self.assertIn("run_hosted_new_video_pipeline.py", hosted_apply)
+        runner = (BACKEND_ROOT / "bin" / "run_hosted_new_video_pipeline.py").read_text(encoding="utf-8")
+        self.assertIn("apply_hosted_pending_candidates.py", runner)
         self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
         self.assertIn("Lite GHA skips Gemini API availability as a hard gate.", daily_workflow)
