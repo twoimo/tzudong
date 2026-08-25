@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
-from backend.pipeline_control.adapter import execute_steps
+from backend.pipeline_control.adapter import ADAPTER_STEPS, execute_steps
 from backend.pipeline_control.cutover import plan_cutover
 from backend.pipeline_control.manifest import (
     is_live_evidence_eligible,
@@ -76,7 +76,10 @@ class LiveAdapterTests(unittest.TestCase):
         )
         result = execute_steps(run, should_stop=lambda: None, live=True, runner=runner)
         self.assertEqual(result, "Succeeded")
-        self.assertEqual(len(seen), 15)
+        self.assertEqual(len(seen), len(ADAPTER_STEPS) - 1)
+        self.assertFalse(any("05-map-url-crawling.js" in " ".join(item) for item in seen))
+        self.assertTrue(any("06-frame-caption.py" in " ".join(item) for item in seen))
+        self.assertTrue(any("08-chunk-multimodal-crawling.sh" in " ".join(item) for item in seen))
         self.assertIn("--channel", seen[0])
         self.assertIn("tzuyang", seen[0])
 
@@ -448,6 +451,86 @@ class LiveAdapterTests(unittest.TestCase):
             poison.write_text("{not-json\n{\"target\":\"tzuyang\",\"dry_run\":true}\n")
             recovered = queue_mod.drain(path)
             self.assertEqual(len(recovered), 1)
+
+    def test_queued_api_run_id_survives_claim_and_dry_run(self) -> None:
+        from backend.pipeline_control.live_run import run_once
+
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        store = MemoryStore(clock=lambda: 1_000.0)
+        queued, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="apiqueue01",
+            payload={"dryRun": True},
+            actor="api",
+            request_id="req-api-1",
+            dry_run=True,
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            from backend.pipeline_control import live_run as live_run_mod
+
+            previous = live_run_mod.CANDIDATE_DIR
+            live_run_mod.CANDIDATE_DIR = Path(raw)
+            seen: list[list[str]] = []
+            try:
+                result = run_once(
+                    store,
+                    target="tzuyang",
+                    index=1,
+                    live=True,
+                    runner=lambda argv: seen.append(argv) or 0,
+                    queued_dry_run=True,
+                    queued_run_id=queued.id,
+                )
+            finally:
+                live_run_mod.CANDIDATE_DIR = previous
+            payload = json.loads((Path(raw) / "run-1-current-summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(result, "Succeeded")
+        self.assertEqual(seen, [])
+        self.assertEqual(payload["jobId"], queued.id)
+        self.assertEqual(payload["jobIdScope"], "api_run")
+        self.assertTrue(payload["sameRunIdVerified"])
+        self.assertEqual(payload["executionMode"], "dry_run")
+        self.assertEqual(store.get(queued.id).status, "Succeeded")
+        self.assertEqual(len(store.runs), 1)
+
+    def test_queued_run_id_mismatch_fails_closed(self) -> None:
+        from backend.pipeline_control.live_run import run_once
+
+        os.environ["PIPELINE_CONTROL_DSN"] = "postgresql://tzudong@127.0.0.1:54322/postgres"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        store = MemoryStore(clock=lambda: 1_000.0)
+        first, _ = store.create_run(
+            target="tzuyang",
+            profile="heavy_local",
+            idempotency_key="apiqueue02",
+            payload={},
+            actor="api",
+            request_id="req-api-2",
+            dry_run=True,
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            from backend.pipeline_control import live_run as live_run_mod
+
+            previous = live_run_mod.CANDIDATE_DIR
+            live_run_mod.CANDIDATE_DIR = Path(raw)
+            try:
+                result = run_once(
+                    store,
+                    target="tzuyang",
+                    index=1,
+                    live=True,
+                    queued_dry_run=True,
+                    queued_run_id="missing-run-id",
+                )
+            finally:
+                live_run_mod.CANDIDATE_DIR = previous
+            payload = json.loads((Path(raw) / "run-1-current-summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(result, "Failed")
+        self.assertEqual(payload["jobIdScope"], "api_run")
+        self.assertFalse(payload["sameRunIdVerified"])
+        self.assertEqual(store.get(first.id).status, "Queued")
     def test_monitor_has_nowork_short_circuit(self) -> None:
         from pathlib import Path
 

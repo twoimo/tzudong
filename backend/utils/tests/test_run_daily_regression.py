@@ -514,7 +514,11 @@ class GDriveUploadContractTests(unittest.TestCase):
         backfill_workflow = GDRIVE_BACKFILL_WORKFLOW.read_text(encoding="utf-8")
 
         self.assertIn("python3 backend/bin/check_env_contract.py --profile daily", daily_workflow)
+        self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
+        self.assertIn("apply_hosted_pending_candidates.py", daily_workflow)
+        self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
+        self.assertIn("Lite GHA skips Gemini API availability as a hard gate.", daily_workflow)
         self.assertIn("--require-api-available", daily_workflow)
         self.assertIn("allow_budget_risk", daily_workflow)
         self.assertIn('GEMINI_CLI_TRUST_WORKSPACE: "false"', daily_workflow)
