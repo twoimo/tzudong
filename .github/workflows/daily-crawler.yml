@@ -275,12 +275,20 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_API_KEY_BYEON: ${{ secrets.GEMINI_API_KEY }}
+          SKIP_HEAVY_COMPUTE: ${{ github.event.inputs.skip_heavy_compute || 'true' }}
         run: |
           set -euo pipefail
           mkdir -p backend/log/cron
+          require_api=()
+          if [ "${SKIP_HEAVY_COMPUTE}" != "true" ]; then
+            require_api+=(--require-api-available)
+          fi
+          set +e
           node backend/bin/check_gemini_runtime.mjs \
             --output backend/log/cron/gemini-runtime-preflight.json \
-            --require-api-available
+            "${require_api[@]}"
+          preflight_exit=$?
+          set -e
           {
             echo "### Gemini API runtime preflight"
             echo
@@ -288,6 +296,11 @@ jobs:
             cat backend/log/cron/gemini-runtime-preflight.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${SKIP_HEAVY_COMPUTE}" = "true" ]; then
+            echo "Lite GHA skips Gemini API availability as a hard gate."
+            exit 0
+          fi
+          exit "$preflight_exit"
 
       - name: Check production contract fixture drift
         run: |
