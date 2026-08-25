@@ -8,8 +8,8 @@ const repoSource = (relativePath: string) => readFileSync(join(repoRoot, relativ
 const appSource = (relativePath: string) => readFileSync(join(appRoot, relativePath), 'utf8');
 
 describe('repo design contract source', () => {
-  test('DESIGN.md contains the required durable design checklist sections', () => {
-    const designSource = repoSource('DESIGN.md');
+  test('docs/product/DESIGN.md contains the required durable design checklist sections', () => {
+    const designSource = repoSource('docs/product/DESIGN.md');
 
     for (const heading of [
       '## Source of truth',
@@ -32,7 +32,7 @@ describe('repo design contract source', () => {
   });
 
   test('current admin/home UI surfaces use documented semantic typography tokens', () => {
-    const designSource = repoSource('DESIGN.md');
+    const designSource = repoSource('docs/product/DESIGN.md');
     const appGlobalsSource = appSource('app/app-globals.css');
     const adminConsoleSource = appSource('components/admin/AdminConsoleOverview.tsx');
     const adminOverviewSource = appSource('components/admin/AdminOverviewDashboard.tsx');
