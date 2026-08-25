@@ -937,6 +937,10 @@ jobs:
           python-version: "3.12"
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
+      - name: Evaluate youtube IDs absent from hosted
+        run: |
+          set -euo pipefail
+          python3 backend/bin/evaluate_new_youtube_videos.py --channel tzuyang --limit 1
       - name: Preview then apply only new pending restaurants
         run: |
           set -euo pipefail
