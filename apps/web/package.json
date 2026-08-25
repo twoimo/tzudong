@@ -101,15 +101,9 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^13.1.1",
     "idb": "^8.0.3",
-<<<<<<< HEAD
     "input-otp": "^1.4.2",
     "lucide-react": "^1.31.0",
-    "maplibre-gl": "^6.4.1",
-=======
-    "input-otp": "^1.5.0",
-    "lucide-react": "^1.33.0",
     "maplibre-gl": "^5.24.0",
->>>>>>> f11ad2434 (chore(deps): bump the web-runtime group in /apps/web with 3 updates)
     "next": "16.2.12",
     "openai": "^7.4.0",
     "react": "^19.2.8",
