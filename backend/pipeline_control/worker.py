@@ -149,6 +149,7 @@ def write_run_manifest(
     execution_mode: str = "dry_run",
     data_sink: str | None = None,
     store: MemoryStore | None = None,
+    job_id_scope: str = "worker_execution",
 ) -> Path:
     if execution_mode not in {"dry_run", "live"}:
         raise ValueError("execution_mode_invalid")
@@ -220,7 +221,9 @@ def write_run_manifest(
         "policyMode": os.environ.get("RUN_DAILY_POLICY_MODE", "end_to_end"),
         "stepEvents": step_events,
         "jobId": run.id if run is not None else None,
-        "jobIdScope": "worker_execution",
+        "jobIdScope": (
+            job_id_scope if job_id_scope in {"api_run", "worker_execution"} else "worker_execution"
+        ),
         # FileStore GET SoT: true only when enqueue, claim, and success share
         # one job id on the same store. Overlay compose must not add Postgres.
         "sameRunIdVerified": same_run_id_verified(store, run),
@@ -299,10 +302,23 @@ def process_one(
     live: bool | None = None,
     runner=None,
     manifest_path: Path | None = None,
+    run_id: str | None = None,
+    job_id_scope: str = "worker_execution",
 ) -> str | None:
-    run = store.claim()
+    run = store.claim(run_id) if run_id is not None else store.claim()
     if run is None:
         return None
+    if run_id is not None and run.id != run_id:
+        store.finish_failed(run.id, "run_id_mismatch")
+        write_run_manifest(
+            "Failed",
+            manifest_path,
+            run=run,
+            execution_mode="dry_run",
+            store=store,
+            job_id_scope="api_run",
+        )
+        return "Failed"
 
     def should_stop() -> str | None:
         checkpoint = getattr(store, "checkpoint", None)
@@ -333,6 +349,7 @@ def process_one(
             run=run,
             execution_mode=execution_mode,
             store=store,
+            job_id_scope=job_id_scope,
         )
         return "Failed"
     collected: list[dict] = []
@@ -366,6 +383,7 @@ def process_one(
             execution_mode=execution_mode,
             data_sink=data_sink,
             store=store,
+            job_id_scope=job_id_scope,
         )
         return "Failed"
     except EsIndexError as exc:
@@ -378,6 +396,7 @@ def process_one(
             execution_mode=execution_mode,
             data_sink=data_sink,
             store=store,
+            job_id_scope=job_id_scope,
         )
         return "Failed"
     if result == "Succeeded":
@@ -395,6 +414,7 @@ def process_one(
         execution_mode=execution_mode,
         data_sink=data_sink,
         store=store,
+        job_id_scope=job_id_scope,
     )
     return result
 

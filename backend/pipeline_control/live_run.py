@@ -32,6 +32,7 @@ def run_once(
     live: bool,
     runner=None,
     queued_dry_run: bool | None = None,
+    queued_run_id: str | None = None,
 ) -> str:
     use_live = live and queued_dry_run is not True
     assert_admitted(target)
@@ -41,6 +42,35 @@ def run_once(
     )
     CANDIDATE_DIR.mkdir(parents=True, exist_ok=True)
     manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"
+    if queued_run_id is not None:
+        claimed_id = str(queued_run_id).strip()
+        if not claimed_id:
+            write_run_manifest(
+                "Failed",
+                manifest,
+                execution_mode="dry_run",
+                store=store,
+                job_id_scope="api_run",
+            )
+            return "Failed"
+        result = process_one(
+            store,
+            live=use_live,
+            runner=runner,
+            manifest_path=manifest,
+            run_id=claimed_id,
+            job_id_scope="api_run",
+        )
+        if result is None:
+            write_run_manifest(
+                "Failed",
+                manifest,
+                execution_mode="dry_run",
+                store=store,
+                job_id_scope="api_run",
+            )
+            return "Failed"
+        return result
     try:
         run, _created = store.create_run(
             target=target,
@@ -68,9 +98,16 @@ def run_once(
         live=use_live,
         runner=runner,
         manifest_path=manifest,
+        job_id_scope="worker_execution",
     )
     if result is None:
-        write_run_manifest("Failed", manifest, run=run, store=store)
+        write_run_manifest(
+            "Failed",
+            manifest,
+            run=run,
+            store=store,
+            job_id_scope="worker_execution",
+        )
         return "Failed"
     return result
 
@@ -93,19 +130,25 @@ def main(argv: list[str] | None = None) -> int:
     queued = drain()
     results: list[str] = []
     last_live_manifest = None
-    jobs: list[dict] = [{"queued": False} for _ in range(args.count)]
-    jobs.extend({"queued": True, **job} for job in queued)
+    jobs: list[dict] = []
+    queued_jobs = [{"queued": True, **job} for job in queued]
+    if queued_jobs:
+        jobs.extend(queued_jobs)
+    else:
+        jobs.extend({"queued": False} for _ in range(args.count))
     if not jobs:
         jobs = [{"queued": False}]
     for index, job in enumerate(jobs, start=1):
         target = str(job.get("target") or args.target)
         queued_dry = job.get("dry_run") if job.get("queued") else None
+        queued_id = str(job.get("id") or "").strip() if job.get("queued") else None
         result = run_once(
             store,
             target=target,
             index=index,
             live=live,
             queued_dry_run=queued_dry,
+            queued_run_id=queued_id or None,
         )
         results.append(result)
         manifest = CANDIDATE_DIR / f"run-{index}-current-summary.json"

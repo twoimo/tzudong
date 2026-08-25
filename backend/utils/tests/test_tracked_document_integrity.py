@@ -77,6 +77,25 @@ class TrackedDocumentIntegrityTests(unittest.TestCase):
                 for marker in corruption_markers(text)
             )
         self.assertEqual(findings, [], "\n".join(findings[:20]))
+    def test_n3_live_evidence_docs_do_not_claim_completed_parity(self) -> None:
+        forbidden = (
+            "after N=3 healthy live parity",
+            "removed after N=3 healthy live parity",
+            "Isolated cutover removed",
+        )
+        docs = (
+            REPO_ROOT / "backend" / "ARCHITECTURE.md",
+            REPO_ROOT / "backend" / "pipeline-control" / "lite-gha.md",
+            REPO_ROOT / "backend" / "pipeline-control" / "harbor-tags.md",
+        )
+        findings: list[str] = []
+        for path in docs:
+            text = path.read_text(encoding="utf-8")
+            for phrase in forbidden:
+                if phrase in text:
+                    findings.append(f"{path.relative_to(REPO_ROOT)}: {phrase}")
+            self.assertIn("`liveEvidenceEligible` stays false", text)
+        self.assertEqual(findings, [])
 
 
 if __name__ == "__main__":
