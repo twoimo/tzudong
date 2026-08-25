@@ -136,17 +136,6 @@ function makeArgs() {
 
 const supabaseExecutable = process.env.SUPABASE_CLI || 'supabase';
 
-try {
-  const { args } = makeArgs();
-  const stdout = execFileSync(supabaseExecutable, args, {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  fs.mkdirSync(path.dirname(outFile), { recursive: true });
-  fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
-
-  console.log(`[supabase-gen-types] Wrote ${outFile}`);
 function classifyGenTypesFailure(error) {
   const text = `${error?.stderr?.toString?.() || ''} ${error?.message || ''}`.toLowerCase();
   if (text.includes('password authentication failed') || text.includes('does not exist')) {
@@ -163,6 +152,18 @@ function classifyGenTypesFailure(error) {
   }
   return 'cli_failed';
 }
+
+try {
+  const { args } = makeArgs();
+  const stdout = execFileSync(supabaseExecutable, args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
+
+  console.log(`[supabase-gen-types] Wrote ${outFile}`);
 
 } catch (error) {
   const message = error?.stderr?.toString?.() || error?.message || String(error);
