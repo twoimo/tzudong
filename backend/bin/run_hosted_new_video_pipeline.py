@@ -12,7 +12,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def _repo_root() -> Path:
+    override = os.environ.get("TZUDONG_REPO_ROOT", "").strip()
+    if override:
+        return Path(override).resolve()
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _repo_root()
 EVALUATE = REPO_ROOT / "backend" / "bin" / "evaluate_new_youtube_videos.py"
 APPLY = REPO_ROOT / "backend" / "bin" / "apply_hosted_pending_candidates.py"
 
