@@ -109,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     _write_urls(urls_path, new_urls)
+    new_ids = [extract_youtube_video_id(item) for item in new_urls]
+    primary_id = next((item for item in new_ids if item), "")
     try:
         _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env)
         _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
@@ -151,19 +153,19 @@ def main(argv: list[str] | None = None) -> int:
             ],
             env,
         )
-        _run(
-            [
-                "bash",
-                str(SCRIPTS["laaj"]),
-                "--channel",
-                args.channel,
-                "--crawling-path",
-                str(crawling),
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
+        laaj_cmd = [
+            "bash",
+            str(SCRIPTS["laaj"]),
+            "--channel",
+            args.channel,
+            "--crawling-path",
+            str(crawling),
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        if primary_id:
+            laaj_cmd.extend(["--video-id", primary_id])
+        _run(laaj_cmd, env)
         _run(
             [
                 python,
