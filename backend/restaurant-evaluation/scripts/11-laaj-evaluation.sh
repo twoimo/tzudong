@@ -359,18 +359,20 @@ export TZ="Asia/Seoul"
 CHANNEL=""
 CRAWLING_PATH=""
 EVALUATION_PATH=""
+VIDEO_ID_FILTER=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --channel|-c) CHANNEL="$2"; shift 2 ;;
         --crawling-path) CRAWLING_PATH="$2"; shift 2 ;;
         --evaluation-path) EVALUATION_PATH="$2"; shift 2 ;;
+        --video-id) VIDEO_ID_FILTER="$2"; shift 2 ;;
         *) echo "알 수 없는 옵션: $1"; exit 1 ;;
     esac
 done
 
 if [ -z "$CHANNEL" ] || [ -z "$CRAWLING_PATH" ] || [ -z "$EVALUATION_PATH" ]; then
-    echo "사용법: $0 --channel <채널명> --crawling-path <크롤링경로> --evaluation-path <평가경로>"
+    echo "사용법: $0 --channel <채널명> --crawling-path <크롤링경로> --evaluation-path <평가경로> [--video-id <id>]"
     exit 1
 fi
 
@@ -539,6 +541,10 @@ mapfile -t VIDEO_IDS < <(
         | sed 's/\.jsonl$//' \
         | sort
 )
+if [ -n "$VIDEO_ID_FILTER" ]; then
+    VIDEO_IDS=("$VIDEO_ID_FILTER")
+    log_info "video-id filter: $VIDEO_ID_FILTER"
+fi
 
 TOTAL=${#VIDEO_IDS[@]}
 log_info "총 대상 파일: $TOTAL 개"
