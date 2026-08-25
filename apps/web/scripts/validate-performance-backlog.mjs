@@ -199,7 +199,7 @@ function budgetTable(value){
   return table;
 }
 function isProductFile(path){
-  return !['AGENTS.md','DESIGN.md','README.md','README.ko.md','SECURITY.md'].includes(path)
+  return !['AGENTS.md','docs/product/DESIGN.md','README.md','README.ko.md','SECURITY.md'].includes(path)
     &&!/(^|\/)(?:tests?|tests-unit|fixtures|artifacts|evidence|generated)(?:\/|$)|\.(?:test|spec)\.[^.]+$/.test(path);
 }
 function manifest(value,item,context){
