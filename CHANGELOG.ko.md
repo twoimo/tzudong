@@ -33,6 +33,7 @@ English: [CHANGELOG.md](CHANGELOG.md).
 - Production 빌드: `apps/web/app/api/admin/pipeline/route.ts`에서 GET 앞에 함수를 닫음 (#2735).
 - 호스티드 평가 잡에 크롤 PyYAML + `backend` `npm ci` (#2732–#2739).
 - apply 전에 `backend/log/cron/` 생성.
+- 나이트리 로컬 publication 검증기/빌더 원장 개수 78 → 82 (`backend/supabase/migrations`와 일치, 이슈 #2592).
 
 ### 운영 (깃에 없음)
 
