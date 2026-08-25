@@ -330,7 +330,8 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             },
         }
         with self.assertRaises(scanner.RuntimeScanError):
-            scanner._validate_runtime(runtime)
+            scanner._validate_runtime(runtime, require_smoke=True)
+        scanner._validate_runtime(runtime)
 
     def test_runtime_validation_requires_bound_external_effect_case(self):
         scanner = self.scanner
