@@ -206,7 +206,19 @@ describe("nightly regression package and source contracts", () => {
     const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
     expect(pullPaths).toContain("      - '.github/scripts/**'");
     expect(pushPaths).toContain("      - '.github/scripts/**'");
-    expect(webAdminWorkflowSource.match(/      - '\.github\/scripts\/\*\*'/g)).toHaveLength(2);
+    const affectedPathsBlock = sourceBlock(
+      webAdminWorkflowSource,
+      "  affected-paths:",
+      "  dependency-modernization-proof:",
+    );
+    const webCodeFilter = sourceBlock(
+      affectedPathsBlock,
+      "            web_code:",
+      "            admin_backend:",
+    );
+    expect(webCodeFilter).toContain("              - 'apps/web/**'");
+    expect(pullPaths).toContain("      - 'apps/web/**'");
+    expect(pushPaths).toContain("      - 'apps/web/**'");
   });
 
   test("parses local and hosted mode only from explicit command arguments", () => {
@@ -1629,6 +1641,8 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes public web and local Supabase changes into Web Admin CI", () => {
+    const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
+    const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
     for (const path of [
       "apps/web/**",
       "apps/web/app/**",
@@ -1643,7 +1657,8 @@ describe("nightly regression package and source contracts", () => {
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      expect(webAdminWorkflowSource.match(new RegExp(path.replaceAll("*", "\\*"), "g"))).toHaveLength(2);
+      expect(pullPaths).toContain(`      - '${path}'`);
+      expect(pushPaths).toContain(`      - '${path}'`);
     }
   });
 });
