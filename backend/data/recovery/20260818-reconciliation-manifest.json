@@ -100,7 +100,7 @@
       "sourceStatus": "M",
       "baseSha256": "067d7688ab4ee0ec6f7338f2b6389cab391cd0531f7b02ff8885c87fe15335b5",
       "sourceSha256": "9d748d08c0b6aa1418a0303abd9dc79ff0ac6cb1d398b251429c4402f572dcd6",
-      "resultSha256": "067d7688ab4ee0ec6f7338f2b6389cab391cd0531f7b02ff8885c87fe15335b5"
+      "resultSha256": "9a489d72dadedaf335a349943b96f1c88bf722cb62ac0ad6dd1c046bfd9c0b54"
     },
     {
       "path": "backend/restaurant-crawling/data/tzuyang/meta/-1OU4tkFJns.jsonl",

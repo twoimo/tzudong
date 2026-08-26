@@ -31,6 +31,7 @@ GitHub 릴리즈 `v1.2.5` (`origin/main`, `v1.2.4` 이후 파이프라인·나�
 - 자막 문맥(로컬 OpenAI)은 선택이다. 죽어도 청크/평가는 계속한다.
 - LAAJ는 절대 평가 경로를 다시 붙이지 않고, Gemini CLI 없이 Node Gemini API로 계속하며 `--video-id`를 받는다.
 - 09/10은 `--video-id`를 받고, 그 ID의 옛 selection/rule 파일을 다시 쓴다.
+- `run_hosted_new_video_pipeline.py`가 로컬/Mac 런타임을 스스로 준비한다: `backend/.env(.local)`를 로드하고(기존 환경변수 우선) 저장소 `.venv`를 `PYTHON_CMD`/`PYTHONPATH`로 연결한다. 런치데몬 wrapper에 손으로 env를 넣을 필요가 없다. `PATH`를 넓히거나 승인 상태를 만지지 않는다.
 
 ### 수정
 
