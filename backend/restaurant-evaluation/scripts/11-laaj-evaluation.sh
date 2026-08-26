@@ -555,6 +555,7 @@ FAILED=0
 SKIPPED_EXISTS=0
 SKIPPED_NO_TARGET=0
 SKIPPED_NO_TRANSCRIPT=0
+SKIPPED_NO_RULE=0
 GEMINI_CALLS=0
 TOTAL_GEMINI_TIME=0
 
@@ -594,6 +595,12 @@ for i in "${!VIDEO_IDS[@]}"; do
     if [ -f "$ERROR_FILE" ]; then
         rm "$ERROR_FILE"
         log_info "[$INDEX/$TOTAL] 재시도: $VIDEO_ID"
+    fi
+    # rule 평가(10)가 evaluation_target 없음으로 제외한 영상은 rule_results가 없다 - 스킵
+    if [ ! -f "$RULE_FILE" ]; then
+        SKIPPED_NO_RULE=$((SKIPPED_NO_RULE + 1))
+        log_info "[$INDEX/$TOTAL] SKIP: no_rule_result ($VIDEO_ID)"
+        continue
     fi
     
     # ---------------------------
@@ -879,6 +886,6 @@ done
 
 log_info "============================================================"
 log_info "LAAJ 평가 완료: $CHANNEL"
-log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS"
+log_info "성공: $SUCCESS / 실패: $FAILED / 스킵: $SKIPPED_EXISTS / rule 미대상: $SKIPPED_NO_RULE / 자막 없음: $SKIPPED_NO_TRANSCRIPT"
 log_info "Gemini 호출: $GEMINI_CALLS회 ($(format_duration $TOTAL_GEMINI_TIME))"
 log_info "============================================================"
