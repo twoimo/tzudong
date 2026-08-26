@@ -31,6 +31,7 @@ GitHub Release `v1.2.5` on `origin/main` (pipeline + nightly closure work since 
 - Transcript-context (local OpenAI) is optional; chunk/eval continue if it is down.
 - LAAJ keeps absolute evaluation paths, continues on Node Gemini API without Gemini CLI, and accepts `--video-id`.
 - 09/10 accept `--video-id` and rewrite stale selection/rule files for that ID.
+- `run_hosted_new_video_pipeline.py` self-bootstraps the local/Mac runtime: it loads `backend/.env(.local)` (existing environment wins) and admits the repo-local `.venv` via `PYTHON_CMD`/`PYTHONPATH`, so the launchd wrapper needs no hand-edited env wiring. It never widens `PATH` or touches approval state.
 
 ### Fixed
 
