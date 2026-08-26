@@ -60,10 +60,14 @@ PROFILES = {
         "optional": [
             "YOUTUBE_API_KEY_BYEON",
             "GEMINI_API_KEY",
+            "YOUTUBE_COOKIES_TXT",
+            "OPENAI_API_KEY_BYEON",
         ],
         "allowed_aliases": [
             "YOUTUBE_API_KEY",
             "GEMINI_API_KEY_BYEON",
+            "GEMINI_CREDENTIALS_BASE64",
+            "GEMINI_CREDENTIALS_BASE64_2",
         ],
     },
 }
