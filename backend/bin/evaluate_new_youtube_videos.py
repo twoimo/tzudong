@@ -67,6 +67,21 @@ def _write_urls(path: Path, urls: list[str]) -> None:
     path.write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8")
 
 
+def _locally_evaluated_ids(evaluation: Path) -> set[str]:
+    """IDs 09 already wrote (selection or notSelection).
+
+    Foreign restaurants never reach hosted youtube ids, so they would
+    re-qualify as new every night and consume --limit.
+    """
+    ids: set[str] = set()
+    for folder in ("selection", "notSelection"):
+        directory = evaluation / "evaluation" / folder
+        if not directory.is_dir():
+            continue
+        ids.update(path.stem for path in directory.glob("*.jsonl"))
+    return ids
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", default="tzuyang")
@@ -94,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"
+    local_done = _locally_evaluated_ids(evaluation)
     before = _load_urls(urls_path)
     _run([python, str(SCRIPTS["collect_urls"]), "--channel", args.channel], env)
     after = _load_urls(urls_path)
@@ -101,13 +117,19 @@ def main(argv: list[str] | None = None) -> int:
     seen: set[str] = set()
     for item in after:
         video_id = extract_youtube_video_id(item)
-        if video_id is None or video_id in hosted or video_id in seen:
+        if (
+            video_id is None
+            or video_id in hosted
+            or video_id in seen
+            or video_id in local_done
+        ):
             continue
         seen.add(video_id)
         new_urls.append(f"https://www.youtube.com/watch?v={video_id}")
         if len(new_urls) >= args.limit:
             break
     print(f"hostedYoutubeIds={len(hosted)}")
+    print(f"localEvaluatedIds={len(local_done)}")
     print(f"newVideoCount={len(new_urls)}")
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
     if args.dry_run or not new_urls:
