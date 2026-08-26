@@ -472,13 +472,13 @@ download_video() {
 
     local output_template="$output_dir/${video_id}.%(ext)s"
     local cookie_file="$PROJECT_ROOT/restaurant-crawling/data/cookies.txt"
-    local cookie_arg=""
+    local cookie_args=()
 
     if [[ "$yt_dlp_cmd" == *".exe"* ]] && command -v wslpath &> /dev/null; then
         output_template="$(wslpath -w "$output_dir")\\${video_id}.%(ext)s"
-        [ -f "$cookie_file" ] && cookie_arg="--cookies $(wslpath -w "$cookie_file")"
+        [ -f "$cookie_file" ] && cookie_args=(--cookies "$(wslpath -w "$cookie_file")")
     else
-        [ -f "$cookie_file" ] && cookie_arg="--cookies $cookie_file"
+        [ -f "$cookie_file" ] && cookie_args=(--cookies "$cookie_file")
     fi
 
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"
@@ -495,12 +495,12 @@ download_video() {
         log_warning "yt-dlp Chrome impersonation target unavailable → continuing without impersonation"
     fi
     local extractor_args="youtube:player_client=web,android"
-    local browser_cookie_arg=""
-    if [ -z "$cookie_arg" ] && [ -n "${YTDLP_COOKIES_FROM_BROWSER:-}" ]; then
-        browser_cookie_arg="--cookies-from-browser ${YTDLP_COOKIES_FROM_BROWSER}"
+    local browser_cookie_args=()
+    if [ ${#cookie_args[@]} -eq 0 ] && [ -n "${YTDLP_COOKIES_FROM_BROWSER:-}" ]; then
+        browser_cookie_args=(--cookies-from-browser "${YTDLP_COOKIES_FROM_BROWSER}")
         log_warning "cookies.txt 없음 → YTDLP_COOKIES_FROM_BROWSER=${YTDLP_COOKIES_FROM_BROWSER} 사용"
     fi
-    $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg $browser_cookie_arg \
+    $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" "${cookie_args[@]}" "${browser_cookie_args[@]}" \
         "${yt_impersonate_flags[@]}" \
         --extractor-args "$extractor_args" \
         --no-part --ignore-errors \
@@ -510,7 +510,7 @@ download_video() {
         "https://www.youtube.com/watch?v=$video_id" >&2
     if [ ! -f "$output_dir/${video_id}.mp4" ] && [ ! -f "$output_dir/${video_id}.webm" ] && [ ! -f "$output_dir/${video_id}.mkv" ]; then
         log_warning "첫 다운로드 실패 → android player client로 재시도"
-        $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" $cookie_arg $browser_cookie_arg \
+        $yt_dlp_cmd --js-runtimes "deno" --js-runtimes "node" "${cookie_args[@]}" "${browser_cookie_args[@]}" \
             --extractor-args "youtube:player_client=android" \
             --no-part --ignore-errors \
             "${yt_quiet_flags[@]}" \
