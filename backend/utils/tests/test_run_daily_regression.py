@@ -521,6 +521,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertNotIn("python3 -m pip install --disable-pip-version-check --upgrade pip", hosted_apply)
         self.assertIn("python3 backend/bin/check_env_contract.py --profile hosted-pending-apply", daily_workflow)
         self.assertIn("run_hosted_new_video_pipeline.py", hosted_apply)
+        self.assertIn("Setup evaluate credentials for transcript and chunk stages", hosted_apply)
+        self.assertIn("backend/restaurant-crawling/data/cookies.txt", hosted_apply)
+        self.assertIn("YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}", hosted_apply)
+        self.assertIn("GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}", hosted_apply)
         runner = (BACKEND_ROOT / "bin" / "run_hosted_new_video_pipeline.py").read_text(encoding="utf-8")
         self.assertIn("apply_hosted_pending_candidates.py", runner)
         self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
@@ -604,6 +608,27 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("AGY_CREDENTIAL_B64", oauth_payload["runtimeAliasesPresent"])
         self.assertNotIn("oauth-secret-value", oauth_ok.stdout)
         self.assertNotIn("agy-oauth-secret-value", oauth_ok.stdout)
+        hosted_env = {
+            "SUPABASE_URL": "https://stub.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "stub-service-role",
+            "TZUDONG_HOSTED_DATA_PLANE_APPROVED": "1",
+            "YOUTUBE_COOKIES_TXT": "stub-cookie",
+            "GEMINI_CREDENTIALS_BASE64": "oauth-secret-value",
+        }
+        hosted_ok = subprocess.run(
+            [PYTHON_BIN, str(ENV_CONTRACT_SOURCE), "--profile", "hosted-pending-apply", "--json"],
+            capture_output=True,
+            text=True,
+            env={**os.environ, **hosted_env},
+            check=False,
+        )
+        self.assertEqual(0, hosted_ok.returncode, self._format_process_output(hosted_ok))
+        hosted_payload = json.loads(hosted_ok.stdout)
+        self.assertTrue(hosted_payload["ok"])
+        self.assertIn("GEMINI_CREDENTIALS_BASE64", hosted_payload["runtimeAliasesPresent"])
+        self.assertNotIn("stub-cookie", hosted_ok.stdout)
+        self.assertNotIn("oauth-secret-value", hosted_ok.stdout)
+        self.assertNotIn("stub-service-role", hosted_ok.stdout)
 
     def test_gdrive_expected_manifest_caps_batch_and_queues_overflow(self) -> None:
         for name in ("a.jpg", "b.jpg", "c.jpg"):
