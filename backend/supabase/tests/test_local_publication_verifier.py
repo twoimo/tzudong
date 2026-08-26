@@ -761,6 +761,7 @@ complete_lifecycle_stage
                 "ambiguous": 0,
                 "cases": [external_case],
             },
+            "unresolvedFunctions": [],
         }
         _, closure_metadata = function_scanner.generate_patch()
         closure_binding = function_scanner._closure_binding_sha256(

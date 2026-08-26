@@ -78,6 +78,7 @@ RUNTIME_BASE_FIELDS = {
     "candidateResolution",
     "closureSmoke",
     "rpcSmoke",
+    "unresolvedFunctions",
 }
 EXPECTED_FIELDS = {
     "local-stack-reset.json": STACK_RECEIPT_FIELDS,
@@ -884,6 +885,7 @@ def verify_runtime_receipt(payload: dict[str, object], name: str) -> None:
         or payload.get("unresolvedPathCount") != 0
         or payload.get("ambiguousPathCount") != 0
         or payload.get("definerMissingSearchPathCount") != 0
+        or payload.get("unresolvedFunctions") != []
         or any(
             not isinstance(payload.get(field), str)
             or SHA256.fullmatch(payload[field]) is None
