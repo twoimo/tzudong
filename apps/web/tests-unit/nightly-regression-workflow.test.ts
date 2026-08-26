@@ -623,7 +623,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v1'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 77",
+      "receipt.ledger.length !== 83",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -640,7 +640,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(operationsDocSource).toContain("77-unit migration ledger");
+    expect(operationsDocSource).toContain("83-unit migration ledger");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
