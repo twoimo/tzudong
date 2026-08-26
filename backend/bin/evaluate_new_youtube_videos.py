@@ -37,10 +37,11 @@ SCRIPTS = {
 }
 
 
-def _run(argv: list[str], env: dict[str, str]) -> None:
+def _run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
     completed = subprocess.run(argv, cwd=REPO_ROOT, env=env, check=False)
-    if completed.returncode != 0:
+    if required and completed.returncode != 0:
         raise SystemExit(completed.returncode)
+    return completed.returncode
 
 
 def _load_urls(path: Path) -> list[str]:
@@ -57,6 +58,21 @@ def _load_urls(path: Path) -> list[str]:
 def _write_urls(path: Path, urls: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8")
+
+
+def _locally_evaluated_ids(evaluation: Path) -> set[str]:
+    """IDs 09 already wrote (selection or notSelection).
+
+    Foreign restaurants never reach hosted youtube ids, so they would
+    re-qualify as new every night and consume --limit.
+    """
+    ids: set[str] = set()
+    for folder in ("selection", "notSelection"):
+        directory = evaluation / "evaluation" / folder
+        if not directory.is_dir():
+            continue
+        ids.update(path.stem for path in directory.glob("*.jsonl"))
+    return ids
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -86,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"
+    local_done = _locally_evaluated_ids(evaluation)
     before = _load_urls(urls_path)
     _run([python, str(SCRIPTS["collect_urls"]), "--channel", args.channel], env)
     after = _load_urls(urls_path)
@@ -93,13 +110,19 @@ def main(argv: list[str] | None = None) -> int:
     seen: set[str] = set()
     for item in after:
         video_id = extract_youtube_video_id(item)
-        if video_id is None or video_id in hosted or video_id in seen:
+        if (
+            video_id is None
+            or video_id in hosted
+            or video_id in seen
+            or video_id in local_done
+        ):
             continue
         seen.add(video_id)
         new_urls.append(f"https://www.youtube.com/watch?v={video_id}")
         if len(new_urls) >= args.limit:
             break
     print(f"hostedYoutubeIds={len(hosted)}")
+    print(f"localEvaluatedIds={len(local_done)}")
     print(f"newVideoCount={len(new_urls)}")
     print(f"newVideoIds={[extract_youtube_video_id(item) for item in new_urls]}")
     if args.dry_run or not new_urls:
@@ -108,10 +131,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     _write_urls(urls_path, new_urls)
+    new_ids = [extract_youtube_video_id(item) for item in new_urls]
+    primary_id = next((item for item in new_ids if item), "")
     try:
         _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env)
         _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
-        _run(
+        context_exit = _run(
             [
                 python,
                 str(SCRIPTS["context"]),
@@ -119,45 +144,49 @@ def main(argv: list[str] | None = None) -> int:
                 str(args.limit),
             ],
             env,
+            required=False,
         )
+        if context_exit != 0:
+            print(f"transcript_context=skipped exit={context_exit}")
+        else:
+            print("transcript_context=ok")
         _run(["bash", str(SCRIPTS["chunk"]), "--channel", args.channel], env)
-        _run(
-            [
-                python,
-                str(SCRIPTS["target"]),
-                "--channel",
-                args.channel,
-                "--crawling-path",
-                str(crawling),
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
-        _run(
-            [
-                python,
-                str(SCRIPTS["rule"]),
-                "--channel",
-                args.channel,
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
-        _run(
-            [
-                "bash",
-                str(SCRIPTS["laaj"]),
-                "--channel",
-                args.channel,
-                "--crawling-path",
-                str(crawling),
-                "--evaluation-path",
-                str(evaluation),
-            ],
-            env,
-        )
+        target_cmd = [
+            python,
+            str(SCRIPTS["target"]),
+            "--channel",
+            args.channel,
+            "--crawling-path",
+            str(crawling),
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        rule_cmd = [
+            python,
+            str(SCRIPTS["rule"]),
+            "--channel",
+            args.channel,
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        if primary_id:
+            target_cmd.extend(["--video-id", primary_id])
+            rule_cmd.extend(["--video-id", primary_id])
+        _run(target_cmd, env)
+        _run(rule_cmd, env)
+        laaj_cmd = [
+            "bash",
+            str(SCRIPTS["laaj"]),
+            "--channel",
+            args.channel,
+            "--crawling-path",
+            str(crawling),
+            "--evaluation-path",
+            str(evaluation),
+        ]
+        if primary_id:
+            laaj_cmd.extend(["--video-id", primary_id])
+        _run(laaj_cmd, env)
         _run(
             [
                 python,
