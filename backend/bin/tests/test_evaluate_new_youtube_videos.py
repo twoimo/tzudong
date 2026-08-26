@@ -108,5 +108,27 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         self.assertIn("apply_hosted_pending_candidates.py", runner)
         self.assertIn("TZUDONG_PIPELINE_SOURCE", runner)
 
+    def test_shared_runner_self_bootstraps_local_runtime(self) -> None:
+        runner = (
+            ROOT / "backend/bin/run_hosted_new_video_pipeline.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("_load_backend_env(REPO_ROOT)", runner)
+        self.assertIn("_apply_local_runtime_environment()", runner)
+        # launchd has no CI secret injection; the runner must load backend/.env
+        self.assertIn(
+            "load_backend_env(backend, prefer_local=True, override=False)", runner
+        )
+        # venv context is lost when the transcript trusted-command resolver
+        # realpaths the interpreter; PYTHONPATH must be restored explicitly.
+        self.assertIn('os.environ["PYTHON_CMD"]', runner)
+        self.assertIn('os.environ["PYTHONPATH"]', runner)
+        # existing process environment wins over .env and venv defaults
+        self.assertIn('if not os.environ.get("PYTHON_CMD")', runner)
+        self.assertIn('if not os.environ.get("PYTHONPATH")', runner)
+        self.assertIn("override=False", runner)
+        # never widen PATH or touch hosted-apply approval state here
+        self.assertNotIn('os.environ["PATH"]', runner)
+        self.assertNotIn("TZUDONG_HOSTED_DATA_PLANE_APPROVED", runner)
+
 if __name__ == "__main__":
     unittest.main()
