@@ -2465,7 +2465,7 @@ class DailyPublicationContractTests(unittest.TestCase):
     def test_publisher_source_separates_secret_compute_from_write_publish(self) -> None:
         workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         compute = workflow.split("  daily-compute:", 1)[1].split("  daily-publish:", 1)[0]
-        publisher = workflow.split("  daily-publish:", 1)[1]
+        publisher = workflow.split("  daily-publish:", 1)[1].split("\n  hosted-pending-apply:", 1)[0]
 
         self.assertIn("contents: read", compute)
         self.assertNotIn("contents: write", compute)
