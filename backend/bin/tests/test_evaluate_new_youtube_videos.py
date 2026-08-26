@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,6 +36,40 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertTrue(str(calls[0][1]).endswith("01-collect-urls.py"))
 
+    def test_skips_urls_already_locally_evaluated(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
+            calls.append(argv)
+            return 0
+
+        with patch.object(module, "assert_hosted_target"), patch.object(
+            module,
+            "fetch_hosted_restaurant_snapshot",
+            return_value=([], []),
+        ), patch.object(
+            module,
+            "_load_urls",
+            return_value=["https://www.youtube.com/watch?v=FZoO4d0tU40"],
+        ), patch.object(
+            module, "_locally_evaluated_ids", return_value={"FZoO4d0tU40"}
+        ), patch.object(module, "_write_urls"), patch.object(
+            module, "_run", side_effect=fake_run
+        ):
+            code = module.main(["--channel", "tzuyang", "--limit", "1"])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(str(calls[0][1]).endswith("01-collect-urls.py"))
+
+    def test_locally_evaluated_ids_reads_selection_and_not_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "evaluation" / "selection").mkdir(parents=True)
+            (root / "evaluation" / "notSelection").mkdir(parents=True)
+            (root / "evaluation" / "selection" / "sel1.jsonl").write_text("{}" + "\n")
+            (root / "evaluation" / "notSelection" / "ns1.jsonl").write_text("{}" + "\n")
+            self.assertEqual(module._locally_evaluated_ids(root), {"sel1", "ns1"})
+
     def test_rejects_invalid_limit(self) -> None:
         self.assertEqual(module.main(["--limit", "0"]), 2)
         self.assertEqual(module.main(["--limit", "9"]), 2)
@@ -62,8 +97,8 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
                 ["https://www.youtube.com/watch?v=dNTE6DuEWGg"],
             ],
         ), patch.object(module, "_write_urls"), patch.object(
-            module, "_run", side_effect=fake_run
-        ):
+            module, "_locally_evaluated_ids", return_value=set()
+        ), patch.object(module, "_run", side_effect=fake_run):
             code = module.main(["--channel", "tzuyang", "--limit", "1"])
         self.assertEqual(code, 0)
         self.assertTrue(any("08-chunk-multimodal-crawling.sh" in " ".join(call) for call in calls))
