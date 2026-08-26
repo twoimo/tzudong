@@ -88,6 +88,22 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가를 건너뜁니다.",
             text,
         )
+    def test_laaj_script_skips_missing_rule_result_before_reading(self) -> None:
+        script = (
+            ROOT
+            / "backend"
+            / "restaurant-evaluation"
+            / "scripts"
+            / "11-laaj-evaluation.sh"
+        )
+        text = script.read_text(encoding="utf-8")
+        self.assertIn('if [ ! -f "$RULE_FILE" ]; then', text)
+        self.assertIn("SKIPPED_NO_RULE=0", text)
+        guard_index = text.index('if [ ! -f "$RULE_FILE" ]; then')
+        load_index = text.index('RULE_DATA=$(tail -n 1 "$RULE_FILE")')
+        self.assertLess(guard_index, load_index)
+        summary_line = text.index("성공: $SUCCESS / 실패: $FAILED")
+        self.assertIn("$SKIPPED_NO_RULE", text[summary_line:])
     def test_target_and_rule_accept_video_id(self) -> None:
         target = (
             ROOT / "backend/restaurant-evaluation/scripts/09-target-selection.py"
