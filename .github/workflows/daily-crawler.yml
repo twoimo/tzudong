@@ -928,6 +928,10 @@ jobs:
       NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
       NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
       LIVE_MAX_NEW_ITEMS: "1"
+      YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
+      OPENAI_API_KEY_BYEON: ${{ secrets.OPENAI_API_KEY_BYEON }}
+      GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+      GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -947,6 +951,30 @@ jobs:
       - name: Install locked Node dependencies for evaluate
         working-directory: backend
         run: npm ci --ignore-scripts
+      - name: Setup evaluate credentials for transcript and chunk stages
+        env:
+          GOOGLE_CREDENTIALS_BASE64: ${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}
+          YOUTUBE_COOKIES_TXT: ${{ secrets.YOUTUBE_COOKIES_TXT }}
+          GEMINI_CREDENTIALS_BASE64: ${{ secrets.GEMINI_CREDENTIALS_BASE64 }}
+          GEMINI_CREDENTIALS_BASE64_2: ${{ secrets.GEMINI_CREDENTIALS_BASE64_2 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p backend/restaurant-crawling/data ~/.gemini ~/.config/rclone
+          if [ -n "$GOOGLE_CREDENTIALS_BASE64" ]; then
+            printf '%s' "$GOOGLE_CREDENTIALS_BASE64" | base64 -d > backend/restaurant-crawling/data/credentials.json
+          fi
+          if [ -n "$YOUTUBE_COOKIES_TXT" ]; then
+            printf '%s' "$YOUTUBE_COOKIES_TXT" > backend/restaurant-crawling/data/cookies.txt
+          fi
+          if [ -n "$GEMINI_CREDENTIALS_BASE64" ]; then
+            printf '%s' "$GEMINI_CREDENTIALS_BASE64" | base64 -d > ~/.gemini/oauth_creds.json
+            chmod 600 ~/.gemini/oauth_creds.json
+          fi
+          if [ -n "$GEMINI_CREDENTIALS_BASE64_2" ]; then
+            printf '%s' "$GEMINI_CREDENTIALS_BASE64_2" | base64 -d > ~/.gemini/oauth_creds_2.json
+            chmod 600 ~/.gemini/oauth_creds_2.json
+          fi
       - name: Preflight hosted pending apply env
         run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
       - name: Evaluate new videos then pending-apply
