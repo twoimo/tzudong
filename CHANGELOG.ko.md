@@ -33,6 +33,7 @@ GitHub 릴리즈 `v1.2.5` (`origin/main`, `v1.2.4` 이후 파이프라인·나�
 - 09/10은 `--video-id`를 받고, 그 ID의 옛 selection/rule 파일을 다시 쓴다.
 - `run_hosted_new_video_pipeline.py`가 로컬/Mac 런타임을 스스로 준비한다: `backend/.env(.local)`를 로드하고(기존 환경변수 우선) 저장소 `.venv`를 `PYTHON_CMD`/`PYTHONPATH`로 연결한다. 런치데몬 wrapper에 손으로 env를 넣을 필요가 없다. `PATH`를 넓히거나 승인 상태를 만지지 않는다.
 - LAAJ는 rule 평가가 `rule_results` 파일을 만들지 않은 영상(`evaluation_target` 없음)을 파일 읽기 크래시 대신 건너뛴다. 요약에 새 `rule 미대상` 개수를 보고한다.
+- 평가는 이미 로컬 `selection`/`notSelection`이 있는 유튜브 ID를 건너뛴다. hosted에 안 들어가는 해외 영상이 매일 `--limit` 자리를 차지하지 못하게 한다.
 
 ### 수정
 
