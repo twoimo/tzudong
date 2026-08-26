@@ -114,7 +114,7 @@ describe("app back navigation state contracts", () => {
   });
 
   test("native app lifecycle scenarios are documented until Capacitor is introduced", () => {
-    const appBackDoc = docsSource("app-back-navigation-state.md");
+    const appBackDoc = docsSource("product/app-back-navigation-state.md");
     const packageSource = source("package.json");
 
     expect(appBackDoc).toContain("Android hardware back");
