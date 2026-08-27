@@ -19,6 +19,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
+  excludeRestaurantsAlreadyShown,
   fetchLatestRestaurantPage,
   fetchPopularRestaurants,
   getLatestRestaurantsQueryKey,
@@ -182,25 +183,10 @@ export default function DesktopLeftPanelMapHome({
     [latestRestaurantPages],
   );
   const visibleLatestRestaurants = useMemo(() => {
-    const popularRestaurantIds = new Set(
-      popularRestaurants.map((restaurant) => restaurant.id),
+    return excludeRestaurantsAlreadyShown(
+      latestRestaurants,
+      new Set(popularRestaurants.map((restaurant) => restaurant.id)),
     );
-    const seenRestaurantIds = new Set<string>();
-    const dedupedRestaurants: Restaurant[] = [];
-
-    latestRestaurants.forEach((restaurant) => {
-      if (
-        popularRestaurantIds.has(restaurant.id) ||
-        seenRestaurantIds.has(restaurant.id)
-      ) {
-        return;
-      }
-
-      seenRestaurantIds.add(restaurant.id);
-      dedupedRestaurants.push(restaurant);
-    });
-
-    return dedupedRestaurants;
   }, [latestRestaurants, popularRestaurants]);
   const renderedLatestRestaurants = useMemo(
     () => visibleLatestRestaurants.slice(0, visibleLatestRestaurantCount),
@@ -534,7 +520,9 @@ export default function DesktopLeftPanelMapHome({
               </div>
             ) : visibleLatestRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-5 text-center text-xs text-muted-foreground">
-                새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.
+                {process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1'
+                  ? '로컬 작업장에는 공개 지도용 승인 맛집이 아직 없습니다. pending은 여기 올리지 않고, 확정된 행만 hosted_data_plane으로 프로덕션에 올립니다.'
+                  : '새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.'}
               </div>
             ) : (
               <>

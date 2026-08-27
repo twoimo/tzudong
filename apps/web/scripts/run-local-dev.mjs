@@ -11,7 +11,7 @@ import {
 import { localDevDistDirName } from './local-dev-dist-dir.mjs';
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--');
-let rawPort = '8080';
+let rawPort = '3000';
 let operatorEnvFile;
 let turbopack = false;
 let skipClean = true;
@@ -84,17 +84,23 @@ const child = spawn(
   ],
   {
     cwd: process.cwd(),
-    env: {
-      ...buildLocalWebEnvironment(local, loadLocalWebInputEnvironment({
-        repositoryRoot: local.repositoryRoot,
-        operatorEnvFile,
-      })),
-      __NEXT_PROCESSED_ENV: 'true',
-      NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`,
-      NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: liveNaverProviderSmoke ? '' : '/__local/naver-maps.js',
-      NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE: liveNaverProviderSmoke ? '1' : '0',
-      TZUDONG_NEXT_DIST_DIR: localDevDistDirName(port),
-    },
+    env: (() => {
+      const environment = {
+        ...buildLocalWebEnvironment(local, loadLocalWebInputEnvironment({
+          repositoryRoot: local.repositoryRoot,
+          operatorEnvFile,
+        })),
+        __NEXT_PROCESSED_ENV: 'true',
+        NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`,
+        TZUDONG_NEXT_DIST_DIR: localDevDistDirName(port),
+      };
+      const useLiveNaver = liveNaverProviderSmoke || Boolean(environment.NEXT_PUBLIC_NAVER_CLIENT_ID);
+      environment.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL = useLiveNaver ? '' : '/__local/naver-maps.js';
+      environment.NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE = useLiveNaver ? '1' : '0';
+      delete environment.CI;
+      delete environment.GITHUB_ACTIONS;
+      return environment;
+    })(),
     stdio: 'inherit',
   },
 );

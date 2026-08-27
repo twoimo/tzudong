@@ -31,6 +31,9 @@ class ChunkDownloadRetryTests(unittest.TestCase):
         self.assertIn('elif [ -n "${PYTHON_CMD:-}" ] && command -v "${PYTHON_CMD}" >/dev/null 2>&1; then', self.source)
         fallback_fn = self.source.split("get_web_fallback_python()", 1)[1].split("get_local_python_cmd()", 1)[0]
         self.assertLess(fallback_fn.index("${PYTHON_CMD:-}"), fallback_fn.index("command -v python3"))
+    def test_log_verbosity_lowercasing_is_posix(self) -> None:
+        self.assertIn("tr '[:upper:]' '[:lower:]'", self.source)
+        self.assertNotIn("${LOG_VERBOSITY,,}", self.source)
 
 
 if __name__ == "__main__":

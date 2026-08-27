@@ -3,6 +3,9 @@ import { describe, expect, test } from 'bun:test';
 import {
   getAdminEvaluationApprovalName,
   getAdminEvaluationDisplayName,
+  getAdminEvaluationVideoLabel,
+  hasAdminEvaluationYoutubeTitle,
+  matchesAdminEvaluationSearch,
   getRuleBasedPassedNaverName,
 } from '@/lib/admin-evaluation-name';
 
@@ -163,5 +166,64 @@ describe('getAdminEvaluationApprovalName', () => {
         },
       }),
     ).toBe('원본상호 본점');
+  });
+});
+
+describe('getAdminEvaluationVideoLabel', () => {
+  test('prefers youtube_meta.title when present', () => {
+    expect(getAdminEvaluationVideoLabel({
+      youtube_meta: { title: '스페인5탄) 현지셰프 추천 3대 맛집' },
+      origin_name: 'Los Tortíllez',
+      youtube_link: 'https://www.youtube.com/watch?v=pp5dpgqtO4s',
+    })).toBe('스페인5탄) 현지셰프 추천 3대 맛집');
+  });
+
+  test('does not fall back to a youtube URL when the title is missing', () => {
+    expect(getAdminEvaluationVideoLabel({
+      origin_name: '동묘집',
+      youtube_link: 'https://www.youtube.com/watch?v=Vo0o025xUKE',
+    })).toBe('동묘집');
+    expect(hasAdminEvaluationYoutubeTitle({
+      origin_name: '동묘집',
+      youtube_link: 'https://www.youtube.com/watch?v=Vo0o025xUKE',
+    })).toBe(false);
+  });
+
+  test('uses a bounded empty label when both title and restaurant name are missing', () => {
+    expect(getAdminEvaluationVideoLabel({
+      youtube_link: 'https://www.youtube.com/watch?v=BXP5ShNsY0U',
+    })).toBe('영상 제목 없음');
+    expect(hasAdminEvaluationYoutubeTitle({
+      youtube_link: 'https://www.youtube.com/watch?v=BXP5ShNsY0U',
+    })).toBe(false);
+  });
+
+  test('keeps title presence separate from the display fallback', () => {
+    expect(hasAdminEvaluationYoutubeTitle({
+      youtube_meta: { title: '스페인5탄) 현지셰프 추천 3대 맛집' },
+    })).toBe(true);
+  });
+});
+
+describe('matchesAdminEvaluationSearch', () => {
+  test('matches restaurant name when youtube title is missing', () => {
+    expect(matchesAdminEvaluationSearch({
+      origin_name: '동묘집',
+      youtube_link: 'https://www.youtube.com/watch?v=Vo0o025xUKE',
+    }, '동묘')).toBe(true);
+  });
+
+  test('matches a video id in the youtube link', () => {
+    expect(matchesAdminEvaluationSearch({
+      origin_name: '동묘집',
+      youtube_link: 'https://www.youtube.com/watch?v=Vo0o025xUKE',
+    }, 'Vo0o025xUKE')).toBe(true);
+  });
+
+  test('does not treat an unrelated query as a hit', () => {
+    expect(matchesAdminEvaluationSearch({
+      origin_name: '동묘집',
+      youtube_link: 'https://www.youtube.com/watch?v=Vo0o025xUKE',
+    }, '스시린')).toBe(false);
   });
 });

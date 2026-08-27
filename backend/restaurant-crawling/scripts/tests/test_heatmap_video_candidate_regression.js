@@ -197,6 +197,52 @@ test('processSingleVideo re-extracts when reused segments miss a requested forma
     fs.rmSync(framesDir, { recursive: true, force: true });
     fs.rmSync(channelDir, { recursive: true, force: true });
 });
+test('processSingleVideo extracts the opening 90s when heatmap segments are unavailable', async () => {
+    const cacheDir = makeTempDir('heatmap-cache-');
+    const framesDir = makeTempDir('heatmap-frames-');
+    const channel = `heatmap-opening-fallback-${Date.now()}`;
+    const channelDir = path.join(DATA_ROOT, channel);
+    const videoId = 'Abc123Def45';
+    fs.mkdirSync(path.join(channelDir, 'meta'), { recursive: true });
+    fs.writeFileSync(
+        path.join(channelDir, 'meta', `${videoId}.jsonl`),
+        `${JSON.stringify({ recollect_id: 1, duration: 120 })}\n`,
+        'utf8'
+    );
+
+    const { processSingleVideo } = await loadModule({
+        VIDEO_CACHE_DIR: cacheDir,
+        FRAMES_ROOT_DIR: framesDir,
+        GDRIVE_REMOTE_PATH: undefined,
+    });
+
+    let receivedSegments = null;
+    await processSingleVideo(
+        videoId,
+        {
+            channel,
+            fps: 1.0,
+            buffer: 0.0,
+            quality: ['360p'],
+            ext: ['jpg'],
+            url: 'https://www.youtube.com/watch?v=Abc123Def45',
+        },
+        {
+            loadSegments: async () => null,
+            acquireVideo: async () => path.join(cacheDir, `${videoId}.mp4`),
+            extractFramesFn: async (_videoPath, segments) => {
+                receivedSegments = segments;
+                return { totalSegments: segments.length, failedSegments: 0, totalFrames: 1 };
+            },
+        }
+    );
+
+    assert.deepEqual(receivedSegments, [{ startSec: 0, endSec: 90 }]);
+
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    fs.rmSync(framesDir, { recursive: true, force: true });
+    fs.rmSync(channelDir, { recursive: true, force: true });
+});
 
 test('processSingleVideo fails closed when no usable media fallback exists', async () => {
     const cacheDir = makeTempDir('heatmap-cache-');

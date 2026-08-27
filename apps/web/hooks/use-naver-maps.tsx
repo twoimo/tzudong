@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { NAVER_MAPS_CONFIG } from "@/config/maps";
 import {
     isLocalNaverStyleFallbackHost,
+    LOCAL_NAVER_MAP_STUB_SCRIPT_URL,
     resolveNaverMapScriptUrl,
     rewriteNaverStyleUrlForLocalhost,
     shouldUseLocalNaverMapStub,
@@ -17,10 +18,17 @@ declare global {
     }
 }
 const LOCAL_NIGHTLY = process.env.NIGHTLY_LOCAL_ENV_ONLY === '1' && process.env.NODE_ENV === 'test';
+const LIVE_NAVER_CLIENT_ID = (process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || '').trim();
+const HAS_LIVE_NAVER_CLIENT_ID = Boolean(
+    LIVE_NAVER_CLIENT_ID
+    && LIVE_NAVER_CLIENT_ID !== 'test'
+    && !/^(?:approved[-_]local|replace[-_]with|your[-_])/i.test(LIVE_NAVER_CLIENT_ID),
+);
 const LOCAL_OFFLINE_MAP = shouldUseLocalNaverMapStub({
     isLiveProviderSmoke: process.env.NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE === '1',
     isLocalNightly: LOCAL_NIGHTLY,
     isLocalRuntime: process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1',
+    hasLiveClientId: HAS_LIVE_NAVER_CLIENT_ID,
 });
 
 interface UseNaverMapsOptions {
@@ -98,6 +106,48 @@ function hasUsableNaverMaps() {
         && maps.Event
     );
 }
+function loadLocalNaverStubFallback(
+    setIsLoaded: (value: boolean) => void,
+    setIsLoading: (value: boolean) => void,
+    setLoadError: (value: Error | null) => void,
+) {
+    if (hasUsableNaverMaps()) {
+        setIsLoaded(true);
+        setIsLoading(false);
+        return;
+    }
+
+    const existingStub = document.querySelector('script[data-local-naver-maps="true"]');
+    const attachStub = (script: HTMLScriptElement) => {
+        script.addEventListener('load', () => {
+            if (hasUsableNaverMaps()) {
+                setIsLoaded(true);
+                setLoadError(null);
+            } else {
+                setLoadError(new Error('네이버 지도 API 초기화 실패'));
+            }
+            setIsLoading(false);
+        });
+        script.addEventListener('error', () => {
+            setLoadError(new Error('네이버 지도 API 로딩 실패 - 네트워크 오류'));
+            setIsLoading(false);
+        });
+    };
+
+    if (existingStub instanceof HTMLScriptElement) {
+        attachStub(existingStub);
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.dataset.localNaverMaps = 'true';
+    script.src = LOCAL_NAVER_MAP_STUB_SCRIPT_URL;
+    script.async = true;
+    attachStub(script);
+    document.head.appendChild(script);
+}
+
 const EFFECTIVE_SCRIPT_URL = resolveNaverMapScriptUrl({
     clientId: NAVER_MAPS_CONFIG.clientId,
     configuredScriptUrl: process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL,
@@ -172,15 +222,21 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
                 if (hasUsableNaverMaps()) {
                     setIsLoaded(true);
                     setIsLoading(false);
-                } else {
-                    console.error("❌ 네이버 지도 API 초기화 실패");
-                    setLoadError(new Error("네이버 지도 API 초기화 실패"));
-                    setIsLoading(false);
+                    return;
                 }
+                if (!LOCAL_OFFLINE_MAP) {
+                    loadLocalNaverStubFallback(setIsLoaded, setIsLoading, setLoadError);
+                    return;
+                }
+                setLoadError(new Error("네이버 지도 API 초기화 실패"));
+                setIsLoading(false);
             };
 
-            script.onerror = (error) => {
-                console.error("❌ 네이버 지도 API 스크립트 로드 실패:");
+            script.onerror = () => {
+                if (!LOCAL_OFFLINE_MAP) {
+                    loadLocalNaverStubFallback(setIsLoaded, setIsLoading, setLoadError);
+                    return;
+                }
                 setLoadError(
                     new Error(
                         "네이버 지도 API 스크립트 로드 실패 - Client ID 또는 웹 서비스 URL을 확인해주세요."

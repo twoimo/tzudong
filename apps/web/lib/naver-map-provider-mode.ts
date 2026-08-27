@@ -2,6 +2,7 @@ type NaverMapProviderModeInput = {
     isLiveProviderSmoke: boolean;
     isLocalNightly: boolean;
     isLocalRuntime: boolean;
+    hasLiveClientId?: boolean;
 };
 
 const LOCAL_NAVER_STYLE_FALLBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
@@ -11,8 +12,12 @@ export function shouldUseLocalNaverMapStub({
     isLiveProviderSmoke,
     isLocalNightly,
     isLocalRuntime,
+    hasLiveClientId = false,
 }: NaverMapProviderModeInput) {
-    return isLocalNightly || (isLocalRuntime && !isLiveProviderSmoke);
+    if (isLocalNightly) return true;
+    if (isLiveProviderSmoke) return false;
+    if (isLocalRuntime && hasLiveClientId) return false;
+    return isLocalRuntime;
 }
 
 export function resolveNaverMapScriptUrl({

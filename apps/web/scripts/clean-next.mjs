@@ -63,7 +63,7 @@ const getGuardedDevPort = () => {
         return null;
     }
 
-    const rawPort = readCommandArg('--port') ?? process.env.PORT ?? '8080';
+    const rawPort = readCommandArg('--port') ?? process.env.PORT ?? '3000';
     const port = Number(rawPort);
     return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
 };

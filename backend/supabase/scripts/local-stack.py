@@ -150,6 +150,8 @@ PORT_KEYS = (
 INTERNAL_PORT_KEYS = ("POSTGRES_PORT",)
 LOCAL_URL_KEYS = ("SITE_URL", "API_EXTERNAL_URL", "SUPABASE_PUBLIC_URL")
 LOCAL_BROWSER_ORIGINS = (
+    "http://127.0.0.1:3000",
+    "http://localhost:3000",
     "http://127.0.0.1:8080",
     "http://localhost:8080",
     "http://127.0.0.1:18080",

@@ -10,7 +10,7 @@ const readArg = (name, fallback) => {
 };
 const hasFlag = (name) => args.includes(name);
 
-const port = Number(readArg('--port', process.env.PORT ?? '8080'));
+const port = Number(readArg('--port', process.env.PORT ?? '3000'));
 if (!Number.isInteger(port) || port <= 0) {
   process.stderr.write('[dev-prewarm] error=InvalidPort\n');
   process.exit(1);

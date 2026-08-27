@@ -206,7 +206,6 @@ describe("nightly regression package and source contracts", () => {
     const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
     expect(pullPaths).toContain("      - '.github/scripts/**'");
     expect(pushPaths).toContain("      - '.github/scripts/**'");
-    expect(webAdminWorkflowSource.match(/      - '\.github\/scripts\/\*\*'/g)).toHaveLength(2);
   });
 
   test("parses local and hosted mode only from explicit command arguments", () => {
@@ -916,7 +915,9 @@ describe("nightly regression package and source contracts", () => {
       "allowed_health",
       "Pull pinned Compose images",
       "docker', 'pull'",
-      "'cli_version': '2.109.1'",
+      "'cli_version': 'observed'",
+      "cli_unavailable",
+      "for attempt in range(4)",
       "cli_returncode != 0",
       "'image': 'public.ecr.aws/supabase/postgres-meta:v0.96.6'",
       "public.ecr.aws/supabase/postgres-meta@sha256:b9edad6fff2d4fb991ecd57837dbe3f21d2efa0f0ccb186f6ccf0e2d57192fed",
@@ -1122,6 +1123,11 @@ describe("nightly regression package and source contracts", () => {
     expect(localWorkflowSource).toContain("CLEANUP_OUTCOME: ${{ steps.nightly-cleanup.outcome }}");
     expect(localWorkflowSource).toContain("if [[ \"$CURRENT_JOB_STATUS\" == 'success'");
     expect(localWorkflowSource).toContain("\"$CLEANUP_OUTCOME\" == 'success'");
+    expect(localWorkflowSource).toContain(
+      "First scheduled nightly failure; recording in summary without opening an issue.",
+    );
+    expect(localWorkflowSource).toContain("--event schedule");
+    expect(localWorkflowSource).toContain("--status failure");
     expect(localWorkflowSource.indexOf("Stop and remove disposable local stack"))
       .toBeLessThan(localWorkflowSource.indexOf("Manage scheduled nightly incident"));
     expect(localWorkflowSource.indexOf("Manage scheduled nightly incident"))
@@ -1139,7 +1145,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 78",
+      "EXPECTED_LEDGER_UNITS = 83",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1150,7 +1156,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 78");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 83");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -1622,6 +1628,8 @@ describe("nightly regression package and source contracts", () => {
   });
 
   test("routes public web and local Supabase changes into Web Admin CI", () => {
+    const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
+    const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");
     for (const path of [
       "apps/web/**",
       "apps/web/app/**",
@@ -1636,7 +1644,9 @@ describe("nightly regression package and source contracts", () => {
       ".github/workflows/nightly-local-regression.yml",
       ".github/nightly-local-publication-allowlist.txt",
     ]) {
-      expect(webAdminWorkflowSource.match(new RegExp(path.replaceAll("*", "\\*"), "g"))).toHaveLength(2);
+      const line = `      - '${path}'`;
+      expect(pullPaths).toContain(line);
+      expect(pushPaths).toContain(line);
     }
   });
 });

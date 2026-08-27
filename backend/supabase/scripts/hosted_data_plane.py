@@ -300,7 +300,7 @@ def fetch_hosted_restaurant_snapshot(
 def load_evaluation_rows(path: str) -> list[dict[str, Any]]:
     source = Path(path)
     if not source.is_file():
-        _deny("evaluation_missing")
+        return []
     rows: list[dict[str, Any]] = []
     for line in source.read_text(encoding="utf-8").splitlines():
         if not line.strip():
@@ -335,6 +335,13 @@ def apply_pending_candidates(
         _deny("forbidden_local_docker_apply")
     inserted: list[str] = []
     skipped: list[str] = []
+    unresolved: list[str] = []
+    # Per-candidate mutually-exclusive outcome by stable identity (video id).
+    # Precedence keeps a candidate in exactly one bucket when duplicate rows map
+    # to the same identity: an applied record dominates an already-present skip,
+    # which dominates an unresolved classification (R4.4).
+    _APPLIED, _PRESENT, _UNRESOLVED = 3, 2, 1
+    outcome: dict[str, int] = {}
     requester = fetch or _json_request
     for row in evaluation_rows:
         video_id = row_youtube_id(row)
@@ -354,16 +361,36 @@ def apply_pending_candidates(
         )
         if status in {201, 200}:
             inserted.append(video_id)
+            rank = _APPLIED
         elif status == 409:
+            # Already present on hosted (insert-if-absent): skip, never duplicate.
             skipped.append(video_id)
+            rank = _PRESENT
         else:
-            _deny("hosted_insert_failed")
-    unexpected = sorted(allowed - set(inserted) - set(skipped))
+            # Hosted presence could not be determined for this candidate. Skip it
+            # without creating a record and classify as unresolved rather than
+            # aborting the whole run; applied records are never rolled back
+            # (R4.6, R4.7).
+            unresolved.append(video_id)
+            rank = _UNRESOLVED
+        if rank > outcome.get(video_id, 0):
+            outcome[video_id] = rank
+    # Every admitted candidate must have been processed into some bucket; the
+    # three reflection lists then partition the processed set (R4.4).
+    unexpected = sorted(allowed - set(outcome))
     if unexpected:
         _deny("candidate_not_applied")
+    reflection = {
+        "applied": sorted(v for v, r in outcome.items() if r == _APPLIED),
+        "skippedAlreadyPresent": sorted(
+            v for v, r in outcome.items() if r == _PRESENT
+        ),
+        "unresolved": sorted(v for v, r in outcome.items() if r == _UNRESOLVED),
+    }
     return {
         "insertedVideoIds": inserted,
         "skippedExistingVideoIds": skipped,
         "insertedCount": len(inserted),
         "previewSha256": presented_preview_sha256,
+        "reflection": reflection,
     }

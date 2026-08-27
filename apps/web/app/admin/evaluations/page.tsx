@@ -32,8 +32,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
-import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
-import { getAddressConsistencyStatus } from '@/lib/admin-address-consistency';
+import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName, matchesAdminEvaluationSearch } from '@/lib/admin-evaluation-name';
+import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
@@ -42,6 +42,7 @@ import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
   isAdminEvaluationRecordReadyForApproval,
+  isAdminEvaluationRecordUnconfirmedMapLocation,
 } from '@/lib/admin/evaluation-records';
 import {
   ADMIN_PENDING_COUNTS_QUERY_KEY as ADMIN_SHARED_PENDING_COUNTS_QUERY_KEY,
@@ -794,38 +795,28 @@ type ParsedYoutubeMeta = NonNullable<EvaluationRecord['youtube_meta']>;
 function parseNumericEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['visit_authenticity'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'number'
-    || typeof value.eval_basis !== 'string'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'number') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    eval_basis: value.eval_basis,
+    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
   };
 }
 
 function parseBooleanEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['rb_grounding_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'boolean'
-    || typeof value.eval_basis !== 'string'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    eval_basis: value.eval_basis,
+    eval_basis: typeof value.eval_basis === 'string' ? value.eval_basis : '',
   };
 }
 
@@ -834,18 +825,19 @@ function parseCategoryEvaluationMetric(
 ): ParsedEvaluationResults['category_TF'] {
   if (
     !isRecord(value)
-    || typeof value.name !== 'string'
     || typeof value.eval_value !== 'boolean'
-    || !isNullableString(value.category_revision)
+    || (value.category_revision !== undefined && !isNullableString(value.category_revision))
     || (value.eval_basis !== undefined && typeof value.eval_basis !== 'string')
   ) {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
-    category_revision: value.category_revision,
+    category_revision: typeof value.category_revision === 'string' || value.category_revision === null
+      ? value.category_revision
+      : null,
     ...(typeof value.eval_basis === 'string' ? { eval_basis: value.eval_basis } : {}),
   };
 }
@@ -853,16 +845,12 @@ function parseCategoryEvaluationMetric(
 function parseCategoryValidityEvaluationMetric(
   value: unknown,
 ): ParsedEvaluationResults['category_validity_TF'] {
-  if (
-    !isRecord(value)
-    || typeof value.name !== 'string'
-    || typeof value.eval_value !== 'boolean'
-  ) {
+  if (!isRecord(value) || typeof value.eval_value !== 'boolean') {
     return null;
   }
 
   return {
-    name: value.name,
+    name: typeof value.name === 'string' ? value.name : '',
     eval_value: value.eval_value,
   };
 }
@@ -1391,7 +1379,7 @@ function AdminEvaluationStaticMobileLoadingControls() {
       <div className="relative">
         <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <div className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground">
-          영상 제목 검색...
+          상호·영상 ID 검색...
         </div>
       </div>
 
@@ -1549,8 +1537,6 @@ function AdminEvaluationPage({
   });
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
-  const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
-  const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<EvalFiltersState>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
@@ -1730,8 +1716,6 @@ function AdminEvaluationPage({
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // 첫 마운트 여부를 추적 (검색 자동 실행 방지)
-  const isInitialMount = useRef(true);
 
   // 데이터 로드 여부 추적 (세션 동안 한 번만 로드)
   const hasLoadedData = useRef(false);
@@ -1791,65 +1775,18 @@ function AdminEvaluationPage({
     hasCheckedAuth.current = true;
   }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, toast, router]);
 
-  // YouTube 제목 퍼지 검색
-  useEffect(() => {
-    // 첫 마운트 시에는 검색 실행하지 않음 (localStorage 복원으로 인한 자동 실행 방지)
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    const performFuzzySearch = async () => {
-      if (!searchQuery.trim()) {
-        setSearchResults(null);
-        return;
-      }
-
-      setIsSearching(true);
-      try {
-        const { data, error } = await supabase
-          .rpc('search_restaurants_by_youtube_title', {
-            search_query: searchQuery.trim(),
-            max_results: 100,
-            include_all_status: true,
-          })
-          .overrideTypes<Record<string, unknown>[], { merge: false }>();
-
-        if (error) throw error;
-
-        const convertedData = (data ?? [])
-          .map(normalizeEvaluationRecord)
-          .filter((record): record is EvaluationRecord => record !== null)
-          .map(withAdminEvaluationDisplayName);
-        setSearchResults(convertedData);
-      } catch {
-        toast({
-          variant: 'destructive',
-          title: '검색 실패',
-          description: '영상 제목 검색 중 오류가 발생했습니다.',
-        });
-        setSearchResults(null);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(performFuzzySearch, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery, toast]);
-
-  // 필터링 + 검색된 레코드
   const filteredRecords = useMemo(() => {
-    // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
-    const baseRecords = searchResults || allRecords;
+    let filtered = allRecords;
 
-    // 기본: 모든 레코드 포함 (Deleted 포함)
-    let filtered = baseRecords;
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((record) => matchesAdminEvaluationSearch(record, searchQuery));
+    }
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
-      // 'deleted' 필터 선택 시 특별 처리: baseRecords에서 deleted만 추출
+      // 'deleted' 필터 선택 시 이미 검색된 결과에서 deleted만 추출
       if (evalFilters.status === 'deleted') {
-        filtered = baseRecords.filter(r => r.status === 'deleted');
+        filtered = filtered.filter(r => r.status === 'deleted');
       } else {
         filtered = filtered.filter(r => {
           let match = false;
@@ -1860,6 +1797,9 @@ function AdminEvaluationPage({
               break;
             case 'not_selected':
               match = isAdminEvaluationRecordNotSelected(r);
+              break;
+            case 'unconfirmed_map':
+              match = isAdminEvaluationRecordUnconfirmedMapLocation(r);
               break;
             case 'ready_for_approval':
               match = isAdminEvaluationRecordReadyForApproval(r);
@@ -1972,7 +1912,7 @@ function AdminEvaluationPage({
     }
 
     return filtered;
-  }, [allRecords, searchResults, evalFilters, deepLinkFilter]);
+  }, [allRecords, searchQuery, evalFilters, deepLinkFilter]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
   useEffect(() => {
@@ -2111,6 +2051,7 @@ function AdminEvaluationPage({
           pending: 0,
           approved: 0,
           ready_for_approval: 0,
+          unconfirmed_map: 0,
                 hold: 0,
           db_conflict: 0,
           missing: 0,
@@ -2177,6 +2118,7 @@ function AdminEvaluationPage({
         missing: typedRecords.filter(isAdminEvaluationRecordMissing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
         ready_for_approval: typedRecords.filter(isAdminEvaluationRecordReadyForApproval).length,
+        unconfirmed_map: typedRecords.filter(isAdminEvaluationRecordUnconfirmedMapLocation).length,
         not_selected: typedRecords.filter(isAdminEvaluationRecordNotSelected).length,
         deleted: deletedCount,
       };
@@ -2199,6 +2141,7 @@ function AdminEvaluationPage({
         missing: 0,
         db_conflict: 0,
         ready_for_approval: 0,
+        unconfirmed_map: 0,
         not_selected: 0,
         deleted: 0,
       });
@@ -2238,6 +2181,7 @@ function AdminEvaluationPage({
       hold: allRecords.filter(r => r.status === 'hold').length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       ready_for_approval: allRecords.filter(isAdminEvaluationRecordReadyForApproval).length,
+      unconfirmed_map: allRecords.filter(isAdminEvaluationRecordUnconfirmedMapLocation).length,
       missing: allRecords.filter(isAdminEvaluationRecordMissing).length,
       not_selected: allRecords.filter(isAdminEvaluationRecordNotSelected).length,
       deleted: deletedCount,
@@ -2260,6 +2204,14 @@ function AdminEvaluationPage({
         variant: 'destructive',
         title: '승인 불가',
         description: '평가값 또는 근거가 비어 있어 승인할 수 없습니다.',
+      });
+      return;
+    }
+    if (hasUnconfirmedPublicMapLocation(record)) {
+      toast({
+        variant: 'destructive',
+        title: '승인 불가',
+        description: '유튜브에서 지점이 확정되지 않은 좌표입니다. 공개 지도에 찍히지 않게 보류하세요.',
       });
       return;
     }
@@ -3808,7 +3760,7 @@ function AdminEvaluationPage({
               onRegisterMissing={handleRegisterMissing}
               onResolveConflict={handleResolveConflict}
               onEdit={handleEdit}
-              loading={loading || isSearching}
+              loading={loading}
               evalFilters={evalFilters}
               isDeletedFilterActive={evalFilters.status === 'deleted'}
               searchQuery={searchQuery}

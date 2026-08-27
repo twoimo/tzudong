@@ -46,7 +46,9 @@
     ".next-local-8080/types/**/*.ts",
     ".next-local-8080/dev/types/**/*.ts",
     ".next-nightly-local-18080/dev/types/**/*.ts",
-    ".next-nightly-local-18080/dev/dev/types/**/*.ts"
+    ".next-nightly-local-18080/dev/dev/types/**/*.ts",
+    ".next-local-3000/types/**/*.ts",
+    ".next-local-3000/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

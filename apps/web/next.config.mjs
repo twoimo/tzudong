@@ -109,6 +109,7 @@ export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEX
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
+    outputFileTracingRoot: __dirname,
     allowedDevOrigins: ['127.0.0.1', 'localhost'],
     images: {
         // [OPTIMIZATION] 이미지 최적화 설정 (예상 LCP 개선: ~300ms)

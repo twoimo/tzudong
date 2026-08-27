@@ -212,9 +212,11 @@ class LocalComposeInputContractTests(unittest.TestCase):
     def test_kong_browser_cors_is_exact_local_only_and_manifest_bound(self) -> None:
         source_path = SUPABASE / "local-inputs" / "kong.yml"
         kong_source = source_path.read_text(encoding="utf-8")
-        expected_sha256 = "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15"
+        expected_sha256 = "ac0b77d2268d901ddd3ef546d27658f46b153370f4e11447916d2ee794cdfdbf"
         self.assertEqual(hashlib.sha256(source_path.read_bytes()).hexdigest(), expected_sha256)
         self.assertEqual(tuple(local_stack.LOCAL_BROWSER_ORIGINS), (
+            "http://127.0.0.1:3000",
+            "http://localhost:3000",
             "http://127.0.0.1:8080",
             "http://localhost:8080",
             "http://127.0.0.1:18080",

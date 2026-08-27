@@ -22,6 +22,7 @@ export function CategorySidebar({
   // 그룹 2: 승인대기, missing, 평가미대상 (통계만 표시)
   const statCategoriesGroup2 = [
     { label: '승인 대기', count: stats.ready_for_approval },
+    { label: '미확정 좌표', count: stats.unconfirmed_map },
     { label: 'Missing', count: stats.missing },
     { label: '평가 미대상', count: stats.not_selected },
   ];

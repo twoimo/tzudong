@@ -60,7 +60,7 @@ export function MapViewGoogleLoadErrorState() {
                         <p>🔧 해결 방법:</p>
                         <p>1. Google Cloud Console에서 API 키 확인</p>
                         <p>2. Application restrictions → HTTP referrers 설정</p>
-                        <p>3. 다음 도메인 추가: <code className="bg-muted px-1 rounded">localhost:8080/*</code></p>
+                        <p>3. 다음 도메인 추가: <code className="bg-muted px-1 rounded">localhost:3000/*</code></p>
                         <p>4. Maps JavaScript API 활성화 및 InvalidKeyMapError 여부 확인</p>
                 </div>
             </div>

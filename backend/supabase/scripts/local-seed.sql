@@ -410,6 +410,7 @@ ON CONFLICT (id) DO UPDATE SET
   lng = EXCLUDED.lng,
   phone = EXCLUDED.phone,
   status = EXCLUDED.status,
+  youtube_link = NULL,
   created_at = EXCLUDED.created_at,
   updated_at = EXCLUDED.updated_at,
   weekly_search_count = EXCLUDED.weekly_search_count;

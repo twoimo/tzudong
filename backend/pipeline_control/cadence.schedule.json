@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Asia/Seoul",
+  "utcOffsetMinutes": 540,
+  "minBufferMinutes": 30,
+  "windows": [
+    {
+      "runner": "GHA_Runner",
+      "profile": "lite_gha",
+      "kstStart": "04:00",
+      "kstEnd": "04:45",
+      "utcCron": "0 19 * * *",
+      "workflow": ".github/workflows/daily-crawler.yml"
+    },
+    {
+      "runner": "Mac_Runner",
+      "profile": "heavy_local",
+      "kstStart": "05:15",
+      "kstEnd": "07:00",
+      "launchdCalendar": { "Hour": 5, "Minute": 0 },
+      "agent": "dev.tzudong.hosted-new-video"
+    }
+  ]
+}

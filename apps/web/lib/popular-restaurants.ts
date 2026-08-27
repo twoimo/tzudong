@@ -85,6 +85,32 @@ export type PopularRankTrend = {
 export type PopularRestaurantWithTrend = Restaurant & {
   popularRankTrend?: PopularRankTrend;
 };
+export function excludeRestaurantsAlreadyShown<T extends { id: string }>(
+  restaurants: readonly T[],
+  alreadyShownIds: ReadonlySet<string>,
+): T[] {
+  const seenRestaurantIds = new Set<string>();
+  const remaining: T[] = [];
+
+  for (const restaurant of restaurants) {
+    if (seenRestaurantIds.has(restaurant.id)) continue;
+    seenRestaurantIds.add(restaurant.id);
+    if (alreadyShownIds.has(restaurant.id)) continue;
+    remaining.push(restaurant);
+  }
+
+  if (remaining.length > 0) return remaining;
+
+  seenRestaurantIds.clear();
+  const fallback: T[] = [];
+  for (const restaurant of restaurants) {
+    if (seenRestaurantIds.has(restaurant.id)) continue;
+    seenRestaurantIds.add(restaurant.id);
+    fallback.push(restaurant);
+  }
+  return fallback;
+}
+
 
 type PopularRankSnapshotRow = {
   restaurant_id: string;

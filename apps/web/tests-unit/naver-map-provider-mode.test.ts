@@ -20,6 +20,12 @@ describe('Naver map provider mode', () => {
             isLocalRuntime: true,
         })).toBe(false);
         expect(shouldUseLocalNaverMapStub({
+            isLiveProviderSmoke: false,
+            isLocalNightly: false,
+            isLocalRuntime: true,
+            hasLiveClientId: true,
+        })).toBe(false);
+        expect(shouldUseLocalNaverMapStub({
             isLiveProviderSmoke: true,
             isLocalNightly: true,
             isLocalRuntime: true,

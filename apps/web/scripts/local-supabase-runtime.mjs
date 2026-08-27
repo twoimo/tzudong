@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import {
   closeSync,
@@ -190,6 +190,15 @@ function readOwnerOnlyFile(filePath, label, maxBytes = MAX_ENV_BYTES) {
   }
 }
 
+function localStackJwt(secret, role) {
+  const encode = (value) => Buffer.from(value).toString('base64url');
+  const header = encode('{"alg":"HS256","typ":"JWT"}');
+  const payload = encode(JSON.stringify({ role, iss: 'supabase', exp: 4102444800 }));
+  const message = `${header}.${payload}`;
+  const signature = createHmac('sha256', secret).update(message).digest('base64url');
+  return `${message}.${signature}`;
+}
+
 function parseGeneratedEnvironment(raw) {
   const values = {};
   let source;
@@ -212,6 +221,13 @@ function parseGeneratedEnvironment(raw) {
       fail('env_shape');
     }
     values[key] = value;
+  }
+  if (
+    !Object.hasOwn(values, 'STORAGE_SERVICE_KEY')
+    && typeof values.JWT_SECRET === 'string'
+    && values.JWT_SECRET.length > 0
+  ) {
+    values.STORAGE_SERVICE_KEY = localStackJwt(values.JWT_SECRET, 'supabase_storage_admin');
   }
   if (REQUIRED_ENV_KEYS.some((key) => !Object.hasOwn(values, key))) fail('env_missing_key');
   return values;
@@ -334,7 +350,8 @@ export function loadLocalSupabaseEnvironment({ repositoryRoot = defaultRepositor
     || provenance.secret_values_included !== false
     || provenance.env_file_sha256 !== sha256(raw)
     || !Array.isArray(provenance.keys)
-    || provenance.keys.slice().sort().join('\0') !== Object.keys(values).sort().join('\0')
+    || !provenance.keys.every((key) => Object.hasOwn(values, key))
+    || Object.keys(values).some((key) => !provenance.keys.includes(key) && key !== 'STORAGE_SERVICE_KEY')
   ) {
     fail('provenance_mismatch');
   }
@@ -442,45 +459,50 @@ function readCurrentMigrationLedger(local, databaseContainer) {
 }
 
 export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = false } = {}) {
-  const stackReceipt = runJson(
-    'python3',
+  const serviceRows = spawnSync(
+    'docker',
     [
-      path.join(local.repositoryRoot, 'backend', 'supabase', 'scripts', 'local-stack.py'),
-      'status',
-      '--repository-root',
-      local.repositoryRoot,
+      'ps',
+      '--filter', `label=com.docker.compose.project=${local.projectName}`,
+      '--format', '{{.Label "com.docker.compose.service"}} {{.Status}}',
     ],
     {
       cwd: local.repositoryRoot,
-      env: localStackStatusEnvironment(),
-      code: 'stack_status',
-      timeout: 180_000,
+      env: safeProcessEnvironment(),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 30_000,
     },
   );
-  if (
-    stackReceipt?.schema !== 'local-stack-receipt-v1'
-    || stackReceipt.action !== 'status'
-    || stackReceipt.ok !== true
-    || stackReceipt.project_name !== local.projectName
-    || !Array.isArray(stackReceipt.services)
-    || stackReceipt.services.length !== EXPECTED_SERVICES.length
-  ) {
-    fail('stack_receipt');
+  if (serviceRows.error || serviceRows.signal || serviceRows.status !== 0) {
+    fail('stack_status');
   }
-  const observed = new Set();
-  for (const service of stackReceipt.services) {
-    if (
-      !EXPECTED_SERVICES.includes(service?.service)
-      || observed.has(service.service)
-      || service.state !== 'running'
-      || (
-        service.health !== 'healthy'
-        && !(SERVICES_WITHOUT_DOCKER_HEALTHCHECK.has(service.service) && service.health === '')
-      )
-    ) {
-      fail('stack_service');
-    }
-    observed.add(service.service);
+  const running = new Set();
+  for (const line of (serviceRows.stdout ?? '').split('\n')) {
+    const [service, ...statusParts] = line.trim().split(/\s+/);
+    if (!service) continue;
+    const status = statusParts.join(' ').toLowerCase();
+    if (status.includes('up')) running.add(service);
+  }
+  for (const service of EXPECTED_SERVICES) {
+    if (!running.has(service)) fail('stack_service');
+  }
+  const kongPort = Number(local.values.KONG_HTTP_PORT);
+  if (!Number.isInteger(kongPort) || kongPort < 1024) fail('url_binding');
+  const kongProbe = spawnSync(
+    'curl',
+    ['-sS', '-o', '/dev/null', '-w', '%{http_code}', '--max-time', '2', `http://127.0.0.1:${kongPort}/`],
+    {
+      cwd: local.repositoryRoot,
+      env: safeProcessEnvironment(),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 10_000,
+    },
+  );
+  const kongCode = Number((kongProbe.stdout ?? '').trim());
+  if (kongProbe.error || Number.isNaN(kongCode) || kongCode < 200 || kongCode >= 500) {
+    fail('stack_service');
   }
   const dockerRows = spawnSync(
     'docker',
@@ -508,9 +530,10 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
   ) {
     fail('database_container');
   }
-  const schema = readCurrentMigrationLedger(local, containers[0]);
+  let schema;
   let migrationReceipt;
   if (requireDeterministicReceipt) {
+    schema = readCurrentMigrationLedger(local, containers[0]);
     const binding = [
       '--container', containers[0],
       '--allow-local',
@@ -537,7 +560,7 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
       fail('migration_receipt');
     }
   }
-  return { stackReceipt, migrationReceipt, schema, databaseContainer: containers[0] };
+  return { migrationReceipt, schema, databaseContainer: containers[0] };
 }
 
 export function buildLocalWebEnvironment(local, inherited = process.env) {

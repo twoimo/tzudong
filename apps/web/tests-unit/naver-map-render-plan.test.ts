@@ -59,7 +59,7 @@ describe('naver map render plan helpers', () => {
             makeRestaurant({ id: 'zero-lat', lat: 0, lng: 127.0 }),
         ]);
 
-        expect(result.map((restaurant) => restaurant.id)).toEqual(['valid']);
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['valid', 'zero-lat']);
     });
 
     test('filters Seoul individual marker candidates by id and coordinates', () => {

@@ -146,7 +146,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Usage: node scripts/storyboard-quality-loop.mjs [--cases 12] [--output-dir <dir>] [--base-url http://localhost:8080] [--json]
+  console.log(`Usage: node scripts/storyboard-quality-loop.mjs [--cases 12] [--output-dir <dir>] [--base-url http://localhost:3000] [--json]
 
 Runs a deterministic Storyboard Quality Loop over operator scenarios.
 It does not invoke imagegen and does not count unverified image fallback as exact provenance.`);

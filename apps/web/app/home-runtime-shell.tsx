@@ -237,7 +237,7 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
         <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             <DeferredUserDataPrefetcher enabled={Boolean(user)} />
 
-            <div className="flex-1 flex flex-col overflow-hidden transition-[margin] duration-300">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300">
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
                 </a>
@@ -319,11 +319,11 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
 
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
-        <div className="bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
+        <div className="flex flex-col bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full w-full bg-background" aria-label="쯔동여지도 지도 본문">
+            <main id="main-content" className="h-full min-h-0 w-full flex-1 bg-background" aria-label="쯔동여지도 지도 본문">
                 {children}
             </main>
         </div>

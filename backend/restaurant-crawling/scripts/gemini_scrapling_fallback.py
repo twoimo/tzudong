@@ -1295,6 +1295,12 @@ def _run_fallback_once(prompt_path, video_path, output_path, target_model=None):
                         break
 
                     if is_send_ready():
+                        text_blocks = get_model_text_blocks()
+                        current_text = (text_blocks[-1] if text_blocks else "").strip()
+                        searching = any(marker in current_text for marker in ("웹 검색 중", "검색 중", "Searching the web", "검색하는 중"))
+                        if searching or not current_text:
+                            time.sleep(3)
+                            continue
                         human_delay(2, 4)
                         success = True
                         break

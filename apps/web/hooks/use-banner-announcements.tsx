@@ -62,8 +62,7 @@ export function useActiveAnnouncements(enabled = true) {
                 ]);
 
                 return parseAnnouncements(rows);
-            } catch (error) {
-                console.error('활성 공지사항 조회 중 오류:');
+            } catch {
                 return getFallbackActiveAnnouncements();
             }
         },
@@ -86,8 +85,7 @@ export function useBannerAnnouncements(enabled = true) {
                 ]);
 
                 return parseAnnouncements(rows);
-            } catch (error) {
-                console.error('배너 공지사항 조회 중 오류:');
+            } catch {
                 const fallbackAnnouncements = await getFallbackActiveAnnouncements();
                 return fallbackAnnouncements.filter((announcement) => announcement.showOnBanner);
             }

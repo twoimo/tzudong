@@ -109,13 +109,11 @@ export function useActiveAnnouncements(enabled = true) {
                     .order('created_at', { ascending: false });
 
                 if (error) {
-                    console.error('활성 공지사항 조회 실패:');
                     return getFallbackActiveAnnouncements();
                 }
 
                 return parseAnnouncements(data as AnnouncementRow[]);
-            } catch (error) {
-                console.error('활성 공지사항 조회 중 오류:');
+            } catch {
                 return getFallbackActiveAnnouncements();
             }
         },
@@ -142,13 +140,11 @@ export function useBannerAnnouncements() {
                     .order('created_at', { ascending: false });
 
                 if (error) {
-                    console.error('배너 공지사항 조회 실패:');
                     return getFallbackBannerAnnouncements();
                 }
 
                 return parseAnnouncements(data as AnnouncementRow[]);
-            } catch (error) {
-                console.error('배너 공지사항 조회 중 오류:');
+            } catch {
                 return getFallbackBannerAnnouncements();
             }
         },

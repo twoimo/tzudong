@@ -9,6 +9,8 @@ import {
   getAddressConsistencyReviewQueueInfo,
   getAddressConsistencyTriageSignals,
   canApproveAddressConsistencyRecord,
+  getAddressConsistencyStatus,
+  hasUnconfirmedPublicMapLocation,
   isGeocodeRecoveredReviewQueue,
 } from '@/lib/admin-address-consistency';
 
@@ -133,6 +135,64 @@ describe('admin address consistency explanations', () => {
       label: '검토',
       reason: '주소 지오코딩은 회복됐지만 지도 상호 후보가 없습니다.',
     });
+  });
+  test('keeps unconfirmed youtube-inferred coordinates off the public map approval path', () => {
+    const record = {
+      status: 'pending',
+      geocoding_success: true,
+      evaluation_results: {
+        location_match_TF: {
+          pending_reason: 'ambiguous_chain',
+          eval_value: false,
+        },
+      },
+    } as const;
+    expect(hasUnconfirmedPublicMapLocation(record)).toBe(true);
+    expect(getAddressConsistencyStatus(record)).toBe('review');
+    expect(canApproveAddressConsistencyRecord(record)).toBe(false);
+  });
+  test('blocks geo-true insufficient_evidence from public-map approval', () => {
+    const record = {
+      status: 'pending',
+      geocoding_success: true,
+      evaluation_results: {
+        location_match_TF: {
+          pending_reason: 'insufficient_evidence',
+          eval_value: false,
+        },
+      },
+    } as const;
+    expect(hasUnconfirmedPublicMapLocation(record)).toBe(true);
+    expect(getAddressConsistencyStatus(record)).toBe('review');
+    expect(canApproveAddressConsistencyRecord(record)).toBe(false);
+    expect(explainAddressConsistency(record)).toMatchObject({
+      label: '검토',
+      headline: '검토 · 좌표는 있지만 영상에서 같은 가게로 확정할 근거가 부족합니다.',
+      reason: '후보를 확정할 독립 근거가 부족합니다.',
+    });
+    expect(explainAddressConsistency(record).headline).not.toContain('회복');
+    expect(getAddressConsistencyOperatorGuidance(record)).toMatchObject({
+      label: '검토',
+      tone: 'warning',
+      possibleCause: expect.stringContaining('좌표는 있지만'),
+    });
+  });
+
+  test('does not treat geo-false insufficient_evidence as an unconfirmed public pin', () => {
+    const record = {
+      status: 'pending',
+      geocoding_success: false,
+      geocoding_false_stage: 2,
+      evaluation_results: {
+        location_match_TF: {
+          pending_reason: 'insufficient_evidence',
+          eval_value: false,
+        },
+      },
+    } as const;
+    expect(hasUnconfirmedPublicMapLocation(record)).toBe(false);
+    expect(getAddressConsistencyStatus(record)).toBe('false');
+    expect(canApproveAddressConsistencyRecord(record)).toBe(false);
   });
 
   test('gives operators root-cause guidance for staged mismatch rows', () => {

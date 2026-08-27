@@ -10,6 +10,7 @@ import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
   isAdminEvaluationRecordReadyForApproval,
+  isAdminEvaluationRecordUnconfirmedMapLocation,
 } from '@/lib/admin/evaluation-records';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
@@ -22,6 +23,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
       'approved',
       'deleted',
       'ready_for_approval',
+      'unconfirmed_map',
       'missing',
       'not_selected',
     ]);
@@ -32,6 +34,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
       '승인됨',
       '삭제됨',
       '승인 대기',
+      '미확정 좌표',
       'Missing',
       '평가 미대상',
     ]);
@@ -43,6 +46,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(sanitizePrimaryStatusFilterValue('approved')).toBe('approved');
     expect(sanitizePrimaryStatusFilterValue('deleted')).toBe('deleted');
     expect(sanitizePrimaryStatusFilterValue('ready_for_approval')).toBe('ready_for_approval');
+    expect(sanitizePrimaryStatusFilterValue('unconfirmed_map')).toBe('unconfirmed_map');
     expect(sanitizePrimaryStatusFilterValue('evaluation_incomplete')).toBeUndefined();
     expect(sanitizePrimaryStatusFilterValue('missing')).toBe('missing');
     expect(sanitizePrimaryStatusFilterValue('not_selected')).toBe('not_selected');
@@ -84,6 +88,77 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
         location_match_TF: null,
       },
     })).toBe(true);
+    expect(isAdminEvaluationRecordReadyForApproval({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: true,
+      evaluation_results: {
+        visit_authenticity: { name: '방문', eval_value: 1, eval_basis: '직접 방문' },
+        rb_inference_score: { name: '추론', eval_value: 1, eval_basis: '명확' },
+        rb_grounding_TF: { name: '근거', eval_value: true, eval_basis: '확인' },
+        review_faithfulness_score: { name: '리뷰', eval_value: 1, eval_basis: '충실' },
+        category_validity_TF: { name: '카테고리 유효', eval_value: true },
+        category_TF: { name: '카테고리', eval_value: true, category_revision: null },
+        location_match_TF: { pending_reason: 'ambiguous_chain', eval_value: false },
+      },
+    })).toBe(false);
+    expect(isAdminEvaluationRecordUnconfirmedMapLocation({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: false,
+      evaluation_results: {
+        location_match_TF: { pending_reason: 'ambiguous_chain', eval_value: false },
+      },
+    })).toBe(true);
+    expect(isAdminEvaluationRecordUnconfirmedMapLocation({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: false,
+      evaluation_results: {
+        location_match_TF: { pending_reason: 'insufficient_evidence', eval_value: false },
+      },
+    })).toBe(true);
+    expect(isAdminEvaluationRecordUnconfirmedMapLocation({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: false,
+      evaluation_results: {
+        location_match_TF: { pending_reason: 'multi_candidate', eval_value: false },
+      },
+    })).toBe(true);
+    expect(isAdminEvaluationRecordUnconfirmedMapLocation({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: true,
+      evaluation_results: {
+        location_match_TF: { pending_reason: null, match_status: 'confirmed_from_video', eval_value: true },
+      },
+    })).toBe(false);
+    expect(isAdminEvaluationRecordReadyForApproval({
+      status: 'pending',
+      is_missing: false,
+      is_not_selected: false,
+      geocoding_success: true,
+      evaluation_results: {
+        visit_authenticity: { name: '방문', eval_value: 1, eval_basis: '직접 방문' },
+        rb_inference_score: { name: '추론', eval_value: 1, eval_basis: '명확' },
+        rb_grounding_TF: { name: '근거', eval_value: true, eval_basis: '확인' },
+        review_faithfulness_score: { name: '리뷰', eval_value: 1, eval_basis: '충실' },
+        category_validity_TF: { name: '카테고리 유효', eval_value: true },
+        category_TF: { name: '카테고리', eval_value: true, category_revision: null },
+        location_match_TF: { pending_reason: 'insufficient_evidence', eval_value: false },
+      },
+    })).toBe(false);
+  });
+  test('queues geo-true insufficient_evidence from the shared reason set, not a leftover literal', () => {
+    const classifierSource = source('lib/admin/evaluation-records.ts');
+    expect(classifierSource).toContain('GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(reason)');
+    expect(classifierSource).not.toMatch(/reason === 'insufficient_evidence'/);
   });
 
   test('keeps table and slide approval gates on the shared address-consistency helper', () => {
@@ -168,6 +243,10 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(pageSource).toContain('missing: typedRecords.filter(isAdminEvaluationRecordMissing).length');
     expect(pageSource).toContain('not_selected: typedRecords.filter(isAdminEvaluationRecordNotSelected).length');
     expect(pageSource).toContain('ready_for_approval: typedRecords.filter(isAdminEvaluationRecordReadyForApproval).length');
+    expect(pageSource).toContain('unconfirmed_map: typedRecords.filter(isAdminEvaluationRecordUnconfirmedMapLocation).length');
+    expect(pageSource).toContain("case 'unconfirmed_map':");
+    expect(categorySidebarSource).toContain("label: '미확정 좌표'");
+    expect(evaluationRecordHelperSource).toContain('export function isAdminEvaluationRecordUnconfirmedMapLocation');
     expect(pageSource).toContain("isDeletedFilterActive={evalFilters.status === 'deleted'}");
     expect(evaluationApiRouteSource).toContain('requireAdmin()');
     expect(evaluationApiRouteSource).toContain('createSupabaseServiceRoleClient');

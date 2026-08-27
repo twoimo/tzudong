@@ -673,6 +673,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           path: |
+            backend/log/cron/current-summary.json
+            backend/log/cron/current-health.json
             backend/log/cron/current-upload-status.json
             backend/log/cron/current-upload-expected.json
             backend/log/cron/current-upload-batches.json

@@ -256,9 +256,9 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             "reason": "missing_search_path",
         }
         sql = scanner._patch_sql("a" * 64, [candidate], "b" * 64)
-        self.assertIn("IF target_path_count = 0 THEN", sql)
+        self.assertIn("IF target_path_count = 0 OR target_valid_path_count <> 1 THEN", sql)
         self.assertIn(
-            "ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+            "ELSIF target_path_count <> 1 THEN",
             sql,
         )
         self.assertIn("local_closure_runtime_path_invalid", sql)
@@ -279,13 +279,13 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             sql,
         )
         self.assertLess(
-            sql.index("IF target_path_count = 0 THEN"),
+            sql.index("IF target_path_count = 0 OR target_valid_path_count <> 1 THEN"),
             sql.index("ALTER FUNCTION %s SET search_path TO"),
         )
 
     def test_frozen_source_closure_candidate_receipt_is_exact(self):
         candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 42)
+        self.assertEqual(len(candidates), 47)
         target = [
             item for item in candidates
             if item["name"] == "public.approve_submission_item"
@@ -330,7 +330,8 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
             },
         }
         with self.assertRaises(scanner.RuntimeScanError):
-            scanner._validate_runtime(runtime)
+            scanner._validate_runtime(runtime, require_smoke=True)
+        scanner._validate_runtime(runtime)
 
     def test_runtime_validation_requires_bound_external_effect_case(self):
         scanner = self.scanner

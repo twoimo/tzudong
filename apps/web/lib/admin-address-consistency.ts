@@ -33,6 +33,15 @@ interface AddressConsistencyInput {
   } | null;
 }
 
+export const UNCONFIRMED_MAP_REASONS = new Set([
+  'ambiguous_chain',
+  'multi_candidate',
+]);
+
+export const GEO_TRUE_UNCONFIRMED_MAP_REASONS = new Set([
+  'insufficient_evidence',
+]);
+
 const PENDING_REASON_LABELS: Record<string, string> = {
   insufficient_evidence: '후보를 확정할 독립 근거가 부족합니다.',
   cross_country_mismatch: '원본 위치와 후보 위치의 국가/지역이 서로 맞지 않습니다.',
@@ -120,6 +129,12 @@ function getOriginAddressText(originAddress: unknown): string | null {
   const value = (originAddress as Record<string, unknown>).address;
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
+export function hasUnconfirmedPublicMapLocation(record: AddressConsistencyInput): boolean {
+  const reason = record.evaluation_results?.location_match_TF?.pending_reason;
+  if (typeof reason !== 'string') return false;
+  if (UNCONFIRMED_MAP_REASONS.has(reason)) return true;
+  return record.geocoding_success === true && GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(reason);
+}
 
 export function getAddressConsistencyStatus(record: AddressConsistencyInput): AddressConsistencyStatus {
   if (
@@ -129,6 +144,7 @@ export function getAddressConsistencyStatus(record: AddressConsistencyInput): Ad
     || record.is_not_selected === true
     || record.is_missing === true
   ) return 'not_applicable';
+  if (hasUnconfirmedPublicMapLocation(record)) return 'review';
   if (record.geocoding_success === true) return 'true';
   if (record.geocoding_success === false && record.geocoding_false_stage === null) return 'failed';
   if (isAddressPromotionCandidate(record)) return 'candidate';
@@ -469,7 +485,6 @@ function getGuidanceForPendingReason(pendingReason: string | null): AddressConsi
       safeguard: '지역이 다른 후보를 그대로 승인하지 말고 수정 또는 삭제/보류 결정을 분리해 기록합니다.',
     };
   }
-
   return null;
 }
 
@@ -521,6 +536,21 @@ export function getAddressConsistencyOperatorGuidance(record: AddressConsistency
 
   const pendingReasonGuidance = getGuidanceForPendingReason(pendingReason);
   if (pendingReasonGuidance) return pendingReasonGuidance;
+  if (
+    status === 'review'
+    && typeof pendingReason === 'string'
+    && GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(pendingReason)
+    && hasUnconfirmedPublicMapLocation(record)
+  ) {
+    return {
+      label: '검토',
+      tone: 'warning',
+      possibleCause: '좌표는 있지만 영상·자막에서 같은 가게·지점을 확정할 독립 근거가 부족합니다.',
+      recommendedAction: '간판·지점명·도로명 자막을 대조하고, 네이버 첫 검색만으로 승인하지 마세요.',
+      safeguard: '미확정 좌표는 공개 지도에 올리지 말고 보류 큐에 남깁니다.',
+    };
+  }
+
 
   if (reviewQueueInfo?.queue === ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE) {
     return {
@@ -746,6 +776,49 @@ export function explainAddressConsistency(record: AddressConsistencyInput): Addr
   }
 
   if (status === 'review') {
+    const unconfirmedReason = typeof locationMatch?.pending_reason === 'string' ? locationMatch.pending_reason : null;
+    const isUnconfirmedPublicPin = hasUnconfirmedPublicMapLocation(record);
+    const isGeoTrueInsufficientEvidence = isUnconfirmedPublicPin
+      && unconfirmedReason !== null
+      && GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(unconfirmedReason);
+    const isUnconfirmedChain = isUnconfirmedPublicPin && unconfirmedReason !== null && UNCONFIRMED_MAP_REASONS.has(unconfirmedReason);
+
+    if (isGeoTrueInsufficientEvidence) {
+      return {
+        label,
+        headline: '검토 · 좌표는 있지만 영상에서 같은 가게로 확정할 근거가 부족합니다.',
+        reason: pendingReason || '주소 후보는 있어도 간판·지점명·도로명 자막이 없어 공개 지도에 올릴 수 없습니다.',
+        evidence: compact([
+          reviewQueueInfo ? `운영 큐: ${reviewQueueInfo.label} · ${reviewQueueInfo.reason}` : null,
+          falseMessage ? `규칙 판정: ${falseMessage}` : null,
+          originAddress ? `원본 주소: ${originAddress}` : null,
+          candidateName ? `검토 후보: ${candidateName}` : null,
+          candidateAddress ? `검토 주소: ${candidateAddress}` : null,
+          locationMatch?.match_status ? `매칭 상태: ${toKoreanMatchStatus(locationMatch.match_status) ?? locationMatch.match_status}` : null,
+          ...sourceEvidence,
+          ...evidenceSummary,
+        ]),
+      };
+    }
+
+    if (isUnconfirmedChain) {
+      return {
+        label,
+        headline: '검토 · 체인/복수 후보라 지점을 확정할 수 없습니다.',
+        reason: pendingReason || '동일·유사 상호 후보가 여러 곳이라 네이버 첫 검색만으로 공개 지도에 올릴 수 없습니다.',
+        evidence: compact([
+          reviewQueueInfo ? `운영 큐: ${reviewQueueInfo.label} · ${reviewQueueInfo.reason}` : null,
+          falseMessage ? `규칙 판정: ${falseMessage}` : null,
+          originAddress ? `원본 주소: ${originAddress}` : null,
+          candidateName ? `검토 후보: ${candidateName}` : null,
+          candidateAddress ? `검토 주소: ${candidateAddress}` : null,
+          locationMatch?.match_status ? `매칭 상태: ${toKoreanMatchStatus(locationMatch.match_status) ?? locationMatch.match_status}` : null,
+          ...sourceEvidence,
+          ...evidenceSummary,
+        ]),
+      };
+    }
+
     return {
       label,
       headline: '검토 · 주소 후보는 회복됐지만 같은 가게로 확정할 상호 근거가 부족합니다.',

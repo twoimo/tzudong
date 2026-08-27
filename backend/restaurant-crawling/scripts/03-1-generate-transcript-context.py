@@ -473,6 +473,12 @@ def main() -> int:
         help="로컬 문맥 생성 모델 ID. 기본값은 TRANSCRIPT_CONTEXT_MODEL 또는 백엔드 기본 모델.",
     )
     parser.add_argument(
+        "--video-id",
+        type=str,
+        default="",
+        help="쉼표 구분 비디오 ID 화이트리스트. 지정 시 해당 영상만 처리 대상에 남긴다.",
+    )
+    parser.add_argument(
         "--prompt", type=str, default="generate_context_en.yaml", help="프롬프트 파일명"
     )
     parser.add_argument(
@@ -514,6 +520,18 @@ def main() -> int:
 
     # 트랜스크립트 파일 목록 (정렬하여 순서 보장 - 디버깅 용이)
     transcript_paths = sorted(glob.glob(str(transcript_dir / "*.jsonl")))
+    requested_ids = {
+        video_id.strip()
+        for video_id in args.video_id.split(",")
+        if video_id.strip()
+    }
+    if requested_ids:
+        transcript_paths = [
+            data_path
+            for data_path in transcript_paths
+            if os.path.basename(data_path).rsplit(".", 1)[0] in requested_ids
+        ]
+        print(f"op=transcript_context_video_filter ids={len(requested_ids)}")
 
     print(f"op=transcript_context_scan files={len(transcript_paths)}")
     if args.max_videos > 0:

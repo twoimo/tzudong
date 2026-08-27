@@ -66,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.preview_out:
-        Path(args.preview_out).write_text(
+        out = Path(args.preview_out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(
             json.dumps(preview, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
@@ -91,6 +93,20 @@ def main(argv: list[str] | None = None) -> int:
     print(f"insertedCount={result['insertedCount']}")
     print(f"insertedVideoIds={result['insertedVideoIds']}")
     print(f"skippedExistingVideoIds={result['skippedExistingVideoIds']}")
+    reflection = result.get("reflection") or {
+        "applied": [],
+        "skippedAlreadyPresent": [],
+        "unresolved": [],
+    }
+    # Per-candidate reflection accounting (stable video-id identity only, never
+    # raw payloads) so it can be emitted into the Run_Manifest reflection field.
+    print(f"reflectionApplied={reflection['applied']}")
+    print(f"reflectionSkippedAlreadyPresent={reflection['skippedAlreadyPresent']}")
+    print(f"reflectionUnresolved={reflection['unresolved']}")
+    print(
+        "reflection="
+        + json.dumps(reflection, ensure_ascii=False, sort_keys=True)
+    )
     if APPROVAL_ENV not in os.environ:
         return 2
     return 0

@@ -233,6 +233,7 @@ export interface CategoryStats {
   pending: number;
   approved: number;
   ready_for_approval?: number;
+  unconfirmed_map?: number;
   hold: number;
   db_conflict: number;
   missing: number;

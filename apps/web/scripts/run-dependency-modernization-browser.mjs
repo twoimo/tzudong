@@ -19,7 +19,7 @@ const proofEnvironment = {
     NODE_ENV: 'production',
     NEXT_PUBLIC_SUPABASE_URL: 'https://dependency-proof.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'dependency-modernization-browser-proof-anon-key',
-    PLAYWRIGHT_WEB_SERVER_COMMAND: 'node scripts/start-standalone.mjs --port 8080 --hostname localhost',
+    PLAYWRIGHT_WEB_SERVER_COMMAND: 'node scripts/start-standalone.mjs --port 3000 --hostname localhost',
 };
 
 class OperationFailure extends Error {

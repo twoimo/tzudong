@@ -823,6 +823,7 @@ function parseArgs() {
             case '--quality': params.quality = args[++i].split(','); break; // 콤마로 구분하여 배열로 변환
             case '--ext': params.ext = args[++i].toLowerCase().split(','); break; // 콤마로 구분하여 배열로 변환
             case '--delete-cache': params.deleteCache = true; break;
+            case '--video-id': params.videoIds = args[++i].split(',').map(s => s.trim()).filter(Boolean); break; // 콤마 구분 화이트리스트
             case '--force': params.force = true; break; // [추가] 강제 수집 플래그
             case '--frames-dir': params.framesDir = args[++i]; break; // [추가] 프레임 경로 설정
             case '--video-cache-dir': params.videoCacheDir = args[++i]; break; // [추가] 캐시 경로 설정
@@ -1429,14 +1430,14 @@ async function fetchAndSaveHeatmap(channel, videoId, _url) {
         }
     }
 
-    // [Mod] 쿠키 없이 접근 (Public/Incognito Mode) - 최대 3회 재시도 (2차 쿠키 폴백 제거)
     let html, parsed;
     const MAX_RETRIES = 3;
+    const cookieHeader = await loadCookies();
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         log('info', 'FRAME_HEATMAP_REQUEST_ATTEMPTED');
         try {
-            html = await fetchPage(canonicalVideoUrl, '');
+            html = await fetchPage(canonicalVideoUrl, cookieHeader || '');
             parsed = parseHeatmap(html);
 
             // 데이터가 유효하면 루프 탈출
@@ -1931,16 +1932,12 @@ async function processSingleVideo(videoId, params, dependencies = {}) {
     const canonicalVideoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     // 1. 히트맵 데이터 수집 (Recollect ID 자동 감지)
-    const segments = await loadSegments(channel, videoId, canonicalVideoUrl);
-    // [Mod] segments가 null이면 '변경 없음' 또는 '데이터 없음' -> 수집 중단
-    if (!segments) {
-        return;
+    let segments = await loadSegments(channel, videoId, canonicalVideoUrl);
+    if (!segments || (Array.isArray(segments) && segments.length === 0)) {
+        log('info', 'FRAME_OPENING_FALLBACK');
+        segments = [{ startSec: 0, endSec: 90, peakSec: 18 }];
     }
     const safeSegments = assertFrameSegments(segments);
-    if (safeSegments.length === 0) {
-        log('info', 'FRAME_HEATMAP_EMPTY');
-        return;
-    }
 
     log('info', 'FRAME_HEATMAP_SEGMENTS_FOUND');
     log('info', 'FRAME_QUALITIES_CONFIGURED');
@@ -2246,10 +2243,15 @@ async function processBatch(params, dependencies = {}) {
         }
     }
 
-    const urls = fs.readFileSync(urlsPath, 'utf8')
+    let urls = fs.readFileSync(urlsPath, 'utf8')
         .split('\n')
         .map(line => line.trim())
         .filter(line => line.length > 0);
+    if (Array.isArray(params.videoIds) && params.videoIds.length > 0) {
+        const requested = new Set(params.videoIds);
+        urls = urls.filter(url => requested.has(extractVideoId(url)));
+        log('info', 'FRAME_VIDEO_ID_FILTER_APPLIED', { count: requested.size });
+    }
 
     log('info', 'FRAME_URLS_DISCOVERED');
 

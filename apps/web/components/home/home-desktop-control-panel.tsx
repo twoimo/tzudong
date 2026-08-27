@@ -1626,7 +1626,7 @@ export default function HomeDesktopControlPanel({
         id="desktop-left-map-panel"
         ref={desktopSearchShellRef}
         className={cn(
-          "desktop-left-panel-scrollbarless fixed inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-xl",
+          "desktop-left-panel-scrollbarless absolute inset-y-0 z-[90] flex w-[min(392px,calc(100vw-32px))] flex-col border-border bg-background shadow-xl",
           desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r",
           "transition-transform duration-300 ease-out motion-reduce:transition-none",
           isPanelCollapsed

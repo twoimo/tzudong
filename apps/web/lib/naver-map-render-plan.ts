@@ -13,7 +13,10 @@ const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'):
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
 function hasRenderableCoordinates(restaurant: Restaurant): restaurant is RestaurantWithRenderableCoordinates {
-    return Boolean(restaurant.lat && restaurant.lng);
+    return typeof restaurant.lat === 'number'
+        && Number.isFinite(restaurant.lat)
+        && typeof restaurant.lng === 'number'
+        && Number.isFinite(restaurant.lng);
 }
 
 export function deriveClusterRenderPlan(

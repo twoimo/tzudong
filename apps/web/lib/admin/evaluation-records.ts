@@ -1,3 +1,8 @@
+import {
+  GEO_TRUE_UNCONFIRMED_MAP_REASONS,
+  UNCONFIRMED_MAP_REASONS,
+  hasUnconfirmedPublicMapLocation,
+} from '@/lib/admin-address-consistency';
 import type { EvaluationRecord } from '@/types/evaluation';
 
 export const ADMIN_EVALUATION_RECORD_SELECT = [
@@ -55,9 +60,21 @@ export function isAdminEvaluationRecordMissing(record: AdminEvaluationRecordClas
 export function isAdminEvaluationRecordNotSelected(record: AdminEvaluationRecordClassifierInput): boolean {
   return record.is_not_selected === true || record.status === 'not_selected';
 }
+export function isAdminEvaluationRecordUnconfirmedMapLocation(
+  record: AdminEvaluationRecordClassifierInput,
+): boolean {
+  if (record.status === 'deleted' || record.status === 'approved') return false;
+  if (record.is_missing === true || record.is_not_selected === true) return false;
+  const reason = record.evaluation_results?.location_match_TF?.pending_reason;
+  if (typeof reason === 'string' && GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(reason)) return true;
+  return hasUnconfirmedPublicMapLocation(record);
+}
 
 export function isAdminEvaluationRecordReadyForApproval(record: AdminEvaluationRecordClassifierInput): boolean {
   const evaluationResults = record.evaluation_results;
+  const pendingReason = evaluationResults?.location_match_TF?.pending_reason;
+  const blockedPendingReason = typeof pendingReason === 'string'
+    && (UNCONFIRMED_MAP_REASONS.has(pendingReason) || GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(pendingReason));
 
   return (
     evaluationResults?.visit_authenticity?.eval_value === 1 &&
@@ -67,6 +84,7 @@ export function isAdminEvaluationRecordReadyForApproval(record: AdminEvaluationR
     record.geocoding_success === true &&
     evaluationResults?.category_validity_TF?.eval_value === true &&
     evaluationResults?.category_TF?.eval_value === true &&
-    (record.status === 'pending' || record.status === 'hold')
+    (record.status === 'pending' || record.status === 'hold') &&
+    !blockedPendingReason
   );
 }

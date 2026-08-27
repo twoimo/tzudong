@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   buildRestaurantRegionAddressOrFilter,
+  excludeRestaurantsAlreadyShown,
   getRestaurantRegionAddressKeywords,
   matchesRestaurantAddressContext,
 } from '@/lib/popular-restaurants';
@@ -79,5 +80,21 @@ describe('popular restaurant region filtering', () => {
     );
 
     expect(buildRestaurantRegionAddressOrFilter(null)).toBeNull();
+  });
+
+  test('keeps latest restaurants visible when they already appear in the popular list', () => {
+    const garden = restaurantWithAddress({ road_address: '서울특별시 중구 세종대로 110' });
+    const myeongdong = {
+      ...restaurantWithAddress({ road_address: '서울특별시 중구 을지로 30' }),
+      id: 'restaurant-id-2',
+    };
+
+    expect(excludeRestaurantsAlreadyShown([garden, myeongdong], new Set([garden.id, myeongdong.id]))).toEqual([
+      garden,
+      myeongdong,
+    ]);
+    expect(excludeRestaurantsAlreadyShown([garden, myeongdong, garden], new Set([garden.id]))).toEqual([
+      myeongdong,
+    ]);
   });
 });

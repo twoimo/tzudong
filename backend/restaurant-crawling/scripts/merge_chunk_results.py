@@ -143,13 +143,17 @@ def merge_all_restaurants(
     return merged
 
 
-def main():
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="청크별 크롤링 결과 병합 및 중복 제거"
     )
     parser.add_argument("files", nargs="*", help="응답 JSON 파일 목록")
     parser.add_argument("--dir", help="응답 파일이 있는 디렉토리 경로")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--visual-location",
+        help="Optional 03-2 visual-location JSONL. Screen names stay pending without a confirmed address.",
+    )
+    args = parser.parse_args(argv)
 
     files: List[Path] = []
     if args.dir:
@@ -158,7 +162,7 @@ def main():
     if args.files:
         files.extend(Path(f) for f in args.files)
 
-    if not files:
+    if not files and not (args.visual_location and Path(args.visual_location).is_file()):
         print('{"restaurants": []}')
         return
 
@@ -181,8 +185,30 @@ def main():
         file=sys.stderr,
     )
 
+    visual_path = Path(args.visual_location) if args.visual_location else None
+    if visual_path and visual_path.is_file():
+        try:
+            last = None
+            for line in visual_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    last = json.loads(line)
+            if isinstance(last, dict) and last.get("origin_name"):
+                visual_row = {
+                    "origin_name": last.get("origin_name"),
+                    "address": last.get("address"),
+                    "address_status": last.get("address_status") or "unknown",
+                    "evidence": last.get("evidence")
+                    or {"visual": [], "caption": [], "external": []},
+                }
+                if not any(
+                    names_are_similar(existing.get("origin_name", ""), visual_row["origin_name"])
+                    for existing in merged
+                ):
+                    merged.append(visual_row)
+                    print("[INFO] visual-location candidate attached", file=sys.stderr)
+        except (OSError, json.JSONDecodeError):
+            print("[WARN] op=visual_location_merge_skipped", file=sys.stderr)
     result: Dict[str, Any] = {"restaurants": merged}
-    # 모든 청크에서 음식점이 없고 사유가 존재하면 전달
     if not merged and all_reasons:
         result["no_restaurant_reason"] = all_reasons[0]
     json.dump(result, sys.stdout, ensure_ascii=False)

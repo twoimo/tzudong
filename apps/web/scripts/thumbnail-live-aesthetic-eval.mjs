@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 const appRoot = resolve(__dirname, '..');
 const repoRoot = resolve(appRoot, '../..');
 
-const DEFAULT_BASE_URL = 'http://localhost:8080';
+const DEFAULT_BASE_URL = 'http://localhost:3000';
 const DEFAULT_ARTIFACT_ROOT = resolve(repoRoot, '.omx/artifacts/thumbnail-live-aesthetic');
 const TARGET = { width: 1280, height: 720, aspectRatio: '16:9' };
 const EXACT_PROVIDER = { providerId: 'local-codex', model: 'gpt-image-2', modelProvenance: 'exact' };

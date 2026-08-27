@@ -57,8 +57,20 @@
       this._markers = new Set();
       this._overlay = document.createElement('div');
       this._overlay.dataset.testid = 'mock-naver-overlay';
-      Object.assign(this._overlay.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
+      Object.assign(this._overlay.style, {
+        position: 'absolute',
+        inset: '0',
+        pointerEvents: 'none',
+        backgroundColor: '#d7e3cf',
+        backgroundImage: [
+          'linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)',
+          'linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px)',
+          'radial-gradient(circle at 50% 48%, #f4efe4 0 18%, transparent 19%)',
+        ].join(','),
+        backgroundSize: '48px 48px, 48px 48px, 100% 100%',
+      });
       if (!container.style.position) container.style.position = 'relative';
+      if (!container.style.backgroundColor) container.style.backgroundColor = '#d7e3cf';
       container.appendChild(this._overlay);
       setTimeout(() => trigger(this, 'idle'), 0);
     }

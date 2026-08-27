@@ -29,9 +29,22 @@ from backend.pipeline_control.live_evidence import (
 from backend.pipeline_control.manifest import (
     LIVE_EVIDENCE_FIELDS,
     LIVE_EVIDENCE_SCHEMA,
+    build_operator_summary,
+    cadence_window_for_profile,
+    derive_window_overrun,
+    empty_reflection_accounting,
+    final_status_for,
     is_live_evidence_eligible,
     is_live_execution_success,
+    map_hosted_gate_rejection_code,
+    normalize_missed_window_count,
+    normalize_reflection_accounting,
+    validate_hosted_gate_rejection_code,
     write_compatible_summary,
+)
+from backend.pipeline_control.schedule import (
+    ERROR_WINDOW_SHAPE_INVALID,
+    validate_cadence,
 )
 from backend.pipeline_control.state_machine import RunRecord
 from backend.pipeline_control.store import MemoryStore
@@ -45,6 +58,7 @@ from backend.utils.supabase_rest import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MANIFEST = REPO_ROOT / "backend" / "log" / "cron" / "current-summary.json"
+DEFAULT_CADENCE_CONFIG = REPO_ROOT / "backend" / "pipeline_control" / "cadence.schedule.json"
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 _GIT_SHA_RE = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
 _MISSING_ENVIRONMENT_VALUE = object()
@@ -95,6 +109,84 @@ def heavy_local_runtime_ready(root: Path | None = None) -> dict[str, bool]:
         "nodeHint": True,
         "ffmpegHint": True,
     }
+
+
+def _load_cadence_config(path: Path) -> object:
+    """Read the committed cadence config, fail closed on any read/parse error.
+
+    A missing, unreadable, or non-JSON config is not a valid schedule, so the
+    caller must treat it as a rejection rather than proceeding. No provider or
+    filesystem diagnostics are surfaced.
+    """
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, ValueError):
+        return None
+
+
+def cadence_preflight(path: Path | None = None) -> None:
+    """Fail-closed cadence preflight for the runner/entrypoint.
+
+    Validates the committed cadence configuration before any runner or step is
+    triggered. On rejection the process halts and surfaces only the bounded
+    ``errorCode`` and the conflicting window labels — no provider, filesystem,
+    or free-form diagnostics.
+    """
+
+    config = _load_cadence_config(path or DEFAULT_CADENCE_CONFIG)
+    result = validate_cadence(config)
+    if result.get("ok"):
+        return
+    error_code = result.get("errorCode") or ERROR_WINDOW_SHAPE_INVALID
+    conflicting = result.get("conflictingWindows") or []
+    windows = ",".join(str(label) for label in conflicting)
+    raise SystemExit(f"cadence_invalid:{error_code}:{windows}")
+
+
+def _load_env_contract_module():
+    """Load ``backend/bin/check_env_contract.py`` as a module.
+
+    ``backend/bin`` is a script directory (not a package), so the env-contract
+    validator is loaded by file location the same way its tests do. Returns
+    ``None`` when the checker cannot be located/loaded so the caller fails
+    closed.
+    """
+
+    import importlib.util
+
+    checker_path = REPO_ROOT / "backend" / "bin" / "check_env_contract.py"
+    spec = importlib.util.spec_from_file_location(
+        "check_env_contract", checker_path
+    )
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def env_contract_preflight(profile: str = "pipeline-control") -> None:
+    """Fail-closed env-contract preflight for the runner/entrypoint (R6.10, R7.2).
+
+    Validates the mapped env-contract profile before any pipeline step. On a
+    missing required secret or a forbidden legacy name the process halts and
+    surfaces only canonical secret names (never any value), matching the
+    contract validator's names+presence-only reporting.
+    """
+
+    module = _load_env_contract_module()
+    if module is None:
+        raise SystemExit("env_contract_unavailable")
+    report = module.validate(profile, dict(os.environ))
+    if report.get("ok"):
+        return
+    missing = ",".join(report.get("missingRequired") or [])
+    forbidden = ",".join(report.get("forbiddenPresent") or [])
+    raise SystemExit(
+        f"env_contract_invalid:{profile}:missing={missing}:forbidden={forbidden}"
+    )
 
 
 def live_enabled() -> bool:
@@ -150,6 +242,10 @@ def write_run_manifest(
     data_sink: str | None = None,
     store: MemoryStore | None = None,
     job_id_scope: str = "worker_execution",
+    hosted_gate_rejection_code: str | None = None,
+    missed_window_count: int = 0,
+    reflection: dict | None = None,
+    cadence_config_path: Path | None = None,
 ) -> Path:
     if execution_mode not in {"dry_run", "live"}:
         raise ValueError("execution_mode_invalid")
@@ -210,7 +306,7 @@ def write_run_manifest(
     payload = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "finalStatus": "OK" if ok else "ERROR",
+        "finalStatus": final_status_for(run_status),
         "finalExitCode": 0 if ok else 1,
         "failedRequiredSteps": failed,
         "optionalSkips": optional,
@@ -293,6 +389,34 @@ def write_run_manifest(
         payload["evidenceReceiptSha256"] = canonical_sha256(receipt_fields)
     payload["liveExecutionSucceeded"] = is_live_execution_success(payload)
     payload["liveEvidenceEligible"] = is_live_evidence_eligible(payload)
+
+    # Additive, bounded, secret-free orchestration fields (R5.8, R3.7, R1.7,
+    # R6.2, R4.4). ``failedRequiredSteps`` already records failed required steps
+    # by fixed canonical id only; the summary reports their count.
+    compute_profile = run.profile if run is not None else None
+    window_start, window_end = cadence_window_for_profile(
+        compute_profile, config_path=cadence_config_path
+    )
+    payload["windowStart"] = window_start
+    payload["windowEnd"] = window_end
+    payload["windowOverrun"] = derive_window_overrun(
+        window_end, payload["generatedAt"]
+    )
+    payload["hostedGateRejectionCode"] = validate_hosted_gate_rejection_code(
+        hosted_gate_rejection_code
+    )
+    payload["missedWindowCount"] = normalize_missed_window_count(missed_window_count)
+    payload["reflection"] = (
+        empty_reflection_accounting()
+        if reflection is None
+        else normalize_reflection_accounting(reflection)
+    )
+    payload["operatorSummary"] = build_operator_summary(
+        final_status=payload["finalStatus"],
+        execution_mode=execution_mode,
+        data_sink=data_sink,
+        failed_required_count=len(failed),
+    )
     return write_compatible_summary(destination, payload)
 
 
@@ -343,6 +467,10 @@ def process_one(
         data_sink = boundary.data_sink
     except SupabaseRestConfigurationError:
         store.finish_failed(run.id, "supabase_data_boundary_rejected")
+        rejection_code = map_hosted_gate_rejection_code(
+            profile=run.profile,
+            execution_mode=execution_mode,
+        )
         write_run_manifest(
             "Failed",
             manifest_path,
@@ -350,6 +478,7 @@ def process_one(
             execution_mode=execution_mode,
             store=store,
             job_id_scope=job_id_scope,
+            hosted_gate_rejection_code=rejection_code,
         )
         return "Failed"
     collected: list[dict] = []
@@ -421,11 +550,24 @@ def process_one(
 
 def main() -> int:
     from backend.pipeline_control.live_run import main as live_main
+    from backend.pipeline_control.health import write_health_report
 
+    # Fail-closed preflight (before any step): reject an invalid cadence config
+    # (R1.6) and an unsatisfied env contract (R6.10, R7.2).
+    cadence_preflight()
+    env_contract_preflight("pipeline-control")
     profile = resolve_compute_profile()
     if profile == "heavy_local" and not all(heavy_local_runtime_ready().values()):
         raise SystemExit("heavy_local_runtime_missing")
-    return live_main()
+    exit_code = live_main()
+    # Govern run-health reporting with the staleness/absence rule (R5.7): a
+    # stale or absent Run_Manifest is reported as not-Succeeded. Writing the
+    # health outcome must never mask the pipeline's own exit code.
+    try:
+        write_health_report()
+    except Exception:
+        pass
+    return exit_code
 
 
 if __name__ == "__main__":

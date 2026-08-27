@@ -1043,6 +1043,15 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain("TOP 5");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurantPage");
+    expect(desktopLeftPanelMapHomeSource).toContain("excludeRestaurantsAlreadyShown");
+    expect(desktopLeftPanelMapHomeSource).not.toContain("data-local-workspace-banner");
+    expect(source("app/home-runtime-shell.tsx")).not.toContain("LocalWorkspaceBanner");
+    expect(source("app/layout.tsx")).toContain("LocalWorkspaceBanner");
+    expect(source("app/layout.tsx")).toContain("data-local-workspace-app");
+    expect(source("components/home/LocalWorkspaceBanner.tsx")).toContain("data-local-workspace-banner");
+    expect(source("components/home/LocalWorkspaceBanner.tsx")).not.toContain("z-[200]");
+    expect(source("components/layout/OverlayLayout.tsx")).not.toContain("LocalWorkspaceBanner");
+    expect(desktopLeftPanelMapHomeSource).toContain("새로 추가된 맛집이 준비되면 최신순으로 보여드릴게요.");
     expect(desktopLeftPanelMapHomeSource).toContain(
       "getPopularRestaurantsQueryKey",
     );
@@ -1537,7 +1546,7 @@ describe("web quality performance source contracts", () => {
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "fixed inset-y-0 z-[90] flex",
+      "absolute inset-y-0 z-[90] flex",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r"',

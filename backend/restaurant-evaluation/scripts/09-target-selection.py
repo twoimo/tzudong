@@ -37,19 +37,39 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
     기존 backup 로직 그대로 유지.
     """
     crawling_file = data_path / "crawling" / f"{video_id}.jsonl"
+    visual_file = data_path / "visual-location" / f"{video_id}.jsonl"
 
-    if not crawling_file.exists():
+    data = load_last_jsonl_record(crawling_file) if crawling_file.exists() else None
+    visual = load_last_jsonl_record(visual_file) if visual_file.exists() else None
+
+    if not data and not visual:
         return None
-
-    # 최신 줄 로드 (성능: 대용량 JSONL 전체 순회 방지)
-    data = load_last_jsonl_record(crawling_file)
 
     if not data:
-        print(f"[WARN] 마지막 JSONL 레코드 로드 실패(빈 파일/손상): {crawling_file}")
-        return None
+        data = {
+            "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
+            "restaurants": [],
+            "recollect_version": {},
+        }
 
-    youtube_link = data.get("youtube_link")
-    restaurants = data.get("restaurants", [])
+    youtube_link = data.get("youtube_link") or f"https://www.youtube.com/watch?v={video_id}"
+    restaurants = list(data.get("restaurants") or [])
+    visual_evidence = (visual or {}).get("evidence", {}).get("visual") if visual else None
+    if visual and visual.get("origin_name") and not any(
+        restaurant.get("origin_name") == visual.get("origin_name") for restaurant in restaurants
+    ):
+        restaurants.append(
+            {
+                "origin_name": visual.get("origin_name"),
+                "address": None,
+                "address_status": "estimated" if visual.get("address") else "unknown",
+                "evidence": {
+                    "visual": visual_evidence or [],
+                    "caption": [],
+                    "external": [],
+                },
+            }
+        )
 
     # evaluation_target 생성
     evaluation_target = {}
@@ -79,6 +99,8 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
         "evaluation_target": evaluation_target,
         "restaurants": restaurants,
         "recollect_version": recollect_version,
+        "visual_origin_name": (visual or {}).get("origin_name"),
+        "address_status": (visual or {}).get("address_status") or "unknown",
     }
 
     # 분류 결과
@@ -109,6 +131,7 @@ def main():
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
     parser.add_argument("--crawling-path", required=True, help="크롤링 데이터 경로")
     parser.add_argument("--evaluation-path", required=True, help="평가 결과 저장 경로")
+    parser.add_argument("--video-id", default="", help="이 영상만 선정. 기존 selection이 있어도 다시 씀")
     args = parser.parse_args()
 
     channel = args.channel
@@ -127,15 +150,22 @@ def main():
     selection_dir.mkdir(parents=True, exist_ok=True)
     not_selection_dir.mkdir(parents=True, exist_ok=True)
 
-    # crawling 폴더에서 video_id 수집
-    crawling_dir = crawling_path / "crawling"
-    if not crawling_dir.exists():
-        print(f"[ERROR] crawling 폴더 없음: {crawling_dir}")
-        return
-
     video_ids = set()
-    for f in crawling_dir.glob("*.jsonl"):
-        video_ids.add(f.stem)
+    crawling_dir = crawling_path / "crawling"
+    visual_dir = crawling_path / "visual-location"
+    if crawling_dir.exists():
+        for f in crawling_dir.glob("*.jsonl"):
+            video_ids.add(f.stem)
+    if visual_dir.exists():
+        for f in visual_dir.glob("*.jsonl"):
+            video_ids.add(f.stem)
+    if not video_ids:
+        print(f"[ERROR] crawling/visual-location 후보 없음: {crawling_path}")
+        return
+    requested = (args.video_id or "").strip()
+    if requested:
+        video_ids = {requested}
+        print(f"video-id filter: {requested}")
 
     print(f"대상 비디오: {len(video_ids)}개")
 
@@ -153,8 +183,8 @@ def main():
         selection_file = selection_dir / f"{video_id}.jsonl"
         not_selection_file = not_selection_dir / f"{video_id}.jsonl"
 
-        # 중복 검사: 이미 처리됨
-        if selection_file.exists() or not_selection_file.exists():
+        # 중복 검사: 이미 처리됨. --video-id 지정 시 재작성.
+        if not requested and (selection_file.exists() or not_selection_file.exists()):
             stats["skipped"] += 1
             if stats["skipped"] % 50 == 1:
                 print(f"이미 처리됨 (스킵 {stats['skipped']}개)")

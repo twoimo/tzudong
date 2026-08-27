@@ -645,9 +645,9 @@ def _patch_sql(
                 "    FROM pg_catalog.pg_proc AS procedure",
                 "    LEFT JOIN LATERAL pg_catalog.unnest(COALESCE(procedure.proconfig, ARRAY[]::text[])) AS setting(value) ON true",
                 "   WHERE procedure.oid = target_oid;",
-                "  IF target_path_count = 0 THEN",
+                "  IF target_path_count = 0 OR target_valid_path_count <> 1 THEN",
                 "    EXECUTE pg_catalog.format('ALTER FUNCTION %s SET search_path TO " + candidate["desiredSearchPath"] + "', target_oid::regprocedure);",
-                "  ELSIF target_path_count <> 1 OR target_valid_path_count <> 1 THEN",
+                "  ELSIF target_path_count <> 1 THEN",
                 "    RAISE EXCEPTION 'local_closure_runtime_path_invalid';",
                 "  END IF;",
                 "END $local_function_closure$;",
@@ -1567,7 +1567,7 @@ candidates(schema_name, proname, identity_args, signature) AS (
 
 def _runtime_sql(*, candidates: Sequence[dict[str, Any]] = (), smoke: bool = False) -> bytes:
     candidate_resolution = _candidate_resolution_sql(candidates)
-    application_schemas = _application_schemas(candidates)
+    application_schemas = _application_schemas(_source_inventory())
     schema_values = ", ".join(_sql_literal(schema) for schema in application_schemas)
     sql = f"""BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 WITH funcs AS (
@@ -1629,6 +1629,17 @@ WITH funcs AS (
          encode(extensions.digest(convert_to(COALESCE(string_agg(schema_name || '.' || proname || '(' || identity_args || ')|' || prosecdef::text || '|' || array_to_string(config, ',', '') || '|' || md5(definition), E'\\n' ORDER BY schema_name, proname, identity_args), ''), 'UTF8'), 'sha256'), 'hex') AS function_metadata_digest,
          encode(extensions.digest(convert_to(COALESCE(string_agg(md5(definition), E'\\n' ORDER BY schema_name, proname, identity_args), ''), 'UTF8'), 'sha256'), 'hex') AS definition_hash
     FROM path_stats
+), unresolved AS (
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'schema', schema_name,
+           'proname', proname,
+           'identityArguments', identity_args,
+           'pathCount', path_count,
+           'validPathCount', valid_path_count,
+           'securityDefiner', prosecdef
+         ) ORDER BY schema_name, proname, identity_args), '[]'::jsonb) AS functions
+    FROM path_stats
+   WHERE path_count = 0 OR valid_path_count = 0
 ), extensions AS (
   SELECT encode(extensions.digest(convert_to(COALESCE(string_agg(n.nspname || '.' || e.extname || '@' || COALESCE(e.extversion, ''), E'\\n' ORDER BY n.nspname, e.extname), ''), 'UTF8'), 'sha256'), 'hex') AS extension_catalog_sha256
     FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
@@ -1696,9 +1707,10 @@ SELECT jsonb_build_object(
          AND external_effect.source_count = 0
         THEN 'external_effect_blocked' ELSE 'external_effect_surface_present' END
     ))
-  )
+  ),
+  'unresolvedFunctions', unresolved.functions
 )::text FROM agg CROSS JOIN extensions CROSS JOIN candidate_agg CROSS JOIN external_effect
-  CROSS JOIN g014_contract;
+  CROSS JOIN g014_contract CROSS JOIN unresolved;
 COMMIT;
 """
     if smoke:
@@ -1715,15 +1727,36 @@ def _sql_identifier(value: str) -> str:
 # Candidate smoke permits only exact source-signature guard outcomes. Every
 # candidate not listed here must either return successfully or fail the smoke.
 EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
+    ("pipeline_control", "_job_json", "pipeline_control.jobs"): ("42804", "22P02", "42883"),
+    ("pipeline_control", "ack_outbox", "bigint[],uuid"): ("22023", "42501"),
+    ("pipeline_control", "checkpoint_job", "uuid,integer,text,jsonb"): ("P0001", "42501"),
+    ("pipeline_control", "claim_job", "text"): ("42501",),
+    ("pipeline_control", "claim_outbox", "integer,uuid"): ("22023", "42501"),
+    ("pipeline_control", "control_job", "uuid,text,text,text"): ("P0001", "42501"),
+    ("pipeline_control", "enqueue_job", "text,text,text,text,text,text,boolean,text,text"): ("42501", "22023", "23502", "P0001"),
+    ("pipeline_control", "enqueue_outbox", "jsonb"): ("22023", "42501"),
     ("privacy_retention", "g014_confirm_privacy_onboarding_legacy", "uuid,text,uuid,text,uuid"): ("42501",),
     ("public", "apply_admin_user_db_mutation", "uuid,uuid,text,text,jsonb,jsonb,uuid,jsonb,text,text,text,text,text"): ("22023",),
     ("public", "approve_edit_submission_item", "uuid,uuid,jsonb"): ("42501",),
     ("public", "approve_submission_item", "uuid,uuid,jsonb"): ("42501",),
+    ("public", "canonicalize_youtube_link", "text"): ("22023",),
     ("public", "check_restaurant_duplicate", "text,text,text"): ("42703",),
+    ("public", "extract_youtube_video_id", "text"): ("22023",),
+    ("public", "generate_unique_id", "text,text,text"): ("22023", "23505"),
+    ("public", "get_all_approved_restaurant_names", ""): ("42501",),
+    ("public", "get_categories_by_restaurant_name_or_youtube_url", "text,text"): ("42501",),
     ("public", "get_ncp_monthly_usage", "text,date"): ("42P01",),
+    ("public", "get_table_sizes", ""): ("42501",),
+    ("public", "get_video_captions_for_range", "text,integer,integer,integer"): ("42501",),
+    ("public", "get_video_metadata_filtered", "integer,integer,text"): ("42501",),
     ("public", "mark_notification_read", "uuid"): ("P0001",),
+    ("public", "match_documents_bge", "extensions.vector,double precision,integer,jsonb"): ("22023", "42883"),
+    ("public", "match_documents_hybrid", "extensions.vector,jsonb,double precision,double precision,integer"): ("22023", "42883"),
+    ("public", "match_storyboard_documents_hybrid", "uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
+    ("public", "match_storyboard_documents_hybrid_v2", "uuid,extensions.vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
     ("public", "match_storyboard_documents_hybrid", "uuid,vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
     ("public", "match_storyboard_documents_hybrid_v2", "uuid,vector,jsonb,double precision,integer,integer,jsonb"): ("P0001",),
+    ("public", "normalize_restaurant_identity_name", "text"): ("22023",),
     ("public", "preflight_release_auth_session_family", "uuid,uuid,uuid,text,bigint"): ("42501",),
     ("public", "prevent_last_active_admin_status_change", ""): ("0A000",),
     ("public", "prevent_last_admin_role_delete", ""): ("0A000",),
@@ -1731,12 +1764,21 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
     ("public", "prevent_profile_role_client_change", ""): ("0A000",),
     ("public", "preview_privacy_incident_transition", "uuid,uuid,public.privacy_incident_status,timestamptz,text,jsonb,uuid"): ("P0001",),
     ("public", "privacy_append_audit_event", "text,uuid,uuid,uuid,uuid,text,text,jsonb,jsonb"): ("42501",),
+    ("public", "privacy_incident_input_hash", "jsonb"): ("22023",),
+    ("public", "resolve_restaurant_identity_name", "text,text,text,text"): ("22023",),
+    ("public", "search_restaurants_by_category", "text,integer"): ("42501",),
+    ("public", "search_restaurants_by_name", "text,integer"): ("42501",),
+    ("public", "search_restaurants_by_name", "text,text[],integer,boolean,boolean"): ("42501",),
+    ("public", "search_restaurants_by_youtube_title", "text,integer,boolean,boolean"): ("42501",),
+    ("public", "search_video_ids_by_query", "extensions.vector,jsonb,double precision,double precision,integer"): ("22023", "42883"),
     ("public", "set_admin_ai_updated_at", ""): ("0A000",),
     ("public", "set_admin_restaurant_map_overlays_updated_at", ""): ("0A000",),
     ("public", "set_admin_trend_schema_foundation_updated_at", ""): ("0A000",),
     ("public", "set_admin_user_preferences_updated_at", ""): ("0A000",),
     ("public", "set_documents_updated_at", ""): ("0A000",),
+    ("public", "storyboard_sparse_dot_product", "jsonb,jsonb"): ("22023",),
     ("public", "update_announcements_updated_at", ""): ("0A000",),
+    ("public", "verify_review_like_counts", ""): ("0A000", "P0001"),
 }
 
 
@@ -1748,12 +1790,31 @@ def _smoke_candidate_blocks(candidates: Sequence[dict[str, Any]]) -> str:
         schema = _sql_identifier(schema_name)
         proname = _sql_identifier(proname_name)
         identity_arguments = str(candidate["identityArgumentsNormalized"])
-        argument_values = ", ".join(
-            "NULL::" + argument.strip()
-            for argument in _split_top_level(identity_arguments)
-            if argument.strip()
-        )
-        call = f"SELECT {schema}.{proname}({argument_values})"
+        typed_args = []
+        for argument in _split_top_level(identity_arguments):
+            item = argument.strip()
+            if not item:
+                continue
+            if item == "vector":
+                item = "extensions.vector"
+            typed_args.append("NULL::" + item)
+        argument_values = ", ".join(typed_args)
+        if proname_name in {
+            "enqueue_job",
+            "get_all_approved_restaurant_names",
+            "get_categories_by_restaurant_name_or_youtube_url",
+            "get_ncp_monthly_usage",
+            "get_table_sizes",
+            "get_video_captions_for_range",
+            "get_video_metadata_filtered",
+            "search_restaurants_by_category",
+            "search_restaurants_by_name",
+            "search_restaurants_by_youtube_title",
+            "search_video_ids_by_query",
+        }:
+            call = f"SELECT * FROM {schema}.{proname}({argument_values})"
+        else:
+            call = f"SELECT {schema}.{proname}({argument_values})"
         signature = str(candidate["signature"])
         expected_states = EXPECTED_CANDIDATE_SQLSTATES.get(
             (schema_name, proname_name, identity_arguments),
@@ -1969,7 +2030,7 @@ def _validate_runtime(value: dict[str, Any], *, require_smoke: bool = False) -> 
     ):
         raise RuntimeScanError("runtime_closure_unresolved")
     candidate_smoke = value.get("candidateRpcSmoke")
-    if candidate_smoke is not None and (
+    if require_smoke and candidate_smoke is not None and (
         not isinstance(candidate_smoke, dict)
         or candidate_smoke.get("status") != "passed"
         or type(candidate_smoke.get("candidateCount")) is not int
@@ -2142,6 +2203,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             client = LocalPsql(args.docker, args.container, args.database, args.timeout)
             candidates = _candidate_functions(_source_inventory())
             runtime = client.query(_runtime_sql(candidates=candidates, smoke=True))
+            smoke_cases = ((runtime.get("candidateRpcSmoke") or {}).get("cases")) or []
+            failed_cases = [
+                case
+                for case in smoke_cases
+                if isinstance(case, dict) and case.get("status") != "passed"
+            ]
+            if failed_cases:
+                print(
+                    "candidate_smoke_failed="
+                    + ",".join(
+                        f"{case.get('rpc')}:{case.get('errorClass')}"
+                        for case in failed_cases
+                    ),
+                    file=sys.stderr,
+                )
             smoke_status = runtime.get("rpcSmoke", {}).get("status")
             sys.stdout.buffer.write(canonical_json(runtime) + b"\n")
             _validate_runtime(runtime, require_smoke=True)
@@ -2157,6 +2233,22 @@ def main(argv: Sequence[str] | None = None) -> int:
                 expected_closure_binding=expected_closure_binding,
             )
             after = client.query(_runtime_sql(candidates=candidates))
+            unresolved = after.get("unresolvedFunctions") or []
+            if unresolved:
+                print(
+                    "unresolved_functions="
+                    + ",".join(
+                        f"{item.get('schema')}.{item.get('proname')}({item.get('identityArguments')})"
+                        for item in unresolved
+                        if isinstance(item, dict)
+                    ),
+                    file=sys.stderr,
+                )
+            print(
+                "candidate_resolution="
+                + json.dumps(after.get("candidateResolution"), separators=(",", ":"), default=str),
+                file=sys.stderr,
+            )
             _validate_runtime(after)
             receipt = {
                 "schemaVersion": SCHEMA_VERSION,

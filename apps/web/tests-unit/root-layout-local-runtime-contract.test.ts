@@ -33,6 +33,13 @@ describe('root layout local runtime and CSP nonce contract', () => {
     expect(layoutSource).not.toContain('strategy="beforeInteractive"');
     expect(layoutSource).not.toMatch(/randomUUID|Math\.random/);
   });
+  test('keeps the local workspace banner outside the app tree', () => {
+    expect(layoutSource).toContain('import { LocalWorkspaceBanner } from "@/components/home/LocalWorkspaceBanner"');
+    expect(layoutSource).toContain('data-local-workspace={process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1" ? "true" : undefined}');
+    expect(layoutSource).toContain('<LocalWorkspaceBanner />');
+    expect(layoutSource).toContain('<div data-local-workspace-app="true">');
+    expect(layoutSource.indexOf('<LocalWorkspaceBanner />')).toBeLessThan(layoutSource.indexOf('data-local-workspace-app'));
+  });
 
   test('inlines only the hash-pinned source-controlled viewport bootstrap', () => {
     const publicBootstrapSource = readFileSync(

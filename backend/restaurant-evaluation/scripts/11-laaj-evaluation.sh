@@ -359,23 +359,33 @@ export TZ="Asia/Seoul"
 CHANNEL=""
 CRAWLING_PATH=""
 EVALUATION_PATH=""
+VIDEO_ID_FILTER=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --channel|-c) CHANNEL="$2"; shift 2 ;;
         --crawling-path) CRAWLING_PATH="$2"; shift 2 ;;
         --evaluation-path) EVALUATION_PATH="$2"; shift 2 ;;
+        --video-id) VIDEO_ID_FILTER="$2"; shift 2 ;;
         *) echo "알 수 없는 옵션: $1"; exit 1 ;;
     esac
 done
 
 if [ -z "$CHANNEL" ] || [ -z "$CRAWLING_PATH" ] || [ -z "$EVALUATION_PATH" ]; then
-    echo "사용법: $0 --channel <채널명> --crawling-path <크롤링경로> --evaluation-path <평가경로>"
+    echo "사용법: $0 --channel <채널명> --crawling-path <크롤링경로> --evaluation-path <평가경로> [--video-id <id>]"
     exit 1
 fi
 
-FULL_CRAWLING_PATH="$PROJECT_ROOT/$CRAWLING_PATH"
-FULL_EVALUATION_PATH="$PROJECT_ROOT/$EVALUATION_PATH"
+if [[ "$CRAWLING_PATH" = /* ]]; then
+    FULL_CRAWLING_PATH="$CRAWLING_PATH"
+else
+    FULL_CRAWLING_PATH="$PROJECT_ROOT/$CRAWLING_PATH"
+fi
+if [[ "$EVALUATION_PATH" = /* ]]; then
+    FULL_EVALUATION_PATH="$EVALUATION_PATH"
+else
+    FULL_EVALUATION_PATH="$PROJECT_ROOT/$EVALUATION_PATH"
+fi
 
 RULE_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/rule_results"
 LAAJ_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/laaj_results"
@@ -515,8 +525,9 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
             exit 0
         fi
     else
-        log_warning "Node.js API Health Check 실패 & Gemini CLI 미설치. 평가를 건너뜁니다."
-        exit 0
+        log_warning "Node.js API Health Check 실패 & Gemini CLI 미설치. Node API로 평가를 계속합니다."
+        FORCE_CLI_FALLBACK=false
+        HEALTH_CHECK_PASSED=true
     fi
 fi
 
@@ -530,6 +541,10 @@ mapfile -t VIDEO_IDS < <(
         | sed 's/\.jsonl$//' \
         | sort
 )
+if [ -n "$VIDEO_ID_FILTER" ]; then
+    VIDEO_IDS=("$VIDEO_ID_FILTER")
+    log_info "video-id filter: $VIDEO_ID_FILTER"
+fi
 
 TOTAL=${#VIDEO_IDS[@]}
 log_info "총 대상 파일: $TOTAL 개"

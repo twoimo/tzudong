@@ -207,8 +207,6 @@ export function useActiveAdBanners(
                     .overrideTypes<AdBannerDatabaseRow[], { merge: false }>();
 
                 if (error) {
-                    console.error('광고 배너 조회 실패:');
-                    // 폴백 데이터 반환
                     return displayTarget
                         ? FALLBACK_AD_BANNERS.filter(b => b.display_target.includes(displayTarget))
                         : FALLBACK_AD_BANNERS;

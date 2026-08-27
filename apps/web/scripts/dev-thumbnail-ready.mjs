@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { safeCliErrorName } from './privacy-safe-cli-log.mjs'
 
-const PORT = process.env.PORT || '8080'
+const PORT = process.env.PORT || '3000'
 const HOST = process.env.HOST || 'localhost'
 const token = process.env.E2E_ADMIN_ROUTE_BYPASS_TOKEN?.trim() || randomBytes(18).toString('base64url')
 const bootstrapNext = '/admin?module=youtube-thumbnail-generator'

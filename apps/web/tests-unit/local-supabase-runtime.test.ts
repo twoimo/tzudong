@@ -47,6 +47,34 @@ describe('local Supabase runtime source contract', () => {
     expect(() => __localSupabaseRuntimeForTests.parseGeneratedEnvironment(Buffer.from(`${source}ANON_KEY=duplicate\n`))).toThrow('env_shape');
     expect(() => __localSupabaseRuntimeForTests.parseGeneratedEnvironment(Buffer.from(source.replace('ANON_KEY=', 'bad-key=')))).toThrow('env_shape');
   });
+  test('reconstructs STORAGE_SERVICE_KEY from JWT_SECRET when the generated env omitted it', () => {
+    const required = {
+      PROJECT_NAME: 'tzudong-local-000000000000',
+      LOCAL_STATE_ROOT: '/tmp/state',
+      LOCAL_INPUT_ROOT: '/tmp/state/inputs',
+      POSTGRES_PASSWORD: 'fixture-password',
+      POSTGRES_HOST_PORT: '13432',
+      POOLER_TENANT_ID: 'local',
+      KONG_HTTP_PORT: '8000',
+      SITE_URL: 'http://127.0.0.1:8080',
+      ADDITIONAL_REDIRECT_URLS: 'http://127.0.0.1:8080',
+      API_EXTERNAL_URL: 'http://127.0.0.1:8000',
+      SUPABASE_PUBLIC_URL: 'http://127.0.0.1:8000',
+      SUPABASE_DB_URL: 'postgresql://postgres:fixture@127.0.0.1:13432/postgres',
+      ANON_KEY: 'fixture-anon',
+      SERVICE_ROLE_KEY: 'fixture-service',
+      NIGHTLY_ADMIN_EMAIL: 'nightly-ci@local.invalid',
+      NIGHTLY_ADMIN_PASSWORD: 'fixture-password-long',
+      LOCAL_STACK_GENERATOR_VERSION: 'local-stack-v1',
+      JWT_SECRET: 'fixture-jwt-secret',
+    };
+    const parsed = __localSupabaseRuntimeForTests.parseGeneratedEnvironment(
+      Buffer.from(`${Object.entries(required).map(([key, value]) => `${key}=${value}`).join('\n')}\n`),
+    );
+    expect(parsed.STORAGE_SERVICE_KEY).toMatch(/^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\./);
+    expect(parsed.STORAGE_SERVICE_KEY).not.toBe(required.SERVICE_ROLE_KEY);
+    expect(parsed.JWT_SECRET).toBe('fixture-jwt-secret');
+  });
 
   test('passes only the bounded GitHub socket admission context to local stack status', () => {
     const environment = __localSupabaseRuntimeForTests.localStackStatusEnvironment({
@@ -152,9 +180,9 @@ describe('local Supabase runtime source contract', () => {
     const localDevRunner = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');
     const gitignore = readFileSync(path.resolve(import.meta.dir, '../.gitignore'), 'utf8');
     const eslintConfig = readFileSync(path.resolve(import.meta.dir, '../eslint.config.mjs'), 'utf8');
-    expect(packageSource).toContain('"dev": "node scripts/run-local-dev.mjs --port 8080"');
-    expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 8080"');
-    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
+    expect(packageSource).toContain('"dev": "node scripts/run-local-dev.mjs --port 3000"');
+    expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 3000"');
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted"');
     expect(packageSource).toContain('"supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs"');
     const localTypeRunner = readFileSync(
       path.resolve(import.meta.dir, '../scripts/run-local-supabase-types.mjs'),
@@ -216,14 +244,16 @@ describe('local Supabase runtime source contract', () => {
     expect(runner).toContain("export function buildLocalNightlyEnvironment");
     expect(runner).toContain("SUPABASE_SERVICE_ROLE_KEY: local.values.SERVICE_ROLE_KEY");
     expect(runner).toContain("SUPABASE_STORAGE_SERVER_KEY: local.values.STORAGE_SERVICE_KEY");
-    expect(runner).toContain('env: localStackStatusEnvironment(),');
+    expect(runner).toContain("label=com.docker.compose.project=${local.projectName}");
+    expect(runner).toContain('fail(\'stack_service\')');
     expect(nextConfig).toContain("process.env.TZUDONG_LOCAL_SUPABASE_DEV === '1'");
     expect(nextConfig).toContain("process.env.NODE_ENV === 'development'");
     expect(localDevRunner).toContain('NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${port}`');
     expect(localDevRunner).toContain('TZUDONG_NEXT_DIST_DIR: localDevDistDirName(port)');
     expect(localDevRunner).toContain("name === '--live-naver-provider-smoke'");
-    expect(localDevRunner).toContain("NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE: liveNaverProviderSmoke ? '1' : '0'");
-    expect(localDevRunner).toContain("NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL: liveNaverProviderSmoke ? '' : '/__local/naver-maps.js'");
+    expect(localDevRunner).toContain("const useLiveNaver = liveNaverProviderSmoke || Boolean(environment.NEXT_PUBLIC_NAVER_CLIENT_ID);");
+    expect(localDevRunner).toContain("environment.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL = useLiveNaver ? '' : '/__local/naver-maps.js'");
+    expect(localDevRunner).toContain("environment.NEXT_PUBLIC_TZUDONG_NAVER_LIVE_PROVIDER_SMOKE = useLiveNaver ? '1' : '0'");
     expect(localDevRunner).toContain("__NEXT_PROCESSED_ENV: 'true'");
     expect(localDevRunner).not.toContain('process.kill(process.pid');
     expect(gitignore).toContain('/.next-*/');
@@ -252,7 +282,7 @@ describe('local Supabase runtime source contract', () => {
         || source.includes('nightlyRun');
       expect(admitted, name).toBe(true);
     }
-    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted"');
     const cleanNext = readFileSync(path.resolve(import.meta.dir, '../scripts/clean-next.mjs'), 'utf8');
     const prewarm = readFileSync(path.resolve(import.meta.dir, '../scripts/dev-prewarm.mjs'), 'utf8');
     const localDev = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');

@@ -6,6 +6,7 @@ import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE_ALT, OG_IMAGE_PATH, SITE_N
 import { resolveRootLayoutResourceHintPolicy } from "@/lib/root-layout-resource-hints";
 import { VIEWPORT_HEIGHT_BOOTSTRAP_SOURCE } from "@/lib/viewport-height-bootstrap";
 import { RootSpeedInsights } from "./root-speed-insights";
+import { LocalWorkspaceBanner } from "@/components/home/LocalWorkspaceBanner";
 import "./globals.css";
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,7 @@ export default async function RootLayout({
         <html
             lang="ko"
             className={`${pretendard.variable} ${notoSerifKr.variable} ${pretendard.className}`}
+            data-local-workspace={process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === "1" ? "true" : undefined}
             suppressHydrationWarning
         >
             <head>
@@ -130,7 +132,10 @@ export default async function RootLayout({
                 ) : null}
             </head>
             <body suppressHydrationWarning>
-                {children}
+                <LocalWorkspaceBanner />
+                <div data-local-workspace-app="true">
+                    {children}
+                </div>
                 <RootSpeedInsights />
             </body>
         </html>

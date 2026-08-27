@@ -5,10 +5,10 @@
     {
       "kind": "template",
       "template": "kong.yml",
-      "template_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
+      "template_sha256": "ac0b77d2268d901ddd3ef546d27658f46b153370f4e11447916d2ee794cdfdbf",
       "template_mode": "0644",
       "output": "kong.yml",
-      "output_sha256": "f91e15a499ce13555ab586723bdeb94525157729179816449abfab31bf486e15",
+      "output_sha256": "ac0b77d2268d901ddd3ef546d27658f46b153370f4e11447916d2ee794cdfdbf",
       "service": "kong",
       "destination": "/home/kong/temp.yml",
       "output_mode": "0600"

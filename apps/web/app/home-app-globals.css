@@ -86,6 +86,7 @@
   --font-noto-serif-kr: var(--font-display, "Noto Serif KR"), "Apple SD Gothic Neo", "Malgun Gothic", ui-serif, Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   /* 기본값 (fallback) */
+  --local-workspace-banner-height: 0px;
 }
 
 /* dvh 지원 브라우저용 */
@@ -193,6 +194,29 @@ All colors MUST be HSL.
     overflow: hidden;
   }
 
+}
+html[data-local-workspace="true"] {
+  --local-workspace-banner-height: 1.75rem;
+}
+
+html[data-local-workspace="true"] body {
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-local-workspace="true"] [data-local-workspace-banner="true"] {
+  flex: 0 0 var(--local-workspace-banner-height);
+  height: var(--local-workspace-banner-height);
+}
+
+html[data-local-workspace="true"] [data-local-workspace-app="true"] {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  --full-height: calc(100vh - var(--local-workspace-banner-height));
+  height: var(--full-height);
+  overflow: hidden;
+  transform: translateZ(0);
 }
 
 /* 네이버 지도 마커 최적화 및 스타일 초기화 */

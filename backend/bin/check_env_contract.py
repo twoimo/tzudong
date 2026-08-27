@@ -101,8 +101,73 @@ RUNTIME_ALIAS_NOTES = {
 }
 
 
+# Bounded denylist of known placeholder/fabricated markers. A required secret
+# bound only to one of these (case-insensitive, after trimming) is treated as
+# absent. Comparison is against the whole normalized value; the value itself is
+# never logged, emitted, or persisted anywhere.
+PLACEHOLDER_MARKERS = frozenset(
+    {
+        "changeme",
+        "change-me",
+        "change_me",
+        "placeholder",
+        "your-api-key",
+        "your-api-key-here",
+        "your_api_key",
+        "yourapikeyhere",
+        "todo",
+        "tbd",
+        "fixme",
+        "example",
+        "dummy",
+        "fake",
+        "sample",
+        "none",
+        "null",
+        "n/a",
+        "na",
+        "xxx",
+        "xxxx",
+        "xxxxx",
+        "xxxxxxxx",
+        "replace_me",
+        "replace-me",
+        "replaceme",
+        "set-me",
+        "set_me",
+        "setme",
+        "unset",
+        "undefined",
+    }
+)
+
+
+def _is_placeholder(value: str) -> bool:
+    """Return True when ``value`` is a known placeholder/fabricated marker.
+
+    The value is compared only against a bounded denylist and simple templated
+    shapes (e.g. ``<your-key>``). The value is never logged or emitted.
+    """
+    normalized = value.strip().lower()
+    if not normalized:
+        return False
+    if normalized in PLACEHOLDER_MARKERS:
+        return True
+    # Templated markers such as ``<your-key>`` or ``${SECRET}`` are placeholders.
+    if normalized.startswith("<") and normalized.endswith(">"):
+        return True
+    if normalized.startswith("${") and normalized.endswith("}"):
+        return True
+    return False
+
+
 def _present(env: Dict[str, str], name: str) -> bool:
-    return bool((env.get(name) or "").strip())
+    value = (env.get(name) or "").strip()
+    if not value:
+        return False
+    if _is_placeholder(value):
+        return False
+    return True
 
 
 def _status_map(env: Dict[str, str], names: Iterable[str]) -> Dict[str, bool]:

@@ -38,6 +38,12 @@ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQue
     });
 
     if (!response.ok) {
+        if (
+            (table === 'announcements' || table === 'ad_banners')
+            && (response.status === 401 || response.status === 403)
+        ) {
+            return [];
+        }
         const body = await response.text().catch(() => '');
         throw new Error(`Supabase REST ${table} failed: ${response.status} ${body}`.trim());
     }

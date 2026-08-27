@@ -134,6 +134,9 @@ import {
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
+import { AdminOpsReadbackStrip } from "@/components/admin/AdminOpsReadbackStrip";
+import { AdminOpsReadbackStrip } from "@/components/admin/AdminOpsReadbackStrip";
+import { AdminOpsReadbackStrip } from "@/components/admin/AdminOpsReadbackStrip";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;

@@ -11,6 +11,8 @@
     ·
     <a href="README.ko.md">한국어</a>
     ·
+    <a href="CHANGELOG.md">Changelog</a>
+    ·
     <a href="LICENSE">MIT</a>
   </p>
   <p>
@@ -41,6 +43,8 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
 - Web runtime: Node 24.x. Day-to-day install/unit flows may use Bun; npm 11.6.2, `package.json`, and `package-lock.json` are the release package authority.
 - TypeScript: native CLI `@typescript/native` `7.0.2`; stable API/compatibility bridge `6.0.2` via `npm run typecheck:parity`.
 - Serialized content patches: `develop -> data -> main`. Hosted apply, legal compliance, and live URL state are not claimed by this tree.
+- Change history: [CHANGELOG.md](CHANGELOG.md) / [CHANGELOG.ko.md](CHANGELOG.ko.md).
+- Docs index: [docs/README.md](docs/README.md). Product design: [docs/product/DESIGN.md](docs/product/DESIGN.md).
 
 ## Product tour
 
