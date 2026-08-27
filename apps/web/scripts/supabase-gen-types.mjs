@@ -142,12 +142,12 @@ try {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+}
 
   fs.mkdirSync(path.dirname(outFile), { recursive: true });
   fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
 
-  console.log(`[supabase-gen-types] Wrote ${outFile}`);
-} catch (error) {
+main().catch((error) => {
   const message = error?.stderr?.toString?.() || error?.message || String(error);
 
   if (message.includes('Access token not provided')) {
@@ -189,4 +189,4 @@ try {
   console.error('[supabase-gen-types] Failed to generate types.');
   logCliError(error, (line) => process.stderr.write(`[supabase-gen-types] ${line}`));
   process.exit(1);
-}
+});

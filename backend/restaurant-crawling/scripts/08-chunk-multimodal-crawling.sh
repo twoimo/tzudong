@@ -473,13 +473,13 @@ download_video() {
 
     local output_template="$output_dir/${video_id}.%(ext)s"
     local cookie_file="$PROJECT_ROOT/restaurant-crawling/data/cookies.txt"
-    local cookie_arg=""
+    local cookie_args=()
 
     if [[ "$yt_dlp_cmd" == *".exe"* ]] && command -v wslpath &> /dev/null; then
         output_template="$(wslpath -w "$output_dir")\\${video_id}.%(ext)s"
-        [ -f "$cookie_file" ] && cookie_arg="--cookies $(wslpath -w "$cookie_file")"
+        [ -f "$cookie_file" ] && cookie_args=(--cookies "$(wslpath -w "$cookie_file")")
     else
-        [ -f "$cookie_file" ] && cookie_arg="--cookies $cookie_file"
+        [ -f "$cookie_file" ] && cookie_args=(--cookies "$cookie_file")
     fi
 
     log_info "yt-dlp 다운로드: $video_id (최대 360p 우선, cmd=$yt_dlp_cmd)"

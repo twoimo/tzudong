@@ -40,6 +40,35 @@ describe("mobile and desktop parity source contracts", () => {
     ]) expect(runner).not.toContain(unsafeSink);
   });
 
+  test("admin evaluation metric parsers accept LAAJ objects without name", () => {
+    const pageSource = source("app/admin/evaluations/page.tsx");
+    const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
+    expect(numeric).toContain("typeof value.eval_value !== 'number'");
+    expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
+    expect(numeric).toContain("typeof value.name === 'string' ? value.name : ''");
+    const bool = pageSource.split("function parseBooleanEvaluationMetric")[1] ?? "";
+    expect(bool.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
+    expect(bool).toContain("typeof value.eval_value !== 'boolean'");
+  });
+  test("responsive runner emits only fixed failure codes and allowlisted library facts", () => {
+    const runner = source("scripts/run-responsive-tests.mjs");
+
+    expect(runner).toContain("import { logCliError } from './privacy-safe-cli-log.mjs';");
+    expect(runner).toContain("const SAFE_LIBRARY_NAME_PATTERN = /^lib[A-Za-z0-9][A-Za-z0-9._+-]{0,127}$/;");
+    expect(runner).toContain("const MISSING_LIBRARY_LINE_PATTERN = /^([A-Za-z0-9][A-Za-z0-9._+-]{0,127})\\s+=>\\s+not found$/;");
+    expect(runner).toContain("stdio: 'ignore'");
+    expect(runner).toContain("RESPONSIVE_TEST_LIBRARY_INSPECTION_FAILED");
+    expect(runner).toContain("logMissingLibraryFacts(libraryCheck.missingLibraries, console.error)");
+    expect(runner).not.toMatch(/console\.(?:log|warn|error)\([^)]*(?:stdout|stderr|output)/);
+    for (const unsafeSink of [
+      "stdio: 'inherit'",
+      'ldd failed: ${',
+      'ldd.stderr',
+      'error.message',
+      'console.error(`- ${lib}`)',
+    ]) expect(runner).not.toContain(unsafeSink);
+  });
+
   test("admin console exposes both mobile-width and desktop-width navigation affordances", () => {
     const adminPageSource = source("app/admin/page.tsx");
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");

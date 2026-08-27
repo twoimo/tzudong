@@ -274,6 +274,8 @@ export default function DesktopLeftPanelMapHome({
         rootMargin: '240px 0px',
       },
     );
+    const seenRestaurantIds = new Set<string>();
+    const dedupedRestaurants: Restaurant[] = [];
 
     observer.observe(loadMoreNode);
 
