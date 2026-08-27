@@ -163,3 +163,20 @@ tmp/
 # Isolated recovery worktrees and local operator artifacts. Never commit
 # dumps, keys, or hosted receipts from this tree.
 .recovery/
+
+# ── Secret safety net: never commit credentials to this public repo ──
+# History was purged of leaked secrets on 2026-08-28; these globs prevent
+# any future re-introduction anywhere in the tree. .env.example stays tracked.
+**/.env
+**/.env.*
+!**/.env.example
+**/.env.old
+**/oauth_creds.json
+**/*session.json
+**/cookies.txt
+**/cookies.json
+**/cookies.txt.bak
+**/cookies.json.bak
+**/gemini_cookies.json
+# Consolidated local-only archive (extra git clones, DB backups, evidence)
+.local-archive/
