@@ -729,7 +729,9 @@ jobs:
 
       - name: Upload validated data-only publication artifact
         id: upload-publication
-        if: ${{ steps.publication.outputs.ready == 'true' }}
+        # Disabled with daily-publish: do not emit crawl data even as a CI
+        # artifact on this public repo. Re-enable via TZUDONG_DATA_BRANCH_PUBLISH=1.
+        if: ${{ steps.publication.outputs.ready == 'true' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
         with:
           name: daily-data-publication-${{ github.run_id }}
@@ -767,7 +769,11 @@ jobs:
 
   daily-publish:
     needs: daily-compute
-    if: ${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
+    # Crawled/evaluated data must live only in Supabase (persistence boundary)
+    # and locally, never committed to this public repo. Publishing crawl data to
+    # the `data` branch is disabled by default; hosted-pending-apply still writes
+    # to Supabase. Set repo variable TZUDONG_DATA_BRANCH_PUBLISH=1 to re-enable.
+    if: ${{ always() && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
