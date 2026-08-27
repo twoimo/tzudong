@@ -122,6 +122,10 @@ backend/restaurant-crawling/data/*/video_cache/
 backend/restaurant-crawling/data/*/temp_video/
 backend/restaurant-crawling/data/*/thumbnails/
 backend/restaurant-crawling/data/frames/
+# Channel-less cache dirs (Mac hosted-new-video runs write here directly).
+backend/restaurant-crawling/data/video_cache/
+backend/restaurant-crawling/data/temp_video/
+backend/restaurant-crawling/data/thumbnails/
 backend/restaurant-crawling/data/credentials.json
 backend/restaurant-crawling/data/cookies.txt
 backend/restaurant-crawling/data/*.local.json
@@ -132,6 +136,13 @@ backend/restaurant-crawling/data/camoufox_profile/
 # mutations instead of committing blobs. Untracked jsonl stays ignored.
 backend/restaurant-crawling/data/**/*.jsonl
 backend/restaurant-evaluation/data/**/*.jsonl
+# Keep the full crawled/evaluated dataset LOCAL (Mac) only — never in the public repo.
+# Data belongs in Supabase (persistence boundary) + local Mac, not in git.
+backend/restaurant-crawling/data/tzuyang/
+backend/restaurant-evaluation/data/
+# Windows Explorer artifacts that leaked into data dirs
+desktop.ini
+**/desktop.ini
 
 # Operator timestamp, not a product file.
 backend/.sync_trigger
@@ -146,3 +157,34 @@ tmp/
 # Isolated recovery worktrees and local operator artifacts. Never commit
 # dumps, keys, or hosted receipts from this tree.
 .recovery/
+
+# ── Consolidated local-only archive (Mac fragments live here) ───────
+# Preserved but LOCAL ONLY: extra git clones, production DB backups,
+# recovery evidence. Never commit to this public repo.
+.local-archive/
+
+# ── Crawl/eval datasets: Supabase + local Mac only, never in git ────
+backend/agent-rag/
+backend/log/
+backend/restaurant-crawling/temp/
+backend/restaurant-evaluation/temp/
+backend/restaurant-crawling/data/tzuyang_backup/
+backend/restaurant-crawling/data/manual/
+backend/restaurant-crawling/data/meatcreator/
+backend/restaurant-crawling-test/
+backend/restaurant-evaluation-test/
+**/*.jsonl
+
+# ── Secret safety net: never commit credentials to public history ───
+**/.env
+**/.env.*
+!**/.env.example
+**/.env.old
+**/oauth_creds.json
+**/*session.json
+**/cookies.txt
+**/cookies.json
+**/cookies.txt.bak
+**/cookies.json.bak
+**/gemini_cookies.json
+**/.gemini/
