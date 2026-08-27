@@ -24,7 +24,7 @@ PROFILES = {
         ],
         "optional": [
             "YOUTUBE_COOKIES_TXT",
-            "OPENAI_API_KEY_BYEON",
+            "OPENAI_API_KEY",
             "GITHUB_TOKEN",
         ],
         "allowed_aliases": [

@@ -412,7 +412,7 @@ export async function POST(request: NextRequest) {
 
         let sponsorAnalysis = buildSponsorAnalysis('not_requested', 'no_ad_signal');
         if (isAds) {
-            const openaiApiKey = process.env.NEXT_OPENAI_API_KEY_BYEON?.trim();
+            const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
             if (!openaiApiKey) {
                 sponsorAnalysis = buildSponsorAnalysis('unavailable', 'provider_not_configured');
             } else {

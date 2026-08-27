@@ -62,7 +62,6 @@ def codex_oauth_env() -> dict[str, str]:
     for key in (
         "OPENAI_API_KEY",
         "CODEX_API_KEY",
-        "NEXT_OPENAI_API_KEY_BYEON",
     ):
         child_env.pop(key, None)
     return child_env

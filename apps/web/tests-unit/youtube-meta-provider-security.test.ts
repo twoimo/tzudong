@@ -45,19 +45,19 @@ async function loadRoute() {
 
 function setProviderKeys() {
     const previousYoutubeApiKey = process.env.YOUTUBE_API_KEY;
-    const previousOpenaiApiKey = process.env.NEXT_OPENAI_API_KEY_BYEON;
+    const previousOpenaiApiKey = process.env.OPENAI_API_KEY;
     const previousNodeEnv = process.env.NODE_ENV;
     const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
     process.env.YOUTUBE_API_KEY = YOUTUBE_API_KEY;
-    process.env.NEXT_OPENAI_API_KEY_BYEON = OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = OPENAI_API_KEY;
     process.env.NODE_ENV = 'test';
     delete process.env.NEXT_PUBLIC_SITE_URL;
 
     return () => {
         if (previousYoutubeApiKey === undefined) delete process.env.YOUTUBE_API_KEY;
         else process.env.YOUTUBE_API_KEY = previousYoutubeApiKey;
-        if (previousOpenaiApiKey === undefined) delete process.env.NEXT_OPENAI_API_KEY_BYEON;
-        else process.env.NEXT_OPENAI_API_KEY_BYEON = previousOpenaiApiKey;
+        if (previousOpenaiApiKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = previousOpenaiApiKey;
         if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
         else process.env.NODE_ENV = previousNodeEnv;
         if (previousSiteUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;

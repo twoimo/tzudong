@@ -64,11 +64,9 @@ def load_dotenv_file(path: Path) -> None:
             os.environ[key] = value
 
 
-def apply_safe_env_aliases(runtime: str) -> None:
-    if runtime != "codex_cli_oauth" and not os.environ.get("OPENAI_API_KEY") and os.environ.get("NEXT_OPENAI_API_KEY_BYEON"):
-        # Only for optional LangGraph/API-key mode. The default Codex CLI path
-        # does not require this variable.
-        os.environ["OPENAI_API_KEY"] = os.environ["NEXT_OPENAI_API_KEY_BYEON"]
+def apply_safe_env_aliases(_runtime: str) -> None:
+    # OPENAI_API_KEY is the only OpenAI key name. Codex CLI OAuth does not use it.
+    return
 
 
 def truthy_env(name: str, default: bool = False) -> bool:
@@ -122,7 +120,6 @@ def codex_oauth_env() -> dict[str, str]:
     for key in (
         "OPENAI_API_KEY",
         "CODEX_API_KEY",
-        "NEXT_OPENAI_API_KEY_BYEON",
     ):
         child_env.pop(key, None)
     return child_env

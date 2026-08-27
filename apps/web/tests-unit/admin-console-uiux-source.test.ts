@@ -7856,7 +7856,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(backendAgentWrapperSource).toContain("codex_oauth_env");
     expect(backendAgentWrapperSource).toContain("CODEX_API_KEY");
     expect(backendAgentWrapperSource).not.toContain("NEXT_PUBLIC_SUPABASE_URL");
-    expect(backendAgentWrapperSource).toContain("NEXT_OPENAI_API_KEY_BYEON");
+    expect(backendAgentWrapperSource).toContain("OPENAI_API_KEY");
     expect(backendAgentWrapperSource).toContain("Do not run shell commands");
     expect(backendAgentWrapperSource).toContain(
       "gpt-image-2 is handled by the separate image provider",

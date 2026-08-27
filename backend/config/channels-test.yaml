@@ -21,7 +21,7 @@ api:
   youtube:
     key_env: "YOUTUBE_API_KEY_BYEON"
   openai:
-    key_env: "OPENAI_API_KEY_BYEON"
+    key_env: "OPENAI_API_KEY"
     model: "gpt-4o-mini"
   gemini:
     models:
