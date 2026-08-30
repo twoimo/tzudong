@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@google/genai": "^2.18.0",
+    "@google/genai": "^2.19.0",
     "@google/generative-ai": "^0.24.1",
     "browser-image-compression": "^2.0.2",
     "dotenv": "^16.6.1",
