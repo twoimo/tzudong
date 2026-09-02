@@ -22,18 +22,18 @@ describe("admin restaurant refresh history source contracts", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
     const routeSource = source("lib/admin/admin-module-routing.ts");
+    const registrySource = source("lib/admin/console-menu-registry.ts");
 
-    expect(routeSource).toContain('"restaurant-refresh-history"');
+    expect(routeSource).toContain("ADMIN_CONSOLE_MODULE_IDS");
+    expect(registrySource).toContain('"restaurant-refresh-history"');
     expect(consoleSource).toContain('title: "맛집 최신화"');
     expect(consoleSource).toContain(
       'href: "/admin?module=restaurant-refresh-history"',
     );
     expect(consoleSource).toContain("AdminRestaurantRefreshHistoryModule");
     expect(consoleSource).toContain('case "restaurant-refresh-history"');
-    expect(sidebarOrderSource).toContain('"restaurant-refresh-history"');
-    expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
-    );
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENU_IDS");
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENUS");
   });
 
   test("panel keeps refresh workflow history-first and operator guarded", () => {

@@ -556,6 +556,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("uses the shared compact embedded module shell instead of canvas-level generic headers", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routeSource = source("lib/admin/admin-module-routing.ts");
+    const registrySource = source("lib/admin/console-menu-registry.ts");
     const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
 
     expect(shellSource).toContain("export function AdminEmbeddedModuleShell");
@@ -573,6 +574,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
     expect(shellSource).toContain('moduleId === "overview"');
 
+    expect(routeSource).toContain("ADMIN_CONSOLE_MODULE_IDS");
+    expect(routeSource).toContain("ADMIN_CONSOLE_MENU_IDS");
     for (const moduleId of [
       "overview",
       "routes",
@@ -590,7 +593,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "llm",
       "pipeline",
     ]) {
-      expect(routeSource).toContain(`"${moduleId}"`);
+      expect(registrySource).toContain(`"${moduleId}"`);
     }
 
     expect(consoleSource).toContain("AdminEmbeddedModuleShell");
@@ -3381,20 +3384,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('"users",');
     expect(consoleSource).toContain('"insights",');
     expect(consoleSource).toContain('"audit",');
-    expect(sidebarOrderSource).toContain(
-      'export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"]',
-    );
-    expect(sidebarOrderSource).toContain('"routes",');
-    expect(sidebarOrderSource).toContain('"restaurant-refresh-history",');
-    expect(sidebarOrderSource).toContain(
-      '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
-    );
-    expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
-    );
-    expect(sidebarOrderSource).toContain(
-      '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
-    );
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_SECTION_LABELS");
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENU_IDS");
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENUS");
+    expect(sidebarOrderSource).toContain("export const ADMIN_SIDEBAR_SECTIONS");
+    expect(sidebarOrderSource).toContain("export const ADMIN_SIDEBAR_ITEM_IDS");
+    expect(sidebarOrderSource).toContain("normalizeAdminSidebarOrderWithReason");
+    expect(sidebarOrderSource).toContain('"retired-section"');
+    expect(sidebarOrderSource).toContain('"cross-section-item"');
     expect(sidebarOrderRouteSource).toContain(
       'from "@/lib/admin/sidebar-order"',
     );
@@ -8432,9 +8429,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain("admin_user_preferences");
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
-    expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
-    );
+    expect(sidebarOrderSource).toContain("normalizeAdminSidebarOrderWithReason");
+    expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_SECTION_LABELS");
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(
       preferenceRouteSource.indexOf("createSupabaseServiceRoleClient()"),
@@ -8454,9 +8450,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
-    expect(routingSource).toContain(
-      "알 수 없는 관리자 화면 요청을 대시보드 (KPI)로 되돌렸습니다.",
-    );
+    expect(routingSource).toContain("CONSOLE_FIXED_MESSAGES.unknownModule");
+    expect(routingSource).toContain("CONSOLE_FIXED_MESSAGES.legacyLinkNormalized");
     expect(consoleSource).toContain("const nextHref = buildCanonicalAdminModuleHref(moduleId);");
     expect(consoleSource).toContain("router.replace(nextHref, {");
     expect(consoleSource).toContain(

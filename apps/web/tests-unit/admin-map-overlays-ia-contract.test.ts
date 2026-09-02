@@ -11,9 +11,11 @@ function source(relativePath: string) {
 describe('admin map overlays IA contract', () => {
   test('admin routing exposes the map-overlays module id', () => {
     const routing = source('lib/admin/admin-module-routing.ts');
+    const registry = source('lib/admin/console-menu-registry.ts');
 
-    expect(routing).toContain('"map-overlays"');
     expect(routing).toContain('ADMIN_CONSOLE_MODULE_IDS');
+    expect(routing).toContain('ADMIN_CONSOLE_MENU_IDS');
+    expect(registry).toContain('"map-overlays"');
   });
 
   test('admin console adds 지도 오버레이 with required tabs and integrations', () => {

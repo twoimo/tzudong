@@ -1,39 +1,49 @@
-export const ADMIN_SIDEBAR_SECTIONS = ["홈", "검수", "운영", "실험실"] as const;
-export const ADMIN_SIDEBAR_ITEM_IDS = [
-  "overview",
-  "restaurants",
-  "restaurant-refresh-history",
-  "submissions",
-  "reviews",
-  "map-overlays",
-  "users",
-  "banners",
-  "insights",
-  "pipeline",
-  "youtube-thumbnail-generator",
-  "storyboard",
-  "routes",
-  "llm",
-  "audit",
-] as const;
+import {
+  ADMIN_CONSOLE_MENU_IDS,
+  ADMIN_CONSOLE_MENUS,
+  ADMIN_CONSOLE_SECTION_LABELS,
+  isRetiredAdminSectionLabel,
+  type AdminConsoleMenuId,
+  type AdminConsoleSectionLabel,
+} from "@/lib/admin/console-menu-registry";
 
-export type AdminSidebarSectionLabel = (typeof ADMIN_SIDEBAR_SECTIONS)[number];
-export type AdminSidebarItemId = (typeof ADMIN_SIDEBAR_ITEM_IDS)[number];
+export const ADMIN_SIDEBAR_SECTIONS = ADMIN_CONSOLE_SECTION_LABELS;
+export const ADMIN_SIDEBAR_ITEM_IDS = ADMIN_CONSOLE_MENU_IDS;
+
+export type AdminSidebarSectionLabel = AdminConsoleSectionLabel;
+export type AdminSidebarItemId = AdminConsoleMenuId;
 
 export type AdminSidebarOrderPreference = {
   sections: string[];
   items: Record<string, AdminSidebarItemId[]>;
 };
 
-export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference = {
-  sections: [...ADMIN_SIDEBAR_SECTIONS],
-  items: {
-    홈: ["overview"],
-    검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"],
-    운영: ["map-overlays", "users", "banners", "insights", "pipeline"],
-    실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"],
-  },
+export type AdminSidebarOrderRevertedReason =
+  | "retired-section"
+  | "cross-section-item"
+  | null;
+
+export type AdminSidebarOrderNormalization = {
+  order: AdminSidebarOrderPreference;
+  revertedReason: AdminSidebarOrderRevertedReason;
 };
+
+function createDefaultAdminSidebarOrder(): AdminSidebarOrderPreference {
+  return {
+    sections: [...ADMIN_SIDEBAR_SECTIONS],
+    items: Object.fromEntries(
+      ADMIN_SIDEBAR_SECTIONS.map((section) => [
+        section,
+        ADMIN_CONSOLE_MENU_IDS.filter(
+          (id) => ADMIN_CONSOLE_MENUS[id].section === section,
+        ),
+      ]),
+    ),
+  };
+}
+
+export const DEFAULT_ADMIN_SIDEBAR_ORDER: AdminSidebarOrderPreference =
+  createDefaultAdminSidebarOrder();
 
 const sectionSet = new Set<string>(ADMIN_SIDEBAR_SECTIONS);
 const itemSet = new Set<string>(ADMIN_SIDEBAR_ITEM_IDS);
@@ -82,12 +92,39 @@ function uniqueKnownItems(
   });
 }
 
+function collectDeclaredSectionNames(
+  record: Record<string, unknown>,
+  itemRecord: Record<string, unknown>,
+): string[] {
+  const names: string[] = [];
+  if (Array.isArray(record.sections)) {
+    for (const section of record.sections) {
+      if (typeof section === "string") {
+        names.push(section);
+      }
+    }
+  }
+  names.push(...Object.keys(itemRecord));
+  return names;
+}
+
+function hasRetiredSectionName(
+  record: Record<string, unknown>,
+  itemRecord: Record<string, unknown>,
+): boolean {
+  return collectDeclaredSectionNames(record, itemRecord).some((section) =>
+    isRetiredAdminSectionLabel(section),
+  );
+}
+
 function hasItemsOutsideCurrentSection(value: Record<string, unknown>): boolean {
   return DEFAULT_ADMIN_SIDEBAR_ORDER.sections.some((section) => {
     const rawItems = value[section];
     if (!Array.isArray(rawItems)) return false;
 
-    const allowedItemIds = new Set(DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? []);
+    const allowedItemIds = new Set(
+      DEFAULT_ADMIN_SIDEBAR_ORDER.items[section] ?? [],
+    );
     return rawItems.some(
       (item) =>
         typeof item === "string" &&
@@ -126,15 +163,10 @@ export function mergeSidebarItemsWithDefaultSlots<Item extends string>(
   return mergedItems;
 }
 
-export function normalizeAdminSidebarOrder(
-  value: unknown,
+function mergeKnownSidebarOrder(
+  record: Record<string, unknown>,
+  itemRecord: Record<string, unknown>,
 ): AdminSidebarOrderPreference {
-  const record = isRecord(value) ? value : {};
-  const itemRecord = isRecord(record.items) ? record.items : {};
-  if (hasItemsOutsideCurrentSection(itemRecord)) {
-    return DEFAULT_ADMIN_SIDEBAR_ORDER;
-  }
-
   const preferredSections = uniqueKnownSections(record.sections);
   const sections = [
     ...preferredSections,
@@ -162,4 +194,40 @@ export function normalizeAdminSidebarOrder(
   );
 
   return { sections, items };
+}
+
+export function normalizeAdminSidebarOrderWithReason(
+  value: unknown,
+): AdminSidebarOrderNormalization {
+  if (!isRecord(value)) {
+    return {
+      order: DEFAULT_ADMIN_SIDEBAR_ORDER,
+      revertedReason: null,
+    };
+  }
+
+  const itemRecord = isRecord(value.items) ? value.items : {};
+  if (hasRetiredSectionName(value, itemRecord)) {
+    return {
+      order: DEFAULT_ADMIN_SIDEBAR_ORDER,
+      revertedReason: "retired-section",
+    };
+  }
+  if (hasItemsOutsideCurrentSection(itemRecord)) {
+    return {
+      order: DEFAULT_ADMIN_SIDEBAR_ORDER,
+      revertedReason: "cross-section-item",
+    };
+  }
+
+  return {
+    order: mergeKnownSidebarOrder(value, itemRecord),
+    revertedReason: null,
+  };
+}
+
+export function normalizeAdminSidebarOrder(
+  value: unknown,
+): AdminSidebarOrderPreference {
+  return normalizeAdminSidebarOrderWithReason(value).order;
 }
