@@ -154,7 +154,7 @@
     - _요구사항 7.2, 7.6, 7.15, 5.7, 5.10_
 
 - [ ] 6. 모듈_셸 변경과 15개 적용
-  - [ ] 6.1 `AdminEmbeddedModuleShell` 계조·레지스트리 적용
+  - [x] 6.1 `AdminEmbeddedModuleShell` 계조·레지스트리 적용
     - `apps/web/components/admin/AdminEmbeddedModuleShell.tsx`에서 `hideHeader` 내부 파생을 제거하고, `title`·`summary` 프롭 대신 `menuId`만 받아 레지스트리에서 표시 제목·목적 문장을 조회한다. 제목 그라디언트/투명 텍스트를 단계 1 단색으로, 아이콘 `text-primary`를 단계 2로 바꾼다. 작업 영역 `aria-labelledby`를 제목 요소 식별자와 일치시키고 산출물_성격 데이터 속성을 부여한다. 15개 메뉴 전부가 이 셸을 쓰고 머리말 생략 설정을 제공하지 않는다.
     - _요구사항 3.1, 3.2, 3.6, 3.10, 4.7, 9.9, 15.6, 16.9_
 

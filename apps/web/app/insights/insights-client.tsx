@@ -4,7 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEven
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { hierarchy, treemap, treemapResquarify, type HierarchyRectangularNode } from 'd3-hierarchy';
-import { Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
 import { Card, CardContent } from '@/components/ui/card';
@@ -1207,8 +1206,6 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         ? '개별 영상'
         : `${formatClusterValueByMode(metricMode, clusterStep)} 단위 클러스터`;
     const treemapContextText = `트리맵 기준: ${metricLabel} · ${periodLabel} · ${selectedCount.toLocaleString()}개 영상 · ${modeLabel} · ${clusterContextText}`;
-    const moduleSummaryText = `${selectedCount.toLocaleString()}개 영상 · ${metricLabel} · ${periodLabel} · ${modeLabel} · ${clusterContextText}`;
-
     const treemapLegendText = viewMode === 'change'
         ? `색상 범례: ${periodLabel} 대비 ${metricLabel} 증감률이 높을수록 밝은 초록색입니다.`
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
@@ -1263,13 +1260,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     }, [treemapQuery]);
 
 
-    const renderEmbeddedShell = (children: ReactNode, summary: ReactNode = moduleSummaryText) => (
+    const renderEmbeddedShell = (children: ReactNode) => (
         <AdminEmbeddedModuleShell
-            moduleId="insights"
-            titleId="admin-insights-title"
-            title="핵심 인사이트"
-            icon={Lightbulb}
-            summary={summary}
+            menuId="insights"
             contentClassName="p-2"
         >
             {children}
@@ -1279,8 +1272,10 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     if (isLoading && !canRender) {
         if (embedded) {
             return renderEmbeddedShell(
-                <InsightsClientLoadingSkeleton />,
-                '데이터를 불러오는 중입니다.',
+                <>
+                    <p className="sr-only">{'데이터를 불러오는 중입니다.'}</p>
+                    <InsightsClientLoadingSkeleton />
+                </>,
             );
         }
 
@@ -1317,7 +1312,12 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         );
 
         if (embedded) {
-            return renderEmbeddedShell(errorContent, '데이터를 불러오지 못했습니다.');
+            return renderEmbeddedShell(
+                <>
+                    <p className="sr-only">{'데이터를 불러오지 못했습니다.'}</p>
+                    {errorContent}
+                </>,
+            );
         }
 
         return errorContent;

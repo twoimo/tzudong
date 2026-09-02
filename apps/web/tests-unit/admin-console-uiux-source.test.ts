@@ -571,18 +571,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(shellSource).toContain("export function AdminEmbeddedModuleShell");
     expect(shellSource).toContain('data-admin-embedded-module-shell="true"');
-    expect(shellSource).toContain("data-admin-embedded-module-id={moduleId}");
+    expect(shellSource).toContain("data-admin-embedded-module-id={menuId}");
     expect(shellSource).toContain('data-admin-module-header="compact"');
-    expect(shellSource).toContain("data-admin-module-header-module={moduleId}");
+    expect(shellSource).toContain("data-admin-module-header-module={menuId}");
+    expect(shellSource).toContain("data-admin-module-output-kind={menu.outputKind}");
     expect(shellSource).toContain('data-admin-module-summary="true"');
     expect(shellSource).toContain('data-admin-module-actions="top-right"');
     expect(shellSource).toContain('data-admin-module-content="bounded"');
     expect(shellSource).toContain(
       '"shrink-0 border-b border-border bg-card px-2 py-1.5"',
     );
-    expect(shellSource).toContain("bg-gradient-primary bg-clip-text");
+    expect(shellSource).not.toContain("bg-gradient-primary bg-clip-text");
+    expect(shellSource).not.toContain("text-transparent");
+    expect(shellSource).not.toContain("hideHeader");
+    expect(shellSource).not.toContain('moduleId === "overview"');
+    expect(shellSource).toContain("getAdminConsoleMenu(menuId)");
+    expect(shellSource).toContain("text-[var(--admin-tone-1)]");
+    expect(shellSource).toContain("text-[var(--admin-tone-2)]");
+    expect(shellSource).toContain("aria-labelledby={titleId}");
     expect(shellSource).toContain('"min-h-0 min-w-0 flex-1 overflow-hidden"');
-    expect(shellSource).toContain('moduleId === "overview"');
 
     expect(routeSource).toContain("ADMIN_CONSOLE_MODULE_IDS");
     expect(routeSource).toContain("ADMIN_CONSOLE_MENU_IDS");
@@ -616,9 +623,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const insightsSource = source("app/insights/insights-client.tsx");
 
     expect(insightsSource).toContain("AdminEmbeddedModuleShell");
-    expect(insightsSource).toContain('moduleId="insights"');
-    expect(insightsSource).toContain('titleId="admin-insights-title"');
-    expect(insightsSource).toContain('summary={summary}');
+    expect(insightsSource).toContain('menuId="insights"');
     expect(insightsSource).toContain('contentClassName="p-2"');
 
     const loadingBranch =
@@ -637,7 +642,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       )?.[1] ?? "";
     expect(errorBranch).toContain("const errorContent = (");
     expect(errorBranch).toContain("onClick={handleRetry}");
-    expect(errorBranch).toContain("return renderEmbeddedShell(errorContent");
+    expect(errorBranch).toContain("return renderEmbeddedShell(");
+    expect(errorBranch).toContain("{errorContent}");
     expect(errorBranch).toContain("'데이터를 불러오지 못했습니다.'");
     expect(errorBranch).toContain("return errorContent");
 

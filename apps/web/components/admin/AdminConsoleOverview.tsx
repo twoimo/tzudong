@@ -18,7 +18,6 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Activity,
   BarChart2,
   Bot,
   CheckCircle2,
@@ -7796,11 +7795,7 @@ function GuardedApplyCard() {
 function LlmSessionWorkspace() {
   return (
     <AdminEmbeddedModuleShell
-      moduleId="llm"
-      titleId="admin-llm-session-title"
-      title="운영 보조"
-      icon={Bot}
-      summary="읽기 전용 · 제안만 제공 · 적용은 각 모듈에서"
+      menuId="llm"
       contentClassName="overflow-y-auto p-2 md:p-3"
     >
       <section aria-label="운영 보조 제안" className="space-y-3">
@@ -7919,11 +7914,7 @@ function AuditPlaceholder() {
 
   return (
     <AdminEmbeddedModuleShell
-      moduleId="audit"
-      titleId="admin-audit-title"
-      title="감사 로그"
-      icon={ScrollText}
-      summary={coverageBadgeLabel}
+      menuId="audit"
       contentClassName="overflow-y-auto p-2 md:p-3"
     >
       <div className="min-h-[480px] space-y-3">
@@ -8128,11 +8119,7 @@ function AdminMapOverlayOperationsModule() {
 
   return (
     <AdminEmbeddedModuleShell
-      moduleId="map-overlays"
-      titleId="admin-map-overlays-title"
-      title="지도 오버레이"
-      icon={Layers3}
-      summary={`${activeTabConfig.label} · readback/audit 확인 흐름`}
+      menuId="map-overlays"
       contentClassName="overflow-y-auto p-2 md:p-3"
     >
       <section
@@ -8308,6 +8295,22 @@ function InlineModulePanel({
     }
   })();
 
+  const ownsInnerShell =
+    module.id === "map-overlays" ||
+    module.id === "storyboard" ||
+    module.id === "youtube-thumbnail-generator" ||
+    module.id === "insights";
+  const panel = ownsInnerShell ? (
+    moduleContent
+  ) : (
+    <AdminEmbeddedModuleShell
+      menuId={module.id}
+      contentClassName="overflow-y-auto"
+    >
+      {moduleContent}
+    </AdminEmbeddedModuleShell>
+  );
+
   return (
     <section
       aria-label={`${module.title} 작업 화면`}
@@ -8322,7 +8325,7 @@ function InlineModulePanel({
         )}
         data-admin-console-inline-module-panel="true"
       >
-        {moduleContent}
+        {panel}
       </div>
     </section>
   );
@@ -9808,12 +9811,6 @@ export function AdminConsoleOverview({
 
   const isAdminCanvasBootstrapping =
     isShellBootstrapping || !loadedModuleIds.has(activeModuleId);
-  const overviewModuleSummary = statsLoading
-    ? "KPI 데이터를 불러오는 중입니다."
-    : statsHasError
-      ? "일부 KPI를 확인하지 못했습니다."
-      : `대기 ${formatNumber(stats.pendingTotal)}건 · 맛집 ${formatNumber(stats.totalRestaurants)}곳 · 영상 ${formatNumber(stats.totalVideos)}개`;
-
   return (
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
@@ -9881,11 +9878,7 @@ export function AdminConsoleOverview({
             getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
           ) : activeModuleId === "overview" ? (
             <AdminEmbeddedModuleShell
-              moduleId="overview"
-              titleId="admin-overview-module-title"
-              title="대시보드 (KPI)"
-              icon={Activity}
-              summary={overviewModuleSummary}
+              menuId="overview"
               contentClassName="overflow-y-auto"
             >
               <AdminDashboardManagementPanel
@@ -9897,11 +9890,7 @@ export function AdminConsoleOverview({
             </AdminEmbeddedModuleShell>
           ) : activeModuleId === "routes" ? (
             <AdminEmbeddedModuleShell
-              moduleId="routes"
-              titleId="admin-routes-module-title"
-              title="맛집 동선 추천"
-              icon={Route}
-              summary="지도 맛집과 실제 도로 동선을 함께 확인합니다."
+              menuId="routes"
               contentClassName="overflow-hidden"
             >
               <AdminRouteRecommendationModule

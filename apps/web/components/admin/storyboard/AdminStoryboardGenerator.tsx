@@ -8014,24 +8014,10 @@ export function AdminStoryboardGenerator({
     }
   }
 
-  const storyboardModuleSummary = acceptedStoryboardJob
-    ? `작업 ${formatStoryboardJobStatusLabel(acceptedStoryboardJob.status)} · ${acceptedStoryboardJob.stage}`
-    : isGenerating
-      ? "스토리보드 구성 중 · 작업 제출/응답 대기"
-      : isGeneratingImages
-        ? `이미지 생성 중 · ${generatedImageCount}/${totalCutCount}컷 준비`
-        : isChatAgentStreaming
-          ? "도우미 응답 중 · 캔버스 맥락 반영"
-          : `이미지 ${generatedImageCount}/${totalCutCount}컷 · ${formatStoryboardOmittedSceneText(omittedStoryboardSceneCount)}`;
-
 
   return (
     <AdminEmbeddedModuleShell
-      moduleId="storyboard"
-      titleId="admin-storyboard-generator-title"
-      title="스토리보드 생성"
-      icon={Clapperboard}
-      summary={storyboardModuleSummary}
+      menuId="storyboard"
     >
       <section
         className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background p-2"

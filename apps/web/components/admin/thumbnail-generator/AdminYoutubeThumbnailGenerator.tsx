@@ -6466,20 +6466,9 @@ export function AdminYoutubeThumbnailGenerator() {
       </div>
     );
   }
-  const thumbnailModuleSummary = isGenerating
-    ? `이미지 생성 중 · ${thumbnailImageApiRouterView.label}`
-    : isChatAgentStreaming
-      ? "도우미 응답 중 · 캔버스 편집 맥락 반영"
-      : `상태 ${thumbnailChatStatusLabel} · 기록 ${historyRuns.length}개 · ${thumbnailImageApiRouterView.label}`;
-
-
   return (
     <AdminEmbeddedModuleShell
-      moduleId="youtube-thumbnail-generator"
-      titleId="admin-youtube-thumbnail-generator-title"
-      title="유튜브 썸네일 생성"
-      icon={Wand2}
-      summary={thumbnailModuleSummary}
+      menuId="youtube-thumbnail-generator"
     >
       <main
         className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-3"
