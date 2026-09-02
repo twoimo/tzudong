@@ -95,7 +95,6 @@ import {
   type AdminDashboardWidgetId,
 } from "@/lib/admin/dashboard-widget-order";
 import {
-  DEFAULT_ADMIN_SIDEBAR_ORDER,
   normalizeAdminSidebarOrder,
   type AdminSidebarOrderPreference,
 } from "@/lib/admin/sidebar-order";
@@ -134,6 +133,8 @@ import {
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
+import { AdminConsoleSidebarOrderEditor } from "@/components/admin/console/AdminConsoleSidebarOrderEditor";
+import { useAdminSidebarOrder } from "@/components/admin/console/use-admin-sidebar-order";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
@@ -616,44 +617,6 @@ function moveAdminDashboardWidget(
   const normalized = normalizeAdminDashboardWidgetOrder(order);
   const index = normalized.indexOf(widgetId);
   return index < 0 ? normalized : moveItemInArray(normalized, index, direction);
-}
-
-function moveAdminSidebarSection(
-  order: AdminSidebarOrderPreference,
-  section: string,
-  direction: -1 | 1,
-): AdminSidebarOrderPreference {
-  const normalized = normalizeAdminSidebarOrder(order);
-  const index = normalized.sections.indexOf(section);
-  return {
-    ...normalized,
-    sections:
-      index < 0
-        ? normalized.sections
-        : moveItemInArray(normalized.sections, index, direction),
-  };
-}
-
-function moveAdminSidebarItem(
-  order: AdminSidebarOrderPreference,
-  section: string,
-  itemId: AdminModuleId,
-  direction: -1 | 1,
-): AdminSidebarOrderPreference {
-  const normalized = normalizeAdminSidebarOrder(order);
-  const sectionItems = normalized.items[section] ?? [];
-  const index = sectionItems.indexOf(itemId);
-
-  return {
-    ...normalized,
-    items: {
-      ...normalized.items,
-      [section]:
-        index < 0
-          ? sectionItems
-          : moveItemInArray(sectionItems, index, direction),
-    },
-  };
 }
 
 function buildOrderedSidebarSections(
@@ -7992,16 +7955,9 @@ function AdminSidebar({
   accountDisplayName: string;
   accountEmail: string;
 }) {
-  const [sidebarOrder, setSidebarOrder] = useState<AdminSidebarOrderPreference>(
-    DEFAULT_ADMIN_SIDEBAR_ORDER,
-  );
+  const sidebarOrderState = useAdminSidebarOrder(canLoadPreferences);
+  const sidebarOrder = sidebarOrderState.order;
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
-  const [isOrderLoading, setIsOrderLoading] = useState(false);
-  const [isOrderSaving, setIsOrderSaving] = useState(false);
-  const [sidebarOrderMessage, setSidebarOrderMessage] = useState(
-    "메뉴 순서는 관리자 계정별로 저장됩니다.",
-  );
-  const [isSidebarOrderEditMode, setIsSidebarOrderEditMode] = useState(false);
   const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
   const orderedSidebarSections = useMemo(
     () => buildOrderedSidebarSections(sidebarOrder),
@@ -8011,84 +7967,6 @@ function AdminSidebar({
     .flatMap((section) => section.items)
     .find((item) => item.id === activeModuleId);
   const activeSidebarLabel = activeSidebarItem?.title ?? "전체 현황";
-
-  useEffect(() => {
-    if (!canLoadPreferences) {
-      setIsOrderLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function loadSidebarOrder() {
-      setIsOrderLoading(true);
-      try {
-        const response = await fetch("/api/admin/preferences/sidebar-order", {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) return;
-
-        const payload = (await response.json()) as { order?: unknown };
-        if (!controller.signal.aborted) {
-          setSidebarOrder(normalizeAdminSidebarOrder(payload.order));
-        }
-      } catch {
-        if (!controller.signal.aborted) {
-          setSidebarOrderMessage(
-            "저장된 메뉴 순서를 불러오지 못해 처음 상태로 표시합니다.",
-          );
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsOrderLoading(false);
-        }
-      }
-    }
-
-    void loadSidebarOrder();
-
-    return () => {
-      controller.abort();
-    };
-  }, [canLoadPreferences]);
-
-  const persistSidebarOrder = useCallback(
-    async (nextOrder: AdminSidebarOrderPreference, successMessage: string) => {
-      if (!canLoadPreferences) return;
-
-      const normalizedOrder = normalizeAdminSidebarOrder(nextOrder);
-      setSidebarOrder(normalizedOrder);
-      setIsOrderSaving(true);
-      setSidebarOrderMessage("메뉴 순서를 저장하는 중입니다.");
-
-      try {
-        const response = await fetch("/api/admin/preferences/sidebar-order", {
-          method: "PATCH",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ order: normalizedOrder }),
-        });
-
-        if (!response.ok) throw new Error("sidebar-order-save-failed");
-
-        const payload = (await response.json()) as { order?: unknown };
-        setSidebarOrder(normalizeAdminSidebarOrder(payload.order));
-        setSidebarOrderMessage(successMessage);
-      } catch {
-        setSidebarOrderMessage(
-          "저장하지 못했습니다. 화면에는 임시 순서가 반영되어 있습니다.",
-        );
-      } finally {
-        setIsOrderSaving(false);
-      }
-    },
-    [canLoadPreferences],
-  );
 
   const getItemStatus = (moduleId: AdminModuleId) => {
     if (moduleId === "submissions" && stats.pendingSubmissions != null) {
@@ -8286,213 +8164,6 @@ function AdminSidebar({
     return <Fragment key={item.id}>{button}</Fragment>;
   };
 
-  const renderOrderControls = (placement: "dropdown" | "sidebar") => (
-    <div
-      id="admin-sidebar-order-editor"
-      className="rounded-2xl bg-background/85 p-2"
-      aria-label="메뉴 순서 설정"
-      data-admin-sidebar-order-editor={placement}
-      data-admin-sidebar-order-edit-mode={isSidebarOrderEditMode ? "enabled" : "locked"}
-      data-admin-sidebar-order-editor-density="compact"
-    >
-      <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-bold text-foreground">
-            메뉴 순서
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            type="button"
-            variant={isSidebarOrderEditMode ? "default" : "outline"}
-            size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
-            aria-pressed={isSidebarOrderEditMode}
-            data-admin-sidebar-order-edit-toggle="true"
-            onClick={() => {
-              setIsSidebarOrderEditMode((current) => !current);
-              setSidebarOrderMessage(
-                isSidebarOrderEditMode
-                  ? "메뉴 순서 편집을 잠갔습니다."
-                  : "메뉴 순서 편집을 켰습니다. 화살표로 변경 후 자동 저장됩니다.",
-              );
-            }}
-          >
-            {isSidebarOrderEditMode ? "편집 잠금" : "편집 켜기"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
-            disabled={
-              !isSidebarOrderEditMode ||
-              !canLoadPreferences ||
-              isOrderLoading ||
-              isOrderSaving
-            }
-            data-admin-sidebar-order-loading={isOrderLoading ? "true" : "false"}
-            onClick={() =>
-              void persistSidebarOrder(
-                DEFAULT_ADMIN_SIDEBAR_ORDER,
-                "처음 상태로 되돌렸습니다.",
-              )
-            }
-          >
-            초기화
-          </Button>
-        </div>
-      </div>
-
-      {!isSidebarOrderEditMode && (
-        <p
-          className="mb-1.5 rounded-lg border border-dashed border-border bg-muted/25 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
-          data-admin-sidebar-order-edit-lock-message="true"
-        >
-          순서 편집을 켜야 이동 버튼이 활성화됩니다.
-        </p>
-      )}
-
-      <div className="space-y-2">
-        {orderedSidebarSections.map((section, sectionIndex) => (
-          <div
-            key={section.label}
-            className="space-y-0.5 border-t border-border/55 pt-2 first:border-t-0 first:pt-0"
-            data-admin-sidebar-order-section="compact"
-          >
-            <div className="flex h-5 items-center justify-between gap-1.5 px-1">
-              <span className="truncate text-[11px] font-semibold text-muted-foreground">
-                {section.label}
-              </span>
-              <div className="flex shrink-0 gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={`${section.label} 섹션 앞으로`}
-                  disabled={
-                    !canLoadPreferences ||
-                    !isSidebarOrderEditMode ||
-                    isOrderLoading ||
-                    sectionIndex === 0 ||
-                    isOrderSaving
-                  }
-                  onClick={() =>
-                    void persistSidebarOrder(
-                      moveAdminSidebarSection(sidebarOrder, section.label, -1),
-                      `${section.label} 섹션을 앞으로 옮겼습니다.`,
-                    )
-                  }
-                >
-                  ↑
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={`${section.label} 섹션 뒤로`}
-                  disabled={
-                    !canLoadPreferences ||
-                    !isSidebarOrderEditMode ||
-                    isOrderLoading ||
-                    sectionIndex === orderedSidebarSections.length - 1 ||
-                    isOrderSaving
-                  }
-                  onClick={() =>
-                    void persistSidebarOrder(
-                      moveAdminSidebarSection(sidebarOrder, section.label, 1),
-                      `${section.label} 섹션을 뒤로 옮겼습니다.`,
-                    )
-                  }
-                >
-                  ↓
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-0.5">
-              {section.items.map((item, itemIndex) => (
-                <div
-                  key={item.id}
-                  className="grid min-h-7 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-lg px-1.5 py-0.5 transition-colors hover:bg-muted/55"
-                  data-admin-sidebar-order-item="compact"
-                >
-                  <span className="min-w-0 truncate text-xs font-semibold text-foreground">
-                    {item.title}
-                  </span>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
-                      aria-label={`${item.title} 메뉴 앞으로`}
-                      disabled={
-                        !canLoadPreferences ||
-                        !isSidebarOrderEditMode ||
-                        isOrderLoading ||
-                        itemIndex === 0 ||
-                        isOrderSaving
-                      }
-                      onClick={() =>
-                        void persistSidebarOrder(
-                          moveAdminSidebarItem(
-                            sidebarOrder,
-                            section.label,
-                            item.id,
-                            -1,
-                          ),
-                          `${item.title} 메뉴를 앞으로 옮겼습니다.`,
-                        )
-                      }
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
-                      aria-label={`${item.title} 메뉴 뒤로`}
-                      disabled={
-                        !canLoadPreferences ||
-                        !isSidebarOrderEditMode ||
-                        isOrderLoading ||
-                        itemIndex === section.items.length - 1 ||
-                        isOrderSaving
-                      }
-                      onClick={() =>
-                        void persistSidebarOrder(
-                          moveAdminSidebarItem(
-                            sidebarOrder,
-                            section.label,
-                            item.id,
-                            1,
-                          ),
-                          `${item.title} 메뉴를 뒤로 옮겼습니다.`,
-                        )
-                      }
-                    >
-                      ↓
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p
-        className="mt-2 rounded-lg bg-muted/30 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
-        aria-live="polite"
-      >
-        {sidebarOrderMessage}
-      </p>
-    </div>
-  );
 
   const renderThemeControls = (
     placement: "dropdown" | "sidebar",
@@ -8595,7 +8266,7 @@ function AdminSidebar({
 
       <div className="mt-2">{renderThemeControls("dropdown")}</div>
 
-      <div className="mt-2">{renderOrderControls("dropdown")}</div>
+      <div className="mt-2"><AdminConsoleSidebarOrderEditor placement="dropdown" orderState={sidebarOrderState} /></div>
     </PopoverContent>
   );
   const sidebarAccountAvatarClassName =
@@ -8644,7 +8315,7 @@ function AdminSidebar({
         className="mt-3 border-t border-border/60 pt-3"
         data-admin-sidebar-account-order-section="true"
       >
-        {renderOrderControls("sidebar")}
+        <AdminConsoleSidebarOrderEditor placement="sidebar" orderState={sidebarOrderState} />
       </div>
     </PopoverContent>
   );

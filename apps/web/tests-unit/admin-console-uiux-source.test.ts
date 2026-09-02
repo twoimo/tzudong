@@ -7991,23 +7991,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "app/api/admin/preferences/sidebar-order/route.ts",
     );
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
+    const sidebarOrderHookSource = source(
+      "components/admin/console/use-admin-sidebar-order.ts",
+    );
+    const sidebarOrderEditorSource = source(
+      "components/admin/console/AdminConsoleSidebarOrderEditor.tsx",
+    );
     const hydrationSmokeSource = source("tests/admin-console-module-hydration.spec.ts");
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
 
-    expect(consoleSource).toContain("DEFAULT_ADMIN_SIDEBAR_ORDER");
+    expect(sidebarOrderHookSource).toContain("DEFAULT_ADMIN_SIDEBAR_ORDER");
     expect(consoleSource).toContain("normalizeAdminSidebarOrder");
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
-    expect(consoleSource).toContain("moveAdminSidebarSection");
-    expect(consoleSource).toContain("moveAdminSidebarItem");
+    expect(sidebarOrderHookSource).toContain("moveAdminSidebarSection");
+    expect(sidebarOrderHookSource).toContain("moveAdminSidebarItem");
     expect(consoleSource).toContain("buildOrderedSidebarSections");
     expect(consoleSource).toContain("canLoadPreferences");
-    expect(consoleSource).toContain("if (!canLoadPreferences) {");
-    expect(consoleSource).toContain("setIsOrderLoading(true);");
-    expect(consoleSource).toContain("setIsOrderLoading(false);");
-    expect(consoleSource).toContain("isOrderLoading ||");
-    expect(consoleSource).toContain("data-admin-sidebar-order-loading=");
+    expect(sidebarOrderHookSource).toContain("if (!enabled) {");
+    expect(sidebarOrderHookSource).toContain("setIsLoading(true);");
+    expect(sidebarOrderHookSource).toContain("setIsLoading(false);");
+    expect(sidebarOrderHookSource).toContain("saveLockRef.current");
+    expect(sidebarOrderEditorSource).toContain("data-admin-sidebar-order-loading=");
     expect(consoleSource).toContain("useAdBannersAdmin(isAdmin)");
     expect(consoleSource).not.toContain("useAnnouncementsAdmin(isAdmin)");
     expect(source("hooks/use-ad-banners.tsx")).toContain(
@@ -8112,14 +8118,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-console-menu-trigger="desktop-hamburger"',
     );
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
-    expect(consoleSource).toContain(
+    expect(sidebarOrderEditorSource).toContain(
       "data-admin-sidebar-order-editor={placement}",
     );
-    expect(consoleSource).toContain("isSidebarOrderEditMode");
-    expect(consoleSource).toContain('data-admin-sidebar-order-edit-toggle="true"');
-    expect(consoleSource).toContain('data-admin-sidebar-order-edit-mode={isSidebarOrderEditMode ? "enabled" : "locked"}');
-    expect(consoleSource).toContain('data-admin-sidebar-order-edit-lock-message="true"');
-    expect(consoleSource).toContain("!isSidebarOrderEditMode ||");
+    expect(sidebarOrderEditorSource).toContain("isEditMode");
+    expect(sidebarOrderEditorSource).toContain('data-admin-sidebar-order-edit-toggle="true"');
+    expect(sidebarOrderEditorSource).toContain('data-admin-sidebar-order-edit-mode={isEditMode ? "enabled" : "locked"}');
+    expect(sidebarOrderEditorSource).toContain('data-admin-sidebar-order-edit-lock-message="true"');
+    expect(sidebarOrderEditorSource).toContain("aria-pressed={isEditMode}");
     expect(hydrationSmokeSource).toContain("ADMIN_MODULE_SMOKE_TARGETS");
     expect(hydrationSmokeSource).toContain("/admin?module=routes");
     expect(hydrationSmokeSource).toContain("/admin?module=youtube-thumbnail-generator");
@@ -8132,7 +8138,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(hydrationSmokeSource).toContain('data-admin-youtube-thumbnail-generator="true"');
     expect(hydrationSmokeSource).toContain('data-admin-audit-coverage="partial-domain-specific"');
     expect(hydrationSmokeSource).toContain("관리자 지도 운영 개요 2분할");
-    expect(consoleSource).toContain('renderOrderControls("dropdown")');
+    expect(consoleSource).toContain('placement="dropdown"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-toggle="true"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain(
@@ -8177,16 +8183,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-sidebar-theme-cycle="single-button"');
     expect(consoleSource).toContain('data-admin-sidebar-theme-current={currentTheme}');
     expect(consoleSource).toContain('getNextAdminThemePreference(themePreference)');
-    expect(consoleSource).toContain(
+    expect(sidebarOrderEditorSource).toContain(
       'className="rounded-2xl bg-background/85 p-2"',
     );
-    expect(consoleSource).toContain(
+    expect(sidebarOrderEditorSource).toContain(
       'data-admin-sidebar-order-editor-density="compact"',
     );
-    expect(consoleSource).toContain(
+    expect(sidebarOrderEditorSource).toContain(
       'data-admin-sidebar-order-section="compact"',
     );
-    expect(consoleSource).toContain('data-admin-sidebar-order-item="compact"');
+    expect(sidebarOrderEditorSource).toContain('data-admin-sidebar-order-item="compact"');
     expect(consoleSource).not.toContain(
       'className="rounded-xl border border-border bg-card/80 p-1.5"',
     );
@@ -8375,10 +8381,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'aria-controls="admin-console-menu-dropdown"',
     );
     expect(consoleSource).toContain('data-admin-console-menu-dropdown="true"');
-    expect(consoleSource).toContain(
+    expect(sidebarOrderEditorSource).toContain(
       "data-admin-sidebar-order-editor={placement}",
     );
-    expect(consoleSource).toContain('renderOrderControls("dropdown")');
+    expect(consoleSource).toContain('placement="dropdown"');
     expect(consoleSource).toContain('data-admin-sidebar-footer-actions="true"');
     expect(consoleSource).toContain(
       'data-admin-sidebar-section-list="spacious"',
@@ -8409,7 +8415,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'renderThemeControls("sidebar", { compact: false })',
     );
-    expect(consoleSource).toContain('renderOrderControls("sidebar")');
+    expect(consoleSource).toContain('placement="sidebar"');
     const sidebarThemeControlIndex = consoleSource.indexOf(
       '{renderThemeControls("sidebar", { compact: false })}',
     );
@@ -8420,11 +8426,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(accountOrderSectionIndex).toBeGreaterThan(-1);
     expect(sidebarThemeControlIndex).toBeLessThan(accountOrderSectionIndex);
     expect(consoleSource).toContain("block space-y-3");
-    expect(consoleSource).toContain("메뉴 순서");
-    expect(consoleSource).toContain("초기화");
-    expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");
-    expect(consoleSource).toContain("aria-label={`${item.title} 메뉴 뒤로`}");
-    expect(consoleSource).toContain('aria-live="polite"');
+    expect(sidebarOrderEditorSource).toContain("메뉴 순서");
+    expect(sidebarOrderEditorSource).toContain("초기화");
+    expect(sidebarOrderEditorSource).toContain("aria-label={`${item.title} 메뉴 앞으로`}");
+    expect(sidebarOrderEditorSource).toContain("aria-label={`${item.title} 메뉴 뒤로`}");
+    expect(sidebarOrderEditorSource).toContain('aria-live="polite"');
     expect(preferenceRouteSource).toContain("SIDEBAR_ORDER_KEY");
     expect(preferenceRouteSource).toContain("admin_user_preferences");
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');

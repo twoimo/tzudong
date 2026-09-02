@@ -139,7 +139,7 @@
     - `PendingBadgeState`를 판별 합집합으로 반환한다: 1~99 정수·100 이상 `99+`, 접근성 라벨에 비축약 정수, 접힌 상태 점 표식, `readiness.status === "degraded"` 부분 집계 표식, `asOf` 180초 이상 과거 지연 표식, 조회 실패 시 전 메뉴 배지 생략. 상태_색상 토큰을 쓰지 않는다.
     - _요구사항 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 8.11_
 
-  - [ ] 5.3 순서 편집기와 조회·저장 훅 작성
+  - [x] 5.3 순서 편집기와 조회·저장 훅 작성
     - `apps/web/components/admin/console/use-admin-sidebar-order.ts`와 `AdminConsoleSidebarOrderEditor.tsx`를 신설하고 기존 순서 편집 렌더·`loadSidebarOrder`·`persistSidebarOrder`를 이동한다. 조회 실패 시 기본 순서 표시·저장 미전송·고정 안내, 진행 중 저장 1건 잠금(이동·초기화 제어 비활성), 실패 시 임시 순서 유지·자동 재시도 없음·고정 안내, 성공 시 응답 순서로 교체·성공 문구를 처리한다.
     - `normalizeAdminSidebarOrderWithReason`으로 되돌림 사유를 판정하고 적재 후 처음 1회만 초기화 안내를 표시한다(`useRef`로 표시 여부 기억, 재수신 시 미표시). 편집 토글 `aria-pressed`와 상태 aria-live 1회 알림, 키보드 한 칸 이동·초점 유지를 제공한다.
     - _요구사항 5.7, 5.10, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.15, 14.8, 14.10_
