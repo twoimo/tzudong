@@ -74,11 +74,13 @@ describe('browser title source contracts', () => {
     expect(homeClientSource).toContain('useDocumentTitle(visibleDetailTitle)');
     expect(homeClientSource).toContain('buildBrowserTitle(visibleDetailRestaurant.name)');
 
-    expect(adminSource).toContain('buildScopedBrowserTitle([activeModuleLabel, "관리자 콘솔"])');
-    expect(adminSource).toContain('activeModuleId === "overview"');
-    expect(adminSource).toContain('activeModuleId === "routes"');
-    expect(adminSource).toContain('activeModuleId === "llm"');
+    expect(adminSource).toContain('getAdminConsoleMenu(activeModuleId).title');
+    expect(adminSource).toContain('buildScopedBrowserTitle([');
+    expect(adminSource).toContain('activeModuleLabel,');
+    expect(adminSource).toContain('"관리자 콘솔"');
+    expect(adminSource).not.toContain('? "대시보드 (KPI)"');
     expect(adminSource).not.toContain('searchParams.get("module") ??');
+    expect(adminSource).not.toContain('작업 화면으로 전환됨');
 
     expect(myPageSource).toContain('resolveMobileRouteHeader(pathname)');
     expect(myPageSource).toContain('getMyPageBrowserTitleLabel(mobileRouteHeader)');

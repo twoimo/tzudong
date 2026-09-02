@@ -3358,6 +3358,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       '<p className="sr-only" aria-live="polite">',
     );
+    expect(consoleSource).toMatch(
+      /<p className="sr-only" aria-live="polite">\s*\{activeModuleLabel\}\s*<\/p>/,
+    );
+    expect(consoleSource).not.toContain("작업 화면으로 전환됨");
   });
   test("keeps announcement management out of the admin sidebar default order", () => {
     const consoleSource = adminConsoleShellSource();

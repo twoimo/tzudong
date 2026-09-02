@@ -117,6 +117,7 @@ import {
   getAdminModuleStateWarning,
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
+import { getAdminConsoleMenu } from "@/lib/admin/console-menu-registry";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
@@ -9327,17 +9328,11 @@ export function AdminConsoleOverview({
   const activeModule = consoleModules.find(
     (module) => module.id === activeModuleId,
   );
-  const activeModuleLabel =
-    activeModuleId === "overview"
-      ? "대시보드 (KPI)"
-      : activeModuleId === "routes"
-        ? "맛집 동선 추천"
-        : activeModuleId === "llm"
-          ? "운영 보조"
-          : activeModule?.title;
-  const activeBrowserTitle = activeModuleLabel
-    ? buildScopedBrowserTitle([activeModuleLabel, "관리자 콘솔"])
-    : null;
+  const activeModuleLabel = getAdminConsoleMenu(activeModuleId).title;
+  const activeBrowserTitle = buildScopedBrowserTitle([
+    activeModuleLabel,
+    "관리자 콘솔",
+  ]);
   useDocumentTitle(activeBrowserTitle);
   const [loadedModuleIds, setLoadedModuleIds] = useState<
     ReadonlySet<AdminModuleId>
@@ -9872,7 +9867,7 @@ export function AdminConsoleOverview({
           onTouchMove={handleAdminCanvasTouchMove}
         >
           <p className="sr-only" aria-live="polite">
-            {activeModuleLabel} 작업 화면으로 전환됨
+            {activeModuleLabel}
           </p>
           {isAdminCanvasBootstrapping ? (
             getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
