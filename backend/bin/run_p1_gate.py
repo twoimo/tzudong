@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 1, requirements 8 and 9). It:
 
   * Defines the P1 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P1-local-pipeline-rollback.json``).
+    (``backend/docs/phases/P1-local-pipeline-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     two P1-specific additional verifications Task 10 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -85,7 +85,7 @@ phase_gate = _load_phase_gate()
 P1_PHASE_ID = "P1-local-pipeline"
 P1_SEQUENCE = 1
 P1_ASSIGNED_REQUIREMENTS = [8, 9]
-P1_ROLLBACK_PLAN_REF = "backend/log/phases/P1-local-pipeline-rollback.json"
+P1_ROLLBACK_PLAN_REF = "backend/docs/phases/P1-local-pipeline-rollback.json"
 
 # Entry conditions (each with a decidable statement and a unique id).
 P1_ENTRY_CONDITIONS: tuple[dict, ...] = (

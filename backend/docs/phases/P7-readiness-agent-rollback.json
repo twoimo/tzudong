@@ -1,0 +1,75 @@
+{
+  "phaseId": "P7-readiness-agent",
+  "recoveryCandidateWorktreeId": "recovery-candidate/platform-modernization",
+  "commands": [
+    {
+      "worktreeId": "recovery-candidate/platform-modernization",
+      "argv": [
+        "git",
+        "status",
+        "--short"
+      ]
+    }
+  ],
+  "postRollbackVerification": [
+    {
+      "cwd": "apps/web",
+      "argv": [
+        "bun",
+        "run",
+        "lint"
+      ]
+    },
+    {
+      "cwd": "apps/web",
+      "argv": [
+        "bun",
+        "run",
+        "test:unit"
+      ]
+    },
+    {
+      "cwd": "apps/web",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck:parity"
+      ]
+    },
+    {
+      "cwd": "apps/web",
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ]
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "backend.utils.tests.test_run_daily_regression"
+      ]
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "backend.pipeline.test_validators_unittest"
+      ]
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "backend.pipeline.test_data_contracts_unittest"
+      ]
+    }
+  ]
+}

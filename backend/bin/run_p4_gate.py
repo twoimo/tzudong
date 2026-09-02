@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 4, requirements 4, 5, and 11). It:
 
   * Defines the P4 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P4-supply-chain-rollback.json``).
+    (``backend/docs/phases/P4-supply-chain-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     three P4-specific additional verifications Task 33 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -110,7 +110,7 @@ phase_gate = _load_sibling("phase_gate", "phase_gate.py")
 P4_PHASE_ID = "P4-supply-chain"
 P4_SEQUENCE = 4
 P4_ASSIGNED_REQUIREMENTS = [4, 5, 11]
-P4_ROLLBACK_PLAN_REF = "backend/log/phases/P4-supply-chain-rollback.json"
+P4_ROLLBACK_PLAN_REF = "backend/docs/phases/P4-supply-chain-rollback.json"
 
 # Canonical inputs the P4-specific static checks are anchored to.
 _TOOLING_RECORD_REF = "backend/deploy/tooling-selection.v1.json"

@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 6, requirements 1, 2, 3). It:
 
   * Defines the P6 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P6-rust-rollback.json``).
+    (``backend/docs/phases/P6-rust-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     P6-specific additional verifications Task 47 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -121,7 +121,7 @@ if str(_repo_root()) not in sys.path:
 P6_PHASE_ID = "P6-rust"
 P6_SEQUENCE = 6
 P6_ASSIGNED_REQUIREMENTS = [1, 2, 3]
-P6_ROLLBACK_PLAN_REF = "backend/log/phases/P6-rust-rollback.json"
+P6_ROLLBACK_PLAN_REF = "backend/docs/phases/P6-rust-rollback.json"
 
 # Canonical inputs the P6-specific static checks are anchored to.
 _MIGRATION_LEDGER_REF = "backend/rust/migration-ledger.v1.json"

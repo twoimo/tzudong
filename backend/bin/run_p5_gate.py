@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 5, requirements 6 and 7). It:
 
   * Defines the P5 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P5-layout-naming-rollback.json``).
+    (``backend/docs/phases/P5-layout-naming-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     P5-specific additional verifications Task 38 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -110,7 +110,7 @@ phase_gate = _load_sibling("phase_gate", "phase_gate.py")
 P5_PHASE_ID = "P5-layout-naming"
 P5_SEQUENCE = 5
 P5_ASSIGNED_REQUIREMENTS = [6, 7]
-P5_ROLLBACK_PLAN_REF = "backend/log/phases/P5-layout-naming-rollback.json"
+P5_ROLLBACK_PLAN_REF = "backend/docs/phases/P5-layout-naming-rollback.json"
 
 # Canonical inputs the P5-specific static checks are anchored to.
 _LAYOUT_MANIFEST_REF = "backend/layout-manifest.v1.json"

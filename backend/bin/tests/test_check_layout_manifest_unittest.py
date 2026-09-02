@@ -351,8 +351,8 @@ class RealTreeTest(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertIsNone(result["errorCode"])
         self.assertIn(result["errorCode"], clm.LAYOUT_CHECK_RESULT_CODES)
-        # 26 tracked in-scope 1st/2nd-level directories.
-        self.assertEqual(result["trackedDirectoryCount"], 26)
+        # 27 tracked in-scope 1st/2nd-level directories (includes backend/rust).
+        self.assertEqual(result["trackedDirectoryCount"], 27)
         self.assertEqual(result["checks"]["staleReferences"]["unresolvedCount"], 0)
         move = result["checks"]["moves"][0]
         self.assertEqual(move["beforeMatchCount"], 0)

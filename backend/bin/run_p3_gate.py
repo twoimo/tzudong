@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 3, requirements 12 and 13). It:
 
   * Defines the P3 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P3-observability-rollback.json``).
+    (``backend/docs/phases/P3-observability-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     two P3-specific additional verifications Task 27 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -99,7 +99,7 @@ phase_gate = _load_sibling("phase_gate", "phase_gate.py")
 P3_PHASE_ID = "P3-observability"
 P3_SEQUENCE = 3
 P3_ASSIGNED_REQUIREMENTS = [12, 13]
-P3_ROLLBACK_PLAN_REF = "backend/log/phases/P3-observability-rollback.json"
+P3_ROLLBACK_PLAN_REF = "backend/docs/phases/P3-observability-rollback.json"
 
 # Entry conditions (each with a decidable statement and a unique id). P3 enters
 # only after P2 completed (design table: "진입: P2 완료").

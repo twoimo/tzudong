@@ -7,7 +7,7 @@ Phase_Gate" table (sequence 2, requirement 10). It:
 
   * Defines the P2 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P2-publication-rollback.json``).
+    (``backend/docs/phases/P2-publication-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     two P2-specific additional verifications Task 18 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -90,7 +90,7 @@ phase_gate = _load_phase_gate()
 P2_PHASE_ID = "P2-publication"
 P2_SEQUENCE = 2
 P2_ASSIGNED_REQUIREMENTS = [10]
-P2_ROLLBACK_PLAN_REF = "backend/log/phases/P2-publication-rollback.json"
+P2_ROLLBACK_PLAN_REF = "backend/docs/phases/P2-publication-rollback.json"
 
 # Entry conditions (each with a decidable statement and a unique id). P2 enters
 # only after P1 completed (design table: "진입: P1 완료").

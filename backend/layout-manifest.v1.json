@@ -187,6 +187,20 @@
       "vcsTracked": true
     },
     {
+      "path": "backend/rust",
+      "depth": 2,
+      "ownership": "Rust_Component 크레이트·패리티 하네스·마이그레이션 원장",
+      "allowedContents": [
+        "Cargo 워크스페이스와 크레이트 소스",
+        "PyO3 바인딩",
+        "마이그레이션 원장",
+        "패리티 속성 테스트"
+      ],
+      "forbiddenContents": ["시크릿 값 리터럴", "호스티드 프로덕션 자격 증명"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "backend/storyboard-agent",
       "depth": 2,
       "ownership": "스토리보드 생성 에이전트 소스",

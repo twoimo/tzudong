@@ -8,7 +8,7 @@ of the P6 runner (``backend/bin/run_p6_gate.py``, Task 47):
 
   * Defines the P7 Phase_Gate configuration — entry conditions, exit
     conditions, the public routes to check, and the Rollback_Plan reference
-    (``backend/log/phases/P7-readiness-agent-rollback.json``).
+    (``backend/docs/phases/P7-readiness-agent-rollback.json``).
   * Runs the Requirement 16.4 seven-command set (via ``phase_gate``), plus the
     P7-specific additional verifications Task 53 enumerates:
       - ``python backend/bin/check_env_contract.py --profile daily``
@@ -112,7 +112,7 @@ if str(_repo_root()) not in sys.path:
 P7_PHASE_ID = "P7-readiness-agent"
 P7_SEQUENCE = 7
 P7_ASSIGNED_REQUIREMENTS = [14, 15]
-P7_ROLLBACK_PLAN_REF = "backend/log/phases/P7-readiness-agent-rollback.json"
+P7_ROLLBACK_PLAN_REF = "backend/docs/phases/P7-readiness-agent-rollback.json"
 
 # Canonical inputs the P7-specific static checks are anchored to (design C10).
 _CATALOG_REF = "backend/deploy/deployment-descriptor-set.v1.json"
