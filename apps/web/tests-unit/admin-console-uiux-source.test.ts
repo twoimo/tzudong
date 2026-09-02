@@ -9,6 +9,13 @@ import {
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
+const adminConsoleOverviewSource = () =>
+  source("components/admin/AdminConsoleOverview.tsx");
+const adminConsoleSidebarSource = () =>
+  source("components/admin/console/AdminConsoleSidebar.tsx");
+const adminConsoleShellSource = () =>
+  adminConsoleOverviewSource() + "\n" + adminConsoleSidebarSource();
+
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -414,7 +421,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
   });
   test("keeps admin module state URL-backed and easy to recover", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
 
     expect(consoleSource).toContain("useSearchParams");
     expect(consoleSource).toContain("getAdminModuleIdFromSearchParams");
@@ -426,7 +433,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("keeps the G012 shared shell focus path, scroll owner, and containment explicit", () => {
     const mainLayoutSource = source("components/layout/MainLayout.tsx");
     const overlayLayoutSource = source("components/layout/OverlayLayout.tsx");
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const embeddedShellSource = source(
       "components/admin/AdminEmbeddedModuleShell.tsx",
     );
@@ -446,7 +453,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overlayLayoutSource).toContain('tabIndex={-1}');
 
     expect(consoleSource).toContain('href="#admin-console-canvas"');
-    expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
+    expect(consoleSource).toContain(
+      'const SIDEBAR_NAV_LANDMARK_NAME = "관리자 통합 메뉴"',
+    );
+    expect(consoleSource).toContain("aria-label={SIDEBAR_NAV_LANDMARK_NAME}");
     expect(consoleSource).toContain(
       'data-admin-console-layout="sidebar-content"',
     );
@@ -492,13 +502,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     }
   });
   test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const guardedSource = source("lib/admin/guarded-mutation-contract.ts");
 
     expect(consoleSource).toContain('aria-current={isActive ? "page" : undefined}');
     expect(consoleSource).toContain('data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}');
     expect(consoleSource).toContain('data-admin-console-menu-item-state={isActive ? "active" : "inactive"}');
-    expect(consoleSource).toContain('? "border-primary/20 bg-primary text-primary-foreground shadow-primary"');
+    expect(consoleSource).toContain('? "border-border bg-muted text-foreground"');
     expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="true"');
     expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="live"');
     expect(consoleSource).toContain("shouldShowMobileDashboardLoadingPrompt");
@@ -538,7 +548,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("removes repeated beginner guidance cards from the admin console", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
 
     expect(consoleSource).not.toContain("초보자 안내 강화");
     expect(consoleSource).not.toContain("BeginnerGuideCard");
@@ -554,7 +564,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("uses the shared compact embedded module shell instead of canvas-level generic headers", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const routeSource = source("lib/admin/admin-module-routing.ts");
     const registrySource = source("lib/admin/console-menu-registry.ts");
     const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
@@ -696,7 +706,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps route recommendation as a viewport-bounded two-pane map console", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -707,8 +717,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'import("@/components/admin/AdminOverviewDashboard")',
     );
-    expect(consoleSource).toContain('id: "routes"');
-    expect(consoleSource).toContain('title: "맛집 동선 추천"');
+    const registrySource = source("lib/admin/console-menu-registry.ts");
+    expect(registrySource).toContain('id: "routes"');
+    expect(registrySource).toContain('title: "맛집 동선 추천"');
+    expect(consoleSource).toContain("buildRegistrySidebarSections");
     expect(consoleSource).toContain("AdminDashboardManagementPanel");
     expect(consoleSource).not.toContain("fetchAdminMapRestaurants");
 
@@ -886,7 +898,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps all admin skeletons compact and layout-faithful", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const adminLoadingSource = source("app/admin/loading.tsx");
     const routeSkeletonSource = source("app/admin/evaluations/page.tsx");
     const evaluationTableSource = source(
@@ -1297,7 +1309,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps overview reference widgets uncluttered and source-honest", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const appGlobalsSource = source("app/app-globals.css");
     const appLayoutSource = source("app/layout.tsx");
     const overviewSource = source(
@@ -1404,49 +1416,17 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("위로 이동");
     expect(consoleSource).not.toContain("아래로 이동");
     expect(consoleSource).not.toContain("기본 순서");
-    expect(consoleSource).toContain('title: "대시보드 (KPI)"');
-    expect(consoleSource).toContain('badge: "성과 요약"');
-    const sidebarSectionsSource = consoleSource.slice(
-      consoleSource.indexOf("const sidebarSections"),
-      consoleSource.indexOf("function moveItemInArray"),
-    );
-    const homeSectionSource = sidebarSectionsSource.slice(
-      sidebarSectionsSource.indexOf('label: "홈"'),
-      sidebarSectionsSource.indexOf('label: "검수"'),
-    );
-    const opsSectionSource = sidebarSectionsSource.slice(
-      sidebarSectionsSource.indexOf('label: "운영"'),
-      sidebarSectionsSource.indexOf('label: "실험실"'),
-    );
-    const labSectionSource = sidebarSectionsSource.slice(
-      sidebarSectionsSource.indexOf('label: "실험실"'),
-    );
-    expect(homeSectionSource).not.toContain('id: "routes"');
-    expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["map-overlays", "users", "banners", "insights", "pipeline"])',
-    );
-    expect(opsSectionSource).not.toContain('id: "routes"');
-    expect(opsSectionSource).not.toContain('"storyboard"');
-    expect(opsSectionSource).not.toContain('"audit"');
-    expect(labSectionSource).toContain(
-      'getSidebarConsoleItems(["youtube-thumbnail-generator", "storyboard"])',
-    );
-    expect(labSectionSource).toContain('id: "routes"');
-    expect(labSectionSource).toContain('"audit"');
-    expect(labSectionSource).toContain('id: "llm"');
-    expect(labSectionSource).toContain('badge: "실험 중"');
-    expect(
-      labSectionSource.indexOf('"youtube-thumbnail-generator"'),
-    ).toBeLessThan(labSectionSource.indexOf('"storyboard"'));
-    expect(labSectionSource.indexOf('"storyboard"')).toBeLessThan(
-      labSectionSource.indexOf('id: "routes"'),
-    );
-    expect(labSectionSource.indexOf('id: "routes"')).toBeLessThan(
-      labSectionSource.indexOf('id: "llm"'),
-    );
-    expect(labSectionSource.indexOf('id: "llm"')).toBeLessThan(
-      labSectionSource.indexOf('"audit"'),
-    );
+    const registrySource = source("lib/admin/console-menu-registry.ts");
+    expect(registrySource).toContain('title: "대시보드 (KPI)"');
+    expect(consoleSource).not.toContain('badge: "성과 요약"');
+    expect(consoleSource).toContain("buildRegistrySidebarSections");
+    expect(consoleSource).toContain("getAdminConsoleMenuIdsBySection");
+    expect(consoleSource).toContain("getAdminConsoleMenu");
+    expect(consoleSource).toContain("ADMIN_CONSOLE_SECTION_LABELS");
+    expect(consoleSource).toContain("ADMIN_CONSOLE_MENU_ICONS");
+    expect(consoleSource).not.toContain("const sidebarSections");
+    expect(consoleSource).not.toContain("function getSidebarConsoleItems");
+    expect(consoleSource).not.toContain('badge: "실험 중"');
     expect(consoleSource).toContain('title: "핵심 인사이트"');
     expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
     expect(consoleSource).toContain("/api/insights/treemap");
@@ -2791,7 +2771,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps KPI PDF report export printable without unsafe HTML sinks", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const pdfReportBuilderSource = consoleSource.slice(
       consoleSource.indexOf("function buildAdminDashboardPdfReportHtml"),
       consoleSource.indexOf("function openAdminDashboardPdfReport"),
@@ -2946,7 +2926,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps admin pending counts behind an admin-only server route", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const routeSource = source("app/api/admin/pending-counts/route.ts");
 
 
@@ -2966,7 +2946,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps admin system status center in a dedicated hook/component with fail-closed run_daily states", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const centerSource = source(
       "components/admin/system-status/AdminSystemStatusCenter.tsx",
     );
@@ -3038,7 +3018,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("does not render an admin access gate for non-admin visitors", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const middlewareSource = source("lib/supabase/middleware.ts");
 
     expect(consoleSource).toContain("shouldRenderAdminShell");
@@ -3102,7 +3082,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps unified admin console as the single operator shell", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const adminPageSource = source("app/admin/page.tsx");
     const appGlobalsSource = source("app/app-globals.css");
 
@@ -3124,8 +3104,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     ]) {
       expect(consoleSource).toContain(moduleId);
     }
-    expect(consoleSource).toContain("sidebarSections");
-    expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
+    expect(consoleSource).toContain("orderedSidebarSections");
+    expect(consoleSource).toContain(
+      'const SIDEBAR_NAV_LANDMARK_NAME = "관리자 통합 메뉴"',
+    );
+    expect(consoleSource).toContain("aria-label={SIDEBAR_NAV_LANDMARK_NAME}");
     expect(consoleSource).toContain('aria-label="관리자 콘솔 작업 화면"');
     expect(consoleSource).toContain(
       'data-admin-console-layout="sidebar-content"',
@@ -3344,7 +3327,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps admin console keyboard and screen-reader navigation intact", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
 
     expect(consoleSource).toContain('href="#admin-console-canvas"');
     expect(consoleSource).toContain("작업 화면으로 건너뛰기");
@@ -3371,7 +3354,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
   });
   test("keeps announcement management out of the admin sidebar default order", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const sidebarOrderRouteSource = source(
       "app/api/admin/preferences/sidebar-order/route.ts",
     );
@@ -3403,7 +3386,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("adds YouTube thumbnail generation as a guarded Lab module", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const componentSource = source(
       "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
     );
@@ -5373,7 +5356,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("adds storyboard generation as an operator-controlled admin module", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const storyboardSource = source(
       "components/admin/storyboard/AdminStoryboardGenerator.tsx",
     );
@@ -7985,7 +7968,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("lets admins reorder the sidebar without polluting the two-pane map overview", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const appGlobalsSource = source("app/app-globals.css");
     const preferenceRouteSource = source(
       "app/api/admin/preferences/sidebar-order/route.ts",
@@ -8295,14 +8278,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-sidebar-collapsed-tooltip="true"',
     );
-    expect(consoleSource).toContain("adminDashboardTooltipPortalClassName");
     expect(consoleSource).toContain('side="right"');
-    expect(consoleSource).toContain('dataAttribute="sidebar-collapsed"');
     expect(consoleSource).toContain("getSidebarBadgeClassName");
-    expect(consoleSource).toContain('sectionLabel === "실험실"');
+    expect(consoleSource).toContain("text-muted-foreground");
     expect(consoleSource).toContain(
       "data-admin-sidebar-badge-tone={section.label}",
     );
+    expect(consoleSource).toContain("useAdminPendingBadges");
+    expect(consoleSource).toContain("getAdminConsoleMenu");
+    expect(consoleSource).toContain("aria-describedby={isPurposeDescribed ? purposeId : undefined}");
     expect(appGlobalsSource).toContain(".dark {");
     expect(appGlobalsSource).toContain("--background: 24 10% 10%;");
     expect(consoleSource).toContain(
@@ -8447,7 +8431,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("cleans stale admin module query state and canonicalizes invalid modules", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const routingSource = source("lib/admin/admin-module-routing.ts");
     const consoleModulesSource = consoleSource.slice(
       consoleSource.indexOf("const consoleModules"),
@@ -8479,7 +8463,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps route recommendation as only two source-honest map panes", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -8547,7 +8531,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       expect(resolveGitHubActionsRunUrl(unsafeUrl)).toBeNull();
     }
 
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const overviewSource = source(
       "components/admin/AdminOverviewDashboard.tsx",
     );
@@ -8608,7 +8592,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("removes repeated embedded module context headers from the admin canvas", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
 
     expect(consoleSource).not.toContain("이 화면에서 처리 · {module.badge}");
     expect(consoleSource).not.toContain("독립 라우트 보존");
@@ -8620,7 +8604,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("keeps admin pages dense without sacrificing responsive boundaries", () => {
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource = adminConsoleShellSource();
     const tailwindSource = source("app/app-globals.css");
     const usersSource = source("components/admin/AdminUsersPanel.tsx");
     const evaluationsSource = source("app/admin/evaluations/page.tsx");

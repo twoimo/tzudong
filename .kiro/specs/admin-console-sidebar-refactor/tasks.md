@@ -129,7 +129,7 @@
   - 모든 시험이 통과하는지 확인하고, 의문이 생기면 사용자에게 질문한다.
 
 - [ ] 5. 사이드바 추출
-  - [ ] 5.1 `AdminConsoleSidebar` 컴포넌트 작성
+  - [x] 5.1 `AdminConsoleSidebar` 컴포넌트 작성
     - `apps/web/components/admin/console/AdminConsoleSidebar.tsx`를 신설하고 `AdminConsoleOverview.tsx`의 `renderMenuItem`·드롭다운·사이드바 렌더·`getSidebarBadgeClassName`·`sidebarSections`를 이동한다. 데스크톱 목록·접힌 레일·모바일 드롭다운을 레지스트리에서 파생하고 제목·섹션 이름 문자열을 직접 선언하지 않는다.
     - 섹션 배지를 4개 섹션 전부 동일한 중립_계조 단계로, 활성 메뉴 강조를 `bg-primary` 대신 계조 대비로 제공한다. 활성 메뉴에만 `aria-current="page"`를 데스크톱·모바일 각각에서 부여한다. 두께 2px·대비 3:1 이상 초점 표시, 한국어 탐색 랜드마크 이름, 15개 선택 제어에 표시 제목 포함 접근성 라벨, 목적 문장 `aria-describedby` 안내(초점/진입 후 120ms 이내)를 제공한다. 대기_배지는 5.2 훅을 소비한다.
     - _요구사항 1.4, 1.5, 6.6, 9.7, 9.8, 14.1, 14.2, 14.3, 14.4, 14.7, 15.1, 15.3, 16.9_
