@@ -23,7 +23,10 @@ CONSUMER_GROUP = "pipeline-indexer"
 BULK_LIMIT = 50
 
 ALLOWED_MODES = frozenset({"noop", "es"})
-ALLOWED_ES_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "elasticsearch"})
+# Loki is the default Log_Sink; its admission reuses admit_es_url, so the local
+# docker-network host ``loki`` joins the approved local search-store host set
+# alongside the Elasticsearch opt-in hosts (design B / requirement 13.10).
+ALLOWED_ES_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "elasticsearch", "loki"})
 LOG_ALLOWLIST = frozenset(
     {
         "type",

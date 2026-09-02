@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "scope": {
+    "note": "저장소가 git으로 추적하는 1단·2단 디렉터리 전체에 대해 항목 하나씩(요구사항 6.1). 소스 항목은 git 추적 디렉터리와 양방향 대응한다(요구사항 6.9). build_artifact·local_ephemeral 항목은 버전 관리 추적 제외를 vcsTracked=false로 기록한다(요구사항 6.8).",
+    "trackedTopLevelDirectories": [".github", "apps", "backend", "docs", "scripts"],
+    "excludedTopLevelDirectories": [".git", ".venv", ".hypothesis", ".cursor", ".kiro", ".local-archive"]
+  },
+  "entries": [
+    {
+      "path": ".github",
+      "depth": 1,
+      "ownership": "저장소 CI·거버넌스 산출물 소유 경계",
+      "allowedContents": [
+        "GitHub Actions 워크플로",
+        "dependabot 설정",
+        "CODEOWNERS와 거버넌스 매니페스트",
+        "CI 보조 스크립트"
+      ],
+      "forbiddenContents": [
+        "장시간 크롤러·ffmpeg·Gemini 대량·GDrive 대량·Supabase 배치 삽입 실행",
+        "시크릿 값 리터럴",
+        "런타임 애플리케이션 소스"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": ".github/scripts",
+      "depth": 2,
+      "ownership": "CI 워크플로가 호출하는 보조 스크립트",
+      "allowedContents": ["워크플로 지원 파이썬·셸 스크립트"],
+      "forbiddenContents": ["시크릿 값 리터럴", "장시간 파이프라인 실행"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": ".github/workflows",
+      "depth": 2,
+      "ownership": "GitHub Actions 워크플로 정의",
+      "allowedContents": ["워크플로 YAML 정의"],
+      "forbiddenContents": ["시크릿 값 리터럴", "보호 브랜치 직접·강제 푸시 명령"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "apps",
+      "depth": 1,
+      "ownership": "모노레포 애플리케이션 컨테이너",
+      "allowedContents": ["애플리케이션 패키지 디렉터리"],
+      "forbiddenContents": ["Backend_Runtime 파이프라인 소스", "운영 산출물"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "apps/web",
+      "depth": 2,
+      "ownership": "Web_App 경계",
+      "allowedContents": [
+        "Next.js 16 공개 앱 라우트",
+        "보호된 /admin 콘솔",
+        "웹 단위·Playwright 테스트",
+        "웹 성능 정규 예산 입력"
+      ],
+      "forbiddenContents": [
+        "장시간 크롤러 실행 소유",
+        "ffmpeg 처리 소유",
+        "Gemini 대량 평가 소유",
+        "GDrive 대량 업로드 소유",
+        "장시간 Supabase 배치 삽입 소유",
+        "Rust_Component 원시 성능 아티팩트"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend",
+      "depth": 1,
+      "ownership": "Backend_Runtime 경계",
+      "allowedContents": [
+        "크롤링·평가·미디어·배치·Supabase 준비 소스",
+        "운영자 CLI와 검사기",
+        "백엔드 문서와 계약 원장"
+      ],
+      "forbiddenContents": [
+        "Web_App 공개 라우트 핸들러",
+        "시크릿 값 리터럴",
+        "`latest` 또는 부동 이미지 태그"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/bin",
+      "depth": 2,
+      "ownership": "경로로 로드되는 독립 실행 운영자·검사기 CLI(패키지 아님, __init__.py 없음)",
+      "allowedContents": ["독립 실행 파이썬·mjs·셸 CLI 스크립트"],
+      "forbiddenContents": ["임포트 가능한 파이썬 패키지 초기화", "컨테이너·설정 산출물"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/config",
+      "depth": 2,
+      "ownership": "채널·런타임 설정 데이터",
+      "allowedContents": ["채널·API 설정 YAML", "상대 경로 데이터 지시"],
+      "forbiddenContents": ["시크릿 값 리터럴", "이동된 디렉터리에 대한 미해석 경로 참조"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/deploy",
+      "depth": 2,
+      "ownership": "운영 산출물 단일 소유 경로",
+      "allowedContents": [
+        "Dockerfile 및 compose 파일",
+        "otel-collector.yaml, prometheus.yml, grafana/",
+        "metrics.v1.json, events.v1.json",
+        "helm/, opentofu/, argocd/, registry/",
+        "승인 일정·도구 선정·이전 준비 원장"
+      ],
+      "forbiddenContents": [
+        "임포트 가능한 파이썬 모듈",
+        "시크릿 값 리터럴",
+        "`latest` 또는 부동 이미지 태그"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/docs",
+      "depth": 2,
+      "ownership": "Backend_Runtime 문서",
+      "allowedContents": ["백엔드 운영·아키텍처 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/fixtures",
+      "depth": 2,
+      "ownership": "백엔드 테스트·계약 픽스처",
+      "allowedContents": ["`LOCAL_TEST_ONLY:NOT_PRODUCTION` 표기 픽스처", "계약 검증 픽스처"],
+      "forbiddenContents": ["프로덕션 데이터", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/pipeline",
+      "depth": 2,
+      "ownership": "파이프라인 검증기·데이터 계약 소스",
+      "allowedContents": ["validators·state·data-contracts 파이썬 모듈", "모듈 인접 단위 테스트"],
+      "forbiddenContents": ["컨테이너·설정 산출물", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/pipeline_control",
+      "depth": 2,
+      "ownership": "Backend_Runtime 파이썬 제어 평면 모듈(유일한 임포트 가능 패키지)",
+      "allowedContents": ["임포트 가능한 파이썬 모듈", "모듈 인접 단위·속성 테스트"],
+      "forbiddenContents": [
+        "Dockerfile",
+        "docker-compose*.yml",
+        "수집기·대시보드 설정",
+        "Helm 차트",
+        "IaC 정의"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/restaurant-crawling",
+      "depth": 2,
+      "ownership": "크롤링 단계 스크립트와 채널 데이터",
+      "allowedContents": ["크롤링 Node·파이썬 스크립트", "채널별 크롤 데이터", "크롤링 프롬프트"],
+      "forbiddenContents": ["Route_Handler_Boundary 진입점", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/restaurant-evaluation",
+      "depth": 2,
+      "ownership": "평가 단계 스크립트와 평가 데이터",
+      "allowedContents": ["평가·삽입 스크립트", "채널별 평가 데이터", "평가 프롬프트"],
+      "forbiddenContents": ["Route_Handler_Boundary 진입점", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/storyboard-agent",
+      "depth": 2,
+      "ownership": "스토리보드 생성 에이전트 소스",
+      "allowedContents": ["스토리보드 에이전트 스크립트와 프롬프트"],
+      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/supabase",
+      "depth": 2,
+      "ownership": "로컬 Supabase 스택과 불변 마이그레이션 원장",
+      "allowedContents": [
+        "적용된 마이그레이션 파일",
+        "로컬 스택 compose와 스크립트",
+        "베이스라인·로컬 입력"
+      ],
+      "forbiddenContents": [
+        "적용된 마이그레이션의 내용·파일명 변경",
+        "시크릿 값 리터럴",
+        "`LOCAL_TEST_ONLY:NOT_PRODUCTION` 표기 없는 시드 픽스처"
+      ],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/thumbnail-agent",
+      "depth": 2,
+      "ownership": "썸네일 생성 에이전트 소스",
+      "allowedContents": ["썸네일 에이전트 스크립트와 프롬프트"],
+      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/trend",
+      "depth": 2,
+      "ownership": "트렌드 분석 모듈 소스",
+      "allowedContents": ["트렌드 분석 스크립트와 데이터 계약"],
+      "forbiddenContents": ["시크릿 값 리터럴", "컨테이너·설정 산출물"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/utils",
+      "depth": 2,
+      "ownership": "공유 백엔드 유틸리티와 레다크션 경계(privacy_log.py)",
+      "allowedContents": ["공유 유틸리티 모듈", "backend 레다크션·어설션 경계", "유틸 단위·속성 테스트"],
+      "forbiddenContents": ["컨테이너·설정 산출물", "Forbidden_Log_Field 값 로깅"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs",
+      "depth": 1,
+      "ownership": "제품·운영 문서 소유 경계",
+      "allowedContents": ["제품 문서", "운영 문서", "보관 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/archive",
+      "depth": 2,
+      "ownership": "보관 문서",
+      "allowedContents": ["보관된 과거 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/operations",
+      "depth": 2,
+      "ownership": "운영 문서",
+      "allowedContents": ["운영 절차·런북 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/product",
+      "depth": 2,
+      "ownership": "제품 문서",
+      "allowedContents": ["제품 기획·설명 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "scripts",
+      "depth": 1,
+      "ownership": "저장소 수준 운영자 스크립트 소유 경계",
+      "allowedContents": ["릴리스·시드·프로바이더 보조 스크립트"],
+      "forbiddenContents": ["Web_App·Backend_Runtime 런타임 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "scripts/security",
+      "depth": 2,
+      "ownership": "저장소 수준 보안 스크립트",
+      "allowedContents": ["보안 감사·점검 스크립트"],
+      "forbiddenContents": ["시크릿 값 리터럴", "장시간 파이프라인 실행"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "backend/performance",
+      "depth": 2,
+      "ownership": "Rust_Component 원시·스코어·검증 성능 아티팩트",
+      "allowedContents": ["원시 측정 NDJSON", "스코어러 출력", "검증기 출력"],
+      "forbiddenContents": ["정규 예산 입력 파일", "웹 표면 성능 아티팩트"],
+      "classification": "build_artifact",
+      "vcsTracked": false
+    },
+    {
+      "path": "backend/log",
+      "depth": 2,
+      "ownership": "로컬 실행 로그와 단계 산출물 색인",
+      "allowedContents": ["단계 게이트 산출물", "게이트·도구 실행 로그"],
+      "forbiddenContents": ["Forbidden_Log_Field 값", "버전 관리 커밋"],
+      "classification": "local_ephemeral",
+      "vcsTracked": false
+    }
+  ]
+}

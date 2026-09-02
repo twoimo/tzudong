@@ -1,0 +1,27 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+  # Log plane (design B): tail the local pipeline log files and forward to Loki.
+  filelog:
+    include:
+      - /var/log/tzudong/*.log
+    start_at: end
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+  # Loki is the default Log_Sink. The `loki` host matches the approved local
+  # search-store host set reused from es_index.admit_es_url (requirement 13.10).
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+service:
+  pipelines:
+    # Existing metrics pipeline is unchanged: otlp -> prometheus.
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]
+    # New logs pipeline: filelog -> loki.
+    logs:
+      receivers: [filelog]
+      exporters: [loki]

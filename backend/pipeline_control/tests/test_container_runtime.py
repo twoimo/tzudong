@@ -8,12 +8,12 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCKERFILE = ROOT / "pipeline-control" / "Dockerfile"
-COMPOSE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
-HARBOR = ROOT / "pipeline-control" / "harbor-tags.md"
+DOCKERFILE = ROOT / "deploy" / "pipeline-control" / "Dockerfile"
+COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.pipeline.yml"
+HARBOR = ROOT / "deploy" / "pipeline-control" / "harbor-tags.md"
 CONTRACTS = ROOT / "DATA_CONTRACTS.md"
 API = ROOT / "pipeline_control" / "api.py"
-FIXTURE = ROOT / "pipeline-control" / "fixtures" / "pg-host-classes.v1.json"
+FIXTURE = ROOT / "deploy" / "pipeline-control" / "fixtures" / "pg-host-classes.v1.json"
 
 
 class ContainerRuntimeContractTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class ContainerRuntimeContractTests(unittest.TestCase):
         self.assertIn('"backend.pipeline_control.worker"', dockerfile)
         self.assertIn('"backend.pipeline_control.es_index"', dockerfile)
         self.assertIn(
-            "pip install --no-cache-dir -r /workspace/backend/pipeline-control/requirements.txt",
+            "pip install --no-cache-dir -r /workspace/backend/deploy/pipeline-control/requirements.txt",
             dockerfile,
         )
 

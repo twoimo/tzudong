@@ -21,20 +21,21 @@ from backend.pipeline_control.metrics import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUIREMENTS = ROOT / "pipeline-control" / "requirements.txt"
-DOCKERFILE = ROOT / "pipeline-control" / "Dockerfile"
-OBS = ROOT / "pipeline-control" / "docker-compose.observability.yml"
-OTEL = ROOT / "pipeline-control" / "otel-collector.yaml"
-PROM = ROOT / "pipeline-control" / "prometheus.yml"
-PIPELINE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
+REQUIREMENTS = ROOT / "deploy" / "pipeline-control" / "requirements.txt"
+DOCKERFILE = ROOT / "deploy" / "pipeline-control" / "Dockerfile"
+OBS = ROOT / "deploy" / "pipeline-control" / "docker-compose.observability.yml"
+OTEL = ROOT / "deploy" / "pipeline-control" / "otel-collector.yaml"
+PROM = ROOT / "deploy" / "pipeline-control" / "prometheus.yml"
+PIPELINE = ROOT / "deploy" / "pipeline-control" / "docker-compose.pipeline.yml"
 WORKFLOW = ROOT.parent / ".github" / "workflows" / "daily-crawler.yml"
 CONTRACT = ROOT / "DATA_CONTRACTS.md"
-EVENTS = ROOT / "pipeline-control" / "events.v1.json"
+EVENTS = ROOT / "deploy" / "pipeline-control" / "events.v1.json"
 GRAFANA_DASH = (
-    ROOT / "pipeline-control" / "grafana" / "dashboards" / "pipeline-frozen-counters.json"
+    ROOT / "deploy" / "pipeline-control" / "grafana" / "dashboards" / "pipeline-frozen-counters.json"
 )
 GRAFANA_DS = (
     ROOT
+    / "deploy"
     / "pipeline-control"
     / "grafana"
     / "provisioning"
@@ -108,7 +109,7 @@ class MetricNameFreezeTests(unittest.TestCase):
         self.assertIn("OTLP HTTP", dockerfile)
         self.assertNotIn("otherwise copy-only", dockerfile)
         self.assertIn(
-            "pip install --no-cache-dir -r /workspace/backend/pipeline-control/requirements.txt",
+            "pip install --no-cache-dir -r /workspace/backend/deploy/pipeline-control/requirements.txt",
             dockerfile,
         )
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 CATALOG_PATH = (
-    Path(__file__).resolve().parents[1] / "pipeline-control" / "metrics.v1.json"
+    Path(__file__).resolve().parents[1] / "deploy" / "pipeline-control" / "metrics.v1.json"
 )
 
 FROZEN = (

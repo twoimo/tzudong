@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent_action_rate_limits",
+  "designSource": ".kiro/specs/platform-modernization/design.md#c11-ops_agent",
+  "requirements": ["15.9"],
+  "notes": [
+    "이 상한 값은 기록된 설계 결정(설계 C11 상한)이며 운영자 승인 자체가 아니다. 명명된 사람이 approval.approverName을 채워야 활성 승인이 성립한다.",
+    "Ops_Agent는 허용 조치 건수와 시간 창 길이를 이 활성 승인 상한에서만 읽고, 시간 창의 슬라이딩 집계로 조치 건수를 제한한다.",
+    "어느 상한이라도 초과하는 요청은 조치를 수행하지 않고 agent_action_rate_limited를 반환한다. (요구사항 15.9)"
+  ],
+  "aggregation": "sliding",
+  "exceededResultCode": "agent_action_rate_limited",
+  "limits": [
+    {
+      "limitId": "sliding_60m",
+      "windowKind": "sliding",
+      "windowMinutes": 60,
+      "maxActions": 10
+    },
+    {
+      "limitId": "daily_hard_cap",
+      "windowKind": "sliding",
+      "windowMinutes": 1440,
+      "maxActions": 40
+    }
+  ],
+  "approval": {
+    "approverName": null,
+    "approvedAt": null,
+    "status": "unresolved"
+  }
+}

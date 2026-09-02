@@ -18,7 +18,11 @@ from backend.pipeline_control.adapter import (
     noop_event_sink,
 )
 from backend.pipeline_control.graph import AdapterGraphError
-from backend.pipeline_control.profiles import ProfileError, resolve_compute_profile
+from backend.pipeline_control.profiles import (
+    ProfileError,
+    preflight_data_sink,
+    resolve_compute_profile,
+)
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.es_index import EsIndexError
 from backend.pipeline_control.live_evidence import (
@@ -459,6 +463,25 @@ def process_one(
 
     use_live = live_enabled() if live is None else live
     execution_mode = "live" if use_live and not run.dry_run else "dry_run"
+
+    # Fail closed on a hosted_apply request before any step starts (R8.3). The
+    # sink is resolved as a preflight so a hosted_apply classification halts the
+    # run with the bounded ``hosted_apply_not_admitted`` code and leaves both
+    # Local_Database and Hosted_Database state untouched.
+    try:
+        preflight_data_sink(compute_profile=run.profile)
+    except ProfileError as exc:
+        store.finish_failed(run.id, exc.code)
+        write_run_manifest(
+            "Failed",
+            manifest_path,
+            run=run,
+            execution_mode=execution_mode,
+            store=store,
+            job_id_scope=job_id_scope,
+        )
+        return "Failed"
+
     try:
         boundary = admit_pipeline_supabase_boundary(
             profile=run.profile,
@@ -559,6 +582,13 @@ def main() -> int:
     profile = resolve_compute_profile()
     if profile == "heavy_local" and not all(heavy_local_runtime_ready().values()):
         raise SystemExit("heavy_local_runtime_missing")
+    # Resolve the data sink before any step is triggered (R8.3): a hosted_apply
+    # request halts the worker entrypoint with the bounded fixed code and no
+    # step, runner, or REST client is created.
+    try:
+        preflight_data_sink(compute_profile=profile)
+    except ProfileError as exc:
+        raise SystemExit(exc.code)
     exit_code = live_main()
     # Govern run-health reporting with the staleness/absence rule (R5.7): a
     # stale or absent Run_Manifest is reported as not-Succeeded. Writing the

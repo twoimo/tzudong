@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "publication_set",
+  "derivation": {
+    "method": "public_runtime_read_columns INTERSECT pipeline_written_columns MINUS operator_owned",
+    "rationale": "집합 A(공개 런타임 읽기 컬럼) ∩ 집합 B(파이프라인 쓰기 컬럼) − {운영자·사용자 소유 카운터, 진단 문자열, DB 소유 타임스탬프}. 근거는 design.md C6/D5.",
+    "publicReadSources": [
+      "apps/web/hooks/use-restaurants.tsx:RESTAURANT_MERGE_SELECT",
+      "apps/web/lib/popular-restaurants.ts:POPULAR_RESTAURANT_SELECT",
+      "apps/web/lib/public-insights/treemap.ts:selectColumns"
+    ],
+    "pipelineWriteSources": [
+      "backend/restaurant-crawling/scripts/02-1-migrate-meta-to-supabase.py:row_data",
+      "backend/restaurant-evaluation/scripts/13-supabase-insert.py",
+      "pipeline_control.batch_upsert_restaurants"
+    ],
+    "designSource": ".kiro/specs/platform-modernization/design.md#c6-publish_worker와-publication_set"
+  },
+  "tables": [
+    {
+      "schema": "public",
+      "table": "restaurants",
+      "rowIdentityKeyColumns": ["id"],
+      "casKeyColumns": ["id", "trace_id", "updated_at"],
+      "publishedColumns": [
+        "approved_name", "origin_name", "naver_name", "google_name",
+        "trace_id_name_source", "trace_id", "phone", "categories", "status",
+        "source_type", "channel_name", "youtube_link", "youtube_meta",
+        "description_map_url", "evaluation_results", "reasoning_basis",
+        "tzuyang_review", "origin_address", "road_address", "jibun_address",
+        "english_address", "address_elements", "lat", "lng",
+        "geocoding_success", "geocoding_false_stage", "is_missing",
+        "is_not_selected", "recollect_version"
+      ]
+    },
+    {
+      "schema": "public",
+      "table": "videos",
+      "rowIdentityKeyColumns": ["id"],
+      "casKeyColumns": ["id"],
+      "publishedColumns": [
+        "title", "published_at", "duration", "category", "meta_history",
+        "view_count", "like_count", "comment_count"
+      ]
+    }
+  ],
+  "excludedColumns": {
+    "public.restaurants": [
+      "created_by", "updated_by_admin_id", "review_count", "search_count",
+      "weekly_search_count", "db_error_message", "db_error_details",
+      "created_at", "updated_at"
+    ]
+  },
+  "excludedColumnReasons": {
+    "public.restaurants": {
+      "created_by": "관리자·사용자 소유. 게시가 호스티드 소유권 기록을 덮어쓴다.",
+      "updated_by_admin_id": "관리자·사용자 소유. 게시가 호스티드 소유권 기록을 덮어쓴다.",
+      "review_count": "호스티드 사용자 활동 파생값. 로컬에는 원본이 없다.",
+      "search_count": "호스티드 사용자 활동 파생값. 로컬에는 원본이 없다.",
+      "weekly_search_count": "호스티드 사용자 활동 파생값. 로컬에는 원본이 없다.",
+      "db_error_message": "진단 문자열. Forbidden_Log_Field 인접 부류이므로 게시하지 않는다.",
+      "db_error_details": "진단 문자열. Forbidden_Log_Field 인접 부류이므로 게시하지 않는다.",
+      "created_at": "DB 소유 메타데이터. CAS 입력으로만 쓰고 게시 값으로 삼지 않는다.",
+      "updated_at": "DB 소유 메타데이터. CAS 입력으로만 쓰고 게시 값으로 삼지 않는다.",
+      "name": "approved_name의 조회 별칭이며 실제 컬럼이 아니다. 게시 대상 컬럼 목록에 포함하지 않는다."
+    }
+  },
+  "approval": {
+    "approverName": null,
+    "approvedAt": null,
+    "status": "unresolved"
+  }
+}

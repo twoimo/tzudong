@@ -1,0 +1,59 @@
+{{/*
+One Deployment per migration component (design C10). Env values are pulled from
+external references only: configMapKeyRef for non-secret config and
+secretKeyRef for secrets. No credential, token, or connection-string literal
+appears in this template or its rendered output. The secret reference name
+(the *_REF identifier) is the only thing recorded for a secret.
+
+Only derived fields (namespace, name/fullname, clusterLabel) vary with
+.Values.clusterId; the image, resource requests, env var names, and secret
+reference names are identical across cluster renders (Requirement 14.5).
+*/}}
+{{- range $key, $component := .Values.components }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tzudong.fullname" (dict "root" $ "name" $component.componentId) }}
+  namespace: {{ include "tzudong.namespace" $ }}
+  labels:
+    app.kubernetes.io/name: {{ $component.componentId }}
+    app.kubernetes.io/part-of: tzudong-platform
+    tzudong.io/cluster: {{ include "tzudong.clusterLabel" $ }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $component.componentId }}
+      tzudong.io/cluster: {{ include "tzudong.clusterLabel" $ }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $component.componentId }}
+        tzudong.io/cluster: {{ include "tzudong.clusterLabel" $ }}
+    spec:
+      containers:
+        - name: {{ $component.componentId | lower }}
+          image: {{ $component.image }}
+          resources:
+            requests:
+              cpu: {{ $component.resources.requests.cpu }}
+              memory: {{ $component.resources.requests.memory }}
+          env:
+            {{- range $env := $component.env }}
+            - name: {{ $env.name }}
+              {{- $parts := splitList ":" $env.source }}
+              {{- if eq (first $parts) "secretRef" }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ index $parts 1 }}
+                  key: value
+              {{- else if eq (first $parts) "configmap" }}
+              {{- $ref := splitList "/" (index $parts 1) }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ first $ref }}
+                  key: {{ last $ref }}
+              {{- end }}
+            {{- end }}
+{{- end }}

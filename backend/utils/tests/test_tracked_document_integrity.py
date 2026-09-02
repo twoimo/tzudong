@@ -85,8 +85,8 @@ class TrackedDocumentIntegrityTests(unittest.TestCase):
         )
         docs = (
             REPO_ROOT / "backend" / "ARCHITECTURE.md",
-            REPO_ROOT / "backend" / "pipeline-control" / "lite-gha.md",
-            REPO_ROOT / "backend" / "pipeline-control" / "harbor-tags.md",
+            REPO_ROOT / "backend" / "deploy" / "pipeline-control" / "lite-gha.md",
+            REPO_ROOT / "backend" / "deploy" / "pipeline-control" / "harbor-tags.md",
         )
         findings: list[str] = []
         for path in docs:

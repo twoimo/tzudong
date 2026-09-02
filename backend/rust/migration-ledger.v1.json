@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "slices": [
+    {
+      "sliceId": "R1-validators",
+      "replacedPythonPaths": [
+        "backend/pipeline/validators.py",
+        "backend/pipeline/state.py"
+      ],
+      "rustArtifactPaths": ["backend/rust/tzudong-validators/src/lib.rs"],
+      "replacementScope": "partial_replacement",
+      "activeImplementation": "python",
+      "rustArtifactId": null,
+      "consecutiveMatchedCount": 0,
+      "parityResultRefs": [],
+      "regressionSuites": [
+        { "suite": "backend.utils.tests.test_run_daily_regression", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_validators_unittest", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_data_contracts_unittest", "failures": null, "errors": null }
+      ],
+      "boundaryCheck": { "routeHandlerViolations": null }
+    },
+    {
+      "sliceId": "R2-normalize",
+      "replacedPythonPaths": [
+        "backend/utils/data_utils.py"
+      ],
+      "rustArtifactPaths": ["backend/rust/tzudong-normalize/src/lib.rs"],
+      "replacementScope": "partial_replacement",
+      "activeImplementation": "python",
+      "rustArtifactId": null,
+      "consecutiveMatchedCount": 0,
+      "parityResultRefs": [],
+      "regressionSuites": [
+        { "suite": "backend.utils.tests.test_run_daily_regression", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_validators_unittest", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_data_contracts_unittest", "failures": null, "errors": null }
+      ],
+      "boundaryCheck": { "routeHandlerViolations": null }
+    },
+    {
+      "sliceId": "R3-upsert-payload",
+      "replacedPythonPaths": [
+        "backend/pipeline_control/batch_upsert.py"
+      ],
+      "rustArtifactPaths": ["backend/rust/tzudong-upsert-payload/src/lib.rs"],
+      "replacementScope": "partial_replacement",
+      "activeImplementation": "python",
+      "rustArtifactId": null,
+      "consecutiveMatchedCount": 0,
+      "parityResultRefs": [],
+      "regressionSuites": [
+        { "suite": "backend.utils.tests.test_run_daily_regression", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_validators_unittest", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_data_contracts_unittest", "failures": null, "errors": null }
+      ],
+      "boundaryCheck": { "routeHandlerViolations": null }
+    },
+    {
+      "sliceId": "R4-media-compute",
+      "replacedPythonPaths": [
+        "backend/restaurant-crawling/scripts/chunk_planner.py"
+      ],
+      "rustArtifactPaths": ["backend/rust/tzudong-media-compute/src/lib.rs"],
+      "replacementScope": "partial_replacement",
+      "activeImplementation": "python",
+      "rustArtifactId": null,
+      "consecutiveMatchedCount": 0,
+      "parityResultRefs": [],
+      "regressionSuites": [
+        { "suite": "backend.utils.tests.test_run_daily_regression", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_validators_unittest", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_data_contracts_unittest", "failures": null, "errors": null }
+      ],
+      "boundaryCheck": { "routeHandlerViolations": null }
+    },
+    {
+      "sliceId": "R5-pipeline-graph",
+      "replacedPythonPaths": [
+        "backend/pipeline_control/graph.py",
+        "backend/pipeline_control/state_machine.py"
+      ],
+      "rustArtifactPaths": ["backend/rust/tzudong-pipeline-graph/src/lib.rs"],
+      "replacementScope": "partial_replacement",
+      "activeImplementation": "python",
+      "rustArtifactId": null,
+      "consecutiveMatchedCount": 0,
+      "parityResultRefs": [],
+      "regressionSuites": [
+        { "suite": "backend.utils.tests.test_run_daily_regression", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_validators_unittest", "failures": null, "errors": null },
+        { "suite": "backend.pipeline.test_data_contracts_unittest", "failures": null, "errors": null }
+      ],
+      "boundaryCheck": { "routeHandlerViolations": null }
+    }
+  ],
+  "exclusions": [
+    {
+      "excludedPaths": [
+        "backend/restaurant-crawling/scripts/03-collect-transcript.js",
+        "backend/restaurant-crawling/scripts/04-extract-frames-with-heatmap.js",
+        "backend/restaurant-crawling/scripts/05-map-url-crawling.js"
+      ],
+      "reasonClass": "node_sdk_bound",
+      "retainedImplementationPath": "backend/restaurant-crawling/scripts/03-collect-transcript.js"
+    },
+    {
+      "excludedPaths": [
+        "backend/restaurant-crawling/scripts/06-frame-caption.py"
+      ],
+      "reasonClass": "provider_sdk_bound",
+      "retainedImplementationPath": "backend/restaurant-crawling/scripts/06-frame-caption.py"
+    }
+  ],
+  "nonGoals": [
+    "browser automation migration",
+    "Gemini SDK glue migration",
+    "GDrive SDK glue migration",
+    "python removal without an explicit separate merge candidate"
+  ]
+}
