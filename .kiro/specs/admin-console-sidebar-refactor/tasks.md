@@ -134,7 +134,7 @@
     - 섹션 배지를 4개 섹션 전부 동일한 중립_계조 단계로, 활성 메뉴 강조를 `bg-primary` 대신 계조 대비로 제공한다. 활성 메뉴에만 `aria-current="page"`를 데스크톱·모바일 각각에서 부여한다. 두께 2px·대비 3:1 이상 초점 표시, 한국어 탐색 랜드마크 이름, 15개 선택 제어에 표시 제목 포함 접근성 라벨, 목적 문장 `aria-describedby` 안내(초점/진입 후 120ms 이내)를 제공한다. 대기_배지는 5.2 훅을 소비한다.
     - _요구사항 1.4, 1.5, 6.6, 9.7, 9.8, 14.1, 14.2, 14.3, 14.4, 14.7, 15.1, 15.3, 16.9_
 
-  - [ ] 5.2 대기_배지 훅 작성
+  - [x] 5.2 대기_배지 훅 작성
     - `apps/web/components/admin/console/use-admin-pending-badges.ts`를 신설한다. `/api/admin/pending-counts`를 60초 이하 간격으로 재조회하고, 레지스트리 `pendingDomains`가 선언한 도메인 건수만 합산한다(`submissions` = `restaurant_submissions` + `restaurant_recommendation_requests`, `reviews` = `reviews`). 나머지 13개는 `hidden`.
     - `PendingBadgeState`를 판별 합집합으로 반환한다: 1~99 정수·100 이상 `99+`, 접근성 라벨에 비축약 정수, 접힌 상태 점 표식, `readiness.status === "degraded"` 부분 집계 표식, `asOf` 180초 이상 과거 지연 표식, 조회 실패 시 전 메뉴 배지 생략. 상태_색상 토큰을 쓰지 않는다.
     - _요구사항 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 8.11_
@@ -144,7 +144,7 @@
     - `normalizeAdminSidebarOrderWithReason`으로 되돌림 사유를 판정하고 적재 후 처음 1회만 초기화 안내를 표시한다(`useRef`로 표시 여부 기억, 재수신 시 미표시). 편집 토글 `aria-pressed`와 상태 aria-live 1회 알림, 키보드 한 칸 이동·초점 유지를 제공한다.
     - _요구사항 5.7, 5.10, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.15, 14.8, 14.10_
 
-  - [ ]* 5.4 대기_배지 합산 성질 시험
+  - [x]* 5.4 대기_배지 합산 성질 시험
     - `apps/web/tests-unit/admin-sidebar-pending-badge.test.ts`를 신설한다. 다양한 대기 건수 응답과 15개 메뉴 조합을 결정적으로 생성한다.
     - **Property 12: 대기_배지 합산 불변식** — 배지 표시 메뉴가 정확히 2개, 표시 건수가 선언 도메인 합과 같은 0 이상 정수, 접근성 라벨에 비축약 정수 포함, 조회 실패 시 15개 전부 미표시.
     - **Validates: Requirements 8.1, 8.2, 8.4, 8.6, 8.7, 8.9**
