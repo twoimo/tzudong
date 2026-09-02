@@ -173,8 +173,7 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).not.toContain('id: "announcements"');
         expect(adminConsoleSource).not.toContain('/admin?module=announcements');
         expect(adminConsoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
-        expect(adminConsoleSource).toContain('href: "/admin?module=banners"');
-        expect(adminConsoleSource).toContain('href: "/admin?module=insights"');
+        expect(adminConsoleSource).toContain("buildCanonicalAdminModuleHref");
         expect(adminConsoleSource).not.toContain('href: "/admin/banners"');
         expect(adminConsoleSource).not.toContain('href: "/insights"');
         expect(insightsClientSource).toContain('export default function InsightsClient({ embedded = false }: { embedded?: boolean } = {})');

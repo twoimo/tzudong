@@ -71,12 +71,17 @@ describe("mobile and desktop parity source contracts", () => {
 
   test("admin console exposes both mobile-width and desktop-width navigation affordances", () => {
     const adminPageSource = source("app/admin/page.tsx");
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource =
+      source("components/admin/AdminConsoleOverview.tsx") +
+      "\n" +
+      source("components/admin/console/AdminConsoleSidebar.tsx");
     const insightsClientSource = source("app/insights/insights-client.tsx");
 
     expect(adminPageSource).toContain("<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />");
-    expect(consoleSource).toContain('aria-label="관리자 콘솔 사이드바"');
-    expect(consoleSource).toContain('aria-label="관리자 통합 메뉴"');
+    expect(consoleSource).toContain('SIDEBAR_LANDMARK_NAME = "관리자 콘솔 사이드바"');
+    expect(consoleSource).toContain("aria-label={SIDEBAR_LANDMARK_NAME}");
+    expect(consoleSource).toContain('SIDEBAR_NAV_LANDMARK_NAME = "관리자 통합 메뉴"');
+    expect(consoleSource).toContain("aria-label={SIDEBAR_NAV_LANDMARK_NAME}");
     expect(consoleSource).toContain('data-admin-console-shell="true"');
     expect(consoleSource).not.toContain(
       '<ReturnToMapButton iconOnly className="h-8 w-8" />',
@@ -135,8 +140,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('initialSubmissionTab="reviews"');
     expect(consoleSource).toContain("AdminBannerModule");
     expect(consoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
-    expect(consoleSource).toContain('href: "/admin?module=banners"');
-    expect(consoleSource).toContain('href: "/admin?module=insights"');
+    expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).not.toContain('href: "/admin/banners"');
     expect(consoleSource).not.toContain('href: "/insights"');
     expect(insightsClientSource).toContain("embedded || (!isAuthLoading && !!user)");

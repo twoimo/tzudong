@@ -26,10 +26,9 @@ describe("admin restaurant refresh history source contracts", () => {
 
     expect(routeSource).toContain("ADMIN_CONSOLE_MODULE_IDS");
     expect(registrySource).toContain('"restaurant-refresh-history"');
-    expect(consoleSource).toContain('title: "맛집 최신화"');
-    expect(consoleSource).toContain(
-      'href: "/admin?module=restaurant-refresh-history"',
-    );
+    expect(registrySource).toContain('title: "맛집 최신화"');
+    expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
+    expect(consoleSource).not.toContain("/admin/restaurant-refresh-history");
     expect(consoleSource).toContain("AdminRestaurantRefreshHistoryModule");
     expect(consoleSource).toContain('case "restaurant-refresh-history"');
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENU_IDS");

@@ -22,7 +22,6 @@ import {
   Bot,
   CheckCircle2,
   ClipboardCheck,
-  Clapperboard,
   ClipboardList,
   ExternalLink,
   FileDown,
@@ -126,156 +125,16 @@ import { AdminConsoleSidebar } from "@/components/admin/console/AdminConsoleSide
 type AdminModuleId = AdminConsoleRouteModuleId;
 type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
 
-type ConsoleModule = {
-  id: ConsoleModuleId;
-  title: string;
-  description: string;
-  href: string;
-  icon: typeof Store;
-  badge: string;
-  actionLabel: string;
-  priority?: "urgent" | "normal";
-};
+function isInlineConsoleModuleId(
+  moduleId: AdminModuleId,
+): moduleId is ConsoleModuleId {
+  return moduleId !== "overview" && moduleId !== "routes" && moduleId !== "llm";
+}
 
 const STORYBOARD_MODULE_LOADING_CUT_NOS = [1, 2, 3, 4] as const;
 const THUMBNAIL_MODULE_LOADING_TOOL_IDS = Array.from(
   { length: 12 },
   (_, index) => index + 1,
-);
-
-const consoleModules: ConsoleModule[] = [
-  {
-    id: "restaurants",
-    title: "맛집 관리",
-    description:
-      "승인된 맛집, 삭제/복구, 지도 좌표 오류 후보를 한 흐름에서 점검합니다.",
-    href: "/admin?module=restaurants",
-    icon: Store,
-    badge: "데이터 검수",
-    actionLabel: "맛집 데이터 검수",
-    priority: "urgent",
-  },
-  {
-    id: "restaurant-refresh-history",
-    title: "맛집 최신화",
-    description:
-      "승인된 맛집의 상호명, 전화번호, 폐업·이전 후보와 과거 변경 이력을 관리합니다.",
-    href: "/admin?module=restaurant-refresh-history",
-    icon: RefreshCw,
-    badge: "기록 관리",
-    actionLabel: "최신화 이력 보기",
-    priority: "urgent",
-  },
-  {
-    id: "submissions",
-    title: "제보 관리",
-    description:
-      "사용자 신규/수정 제보를 검토하고 안전 적용 절차로 반영합니다.",
-    href: "/admin?module=submissions",
-    icon: ClipboardList,
-    badge: "승인 대기",
-    actionLabel: "제보 검토하기",
-    priority: "urgent",
-  },
-  {
-    id: "reviews",
-    title: "리뷰 관리",
-    description:
-      "미승인 리뷰, OCR 증빙, 중복/삭제 후보를 운영 기준에 맞춰 처리합니다.",
-    href: "/admin?module=reviews",
-    icon: MessageSquareText,
-    badge: "검수 큐",
-    actionLabel: "리뷰 검수하기",
-    priority: "urgent",
-  },
-  {
-    id: "storyboard",
-    title: "스토리보드 생성",
-    description:
-      "쯔양 유튜브 히트맵을 바탕으로 다음 영상 소재와 씬별 촬영안을 생성합니다.",
-    href: "/admin?module=storyboard",
-    icon: Clapperboard,
-    badge: "영상 기획",
-    actionLabel: "스토리보드 만들기",
-    priority: "urgent",
-  },
-  {
-    id: "map-overlays",
-    title: "지도 오버레이",
-    description:
-      "수동 오버레이, 트렌드 제안, 트렌드 실행 상태를 한 작업대에서 확인합니다.",
-    href: "/admin?module=map-overlays",
-    icon: Layers3,
-    badge: "오버레이",
-    actionLabel: "지도 오버레이 관리",
-    priority: "urgent",
-  },
-
-  {
-    id: "banners",
-    title: "배너 관리",
-    description:
-      "사이드바/모바일 팝업 배너의 노출 위치, 우선순위, 미디어 상태를 관리합니다.",
-    href: "/admin?module=banners",
-    icon: ImageIcon,
-    badge: "공개 노출",
-    actionLabel: "배너 노출 관리",
-  },
-  {
-    id: "users",
-    title: "사용자 관리",
-    description:
-      "사용자 계정, 관리자 권한, 비활성 상태, 프로필 정보를 안전한 편집 흐름으로 관리합니다.",
-    href: "/admin?module=users",
-    icon: UsersRound,
-    badge: "권한 관리",
-    actionLabel: "사용자 계정 관리",
-  },
-  {
-    id: "insights",
-    title: "핵심 인사이트",
-    description:
-      "조회수/좋아요/댓글/영상 길이 기반 트리맵과 변화 추이를 확인합니다.",
-    href: "/admin?module=insights",
-    icon: BarChart2,
-    badge: "분석",
-    actionLabel: "핵심 인사이트 보기",
-  },
-  {
-    id: "pipeline",
-    title: "크롤러 파이프라인",
-    description:
-      "비동기 control-plane 상태와 대상별 실행을 관리합니다.",
-    href: "/admin?module=pipeline",
-    icon: Workflow,
-    badge: "파이프라인",
-    actionLabel: "파이프라인 보기",
-  },
-  {
-    id: "audit",
-    title: "감사 로그",
-    description:
-      "사용자 관리 감사는 admin_audit_events 기준의 부분/도메인별 범위로 추적합니다.",
-    href: "/admin?module=audit",
-    icon: ScrollText,
-    badge: "부분 감사",
-    actionLabel: "감사 범위 보기",
-  },
-  {
-    id: "youtube-thumbnail-generator",
-    title: "유튜브 썸네일 생성",
-    description:
-      "다음 업로드 주제와 참고 이미지를 바탕으로 16:9 먹방 썸네일 초안을 만들고 텍스트를 편집합니다.",
-    href: "/admin?module=youtube-thumbnail-generator",
-    icon: ImageIcon,
-    badge: "썸네일",
-    actionLabel: "썸네일 생성하기",
-    priority: "urgent",
-  },
-];
-
-const consoleModuleById = new Map<ConsoleModuleId, ConsoleModule>(
-  consoleModules.map((module) => [module.id, module]),
 );
 
 const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
@@ -8225,19 +8084,21 @@ function AdminMapOverlayOperationsModule() {
     </AdminEmbeddedModuleShell>
   );
 }
+
 function InlineModulePanel({
-  module,
+  moduleId,
   initialStoryboardResult,
 }: {
-  module: ConsoleModule;
+  moduleId: ConsoleModuleId;
   initialStoryboardResult?: StoryboardInitialResult | null;
 }) {
-  if (module.id === "audit") {
+  const moduleTitle = getAdminConsoleMenu(moduleId).title;
+  if (moduleId === "audit") {
     return <AuditPlaceholder />;
   }
 
   const moduleContent = (() => {
-    switch (module.id) {
+    switch (moduleId) {
       case "restaurants":
         return (
           <AdminEvaluationModule
@@ -8290,22 +8151,22 @@ function InlineModulePanel({
       case "pipeline":
         return <AdminPipelineDashboard key="admin-pipeline" />;
       default: {
-        const exhaustiveModuleId: never = module.id;
+        const exhaustiveModuleId: never = moduleId;
         return exhaustiveModuleId;
       }
     }
   })();
 
   const ownsInnerShell =
-    module.id === "map-overlays" ||
-    module.id === "storyboard" ||
-    module.id === "youtube-thumbnail-generator" ||
-    module.id === "insights";
+    moduleId === "map-overlays" ||
+    moduleId === "storyboard" ||
+    moduleId === "youtube-thumbnail-generator" ||
+    moduleId === "insights";
   const panel = ownsInnerShell ? (
     moduleContent
   ) : (
     <AdminEmbeddedModuleShell
-      menuId={module.id}
+      menuId={moduleId}
       contentClassName="overflow-y-auto"
     >
       {moduleContent}
@@ -8314,10 +8175,10 @@ function InlineModulePanel({
 
   return (
     <section
-      aria-label={`${module.title} 작업 화면`}
+      aria-label={`${moduleTitle} 작업 화면`}
       className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
       data-admin-console-inline-module-frame="true"
-      data-admin-console-inline-module-id={module.id}
+      data-admin-console-inline-module-id={moduleId}
     >
       <div
         className={cn(
@@ -9325,9 +9186,6 @@ export function AdminConsoleOverview({
   const mobileChromeHadDownScrollRef = useRef(false);
   const adminCanvasTouchStartYRef = useRef<number | null>(null);
   const previousRequestedModuleIdRef = useRef(requestedModuleId);
-  const activeModule = consoleModules.find(
-    (module) => module.id === activeModuleId,
-  );
   const activeModuleLabel = getAdminConsoleMenu(activeModuleId).title;
   const activeBrowserTitle = buildScopedBrowserTitle([
     activeModuleLabel,
@@ -9897,9 +9755,9 @@ export function AdminConsoleOverview({
             </AdminEmbeddedModuleShell>
           ) : activeModuleId === "llm" ? (
             <LlmSessionWorkspace />
-          ) : activeModule ? (
+          ) : isInlineConsoleModuleId(activeModuleId) ? (
             <InlineModulePanel
-              module={activeModule}
+              moduleId={activeModuleId}
               initialStoryboardResult={initialStoryboardResult}
             />
           ) : null}

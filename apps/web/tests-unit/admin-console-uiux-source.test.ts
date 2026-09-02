@@ -1433,7 +1433,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("const sidebarSections");
     expect(consoleSource).not.toContain("function getSidebarConsoleItems");
     expect(consoleSource).not.toContain('badge: "실험 중"');
-    expect(consoleSource).toContain('title: "핵심 인사이트"');
+    expect(registrySource).toContain('title: "핵심 인사이트"');
     expect(consoleSource).toContain("fetchAdminDashboardInsightSummary");
     expect(consoleSource).toContain("/api/insights/treemap");
     expect(consoleSource).toContain(
@@ -3363,6 +3363,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("작업 화면으로 전환됨");
   });
+
+  test("renders inline modules from the registry instead of a duplicate catalog", () => {
+    const consoleSource = adminConsoleShellSource();
+
+    expect(consoleSource).not.toContain("const consoleModules");
+    expect(consoleSource).not.toContain("type ConsoleModule =");
+    expect(consoleSource).toContain("function isInlineConsoleModuleId");
+    expect(consoleSource).toContain("const moduleTitle = getAdminConsoleMenu(moduleId).title");
+    expect(consoleSource).toContain("isInlineConsoleModuleId(activeModuleId)");
+    expect(consoleSource).toContain("aria-label={`${moduleTitle} 작업 화면`}");
+    expect(consoleSource).not.toContain('href: "/admin?module=banners"');
+    expect(consoleSource).not.toContain('href: "/admin?module=insights"');
+  });
+
   test("keeps announcement management out of the admin sidebar default order", () => {
     const consoleSource = adminConsoleShellSource();
     const sidebarOrderRouteSource = source(
@@ -3370,13 +3384,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
 
+    const registrySource = source("lib/admin/console-menu-registry.ts");
     expect(consoleSource).not.toContain('id: "announcements"');
     expect(consoleSource).not.toContain('          "announcements",');
-    expect(consoleSource).toContain('"storyboard",');
-    expect(consoleSource).toContain('"banners",');
-    expect(consoleSource).toContain('"users",');
-    expect(consoleSource).toContain('"insights",');
-    expect(consoleSource).toContain('"audit",');
+    expect(registrySource).not.toContain('"announcements"');
+    expect(registrySource).toContain('"storyboard"');
+    expect(registrySource).toContain('"banners"');
+    expect(registrySource).toContain('"users"');
+    expect(registrySource).toContain('"insights"');
+    expect(registrySource).toContain('"audit"');
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_SECTION_LABELS");
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENU_IDS");
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENUS");
@@ -3457,8 +3473,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "../../backend/thumbnail-agent/README.md",
     );
 
-    expect(consoleSource).toContain('id: "youtube-thumbnail-generator"');
-    expect(consoleSource).toContain('title: "유튜브 썸네일 생성"');
+    const registrySource = source("lib/admin/console-menu-registry.ts");
+    expect(registrySource).toContain('id: "youtube-thumbnail-generator"');
+    expect(registrySource).toContain('title: "유튜브 썸네일 생성"');
+    expect(consoleSource).toContain('case "youtube-thumbnail-generator"');
     expect(consoleSource).toContain("AdminYoutubeThumbnailGenerator");
     expect(componentSource).toContain("/api/admin/youtube-thumbnail-generator");
     expect(componentSource).toContain(
@@ -5422,8 +5440,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const typesSource = source("lib/admin/storyboard/types.ts");
     const requireAdminSource = source("lib/auth/require-admin.ts");
 
-    expect(consoleSource).toContain('id: "storyboard"');
-    expect(consoleSource).toContain("스토리보드 생성");
+    const registrySource = source("lib/admin/console-menu-registry.ts");
+    expect(registrySource).toContain('id: "storyboard"');
+    expect(registrySource).toContain('title: "스토리보드 생성"');
+    expect(consoleSource).toContain('case "storyboard"');
     expect(consoleSource).toContain("AdminStoryboardGenerator");
     expect(storyboardSource).toContain("/api/admin/storyboard");
     expect(storyboardSource).toContain('aria-label="스토리보드 생성"');
@@ -8443,11 +8463,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("cleans stale admin module query state and canonicalizes invalid modules", () => {
     const consoleSource = adminConsoleShellSource();
     const routingSource = source("lib/admin/admin-module-routing.ts");
-    const consoleModulesSource = consoleSource.slice(
-      consoleSource.indexOf("const consoleModules"),
-      consoleSource.indexOf("const consoleModuleById"),
-    );
 
+    expect(consoleSource).not.toContain("const consoleModules");
+    expect(consoleSource).not.toContain("consoleModuleById");
+    expect(consoleSource).toContain("isInlineConsoleModuleId");
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
     expect(routingSource).toContain("CONSOLE_FIXED_MESSAGES.unknownModule");
@@ -8465,10 +8484,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const params = new URLSearchParams(window.location.search);",
     );
     expect(consoleSource).not.toContain("window.location.hash");
-    expect(consoleModulesSource).toContain('href: "/admin?module=banners"');
-    expect(consoleModulesSource).toContain('href: "/admin?module=insights"');
-    expect(consoleModulesSource).not.toContain('href: "/admin/banners"');
-    expect(consoleModulesSource).not.toContain('href: "/insights"');
+    expect(routingSource).toContain("params.set(\"module\", moduleId)");
+    expect(consoleSource).toContain("buildCanonicalAdminModuleHref(moduleId)");
+    expect(consoleSource).not.toContain('href: "/admin/banners"');
+    expect(consoleSource).not.toContain('href: "/insights"');
     expect(consoleSource).toContain('<InsightsModule key="admin-insights" embedded />');
   });
 
@@ -8608,7 +8627,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("독립 라우트 보존");
     expect(consoleSource).not.toContain("문서 스크롤 없음");
     expect(consoleSource).not.toContain("module.description");
-    expect(consoleSource).toContain("aria-label={`${module.title} 작업 화면`}");
+    expect(consoleSource).toContain("getAdminConsoleMenu(moduleId).title");
+    expect(consoleSource).toContain("aria-label={`${moduleTitle} 작업 화면`}");
     expect(consoleSource).toContain("사용자");
     expect(consoleSource).toContain("사용자 관리 감사 이벤트");
   });
