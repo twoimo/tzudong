@@ -68,7 +68,7 @@ describe('repo design contract source', () => {
 
   test('public surface inventory contract exists as the slice-1 page matrix owner', () => {
     expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
-      'page inventory is exactly the 27-row matrix',
+      'page inventory is exactly the 29-row matrix',
     );
     expect(appSource('tests-unit/public-surface-design-contract.test.ts')).toContain(
       'pins all five CSS owner-to-importer mappings',

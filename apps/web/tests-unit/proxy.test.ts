@@ -292,7 +292,7 @@ test('로컬 production bundle smoke 우회는 명시 플래그와 로컬 호스
     }
 })
 
-test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admin 진입에만 허용된다', async () => {
+test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admin과 /admin/claims 진입에만 허용된다', async () => {
     enableAdminBypassEnv()
 
     try {
@@ -423,6 +423,31 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
                 headers: adminBypassHeaders(),
             }),
         )
+        const claimsRouteResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin/claims', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+        const claimsChildRouteResponse = await proxy(
+            new NextRequest('http://localhost:3000/admin/claims/foo', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+        const claimsApiResponse = await proxy(
+            new NextRequest('http://localhost:3000/api/admin/claims', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+        const claimsPreviewApiResponse = await proxy(
+            new NextRequest('http://localhost:3000/api/admin/claims/preview', {
+                headers: adminBypassHeaders(),
+            }),
+        )
+        const claimsApplyApiResponse = await proxy(
+            new NextRequest('http://localhost:3000/api/admin/claims/apply', {
+                headers: adminBypassHeaders(),
+            }),
+        )
         const postResponse = await proxy(
             new NextRequest('http://localhost:3000/admin', {
                 method: 'POST',
@@ -449,10 +474,15 @@ test('Playwright 관리자 우회는 env와 토큰 헤더가 모두 맞는 /admi
         expect(missingHostResponse.headers.get('x-auth-checked')).toBe('1')
         expect(nonAdminVariantResponse.headers.get('x-auth-checked')).toBe('1')
         expect(childRouteResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(claimsRouteResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(claimsChildRouteResponse.headers.get('x-auth-checked')).toBe('1')
+        expect(claimsApiResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(claimsPreviewApiResponse.headers.get('x-auth-checked')).toBeNull()
+        expect(claimsApplyApiResponse.headers.get('x-auth-checked')).toBeNull()
         expect(postResponse.status).toBe(403)
         expect(postResponse.headers.get('x-middleware-next')).toBeNull()
         expect(postResponse.headers.get('x-auth-checked')).toBeNull()
-        expect(updateSessionCalls).toBe(11)
+        expect(updateSessionCalls).toBe(12)
     } finally {
         resetAdminBypassEnv()
     }

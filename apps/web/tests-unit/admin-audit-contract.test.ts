@@ -5,6 +5,7 @@ import {
   ADMIN_AUDIT_COVERAGE_MODE,
   ADMIN_AUDIT_PRIMARY_SOURCE,
   RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE,
+  RESTAURANT_CLAIM_AUDIT_SOURCE,
   buildMutationAuditReceipt,
   getAdminAuditCoverage,
 } from "../lib/admin/audit-contract";
@@ -73,6 +74,12 @@ describe("admin audit coverage contract", () => {
       expect.objectContaining({
         domain: "restaurant_request_reviews",
         source: RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE,
+      }),
+    );
+    expect(coverage.domainSpecific).toContainEqual(
+      expect.objectContaining({
+        domain: "restaurant_claims",
+        source: RESTAURANT_CLAIM_AUDIT_SOURCE,
       }),
     );
   });

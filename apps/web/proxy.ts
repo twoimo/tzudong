@@ -87,7 +87,28 @@ function isPlaywrightAdminBypassRequest(request: NextRequest) {
         isE2EAdminRouteBypassEnvEnabled() &&
         request.headers.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1' &&
         requestToken === expectedToken &&
-        normalizedPathname === '/admin'
+        (normalizedPathname === '/admin' || normalizedPathname === '/admin/claims')
+    )
+}
+
+function isPlaywrightRestaurantClaimApiBypassRequest(request: NextRequest) {
+    const { hostname, pathname } = request.nextUrl
+    const normalizedPathname = pathname.replace(/\/+$/, '') || '/'
+    const expectedToken = getE2EAdminRouteBypassExpectedToken()
+    const requestToken = request.headers.get(E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER)?.trim()
+
+    return (
+        (
+            normalizedPathname === '/api/admin/claims'
+            || normalizedPathname === '/api/admin/claims/preview'
+            || normalizedPathname === '/api/admin/claims/apply'
+        ) &&
+        isLocalPlaywrightRequestUrlHost(hostname) &&
+        isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true }) &&
+        isLocalPlaywrightHostHeader(request.headers.get('x-forwarded-host')) &&
+        isE2EAdminRouteBypassEnvEnabled() &&
+        request.headers.get(E2E_ADMIN_ROUTE_BYPASS_HEADER) === '1' &&
+        requestToken === expectedToken
     )
 }
 
@@ -196,6 +217,10 @@ async function shouldSkipSession(request: NextRequest) {
         return true
     }
     if (isPlaywrightAdminBypassRequest(request)) {
+        return true
+    }
+
+    if (isPlaywrightRestaurantClaimApiBypassRequest(request)) {
         return true
     }
 

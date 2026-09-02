@@ -45,6 +45,8 @@ const PAGE_MATRIX = [
   'app/admin/banners/page.tsx',
   'app/admin/submissions/page.tsx',
   'app/admin/privacy-incidents/page.tsx',
+  'app/admin/claims/page.tsx',
+  'app/r/[restaurantId]/page.tsx',
   'app/s/[code]/page.tsx',
 ] as const;
 
@@ -275,10 +277,10 @@ function walkCssUnder(root: string): string[] {
 }
 
 describe('public surface design contract', () => {
-  test('page inventory is exactly the 27-row matrix', () => {
+  test('page inventory is exactly the 29-row matrix', () => {
     const actual = walkFiles(appDir, (name) => name === 'page.tsx');
     expect(actual).toEqual([...PAGE_MATRIX].sort());
-    expect(actual).toHaveLength(27);
+    expect(actual).toHaveLength(29);
   });
 
   test('loading files use the three-way taxonomy and do not treat null loaders as missing', () => {
@@ -330,6 +332,10 @@ describe('public surface design contract', () => {
     expect(readApp('app/data-deletion/page.tsx')).not.toContain('AppRuntimeLayout');
     expect(existsSync(join(appRoot, 'app/privacy/layout.tsx'))).toBe(false);
     expect(existsSync(join(appRoot, 'app/data-deletion/layout.tsx'))).toBe(false);
+    expect(existsSync(join(appRoot, 'app/r/layout.tsx'))).toBe(false);
+    expect(readApp('app/r/[restaurantId]/page.tsx')).not.toContain('AppRuntimeLayout');
+    expect(readApp('app/r/[restaurantId]/restaurant-claim-panel.tsx')).toContain('overflow-x-hidden');
+    expect(readApp('app/r/[restaurantId]/restaurant-claim-panel.tsx')).toContain('border-border');
     expect(readApp('app/s/[code]/page.tsx')).toContain('notFound()');
     expect(readApp('app/s/layout.tsx')).toContain('AppRuntimeLayout');
   });

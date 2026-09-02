@@ -1,5 +1,6 @@
 export const ADMIN_AUDIT_PRIMARY_SOURCE = "admin_audit_events";
 export const RESTAURANT_REQUEST_REVIEW_AUDIT_SOURCE = "restaurant_request_review_audit";
+export const RESTAURANT_CLAIM_AUDIT_SOURCE = "restaurant_claim_audit";
 
 export const ADMIN_AUDIT_COVERAGE_MODE = "truthful-partial-domain-specific";
 
@@ -64,6 +65,15 @@ export const ADMIN_AUDIT_COVERAGE: AdminAuditCoverage = Object.freeze({
         "Restaurant recommendation review decisions have a separate domain-specific audit/readback path.",
       readback:
         "Review mutations return their restaurant_request_review_audit identifier for request-level readback.",
+    }),
+    Object.freeze({
+      domain: "restaurant_claims",
+      source: RESTAURANT_CLAIM_AUDIT_SOURCE,
+      label: "Restaurant ownership claim audit feed",
+      summary:
+        "Public restaurant ownership-claim approvals have a separate domain-specific audit/readback path.",
+      readback:
+        "Claim approval mutations return their restaurant_claim_audit identifier for claim-level readback.",
     }),
   ]),
 });
