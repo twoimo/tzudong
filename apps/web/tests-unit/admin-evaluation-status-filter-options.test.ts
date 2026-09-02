@@ -174,7 +174,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
 
   test('keeps mobile status filters clickable and view toggles icon-only', () => {
     const tableSource = source('components/admin/EvaluationTableNew.tsx');
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
     const categorySidebarSource = source('components/admin/CategorySidebar.tsx');
     const adminOverviewSource = source('components/admin/AdminConsoleOverview.tsx');
     const evaluationApiRouteSource = source('app/api/admin/evaluations/route.ts');

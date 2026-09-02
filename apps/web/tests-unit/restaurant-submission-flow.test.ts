@@ -213,7 +213,7 @@ describe('restaurant submission privacy boundaries', () => {
         const submitSource = source('app/api/mypage/submissions/submit/route.ts');
         const deleteSource = source('app/api/mypage/submissions/delete/route.ts');
         const draftSource = source('lib/submissionDraftDB.ts');
-        const adminSource = source('app/admin/evaluations/page.tsx');
+        const adminSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
         const submitNewSource = submitSource.slice(
             submitSource.indexOf('async function submitNew('),
             submitSource.indexOf('async function submitRequest('),

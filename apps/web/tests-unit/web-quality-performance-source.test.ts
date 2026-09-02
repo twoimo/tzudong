@@ -4270,7 +4270,7 @@ describe("web quality performance source contracts", () => {
   });
 
   test("admin review queue avoids fetching approved review history", () => {
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
+    const evaluationsSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
 
     expect(evaluationsSource).toContain(
       "queryKey: ['admin-reviews-inline', user?.id, isAdmin]",

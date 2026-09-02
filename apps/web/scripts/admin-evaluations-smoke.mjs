@@ -491,7 +491,11 @@ async function main() {
     const page = await context.newPage();
     await page.goto(new URL('/admin/evaluations', baseUrl).toString(), { waitUntil: 'domcontentloaded' });
     await hideOverlay(page);
-    if (!page.url().includes('/admin/evaluations')) {
+    const evaluationsUrl = new URL(page.url());
+    if (
+        evaluationsUrl.pathname !== '/admin'
+        || evaluationsUrl.searchParams.get('module') !== 'restaurants'
+    ) {
         throw operationError('ADMIN_EVALUATIONS_ROUTE_UNAVAILABLE');
     }
 

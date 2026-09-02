@@ -267,7 +267,7 @@ describe('admin profile summary boundary', () => {
     const routeSource = source('app/api/admin/profile-summaries/route.ts');
     const helperSource = source('lib/admin/profile-summaries.ts');
     const reviewPanelSource = source('components/admin/AdminReviewPanel.tsx');
-    const evaluationsSource = source('app/admin/evaluations/page.tsx');
+    const evaluationsSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
     const routePost = routeSource.slice(routeSource.indexOf('export async function POST'));
 
     expect(routeSource).toContain("export const runtime = 'nodejs'");

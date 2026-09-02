@@ -681,7 +681,7 @@ function buildOrderedSidebarSections(
 }
 
 function loadAdminEvaluationModule() {
-  return import("@/app/admin/evaluations/page").then(
+  return import("@/app/admin/evaluations/admin-evaluation-page").then(
     (module) => module.default.Embedded,
   );
 }

@@ -10,7 +10,7 @@ function source(relativePath: string) {
 
 describe("admin pending counts source contract", () => {
   test("evaluations submission context consumes canonical pending-counts endpoint", () => {
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
+    const evaluationsSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
 
     expect(evaluationsSource).toContain("fetch('/api/admin/pending-counts'");
     expect(evaluationsSource).toContain("normalizeAdminPendingCountsResponse");

@@ -7,7 +7,7 @@ const source = (relativePath: string) =>
 
 describe("admin evaluation address filter source contract", () => {
   test("review filter absorbs internal candidate status while candidate label stays hidden", () => {
-    const pageSource = source("app/admin/evaluations/page.tsx");
+    const pageSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
     const tableSource = source("components/admin/EvaluationTableNew.tsx");
     const addressSource = source("lib/admin-address-consistency.ts");
 

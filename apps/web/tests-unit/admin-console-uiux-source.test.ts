@@ -885,7 +885,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   test("keeps all admin skeletons compact and layout-faithful", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const adminLoadingSource = source("app/admin/loading.tsx");
-    const routeSkeletonSource = source("app/admin/evaluations/page.tsx");
+    const routeSkeletonSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
     const evaluationTableSource = source(
       "components/admin/EvaluationTableNew.tsx",
     );
@@ -8622,7 +8622,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const tailwindSource = source("app/app-globals.css");
     const usersSource = source("components/admin/AdminUsersPanel.tsx");
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
+    const evaluationsSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
     const bannersSource = source("app/admin/banners/page.tsx");
     const announcementSource = source(
       "components/announcement/AnnouncementPanel.tsx",
@@ -8924,7 +8924,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("surfaces restaurant recommendation requests as a guarded admin lane", () => {
-    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
+    const adminEvaluationSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
     const submissionSource = source("components/admin/SubmissionListView.tsx");
     const detailSource = source("components/admin/SubmissionDetailView.tsx");
     const reviewRouteSource = source(
@@ -9072,7 +9072,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
   });
 
   test("retires legacy browser admin evaluation mutations behind the explicit guard flag", () => {
-    const adminEvaluationSource = source("app/admin/evaluations/page.tsx");
+    const adminEvaluationSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
 
     const expectGuardBefore = (domain: string, operation: string, privilegedSnippet: string) => {
       const guardCall = `assertLegacyBrowserAdminMutationEnabled('${domain}', '${operation}')`;

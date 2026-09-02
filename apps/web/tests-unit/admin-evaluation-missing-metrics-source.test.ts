@@ -6,7 +6,7 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 
 describe('admin evaluation missing metric UI contracts', () => {
   test('keeps missing metric approval guard without exposing rerun status labels', () => {
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
     const tableSource = source('components/admin/EvaluationTableNew.tsx');
     const detailSource = source('components/admin/EvaluationDetailView.tsx');
     const slideSource = source('components/admin/EvaluationSlideView.tsx');
@@ -25,7 +25,7 @@ describe('admin evaluation missing metric UI contracts', () => {
   });
 
   test('does not expose unsafe bulk evaluator rerun actions in admin UI', () => {
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
     const tableSource = source('components/admin/EvaluationTableNew.tsx');
     const combined = `${pageSource}\n${tableSource}`;
 

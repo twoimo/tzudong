@@ -159,7 +159,7 @@ describe('submission approval state contract', () => {
 
   test('submission approval audit notes preserve force and browser evidence provenance', () => {
     const listSource = source('components/admin/SubmissionListView.tsx');
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
 
     expect(listSource).toContain('submission-approval-state:v1');
     expect(listSource).toContain('browser-local-search-evidence:not-backend-truth');

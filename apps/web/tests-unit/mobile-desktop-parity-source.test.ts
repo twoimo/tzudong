@@ -41,7 +41,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("admin evaluation metric parsers accept LAAJ objects without name", () => {
-    const pageSource = source("app/admin/evaluations/page.tsx");
+    const pageSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
     const numeric = pageSource.split("function parseNumericEvaluationMetric")[1] ?? "";
     expect(numeric).toContain("typeof value.eval_value !== 'number'");
     expect(numeric.slice(0, 350)).not.toContain("typeof value.name !== 'string'");
@@ -188,7 +188,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("admin evaluation delete is immediate while restore keeps inline typed confirmation", () => {
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
+    const evaluationsSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
 
     expect(evaluationsSource).not.toContain("EVALUATION_DELETE_CONFIRMATION");
     expect(evaluationsSource).not.toContain("검수삭제");
@@ -209,7 +209,7 @@ describe("mobile and desktop parity source contracts", () => {
   });
 
   test("embedded submission and review modules cannot switch into restaurant evaluation view", () => {
-    const evaluationsSource = source("app/admin/evaluations/page.tsx");
+    const evaluationsSource = source("app/admin/evaluations/admin-evaluation-page.tsx");
 
     expect(evaluationsSource).toContain(
       "const canSwitchEvaluationView = !embedded || initialView === 'evaluations';",

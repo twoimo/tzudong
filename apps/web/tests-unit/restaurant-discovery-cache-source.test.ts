@@ -8,7 +8,7 @@ const source = (relativePath: string) =>
 describe('restaurant discovery cache invalidation contract', () => {
   test('admin approval/update/delete invalidates every public map and search surface', () => {
     const cacheSource = source('lib/restaurant-discovery-cache.ts');
-    const adminSource = source('app/admin/evaluations/page.tsx');
+    const adminSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
 
     expect(cacheSource).toContain("RESTAURANT_SEARCH_QUERY_KEY_PREFIX = [");
     expect(cacheSource).toContain("'restaurant-search'");

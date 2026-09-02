@@ -29,7 +29,8 @@ describe('frontend unused route compatibility', () => {
 
     test('moves admin submissions to the canonical evaluations view', () => {
         const adminSubmissionsSource = source('app/admin/submissions/page.tsx');
-        const adminEvaluationsSource = source('app/admin/evaluations/page.tsx');
+        const adminEvaluationsRouteSource = source('app/admin/evaluations/page.tsx');
+        const adminEvaluationsSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
         const adminLoadingSource = source('app/admin/loading.tsx');
         const adminBannersSource = source('app/admin/banners/page.tsx');
         const headerSource = source('components/layout/Header.tsx');
@@ -39,6 +40,11 @@ describe('frontend unused route compatibility', () => {
         expect(adminSubmissionsSource).toContain("redirect('/admin?module=submissions')");
         expect(adminSubmissionsSource).not.toContain('"use client"');
         expect(adminSubmissionsSource).not.toContain('useInfiniteQuery');
+        expect(adminEvaluationsRouteSource).not.toMatch(/['"]use client['"]/);
+        expect(adminEvaluationsRouteSource).toContain("redirect(buildCanonicalAdminEvaluationsHref");
+        expect(adminEvaluationsRouteSource).toContain("export const dynamic = 'force-dynamic'");
+        expect(adminEvaluationsRouteSource).not.toContain('useInfiniteQuery');
+        expect(adminEvaluationsRouteSource).not.toContain('@/components/admin/EvaluationTableNew');
         expect(adminEvaluationsSource).toContain('buildCanonicalAdminEvaluationsHref');
         expect(adminEvaluationsSource).toContain("const routeView = embedded ? null : searchParams.get('view');");
         expect(adminEvaluationsSource).toContain("routeView === 'submissions'");
@@ -186,6 +192,10 @@ describe('frontend unused route compatibility', () => {
         expect(adminConsoleSource).not.toContain('if (!user || !isAdmin)');
         expect(adminConsoleSource).not.toContain('router.push("/admin/evaluations")');
         expect(adminConsoleSource).not.toContain('router.push("/admin/banners")');
+        expect(adminConsoleSource).toContain('import("@/app/admin/evaluations/admin-evaluation-page")');
+        expect(adminConsoleSource).not.toContain('import("@/app/admin/evaluations/page")');
+        expect(adminConsoleSource).toContain('import("@/app/admin/evaluations/admin-evaluation-page")');
+        expect(adminConsoleSource).not.toContain('import("@/app/admin/evaluations/page")');
     });
 
     test('removes admin insight fallback while preserving public insights and global map', () => {

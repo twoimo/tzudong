@@ -7,7 +7,7 @@ const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..'
 describe('admin edit restaurant modal persistence contract', () => {
   test('persists editable fields and blocks un-geocoded address drift', () => {
     const modalSource = source('components/admin/EditRestaurantModal.tsx');
-    const pageSource = source('app/admin/evaluations/page.tsx');
+    const pageSource = source('app/admin/evaluations/admin-evaluation-page.tsx');
 
     expect(pageSource).toContain('const approvedName = getAdminEvaluationApprovalName(record);');
     expect(modalSource).toContain("title: '주소 저장 전 재지오코딩 필요'");
