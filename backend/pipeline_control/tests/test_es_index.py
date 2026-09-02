@@ -9,10 +9,17 @@ from pathlib import Path
 
 from backend.pipeline_control.adapter import execute_steps
 from backend.pipeline_control.es_index import (
+    ALLOWED_ES_HOSTS,
     EsIndexError,
     INDICES,
+    LOG_ALLOWLIST,
+    RAW_ALLOWLIST,
+    admit_es_url,
+    allowlisted_document,
     allowlisted_raw_doc,
+    index_bulk,
     index_document,
+    resolve_index,
 )
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.state_machine import RunRecord
@@ -21,7 +28,7 @@ from backend.pipeline_control.worker import process_one
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT.parent / ".github" / "workflows"
-COMPOSE_DIR = ROOT / "pipeline-control"
+COMPOSE_DIR = ROOT / "deploy" / "pipeline-control"
 CONTRACT = ROOT.parent / "backend" / "DATA_CONTRACTS.md"
 
 
@@ -399,6 +406,149 @@ class EsIndexTests(unittest.TestCase):
             self.assertEqual(result, "Failed")
             self.assertEqual(store.get(created.id).status, "Failed")
             self.assertEqual(store.get(created.id).error_code, "es_index_failed")
+
+
+class EsOptInPreservationTests(unittest.TestCase):
+    """Task 26: the Elasticsearch secondary sink stays an opt-in path.
+
+    Loki is the default Log_Sink (Task 21). ``es_index`` must remain a no-op
+    unless an operator explicitly opts in with ``TZUDONG_PIPELINE_ES=es``, and
+    the ``pipeline-logs-v1``/``pipeline-raw-v1`` index mapping, the
+    ``LOG_ALLOWLIST``/``RAW_ALLOWLIST`` field allowlists, and the ``local_db``
+    only + approved-host URL admission (requirements 11.6, 13.10) must be
+    preserved as they were before Loki became the default.
+    """
+
+    def setUp(self) -> None:
+        self._orig = {
+            key: os.environ.get(key)
+            for key in ("TZUDONG_PIPELINE_ES", "TZUDONG_ES_URL", "TZUDONG_DATA_ENV")
+        }
+
+    def tearDown(self) -> None:
+        for key, value in self._orig.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def test_explicit_noop_and_empty_modes_stay_no_op(self) -> None:
+        """Opt-out modes never load a client; Loki remains the default sink."""
+        from backend.pipeline_control import es_index as es_mod
+
+        loads = {"n": 0}
+
+        def boom() -> object:
+            loads["n"] += 1
+            raise ImportError("es")
+
+        orig_load = es_mod._load_es_client
+        es_mod._load_es_client = boom  # type: ignore[method-assign]
+        try:
+            document = {"type": "run.lifecycle", "job_id": "j1", "status": "Succeeded"}
+            for raw in ("noop", "", "   "):
+                os.environ["TZUDONG_PIPELINE_ES"] = raw
+                self.assertEqual(
+                    index_document(document),
+                    "noop:pipeline-logs-v1",
+                    msg=f"mode={raw!r} must be a no-op",
+                )
+                self.assertEqual(
+                    index_bulk([document]),
+                    "noop:1",
+                    msg=f"bulk mode={raw!r} must be a no-op",
+                )
+            os.environ.pop("TZUDONG_PIPELINE_ES", None)
+            self.assertEqual(index_document(document), "noop:pipeline-logs-v1")
+            self.assertEqual(index_bulk([document]), "noop:1")
+        finally:
+            es_mod._load_es_client = orig_load  # type: ignore[method-assign]
+        self.assertEqual(loads["n"], 0)
+
+    def test_index_and_allowlist_constants_are_preserved(self) -> None:
+        """The document-class mapping and field allowlists are unchanged."""
+        self.assertEqual(INDICES["run.lifecycle"], "pipeline-logs-v1")
+        self.assertEqual(INDICES["step.progress"], "pipeline-logs-v1")
+        self.assertEqual(INDICES["record.upserted"], "pipeline-logs-v1")
+        self.assertEqual(INDICES["adapter.raw"], "pipeline-raw-v1")
+        self.assertEqual(set(INDICES.values()), {"pipeline-logs-v1", "pipeline-raw-v1"})
+        # Forbidden log fields must never appear in either allowlist.
+        for field in ("dsn", "password", "byte_size", "sha256", "origin_name", "email"):
+            self.assertNotIn(field, LOG_ALLOWLIST)
+            self.assertNotIn(field, RAW_ALLOWLIST)
+        self.assertIn("job_id", LOG_ALLOWLIST)
+        self.assertIn("payload_hash", RAW_ALLOWLIST)
+
+    def test_opt_in_bulk_honors_indices_and_allowlist(self) -> None:
+        """``=es`` activates the indexer, routing classes and stripping keys."""
+        from backend.pipeline_control import es_index as es_mod
+
+        os.environ["TZUDONG_PIPELINE_ES"] = "es"
+        os.environ["TZUDONG_DATA_ENV"] = "local_db"
+        os.environ["TZUDONG_ES_URL"] = "http://elasticsearch:9200"
+        captured: list[dict] = []
+
+        class FakeClient:
+            def __init__(self, *_args: object, **_kwargs: object) -> None:
+                pass
+
+            def bulk(self, documents: list[dict]) -> None:
+                captured.extend(documents)
+
+        orig_load = es_mod._load_es_client
+        es_mod._load_es_client = lambda: FakeClient  # type: ignore[method-assign]
+        try:
+            result = index_bulk(
+                [
+                    {
+                        "type": "step.progress",
+                        "job_id": "j1",
+                        "step": "01",
+                        "password": "super-secret-value",
+                    },
+                    {
+                        "type": "adapter.raw",
+                        "job_id": "j1",
+                        "step": "01",
+                        "payload_hash": "abc",
+                        "sha256": "deadbeef",
+                    },
+                ]
+            )
+        finally:
+            es_mod._load_es_client = orig_load  # type: ignore[method-assign]
+        self.assertEqual(result, "es:bulk:2")
+        # index_bulk forwards raw documents to the client, which applies the
+        # allowlist itself; the routing to the two indices is preserved.
+        self.assertEqual(resolve_index(captured[0]), "pipeline-logs-v1")
+        self.assertEqual(resolve_index(captured[1]), "pipeline-raw-v1")
+        self.assertEqual(allowlisted_document(captured[0]).get("job_id"), "j1")
+        self.assertNotIn("password", allowlisted_document(captured[0]))
+        self.assertNotIn("sha256", allowlisted_document(captured[1]))
+
+    def test_admit_url_opt_in_hosts_coexist_with_loki_default(self) -> None:
+        """``elasticsearch`` stays admissible; ``loki`` joins for the default."""
+        self.assertEqual(
+            admit_es_url(data_env="local_db", url="http://elasticsearch:9200"),
+            "http://elasticsearch:9200",
+        )
+        self.assertEqual(
+            admit_es_url(data_env="local_db", url="http://127.0.0.1:9200/"),
+            "http://127.0.0.1:9200",
+        )
+        # Loki host was added for the default sink (Task 21) without dropping
+        # any Elasticsearch opt-in host.
+        self.assertEqual(
+            admit_es_url(data_env="local_db", url="http://loki:3100"),
+            "http://loki:3100",
+        )
+        self.assertLessEqual(
+            {"127.0.0.1", "localhost", "::1", "elasticsearch"}, ALLOWED_ES_HOSTS
+        )
+        # A non-local data environment still fails closed with the fixed code.
+        with self.assertRaises(EsIndexError) as ctx:
+            admit_es_url(data_env="hosting_db", url="http://elasticsearch:9200")
+        self.assertEqual(ctx.exception.code, "es_url_host_rejected")
 
 
 if __name__ == "__main__":

@@ -22,9 +22,9 @@ from backend.pipeline_control.worker import process_one
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT.parent / ".github" / "workflows"
-KAFKA_COMPOSE = ROOT / "pipeline-control" / "docker-compose.kafka.yml"
-OBS_COMPOSE = ROOT / "pipeline-control" / "docker-compose.observability.yml"
-PIPELINE_COMPOSE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
+KAFKA_COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.kafka.yml"
+OBS_COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.observability.yml"
+PIPELINE_COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.pipeline.yml"
 CONTRACT = ROOT.parent / "backend" / "DATA_CONTRACTS.md"
 
 
@@ -243,7 +243,7 @@ class EventSinkTests(unittest.TestCase):
         obs = OBS_COMPOSE.read_text(encoding="utf-8")
         pipeline = PIPELINE_COMPOSE.read_text(encoding="utf-8")
         contract = CONTRACT.read_text(encoding="utf-8")
-        reqs = (ROOT / "pipeline-control" / "requirements.txt").read_text(encoding="utf-8")
+        reqs = (ROOT / "deploy" / "pipeline-control" / "requirements.txt").read_text(encoding="utf-8")
         self.assertRegex(kafka, r"(?m)^\s+kafka:")
         self.assertRegex(kafka, r"(?m)^\s+kafka-ui:")
         self.assertNotRegex(kafka, r"(?im)^\s+postgres:")

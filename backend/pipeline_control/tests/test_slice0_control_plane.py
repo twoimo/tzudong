@@ -27,9 +27,9 @@ from backend.pipeline_control.worker import heavy_local_runtime_ready, process_o
 from backend.utils.privacy_log import sanitize_log_value
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPOSE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
+COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.pipeline.yml"
 MIGRATION = ROOT / "supabase" / "migrations" / "20260817020000_pipeline_control.sql"
-FIXTURE = ROOT / "pipeline-control" / "fixtures" / "pg-host-classes.v1.json"
+FIXTURE = ROOT / "deploy" / "pipeline-control" / "fixtures" / "pg-host-classes.v1.json"
 MJS = ROOT / "utils" / "verified-pg-client.mjs"
 CONTRACT = ROOT / "supabase" / "scripts" / "g035_hosted_recovery_contract.py"
 
@@ -679,9 +679,9 @@ class OverlayAndDocsTests(unittest.TestCase):
     def test_payload_hash_stable(self) -> None:
         self.assertEqual(payload_hash({"a": 1, "b": 2}), payload_hash({"b": 2, "a": 1}))
     def test_observability_overlay_is_separate_and_has_no_postgres(self) -> None:
-        obs = (ROOT / "pipeline-control" / "docker-compose.observability.yml").read_text(encoding="utf-8")
-        kafka = (ROOT / "pipeline-control" / "docker-compose.kafka.yml").read_text(encoding="utf-8")
-        events = json.loads((ROOT / "pipeline-control" / "events.v1.json").read_text(encoding="utf-8"))
+        obs = (ROOT / "deploy" / "pipeline-control" / "docker-compose.observability.yml").read_text(encoding="utf-8")
+        kafka = (ROOT / "deploy" / "pipeline-control" / "docker-compose.kafka.yml").read_text(encoding="utf-8")
+        events = json.loads((ROOT / "deploy" / "pipeline-control" / "events.v1.json").read_text(encoding="utf-8"))
         self.assertNotRegex(obs, r"(?im)^\s+postgres:")
         self.assertNotRegex(obs, r"(?m)^\s+kafka:")
         self.assertRegex(kafka, r"(?m)^\s+kafka:")
@@ -713,7 +713,7 @@ class OverlayAndDocsTests(unittest.TestCase):
         self.assertNotRegex(obs, r"(?i)GF_SECURITY_ADMIN_PASSWORD:\s*['\"]?(admin|password|changeme)")
         self.assertNotIn("TZUDONG_PIPELINE_PERSIST", obs)
 
-        metrics = json.loads((ROOT / "pipeline-control" / "metrics.v1.json").read_text(encoding="utf-8"))
+        metrics = json.loads((ROOT / "deploy" / "pipeline-control" / "metrics.v1.json").read_text(encoding="utf-8"))
         self.assertEqual(
             metrics["metrics"],
             [

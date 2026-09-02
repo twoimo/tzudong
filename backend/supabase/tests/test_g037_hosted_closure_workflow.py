@@ -158,7 +158,7 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
     def test_security_audit_trigger_covers_nonstandard_g037_manifest(self):
         workflow = (ROOT / ".github/workflows/security-audit.yml").read_text(encoding="utf8")
         self.assertIn("backend/supabase/scripts/g037-hosted-closure-requirements.txt", workflow)
-        self.assertIn("backend/pipeline-control/requirements.txt", workflow)
+        self.assertIn("backend/deploy/pipeline-control/requirements.txt", workflow)
 
     def test_read_only_workflow_argv_matches_imported_executor_parser_contract(self):
         remediation = types.ModuleType("g037_remediation_authorization")

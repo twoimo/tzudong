@@ -12,6 +12,7 @@ from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 
 FIXTURE_PATH = (
     Path(__file__).resolve().parents[1]
+    / "deploy"
     / "pipeline-control"
     / "fixtures"
     / "pg-host-classes.v1.json"

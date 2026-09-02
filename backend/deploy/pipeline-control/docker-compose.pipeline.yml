@@ -5,8 +5,8 @@ name: tzudong-pipeline-control
 services:
   pipeline-api:
     build:
-      context: ../..
-      dockerfile: backend/pipeline-control/Dockerfile
+      context: ../../..
+      dockerfile: backend/deploy/pipeline-control/Dockerfile
       target: api
     environment:
       TZUDONG_DATA_ENV: local_db
@@ -23,15 +23,15 @@ services:
     ports:
       - "127.0.0.1:8091:8091"
     volumes:
-      - ../..:/workspace
+      - ../../..:/workspace
     command: ["python", "-m", "backend.pipeline_control.api"]
     networks:
       - supabase_network_local
 
   pipeline-worker:
     build:
-      context: ../..
-      dockerfile: backend/pipeline-control/Dockerfile
+      context: ../../..
+      dockerfile: backend/deploy/pipeline-control/Dockerfile
       target: worker
     environment:
       TZUDONG_DATA_ENV: local_db
@@ -45,15 +45,15 @@ services:
       OTEL_SERVICE_NAME: pipeline-worker
     volumes:
       # heavy_local: repo tree, numbered scripts, node/ffmpeg available on the host mount
-      - ../..:/workspace
+      - ../../..:/workspace
     command: ["python", "-m", "backend.pipeline_control.worker"]
     networks:
       - supabase_network_local
 
   pipeline-indexer:
     build:
-      context: ../..
-      dockerfile: backend/pipeline-control/Dockerfile
+      context: ../../..
+      dockerfile: backend/deploy/pipeline-control/Dockerfile
       target: indexer
     environment:
       TZUDONG_DATA_ENV: local_db
@@ -73,8 +73,8 @@ services:
 
   pipeline-publisher:
     build:
-      context: ../..
-      dockerfile: backend/pipeline-control/Dockerfile
+      context: ../../..
+      dockerfile: backend/deploy/pipeline-control/Dockerfile
       target: worker
     environment:
       TZUDONG_DATA_ENV: local_db

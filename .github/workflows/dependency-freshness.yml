@@ -1,0 +1,176 @@
+name: Dependency Freshness
+run-name: Dependency Freshness · ${{ github.ref_name }}
+
+# Dependency_Freshness_Workflow (requirements 4.1-4.11, 5.3, 5.6; design C2).
+#
+# This workflow validates dependency update candidates. It NEVER merges,
+# NEVER changes candidate content, and NEVER bypasses branch protection.
+# Candidate PRs themselves are opened by `.github/dependabot.yml` and land only
+# through the serial `develop -> data -> main` path under human review. This
+# workflow enforces the governance rules, runs the four verification commands
+# in `apps/web`, and records a storage-owned run receipt (UTC run time and the
+# per-unit candidate count) with Forbidden_Log_Field values redacted.
+
+on:
+  # Requirement 4.6: run at least once every seven days (weekly cron).
+  schedule:
+    - cron: '0 6 * * 1' # 06:00 UTC every Monday
+  workflow_dispatch:
+
+concurrency:
+  group: dependency-freshness-${{ github.ref }}
+  cancel-in-progress: false
+
+# Read-only permissions. This workflow cannot push, merge, or change branch
+# protection; candidates land only through human review (requirement 4.2).
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  BUN_VERSION: '1.2.16'
+  NPM_AUTHORITY: '11.6.2'
+  # Requirement 4.4: a single verification command may not exceed 30 minutes.
+  COMMAND_TIMEOUT_SECONDS: '1800'
+
+jobs:
+  freshness:
+    name: Freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Node 24
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Pin npm authority
+        run: npm install --global npm@"${NPM_AUTHORITY}" && test "$(npm --version)" = "${NPM_AUTHORITY}"
+
+      - name: Authoritative clean install
+        run: npm ci
+
+      - name: Assert governance invariants and enumerate the seven units
+        # Requirements 4.1, 4.2, 4.9, 5.6: seven units (cargo 7th), develop-only,
+        # <=5 open per unit, never merged. Fails closed if the contract drifts.
+        run: node scripts/verify-dependency-freshness.mjs > "$RUNNER_TEMP/dependency-freshness-units.json"
+
+      - name: Preserve dependabot holds
+        # Requirement 4.5: the four preserved holds must remain in dependabot.yml.
+        # Hold release is a separate candidate that touches only dependabot.yml.
+        working-directory: .
+        run: |
+          set -euo pipefail
+          manifest='.github/dependabot.yml'
+          test -f "$manifest"
+          grep -Fq 'dependency-name: "next"' "$manifest"
+          grep -Fq '">=16.3.0"' "$manifest"
+          grep -Fq 'dependency-name: "@next/bundle-analyzer"' "$manifest"
+          grep -Fq 'dependency-name: "eslint-config-next"' "$manifest"
+          grep -Fq 'dependency-name: "eslint"' "$manifest"
+          grep -Fq 'dependency-name: "@types/node"' "$manifest"
+          grep -Fq 'dependency-name: "typescript-eslint"' "$manifest"
+          grep -Fq '">8.63.0"' "$manifest"
+
+      - name: Verify Rust toolchain pin is a three-digit fixed version
+        # Requirement 5.6: rust-toolchain.toml pins major.minor.patch, no channel
+        # alias, no floating range; included in the freshness checks.
+        run: |
+          set -euo pipefail
+          toolchain='../../backend/rust/rust-toolchain.toml'
+          test -f "$toolchain"
+          channel="$(grep -E '^[[:space:]]*channel[[:space:]]*=' "$toolchain" | head -n1 | sed -E 's/.*=[[:space:]]*"?([^"#]+)"?.*/\1/' | tr -d '[:space:]')"
+          echo "rust toolchain channel: ${channel}"
+          case "$channel" in
+            stable|beta|nightly*|*'*'*|*'^'*|*'~'*|*'>'*|*'<'*)
+              echo 'rust toolchain channel alias or floating range is not admitted' >&2
+              exit 1
+              ;;
+          esac
+          echo "$channel" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || {
+            echo 'rust toolchain pin must be an exact three-digit version' >&2
+            exit 1
+          }
+
+      - name: Verify Pin_Contract (reuse task 30 verifier)
+        # Requirement 5.3: a candidate changing a Pin_Contract value is rejected
+        # with pin_contract_violation; the pin drift verifier fails closed and
+        # never mutates a pin value.
+        run: node scripts/verify-pin-contract.mjs
+
+      - name: Run the four verification commands with a 30-minute per-command budget
+        id: verify
+        # Requirement 4.3/4.4: run all four checks in apps/web and attach each
+        # command's pass/fail result and finish time. A failure or a command that
+        # exceeds 30 minutes yields dependency_check_failed downstream.
+        run: |
+          set -uo pipefail
+          lines="$RUNNER_TEMP/verification-lines.ndjson"
+          : > "$lines"
+          run_check() {
+            local name="$1"; shift
+            local start end minutes status finish
+            start="$(date -u +%s)"
+            if timeout "${COMMAND_TIMEOUT_SECONDS}" "$@"; then status='true'; else status='false'; fi
+            end="$(date -u +%s)"
+            finish="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            minutes=$(( (end - start) / 60 ))
+            printf '{"command":"%s","passed":%s,"finishedAt":"%s","durationMinutes":%s}\n' \
+              "$name" "$status" "$finish" "$minutes" >> "$lines"
+          }
+          run_check 'bun run lint' bun run lint
+          run_check 'bun run test:unit' bun run test:unit
+          run_check 'npm run typecheck:parity' npm run typecheck:parity
+          run_check 'npm run build' npm run build
+          node -e 'const fs=require("node:fs");const p=process.env.LINES;const out=process.env.OUT;const rows=fs.readFileSync(p,"utf8").trim().split("\n").filter(Boolean).map((l)=>JSON.parse(l));fs.writeFileSync(out,JSON.stringify(rows));' \
+            LINES="$lines" OUT="$RUNNER_TEMP/dependency-freshness-verification.json"
+        env:
+          LINES: ${{ runner.temp }}/verification-lines.ndjson
+          OUT: ${{ runner.temp }}/dependency-freshness-verification.json
+
+      - name: Record run receipt and classify verification
+        id: record
+        continue-on-error: true
+        # Requirements 4.4, 4.6, 4.8: emit UTC run time + per-unit candidate
+        # count, fold in the verification verdict (dependency_check_failed on
+        # failure/timeout/incomplete attachment), and redact Forbidden_Log_Field.
+        run: |
+          set -euo pipefail
+          node scripts/verify-dependency-freshness.mjs \
+            --verification "$RUNNER_TEMP/dependency-freshness-verification.json" \
+            > "$RUNNER_TEMP/dependency-freshness-run.json"
+
+      - name: Upload dependency freshness run receipt
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4
+        with:
+          name: dependency-freshness-run-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/dependency-freshness-units.json
+            ${{ runner.temp }}/dependency-freshness-verification.json
+            ${{ runner.temp }}/dependency-freshness-run.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Fail closed on verification verdict
+        # dependency_check_failed marks the run non-mergeable; the workflow still
+        # never mutates candidate content or merges anything.
+        if: ${{ steps.record.outcome != 'success' }}
+        run: exit 1

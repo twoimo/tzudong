@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "kind": "agent_action_allowlist",
+  "designSource": ".kiro/specs/platform-modernization/design.md#c11-ops_agent",
+  "requirements": ["15.3", "15.9"],
+  "notes": [
+    "이 목록의 6개 조치는 기록된 설계 결정(설계 C11 표)이며 운영자 승인 자체가 아니다. 명명된 사람이 approval.approverName을 채워야 활성 승인이 성립한다.",
+    "6개 조치는 전부 로컬 전용(scope=local)이고 멱등(idempotent=true)이다. Ops_Agent는 이 부류만 사람의 개별 승인 없이 수행한다.",
+    "조치 종류 식별자가 이 목록 항목과 정확히 일치하지 않으면 조치를 수행하지 않고 agent_action_not_allowlisted를 반환한다. (요구사항 15.4)",
+    "이 파일은 자격증명 값, 토큰 값, 시크릿 값, Forbidden_Log_Field 값을 포함하지 않는다."
+  ],
+  "actionCount": 6,
+  "actions": [
+    {
+      "actionKindId": "restart_local_container",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "Observability_Stack 서비스 재기동. 로컬 도커 컨텍스트 전용.",
+      "idempotencyBasis": "재기동 후 상태는 실행 중 하나로 수렴한다."
+    },
+    {
+      "actionKindId": "requeue_failed_pipeline_task",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "Local_Database 작업 재큐.",
+      "idempotencyBasis": "동일 작업 식별자 재큐가 중복 행을 만들지 않는다."
+    },
+    {
+      "actionKindId": "flush_log_pending_queue",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "보류 큐 재전달 트리거.",
+      "idempotencyBasis": "결정적 문서 ID로 중복 레코드가 생기지 않는다."
+    },
+    {
+      "actionKindId": "open_github_issue",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "고정 라벨 이슈 생성만.",
+      "idempotencyBasis": "동일 트리거 신호 식별자당 1회 제한으로 중복을 방지한다."
+    },
+    {
+      "actionKindId": "capture_diagnostic_snapshot",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "레다크션 통과 지표·상태 스냅샷 아티팩트 생성.",
+      "idempotencyBasis": "스냅샷 생성은 대상 상태를 바꾸지 않는다."
+    },
+    {
+      "actionKindId": "scale_local_worker_concurrency",
+      "scope": "local",
+      "idempotent": true,
+      "riskClass": "autonomous_local_idempotent",
+      "humanApprovalRequired": false,
+      "behavior": "승인된 상하한 내 로컬 워커 동시성 조정.",
+      "idempotencyBasis": "목표값 설정이므로 반복 적용이 같은 값으로 수렴한다."
+    }
+  ],
+  "humanApprovalRequiredClasses": [
+    "hosted_database_write",
+    "hosted_migration_apply",
+    "deployment_execution",
+    "rollback_execution",
+    "branch_protection_change",
+    "secret_value_change",
+    "dns_change"
+  ],
+  "humanApprovalRequiredNote": "이 부류는 위 allowlist에 포함되지 않는다. 조치 식별자와 트리거 신호 식별자에 결속된 명명된 사람 승인 참조가 Agent_Action_Record에 기록된 이후에만 수행하며, 결속된 참조가 없으면 human_approval_required를 반환한다. (요구사항 15.5, 15.6)",
+  "neverPerformed": [
+    "release_self_approval",
+    "supervisory_authority_notification",
+    "data_subject_notification"
+  ],
+  "neverPerformedNote": "이 항목은 어떤 승인 상태에서도 수행하지 않고 명명된 사람의 결정·실행 대기 상태로만 기록한다. Ops_Agent는 릴리스 증거·배포 영수증·법령 준수 상태·통지의 제출·접수 사실을 생성하거나 충족 상태로 표기하지 않는다. (요구사항 15.13, 15.16)",
+  "approval": {
+    "approverName": null,
+    "approvedAt": null,
+    "status": "unresolved"
+  }
+}

@@ -63,7 +63,7 @@ jobs:
           - backend/pipeline/requirements.txt
           - backend/restaurant-crawling/scripts/requirements.txt
           - backend/supabase/scripts/g037-hosted-closure-requirements.txt
-          - backend/pipeline-control/requirements.txt
+          - backend/deploy/pipeline-control/requirements.txt
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6

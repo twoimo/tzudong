@@ -6,12 +6,12 @@ WORKDIR /workspace
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 RUN useradd --system --uid 10001 --create-home --home-dir /home/tzudong --shell /usr/sbin/nologin tzudong
-COPY backend/pipeline-control/requirements.txt /workspace/backend/pipeline-control/requirements.txt
-RUN pip install --no-cache-dir -r /workspace/backend/pipeline-control/requirements.txt
+COPY backend/deploy/pipeline-control/requirements.txt /workspace/backend/deploy/pipeline-control/requirements.txt
+RUN pip install --no-cache-dir -r /workspace/backend/deploy/pipeline-control/requirements.txt
 COPY --chown=tzudong:tzudong backend/pipeline_control /workspace/backend/pipeline_control
 COPY --chown=tzudong:tzudong backend/utils /workspace/backend/utils
 COPY --chown=tzudong:tzudong backend/config /workspace/backend/config
-COPY --chown=tzudong:tzudong backend/pipeline-control/fixtures /workspace/backend/pipeline-control/fixtures
+COPY --chown=tzudong:tzudong backend/deploy/pipeline-control/fixtures /workspace/backend/deploy/pipeline-control/fixtures
 USER tzudong
 STOPSIGNAL SIGTERM
 

@@ -6,8 +6,8 @@
 Build:
 
 ```
-docker build -f backend/pipeline-control/Dockerfile --target api -t harbor.local/tzudong/pipeline-api:local .
-docker build -f backend/pipeline-control/Dockerfile --target worker -t harbor.local/tzudong/pipeline-worker:local .
+docker build -f backend/deploy/pipeline-control/Dockerfile --target api -t harbor.local/tzudong/pipeline-api:local .
+docker build -f backend/deploy/pipeline-control/Dockerfile --target worker -t harbor.local/tzudong/pipeline-worker:local .
 ```
 
 `lite_gha` uses the worker target as a one-shot after a Postgres service is healthy.

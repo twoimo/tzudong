@@ -36,8 +36,8 @@ MIGRATION = ROOT / "supabase" / "migrations" / "20260820050000_pipeline_outbox.s
 BATCH = ROOT / "supabase" / "migrations" / "20260820040000_pipeline_batch_upsert.sql"
 ATOMIC = ROOT / "supabase" / "migrations" / "20260820030000_pipeline_control_atomic.sql"
 CONTRACTS = ROOT / "DATA_CONTRACTS.md"
-COMPOSE = ROOT / "pipeline-control" / "docker-compose.pipeline.yml"
-EVENTS_CATALOG = ROOT / "pipeline-control" / "events.v1.json"
+COMPOSE = ROOT / "deploy" / "pipeline-control" / "docker-compose.pipeline.yml"
+EVENTS_CATALOG = ROOT / "deploy" / "pipeline-control" / "events.v1.json"
 
 
 class OutboxSqlContractTests(unittest.TestCase):
