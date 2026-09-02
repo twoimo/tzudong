@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { CONSOLE_FIXED_MESSAGES } from "@/lib/admin/console-messages";
 import {
   DEFAULT_ADMIN_SIDEBAR_ORDER,
-  normalizeAdminSidebarOrder,
   normalizeAdminSidebarOrderWithReason,
   type AdminSidebarOrderPreference,
 } from "@/lib/admin/sidebar-order";
 import { canPersistAdminSidebarOrder } from "@/lib/admin/sidebar-order-controls";
+import {
+  beginAdminSidebarOrderSave,
+  resolveAdminSidebarOrderLoadFailure,
+  resolveAdminSidebarOrderRevertNotice,
+  resolveAdminSidebarOrderSaveFailure,
+  resolveAdminSidebarOrderSaveSuccess,
+} from "@/lib/admin/sidebar-order-session";
 
 export {
   canPersistAdminSidebarOrder,
@@ -63,15 +68,20 @@ export function useAdminSidebarOrder(enabled: boolean) {
 
         const normalized = normalizeAdminSidebarOrderWithReason(rawOrder);
         setOrder(normalized.order);
-        if (normalized.revertedReason && !revertNoticeShownRef.current) {
-          revertNoticeShownRef.current = true;
-          setMessage(CONSOLE_FIXED_MESSAGES.orderReset);
+        const notice = resolveAdminSidebarOrderRevertNotice({
+          revertedReason: normalized.revertedReason,
+          alreadyShown: revertNoticeShownRef.current,
+        });
+        if (notice.show && notice.message) {
+          revertNoticeShownRef.current = notice.alreadyShown;
+          setMessage(notice.message);
         }
       } catch {
         if (!controller.signal.aborted) {
-          setOrder(DEFAULT_ADMIN_SIDEBAR_ORDER);
-          setLoadFailed(true);
-          setMessage(CONSOLE_FIXED_MESSAGES.orderLoadFailed);
+          const failed = resolveAdminSidebarOrderLoadFailure();
+          setOrder(failed.order);
+          setLoadFailed(failed.loadFailed);
+          setMessage(failed.message);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -89,22 +99,22 @@ export function useAdminSidebarOrder(enabled: boolean) {
 
   const persist = useCallback(
     async (nextOrder: AdminSidebarOrderPreference, successMessage: string) => {
-      if (
-        !canPersistAdminSidebarOrder({
-          enabled,
-          loadFailed,
-          isLoading,
-          isSaving: saveLockRef.current || isSaving,
-        })
-      ) {
+      const started = beginAdminSidebarOrderSave({
+        enabled,
+        loadFailed,
+        isLoading,
+        isSaving,
+        saveLocked: saveLockRef.current,
+        nextOrder,
+      });
+      if (!started.accepted) {
         return;
       }
 
-      const normalizedOrder = normalizeAdminSidebarOrder(nextOrder);
-      saveLockRef.current = true;
-      setOrder(normalizedOrder);
+      saveLockRef.current = started.saveLocked;
+      setOrder(started.order);
       setIsSaving(true);
-      setMessage("메뉴 순서를 저장하는 중입니다.");
+      setMessage(started.savingMessage);
 
       try {
         const response = await fetch("/api/admin/preferences/sidebar-order", {
@@ -113,7 +123,7 @@ export function useAdminSidebarOrder(enabled: boolean) {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ order: normalizedOrder }),
+          body: JSON.stringify({ order: started.order }),
         });
 
         if (!response.ok) {
@@ -121,10 +131,17 @@ export function useAdminSidebarOrder(enabled: boolean) {
         }
 
         const rawOrder = await readSidebarOrderPayload(response);
-        setOrder(normalizeAdminSidebarOrder(rawOrder));
-        setMessage(successMessage);
+        const succeeded = resolveAdminSidebarOrderSaveSuccess({
+          rawOrder,
+          successMessage,
+        });
+        setOrder(succeeded.order);
+        setMessage(succeeded.message);
       } catch {
-        setMessage(CONSOLE_FIXED_MESSAGES.orderSaveFailed);
+        const failed = resolveAdminSidebarOrderSaveFailure({
+          optimisticOrder: started.order,
+        });
+        setMessage(failed.message);
       } finally {
         saveLockRef.current = false;
         setIsSaving(false);
