@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import {
+  ADMIN_API_STATUS_CODES,
+  type AdminApiStatusCode,
+} from "@/lib/admin/admin-api-status";
 import { normalizeAdminSidebarOrder } from "@/lib/admin/sidebar-order";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
-import { readBoundedJsonRequest } from "@/lib/security/bounded-json-request";
+import {
+  BOUNDED_JSON_REQUEST_ERROR,
+  readBoundedJsonRequest,
+} from "@/lib/security/bounded-json-request";
 import { isTrustedSameOriginMutation } from "@/lib/security/same-origin-mutation";
 
 export const runtime = "nodejs";
 
 const SIDEBAR_ORDER_KEY = "admin_sidebar_order";
 const MAX_SIDEBAR_ORDER_REQUEST_BYTES = 4 * 1024;
+const MENU_DOMAIN = "preferences";
+const ACTION_NAME = "sidebar-order";
 
 type PreferenceRow = {
   value: unknown;
@@ -18,22 +27,58 @@ type PreferenceRow = {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
+
 function isAdminPreferenceUserIdPersistable(userId: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     userId,
   );
 }
 
+function adminJson(body: unknown, status: AdminApiStatusCode = 200) {
+  const nextStatus = (ADMIN_API_STATUS_CODES as readonly number[]).includes(status)
+    ? status
+    : 500;
+  return NextResponse.json(body, {
+    status: nextStatus,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function logAdminPreferenceError(code: string) {
+  console.error(
+    JSON.stringify({
+      menu: MENU_DOMAIN,
+      action: ACTION_NAME,
+      code,
+      at: new Date().toISOString(),
+    }),
+  );
+}
+
+function bodyFailureResponse(
+  code:
+    | typeof BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge
+    | typeof BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType
+    | "UNREADABLE",
+) {
+  if (code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge) {
+    logAdminPreferenceError("ADMIN_BODY_TOO_LARGE");
+    return adminJson({ error: "ADMIN_BODY_TOO_LARGE" }, 413);
+  }
+  if (code === BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType) {
+    logAdminPreferenceError("ADMIN_UNSUPPORTED_MEDIA_TYPE");
+    return adminJson({ error: "ADMIN_UNSUPPORTED_MEDIA_TYPE" }, 415);
+  }
+  logAdminPreferenceError("ADMIN_BODY_UNREADABLE");
+  return adminJson({ error: "ADMIN_BODY_UNREADABLE" }, 400);
+}
 
 export async function GET() {
   try {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
     if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
-      return NextResponse.json(
-        { order: normalizeAdminSidebarOrder(null) },
-        { headers: { "Cache-Control": "no-store" } },
-      );
+      return adminJson({ order: normalizeAdminSidebarOrder(null) });
     }
 
     const supabase = createSupabaseServiceRoleClient();
@@ -47,16 +92,10 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json(
-      { order: normalizeAdminSidebarOrder(data?.value) },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  } catch (error) {
-    console.error("[admin/preferences/sidebar-order] failed to read sidebar order:");
-    return NextResponse.json(
-      { error: "사이드바 순서를 불러오지 못했습니다." },
-      { status: 500 },
-    );
+    return adminJson({ order: normalizeAdminSidebarOrder(data?.value) });
+  } catch {
+    logAdminPreferenceError("ADMIN_SIDEBAR_ORDER_UNAVAILABLE");
+    return adminJson({ error: "ADMIN_SIDEBAR_ORDER_UNAVAILABLE" }, 500);
   }
 }
 
@@ -65,26 +104,34 @@ export async function PATCH(request: NextRequest) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
     if (!isTrustedSameOriginMutation(request)) {
-      return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403, headers: { "Cache-Control": "no-store" } },
-      );
+      logAdminPreferenceError("ADMIN_ORIGIN_REJECTED");
+      return adminJson({ error: "ADMIN_ORIGIN_REJECTED" }, 403);
     }
 
     const requestBody = await readBoundedJsonRequest(
       request,
       MAX_SIDEBAR_ORDER_REQUEST_BYTES,
     );
-    const body = requestBody.ok ? requestBody.value : null;
-    if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
-      return NextResponse.json(
-        { order: normalizeAdminSidebarOrder(isRecord(body) ? body.order : null) },
-        { headers: { "Cache-Control": "no-store" } },
-      );
+    if (!requestBody.ok) {
+      if (requestBody.code === BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge) {
+        return bodyFailureResponse(BOUNDED_JSON_REQUEST_ERROR.bodyTooLarge);
+      }
+      if (requestBody.code === BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType) {
+        return bodyFailureResponse(
+          BOUNDED_JSON_REQUEST_ERROR.unsupportedMediaType,
+        );
+      }
+      return bodyFailureResponse("UNREADABLE");
     }
-    const order = normalizeAdminSidebarOrder(
-      isRecord(body) ? body.order : null,
-    );
+    if (!isRecord(requestBody.value) || !isRecord(requestBody.value.order)) {
+      return bodyFailureResponse("UNREADABLE");
+    }
+    if (!isAdminPreferenceUserIdPersistable(auth.userId)) {
+      return adminJson({
+        order: normalizeAdminSidebarOrder(requestBody.value.order),
+      });
+    }
+    const order = normalizeAdminSidebarOrder(requestBody.value.order);
     const supabase = createSupabaseServiceRoleClient();
     const { data, error } = await supabase
       .from("admin_user_preferences")
@@ -102,15 +149,10 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json(
-      { order: normalizeAdminSidebarOrder(data.value) },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  } catch (error) {
-    console.error("[admin/preferences/sidebar-order] failed to save sidebar order:");
-    return NextResponse.json(
-      { error: "사이드바 순서를 저장하지 못했습니다." },
-      { status: 500 },
-    );
+    return adminJson({ order: normalizeAdminSidebarOrder(data.value) });
+  } catch {
+    logAdminPreferenceError("ADMIN_SIDEBAR_ORDER_UNAVAILABLE");
+    return adminJson({ error: "ADMIN_SIDEBAR_ORDER_UNAVAILABLE" }, 500);
   }
 }
+

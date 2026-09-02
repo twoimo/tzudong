@@ -34,10 +34,10 @@ const routeContracts: RouteContract[] = [
     maximumBytesSource: 'const MAX_SIDEBAR_ORDER_REQUEST_BYTES = 4 * 1024;',
     normalPayload: {
       order: {
-        sections: ['운영', '홈'],
+        sections: ['운영', '판단'],
         items: {
-          홈: ['overview'],
-          운영: ['insights', 'users'],
+          판단: ['overview'],
+          운영: ['users', 'banners'],
         },
       },
     },
@@ -126,7 +126,7 @@ describe('preference and trend request security', () => {
       expect(guardIndex).toBeGreaterThan(authIndex);
       expect(readerIndex).toBeGreaterThan(guardIndex);
       expect(serviceRoleIndex).toBeGreaterThan(readerIndex);
-      expect(mutationSource.slice(guardIndex, readerIndex)).toContain('status: 403');
+      expect(mutationSource.slice(guardIndex, readerIndex)).toContain('403');
     }
 
     const dashboardSource = source('app/api/admin/preferences/dashboard-widget-order/route.ts');
@@ -140,6 +140,34 @@ describe('preference and trend request security', () => {
 
     expect(source('app/api/home/youtube-kpi/route.ts')).not.toContain('isTrustedSameOriginMutation');
   });
+
+  test('omits sidebar-order persistence when the bounded body cannot be read', () => {
+    const routeSource = source('app/api/admin/preferences/sidebar-order/route.ts');
+    const mutationSource = handlerSource(routeSource, 'PATCH');
+    const readerIndex = mutationSource.indexOf('readBoundedJsonRequest(');
+    const persistIndex = mutationSource.indexOf('createSupabaseServiceRoleClient()');
+    const upsertIndex = mutationSource.indexOf('.upsert(');
+    const failureBranch = mutationSource.slice(readerIndex, persistIndex);
+
+    expect(routeSource).toContain('ADMIN_API_STATUS_CODES');
+    expect(routeSource).toContain('Cache-Control');
+    expect(routeSource).toContain('no-store');
+    expect(routeSource).not.toContain('requestBody.ok ? requestBody.value : null');
+    expect(routeSource).toContain('ADMIN_BODY_TOO_LARGE');
+    expect(routeSource).toContain('413');
+    expect(routeSource).toContain('ADMIN_UNSUPPORTED_MEDIA_TYPE');
+    expect(routeSource).toContain('415');
+    expect(routeSource).toContain('ADMIN_BODY_UNREADABLE');
+    expect(routeSource).toContain('400');
+    expect(failureBranch).toContain('!requestBody.ok');
+    expect(failureBranch).toContain('bodyFailureResponse');
+    expect(failureBranch).not.toContain('.upsert(');
+    expect(persistIndex).toBeGreaterThan(readerIndex);
+    expect(upsertIndex).toBeGreaterThan(persistIndex);
+    expect(mutationSource.indexOf('isRecord(requestBody.value.order)')).toBeGreaterThan(readerIndex);
+    expect(mutationSource.indexOf('isRecord(requestBody.value.order)')).toBeLessThan(persistIndex);
+  });
+
 
   test('rejects actual and declared over-limit bodies, rejects non-JSON media, and accepts normal payloads', async () => {
     for (const contract of routeContracts) {
