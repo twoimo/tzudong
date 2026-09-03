@@ -162,7 +162,7 @@
     - `AdminConsoleOverview.tsx`의 aria-live 영역을 활성 메뉴 전환 시 표시 제목 1개로 교체하고 추가 알림 문자열을 만들지 않도록 정정한다. 브라우저 제목(`useDocumentTitle` 등)이 활성 메뉴 ID로 레지스트리를 조회한 표시 제목과 관리자 콘솔 문자열만 포함하도록 `activeModuleLabel` 삼항식 대신 레지스트리 파생으로 교체한다.
     - _요구사항 2.2, 3.8, 6.7_
 
-- [ ] 7. 골격 화면과 모듈_패널 대응 추출
+- [x] 7. 골격 화면과 모듈_패널 대응 추출
   - [x] 7.1 `AdminConsoleModuleSkeleton` 전수 대응 작성
     - `apps/web/components/admin/console/AdminConsoleModuleSkeleton.tsx`를 신설하고 기존 골격 화면 로직을 이동한다. 메뉴 ID → 골격 형태를 `satisfies Record<AdminConsoleMenuId, ModuleSkeletonShape>`로 선언하고, `regions`를 완료 화면 주요 영역과 1:1로 데이터 선언해 시험이 같은 값을 읽게 한다. 머리말 하단 기준선 변화 4px 이내를 유지한다.
     - _요구사항 3.3, 3.4, 3.13_
@@ -175,7 +175,7 @@
     - `apps/web/tests-unit/admin-console-module-panel-source.test.ts`를 신설해 15개 `dynamic()` 선언 존재, `loading: () => null` 부재, 골격 대응·패널 대응 키가 15개 메뉴 ID와 동일함을 단정한다.
     - _요구사항 3.4, 2.3, 21.3_
 
-- [ ] 8. 공통 완성도 상태와 산출물_성격 표식
+- [x] 8. 공통 완성도 상태와 산출물_성격 표식
   - [x] 8.1 15개 패널 상태 표식 규약 적용
     - 15개 모듈_패널이 로딩·빈·오류·권한 상태와 대표 작업 제어를 갖도록 상태 표식 데이터 속성(`data-admin-module-state`, `-menu`, `-output-kind`)을 부여한다. 오류는 고정 한국어 문구 + 다시 시도(같은 대상·조건 재발행), 권한 실패는 고정 안내 + 활성 메뉴 정규_링크 복귀 재로그인 제어를 제공한다. 한 시점 상태 표식은 최대 1개, 대표 작업은 360·1280px 최초 화면에서 세로 스크롤 없이 도달 가능하게 둔다.
     - _요구사항 3.5, 3.6, 3.7, 3.9, 3.11, 3.12, 4.2, 4.3, 4.7, 16.4, 19.1_
@@ -185,7 +185,7 @@
     - **Property 3: 파생 집합 동일성** — 각 집합이 15개 원소를 갖고 순서 무관하게 레지스트리 메뉴 ID 집합과 동일하다.
     - **Validates: Requirements 2.1, 2.4, 2.7, 2.10, 21.1**
 
-- [ ] 9. 모듈_그리드 신설
+- [x] 9. 모듈_그리드 신설
   - [x] 9.1 `AdminConsoleModuleGrid` 작성
     - `apps/web/components/admin/console/AdminConsoleModuleGrid.tsx`를 신설한다. 15개 카드를 레지스트리 순서로, 표시 제목·목적 문장·섹션 이름·대표 작업 이름을 표시한다. `filterAdminConsoleMenus`를 소비하고 검색 입력(`maxLength=64`)과 섹션 필터를 AND 결합한다. 한글 IME 조합 중에는 `committedQuery`를 갱신하지 않는다(`compositionStart/End` + `onChange` 플래그 보호).
     - 표시 카드 수 변경 시 현재 수·전체 15를 포함한 문장을 `aria-live="polite"`로 200ms 이내 알린다. 결과 0건이면 빈 상태 문장과 필터 해제 제어를 표시한다. 반응형 열(767px 이하 1열·768~1279 2열·1280 이상 3열), 360px 가로 넘침 없음, 대표 작업 접근성 이름에 표시 제목+작업 이름 포함, 대시보드 지표 요약 아래 배치를 적용한다. 전환은 CSS(`motion-reduce:transition-none`)만 쓴다.
@@ -204,7 +204,7 @@
     - **Property 11: 검색 단조성** — 문자열 A와 접두사 관계 B, 동일 섹션 필터에서 B의 카드 집합이 A의 부분집합이다.
     - **Validates: Requirements 13.16**
 
-- [ ] 10. 데이터_시각화 계층 신설
+- [x] 10. 데이터_시각화 계층 신설
   - [x] 10.1 공통 카드·메타행·요약·계조 훅·상태 판별 작성
     - `apps/web/app/globals.css`에 `[data-admin-console-tone-scale="v1"]` 계조 변수 블록을 추가한다(토큰 참조만, 리터럴 없음). `apps/web/hooks/use-console-tone-scale.ts`를 신설해 `getComputedStyle`로 8개 값을 읽고 `MutationObserver`로 `dark` 토글에 반응하며 해석 전에는 recharts 도형을 렌더링하지 않는다(문자열 요약은 표시).
     - `components/admin/viz/ConsoleVizCard.tsx`, `ConsoleCardMetaRow.tsx`, `ConsoleVizSummary.tsx`와 `lib/admin/console-viz-state.ts`(`resolveConsoleVizState` 순수 함수, 판별 합집합 로딩/오류/빈/부족/정상)를 신설한다. 카드 24px 반경·1px 경계선·운영 질문 문장·근거 라벨·도형 슬롯(`aria-hidden`, 내부 초점 요소 0)·최하단 카드_메타_행(좌 24자 말줄임·우 `tabular-nums` 비축약)을 제공한다. 값 안내는 한 번에 하나, 초점 시 동일 내용, Esc 시 제거·초점 유지로 처리한다.
