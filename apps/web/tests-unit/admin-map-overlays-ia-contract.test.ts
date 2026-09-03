@@ -20,9 +20,10 @@ describe('admin map overlays IA contract', () => {
 
   test('admin console adds 지도 오버레이 with required tabs and integrations', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
+    const registrySource = source('lib/admin/console-menu-registry.ts');
 
-    expect(consoleSource).toContain('id: "map-overlays"');
-    expect(consoleSource).toContain('title: "지도 오버레이"');
+    expect(registrySource).toContain('id: "map-overlays"');
+    expect(registrySource).toContain('title: "지도 오버레이"');
     expect(consoleSource).toContain('label: "수동 오버레이"');
     expect(consoleSource).toContain('label: "트렌드 제안"');
     expect(consoleSource).toContain('label: "트렌드 실행"');

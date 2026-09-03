@@ -34,7 +34,12 @@ describe('repo design contract source', () => {
   test('current admin/home UI surfaces use documented semantic typography tokens', () => {
     const designSource = repoSource('docs/product/DESIGN.md');
     const appGlobalsSource = appSource('app/app-globals.css');
-    const adminConsoleSource = appSource('components/admin/AdminConsoleOverview.tsx');
+    const adminConsoleSource =
+      appSource('components/admin/AdminConsoleOverview.tsx') +
+      '\n' +
+      appSource('lib/admin/console-menu-registry.ts') +
+      '\n' +
+      appSource('components/admin/AdminUsersPanel.tsx');
     const adminOverviewSource = appSource('components/admin/AdminOverviewDashboard.tsx');
     const headerSource = appSource('components/layout/Header.tsx');
     const announcementPanelSource = appSource('components/announcement/AnnouncementPanel.tsx');

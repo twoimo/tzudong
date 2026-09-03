@@ -208,7 +208,12 @@ describe("admin pipeline control contract", () => {
   test("BFF forwards Idempotency-Key and dashboard gates loopback Grafana iframe", () => {
     const route = source("app/api/admin/pipeline/route.ts");
     const dashboard = source("components/admin/pipeline/AdminPipelineDashboard.tsx");
-    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    const consoleSource =
+      source("components/admin/AdminConsoleOverview.tsx") +
+      "\n" +
+      source("lib/admin/console-menu-registry.ts") +
+      "\n" +
+      source("components/admin/console/module-panel-registry.tsx");
     const proxySource = source("proxy.ts");
     const nextConfig = source("next.config.mjs");
     expect(route).toContain('"Idempotency-Key": normalized.idempotencyKey');

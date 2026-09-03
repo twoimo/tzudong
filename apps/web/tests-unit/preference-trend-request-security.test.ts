@@ -149,9 +149,11 @@ describe('preference and trend request security', () => {
     const upsertIndex = mutationSource.indexOf('.upsert(');
     const failureBranch = mutationSource.slice(readerIndex, persistIndex);
 
-    expect(routeSource).toContain('ADMIN_API_STATUS_CODES');
-    expect(routeSource).toContain('Cache-Control');
-    expect(routeSource).toContain('no-store');
+    const adminJsonSource = source('lib/admin/admin-json.ts');
+    expect(routeSource).toContain('adminJson');
+    expect(adminJsonSource).toContain('ADMIN_API_STATUS_CODES');
+    expect(adminJsonSource).toContain('Cache-Control');
+    expect(adminJsonSource).toContain('no-store');
     expect(routeSource).not.toContain('requestBody.ok ? requestBody.value : null');
     expect(routeSource).toContain('ADMIN_BODY_TOO_LARGE');
     expect(routeSource).toContain('413');
