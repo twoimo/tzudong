@@ -320,6 +320,7 @@
 - [ ] 16. 최종 검증
   - [ ] 16.1 세 검증 실행으로 실패 0·건너뜀 0 확인
     - `apps/web`에서 `bun run test:unit`과 `npm run typecheck:parity`를, 저장소 루트/`apps/web`에서 `npx playwright test`를 실행하고 실패 0건·건너뜀 0건을 확인한다. 선택(`*`) 시험 작업과 작업 10.3을 완료하지 않으면 요구사항 10-9·21-10의 전체 통과 형태에 도달하지 못하므로, 전체 통과를 주장하기 전 그 작업들이 완료되어 있어야 한다. 이 실행은 호스팅 프로덕션 상태나 법적 준수를 증명하지 않는다.
+    - 실행 기록: 요구사항 21-10의 실패 0·건너뜀 0 형태는 도달하지 않았다. `bun run test:unit` 1937 pass / 19 fail / 1 error / 0 skip. `npm run typecheck:parity` exit 1이며 native 진단은 `lib/privacy/guardian.ts`(`{"type":"exit"}`) 1파일이다. `npx playwright test`는 시험 시작 전 exit 1(기본 webServer는 :3000 점유 거부; reuse 시 `tests/release-visual.spec.ts`가 `RELEASE_VISUAL_OUTPUT_DIR` 없이 로드 단계에서 중단). 나열된 기존 결함만으로 전체 통과가 성립하지 않아 16·16.1은 체크하지 않는다.
     - _요구사항 21.10_
 
 ## Notes
