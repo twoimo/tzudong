@@ -289,8 +289,8 @@
     - `apps/web/tests-unit/nightly-regression-workflow.test.ts`의 회귀 대상 목록에 이 스펙에서 신설한 시험 파일을 등록한다. 필수 갱신이다.
     - _요구사항 21.9_
 
-- [ ] 14. 체크포인트 — 콘솔 통합 검증
-  - 모든 시험이 통과하는지 확인하고, 의문이 생기면 사용자에게 질문한다.
+- [x] 14. 체크포인트 — 콘솔 통합 검증
+  - 작업 1–13 콘솔 통합 단위 시험 17개 파일 / 131건 통과, 인접 콘솔 경로 시험 17건 통과, 실패 0. 작업 15 브라우저 스펙은 시작하지 않았다. 기존 CI 실패(`guardian.ts`, bun frozen-lockfile, `supabase-gen-types.mjs`)와 `admin-sidebar-order-hook.test.ts` placeholder, 작업 16.1 전체 `test:unit`·typecheck·playwright는 이 체크포인트에서 주장하지 않는다.
 
 - [ ] 15. 브라우저 시험 신설
   - [ ]* 15.1 모듈 활성화·수화 시험
