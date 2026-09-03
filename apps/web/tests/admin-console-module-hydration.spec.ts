@@ -1,5 +1,5 @@
 import { expect, test, type ConsoleMessage, type Page, type TestInfo } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 
@@ -7,7 +7,12 @@ import {
   E2E_ADMIN_ROUTE_BYPASS_HEADER,
   E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER,
 } from '../lib/e2e-admin-route-bypass';
+import {
+  ADMIN_CONSOLE_MENU_IDS,
+  ADMIN_CONSOLE_MENUS,
+} from '../lib/admin/console-menu-registry';
 import { gotoAndHidePopup } from './helpers';
+import { writeEvidenceIfSafe } from './helpers/evidence-guard';
 
 const ADMIN_MODULE_SMOKE_TARGETS = [
   {
@@ -79,6 +84,11 @@ const ADMIN_MODULE_SMOKE_TARGETS = [
     path: '/admin?module=llm',
     moduleId: 'llm',
     readySelector: '[aria-label="운영 보조 제안"]',
+  },
+  {
+    path: '/admin?module=pipeline',
+    moduleId: 'pipeline',
+    readySelector: '[data-admin-pipeline-dashboard="true"]',
   },
 ] as const;
 
@@ -201,18 +211,94 @@ test.describe('admin console module hydration smoke', () => {
     }
 
     expect(runtimeErrors).toEqual([]);
+    expect(visited).toHaveLength(15);
     mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
     await page.screenshot({ path: HYDRATION_SMOKE_SCREENSHOT, fullPage: false });
-    writeFileSync(
-      HYDRATION_SMOKE_TRANSCRIPT,
-      `${JSON.stringify({
+    writeEvidenceIfSafe(HYDRATION_SMOKE_TRANSCRIPT, {
         schemaVersion: 1,
         kind: 'playwright-browser-automation-report',
         visited,
         runtimeErrors,
         screenshot: HYDRATION_SMOKE_SCREENSHOT,
-      }, null, 2)}\n`,
+      });
+  });
+
+  test('activates all 15 menus with a skeleton-to-ready canvas, never a blank loading fallback', async ({ page }, testInfo) => {
+    test.setTimeout(300_000);
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await installE2EAdminShellBypass(page);
+    await page.setExtraHTTPHeaders({
+      [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
+      [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: getE2EAdminRouteBypassToken(testInfo),
+    });
+    await gotoAndHidePopup(page, '/admin');
+
+    const canvas = page.locator('#admin-console-canvas');
+    await expect(canvas).toBeVisible({ timeout: 30_000 });
+
+    const layout = page.locator('[data-admin-console-sidebar-collapsed]');
+    const toggle = page.locator('[data-admin-sidebar-collapse-toggle="true"]');
+    if ((await layout.getAttribute('data-admin-console-sidebar-collapsed')) === 'true') {
+      await toggle.click();
+    }
+    await expect(layout).toHaveAttribute('data-admin-console-sidebar-collapsed', 'false');
+
+    const transitions: Array<{
+      moduleId: string;
+      observedLoading: boolean;
+      observedReady: boolean;
+      childCount: number;
+    }> = [];
+
+    const readyByModuleId = Object.fromEntries(
+      ADMIN_MODULE_SMOKE_TARGETS.map((target) => [target.moduleId, target.readySelector]),
     );
+
+    for (const moduleId of ADMIN_CONSOLE_MENU_IDS) {
+      const title = ADMIN_CONSOLE_MENUS[moduleId].title;
+      const menuButton = page
+        .locator('[data-admin-console-menu-item-mode="desktop-sidebar"]')
+        .filter({ hasText: title })
+        .first();
+      await menuButton.click();
+
+      await expect(canvas).toHaveAttribute('data-admin-console-active-module', moduleId, {
+        timeout: 30_000,
+      });
+
+      const loadingLocator = canvas.locator(
+        `[data-admin-sidebar-module-loading-module="${moduleId}"]`,
+      );
+      const readyLocator = canvas.locator(
+        `[data-admin-module-state-menu="${moduleId}"], ${readyByModuleId[moduleId]}`,
+      );
+      await expect(loadingLocator.or(readyLocator).first()).toBeVisible({ timeout: 30_000 });
+      const observedLoading = (await loadingLocator.count()) > 0;
+      await expect(readyLocator.first()).toBeVisible({ timeout: 30_000 });
+      const childCount = await canvas.evaluate((element) => element.childElementCount);
+      expect(childCount).toBeGreaterThan(0);
+      await expect(page.locator(`[data-admin-module-header-module="${moduleId}"]`)).toBeVisible({
+        timeout: 30_000,
+      });
+
+      transitions.push({
+        moduleId,
+        observedLoading,
+        observedReady: true,
+        childCount,
+      });
+    }
+
+    expect(transitions).toHaveLength(15);
+    expect(new Set(transitions.map((entry) => entry.moduleId)).size).toBe(15);
+
+    writeEvidenceIfSafe(resolve(HYDRATION_SMOKE_ARTIFACT_DIR, 'g001-admin-console-module-activation.json'), {
+      schemaVersion: 1,
+      kind: 'playwright-browser-automation-report',
+      transitions,
+      blankLoadingFallbackBanned: true,
+    });
   });
 
   test('renders the production Recharts series, legend, and zero-value tooltip', async ({ page }, testInfo) => {
@@ -369,27 +455,23 @@ test.describe('admin console module hydration smoke', () => {
       .toBe(0);
     const measuredScrollTopAfterSelection = await canvas.evaluate((element) => element.scrollTop);
     const activeModuleIdAfterSelection = await canvas.getAttribute('data-admin-console-active-module');
-    const finalUrlAfterSelection = page.url();
 
     await menuTrigger.click();
     await expect(dropdown).toBeVisible();
     await expect(routeMenuItem).toHaveAttribute('aria-current', 'page');
     await expect(routeMenuItem).toHaveAttribute('data-admin-console-menu-item-state', 'active');
-    await expect(routeMenuItem).toHaveClass(/bg-primary/);
+    await expect(routeMenuItem).toHaveClass(/bg-muted/);
     const activeMenuObservation = await routeMenuItem.evaluate((element) => ({
       ariaCurrent: element.getAttribute('aria-current'),
       className: element.getAttribute('class'),
       dataState: element.getAttribute('data-admin-console-menu-item-state'),
-      text: element.textContent?.replace(/\s+/g, ' ').trim() ?? '',
-      visualHasPrimaryClass: element.classList.contains('bg-primary'),
+      visualHasMutedClass: element.classList.contains('bg-muted'),
     }));
     const viewport = page.viewportSize();
     await routeMenuItem.scrollIntoViewIfNeeded();
     mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
     await page.screenshot({ path: MOBILE_MENU_SCREENSHOT, fullPage: false });
-    writeFileSync(
-      MOBILE_MENU_TRANSCRIPT,
-      `${JSON.stringify({
+    writeEvidenceIfSafe(MOBILE_MENU_TRANSCRIPT, {
         schemaVersion: 1,
         kind: 'playwright-browser-automation-report',
         surface: 'web',
@@ -399,7 +481,6 @@ test.describe('admin console module hydration smoke', () => {
           activeMenuObservation,
           activeModuleIdAfterSelection,
           dropdownCountAfterSelection,
-          finalUrlAfterSelection,
           measuredScrollTopAfterSelection,
           nestedScrollObservation,
           screenshot: MOBILE_MENU_SCREENSHOT,
@@ -439,18 +520,17 @@ test.describe('admin console module hydration smoke', () => {
             timestamp: '2026-07-09T03:20:05.000Z',
             selector: '#admin-console-canvas',
             status: 'passed',
-            description: `Canvas activeModuleId=${activeModuleIdAfterSelection}, scrollTop=${measuredScrollTopAfterSelection}, url=${finalUrlAfterSelection}`,
+            description: `Canvas activeModuleId=${activeModuleIdAfterSelection}, scrollTop=${measuredScrollTopAfterSelection}`,
           },
           {
             timestamp: '2026-07-09T03:20:06.000Z',
             selector: '[data-admin-console-menu-item-mode="mobile-dropdown"][aria-label="맛집 동선 추천"]',
             status: 'passed',
-            description: `Active menu state aria-current=${activeMenuObservation.ariaCurrent}, data-state=${activeMenuObservation.dataState}, visualHasPrimaryClass=${activeMenuObservation.visualHasPrimaryClass}`,
+            description: `Active menu state aria-current=${activeMenuObservation.ariaCurrent}, data-state=${activeMenuObservation.dataState}, visualHasMutedClass=${activeMenuObservation.visualHasMutedClass}`,
           },
         ],
         screenshot: MOBILE_MENU_SCREENSHOT,
-      }, null, 2)}\n`,
-    );
+      });
 
     await page.keyboard.press('Escape');
     await expect(dropdown).toHaveCount(0);
@@ -586,9 +666,7 @@ test.describe('admin console module hydration smoke', () => {
 
     mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
     await page.screenshot({ path: STORYBOARD_RESPONSIVE_SCREENSHOT, fullPage: false });
-    writeFileSync(
-      STORYBOARD_RESPONSIVE_TRANSCRIPT,
-      `${JSON.stringify({
+    writeEvidenceIfSafe(STORYBOARD_RESPONSIVE_TRANSCRIPT, {
         schemaVersion: 1,
         kind: 'playwright-browser-automation-report',
         surface: 'web',
@@ -603,8 +681,7 @@ test.describe('admin console module hydration smoke', () => {
         },
         runtimeErrors,
         screenshot: STORYBOARD_RESPONSIVE_SCREENSHOT,
-      }, null, 2)}\n`,
-    );
+      });
 
     expect(runtimeErrors).toEqual([]);
   });
@@ -660,9 +737,7 @@ test.describe('admin console module hydration smoke', () => {
 
     mkdirSync(HYDRATION_SMOKE_ARTIFACT_DIR, { recursive: true });
     await page.screenshot({ path: INSIGHTS_STATE_SCREENSHOT, fullPage: false });
-    writeFileSync(
-      INSIGHTS_STATE_TRANSCRIPT,
-      `${JSON.stringify({
+    writeEvidenceIfSafe(INSIGHTS_STATE_TRANSCRIPT, {
         schemaVersion: 1,
         kind: 'playwright-browser-automation-report',
         surface: 'web',
@@ -674,8 +749,7 @@ test.describe('admin console module hydration smoke', () => {
         },
         runtimeErrors,
         screenshot: INSIGHTS_STATE_SCREENSHOT,
-      }, null, 2)}\n`,
-    );
+      });
 
     expect(runtimeErrors).toEqual([]);
   });
