@@ -36,6 +36,7 @@ import { getAdminEvaluationApprovalName, getAdminEvaluationDisplayName, matchesA
 import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/lib/admin-address-consistency';
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
+import { RISKY_WORK_STEPS } from '@/lib/admin/risky-work-procedure';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
 import { fetchAdminProfileSummaries } from '@/lib/admin/profile-summaries';
 import {
@@ -1323,11 +1324,13 @@ function AdminEvaluationPageWrapper({
 }: AdminEvaluationPageWrapperProps = {}) {
   return (
     <Suspense fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}>
-      <AdminEvaluationPage
-        embedded={embedded}
-        initialView={initialView}
-        initialSubmissionTab={initialSubmissionTab}
-      />
+      <div data-admin-risky-work-steps={RISKY_WORK_STEPS.join(' ')}>
+        <AdminEvaluationPage
+          embedded={embedded}
+          initialView={initialView}
+          initialSubmissionTab={initialSubmissionTab}
+        />
+      </div>
     </Suspense>
   );
 }

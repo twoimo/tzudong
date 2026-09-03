@@ -222,7 +222,10 @@ describe('privacy incident workflow contract', () => {
 
   test('Korean operator UI distinguishes drafts, decisions, deadline, and unverified external receipts', () => {
     const page = source('app/admin/privacy-incidents/page.tsx');
-    const adminOverview = source('components/admin/AdminConsoleOverview.tsx');
+    const adminOverview =
+      source('components/admin/AdminConsoleOverview.tsx') +
+      '\n' +
+      source('components/admin/console/AdminAuditEventsPanel.tsx');
 
     expect(page).toContain('개인정보 사고 담당 관리자 전용');
     expect(page).toContain('운영자 결정 입력');

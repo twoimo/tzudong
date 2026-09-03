@@ -132,7 +132,11 @@ describe('frontend unused route compatibility', () => {
 
     test('keeps the unified admin console as the canonical embedded module hub', () => {
         const adminPageSource = source('app/admin/page.tsx');
-        const adminConsoleSource = source('components/admin/AdminConsoleOverview.tsx');
+        const adminConsoleSource = [
+            source('components/admin/console/AdminConsoleModuleSkeleton.tsx'),
+            source('components/admin/AdminConsoleOverview.tsx'),
+            source('components/admin/console/module-panel-registry.tsx'),
+        ].join('\n');
         const insightsClientSource = source('app/insights/insights-client.tsx');
 
         expect(adminPageSource).toContain('<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />');

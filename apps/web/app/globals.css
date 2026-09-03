@@ -248,3 +248,16 @@ body:has([data-legal-page="true"]) {
   [data-storyboard-cut-image-shimmer="true"] {
   display: none;
 }
+
+[data-admin-console-tone-scale="v1"] {
+  --admin-tone-1: hsl(var(--foreground));
+  --admin-tone-2: hsl(var(--foreground) / 0.82);
+  --admin-tone-3: hsl(var(--foreground) / 0.66);
+  --admin-tone-4: hsl(var(--foreground) / 0.52);
+  --admin-tone-5: hsl(var(--foreground) / 0.40);
+  --admin-tone-6: hsl(var(--foreground) / 0.30);
+  --admin-status-error: hsl(var(--destructive));
+  --admin-hairline: hsl(var(--border));
+  --admin-card-radius: 24px;
+  --admin-control-radius: 12px;
+}

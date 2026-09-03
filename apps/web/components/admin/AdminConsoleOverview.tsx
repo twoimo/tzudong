@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Fragment,
@@ -18,29 +17,19 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  BarChart2,
-  Bot,
   CheckCircle2,
   ClipboardCheck,
-  ClipboardList,
   ExternalLink,
   FileDown,
-  Image as ImageIcon,
-  MessageSquareText,
   LayoutList,
   Info,
-  Layers3,
   Maximize2,
   Minimize2,
-  Route,
   ScrollText,
   RefreshCw,
   Search,
-  Store,
   MonitorPlay,
-  UsersRound,
   XCircle,
-  Workflow,
 } from "lucide-react";
 import {
   Area,
@@ -78,6 +67,7 @@ import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useConsoleToneScale } from "@/hooks/use-console-tone-scale";
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
   isAdminDashboardWidgetId,
@@ -93,6 +83,10 @@ import {
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from "@/lib/admin/pending-counts";
+import {
+  CONSOLE_CHART_AXIS_COLOR,
+  CONSOLE_CHART_GRID_COLOR,
+} from "@/lib/admin/console-tone-scale";
 import { cn } from "@/lib/utils";
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
@@ -106,10 +100,6 @@ import type {
 } from "@/lib/public-insights/treemap";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
 import {
-  getAdminAuditCoverage,
-  type AdminAuditCoverage,
-} from "@/lib/admin/audit-contract";
-import {
   buildCanonicalAdminHrefFromSearchParams,
   buildCanonicalAdminModuleHref,
   getAdminModuleIdFromSearchParams,
@@ -117,27 +107,22 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { getAdminConsoleMenu } from "@/lib/admin/console-menu-registry";
+import { RISKY_WORK_STEPS } from "@/lib/admin/risky-work-procedure";
+import { createSameQueryRetry } from "@/lib/admin/console-module-state";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
-import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 import { AdminConsoleSidebar } from "@/components/admin/console/AdminConsoleSidebar";
+import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
+import { AdminConsoleModuleGrid } from "@/components/admin/console/AdminConsoleModuleGrid";
+import { AdminConsoleOverviewVisualizations } from "@/components/admin/console/AdminConsoleOverviewVisualizations";
+import { AdminConsoleModuleSkeleton } from "@/components/admin/console/AdminConsoleModuleSkeleton";
+import {
+  AdminConsoleRegisteredModulePanel,
+  preloadAdminConsoleModule,
+} from "@/components/admin/console/module-panel-registry";
 
 type AdminModuleId = AdminConsoleRouteModuleId;
-type ConsoleModuleId = Exclude<AdminModuleId, "overview" | "routes" | "llm">;
 
-function isInlineConsoleModuleId(
-  moduleId: AdminModuleId,
-): moduleId is ConsoleModuleId {
-  return moduleId !== "overview" && moduleId !== "routes" && moduleId !== "llm";
-}
-
-const STORYBOARD_MODULE_LOADING_CUT_NOS = [1, 2, 3, 4] as const;
-const THUMBNAIL_MODULE_LOADING_TOOL_IDS = Array.from(
-  { length: 12 },
-  (_, index) => index + 1,
-);
-
-const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
 const ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY = "tzudong-admin-sidebar-collapsed";
 const SIDEBAR_LABEL_REVEAL_DELAY_MS = 120;
 
@@ -321,51 +306,6 @@ function moveAdminDashboardWidget(
   return index < 0 ? normalized : moveItemInArray(normalized, index, direction);
 }
 
-function loadAdminEvaluationModule() {
-  return import("@/app/admin/evaluations/page").then(
-    (module) => module.default.Embedded,
-  );
-}
-
-function loadAdminBannerModule() {
-  return import("@/app/admin/banners/page").then(
-    (module) => module.default.Embedded,
-  );
-}
-
-function loadAdminRestaurantRefreshHistoryModule() {
-  return import("@/components/admin/AdminRestaurantRefreshHistoryPanel").then(
-    (module) => module.AdminRestaurantRefreshHistoryPanel,
-  );
-}
-
-function loadAdminUsersModule() {
-  return import("@/components/admin/AdminUsersPanel");
-}
-
-function loadAdminStoryboardGenerator() {
-  return import("@/components/admin/storyboard/AdminStoryboardGenerator").then(
-    (module) => module.AdminStoryboardGenerator,
-  );
-}
-
-function loadAdminYoutubeThumbnailGenerator() {
-  return import(
-    "@/components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator"
-  ).then((module) => module.AdminYoutubeThumbnailGenerator);
-}
-
-function loadInsightsModule() {
-  return import("@/app/insights/insights-client");
-}
-
-function loadAdminRouteRecommendationModule() {
-  return import("@/components/admin/AdminOverviewDashboard").then(
-    (module) => module.AdminOverviewDashboard,
-  );
-}
-
-
 const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
 
 function AdminEvaluationModuleStaticShell() {
@@ -502,98 +442,8 @@ function AdminEvaluationModuleStaticShell() {
   );
 }
 
-const AdminEvaluationModule = dynamic(loadAdminEvaluationModule, {
-  ssr: false,
-  loading: () => <AdminEvaluationModuleStaticShell />,
-});
-
-const AdminBannerModule = dynamic(loadAdminBannerModule, {
-  ssr: false,
-  loading: () => null,
-});
-
-const AdminRestaurantRefreshHistoryModule = dynamic(
-  loadAdminRestaurantRefreshHistoryModule,
-  {
-    ssr: false,
-    loading: () => null,
-  },
-);
-
-const AdminUsersModule = dynamic(loadAdminUsersModule, {
-  ssr: false,
-  loading: () => null,
-});
-
-const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
-  ssr: false,
-  loading: () => null,
-});
-
-const AdminYoutubeThumbnailGenerator = dynamic(
-  loadAdminYoutubeThumbnailGenerator,
-  {
-    ssr: false,
-    loading: () => null,
-  },
-);
-
-const InsightsModule = dynamic(loadInsightsModule, {
-  ssr: false,
-  loading: () => null,
-});
-
-const AdminRouteRecommendationModule = dynamic(
-  loadAdminRouteRecommendationModule,
-  {
-    ssr: false,
-    loading: () => null,
-  },
-);
-
-const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
-  "overview",
-  "map-overlays",
-  "llm",
-  "audit",
-]);
-
-function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
-  switch (moduleId) {
-    case "overview":
-    case "llm":
-    case "audit":
-    case "map-overlays":
-      return Promise.resolve();
-    case "restaurants":
-    case "submissions":
-    case "reviews":
-      return loadAdminEvaluationModule();
-    case "restaurant-refresh-history":
-      return loadAdminRestaurantRefreshHistoryModule();
-    case "banners":
-      return loadAdminBannerModule();
-    case "storyboard":
-      return loadAdminStoryboardGenerator();
-    case "youtube-thumbnail-generator":
-      return loadAdminYoutubeThumbnailGenerator();
-    case "users":
-      return loadAdminUsersModule();
-    case "insights":
-      return loadInsightsModule();
-    case "pipeline":
-      return Promise.resolve();
-    case "routes":
-      return loadAdminRouteRecommendationModule();
-    default: {
-      const exhaustiveModuleId: never = moduleId;
-      return Promise.resolve(exhaustiveModuleId);
-    }
-  }
-}
-
 function createInitialAdminConsoleLoadedModuleIds() {
-  return new Set<AdminModuleId>(ADMIN_CONSOLE_INLINE_MODULE_IDS);
+  return new Set<AdminModuleId>();
 }
 
 
@@ -690,147 +540,6 @@ type AdminYouTubeKpiCollectionLogs = {
     error?: string | null;
   };
 };
-type AdminAuditCoverageView = AdminAuditCoverage & {
-  label?: string;
-  summary?: string;
-  source?: string;
-  sources?: string[];
-  domain?: string;
-  domains?: string[];
-  mode?: string;
-  universal?: boolean;
-};
-
-type AdminAuditEvent = {
-  id: string;
-  actorUserId: string | null;
-  targetUserId: string | null;
-  action: string;
-  status: string;
-  reasonCode: string;
-  correlationId: string | null;
-  appliedAt: string | null;
-  errorCode: string | null;
-  createdAt: string | null;
-  counts: Record<string, number>;
-  flags: Record<string, boolean>;
-};
-
-type AdminAuditEventsResponse = {
-  asOf: string;
-  source: "admin_audit_events";
-  coverage?: AdminAuditCoverageView;
-  events: AdminAuditEvent[];
-  unavailable: {
-    reason: string;
-    message: string;
-  } | null;
-};
-type AdminAuditUnavailableReason =
-  | "admin-audit-events-read-failed"
-  | "admin-audit-session-expired"
-  | "admin-audit-admin-required";
-const adminAuditFallbackCoverage =
-  getAdminAuditCoverage() as AdminAuditCoverageView;
-
-function isRecordValue(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isAdminAuditCoveragePayload(value: unknown): value is AdminAuditCoverageView {
-  return (
-    isRecordValue(value) &&
-    value.mode === "truthful-partial-domain-specific" &&
-    value.universal === false
-  );
-}
-
-function isAdminAuditUnavailablePayload(
-  value: unknown,
-): value is AdminAuditEventsResponse["unavailable"] {
-  return (
-    value === null ||
-    (isRecordValue(value) &&
-      typeof value.reason === "string" &&
-      typeof value.message === "string")
-  );
-}
-
-function isAdminAuditEventsResponsePayload(
-  value: unknown,
-): value is AdminAuditEventsResponse {
-  return (
-    isRecordValue(value) &&
-    value.source === "admin_audit_events" &&
-    Array.isArray(value.events) &&
-    value.events.length <= 50 &&
-    value.events.every((event) => (
-      isRecordValue(event) &&
-      typeof event.id === "string" &&
-      typeof event.action === "string" &&
-      typeof event.status === "string" &&
-      typeof event.reasonCode === "string" &&
-      isRecordValue(event.counts) &&
-      isRecordValue(event.flags)
-    )) &&
-    isAdminAuditCoveragePayload(value.coverage) &&
-    isAdminAuditUnavailablePayload(value.unavailable)
-  );
-}
-
-function getPayloadErrorMessage(value: unknown) {
-  return isRecordValue(value) && typeof value.error === "string"
-    ? value.error
-    : null;
-}
-
-function getAdminAuditCoverageLabel(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  return coverage?.universal === false
-    ? "부분/도메인별 감사 범위"
-    : (coverage?.label ?? "부분/도메인별 감사 범위");
-}
-
-function getAdminAuditCoverageSourceSummary(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  const sources =
-    coverage?.sources?.length
-      ? coverage.sources
-      : [
-          coverage?.primary?.source,
-          ...(coverage?.domainSpecific?.map((feed) => feed.source) ?? []),
-        ].filter((source): source is string => Boolean(source));
-  return (sources.length ? sources : ["admin_audit_events"]).join(" · ");
-}
-
-function getAdminAuditCoverageDomainSummary(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  const domains =
-    coverage?.domains?.length
-      ? coverage.domains
-      : [
-          coverage?.primary?.domain,
-          ...(coverage?.domainSpecific?.map((feed) => feed.domain) ?? []),
-        ].filter((domain): domain is string => Boolean(domain));
-  return (domains.length
-    ? domains
-    : ["admin_user_management", "restaurant_request_reviews"]
-  ).join(" · ");
-}
-
-function hasTruthfulAdminAuditCoverage(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  return (
-    coverage?.universal === false &&
-    coverage?.mode === "truthful-partial-domain-specific"
-  );
-}
-
-
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
 
@@ -1101,59 +810,11 @@ async function fetchAdminYouTubeKpiCollectionLogs(): Promise<AdminYouTubeKpiColl
   return response.json() as Promise<AdminYouTubeKpiCollectionLogs>;
 }
 
-function buildAdminAuditAuthUnavailableResponse(
-  status: number,
-): AdminAuditEventsResponse | null {
-  const reason: AdminAuditUnavailableReason | null =
-    status === 401
-      ? "admin-audit-session-expired"
-      : status === 403
-        ? "admin-audit-admin-required"
-        : null;
-
-  if (!reason) return null;
-
-  return {
-    asOf: new Date().toISOString(),
-    source: "admin_audit_events",
-    coverage: adminAuditFallbackCoverage,
-    events: [],
-    unavailable: {
-      reason,
-      message:
-        status === 401
-          ? "관리자 세션이 만료되었거나 로그인이 필요합니다. 다시 로그인한 뒤 감사 로그를 새로고침해 주세요."
-          : "현재 계정에 관리자 감사 로그를 볼 권한이 없습니다. 관리자 권한을 확인한 뒤 다시 시도해 주세요.",
-    },
-  };
-}
-async function fetchAdminAuditEvents(): Promise<AdminAuditEventsResponse> {
-  const response = await fetch("/api/admin/audit-events?limit=20", {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => null);
-
-  const authUnavailable = buildAdminAuditAuthUnavailableResponse(response.status);
-  if (authUnavailable) return authUnavailable;
-  if (!response.ok) {
-    if (isAdminAuditEventsResponsePayload(payload) && payload.unavailable) {
-      return payload;
-    }
-    throw new Error(getPayloadErrorMessage(payload) ?? "admin-audit-events-failed");
-  }
-
-  if (!isAdminAuditEventsResponsePayload(payload)) {
-    throw new Error("admin-audit-events-invalid-response");
-  }
-
-  return payload;
-}
-
 function useAdminOverviewStats(isAdmin: boolean): {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  refetch: () => void;
 } {
   const pendingCountsQuery = useQuery({
     queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
@@ -1208,6 +869,11 @@ function useAdminOverviewStats(isAdmin: boolean): {
       pendingCountsQuery.isError ||
       dashboardSummaryQuery.isError ||
       bannersQuery.isError,
+    refetch: () => {
+      void pendingCountsQuery.refetch();
+      void dashboardSummaryQuery.refetch();
+      void bannersQuery.refetch();
+    },
   };
 }
 
@@ -2607,7 +2273,7 @@ function getDashboardChangeProgress(change: number | null) {
 }
 
 const adminDashboardCardClass =
-  "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  "min-h-0 min-w-0 w-full overflow-hidden rounded-[var(--admin-card-radius)] border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
 
 const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };
 const adminDashboardScatterChartMargin = {
@@ -2617,7 +2283,7 @@ const adminDashboardScatterChartMargin = {
   left: 0,
 };
 const adminDashboardVisualizationShellClassName =
-  "min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-1.5";
+  "min-h-0 flex-1 overflow-hidden rounded-[var(--admin-card-radius)] p-1 sm:p-1.5";
 const adminDashboardChartViewportClassName =
   "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
 const adminDashboardTooltipWrapperStyle = {
@@ -2632,18 +2298,25 @@ const adminDashboardTooltipLineClassName =
   "whitespace-normal break-keep text-muted-foreground [text-wrap:pretty]";
 const adminDashboardTooltipFirstLineClassName =
   "font-extrabold text-foreground";
-const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
-const adminDashboardAxisColor = "hsl(var(--muted-foreground))";
-const adminDashboardFocusPalette = {
-  primary: "#14b8a6",
-  primarySoft: "#5eead4",
-  primaryFaint: "#99f6e4",
-  reach: "#38a5db",
-  muted: "#94a3b8",
-  mutedStrong: "#64748b",
-  warning: "#f59e0b",
-  risk: "#f43f5e",
-} as const;
+const adminDashboardGridColor = CONSOLE_CHART_GRID_COLOR;
+const adminDashboardAxisColor = CONSOLE_CHART_AXIS_COLOR;
+
+function useAdminDashboardFocusPalette() {
+  const scale = useConsoleToneScale();
+  return {
+    resolved: scale.resolved,
+    primary: scale.tones[0] || "var(--admin-tone-1)",
+    primarySoft: scale.tones[1] || "var(--admin-tone-2)",
+    primaryFaint: scale.tones[2] || "var(--admin-tone-3)",
+    reach: scale.tones[3] || "var(--admin-tone-4)",
+    muted: scale.tones[4] || "var(--admin-tone-5)",
+    mutedStrong: scale.tones[5] || "var(--admin-tone-6)",
+    warning: scale.tones[1] || "var(--admin-tone-2)",
+    risk: scale.statusError || "var(--admin-status-error)",
+    grid: scale.hairline || adminDashboardGridColor,
+    axis: scale.axis || adminDashboardAxisColor,
+  };
+}
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
@@ -3085,9 +2758,9 @@ function AdminDashboardSeriesToggle<Key extends string>({
 
 function AdminDashboardImpactRankLegend() {
   const rankLegendColors = [
-    "bg-teal-500",
-    "bg-teal-500/75",
-    "bg-teal-500/55",
+    "bg-[var(--admin-tone-1)]",
+    "bg-[var(--admin-tone-2)]",
+    "bg-[var(--admin-tone-3)]",
     "bg-muted-foreground/40",
     "bg-muted-foreground/25",
   ];
@@ -3656,7 +3329,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "engagement",
@@ -3666,7 +3339,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "engagementRate",
                       label: "참여율",
-                      dotClassName: "bg-amber-500",
+                      dotClassName: "bg-[var(--admin-tone-2)]",
                     },
                   ]}
                   visibility={DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY}
@@ -3724,7 +3397,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "likes",
@@ -3843,8 +3516,8 @@ function AdminDashboardQualityBadges({
 
   const toneClass = {
     info: "border-muted-foreground/20 bg-muted/35 text-muted-foreground",
-    warning: "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200",
-    risk: "border-rose-500/30 bg-rose-50 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
+    warning: "border-[var(--admin-tone-2)] bg-[var(--admin-tone-6)] text-[var(--admin-tone-2)]",
+    risk: "border-[var(--admin-status-error)] bg-[var(--admin-tone-6)] text-[var(--admin-status-error)]",
   } satisfies Record<AdminDashboardDataQualityBadge["severity"], string>;
 
   return (
@@ -3907,37 +3580,38 @@ function AdminDashboardKpiCard({
   isFullscreen?: boolean;
   fullscreenAction?: ReactNode;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
   const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
     sky: {
-      bar: "bg-sky-500 dark:bg-sky-400",
-      text: "text-sky-700 dark:text-sky-300",
+      bar: "bg-[var(--admin-tone-4)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.reach,
     },
     teal: {
-      bar: "bg-teal-500 dark:bg-teal-400",
-      text: "text-teal-700 dark:text-teal-300",
+      bar: "bg-[var(--admin-tone-1)]",
+      text: "text-[var(--admin-tone-1)]",
       stroke: adminDashboardFocusPalette.primary,
     },
     amber: {
-      bar: "bg-amber-500 dark:bg-amber-400",
-      text: "text-amber-700 dark:text-amber-300",
+      bar: "bg-[var(--admin-tone-2)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.warning,
     },
     rose: {
-      bar: "bg-rose-500 dark:bg-rose-400",
-      text: "text-rose-700 dark:text-rose-300",
+      bar: "bg-[var(--admin-status-error)]",
+      text: "text-[var(--admin-status-error)]",
       stroke: adminDashboardFocusPalette.risk,
     },
     neutral: {
-      bar: "bg-muted-foreground/55",
-      text: "text-muted-foreground",
+      bar: "bg-[var(--admin-tone-4)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.muted,
     },
   }[tone];
   const emphasisClass = {
     primary:
-      "border-sky-500/35 bg-sky-50/20 dark:border-sky-400/45 dark:bg-sky-950/20",
+      "border-[var(--admin-tone-4)] bg-[var(--admin-tone-6)]/20",
     supporting: undefined,
   }[emphasis];
   const cursorStrokeOpacity = emphasis === "primary" ? 0.45 : 0.32;
@@ -4060,6 +3734,8 @@ function AdminDashboardKpiCard({
                     dataKey="value"
                     stroke={toneClass.stroke}
                     strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     fill={toneClass.stroke}
                     fillOpacity={sparklineFillOpacity}
                     dot={false}
@@ -4217,12 +3893,12 @@ function AdminDashboardOpsSummaryCard({
             );
             const barTone =
               sectionIndex === 0
-                ? "bg-muted-foreground/35"
-                : "bg-rose-500 dark:bg-rose-400";
+                ? "bg-[var(--admin-tone-4)]"
+                : "bg-[var(--admin-status-error)]";
             const labelTone =
               sectionIndex === 0
                 ? "text-muted-foreground"
-                : "text-rose-700 dark:text-rose-300";
+                : "text-[var(--admin-status-error)]";
 
             return (
               <div key={section.title} className="grid min-h-0 gap-2">
@@ -4313,6 +3989,9 @@ function AdminDashboardMultiLineChart({
   seriesVisibility: AdminDashboardSeriesVisibility<AdminDashboardTrendSeriesKey>;
   totalPointCount?: number;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const isDenseChart = points.length > 80;
   const normalizeValues = (values: number[]) => {
     const maxSeriesValue = Math.max(1, ...values);
@@ -4410,6 +4089,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="조회수"
                 stroke={adminDashboardFocusPalette.primary}
                 strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
                 isAnimationActive={false}
@@ -4436,6 +4117,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="참여"
                 stroke={adminDashboardFocusPalette.muted}
                 strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
                 isAnimationActive={false}
@@ -4462,6 +4145,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="참여율"
                 stroke={adminDashboardFocusPalette.warning}
                 strokeWidth={2.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.6 }}
                 activeDot={{ r: isDenseChart ? 3 : 4.2 }}
                 isAnimationActive={false}
@@ -4498,6 +4183,9 @@ function AdminDashboardBubbleChart({
   metricMode?: "current" | "delta";
   displayLimit: number;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const topVideos = [...videos]
     .sort((a, b) => {
       if (metricMode === "delta") {
@@ -4540,8 +4228,8 @@ function AdminDashboardBubbleChart({
     adminDashboardFocusPalette.primary,
     adminDashboardFocusPalette.primarySoft,
     adminDashboardFocusPalette.primaryFaint,
-    "#cbd5e1",
-    "#e2e8f0",
+    adminDashboardFocusPalette.muted,
+    adminDashboardFocusPalette.mutedStrong,
   ];
 
   if (topVideos.length === 0) {
@@ -4691,16 +4379,16 @@ function AdminDashboardGroupedBarChart({
   const topRow = visibleRows[0];
   const rankColors = [
     {
-      barClass: "bg-teal-500 text-white dark:bg-teal-500 dark:text-white",
-      dotClass: "bg-teal-500 dark:bg-teal-400",
+      barClass: "bg-[var(--admin-tone-1)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-1)]",
     },
     {
-      barClass: "bg-teal-500/75 text-white dark:bg-teal-400/75 dark:text-white",
-      dotClass: "bg-teal-500/75 dark:bg-teal-400/75",
+      barClass: "bg-[var(--admin-tone-2)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-2)]",
     },
     {
-      barClass: "bg-teal-500/55 text-white dark:bg-teal-400/55 dark:text-white",
-      dotClass: "bg-teal-500/55 dark:bg-teal-400/55",
+      barClass: "bg-[var(--admin-tone-3)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-3)]",
     },
     {
       barClass:
@@ -4719,7 +4407,7 @@ function AdminDashboardGroupedBarChart({
       key: "viewCount",
       label: "조회수",
       labelClass:
-        "border-teal-500/25 bg-teal-50 text-foreground dark:border-teal-400/30 dark:bg-teal-950/35",
+        "border-[var(--admin-hairline)] bg-[var(--admin-tone-6)] text-foreground",
     },
     {
       seriesKey: "likes",
@@ -4911,9 +4599,9 @@ function AdminDashboardDiagnosisBoard({
   const modeLabel =
     metricMode === "delta" ? "기간 순증 평균 대비" : "기간 영상 현재 평균 대비";
   const signalBarClass = {
-    primary: "bg-teal-500",
-    warning: "bg-amber-500",
-    risk: "bg-rose-500",
+    primary: "bg-[var(--admin-tone-1)]",
+    warning: "bg-[var(--admin-tone-2)]",
+    risk: "bg-[var(--admin-status-error)]",
   } satisfies Record<AdminDashboardContentInsight["tone"], string>;
 
   const visibleInsights = insights.slice(
@@ -5043,6 +4731,9 @@ function AdminDashboardAreaChart({
 }: {
   points: AdminDashboardTrendPoint[];
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const rawChartData = points.map((point) => ({
     label: point.label,
     참여율:
@@ -5152,6 +4843,8 @@ function AdminDashboardAreaChart({
             dataKey="참여율"
             stroke={adminDashboardFocusPalette.warning}
             strokeWidth={2.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="url(#adminDashboardEngagementArea)"
             dot={{ r: 2.4 }}
             activeDot={{ r: 4.2 }}
@@ -7304,7 +6997,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "engagement",
@@ -7314,7 +7007,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "engagementRate",
                       label: "참여율",
-                      dotClassName: "bg-amber-500",
+                      dotClassName: "bg-[var(--admin-tone-2)]",
                     },
                   ]}
                   visibility={trendSeriesVisibility}
@@ -7442,7 +7135,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "likes",
@@ -7613,339 +7306,8 @@ function AdminDashboardManagementPanel({
   );
 }
 
-function GuardedApplyCard() {
-  return (
-    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-lg">안전 적용 원칙</CardTitle>
-          <Badge variant="outline" className="border-primary/30 text-primary">
-            관리자 확인 필수
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {guardedSteps.map((step, index) => (
-            <div key={step} className="flex items-center gap-2">
-              <Badge
-                variant={index === 0 ? "default" : "secondary"}
-                className={cn(
-                  index === 0 && "bg-primary text-primary-foreground",
-                )}
-              >
-                {step}
-              </Badge>
-              {index < guardedSteps.length - 1 && (
-                <span className="text-muted-foreground">→</span>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          제보 승인, 리뷰 반려, 맛집 삭제/복구, 배너 공개처럼 사용자에게 보이는
-          변경은 적용 전에 한 번 더 확인하고, 적용 후에는 실제 상태를 다시 읽어
-          관리자에게 보여주는 흐름을 기본값으로 둡니다.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LlmSessionWorkspace() {
-  return (
-    <AdminEmbeddedModuleShell
-      menuId="llm"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <section aria-label="운영 보조 제안" className="space-y-3">
-        <div className="grid gap-3 xl:grid-cols-3">
-          {[
-            [
-              "현재 화면 요약",
-              "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
-            ],
-            [
-              "다음 검수 추천",
-              "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
-            ],
-            [
-              "위험 액션 체크리스트",
-              "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
-            ],
-          ].map(([title, description]) => (
-            <Card key={title} className="border-border bg-card/95 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-          <GuardedApplyCard />
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
-                운영 원칙
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
-              <p>
-                2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
-                수행하지 않습니다.
-              </p>
-              <p>
-                3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
-                거칩니다.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    </AdminEmbeddedModuleShell>
-  );
-}
-
-function getAdminAuditActionLabel(action: string) {
-  switch (action) {
-    case "admin_user_created":
-      return "사용자 생성";
-    case "admin_user_profile_updated":
-      return "프로필 수정";
-    case "admin_user_role_granted":
-      return "관리자 부여";
-    case "admin_user_role_revoked":
-      return "권한 회수";
-    case "admin_user_disabled":
-      return "계정 비활성화";
-    case "admin_user_reactivated":
-      return "계정 재활성화";
-    default:
-      return action;
-  }
-}
-
-function getAdminAuditStatusClassName(status: string) {
-  switch (status) {
-    case "applied":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300";
-    case "failed":
-      return "border-destructive/20 bg-destructive/10 text-destructive";
-    default:
-      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
-  }
-}
-
-function AuditPlaceholder() {
-  const auditEventsQuery = useQuery({
-    queryKey: ["admin-audit-events", "recent"],
-    queryFn: fetchAdminAuditEvents,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-  });
-  const auditPayload = auditEventsQuery.data;
-  const events = auditPayload?.events ?? [];
-  const unavailable = auditPayload?.unavailable ?? null;
-  const coverage = auditPayload?.coverage ?? adminAuditFallbackCoverage;
-  const isAuditCoverageMissing =
-    auditPayload !== undefined && !auditPayload.coverage;
-  const hasTruthfulCoverage =
-    !isAuditCoverageMissing && hasTruthfulAdminAuditCoverage(coverage);
-  const isAuditAuthUnavailable =
-    unavailable?.reason === "admin-audit-session-expired" ||
-    unavailable?.reason === "admin-audit-admin-required";
-  const coverageBadgeLabel =
-    isAuditAuthUnavailable
-      ? "세션 확인 필요"
-      : unavailable || auditEventsQuery.isError
-        ? "읽기 확인 필요"
-        : hasTruthfulCoverage
-          ? `부분 감사 · ${events.length}개`
-          : "범위 확인 필요";
-  const adminAuditLoginHref = "/?auth=login&reason=admin&next=%2Fadmin%3Fmodule%3Daudit";
-
-  return (
-    <AdminEmbeddedModuleShell
-      menuId="audit"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <div className="min-h-[480px] space-y-3">
-        <div
-          className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
-          data-admin-audit-coverage="partial-domain-specific"
-          data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
-          data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
-          data-admin-audit-universal={coverage.universal ? "true" : "false"}
-        >
-          <p className="font-bold text-foreground">
-            {getAdminAuditCoverageLabel(coverage)}
-          </p>
-          <p className="mt-1">
-            소스: {getAdminAuditCoverageSourceSummary(coverage)} · 도메인:{" "}
-            {getAdminAuditCoverageDomainSummary(coverage)}
-          </p>
-          <p className="mt-1">
-            admin_audit_events는 사용자 관리 감사의 현재 1차 피드이며, 맛집 추천
-            검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
-            전체 운영 변경을 포괄하는 범용 감사 로그처럼 표시하지 않습니다.
-          </p>
-        </div>
-
-        <Link
-          href="/admin/privacy-incidents"
-          className="flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
-          data-admin-privacy-incidents-link="true"
-        >
-          <span>
-            <strong className="block">개인정보 사고 대응</strong>
-            <span className="mt-1 block text-xs">
-              사람의 평가·외부 제출 기록·72시간 기준을 관리하며 자동 신고나 수리 완료를 주장하지 않습니다.
-            </span>
-          </span>
-          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
-        </Link>
-
-        {auditEventsQuery.isLoading ? (
-          <div className="space-y-2" aria-label="감사 로그 로딩 중">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-          </div>
-        ) : null}
-
-        {!auditEventsQuery.isLoading && (unavailable || auditEventsQuery.isError) ? (
-          <div
-            className={cn(
-              "rounded-2xl p-4 text-sm leading-6",
-              isAuditAuthUnavailable
-                ? "border border-destructive/20 bg-destructive/10 text-destructive"
-                : "border border-amber-200 bg-amber-50/80 text-amber-900",
-            )}
-            role="status"
-            data-admin-audit-unavailable-state="true"
-            data-admin-audit-session-expired-state={isAuditAuthUnavailable ? "true" : undefined}
-          >
-            <p className="font-bold">
-              {isAuditAuthUnavailable
-                ? "관리자 세션 확인이 필요합니다."
-                : "감사 로그를 읽지 못했습니다."}
-            </p>
-            <p className="mt-1">
-              {unavailable?.message ??
-                "관리자 감사 로그 API 또는 데이터베이스 권한을 확인해 주세요."}
-            </p>
-            {isAuditAuthUnavailable ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => {
-                    window.location.assign(adminAuditLoginHref);
-                  }}
-                >
-                  다시 로그인하기
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-destructive/30 bg-background text-destructive hover:bg-destructive/10"
-                  onClick={() => auditEventsQuery.refetch()}
-                >
-                  감사 로그 다시 확인
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {!auditEventsQuery.isLoading && !unavailable && !auditEventsQuery.isError && events.length === 0 ? (
-          <div
-            className="rounded-2xl border border-border bg-muted/25 p-4 text-center text-sm leading-6 text-muted-foreground"
-            role="status"
-            data-admin-audit-empty-state="true"
-          >
-            아직 표시할 사용자 관리 감사 이벤트가 없습니다. 새 사용자 생성이나 권한 변경을 적용하면
-            부분 감사 범위 안에서 intent → applied/failed 순서로 이 영역에 표시됩니다.
-          </div>
-        ) : null}
-
-        {events.length > 0 ? (
-          <ol
-            className="divide-y divide-border overflow-hidden rounded-2xl border border-border"
-            data-admin-audit-event-list="admin_audit_events"
-          >
-            {events.map((event) => (
-              <li key={event.id} className="bg-background p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">
-                      {getAdminAuditActionLabel(event.action)}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {formatDashboardDateTime(event.createdAt)}
-                      {event.reasonCode ? ` · ${event.reasonCode}` : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px]",
-                      getAdminAuditStatusClassName(event.status),
-                    )}
-                  >
-                    {event.status}
-                  </Badge>
-                </div>
-                <dl className="mt-2 grid gap-1 text-[11px] leading-5 text-muted-foreground sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-foreground">감사 ID</dt>
-                    <dd className="break-all font-mono">{event.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">대상</dt>
-                    <dd className="break-all font-mono">{event.targetUserId ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">범위</dt>
-                    <dd className="break-all font-mono">
-                      admin_user_management · admin_audit_events
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">적용 시각</dt>
-                    <dd className="break-all font-mono">
-                      {event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">상관 ID</dt>
-                    <dd className="break-all font-mono">{event.correlationId ?? "—"}</dd>
-                  </div>
-                  {event.errorCode ? (
-                    <div className="sm:col-span-2">
-                      <dt className="font-semibold text-destructive">오류 코드</dt>
-                      <dd className="break-all font-mono text-destructive">{event.errorCode}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </li>
-            ))}
-          </ol>
-        ) : null}
-      </div>
-    </AdminEmbeddedModuleShell>
-  );
-}
+export { AdminOpsAssistPanel as AdminLlmWorkspacePanel } from "@/components/admin/console/AdminOpsAssistPanel";
+export { AdminAuditEventsPanel as AdminAuditCanvasPanel } from "@/components/admin/console/AdminAuditEventsPanel";
 
 type AdminMapOverlayTabId = "manual" | "trend-proposals" | "trend-runs";
 
@@ -7971,7 +7333,7 @@ const ADMIN_MAP_OVERLAY_TABS: Array<{
   },
 ];
 
-function AdminMapOverlayOperationsModule() {
+export function AdminMapOverlayOperationsModule() {
   const [activeTab, setActiveTab] = useState<AdminMapOverlayTabId>("manual");
   const activeTabConfig =
     ADMIN_MAP_OVERLAY_TABS.find((tab) => tab.id === activeTab) ??
@@ -7986,6 +7348,7 @@ function AdminMapOverlayOperationsModule() {
         className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
         aria-label="지도 오버레이 작업"
         data-admin-map-overlays-module="true"
+        data-admin-risky-work-steps={RISKY_WORK_STEPS.join(" ")}
         data-layout-primitives="panel-layout list-detail step-nav stack"
       >
         <div className="space-y-2 md:space-y-3">
@@ -8085,1069 +7448,67 @@ function AdminMapOverlayOperationsModule() {
   );
 }
 
-function InlineModulePanel({
-  moduleId,
-  initialStoryboardResult,
+
+const EMPTY_SEARCH_PARAMS = new URLSearchParams();
+
+export function AdminOverviewCanvasPanel({
+  stats,
+  isLoading,
+  hasError,
+  isAdmin,
+  onSelectModule,
 }: {
-  moduleId: ConsoleModuleId;
-  initialStoryboardResult?: StoryboardInitialResult | null;
+  stats?: AdminOverviewStats;
+  isLoading: boolean;
+  hasError: boolean;
+  isAdmin: boolean;
+  onSelectModule?: (moduleId: AdminModuleId) => void;
 }) {
-  const moduleTitle = getAdminConsoleMenu(moduleId).title;
-  if (moduleId === "audit") {
-    return <AuditPlaceholder />;
-  }
-
-  const moduleContent = (() => {
-    switch (moduleId) {
-      case "restaurants":
-        return (
-          <AdminEvaluationModule
-            key="restaurants"
-            embedded
-            initialView="evaluations"
-          />
-        );
-      case "restaurant-refresh-history":
-        return (
-          <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />
-        );
-      case "submissions":
-        return (
-          <AdminEvaluationModule
-            key="submissions"
-            embedded
-            initialView="submissions"
-            initialSubmissionTab="new"
-          />
-        );
-      case "reviews":
-        return (
-          <AdminEvaluationModule
-            key="reviews"
-            embedded
-            initialView="submissions"
-            initialSubmissionTab="reviews"
-          />
-        );
-      case "map-overlays":
-        return <AdminMapOverlayOperationsModule key="admin-map-overlays" />;
-      case "banners":
-        return <AdminBannerModule key="admin-banners" embedded />;
-      case "storyboard":
-        return (
-          <AdminStoryboardGenerator
-            key="admin-storyboard"
-            initialStoryboardResult={initialStoryboardResult}
-          />
-        );
-      case "youtube-thumbnail-generator":
-        return (
-          <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />
-        );
-      case "users":
-        return <AdminUsersModule key="admin-users" />;
-      case "insights":
-        return <InsightsModule key="admin-insights" embedded />;
-      case "pipeline":
-        return <AdminPipelineDashboard key="admin-pipeline" />;
-      default: {
-        const exhaustiveModuleId: never = moduleId;
-        return exhaustiveModuleId;
-      }
-    }
-  })();
-
-  const ownsInnerShell =
-    moduleId === "map-overlays" ||
-    moduleId === "storyboard" ||
-    moduleId === "youtube-thumbnail-generator" ||
-    moduleId === "insights";
-  const panel = ownsInnerShell ? (
-    moduleContent
-  ) : (
+  return (
     <AdminEmbeddedModuleShell
-      menuId={moduleId}
+      menuId="overview"
       contentClassName="overflow-y-auto"
     >
-      {moduleContent}
+      <AdminDashboardManagementPanel
+        stats={stats as AdminOverviewStats}
+        isLoading={isLoading}
+        hasError={hasError}
+        isAdmin={isAdmin}
+      />
+      <AdminConsoleOverviewVisualizations
+        stats={stats}
+        isLoading={isLoading}
+        hasError={hasError}
+      />
+      <AdminConsoleModuleGrid onSelectModule={onSelectModule} />
     </AdminEmbeddedModuleShell>
   );
-
-  return (
-    <section
-      aria-label={`${moduleTitle} 작업 화면`}
-      className="flex min-h-full min-w-0 flex-col md:h-full md:min-h-0"
-      data-admin-console-inline-module-frame="true"
-      data-admin-console-inline-module-id={moduleId}
-    >
-      <div
-        className={cn(
-          "min-h-[360px] flex-1 rounded-lg bg-background shadow-none md:min-h-0 md:rounded-xl md:border md:border-border md:shadow-sm",
-          "overflow-visible md:overflow-hidden",
-        )}
-        data-admin-console-inline-module-panel="true"
-      >
-        {panel}
-      </div>
-    </section>
-  );
 }
-
-type AdminConsoleCanvasSkeletonVariant =
-  | "split-list-detail"
-  | "evaluation-table"
-  | "submission-queue"
-  | "refresh-history"
-  | "banner-editor"
-  | "overlay-workspace"
-  | "user-table"
-  | "insights-grid"
-  | "route-map"
-  | "llm-workspace"
-  | "audit-log"
-  | "pipeline-ops";
-
-type AdminConsoleCanvasSkeletonModuleId = AdminModuleId | "generic";
-
-type AdminConsoleCanvasSkeletonConfig = {
-  moduleId: AdminConsoleCanvasSkeletonModuleId;
-  title: string;
-  description: string;
-  icon: typeof Store;
-  variant: AdminConsoleCanvasSkeletonVariant;
-};
-
-const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4, 5] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
-  "primary",
-  "secondary",
-  "tertiary",
-  "quaternary",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_METRICS = [
-  "metric-a",
-  "metric-b",
-  "metric-c",
-  "metric-d",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE = [
-  "queued",
-  "checking",
-  "applying",
-  "readback",
-] as const;
 
 function getAdminConsoleModuleLoadingSkeleton(
   moduleId: AdminModuleId,
   title?: string,
 ) {
   if (moduleId === "overview") {
-    return <AdminDashboardManagementSkeleton />;
+    return (
+      <AdminConsoleModuleCompleteness
+        menuId="overview"
+        request={{ isLoading: true }}
+      >
+        <AdminDashboardManagementSkeleton />
+      </AdminConsoleModuleCompleteness>
+    );
   }
-
-  if (moduleId === "storyboard") {
-    return <AdminStoryboardModuleLoadingSkeleton />;
-  }
-
-  if (moduleId === "youtube-thumbnail-generator") {
-    return <AdminYoutubeThumbnailModuleLoadingSkeleton />;
-  }
-
-  return <AdminConsoleCanvasSkeleton moduleId={moduleId} title={title} />;
-}
-
-function getAdminConsoleCanvasSkeletonConfig({
-  moduleId,
-  title,
-}: {
-  moduleId: AdminConsoleCanvasSkeletonModuleId;
-  title?: string;
-}): AdminConsoleCanvasSkeletonConfig {
-  switch (moduleId) {
-    case "restaurants":
-      return {
-        moduleId,
-        title: title ?? "맛집 관리",
-        description: "검수 테이블과 세부 액션 영역을 뷰포트 안에서 준비합니다.",
-        icon: Store,
-        variant: "evaluation-table",
-      };
-    case "submissions":
-      return {
-        moduleId,
-        title: title ?? "제보 관리",
-        description: "제보·수정 요청 목록과 판정 패널을 함께 준비합니다.",
-        icon: ClipboardList,
-        variant: "submission-queue",
-      };
-    case "reviews":
-      return {
-        moduleId,
-        title: title ?? "리뷰 관리",
-        description: "리뷰 검수 큐와 증빙 확인 패널을 함께 준비합니다.",
-        icon: MessageSquareText,
-        variant: "submission-queue",
-      };
-    case "restaurant-refresh-history":
-      return {
-        moduleId,
-        title: title ?? "맛집 최신화",
-        description: "최신화 후보 목록과 변경 이력 패널을 먼저 배치합니다.",
-        icon: RefreshCw,
-        variant: "refresh-history",
-      };
-    case "map-overlays":
-      return {
-        moduleId,
-        title: title ?? "지도 오버레이",
-        description: "수동 오버레이, 트렌드 제안, 트렌드 실행 탭을 준비합니다.",
-        icon: Layers3,
-        variant: "overlay-workspace",
-      };
-    case "banners":
-      return {
-        moduleId,
-        title: title ?? "배너 관리",
-        description: "배너 목록, 미디어 미리보기, 편집 폼을 한 화면에 준비합니다.",
-        icon: ImageIcon,
-        variant: "banner-editor",
-      };
-    case "users":
-      return {
-        moduleId,
-        title: title ?? "사용자 관리",
-        description: "계정 요약 카드와 사용자 표 구조를 먼저 고정합니다.",
-        icon: UsersRound,
-        variant: "user-table",
-      };
-    case "insights":
-      return {
-        moduleId,
-        title: title ?? "핵심 인사이트",
-        description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
-        icon: BarChart2,
-        variant: "insights-grid",
-      };
-    case "pipeline":
-      return {
-        moduleId,
-        title: title ?? "크롤러 파이프라인",
-        description: "control-plane 대상 상태와 환경 칩을 준비합니다.",
-        icon: Workflow,
-        variant: "pipeline-ops",
-      };
-    case "routes":
-      return {
-        moduleId,
-        title: title ?? "맛집 동선 추천",
-        description: "지도, 후보 목록, 동선 준비도 패널을 먼저 배치합니다.",
-        icon: Route,
-        variant: "route-map",
-      };
-    case "llm":
-      return {
-        moduleId,
-        title: title ?? "운영 보조",
-        description: "읽기 전용 요약 카드와 위험 액션 체크리스트를 준비합니다.",
-        icon: Bot,
-        variant: "llm-workspace",
-      };
-    case "audit":
-      return {
-        moduleId,
-        title: title ?? "감사 로그",
-        description: "결정 기록과 상태 재확인 타임라인 구조를 준비합니다.",
-        icon: ScrollText,
-        variant: "audit-log",
-      };
-    default:
-      return {
-        moduleId: "generic",
-        title: title ?? "관리자 작업 화면",
-        description: "사이드바 메뉴 화면의 구조를 먼저 준비합니다.",
-        icon: Store,
-        variant: "split-list-detail",
-      };
-  }
-}
-
-function AdminConsoleCanvasSkeleton({
-  title,
-  moduleId = "generic",
-}: {
-  title?: string;
-  moduleId?: AdminConsoleCanvasSkeletonModuleId;
-} = {}) {
-  const config = getAdminConsoleCanvasSkeletonConfig({ moduleId, title });
-  const HeaderIcon = config.icon;
 
   return (
-    <section
-      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm md:min-h-0"
-      data-admin-console-content-loading="true"
-      data-admin-sidebar-module-loading="page-shell"
-      data-admin-sidebar-module-loading-viewport="true"
-      data-admin-sidebar-module-loading-module={config.moduleId}
-      data-admin-sidebar-module-loading-title={config.title}
-      data-admin-sidebar-module-loading-variant={config.variant}
-      role="status"
-      aria-busy="true"
-      aria-label={`${config.title} 화면 로딩 중`}
+    <AdminConsoleModuleCompleteness
+      menuId={moduleId}
+      request={{ isLoading: true }}
     >
-      <span className="sr-only">
-        {config.title} 화면의 뷰포트 기준 레이아웃을 먼저 준비하고 내부 데이터를
-        불러오는 중입니다.
-      </span>
-      <header
-        className="flex shrink-0 flex-col gap-2 border-b border-border bg-card/95 px-3 py-2 lg:flex-row lg:items-center lg:justify-between"
-        data-admin-sidebar-module-loading-header="true"
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-            <HeaderIcon className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-bold text-foreground">
-              {config.title}
-            </p>
-            <p className="truncate text-xs font-semibold text-muted-foreground">
-              {config.description}
-            </p>
-          </div>
-        </div>
-        <div
-          className="flex flex-wrap items-center gap-1.5"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-toolbar="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-7 w-20 rounded-full motion-reduce:animate-none"
-            />
-          ))}
-        </div>
-      </header>
-
-      <AdminConsoleCanvasSkeletonBody variant={config.variant} />
-    </section>
+      <AdminConsoleModuleSkeleton menuId={moduleId} title={title} />
+    </AdminConsoleModuleCompleteness>
   );
 }
-
-function AdminConsoleSkeletonMetricStrip({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
-      {ADMIN_CONSOLE_CANVAS_SKELETON_METRICS.map((metric) => (
-        <div
-          key={metric}
-          className="min-h-20 rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-        >
-          <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-6 w-24 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-2 w-full rounded-full motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminConsoleSkeletonRows({
-  count = ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.length,
-  withMedia = false,
-}: {
-  count?: number;
-  withMedia?: boolean;
-}) {
-  return (
-    <div className="divide-y divide-border">
-      {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, count).map((row) => (
-        <div
-          key={row}
-          className={cn(
-            "grid items-center gap-2 px-3 py-3",
-            withMedia
-              ? "sm:grid-cols-[56px_minmax(0,1fr)_90px]"
-              : "sm:grid-cols-[minmax(0,1fr)_80px]",
-          )}
-        >
-          {withMedia ? (
-            <Skeleton className="h-10 w-14 rounded-md motion-reduce:animate-none" />
-          ) : null}
-          <div className="min-w-0 space-y-1.5">
-            <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminConsoleCanvasSkeletonBody({
-  variant,
-}: {
-  variant: AdminConsoleCanvasSkeletonVariant;
-}) {
-  if (variant === "evaluation-table" || variant === "submission-queue") {
-    return (
-      <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-evaluation="viewport-table"
-      >
-        <AdminConsoleSkeletonMetricStrip className="xl:grid-cols-5" />
-        <section
-          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(5,78px)_112px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-20 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} withMedia />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "refresh-history") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-refresh-history="viewport-split"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 md:grid-cols-2"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-full min-h-28 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "banner-editor") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-banners="viewport-editor"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={5} withMedia />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.8fr)]"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <div className="space-y-2">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, 5).map((row) => (
-              <Skeleton
-                key={row}
-                className="h-10 rounded-lg motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "user-table") {
-    return (
-      <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-users="viewport-table"
-      >
-        <AdminConsoleSkeletonMetricStrip />
-        <section
-          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_96px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-24 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "insights-grid") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-insights="viewport-charts"
-      >
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <AdminConsoleSkeletonMetricStrip />
-          <Skeleton className="min-h-72 flex-1 rounded-2xl motion-reduce:animate-none" />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <AdminConsoleSkeletonRows count={4} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "route-map") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-routes="viewport-map"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="h-full min-h-96 rounded-2xl motion-reduce:animate-none" />
-        </section>
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "llm-workspace" || variant === "audit-log") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-ops="viewport-cards"
-      >
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE.map((item) => (
-            <div key={item} className="rounded-xl border border-border/70 p-3">
-              <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-3 h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-2 h-3 w-4/5 rounded-full motion-reduce:animate-none" />
-            </div>
-          ))}
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
-      data-admin-sidebar-module-loading-grid="true"
-    >
-      <section
-        className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
-        aria-hidden="true"
-        data-admin-sidebar-module-loading-list="true"
-      >
-        <div className="border-b border-border bg-muted/30 px-3 py-2">
-          <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-        </div>
-        <AdminConsoleSkeletonRows count={5} />
-      </section>
-
-      <section
-        className="min-h-[360px] overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:min-h-0"
-        aria-hidden="true"
-        data-admin-sidebar-module-loading-detail="true"
-      >
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-24 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-          <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AdminStoryboardModuleLoadingSkeleton() {
-  return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2"
-      data-admin-console-content-loading="true"
-      data-admin-storyboard-generator-loading="true"
-      data-storyboard-module-loading="true"
-      data-storyboard-module-loading-layout="page-shell"
-      data-storyboard-viewport-fit="bounded"
-      style={{
-        height: "calc(var(--full-height, 100vh) - 2rem)",
-        maxHeight: "100%",
-        minHeight: 0,
-      }}
-      role="status"
-      aria-busy="true"
-      aria-label="스토리보드 생성 화면 로딩 중"
-    >
-      <div
-        className="grid h-full min-h-0 gap-3 overflow-hidden"
-        data-storyboard-desktop-split-layout="inline-grid"
-        data-storyboard-module-loading-grid="true"
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
-        }}
-      >
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
-          aria-label="스토리보드 도우미 준비 영역"
-          data-storyboard-module-loading-chat-shell="static"
-          style={{
-            gridColumn: "var(--storyboard-input-panel-column, 2)",
-            gridRow: "var(--storyboard-input-panel-row, 1)",
-            minWidth: 0,
-          }}
-        >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <div className="h-4 w-32 rounded-full bg-muted/80" />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="h-4 w-4 rounded-full bg-muted/80" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-background"
-              data-storyboard-module-loading-chat="true"
-            >
-              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
-                <div className="max-w-[88%] space-y-2">
-                  <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="mt-2 flex gap-2">
-                    <div className="h-7 w-20 rounded-full border border-border/60 bg-background" />
-                    <div className="h-7 w-20 rounded-full bg-primary/75" />
-                  </div>
-                </div>
-                <div className="max-w-[92%] space-y-2">
-                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-              </div>
-              <div
-                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
-                data-storyboard-module-loading-composer="true"
-              >
-                <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-3">
-                  <div className="h-5 w-5 shrink-0 rounded-full bg-muted/80" />
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              스토리보드 도우미 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
-          aria-label="스토리보드 캔버스 준비 영역"
-          data-storyboard-module-loading-canvas="true"
-          style={{
-            gridColumn: "var(--storyboard-result-panel-column, 1)",
-            gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0,
-          }}
-        >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="h-4 w-12 shrink-0 rounded-full bg-muted/80" />
-              <div className="h-6 w-20 shrink-0 rounded-full border border-border/70 bg-background" />
-              <div className="h-3 w-48 max-w-[32vw] rounded-full bg-muted/70" />
-            </div>
-            <div
-              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden px-1 py-1"
-              data-storyboard-module-loading-toolbar="true"
-            >
-              <div className="h-8 w-16 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-32 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-28 shrink-0 rounded-md bg-muted/70" />
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-2 pt-1">
-            <div
-              className="h-full min-h-0"
-              data-storyboard-module-loading-frame-grid="true"
-              aria-hidden="true"
-            >
-              {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
-                <div
-                  key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
-                  data-storyboard-module-loading-cut={String(cutNo)}
-                >
-                  <div className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52">
-                    <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
-                    <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
-                    <span
-                      className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-glass="true"
-                    />
-                    <span
-                      className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-shimmer="true"
-                    />
-                  </div>
-                  <div className="shrink-0 space-y-1 border-t border-border/45 bg-background/90 px-2.5 py-1.5">
-                    <div className="grid items-center gap-2 rounded-lg bg-muted/15 px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-muted/65" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-rose-100/70" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-amber-100/75" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <span className="sr-only">
-              스토리보드 캔버스 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-  );
-}
-
-function AdminYoutubeThumbnailModuleLoadingSkeleton() {
-  return (
-    <section
-      className="relative flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
-      data-thumbnail-module-loading="true"
-      data-thumbnail-module-loading-layout="page-shell"
-      data-thumbnail-module-loading-parity="storyboard-shell"
-      role="status"
-      aria-busy="true"
-      aria-label="유튜브 썸네일 생성 화면 로딩 중"
-    >
-      <span
-        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-background via-slate-50/72 to-slate-200/48 dark:via-slate-900/54 dark:to-slate-700/32"
-        aria-hidden="true"
-        data-thumbnail-module-loading-glass-shell="true"
-      />
-      <span
-        className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent dark:via-white/22"
-        aria-hidden="true"
-        data-thumbnail-module-loading-page-shimmer="true"
-      />
-      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <Card
-          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
-          aria-label="유튜브 썸네일 도우미 준비 영역"
-          data-thumbnail-module-loading-chat-shell="static"
-          data-thumbnail-module-loading-card-glass="chat"
-        >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/36 via-slate-100/14 to-slate-300/18 dark:from-slate-800/22 dark:via-slate-700/12 dark:to-slate-500/14"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 truncate">
-                  유튜브 썸네일 생성 도우미
-                </span>
-              </CardTitle>
-              <Badge
-                variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
-              >
-                준비 중
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/92 to-muted/32 shadow-sm"
-              data-thumbnail-module-loading-chat="true"
-              data-thumbnail-module-loading-chat-tone="neutral-storyboard"
-            >
-              <span
-                className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/42 via-slate-100/16 to-slate-300/18 dark:from-slate-800/26 dark:via-slate-700/14 dark:to-slate-600/16"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-glass="true"
-              />
-              <span
-                className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent dark:via-white/18"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-shimmer="true"
-              />
-              <div
-                className="relative z-10 min-h-0 flex-1 space-y-3 overflow-hidden p-3"
-                data-thumbnail-module-loading-chat-log="true"
-                aria-hidden="true"
-              >
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted/80">
-                    <div className="h-3.5 w-3.5 rounded-full bg-muted-foreground/20" />
-                  </div>
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-14 rounded-full bg-muted-foreground/18" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-2 shadow-sm ring-1 ring-border/60"
-                      data-thumbnail-module-loading-chat-bubble="guide"
-                    >
-                      <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
-                      <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div
-                      className="flex flex-wrap gap-1.5 pl-1"
-                      data-thumbnail-module-loading-chat-actions="outside-bubble"
-                    >
-                      <div className="h-7 w-20 rounded-full border border-border/70 bg-background/80" />
-                      <div className="h-7 w-20 rounded-full bg-muted/80" />
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className="flex justify-end gap-2"
-                  data-thumbnail-module-loading-chat-message="user"
-                >
-                  <div className="max-w-[78%] space-y-1 text-right">
-                    <div className="ml-auto h-2.5 w-5 rounded-full bg-muted-foreground/16" />
-                    <div className="rounded-2xl rounded-br-md bg-muted/70 px-3 py-2">
-                      <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/16" />
-                    </div>
-                  </div>
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                </div>
-
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-16 rounded-full bg-muted-foreground/16" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/55 px-3 py-2"
-                      data-thumbnail-module-loading-chat-bubble="assistant"
-                    >
-                      <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
-                      <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5"
-                data-thumbnail-module-loading-composer="true"
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              도우미 영역의 말풍선과 입력창을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none"
-          aria-label="유튜브 썸네일 캔버스 로딩"
-          data-thumbnail-module-loading-canvas="true"
-          data-thumbnail-module-loading-card-glass="canvas"
-        >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/34 via-slate-100/14 to-slate-300/20 dark:from-slate-800/24 dark:via-slate-700/14 dark:to-slate-600/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
-              <span className="shrink-0 whitespace-nowrap font-semibold">
-                캔버스 편집 / PNG 내보내기
-              </span>
-            </CardTitle>
-            <div className="ml-auto hidden min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1 sm:flex">
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/80" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <div
-                className="relative aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-slate-300/80 bg-gradient-to-br from-slate-100 via-slate-200 to-slate-400/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-slate-700/70 dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
-                data-thumbnail-module-loading-canvas-frame="true"
-                data-thumbnail-module-loading-canvas-aspect="16:9"
-              >
-                <span
-                  className="absolute inset-0 bg-gradient-to-br from-white/42 via-slate-200/22 to-slate-500/18"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-canvas-glass="true"
-                />
-                <span
-                  className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-shimmer="true"
-                />
-              </div>
-            </div>
-            <div
-              className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
-              data-thumbnail-module-loading-toolbar="true"
-            >
-              {THUMBNAIL_MODULE_LOADING_TOOL_IDS.map((toolId) => (
-                <div
-                  key={`thumbnail-module-loading-tool-${toolId}`}
-                  className="relative h-8 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-background/88 via-slate-50/68 to-slate-200/54 dark:via-slate-800/44 dark:to-slate-700/34"
-                >
-                  <span
-                    className="absolute inset-0 bg-gradient-to-br from-white/28 via-transparent to-slate-400/14"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-glass="true"
-                  />
-                  <span
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent dark:via-white/16"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-shimmer="true"
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <span className="sr-only">
-        유튜브 썸네일 페이지 구조와 캔버스, 채팅 도우미를 함께 준비하고
-        있습니다.
-      </span>
-    </section>
-  );
-}
-
-const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
 export function AdminConsoleOverview({
   initialStoryboardResult = null,
@@ -9171,7 +7532,21 @@ export function AdminConsoleOverview({
     stats,
     isLoading: statsLoading,
     hasError: statsHasError,
+    refetch: refetchOverviewStats,
   } = useAdminOverviewStats(canLoadAdminConsoleData);
+  const retryOverviewStats = useMemo(
+    () =>
+      createSameQueryRetry(
+        {
+          target: "/api/admin/pending-counts",
+          query: "",
+        },
+        () => {
+          refetchOverviewStats();
+        },
+      ),
+    [refetchOverviewStats],
+  );
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -9668,6 +8043,7 @@ export function AdminConsoleOverview({
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-admin-console-tone-scale="v1"
       data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
@@ -9729,38 +8105,19 @@ export function AdminConsoleOverview({
           </p>
           {isAdminCanvasBootstrapping ? (
             getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
-          ) : activeModuleId === "overview" ? (
-            <AdminEmbeddedModuleShell
-              menuId="overview"
-              contentClassName="overflow-y-auto"
-            >
-              <AdminDashboardManagementPanel
-                stats={stats}
-                isLoading={statsLoading}
-                hasError={statsHasError}
-                isAdmin={canLoadAdminConsoleData}
-              />
-            </AdminEmbeddedModuleShell>
-          ) : activeModuleId === "routes" ? (
-            <AdminEmbeddedModuleShell
-              menuId="routes"
-              contentClassName="overflow-hidden"
-            >
-              <AdminRouteRecommendationModule
-                stats={stats}
-                isLoading={statsLoading}
-                hasError={statsHasError}
-                onSelectModule={selectModule}
-              />
-            </AdminEmbeddedModuleShell>
-          ) : activeModuleId === "llm" ? (
-            <LlmSessionWorkspace />
-          ) : isInlineConsoleModuleId(activeModuleId) ? (
-            <InlineModulePanel
-              moduleId={activeModuleId}
+          ) : (
+            <AdminConsoleRegisteredModulePanel
+              menuId={activeModuleId}
+              stats={stats}
+              isLoading={statsLoading}
+              hasError={statsHasError}
+              isUnauthorized={!isShellBootstrapping && !canLoadAdminConsoleData}
+              isAdmin={canLoadAdminConsoleData}
+              onRetry={retryOverviewStats ?? undefined}
+              onSelectModule={selectModule}
               initialStoryboardResult={initialStoryboardResult}
             />
-          ) : null}
+          )}
         </section>
       </div>
     </main>

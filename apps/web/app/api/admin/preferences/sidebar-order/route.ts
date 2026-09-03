@@ -1,9 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-import {
-  ADMIN_API_STATUS_CODES,
-  type AdminApiStatusCode,
-} from "@/lib/admin/admin-api-status";
+import { adminJson, logAdminFixedError } from "@/lib/admin/admin-json";
 import { normalizeAdminSidebarOrder } from "@/lib/admin/sidebar-order";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/service-role";
@@ -34,25 +31,12 @@ function isAdminPreferenceUserIdPersistable(userId: string) {
   );
 }
 
-function adminJson(body: unknown, status: AdminApiStatusCode = 200) {
-  const nextStatus = (ADMIN_API_STATUS_CODES as readonly number[]).includes(status)
-    ? status
-    : 500;
-  return NextResponse.json(body, {
-    status: nextStatus,
-    headers: { "Cache-Control": "no-store" },
-  });
-}
-
 function logAdminPreferenceError(code: string) {
-  console.error(
-    JSON.stringify({
-      menu: MENU_DOMAIN,
-      action: ACTION_NAME,
-      code,
-      at: new Date().toISOString(),
-    }),
-  );
+  logAdminFixedError({
+    menu: MENU_DOMAIN,
+    action: ACTION_NAME,
+    code,
+  });
 }
 
 function bodyFailureResponse(

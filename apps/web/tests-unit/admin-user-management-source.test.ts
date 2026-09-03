@@ -8,12 +8,15 @@ const repoSource = (relativePath: string) => readFileSync(join(import.meta.dir, 
 describe('admin user-management source contract', () => {
   test('embeds user management as a URL-backed admin console module', () => {
     const consoleSource = source('components/admin/AdminConsoleOverview.tsx');
+    const registrySource = source('components/admin/console/module-panel-registry.tsx');
+    const menuSource = source('lib/admin/console-menu-registry.ts');
+    const routingSource = source('lib/admin/admin-module-routing.ts');
 
-    expect(consoleSource).toContain('"users"');
-    expect(consoleSource).toContain('title: "사용자 관리"');
-    expect(consoleSource).toContain('/admin?module=users');
-    expect(consoleSource).toContain('AdminUsersModule');
-    expect(consoleSource).toContain('components/admin/AdminUsersPanel');
+    expect(registrySource).toContain('"users"');
+    expect(menuSource).toContain('title: "사용자 관리"');
+    expect(routingSource).toContain('buildCanonicalAdminModuleHref');
+    expect(registrySource).toContain('AdminUsersModule');
+    expect(registrySource).toContain('components/admin/AdminUsersPanel');
     expect(consoleSource).toContain('getAdminModuleIdFromSearchParams');
     expect(consoleSource).toContain('router.replace');
     expect(consoleSource).toContain('scroll: false');
@@ -240,6 +243,44 @@ describe('admin user-management source contract', () => {
     expect(migrationSource).toContain('admin_user_preferences_insert_own_admin');
     expect(migrationSource).toContain('admin_user_preferences_update_own_admin');
     expect(migrationSource).toContain("user_roles.role = 'admin'");
+  });
+
+  test('keeps eight user display fields, completeness markers, and change output kind', () => {
+    const panelSource = source('components/admin/AdminUsersPanel.tsx');
+    const displaySource = source('lib/admin/admin-user-display.ts');
+    const completenessSource = source('components/admin/console/AdminConsoleModuleCompleteness.tsx');
+    const registrySource = source('components/admin/console/module-panel-registry.tsx');
+    const menuSource = source('lib/admin/console-menu-registry.ts');
+
+    expect(displaySource).toContain('accountId');
+    expect(displaySource).toContain('displayName');
+    expect(displaySource).toContain('role');
+    expect(displaySource).toContain('status');
+    expect(displaySource).toContain('createdAt');
+    expect(displaySource).toContain('lastLoginAt');
+    expect(displaySource).toContain('emailConfirmed');
+    expect(displaySource).toContain('emailMaskToken');
+    expect(displaySource).toContain('계정 식별자');
+    expect(displaySource).toContain('표시 이름');
+    expect(displaySource).toContain('권한 역할');
+    expect(displaySource).toContain('계정 상태');
+    expect(displaySource).toContain('계정 생성 시각');
+    expect(displaySource).toContain('최근 로그인 시각');
+    expect(displaySource).toContain('이메일 확인 여부');
+    expect(displaySource).toContain('이메일 마스킹 표식');
+    expect(panelSource).toContain('ADMIN_USER_DISPLAY_FIELDS');
+    expect(panelSource).toContain('emailMaskToken');
+    expect(panelSource).not.toContain('selectedUser.email ||');
+    expect(panelSource).not.toContain('managedUser.email ||');
+    expect(panelSource).not.toContain('{selectedUser.email}');
+    expect(panelSource).not.toContain('{managedUser.email}');
+    expect(completenessSource).toContain('data-admin-module-state={state}');
+    expect(completenessSource).toContain('"loading"');
+    expect(completenessSource).toContain('"empty"');
+    expect(completenessSource).toContain('"error"');
+    expect(registrySource).toContain('withCompleteness(\n    "users"');
+    expect(menuSource).toContain('outputKind: "변경"');
+    expect(completenessSource).toContain('data-admin-module-output-kind={getAdminConsoleModuleOutputKind(menuId)}');
   });
 
   test('does not add a separate global shortcut outside the admin console', () => {

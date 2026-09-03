@@ -22,11 +22,17 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  ADMIN_USER_DISPLAY_FIELD_LABELS,
+  ADMIN_USER_DISPLAY_FIELDS,
+} from "@/lib/admin/admin-user-display";
+import { RISKY_WORK_STEPS } from "@/lib/admin/risky-work-procedure";
+import { sanitizePrivacyValue } from "@/lib/privacy/sanitize";
 import { cn } from "@/lib/utils";
 
 type ManagedUser = {
   id: string;
-  email: string;
+  emailMaskToken: string;
   username: string;
   nickname: string;
   avatarUrl: string | null;
@@ -386,6 +392,9 @@ export default function AdminUsersPanel() {
             {['관리자 확인 필수', '자기 잠금 방지', '상태 재확인', '삭제 대신 비활성화'].map((label) => (
               <Badge key={label} variant="outline" className="max-w-full rounded-full border-primary/25 bg-background px-2.5 text-[11px] text-primary sm:text-xs">{label}</Badge>
             ))}
+            {RISKY_WORK_STEPS.map((step) => (
+              <Badge key={step} variant="secondary" className="max-w-full rounded-full px-2.5 text-[11px] sm:text-xs">{step}</Badge>
+            ))}
           </div>
         </div>
 
@@ -462,7 +471,7 @@ export default function AdminUsersPanel() {
                           aria-label={`${managedUser.nickname} 상세 보기`}
                         >
                           <span className="block truncate text-sm font-semibold text-foreground">{managedUser.nickname}</span>
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{managedUser.emailMaskToken || managedUser.id}</span>
                         </button>
                         <div className="mt-3 flex flex-wrap gap-1.5" aria-label="사용자 상태 요약">
                           <RoleBadge isAdmin={managedUser.isAdmin} />
@@ -499,7 +508,7 @@ export default function AdminUsersPanel() {
                                 aria-label={`${managedUser.nickname} 상세 보기`}
                               >
                                 <span className="block truncate font-semibold text-foreground">{managedUser.nickname}</span>
-                                <span className="block truncate text-xs text-muted-foreground">{managedUser.email || managedUser.id}</span>
+                                <span className="block truncate text-xs text-muted-foreground">{managedUser.emailMaskToken || managedUser.id}</span>
                               </button>
                             </td>
                             <td className="px-3 py-3 align-top"><RoleBadge isAdmin={managedUser.isAdmin} /></td>
@@ -559,7 +568,7 @@ export default function AdminUsersPanel() {
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-lg font-bold text-foreground">{selectedUser.nickname}</p>
-                        <p className="truncate text-sm text-muted-foreground">{selectedUser.email || selectedUser.id}</p>
+                        <p className="truncate text-sm text-muted-foreground">{selectedUser.emailMaskToken}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <RoleBadge isAdmin={selectedUser.isAdmin} />
@@ -567,11 +576,18 @@ export default function AdminUsersPanel() {
                         {isSelfSelected && <Badge variant="secondary" className="border-transparent bg-primary/10 text-primary">현재 로그인 계정</Badge>}
                       </div>
                     </div>
-                    <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                      <div><dt className="text-xs text-muted-foreground">가입일</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.createdAt)}</dd></div>
-                      <div><dt className="text-xs text-muted-foreground">최근 로그인</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.lastSignInAt)}</dd></div>
-                      <div><dt className="text-xs text-muted-foreground">사용자 ID</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedUser.id}</dd></div>
-                      <div><dt className="text-xs text-muted-foreground">비활성 만료</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.bannedUntil)}</dd></div>
+                    <dl
+                      className="mt-3 grid gap-2 text-sm sm:grid-cols-2"
+                      data-admin-user-display-fields={ADMIN_USER_DISPLAY_FIELDS.join(" ")}
+                    >
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.accountId}</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{selectedUser.id}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.displayName}</dt><dd className="mt-1 text-foreground">{selectedUser.nickname}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.role}</dt><dd className="mt-1 text-foreground">{selectedUser.roleLabel}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.status}</dt><dd className="mt-1 text-foreground">{selectedUser.statusLabel}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.createdAt}</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.createdAt)}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.lastLoginAt}</dt><dd className="mt-1 text-foreground">{formatDateTime(selectedUser.lastSignInAt)}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.emailConfirmed}</dt><dd className="mt-1 text-foreground">{selectedUser.emailConfirmedAt ? "확인됨" : "미확인"}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{ADMIN_USER_DISPLAY_FIELD_LABELS.emailMaskToken}</dt><dd className="mt-1 break-all font-mono text-xs text-foreground">{sanitizePrivacyValue(selectedUser.emailMaskToken).value as string}</dd></div>
                     </dl>
                   </div>
 

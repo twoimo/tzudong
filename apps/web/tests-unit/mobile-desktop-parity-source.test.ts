@@ -74,7 +74,11 @@ describe("mobile and desktop parity source contracts", () => {
     const consoleSource =
       source("components/admin/AdminConsoleOverview.tsx") +
       "\n" +
-      source("components/admin/console/AdminConsoleSidebar.tsx");
+      source("components/admin/console/AdminConsoleSidebar.tsx") +
+      "\n" +
+      source("components/admin/console/AdminConsoleModuleSkeleton.tsx") +
+      "\n" +
+      source("components/admin/console/module-panel-registry.tsx");
     const insightsClientSource = source("app/insights/insights-client.tsx");
 
     expect(adminPageSource).toContain("<AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />");

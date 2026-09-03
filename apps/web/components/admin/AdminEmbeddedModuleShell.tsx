@@ -7,6 +7,7 @@ import {
   getAdminConsoleMenu,
   type AdminConsoleMenuId,
 } from "@/lib/admin/console-menu-registry";
+import { buildCanonicalAdminModuleHref } from "@/lib/admin/admin-module-routing";
 import { CONSOLE_TONE_STEPS } from "@/lib/admin/console-tone-scale";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +17,48 @@ const ICON_TONE = CONSOLE_TONE_STEPS[1];
 type AdminEmbeddedModuleShellProps = {
   menuId: AdminConsoleMenuId;
   actions?: ReactNode;
+  onPrimaryAction?: () => void;
   children: ReactNode;
   className?: string;
   headerClassName?: string;
   contentClassName?: string;
   scrollOwner?: string;
 };
+
+function AdminConsolePrimaryAction({
+  menuId,
+  onPrimaryAction,
+}: {
+  menuId: AdminConsoleMenuId;
+  onPrimaryAction?: () => void;
+}) {
+  const menu = getAdminConsoleMenu(menuId);
+  const className =
+    "inline-flex shrink-0 items-center rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground";
+
+  if (onPrimaryAction) {
+    return (
+      <button
+        type="button"
+        className={className}
+        data-admin-module-primary-action={menuId}
+        onClick={onPrimaryAction}
+      >
+        {menu.primaryActionLabel}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={buildCanonicalAdminModuleHref(menuId)}
+      className={className}
+      data-admin-module-primary-action={menuId}
+    >
+      {menu.primaryActionLabel}
+    </a>
+  );
+}
 
 export function getAdminEmbeddedModuleTitleId(menuId: AdminConsoleMenuId) {
   return `admin-${menuId}-title`;
@@ -30,6 +67,7 @@ export function getAdminEmbeddedModuleTitleId(menuId: AdminConsoleMenuId) {
 export function AdminEmbeddedModuleShell({
   menuId,
   actions,
+  onPrimaryAction,
   children,
   className,
   headerClassName,
@@ -87,14 +125,17 @@ export function AdminEmbeddedModuleShell({
               {menu.purpose}
             </div>
           </div>
-          {actions ? (
-            <div
-              className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5"
-              data-admin-module-actions="top-right"
-            >
-              {actions}
-            </div>
-          ) : null}
+          <div
+            className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5"
+            data-admin-module-actions="top-right"
+          >
+            {actions ?? (
+              <AdminConsolePrimaryAction
+                menuId={menuId}
+                onPrimaryAction={onPrimaryAction}
+              />
+            )}
+          </div>
         </div>
       </div>
       <div

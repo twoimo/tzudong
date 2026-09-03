@@ -94,6 +94,8 @@ export const CONSOLE_HAIRLINE_WIDTH_PX = 1;
 export const CONSOLE_BAR_END_RADIUS_PX = 4;
 export const CONSOLE_META_ROW_FONT_SIZE_PX = 11;
 export const CONSOLE_META_ROW_MIN_HEIGHT_PX = 16;
+export const CONSOLE_CHART_GRID_COLOR = "hsl(var(--border) / 0.55)";
+export const CONSOLE_CHART_AXIS_COLOR = "hsl(var(--muted-foreground))";
 
 export type ConsoleHslChannels = {
   readonly h: number;
