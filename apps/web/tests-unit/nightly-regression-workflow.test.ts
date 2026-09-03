@@ -1642,6 +1642,7 @@ describe("nightly regression package and source contracts", () => {
       "tests-unit/admin-console-viz-source.test.ts",
       "tests-unit/admin-console-guardrail-source.test.ts",
       "tests-unit/admin-console-theme-prelude-source.test.ts",
+      "tests-unit/admin-console-evidence-guard.test.ts",
     ] as const;
     for (const relativePath of specUnitFiles) {
       expect(read(relativePath).length).toBeGreaterThan(0);
