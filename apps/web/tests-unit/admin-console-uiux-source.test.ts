@@ -1621,17 +1621,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('emphasis?: "primary" | "supporting";');
     expect(consoleSource).toContain("data-admin-dashboard-kpi-emphasis={emphasis}");
     expect(consoleSource).toContain("data-admin-dashboard-kpi-tone={tone}");
-    expect(consoleSource).toContain("border-sky-500/35 bg-sky-50/20");
-    expect(consoleSource).toContain("dark:border-sky-400/45 dark:bg-sky-950/20");
+    expect(consoleSource).toContain("border-[var(--admin-tone-4)] bg-[var(--admin-tone-6)]/20");
     expect(consoleSource).toContain("toneClass.text");
-    expect(consoleSource).toContain("dark:text-sky-300");
-    expect(consoleSource).toContain("dark:text-rose-300");
-    expect(consoleSource).toContain("dark:text-amber-300");
-    expect(consoleSource).toContain("dark:text-teal-300");
+    expect(consoleSource).toContain("bg-[var(--admin-tone-4)]");
+    expect(consoleSource).toContain("text-[var(--admin-status-error)]");
     expect(consoleSource).toContain("dark:bg-muted/35");
-    expect(consoleSource).toContain("dark:text-white");
     expect(consoleSource).not.toContain("dark:text-slate-950");
-    expect(consoleSource).toContain("bg-teal-500 text-white dark:bg-teal-500 dark:text-white");
+    expect(consoleSource).toContain("bg-[var(--admin-tone-1)] text-[var(--card)]");
     expect(consoleSource).toContain("bg-muted-foreground/42 text-foreground");
     expect(consoleSource).toContain("text-[11px] font-black leading-none");
     expect(consoleSource).toContain(
@@ -1733,12 +1729,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("textClassName?: string");
     expect(consoleSource).not.toContain("option.textClassName");
     expect(consoleSource).toContain(
-      "border-teal-500/25 bg-teal-50 text-foreground",
+      "border-[var(--admin-hairline)] bg-[var(--admin-tone-6)] text-foreground",
     );
     expect(consoleSource).toContain(
       "border-border bg-muted/35 text-muted-foreground dark:bg-muted/20",
     );
-    expect(consoleSource).toContain('dotClassName: "bg-amber-500"');
+    expect(consoleSource).toContain('dotClassName: "bg-[var(--admin-tone-2)]"');
     expect(consoleSource).toContain('dotClassName: "bg-muted-foreground/45"');
     expect(consoleSource).toContain('dotClassName: "bg-muted-foreground/30"');
     expect(consoleSource).not.toContain(
@@ -2009,7 +2005,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('dataKey="참여율최고"');
     expect(consoleSource).toContain('dataKey="참여율최저"');
     expect(consoleSource).toContain("adminDashboardFocusPalette");
-    expect(consoleSource).toContain('warning: "#f59e0b"');
+    expect(consoleSource).toContain("useAdminDashboardFocusPalette");
+    expect(consoleSource).toContain("useConsoleToneScale");
+    expect(consoleSource).not.toContain('warning: "#f59e0b"');
+    expect(consoleSource).not.toContain("#14b8a6");
+    expect(consoleSource).not.toContain("#cbd5e1");
+    expect(consoleSource).not.toContain("#e2e8f0");
     expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.primary}");
     expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.warning}");
     expect(consoleSource).toContain("stopColor={adminDashboardFocusPalette.warning}");
@@ -2729,14 +2730,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "adminDashboardVisualizationShellClassName",
     );
-    expect(consoleSource).toContain("rounded-xl p-1 sm:p-1.5");
+    expect(consoleSource).toContain("rounded-[var(--admin-card-radius)] p-1 sm:p-1.5");
     expect(consoleSource).toContain("grid content-stretch gap-2");
     expect(consoleSource).toContain(
       "grid grid-cols-[minmax(4.5rem,5.5rem)_minmax(0,1fr)_minmax(3.25rem,max-content)]",
     );
-    expect(consoleSource).toContain("text-teal-700 dark:text-teal-300");
-    expect(consoleSource).toContain("text-rose-700 dark:text-rose-300");
-    expect(consoleSource).toContain("bg-muted-foreground/35");
+    expect(consoleSource).toContain("text-[var(--admin-tone-1)]");
+    expect(consoleSource).toContain("text-[var(--admin-status-error)]");
+    expect(consoleSource).toContain("bg-[var(--admin-tone-4)]");
     const subscriberKpiSource = consoleSource.slice(
       consoleSource.lastIndexOf('widgetId="subscribers"'),
       consoleSource.lastIndexOf('widgetId="views"'),

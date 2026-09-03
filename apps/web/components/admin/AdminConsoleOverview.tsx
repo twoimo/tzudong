@@ -68,6 +68,7 @@ import { useAdBannersAdmin } from "@/hooks/use-ad-banners";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useConsoleToneScale } from "@/hooks/use-console-tone-scale";
 import {
   DEFAULT_ADMIN_DASHBOARD_WIDGET_ORDER,
   isAdminDashboardWidgetId,
@@ -83,6 +84,10 @@ import {
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from "@/lib/admin/pending-counts";
+import {
+  CONSOLE_CHART_AXIS_COLOR,
+  CONSOLE_CHART_GRID_COLOR,
+} from "@/lib/admin/console-tone-scale";
 import { cn } from "@/lib/utils";
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
@@ -113,6 +118,7 @@ import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModule
 import { AdminConsoleSidebar } from "@/components/admin/console/AdminConsoleSidebar";
 import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
 import { AdminConsoleModuleGrid } from "@/components/admin/console/AdminConsoleModuleGrid";
+import { AdminConsoleOverviewVisualizations } from "@/components/admin/console/AdminConsoleOverviewVisualizations";
 import { AdminConsoleModuleSkeleton } from "@/components/admin/console/AdminConsoleModuleSkeleton";
 import {
   AdminConsoleRegisteredModulePanel,
@@ -2462,7 +2468,7 @@ function getDashboardChangeProgress(change: number | null) {
 }
 
 const adminDashboardCardClass =
-  "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
+  "min-h-0 min-w-0 w-full overflow-hidden rounded-[var(--admin-card-radius)] border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
 
 const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };
 const adminDashboardScatterChartMargin = {
@@ -2472,7 +2478,7 @@ const adminDashboardScatterChartMargin = {
   left: 0,
 };
 const adminDashboardVisualizationShellClassName =
-  "min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-1.5";
+  "min-h-0 flex-1 overflow-hidden rounded-[var(--admin-card-radius)] p-1 sm:p-1.5";
 const adminDashboardChartViewportClassName =
   "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
 const adminDashboardTooltipWrapperStyle = {
@@ -2487,18 +2493,25 @@ const adminDashboardTooltipLineClassName =
   "whitespace-normal break-keep text-muted-foreground [text-wrap:pretty]";
 const adminDashboardTooltipFirstLineClassName =
   "font-extrabold text-foreground";
-const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
-const adminDashboardAxisColor = "hsl(var(--muted-foreground))";
-const adminDashboardFocusPalette = {
-  primary: "#14b8a6",
-  primarySoft: "#5eead4",
-  primaryFaint: "#99f6e4",
-  reach: "#38a5db",
-  muted: "#94a3b8",
-  mutedStrong: "#64748b",
-  warning: "#f59e0b",
-  risk: "#f43f5e",
-} as const;
+const adminDashboardGridColor = CONSOLE_CHART_GRID_COLOR;
+const adminDashboardAxisColor = CONSOLE_CHART_AXIS_COLOR;
+
+function useAdminDashboardFocusPalette() {
+  const scale = useConsoleToneScale();
+  return {
+    resolved: scale.resolved,
+    primary: scale.tones[0] || "var(--admin-tone-1)",
+    primarySoft: scale.tones[1] || "var(--admin-tone-2)",
+    primaryFaint: scale.tones[2] || "var(--admin-tone-3)",
+    reach: scale.tones[3] || "var(--admin-tone-4)",
+    muted: scale.tones[4] || "var(--admin-tone-5)",
+    mutedStrong: scale.tones[5] || "var(--admin-tone-6)",
+    warning: scale.tones[1] || "var(--admin-tone-2)",
+    risk: scale.statusError || "var(--admin-status-error)",
+    grid: scale.hairline || adminDashboardGridColor,
+    axis: scale.axis || adminDashboardAxisColor,
+  };
+}
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
@@ -2940,9 +2953,9 @@ function AdminDashboardSeriesToggle<Key extends string>({
 
 function AdminDashboardImpactRankLegend() {
   const rankLegendColors = [
-    "bg-teal-500",
-    "bg-teal-500/75",
-    "bg-teal-500/55",
+    "bg-[var(--admin-tone-1)]",
+    "bg-[var(--admin-tone-2)]",
+    "bg-[var(--admin-tone-3)]",
     "bg-muted-foreground/40",
     "bg-muted-foreground/25",
   ];
@@ -3511,7 +3524,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "engagement",
@@ -3521,7 +3534,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "engagementRate",
                       label: "참여율",
-                      dotClassName: "bg-amber-500",
+                      dotClassName: "bg-[var(--admin-tone-2)]",
                     },
                   ]}
                   visibility={DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY}
@@ -3579,7 +3592,7 @@ function AdminDashboardManagementSkeleton() {
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "likes",
@@ -3698,8 +3711,8 @@ function AdminDashboardQualityBadges({
 
   const toneClass = {
     info: "border-muted-foreground/20 bg-muted/35 text-muted-foreground",
-    warning: "border-amber-500/30 bg-amber-50 text-amber-800 dark:bg-amber-950/25 dark:text-amber-200",
-    risk: "border-rose-500/30 bg-rose-50 text-rose-800 dark:bg-rose-950/25 dark:text-rose-200",
+    warning: "border-[var(--admin-tone-2)] bg-[var(--admin-tone-6)] text-[var(--admin-tone-2)]",
+    risk: "border-[var(--admin-status-error)] bg-[var(--admin-tone-6)] text-[var(--admin-status-error)]",
   } satisfies Record<AdminDashboardDataQualityBadge["severity"], string>;
 
   return (
@@ -3762,37 +3775,38 @@ function AdminDashboardKpiCard({
   isFullscreen?: boolean;
   fullscreenAction?: ReactNode;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
   const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
     sky: {
-      bar: "bg-sky-500 dark:bg-sky-400",
-      text: "text-sky-700 dark:text-sky-300",
+      bar: "bg-[var(--admin-tone-4)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.reach,
     },
     teal: {
-      bar: "bg-teal-500 dark:bg-teal-400",
-      text: "text-teal-700 dark:text-teal-300",
+      bar: "bg-[var(--admin-tone-1)]",
+      text: "text-[var(--admin-tone-1)]",
       stroke: adminDashboardFocusPalette.primary,
     },
     amber: {
-      bar: "bg-amber-500 dark:bg-amber-400",
-      text: "text-amber-700 dark:text-amber-300",
+      bar: "bg-[var(--admin-tone-2)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.warning,
     },
     rose: {
-      bar: "bg-rose-500 dark:bg-rose-400",
-      text: "text-rose-700 dark:text-rose-300",
+      bar: "bg-[var(--admin-status-error)]",
+      text: "text-[var(--admin-status-error)]",
       stroke: adminDashboardFocusPalette.risk,
     },
     neutral: {
-      bar: "bg-muted-foreground/55",
-      text: "text-muted-foreground",
+      bar: "bg-[var(--admin-tone-4)]",
+      text: "text-[var(--admin-tone-2)]",
       stroke: adminDashboardFocusPalette.muted,
     },
   }[tone];
   const emphasisClass = {
     primary:
-      "border-sky-500/35 bg-sky-50/20 dark:border-sky-400/45 dark:bg-sky-950/20",
+      "border-[var(--admin-tone-4)] bg-[var(--admin-tone-6)]/20",
     supporting: undefined,
   }[emphasis];
   const cursorStrokeOpacity = emphasis === "primary" ? 0.45 : 0.32;
@@ -3915,6 +3929,8 @@ function AdminDashboardKpiCard({
                     dataKey="value"
                     stroke={toneClass.stroke}
                     strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                     fill={toneClass.stroke}
                     fillOpacity={sparklineFillOpacity}
                     dot={false}
@@ -4072,12 +4088,12 @@ function AdminDashboardOpsSummaryCard({
             );
             const barTone =
               sectionIndex === 0
-                ? "bg-muted-foreground/35"
-                : "bg-rose-500 dark:bg-rose-400";
+                ? "bg-[var(--admin-tone-4)]"
+                : "bg-[var(--admin-status-error)]";
             const labelTone =
               sectionIndex === 0
                 ? "text-muted-foreground"
-                : "text-rose-700 dark:text-rose-300";
+                : "text-[var(--admin-status-error)]";
 
             return (
               <div key={section.title} className="grid min-h-0 gap-2">
@@ -4168,6 +4184,9 @@ function AdminDashboardMultiLineChart({
   seriesVisibility: AdminDashboardSeriesVisibility<AdminDashboardTrendSeriesKey>;
   totalPointCount?: number;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const isDenseChart = points.length > 80;
   const normalizeValues = (values: number[]) => {
     const maxSeriesValue = Math.max(1, ...values);
@@ -4265,6 +4284,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="조회수"
                 stroke={adminDashboardFocusPalette.primary}
                 strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
                 isAnimationActive={false}
@@ -4291,6 +4312,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="참여"
                 stroke={adminDashboardFocusPalette.muted}
                 strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.4 }}
                 activeDot={{ r: isDenseChart ? 3 : 4 }}
                 isAnimationActive={false}
@@ -4317,6 +4340,8 @@ function AdminDashboardMultiLineChart({
                 dataKey="참여율"
                 stroke={adminDashboardFocusPalette.warning}
                 strokeWidth={2.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 dot={isDenseChart ? false : { r: 2.6 }}
                 activeDot={{ r: isDenseChart ? 3 : 4.2 }}
                 isAnimationActive={false}
@@ -4353,6 +4378,9 @@ function AdminDashboardBubbleChart({
   metricMode?: "current" | "delta";
   displayLimit: number;
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const topVideos = [...videos]
     .sort((a, b) => {
       if (metricMode === "delta") {
@@ -4395,8 +4423,8 @@ function AdminDashboardBubbleChart({
     adminDashboardFocusPalette.primary,
     adminDashboardFocusPalette.primarySoft,
     adminDashboardFocusPalette.primaryFaint,
-    "#cbd5e1",
-    "#e2e8f0",
+    adminDashboardFocusPalette.muted,
+    adminDashboardFocusPalette.mutedStrong,
   ];
 
   if (topVideos.length === 0) {
@@ -4546,16 +4574,16 @@ function AdminDashboardGroupedBarChart({
   const topRow = visibleRows[0];
   const rankColors = [
     {
-      barClass: "bg-teal-500 text-white dark:bg-teal-500 dark:text-white",
-      dotClass: "bg-teal-500 dark:bg-teal-400",
+      barClass: "bg-[var(--admin-tone-1)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-1)]",
     },
     {
-      barClass: "bg-teal-500/75 text-white dark:bg-teal-400/75 dark:text-white",
-      dotClass: "bg-teal-500/75 dark:bg-teal-400/75",
+      barClass: "bg-[var(--admin-tone-2)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-2)]",
     },
     {
-      barClass: "bg-teal-500/55 text-white dark:bg-teal-400/55 dark:text-white",
-      dotClass: "bg-teal-500/55 dark:bg-teal-400/55",
+      barClass: "bg-[var(--admin-tone-3)] text-[var(--card)]",
+      dotClass: "bg-[var(--admin-tone-3)]",
     },
     {
       barClass:
@@ -4574,7 +4602,7 @@ function AdminDashboardGroupedBarChart({
       key: "viewCount",
       label: "조회수",
       labelClass:
-        "border-teal-500/25 bg-teal-50 text-foreground dark:border-teal-400/30 dark:bg-teal-950/35",
+        "border-[var(--admin-hairline)] bg-[var(--admin-tone-6)] text-foreground",
     },
     {
       seriesKey: "likes",
@@ -4766,9 +4794,9 @@ function AdminDashboardDiagnosisBoard({
   const modeLabel =
     metricMode === "delta" ? "기간 순증 평균 대비" : "기간 영상 현재 평균 대비";
   const signalBarClass = {
-    primary: "bg-teal-500",
-    warning: "bg-amber-500",
-    risk: "bg-rose-500",
+    primary: "bg-[var(--admin-tone-1)]",
+    warning: "bg-[var(--admin-tone-2)]",
+    risk: "bg-[var(--admin-status-error)]",
   } satisfies Record<AdminDashboardContentInsight["tone"], string>;
 
   const visibleInsights = insights.slice(
@@ -4898,6 +4926,9 @@ function AdminDashboardAreaChart({
 }: {
   points: AdminDashboardTrendPoint[];
 }) {
+  const adminDashboardFocusPalette = useAdminDashboardFocusPalette();
+  const adminDashboardGridColor = adminDashboardFocusPalette.grid;
+  const adminDashboardAxisColor = adminDashboardFocusPalette.axis;
   const rawChartData = points.map((point) => ({
     label: point.label,
     참여율:
@@ -5007,6 +5038,8 @@ function AdminDashboardAreaChart({
             dataKey="참여율"
             stroke={adminDashboardFocusPalette.warning}
             strokeWidth={2.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="url(#adminDashboardEngagementArea)"
             dot={{ r: 2.4 }}
             activeDot={{ r: 4.2 }}
@@ -7159,7 +7192,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "engagement",
@@ -7169,7 +7202,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "engagementRate",
                       label: "참여율",
-                      dotClassName: "bg-amber-500",
+                      dotClassName: "bg-[var(--admin-tone-2)]",
                     },
                   ]}
                   visibility={trendSeriesVisibility}
@@ -7297,7 +7330,7 @@ function AdminDashboardManagementPanel({
                     {
                       key: "views",
                       label: "조회수",
-                      dotClassName: "bg-teal-500",
+                      dotClassName: "bg-[var(--admin-tone-1)]",
                     },
                     {
                       key: "likes",
@@ -7967,6 +8000,11 @@ export function AdminOverviewCanvasPanel({
         hasError={hasError}
         isAdmin={isAdmin}
       />
+      <AdminConsoleOverviewVisualizations
+        stats={stats}
+        isLoading={isLoading}
+        hasError={hasError}
+      />
       <AdminConsoleModuleGrid onSelectModule={onSelectModule} />
     </AdminEmbeddedModuleShell>
   );
@@ -8538,6 +8576,7 @@ export function AdminConsoleOverview({
     <main
       className="h-[var(--full-height,100vh)] min-h-0 min-w-0 w-full overflow-hidden bg-background font-sans text-foreground tracking-normal"
       data-admin-console-shell="true"
+      data-admin-console-tone-scale="v1"
       data-layout-primitives="fixed-sidenav-shell scroll-body-shell sidebar"
     >
       <a
