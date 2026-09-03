@@ -50,6 +50,7 @@ export function ConsoleVizCard({
       data-admin-viz-menu={binding.menuId}
       data-admin-viz-form={binding.form}
       data-admin-viz-state={state.kind}
+      data-admin-viz-series-count={String(summarySeries.length)}
     >
       <p className="text-sm font-semibold text-[var(--admin-tone-1)]">
         {binding.question}

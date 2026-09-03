@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  countableConsoleVizPoints,
   formatConsoleVizSeriesValue,
   type ConsoleVizSeries,
 } from "@/lib/admin/console-viz-state";
@@ -38,6 +39,9 @@ export function ConsoleVizSummary({
               activeKey === key && "bg-[var(--admin-tone-6)]",
             )}
             data-admin-viz-series-summary={key}
+            data-admin-viz-series-points={String(
+              countableConsoleVizPoints(item).length,
+            )}
             onMouseEnter={() => onShow({ key, label: item.label, value })}
             onMouseLeave={() => onHide(key)}
             onFocus={() => onShow({ key, label: item.label, value })}

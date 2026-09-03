@@ -262,12 +262,12 @@
     - `apps/web/tests-unit/admin-console-guardrail-source.test.ts`를 신설해 각 관리자_API 경로에서 `requireAdmin` 첫 등장이 `readBoundedJsonRequest`·`createSupabaseServiceRoleClient`·`.from(`·`fetch(`보다 앞섬, 고정 코드·상태 코드 집합·`no-store`, 금지 부류 12개 표시·기록 경로 부재, 감사 컴포넌트 이름에 자리표시 낱말 부재, 과장 감사 문구 6개 부재를 단정한다. 위험_작업_절차 미리보기·불일치·재확인·감사·만료·중복 차단을 단위로 확인한다.
     - _요구사항 17.9, 18.11, 19.7, 20.7, 20.10_
 
-- [ ] 12. 밝기 모드 선행 스크립트
-  - [ ] 12.1 첫 페인트 전 테마 적용 스크립트 추가
+- [x] 12. 밝기 모드 선행 스크립트
+  - [x] 12.1 첫 페인트 전 테마 적용 스크립트 추가
     - `apps/web/app/admin/layout.tsx`에 차단 인라인 스크립트를 추가해 `tzudong-admin-theme`를 읽고 첫 페인트 전에 `dark` 클래스를 설정한다. 저장값이 없거나 `light`·`dark`·`system`과 다르면 시스템 모드를 적용하고 그 값을 저장한다. 스크립트는 테마 문자열 1개만 다루고 금지 부류를 읽거나 기록하지 않는다.
     - _요구사항 12.4, 12.5, 12.12_
 
-  - [ ]* 12.2 밝기 모드 정보량 동등성 브라우저 시험
+  - [x]* 12.2 밝기 모드 정보량 동등성 브라우저 시험
     - `apps/web/tests/admin-console-tone-parity.spec.ts`를 신설한다. 계조 해석이 `getComputedStyle` 의존이므로 실제 브라우저에서 확인한다.
     - **Property 14: 밝기 모드 정보량 동등성** — 같은 데이터에서 라이트·다크의 계열 수·라벨 집합·계열별 점 개수가 같다. 어느 표면이라도 계열 수가 다르면 실패.
     - **Validates: Requirements 12.3, 12.11**
