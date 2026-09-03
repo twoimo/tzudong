@@ -13,8 +13,18 @@ const adminConsoleOverviewSource = () =>
   source("components/admin/AdminConsoleOverview.tsx");
 const adminConsoleSidebarSource = () =>
   source("components/admin/console/AdminConsoleSidebar.tsx");
+const adminConsoleModuleSkeletonSource = () =>
+  source("components/admin/console/AdminConsoleModuleSkeleton.tsx");
+const adminConsoleModulePanelRegistrySource = () =>
+  source("components/admin/console/module-panel-registry.tsx");
 const adminConsoleShellSource = () =>
-  adminConsoleOverviewSource() + "\n" + adminConsoleSidebarSource();
+  adminConsoleModuleSkeletonSource() +
+  "\n" +
+  adminConsoleOverviewSource() +
+  "\n" +
+  adminConsoleSidebarSource() +
+  "\n" +
+  adminConsoleModulePanelRegistrySource();
 
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -986,11 +996,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "loading: () => getAdminConsoleModuleLoadingSkeleton(",
     );
-    expect(
-      (consoleSource.match(/loading: \(\) => null/g) ?? []).length,
-    ).toBeGreaterThanOrEqual(7);
+    expect(consoleSource).not.toContain("loading: () => null");
     expect(consoleSource).toContain(
-      "loading: () => <AdminEvaluationModuleStaticShell />",
+      "loading: () => <AdminConsoleModuleSkeleton menuId=",
     );
     expect(consoleSource).toContain(
       'data-admin-sidebar-module-loading-evaluation="viewport-table"',
@@ -1236,7 +1244,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "useState<AdminModuleId>(requestedModuleId)",
     );
-    expect(consoleSource).toContain('activeModuleId === "overview" ? (');
+    expect(consoleSource).toContain("<AdminConsoleRegisteredModulePanel");
     expect(source("components/admin/AdminOverviewDashboard.tsx")).toContain(
       "backdrop-blur-[1px]",
     );
@@ -3369,9 +3377,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(consoleSource).not.toContain("const consoleModules");
     expect(consoleSource).not.toContain("type ConsoleModule =");
-    expect(consoleSource).toContain("function isInlineConsoleModuleId");
-    expect(consoleSource).toContain("const moduleTitle = getAdminConsoleMenu(moduleId).title");
-    expect(consoleSource).toContain("isInlineConsoleModuleId(activeModuleId)");
+    expect(consoleSource).toContain("ADMIN_CONSOLE_MODULE_PANELS");
+    expect(consoleSource).toContain(
+      "const moduleTitle = getAdminConsoleMenu(menuId).title",
+    );
+    expect(consoleSource).toContain("<AdminConsoleRegisteredModulePanel");
     expect(consoleSource).toContain("aria-label={`${moduleTitle} 작업 화면`}");
     expect(consoleSource).not.toContain('href: "/admin?module=banners"');
     expect(consoleSource).not.toContain('href: "/admin?module=insights"');
@@ -8466,7 +8476,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(consoleSource).not.toContain("const consoleModules");
     expect(consoleSource).not.toContain("consoleModuleById");
-    expect(consoleSource).toContain("isInlineConsoleModuleId");
+    expect(consoleSource).toContain("AdminConsoleRegisteredModulePanel");
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).toContain("getAdminModuleStateWarning");
     expect(routingSource).toContain("CONSOLE_FIXED_MESSAGES.unknownModule");

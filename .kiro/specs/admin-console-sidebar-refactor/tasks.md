@@ -163,15 +163,15 @@
     - _요구사항 2.2, 3.8, 6.7_
 
 - [ ] 7. 골격 화면과 모듈_패널 대응 추출
-  - [ ] 7.1 `AdminConsoleModuleSkeleton` 전수 대응 작성
+  - [x] 7.1 `AdminConsoleModuleSkeleton` 전수 대응 작성
     - `apps/web/components/admin/console/AdminConsoleModuleSkeleton.tsx`를 신설하고 기존 골격 화면 로직을 이동한다. 메뉴 ID → 골격 형태를 `satisfies Record<AdminConsoleMenuId, ModuleSkeletonShape>`로 선언하고, `regions`를 완료 화면 주요 영역과 1:1로 데이터 선언해 시험이 같은 값을 읽게 한다. 머리말 하단 기준선 변화 4px 이내를 유지한다.
     - _요구사항 3.3, 3.4, 3.13_
 
-  - [ ] 7.2 `module-panel-registry` 지연 로딩 대응 작성
+  - [x] 7.2 `module-panel-registry` 지연 로딩 대응 작성
     - `apps/web/components/admin/console/module-panel-registry.tsx`를 신설하고 15개 `dynamic()` 선언을 `satisfies Record<AdminConsoleMenuId, …>`로 모은다. `loading: () => null`인 7개 모듈을 `loading: () => <AdminConsoleModuleSkeleton menuId="…" />`로 교체한다. 활성 메뉴에 대응 항목이 없으면 `CONSOLE_FIXED_MESSAGES.modulePanelMissing`을 표시하고 사이드바 선택 기능을 유지한다.
     - _요구사항 2.3, 2.11, 3.4_
 
-  - [ ]* 7.3 골격·패널 대응 소스 계약 시험
+  - [x]* 7.3 골격·패널 대응 소스 계약 시험
     - `apps/web/tests-unit/admin-console-module-panel-source.test.ts`를 신설해 15개 `dynamic()` 선언 존재, `loading: () => null` 부재, 골격 대응·패널 대응 키가 15개 메뉴 ID와 동일함을 단정한다.
     - _요구사항 3.4, 2.3, 21.3_
 

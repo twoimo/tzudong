@@ -3355,10 +3355,19 @@ test('fails Python probe closed without exposing bare inherited secrets', async 
       ),
       'utf8',
     );
-    const consoleSource = readFileSync(
-      path.resolve(import.meta.dir, '../components/admin/AdminConsoleOverview.tsx'),
-      'utf8',
-    );
+    const consoleSource = [
+      readFileSync(
+        path.resolve(import.meta.dir, '../components/admin/AdminConsoleOverview.tsx'),
+        'utf8',
+      ),
+      readFileSync(
+        path.resolve(
+          import.meta.dir,
+          '../components/admin/console/module-panel-registry.tsx',
+        ),
+        'utf8',
+      ),
+    ].join('\n');
     const jobStatusRouteSource = readFileSync(
       path.resolve(
         import.meta.dir,
