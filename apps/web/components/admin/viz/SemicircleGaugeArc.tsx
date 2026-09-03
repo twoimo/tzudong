@@ -33,6 +33,50 @@ function describeArc(
   return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
+function buildGaugeArcs({
+  values,
+  labels,
+  paints,
+  cx,
+  cy,
+  radius,
+}: {
+  values: readonly number[];
+  labels: readonly string[];
+  paints: ReturnType<typeof paintConsoleSeries>["paints"];
+  cx: number;
+  cy: number;
+  radius: number;
+}) {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) {
+    return [];
+  }
+  return values
+    .reduce<
+      Array<{
+        key: string;
+        path: string;
+        paint: (typeof paints)[number];
+        cursor: number;
+      }>
+    >((arcs, value, index) => {
+      const cursor = arcs.at(-1)?.cursor ?? 180;
+      const sweep = (value / total) * 180;
+      const end = cursor - sweep;
+      return [
+        ...arcs,
+        {
+          key: labels[index] ?? String(index),
+          path: describeArc(cx, cy, radius, cursor, end),
+          paint: paints[index],
+          cursor: end,
+        },
+      ];
+    }, [])
+    .map(({ key, path, paint }) => ({ key, path, paint }));
+}
+
 export function SemicircleGaugeArc({
   binding,
   requestStatus,
@@ -52,25 +96,17 @@ export function SemicircleGaugeArc({
     const last = countableConsoleVizPoints(item).at(-1) ?? 0;
     return Math.max(0, last);
   });
-  const total = values.reduce((sum, value) => sum + value, 0);
   const cx = 120;
   const cy = 110;
   const radius = 78;
-  let cursor = 180;
-  const arcs =
-    total <= 0
-      ? []
-      : values.map((value, index) => {
-          const sweep = (value / total) * 180;
-          const start = cursor;
-          const end = cursor - sweep;
-          cursor = end;
-          return {
-            key: renderable[index]?.label ?? String(index),
-            path: describeArc(cx, cy, radius, start, end),
-            paint: paints[index],
-          };
-        });
+  const arcs = buildGaugeArcs({
+    values,
+    labels: renderable.map((item) => item.label),
+    paints,
+    cx,
+    cy,
+    radius,
+  });
 
   return (
     <ConsoleVizCard

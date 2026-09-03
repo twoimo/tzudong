@@ -16,6 +16,33 @@ import { paintConsoleSeries } from "./viz-paint";
 
 const BAR_THICKNESS_PX = 20;
 
+function buildWaterfallRows(
+  series: ReturnType<typeof getRenderableConsoleVizSeries>,
+): ReadonlyArray<{
+  readonly label: string;
+  readonly base: number;
+  readonly value: number;
+}> {
+  return series
+    .reduce<
+      Array<{ label: string; base: number; value: number; cursor: number }>
+    >((rows, item) => {
+      const cursor = rows.at(-1)?.cursor ?? 0;
+      const delta = countableConsoleVizPoints(item).at(-1) ?? 0;
+      const base = delta >= 0 ? cursor : cursor + delta;
+      return [
+        ...rows,
+        {
+          label: item.label,
+          base: Math.max(0, base),
+          value: Math.abs(delta),
+          cursor: cursor + delta,
+        },
+      ];
+    }, [])
+    .map(({ label, base, value }) => ({ label, base, value }));
+}
+
 export function WaterfallDeltaStep({
   binding,
   requestStatus,
@@ -27,17 +54,7 @@ export function WaterfallDeltaStep({
   const scale = useConsoleToneScale();
   const renderable = getRenderableConsoleVizSeries(state, binding.minimumPoints);
   const { paints } = paintConsoleSeries(2, scale.tones, scale.resolved);
-  let cursor = 0;
-  const rows = renderable.map((item) => {
-    const delta = countableConsoleVizPoints(item).at(-1) ?? 0;
-    const base = delta >= 0 ? cursor : cursor + delta;
-    cursor += delta;
-    return {
-      label: item.label,
-      base: Math.max(0, base),
-      value: Math.abs(delta),
-    };
-  });
+  const rows = buildWaterfallRows(renderable);
   const radius = getBarEndRadius(BAR_THICKNESS_PX);
 
   return (
