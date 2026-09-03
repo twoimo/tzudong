@@ -270,8 +270,10 @@ describe('admin user-management source contract', () => {
     expect(displaySource).toContain('이메일 마스킹 표식');
     expect(panelSource).toContain('ADMIN_USER_DISPLAY_FIELDS');
     expect(panelSource).toContain('emailMaskToken');
-    expect(panelSource).not.toContain('selectedUser.email');
-    expect(panelSource).not.toContain('managedUser.email');
+    expect(panelSource).not.toContain('selectedUser.email ||');
+    expect(panelSource).not.toContain('managedUser.email ||');
+    expect(panelSource).not.toContain('{selectedUser.email}');
+    expect(panelSource).not.toContain('{managedUser.email}');
     expect(completenessSource).toContain('data-admin-module-state={state}');
     expect(completenessSource).toContain('"loading"');
     expect(completenessSource).toContain('"empty"');

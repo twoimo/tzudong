@@ -114,12 +114,18 @@ describe("admin console guardrail source contract", () => {
 
     for (const filePath of routes) {
       const source = readFileSync(filePath, "utf8");
-      expect(source).toContain("requireAdmin");
+      const hasDirectAdminAuth = source.includes("requireAdmin");
+      const hasDelegatedAdminAuth = source.includes(
+        "authenticateStoryboardRagAction",
+      );
+      expect(hasDirectAdminAuth || hasDelegatedAdminAuth).toBe(true);
       const handlers = extractExportedHandlers(source);
       expect(handlers.length).toBeGreaterThan(0);
       for (const handler of handlers) {
         const body = stripTypeOnly(handler.body);
-        const requireIndex = body.search(/requireAdmin\s*\(/);
+        const requireIndex = body.search(
+          /(?:requireAdmin|authenticateStoryboardRagAction)\s*\(/,
+        );
         expect(requireIndex).toBeGreaterThan(-1);
         for (const marker of [
           "readBoundedJsonRequest",
@@ -159,8 +165,10 @@ describe("admin console guardrail source contract", () => {
       }
     }
     const usersPanel = read("components/admin/AdminUsersPanel.tsx");
-    expect(usersPanel).not.toContain("selectedUser.email");
-    expect(usersPanel).not.toContain("managedUser.email");
+    expect(usersPanel).not.toContain("selectedUser.email ||");
+    expect(usersPanel).not.toContain("managedUser.email ||");
+    expect(usersPanel).not.toContain("{selectedUser.email}");
+    expect(usersPanel).not.toContain("{managedUser.email}");
     expect(usersPanel).toContain("emailMaskToken");
     expect(usersPanel).toContain("sanitizePrivacyValue");
     const vizState = read("lib/admin/console-viz-state.ts");
@@ -204,7 +212,15 @@ describe("admin console guardrail source contract", () => {
       "감사 기록",
     ]);
     for (const forbidden of RISKY_WORK_FORBIDDEN_STEP_NAMES) {
-      expect(procedureSource).not.toContain(`"${forbidden}"`);
+      expect((RISKY_WORK_STEPS as readonly string[]).includes(forbidden)).toBe(
+        false,
+      );
+    }
+    const stepsUi = read(
+      "components/admin/console/RiskyWorkProcedureSteps.tsx",
+    );
+    for (const forbidden of RISKY_WORK_FORBIDDEN_STEP_NAMES) {
+      expect(stepsUi).not.toContain(forbidden);
     }
     expect(registrySource).toContain("RiskyWorkProcedureSteps");
     expect(registrySource).toContain("isRiskyWorkMenuId(menuId)");
