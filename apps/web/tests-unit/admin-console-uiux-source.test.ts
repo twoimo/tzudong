@@ -9408,7 +9408,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(ADMIN_CONSOLE_MENU_IDS).toHaveLength(15);
     expect(ADMIN_CONSOLE_MENU_IDS.length * 3).toBe(45);
-    expect((registrySource.match(/withCompleteness\(/g) ?? []).length).toBe(15);
+    expect((registrySource.match(/return withCompleteness\(/g) ?? []).length).toBe(
+      15,
+    );
     expect(
       (registrySource.match(/completenessLoading\("/g) ?? []).length,
     ).toBe(15);
