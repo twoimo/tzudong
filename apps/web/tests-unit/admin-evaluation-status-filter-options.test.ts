@@ -238,7 +238,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(adminOverviewSource).not.toContain('필터링: <Skeleton');
     expect(adminOverviewSource).toContain('data-admin-evaluation-dynamic-loading-shell="true"');
     expect(adminOverviewSource).toContain(
-      'loading: () => <AdminConsoleModuleSkeleton menuId="restaurants" />',
+      'loading: () => completenessLoading("restaurants")',
     );
     expect(adminOverviewSource).toContain('정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.');
     expect(adminOverviewSource).toContain('data-admin-evaluation-static-loading-controls="true"');

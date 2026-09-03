@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   ADMIN_CONSOLE_MENU_IDS,
@@ -18,6 +20,15 @@ import {
   type AdminMenuOutputKind,
 } from "../lib/admin/console-menu-registry";
 import { CONSOLE_FIXED_MESSAGES } from "../lib/admin/console-messages";
+import {
+  ADMIN_CONSOLE_MODULE_EMPTY_COPY,
+  getAdminConsoleCompletenessMenuIds,
+} from "../lib/admin/console-module-state";
+import {
+  ADMIN_CONSOLE_MODULE_IDS,
+  buildCanonicalAdminModuleHref,
+} from "../lib/admin/admin-module-routing";
+import { ADMIN_SIDEBAR_ITEM_IDS } from "../lib/admin/sidebar-order";
 import {
   CONSOLE_VIZ_BINDINGS,
   CONSOLE_VIZ_UNBOUND_MENU_IDS,
@@ -259,6 +270,102 @@ describe("admin console menu registry", () => {
       expect(message.includes("완성")).toBe(false);
       expect(message.includes("최종")).toBe(false);
     }
+  });
+
+  function uniqueSorted(values: readonly string[]): string[] {
+    return [...new Set(values)].sort();
+  }
+
+  function derivedSetEqualsRegistry(values: readonly string[]): boolean {
+    const unique = new Set(values);
+    return (
+      unique.size === ADMIN_CONSOLE_MENU_IDS.length &&
+      ADMIN_CONSOLE_MENU_IDS.every((id) => unique.has(id))
+    );
+  }
+
+  function extractObjectKeys(fileSource: string, constName: string): string[] {
+    const start = fileSource.indexOf(`export const ${constName} = {`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const afterStart = fileSource.slice(start);
+    const end = afterStart.search(/\} as const satisfies/);
+    expect(end).toBeGreaterThan(0);
+    const body = afterStart.slice(0, end);
+    const nestedFieldNames = new Set(["menuId", "regions", "variant"]);
+    return [...body.matchAll(/^\s*(?:"([^"]+)"|([A-Za-z][\w-]*))\s*:/gm)]
+      .map((match) => match[1] ?? match[2])
+      .filter((key): key is string => typeof key === "string")
+      .filter((key) => !nestedFieldNames.has(key));
+  }
+
+  // Property 3: 파생 집합 동일성
+  // Validates: Requirements 2.1, 2.4, 2.7, 2.10, 21.1
+  test("keeps derived menu-id sets equal to the registry set", () => {
+    const registryIds = uniqueSorted(ADMIN_CONSOLE_MENU_IDS);
+    const routingIds = uniqueSorted(ADMIN_CONSOLE_MODULE_IDS);
+    const sidebarIds = uniqueSorted(
+      ADMIN_CONSOLE_SECTION_LABELS.flatMap((label) =>
+        getAdminConsoleMenuIdsBySection(label),
+      ),
+    );
+    const canonicalIds = uniqueSorted(
+      ADMIN_CONSOLE_MENU_IDS.filter((id) => {
+        const href = buildCanonicalAdminModuleHref(id);
+        return href === "/admin" || href.startsWith("/admin?");
+      }),
+    );
+    const shellHeaderIds = uniqueSorted(getAdminConsoleCompletenessMenuIds());
+    const gridIds = uniqueSorted(
+      filterAdminConsoleMenus({ committedQuery: "", section: null }).map(
+        (menu) => menu.id,
+      ),
+    );
+    const orderAllowlistIds = uniqueSorted(ADMIN_SIDEBAR_ITEM_IDS);
+    const skeletonSource = readFileSync(
+      join(
+        import.meta.dir,
+        "..",
+        "components/admin/console/AdminConsoleModuleSkeleton.tsx",
+      ),
+      "utf8",
+    );
+    const panelSource = readFileSync(
+      join(
+        import.meta.dir,
+        "..",
+        "components/admin/console/module-panel-registry.tsx",
+      ),
+      "utf8",
+    );
+    const skeletonIds = uniqueSorted(
+      extractObjectKeys(skeletonSource, "ADMIN_CONSOLE_MODULE_SKELETON_SHAPES"),
+    );
+    const panelIds = uniqueSorted(
+      extractObjectKeys(panelSource, "ADMIN_CONSOLE_MODULE_PANELS"),
+    );
+    const emptyCopyIds = uniqueSorted(Object.keys(ADMIN_CONSOLE_MODULE_EMPTY_COPY));
+
+    const derivedSets = {
+      routing: routingIds,
+      sidebar: sidebarIds,
+      canonical: canonicalIds,
+      shellHeader: shellHeaderIds,
+      moduleGrid: gridIds,
+      orderAllowlist: orderAllowlistIds,
+      skeleton: skeletonIds,
+      panel: panelIds,
+      emptyCopy: emptyCopyIds,
+    } as const;
+
+    for (const [label, values] of Object.entries(derivedSets)) {
+      expect(values, label).toHaveLength(15);
+      expect(derivedSetEqualsRegistry(values), label).toBe(true);
+      expect(values, label).toEqual(registryIds);
+    }
+
+    expect(derivedSetEqualsRegistry([...registryIds, "extra-menu"])).toBe(false);
+    expect(derivedSetEqualsRegistry(registryIds.slice(1))).toBe(false);
+    expect(derivedSetEqualsRegistry([])).toBe(false);
   });
 
   test("reports damaged registry fields instead of treating them as passing", () => {

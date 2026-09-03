@@ -107,9 +107,11 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { getAdminConsoleMenu } from "@/lib/admin/console-menu-registry";
+import { createSameQueryRetry } from "@/lib/admin/console-module-state";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminConsoleSidebar } from "@/components/admin/console/AdminConsoleSidebar";
+import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
 import { AdminConsoleModuleSkeleton } from "@/components/admin/console/AdminConsoleModuleSkeleton";
 import {
   AdminConsoleRegisteredModulePanel,
@@ -1000,6 +1002,7 @@ function useAdminOverviewStats(isAdmin: boolean): {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
+  refetch: () => void;
 } {
   const pendingCountsQuery = useQuery({
     queryKey: ADMIN_PENDING_COUNTS_QUERY_KEY,
@@ -1054,6 +1057,11 @@ function useAdminOverviewStats(isAdmin: boolean): {
       pendingCountsQuery.isError ||
       dashboardSummaryQuery.isError ||
       bannersQuery.isError,
+    refetch: () => {
+      void pendingCountsQuery.refetch();
+      void dashboardSummaryQuery.refetch();
+      void bannersQuery.refetch();
+    },
   };
 }
 
@@ -7973,10 +7981,24 @@ function getAdminConsoleModuleLoadingSkeleton(
   title?: string,
 ) {
   if (moduleId === "overview") {
-    return <AdminDashboardManagementSkeleton />;
+    return (
+      <AdminConsoleModuleCompleteness
+        menuId="overview"
+        request={{ isLoading: true }}
+      >
+        <AdminDashboardManagementSkeleton />
+      </AdminConsoleModuleCompleteness>
+    );
   }
 
-  return <AdminConsoleModuleSkeleton menuId={moduleId} title={title} />;
+  return (
+    <AdminConsoleModuleCompleteness
+      menuId={moduleId}
+      request={{ isLoading: true }}
+    >
+      <AdminConsoleModuleSkeleton menuId={moduleId} title={title} />
+    </AdminConsoleModuleCompleteness>
+  );
 }
 
 export function AdminConsoleOverview({
@@ -8001,7 +8023,21 @@ export function AdminConsoleOverview({
     stats,
     isLoading: statsLoading,
     hasError: statsHasError,
+    refetch: refetchOverviewStats,
   } = useAdminOverviewStats(canLoadAdminConsoleData);
+  const retryOverviewStats = useMemo(
+    () =>
+      createSameQueryRetry(
+        {
+          target: "/api/admin/pending-counts",
+          query: "",
+        },
+        () => {
+          refetchOverviewStats();
+        },
+      ),
+    [refetchOverviewStats],
+  );
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -8565,7 +8601,9 @@ export function AdminConsoleOverview({
               stats={stats}
               isLoading={statsLoading}
               hasError={statsHasError}
+              isUnauthorized={!isShellBootstrapping && !canLoadAdminConsoleData}
               isAdmin={canLoadAdminConsoleData}
+              onRetry={retryOverviewStats ?? undefined}
               onSelectModule={selectModule}
               initialStoryboardResult={initialStoryboardResult}
             />

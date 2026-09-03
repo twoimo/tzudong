@@ -4,13 +4,19 @@ import dynamic from "next/dynamic";
 import type { ComponentType, ReactNode } from "react";
 
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
-import { AdminConsoleModuleSkeleton } from "@/components/admin/console/AdminConsoleModuleSkeleton";
+import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
 import {
   getAdminConsoleMenu,
   isAdminConsoleMenuId,
   type AdminConsoleMenuId,
 } from "@/lib/admin/console-menu-registry";
+import {
+  isAdminConsoleCanvasStatsEmpty,
+  pickHighestPendingAdminConsoleMenu,
+  resolveAdminConsolePanelRequest,
+  usesAdminConsoleCanvasStats,
+} from "@/lib/admin/console-module-state";
 import { CONSOLE_FIXED_MESSAGES } from "@/lib/admin/console-messages";
 import { cn } from "@/lib/utils";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
@@ -34,12 +40,50 @@ export type AdminConsoleModulePanelProps = {
   stats?: AdminConsoleModulePanelStats;
   isLoading?: boolean;
   hasError?: boolean;
+  isUnauthorized?: boolean;
+  isEmpty?: boolean;
   isAdmin?: boolean;
+  onRetry?: () => void;
   onSelectModule?: (moduleId: AdminConsoleMenuId) => void;
   initialStoryboardResult?: StoryboardInitialResult | null;
 };
 
 type AdminConsoleModulePanelComponent = ComponentType<AdminConsoleModulePanelProps>;
+
+function withCompleteness(
+  menuId: AdminConsoleMenuId,
+  props: AdminConsoleModulePanelProps,
+  children: ReactNode,
+) {
+  const canvasEmpty =
+    usesAdminConsoleCanvasStats(menuId) && props.stats
+      ? isAdminConsoleCanvasStatsEmpty(props.stats)
+      : false;
+  const onPrimaryAction =
+    menuId === "overview" && props.onSelectModule && props.stats
+      ? () => {
+          props.onSelectModule?.(
+            pickHighestPendingAdminConsoleMenu(props.stats!),
+          );
+        }
+      : undefined;
+
+  return (
+    <AdminConsoleModuleCompleteness
+      menuId={menuId}
+      request={resolveAdminConsolePanelRequest(menuId, {
+        isLoading: props.isLoading,
+        hasError: props.hasError,
+        isUnauthorized: props.isUnauthorized,
+        isEmpty: props.isEmpty ?? canvasEmpty,
+      })}
+      onRetry={props.onRetry}
+      onPrimaryAction={onPrimaryAction}
+    >
+      {children}
+    </AdminConsoleModuleCompleteness>
+  );
+}
 
 function ModulePanelFrame({
   menuId,
@@ -155,96 +199,103 @@ function loadAdminMapOverlayOperationsModule() {
   );
 }
 
+function completenessLoading(menuId: AdminConsoleMenuId) {
+  return (
+    <AdminConsoleModuleCompleteness
+      menuId={menuId}
+      request={{ isLoading: true }}
+    />
+  );
+}
+
 const AdminEvaluationModule = dynamic(loadAdminEvaluationModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="restaurants" />,
+  loading: () => completenessLoading("restaurants"),
 });
 
 const AdminBannerModule = dynamic(loadAdminBannerModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="banners" />,
+  loading: () => completenessLoading("banners"),
 });
 
 const AdminRestaurantRefreshHistoryModule = dynamic(
   loadAdminRestaurantRefreshHistoryModule,
   {
     ssr: false,
-    loading: () => (
-      <AdminConsoleModuleSkeleton menuId="restaurant-refresh-history" />
-    ),
+    loading: () => completenessLoading("restaurant-refresh-history"),
   },
 );
 
 const AdminUsersModule = dynamic(loadAdminUsersModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="users" />,
+  loading: () => completenessLoading("users"),
 });
 
 const AdminStoryboardGenerator = dynamic(loadAdminStoryboardGenerator, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="storyboard" />,
+  loading: () => completenessLoading("storyboard"),
 });
 
 const AdminYoutubeThumbnailGenerator = dynamic(
   loadAdminYoutubeThumbnailGenerator,
   {
     ssr: false,
-    loading: () => (
-      <AdminConsoleModuleSkeleton menuId="youtube-thumbnail-generator" />
-    ),
+    loading: () => completenessLoading("youtube-thumbnail-generator"),
   },
 );
 
 const InsightsModule = dynamic(loadInsightsModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="insights" />,
+  loading: () => completenessLoading("insights"),
 });
 
 const AdminRouteRecommendationModule = dynamic(
   loadAdminRouteRecommendationModule,
   {
     ssr: false,
-    loading: () => <AdminConsoleModuleSkeleton menuId="routes" />,
+    loading: () => completenessLoading("routes"),
   },
 );
 
 const AdminOverviewPanel = dynamic(loadAdminOverviewCanvasPanel, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="overview" />,
+  loading: () => completenessLoading("overview"),
 });
 
 const AdminLlmPanel = dynamic(loadAdminLlmWorkspacePanel, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="llm" />,
+  loading: () => completenessLoading("llm"),
 });
 
 const AdminAuditPanel = dynamic(loadAdminAuditCanvasPanel, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="audit" />,
+  loading: () => completenessLoading("audit"),
 });
 
 const AdminMapOverlaysPanel = dynamic(loadAdminMapOverlayOperationsModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="map-overlays" />,
+  loading: () => completenessLoading("map-overlays"),
 });
 
 const AdminPipelinePanel = dynamic(loadAdminPipelineModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="pipeline" />,
+  loading: () => completenessLoading("pipeline"),
 });
 
 const AdminSubmissionsPanel = dynamic(loadAdminEvaluationModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="submissions" />,
+  loading: () => completenessLoading("submissions"),
 });
 
 const AdminReviewsPanel = dynamic(loadAdminEvaluationModule, {
   ssr: false,
-  loading: () => <AdminConsoleModuleSkeleton menuId="reviews" />,
+  loading: () => completenessLoading("reviews"),
 });
 
-function AdminRestaurantsRegisteredPanel() {
-  return (
+function AdminRestaurantsRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "restaurants",
+    props,
     <ModulePanelFrame menuId="restaurants">
       <AdminEmbeddedModuleShell
         menuId="restaurants"
@@ -256,12 +307,14 @@ function AdminRestaurantsRegisteredPanel() {
           initialView="evaluations"
         />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminSubmissionsRegisteredPanel() {
-  return (
+function AdminSubmissionsRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "submissions",
+    props,
     <ModulePanelFrame menuId="submissions">
       <AdminEmbeddedModuleShell
         menuId="submissions"
@@ -274,12 +327,14 @@ function AdminSubmissionsRegisteredPanel() {
           initialSubmissionTab="new"
         />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminReviewsRegisteredPanel() {
-  return (
+function AdminReviewsRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "reviews",
+    props,
     <ModulePanelFrame menuId="reviews">
       <AdminEmbeddedModuleShell
         menuId="reviews"
@@ -292,12 +347,16 @@ function AdminReviewsRegisteredPanel() {
           initialSubmissionTab="reviews"
         />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminRestaurantRefreshHistoryRegisteredPanel() {
-  return (
+function AdminRestaurantRefreshHistoryRegisteredPanel(
+  props: AdminConsoleModulePanelProps,
+) {
+  return withCompleteness(
+    "restaurant-refresh-history",
+    props,
     <ModulePanelFrame menuId="restaurant-refresh-history">
       <AdminEmbeddedModuleShell
         menuId="restaurant-refresh-history"
@@ -305,20 +364,24 @@ function AdminRestaurantRefreshHistoryRegisteredPanel() {
       >
         <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminInsightsRegisteredPanel() {
-  return (
+function AdminInsightsRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "insights",
+    props,
     <ModulePanelFrame menuId="insights">
       <InsightsModule key="admin-insights" embedded />
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminBannersRegisteredPanel() {
-  return (
+function AdminBannersRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "banners",
+    props,
     <ModulePanelFrame menuId="banners">
       <AdminEmbeddedModuleShell
         menuId="banners"
@@ -326,30 +389,29 @@ function AdminBannersRegisteredPanel() {
       >
         <AdminBannerModule key="admin-banners" embedded />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminRoutesRegisteredPanel({
-  stats,
-  isLoading,
-  hasError,
-  onSelectModule,
-}: AdminConsoleModulePanelProps) {
-  return (
+function AdminRoutesRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "routes",
+    props,
     <AdminEmbeddedModuleShell menuId="routes" contentClassName="overflow-hidden">
       <AdminRouteRecommendationModule
-        stats={stats}
-        isLoading={Boolean(isLoading)}
-        hasError={Boolean(hasError)}
-        onSelectModule={onSelectModule}
+        stats={props.stats}
+        isLoading={Boolean(props.isLoading)}
+        hasError={Boolean(props.hasError)}
+        onSelectModule={props.onSelectModule}
       />
-    </AdminEmbeddedModuleShell>
+    </AdminEmbeddedModuleShell>,
   );
 }
 
-function AdminUsersRegisteredPanel() {
-  return (
+function AdminUsersRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "users",
+    props,
     <ModulePanelFrame menuId="users">
       <AdminEmbeddedModuleShell
         menuId="users"
@@ -357,12 +419,14 @@ function AdminUsersRegisteredPanel() {
       >
         <AdminUsersModule key="admin-users" />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminPipelineRegisteredPanel() {
-  return (
+function AdminPipelineRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "pipeline",
+    props,
     <ModulePanelFrame menuId="pipeline">
       <AdminEmbeddedModuleShell
         menuId="pipeline"
@@ -370,45 +434,69 @@ function AdminPipelineRegisteredPanel() {
       >
         <AdminPipelinePanel key="admin-pipeline" />
       </AdminEmbeddedModuleShell>
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminStoryboardRegisteredPanel({
-  initialStoryboardResult,
-}: AdminConsoleModulePanelProps) {
-  return (
+function AdminStoryboardRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "storyboard",
+    props,
     <ModulePanelFrame menuId="storyboard">
       <AdminStoryboardGenerator
         key="admin-storyboard"
-        initialStoryboardResult={initialStoryboardResult}
+        initialStoryboardResult={props.initialStoryboardResult}
       />
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
   );
 }
 
-function AdminYoutubeThumbnailRegisteredPanel() {
-  return (
+function AdminYoutubeThumbnailRegisteredPanel(
+  props: AdminConsoleModulePanelProps,
+) {
+  return withCompleteness(
+    "youtube-thumbnail-generator",
+    props,
     <ModulePanelFrame menuId="youtube-thumbnail-generator">
       <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />
-    </ModulePanelFrame>
+    </ModulePanelFrame>,
+  );
+}
+
+function AdminOverviewRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness("overview", props, <AdminOverviewPanel {...props} />);
+}
+
+function AdminLlmRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness("llm", props, <AdminLlmPanel {...props} />);
+}
+
+function AdminAuditRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness("audit", props, <AdminAuditPanel {...props} />);
+}
+
+function AdminMapOverlaysRegisteredPanel(props: AdminConsoleModulePanelProps) {
+  return withCompleteness(
+    "map-overlays",
+    props,
+    <AdminMapOverlaysPanel {...props} />,
   );
 }
 
 export const ADMIN_CONSOLE_MODULE_PANELS = {
-  overview: AdminOverviewPanel,
+  overview: AdminOverviewRegisteredPanel,
   insights: AdminInsightsRegisteredPanel,
-  llm: AdminLlmPanel,
+  llm: AdminLlmRegisteredPanel,
   restaurants: AdminRestaurantsRegisteredPanel,
   "restaurant-refresh-history": AdminRestaurantRefreshHistoryRegisteredPanel,
   submissions: AdminSubmissionsRegisteredPanel,
   reviews: AdminReviewsRegisteredPanel,
-  "map-overlays": AdminMapOverlaysPanel,
+  "map-overlays": AdminMapOverlaysRegisteredPanel,
   banners: AdminBannersRegisteredPanel,
   routes: AdminRoutesRegisteredPanel,
   users: AdminUsersRegisteredPanel,
   pipeline: AdminPipelineRegisteredPanel,
-  audit: AdminAuditPanel,
+  audit: AdminAuditRegisteredPanel,
   storyboard: AdminStoryboardRegisteredPanel,
   "youtube-thumbnail-generator": AdminYoutubeThumbnailRegisteredPanel,
 } as const satisfies Record<

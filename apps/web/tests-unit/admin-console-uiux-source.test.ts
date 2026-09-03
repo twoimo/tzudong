@@ -998,7 +998,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("loading: () => null");
     expect(consoleSource).toContain(
-      "loading: () => <AdminConsoleModuleSkeleton menuId=",
+      "loading: () => completenessLoading(",
     );
     expect(consoleSource).toContain(
       'data-admin-sidebar-module-loading-evaluation="viewport-table"',
