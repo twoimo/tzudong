@@ -88,8 +88,15 @@ test.describe("admin console sidebar information architecture", () => {
       .count();
     expect(restaurantsBadgeCount).toBe(0);
 
-    const expandedBadgeBox = await submissionsBadge.boundingBox();
-    expect(expandedBadgeBox?.width ?? 0).toBeGreaterThan(12);
+    await expect
+      .poll(() =>
+        submissionsBadge.evaluate((element) => element.getBoundingClientRect().width),
+      )
+      .toBeGreaterThan(12);
+    const expandedBadge = await submissionsBadge.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { width: rect.width, height: rect.height };
+    });
 
     await page.locator('[data-admin-sidebar-collapse-toggle="true"]').click();
     await expect(
@@ -98,9 +105,20 @@ test.describe("admin console sidebar information architecture", () => {
 
     await expect(submissionsBadge).toHaveClass(/md:h-2/);
     await expect(submissionsBadge).toHaveClass(/md:w-2/);
-    const collapsedBadgeBox = await submissionsBadge.boundingBox();
-    expect(collapsedBadgeBox?.width ?? 99).toBeLessThanOrEqual(12);
-    expect(collapsedBadgeBox?.height ?? 99).toBeLessThanOrEqual(12);
+    const collapsedBadge = await submissionsBadge.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        fontSize: Number.parseFloat(style.fontSize),
+        position: style.position,
+      };
+    });
+    expect(collapsedBadge.position).toBe("absolute");
+    expect(collapsedBadge.fontSize).toBe(0);
+    expect(collapsedBadge.width).toBeLessThanOrEqual(12);
+    expect(collapsedBadge.height).toBeLessThanOrEqual(12);
 
     saveAdminConsoleEvidence("sidebar-ia.json", {
       schemaVersion: 1,
@@ -110,7 +128,8 @@ test.describe("admin console sidebar information architecture", () => {
       titles,
       ariaCurrentAfterInsights: "insights",
       badgeCounts: { submissions: 6, reviews: 3, restaurants: 0 },
-      collapsedDotWidth: Math.round(collapsedBadgeBox?.width ?? 0),
+      collapsedDotWidth: Math.round(collapsedBadge.width),
+      collapsedDotFontSize: collapsedBadge.fontSize,
       focusOrder:
         (await page
           .locator("#admin-console-canvas")

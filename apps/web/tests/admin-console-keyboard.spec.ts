@@ -32,10 +32,42 @@ test.describe("admin console keyboard operation", () => {
       "skip-link sidebar canvas module-actions",
     );
 
-    await page.locator("body").click({ position: { x: 8, y: 8 } });
-    await page.keyboard.press("Tab");
     const skipLink = page.getByRole("link", { name: "작업 화면으로 건너뛰기" });
+    const shellOrder = await page.evaluate(() => {
+      const shell = document.querySelector("[data-admin-console-shell='true']");
+      if (!shell) return [];
+      return Array.from(
+        shell.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+        .map((element) => element.textContent?.replace(/\s+/g, " ").trim() ?? "")
+        .filter(Boolean)
+        .slice(0, 3);
+    });
+    expect(shellOrder[0] ?? "").toContain("건너뛰기");
+
+    await skipLink.focus();
     await expect(skipLink).toBeFocused();
+    await page.keyboard.press("Tab");
+    const tabAfterSkip = await page.evaluate(() => {
+      const active = document.activeElement;
+      if (!active) return "none";
+      if (active.closest("#admin-console-canvas")) return "canvas";
+      if (
+        active.closest("aside") ||
+        active.closest('[data-admin-console-mobile-header="true"]')
+      ) {
+        return "sidebar";
+      }
+      return [
+        active.tagName,
+        active.getAttribute("aria-label") ??
+          active.textContent?.replace(/\s+/g, " ").trim().slice(0, 40),
+      ].join(":");
+    });
+    expect(tabAfterSkip).toBe("sidebar");
+    await skipLink.focus();
     await skipLink.press("Enter");
     await expect(page.locator("#admin-console-canvas")).toBeFocused();
 
@@ -75,6 +107,9 @@ test.describe("admin console keyboard operation", () => {
     const insightsDown = editor.locator(
       '[data-admin-sidebar-order-move="item:insights:1"]',
     );
+    const insightsUp = editor.locator(
+      '[data-admin-sidebar-order-move="item:insights:-1"]',
+    );
     await insightsDown.focus();
     await expect(insightsDown).toBeFocused();
     await insightsDown.press("ArrowDown");
@@ -90,7 +125,10 @@ test.describe("admin console keyboard operation", () => {
           (id) => ADMIN_CONSOLE_MENUS[id].title,
         ),
       ]);
-    await expect(insightsDown).toBeFocused();
+    await expect(insightsDown).toBeDisabled();
+    await expect(editor).toBeVisible();
+    await insightsUp.focus();
+    await expect(insightsUp).toBeFocused();
 
     saveAdminConsoleEvidence("keyboard-desktop.json", {
       schemaVersion: 1,

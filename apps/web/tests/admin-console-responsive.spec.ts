@@ -18,9 +18,15 @@ async function measureOverflow(page: Page) {
 }
 
 async function gridColumnCount(page: Page) {
-  return page.locator('[data-admin-module-grid-cards="true"]').evaluate((element) => {
-    const template = getComputedStyle(element).gridTemplateColumns;
-    return template.split(/\s+/).filter(Boolean).length;
+  const cards = page.locator('[data-admin-module-grid-cards="true"]');
+  await expect(cards).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[data-admin-module-grid-card]")).toHaveCount(15);
+  return cards.evaluate((element) => {
+    const children = Array.from(
+      element.querySelectorAll<HTMLElement>("[data-admin-module-grid-card]"),
+    ).slice(0, 6);
+    const lefts = new Set(children.map((child) => Math.round(child.getBoundingClientRect().left)));
+    return lefts.size;
   });
 }
 
@@ -29,8 +35,10 @@ async function expectCardsReachable(page: Page) {
   await expect(grid.locator("[data-admin-module-grid-card]")).toHaveCount(15);
   for (const menuId of ADMIN_CONSOLE_MENU_IDS) {
     const card = grid.locator(`[data-admin-module-grid-card="${menuId}"]`);
-    await card.scrollIntoViewIfNeeded();
     await expect(card).toBeVisible();
+    await card.evaluate((element) => {
+      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
   }
 }
 
@@ -45,6 +53,9 @@ test.describe("admin console responsive breakpoints", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await openAdminConsole(page, "/admin");
     await waitForModuleReady(page, "overview");
+    await expect(
+      page.locator('[data-admin-module-grid="true"] [data-admin-module-grid-card]'),
+    ).toHaveCount(15, { timeout: 30_000 });
 
     const hamburger = page.locator(
       '[data-admin-console-menu-trigger="hamburger"]',

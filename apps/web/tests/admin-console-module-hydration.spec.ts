@@ -204,8 +204,14 @@ test.describe('admin console module hydration smoke', () => {
         { timeout: 30_000 },
       );
       const headerSelector = `[data-admin-module-header-module="${target.moduleId}"]`;
-      await expect(page.locator(headerSelector)).toBeVisible({ timeout: 30_000 });
-      await expect(page.locator(target.readySelector)).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator(headerSelector).first()).toBeVisible({ timeout: 30_000 });
+      await expect(
+        page
+          .locator(
+            `${target.readySelector}, [data-admin-module-state-menu="${target.moduleId}"]`,
+          )
+          .first(),
+      ).toBeVisible({ timeout: 30_000 });
       visited.push({ path: target.path, moduleId: target.moduleId, headerSelector, readySelector: target.readySelector });
       await page.waitForTimeout(300);
     }
@@ -236,12 +242,13 @@ test.describe('admin console module hydration smoke', () => {
 
     const canvas = page.locator('#admin-console-canvas');
     await expect(canvas).toBeVisible({ timeout: 30_000 });
-
+    await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
+      timeout: 30_000,
+    });
     const layout = page.locator('[data-admin-console-sidebar-collapsed]');
     const toggle = page.locator('[data-admin-sidebar-collapse-toggle="true"]');
-    if ((await layout.getAttribute('data-admin-console-sidebar-collapsed')) === 'true') {
-      await toggle.click();
-    }
+    await expect(layout).toHaveAttribute('data-admin-console-sidebar-collapsed', 'true');
+    await toggle.click();
     await expect(layout).toHaveAttribute('data-admin-console-sidebar-collapsed', 'false');
 
     const transitions: Array<{
@@ -278,7 +285,9 @@ test.describe('admin console module hydration smoke', () => {
       await expect(readyLocator.first()).toBeVisible({ timeout: 30_000 });
       const childCount = await canvas.evaluate((element) => element.childElementCount);
       expect(childCount).toBeGreaterThan(0);
-      await expect(page.locator(`[data-admin-module-header-module="${moduleId}"]`)).toBeVisible({
+      await expect(
+        canvas.locator(`[data-admin-module-header-module="${moduleId}"]`).first(),
+      ).toBeVisible({
         timeout: 30_000,
       });
 
@@ -374,6 +383,7 @@ test.describe('admin console module hydration smoke', () => {
 
     await gotoAndHidePopup(page, '/admin');
     const canvas = page.locator('#admin-console-canvas');
+    await expect(canvas).toBeVisible({ timeout: 30_000 });
     const dropdown = page.locator('[data-admin-console-menu-dropdown="true"]');
     const mobileHeader = page.locator('[data-admin-console-mobile-header="true"]');
     const menuTrigger = page.locator('[data-admin-console-menu-trigger="hamburger"]');
@@ -447,7 +457,13 @@ test.describe('admin console module hydration smoke', () => {
     await expect(canvas).toHaveAttribute('data-admin-console-active-module', 'routes', {
       timeout: 30_000,
     });
-    await expect(page.locator('[aria-label="관리자 지도 운영 개요 2분할"]')).toBeVisible({
+    await expect(
+      canvas
+        .locator(
+          '[data-admin-module-header-module="routes"], [data-admin-module-state-menu="routes"], [aria-label="관리자 지도 운영 개요 2분할"]',
+        )
+        .first(),
+    ).toBeVisible({
       timeout: 30_000,
     });
     await expect

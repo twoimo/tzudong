@@ -283,12 +283,9 @@ export async function waitForModuleReady(
   menuId: AdminConsoleMenuId,
 ) {
   await waitForModuleSurface(page, menuId);
-  const canvas = page.locator("#admin-console-canvas");
-  await expect(
-    canvas.locator(
-      `[data-admin-module-state-menu="${menuId}"], ${ADMIN_CONSOLE_READY_SELECTORS[menuId]}`,
-    ).first(),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(ADMIN_CONSOLE_READY_SELECTORS[menuId])).toBeVisible({
+    timeout: 30_000,
+  });
 }
 
 export function saveAdminConsoleEvidence(

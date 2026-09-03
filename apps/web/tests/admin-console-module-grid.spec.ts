@@ -89,22 +89,41 @@ test.describe("admin console module grid", () => {
         "value",
       )?.set;
       element.focus();
-      element.dispatchEvent(new CompositionEvent("compositionstart", { data: "" }));
-      setNativeValue?.call(element, "대시보드");
       element.dispatchEvent(
-        new InputEvent("input", {
+        new CompositionEvent("compositionstart", {
           bubbles: true,
-          data: "대시보드",
-          isComposing: true,
+          cancelable: true,
+          data: "",
         }),
       );
+      setNativeValue?.call(element, "대시보드");
+      const inputEvent = new InputEvent("input", {
+        bubbles: true,
+        composed: true,
+        data: "대시보드",
+        isComposing: true,
+      });
+      Object.defineProperty(inputEvent, "isComposing", { value: true });
+      element.dispatchEvent(inputEvent);
     });
     await expect(search).toHaveValue("대시보드");
     await expect(cards).toHaveCount(15);
     await search.evaluate((element: HTMLInputElement) => {
       element.dispatchEvent(
-        new CompositionEvent("compositionend", { data: "대시보드" }),
+        new CompositionEvent("compositionend", {
+          bubbles: true,
+          cancelable: true,
+          data: "대시보드",
+        }),
       );
+      const commitEvent = new InputEvent("input", {
+        bubbles: true,
+        composed: true,
+        data: "대시보드",
+        isComposing: false,
+      });
+      Object.defineProperty(commitEvent, "isComposing", { value: false });
+      element.dispatchEvent(commitEvent);
     });
     await expect(cards).toHaveCount(1);
     await expect(
