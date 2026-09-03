@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +49,9 @@ export function AdminConsoleSidebarOrderEditor({
   orderState,
 }: AdminConsoleSidebarOrderEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const pendingFocusRef = useRef<{ moveKey: string; fallbackKey: string } | null>(
+    null,
+  );
   const isEditMode = orderState.isEditMode;
   const sections = orderedEditorSections(orderState);
   const controlsLocked = !isEditMode || !orderState.canPersist;
@@ -69,12 +72,20 @@ export function AdminConsoleSidebarOrderEditor({
     fallback?.focus();
   }
 
+  useLayoutEffect(() => {
+    const pending = pendingFocusRef.current;
+    if (!pending) return;
+    pendingFocusRef.current = null;
+    restoreFocus(pending.moveKey, pending.fallbackKey);
+  }, [orderState.order, orderState.isSaving]);
+
   async function persistAndKeepFocus(
     nextOrder: ReturnType<typeof normalizeAdminSidebarOrder>,
     successMessage: string,
     moveKey: string,
     fallbackKey: string,
   ) {
+    pendingFocusRef.current = { moveKey, fallbackKey };
     await orderState.persist(nextOrder, successMessage);
     restoreFocus(moveKey, fallbackKey);
   }

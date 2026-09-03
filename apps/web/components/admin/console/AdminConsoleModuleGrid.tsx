@@ -78,7 +78,10 @@ export function AdminConsoleModuleGrid({
             }}
             onChange={(event) => {
               setRawValue(event.target.value);
-              if (!isComposingRef.current) {
+              if (
+                !isComposingRef.current &&
+                !event.nativeEvent.isComposing
+              ) {
                 setCommittedQuery(event.target.value);
               }
             }}

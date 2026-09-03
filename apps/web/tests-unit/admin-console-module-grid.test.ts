@@ -32,6 +32,7 @@ describe("admin console module grid", () => {
     expect(gridSource).toContain("onCompositionStart");
     expect(gridSource).toContain("onCompositionEnd");
     expect(gridSource).toContain("isComposingRef.current");
+    expect(gridSource).toContain("event.nativeEvent.isComposing");
     expect(gridSource).toContain('aria-live="polite"');
     expect(gridSource).toContain("data-admin-module-grid-count");
     expect(gridSource).toContain("전체 ${TOTAL_MENU_COUNT}개");
