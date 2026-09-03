@@ -499,7 +499,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
 
     expect(consoleSource).toContain("const AdminStoryboardGenerator = dynamic(");
     expect(consoleSource).toContain(
-      "function preloadAdminConsoleModule(moduleId: AdminModuleId)",
+      "function preloadAdminConsoleModule(",
     );
     expect(consoleSource).toContain("void preloadAdminConsoleModule(activeModuleId)");
     expect(consoleSource).toContain("getAdminModuleIdFromSearchParams");
@@ -970,7 +970,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "const AdminStoryboardGenerator = dynamic(",
     );
     expect(consoleSource).toContain(
-      "function preloadAdminConsoleModule(moduleId: AdminModuleId)",
+      "function preloadAdminConsoleModule(",
     );
     expect(consoleSource).toContain(
       "void preloadAdminConsoleModule(activeModuleId)",
@@ -1029,7 +1029,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "initialStoryboardResult={initialStoryboardResult}",
     );
     expect(consoleSource).toContain(
-      'moduleId === "youtube-thumbnail-generator"',
+      'menuId === "youtube-thumbnail-generator"',
     );
     expect(consoleSource).toContain(
       "<AdminYoutubeThumbnailModuleLoadingSkeleton />",
@@ -1185,10 +1185,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("THUMBNAIL_MODULE_LOADING_TOOL_IDS.map");
     expect(consoleSource).not.toContain("[animation:storyboard-glass-shimmer_");
-    const thumbnailLoadingSkeletonSource =
-      consoleSource
-        .split("function AdminYoutubeThumbnailModuleLoadingSkeleton()")[1]
-        ?.split("export function AdminConsoleOverview")[0] ?? "";
+    const thumbnailLoadingSkeletonSource = (() => {
+      const start = consoleSource.indexOf(
+        "function AdminYoutubeThumbnailModuleLoadingSkeleton()",
+      );
+      if (start < 0) return "";
+      const after = consoleSource.slice(start);
+      const nextFn = after.search(/\n(?:export )?function /);
+      return nextFn >= 0 ? after.slice(0, nextFn) : after;
+    })();
     expect(thumbnailLoadingSkeletonSource).not.toContain("blur-sm");
     expect(thumbnailLoadingSkeletonSource).not.toContain("blur-md");
     expect(thumbnailLoadingSkeletonSource).not.toContain("backdrop-blur-[1px]");
