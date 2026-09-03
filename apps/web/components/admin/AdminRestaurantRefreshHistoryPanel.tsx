@@ -10,9 +10,12 @@ import {
   Store,
 } from "lucide-react";
 
+import { ConsoleVizFormRenderer } from "@/components/admin/viz/console-viz-forms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getConsoleVizBindings } from "@/lib/admin/console-visualization-map";
+import type { ConsoleVizSeries } from "@/lib/admin/console-viz-state";
 import { cn } from "@/lib/utils";
 
 type RefreshCandidateStatus =
@@ -737,6 +740,42 @@ export function AdminRestaurantRefreshHistoryPanel() {
     decision === "approved" && !selectedCandidateIsClosure;
   const summary = data?.summary;
 
+  const waterfallBinding = getConsoleVizBindings("restaurant-refresh-history").find(
+    (binding) => binding.form === "waterfall-delta-step",
+  );
+  const waterfallSeries: ConsoleVizSeries[] = summary
+    ? [
+        {
+          label: "검토 필요",
+          points: [0, summary.needs_review],
+          unit: "건",
+          fractionDigits: 0,
+        },
+        {
+          label: "승인",
+          points: [0, summary.approved],
+          unit: "건",
+          fractionDigits: 0,
+        },
+        {
+          label: "적용",
+          points: [0, summary.applied],
+          unit: "건",
+          fractionDigits: 0,
+        },
+        {
+          label: "반려",
+          points: [0, summary.rejected],
+          unit: "건",
+          fractionDigits: 0,
+        },
+      ]
+    : [];
+  const waterfallStatus = error
+    ? "error"
+    : isLoading && !data
+      ? "loading"
+      : "settled";
   const statusSummaryItems: StatusSummaryItem[] = [
     {
       label: "승인 맛집",
@@ -886,6 +925,17 @@ export function AdminRestaurantRefreshHistoryPanel() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide p-2 [scrollbar-width:none] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] lg:overflow-hidden [&::-webkit-scrollbar]:hidden" data-admin-module-content="bounded">
+        {waterfallBinding ? (
+          <div className="lg:col-span-2" data-admin-refresh-waterfall="true">
+            <ConsoleVizFormRenderer
+              binding={waterfallBinding}
+              requestStatus={waterfallStatus}
+              series={waterfallSeries}
+              metaLeft="최신화 변경 유형"
+              metaRight={`${summary?.needs_review ?? 0}건`}
+            />
+          </div>
+        ) : null}
         {error || decisionMessage ? (
           <div className="space-y-2 lg:col-span-2">
             {error ? (

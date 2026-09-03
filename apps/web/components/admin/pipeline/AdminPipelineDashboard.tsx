@@ -11,6 +11,7 @@ import {
   type PipelineRunAction,
   buildPipelinePreviewHash,
 } from "@/lib/admin/pipeline-control";
+import { RISKY_WORK_STEPS } from "@/lib/admin/risky-work-procedure";
 
 type PipelineStatusResponse = {
   targets?: Array<{ id: string; status?: string }>;
@@ -187,6 +188,7 @@ export function AdminPipelineDashboard() {
   return (
     <section
       data-admin-pipeline-dashboard="true"
+      data-admin-risky-work-steps={RISKY_WORK_STEPS.join(" ")}
       className="flex min-h-[220px] flex-col gap-3 border border-border bg-card p-4"
     >
       <header>

@@ -17,7 +17,6 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bot,
   CheckCircle2,
   ClipboardCheck,
   ExternalLink,
@@ -101,10 +100,6 @@ import type {
 } from "@/lib/public-insights/treemap";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
 import {
-  getAdminAuditCoverage,
-  type AdminAuditCoverage,
-} from "@/lib/admin/audit-contract";
-import {
   buildCanonicalAdminHrefFromSearchParams,
   buildCanonicalAdminModuleHref,
   getAdminModuleIdFromSearchParams,
@@ -112,6 +107,7 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { getAdminConsoleMenu } from "@/lib/admin/console-menu-registry";
+import { RISKY_WORK_STEPS } from "@/lib/admin/risky-work-procedure";
 import { createSameQueryRetry } from "@/lib/admin/console-module-state";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
@@ -127,7 +123,6 @@ import {
 
 type AdminModuleId = AdminConsoleRouteModuleId;
 
-const guardedSteps = ["미리보기", "확인", "적용", "재확인", "감사 기록"];
 const ADMIN_SIDEBAR_COLLAPSED_STORAGE_KEY = "tzudong-admin-sidebar-collapsed";
 const SIDEBAR_LABEL_REVEAL_DELAY_MS = 120;
 
@@ -545,147 +540,6 @@ type AdminYouTubeKpiCollectionLogs = {
     error?: string | null;
   };
 };
-type AdminAuditCoverageView = AdminAuditCoverage & {
-  label?: string;
-  summary?: string;
-  source?: string;
-  sources?: string[];
-  domain?: string;
-  domains?: string[];
-  mode?: string;
-  universal?: boolean;
-};
-
-type AdminAuditEvent = {
-  id: string;
-  actorUserId: string | null;
-  targetUserId: string | null;
-  action: string;
-  status: string;
-  reasonCode: string;
-  correlationId: string | null;
-  appliedAt: string | null;
-  errorCode: string | null;
-  createdAt: string | null;
-  counts: Record<string, number>;
-  flags: Record<string, boolean>;
-};
-
-type AdminAuditEventsResponse = {
-  asOf: string;
-  source: "admin_audit_events";
-  coverage?: AdminAuditCoverageView;
-  events: AdminAuditEvent[];
-  unavailable: {
-    reason: string;
-    message: string;
-  } | null;
-};
-type AdminAuditUnavailableReason =
-  | "admin-audit-events-read-failed"
-  | "admin-audit-session-expired"
-  | "admin-audit-admin-required";
-const adminAuditFallbackCoverage =
-  getAdminAuditCoverage() as AdminAuditCoverageView;
-
-function isRecordValue(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isAdminAuditCoveragePayload(value: unknown): value is AdminAuditCoverageView {
-  return (
-    isRecordValue(value) &&
-    value.mode === "truthful-partial-domain-specific" &&
-    value.universal === false
-  );
-}
-
-function isAdminAuditUnavailablePayload(
-  value: unknown,
-): value is AdminAuditEventsResponse["unavailable"] {
-  return (
-    value === null ||
-    (isRecordValue(value) &&
-      typeof value.reason === "string" &&
-      typeof value.message === "string")
-  );
-}
-
-function isAdminAuditEventsResponsePayload(
-  value: unknown,
-): value is AdminAuditEventsResponse {
-  return (
-    isRecordValue(value) &&
-    value.source === "admin_audit_events" &&
-    Array.isArray(value.events) &&
-    value.events.length <= 50 &&
-    value.events.every((event) => (
-      isRecordValue(event) &&
-      typeof event.id === "string" &&
-      typeof event.action === "string" &&
-      typeof event.status === "string" &&
-      typeof event.reasonCode === "string" &&
-      isRecordValue(event.counts) &&
-      isRecordValue(event.flags)
-    )) &&
-    isAdminAuditCoveragePayload(value.coverage) &&
-    isAdminAuditUnavailablePayload(value.unavailable)
-  );
-}
-
-function getPayloadErrorMessage(value: unknown) {
-  return isRecordValue(value) && typeof value.error === "string"
-    ? value.error
-    : null;
-}
-
-function getAdminAuditCoverageLabel(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  return coverage?.universal === false
-    ? "부분/도메인별 감사 범위"
-    : (coverage?.label ?? "부분/도메인별 감사 범위");
-}
-
-function getAdminAuditCoverageSourceSummary(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  const sources =
-    coverage?.sources?.length
-      ? coverage.sources
-      : [
-          coverage?.primary?.source,
-          ...(coverage?.domainSpecific?.map((feed) => feed.source) ?? []),
-        ].filter((source): source is string => Boolean(source));
-  return (sources.length ? sources : ["admin_audit_events"]).join(" · ");
-}
-
-function getAdminAuditCoverageDomainSummary(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  const domains =
-    coverage?.domains?.length
-      ? coverage.domains
-      : [
-          coverage?.primary?.domain,
-          ...(coverage?.domainSpecific?.map((feed) => feed.domain) ?? []),
-        ].filter((domain): domain is string => Boolean(domain));
-  return (domains.length
-    ? domains
-    : ["admin_user_management", "restaurant_request_reviews"]
-  ).join(" · ");
-}
-
-function hasTruthfulAdminAuditCoverage(
-  coverage: AdminAuditCoverageView | undefined,
-) {
-  return (
-    coverage?.universal === false &&
-    coverage?.mode === "truthful-partial-domain-specific"
-  );
-}
-
-
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
 
@@ -954,55 +808,6 @@ async function fetchAdminYouTubeKpiCollectionLogs(): Promise<AdminYouTubeKpiColl
   }
 
   return response.json() as Promise<AdminYouTubeKpiCollectionLogs>;
-}
-
-function buildAdminAuditAuthUnavailableResponse(
-  status: number,
-): AdminAuditEventsResponse | null {
-  const reason: AdminAuditUnavailableReason | null =
-    status === 401
-      ? "admin-audit-session-expired"
-      : status === 403
-        ? "admin-audit-admin-required"
-        : null;
-
-  if (!reason) return null;
-
-  return {
-    asOf: new Date().toISOString(),
-    source: "admin_audit_events",
-    coverage: adminAuditFallbackCoverage,
-    events: [],
-    unavailable: {
-      reason,
-      message:
-        status === 401
-          ? "관리자 세션이 만료되었거나 로그인이 필요합니다. 다시 로그인한 뒤 감사 로그를 새로고침해 주세요."
-          : "현재 계정에 관리자 감사 로그를 볼 권한이 없습니다. 관리자 권한을 확인한 뒤 다시 시도해 주세요.",
-    },
-  };
-}
-async function fetchAdminAuditEvents(): Promise<AdminAuditEventsResponse> {
-  const response = await fetch("/api/admin/audit-events?limit=20", {
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-  });
-  const payload = await response.json().catch(() => null);
-
-  const authUnavailable = buildAdminAuditAuthUnavailableResponse(response.status);
-  if (authUnavailable) return authUnavailable;
-  if (!response.ok) {
-    if (isAdminAuditEventsResponsePayload(payload) && payload.unavailable) {
-      return payload;
-    }
-    throw new Error(getPayloadErrorMessage(payload) ?? "admin-audit-events-failed");
-  }
-
-  if (!isAdminAuditEventsResponsePayload(payload)) {
-    throw new Error("admin-audit-events-invalid-response");
-  }
-
-  return payload;
 }
 
 function useAdminOverviewStats(isAdmin: boolean): {
@@ -7501,339 +7306,8 @@ function AdminDashboardManagementPanel({
   );
 }
 
-function GuardedApplyCard() {
-  return (
-    <Card className="border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-lg">안전 적용 원칙</CardTitle>
-          <Badge variant="outline" className="border-primary/30 text-primary">
-            관리자 확인 필수
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {guardedSteps.map((step, index) => (
-            <div key={step} className="flex items-center gap-2">
-              <Badge
-                variant={index === 0 ? "default" : "secondary"}
-                className={cn(
-                  index === 0 && "bg-primary text-primary-foreground",
-                )}
-              >
-                {step}
-              </Badge>
-              {index < guardedSteps.length - 1 && (
-                <span className="text-muted-foreground">→</span>
-              )}
-            </div>
-          ))}
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          제보 승인, 리뷰 반려, 맛집 삭제/복구, 배너 공개처럼 사용자에게 보이는
-          변경은 적용 전에 한 번 더 확인하고, 적용 후에는 실제 상태를 다시 읽어
-          관리자에게 보여주는 흐름을 기본값으로 둡니다.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LlmSessionWorkspace() {
-  return (
-    <AdminEmbeddedModuleShell
-      menuId="llm"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <section aria-label="운영 보조 제안" className="space-y-3">
-        <div className="grid gap-3 xl:grid-cols-3">
-          {[
-            [
-              "현재 화면 요약",
-              "선택한 모듈의 대기 건수, 실패 상태, 위험 액션 후보를 한 문단으로 요약합니다.",
-            ],
-            [
-              "다음 검수 추천",
-              "오래된 제보, 지오코딩 실패, 미승인 리뷰, 배너 공개 변경을 우선순위로 정리합니다.",
-            ],
-            [
-              "위험 액션 체크리스트",
-              "삭제·반려·공개 배너 변경 전 미리보기 → 확인 → 적용 → 재확인 → 감사 기록 순서를 확인합니다.",
-            ],
-          ].map(([title, description]) => (
-            <Card key={title} className="border-border bg-card/95 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
-          <GuardedApplyCard />
-          <Card className="border-border bg-card/95 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Bot className="h-5 w-5 text-primary" aria-hidden="true" />
-                운영 원칙
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p>1. 자동 운영 보조는 읽기 전용 제안 화면으로 유지합니다.</p>
-              <p>
-                2. 데이터 변경, 권한 정책, 데이터 구조 변경은 이 화면에서 직접
-                수행하지 않습니다.
-              </p>
-              <p>
-                3. 위험 작업은 반드시 관리자 UI의 명시적 확인과 상태 재확인을
-                거칩니다.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-    </AdminEmbeddedModuleShell>
-  );
-}
-
-function getAdminAuditActionLabel(action: string) {
-  switch (action) {
-    case "admin_user_created":
-      return "사용자 생성";
-    case "admin_user_profile_updated":
-      return "프로필 수정";
-    case "admin_user_role_granted":
-      return "관리자 부여";
-    case "admin_user_role_revoked":
-      return "권한 회수";
-    case "admin_user_disabled":
-      return "계정 비활성화";
-    case "admin_user_reactivated":
-      return "계정 재활성화";
-    default:
-      return action;
-  }
-}
-
-function getAdminAuditStatusClassName(status: string) {
-  switch (status) {
-    case "applied":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300";
-    case "failed":
-      return "border-destructive/20 bg-destructive/10 text-destructive";
-    default:
-      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
-  }
-}
-
-function AuditPlaceholder() {
-  const auditEventsQuery = useQuery({
-    queryKey: ["admin-audit-events", "recent"],
-    queryFn: fetchAdminAuditEvents,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-  });
-  const auditPayload = auditEventsQuery.data;
-  const events = auditPayload?.events ?? [];
-  const unavailable = auditPayload?.unavailable ?? null;
-  const coverage = auditPayload?.coverage ?? adminAuditFallbackCoverage;
-  const isAuditCoverageMissing =
-    auditPayload !== undefined && !auditPayload.coverage;
-  const hasTruthfulCoverage =
-    !isAuditCoverageMissing && hasTruthfulAdminAuditCoverage(coverage);
-  const isAuditAuthUnavailable =
-    unavailable?.reason === "admin-audit-session-expired" ||
-    unavailable?.reason === "admin-audit-admin-required";
-  const coverageBadgeLabel =
-    isAuditAuthUnavailable
-      ? "세션 확인 필요"
-      : unavailable || auditEventsQuery.isError
-        ? "읽기 확인 필요"
-        : hasTruthfulCoverage
-          ? `부분 감사 · ${events.length}개`
-          : "범위 확인 필요";
-  const adminAuditLoginHref = "/?auth=login&reason=admin&next=%2Fadmin%3Fmodule%3Daudit";
-
-  return (
-    <AdminEmbeddedModuleShell
-      menuId="audit"
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <div className="min-h-[480px] space-y-3">
-        <div
-          className="rounded-2xl border border-border bg-muted/25 p-3 text-xs leading-5 text-muted-foreground"
-          data-admin-audit-coverage="partial-domain-specific"
-          data-admin-audit-coverage-source={getAdminAuditCoverageSourceSummary(coverage)}
-          data-admin-audit-coverage-domain={getAdminAuditCoverageDomainSummary(coverage)}
-          data-admin-audit-universal={coverage.universal ? "true" : "false"}
-        >
-          <p className="font-bold text-foreground">
-            {getAdminAuditCoverageLabel(coverage)}
-          </p>
-          <p className="mt-1">
-            소스: {getAdminAuditCoverageSourceSummary(coverage)} · 도메인:{" "}
-            {getAdminAuditCoverageDomainSummary(coverage)}
-          </p>
-          <p className="mt-1">
-            admin_audit_events는 사용자 관리 감사의 현재 1차 피드이며, 맛집 추천
-            검토 감사는 restaurant_request_review_audit의 별도 도메인별 경로입니다.
-            전체 운영 변경을 포괄하는 범용 감사 로그처럼 표시하지 않습니다.
-          </p>
-        </div>
-
-        <Link
-          href="/admin/privacy-incidents"
-          className="flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
-          data-admin-privacy-incidents-link="true"
-        >
-          <span>
-            <strong className="block">개인정보 사고 대응</strong>
-            <span className="mt-1 block text-xs">
-              사람의 평가·외부 제출 기록·72시간 기준을 관리하며 자동 신고나 수리 완료를 주장하지 않습니다.
-            </span>
-          </span>
-          <ExternalLink aria-hidden="true" className="h-4 w-4 shrink-0" />
-        </Link>
-
-        {auditEventsQuery.isLoading ? (
-          <div className="space-y-2" aria-label="감사 로그 로딩 중">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-          </div>
-        ) : null}
-
-        {!auditEventsQuery.isLoading && (unavailable || auditEventsQuery.isError) ? (
-          <div
-            className={cn(
-              "rounded-2xl p-4 text-sm leading-6",
-              isAuditAuthUnavailable
-                ? "border border-destructive/20 bg-destructive/10 text-destructive"
-                : "border border-amber-200 bg-amber-50/80 text-amber-900",
-            )}
-            role="status"
-            data-admin-audit-unavailable-state="true"
-            data-admin-audit-session-expired-state={isAuditAuthUnavailable ? "true" : undefined}
-          >
-            <p className="font-bold">
-              {isAuditAuthUnavailable
-                ? "관리자 세션 확인이 필요합니다."
-                : "감사 로그를 읽지 못했습니다."}
-            </p>
-            <p className="mt-1">
-              {unavailable?.message ??
-                "관리자 감사 로그 API 또는 데이터베이스 권한을 확인해 주세요."}
-            </p>
-            {isAuditAuthUnavailable ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={() => {
-                    window.location.assign(adminAuditLoginHref);
-                  }}
-                >
-                  다시 로그인하기
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 border-destructive/30 bg-background text-destructive hover:bg-destructive/10"
-                  onClick={() => auditEventsQuery.refetch()}
-                >
-                  감사 로그 다시 확인
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {!auditEventsQuery.isLoading && !unavailable && !auditEventsQuery.isError && events.length === 0 ? (
-          <div
-            className="rounded-2xl border border-border bg-muted/25 p-4 text-center text-sm leading-6 text-muted-foreground"
-            role="status"
-            data-admin-audit-empty-state="true"
-          >
-            아직 표시할 사용자 관리 감사 이벤트가 없습니다. 새 사용자 생성이나 권한 변경을 적용하면
-            부분 감사 범위 안에서 intent → applied/failed 순서로 이 영역에 표시됩니다.
-          </div>
-        ) : null}
-
-        {events.length > 0 ? (
-          <ol
-            className="divide-y divide-border overflow-hidden rounded-2xl border border-border"
-            data-admin-audit-event-list="admin_audit_events"
-          >
-            {events.map((event) => (
-              <li key={event.id} className="bg-background p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">
-                      {getAdminAuditActionLabel(event.action)}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {formatDashboardDateTime(event.createdAt)}
-                      {event.reasonCode ? ` · ${event.reasonCode}` : ""}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px]",
-                      getAdminAuditStatusClassName(event.status),
-                    )}
-                  >
-                    {event.status}
-                  </Badge>
-                </div>
-                <dl className="mt-2 grid gap-1 text-[11px] leading-5 text-muted-foreground sm:grid-cols-2">
-                  <div>
-                    <dt className="font-semibold text-foreground">감사 ID</dt>
-                    <dd className="break-all font-mono">{event.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">대상</dt>
-                    <dd className="break-all font-mono">{event.targetUserId ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">범위</dt>
-                    <dd className="break-all font-mono">
-                      admin_user_management · admin_audit_events
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">적용 시각</dt>
-                    <dd className="break-all font-mono">
-                      {event.appliedAt ? formatDashboardDateTime(event.appliedAt) : "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="font-semibold text-foreground">상관 ID</dt>
-                    <dd className="break-all font-mono">{event.correlationId ?? "—"}</dd>
-                  </div>
-                  {event.errorCode ? (
-                    <div className="sm:col-span-2">
-                      <dt className="font-semibold text-destructive">오류 코드</dt>
-                      <dd className="break-all font-mono text-destructive">{event.errorCode}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </li>
-            ))}
-          </ol>
-        ) : null}
-      </div>
-    </AdminEmbeddedModuleShell>
-  );
-}
+export { AdminOpsAssistPanel as AdminLlmWorkspacePanel } from "@/components/admin/console/AdminOpsAssistPanel";
+export { AdminAuditEventsPanel as AdminAuditCanvasPanel } from "@/components/admin/console/AdminAuditEventsPanel";
 
 type AdminMapOverlayTabId = "manual" | "trend-proposals" | "trend-runs";
 
@@ -7874,6 +7348,7 @@ export function AdminMapOverlayOperationsModule() {
         className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
         aria-label="지도 오버레이 작업"
         data-admin-map-overlays-module="true"
+        data-admin-risky-work-steps={RISKY_WORK_STEPS.join(" ")}
         data-layout-primitives="panel-layout list-detail step-nav stack"
       >
         <div className="space-y-2 md:space-y-3">
@@ -8008,14 +7483,6 @@ export function AdminOverviewCanvasPanel({
       <AdminConsoleModuleGrid onSelectModule={onSelectModule} />
     </AdminEmbeddedModuleShell>
   );
-}
-
-export function AdminLlmWorkspacePanel() {
-  return <LlmSessionWorkspace />;
-}
-
-export function AdminAuditCanvasPanel() {
-  return <AuditPlaceholder />;
 }
 
 function getAdminConsoleModuleLoadingSkeleton(

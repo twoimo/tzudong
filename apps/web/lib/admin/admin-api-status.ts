@@ -3,3 +3,6 @@ export const ADMIN_API_STATUS_CODES = [
 ] as const;
 
 export type AdminApiStatusCode = (typeof ADMIN_API_STATUS_CODES)[number];
+
+export const ADMIN_UPSTREAM_TIMEOUT = 10_000;
+

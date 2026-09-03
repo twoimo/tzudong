@@ -24,7 +24,13 @@ const adminConsoleShellSource = () =>
   "\n" +
   adminConsoleSidebarSource() +
   "\n" +
-  adminConsoleModulePanelRegistrySource();
+  adminConsoleModulePanelRegistrySource() +
+  "\n" +
+  source("components/admin/console/AdminOpsAssistPanel.tsx") +
+  "\n" +
+  source("components/admin/console/AdminAuditEventsPanel.tsx") +
+  "\n" +
+  source("lib/admin/admin-audit-events.ts");
 
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -23,14 +23,17 @@ describe("admin restaurant refresh history source contracts", () => {
     const sidebarOrderSource = source("lib/admin/sidebar-order.ts");
     const routeSource = source("lib/admin/admin-module-routing.ts");
     const registrySource = source("lib/admin/console-menu-registry.ts");
+    const panelRegistrySource = source(
+      "components/admin/console/module-panel-registry.tsx",
+    );
 
     expect(routeSource).toContain("ADMIN_CONSOLE_MODULE_IDS");
     expect(registrySource).toContain('"restaurant-refresh-history"');
     expect(registrySource).toContain('title: "맛집 최신화"');
     expect(consoleSource).toContain("buildCanonicalAdminModuleHref");
     expect(consoleSource).not.toContain("/admin/restaurant-refresh-history");
-    expect(consoleSource).toContain("AdminRestaurantRefreshHistoryModule");
-    expect(consoleSource).toContain('case "restaurant-refresh-history"');
+    expect(panelRegistrySource).toContain("AdminRestaurantRefreshHistoryModule");
+    expect(panelRegistrySource).toContain("restaurant-refresh-history");
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENU_IDS");
     expect(sidebarOrderSource).toContain("ADMIN_CONSOLE_MENUS");
   });
@@ -135,6 +138,34 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(html).toContain('aria-labelledby="admin-restaurant-refresh-history-title"');
     expect(html).toContain("기록 관리");
     expect(html).not.toMatch(/<h1[\s\S]*?>[\s\S]*?맛집 최신화[\s\S]*?<\/h1>/);
+  });
+
+  test("keeps completeness state markers and waterfall visualization", () => {
+    const panelSource = source(
+      "components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
+    );
+    const completenessSource = source(
+      "components/admin/console/AdminConsoleModuleCompleteness.tsx",
+    );
+    const registrySource = source(
+      "components/admin/console/module-panel-registry.tsx",
+    );
+    const vizMapSource = source("lib/admin/console-visualization-map.ts");
+
+    expect(completenessSource).toContain('data-admin-module-state={state}');
+    expect(completenessSource).toContain('"loading"');
+    expect(completenessSource).toContain('"empty"');
+    expect(completenessSource).toContain('"error"');
+    expect(registrySource).toContain(
+      'withCompleteness(\n    "restaurant-refresh-history"',
+    );
+    expect(panelSource).toContain("waterfall-delta-step");
+    expect(panelSource).toContain("ConsoleVizFormRenderer");
+    expect(source("components/admin/viz/WaterfallDeltaStep.tsx")).toContain(
+      "export function WaterfallDeltaStep",
+    );
+    expect(vizMapSource).toContain('form: "waterfall-delta-step"');
+    expect(vizMapSource).toContain('menuId: "restaurant-refresh-history"');
   });
 
   test("admin API is admin gated, no-store, and separates record from guarded apply", () => {

@@ -3,6 +3,8 @@ import type { User } from '@supabase/supabase-js';
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
+import { adminJson, logAdminFixedError } from '@/lib/admin/admin-json';
+import { buildAdminUserEmailMaskToken } from '@/lib/admin/admin-user-display';
 import { getAdminSafeErrorName } from '@/lib/admin/guarded-mutation-contract';
 
 export const runtime = 'nodejs';
@@ -76,13 +78,14 @@ async function fetchUserManagementMetadata(
 function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow | undefined) {
   const userMetadata = (user.user_metadata ?? {}) as Record<string, unknown>;
   const nickname = toStringValue(metadata?.nickname) || toStringValue(userMetadata.nickname) || '닉네임 없음';
-  const username = toStringValue(metadata?.username) || toStringValue(userMetadata.username) || user.email?.split('@')[0] || 'unknown';
+  const username = toStringValue(metadata?.username) || toStringValue(userMetadata.username) || 'unknown';
   const isAdmin = metadata?.is_admin === true;
   const isDisabled = metadata ? metadata.account_status !== 'active' || isDisabledUser(user) : true;
+  const emailMaskToken = buildAdminUserEmailMaskToken(user.email ?? '');
 
   return {
     id: user.id,
-    email: user.email ?? '',
+    emailMaskToken,
     username,
     nickname,
     avatarUrl: metadata?.avatar_url ?? null,
@@ -95,6 +98,7 @@ function buildManagedUser(user: User, metadata: AdminUserManagementMetadataRow |
     emailConfirmedAt: user.email_confirmed_at ?? null,
     statusLabel: isDisabled ? '비활성' : '활성',
     roleLabel: isAdmin ? '관리자' : '일반 사용자',
+    searchHaystack: [user.email ?? '', nickname, username, user.id].join(' ').toLowerCase(),
   };
 }
 
@@ -136,35 +140,29 @@ export async function GET(request: NextRequest) {
       .map((user) => buildManagedUser(user, metadataMap.get(user.id)))
       .filter((user) => {
         if (!search) return true;
-        return [user.email, user.nickname, user.username, user.id]
-          .join(' ')
-          .toLowerCase()
-          .includes(search);
-      });
+        return user.searchHaystack.includes(search);
+      })
+      .map(({ searchHaystack: _searchHaystack, ...user }) => user);
 
-    return NextResponse.json(
-      {
-        users,
-        page,
-        perPage,
-        total: search ? users.length : listedTotal,
-        summary: {
-          loadedUsers: users.length,
-          adminUsers: users.filter((user) => user.isAdmin).length,
-          disabledUsers: users.filter((user) => user.isDisabled).length,
-          unconfirmedUsers: users.filter((user) => !user.emailConfirmedAt).length,
-        },
+    return adminJson({
+      users,
+      page,
+      perPage,
+      total: search ? users.length : listedTotal,
+      summary: {
+        loadedUsers: users.length,
+        adminUsers: users.filter((user) => user.isAdmin).length,
+        disabledUsers: users.filter((user) => user.isDisabled).length,
+        unconfirmedUsers: users.filter((user) => !user.emailConfirmedAt).length,
       },
-      { headers: { 'Cache-Control': 'no-store' } },
-    );
-  } catch (error) {
-    console.error('[admin/users] failed to list users', {
-      domain: 'admin_user_management',
-      action: 'list_users',
-      step: 'list',
-      errorName: getAdminSafeErrorName(error),
     });
-    return NextResponse.json({ error: '사용자 목록을 불러오지 못했습니다.' }, { status: 500 });
+  } catch (error) {
+    logAdminFixedError({
+      menu: 'users',
+      action: 'list_users',
+      code: getAdminSafeErrorName(error),
+    });
+    return adminJson({ error: 'ADMIN_USERS_LIST_UNAVAILABLE' }, 500);
   }
 }
 

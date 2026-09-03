@@ -35,6 +35,7 @@ import {
     Loader2,
     Scroll,
 } from 'lucide-react';
+import { RISKY_WORK_STEPS } from '@/lib/admin/risky-work-procedure';
 import { cn } from '@/lib/utils';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { toast } from '@/hooks/use-toast';
@@ -126,7 +127,9 @@ type BannerManagementPageWrapperProps = {
 function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
     return (
         <Suspense fallback={null}>
-            <BannerManagementPage embedded={embedded} />
+            <div data-admin-risky-work-steps={RISKY_WORK_STEPS.join(' ')}>
+                <BannerManagementPage embedded={embedded} />
+            </div>
         </Suspense>
     );
 }

@@ -5,6 +5,8 @@ import type { ComponentType, ReactNode } from "react";
 
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
+import { RiskyWorkProcedureSteps } from "@/components/admin/console/RiskyWorkProcedureSteps";
+import { isRiskyWorkMenuId } from "@/lib/admin/risky-work-procedure";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
 import {
   getAdminConsoleMenu,
@@ -80,6 +82,9 @@ function withCompleteness(
       onRetry={props.onRetry}
       onPrimaryAction={onPrimaryAction}
     >
+      {isRiskyWorkMenuId(menuId) ? (
+        <RiskyWorkProcedureSteps menuId={menuId} />
+      ) : null}
       {children}
     </AdminConsoleModuleCompleteness>
   );
@@ -183,14 +188,14 @@ function loadAdminOverviewCanvasPanel() {
 }
 
 function loadAdminLlmWorkspacePanel() {
-  return import("@/components/admin/AdminConsoleOverview").then(
-    (module) => module.AdminLlmWorkspacePanel,
+  return import("@/components/admin/console/AdminOpsAssistPanel").then(
+    (module) => module.AdminOpsAssistPanel,
   );
 }
 
 function loadAdminAuditCanvasPanel() {
-  return import("@/components/admin/AdminConsoleOverview").then(
-    (module) => module.AdminAuditCanvasPanel,
+  return import("@/components/admin/console/AdminAuditEventsPanel").then(
+    (module) => module.AdminAuditEventsPanel,
   );
 }
 

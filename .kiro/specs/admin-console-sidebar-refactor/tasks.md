@@ -232,33 +232,33 @@
     - `apps/web/tests-unit/admin-console-viz-source.test.ts`를 신설해 계열 색 지정에 16진수·`rgb`/`rgba`·채도 있는 `hsl`/`hsla`·색조 이름 유틸리티 클래스 4부류가 없음과, 셸 색 사용이 6단계+3역할 허용 목록에 한정됨을 단정한다. `hsl(var(--…))`는 허용한다.
     - _요구사항 9.14, 9.15, 21.6_
 
-- [ ] 11. `llm` 데이터 연결, `audit` 개명, 가드레일과 개인정보 경계
-  - [ ] 11.1 `AdminOpsAssistPanel` 작성 (`llm` 읽기 전용 데이터 연결)
+- [x] 11. `llm` 데이터 연결, `audit` 개명, 가드레일과 개인정보 경계
+  - [x] 11.1 `AdminOpsAssistPanel` 작성 (`llm` 읽기 전용 데이터 연결)
     - `apps/web/components/admin/console/AdminOpsAssistPanel.tsx`를 신설해 `LlmSessionWorkspace`를 대체한다. `/api/admin/pending-counts`·`/api/admin/system-status`·`/api/admin/audit-events`를 GET으로만 조회하고 변경 호출 경로를 두지 않는다. 각 제안 항목에 초안/제안 표기와 근거 출처 이름을 붙이고, 변경 제안은 담당 메뉴 위험_작업_절차로 위임하며 위임 대상 표시 제목을 표시한다. 생성 준비 불가 시 조회 결과를 유지한 채 생성 제어만 비활성화하고 고정 문구를 표시한다.
     - _요구사항 4.4, 4.5, 4.6, 4.10, 4.11_
 
-  - [ ] 11.2 `AdminAuditEventsPanel` 개명·이관
+  - [x] 11.2 `AdminAuditEventsPanel` 개명·이관
     - `AuditPlaceholder`를 `apps/web/components/admin/console/AdminAuditEventsPanel.tsx`로 이관·개명하고 섹션을 운영으로 옮긴다. 기존 감사 범위 표기(`data-admin-audit-coverage`, `universal: false`, 과장 문구 부재)와 로딩·빈·오류·세션만료 상태를 유지하고, 활동 히트맵과 카드_메타_행(좌: 부분 범위 문구+도메인, 우: 건수 최대 50), 개인정보 사고 대응 링크(자동 신고 완료 미주장)를 추가한다. 응답에 범위 필드가 없거나 전체 아님 표식이 거짓이면 범위 확인 필요 상태만 표시한다.
     - _요구사항 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.8, 20.9, 20.10_
 
-  - [ ] 11.3 위험_작업_절차와 관리자_API 가드레일 적용
+  - [x] 11.3 위험_작업_절차와 관리자_API 가드레일 적용
     - 요구사항 18-1 열거 메뉴(restaurants·submissions·reviews·users·banners·map-overlays·routes·pipeline)의 위험 작업이 미리보기→확인→적용→재확인→감사 기록 5단계를 생략 없이 적용하도록 한다. 미리보기(식별 해시·영향 건수·대상 최대 50·600초 만료), 확인 문구 정확 일치·미리 채우지 않음, 불일치 누적 3회 해시 무효화, 만료·상태 변경 시 새 미리보기 요구, 동일 해시 재요청 시 최초 재확인 값 반환·중복 감사 없음을 구현한다.
     - 관리자_API 공통 순서(`requireAdmin` → 동일 출처 → 본문 상한 → 서비스 롤 클라이언트)와 `adminJson` no-store 헬퍼, `ADMIN_API_STATUS_CODES` 고정 집합, 목록 상한 절단, `backend`·외부 호출 10초 상한(`ADMIN_UPSTREAM_TIMEOUT`)을 적용한다. 크롤링·미디어·대량 생성·GDrive·대량 적재는 `backend`에 위임한다.
     - _요구사항 4.12, 16.3, 17.1, 17.2, 17.3, 17.4, 17.5, 17.6, 17.7, 17.8, 17.10, 17.11, 17.12, 18.1, 18.2, 18.3, 18.4, 18.5, 18.6, 18.7, 18.8, 18.9, 18.10_
 
-  - [ ] 11.4 개인정보_경계 적용
+  - [x] 11.4 개인정보_경계 적용
     - 표시·기록 경로에 `apps/web/lib/privacy/sanitize.ts`를 통과시킨다. 사용자 관리 화면은 8개 항목만·이메일 마스킹 표식, OCR은 정형 요약·고정 실패 코드만, 시각화 입력은 집계 값·분류 이름만(`ConsoleVizSeries` 타입에 식별자·좌표·OCR 필드 부재), 위치는 저장된 업소 좌표만(기기 위치 요청 없음)을 적용한다. 클라이언트 오류 보고는 메뉴 ID+고정 코드만 쓴다.
     - _요구사항 19.1, 19.2, 19.4, 19.5, 19.6, 19.8, 19.9_
 
-  - [ ] 11.5 사용자 관리 소스 계약 시험 갱신
+  - [x] 11.5 사용자 관리 소스 계약 시험 갱신
     - `apps/web/tests-unit/admin-user-management-source.test.ts`에 8개 표시 항목 유지와 상태 표식 3종·산출물_성격 표식 단정을 추가한다. 메뉴 구성 변경으로 깨지므로 필수다.
     - _요구사항 4.9, 19.4, 21.3, 21.9_
 
-  - [ ] 11.6 맛집 최신화 소스 계약 시험 갱신
+  - [x] 11.6 맛집 최신화 소스 계약 시험 갱신
     - `apps/web/tests-unit/admin-restaurant-refresh-history-source.test.ts`에 상태 표식 3종과 워터폴 시각화 단정을 추가한다. 필수 갱신이다.
     - _요구사항 21.3, 21.9_
 
-  - [ ]* 11.7 가드레일·위험 작업 소스 계약과 단위 시험
+  - [x]* 11.7 가드레일·위험 작업 소스 계약과 단위 시험
     - `apps/web/tests-unit/admin-console-guardrail-source.test.ts`를 신설해 각 관리자_API 경로에서 `requireAdmin` 첫 등장이 `readBoundedJsonRequest`·`createSupabaseServiceRoleClient`·`.from(`·`fetch(`보다 앞섬, 고정 코드·상태 코드 집합·`no-store`, 금지 부류 12개 표시·기록 경로 부재, 감사 컴포넌트 이름에 자리표시 낱말 부재, 과장 감사 문구 6개 부재를 단정한다. 위험_작업_절차 미리보기·불일치·재확인·감사·만료·중복 차단을 단위로 확인한다.
     - _요구사항 17.9, 18.11, 19.7, 20.7, 20.10_
 

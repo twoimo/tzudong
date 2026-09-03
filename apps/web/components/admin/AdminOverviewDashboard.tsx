@@ -34,6 +34,7 @@ import {
   type AdminRouteCandidateReadback,
   type AdminRouteDirectionsReadback,
 } from "@/lib/admin-route-planner";
+import { RISKY_WORK_STEPS } from "@/lib/admin/risky-work-procedure";
 import {
   type AdminMapOverlaysResponse,
   type AdminRestaurantMapOverlay,
@@ -1820,6 +1821,7 @@ export function AdminOverviewDashboard({
       data-layout-primitives="panel-layout list-detail frame cluster"
       data-scroll-owner="admin-overview-canvas"
       data-admin-overview-layout="two-pane"
+      data-admin-risky-work-steps={RISKY_WORK_STEPS.join(" ")}
     >
       <div
         className="h-[340px] min-w-0 sm:h-[390px] overflow-visible lg:h-full lg:min-h-0"
