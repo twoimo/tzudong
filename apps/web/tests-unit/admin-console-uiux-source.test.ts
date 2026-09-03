@@ -1513,7 +1513,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).not.toContain("viewBox={`0 0 ${width} ${height}`}");
     expect(consoleSource).toContain(
-      "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
+      "min-h-0 min-w-0 w-full overflow-hidden rounded-[var(--admin-card-radius)] border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]",
     );
     expect(consoleSource).not.toContain("bg-[#e9ecee]");
     expect(consoleSource).not.toContain(
@@ -8134,7 +8134,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-horizontal-scroll-owner="admin-dashboard-kpi-title-actions"',
     );
     expect(consoleSource).toContain(
-      "min-h-0 min-w-0 w-full overflow-hidden border",
+      "min-h-0 min-w-0 w-full overflow-hidden rounded-[var(--admin-card-radius)] border",
     );
     expect(consoleSource).toContain("overflow-x-hidden overscroll-contain");
     expect(consoleSource).toContain(
