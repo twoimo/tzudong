@@ -738,6 +738,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(registrySource).toContain('title: "맛집 동선 추천"');
     expect(consoleSource).toContain("buildRegistrySidebarSections");
     expect(consoleSource).toContain("AdminDashboardManagementPanel");
+    expect(consoleSource).toContain("AdminConsoleModuleGrid");
+    expect(consoleSource.indexOf("<AdminConsoleModuleGrid")).toBeGreaterThan(
+      consoleSource.indexOf("AdminDashboardManagementPanel"),
+    );
     expect(consoleSource).not.toContain("fetchAdminMapRestaurants");
 
     expect(overviewSource).toContain("fetchAdminMapRestaurants");

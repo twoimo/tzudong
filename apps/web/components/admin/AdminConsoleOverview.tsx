@@ -112,6 +112,7 @@ import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminConsoleSidebar } from "@/components/admin/console/AdminConsoleSidebar";
 import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
+import { AdminConsoleModuleGrid } from "@/components/admin/console/AdminConsoleModuleGrid";
 import { AdminConsoleModuleSkeleton } from "@/components/admin/console/AdminConsoleModuleSkeleton";
 import {
   AdminConsoleRegisteredModulePanel,
@@ -7947,11 +7948,13 @@ export function AdminOverviewCanvasPanel({
   isLoading,
   hasError,
   isAdmin,
+  onSelectModule,
 }: {
   stats?: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
   isAdmin: boolean;
+  onSelectModule?: (moduleId: AdminModuleId) => void;
 }) {
   return (
     <AdminEmbeddedModuleShell
@@ -7964,6 +7967,7 @@ export function AdminOverviewCanvasPanel({
         hasError={hasError}
         isAdmin={isAdmin}
       />
+      <AdminConsoleModuleGrid onSelectModule={onSelectModule} />
     </AdminEmbeddedModuleShell>
   );
 }

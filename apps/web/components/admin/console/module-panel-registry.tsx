@@ -175,6 +175,7 @@ function loadAdminOverviewCanvasPanel() {
           isLoading={Boolean(props.isLoading)}
           hasError={Boolean(props.hasError)}
           isAdmin={Boolean(props.isAdmin)}
+          onSelectModule={props.onSelectModule}
         />
       );
     };

@@ -186,21 +186,21 @@
     - **Validates: Requirements 2.1, 2.4, 2.7, 2.10, 21.1**
 
 - [ ] 9. 모듈_그리드 신설
-  - [ ] 9.1 `AdminConsoleModuleGrid` 작성
+  - [x] 9.1 `AdminConsoleModuleGrid` 작성
     - `apps/web/components/admin/console/AdminConsoleModuleGrid.tsx`를 신설한다. 15개 카드를 레지스트리 순서로, 표시 제목·목적 문장·섹션 이름·대표 작업 이름을 표시한다. `filterAdminConsoleMenus`를 소비하고 검색 입력(`maxLength=64`)과 섹션 필터를 AND 결합한다. 한글 IME 조합 중에는 `committedQuery`를 갱신하지 않는다(`compositionStart/End` + `onChange` 플래그 보호).
     - 표시 카드 수 변경 시 현재 수·전체 15를 포함한 문장을 `aria-live="polite"`로 200ms 이내 알린다. 결과 0건이면 빈 상태 문장과 필터 해제 제어를 표시한다. 반응형 열(767px 이하 1열·768~1279 2열·1280 이상 3열), 360px 가로 넘침 없음, 대표 작업 접근성 이름에 표시 제목+작업 이름 포함, 대시보드 지표 요약 아래 배치를 적용한다. 전환은 CSS(`motion-reduce:transition-none`)만 쓴다.
     - _요구사항 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 13.8, 13.9, 13.10, 13.14, 13.15, 12.6, 12.7, 12.13_
 
-  - [ ]* 9.2 모듈_그리드 결과 크기 성질 시험
+  - [x]* 9.2 모듈_그리드 결과 크기 성질 시험
     - `apps/web/tests-unit/admin-console-module-grid.test.ts`를 신설한다. `generateSearchQueryCases`로 100개 이상(빈·공백만·1자·일치 없음·부분 일치·대소문자 변형·64자 초과·한글·로마자 혼용) 생성한다.
     - **Property 9: 모듈_그리드 결과 크기 한계** — 표시 카드 수가 0~15이고 검색 빈·공백만 + 섹션 미선택이면 정확히 15.
     - **Validates: Requirements 13.11, 13.12, 21.7**
 
-  - [ ]* 9.3 모듈_그리드 결과 부분집합 성질 시험
+  - [x]* 9.3 모듈_그리드 결과 부분집합 성질 시험
     - **Property 10: 모듈_그리드 결과 부분집합** — 표시 카드 메뉴 ID 집합이 레지스트리 집합의 부분집합이고 섹션 필터 시 모든 카드 섹션이 선택 섹션과 같다.
     - **Validates: Requirements 13.4, 13.13, 21.7**
 
-  - [ ]* 9.4 검색 단조성 성질 시험
+  - [x]* 9.4 검색 단조성 성질 시험
     - **Property 11: 검색 단조성** — 문자열 A와 접두사 관계 B, 동일 섹션 필터에서 B의 카드 집합이 A의 부분집합이다.
     - **Validates: Requirements 13.16**
 
