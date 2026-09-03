@@ -7,24 +7,25 @@ import {
 import { ADMIN_AUDIT_COVERAGE } from "../lib/admin/audit-contract";
 import { CONSOLE_VIZ_BINDINGS } from "../lib/admin/console-visualization-map";
 import { buildAdminPendingCountsResponse } from "../lib/admin/pending-counts";
-import { gotoAndHidePopup } from "./helpers";
+import { gotoAndHidePopup, hidePopupOverlay } from "./helpers";
 
 const E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY = "tzudong:e2e-admin-shell-bypass";
 const ADMIN_THEME_STORAGE_KEY = "tzudong-admin-theme";
 
 const VIZ_BOUND_TARGETS = [
-  { path: "/admin", moduleId: "overview" },
-  { path: "/admin?module=insights", moduleId: "insights" },
-  { path: "/admin?module=restaurants", moduleId: "restaurants" },
+  { path: "/admin", moduleId: "overview", minCards: 2 },
+  { path: "/admin?module=insights", moduleId: "insights", minCards: 0 },
+  { path: "/admin?module=restaurants", moduleId: "restaurants", minCards: 0 },
   {
     path: "/admin?module=restaurant-refresh-history",
     moduleId: "restaurant-refresh-history",
+    minCards: 1,
   },
-  { path: "/admin?module=submissions", moduleId: "submissions" },
-  { path: "/admin?module=reviews", moduleId: "reviews" },
-  { path: "/admin?module=pipeline", moduleId: "pipeline" },
-  { path: "/admin?module=audit", moduleId: "audit" },
-  { path: "/admin?module=llm", moduleId: "llm" },
+  { path: "/admin?module=submissions", moduleId: "submissions", minCards: 0 },
+  { path: "/admin?module=reviews", moduleId: "reviews", minCards: 0 },
+  { path: "/admin?module=pipeline", moduleId: "pipeline", minCards: 0 },
+  { path: "/admin?module=audit", moduleId: "audit", minCards: 1 },
+  { path: "/admin?module=llm", moduleId: "llm", minCards: 1 },
 ] as const;
 
 const KPI_FIXTURE = {
@@ -172,6 +173,17 @@ async function installStableVizFixtures(page: Page) {
       }),
     });
   });
+  await page.route("**/api/admin/preferences/sidebar-order**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ order: null }),
+    });
+  });
   await page.route("**/api/admin/restaurant-refresh-history**", async (route) => {
     if (route.request().method() !== "GET") {
       await route.fallback();
@@ -195,23 +207,20 @@ async function installStableVizFixtures(page: Page) {
   });
 }
 
-async function waitForSettledVizCards(page: Page) {
-  await page
-    .locator('[data-admin-viz-card="true"]')
-    .first()
-    .waitFor({ state: "attached", timeout: 20_000 })
-    .catch(() => undefined);
-  await page
-    .waitForFunction(() => {
+async function waitForSettledVizCards(page: Page, minCards = 0) {
+  await page.waitForFunction(
+    (expectedMin) => {
       const cards = [
         ...document.querySelectorAll('[data-admin-viz-card="true"]'),
       ];
-      if (cards.length === 0) return true;
+      if (cards.length < expectedMin) return false;
       return cards.every(
         (card) => card.getAttribute("data-admin-viz-state") !== "loading",
       );
-    }, { timeout: 20_000 })
-    .catch(() => undefined);
+    },
+    minCards,
+    { timeout: 20_000 },
+  );
 }
 
 async function collectVizSurfaces(page: Page): Promise<VizSurfaceSnapshot[]> {
@@ -250,6 +259,7 @@ async function setDocumentTheme(page: Page, mode: "light" | "dark") {
 }
 
 test.describe("admin console brightness-mode tone parity", () => {
+  test.describe.configure({ mode: "serial" });
   test("applies the stored theme before paint and records system for invalid values", async ({
     page,
   }, testInfo) => {
@@ -262,11 +272,20 @@ test.describe("admin console brightness-mode tone parity", () => {
       },
       { key: ADMIN_THEME_STORAGE_KEY, value: "dark" },
     );
-    await gotoAndHidePopup(page, "/admin");
-    await expect(page.locator("html")).toHaveClass(/dark/);
-    const darkHtml = await page.content();
-    expect(darkHtml).toContain("tzudong-admin-theme");
-    expect(darkHtml).not.toMatch(/<script\b[^>]*(?:\basync\b|\bdefer\b)/);
+    const firstResponse = await page.goto("/admin", {
+      waitUntil: "domcontentloaded",
+    });
+    await hidePopupOverlay(page);
+    await expect
+      .poll(() =>
+        page.locator("html").evaluate((el) => el.classList.contains("dark")),
+      )
+      .toBe(true);
+    const firstHtml = (await firstResponse?.text()) ?? "";
+    expect(firstHtml).toContain("tzudong-admin-theme");
+    expect(firstHtml).toMatch(
+      /<script(?![^>]*(?:\basync\b|\bdefer\b))[^>]*>[\s\S]*tzudong-admin-theme/,
+    );
 
     await page.addInitScript(
       ({ key, value }) => {
@@ -282,9 +301,11 @@ test.describe("admin console brightness-mode tone parity", () => {
     const prefersDark = await page.evaluate(
       () => window.matchMedia("(prefers-color-scheme: dark)").matches,
     );
-    await expect(page.locator("html")).toHaveClass(
-      prefersDark ? /dark/ : /^(?:(?!dark).)*$/,
-    );
+    await expect
+      .poll(() =>
+        page.locator("html").evaluate((el) => el.classList.contains("dark")),
+      )
+      .toBe(prefersDark);
   });
 
   test("keeps the same series count, labels, and point counts in light and dark", async ({
@@ -314,7 +335,7 @@ test.describe("admin console brightness-mode tone parity", () => {
         target.moduleId,
         { timeout: 30_000 },
       );
-      await waitForSettledVizCards(page);
+      await waitForSettledVizCards(page, target.minCards);
       await setDocumentTheme(page, "light");
       const light = await collectVizSurfaces(page);
       await setDocumentTheme(page, "dark");
