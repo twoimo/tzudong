@@ -5,6 +5,7 @@ import type { ComponentType, ReactNode } from "react";
 
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminConsoleModuleCompleteness } from "@/components/admin/console/AdminConsoleModuleCompleteness";
+import { AdminInsightsVisualizations } from "@/components/admin/console/AdminInsightsVisualizations";
 import { RiskyWorkProcedureSteps } from "@/components/admin/console/RiskyWorkProcedureSteps";
 import { isRiskyWorkMenuId } from "@/lib/admin/risky-work-procedure";
 import type { StoryboardInitialResult } from "@/lib/admin/storyboard/initial-result";
@@ -379,7 +380,14 @@ function AdminInsightsRegisteredPanel(props: AdminConsoleModulePanelProps) {
     "insights",
     props,
     <ModulePanelFrame menuId="insights">
-      <InsightsModule key="admin-insights" embedded />
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="shrink-0 px-2 pt-2">
+          <AdminInsightsVisualizations />
+        </div>
+        <div className="min-h-0 flex-1">
+          <InsightsModule key="admin-insights" embedded />
+        </div>
+      </div>
     </ModulePanelFrame>,
   );
 }
@@ -561,6 +569,7 @@ export function preloadAdminConsoleModule(
     case "users":
       return loadAdminUsersModule();
     case "insights":
+      void import("@/components/admin/console/AdminInsightsVisualizations");
       return loadInsightsModule();
     case "pipeline":
       return loadAdminPipelineModule();
