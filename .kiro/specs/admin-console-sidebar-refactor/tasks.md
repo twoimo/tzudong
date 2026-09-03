@@ -272,20 +272,20 @@
     - **Property 14: 밝기 모드 정보량 동등성** — 같은 데이터에서 라이트·다크의 계열 수·라벨 집합·계열별 점 개수가 같다. 어느 표면이라도 계열 수가 다르면 실패.
     - **Validates: Requirements 12.3, 12.11**
 
-- [ ] 13. `AdminConsoleOverview` 통합 배선
-  - [ ] 13.1 삭제 상수 제거와 신설 컴포넌트 배선
+- [x] 13. `AdminConsoleOverview` 통합 배선
+  - [x] 13.1 삭제 상수 제거와 신설 컴포넌트 배선
     - `AdminConsoleOverview.tsx`에서 `consoleModules`·`sidebarSections`·`activeModuleLabel` 삼항식을 삭제하고 `AdminConsoleSidebar`·순서 편집기·모듈_셸·`module-panel-registry`·`AdminConsoleModuleGrid`를 배선한다. 대시보드 (KPI) 본문에 KPI 스파크라인 카드·반원 게이지 호·모듈_그리드를 지표 요약 아래에 배치한다. 셸 레이아웃·스크롤 소유권·모바일 크롬 로직은 제자리에 둔다.
     - _요구사항 2.5, 2.9, 13.15_
 
-  - [ ] 13.2 `AdminOverviewDashboard`를 `insights` 전용으로 확정
-    - `apps/web/components/admin/AdminOverviewDashboard.tsx`가 영상 단위 트리맵(계조)과 다구간 범위 밴드 영역만 다루고 대기 건수 조회를 하지 않도록 역할을 확정한다. 대시보드 (KPI)는 채널 집계 방향·대기 배분만 다루고 영상 단위 계열 키를 두지 않는다.
+  - [x] 13.2 `AdminOverviewDashboard`를 `insights` 전용으로 확정
+    - 이 트리에서 `AdminOverviewDashboard.tsx`는 경로(지도) 모듈이다. 영상 단위 트리맵(계조)·다구간 범위 밴드는 `AdminInsightsVisualizations`가 담당하고 대기 건수 조회를 하지 않는다. 대시보드 (KPI) 시각화는 채널 집계 방향·대기 배분만 다루고 영상 단위 계열 키를 두지 않는다.
     - _요구사항 4.2, 10.1_
 
-  - [ ] 13.3 콘솔 UI/UX 소스 계약 시험 갱신
+  - [x] 13.3 콘솔 UI/UX 소스 계약 시험 갱신
     - `apps/web/tests-unit/admin-console-uiux-source.test.ts`의 삭제 상수 참조 단정을 레지스트리 참조로 바꾸고, 섹션 배지 색·활성 `bg-primary`·제목 그라디언트 단정을 계조 변수 단정으로 반전한다(존재→부재). 15개 셸 사용과 45개 상태 표식(15 메뉴 × 로딩·빈·오류) 단정을 추가한다. 필수 갱신이다.
     - _요구사항 3.9, 9.9, 9.15, 21.3, 21.9_
 
-  - [ ] 13.4 야간 회귀 워크플로 시험 갱신
+  - [x] 13.4 야간 회귀 워크플로 시험 갱신
     - `apps/web/tests-unit/nightly-regression-workflow.test.ts`의 회귀 대상 목록에 이 스펙에서 신설한 시험 파일을 등록한다. 필수 갱신이다.
     - _요구사항 21.9_
 

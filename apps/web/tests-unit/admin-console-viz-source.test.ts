@@ -129,4 +129,46 @@ describe("admin console visualization source contracts", () => {
     expect(overviewSource).not.toContain("#cbd5e1");
     expect(overviewSource).not.toContain("#e2e8f0");
   });
+
+  test("keeps insights video-level charts off the KPI dashboard and out of pending-count reads", () => {
+    const insightsVizSource = read(
+      "components/admin/console/AdminInsightsVisualizations.tsx",
+    );
+    const overviewVizSource = read(
+      "components/admin/console/AdminConsoleOverviewVisualizations.tsx",
+    );
+    const registrySource = read(
+      "components/admin/console/module-panel-registry.tsx",
+    );
+    const routesDashboardSource = read(
+      "components/admin/AdminOverviewDashboard.tsx",
+    );
+
+    expect(insightsVizSource).toContain('getConsoleVizBindings("insights")');
+    expect(insightsVizSource).toContain('item.form === "treemap-tile"');
+    expect(insightsVizSource).toContain('item.form === "range-band-area"');
+    expect(insightsVizSource).toContain("/api/admin/youtube-kpis");
+    expect(insightsVizSource).toContain("video.title");
+    expect(insightsVizSource).toContain("previousViewCount");
+    expect(insightsVizSource).toContain("viewCount");
+    expect(insightsVizSource).not.toContain("/api/admin/pending-counts");
+    expect(insightsVizSource).not.toContain("pendingRestaurantSubmissions");
+    expect(insightsVizSource).not.toContain("맛집 제보");
+    expect(insightsVizSource).not.toContain("추천 요청");
+
+    expect(overviewVizSource).toContain('label: "조회수"');
+    expect(overviewVizSource).toContain('label: "좋아요"');
+    expect(overviewVizSource).toContain('label: "댓글"');
+    expect(overviewVizSource).toContain('label: "맛집 제보"');
+    expect(overviewVizSource).toContain('label: "추천 요청"');
+    expect(overviewVizSource).toContain('label: "리뷰"');
+    expect(overviewVizSource).not.toContain("video.title");
+    expect(overviewVizSource).not.toContain("previousViewCount");
+    expect(overviewVizSource).not.toContain("treemap-tile");
+    expect(overviewVizSource).not.toContain("range-band-area");
+
+    expect(registrySource).toContain("<AdminInsightsVisualizations");
+    expect(routesDashboardSource).not.toContain("/api/admin/pending-counts");
+    expect(routesDashboardSource).not.toContain("getConsoleVizBindings");
+  });
 });

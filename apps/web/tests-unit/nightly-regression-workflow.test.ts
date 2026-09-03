@@ -1627,6 +1627,37 @@ describe("nightly regression package and source contracts", () => {
     }
   });
 
+  test("registers admin-console sidebar refactor unit files in the unit lane", () => {
+    const specUnitFiles = [
+      "tests-unit/admin-console-menu-registry.test.ts",
+      "tests-unit/admin-console-tone-scale.test.ts",
+      "tests-unit/admin-console-tone-constants.test.ts",
+      "tests-unit/admin-module-routing.test.ts",
+      "tests-unit/admin-sidebar-pending-badge.test.ts",
+      "tests-unit/admin-sidebar-order-editor.test.ts",
+      "tests-unit/admin-console-module-panel-source.test.ts",
+      "tests-unit/admin-console-module-state.test.ts",
+      "tests-unit/admin-console-module-grid.test.ts",
+      "tests-unit/admin-console-viz-state.test.ts",
+      "tests-unit/admin-console-viz-source.test.ts",
+      "tests-unit/admin-console-guardrail-source.test.ts",
+      "tests-unit/admin-console-theme-prelude-source.test.ts",
+    ] as const;
+    for (const relativePath of specUnitFiles) {
+      expect(read(relativePath).length).toBeGreaterThan(0);
+    }
+    expect(nightlyRunnerSource).toContain("bun', ['run', 'test:unit']");
+    expect(nightlyRunnerSource).not.toContain(
+      "tests/admin-console-sidebar-ia.spec.ts",
+    );
+    expect(nightlyRunnerSource).not.toContain(
+      "tests/admin-console-keyboard.spec.ts",
+    );
+    expect(nightlyRunnerSource).not.toContain(
+      "tests/admin-console-module-grid.spec.ts",
+    );
+  });
+
   test("routes public web and local Supabase changes into Web Admin CI", () => {
     const pullPaths = sourceBlock(webAdminWorkflowSource, "  pull_request:", "  push:");
     const pushPaths = sourceBlock(webAdminWorkflowSource, "  push:", "  schedule:");

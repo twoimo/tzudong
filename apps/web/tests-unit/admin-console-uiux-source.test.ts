@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { ADMIN_CONSOLE_MENU_IDS } from "../lib/admin/console-menu-registry";
 import {
   resolveGitHubActionsRunUrl,
   resolveSafeExternalUrl,
@@ -9329,5 +9330,97 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(backendAgentSource).toContain("rag|r\\.a\\.g");
     expect(chatRouteSource).toContain("rag|r\\.a\\.g");
+  });
+
+  test("wires overview from the registry and inverts leftover hue-shell contracts", () => {
+    const overviewSource = adminConsoleOverviewSource();
+    const sidebarSource = adminConsoleSidebarSource();
+    const registrySource = adminConsoleModulePanelRegistrySource();
+    const shellSource = source("components/admin/AdminEmbeddedModuleShell.tsx");
+    const completenessSource = source(
+      "components/admin/console/AdminConsoleModuleCompleteness.tsx",
+    );
+    const skeletonSource = adminConsoleModuleSkeletonSource();
+    const moduleStateSource = source("lib/admin/console-module-state.ts");
+    const insightsClientSource = source("app/insights/insights-client.tsx");
+    const opsSource = source("components/admin/console/AdminOpsAssistPanel.tsx");
+    const auditSource = source(
+      "components/admin/console/AdminAuditEventsPanel.tsx",
+    );
+    const storyboardSource = source(
+      "components/admin/storyboard/AdminStoryboardGenerator.tsx",
+    );
+    const thumbnailSource = source(
+      "components/admin/thumbnail-generator/AdminYoutubeThumbnailGenerator.tsx",
+    );
+    const shellCoverageSource = [
+      overviewSource,
+      registrySource,
+      insightsClientSource,
+      opsSource,
+      auditSource,
+      storyboardSource,
+      thumbnailSource,
+      completenessSource,
+      skeletonSource,
+    ].join("\n");
+
+    expect(overviewSource).not.toContain("const consoleModules");
+    expect(overviewSource).not.toContain("type ConsoleModule");
+    expect(overviewSource).not.toContain("const sidebarSections");
+    expect(overviewSource).toContain(
+      "const activeModuleLabel = getAdminConsoleMenu(activeModuleId).title",
+    );
+    expect(overviewSource).not.toMatch(
+      /const activeModuleLabel\s*=\s*activeModuleId\s*===/,
+    );
+    expect(overviewSource).toContain("AdminConsoleSidebar");
+    expect(overviewSource).toContain("AdminConsoleModuleGrid");
+    expect(overviewSource).toContain("AdminConsoleOverviewVisualizations");
+    expect(overviewSource).toContain("AdminConsoleRegisteredModulePanel");
+    expect(overviewSource).toContain("data-scroll-owner");
+    expect(sidebarSource).toContain("AdminConsoleSidebarOrderEditor");
+
+    const overviewCanvasStart = overviewSource.indexOf(
+      "export function AdminOverviewCanvasPanel",
+    );
+    expect(overviewCanvasStart).toBeGreaterThan(-1);
+    const overviewCanvas = overviewSource.slice(overviewCanvasStart);
+    expect(overviewCanvas.indexOf("AdminDashboardManagementPanel")).toBeLessThan(
+      overviewCanvas.indexOf("AdminConsoleOverviewVisualizations"),
+    );
+    expect(
+      overviewCanvas.indexOf("AdminConsoleOverviewVisualizations"),
+    ).toBeLessThan(overviewCanvas.indexOf("AdminConsoleModuleGrid"));
+
+    expect(sidebarSource).not.toContain("bg-amber-");
+    expect(sidebarSource).not.toContain("bg-sky-");
+    expect(sidebarSource).not.toContain("bg-violet-");
+    expect(sidebarSource).not.toContain("bg-emerald-");
+    expect(sidebarSource).toContain("border-border bg-muted text-foreground");
+    expect(sidebarSource).not.toContain("bg-primary text-primary-foreground");
+    expect(sidebarSource).not.toMatch(
+      /isActive\s*\n\s*\?\s*"bg-primary/,
+    );
+    expect(shellSource).not.toContain("bg-gradient-primary bg-clip-text");
+    expect(shellSource).toContain("text-[var(--admin-tone-1)]");
+    expect(shellSource).toContain("text-[var(--admin-tone-2)]");
+
+    expect(ADMIN_CONSOLE_MENU_IDS).toHaveLength(15);
+    expect(ADMIN_CONSOLE_MENU_IDS.length * 3).toBe(45);
+    expect((registrySource.match(/withCompleteness\(/g) ?? []).length).toBe(15);
+    expect(
+      (registrySource.match(/completenessLoading\("/g) ?? []).length,
+    ).toBe(15);
+    expect(completenessSource).toContain("data-admin-module-state={state}");
+    expect(completenessSource).toContain("menuId={menuId}");
+    expect(skeletonSource).toContain("menuId={menuId}");
+    for (const state of ["loading", "empty", "error"] as const) {
+      expect(moduleStateSource).toContain(`"${state}"`);
+    }
+    for (const menuId of ADMIN_CONSOLE_MENU_IDS) {
+      expect(shellCoverageSource).toContain(`menuId="${menuId}"`);
+      expect(registrySource).toContain(`completenessLoading("${menuId}")`);
+    }
   });
 });
