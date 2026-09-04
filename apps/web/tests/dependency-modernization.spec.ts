@@ -26,6 +26,9 @@ async function openGlobalMap(page: Page) {
     };
   });
   await page.goto('/global-map', { waitUntil: 'domcontentloaded' });
+  // The trigger is server-rendered before its pointer handler is hydrated.
+  // Wait for the client-fetched fixture to prove this page can handle input.
+  await expect(page.getByRole('button', { name: /패널 의존성 검증 맛집/ })).toBeVisible({ timeout: 15_000 });
 }
 
 async function openProductionDetailPanel(page: Page) {
@@ -81,12 +84,14 @@ test.describe('dependency modernization browser contracts', () => {
     const listbox = page.getByRole('listbox');
     await expect(listbox).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('option')).toHaveCount(8);
+    await expect(page.getByRole('option', { name: /튀르키예/ })).toBeFocused();
     await page.keyboard.press('End');
+    await expect(page.getByRole('option', { name: /오스트레일리아/ })).toBeFocused();
     await page.keyboard.press('Enter');
 
     await expect(listbox).toBeHidden();
     await expect(select).toBeFocused();
-    await expect(select).not.toContainText('튀르키예');
+    await expect(select).toContainText('오스트레일리아');
   });
 
   test('resizes real production percentage panels by pointer and keyboard within limits', async ({ page }) => {

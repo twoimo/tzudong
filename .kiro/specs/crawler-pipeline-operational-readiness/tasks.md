@@ -616,7 +616,7 @@
 - [x]* 7.402 Require server `password_encryption=scram-sha-256` before interactive password assignment.
 - [x] 7.403 Prohibit silent session/transaction-pooler substitution when the reviewed artifact and repository contract require the direct endpoint.
 - [x] 7.404 Keep IPv4 add-on purchase or activation outside this ceremony and preserve the owner's earlier upgrade deferral.
-- [ ]! 7.405 Prove direct-endpoint reachability from the controlled credential host before any password generation or assignment.
+- [x] 7.405 Superseded by deliberately selected, provider-observed Session pooler with verified TLS and dedicated-role connection readback. See `credential-request-supersession.v1.json`.
 - [x]* 7.406 Run one credential-free IPv6 DNS and bounded 5432/TCP preflight from the current workspace host without retaining endpoint, address, or error text.
 - [x] 7.407 Record only the fixed current-host result: IPv6 DNS present, TCP 5432 unreachable, no authentication, no SQL, and no persistent change.
 - [x] 7.408 Keep password generation, password assignment, dedicated DSN construction, and repository-secret mutation blocked after the unreachable result.
@@ -642,7 +642,7 @@
 - [x] 7.428 Accept only the exact `ready` schema/code with both network booleans true and every database/state-change boolean false.
 - [x] 7.429 Record failed probe codes as diagnostic evidence only, with no automatic retry, pooler fallback, add-on change, or execution authority.
 - [x] 7.430 Keep controlled-host identity, approval, ready evidence, password-request admission, and password authorization false until external evidence arrives.
-- [ ]! 7.431 Run the exact fixed-target probe once from a different owner-approved controlled host with IPv6 egress and provide only the canonical JSON line.
+- [x] 7.431 Different IPv6 host is unnecessary for the explicitly selected and verified IPv4 Session pooler path. See `credential-request-supersession.v1.json`.
 - [x] 7.432 Re-read the current Supabase connection guide for the documented IPv4-only session-pooler alternative.
 - [x] 7.433 Re-scan the Supabase changelog for connection-pooler breaking changes before drafting an alternative.
 - [x] 7.434 Confirm session mode is on 5432 and the deprecated/transaction mode on 6543 is not admissible for this persistent diagnostic session.
@@ -662,7 +662,7 @@
 - [x] 7.448 Obtain named-owner review approval for the exact session-pooler alternative preview hash.
 - [x] 7.449 Obtain exact provider Connect metadata for the Session pooler host, port, database, and username form without exporting a password or DSN.
 - [x] 7.450 Execute a fixed-target credential-free Session pooler TLS probe after provider metadata and public CA readback; verify certificate and hostname.
-- [ ]! 7.451 Keep password work, contract amendment, Secret mutation, and workflow dispatch blocked until their later exact previews and authorizations complete.
+- [x] 7.451 Later current authorization, preview, one password assignment, one dedicated Secret write, and independent readback completed; protected-main controller dispatch remains pending. See `credential-request-supersession.v1.json`.
 - [x] 7.452 Prepare a non-authorizing metadata-only Dashboard Connect readback request behind the unapproved alternative preview.
 - [x] 7.453 Bind the request to the exact alternative preview and existing direct-host evidence request hashes.
 - [x] 7.454 Preserve direct-path availability, prohibit declaring it abandoned, and retain the IPv4 add-on deferral.
@@ -752,7 +752,7 @@
 - [x] 7.538 Treat the unobserved async completion as a conservatively consumed Dashboard open and stop without another browser command, snapshot, click, or retry.
 - [x] 7.539 Record ambiguous attempt SHA-256 `9bcf5eec76211f11113172b08a1133a67a9824d77874212d6a57c0254dce669c`, no success receipt, and fixed code `g037_session_pooler_control_map_async_completion_ambiguous`.
 - [x] 7.540 Keep selector-bounded metadata v2 construction blocked because no successful control-map receipt exists.
-- [ ]! 7.541 Obtain separate named-owner authorization for the later metadata-value v2 request.
+- [x] 7.541 Separate historical metadata-value request superseded by current owner authorization and completed provider-observed metadata read. See `credential-request-supersession.v1.json`.
 - [x] 7.542 Run a browser-free Aside REPL transport preflight and observe fixed top-level-await completion signal `g037_aside_top_level_await_valid`.
 - [x] 7.543 Create an exact single-line top-level-await browser source that has no async IIFE, dynamic code, external input, or value-bearing selector.
 - [x] 7.544 Pass Node syntax validation for browser source SHA-256 `a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc`.
@@ -766,7 +766,7 @@
 - [x] 7.552 Execute only the exact single-line browser source once and retain only canonical sanitized denial SHA-256 `422180f6518a408b11cb1155438826db884b5513c1d8c35a6919051f37ef1114`.
 - [x] 7.553 Classify the non-ready observation before receipt construction: one Dashboard open, zero completed control snapshots, zero clicks, and no metadata read or provider mutation.
 - [x] 7.554 Create no owner-only receipt and run no receipt verification because the observation was denied rather than ready.
-- [ ]! 7.555 Keep later metadata-value selector construction blocked because no v2 control receipt exists.
+- [x] 7.555 Retired historical selector-construction gate; current metadata and dedicated connection evidence are independently retained without claiming success for the denied v2 attempt. See `credential-request-supersession.v1.json`.
 - [x] 7.556 Record denied attempt SHA-256 `f624f78125c1c3938053569fa27e2d547aa3796f17d621f7707f8eb47580aad5`, spent authorization, automatic transport-title boundary, and no-retry gates.
 - [x] 7.557 Inspect local Aside API guidance without another browser read; confirm selector-scoped interactive snapshots are supported while keeping the exact v2 failure cause unclaimed.
 - [x] 7.558 Create one-line v3 browser source SHA-256 `6dbf2915400970b6de301a2f9aed5c0736d23bc7572d8a6ec7e8e4ced3a5d96e` with bounded restricted-selector waits and fixed denial stage codes.

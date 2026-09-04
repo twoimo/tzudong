@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
@@ -91,8 +91,14 @@ describe("Pin_Contract verifier runtime behavior", () => {
       shell: false,
     });
 
-  test("emits a per-item receipt and reports lock reconciliation state", () => {
+  test("rejects an absent repository compiler or emits a per-item installed-compiler receipt", () => {
     const result = runVerifier();
+    if (!existsSync(resolve(root, 'node_modules/@typescript/native/bin/tsc'))) {
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toContain('global_compiler_not_admitted');
+      return;
+    }
     // Whether the environment matches every pin or not, the verifier must emit a
     // structured per-item receipt (requirement 5.7). A global compiler would emit
     // no receipt, so parsing the JSON also proves the compiler was admitted.
