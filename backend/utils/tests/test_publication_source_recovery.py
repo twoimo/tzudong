@@ -51,7 +51,8 @@ class PublicationSourceRecoveryTests(unittest.TestCase):
 
     def test_queue_gate_and_row_projection_are_closed(self) -> None:
         source = HELPER.read_text(encoding="utf-8")
-        for exact in ("'localhost'", "'127.0.0.1'", "'::1'"):
+        # WHATWG URL.hostname retains brackets around an IPv6 literal.
+        for exact in ("'localhost'", "'127.0.0.1'", "'[::1]'"):
             self.assertIn(exact, source)
         self.assertIn("TZUDONG_PUBLISH_QUEUE_ENABLED", source)
         self.assertIn("Object.keys(value).length !== 0", source)
