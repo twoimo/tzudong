@@ -259,9 +259,9 @@
       "sourceGitBlobSha1": "5e3623810190ffddc0aa27b1a1f54ac240651459",
       "sourceSha256": "957500e1d5c723b933db9785e127850095daa6f94aeb49614264b40d2babcfb2",
       "sourceBytes": 7042,
-      "candidateGitBlobSha1": "7145b4c8e40a22e0ee5a82c2cbd07b10861995dd",
-      "candidateSha256": "513ad72c7c8681f27bd94b16b26c3caf787afd2c6193586e357fc7a20679d3f7",
-      "candidateBytes": 7787
+      "candidateGitBlobSha1": "52802a9187a79b198770ace3e7109155cc2ffbca",
+      "candidateSha256": "8c8137a4aa442c94508dd6b1e8bf4c90dfc486758f0a4465d44206145dec5770",
+      "candidateBytes": 8011
     },
     {
       "sourcePath": "backend/pipeline_control/loki_sink.py",
@@ -359,9 +359,9 @@
       "sourceGitBlobSha1": "2e615ef87d02518c8934b68ee5f28721ce5d22f7",
       "sourceSha256": "667473b5670fbedf6ff019fdb363311ff483b41ac198ee96b6282cd54d49f24a",
       "sourceBytes": 6764,
-      "candidateGitBlobSha1": "5493a66c99a253fa501275a42456f6afabe910d9",
-      "candidateSha256": "adb4d462b5e90d0602a0c2560e75c4a92188eb20962f6d5bb071b8e6ff78be5f",
-      "candidateBytes": 8067
+      "candidateGitBlobSha1": "4fb4d9c47d9e4916b6aa6d45540f7c592b75e62c",
+      "candidateSha256": "769150ce9d9cd2f37deabf759bf0e5fee1b625adfee402a0a96550f6c29a8a92",
+      "candidateBytes": 8087
     },
     {
       "sourcePath": "backend/pipeline_control/test_log_sink_url_pbt.py",

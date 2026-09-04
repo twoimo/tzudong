@@ -162,7 +162,7 @@ class ActivationGateTests(unittest.TestCase):
         for field in ("classId", "legalBasis", "trigger"):
             cases.extend({**valid, field: value} for value in (None, "", " ", 42))
         cases.extend({**valid, "proposedRetentionDays": value}
-                     for value in (None, True, 0, -1, 1.5, "30"))
+                     for value in (None, True, 0, -1, 1.5, "30", 10**100, 4_000_000))
         cases.extend({**valid, "activation": {**valid["activation"], "approvedAt": value}}
                      for value in (None, "yesterday", "2026-02-30T00:00:00Z",
                                    "2026-01-01", "2026-01-01T00:00:00",

@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 # --- Fixed code (design fixed-code table, requirement 13.16) --------------
@@ -117,8 +117,11 @@ def _is_active_class(proposed_class: Any) -> bool:
         return False
     try:
         approved = datetime.fromisoformat(approved_at.replace("Z", "+00:00"))
+        # Reject periods that cannot produce a representable expiry; this is a
+        # storage/runtime bound, not an invented retention-policy maximum.
+        approved + timedelta(days=period)
         return approved <= datetime.now(timezone.utc)
-    except ValueError:
+    except (ValueError, OverflowError):
         return False
 
 
