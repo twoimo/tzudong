@@ -14,15 +14,18 @@ SOURCE_SHA256 = "ae834917e3f6c6653d570dacd27d3894d15fcac2a4f09db86f0f9d0f5181514
 ASSERTION = "PERFORM privacy_retention.assert_g014_catalog_manifest();"
 BRIDGE = """DO $replay_membership_preflight$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_catalog.pg_auth_members
-    WHERE roleid = 'privacy_workflow_owner'::pg_catalog.regrole
-  ) THEN
-    RAISE EXCEPTION 'advisor_replay_owner_membership_not_empty';
-  END IF;
+  PERFORM pg_catalog.set_config(
+    'advisor_replay.membership_before',
+    (SELECT COALESCE(pg_catalog.jsonb_agg(
+      pg_catalog.to_jsonb(membership) - 'oid'
+      ORDER BY membership.member, membership.grantor
+    ), '[]'::jsonb)::text FROM pg_catalog.pg_auth_members AS membership
+     WHERE membership.roleid = 'privacy_workflow_owner'::pg_catalog.regrole),
+    true
+  );
 END
 $replay_membership_preflight$;
-GRANT privacy_workflow_owner TO postgres;
+__MEMBERSHIP_OPEN__
 SET LOCAL ROLE privacy_workflow_owner;
 CREATE TEMPORARY TABLE advisor_replay_guard (
   asserted boolean NOT NULL CHECK (asserted)
@@ -44,13 +47,16 @@ REVOKE ALL ON FUNCTION pg_temp.advisor_replay_assertion()
   FROM PUBLIC, anon, authenticated, service_role, postgres, supabase_admin;
 GRANT EXECUTE ON FUNCTION pg_temp.advisor_replay_assertion() TO postgres;
 RESET ROLE;
-REVOKE privacy_workflow_owner FROM postgres;
+__MEMBERSHIP_RESTORE__
 DO $replay_membership_readback$
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_catalog.pg_auth_members
-    WHERE roleid = 'privacy_workflow_owner'::pg_catalog.regrole
-  ) THEN
+  IF (
+    SELECT COALESCE(pg_catalog.jsonb_agg(
+      pg_catalog.to_jsonb(membership) - 'oid'
+      ORDER BY membership.member, membership.grantor
+    ), '[]'::jsonb) FROM pg_catalog.pg_auth_members AS membership
+     WHERE membership.roleid = 'privacy_workflow_owner'::pg_catalog.regrole
+  ) IS DISTINCT FROM pg_catalog.current_setting('advisor_replay.membership_before')::jsonb THEN
     RAISE EXCEPTION 'advisor_replay_owner_membership_not_restored';
   END IF;
 END
@@ -64,7 +70,12 @@ def transform(source: bytes) -> bytes:
     text = source.decode("utf-8")
     if text.count(ASSERTION) != 2:
         raise ValueError("advisor_replay_assertion_drift")
-    return (BRIDGE + text.replace(ASSERTION, "PERFORM pg_temp.advisor_replay_assertion();")).encode()
+    opening = text[text.index("DO $catalog_membership$"):text.index("SET LOCAL ROLE privacy_workflow_owner;")]
+    closing = text[text.index("DO $catalog_membership_restore$"):text.index("DO $readback$")]
+    bridge = BRIDGE.replace("__MEMBERSHIP_OPEN__", opening.replace("advisor.", "advisor_replay.")).replace(
+        "__MEMBERSHIP_RESTORE__", closing.replace("advisor.", "advisor_replay.")
+    )
+    return (bridge + text.replace(ASSERTION, "PERFORM pg_temp.advisor_replay_assertion();")).encode()
 
 
 def main() -> None:

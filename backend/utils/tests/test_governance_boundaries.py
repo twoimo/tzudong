@@ -256,6 +256,43 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
     def test_gdrive_backfill_scheduled_jobs_are_ref_guarded(self) -> None:
         self._assert_scheduled_entry_jobs_are_ref_guarded(GDRIVE_BACKFILL_WORKFLOW)
 
+    def test_active_write_freeze_blocks_every_crawler_and_backfill_job(self) -> None:
+        import ast
+
+        replacements = {
+            "github.repository": "twoimo/tzudong",
+            "github.event.repository.full_name": "twoimo/tzudong",
+            "github.ref_name": "main",
+            "github.event.repository.default_branch": "main",
+            "github.ref_protected": True,
+            "github.event.workflow_run.conclusion": "success",
+            "github.event.workflow_run.event": "schedule",
+            "github.event.workflow_run.head_branch": "main",
+            "github.event.workflow_run.head_repository.full_name": "twoimo/tzudong",
+            "vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED": "1",
+            "vars.TZUDONG_DATA_BRANCH_PUBLISH": "1",
+            "needs.daily-compute.outputs.publication_ready": "true",
+            "needs.daily-compute.outputs.publication_manifest_sha256": "a" * 64,
+        }
+        for path in (DAILY_CRAWLER_WORKFLOW, GDRIVE_BACKFILL_WORKFLOW):
+            for name, job in _load_workflow(path)["jobs"].items():
+                for event in ("schedule", "workflow_dispatch", "workflow_run"):
+                    for freeze in ("active", "cleared"):
+                        with self.subTest(workflow=path.name, job=name, event=event, freeze=freeze):
+                            expression = " ".join(job["if"].split()).removeprefix("${{").removesuffix("}}").strip()
+                            values = {**replacements, "github.event_name": event, "vars.G037_WRITE_FREEZE": freeze}
+                            for key in sorted(values, key=len, reverse=True):
+                                expression = expression.replace(key, repr(values[key]))
+                            expression = expression.replace("always()", "True").replace("&&", "and").replace("||", "or")
+                            tree = ast.parse(expression, mode="eval")
+                            allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.NotEq, ast.Constant)
+                            self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
+                            self.assertIs(eval(compile(tree, "<workflow-condition>", "eval"), {"__builtins__": {}}, {}), freeze != "active")
+
+    def test_public_repository_data_publication_requires_explicit_opt_in(self) -> None:
+        condition = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["daily-publish"]["if"]
+        self.assertIn("vars.TZUDONG_DATA_BRANCH_PUBLISH == '1'", condition)
+
     def test_daily_crawler_wires_run_manifest_into_published_evidence(self) -> None:
         # R5.3: the scheduled crawler must publish the Run_Manifest
         # (current-summary.json) as evidence. In the current source the crawler binds

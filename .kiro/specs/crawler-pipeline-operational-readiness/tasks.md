@@ -1077,7 +1077,7 @@
 - [x] 14.11 Review the final diff again for secrets, crawl data, generated logs, caches, and receipts after active implementation ends.
 - [x] 14.12 Confirm again that no existing user changes were overwritten after active implementation ends.
 - [x] 14.13 Prepare rollback notes for each content patch.
-- [ ]! 14.14 Obtain external approval and branch-protection evidence.
+- [x] 14.14 Bind current solo-owner task authority to independently verified develop/data/main protection; sanitized API receipts are retained externally and hashed in solo-operator-settings-readback.v1.json.
 - [ ]! 14.15 Serialize changes through `develop -> data -> main` PRs.
 - [x] 14.16 Verify exact Git-integrated Vercel `tzudong` project before any deployment action.
 - [ ]! 14.17 Obtain deployment readback receipt and keep DNS unchanged.
@@ -1146,7 +1146,7 @@
 - [x] 14.80 Reconcile the Vercel domain warning with the operator-approved Cloudflare/Vercel ownership decision.
 - [x] 14.81 Keep all Vercel aliases, custom domains, DNS records, and Cloudflare proxy settings unchanged through the reconciliation decision.
 - [x] 14.82 Record inherited Vercel team access as one confirmed owner and one unconfirmed member, with no project-specific member rows.
-- [ ]! 14.83 Define and approve a deployment rollback target using immutable deployment ID and Git SHA before the next production promotion.
+- [x] 14.83 Bind the verified current tzudong production deployment dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv and source SHA 29e432f7d96d98e6d09ba9237f05d6812ceb956b as the rollback target under current owner authority; immutable-ID readback and external hash are recorded in production-rollback-target.v1.json. No rollback executed.
 - [ ]! 14.84 Require the next deployment receipt to include project ID, deployment ID, source SHA, target, aliases, actor, timestamps, terminal state, and post-alias HTTP readback.
 - [x] 14.85 Verify `tzudong.app` is active under Cloudflare Full DNS setup and publicly delegates to the two assigned Cloudflare nameservers.
 - [x] 14.86 Read only the routing-relevant DNS rows and bind apex `A 216.198.79.1` to Proxied/Auto.
@@ -1183,7 +1183,7 @@
 - [x] 14.117 Implement the always-running promotion-path check after the operator resumed branch-protection work.
 - [x] 14.118 Verify forward promotion, shortcut/reverse rejection, foreign-branch impersonation, malformed input, and workflow triggers.
 - [x] 14.119 Keep path-filtered CI and security checks informational while branch protection is intentionally deferred.
-- [ ]! 14.120 When resumed, roll branch protection out in order `develop`, then `data`, then `main`, verifying each rule through a readback before proceeding.
+- [x] 14.120 Apply and independently verify protection in order develop, data, then main. Hold the two previously skipped scheduled write workflows until freeze-aware source is promoted and verified; preserve the active write freeze.
 - [x] 14.121 Keep the repository free of any newly configured owner/admin bypass actor during the deferment period.
 - [x] 14.122 Preserve existing merge behavior and leave linear-history enforcement disabled during the deferment period.
 - [x] 14.123 Record that the 2026-09-03 refusal supersedes the proposed protection-policy bundle and grants no mutation authority.

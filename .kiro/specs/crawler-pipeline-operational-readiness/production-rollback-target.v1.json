@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-04T20:59:12.730Z",
+  "repository": "twoimo/tzudong",
+  "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+  "projectName": "tzudong",
+  "deploymentId": "dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv",
+  "sourceSha": "29e432f7d96d98e6d09ba9237f05d6812ceb956b",
+  "sourceRef": "main",
+  "target": "production",
+  "state": "READY",
+  "aliases": [
+    "www.tzudong.app",
+    "internal.tzudong.app",
+    "tzudong.app",
+    "tzudong-twoimos-projects.vercel.app",
+    "tzudong-git-main-twoimos-projects.vercel.app"
+  ],
+  "actor": "twoimo",
+  "rollbackTargetApprovedBy": ".kiro/specs/crawler-pipeline-operational-readiness/solo-operator-decision-20260905.json",
+  "rollbackExecuted": false,
+  "newProductionDeployed": false,
+  "dnsChanged": false,
+  "externalReceipt": {
+    "name": "production-rollback-target.json",
+    "sha256": "fe167714fc3fbfeaec17265d9b545dada3e399d725ac5305fa310d8afc1b4de6"
+  }
+}

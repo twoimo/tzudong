@@ -50,6 +50,7 @@ jobs:
       ${{ github.repository == github.event.repository.full_name &&
           github.ref_name == github.event.repository.default_branch &&
           github.ref_protected &&
+          vars.G037_WRITE_FREEZE != 'active' &&
           (github.event_name != 'workflow_run' ||
             (github.event.workflow_run.conclusion == 'success' &&
              github.event.workflow_run.event == 'schedule' &&

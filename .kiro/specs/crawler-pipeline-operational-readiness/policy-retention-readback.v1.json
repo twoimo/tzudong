@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-04T21:00:28.704546+00:00",
+  "scope": "read-only public browser and hosted metadata",
+  "policyVersion": "2026-08-04.1",
+  "locale": "ko-KR",
+  "contentSha256": "6e42ced065a6ea0762b85d9b5e11500fcfc535543ab50d12ffbe6490086a110b",
+  "effectiveAt": "2026-08-04T16:14:03.146Z",
+  "publishedAt": "2026-08-04T16:14:05.607Z",
+  "operatorApprovalRefPresent": true,
+  "browserPrivacyRendered": true,
+  "publicApiMatchesHostedTuple": true,
+  "pagePublicationReadback": "verified_after_client_hydration",
+  "legalReviewProved": false,
+  "retentionClasses": {
+    "activeCount": 1,
+    "disabledCount": 11,
+    "activeCode": "privacy_identity_audit",
+    "activeBasisCode": "operator.ultragoal.identity_audit",
+    "activePeriod": "90 days",
+    "legalBasisValidityAssessed": false
+  },
+  "hydratedFollowupObservedAt": "2026-09-04T21:03:04.303643+00:00",
+  "pageEffectiveAt": "2026-08-04T16:14:03.146Z",
+  "pagePublishedAt": "2026-08-04T16:14:05.607Z",
+  "externalReceipt": {
+    "name": "policy-retention-readback.json",
+    "sha256": "bab6cafe4805b2d6e20eaa7bd4d975deeb93b66f29fee26bc702fe1458cd9a49"
+  }
+}
