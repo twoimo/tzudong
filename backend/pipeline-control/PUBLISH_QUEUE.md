@@ -47,6 +47,13 @@ Agent terminal results use the additive local-only migration
 appends one result and reads it back using a transaction-committing scalar
 executor. Both reservation and result tables deny service-role UPDATE/DELETE;
 `local_analytics.agent_action_state` joins the durable outcome for readers.
+
+Agent execution also requires the additive local-only migration
+`20260905000200_local_agent_rate_budget.sql`. Before an executor runs, the store
+commits a budget claim under one database advisory lock using database time.
+Fresh processes and concurrent instances share these claims. Interrupted and
+unverified attempts remain counted; approval and allowlist denials do not
+consume a claim. Missing migration or unavailable storage fails closed.
 A failed terminal write halts the trigger and never returns a successful action.
 
 Local PostgreSQL integration tests create and destroy their own cluster, private

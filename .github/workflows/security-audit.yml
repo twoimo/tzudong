@@ -45,6 +45,7 @@ on:
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
       - 'backend/supabase/migrations/20260901000100_local_analytics_schema.sql'
       - 'backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql'
+      - 'backend/supabase/migrations/20260905*_local_agent_*.sql'
       - 'backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
@@ -256,6 +257,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Verify retained provenance commits
+        run: |
+          git fetch --no-tags origin refs/tags/kiro-provenance-platform-20260905 refs/tags/kiro-provenance-corroboration-20260905
+          git cat-file -e '880bf06d375dbc6ebe8dcf108419c3f455048a97^{commit}'
+          git cat-file -e '2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c^{commit}'
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6

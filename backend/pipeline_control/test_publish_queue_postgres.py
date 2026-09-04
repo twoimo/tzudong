@@ -74,7 +74,8 @@ class DurableBackendTests(unittest.TestCase):
         with psycopg2.connect(cls.dsn) as c:
             with c.cursor() as cur:
                 cur.execute('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
-                for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql'):
+                for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql',
+                             '20260905000200_local_agent_rate_budget.sql'):
                     cur.execute((ROOT / 'supabase/migrations' / name).read_text())
 
     def connection(self):
@@ -89,6 +90,7 @@ class DurableBackendTests(unittest.TestCase):
         with self.psycopg2.connect(self.dsn) as c:
             with c.cursor() as cur:
                 cur.execute('TRUNCATE local_analytics.publish_jobs,local_analytics.publish_history,local_analytics.publish_audit_events')
+                cur.execute('TRUNCATE local_analytics.agent_action_budget_claims,local_analytics.agent_action_results,local_analytics.agent_action_records')
         self.conn = self.connection()
         self.store = PublishQueueStore(self.conn)
         self.hosted = FakeHosted({'public.videos': ('id',)})
@@ -214,6 +216,37 @@ class DurableBackendTests(unittest.TestCase):
                     self.scalar(sql)
                 self.conn.rollback()
         self.assertFalse(store.record_result(str(uuid4()),oa.AGENT_ACTION_PERFORMED))
+        self.conn.rollback()
+
+    def test_agent_budget_is_atomic_across_connections_restarts_and_windows(self):
+        from concurrent.futures import ThreadPoolExecutor
+        limits = [{'windowMinutes':60,'maxActions':10}, {'windowMinutes':1440,'maxActions':12}]
+        def attempt(_):
+            with self.psycopg2.connect(self.dsn) as conn:
+                with conn.cursor() as cur: cur.execute('SET ROLE service_role')
+                conn.commit()
+                def execute(sql, params):
+                    with conn.cursor() as cur:
+                        cur.execute(sql, params); row = cur.fetchone()
+                    conn.commit()
+                    return row[0] if row else None
+                store = PostgresAgentActionStore(execute)
+                record = oa.AgentActionRecord(str(uuid4()),str(uuid4()),'high','restart_local_container')
+                self.assertEqual(store.reserve(record),'created')
+                return store.claim_rate_budget(record.action_id,limits,0)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(attempt,range(24)))
+        self.assertEqual(results.count('created'),10)
+        self.assertEqual(results.count('limited'),14)
+        self.assertEqual(attempt(None),'limited')
+        # Only this test's private owner advances stored fixture timestamps.
+        with self.psycopg2.connect(self.dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE local_analytics.agent_action_budget_claims SET claimed_at=clock_timestamp()-interval '2 hours'")
+        self.assertEqual([attempt(None) for _ in range(4)],['created','created','limited','limited'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_budget_claims'),12)
+        with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege):
+            self.scalar('DELETE FROM local_analytics.agent_action_budget_claims')
         self.conn.rollback()
 
 if __name__ == '__main__': unittest.main()

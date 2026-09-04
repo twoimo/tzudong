@@ -16,6 +16,7 @@ import {
   VERIFICATION_WORKING_DIRECTORY,
   assertGovernanceInvariants,
   buildRunReceipt,
+  bindVerificationToCommit,
   bumpType,
   classifyCandidate,
   classifyVerification,
@@ -33,6 +34,21 @@ const dependabot = read('.github/dependabot.yml');
 const rustToolchain = read('backend/rust/rust-toolchain.toml');
 
 describe('Dependency_Freshness_Workflow governance contract', () => {
+  test('candidate B cannot inherit checks from candidate A or the default branch', () => {
+    const candidates = ['a', 'b'].map((letter) => ({ headSha: letter.repeat(40),
+      targetBranch: 'develop', unit: '/apps/web', packages: [] }));
+    const results = VERIFICATION_COMMANDS.map((command) => ({ command, passed: true,
+      finishedAt: '2026-09-05T00:00:00Z', durationMinutes: 1 }));
+    const checked = bindVerificationToCommit(candidates, results, 'a'.repeat(40));
+    expect(checked.candidates.map((entry: {headSha: string}) => entry.headSha)).toEqual(['a'.repeat(40)]);
+    expect(checked.unverifiedCandidateCount).toBe(1);
+    expect(checked.verification.checkedCommit).toBe('a'.repeat(40));
+    const baseline = bindVerificationToCommit(candidates, results, 'c'.repeat(40));
+    expect(baseline.candidates).toEqual([]);
+    expect(baseline.verification.scope).toBe('repository_commit_only');
+    expect(() => bindVerificationToCommit(candidates, results, null)).toThrow('checked_commit_invalid');
+    expect(workflow).toContain('ref: ${{ github.event.pull_request.head.sha || github.sha }}');
+  });
   test('enumerates exactly seven units including the cargo unit (design C2)', () => {
     expect(UNITS).toHaveLength(7);
     const directories = UNITS.map((unit) => unit.directory);
