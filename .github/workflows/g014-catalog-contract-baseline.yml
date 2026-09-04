@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/g014-catalog-contract-baseline.yml'
       - 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+      - 'backend/supabase/scripts/transform_g014_guardian_replay.py'
+      - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/volumes/db/**'
       - 'backend/supabase/migrations/**'
       - 'backend/supabase/baselines/**'
@@ -44,6 +46,7 @@ jobs:
           backend.supabase.tests.test_g024_source_reconstruction
           backend.supabase.tests.test_compare_g024_clean_replays
           backend.supabase.tests.test_g026_reconstruction_bundle
+          backend.supabase.tests.test_g014_guardian_replay
 
       - name: Check generator shell syntax
         shell: bash

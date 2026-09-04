@@ -1,26 +1,26 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "kind": "platform_modernization_reconciliation",
   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
-  "candidateHead": "60b6368270a8003d8cf6dae2cc37a5371394351f",
+  "candidateContentSha256": "fcd447b966db1bbcb3a80f2dadd23226631f5d58e6fa91c36ad2482b8303c030",
   "candidateWorkingTreeStateIncluded": true,
   "sourceDeltaEntryCount": 207,
   "dispositionCounts": {
-    "candidate_transformed_present": 91,
+    "candidate_transformed_present": 92,
     "current_layout_adaptation_reviewed": 8,
     "current_layout_retained": 16,
     "deferred_empty_scaffold": 2,
     "deferred_layout_migration": 1,
-    "source_exact_present": 84,
+    "source_exact_present": 83,
     "superseded_spec_source": 5
   },
   "contentStateCounts": {
     "base_exact": 10,
     "candidate_absent": 8,
-    "candidate_transformed": 94,
+    "candidate_transformed": 95,
     "source_and_base_exact": 11,
-    "source_exact": 84
+    "source_exact": 83
   },
   "note": "This is source/candidate inventory, not deployment, approval, hosted-state, migration-apply, legal, or production evidence.",
   "entries": [
@@ -341,10 +341,10 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
-      "candidateGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
-      "contentState": "source_exact",
-      "disposition": "source_exact_present",
-      "rationale": "The candidate working-tree blob exactly matches the parked source blob and is therefore byte-for-byte recovered."
+      "candidateGitBlobSha1": "3e55d4d36e257193599beef8a8c08c5b7b19be46",
+      "contentState": "candidate_transformed",
+      "disposition": "candidate_transformed_present",
+      "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."
     },
     {
       "sourceStatus": "A",
@@ -565,7 +565,7 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": null,
       "sourceGitBlobSha1": "4432746dd80ab9d5ea78c29a269de8e1dbdb2ad6",
-      "candidateGitBlobSha1": "13a80a1b089a3e3adfe2536a16bc68739bfde222",
+      "candidateGitBlobSha1": "467e652d59bebf95e66d6ee4b638bce0586cb4fa",
       "contentState": "candidate_transformed",
       "disposition": "candidate_transformed_present",
       "rationale": "The candidate differs from both Git endpoints because current-layout, security, or compatibility hardening has been applied."

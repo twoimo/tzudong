@@ -196,38 +196,52 @@ def main(argv: Sequence[str] | None = None) -> int:
         cluster_ids=cluster_ids,
     )
 
+    summary = public_summary(result)
     if args.json:
-        print(json.dumps(result, ensure_ascii=True, sort_keys=True))
+        print(json.dumps(summary, ensure_ascii=True, sort_keys=True))
     else:
         print(
             "deployment-descriptor-set ok={ok} code={code} components={n} "
             "remoteApplyAttempts={r}".format(
-                ok=str(result["ok"]).lower(),
-                code=result["errorCode"],
-                n=result["componentCount"],
-                r=result["remoteApplyAttemptCount"],
+                ok=str(summary["ok"]).lower(),
+                code=summary["errorCode"],
+                n=summary["componentCount"],
+                r=summary["remoteApplyAttemptCount"],
             )
         )
-        if not result["ok"]:
-            print(json.dumps(
-                {
-                    "structural": result["structural"],
-                    "secretScan": {
-                        "ok": result["secretScan"]["ok"],
-                        "errorCode": result["secretScan"]["errorCode"],
-                        "findingCount": result["secretScan"]["findingCount"],
-                    },
-                    "render": {
-                        "ok": result["render"]["ok"],
-                        "errorCode": result["render"]["errorCode"],
-                        "differingFields": result["render"].get("differingFields", []),
-                    },
-                },
-                ensure_ascii=True,
-                sort_keys=True,
-            ))
+        if not summary["ok"]:
+            print(json.dumps(summary, ensure_ascii=True, sort_keys=True))
 
     return 0 if result["ok"] else 1
+
+
+def public_summary(result: dict) -> dict:
+    """Emit only fixed codes, booleans, and counts, never descriptor content."""
+    def code(value):
+        for known in ledger_validation.LEDGER_ERROR_CODES | dd.DESCRIPTOR_CODES:
+            if value == known:
+                return known
+        return "descriptor_check_denied"
+
+    def count(value):
+        return min(max(int(value), 0), 100000) if type(value) is int else 0
+
+    def dimension(name):
+        part = result.get(name, {})
+        return {"ok": part.get("ok") is True, "errorCode": code(part.get("errorCode"))}
+
+    scan = dimension("secretScan")
+    scan.update({name: count(result.get("secretScan", {}).get(name))
+                 for name in ("findingCount", "scannedFileCount")})
+    return {
+        "ok": result.get("ok") is True,
+        "errorCode": code(result.get("errorCode")),
+        "componentCount": count(result.get("componentCount")),
+        "remoteApplyAttemptCount": count(result.get("remoteApplyAttemptCount")),
+        "structural": dimension("structural"),
+        "secretScan": scan,
+        "render": dimension("render"),
+    }
 
 
 if __name__ == "__main__":  # pragma: no cover - thin CLI shim

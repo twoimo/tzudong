@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from collections import Counter
@@ -256,11 +257,15 @@ def build(base: str, source: str) -> dict[str, object]:
         states[state] += 1
 
     return {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "kind": "platform_modernization_reconciliation",
         "baseCommit": base,
         "sourceCommit": source,
-        "candidateHead": _run("git", "rev-parse", "HEAD"),
+        # HEAD changes when this manifest itself is committed. Bind candidate
+        # bytes instead; the executing CI receipt records the exact commit.
+        "candidateContentSha256": hashlib.sha256(
+            json.dumps(entries, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest(),
         "candidateWorkingTreeStateIncluded": True,
         "sourceDeltaEntryCount": len(entries),
         "dispositionCounts": dict(sorted(dispositions.items())),

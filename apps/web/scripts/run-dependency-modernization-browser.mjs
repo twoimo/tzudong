@@ -14,12 +14,17 @@ const npmCli = npmAuthorityCli || process.env.npm_execpath?.trim();
 const npmUsesExecutable = Boolean(npmAuthorityCli);
 const MAX_CAPTURED_OUTPUT_LENGTH = 1_048_576;
 const packageOnly = process.argv.slice(2).includes('--package-only');
+const proofPort = process.env.TZUDONG_DEPENDENCY_PROOF_PORT?.trim() || '8080';
+const proofOrigin = `http://localhost:${proofPort}`;
 const proofEnvironment = {
     ...process.env,
     NODE_ENV: 'production',
     NEXT_PUBLIC_SUPABASE_URL: 'https://dependency-proof.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'dependency-modernization-browser-proof-anon-key',
-    PLAYWRIGHT_WEB_SERVER_COMMAND: 'node scripts/start-standalone.mjs --port 3000 --hostname localhost',
+    PLAYWRIGHT_WEB_SERVER_COMMAND: `node scripts/start-standalone.mjs --port ${proofPort} --hostname localhost`,
+    PLAYWRIGHT_BASE_URL: proofOrigin,
+    PLAYWRIGHT_WEB_SERVER_URL: `${proofOrigin}/api/health`,
+    PLAYWRIGHT_REUSE_EXISTING_SERVER: '0',
 };
 
 class OperationFailure extends Error {
@@ -260,6 +265,9 @@ async function proveCandidateDependencyGraph() {
 }
 
 try {
+    if (!/^[1-9][0-9]{3,4}$/.test(proofPort) || Number(proofPort) < 1024 || Number(proofPort) > 65535) {
+        throw new OperationFailure('DEPENDENCY_MODERNIZATION_PORT_INVALID');
+    }
     await proveCandidateDependencyGraph();
     if (!packageOnly) {
         await run(

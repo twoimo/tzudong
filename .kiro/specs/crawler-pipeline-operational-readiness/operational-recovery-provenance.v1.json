@@ -56,7 +56,8 @@
       "id": "bounded-descriptor-cli-test-output",
       "kind": "test-hardening",
       "paths": [
-        "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py"
+        "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
+        "backend/bin/check_deployment_descriptor_set.py"
       ]
     },
     {
@@ -83,9 +84,9 @@
       "sourceGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
       "sourceSha256": "2fdcd6529a9f435d3fec0107fc288fbb938e07786f88cdde8cde5e834f4bcff8",
       "sourceBytes": 8833,
-      "candidateGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
-      "candidateSha256": "2fdcd6529a9f435d3fec0107fc288fbb938e07786f88cdde8cde5e834f4bcff8",
-      "candidateBytes": 8833
+      "candidateGitBlobSha1": "3e55d4d36e257193599beef8a8c08c5b7b19be46",
+      "candidateSha256": "39c1830fabc62a7e2cc6f97e439efb27cf39d268d1089b845ff99fc149057bde",
+      "candidateBytes": 9332
     },
     {
       "sourcePath": "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
@@ -93,9 +94,9 @@
       "sourceGitBlobSha1": "4432746dd80ab9d5ea78c29a269de8e1dbdb2ad6",
       "sourceSha256": "7429ccddce7eabc907d73952983971270167cf2d846b13eac59242e9d5a8cb52",
       "sourceBytes": 3436,
-      "candidateGitBlobSha1": "13a80a1b089a3e3adfe2536a16bc68739bfde222",
-      "candidateSha256": "55f9b5ea06a2dadedafc3a72e906c6538b3a2a7a4a3b774555cfba07141b880a",
-      "candidateBytes": 4309
+      "candidateGitBlobSha1": "467e652d59bebf95e66d6ee4b638bce0586cb4fa",
+      "candidateSha256": "bc1d8cb3a02939b0e8182cef35940c3ace403b896b2544672e31606c4cc2e3c0",
+      "candidateBytes": 5933
     },
     {
       "sourcePath": "backend/deploy/deployment-descriptor-set.v1.json",
@@ -403,9 +404,9 @@
       "sourceGitBlobSha1": "70bc067b1a847430b7baebd72404a8c5bb5a0cff",
       "sourceSha256": "5a1d1bafcb4d943644226f18d057a44ab460d4ffe96820035a350189fc60d862",
       "sourceBytes": 14849,
-      "candidateGitBlobSha1": "e8e52abad79025ea1e21dde12e6ab716767aaf80",
-      "candidateSha256": "d8eab56b262c776c996acc20dddbf0dec0867b4bbbf33de2035e72db117fd71d",
-      "candidateBytes": 17912
+      "candidateGitBlobSha1": "372abed6e999e19e95b9063ca32608bc14da6f75",
+      "candidateSha256": "ce19fd905cbe58f41c5aa89947f0747c76ea3d104c14acb912eef6bf3f40faeb",
+      "candidateBytes": 18002
     },
     {
       "sourcePath": "backend/bin/metrics_contract_report.py",

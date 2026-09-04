@@ -38,7 +38,10 @@ async function openProductionDetailPanel(page: Page) {
 
 test.describe('dependency modernization browser contracts', () => {
   test.describe.configure({ mode: 'serial', timeout: 90_000 });
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    const admittedOrigin = new URL(baseURL!);
+    expect(admittedOrigin.protocol).toBe('http:');
+    expect(admittedOrigin.hostname).toBe('localhost');
     await page.route('**/*', async (route) => {
       const url = new URL(route.request().url());
       if (url.hostname === DEPENDENCY_PROOF_SUPABASE_HOST && url.pathname === '/rest/v1/restaurants') {
@@ -50,7 +53,7 @@ test.describe('dependency modernization browser contracts', () => {
         });
         return;
       }
-      if (url.hostname === 'localhost' && url.port === '8080') {
+      if (url.origin === admittedOrigin.origin) {
         await route.continue();
         return;
       }

@@ -17,6 +17,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -85,6 +86,32 @@ class SecretLiteralGatesRenderTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
+    def test_both_cli_formats_exclude_untrusted_descriptor_details(self):
+        sentinel = "untrusted descriptor content"
+        raw = {"ok": False, "errorCode": sentinel, "componentCount": sentinel,
+               "remoteApplyAttemptCount": sentinel,
+               "structural": {"ok": False, "errorCode": sentinel, "detail": sentinel},
+               "secretScan": {"ok": False, "errorCode": "secret_value_in_descriptor",
+                              "findingCount": 1, "scannedFileCount": 1,
+                              "findings": [{"path": sentinel, "value": sentinel}]},
+               "render": {"ok": False, "errorCode": sentinel,
+                          "renders": {sentinel: sentinel}, "differingFields": [sentinel]}}
+        for arguments in ([], ["--json"]):
+            output = io.StringIO()
+            with mock.patch.object(check, "run_check", return_value=raw), redirect_stdout(output):
+                self.assertEqual(check.main(arguments), 1)
+            self.assertNotIn(sentinel, output.getvalue())
+            self.assertIn("secret_value_in_descriptor", output.getvalue())
+
+    def test_missing_catalog_is_bounded_in_both_cli_formats(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for arguments in ([], ["--json"]):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    self.assertEqual(check.main(["--catalog", str(Path(tmp)/"missing.json"), *arguments]), 1)
+                self.assertNotIn(tmp, output.getvalue())
+                self.assertIn("ledger_shape_invalid", output.getvalue())
+
     def test_main_returns_zero_on_real_tree(self):
         output = io.StringIO()
         with redirect_stdout(output):

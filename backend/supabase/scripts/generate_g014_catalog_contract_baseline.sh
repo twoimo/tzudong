@@ -37,6 +37,7 @@ g028_reauth_test="$supabase_dir/tests/g028_account_deletion_reauth_proof.sql"
 partition_version='g014-source-baseline-partition-v1'
 relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+  'backend/supabase/scripts/transform_g014_guardian_replay.py'
   'backend/supabase/volumes/db'
   'backend/supabase/baselines'
   'backend/supabase/migrations'
@@ -989,7 +990,8 @@ chain_file="$staging_dir/migration-chain.txt"
 previous_hash=$(printf '%s\n' "$partition_version" | sha256sum | cut -d' ' -f1)
 for artifact in "$bootstrap_manifest" "$platform_auth_bootstrap" "$gotrue_manifest" "$gotrue_inventory" \
   "$supabase_dir/docker-compose.yml" "$storage_inventory" "$reconstruction_validator" "$g026_validator" \
-  "$reconstruction_archive" "$reconstruction_manifest" "$g026_bundle"; do
+  "$reconstruction_archive" "$reconstruction_manifest" "$g026_bundle" \
+  "$script_dir/transform_g014_guardian_replay.py"; do
   canonical_path=${artifact#"$repo_root"/}
   file_hash=$(sha256sum -- "$artifact" | cut -d' ' -f1)
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
@@ -1360,6 +1362,13 @@ for migration in "${effective_migrations[@]}"; do
     20260801000300_g016_onboarding_allowlist_freshness.sql)
       transformed_migration=$(g016_apply_catalog_assertion_membership_window "$migration")
       g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20260827084200_g014_8_guardian_provider_verification.sql)
+      transformed_migration="$work_dir/g014-guardian-replay.sql"
+      python3 "$script_dir/transform_g014_guardian_replay.py" \
+        --source "$migration" --output "$transformed_migration"
+      g026_chain_apply "guardian-replay-assertion-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     20260813085342_current_profile_mutation_boundary.sql)

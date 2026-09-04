@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import subprocess
 import unittest
 from collections import Counter
@@ -68,7 +69,7 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
 
     def test_all_207_source_delta_entries_are_accounted_for_exactly_once(self) -> None:
         document = self.document
-        self.assertEqual(document["schemaVersion"], 2)
+        self.assertEqual(document["schemaVersion"], 3)
         self.assertEqual(document["kind"], "platform_modernization_reconciliation")
         expected = _source_delta(document["baseCommit"], document["sourceCommit"])
         actual = [
@@ -116,8 +117,11 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
 
         self.assertEqual(dict(sorted(counts.items())), document["dispositionCounts"])
         self.assertEqual(dict(sorted(states.items())), document["contentStateCounts"])
-        self.assertEqual(counts["source_exact_present"], 84)
-        self.assertEqual(counts["candidate_transformed_present"], 91)
+        self.assertEqual(counts["source_exact_present"], 83)
+        self.assertEqual(counts["candidate_transformed_present"], 92)
+        descriptor = next(entry for entry in document["entries"]
+                          if entry["sourcePath"] == "backend/bin/check_deployment_descriptor_set.py")
+        self.assertEqual(descriptor["disposition"], "candidate_transformed_present")
         self.assertEqual(counts["current_layout_adaptation_reviewed"], 8)
         self.assertEqual(counts["current_layout_retained"], 16)
         self.assertEqual(
@@ -204,6 +208,12 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
         self.assertEqual(
             result.stdout.strip(), "platform_modernization_reconciliation_current"
         )
+
+    def test_manifest_binds_candidate_content_without_a_commit_self_reference(self) -> None:
+        self.assertNotIn("candidateHead", self.document)
+        entries = self.document["entries"]
+        encoded = json.dumps(entries, sort_keys=True, separators=(",", ":")).encode()
+        self.assertEqual(self.document["candidateContentSha256"], hashlib.sha256(encoded).hexdigest())
 
 
 if __name__ == "__main__":

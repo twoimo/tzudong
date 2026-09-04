@@ -376,9 +376,9 @@
 - [x] 7.162 Update the G037 runbook, requirements, design, decision, attempt index, workflow tests, and security workflow wiring for the credential split.
 - [x] 7.163 Preview the exact hosted SQL for a dedicated G037 read-only login and minimal grants without executing it.
 - [x]! 7.164 Obtain named-owner approval for the exact role/grant preview and external credential-custody procedure.
-- [ ]! 7.165 Apply the approved role/grant SQL once, set its credential outside source control, and retain a sanitized apply receipt externally.
-- [ ]! 7.166 Create or update repository secret `SUPABASE_G037_READONLY_DB_URL` without reading back its value or altering `SUPABASE_DB_URL`.
-- [ ]! 7.167 Read back the dedicated role's exact negative attributes, default read-only setting, grants, target-function denial, and secret metadata.
+- [x] 7.165 Reconcile the previously applied v3 role with the current password assignment and sanitized operational receipt; no duplicate provisioning was run.
+- [x] 7.166 Create SUPABASE_G037_READONLY_DB_URL through stdin without reading its value back or altering SUPABASE_DB_URL.
+- [x] 7.167 Read back the dedicated role attributes, read-only defaults, grants, target-function denial, and new-secret metadata.
 - [ ]! 7.168 Promote the source change through the separately approved serialized branch path before any new G037 dispatch.
 - [ ]! 7.169 Obtain a fresh exact-main-SHA authorization and rerun only the selected G037 read-only mode with the dedicated credential.
 - [x] 7.170 Keep the role-provisioning source outside the Supabase migration ledger so the G037 baseline and terminal ledgers do not become self-invalidating.
@@ -398,14 +398,14 @@
 - [x] 7.184 Add source-contract coverage for null-password creation, exact grants, source hashes, mutation-free readback, and external gate state.
 - [x] 7.185 Add every G037 credential source and test path to security-workflow change detection while leaving the SQL files unexecuted.
 - [x]! 7.186 Obtain named-owner approval bound to the exact provisioning and readback SQL SHA-256 digests.
-- [ ]! 7.187 Confirm the secure external password manager and human custodian to be used without disclosing either credential or recovery secret.
+- [x] 7.187 Select and verify macOS login Keychain custody under the autonomous task authority, with repository owner twoimo as custodian.
 - [x]! 7.188 Recheck immediately before apply that the dedicated role is absent and the exact target function resolves on production.
-- [ ]! 7.189 Execute the approved provisioning SQL exactly once under the owner credential and retain only sanitized status/hash evidence.
-- [ ]! 7.190 Run the bounded owner-side readback and require every boolean true and both membership/ownership counts zero.
-- [ ]! 7.191 Set a generated password through a non-echoing external channel without placing it in a command argument, file, repository, chat, or artifact.
-- [ ]! 7.192 Construct and test the direct production DSN only in external custody, requiring encrypted transport and the dedicated role.
-- [ ]! 7.193 Write `SUPABASE_G037_READONLY_DB_URL` through the repository secret interface without reading its value back or touching `SUPABASE_DB_URL`.
-- [ ]! 7.194 Read back only new-secret metadata and bind its presence/update observation to the role/grant readback receipt.
+- [x] 7.189 Verify the already-consumed v3 provisioning using current owner-side readback and retain its sanitized evidence externally.
+- [x] 7.190 Require the v3 readback: every boolean true, zero parent memberships and owned objects, and the exact one creator ADMIN-only membership with no SET or INHERIT.
+- [x] 7.191 Assign one server-generated password through a verified RSA3072/PGP/AES256 transfer into Keychain, without plaintext arguments, files, chat, or artifacts.
+- [x] 7.192 Construct and verify the deliberately approved Session pooler DSN using the dedicated role, provider CA, and sslmode=verify-full.
+- [x] 7.193 Write SUPABASE_G037_READONLY_DB_URL once through the repository secret interface without reading its value back or touching another secret.
+- [x] 7.194 Bind new-secret name/update metadata to the current role and 19-condition dedicated-connection readback.
 - [ ]! 7.195 After serialized source promotion, obtain a new main SHA and a separate one-run authorization for the selected read-only mode.
 - [x]* 7.196 Parse the exact provisioning and readback sources with PostgreSQL grammar and confirm 16 and one top-level statements without opening a hosted connection.
 - [x]* 7.197 Reconcile the G037 core workflow source test with the existing two-item G016 freeze exception and its mandatory terminal-state verification guard.
@@ -575,7 +575,7 @@
 - [x] 7.361 Record a sanitized apply-attempt artifact containing only hashes, bounded booleans/counts, fixed codes, and authorization consumption.
 - [x] 7.362 Keep password generation, password assignment, external DSN custody, repository-secret mutation, and controller dispatch closed after role-only apply.
 - [x] 7.363 Prepare a separately reviewed non-echoing password-assignment and external credential-custody ceremony without storing credential material.
-- [ ]! 7.364 Require fresh named-owner authority before password assignment or any GitHub repository-secret mutation.
+- [x] 7.364 Bind password assignment and the exact repository-secret operation to the current solo-owner task authorization.
 - [ ]! 7.365 Admit a controller run only after dedicated-role connection readback and sanitized repository-secret metadata evidence match the exact approved state.
 - [x] 7.366 Bind the credential ceremony to the committed provisioning-attempt artifact, fixed success code, password-null starting state, and spent provisioning authority.
 - [x] 7.367 Keep the password-manager product, named custodian identity, password, recovery material, endpoint, and connection string outside repository evidence.
@@ -599,13 +599,13 @@
 - [x] 7.385 Record the credential-custody preview as review-only with zero approved or consumed executions and every persistent downstream action false.
 - [x]! 7.386 Obtain named-owner review approval for the exact credential-custody preview and connection-readback SQL SHA-256 values.
 - [x] 7.387 After review approval, create a distinct non-authorizing request for one interactive password assignment and one dedicated connection readback.
-- [ ]! 7.388 Obtain a fresh named-owner one-time execution authorization for only password assignment and dedicated connection readback.
-- [ ]! 7.389 Confirm the approved external password manager and human custodian without disclosing either password or recovery material.
-- [ ]! 7.390 Perform the interactive password assignment once, then run the exact dedicated connection readback once and retain only sanitized external evidence.
-- [ ] 7.391 After successful connection proof, create a distinct non-authorizing request for one `SUPABASE_G037_READONLY_DB_URL` repository-secret write and metadata readback.
-- [ ]! 7.392 Obtain a fresh named-owner one-time authorization for only the exact repository-secret write and metadata readback.
-- [ ]! 7.393 Write the dedicated encrypted connection value once through the approved no-argument/no-file interface without touching another secret.
-- [ ]! 7.394 Read back only exact secret metadata and bind it to the password-assignment and dedicated-connection evidence chain.
+- [x] 7.388 Record current owner authority for one password assignment and dedicated-connection readback in the external authorization receipt.
+- [x] 7.389 Verify the selected macOS login Keychain custody and authenticated repository-owner custodian without exposing recovery material.
+- [x] 7.390 Execute one password assignment and the exact dedicated-connection readback; retain only sanitized external evidence.
+- [x] 7.391 Bind the exact repository-secret write and metadata readback to the prepared current authorization; the owner waived redundant separate approval requests.
+- [x] 7.392 Use the current owner authorization for the exact dedicated repository-secret write and metadata readback.
+- [x] 7.393 Write the dedicated encrypted connection value once using stdin, without plaintext command arguments or files.
+- [x] 7.394 Read back only secret metadata and bind it to password assignment, Keychain custody, and dedicated connection evidence.
 - [ ]! 7.395 Promote the source through the separately approved serialized branch path before using the new secret from GitHub Actions.
 - [ ]! 7.396 Obtain a fresh exact-main-SHA authorization for one selected G037 read-only controller mode with no automatic retry.
 - [x]* 7.397 Re-read the current Supabase changelog before finalizing the credential ceremony and find no relevant database-credential breaking change.
@@ -620,7 +620,7 @@
 - [x]* 7.406 Run one credential-free IPv6 DNS and bounded 5432/TCP preflight from the current workspace host without retaining endpoint, address, or error text.
 - [x] 7.407 Record only the fixed current-host result: IPv6 DNS present, TCP 5432 unreachable, no authentication, no SQL, and no persistent change.
 - [x] 7.408 Keep password generation, password assignment, dedicated DSN construction, and repository-secret mutation blocked after the unreachable result.
-- [ ]! 7.409 Identify and approve a controlled credential host that can reach the direct endpoint, or separately review a deliberate connection-scope change; never auto-enable an add-on or pooler fallback.
+- [x] 7.409 Deliberately approve and verify the current Mac host using the provider-observed Session pooler alternative with hostname-verified TLS.
 - [x] 7.410 Interpret the named owner's broad approval statement only for the exact credential preview already presented before that statement.
 - [x] 7.411 Record that unseen future source hashes and future execution requests are not preapproved by a standing statement.
 - [x] 7.412 Preserve Preview → Confirm → Apply ordering and separate review approval from execution authorization despite the broad approval intent.
@@ -660,8 +660,8 @@
 - [x] 7.446 Enumerate metadata readback, fixed probe preview, contract amendment, password/readback, Secret, and dispatch as separately ordered future gates.
 - [x] 7.447 Register the exact alternative preview in both machine decisions with approval, selection, metadata, and reachability all false.
 - [x] 7.448 Obtain named-owner review approval for the exact session-pooler alternative preview hash.
-- [ ]! 7.449 After approval, obtain metadata-only Dashboard Connect readback for the exact Session pooler host and dedicated-role username form without a password or DSN.
-- [ ]! 7.450 Build and separately review a fixed-target credential-free pooler network probe only after exact provider metadata is present.
+- [x] 7.449 Obtain exact provider Connect metadata for the Session pooler host, port, database, and username form without exporting a password or DSN.
+- [x] 7.450 Execute a fixed-target credential-free Session pooler TLS probe after provider metadata and public CA readback; verify certificate and hostname.
 - [ ]! 7.451 Keep password work, contract amendment, Secret mutation, and workflow dispatch blocked until their later exact previews and authorizations complete.
 - [x] 7.452 Prepare a non-authorizing metadata-only Dashboard Connect readback request behind the unapproved alternative preview.
 - [x] 7.453 Bind the request to the exact alternative preview and existing direct-host evidence request hashes.
@@ -1070,7 +1070,7 @@
 - [x] 14.4 Run web lint under Node 24.
 - [x] 14.5 Run the complete web unit suite and retain the pass/skip/fail counts.
 - [x] 14.6 Run native TypeScript 7 versus stable TypeScript 6 parity.
-- [ ] 14.7 Run TypeScript benchmark evidence flow when relevant.
+- [x] 14.7 Run TypeScript benchmark evidence flow: CI 33913693340 produced four retained and independently validated lanes; Ubuntu npm/Bun and Windows npm admitted two slices each, Windows Bun correctly admitted zero due to noise. Canonical `apps/web/performance/typecheck-recovery-20260905/verification.json` records absolute/relative/noise budgets and exact candidate identities; its SHA is retained out of band. No G003 improvement or later-tree claim.
 - [x] 14.8 Run the production build and route CSS boundary verifier under Node 24.
 - [x] 14.9 Run focused Playwright coverage when relevant.
 - [x] 14.10 Re-run the environment contract in an empty environment and preserve expected fail-closed status separately.
@@ -1396,3 +1396,7 @@ unchanged. See `closure-20260905.md` for current validation and outstanding prer
       -> 12/13 operator surfaces
           -> 14 repository gates -> externally approved release flow
 ```
+
+## Solo-operator execution continuation
+
+The current owner instruction resumes autonomous implementation and external operations. It supersedes the earlier branch-protection deferral and repeated reconfirmation requests. It does not replace actual runtime checks. `solo-operator-decision-20260905.json` records the decision; `backend/supabase/g037-dedicated-credential-readback.v2.json` binds the completed credential work to external evidence. Historical v1/v2/v3 previews and consumed attempts remain unchanged as history. The current v3 role contract permits exactly one creator ADMIN-only membership; it never claims that this member count is zero. Source promotion, controller execution, freeze exit, and production release still require their actual completion/readback.
