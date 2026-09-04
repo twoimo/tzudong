@@ -729,7 +729,8 @@ jobs:
 
       - name: Upload validated data-only publication artifact
         id: upload-publication
-        if: ${{ steps.publication.outputs.ready == 'true' }}
+        # Data artifacts follow the same explicit public-publication opt-in.
+        if: ${{ steps.publication.outputs.ready == 'true' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
         with:
           name: daily-data-publication-${{ github.run_id }}
