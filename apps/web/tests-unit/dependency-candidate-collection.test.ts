@@ -30,6 +30,15 @@ describe('real dependency candidate ingestion', () => {
     const candidates = Array.from({ length: 6 }, (_, i) => descriptor({ ...pr, number: i }, [file('test-package', '16.2.1')]));
     expect(buildRunReceipt({ candidates }).candidates.every((c: {code: string}) => c.code === 'dependency_check_failed')).toBe(true);
   });
+  test('real manifest version ranges cannot bypass held versions', () => {
+    for (const version of ['^16.3.0', '~16.3.0', '>=16.3.0']) {
+      expect(buildRunReceipt({ candidates: [descriptor(pr, [file('next', version)])] })
+        .candidates[0].code).toBe('dependency_hold_violation');
+    }
+    const changed = { ...file(), patch: '-"eslint": "^9.0.0",\n+"eslint": "^10.0.0",' };
+    expect(buildRunReceipt({ candidates: [descriptor(pr, [changed])] })
+      .candidates[0].code).toBe('dependency_hold_violation');
+  });
   test('uses each ecosystem directory and refuses missing API pages', async () => {
     for (const [filename, patch, unit] of [
       ['backend/pipeline/requirements.txt', '-requests==2.32.0\n+requests==2.32.1', '/backend/pipeline'],

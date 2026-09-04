@@ -105,9 +105,10 @@ export const FIXED_CODES = Object.freeze({
 // --- Semver helpers ---
 
 const parseVersion = (value) => {
-  const match = /^\s*v?(\d+)\.(\d+)\.(\d+)/.exec(String(value ?? ''));
+  const match = /^\s*(?:[~^]|>=?|<=?|=)?\s*v?(\d+)\.(\d+)\.(\d+)(?:[-+][\w.-]+)?\s*$/.exec(String(value ?? ''));
   if (!match) return null;
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
+  const parts = [Number(match[1]), Number(match[2]), Number(match[3])];
+  return parts.every(Number.isSafeInteger) ? parts : null;
 };
 
 const compareVersion = (a, b) => {
@@ -136,13 +137,13 @@ export const isHoldRangeBump = (packageName, toVersion, bumped) => {
   for (const hold of HOLD_LIST) {
     if (!hold.packages.includes(packageName)) continue;
     if (hold.kind === 'semver-major') {
-      if (bumped === 'major') return true;
+      if (bumped === 'major' || bumped === 'unknown') return true;
       continue;
     }
     if (hold.kind === 'version-range') {
       const to = parseVersion(toVersion);
       const threshold = parseVersion(hold.threshold);
-      if (!to || !threshold) continue;
+      if (!to || !threshold) return true;
       const cmp = compareVersion(to, threshold);
       if (hold.operator === '>=' && cmp >= 0) return true;
       if (hold.operator === '>' && cmp > 0) return true;
