@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_alternative_preview_approval_contract",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T10:50:39Z",
+  "contractStatus": "awaiting_current_task_exact_statement",
+  "approvalTarget": {
+    "path": "backend/supabase/g037-session-pooler-alternative-preview.v1.json",
+    "sha256": "cdf4bd8f9c05eb2fd789228cdfffa563cf8b5dbf7e68f940b1c9689db8d8214e",
+    "kind": "g037_session_pooler_alternative_preview",
+    "reviewOnly": true
+  },
+  "approvalRequest": {
+    "path": "backend/supabase/g037-session-pooler-alternative-preview-approval-request.v1.json",
+    "sha256": "2fbe7bbb5bd8b461c12d7d7cf723e8be9c040bc8eb90a6c321fb3ac8422c5804",
+    "requestedExactStatement": "최연우, G037 session-pooler alternative preview v1 cdf4bd8f9c05eb2fd789228cdfffa563cf8b5dbf7e68f940b1c9689db8d8214e 검토 승인"
+  },
+  "acceptableEvidence": {
+    "source": "current_task_user_message",
+    "exactStatementRequired": true,
+    "statementMustPostdatePreviewAndRequest": true,
+    "approverDisplayName": "최연우",
+    "targetVersion": 1,
+    "targetSha256": "cdf4bd8f9c05eb2fd789228cdfffa563cf8b5dbf7e68f940b1c9689db8d8214e",
+    "priorMessageOrStandingIntentAccepted": false,
+    "assistantMessageAcceptedAsApproval": false,
+    "localFileOrGeneratedStatementAcceptedAsApproval": false,
+    "inferredIdentityAccepted": false
+  },
+  "futureApprovalArtifactRequirements": {
+    "path": "backend/supabase/g037-session-pooler-alternative-preview-approval.v1.json",
+    "createOnlyAfterEvidence": true,
+    "schemaVersion": 1,
+    "kind": "g037_session_pooler_alternative_preview_approval",
+    "mustBindApprovalTarget": true,
+    "mustBindApprovalRequest": true,
+    "mustRecordApproverDisplayName": true,
+    "mustRecordExactStatement": true,
+    "mustRecordTranscriptEvidenceBoundary": true,
+    "mustKeepSuccessorsUnapproved": true,
+    "mustKeepAllExecutionCountsZero": true
+  },
+  "reviewApprovalScope": {
+    "alternativeDesignReviewed": true,
+    "documentationInterpretationReviewed": true,
+    "metadataRequestMayBePresentedNext": true,
+    "poolerSelected": false,
+    "directPathAbandoned": false,
+    "metadataReadAuthorized": false,
+    "metadataReceiptClaimed": false,
+    "networkProbeAuthorized": false,
+    "credentialContractAmendmentAuthorized": false,
+    "passwordOrDatabaseActionAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false,
+    "migrationReleaseOrDeploymentAuthorized": false
+  },
+  "successorBoundary": {
+    "metadataRequestPath": "backend/supabase/g037-session-pooler-metadata-readback-request.v1.json",
+    "metadataRequestSha256": "f8101542b4f10bc8acaeb1bd657f7d5c0c1add9fbf30ccd456523255db9bcc22",
+    "metadataReceiptContractPath": "backend/supabase/g037-session-pooler-metadata-receipt-contract.v1.json",
+    "metadataReceiptContractSha256": "746a6c80cffd188ece7c39eb540216470154f1f09286d3e887a3836b7427fd81",
+    "successorReviewApproved": false,
+    "successorExecutionAuthorized": false
+  },
+  "currentGate": {
+    "exactStatementPresent": false,
+    "acceptableEvidencePresent": false,
+    "approvalArtifactMayBeCreated": false,
+    "reviewApproved": false,
+    "metadataRequestMayBePresented": false,
+    "metadataReadAuthorized": false,
+    "anyExternalActionAuthorized": false
+  },
+  "notEvidenceOf": [
+    "a current-task user approval statement",
+    "named-owner review approval",
+    "an approval artifact",
+    "successor-source approval",
+    "Dashboard inspection, receipt, or provider metadata",
+    "pooler selection, network reachability, authentication, or role mapping",
+    "password, database, Secret, controller, or workflow action",
+    "migration, release, or deployment"
+  ]
+}

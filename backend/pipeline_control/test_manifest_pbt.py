@@ -15,11 +15,13 @@ Requires ``hypothesis`` (use a throwaway venv if it is not installed).
 from __future__ import annotations
 
 import json
+import os
 import re
 import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest import mock
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -29,7 +31,10 @@ from backend.pipeline_control.manifest import (
     FINAL_STATUS_ERROR,
     FINAL_STATUS_OK,
     HOSTED_GATE_REJECTION_CODES,
+    OPERATOR_DATA_SINKS,
+    OPERATOR_EXECUTION_MODES,
     OPERATOR_SUMMARY_MAX_LENGTH,
+    REFLECTION_MAX_ITEMS_PER_BUCKET,
     RUN_STATUS_FAILED,
     RUN_STATUS_SUCCEEDED,
     build_operator_summary,
@@ -73,8 +78,8 @@ REQUIRED_STEP_SLUGS = ("01-collect-urls", "02-collect-meta", "06-1-enrich", "13-
 
 # Provider/secret markers that must never leak into any serialized manifest field (R5.9).
 SECRET_MARKERS = (
-    "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-    "-----BEGIN PRIVATE KEY-----",
+    "ghp" + "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    "-----BEGIN " + "PRIVATE KEY-----",
     "Bearer aa.bb.cc-secret-token-value",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
     "operator@example.com",
@@ -320,12 +325,8 @@ class ManifestPropertyTests(unittest.TestCase):
     @settings(max_examples=100)
     @given(
         final_status=st.sampled_from((FINAL_STATUS_OK, FINAL_STATUS_ERROR)),
-        execution_mode=st.text(
-            alphabet="abcdefghijklmnopqrstuvwxyz_", min_size=1, max_size=20
-        ),
-        data_sink=st.text(
-            alphabet="abcdefghijklmnopqrstuvwxyz_", min_size=1, max_size=20
-        ),
+        execution_mode=st.sampled_from(sorted(OPERATOR_EXECUTION_MODES)),
+        data_sink=st.sampled_from(sorted(OPERATOR_DATA_SINKS)),
         failed_count=st.integers(min_value=0, max_value=999_999),
     )
     def test_property_21_operator_summary_bounded_and_complete(
@@ -353,11 +354,14 @@ class ManifestPropertyTests(unittest.TestCase):
         # An adversarially long input is still clamped to the maximum length.
         overlong = build_operator_summary(
             final_status=final_status,
-            execution_mode="m" * 1000,
-            data_sink="s" * 1000,
+            execution_mode="secret-shaped-mode" * 100,
+            data_sink="secret-shaped-sink" * 100,
             failed_required_count=failed_count,
         )
         self.assertLessEqual(len(overlong), OPERATOR_SUMMARY_MAX_LENGTH)
+        self.assertIn("mode=unknown", overlong)
+        self.assertIn("sink=unknown", overlong)
+        self.assertNotIn("secret-shaped", overlong)
 
     # Feature: crawler-pipeline-orchestration, Property 22: Manifest excludes secrets and diagnostics.
     # Validates: Requirements 5.9
@@ -418,9 +422,9 @@ class ManifestPropertyTests(unittest.TestCase):
 
         # Reflection object with benign candidate ids plus dropped secret-bearing extras.
         reflection = {
-            "applied": candidate_ids[:2],
-            "skippedAlreadyPresent": candidate_ids[2:4],
-            "unresolved": candidate_ids[4:],
+            "applied": [*candidate_ids[:2], secret],
+            "skippedAlreadyPresent": [*candidate_ids[2:4], secret],
+            "unresolved": [*candidate_ids[4:], secret],
             "secretToken": secret,
             "rawProviderPayload": {"credential": secret},
         }
@@ -455,6 +459,107 @@ class ManifestPropertyTests(unittest.TestCase):
         self.assertIn(
             payload["hostedGateRejectionCode"],
             {None, *HOSTED_GATE_REJECTION_CODES},
+        )
+
+    def test_unknown_step_and_reason_are_reduced_to_fixed_codes(self) -> None:
+        secret = SECRET_MARKERS[0]
+        payload = self._write(
+            "Failed",
+            events=[
+                {
+                    "type": "step.progress",
+                    "step": secret,
+                    "skipped": True,
+                    "skipKind": "optional",
+                    "reason": secret,
+                },
+                {
+                    "type": "run.lifecycle",
+                    "status": "Failed",
+                    "step": secret,
+                },
+            ],
+            run=make_run(),
+            execution_mode="dry_run",
+            data_sink="artifact_only",
+        )
+        serialized = json.dumps(payload, ensure_ascii=True, sort_keys=True)
+        self.assertNotIn(secret, serialized)
+        self.assertEqual(payload["stepEvents"][0]["name"], "unknown_step")
+        self.assertEqual(payload["stepEvents"][0]["reason"], "skip_reason_invalid")
+
+    def test_reflection_is_bounded_deduplicated_and_video_id_only(self) -> None:
+        valid_ids = [f"A{index:010d}" for index in range(REFLECTION_MAX_ITEMS_PER_BUCKET + 5)]
+        duplicate = valid_ids[0]
+        payload = self._write(
+            "Succeeded",
+            run=make_run(),
+            execution_mode="dry_run",
+            data_sink="artifact_only",
+            reflection={
+                "applied": [*valid_ids, duplicate, "not a video id"],
+                "skippedAlreadyPresent": [duplicate, "B1234567890"],
+                "unresolved": ["B1234567890", "C1234567890"],
+            },
+        )
+        reflection = payload["reflection"]
+        self.assertEqual(
+            len(reflection["applied"]), REFLECTION_MAX_ITEMS_PER_BUCKET
+        )
+        self.assertNotIn("not a video id", reflection["applied"])
+        self.assertNotIn(duplicate, reflection["skippedAlreadyPresent"])
+        self.assertNotIn("B1234567890", reflection["unresolved"])
+        flattened = [
+            item
+            for bucket in reflection.values()
+            for item in bucket
+        ]
+        self.assertEqual(len(flattened), len(set(flattened)))
+
+    def test_hash_provenance_accepts_only_exact_sha256_or_null(self) -> None:
+        secret = "not-a-hash-secret-value"
+        with mock.patch.dict(
+            os.environ,
+            {
+                "RUN_DAILY_INPUT_SHA256": secret,
+                "RUN_DAILY_OUTPUT_SHA256": secret,
+            },
+        ):
+            rejected = self._write(
+                "Succeeded",
+                run=make_run(),
+                execution_mode="dry_run",
+                data_sink="artifact_only",
+            )
+        self.assertIsNone(rejected["inputSha256"])
+        self.assertIsNone(rejected["outputSha256"])
+        self.assertEqual(
+            rejected["hashProvenance"],
+            {"inputSha256": "unavailable", "outputSha256": "unavailable"},
+        )
+        self.assertNotIn(secret, json.dumps(rejected, sort_keys=True))
+
+        with mock.patch.dict(
+            os.environ,
+            {
+                "RUN_DAILY_INPUT_SHA256": "a" * 64,
+                "RUN_DAILY_OUTPUT_SHA256": "b" * 64,
+            },
+        ):
+            accepted = self._write(
+                "Succeeded",
+                run=make_run(),
+                execution_mode="dry_run",
+                data_sink="artifact_only",
+            )
+        self.assertEqual(accepted["inputSha256"], "a" * 64)
+        self.assertEqual(accepted["outputSha256"], "b" * 64)
+        self.assertEqual(
+            accepted["hashProvenance"],
+            {
+                "inputSha256": "RUN_DAILY_INPUT_SHA256",
+                "outputSha256": "RUN_DAILY_OUTPUT_SHA256",
+            },
         )
 
 

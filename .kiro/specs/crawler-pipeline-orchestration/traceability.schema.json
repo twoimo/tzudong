@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tzudong.app/schemas/crawler-pipeline-orchestration-traceability.schema.json",
+  "title": "Crawler pipeline orchestration task traceability map",
+  "x-schemaVersion": 1,
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "specPath", "entries"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "specPath": {
+      "const": ".kiro/specs/crawler-pipeline-orchestration/tasks.md"
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "evidenceClasses",
+          "implementationPaths",
+          "verificationModules",
+          "externalEvidenceTypes"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "pattern": "^[1-9]\\d*(?:\\.\\d+)?$"
+          },
+          "evidenceClasses": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "checkpoint",
+                "hosted_supabase",
+                "local_runtime",
+                "source",
+                "source_contract"
+              ]
+            }
+          },
+          "implementationPaths": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "verificationModules": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^backend(?:\\.[A-Za-z0-9_]+)+$"
+            }
+          },
+          "externalEvidenceTypes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "github_branch_protection_readback",
+                "hosted_supabase_readback",
+                "mac_launchagent_readback"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

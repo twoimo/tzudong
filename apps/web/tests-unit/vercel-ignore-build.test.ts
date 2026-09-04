@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "bun:test";
@@ -29,22 +30,46 @@ describe("Vercel ignored build branch policy", () => {
 
     expect(config.git?.deploymentEnabled).toEqual({
       "*": false,
-      main: true,
+      main: false,
       develop: true,
     });
     expect(config.regions).toEqual(["icn1"]);
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
   });
 
-  it("continues production builds from main", () => {
+  it("holds production builds while source promotion and hosted verification proceed", () => {
     const result = runIgnoreCommand({
       VERCEL_ENV: "production",
       VERCEL_GIT_COMMIT_REF: "main",
     });
 
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain("build: production branch deployment");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("skip: production Git deployment held");
     expect(result.stdout).toContain("ref=main");
+  });
+
+  it("requires an explicit true configuration and fails closed on unreadable or malformed configuration", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "tzudong-vercel-gate-"));
+    try {
+      mkdirSync(resolve(root, "scripts"));
+      copyFileSync(resolve(WEB_ROOT, "scripts/vercel-ignore-build.mjs"), resolve(root, "scripts/vercel-ignore-build.mjs"));
+      for (const [config, expected] of [
+        [null, 0],
+        ["invalid-json", 0],
+        [JSON.stringify({ git: { deploymentEnabled: { main: "true" } } }), 0],
+        [JSON.stringify({ git: { deploymentEnabled: { main: true } } }), 1],
+      ] as const) {
+        if (config !== null) writeFileSync(resolve(root, "vercel.json"), config);
+        const result = spawnSync("node", ["scripts/vercel-ignore-build.mjs"], {
+          cwd: root,
+          encoding: "utf8",
+          env: { ...process.env, VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: "main" },
+        });
+        expect(result.status).toBe(expected);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("skips preview builds from main", () => {

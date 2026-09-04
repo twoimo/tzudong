@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_apply_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "operationId": "d983a200-adc4-4c15-8521-f63e278bcc6b",
+  "attemptObservedAt": "2026-09-04T09:40:43Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "authorizationPath": "backend/supabase/g037-readonly-role-apply-authorization.v3.json",
+    "authorizationSha256": "0bf534d0db55f220d25fdbf9a9e727c3b665b32f7d5ea6ca9989d70f3fe20adb",
+    "authorizationRequestPath": "backend/supabase/g037-readonly-role-apply-authorization-request.v3.json",
+    "authorizationRequestSha256": "a983a4f6ca843a3dc8d5ea9991d6bb2c66de5670ddbca0c1d96ed13f17abd9ef",
+    "consumptionPath": "backend/supabase/g037-readonly-role-apply-consumption.v3.json",
+    "consumptionSha256": "f9400c39d77d404f89536e101e2d4eb521df88d7b054d2559adceae4cf6db3ef",
+    "authorizationReusable": false
+  },
+  "executedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql",
+    "sha256": "77542865f044f10c8d6d86f99ba015ef3419a3dfacf5e4ad9c44cc8848d6c4a8",
+    "executionCount": 1,
+    "retryCount": 0
+  },
+  "readbackArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_readback_v3.sql",
+    "sha256": "8a225381a61ff1c752bcdee89722d16e9173a1aadda0fbcc35707cb9cbdeae09",
+    "executionCount": 1
+  },
+  "preexecutionReadback": {
+    "projectActiveHealthy": true,
+    "postgresVersion": "17.6.1.038",
+    "postgresMajorVersion": 17,
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "outcome": {
+    "status": "committed",
+    "fixedCode": "g037_readonly_role_provisioned",
+    "transactionCommitObserved": true,
+    "commitConfirmedByExactRoleReadback": true,
+    "persistentRolePresentAfterApply": true,
+    "persistentHostedStateChanged": true,
+    "providerErrorRetained": false,
+    "rawProviderResultRetained": false
+  },
+  "postapplyReadback": {
+    "schema": "g037-readonly-role-readback-v3",
+    "rolePresent": true,
+    "login": true,
+    "noSuperuser": true,
+    "noInherit": true,
+    "noCreateRole": true,
+    "noCreateDb": true,
+    "noReplication": true,
+    "noBypassRls": true,
+    "connectionLimitOne": true,
+    "settingsExact": true,
+    "databaseConnect": true,
+    "noDatabaseCreate": true,
+    "noPublicSchemaCreate": true,
+    "ledgerColumnsSelect": true,
+    "targetFunctionPresent": true,
+    "targetExecuteDenied": true,
+    "parentMembershipCount": 0,
+    "memberCount": 1,
+    "memberIsCurrentUser": true,
+    "currentUserNonSuperuserCreateRole": true,
+    "grantorSuperuser": true,
+    "adminOption": true,
+    "noSetOption": true,
+    "noInheritOption": true,
+    "creatorMembershipShapeExact": true,
+    "ownedObjectCount": 0
+  },
+  "ledgerBoundary": {
+    "preapplyMigrationCount": 50,
+    "preapplyTerminalMigrationVersion": "20260804000500",
+    "provisioningSourceContainsMigrationLedgerMutation": false,
+    "separatePostapplyLedgerReadbackPerformed": false
+  },
+  "downstreamGate": {
+    "passwordConfigurationAuthorized": false,
+    "credentialGenerationAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "dedicatedRoleConnectionProved": false,
+    "controllerDispatchAuthorized": false,
+    "workflowDispatchAuthorized": false,
+    "migrationOrReleaseAuthorized": false
+  },
+  "notEvidenceOf": [
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role password connection",
+    "controller retry authorization",
+    "postapply migration-ledger readback",
+    "migration, release, or deployment"
+  ]
+}

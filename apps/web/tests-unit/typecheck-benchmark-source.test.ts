@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { buildBenchmarkDecision, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
+import { benchmarkInstallerMatches, buildBenchmarkDecision, mustAbortSampleRetries, samplerCloseRequiresImmediateFailure, TYPECHECK_BENCHMARK_BUDGETS, TYPECHECK_BENCHMARK_MAX_PUBLICATION_BYTES } from "../scripts/measure-typecheck.mjs";
 import { validateBenchmarkReportDocument, verifyPublishedBenchmarkDirectory } from "../scripts/verify-typecheck-benchmark-report.mjs";
 
 const root = resolve(import.meta.dir, "..");
@@ -15,6 +15,18 @@ const measure = read("scripts/measure-typecheck.mjs");
 const reportVerifier = read("scripts/verify-typecheck-benchmark-report.mjs");
 const sampler = `${read("scripts/process-tree-rss-sampler.mjs")}\n${read("scripts/process-tree-rss-core.mjs")}`;
 const repositoryGuidance = readFileSync(resolve(root, "..", "..", "AGENTS.md"), "utf8");
+
+test("benchmark admits only the declared installer versions and rejects ambiguous versions", () => {
+  expect(benchmarkInstallerMatches("bun", "bun/1.4.0 npm/? node/v24.20.0 linux x64")).toBe(true);
+  expect(benchmarkInstallerMatches("npm", "npm/11.6.2 node/v24.20.0 linux x64")).toBe(true);
+  for (const userAgent of ["", "bun/1.2.16", "bun/1.4.01", "bun/1.4.0-canary", "npm/11.6.2", null]) {
+    expect(benchmarkInstallerMatches("bun", userAgent)).toBe(false);
+  }
+  for (const userAgent of ["", "npm/11.19.0", "npm/11.6.20", "npm/11.6.2-beta", "bun/1.4.0", null]) {
+    expect(benchmarkInstallerMatches("npm", userAgent)).toBe(false);
+  }
+  expect(benchmarkInstallerMatches("unknown", "npm/11.6.2")).toBe(false);
+});
 
 function decisionRuns(nativeDurations: number[], compatDurations: number[], nativeRss = 512 * 1024 * 1024, compatRss = 512 * 1024 * 1024) {
   const runs: Array<{ kind: "native" | "compat"; durationMs: number; samplerSummary: { peakRssBytes: number } }> = [];
@@ -619,7 +631,7 @@ describe("TypeScript 7 dual-toolchain and benchmark contract", () => {
   test("fails closed on provenance, malformed evidence, and immutable publication hazards", () => {
     expect(measure).toContain("/^[a-f0-9]{40}$/");
     expect(measure).toContain("Benchmark requires Node 24 x64");
-    expect(measure).toContain("bun\\/1\\.2\\.16");
+    expect(measure).toContain("benchmarkInstallerMatches(result.installer, userAgent)");
     expect(measure).toContain("npm\\/11\\.6\\.2");
     expect(measure).toContain("Repository provenance is not the requested clean release tree");
     expect(measure).toContain("repositoryTopLevelSha256");

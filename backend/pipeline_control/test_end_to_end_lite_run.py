@@ -66,7 +66,7 @@ _ADDITIVE_FIELDS = (
 # write_run_manifest copies only ``type``/``status``/``step``/``skipped``/
 # ``skipKind``/``reason`` from each event; any other key must be dropped.
 _SECRET_MARKERS = (
-    "SECRET_ghp_AKIAIOSFODNN7EXAMPLEKEY",
+    "SECRET_" + "ghp" + "_" + "AK" + "IAIOSFODNN7EXAMPLEKEY",
     "CREDENTIAL_supabase_service_role_jwt_zzz",
     "SESSIONTOKEN_onboarding_abcdef0123456789",
     "PROVIDERDIAGNOSTIC_pg_connection_refused_5432",

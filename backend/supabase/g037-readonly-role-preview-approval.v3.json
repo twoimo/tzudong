@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_preview_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T09:22:06Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "continuity": {
+    "priorPreviewApprovalPath": "backend/supabase/g037-readonly-role-preview-approval.v2.json",
+    "priorPreviewApprovalSha256": "b579b7d11c2d82cef6e8502472399de341512b5d7ce08201354e19b018645dd8",
+    "failedApplyAttemptPath": "backend/supabase/g037-readonly-role-apply-attempt.v2.json",
+    "failedApplyAttemptSha256": "52d4e75d479810ffd35f0fec848f5759d3b3f4996349ea04a9dfa3869db5a175",
+    "creatorMembershipDiagnosticAuthorizationPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-authorization.v3.json",
+    "creatorMembershipDiagnosticAuthorizationSha256": "25c763681bc2c3d141be7c363c945c16ff3c2aa3159d89f770361731b8a31254",
+    "creatorMembershipDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-attempt.v3.json",
+    "creatorMembershipDiagnosticAttemptSha256": "cb1398d04e5c943a1780b03380d7d4ea61ee86e0afb45fb89877684b4393613e",
+    "creatorMembershipDiagnosticAuthorizationReusable": false
+  },
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-provisioning-preview.v3.json",
+      "sha256": "bf1913e5b0cfffaad856e4080939d21e7d11d60fee4f2c333c92c3c9ca219ff9"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql",
+      "sha256": "77542865f044f10c8d6d86f99ba015ef3419a3dfacf5e4ad9c44cc8848d6c4a8"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_readback_v3.sql",
+      "sha256": "8a225381a61ff1c752bcdee89722d16e9173a1aadda0fbcc35707cb9cbdeae09"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_hosted_closure_executor.py",
+      "sha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0"
+    }
+  ],
+  "approvedScope": {
+    "correctedProvisioningV3PreviewReview": true,
+    "provisioningSqlReview": true,
+    "readbackSqlReview": true,
+    "controllerAdmissionReview": true,
+    "productionHostedExecution": false,
+    "roleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "controllerDispatch": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false,
+    "releaseOrDeployment": false
+  },
+  "executionGate": {
+    "status": "separate_one_time_production_apply_authorization_required",
+    "previewOwnerApproved": true,
+    "hostedApplyAuthorized": false,
+    "hostedApplyPerformed": false,
+    "postapplyReadbackPerformed": false,
+    "credentialConfigured": false,
+    "repositorySecretChanged": false,
+    "controllerRetryAuthorized": false
+  },
+  "notEvidenceOf": [
+    "production provisioning v3 execution",
+    "production dedicated-role persistence",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

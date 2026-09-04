@@ -523,6 +523,10 @@ class GDriveUploadContractTests(unittest.TestCase):
         self.assertIn("run_hosted_new_video_pipeline.py", hosted_apply)
         runner = (BACKEND_ROOT / "bin" / "run_hosted_new_video_pipeline.py").read_text(encoding="utf-8")
         self.assertIn("apply_hosted_pending_candidates.py", runner)
+        launchd_installer = (
+            BACKEND_ROOT / "bin" / "install_mac_hosted_pipeline_launchd.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("run_hosted_new_video_pipeline.py", launchd_installer)
         self.assertIn("vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED", daily_workflow)
         self.assertIn("node backend/bin/check_gemini_runtime.mjs", daily_workflow)
         self.assertIn("Lite GHA skips Gemini API availability as a hard gate.", daily_workflow)
@@ -759,12 +763,16 @@ class GDriveUploadContractTests(unittest.TestCase):
 
         self.assertIn("npm audit --audit-level=moderate", security_workflow)
         self.assertIn("python -m pip_audit", security_workflow)
+        self.assertIn("backend/test-requirements.txt", security_workflow)
         self.assertIn("backend/restaurant-crawling/scripts/requirements.txt", security_workflow)
         self.assertIn("backend/supabase/scripts/g037-hosted-closure-requirements.txt", security_workflow)
         self.assertIn("backend/pipeline-control/requirements.txt", security_workflow)
+        self.assertIn("check_crawler_orchestration_readiness.py --run-tests --json", security_workflow)
         self.assertIn('directory: "/backend/pipeline-control"', dependabot)
         self.assertIn('directory: "/backend/restaurant-crawling/scripts"', dependabot)
-        self.assertEqual(dependabot.count('target-branch: "develop"'), 6)
+        self.assertEqual(dependabot.count('target-branch: "develop"'), 7)
+        self.assertIn('package-ecosystem: "cargo"', dependabot)
+        self.assertIn('directory: "/backend/rust"', dependabot)
         self.assertEqual(dependabot.count('applies-to: "version-updates"'), 2)
         self.assertEqual(dependabot.count('          - "minor"'), 2)
         self.assertEqual(dependabot.count('          - "patch"'), 2)
@@ -2465,7 +2473,10 @@ class DailyPublicationContractTests(unittest.TestCase):
     def test_publisher_source_separates_secret_compute_from_write_publish(self) -> None:
         workflow = DAILY_CRAWLER_WORKFLOW.read_text(encoding="utf-8")
         compute = workflow.split("  daily-compute:", 1)[1].split("  daily-publish:", 1)[0]
-        publisher = workflow.split("  daily-publish:", 1)[1]
+        publisher = (
+            workflow.split("  daily-publish:", 1)[1]
+            .split("  hosted-pending-apply:", 1)[0]
+        )
 
         self.assertIn("contents: read", compute)
         self.assertNotIn("contents: write", compute)

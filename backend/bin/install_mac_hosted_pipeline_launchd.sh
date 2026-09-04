@@ -1,23 +1,37 @@
 #!/usr/bin/env bash
 # Install a Mac LaunchAgent that runs the same hosted new-video pipeline as GHA.
 # Does not start the heavy local worker. Does not enable hosted_apply latch.
+# launchd cannot read Documents/Desktop/Downloads unless /bin/bash has Full Disk Access.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 LABEL="dev.tzudong.hosted-new-video"
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
-# Prefer the in-repo virtualenv so the pipeline runs from this workspace and its
-# pinned dependencies; fall back to an explicit override, then system python.
-if [ -n "${PYTHON_CMD:-}" ]; then
-  PYTHON="${PYTHON_CMD}"
-elif [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+SUPPORT="$HOME/Library/Application Support/tzudong"
+LOG_DIR="$HOME/Library/Logs/tzudong"
+WRAPPER="$SUPPORT/run-hosted-new-video.sh"
+if [[ -n "${PYTHON_CMD:-}" ]]; then
+  PYTHON="$PYTHON_CMD"
+elif [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
   PYTHON="$REPO_ROOT/.venv/bin/python"
 else
   PYTHON="/usr/bin/python3"
 fi
-# launchd starts with a minimal PATH; expose the venv bin plus common tool dirs
-# (git/node/ffmpeg via homebrew) so numbered scripts resolve their executables.
-LAUNCHD_PATH="$(dirname "$PYTHON"):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-mkdir -p "$HOME/Library/LaunchAgents" "$REPO_ROOT/backend/log/cron"
+# Validate before replacing a wrapper or unloading the installed agent.
+"$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || {
+  echo "python_runtime_unavailable" >&2
+  exit 1
+}
+mkdir -p "$HOME/Library/LaunchAgents" "$SUPPORT" "$LOG_DIR" "$REPO_ROOT/backend/log/cron"
+cat > "$WRAPPER" <<EOF
+#!/bin/bash
+set -euo pipefail
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+export TZUDONG_REPO_ROOT=$(printf '%q' "$REPO_ROOT")
+export TZUDONG_PIPELINE_SOURCE="mac"
+cd "\$TZUDONG_REPO_ROOT"
+exec $(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 1
+EOF
+chmod 755 "$WRAPPER"
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -26,15 +40,11 @@ cat > "$PLIST" <<EOF
   <key>Label</key>
   <string>${LABEL}</string>
   <key>WorkingDirectory</key>
-  <string>${REPO_ROOT}</string>
+  <string>${SUPPORT}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${PYTHON}</string>
-    <string>${REPO_ROOT}/backend/bin/run_hosted_new_video_pipeline.py</string>
-    <string>--channel</string>
-    <string>tzuyang</string>
-    <string>--limit</string>
-    <string>1</string>
+    <string>/bin/bash</string>
+    <string>${WRAPPER}</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -42,24 +52,25 @@ cat > "$PLIST" <<EOF
     <string>mac</string>
     <key>TZUDONG_REPO_ROOT</key>
     <string>${REPO_ROOT}</string>
-    <key>PATH</key>
-    <string>${LAUNCHD_PATH}</string>
   </dict>
   <key>StartCalendarInterval</key>
   <dict>
     <key>Hour</key>
     <integer>5</integer>
     <key>Minute</key>
-    <integer>0</integer>
+    <integer>15</integer>
   </dict>
   <key>StandardOutPath</key>
-  <string>${REPO_ROOT}/backend/log/cron/mac-hosted-new-video.log</string>
+  <string>${LOG_DIR}/mac-hosted-new-video.log</string>
   <key>StandardErrorPath</key>
-  <string>${REPO_ROOT}/backend/log/cron/mac-hosted-new-video.err.log</string>
+  <string>${LOG_DIR}/mac-hosted-new-video.err.log</string>
 </dict>
 </plist>
 EOF
 launchctl bootout "gui/$(id -u)/${LABEL}" >/dev/null 2>&1 || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 echo "installed ${PLIST}"
-echo "source=mac schedule=05:00 local evaluate+pending-apply limit=1"
+echo "wrapper=${WRAPPER}"
+echo "logs=${LOG_DIR}"
+echo "source=mac schedule=05:15 local evaluate+pending-apply limit=1"
+echo "tcc=grant_full_disk_access_to_/bin/bash if repo is under Documents"

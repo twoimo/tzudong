@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_creator_membership_diagnostic_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T08:28:54Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "continuity": {
+    "priorMembershipDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-membership-diagnostic-attempt.v2.json",
+    "priorMembershipDiagnosticAttemptSha256": "a7cba5f5eac9fa241c75f53f0b0c169ef291fc7b2e8889c4627b243057919bdc",
+    "spentMembershipDiagnosticAuthorizationPath": "backend/supabase/g037-readonly-role-membership-diagnostic-authorization.v2.json",
+    "spentMembershipDiagnosticAuthorizationSha256": "ebf8bd6556691a8b444fc787ce80487d0510c6740ddd94e16dd77c072d5c920e",
+    "priorMembershipDiagnosticAuthorizationReusable": false
+  },
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-preview.v3.json",
+      "sha256": "25b85850bbaef428915d88606276785777213b70c8828d3dc6006ab59ae84a2f"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql",
+      "sha256": "9df2ba5db3e7a527d49df00025f15504fb29003fb543e6c3a735dc5d92a43e4b"
+    }
+  ],
+  "approvedScope": {
+    "rollbackOnlyCreatorMembershipDiagnosticPreviewReview": true,
+    "fixedCodeCreatorMembershipDiagnosticSqlReview": true,
+    "productionDiagnosticExecution": false,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false
+  },
+  "executionGate": {
+    "status": "separate_one_time_creator_membership_diagnostic_execution_authorization_required",
+    "previewOwnerApproved": true,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "production creator identity or grantor identity",
+    "production membership admin, set, or inherit options",
+    "production automatic creator-membership equivalence",
+    "production creator-membership diagnostic execution",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

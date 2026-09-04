@@ -2,13 +2,18 @@
 
 - `harbor.local/tzudong/pipeline-api:<gitsha>`
 - `harbor.local/tzudong/pipeline-worker:<gitsha>`
+- `harbor.local/tzudong/pipeline-indexer:<gitsha>`
 
 Build:
 
+```bash
+docker buildx build --platform linux/arm64,linux/amd64 -f backend/pipeline-control/Dockerfile --target api -t harbor.local/tzudong/pipeline-api:<gitsha> .
+docker buildx build --platform linux/arm64,linux/amd64 -f backend/pipeline-control/Dockerfile --target worker -t harbor.local/tzudong/pipeline-worker:<gitsha> .
+docker buildx build --platform linux/arm64,linux/amd64 -f backend/pipeline-control/Dockerfile --target indexer -t harbor.local/tzudong/pipeline-indexer:<gitsha> .
 ```
-docker build -f backend/pipeline-control/Dockerfile --target api -t harbor.local/tzudong/pipeline-api:local .
-docker build -f backend/pipeline-control/Dockerfile --target worker -t harbor.local/tzudong/pipeline-worker:local .
-```
+
+These are build-only examples. Harbor push needs a separate registry credential approval and is
+not performed by repository verification.
 
 `lite_gha` uses the worker target as a one-shot after a Postgres service is healthy.
 `heavy_local` bind-mounts the repository so numbered scripts, node, and ffmpeg stay on the host tree.

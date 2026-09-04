@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "kind": "supabase_security_advisor_classification",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "observedAt": "2026-09-03T17:41:52.379Z",
+  "scope": "bounded catalog metadata and source reconciliation only",
+  "notEvidenceOf": [
+    "migration application",
+    "production remediation",
+    "legal compliance or general security approval",
+    "release readiness"
+  ],
+  "documentation": {
+    "advisor": "https://supabase.com/docs/guides/database/database-advisors",
+    "securityDefinerView": "https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0010_security_definer_view",
+    "mutableSearchPath": "https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0011_function_search_path_mutable",
+    "anonymousDefiner": "https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0028_anon_security_definer_function_executable",
+    "authenticatedDefiner": "https://supabase.com/docs/guides/database/database-advisors?queryGroups=lint&lint=0029_authenticated_security_definer_function_executable"
+  },
+  "securityDefinerView": {
+    "identity": "public.privacy_consent_state",
+    "advisorLevel": "ERROR",
+    "disposition": "owner_approved_bounded_exception",
+    "reason": "security_invoker would remove the NOLOGIN owner bridge and authenticated currently has no direct private-table grant",
+    "sourceControls": [
+      "security_barrier=true",
+      "view predicate binds event.user_id to auth.uid()",
+      "SELECT granted only to authenticated",
+      "underlying private table has FORCE RLS",
+      "underlying tables grant access only to privacy_workflow_owner"
+    ],
+    "ownerDecision": {
+      "status": "approved_to_retain",
+      "approverDisplayName": "최연우",
+      "scope": "public.privacy_consent_state owner-bridge security-design exception only",
+      "evidenceBoundary": "user-provided named-owner decision in the current task transcript; no immutable external receipt",
+      "notApprovalFor": [
+        "hosted migration application",
+        "legal or privacy compliance review",
+        "general production security certification",
+        "release readiness"
+      ]
+    },
+    "candidateAction": "retain the current owner bridge and keep the Advisor ERROR visible until a separately approved redesign is implemented and read back"
+  },
+  "unvalidatedConstraints": {
+    "managedConstraintExcluded": "realtime.messages.messages_payload_exclusive",
+    "projectOwned": [
+      {
+        "identity": "public.admin_audit_events.admin_audit_events_whitelisted_contract",
+        "sourceState": "intentional_not_valid",
+        "rowCount": 14,
+        "violationCount": 0,
+        "disposition": "actionable_candidate_validation"
+      },
+      {
+        "identity": "public.account_deletion_requests.account_deletion_requests_reason_code_allowed",
+        "sourceState": "intentional_not_valid",
+        "rowCount": 0,
+        "violationCount": 0,
+        "disposition": "actionable_candidate_validation"
+      },
+      {
+        "identity": "public.account_deletion_requests.account_deletion_requests_count_summary_safe",
+        "sourceState": "intentional_not_valid",
+        "rowCount": 0,
+        "violationCount": 0,
+        "disposition": "actionable_candidate_validation"
+      },
+      {
+        "identity": "public.account_deletion_request_items.account_deletion_request_items_reason_code_allowed",
+        "sourceState": "intentional_not_valid",
+        "rowCount": 0,
+        "violationCount": 0,
+        "disposition": "actionable_candidate_validation"
+      }
+    ],
+    "candidateMigration": "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+    "catalogBaselineAdvance": {
+      "manifest": "privacy_retention.g014_catalog_contract_manifest",
+      "changedValueCount": 4,
+      "immutableTrigger": "g014_catalog_manifest_immutable",
+      "controls": [
+        "pre-change full catalog assertion",
+        "temporary owner role with membership restoration",
+        "exact four-row update count",
+        "immutable trigger re-enabled before readback",
+        "post-change full catalog assertion"
+      ]
+    }
+  },
+  "mutableSearchPath": {
+    "advisorWarningCount": 26,
+    "allSecurityInvoker": true,
+    "anonymousOrPublicExecutableCount": 0,
+    "executionRoleSummary": {
+      "postgresOnly": 21,
+      "postgresAndServiceRole": 3,
+      "authenticatedPostgresAndServiceRole": 2
+    },
+    "trustedPath": ["pg_catalog", "public", "extensions"],
+    "trustedPathPrecondition": "PUBLIC, anon, authenticated, and service_role cannot CREATE in public or extensions",
+    "disposition": "actionable_candidate_fixed_path",
+    "sourceReconciliation": {
+      "hostedOnlyFunction": "public.touch_admin_workflow_updated_at()",
+      "observedOwner": "postgres",
+      "observedExecutionRoles": ["postgres"],
+      "candidateAction": "recover the exact invoker trigger body, normalize owner and revoke Data API execution before fixed-path hardening"
+    },
+    "signatures": [
+      "public.canonicalize_youtube_link(text)",
+      "public.extract_youtube_video_id(text)",
+      "public.get_all_approved_restaurant_names()",
+      "public.get_categories_by_restaurant_name_or_youtube_url(text,text)",
+      "public.get_video_captions_for_range(text,integer,integer,integer)",
+      "public.get_video_metadata_filtered(integer,integer,text)",
+      "public.match_documents_bge(public.vector,double precision,integer,jsonb)",
+      "public.match_documents_hybrid(public.vector,jsonb,double precision,double precision,integer)",
+      "public.match_storyboard_documents_hybrid(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "public.match_storyboard_documents_hybrid_v2(uuid,public.vector,jsonb,double precision,integer,integer,jsonb)",
+      "public.normalize_restaurant_identity_name(text)",
+      "public.prevent_last_active_admin_status_change()",
+      "public.prevent_last_admin_role_delete()",
+      "public.prevent_last_admin_role_update()",
+      "public.prevent_profile_role_client_change()",
+      "public.resolve_restaurant_identity_name(text,text,text,text)",
+      "public.search_restaurants_by_category(text,integer)",
+      "public.search_restaurants_by_name(text,integer)",
+      "public.search_video_ids_by_query(public.vector,jsonb,double precision,double precision,integer)",
+      "public.set_admin_restaurant_map_overlays_updated_at()",
+      "public.set_admin_trend_schema_foundation_updated_at()",
+      "public.set_admin_user_preferences_updated_at()",
+      "public.set_documents_updated_at()",
+      "public.storyboard_sparse_dot_product(jsonb,jsonb)",
+      "public.touch_admin_workflow_updated_at()",
+      "public.update_announcements_updated_at()"
+    ],
+    "candidateMigration": "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql"
+  },
+  "securityDefinerExecution": {
+    "anonymousFindingCount": 1,
+    "authenticatedFindingCount": 18,
+    "allPinnedToEmptySearchPath": true,
+    "allOwnedByNoLoginBridgeRoles": true,
+    "disposition": "intentional_source_allowlisted_rpc_surface",
+    "anonymousFunctions": ["read_release_auth_revocation_by_operation"],
+    "authenticatedFunctions": [
+      "approve_edit_submission_item",
+      "approve_submission_item",
+      "begin_account_deletion_apply_with_reauth",
+      "create_user_notification",
+      "delete_notification",
+      "get_current_auth_session_id",
+      "get_current_privacy_eligibility",
+      "get_current_privacy_policy_version",
+      "get_ocr_daily_quota_status",
+      "is_current_auth_session_active",
+      "issue_account_deletion_reauth_proof",
+      "mark_all_notifications_read",
+      "mark_notification_read",
+      "merge_restaurant_records_for_admin_review",
+      "read_current_account_deletion_status",
+      "read_release_auth_revocation_by_operation",
+      "reserve_ocr_daily_quota",
+      "submit_privacy_consent"
+    ],
+    "sourceContract": "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql and additive follow-on migrations",
+    "candidateAction": "retain exact ACL allowlist; do not suppress or broaden grants"
+  }
+}

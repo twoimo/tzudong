@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "supabase_auth_hardening_decision",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "control": "auth.password.leaked_password_protection",
+  "scope": "bounded named-owner plan decision and prior hosted readback only",
+  "notEvidenceOf": [
+    "paid-plan purchase",
+    "hosted setting activation",
+    "immutable external receipt",
+    "legal or privacy approval",
+    "release readiness"
+  ],
+  "ownerDecision": {
+    "approverDisplayName": "최연우",
+    "decision": "defer_paid_plan_upgrade",
+    "evidenceBoundary": "user-provided named-owner decision in the current task transcript; no immutable external receipt"
+  },
+  "currentState": {
+    "organizationPlan": "Free",
+    "planEligible": false,
+    "leakedPasswordProtection": "disabled",
+    "settingsChanged": 0,
+    "blockerCode": "subscription_plan_eligibility_free_plan"
+  },
+  "resumeRequirements": [
+    "new named-owner Pro-plan decision",
+    "eligible-plan readback",
+    "exact-setting apply",
+    "reload readback",
+    "sanitized external receipt"
+  ]
+}

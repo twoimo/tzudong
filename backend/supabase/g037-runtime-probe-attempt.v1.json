@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_hosted_runtime_probe_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "workflow": ".github/workflows/g037-hosted-closure.yml",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "mode": "runtime-probe",
+    "commitSha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+    "evidenceBoundary": "user-provided exact-revision authorization in the current task transcript"
+  },
+  "run": {
+    "id": 33839536300,
+    "url": "https://github.com/twoimo/tzudong/actions/runs/33839536300",
+    "event": "workflow_dispatch",
+    "headBranch": "main",
+    "headSha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+    "createdAt": "2026-09-04T05:10:52Z",
+    "completedAt": "2026-09-04T05:11:37Z",
+    "conclusion": "failure"
+  },
+  "jobs": {
+    "sourceValidation": {
+      "id": 100918820314,
+      "conclusion": "success"
+    },
+    "remoteReadonly": {
+      "id": 100918874341,
+      "conclusion": "failure",
+      "controllerExitCode": 2,
+      "receiptUploadConclusion": "success",
+      "temporaryReceiptRemovalConclusion": "success"
+    }
+  },
+  "receipts": {
+    "validate": {
+      "artifactId": 9924426677,
+      "artifactName": "g037-hosted-closure-validate-3d7557f6307c9f6696018324e559bff6e57afbce",
+      "schema": "g037-hosted-closure-receipt-v3",
+      "mode": "validate",
+      "status": "valid",
+      "manifestSha256": "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95",
+      "receiptSha256": "c1c045b9b5d0acecf41fbddac08a0505e4249ddf4551fa6be00d41e0a54960fa",
+      "fileSha256": "018b3a92bb6aaa9e05c831fa7b8bc286679e1e555ae8318e4cd21cf028f49c43"
+    },
+    "runtimeProbe": {
+      "artifactId": 9924434587,
+      "artifactName": "g037-hosted-closure-runtime-probe-3d7557f6307c9f6696018324e559bff6e57afbce",
+      "schema": "g037-hosted-closure-receipt-v3",
+      "mode": "runtime-probe",
+      "status": "denied",
+      "ambiguousCommit": false,
+      "runtimeAuthorizationDeniedEvidencePresent": false,
+      "manifestSha256": "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95",
+      "receiptSha256": "2542a96f065985f08008e467d428c730a387f0c999cfcb8b3faaad7927ec9c59",
+      "fileSha256": "efa577e54590d54669cc8c98c721e825978a1e96ffcd95f56686c39a9b67d34b"
+    }
+  },
+  "conclusions": {
+    "exactRevisionMatched": true,
+    "sourceValidationPassed": true,
+    "secretValueRead": false,
+    "mutationModeRequested": false,
+    "databaseConnectionState": "unproven",
+    "terminalMutatorState": "unproven",
+    "executePrivilegeDenialState": "unproven",
+    "denialCause": "not_exposed_by_bounded_receipt",
+    "task7_37": "open",
+    "retryRequiresNewAuthorization": true
+  },
+  "ownerRoleFollowup": {
+    "ownerPrivilegesPresent": true,
+    "roleNameRecorded": false,
+    "independentBlocker": "owner_credential_not_admitted_for_future_readonly_controller_runs",
+    "causedThisAttemptDenial": "unproven",
+    "evidenceBoundary": "user-provided privilege-class confirmation in the current task transcript"
+  },
+  "notEvidenceOf": [
+    "invalid database credential",
+    "successful database connection",
+    "missing terminal mutator",
+    "excessive current-role execute privilege",
+    "hosted migration application",
+    "release readiness"
+  ]
+}

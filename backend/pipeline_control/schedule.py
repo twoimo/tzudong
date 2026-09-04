@@ -15,6 +15,9 @@ entrypoint preflight, task 1.3) pass an already-parsed configuration mapping.
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
 from typing import Any, Mapping
 
 # Fixed Korea Standard Time offset. KST is UTC+9 year round with no
@@ -44,6 +47,40 @@ CADENCE_ERROR_CODES = frozenset(
         ERROR_WINDOW_SHAPE_INVALID,
     }
 )
+
+ERROR_SOURCE_CONFIG_INVALID = "source_config_invalid"
+ERROR_GHA_CRON_MISSING = "gha_cron_missing"
+ERROR_GHA_CRON_MISMATCH = "gha_cron_mismatch"
+ERROR_MAC_CALENDAR_MISSING = "mac_calendar_missing"
+ERROR_MAC_CALENDAR_MISMATCH = "mac_calendar_mismatch"
+ERROR_MAC_AGENT_MISMATCH = "mac_agent_mismatch"
+
+CADENCE_SOURCE_ERROR_CODES = frozenset(
+    {
+        None,
+        ERROR_SOURCE_CONFIG_INVALID,
+        ERROR_GHA_CRON_MISSING,
+        ERROR_GHA_CRON_MISMATCH,
+        ERROR_MAC_CALENDAR_MISSING,
+        ERROR_MAC_CALENDAR_MISMATCH,
+        ERROR_MAC_AGENT_MISMATCH,
+    }
+)
+
+EXPECTED_GHA_WORKFLOW = ".github/workflows/daily-crawler.yml"
+EXPECTED_MAC_INSTALLER = "backend/bin/install_mac_hosted_pipeline_launchd.sh"
+EXPECTED_MAC_AGENT = "dev.tzudong.hosted-new-video"
+
+_WORKFLOW_CRON = re.compile(
+    r"^\s*-\s+cron:\s*['\"]([^'\"]+)['\"]\s*$", re.MULTILINE
+)
+_MAC_CALENDAR = re.compile(
+    r"<key>StartCalendarInterval</key>\s*<dict>\s*"
+    r"<key>Hour</key>\s*<integer>(\d{1,2})</integer>\s*"
+    r"<key>Minute</key>\s*<integer>(\d{1,2})</integer>\s*</dict>",
+    re.MULTILINE,
+)
+_MAC_LABEL = re.compile(r'^LABEL="([A-Za-z0-9._-]+)"\s*$', re.MULTILINE)
 
 
 def kst_offset_minutes() -> int:
@@ -173,3 +210,139 @@ def validate_cadence(config: Any) -> dict:
             return _result(False, ERROR_BUFFER_TOO_SMALL, [cur_label, next_label])
 
     return _result(True, None, [])
+
+
+def _source_result(ok: bool, error_code: str | None, source: str | None) -> dict:
+    return {"ok": ok, "errorCode": error_code, "source": source}
+
+
+def _configured_windows(config: Mapping[str, Any]) -> dict[str, Mapping[str, Any]] | None:
+    windows = config.get("windows")
+    if not isinstance(windows, list):
+        return None
+    by_runner: dict[str, Mapping[str, Any]] = {}
+    for window in windows:
+        if not isinstance(window, Mapping):
+            return None
+        runner = window.get("runner")
+        if not isinstance(runner, str) or not runner or runner in by_runner:
+            return None
+        by_runner[runner] = window
+    if set(by_runner) != {GHA_RUNNER, MAC_RUNNER}:
+        return None
+    return by_runner
+
+
+def _cron_start_kst(cron: object) -> str | None:
+    if not isinstance(cron, str):
+        return None
+    parts = cron.split()
+    if len(parts) != 5 or parts[2:] != ["*", "*", "*"]:
+        return None
+    if not all(part.isdigit() for part in parts[:2]):
+        return None
+    minute, hour = (int(part) for part in parts[:2])
+    if minute > 59 or hour > 23:
+        return None
+    return _format_hhmm(utc_to_kst_minutes(hour * 60 + minute))
+
+
+def _format_hhmm(minutes: int) -> str:
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def validate_cadence_sources(
+    config: object,
+    gha_workflow_text: object,
+    mac_installer_text: object,
+) -> dict:
+    """Verify committed config, GHA cron, and LaunchAgent source agree.
+
+    The result contains only a closed error code and a fixed source identifier;
+    it never returns source snippets or parser diagnostics.
+    """
+
+    if (
+        not isinstance(config, Mapping)
+        or config.get("schemaVersion") != 1
+        or config.get("timezone") != "Asia/Seoul"
+        or config.get("utcOffsetMinutes") != KST_UTC_OFFSET_MINUTES
+        or not validate_cadence(config)["ok"]
+    ):
+        return _source_result(False, ERROR_SOURCE_CONFIG_INVALID, "cadence")
+    windows = _configured_windows(config)
+    if windows is None:
+        return _source_result(False, ERROR_SOURCE_CONFIG_INVALID, "cadence")
+
+    gha = windows[GHA_RUNNER]
+    expected_cron = gha.get("utcCron")
+    if (
+        gha.get("profile") != "lite_gha"
+        or gha.get("workflow") != EXPECTED_GHA_WORKFLOW
+        or _cron_start_kst(expected_cron) != gha.get("kstStart")
+    ):
+        return _source_result(False, ERROR_SOURCE_CONFIG_INVALID, "cadence")
+    if not isinstance(gha_workflow_text, str):
+        return _source_result(False, ERROR_GHA_CRON_MISSING, "gha")
+    workflow_crons = _WORKFLOW_CRON.findall(gha_workflow_text)
+    if not workflow_crons:
+        return _source_result(False, ERROR_GHA_CRON_MISSING, "gha")
+    if workflow_crons != [expected_cron]:
+        return _source_result(False, ERROR_GHA_CRON_MISMATCH, "gha")
+
+    mac = windows[MAC_RUNNER]
+    calendar = mac.get("launchdCalendar")
+    if (
+        mac.get("profile") != "heavy_local"
+        or mac.get("agent") != EXPECTED_MAC_AGENT
+        or not isinstance(calendar, Mapping)
+        or set(calendar) != {"Hour", "Minute"}
+        or isinstance(calendar.get("Hour"), bool)
+        or isinstance(calendar.get("Minute"), bool)
+        or not isinstance(calendar.get("Hour"), int)
+        or not isinstance(calendar.get("Minute"), int)
+        or not (0 <= calendar["Hour"] <= 23)
+        or not (0 <= calendar["Minute"] <= 59)
+        or _format_hhmm(calendar["Hour"] * 60 + calendar["Minute"])
+        != mac.get("kstStart")
+    ):
+        return _source_result(False, ERROR_SOURCE_CONFIG_INVALID, "cadence")
+    if not isinstance(mac_installer_text, str):
+        return _source_result(False, ERROR_MAC_CALENDAR_MISSING, "mac")
+    calendar_match = _MAC_CALENDAR.search(mac_installer_text)
+    if calendar_match is None:
+        return _source_result(False, ERROR_MAC_CALENDAR_MISSING, "mac")
+    installed_calendar = {
+        "Hour": int(calendar_match.group(1)),
+        "Minute": int(calendar_match.group(2)),
+    }
+    if installed_calendar != dict(calendar):
+        return _source_result(False, ERROR_MAC_CALENDAR_MISMATCH, "mac")
+    label_match = _MAC_LABEL.search(mac_installer_text)
+    if label_match is None or label_match.group(1) != mac.get("agent"):
+        return _source_result(False, ERROR_MAC_AGENT_MISMATCH, "mac")
+    return _source_result(True, None, None)
+
+
+def inspect_committed_cadence_sources(
+    repo_root: Path,
+    *,
+    config_path: Path = Path("backend/pipeline_control/cadence.schedule.json"),
+    gha_workflow_path: Path = Path(EXPECTED_GHA_WORKFLOW),
+    mac_installer_path: Path = Path(EXPECTED_MAC_INSTALLER),
+) -> dict:
+    """Read and validate the three committed schedule sources fail closed."""
+
+    try:
+        config = json.loads((repo_root / config_path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        config = None
+    try:
+        gha_text = (repo_root / gha_workflow_path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        gha_text = None
+    try:
+        mac_text = (repo_root / mac_installer_path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        mac_text = None
+    return validate_cadence_sources(config, gha_text, mac_text)

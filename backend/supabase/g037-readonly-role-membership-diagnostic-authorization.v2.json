@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_membership_diagnostic_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "authorizedAt": "2026-09-04T08:10:24Z",
+  "authorizationEvidenceBoundary": "user-provided named-owner authorization in the current task transcript; no external immutable receipt",
+  "membershipDiagnosticApproval": {
+    "path": "backend/supabase/g037-readonly-role-membership-diagnostic-approval.v2.json",
+    "sha256": "9631fab6ff13925b39aece61688c4e06df6c37e975121bcdb845ee0a9a49cef9"
+  },
+  "authorizedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql",
+    "sha256": "29b7ef6084eb2732e65028dd1a0158a8cf5eec2ac60b3c081ddffd9d8461ad8a"
+  },
+  "continuity": {
+    "priorDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-postcondition-diagnostic-attempt.v1.json",
+    "priorDiagnosticAttemptSha256": "23bd86c72d4e0bc4c53707cff4cc73e6f5b88c43decfcf2f7924b40af64e64a1",
+    "priorDiagnosticAuthorizationReusable": false
+  },
+  "authorizedScope": {
+    "maximumExecutionCount": 1,
+    "productionRollbackOnlyMembershipDiagnostic": true,
+    "immediateBoundedReadback": true,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false
+  },
+  "preconditions": {
+    "projectMustBeActiveHealthy": true,
+    "databaseMustEqualPostgres": true,
+    "roleMustBeAbsent": true,
+    "migrationLedgerMustExist": true,
+    "targetFunctionMustExist": true,
+    "migrationCountMustEqual50": true,
+    "terminalMigrationMustEqual20260804000500": true,
+    "currentDiagnosticSqlHashMustMatch": true
+  },
+  "executionStateAtAuthorization": {
+    "consumedExecutionCount": 0,
+    "diagnosticExecuted": false,
+    "boundedReadbackPerformed": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "membership diagnostic execution",
+    "production membership direction, count, adjacent role identity, or effective privilege",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

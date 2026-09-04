@@ -6,12 +6,173 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/dependabot.yml'
+      - '.kiro/specs/crawler-pipeline-*/**'
       - 'apps/web/package.json'
       - 'apps/web/package-lock.json'
+      - 'apps/web/bun.lock'
+      - 'apps/web/scripts/verify-pin-contract.mjs'
+      - 'apps/web/app/api/admin/publish-jobs/**'
+      - 'apps/web/lib/admin-publish-jobs.ts'
+      - 'apps/web/tests-unit/publish-jobs-request-contract.test.ts'
       - 'backend/package.json'
       - 'backend/package-lock.json'
       - 'backend/**/requirements*.txt'
+      - 'backend/pipeline-control/Dockerfile'
+      - 'backend/pipeline-control/docker-compose*.yml'
+      - 'backend/pipeline-control/otel-collector.yaml'
+      - 'backend/bin/check_deployment_descriptor_set.py'
+      - 'backend/bin/check_layout_manifest.py'
+      - 'backend/bin/check_rename_ledger.py'
+      - 'backend/bin/build_platform_modernization_reconciliation.py'
+      - 'backend/bin/check_local_runtime.py'
+      - 'backend/bin/metrics_contract_report.py'
+      - 'backend/bin/observability_up.py'
+      - 'backend/bin/schema_mirror_report.py'
+      - 'backend/bin/seed_fixture_guard.py'
+      - 'backend/bin/tests/**'
+      - 'backend/bin/tests/test_check_deployment_descriptor_set_unittest.py'
+      - 'backend/bin/tests/test_metrics_contract_report_unittest.py'
+      - 'backend/bin/tests/test_observability_up_unittest.py'
+      - 'backend/deploy/**'
+      - 'backend/deploy/phase-gates.v1.json'
+      - 'backend/layout-manifest.v1.json'
+      - 'backend/naming-renames.v1.json'
+      - 'backend/pipeline_control/**'
+      - 'backend/rust/Cargo.toml'
+      - 'backend/rust/Cargo.lock'
+      - 'backend/rust/rust-toolchain.toml'
+      - 'backend/rust/**/*.rs'
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
+      - 'backend/supabase/migrations/20260901000100_local_analytics_schema.sql'
+      - 'backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql'
+      - 'backend/supabase/migrations/20260905*_local_agent_*.sql'
+      - 'backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql'
+      - 'backend/supabase/advisor-classification.v1.json'
+      - 'backend/supabase/auth-hardening-decision.v1.json'
+      - 'backend/supabase/hosted-db-access-decision.v1.json'
+      - 'backend/supabase/g037-preflight-attempt.v1.json'
+      - 'backend/supabase/g037-runtime-probe-attempt.v1.json'
+      - 'backend/supabase/g037-readonly-credential-contract.v1.json'
+      - 'backend/supabase/g037-readonly-role-apply-attempt.v1.json'
+      - 'backend/supabase/g037-readonly-role-apply-authorization.v2.json'
+      - 'backend/supabase/g037-readonly-role-apply-attempt.v2.json'
+      - 'backend/supabase/g037-readonly-role-provisioning-preview.v1.json'
+      - 'backend/supabase/g037-readonly-role-preview-approval.v1.json'
+      - 'backend/supabase/g037-readonly-role-provisioning-preview.v2.json'
+      - 'backend/supabase/g037-readonly-role-preview-approval.v2.json'
+      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-preview.v1.json'
+      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-approval.v1.json'
+      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-authorization.v1.json'
+      - 'backend/supabase/g037-readonly-role-postcondition-diagnostic-attempt.v1.json'
+      - 'backend/supabase/g037-readonly-role-membership-diagnostic-preview.v2.json'
+      - 'backend/supabase/g037-readonly-role-membership-diagnostic-approval.v2.json'
+      - 'backend/supabase/g037-readonly-role-membership-diagnostic-authorization.v2.json'
+      - 'backend/supabase/g037-readonly-role-membership-diagnostic-attempt.v2.json'
+      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-preview.v3.json'
+      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-approval.v3.json'
+      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-authorization.v3.json'
+      - 'backend/supabase/g037-readonly-role-creator-membership-diagnostic-attempt.v3.json'
+      - 'backend/supabase/g037-readonly-role-provisioning-preview.v3.json'
+      - 'backend/supabase/g037-readonly-role-preview-approval.v3.json'
+      - 'backend/supabase/g037-readonly-role-apply-authorization-request.v3.json'
+      - 'backend/supabase/g037-readonly-role-apply-authorization.v3.json'
+      - 'backend/supabase/g037-readonly-role-apply-consumption.v3.json'
+      - 'backend/supabase/g037-readonly-role-apply-attempt.v3.json'
+      - 'backend/supabase/g037-readonly-credential-custody-preview.v1.json'
+      - 'backend/supabase/g037-readonly-credential-custody-preview-approval.v1.json'
+      - 'backend/supabase/g037-readonly-password-assignment-authorization-request.v1.json'
+      - 'backend/supabase/g037-direct-endpoint-network-preflight-attempt.v1.json'
+      - 'backend/supabase/g037-direct-endpoint-host-evidence-request.v1.json'
+      - 'backend/supabase/g037-session-pooler-alternative-preview.v1.json'
+      - 'backend/supabase/g037-session-pooler-alternative-preview-approval-request.v1.json'
+      - 'backend/supabase/g037-session-pooler-alternative-preview-approval-contract.v1.json'
+      - 'backend/supabase/g037-session-pooler-alternative-preview-approval.v1.json'
+      - 'backend/supabase/g037-session-pooler-metadata-readback-request.v1.json'
+      - 'backend/supabase/g037-session-pooler-metadata-readback-authorization.v1.json'
+      - 'backend/supabase/g037-session-pooler-metadata-readback-consumption.v1.json'
+      - 'backend/supabase/g037-session-pooler-metadata-readback-attempt.v1.json'
+      - 'backend/supabase/g037-session-pooler-metadata-receipt-contract.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-consumption.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v1.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization-request.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-consumption.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v2.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-request.v3.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v3.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-authorization-request.v3.json'
+      - 'backend/supabase/g037-session-pooler-connect-control-map-attempt.v3.json'
+      - 'backend/supabase/docs/g037-hosted-closure-runbook.md'
+      - 'backend/supabase/scripts/g037_readonly_role_provisioning.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_readback.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_provisioning_v2.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_readback_v2.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_readback_v3.sql'
+      - 'backend/supabase/scripts/g037_readonly_role_connection_readback_v1.sql'
+      - 'backend/supabase/scripts/g037_direct_endpoint_network_preflight.py'
+      - 'backend/supabase/scripts/g037_session_pooler_metadata_receipt.py'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt.py'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_read_v2.mjs'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v2.py'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_read_v3.mjs'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_stdout_filter_v3.py'
+      - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py'
+      - 'backend/supabase/scripts/local-stack.py'
+      - 'backend/supabase/tests/test_advisor_followup_source.py'
+      - 'backend/supabase/tests/test_advisor_replay.py'
+      - 'backend/supabase/scripts/transform_advisor_replay.py'
+      - 'backend/supabase/g037-dedicated-credential-readback.v2.json'
+      - 'backend/supabase/tests/test_g037_dedicated_credential_readback_source.py'
+      - 'backend/supabase/tests/test_auth_hardening_evidence_source.py'
+      - 'backend/supabase/tests/test_hosted_db_access_decision_source.py'
+      - 'backend/supabase/tests/test_g037_preflight_attempt_evidence_source.py'
+      - 'backend/supabase/tests/test_g037_runtime_probe_attempt_evidence_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_credential_contract_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_preview_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v2_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v2_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_postcondition_diagnostic_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_postcondition_diagnostic_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_membership_diagnostic_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_membership_diagnostic_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_creator_membership_diagnostic_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_creator_membership_diagnostic_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v3_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v3_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_request_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_authorization_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_role_v3_apply_attempt_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_credential_custody_preview_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_credential_custody_approval_source.py'
+      - 'backend/supabase/tests/test_g037_readonly_password_assignment_request_source.py'
+      - 'backend/supabase/tests/test_g037_direct_endpoint_network_preflight_attempt_source.py'
+      - 'backend/supabase/tests/test_g037_direct_endpoint_network_preflight.py'
+      - 'backend/supabase/tests/test_g037_direct_endpoint_host_evidence_request_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_alternative_preview_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_request_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_contract_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_preview_approval_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_metadata_request_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_metadata_attempt_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_metadata_receipt.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_control_map_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_control_map_v2_source.py'
+      - 'backend/supabase/tests/test_g037_session_pooler_control_map_v3_source.py'
+      - 'backend/supabase/tests/test_local_compose_inputs.py'
+      - 'backend/utils/tests/test_rust_source_recovery.py'
+      - 'backend/utils/tests/test_operational_source_recovery.py'
+      - 'backend/utils/tests/test_layout_naming_source_recovery.py'
+      - 'backend/utils/tests/test_platform_modernization_reconciliation.py'
+      - 'backend/utils/tests/test_supply_chain_contract.py'
   schedule:
     - cron: '0 17 * * 1'
   workflow_dispatch:
@@ -60,6 +221,7 @@ jobs:
       fail-fast: false
       matrix:
         requirements:
+          - backend/test-requirements.txt
           - backend/pipeline/requirements.txt
           - backend/restaurant-crawling/scripts/requirements.txt
           - backend/supabase/scripts/g037-hosted-closure-requirements.txt
@@ -81,6 +243,253 @@ jobs:
 
       - name: Audit Python requirements
         run: python -m pip_audit -r "${{ matrix.requirements }}" --strict
+
+  orchestration-readiness:
+    runs-on: ubuntu-latest
+    # The recovered full contract suite extends beyond the original focused job.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify retained provenance commits
+        run: |
+          git fetch --no-tags origin refs/tags/kiro-provenance-platform-20260905 refs/tags/kiro-provenance-corroboration-20260905
+          git cat-file -e '880bf06d375dbc6ebe8dcf108419c3f455048a97^{commit}'
+          git cat-file -e '2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c^{commit}'
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Set up exact Bun runtime
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+
+      - name: Install focused test dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
+
+      - name: Install Helm for actual local descriptor rendering
+        uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: 'v4.2.4'
+      - name: Install OpenTofu for provider-free local descriptor plans
+        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
+        with:
+          tofu_version: '1.12.6'
+          tofu_wrapper: false
+      - name: Verify crawler orchestration readiness
+        run: python backend/bin/check_crawler_orchestration_readiness.py --run-tests --json
+
+      - name: Verify supply-chain source contracts
+        run: >-
+          python -m unittest
+          backend.utils.tests.test_supply_chain_contract
+          backend.utils.tests.test_rust_source_recovery
+
+      - name: Verify durable local publication queue and agent results
+        run: |
+          python -m pip install --disable-pip-version-check -r backend/pipeline-control/requirements.txt
+          export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
+          test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres -v
+
+      - name: Verify recovered observability and readiness-agent boundaries
+        run: >-
+          python -m unittest
+          backend.utils.tests.test_operational_source_recovery
+          backend.utils.tests.test_platform_modernization_reconciliation
+          backend.bin.tests.test_observability_up_unittest
+          backend.bin.tests.test_metrics_contract_report_unittest
+          backend.bin.tests.test_check_deployment_descriptor_set_unittest
+          backend.pipeline_control.test_log_allowlist_pbt
+          backend.pipeline_control.test_log_bounds_pbt
+          backend.pipeline_control.test_log_pending_queue_unittest
+          backend.pipeline_control.test_log_pipeline_unittest
+          backend.pipeline_control.test_log_queue_pbt
+          backend.pipeline_control.test_log_redaction_pbt
+          backend.pipeline_control.test_log_redaction_unittest
+          backend.pipeline_control.test_log_required_fields_pbt
+          backend.pipeline_control.test_log_retention_unittest
+          backend.pipeline_control.test_log_sink_url_pbt
+          backend.pipeline_control.test_loopback_boundary_pbt
+          backend.pipeline_control.tests.test_loki_sink
+          backend.pipeline_control.test_deployment_descriptor_unittest
+          backend.pipeline_control.test_descriptor_secret_pbt
+          backend.pipeline_control.test_cluster_render_pbt
+          backend.pipeline_control.test_ops_agent_unittest
+          backend.pipeline_control.test_agent_boundary_pbt
+          backend.pipeline_control.test_agent_rate_pbt
+          backend.pipeline_control.test_evidence_state_pbt
+          backend.pipeline_control.test_migration_readiness_unittest
+          backend.bin.tests.test_tooling_gate_unittest
+          backend.pipeline_control.test_tag_fixity_pbt
+          backend.pipeline_control.test_tooling_selection_unittest
+
+      - name: Verify recovered local-foundation contracts
+        run: >-
+          python -m unittest
+          backend.bin.tests.test_check_local_runtime_unittest
+          backend.bin.tests.test_schema_mirror_report_unittest
+          backend.bin.tests.test_schema_mirror_pbt
+          backend.bin.tests.test_seed_fixture_guard_unittest
+          backend.pipeline_control.test_local_boundary_pbt
+          backend.pipeline_control.test_local_pipeline_composition_unittest
+          backend.pipeline_control.test_run_summary_unittest
+          backend.pipeline_control.test_step_composition_pbt
+          backend.pipeline_control.tests.test_es_index
+
+      - name: Verify current-input phase gates
+        run: >-
+          python -m unittest
+          backend.utils.tests.test_phase_gate_source_recovery
+          backend.bin.tests.test_phase_gate_unittest
+          backend.bin.tests.test_run_p1_gate_unittest
+          backend.bin.tests.test_run_p2_gate_unittest
+          backend.bin.tests.test_run_p3_gate_unittest
+          backend.bin.tests.test_run_p4_gate_unittest
+          backend.bin.tests.test_run_p5_gate_unittest
+          backend.bin.tests.test_run_p6_gate_unittest
+          backend.bin.tests.test_run_p7_gate_unittest
+          backend.pipeline_control.test_phase_partition_pbt
+          backend.pipeline_control.test_rollback_plan_pbt
+
+      - name: Verify current layout and rename ledger
+        run: >-
+          python -m unittest
+          backend.utils.tests.test_layout_naming_source_recovery
+          backend.bin.tests.test_check_layout_manifest_unittest
+          backend.bin.tests.test_check_rename_ledger_unittest
+          backend.bin.tests.test_layout_move_pbt
+          backend.bin.tests.test_rename_scope_pbt
+
+      - name: Verify recovered web supply-chain contracts
+        run: >-
+          bun test
+          apps/web/tests-unit/dependency-candidate-split.test.ts
+          apps/web/tests-unit/dependency-freshness-workflow.test.ts
+          apps/web/tests-unit/image-tag-fixity.test.ts
+          apps/web/tests-unit/pin-contract.test.ts
+          apps/web/tests-unit/sanitize-leak.test.ts
+          apps/web/tests-unit/supabase-entrypoint-source.test.ts
+          apps/web/tests-unit/verify-pin-contract-source.test.ts
+
+      - name: Verify fail-closed publication recovery
+        run: >-
+          python -m unittest
+          backend.utils.tests.test_publication_source_recovery
+          backend.bin.tests.test_publication_isolation_pbt
+          backend.pipeline_control.test_publication_adapter_unittest
+          backend.pipeline_control.test_publication_set_unittest
+          backend.pipeline_control.test_publish_apply_unittest
+          backend.pipeline_control.test_publish_batch_pbt
+          backend.pipeline_control.test_publish_codes_pbt
+          backend.pipeline_control.test_publish_hash_pbt
+          backend.pipeline_control.test_publish_idempotency_pbt
+          backend.pipeline_control.test_publish_payload_pbt
+          backend.pipeline_control.test_publish_readback_pbt
+          backend.pipeline_control.test_publish_schedule_unittest
+          backend.pipeline_control.test_publish_worker_unittest
+          backend.pipeline_control.tests.test_batch_upsert_publication_allowlist
+          backend.supabase.tests.test_local_compose_inputs
+
+      - name: Verify publication admin route boundary
+        run: bun test apps/web/tests-unit/publish-jobs-request-contract.test.ts
+
+      - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
+        run: |
+          python -m unittest \
+            backend.supabase.tests.test_advisor_followup_source \
+            backend.supabase.tests.test_advisor_replay \
+            backend.supabase.tests.test_advisor_replay_prerequisites \
+            backend.supabase.tests.test_g037_dedicated_credential_readback_source \
+            backend.supabase.tests.test_auth_hardening_evidence_source \
+            backend.supabase.tests.test_hosted_db_access_decision_source \
+            backend.supabase.tests.test_g037_preflight_attempt_evidence_source \
+            backend.supabase.tests.test_g037_runtime_probe_attempt_evidence_source \
+            backend.supabase.tests.test_g037_readonly_credential_contract_source \
+            backend.supabase.tests.test_g037_readonly_role_preview_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_v2_source \
+            backend.supabase.tests.test_g037_readonly_role_v2_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_postcondition_diagnostic_source \
+            backend.supabase.tests.test_g037_readonly_role_postcondition_diagnostic_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_membership_diagnostic_source \
+            backend.supabase.tests.test_g037_readonly_role_membership_diagnostic_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_creator_membership_diagnostic_source \
+            backend.supabase.tests.test_g037_readonly_role_creator_membership_diagnostic_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_v3_source \
+            backend.supabase.tests.test_g037_readonly_role_v3_approval_source \
+            backend.supabase.tests.test_g037_readonly_role_v3_apply_request_source \
+            backend.supabase.tests.test_g037_readonly_role_v3_apply_authorization_source \
+            backend.supabase.tests.test_g037_readonly_role_v3_apply_attempt_source \
+            backend.supabase.tests.test_g037_readonly_credential_custody_preview_source \
+            backend.supabase.tests.test_g037_readonly_credential_custody_approval_source \
+            backend.supabase.tests.test_g037_readonly_password_assignment_request_source \
+            backend.supabase.tests.test_g037_direct_endpoint_network_preflight_attempt_source \
+            backend.supabase.tests.test_g037_direct_endpoint_network_preflight \
+            backend.supabase.tests.test_g037_direct_endpoint_host_evidence_request_source \
+            backend.supabase.tests.test_g037_session_pooler_alternative_preview_source \
+            backend.supabase.tests.test_g037_session_pooler_preview_approval_request_source \
+            backend.supabase.tests.test_g037_session_pooler_preview_approval_contract_source \
+            backend.supabase.tests.test_g037_session_pooler_preview_approval_source \
+            backend.supabase.tests.test_g037_session_pooler_metadata_request_source \
+            backend.supabase.tests.test_g037_session_pooler_metadata_attempt_source \
+            backend.supabase.tests.test_g037_session_pooler_metadata_receipt \
+            backend.supabase.tests.test_g037_session_pooler_control_map_source \
+            backend.supabase.tests.test_g037_session_pooler_control_map_v2_source \
+            backend.supabase.tests.test_g037_session_pooler_control_map_v3_source
+
+  rust-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install 1.97.0 --profile minimal --component rustfmt
+          rustup run 1.97.0 rustc --version
+          rustup run 1.97.0 cargo --version
+
+      - name: Verify formatting and locked Cargo workspace
+        env:
+          RUSTUP_TOOLCHAIN: '1.97.0'
+        run: |
+          rustup run 1.97.0 cargo fmt --manifest-path backend/rust/Cargo.toml --all -- --check
+          rustup run 1.97.0 cargo test --manifest-path backend/rust/Cargo.toml --locked
+
+      - name: Build fresh Python extension and verify parity
+        env:
+          RUSTUP_TOOLCHAIN: '1.97.0'
+        run: |
+          python -m venv "$RUNNER_TEMP/rust-parity"
+          "$RUNNER_TEMP/rust-parity/bin/python" -m pip install --disable-pip-version-check maturin==1.15.0 hypothesis==6.165.10
+          VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -m maturin develop --manifest-path backend/rust/tzudong-validators/Cargo.toml --locked
+          VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -c "import tzudong_validators; assert tzudong_validators.__file__"
+          for crate in tzudong-normalize tzudong-upsert-payload tzudong-media-compute tzudong-pipeline-graph; do
+            VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -m maturin develop --manifest-path "backend/rust/$crate/Cargo.toml" --locked
+          done
+          TZUDONG_REQUIRE_RUST_CALL_SITES=1 "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_runtime_bindings
+          "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.parity_pbt backend.rust.tests.parity_error_pbt
 
   secret-pattern-scan:
     runs-on: ubuntu-latest

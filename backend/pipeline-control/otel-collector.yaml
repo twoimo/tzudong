@@ -3,11 +3,21 @@ receivers:
     protocols:
       http:
         endpoint: 0.0.0.0:4318
+  filelog:
+    include:
+      - /var/log/tzudong/*.log
+    start_at: end
 exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
+  otlphttp/loki:
+    # Loki 3.x native OTLP base URL. The Collector appends /v1/logs.
+    endpoint: http://loki:3100/otlp
 service:
   pipelines:
     metrics:
       receivers: [otlp]
       exporters: [prometheus]
+    logs:
+      receivers: [filelog]
+      exporters: [otlphttp/loki]

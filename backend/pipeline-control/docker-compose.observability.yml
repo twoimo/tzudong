@@ -8,12 +8,22 @@ name: tzudong-pipeline-observability
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector:0.120.0
+    # filelog is a contrib receiver; the core distribution does not contain it.
+    image: otel/opentelemetry-collector-contrib:0.120.0
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      - ../log:/var/log/tzudong:ro
     ports:
       - "127.0.0.1:4318:4318"
+    networks:
+      - supabase_network_local
+
+  loki:
+    image: grafana/loki:3.7.7
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "127.0.0.1:3100:3100"
     networks:
       - supabase_network_local
 
@@ -38,7 +48,7 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_SECURITY_CONTENT_SECURITY_POLICY: "true"
-      GF_SECURITY_CONTENT_SECURITY_POLICY_TEMPLATE: "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://127.0.0.1:3000;manifest-src 'self';media-src 'none';form-action 'self';frame-ancestors http://127.0.0.1:3000"
+      GF_SECURITY_CONTENT_SECURITY_POLICY_TEMPLATE: "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $$NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://127.0.0.1:3000;manifest-src 'self';media-src 'none';form-action 'self';frame-ancestors http://127.0.0.1:3000"
       GF_SECURITY_COOKIE_SAMESITE: "lax"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     networks:

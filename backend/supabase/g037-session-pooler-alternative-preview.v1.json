@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_alternative_preview",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "preparedAt": "2026-09-04T10:33:38Z",
+  "reviewStatus": "named_owner_review_required",
+  "purpose": "review a deliberate IPv4 session-pooler alternative without changing the current direct-only credential contract",
+  "officialDocumentation": {
+    "validatedAt": "2026-09-04T10:33:38Z",
+    "supabaseChangelogReviewed": true,
+    "relevantConnectionBreakingChangeFound": false,
+    "connectionGuide": "https://supabase.com/docs/guides/database/connecting-to-postgres",
+    "postgresRolesGuide": "https://supabase.com/docs/guides/database/postgres/roles",
+    "directConnectionRemainsPreferredForSingleSessions": true,
+    "sessionPoolerIsDocumentedIpv4Alternative": true,
+    "sharedSessionPoolerPort": 5432,
+    "sharedTransactionPoolerPort": 6543,
+    "transactionModePreparedStatementsUnsupported": true,
+    "sslRecommendedByProvider": true,
+    "providerExampleUsesRoleAndProjectReferenceInUsername": true,
+    "exactCustomRoleConnectionMetadataDocumentedForThisProject": false
+  },
+  "hostedMetadataObservation": {
+    "observedAt": "2026-09-04T10:33:38Z",
+    "source": "read_only_supabase_get_project",
+    "projectRefMatched": true,
+    "region": "ap-southeast-1",
+    "projectStatus": "ACTIVE_HEALTHY",
+    "postgresEngineMajor": 17,
+    "postgresVersion": "17.6.1.038",
+    "sessionPoolerHostnameReturned": false,
+    "sessionPoolerUsernameReturned": false,
+    "credentialReturnedOrRead": false,
+    "immutableProviderReceiptPresent": false
+  },
+  "continuity": {
+    "credentialPreviewApprovalPath": "backend/supabase/g037-readonly-credential-custody-preview-approval.v1.json",
+    "credentialPreviewApprovalSha256": "46eea3b0f168775771f11b7909b8174fc8b3450ceb0fe23869ed28c2b744e3a8",
+    "passwordAssignmentRequestPath": "backend/supabase/g037-readonly-password-assignment-authorization-request.v1.json",
+    "passwordAssignmentRequestSha256": "7b3602efed38f21d68b2015c8788baa19dabebb7da9d5e30b4d845be7a8bab7f",
+    "failedDirectAttemptPath": "backend/supabase/g037-direct-endpoint-network-preflight-attempt.v1.json",
+    "failedDirectAttemptSha256": "17d265b605258140f697f67caef17f3a028a16b521267d037ae85ccf48b71047",
+    "directHostEvidenceRequestPath": "backend/supabase/g037-direct-endpoint-host-evidence-request.v1.json",
+    "directHostEvidenceRequestSha256": "9055ed5533a1008300cba6bc666ddaeff6503d87ce6d81ae93f1c94fef8f103c",
+    "directHostEvidenceStillAccepted": true,
+    "sameHostDirectRetryAuthorized": false,
+    "ipv4AddonUpgradeStillDeferred": true
+  },
+  "currentContract": {
+    "transportSelection": "direct_only",
+    "directEndpointReachabilityRequired": true,
+    "sessionPoolerAllowed": false,
+    "silentFallbackAllowed": false,
+    "passwordRequestBlocked": true,
+    "repositorySecretMutationAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false
+  },
+  "proposedAlternative": {
+    "transport": "shared_supavisor_session_mode",
+    "selectionStatus": "not_selected_review_only",
+    "networkPurpose": "ipv4_only_controlled_host_alternative",
+    "port": 5432,
+    "transactionModePort6543Allowed": false,
+    "dedicatedPoolerAllowed": false,
+    "directEndpointDisabledOrChanged": false,
+    "ipv4AddonPurchaseOrActivationRequired": false,
+    "exactProviderSessionHostnameObserved": false,
+    "exactProviderSessionUsernameObserved": false,
+    "providerDashboardSessionMetadataRequired": true,
+    "hostnameOrUsernameMayBeInferredFromRegion": false,
+    "customRoleUsernameShapeIsCandidateOnly": "dedicated_role.project_ref",
+    "customRoleUsernameShapeRequiresProviderConfirmation": true,
+    "credentialRoleMustRemainDedicatedReadonlyRole": true,
+    "ownerOrPostgresCredentialAllowed": false
+  },
+  "securityInvariants": {
+    "sslMode": "verify-full",
+    "serverRootCertificateRequired": true,
+    "plaintextTransportAllowed": false,
+    "connectionStringInRepositoryAllowed": false,
+    "connectionStringInCommandArgumentsAllowed": false,
+    "credentialInLogsArtifactsIssuesOrChatAllowed": false,
+    "externalPasswordManagerAndCustodianStillRequired": true,
+    "sameDedicatedRolePasswordRequired": true,
+    "roleAdmissionBeforeOperationalRead": true,
+    "currentUserMustEqualDedicatedRole": true,
+    "defaultTransactionReadOnlyMustBeTrue": true,
+    "targetMutatorExecuteMustBeDenied": true,
+    "boundedConnectionReadbackMustPass": true
+  },
+  "sourceCompatibility": {
+    "hostedExecutorPath": "backend/supabase/scripts/g037_hosted_closure_executor.py",
+    "hostedExecutorSha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0",
+    "hostedExecutorPerformsDedicatedCurrentUserAdmission": true,
+    "hostedWorkflowPath": ".github/workflows/g037-hosted-closure.yml",
+    "hostedWorkflowSha256": "007b84768af0b9ffcf5548de992e7104e392c8c811771976b18ec7970ff69289",
+    "hostedWorkflowUsesOnlyDedicatedSecret": true,
+    "connectionReadbackPath": "backend/supabase/scripts/g037_readonly_role_connection_readback_v1.sql",
+    "connectionReadbackSha256": "c927d42c6729d5516fc89921cc4cc5d7b84e8af9173b17f7c7403b2977834f28",
+    "productionMutationControllerInScope": false,
+    "currentCredentialContractMustBeExplicitlyAmendedAfterApproval": true,
+    "runtimeSourceChangeRequiredBeforeNetworkProbe": false,
+    "runtimeSourceChangeRequiredBeforeCredentialUse": true
+  },
+  "requiredFutureSequence": [
+    {
+      "sequence": 1,
+      "step": "named_owner_review_of_exact_alternative_preview",
+      "persistentMutation": false,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 2,
+      "step": "metadata_only_dashboard_session_connection_readback",
+      "persistentMutation": false,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 3,
+      "step": "fixed_target_credential_free_pooler_network_probe_preview",
+      "persistentMutation": false,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 4,
+      "step": "explicit_transport_contract_amendment_preview_and_tests",
+      "persistentMutation": false,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 5,
+      "step": "fresh_password_assignment_and_connection_readback_authorization",
+      "persistentMutation": true,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 6,
+      "step": "fresh_repository_secret_write_authorization_and_metadata_readback",
+      "persistentMutation": true,
+      "currentlyAuthorized": false
+    },
+    {
+      "sequence": 7,
+      "step": "fresh_exact_revision_workflow_dispatch_authorization",
+      "persistentMutation": false,
+      "currentlyAuthorized": false
+    }
+  ],
+  "requestedReviewScope": {
+    "sessionPoolerAlternativeDesign": true,
+    "officialDocumentationInterpretation": true,
+    "metadataOnlyDashboardReadbackPreparation": true,
+    "directPathAbandonment": false,
+    "poolerSelection": false,
+    "networkProbe": false,
+    "passwordGenerationOrAssignment": false,
+    "databaseAuthenticationOrSql": false,
+    "credentialContractAmendment": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "executionGate": {
+    "exactPreviewApproved": false,
+    "providerSessionMetadataPresent": false,
+    "fixedPoolerProbeReviewed": false,
+    "poolerNetworkReachabilityProved": false,
+    "transportContractAmended": false,
+    "passwordExecutionAuthorizationPresent": false,
+    "repositorySecretExecutionAuthorizationPresent": false,
+    "workflowDispatchAuthorizationPresent": false,
+    "anyExecutionAuthorized": false
+  },
+  "notEvidenceOf": [
+    "named-owner approval of this preview",
+    "an exact session-pooler hostname or username",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password generation or assignment",
+    "dedicated-role connection or SQL execution",
+    "repository secret presence or mutation",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

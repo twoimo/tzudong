@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-04T20:20:26.776321+00:00",
+  "workflowRunId": 33913693340,
+  "lanes": [
+    {
+      "profile": "ubuntu-bun",
+      "candidate": {
+        "tree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "repositoryTopLevelSha256": "6baad942f4a9578f4b577628a76d4955a0c8a0bc0e11577356894e4aff1c3eaf",
+        "headCommit": "c40e6f9476861d1841c7899dad3133750ab68a35",
+        "headTree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "provenanceSha256": "6a4eea1edef27636b6e89ed0fd3dc8b27d5b32dcb34a3208fed301c007f2ee4f",
+        "platform": "linux-x64",
+        "installer": "bun",
+        "profile": "ubuntu-bun",
+        "node": "v24.20.0",
+        "arch": "x64",
+        "installerUserAgentSha256": "677169592fbd8ff0dda5c18e40d4add06587d9751a6dbb7b526ae284f76e7507"
+      },
+      "verification": {
+        "status": "verified",
+        "evidenceStatus": "conclusive",
+        "admittedSlices": 2
+      },
+      "budgets": {
+        "noise": {
+          "durationMadRelative": 0.05,
+          "peakRssMadRelative": 0.05
+        },
+        "durationMedian": {
+          "absoluteMs": 250,
+          "relative": 0.05
+        },
+        "durationP75": {
+          "absoluteMs": 250,
+          "relative": 0.1
+        },
+        "rssP95": {
+          "absoluteBytes": 134217728,
+          "relative": 0.15
+        }
+      },
+      "acceptance": {
+        "diagnosticsEqual": true,
+        "toolchainVerified": true,
+        "durationRegression": false,
+        "rssRegression": false,
+        "passed": true
+      },
+      "comparison": {
+        "durationMedianDelta": -19890.887025999997,
+        "durationP75Delta": -19833.435225,
+        "rssP95Delta": -77295616,
+        "durationMedianRegression": false,
+        "durationP75Regression": false,
+        "rssRegression": false,
+        "positiveSpeedClaimProfileEvidence": {
+          "speedupMs": 19890.887025999997,
+          "speedupRatio": 0.8352188584254595,
+          "pooledMad": 64.66034050000007,
+          "eligible": true
+        }
+      }
+    },
+    {
+      "profile": "ubuntu-npm",
+      "candidate": {
+        "tree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "repositoryTopLevelSha256": "0d7af3d8debd2c8a3f27a8e094992beb2bd68df16bfac1835cf74c1209fb2074",
+        "headCommit": "c40e6f9476861d1841c7899dad3133750ab68a35",
+        "headTree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "provenanceSha256": "6db68d7b6857e40d754b5c6054ee9f8a1b46fe5d137732b1f53a98760da9abaa",
+        "platform": "linux-x64",
+        "installer": "npm",
+        "profile": "ubuntu-npm",
+        "node": "v24.20.0",
+        "arch": "x64",
+        "installerUserAgentSha256": "afcdb0069b74240ee37bb50418accfb9f706da9edfc1c581953a78132ec8f959"
+      },
+      "verification": {
+        "status": "verified",
+        "evidenceStatus": "conclusive",
+        "admittedSlices": 2
+      },
+      "budgets": {
+        "noise": {
+          "durationMadRelative": 0.05,
+          "peakRssMadRelative": 0.05
+        },
+        "durationMedian": {
+          "absoluteMs": 250,
+          "relative": 0.05
+        },
+        "durationP75": {
+          "absoluteMs": 250,
+          "relative": 0.1
+        },
+        "rssP95": {
+          "absoluteBytes": 134217728,
+          "relative": 0.15
+        }
+      },
+      "acceptance": {
+        "diagnosticsEqual": true,
+        "toolchainVerified": true,
+        "durationRegression": false,
+        "rssRegression": false,
+        "passed": true
+      },
+      "comparison": {
+        "durationMedianDelta": -18934.564248,
+        "durationP75Delta": -18868.231249,
+        "rssP95Delta": -36089856,
+        "durationMedianRegression": false,
+        "durationP75Regression": false,
+        "rssRegression": false,
+        "positiveSpeedClaimProfileEvidence": {
+          "speedupMs": 18934.564248,
+          "speedupRatio": 0.843475236326555,
+          "pooledMad": 54.787123000000975,
+          "eligible": true
+        }
+      }
+    },
+    {
+      "profile": "windows-bun",
+      "candidate": {
+        "tree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "repositoryTopLevelSha256": "03627a54e53bf594147f12b991ba222f4b147ecd36bf6a63e355d20e61444050",
+        "headCommit": "c40e6f9476861d1841c7899dad3133750ab68a35",
+        "headTree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "provenanceSha256": "df4ef610f9b4f2dda26c499524e6e39fc95667ac8b0c8489342a54e74b26e12f",
+        "platform": "win32-x64",
+        "installer": "bun",
+        "profile": "windows-bun",
+        "node": "v24.19.0",
+        "arch": "x64",
+        "installerUserAgentSha256": "ed3d8ee7cacb9fc85c700205c0bdb3e64cdad003220c50920571b654f1ff5a48"
+      },
+      "verification": {
+        "status": "verified",
+        "evidenceStatus": "inconclusive_noise",
+        "admittedSlices": 0
+      },
+      "budgets": {
+        "noise": {
+          "durationMadRelative": 0.05,
+          "peakRssMadRelative": 0.05
+        },
+        "durationMedian": {
+          "absoluteMs": 250,
+          "relative": 0.05
+        },
+        "durationP75": {
+          "absoluteMs": 250,
+          "relative": 0.1
+        },
+        "rssP95": {
+          "absoluteBytes": 134217728,
+          "relative": 0.15
+        }
+      },
+      "acceptance": {
+        "diagnosticsEqual": true,
+        "toolchainVerified": true,
+        "durationRegression": false,
+        "rssRegression": false,
+        "passed": true
+      },
+      "comparison": {
+        "durationMedianDelta": -25719.6772,
+        "durationP75Delta": -26320.078299999997,
+        "rssP95Delta": 41455616,
+        "durationMedianRegression": false,
+        "durationP75Regression": false,
+        "rssRegression": false,
+        "positiveSpeedClaimProfileEvidence": {
+          "speedupMs": 25719.6772,
+          "speedupRatio": 0.7887749729919384,
+          "pooledMad": 534.4256500000001,
+          "eligible": false
+        }
+      }
+    },
+    {
+      "profile": "windows-npm",
+      "candidate": {
+        "tree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "repositoryTopLevelSha256": "bf44a5aee50067964e7f8b71ebf70258650b17c9f1f61a69c6ef6a50e07cc8d1",
+        "headCommit": "c40e6f9476861d1841c7899dad3133750ab68a35",
+        "headTree": "4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d",
+        "provenanceSha256": "b0c25fb2e3011eed01a0a45366b9fb8a26df8132fbd0532545b65b3a753ddc24",
+        "platform": "win32-x64",
+        "installer": "npm",
+        "profile": "windows-npm",
+        "node": "v24.19.0",
+        "arch": "x64",
+        "installerUserAgentSha256": "c0731f65325b18da7d7691c3c2ad2e364f43d4c0c5d1bf9fd56f6263f9854eef"
+      },
+      "verification": {
+        "status": "verified",
+        "evidenceStatus": "conclusive",
+        "admittedSlices": 2
+      },
+      "budgets": {
+        "noise": {
+          "durationMadRelative": 0.05,
+          "peakRssMadRelative": 0.05
+        },
+        "durationMedian": {
+          "absoluteMs": 250,
+          "relative": 0.05
+        },
+        "durationP75": {
+          "absoluteMs": 250,
+          "relative": 0.1
+        },
+        "rssP95": {
+          "absoluteBytes": 134217728,
+          "relative": 0.15
+        }
+      },
+      "acceptance": {
+        "diagnosticsEqual": true,
+        "toolchainVerified": true,
+        "durationRegression": false,
+        "rssRegression": false,
+        "passed": true
+      },
+      "comparison": {
+        "durationMedianDelta": -23109.0011,
+        "durationP75Delta": -24992.685599999997,
+        "rssP95Delta": 11485184,
+        "durationMedianRegression": false,
+        "durationP75Regression": false,
+        "rssRegression": false,
+        "positiveSpeedClaimProfileEvidence": {
+          "speedupMs": 23109.0011,
+          "speedupRatio": 0.7915299978192081,
+          "pooledMad": 283.37919999999986,
+          "eligible": true
+        }
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/attempt-outcomes.json",
+      "bytes": 10947,
+      "sha256": "369fb9e00b220bd33ce831347e63d591eda1086e108e426148b77de91ada30ba"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/preflight-receipts.json",
+      "bytes": 1753,
+      "sha256": "846b3051381153f0e1a0f629c719e0a93b87796159e241e77f2aa26eec81970d"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/01-compat-attempt-1.ndjson",
+      "bytes": 978140,
+      "sha256": "6aba1d048b88d15e71aa678b3628c25f1521c7206bbcfe83bbb7c17a34f4714b"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/02-native-attempt-1.ndjson",
+      "bytes": 165687,
+      "sha256": "3ff7767425fa408a43b39524a0a677f4574cfe7122f3b8a26f1424997af9c5e2"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/03-compat-attempt-1.ndjson",
+      "bytes": 986889,
+      "sha256": "5607e632db966bb9f4715cc204b7a7926f8f4d64921c51d8ec9b017c7c84a665"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/04-native-attempt-1.ndjson",
+      "bytes": 162467,
+      "sha256": "288b254eda1c526ad967d8f08fddbe5b7bbb248c29e81cd36ee63c59c39f8634"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/05-compat-attempt-1.ndjson",
+      "bytes": 988968,
+      "sha256": "e9af79b52e8ce2d3554588ba78d24785d4d90b5716d84b7aac0d6df9e0b5837a"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/06-native-attempt-1.ndjson",
+      "bytes": 157037,
+      "sha256": "4b6ff9a2cb9fd97ebbd650e4e2a4cb66591be14c108cc9da6126ae8caf5be56a"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/07-compat-attempt-1.ndjson",
+      "bytes": 981112,
+      "sha256": "c98b9915b4d3de9387b00e4d7bb5ea693d67818404ebe919955e0624723a54df"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/08-native-attempt-1.ndjson",
+      "bytes": 162440,
+      "sha256": "ca502fbe9905eb705511aa1336c248c55ecb515c4f955d8872ae2261a4b159b2"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/09-compat-attempt-1.ndjson",
+      "bytes": 988792,
+      "sha256": "1271ea6b08b0d8d2eb768aa3da9518ac5dbdc1b69c839fec8550fd37a8b4bb70"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/10-native-attempt-1.ndjson",
+      "bytes": 160313,
+      "sha256": "96a6bdf4f20f5cb325a67c9c24d7d8498ac9736e1ac91ebd7e8dd14abe50799b"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/11-compat-attempt-1.ndjson",
+      "bytes": 987952,
+      "sha256": "83d9ee1d34e56d617d038b89e3ed89009746e56f670c66bddae5559ff90322c4"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/12-native-attempt-1.ndjson",
+      "bytes": 168272,
+      "sha256": "ddf198b4d6cf6bfd405a4a519c8c15c617afef7b3d8b6762a53040b5cdc28e1e"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/13-compat-attempt-1.ndjson",
+      "bytes": 1002640,
+      "sha256": "dbef5b3a19da0f3f66d628fcff50bb58fd40d9f3e6a6163f7121b0b722b397df"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/14-native-attempt-1.ndjson",
+      "bytes": 158290,
+      "sha256": "2c3fd21a0c847cf6c8033a08e804aae5d7fca9bd8506ee224c4882c63ad864d4"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/warmup-compat.ndjson",
+      "bytes": 976289,
+      "sha256": "a5bd80855a8477de293f0e96d28ffc3e53fe538f454a51134541b91d02a43e40"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/raw/warmup-native.ndjson",
+      "bytes": 164050,
+      "sha256": "c243a571f357e6a1fafb6caa87b105eb9d9e79d99be3f643a17ff8e0e76a11db"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-bun/report.json",
+      "bytes": 13457,
+      "sha256": "0a266faded2067b49ab00b038369619156ec5b36daa8fb531acc4693d6063627"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/attempt-outcomes.json",
+      "bytes": 10955,
+      "sha256": "ed01ee1da5ea49bfcf1c34544c912ed2a0baf4b194487ea38da4fdc55e9655a4"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/preflight-receipts.json",
+      "bytes": 1753,
+      "sha256": "92e703e8112114e01ae5043c245b20e9744dc5f2fb5de0e26647388f8fe8a795"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/01-compat-attempt-1.ndjson",
+      "bytes": 932280,
+      "sha256": "6e77c80b03ef1efd7bf256621afdda65c52375b04f4fee451599b83e4d8d341e"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/02-native-attempt-1.ndjson",
+      "bytes": 145389,
+      "sha256": "d30a3395190dac0ed075bf8ec172ebdc276ba62b39817c386a88ff094637758b"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/03-compat-attempt-1.ndjson",
+      "bytes": 927233,
+      "sha256": "a58f40da2a0327db94a4fff07768dd96787755152070668aef3fce250068fa57"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/04-native-attempt-1.ndjson",
+      "bytes": 146227,
+      "sha256": "b3218fe6257d989172a746d013543e84c073192c9471bc859e10ef977ec977fa"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/05-compat-attempt-1.ndjson",
+      "bytes": 932691,
+      "sha256": "f9a0625a3a5101d56c79ae2ea753f9a01f82c20563e43c96d9dab1fb24f4ce8a"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/06-native-attempt-1.ndjson",
+      "bytes": 142947,
+      "sha256": "8e653ece4e3f2123dea801454a2731616e1a97f00d4a0cc94f86f1cf7e4d30f6"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/07-compat-attempt-1.ndjson",
+      "bytes": 931368,
+      "sha256": "e401ef1eecb17a4e9b3127095e5e19b53eb9d15ac4be37a1d07c5afbff04f0a9"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/08-native-attempt-1.ndjson",
+      "bytes": 143740,
+      "sha256": "5bc065508f9539a82458ff88fa6aa86dc6b6593ab3808f9e14bcdbfee19a5975"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/09-compat-attempt-1.ndjson",
+      "bytes": 935552,
+      "sha256": "c87226b63e5b61fc2cf35a544267a788505d0641d20a7b7f20f7ca25bcd5b8a1"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/10-native-attempt-1.ndjson",
+      "bytes": 142911,
+      "sha256": "9893b1659f018f97b5e9047379e1479210c54b5cefdd205f396e359b36ffb6fc"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/11-compat-attempt-1.ndjson",
+      "bytes": 925965,
+      "sha256": "b8b5f931d1fc426ffc42d12f1c45ebfabdacef1b10840bf7cf58410de3109fe6"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/12-native-attempt-1.ndjson",
+      "bytes": 149526,
+      "sha256": "5462a3608dc089aecfce1a32ce3a6b227e5e7dd2e70f30c6c6d6fb125875d088"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/13-compat-attempt-1.ndjson",
+      "bytes": 928914,
+      "sha256": "302fa3933fa77e8b850adc78a22c62dbba8b921885b0420547fc53b5d2ed6c22"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/14-native-attempt-1.ndjson",
+      "bytes": 151211,
+      "sha256": "3ad25caf15242467d519cc6e191b32d2b6def5a3492330821e0f26ae9c2ff5e4"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/warmup-compat.ndjson",
+      "bytes": 939604,
+      "sha256": "0322b43d253d2dd3448d23c25670235c5fdb3f68c620f8c8935afa64fc99655d"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/raw/warmup-native.ndjson",
+      "bytes": 160377,
+      "sha256": "65fb9ad008e932f9d101dfd257dda99f17b32aba8b9d86aae2c0fcd2a947f1eb"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-ubuntu-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/ubuntu-npm/report.json",
+      "bytes": 13455,
+      "sha256": "bfb351564f0ac9ff96ebb333e25bdf5bae1079f187ce543a17406bb0f682bc36"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/attempt-outcomes.json",
+      "bytes": 14215,
+      "sha256": "81ef50bf10e8a8a5bf2d2cbd6e6f61d1a4f35d12a3b69d19e7bc26ed19857552"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/preflight-receipts.json",
+      "bytes": 1761,
+      "sha256": "1339d1f4937aa66bac5997d56d34666770fe41413638894370b1bcbd53a4650c"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/01-compat-attempt-1.ndjson",
+      "bytes": 2999263,
+      "sha256": "7a8563235051d7608754f2179f36951893a05510478d6713800d02af77c41df0"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/02-native-attempt-1.ndjson",
+      "bytes": 980774,
+      "sha256": "248d916fd533a0d55530b3258aa04fceeef039249f15c10aaf2c57f082939b34"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/03-compat-attempt-1.ndjson",
+      "bytes": 2125468,
+      "sha256": "4733903b95c8dac22f7e9ec8aa97d3fc15412fe3deba32ce7a68b7a6ae14e051"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/04-native-attempt-1.ndjson",
+      "bytes": 406415,
+      "sha256": "dc7d5aa39df06ede1595d4bdcc9148bafba57a98167317f2a9014f0e843e5508"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/05-compat-attempt-1.ndjson",
+      "bytes": 5615728,
+      "sha256": "d849be45badd7f7a5c0b5e5ee5d22f0618196b74f153ca78b84ca8eaf4dab68f"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/05-compat-attempt-2.ndjson",
+      "bytes": 2351323,
+      "sha256": "3b50a6ea1e39f5ca25509c64bf4ec4db3f66d67f1a54eb1cb102aa71385a6de8"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/06-native-attempt-1.ndjson",
+      "bytes": 614296,
+      "sha256": "3024d184e922f75eda481c8360e26e1744f1862f49c0f48c2a874b9c7d74b755"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/07-compat-attempt-1.ndjson",
+      "bytes": 2433705,
+      "sha256": "7e213703f92cebddbe4ed92840f1f25a918a956053372f2cb6b69cf22fc3b830"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/08-native-attempt-1.ndjson",
+      "bytes": 760564,
+      "sha256": "377daff75c996f862d209bd4845ec6f17c9efaa77918b7122b99d01ee397d98c"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/09-compat-attempt-1.ndjson",
+      "bytes": 2200357,
+      "sha256": "02d86f9a3a7f9f0d744f3d598081d9d58ed0258275e608d3f819681f59fea827"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/10-native-attempt-1.ndjson",
+      "bytes": 626820,
+      "sha256": "7af1de197fab1cb78c17fb3cb020b7641508ccf29881de3ff44a79db933465f1"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/11-compat-attempt-1.ndjson",
+      "bytes": 2417176,
+      "sha256": "5dcb19affc3c1909cb6fe2700be4ac6daa01415c613c6586b77614dd6222ece1"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/12-native-attempt-1.ndjson",
+      "bytes": 406278,
+      "sha256": "0fb01c391eec46eabc1d4230ea46be173d032a0c0117fb0cf22942d0d57247f4"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/13-compat-attempt-1.ndjson",
+      "bytes": 2207814,
+      "sha256": "41e0c5cde7c313435d7f0a0930ee59f8a34c5ddd3cbb55de71467529277b772e"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/14-native-attempt-1.ndjson",
+      "bytes": 683218,
+      "sha256": "4410d1d3597e869a7513bb8b73afa34198ac307af4793bda5d9d2290753cf574"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/15-compat-attempt-1.ndjson",
+      "bytes": 2132311,
+      "sha256": "4f6a6da9daa5dd60cbc25497000bc462bb53ae06b74af383c5a5559bbcfcf2f9"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/16-native-attempt-1.ndjson",
+      "bytes": 439446,
+      "sha256": "15ee10e8a266716619f88bb0eb2c1c52964d1a32d0b6e5ab9454017e7d529963"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/17-compat-attempt-1.ndjson",
+      "bytes": 2240917,
+      "sha256": "68fd1f63667d180502bc9a401d6f400d8eada32ab3d2383464bcafaea1c793ef"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/18-native-attempt-1.ndjson",
+      "bytes": 659993,
+      "sha256": "2ae6cb0c4e1b8724b70dd2e4a70d2ce01015e9a1d7ce24f7114ebfd264f34385"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/warmup-compat.ndjson",
+      "bytes": 2578066,
+      "sha256": "b6429870f7121be1d0074b271aa0e59a43ce344d4f24a69f3427e283085b2c94"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/raw/warmup-native.ndjson",
+      "bytes": 535174,
+      "sha256": "257e63bd67e8cd27c24df688979a1353c555c0a1ba46288f832808c64d0dcc75"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-bun-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-bun/report.json",
+      "bytes": 15977,
+      "sha256": "9c164abce6c9ddd266a975922b071e5d98863a7cc437ba41635a716c0ebde167"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/attempt-outcomes.json",
+      "bytes": 11019,
+      "sha256": "040a41d1122329be31c84b65fe41136ce3f3bd416f2c346136fa80f73dfc8cd7"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/preflight-receipts.json",
+      "bytes": 2375,
+      "sha256": "c828a4e8234dbfc0dfeb323e92d3f04b5a797b8637d88a2a4539430009664d8a"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/01-compat-attempt-1.ndjson",
+      "bytes": 2487391,
+      "sha256": "586d332f548c317a79435944f0b2c3451c6c7e4787de53eaaafb0cce08014f23"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/02-native-attempt-1.ndjson",
+      "bytes": 556000,
+      "sha256": "0998cc8f7d0b5f32ba48699bd6a5e1bf2ff22ae1a1e5347b6f8331bf8cf193f6"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/03-compat-attempt-1.ndjson",
+      "bytes": 2350169,
+      "sha256": "236e3233d11e33c4a48e284a450e930f0f78cda3bd7ad70018ee5e7af1e642fd"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/04-native-attempt-1.ndjson",
+      "bytes": 529251,
+      "sha256": "608593e5617e799c79382b5752c8fe5322a79dc1efcbc2cdf69b08abcb58cf78"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/05-compat-attempt-1.ndjson",
+      "bytes": 2326175,
+      "sha256": "9526cd3647d55c89065947fff7d461b14a1bae100b3b3710a8622c68638510b2"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/06-native-attempt-1.ndjson",
+      "bytes": 573318,
+      "sha256": "b07bf0ed58083d71ecca953b968271c696cf14eb1c1570ef827444d54977816f"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/07-compat-attempt-1.ndjson",
+      "bytes": 2298909,
+      "sha256": "9a13015dd8d41c27438ccc04437f1a484a2bdc6ca760ac56d9b697cf97e2b324"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/08-native-attempt-1.ndjson",
+      "bytes": 547647,
+      "sha256": "aa52eea973f4b98956e9175b4eae0c2df5ab0ece677e46504bbff9e154952005"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/09-compat-attempt-1.ndjson",
+      "bytes": 2260654,
+      "sha256": "e7e42e5ad20964214806911e3a20ae269140fe71c4f32471d9fa6ad3ca7b7daa"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/10-native-attempt-1.ndjson",
+      "bytes": 549661,
+      "sha256": "361941b868f018bad7ffd3ef8c882219a1c584209bd13021474baa6b36ed60e6"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/11-compat-attempt-1.ndjson",
+      "bytes": 2493739,
+      "sha256": "8d56e08c5f30cc329c7965d679d1c468864f34d605eb0ced3d8548d3c7011605"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/12-native-attempt-1.ndjson",
+      "bytes": 565726,
+      "sha256": "00859295f521b948a6d1f02d8699287f8079eb8116f51d93975cda878215b4b0"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/13-compat-attempt-1.ndjson",
+      "bytes": 2290380,
+      "sha256": "e9fe6302d1684cd60f7c7b381bde52bfc7f038649c9310a54cbbeca53f7c028d"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/14-native-attempt-1.ndjson",
+      "bytes": 681274,
+      "sha256": "ca0c26328fd072ee49b2f1c88cd9af154ef4352de816c0ec27e7a7a8f4fa8b7c"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/warmup-compat.ndjson",
+      "bytes": 2605685,
+      "sha256": "609b280866efe04e261014f590eeb7bb6fc553e46f76c57195809323b61d2d56"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/raw/warmup-native.ndjson",
+      "bytes": 825816,
+      "sha256": "61290a2f78529d47394bdb6f79150eb95b645676dfa27deb50102c980b5c81ee"
+    },
+    {
+      "path": "apps/web/performance/typecheck-recovery-20260905/raw-artifacts/ts7-benchmark-windows-npm-33913693340/4427e3a8dfc2cf73ccdc8d05c7e36925bdf8c65d/windows-npm/report.json",
+      "bytes": 13958,
+      "sha256": "e2b786d7055e3340ddda14700b160986cd85ceee0128b0318a9cb5ef4b4f981d"
+    }
+  ],
+  "note": "Retained CI compiler benchmark evidence for the exact candidate identities below. This is not G003 application-performance improvement evidence and does not certify later source trees."
+}

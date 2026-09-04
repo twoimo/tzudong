@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_postcondition_diagnostic_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "authorizedAt": "2026-09-04T07:31:51Z",
+  "authorizationEvidenceBoundary": "user-provided named-owner authorization in the current task transcript; no external immutable receipt",
+  "diagnosticApproval": {
+    "path": "backend/supabase/g037-readonly-role-postcondition-diagnostic-approval.v1.json",
+    "sha256": "7b823f6425c9505495d2026ee3ef0f7c39abd7496a93204cdc4aebb754ca31bb"
+  },
+  "authorizedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql",
+    "sha256": "2f926d1a8ceccbb552718cdeb95c6c55d9922b9a9805efee66f85c6205bf7755"
+  },
+  "authorizedScope": {
+    "maximumExecutionCount": 1,
+    "productionRollbackOnlyDiagnostic": true,
+    "immediateBoundedReadback": true,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false
+  },
+  "preconditions": {
+    "projectMustBeActiveHealthy": true,
+    "databaseMustEqualPostgres": true,
+    "roleMustBeAbsent": true,
+    "migrationLedgerMustExist": true,
+    "targetFunctionMustExist": true,
+    "migrationCountMustEqual50": true,
+    "terminalMigrationMustEqual20260804000500": true,
+    "currentDiagnosticSqlHashMustMatch": true
+  },
+  "executionStateAtAuthorization": {
+    "consumedExecutionCount": 0,
+    "diagnosticExecuted": false,
+    "boundedReadbackPerformed": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "diagnostic execution",
+    "which hosted postcondition differs",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

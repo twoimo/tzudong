@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_connect_control_map_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "e6cdccf0-208b-4eea-a6a4-76cde289cda4",
+  "attemptRecordedAt": "2026-09-04T17:05:42Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedReadCount": 1,
+    "consumedReadCount": 1,
+    "remainingReadCount": 0,
+    "authorizationReusable": false,
+    "authorizationPath": "backend/supabase/g037-session-pooler-connect-control-map-authorization.v1.json",
+    "authorizationSha256": "3cfe7a899473aea6c31c2a50d1e644db4147c1e03fb3bf10f6118c759ed0f2a6",
+    "consumptionPath": "backend/supabase/g037-session-pooler-connect-control-map-consumption.v1.json",
+    "consumptionSha256": "61979c28e596a55a0dcf4fc21b54c518b8ebe9996139892cf80819e25da21748"
+  },
+  "localExecutionPreparation": {
+    "nonInteractiveShellArgumentSyntaxErrorCount": 1,
+    "dashboardOpenBeforeSyntaxError": false,
+    "syntaxErrorContainedProviderOrCredentialMaterial": false,
+    "sameOperationInteractiveReplOpened": true,
+    "additionalAuthorizationConsumedForLocalCorrection": false
+  },
+  "browserExecution": {
+    "openTabCallIssued": true,
+    "dashboardOpenCountConservativelyConsumed": 1,
+    "openCompletionObserved": false,
+    "controlSnapshotCompletionCountObserved": 0,
+    "controlClickCompletionCountObserved": 0,
+    "asyncCompletionResultObserved": false,
+    "additionalBrowserCommandIssuedAfterAmbiguity": false,
+    "replClosedAfterAmbiguity": true
+  },
+  "outcome": {
+    "status": "ambiguous",
+    "fixedCode": "g037_session_pooler_control_map_async_completion_ambiguous",
+    "successfulControlMap": false,
+    "sanitizedReceiptCreated": false,
+    "sanitizedReceiptVerified": false,
+    "sessionPoolerControlIdentified": false,
+    "metadataValueRead": false,
+    "rawControlTreeReturned": false,
+    "rawControlTreeStoredInRepository": false,
+    "providerErrorRetained": false,
+    "rawProviderResponseRetained": false
+  },
+  "safetyReadback": {
+    "credentialRead": false,
+    "passwordValueOrPlaceholderRead": false,
+    "rawDsnRead": false,
+    "clipboardUsed": false,
+    "screenshotCaptured": false,
+    "valueBearingNodeObserved": false,
+    "projectOverviewObserved": false,
+    "organizationMetadataObserved": false,
+    "browserStorageInspected": false,
+    "networkHeadersInspected": false,
+    "databaseAuthenticationAttempted": false,
+    "sqlExecuted": false,
+    "networkProbeExecuted": false,
+    "persistentProviderStateChanged": false
+  },
+  "retryGate": {
+    "controlMapRetryAllowed": false,
+    "authorizationReusable": false,
+    "freshControlMapRequestRequired": true,
+    "freshNamedOwnerAuthorizationRequired": true,
+    "topLevelAwaitPreflightRequired": true,
+    "metadataReadV2ConstructionAuthorized": false,
+    "metadataReadV2ExecutionAuthorized": false,
+    "sessionPoolerSelectionAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false
+  },
+  "notEvidenceOf": [
+    "a completed Dashboard open, control snapshot, or control click",
+    "a successful control map or verified receipt",
+    "an exact Session pooler hostname, username, region, port, database, DSN, credential, certificate, cookie, token, or key",
+    "session-pooler selection, metadata read, reachability, authentication, or role mapping",
+    "authorization for a retry or successor external action",
+    "password, repository Secret, controller, workflow, migration, release, or deployment work"
+  ]
+}

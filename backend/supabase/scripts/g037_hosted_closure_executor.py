@@ -15,6 +15,27 @@ from preflight_g034_hosted_migration_closure import approval_body_contract, appr
 
 SCHEMA="g037-hosted-closure-receipt-v3"; ENV=re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$"); COMMIT=re.compile(r"^[a-f0-9]{40}$")
 class ClosureError(RuntimeError): pass
+_DENIAL_CODE_BY_MESSAGE = {
+    "commit unavailable": "source_commit_unavailable",
+    "database credential environment unavailable": "credential_environment_unavailable",
+    "database connection unavailable": "database_connection_unavailable",
+    "database role contract failed": "readonly_role_contract_denied",
+    "ledger state does not match requested mode": "ledger_state_mismatch",
+    "source-bound retirement gate failed": "retirement_gate_failed",
+    "source-bound retirement approval contract drift": "retirement_approval_drift",
+    "waiting locks present": "waiting_locks_present",
+    "terminal mutator unavailable": "runtime_terminal_mutator_unavailable",
+    "runtime probe authorization unexpectedly granted": "runtime_execute_privilege_present",
+}
+_DENIAL_CODES = frozenset(
+    {
+        *_DENIAL_CODE_BY_MESSAGE.values(),
+        "commit_ambiguous",
+        "controller_contract_denied",
+        "source_contract_denied",
+        "controller_internal_denied",
+    }
+)
 _DOCUMENTS_POLICY_COMPATIBILITY_VERSION = DOCUMENTS_POLICY_COMPATIBILITY_VERSION
 _DOCUMENTS_POLICY_CONTRACT = DOCUMENTS_POLICY_COMPATIBILITY_PRESTATE
 def _prepare_documents_policy_compatibility(cur,item,*,deadline):
@@ -51,7 +72,13 @@ def emit(x): print(canonical_bytes(x).decode("ascii"))
 def receipt(mode,status,evidence):
     # Deliberately whitelist receipt fields instead of attempting to redact arbitrary data.
     safe={k:v for k,v in evidence.items() if k in {"commit_sha256","source_sha256","ledger_sha256","catalog_sha256","acl_sha256","migration_count","ledger_count","retirement_gate","rehearsal","runtime_authorization_denied","ambiguous_commit","managed_role_sha256","terminal_spec_sha256","checkpoint_sha256","documents_policy_compatibility"}}
+    if evidence.get("denial_code") in _DENIAL_CODES: safe["denial_code"]=evidence["denial_code"]
     item={"schema":SCHEMA,"mode":mode,"status":status,"manifest_sha256":MANIFEST_SHA256,"evidence":safe}; item["receipt_sha256"]=digest(item); return item
+def denial_evidence(exc):
+    if isinstance(exc,ContractError): code="source_contract_denied"
+    elif re.search(r"\bambigu(?:ous|ity)\b",str(exc),re.IGNORECASE): code="commit_ambiguous"
+    else: code=_DENIAL_CODE_BY_MESSAGE.get(str(exc),"controller_contract_denied")
+    return {"ambiguous_commit":code=="commit_ambiguous","denial_code":code}
 def root_commit(root):
     try: value=subprocess.run(["git","-C",str(root),"rev-parse","HEAD"],capture_output=True,text=True,check=True).stdout.strip()
     except Exception as exc: raise ClosureError("commit unavailable") from exc
@@ -70,6 +97,168 @@ def connection(env_name):
     except Exception as exc: raise ClosureError("database connection unavailable") from exc
 def q(cur,sql,params=()): cur.execute(sql,params); return cur.fetchall() if cur.description else []
 def ledger(cur): return tuple((str(a),str(b),tuple(c)) for a,b,c in q(cur,"SELECT version,name,statements FROM supabase_migrations.schema_migrations ORDER BY version,name"))
+def readonly_role_admission(cur):
+    """Require the exact dedicated, non-owner, read-only G037 login."""
+    rows=q(cur,"""
+        WITH admitted_role AS (
+          SELECT role_row.*
+            FROM pg_catalog.pg_roles AS role_row
+           WHERE role_row.rolname=current_user
+        ),
+        settings AS (
+          SELECT pg_catalog.array_agg(setting ORDER BY setting) AS values
+            FROM admitted_role AS role_row
+            JOIN pg_catalog.pg_db_role_setting AS setting_row
+              ON setting_row.setrole=role_row.oid
+             AND setting_row.setdatabase=0
+            CROSS JOIN LATERAL pg_catalog.unnest(setting_row.setconfig) AS setting
+        ),
+        membership_shape AS (
+          SELECT
+            pg_catalog.count(*) FILTER (
+              WHERE membership.member=role_row.oid
+            ) AS parent_membership_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+            ) AS member_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+                AND member_role.rolcreaterole
+                AND NOT member_role.rolsuper
+            ) AS member_nonsuperuser_createrole_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+                AND grantor_role.rolsuper
+            ) AS superuser_grantor_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+                AND membership.admin_option
+            ) AS admin_option_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+                AND membership.set_option
+            ) AS set_option_count,
+            pg_catalog.count(*) FILTER (
+              WHERE membership.roleid=role_row.oid
+                AND membership.inherit_option
+            ) AS inherit_option_count
+            FROM admitted_role AS role_row
+            LEFT JOIN pg_catalog.pg_auth_members AS membership
+              ON membership.member=role_row.oid OR membership.roleid=role_row.oid
+            LEFT JOIN pg_catalog.pg_roles AS member_role
+              ON member_role.oid=membership.member
+            LEFT JOIN pg_catalog.pg_roles AS grantor_role
+              ON grantor_role.oid=membership.grantor
+           GROUP BY role_row.oid
+        ),
+        owned_objects AS (
+          SELECT
+            (SELECT pg_catalog.count(*) FROM pg_catalog.pg_database AS object_row, admitted_role AS role_row WHERE object_row.datdba=role_row.oid)
+            + (SELECT pg_catalog.count(*) FROM pg_catalog.pg_namespace AS object_row, admitted_role AS role_row WHERE object_row.nspowner=role_row.oid)
+            + (SELECT pg_catalog.count(*) FROM pg_catalog.pg_class AS object_row, admitted_role AS role_row WHERE object_row.relowner=role_row.oid)
+            + (SELECT pg_catalog.count(*) FROM pg_catalog.pg_proc AS object_row, admitted_role AS role_row WHERE object_row.proowner=role_row.oid)
+            + (SELECT pg_catalog.count(*) FROM pg_catalog.pg_type AS object_row, admitted_role AS role_row WHERE object_row.typowner=role_row.oid)
+              AS value
+        ),
+        direct_column_grants AS (
+          SELECT pg_catalog.count(*) AS value
+            FROM admitted_role AS role_row
+            JOIN pg_catalog.pg_attribute AS attribute_row ON true
+            JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid=attribute_row.attrelid
+            JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid=relation_row.relnamespace
+            CROSS JOIN LATERAL pg_catalog.aclexplode(attribute_row.attacl) AS acl_row
+           WHERE namespace_row.nspname='supabase_migrations'
+             AND relation_row.relname='schema_migrations'
+             AND attribute_row.attname=ANY(ARRAY['version','name','statements'])
+             AND acl_row.grantee=role_row.oid
+             AND acl_row.privilege_type='SELECT'
+             AND NOT acl_row.is_grantable
+        ),
+        unexpected_direct_grants AS (
+          SELECT pg_catalog.count(*) AS value
+            FROM admitted_role AS role_row
+            CROSS JOIN LATERAL (
+              SELECT 1
+                FROM pg_catalog.pg_database AS object_row
+                CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(object_row.datacl,pg_catalog.acldefault('d',object_row.datdba))) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+                 AND NOT (object_row.datname=pg_catalog.current_database() AND acl_row.privilege_type='CONNECT' AND NOT acl_row.is_grantable)
+              UNION ALL
+              SELECT 1
+                FROM pg_catalog.pg_namespace AS object_row
+                CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(object_row.nspacl,pg_catalog.acldefault('n',object_row.nspowner))) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+                 AND NOT (object_row.nspname='supabase_migrations' AND acl_row.privilege_type='USAGE' AND NOT acl_row.is_grantable)
+              UNION ALL
+              SELECT 1
+                FROM pg_catalog.pg_class AS object_row
+                CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(object_row.relacl,pg_catalog.acldefault('r',object_row.relowner))) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+              UNION ALL
+              SELECT 1
+                FROM pg_catalog.pg_attribute AS attribute_row
+                JOIN pg_catalog.pg_class AS relation_row ON relation_row.oid=attribute_row.attrelid
+                JOIN pg_catalog.pg_namespace AS namespace_row ON namespace_row.oid=relation_row.relnamespace
+                CROSS JOIN LATERAL pg_catalog.aclexplode(attribute_row.attacl) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+                 AND NOT (namespace_row.nspname='supabase_migrations' AND relation_row.relname='schema_migrations' AND attribute_row.attname=ANY(ARRAY['version','name','statements']) AND acl_row.privilege_type='SELECT' AND NOT acl_row.is_grantable)
+              UNION ALL
+              SELECT 1
+                FROM pg_catalog.pg_proc AS object_row
+                CROSS JOIN LATERAL pg_catalog.aclexplode(COALESCE(object_row.proacl,pg_catalog.acldefault('f',object_row.proowner))) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+              UNION ALL
+              SELECT 1
+                FROM pg_catalog.pg_default_acl AS object_row
+                CROSS JOIN LATERAL pg_catalog.aclexplode(object_row.defaclacl) AS acl_row
+               WHERE acl_row.grantee=role_row.oid
+            ) AS unexpected_grant
+        )
+        SELECT pg_catalog.current_database()='postgres',
+               session_user=current_user,
+               current_user='tzudong_g037_readonly',
+               role_row.rolcanlogin,
+               NOT role_row.rolsuper,
+               NOT role_row.rolinherit,
+               NOT role_row.rolcreaterole,
+               NOT role_row.rolcreatedb,
+               NOT role_row.rolreplication,
+               NOT role_row.rolbypassrls,
+               role_row.rolconnlimit=1,
+               (SELECT values FROM settings)=ARRAY[
+                 'default_transaction_read_only=on',
+                 'idle_in_transaction_session_timeout=30s',
+                 'lock_timeout=10s',
+                 'search_path=pg_catalog',
+                 'statement_timeout=30s'
+               ],
+               pg_catalog.current_setting('default_transaction_read_only')='on',
+               pg_catalog.current_setting('transaction_read_only')='on',
+               (SELECT parent_membership_count FROM membership_shape)=0,
+               (SELECT member_count FROM membership_shape)=1,
+               (SELECT member_nonsuperuser_createrole_count FROM membership_shape)=1,
+               (SELECT superuser_grantor_count FROM membership_shape)=1,
+               (SELECT admin_option_count FROM membership_shape)=1,
+               (SELECT set_option_count FROM membership_shape)=0,
+               (SELECT inherit_option_count FROM membership_shape)=0,
+               (SELECT value FROM owned_objects)=0,
+               (SELECT value FROM direct_column_grants)=3,
+               (SELECT value FROM unexpected_direct_grants)=0,
+               pg_catalog.has_database_privilege(current_user,pg_catalog.current_database(),'CONNECT'),
+               NOT pg_catalog.has_database_privilege(current_user,pg_catalog.current_database(),'CREATE'),
+               NOT pg_catalog.has_schema_privilege(current_user,'public','CREATE'),
+               pg_catalog.has_schema_privilege(current_user,'supabase_migrations','USAGE'),
+               pg_catalog.has_column_privilege(current_user,'supabase_migrations.schema_migrations','version','SELECT'),
+               pg_catalog.has_column_privilege(current_user,'supabase_migrations.schema_migrations','name','SELECT'),
+               pg_catalog.has_column_privilege(current_user,'supabase_migrations.schema_migrations','statements','SELECT'),
+               pg_catalog.to_regprocedure(%s) IS NOT NULL,
+               NOT pg_catalog.has_function_privilege(current_user,pg_catalog.to_regprocedure(%s),'EXECUTE')
+          FROM admitted_role AS role_row
+    """,(
+        "public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)",
+        "public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)",
+    ))
+    if rows != [(True,)*33]: raise ClosureError("database role contract failed")
 def retirement_gate(cur, *, terminal=False):
     # Source-bound gate: table is retired AND no executable/catalog definition references it.
     table=bool(q(cur,"SELECT pg_catalog.to_regclass('public.restaurants_backup') IS NULL")[0][0])
@@ -1022,6 +1211,7 @@ def run(args):
     conn=connection(args.db_env)
     try:
         cur=conn.cursor()
+        readonly_role_admission(cur)
         if args.mode=="runtime-probe":
             probe=runtime_probe(cur)
             return receipt(args.mode,"authorization-denied",{**base,"runtime_authorization_denied":probe})
@@ -1035,8 +1225,9 @@ def run(args):
         conn.rollback()
         conn.close()
 def main(argv=None):
-    p=argparse.ArgumentParser(); p.add_argument("mode",choices=sorted(MODES)); p.add_argument("--db-env",default="SUPABASE_DB_URL")
+    p=argparse.ArgumentParser(); p.add_argument("mode",choices=sorted(MODES)); p.add_argument("--db-env",default="SUPABASE_G037_READONLY_DB_URL")
     a=p.parse_args(argv)
     try: emit(run(a)); return 0
-    except (ClosureError,ContractError) as exc: emit(receipt(a.mode,"denied",{"ambiguous_commit":"ambiguous" in str(exc).lower()})); return 2
+    except (ClosureError,ContractError) as exc: emit(receipt(a.mode,"denied",denial_evidence(exc))); return 2
+    except Exception: emit(receipt(a.mode,"denied",{"ambiguous_commit":False,"denial_code":"controller_internal_denied"})); return 2
 if __name__=="__main__": raise SystemExit(main())

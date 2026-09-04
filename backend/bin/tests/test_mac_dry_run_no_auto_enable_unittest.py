@@ -189,6 +189,30 @@ class MacEntrypointDryRunPrecedesLiveTest(unittest.TestCase):
             self.main, msg=f"main() not found in {ENTRYPOINT}"
         )
 
+    def test_schedule_and_env_preflights_precede_pipeline_work(self) -> None:
+        calls = [node for node in ast.walk(self.main) if isinstance(node, ast.Call)]
+        cadence_calls = [
+            node
+            for node in calls
+            if isinstance(node.func, ast.Name)
+            and node.func.id == "cadence_source_preflight"
+        ]
+        env_calls = [
+            node
+            for node in calls
+            if isinstance(node.func, ast.Name)
+            and node.func.id == "env_contract_preflight"
+        ]
+        run_calls = _calls_to(self.main, "_run")
+        self.assertEqual(len(cadence_calls), 1)
+        self.assertEqual(len(env_calls), 1)
+        self.assertTrue(run_calls)
+        self.assertLess(cadence_calls[0].lineno, min(call.lineno for call in run_calls))
+        self.assertLess(env_calls[0].lineno, min(call.lineno for call in run_calls))
+        self.assertEqual(
+            ast.literal_eval(env_calls[0].args[0]), "hosted-pending-apply"
+        )
+
     def test_dry_run_preview_precedes_live_apply(self) -> None:
         # The live apply in the unattended path is the call whose result is bound
         # to ``apply_exit``; the dry-run preview is ``_run(apply_cmd + [..])``.

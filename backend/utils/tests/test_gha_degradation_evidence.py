@@ -219,6 +219,15 @@ class LiteEvidenceAndAdapterExitTest(unittest.TestCase):
             "(e.g. current-upload-status.json)",
         )
 
+    def test_evidence_upload_includes_summary_and_derived_health(self) -> None:
+        always_upload_paths = "\n".join(
+            str((step.get("with") or {}).get("path", ""))
+            for step in self.steps
+            if "upload-artifact" in str(step.get("uses", "")) and _is_always(step)
+        )
+        self.assertIn("backend/log/cron/current-summary.json", always_upload_paths)
+        self.assertIn("backend/log/cron/current-health.json", always_upload_paths)
+
 
 class DegradedRunNotReportedCleanSuccessTest(unittest.TestCase):
     """Requirement 6.8 - a degraded run is not reported as a clean success."""

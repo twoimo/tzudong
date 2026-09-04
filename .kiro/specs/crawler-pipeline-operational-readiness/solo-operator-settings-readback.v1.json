@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "repository": "twoimo/tzudong",
+  "authority": "solo-operator-decision-20260905.json",
+  "observedAt": "2026-09-04T20:58:46.743990+00:00",
+  "protectedBranches": [
+    "develop",
+    "data",
+    "main"
+  ],
+  "mainProtectionVerified": true,
+  "requiredChecks": [
+    "Release",
+    "Promotion Path"
+  ],
+  "requiredApprovingReviewCount": 0,
+  "enforceAdmins": true,
+  "allowForcePushes": false,
+  "allowDeletions": false,
+  "productionEnvironmentAllowedBranches": [
+    "main"
+  ],
+  "productionEnvironmentTagPolicies": [],
+  "deployed": false,
+  "dnsChanged": false,
+  "externalReceipts": [
+    {
+      "name": "develop-protection-readback.json",
+      "sha256": "cdd5338c8e573ac1cff2d7fbdb0ea6dd97ad79e366b0a1cf439942fb0d3377f9"
+    },
+    {
+      "name": "data-protection-readback.json",
+      "sha256": "73d49bdc92bb1e545e5c7d9ed4a09e81be14e31ecd82f9bf8e68d4d7901d2c01"
+    },
+    {
+      "name": "production-environment-readback.json",
+      "sha256": "6bd0d1ffe2b118143de60802de2568e352869e1624e46238608b0f755406efe4"
+    },
+    {
+      "name": "main-protection-readback.json",
+      "sha256": "40e41551f9a8a22dd698fdfde89b5037c54d832279cffe68ff7a730baf57a59d"
+    },
+    {
+      "name": "scheduled-workflow-hold.json",
+      "sha256": "850de23dd966d2aebd413dd6dbdc8d35c51bf3f5162fe2443fcdfd7f77a32fd6"
+    }
+  ],
+  "scheduledWorkflowHold": [
+    "daily-crawler.yml",
+    "gdrive-frame-backfill.yml"
+  ]
+}

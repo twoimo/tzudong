@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_membership_diagnostic_preview",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "roleNameSha256": "6f9496e3281f06ffed1b475eadb1ef33e4f6f61724c0a32caf35772d5e2bd515",
+  "priorDiagnosticAttempt": {
+    "path": "backend/supabase/g037-readonly-role-postcondition-diagnostic-attempt.v1.json",
+    "sha256": "23bd86c72d4e0bc4c53707cff4cc73e6f5b88c43decfcf2f7924b40af64e64a1",
+    "fixedCode": "g037_diag_memberships_not_zero",
+    "persistentHostedStateChanged": false
+  },
+  "diagnosticSql": {
+    "path": "backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql",
+    "sha256": "29b7ef6084eb2732e65028dd1a0158a8cf5eec2ac60b3c081ddffd9d8461ad8a",
+    "topLevelStatementCount": 16,
+    "transactional": true,
+    "commitStatementPresent": false,
+    "rollbackStatementPresent": true,
+    "passwordMaterialIncluded": false,
+    "migrationLedgerMutation": false
+  },
+  "diagnosticScope": {
+    "transientRoleCreation": true,
+    "transientRoleSettings": true,
+    "transientMinimalGrants": true,
+    "membershipDirectionClassification": true,
+    "membershipCardinalityBoundedAtFour": true,
+    "adjacentRolePrivilegeCategoryClassification": true,
+    "postgres17MembershipOptionClassification": true,
+    "fixedCodeOnly": true,
+    "roleNameOutput": false,
+    "persistentRoleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "allowedFixedCodes": [
+    "g037_membership_diag_precondition_failed",
+    "g037_membership_diag_role_missing",
+    "g037_membership_diag_cardinality_overflow",
+    "g037_membership_diag_bidirectional",
+    "g037_membership_diag_member_of_multiple",
+    "g037_membership_diag_member_of_elevated",
+    "g037_membership_diag_member_of_admin_option",
+    "g037_membership_diag_member_of_set_option",
+    "g037_membership_diag_member_of_inherit_option",
+    "g037_membership_diag_member_of_restricted",
+    "g037_membership_diag_has_multiple_members",
+    "g037_membership_diag_has_elevated_member",
+    "g037_membership_diag_has_login_member",
+    "g037_membership_diag_has_admin_option_member",
+    "g037_membership_diag_has_set_option_member",
+    "g037_membership_diag_has_inherit_option_member",
+    "g037_membership_diag_has_restricted_member",
+    "g037_membership_diag_none"
+  ],
+  "localValidation": {
+    "postgresVersion": "17.11",
+    "observedFixedCode": "g037_membership_diag_none",
+    "roleAbsentAfterDiagnostic": true,
+    "hostedConnectionUsed": false
+  },
+  "approvalGate": {
+    "status": "membership_diagnostic_preview_owner_approval_required",
+    "previewOwnerApproved": false,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "production membership direction, count, adjacent role identity, or effective privilege",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

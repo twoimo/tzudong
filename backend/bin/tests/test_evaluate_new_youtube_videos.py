@@ -17,6 +17,21 @@ spec.loader.exec_module(module)
 
 
 class EvaluateNewYoutubeVideosTests(unittest.TestCase):
+    def test_shared_runner_failure_prevents_both_preview_and_apply(self) -> None:
+        import contextlib
+        import io
+        from backend.bin import run_hosted_new_video_pipeline as runner
+        for args in ([], ['--dry-run']):
+            with self.subTest(args=args), patch.object(runner, '_load_backend_env'), \
+                patch.object(runner, 'cadence_source_preflight'), \
+                patch.object(runner, 'env_contract_preflight'), \
+                patch.object(runner, '_apply_local_runtime_environment'), \
+                patch.object(runner, '_run', return_value=7) as command, \
+                contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(runner.main(args), 7)
+                self.assertEqual(command.call_count, 1)
+                self.assertEqual(command.call_args.args[0][1], str(runner.EVALUATE))
+
     def test_skips_when_all_urls_already_hosted(self) -> None:
         calls: list[list[str]] = []
 
