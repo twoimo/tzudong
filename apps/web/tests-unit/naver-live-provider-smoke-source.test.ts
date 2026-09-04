@@ -13,7 +13,7 @@ describe('Naver live-provider Playwright smoke source contract', () => {
         const spec = source('tests/naver-live-marker.spec.ts');
 
         expect(packageSource).toContain(
-            '"dev:playwright:naver-live": "node scripts/run-local-dev.mjs --port 3000 --live-naver-provider-smoke"',
+            '"dev:playwright:naver-live": "node scripts/run-local-dev.mjs --port 8080 --live-naver-provider-smoke"',
         );
         expect(packageSource).toContain(
             '"test:naver-live-provider": "node scripts/run-naver-live-provider-smoke.mjs"',

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_direct_endpoint_host_evidence_request",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T10:25:40Z",
+  "requestStatus": "controlled_host_direct_endpoint_evidence_required",
+  "probeArtifact": {
+    "path": "backend/supabase/scripts/g037_direct_endpoint_network_preflight.py",
+    "sha256": "4fed6b4228fbc18db800ddcf543caa74babb3ac8b722aa91da1e3a34112702db",
+    "mode": "probe",
+    "maximumExecutionCountPerHost": 1,
+    "fixedTarget": true,
+    "arbitraryHostOrPortInputAllowed": false
+  },
+  "continuity": {
+    "credentialPreviewApprovalPath": "backend/supabase/g037-readonly-credential-custody-preview-approval.v1.json",
+    "credentialPreviewApprovalSha256": "46eea3b0f168775771f11b7909b8174fc8b3450ceb0fe23869ed28c2b744e3a8",
+    "passwordAssignmentRequestPath": "backend/supabase/g037-readonly-password-assignment-authorization-request.v1.json",
+    "passwordAssignmentRequestSha256": "7b3602efed38f21d68b2015c8788baa19dabebb7da9d5e30b4d845be7a8bab7f",
+    "failedWorkspaceHostAttemptPath": "backend/supabase/g037-direct-endpoint-network-preflight-attempt.v1.json",
+    "failedWorkspaceHostAttemptSha256": "17d265b605258140f697f67caef17f3a028a16b521267d037ae85ccf48b71047",
+    "sameWorkspaceHostRetryRequested": false
+  },
+  "operatorProcedure": {
+    "requiredCommand": "python3 backend/supabase/scripts/g037_direct_endpoint_network_preflight.py probe",
+    "runFromExactReviewedCandidate": true,
+    "runOnOwnerApprovedControlledHost": true,
+    "requireIpv6Egress": true,
+    "credentialOrDatabaseLoginRequired": false,
+    "copyOnlyCanonicalJsonLine": true,
+    "copyTerminalOrNetworkDiagnostics": false,
+    "installOrEnableNetworkService": false,
+    "changeFirewallOrDns": false,
+    "enableIpv4Addon": false,
+    "usePoolerFallback": false
+  },
+  "acceptedEvidence": {
+    "schema": "g037-direct-endpoint-network-preflight-v1",
+    "status": "ready",
+    "fixedCode": "g037_direct_endpoint_ready",
+    "ipv6DnsPresent": true,
+    "tcp5432Reachable": true,
+    "credentialUsed": false,
+    "databaseAuthenticationAttempted": false,
+    "sqlExecuted": false,
+    "persistentStateChanged": false
+  },
+  "failureEvidence": {
+    "acceptedFixedCodes": [
+      "g037_direct_endpoint_ipv6_dns_unavailable",
+      "g037_direct_endpoint_tcp_unreachable"
+    ],
+    "doesNotAuthorizeAutomaticRetry": true,
+    "doesNotAuthorizePoolerFallback": true,
+    "doesNotAuthorizeIpv4AddonChange": true
+  },
+  "requestState": {
+    "controlledHostIdentified": false,
+    "controlledHostApproved": false,
+    "readyEvidenceReceived": false,
+    "passwordAssignmentRequestUnblocked": false,
+    "passwordExecutionAuthorizationPresent": false
+  },
+  "notEvidenceOf": [
+    "controlled host identity or approval",
+    "direct endpoint reachability from another host",
+    "database authentication or credential validity",
+    "password generation or assignment",
+    "repository secret presence or mutation",
+    "controller or workflow authorization",
+    "migration, release, or deployment"
+  ]
+}

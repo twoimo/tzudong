@@ -1,0 +1,782 @@
+{
+  "schemaVersion": 1,
+  "kind": "tooling_selection_record",
+  "designSource": ".kiro/specs/crawler-pipeline-operational-readiness/design.md#supply-chain-contract-recovery",
+  "notes": [
+    "이 표의 선택은 기록된 엔지니어링 결정이며 운영자 승인 자체가 아니다. 명명된 사람이 각 범주 operatorApproval.approverName을 채워야 승인이 성립한다.",
+    "macosLocalInstallSucceeded, installVerifyObservation, residentMemoryMiBAt300s는 실제 로컬 실행으로만 채운다. 이 기록은 세 값을 추정하지 않고 null로 둔다.",
+    "이 기록은 자격증명 값, 토큰 값, 레지스트리 접속 비밀, Forbidden_Log_Field 값을 포함하지 않는다.",
+    "채택 후보의 고정 태그·버전은 설계 C7 확정 값이다. 미채택 후보의 고정 태그·버전은 후보를 가리키는 실재 릴리스 핀이며 부동 태그·범위 표기를 쓰지 않는다."
+  ],
+  "categoryCount": 12,
+  "categories": [
+    {
+      "category": "container_registry",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "container_registry",
+        "selectedCandidateId": "registry.zot",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "registry.zot",
+          "category": "container_registry",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "ghcr.io/project-zot/zot-linux-arm64:v2.1.20",
+          "installVerifyCommand": "docker run --rm ghcr.io/project-zot/zot-linux-arm64:v2.1.20 --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "harbor_or_managed_oci_registry",
+          "unresolvedItems": ["replication policy", "auth backend"],
+          "replacedTreeFileCount": 1,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "registry.harbor",
+          "category": "container_registry",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "goharbor/harbor-core:v2.13.0",
+          "installVerifyCommand": "docker image inspect goharbor/harbor-core:v2.13.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "managed_oci_registry",
+          "unresolvedItems": ["postgres sizing", "redis sizing"],
+          "replacedTreeFileCount": 1,
+          "alwaysOnProcessCount": 3,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 3,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 3,
+            "summary": "Harbor core + 내장 Postgres + Redis 다중 서비스로 상시 실행 프로세스 개수가 3으로 Zot의 1보다 크고 로컬 상주 메모리를 지배한다. 유료 이전 시점 승격 후보로 유지."
+          }
+        }
+      ]
+    },
+    {
+      "category": "image_registry_address_scheme",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "image_registry_address_scheme",
+        "selectedCandidateId": "scheme.harbor_local",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "scheme.harbor_local",
+          "category": "image_registry_address_scheme",
+          "adopted": true,
+          "referenceKind": "registry_address_scheme",
+          "imageTag": "harbor.local/tzudong/pipeline-api",
+          "installVerifyCommand": "grep -R \"harbor.local/tzudong\" backend/pipeline-control/harbor-tags.md",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "managed_oci_registry_namespace",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "convention_stable",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "scheme.internal_dns",
+          "category": "image_registry_address_scheme",
+          "adopted": false,
+          "referenceKind": "registry_address_scheme",
+          "imageTag": "registry.internal/tzudong/pipeline-api",
+          "installVerifyCommand": "grep -R \"registry.internal/tzudong\" backend",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "managed_oci_registry_namespace",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 3,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "convention_stable",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 3,
+            "summary": "harbor-tags.md의 기존 harbor.local/tzudong 규약을 버리면 이전 시 전 이미지 재태깅이 필요하며 대체가 필요한 기존 트리 파일 경로 개수가 3으로 늘어난다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "deploy_tool",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "deploy_tool",
+        "selectedCandidateId": "deploy.argocd",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "deploy.argocd",
+          "category": "deploy_tool",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "quay.io/argoproj/argocd:v3.5.2",
+          "installVerifyCommand": "docker run --rm quay.io/argoproj/argocd:v3.5.2 argocd version --client",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "deploy.flux",
+          "category": "deploy_tool",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "ghcr.io/fluxcd/flux-cli:v2.5.0",
+          "installVerifyCommand": "docker run --rm ghcr.io/fluxcd/flux-cli:v2.5.0 --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 4,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "manualRecoverySteps",
+            "citedMeasuredValue": 4,
+            "summary": "UI 부재로 장애 복구 시 운영자 수동 조치 단계 수가 4로 Argo CD의 1보다 많아 '개발자가 직관적으로 확인'이라는 목표에 불리하다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "dashboard_tool",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "dashboard_tool",
+        "selectedCandidateId": "dashboard.grafana",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "dashboard.grafana",
+          "category": "dashboard_tool",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "grafana/grafana:11.5.2",
+          "installVerifyCommand": "docker run --rm grafana/grafana:11.5.2 grafana server -v",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "dashboard.perses",
+          "category": "dashboard_tool",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "persesdev/perses:v0.47.0",
+          "installVerifyCommand": "docker run --rm persesdev/perses:v0.47.0 --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": ["dashboard-as-code migration"],
+          "replacedTreeFileCount": 4,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 4,
+            "summary": "현행 Grafana 자산은 이미 CSP·익명인증 비활성·임베딩 정책·프로비저닝을 갖춰 대체 파일 경로 개수가 0인 반면 Perses 채택 시 이 4개 설정 자산을 대체해야 한다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "message_broker",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "message_broker",
+        "selectedCandidateId": "broker.kafka_kraft",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "broker.kafka_kraft",
+          "category": "message_broker",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "apache/kafka:3.9.0",
+          "installVerifyCommand": "docker run --rm apache/kafka:3.9.0 /opt/kafka/bin/kafka-topics.sh --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "broker.redpanda",
+          "category": "message_broker",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "docker.redpanda.com/redpandadata/redpanda:v24.2.1",
+          "installVerifyCommand": "docker run --rm docker.redpanda.com/redpandadata/redpanda:v24.2.1 redpanda --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": ["conditional promotion if kafka resident memory is a bottleneck"],
+          "replacedTreeFileCount": 4,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 4,
+            "summary": "Kafka API 호환이고 더 가볍지만 기존 compose 자산과 queue.py·outbox.py·publisher.py 경로를 대체해야 해 대체 파일 경로 개수가 4다. 로컬 상주 메모리가 병목으로 관측되면 승인된 교체 후보로 승격한다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "broker_management_ui",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "broker_management_ui",
+        "selectedCandidateId": "broker_ui.kafbat",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "broker_ui.kafbat",
+          "category": "broker_management_ui",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "ghcr.io/kafbat/kafka-ui:v1.5.0",
+          "installVerifyCommand": "docker image inspect ghcr.io/kafbat/kafka-ui:v1.5.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 1,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "broker_ui.provectuslabs",
+          "category": "broker_management_ui",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "provectuslabs/kafka-ui:v0.7.2",
+          "installVerifyCommand": "docker image inspect provectuslabs/kafka-ui:v0.7.2",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 1,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "stalled_last_release_v0.7.2",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "versionUpdateCadence",
+            "citedMeasuredValue": "stalled_last_release_v0.7.2",
+            "summary": "상류가 더 이상 릴리스하지 않아(마지막 릴리스 v0.7.2) 버전 갱신 주기 항목에서 실격이며 요구사항 4 신선도 목표와 충돌한다. 이 항목은 사용자 지시의 provectuslabs 선택에서 벗어난다."
+          }
+        },
+        {
+          "candidateId": "broker_ui.redpanda_console",
+          "category": "broker_management_ui",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "docker.redpanda.com/redpandadata/console:v3.0.0",
+          "installVerifyCommand": "docker image inspect docker.redpanda.com/redpandadata/console:v3.0.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 1,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "active_but_broker_coupled",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "versionUpdateCadence",
+            "citedMeasuredValue": "active_but_broker_coupled",
+            "summary": "갱신 주기는 활발하지만 Redpanda 브로커 선택에 종속되며 채택된 Kafka KRaft 브로커와 짝이 맞지 않는다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "service_mesh",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "service_mesh",
+        "selectedCandidateId": "mesh.linkerd",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "mesh.linkerd",
+          "category": "service_mesh",
+          "adopted": true,
+          "optIn": true,
+          "referenceKind": "image_tag",
+          "imageTag": "linkerd/controller:edge-26.8.4",
+          "installVerifyCommand": "docker image inspect linkerd/controller:edge-26.8.4",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": ["opt-in local profile only; excluded from default stack"],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_edge",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "mesh.istio_ambient",
+          "category": "service_mesh",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "docker.io/istio/pilot:1.26.0",
+          "installVerifyCommand": "docker image inspect docker.io/istio/pilot:1.26.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 2,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 2,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 2,
+            "summary": "단일 macOS 머신의 소수 서비스에서 mTLS·L7 정책 이득이 컨트롤 플레인 상시 실행 프로세스 개수 2와 상주 메모리를 넘지 않는다."
+          }
+        },
+        {
+          "candidateId": "mesh.cilium",
+          "category": "service_mesh",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "quay.io/cilium/cilium:v1.17.0",
+          "installVerifyCommand": "docker image inspect quay.io/cilium/cilium:v1.17.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 2,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 2,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 2,
+            "summary": "eBPF 데이터 플레인 + 에이전트로 상시 실행 프로세스 개수가 2이며 소수 서비스 로컬 환경에서 L7 정책 이득이 그 상주 비용을 넘지 않는다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "search_log_store",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "search_log_store",
+        "selectedCandidateId": "store.loki",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "store.loki",
+          "category": "search_log_store",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "grafana/loki:3.7.7",
+          "installVerifyCommand": "docker run --rm grafana/loki:3.7.7 -version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "store.elasticsearch",
+          "category": "search_log_store",
+          "adopted": false,
+          "preservedOptIn": true,
+          "referenceKind": "image_tag",
+          "imageTag": "docker.elastic.co/elasticsearch/elasticsearch:8.17.0",
+          "installVerifyCommand": "docker image inspect docker.elastic.co/elasticsearch/elasticsearch:8.17.0",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": ["retained as opt-in secondary sink; es_index.py index/allowlist/URL admission preserved"],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 1,
+            "summary": "현행 compose가 이미 힙 1 GiB를 고정하는 JVM 프로세스(상시 실행 프로세스 1개)가 로컬 상주 메모리를 지배해 기본 저장소로는 부적합하다. 다만 es_index.py의 인덱스·허용목록·URL 승인은 검증된 자산이라 삭제하지 않고 옵트인 보조 경로로 보존한다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "log_collector",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "log_collector",
+        "selectedCandidateId": "collector.otel",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "collector.otel",
+          "category": "log_collector",
+          "adopted": true,
+          "referenceKind": "image_tag",
+          "imageTag": "otel/opentelemetry-collector-contrib:0.120.0",
+          "installVerifyCommand": "docker run --rm otel/opentelemetry-collector-contrib:0.120.0 --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": ["add filelog receiver + loki exporter"],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "collector.fluentd",
+          "category": "log_collector",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "fluent/fluentd:v1.19.2-1.0",
+          "installVerifyCommand": "docker run --rm fluent/fluentd:v1.19.2-1.0 fluentd --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 2,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 2,
+            "summary": "OTel Collector 수집기가 이미 존재하므로 Fluentd를 더하면 상시 실행 프로세스 개수가 2로 늘고 유지 대상만 증가한다."
+          }
+        },
+        {
+          "candidateId": "collector.fluentbit",
+          "category": "log_collector",
+          "adopted": false,
+          "referenceKind": "image_tag",
+          "imageTag": "fluent/fluent-bit:3.2.0",
+          "installVerifyCommand": "docker run --rm fluent/fluent-bit:3.2.0 --version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_self_hosted",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 2,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "alwaysOnProcessCount",
+            "citedMeasuredValue": 2,
+            "summary": "더 가볍지만 기존 단일 수집기에 더해지면 상시 실행 프로세스 개수가 2로 늘어 수집 경로가 둘로 나뉜다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "package_manager_chart",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "package_manager_chart",
+        "selectedCandidateId": "chart.helm",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "chart.helm",
+          "category": "package_manager_chart",
+          "adopted": true,
+          "referenceKind": "package_version",
+          "imageTag": "4.2.4",
+          "chartApiVersion": "v2",
+          "installVerifyCommand": "helm version --short",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "not_applicable",
+          "unresolvedItems": ["design은 사용자 지시 'Helm 3'에서 벗어나 안정 라인 4.2.4를 핀으로 기록. apiVersion v2 차트를 그대로 소비."],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "chart.kustomize",
+          "category": "package_manager_chart",
+          "adopted": false,
+          "referenceKind": "package_version",
+          "imageTag": "v5.5.0",
+          "installVerifyCommand": "kustomize version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "not_applicable",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 3,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "manualRecoverySteps",
+            "citedMeasuredValue": 3,
+            "summary": "클러스터 식별자 매개변수화를 overlay·patch로 손수 조립해야 해 장애 복구·재구성 시 운영자 수동 조치 단계 수가 3으로 Helm values의 1보다 많다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "iac",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "iac",
+        "selectedCandidateId": "iac.opentofu",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "iac.opentofu",
+          "category": "iac",
+          "adopted": true,
+          "referenceKind": "package_version",
+          "imageTag": "1.12.6",
+          "installVerifyCommand": "tofu version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "not_applicable",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "iac.terraform",
+          "category": "iac",
+          "adopted": false,
+          "referenceKind": "package_version",
+          "imageTag": "v1.10.0",
+          "installVerifyCommand": "terraform version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "not_applicable",
+          "unresolvedItems": ["BUSL license"],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 0,
+            "summary": "provider 호환으로 대체 파일 경로 개수가 0으로 OpenTofu와 동등해 이 항목이 Terraform을 우선하지 않으며 결정 요인은 BUSL 라이선스(OpenTofu는 MPL 2.0 / Linux Foundation 거버넌스)다."
+          }
+        },
+        {
+          "candidateId": "iac.pulumi",
+          "category": "iac",
+          "adopted": false,
+          "referenceKind": "package_version",
+          "imageTag": "v3.140.0",
+          "installVerifyCommand": "pulumi version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "not_applicable",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 5,
+          "alwaysOnProcessCount": 0,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 5,
+            "summary": "새 언어 런타임 도입으로 대체가 필요한 파일 경로 개수가 5로 늘고 갱신 주기 부담이 증가한다."
+          }
+        }
+      ]
+    },
+    {
+      "category": "local_kubernetes",
+      "operatorApproval": {
+        "approverName": null,
+        "approvedAt": null,
+        "category": "local_kubernetes",
+        "selectedCandidateId": "k8s.k3d",
+        "status": "unresolved"
+      },
+      "candidates": [
+        {
+          "candidateId": "k8s.k3d",
+          "category": "local_kubernetes",
+          "adopted": true,
+          "referenceKind": "package_version",
+          "imageTag": "5.9.0",
+          "installVerifyCommand": "k3d version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_k3s",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 0,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": null
+        },
+        {
+          "candidateId": "k8s.kind",
+          "category": "local_kubernetes",
+          "adopted": false,
+          "referenceKind": "package_version",
+          "imageTag": "v0.25.0",
+          "installVerifyCommand": "kind version",
+          "macosLocalInstallSucceeded": null,
+          "installVerifyObservation": null,
+          "residentMemoryMiBAt300s": null,
+          "paidMigrationTargetForm": "vps_k3s",
+          "unresolvedItems": [],
+          "replacedTreeFileCount": 2,
+          "alwaysOnProcessCount": 1,
+          "versionUpdateCadence": "upstream_release",
+          "manualRecoverySteps": 1,
+          "notAdoptedReason": {
+            "citedMeasuredItem": "replacedTreeFileCount",
+            "citedMeasuredValue": 2,
+            "summary": "쿠버네티스 자체 테스트 지향이라 이후 VPS k3s 이전 시 로컬 클러스터 정의를 대체해야 하므로 대체 파일 경로 개수가 2다. k3d는 k3s와 연속성이 있어 이 대체가 0이다."
+          }
+        }
+      ]
+    }
+  ],
+  "currentAssetDecisions": [
+    {
+      "asset": "otel/opentelemetry-collector-contrib:0.120.0",
+      "composePath": "backend/pipeline-control/docker-compose.observability.yml",
+      "decision": "keep",
+      "replacementCandidateId": null,
+      "rollbackProcedure": "설정 파일 되돌림"
+    },
+    {
+      "asset": "prom/prometheus:v3.2.1",
+      "composePath": "backend/pipeline-control/docker-compose.observability.yml",
+      "decision": "keep",
+      "replacementCandidateId": null,
+      "rollbackProcedure": "설정 파일 되돌림"
+    },
+    {
+      "asset": "grafana/grafana:11.5.2",
+      "composePath": "backend/pipeline-control/docker-compose.observability.yml",
+      "decision": "keep",
+      "replacementCandidateId": null,
+      "rollbackProcedure": "프로비저닝 되돌림"
+    },
+    {
+      "asset": "apache/kafka:3.9.0",
+      "composePath": "backend/pipeline-control/docker-compose.kafka.yml",
+      "decision": "keep",
+      "replacementCandidateId": "broker.redpanda",
+      "replacementConditional": true,
+      "rollbackProcedure": "compose 파일 되돌림"
+    },
+    {
+      "asset": "provectuslabs/kafka-ui:v0.7.2",
+      "composePath": "backend/pipeline-control/docker-compose.kafka.yml",
+      "decision": "replace",
+      "replacementCandidateId": "broker_ui.kafbat",
+      "rollbackProcedure": "compose 이미지 라인 되돌림"
+    },
+    {
+      "asset": "docker.elastic.co/elasticsearch/elasticsearch:8.17.0",
+      "composePath": "backend/pipeline-control/docker-compose.elasticsearch.yml",
+      "decision": "keep",
+      "keepMode": "opt_in",
+      "replacementCandidateId": null,
+      "rollbackProcedure": "옵트인 플래그 해제"
+    },
+    {
+      "asset": "harbor.local/tzudong tag convention",
+      "composePath": "backend/pipeline-control/harbor-tags.md",
+      "decision": "keep",
+      "replacementCandidateId": null,
+      "rollbackProcedure": "문서 되돌림"
+    }
+  ]
+}

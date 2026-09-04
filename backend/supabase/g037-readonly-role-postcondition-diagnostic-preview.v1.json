@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_postcondition_diagnostic_preview",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "roleNameSha256": "6f9496e3281f06ffed1b475eadb1ef33e4f6f61724c0a32caf35772d5e2bd515",
+  "failedAttempt": {
+    "path": "backend/supabase/g037-readonly-role-apply-attempt.v2.json",
+    "sha256": "52d4e75d479810ffd35f0fec848f5759d3b3f4996349ea04a9dfa3869db5a175",
+    "fixedCode": "role_postcondition_denied",
+    "persistentHostedStateChanged": false
+  },
+  "diagnosticSql": {
+    "path": "backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql",
+    "sha256": "2f926d1a8ceccbb552718cdeb95c6c55d9922b9a9805efee66f85c6205bf7755",
+    "topLevelStatementCount": 16,
+    "transactional": true,
+    "commitStatementPresent": false,
+    "rollbackStatementPresent": true,
+    "passwordMaterialIncluded": false,
+    "migrationLedgerMutation": false
+  },
+  "diagnosticScope": {
+    "transientRoleCreation": true,
+    "transientRoleSettings": true,
+    "transientMinimalGrants": true,
+    "fixedCodeFirstMismatch": true,
+    "alwaysAbortsBeforePersistentCommit": true,
+    "persistentRoleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "allowedFixedCodes": [
+    "g037_diag_role_flags_not_exact",
+    "g037_diag_target_function_missing",
+    "g037_diag_role_settings_not_exact",
+    "g037_diag_database_privileges_not_exact",
+    "g037_diag_schema_privileges_not_exact",
+    "g037_diag_column_grants_not_exact",
+    "g037_diag_unexpected_direct_acl",
+    "g037_diag_owned_objects_not_zero",
+    "g037_diag_memberships_not_zero",
+    "g037_diag_database_connect_missing",
+    "g037_diag_database_create_present",
+    "g037_diag_public_schema_create_present",
+    "g037_diag_version_select_missing",
+    "g037_diag_name_select_missing",
+    "g037_diag_statements_select_missing",
+    "g037_diag_target_execute_present",
+    "g037_diag_all_conditions_passed"
+  ],
+  "localValidation": {
+    "postgresVersion": "17.11",
+    "observedFixedCode": "g037_diag_all_conditions_passed",
+    "roleAbsentAfterDiagnostic": true,
+    "hostedConnectionUsed": false
+  },
+  "approvalGate": {
+    "status": "diagnostic_preview_owner_approval_required",
+    "previewOwnerApproved": false,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "which hosted postcondition differs",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

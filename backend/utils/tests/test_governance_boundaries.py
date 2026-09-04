@@ -325,8 +325,9 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
 # `20260828000100_hosted_candidate_identity_unique.sql`. This test asserts that file
 # exists, is purely additive (creates a new object; performs no drop/alter/destructive
 # operation on prior migration objects), introduces an object name not created by any
-# prior migration, and is appended as the newest migration (prior applied migrations
-# remain in place, not renamed or overwritten).
+# prior migration, and remains ordered after the prior applied migration it extends.
+# Later additive migrations are allowed to sort after the R4 migration; otherwise this
+# historical immutability check would break every time a legitimate migration is added.
 # ---------------------------------------------------------------------------
 
 NEW_R4_MIGRATION = "20260828000100_hosted_candidate_identity_unique.sql"
@@ -434,17 +435,18 @@ class GovernanceAppliedMigrationImmutabilityTest(unittest.TestCase):
             ),
         )
 
-    def test_new_r4_migration_is_the_newest_appended_file(self) -> None:
-        # Appended as the newest migration: prior applied migrations are left in place
-        # (not renamed/overwritten) and the new file sorts last by its timestamp prefix.
+    def test_new_r4_migration_remains_after_its_referenced_history(self) -> None:
+        # The R4 migration must remain ordered after the applied migration it extends.
+        # Newer additive migrations may follow it without weakening this boundary.
         self.assertTrue(self.migration_names, msg="no migration files discovered")
-        self.assertEqual(
-            self.migration_names[-1],
-            NEW_R4_MIGRATION,
+        self.assertIn(NEW_R4_MIGRATION, self.migration_names)
+        self.assertLess(
+            self.migration_names.index(REFERENCED_PRIOR_MIGRATION),
+            self.migration_names.index(NEW_R4_MIGRATION),
             msg=(
-                f"{NEW_R4_MIGRATION} must be the newest (lexicographically last) "
-                "migration, confirming it was appended rather than inserted among or "
-                "overwriting already-applied migrations (R9.7)"
+                f"{NEW_R4_MIGRATION} must remain after the prior applied migration "
+                f"{REFERENCED_PRIOR_MIGRATION} instead of renaming, replacing, or "
+                "overwriting that history (R9.7)"
             ),
         )
 

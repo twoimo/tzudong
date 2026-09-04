@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_postcondition_diagnostic_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T07:01:59Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "continuity": {
+    "failedV2AttemptPath": "backend/supabase/g037-readonly-role-apply-attempt.v2.json",
+    "failedV2AttemptSha256": "52d4e75d479810ffd35f0fec848f5759d3b3f4996349ea04a9dfa3869db5a175",
+    "v2ApplyAuthorizationPath": "backend/supabase/g037-readonly-role-apply-authorization.v2.json",
+    "v2ApplyAuthorizationSha256": "7178b0bb2dd01a00c0d6f01d608564432fd002ad6a21f0677abd57613995ed1d",
+    "priorV2ApplyAuthorizationReusable": false
+  },
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-postcondition-diagnostic-preview.v1.json",
+      "sha256": "8280b2848fbdcd7209affcf8eeb4aa539afe460defdacb97fc5552b84db7693b"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql",
+      "sha256": "2f926d1a8ceccbb552718cdeb95c6c55d9922b9a9805efee66f85c6205bf7755"
+    }
+  ],
+  "approvedScope": {
+    "rollbackOnlyDiagnosticPreviewReview": true,
+    "fixedCodeDiagnosticSqlReview": true,
+    "productionDiagnosticExecution": false,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "executionGate": {
+    "status": "separate_one_time_diagnostic_execution_authorization_required",
+    "previewOwnerApproved": true,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "which hosted postcondition differs",
+    "production diagnostic execution",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

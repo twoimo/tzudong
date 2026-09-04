@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_creator_membership_diagnostic_preview",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "roleNameSha256": "6f9496e3281f06ffed1b475eadb1ef33e4f6f61724c0a32caf35772d5e2bd515",
+  "priorMembershipDiagnosticAttempt": {
+    "path": "backend/supabase/g037-readonly-role-membership-diagnostic-attempt.v2.json",
+    "sha256": "a7cba5f5eac9fa241c75f53f0b0c169ef291fc7b2e8889c4627b243057919bdc",
+    "fixedCode": "g037_membership_diag_has_elevated_member",
+    "membershipDirection": "has_member",
+    "hasMemberCount": 1,
+    "persistentHostedStateChanged": false
+  },
+  "postgres17Reference": {
+    "roleAttributesUrl": "https://www.postgresql.org/docs/17/role-attributes.html",
+    "revokeUrl": "https://www.postgresql.org/docs/17/sql-revoke.html",
+    "automaticGrantExpectation": "a role created by a non-superuser CREATEROLE user is granted back to that creator with ADMIN true, SET false, and INHERIT false by the bootstrap superuser",
+    "productionEquivalenceConfirmed": false
+  },
+  "diagnosticSql": {
+    "path": "backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql",
+    "sha256": "9df2ba5db3e7a527d49df00025f15504fb29003fb543e6c3a735dc5d92a43e4b",
+    "topLevelStatementCount": 16,
+    "transactional": true,
+    "commitStatementPresent": false,
+    "rollbackStatementPresent": true,
+    "passwordMaterialIncluded": false,
+    "migrationLedgerMutation": false
+  },
+  "diagnosticScope": {
+    "transientRoleCreation": true,
+    "transientRoleSettings": true,
+    "transientMinimalGrants": true,
+    "parentMembershipMustBeAbsent": true,
+    "memberCardinalityMustEqualOne": true,
+    "memberMustEqualCurrentUser": true,
+    "currentUserMustBeNonSuperuserCreateRole": true,
+    "grantorMustBeSuperuser": true,
+    "adminOptionMustBeTrue": true,
+    "setOptionMustBeFalse": true,
+    "inheritOptionMustBeFalse": true,
+    "fixedCodeOnly": true,
+    "roleNameOutput": false,
+    "persistentRoleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "allowedFixedCodes": [
+    "g037_creator_diag_precondition_failed",
+    "g037_creator_diag_role_missing",
+    "g037_creator_diag_parent_membership_present",
+    "g037_creator_diag_member_cardinality_not_one",
+    "g037_creator_diag_member_not_current_user",
+    "g037_creator_diag_current_user_attribute_mismatch",
+    "g037_creator_diag_grantor_not_superuser",
+    "g037_creator_diag_admin_option_missing",
+    "g037_creator_diag_set_option_present",
+    "g037_creator_diag_inherit_option_present",
+    "g037_creator_diag_creator_admin_only"
+  ],
+  "localValidation": {
+    "postgresVersion": "17.11",
+    "executorPrivilegeClass": "database_owner_nonsuperuser_createrole",
+    "observedFixedCode": "g037_creator_diag_creator_admin_only",
+    "roleAbsentAfterDiagnostic": true,
+    "scratchClusterMovedToRecoverableTrash": true,
+    "hostedConnectionUsed": false
+  },
+  "approvalGate": {
+    "status": "creator_membership_diagnostic_preview_owner_approval_required",
+    "previewOwnerApproved": false,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "production creator identity or grantor identity",
+    "production membership admin, set, or inherit options",
+    "production automatic creator-membership equivalence",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

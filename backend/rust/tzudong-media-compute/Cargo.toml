@@ -1,0 +1,28 @@
+# Migration_Slice R4-media-compute (design C1/D1).
+#
+# Behavioral-parity Rust backing for the frame-selection / metadata-compute
+# pure functions in backend/restaurant-crawling/scripts/chunk_planner.py (and
+# the format_time helper it imports from src/utils/chunk_utils.py). ffmpeg
+# process orchestration and file I/O stay in Python (design C1). This crate is
+# NOT the public entry point; the Implementation_Selector opts it in per slice
+# (requirements 1.1, 1.3).
+#
+# PyO3 is an OPTIONAL dependency behind the `python` feature (task 42 pattern).
+[package]
+name = "tzudong-media-compute"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "tzudong_media_compute"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+
+[features]
+default = []
+python = ["dep:pyo3"]

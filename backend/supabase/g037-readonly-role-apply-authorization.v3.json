@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_apply_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "authorizedAt": "2026-09-04T09:35:17Z",
+  "authorizationEvidenceBoundary": "user-provided named-owner confirmation in the current task transcript that the immediately preceding hash-bound production apply request is approved; no external immutable receipt",
+  "authorizationRequest": {
+    "path": "backend/supabase/g037-readonly-role-apply-authorization-request.v3.json",
+    "sha256": "a983a4f6ca843a3dc8d5ea9991d6bb2c66de5670ddbca0c1d96ed13f17abd9ef"
+  },
+  "previewApproval": {
+    "path": "backend/supabase/g037-readonly-role-preview-approval.v3.json",
+    "sha256": "1547c6532e786f4a9767e546da0f2b43c55c488cd4266272d6eb3877b4899581"
+  },
+  "authorizedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql",
+    "sha256": "77542865f044f10c8d6d86f99ba015ef3419a3dfacf5e4ad9c44cc8848d6c4a8"
+  },
+  "requiredReadback": {
+    "path": "backend/supabase/scripts/g037_readonly_role_readback_v3.sql",
+    "sha256": "8a225381a61ff1c752bcdee89722d16e9173a1aadda0fbcc35707cb9cbdeae09",
+    "maximumExecutionCount": 1,
+    "boundedFixedKeysOnly": true
+  },
+  "reviewedControllerAdmission": {
+    "path": "backend/supabase/scripts/g037_hosted_closure_executor.py",
+    "sha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0",
+    "executionAuthorized": false
+  },
+  "continuity": {
+    "failedApplyAttemptPath": "backend/supabase/g037-readonly-role-apply-attempt.v2.json",
+    "failedApplyAttemptSha256": "52d4e75d479810ffd35f0fec848f5759d3b3f4996349ea04a9dfa3869db5a175",
+    "creatorMembershipDiagnosticAuthorizationPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-authorization.v3.json",
+    "creatorMembershipDiagnosticAuthorizationSha256": "25c763681bc2c3d141be7c363c945c16ff3c2aa3159d89f770361731b8a31254",
+    "creatorMembershipDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-attempt.v3.json",
+    "creatorMembershipDiagnosticAttemptSha256": "cb1398d04e5c943a1780b03380d7d4ea61ee86e0afb45fb89877684b4393613e",
+    "allPriorExecutionAuthorizationsReusable": false
+  },
+  "authorizedScope": {
+    "maximumProvisioningExecutionCount": 1,
+    "productionProvisioningV3": true,
+    "immediateBoundedReadbackV3": true,
+    "passwordConfiguration": false,
+    "credentialGeneration": false,
+    "repositorySecretMutation": false,
+    "controllerDispatch": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false,
+    "releaseOrDeployment": false
+  },
+  "preconditions": {
+    "projectMustEqualAqlcofblfxdrjhhdmarw": true,
+    "projectMustBeActiveHealthy": true,
+    "postgresMajorVersionMustEqual17": true,
+    "databaseMustEqualPostgres": true,
+    "roleMustBeAbsent": true,
+    "migrationLedgerMustExist": true,
+    "migrationCountMustEqual50": true,
+    "terminalMigrationMustEqual20260804000500": true,
+    "targetFunctionMustExist": true,
+    "authorizationRequestHashMustMatch": true,
+    "previewApprovalHashMustMatch": true,
+    "provisioningSqlHashMustMatch": true,
+    "readbackSqlHashMustMatch": true,
+    "controllerAdmissionHashMustMatch": true
+  },
+  "executionDiscipline": {
+    "consumeAuthorizationBeforeSql": true,
+    "retryUnderSameAuthorization": false,
+    "ambiguousCommitRetryAllowed": false,
+    "providerErrorRetention": false,
+    "fixedCodeOrBoundedReadbackOnly": true
+  },
+  "executionStateAtAuthorization": {
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 0,
+    "hostedApplyPerformed": false,
+    "postapplyReadbackPerformed": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "production provisioning v3 execution",
+    "production dedicated-role persistence",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

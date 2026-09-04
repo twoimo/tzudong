@@ -23,7 +23,12 @@ CONSUMER_GROUP = "pipeline-indexer"
 BULK_LIMIT = 50
 
 ALLOWED_MODES = frozenset({"noop", "es"})
-ALLOWED_ES_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "elasticsearch"})
+# Loki is the default local Log_Sink. Its admission deliberately reuses this
+# local-only guard, so the Docker-network service name belongs to the same
+# closed host set as the optional Elasticsearch sink.
+ALLOWED_ES_HOSTS = frozenset(
+    {"127.0.0.1", "localhost", "::1", "elasticsearch", "loki"}
+)
 LOG_ALLOWLIST = frozenset(
     {
         "type",
@@ -340,4 +345,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

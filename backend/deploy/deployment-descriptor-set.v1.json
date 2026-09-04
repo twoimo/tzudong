@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "kind": "deployment_descriptor_set",
+  "designSource": ".kiro/specs/platform-modernization/design.md#c10-이전-준비와-deployment_descriptor_set",
+  "requirements": ["14.2", "14.3", "14.4", "14.5", "14.6", "14.7"],
+  "note": "5개 구성요소 정의마다 이미지 참조·리소스 요청 값·환경 변수 이름과 출처 참조·시크릿 참조 이름 4항목을 모두 채운다. 어느 항목도 빈 상태로 두지 않는다. 자격증명·토큰·접속 문자열의 비밀 구성요소는 파일 내용에서 제외하고 외부 시크릿 참조 이름으로만 지시한다. 외부화 참조 이름은 backend/deploy/migration-readiness.v1.json과 동일하다. 이 카탈로그는 backend/deploy/helm/ Helm 차트와 backend/deploy/opentofu/ OpenTofu 구성이 렌더링하는 정규 소스다.",
+  "renderSources": [
+    "backend/deploy/helm/tzudong-platform",
+    "backend/deploy/opentofu"
+  ],
+  "clusterParameter": {
+    "name": "clusterId",
+    "note": "클러스터 식별자는 렌더링 매개변수로만 받는다. 서로 다른 2개 이상 식별자에 동일 정의 원본을 재사용하고, 렌더링 결과의 차이는 클러스터 식별자에서 파생된 필드(namespace·releaseName·clusterLabel·fullname)로만 한정한다.",
+    "derivedFields": ["namespace", "releaseName", "clusterLabel", "fullname"]
+  },
+  "components": [
+    {
+      "componentId": "Web_App",
+      "imageRef": "registry.local/tzudong/web-app:1.4.0",
+      "resourceRequest": "cpu=250m,memory=512Mi",
+      "envVars": [
+        { "name": "NODE_ENV", "source": "configmap:web-app-config/node_env" },
+        { "name": "SUPABASE_URL", "source": "secretRef:SUPABASE_URL_REF" },
+        { "name": "SUPABASE_ANON_KEY", "source": "secretRef:SUPABASE_ANON_KEY_REF" },
+        { "name": "SUPABASE_SERVICE_ROLE_KEY", "source": "secretRef:SUPABASE_SERVICE_ROLE_KEY_REF" }
+      ],
+      "secretRefs": [
+        "SUPABASE_URL_REF",
+        "SUPABASE_ANON_KEY_REF",
+        "SUPABASE_SERVICE_ROLE_KEY_REF"
+      ]
+    },
+    {
+      "componentId": "Backend_Runtime",
+      "imageRef": "registry.local/tzudong/pipeline-worker:1.4.0",
+      "resourceRequest": "cpu=500m,memory=1Gi",
+      "envVars": [
+        { "name": "TZUDONG_PROFILE", "source": "configmap:backend-runtime-config/profile" },
+        { "name": "PIPELINE_PG_DSN", "source": "secretRef:PIPELINE_PG_DSN_REF" },
+        { "name": "GEMINI_API_KEY", "source": "secretRef:GEMINI_API_KEY_REF" },
+        { "name": "YOUTUBE_API_KEY", "source": "secretRef:YOUTUBE_API_KEY_REF" }
+      ],
+      "secretRefs": [
+        "PIPELINE_PG_DSN_REF",
+        "GEMINI_API_KEY_REF",
+        "YOUTUBE_API_KEY_REF"
+      ]
+    },
+    {
+      "componentId": "Local_Stack",
+      "imageRef": "registry.local/tzudong/local-stack:1.4.0",
+      "resourceRequest": "cpu=500m,memory=1Gi",
+      "envVars": [
+        { "name": "POSTGRES_DB", "source": "configmap:local-stack-config/postgres_db" },
+        { "name": "MANAGED_PG_DSN", "source": "secretRef:MANAGED_PG_DSN_REF" },
+        { "name": "JWT_SECRET", "source": "secretRef:JWT_SECRET_REF" }
+      ],
+      "secretRefs": [
+        "MANAGED_PG_DSN_REF",
+        "JWT_SECRET_REF"
+      ]
+    },
+    {
+      "componentId": "Observability_Stack",
+      "imageRef": "registry.local/tzudong/observability:1.4.0",
+      "resourceRequest": "cpu=250m,memory=768Mi",
+      "envVars": [
+        { "name": "GF_SERVER_ROOT_URL", "source": "configmap:observability-config/grafana_root_url" },
+        { "name": "GF_SECURITY_ADMIN_PASSWORD", "source": "secretRef:GRAFANA_ADMIN_PASSWORD_REF" },
+        { "name": "LOKI_STORAGE", "source": "secretRef:LOKI_STORAGE_REF" }
+      ],
+      "secretRefs": [
+        "GRAFANA_ADMIN_PASSWORD_REF",
+        "LOKI_STORAGE_REF"
+      ]
+    },
+    {
+      "componentId": "Log_Pipeline",
+      "imageRef": "registry.local/tzudong/otel-collector:1.4.0",
+      "resourceRequest": "cpu=200m,memory=384Mi",
+      "envVars": [
+        { "name": "OTEL_LOG_LEVEL", "source": "configmap:log-pipeline-config/otel_log_level" },
+        { "name": "LOG_SINK_URL", "source": "secretRef:LOG_SINK_URL_REF" },
+        { "name": "LOG_SINK_TOKEN", "source": "secretRef:LOG_SINK_TOKEN_REF" }
+      ],
+      "secretRefs": [
+        "LOG_SINK_URL_REF",
+        "LOG_SINK_TOKEN_REF"
+      ]
+    }
+  ]
+}

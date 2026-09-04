@@ -145,7 +145,7 @@ jobs:
           node-version: '24'
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - name: Create independent clean workspaces
         run: |
           set -euo pipefail
@@ -184,7 +184,7 @@ jobs:
           root="$RUNNER_TEMP/dependency-modernization-proof/bun/apps/web"
           node_bin="$(command -v node)"
           npm_bin="$(command -v npm)"
-          test "$(bun --version)" = "1.2.16"
+          test "$(bun --version)" = "1.4.0"
           (
             cd "$root"
             bun install --frozen-lockfile
@@ -220,7 +220,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
       - run: npm ci
@@ -232,7 +232,7 @@ jobs:
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD^{tree})"
-          npm run bench:typecheck -- --profile ubuntu-npm --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json"
+          npm run typecheck:benchmark -- --profile ubuntu-npm --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-npm/report.json"
       - id: report
         continue-on-error: true
         run: |
@@ -273,7 +273,7 @@ jobs:
           node-version: '24'
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
       - run: bun run typecheck:verify
       - run: bun run typecheck:native
@@ -283,7 +283,7 @@ jobs:
         continue-on-error: true
         run: |
           tree="$(git -C "$GITHUB_WORKSPACE/web-bun" rev-parse HEAD^{tree})"
-          bun run bench:typecheck -- --profile ubuntu-bun --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json"
+          bun run typecheck:benchmark -- --profile ubuntu-bun --release-id "$tree" --output "$RUNNER_TEMP/ts7-release/$tree/ubuntu-bun/report.json"
       - id: report
         continue-on-error: true
         run: |
@@ -325,7 +325,7 @@ jobs:
           cache-dependency-path: web-npm/apps/web/package-lock.json
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - name: Pin npm authority
         run: |
           npm install --global npm@11.6.2
@@ -341,7 +341,7 @@ jobs:
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-npm'
           $tree = git -C $root rev-parse 'HEAD^{tree}'
-          npm run bench:typecheck -- --profile windows-npm --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json")
+          npm run typecheck:benchmark -- --profile windows-npm --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-npm\report.json")
       - id: report
         continue-on-error: true
         run: |
@@ -383,7 +383,7 @@ jobs:
           node-version: '24'
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - run: bun install --frozen-lockfile
       - run: bun run typecheck:verify
       - run: bun run typecheck:native
@@ -394,7 +394,7 @@ jobs:
         run: |
           $root = Join-Path $env:GITHUB_WORKSPACE 'web-bun'
           $tree = git -C $root rev-parse 'HEAD^{tree}'
-          bun run bench:typecheck -- --profile windows-bun --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json")
+          bun run typecheck:benchmark -- --profile windows-bun --release-id $tree --output (Join-Path $env:RUNNER_TEMP "ts7-release\$tree\windows-bun\report.json")
       - id: report
         continue-on-error: true
         run: |
@@ -445,7 +445,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: '1.2.16'
+          bun-version: '1.4.0'
       - name: Pin npm authority
         run: npm install --global npm@11.6.2 && test "$(npm --version)" = "11.6.2"
       - run: npm ci

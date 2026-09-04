@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import unittest
 
-from hosted_data_plane import (
+from backend.supabase.scripts.hosted_data_plane import (
     APPROVAL_ENV,
     HOSTED_URL,
     HostedDataPlaneError,

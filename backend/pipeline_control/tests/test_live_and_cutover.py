@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from hashlib import sha256
 import os
 import tempfile
 import unittest
@@ -13,10 +12,12 @@ from pathlib import Path
 from backend.pipeline_control.adapter import ADAPTER_STEPS, execute_steps
 from backend.pipeline_control.cutover import plan_cutover
 from backend.pipeline_control.manifest import (
+    LIVE_EVIDENCE_FIELDS,
     is_live_evidence_eligible,
     is_live_execution_success,
     record_parity_attempt,
 )
+from backend.pipeline_control.live_evidence import canonical_sha256
 from backend.pipeline_control.state_machine import RunRecord
 from backend.pipeline_control.store import MemoryStore
 from backend.pipeline_control.worker import process_one, write_run_manifest
@@ -28,7 +29,7 @@ from backend.utils.supabase_rest import (
 
 def _live_evidence(job_id: str) -> dict:
     readback_sha = "c" * 64
-    return {
+    payload = {
         "jobId": job_id,
         "sameRunIdVerified": True,
         "executionMode": "live",
@@ -46,11 +47,19 @@ def _live_evidence(job_id: str) -> dict:
         "baselineSha256": readback_sha,
         "candidateSha256": readback_sha,
         "readbackSha256": readback_sha,
-        "evidenceReceiptSha256": sha256(job_id.encode("utf-8")).hexdigest(),
+        "evidenceReceiptSha256": None,
         "baselineRowCount": 25,
         "candidateRowCount": 25,
         "readbackRowCount": 25,
     }
+    payload["evidenceReceiptSha256"] = canonical_sha256(
+        {
+            field: payload.get(field)
+            for field in LIVE_EVIDENCE_FIELDS
+            if field != "evidenceReceiptSha256"
+        }
+    )
+    return payload
 
 
 class LiveAdapterTests(unittest.TestCase):

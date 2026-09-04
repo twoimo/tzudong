@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_apply_authorization_consumption",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "operationId": "d983a200-adc4-4c15-8521-f63e278bcc6b",
+  "consumedAt": "2026-09-04T09:38:55Z",
+  "authorization": {
+    "path": "backend/supabase/g037-readonly-role-apply-authorization.v3.json",
+    "sha256": "0bf534d0db55f220d25fdbf9a9e727c3b665b32f7d5ea6ca9989d70f3fe20adb",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "reusable": false
+  },
+  "authorizationRequest": {
+    "path": "backend/supabase/g037-readonly-role-apply-authorization-request.v3.json",
+    "sha256": "a983a4f6ca843a3dc8d5ea9991d6bb2c66de5670ddbca0c1d96ed13f17abd9ef"
+  },
+  "approvedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql",
+    "sha256": "77542865f044f10c8d6d86f99ba015ef3419a3dfacf5e4ad9c44cc8848d6c4a8"
+  },
+  "requiredReadback": {
+    "path": "backend/supabase/scripts/g037_readonly_role_readback_v3.sql",
+    "sha256": "8a225381a61ff1c752bcdee89722d16e9173a1aadda0fbcc35707cb9cbdeae09",
+    "maximumExecutionCount": 1
+  },
+  "preexecutionReadback": {
+    "projectActiveHealthy": true,
+    "postgresVersion": "17.6.1.038",
+    "postgresMajorVersion": 17,
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "executionBoundary": {
+    "productionExecutionNotYetObserved": true,
+    "executionWithinThisBoundOperationRemaining": 1,
+    "externalRetryAllowed": false,
+    "passwordConfigurationAuthorized": false,
+    "credentialGenerationAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "controllerDispatchAuthorized": false,
+    "workflowDispatchAuthorized": false,
+    "migrationLedgerMutationAuthorized": false,
+    "releaseOrDeploymentAuthorized": false
+  },
+  "notEvidenceOf": [
+    "production provisioning v3 execution",
+    "production transaction commit",
+    "production dedicated-role persistence",
+    "postapply readback",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

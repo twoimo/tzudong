@@ -731,7 +731,10 @@ class OverlayAndDocsTests(unittest.TestCase):
         workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
             encoding="utf-8"
         )
-        self.assertIn("image: postgres:15", workflow)
+        self.assertRegex(
+            workflow,
+            r"image: postgres@sha256:[0-9a-f]{64} # postgres:15",
+        )
         self.assertIn("python3 -m backend.pipeline_control.worker", workflow)
         self.assertIn("TZUDONG_COMPUTE_PROFILE: lite_gha", workflow)
         self.assertNotIn("bash backend/run_daily.sh", workflow)

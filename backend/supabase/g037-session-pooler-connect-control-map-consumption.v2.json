@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_session_pooler_connect_control_map_authorization_consumption",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "eaa06de4-4182-407d-b9cf-d62f683c7c3f",
+  "consumedAt": "2026-09-04T18:15:12Z",
+  "authorization": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-authorization.v2.json",
+    "sha256": "62b222c88728c0b993359dd472e36aa7fcfa715bceaac3dd6e1675f76c09e069",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "remainingExecutionCount": 0,
+    "reusable": false
+  },
+  "authorizationRequest": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v2.json",
+    "sha256": "e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08"
+  },
+  "browserSource": {
+    "path": "backend/supabase/scripts/g037_session_pooler_control_map_read_v2.mjs",
+    "sha256": "a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc",
+    "exactSingleLineTopLevelAwaitSource": true
+  },
+  "receiptContract": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v2.json",
+    "sha256": "15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c",
+    "verifierPath": "backend/supabase/scripts/g037_session_pooler_control_map_receipt_v2.py",
+    "verifierSha256": "7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb"
+  },
+  "executionBoundary": {
+    "browserExecutionNotYetStarted": true,
+    "executionWithinThisBoundOperationRemaining": 1,
+    "maximumDashboardOpenCount": 1,
+    "maximumControlSnapshotCount": 2,
+    "maximumControlClickCount": 1,
+    "externalRetryAllowed": false,
+    "metadataValueReadAuthorized": false,
+    "sessionPoolerControlClickAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrCredentialWorkAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false,
+    "migrationReleaseOrDeploymentAuthorized": false
+  },
+  "notEvidenceOf": [
+    "a Dashboard open or control-only read attempt",
+    "a successful control map, verified observation, or verified receipt",
+    "an exact hostname, username, region, port, database, DSN, credential, certificate, cookie, token, or key",
+    "session-pooler selection, metadata read, reachability, authentication, or role mapping",
+    "authorization for any retry or successor external action",
+    "password, repository Secret, controller, workflow, migration, release, or deployment work"
+  ]
+}

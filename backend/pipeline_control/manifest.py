@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping
 
+from backend.pipeline_control.live_evidence import canonical_sha256
 from backend.pipeline_control.schedule import utc_to_kst_minutes
 from backend.utils.run_daily_helpers import (
     validate_summary_manifest_payload,
@@ -108,6 +109,12 @@ def is_live_evidence_eligible(manifest: dict[str, Any]) -> bool:
         manifest.get("candidateRowCount"),
         manifest.get("readbackRowCount"),
     )
+    receipt_fields = {
+        field: manifest.get(field)
+        for field in LIVE_EVIDENCE_FIELDS
+        if field != "evidenceReceiptSha256"
+    }
+    expected_receipt_sha = canonical_sha256(receipt_fields)
     return bool(
         is_live_execution_success(manifest)
         and manifest.get("evidenceSchemaVersion") == LIVE_EVIDENCE_SCHEMA
@@ -122,6 +129,7 @@ def is_live_evidence_eligible(manifest: dict[str, Any]) -> bool:
         )
         and manifest.get("baselineSha256") == manifest.get("candidateSha256")
         and manifest.get("candidateSha256") == manifest.get("readbackSha256")
+        and manifest.get("evidenceReceiptSha256") == expected_receipt_sha
         and all(
             isinstance(value, int) and not isinstance(value, bool) and value >= 0
             for value in counts
@@ -339,6 +347,10 @@ def refuse_shim_deletion(ledger: dict[str, Any]) -> None:
 
 # Fixed maximum length for the one-line Operator-readable summary (R5.8).
 OPERATOR_SUMMARY_MAX_LENGTH = 200
+REFLECTION_MAX_ITEMS_PER_BUCKET = 100
+REFLECTION_CANDIDATE_ID_RE = re.compile(r"[A-Za-z0-9_-]{11}")
+OPERATOR_EXECUTION_MODES = frozenset({"dry_run", "live"})
+OPERATOR_DATA_SINKS = frozenset({"artifact_only", "hosted_apply", "local_db"})
 
 # Closed set of hosted-gate rejection codes recorded in the manifest (R3.7).
 # The gate's internal configuration conditions are mapped onto exactly one of
@@ -472,18 +484,30 @@ def empty_reflection_accounting() -> dict[str, list[str]]:
 def normalize_reflection_accounting(reflection: object) -> dict[str, list[str]]:
     """Coerce a reflection object into the bounded three-list accounting shape.
 
-    Only ``applied`` / ``skippedAlreadyPresent`` / ``unresolved`` string lists
-    are retained; anything else is dropped so no raw payload leaks into the
-    manifest (R4.4, R5.9).
+    Only bounded 11-character video identities in ``applied`` /
+    ``skippedAlreadyPresent`` / ``unresolved`` are retained. Duplicates are
+    removed across buckets in precedence order and every other value is dropped
+    so no raw payload or diagnostic can leak into the manifest (R4.4, R5.9).
     """
 
     if not isinstance(reflection, dict):
         return empty_reflection_accounting()
     normalized: dict[str, list[str]] = {}
+    seen: set[str] = set()
     for key in ("applied", "skippedAlreadyPresent", "unresolved"):
         value = reflection.get(key)
         if isinstance(value, list):
-            normalized[key] = [item for item in value if isinstance(item, str)]
+            bucket: list[str] = []
+            for item in value:
+                if (
+                    isinstance(item, str)
+                    and REFLECTION_CANDIDATE_ID_RE.fullmatch(item) is not None
+                    and item not in seen
+                    and len(bucket) < REFLECTION_MAX_ITEMS_PER_BUCKET
+                ):
+                    bucket.append(item)
+                    seen.add(item)
+            normalized[key] = bucket
         else:
             normalized[key] = []
     return normalized
@@ -502,11 +526,26 @@ def build_operator_summary(
     count without requiring raw log inspection, truncated to the fixed maximum.
     """
 
-    mode = execution_mode if isinstance(execution_mode, str) and execution_mode else "unknown"
-    sink = data_sink if isinstance(data_sink, str) and data_sink else "unknown"
+    status = (
+        final_status
+        if isinstance(final_status, str)
+        and final_status in {FINAL_STATUS_OK, FINAL_STATUS_ERROR}
+        else FINAL_STATUS_ERROR
+    )
+    mode = (
+        execution_mode
+        if isinstance(execution_mode, str)
+        and execution_mode in OPERATOR_EXECUTION_MODES
+        else "unknown"
+    )
+    sink = (
+        data_sink
+        if isinstance(data_sink, str) and data_sink in OPERATOR_DATA_SINKS
+        else "unknown"
+    )
     count = failed_required_count if isinstance(failed_required_count, int) and failed_required_count >= 0 else 0
     summary = (
-        f"status={final_status} mode={mode} sink={sink} failedRequiredSteps={count}"
+        f"status={status} mode={mode} sink={sink} failedRequiredSteps={count}"
     )
     return summary[:OPERATOR_SUMMARY_MAX_LENGTH]
 

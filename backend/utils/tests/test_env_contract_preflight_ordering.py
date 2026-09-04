@@ -59,10 +59,7 @@ WORKFLOW_RUNNERS = [
         "path": ".github/workflows/daily-crawler.yml",
         "job": "hosted-pending-apply",
         "profiles": {"hosted-pending-apply"},
-        "pipeline_markers": (
-            "evaluate_new_youtube_videos.py",
-            "apply_hosted_pending_candidates.py",
-        ),
+        "pipeline_markers": ("run_hosted_new_video_pipeline.py",),
     },
     {
         "path": ".github/workflows/gdrive-frame-backfill.yml",

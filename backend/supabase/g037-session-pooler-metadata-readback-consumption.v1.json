@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_metadata_readback_authorization_consumption",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "decadec1-e495-4d0c-bf4d-d756ffe91ee2",
+  "consumptionRecordedAt": "2026-09-04T16:32:51Z",
+  "authorization": {
+    "path": "backend/supabase/g037-session-pooler-metadata-readback-authorization.v1.json",
+    "sha256": "240b24087110c8e88c7859f3370f3fba21aa1bf6af4032410fefc99a7226a54f",
+    "approvedReadCount": 1,
+    "consumedReadCount": 1,
+    "remainingReadCount": 0,
+    "reusable": false
+  },
+  "authorizationRequest": {
+    "path": "backend/supabase/g037-session-pooler-metadata-readback-request.v1.json",
+    "sha256": "f8101542b4f10bc8acaeb1bd657f7d5c0c1add9fbf30ccd456523255db9bcc22"
+  },
+  "previewApproval": {
+    "path": "backend/supabase/g037-session-pooler-alternative-preview-approval.v1.json",
+    "sha256": "50d9c3b69fe5ecd2024378c67141a7f41081434ecaec3a7ed1da0783b3ef9279"
+  },
+  "consumptionEvent": {
+    "trigger": "first authorized production Dashboard tab open",
+    "dashboardOpenCount": 1,
+    "inspectionAttemptCount": 1,
+    "retryCount": 0,
+    "centralAuthorizationGateRecordedBeforeRead": true,
+    "consumptionArtifactRecordedBeforeRead": false,
+    "exactEventSecondClaimed": false
+  },
+  "executionBoundary": {
+    "authorizedReadAttemptObserved": true,
+    "executionWithinThisBoundOperationRemaining": 0,
+    "externalRetryAllowed": false,
+    "sessionPoolerMetadataReceiptAllowedAfterFailedAttempt": false,
+    "networkProbeAuthorized": false,
+    "passwordOrCredentialWorkAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false,
+    "migrationReleaseOrDeploymentAuthorized": false
+  },
+  "notEvidenceOf": [
+    "successful Session pooler metadata readback",
+    "a verified metadata receipt",
+    "an exact hostname, username, DSN, credential, certificate, cookie, or token",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "authorization for a retry or successor external action",
+    "password or repository secret work",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

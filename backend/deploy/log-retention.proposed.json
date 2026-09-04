@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "proposedClasses": [
+    {
+      "classId": "operational_logs",
+      "proposedRetentionDays": 30,
+      "legalBasis": null,
+      "trigger": null,
+      "activation": { "status": "unresolved", "approverName": null, "approvedAt": null }
+    },
+    {
+      "classId": "audit_events",
+      "proposedRetentionDays": null,
+      "note": "기존 프라이버시 보존 분류가 지배한다. 여기서 기간을 발명하지 않는다.",
+      "legalBasis": null,
+      "trigger": null,
+      "activation": { "status": "unresolved", "approverName": null, "approvedAt": null }
+    }
+  ]
+}

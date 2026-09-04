@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_membership_diagnostic_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T07:53:19Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "continuity": {
+    "priorDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-postcondition-diagnostic-attempt.v1.json",
+    "priorDiagnosticAttemptSha256": "23bd86c72d4e0bc4c53707cff4cc73e6f5b88c43decfcf2f7924b40af64e64a1",
+    "spentDiagnosticAuthorizationPath": "backend/supabase/g037-readonly-role-postcondition-diagnostic-authorization.v1.json",
+    "spentDiagnosticAuthorizationSha256": "b8bd2d1c2a6fd0f6b37d04c1f2a12506dc8985ea097ea8ae3fd337a266ab6b10",
+    "priorDiagnosticAuthorizationReusable": false
+  },
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-membership-diagnostic-preview.v2.json",
+      "sha256": "cdb21a3f3cfe6fe52cb37efbc3c40226a5425688321378ff3dbe6a41cf920394"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql",
+      "sha256": "29b7ef6084eb2732e65028dd1a0158a8cf5eec2ac60b3c081ddffd9d8461ad8a"
+    }
+  ],
+  "approvedScope": {
+    "rollbackOnlyMembershipDiagnosticPreviewReview": true,
+    "fixedCodeMembershipDiagnosticSqlReview": true,
+    "productionDiagnosticExecution": false,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "executionGate": {
+    "status": "separate_one_time_membership_diagnostic_execution_authorization_required",
+    "previewOwnerApproved": true,
+    "diagnosticExecutionAuthorized": false,
+    "diagnosticExecuted": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "production membership direction, count, adjacent role identity, or effective privilege",
+    "production membership diagnostic execution",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_postcondition_diagnostic_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "attemptObservedAt": "2026-09-04T07:33:10Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "authorizationPath": "backend/supabase/g037-readonly-role-postcondition-diagnostic-authorization.v1.json",
+    "authorizationSha256": "b8bd2d1c2a6fd0f6b37d04c1f2a12506dc8985ea097ea8ae3fd337a266ab6b10",
+    "diagnosticApprovalPath": "backend/supabase/g037-readonly-role-postcondition-diagnostic-approval.v1.json",
+    "diagnosticApprovalSha256": "7b823f6425c9505495d2026ee3ef0f7c39abd7496a93204cdc4aebb754ca31bb",
+    "diagnosticSqlPath": "backend/supabase/scripts/g037_readonly_role_postcondition_diagnostic_v1.sql",
+    "diagnosticSqlSha256": "2f926d1a8ceccbb552718cdeb95c6c55d9922b9a9805efee66f85c6205bf7755"
+  },
+  "preexecutionReadback": {
+    "projectActiveHealthy": true,
+    "postgresMajorVersion": 17,
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCountExact": true,
+    "terminalMigrationExact": true
+  },
+  "outcome": {
+    "status": "rolled_back",
+    "fixedCode": "g037_diag_memberships_not_zero",
+    "fixedCodeAllowlisted": true,
+    "transactionCommitObserved": false,
+    "persistentRolePresentAfterDiagnostic": false,
+    "persistentHostedStateChanged": false,
+    "providerErrorRetained": false
+  },
+  "rollbackReadback": {
+    "roleAbsent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "diagnosisBoundary": {
+    "firstDifferingPostcondition": "membership_count_zero",
+    "membershipDirectionKnown": false,
+    "membershipCountKnown": false,
+    "membershipRoleIdentityRecorded": false,
+    "membershipRoleNameRecorded": false
+  },
+  "retryGate": {
+    "diagnosticV1RetryAllowed": false,
+    "authorizationReusable": false,
+    "rollbackOnlyMembershipDiagnosticPreviewRequired": true,
+    "freshMembershipDiagnosticPreviewApprovalRequired": true,
+    "freshMembershipDiagnosticExecutionAuthorizationRequired": true
+  },
+  "notEvidenceOf": [
+    "membership direction, count, role identity, or effective privilege",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

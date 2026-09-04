@@ -26,7 +26,7 @@ const PLAYWRIGHT_WEB_SERVER_COMMAND =
         : process.env.PLAYWRIGHT_WEB_SERVER_COMMAND
             ?? (runsDependencyModernizationSpec ? 'bun run start:playwright' : 'bun run dev:playwright');
 const PLAYWRIGHT_BASE_URL =
-    process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
+    process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080';
 const PLAYWRIGHT_WEB_SERVER_URL =
     process.env.PLAYWRIGHT_WEB_SERVER_URL ??
     new URL('/api/health', PLAYWRIGHT_BASE_URL).toString();

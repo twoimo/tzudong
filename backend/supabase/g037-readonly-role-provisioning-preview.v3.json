@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_provisioning_preview",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "roleNameSha256": "6f9496e3281f06ffed1b475eadb1ef33e4f6f61724c0a32caf35772d5e2bd515",
+  "supersedes": {
+    "path": "backend/supabase/g037-readonly-role-provisioning-preview.v2.json",
+    "sha256": "9351623d80b179e46b335e65a6fd67faf86485783fa7e5e1117022cef4261fb3",
+    "reasonCode": "documented_creator_admin_membership_shape_rejected"
+  },
+  "failedApplyAttempt": {
+    "path": "backend/supabase/g037-readonly-role-apply-attempt.v2.json",
+    "sha256": "52d4e75d479810ffd35f0fec848f5759d3b3f4996349ea04a9dfa3869db5a175",
+    "priorSqlRetryAllowed": false,
+    "persistentHostedStateChanged": false
+  },
+  "diagnosticBasis": {
+    "path": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-attempt.v3.json",
+    "sha256": "cb1398d04e5c943a1780b03380d7d4ea61ee86e0afb45fb89877684b4393613e",
+    "fixedCode": "g037_creator_diag_creator_admin_only",
+    "automaticCreatorMembershipObservableShapeMatched": true,
+    "persistentHostedStateChanged": false
+  },
+  "provisioningSql": {
+    "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql",
+    "sha256": "77542865f044f10c8d6d86f99ba015ef3419a3dfacf5e4ad9c44cc8848d6c4a8",
+    "topLevelStatementCount": 16,
+    "transactional": true,
+    "migrationLedgerMutation": false,
+    "credentialMaterialIncluded": false,
+    "loginPasswordStateAfterApply": "null"
+  },
+  "readbackSql": {
+    "path": "backend/supabase/scripts/g037_readonly_role_readback_v3.sql",
+    "sha256": "8a225381a61ff1c752bcdee89722d16e9173a1aadda0fbcc35707cb9cbdeae09",
+    "topLevelStatementCount": 1,
+    "mutationFree": true,
+    "boundedOutput": true
+  },
+  "controllerAdmission": {
+    "path": "backend/supabase/scripts/g037_hosted_closure_executor.py",
+    "sha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0",
+    "predicateCount": 33,
+    "parentMembershipMustBeAbsent": true,
+    "singleInboundMemberRequired": true,
+    "memberMustBeNonSuperuserCreateRole": true,
+    "grantorMustBeSuperuser": true,
+    "adminOptionMustBeTrue": true,
+    "setOptionMustBeFalse": true,
+    "inheritOptionMustBeFalse": true,
+    "nullableColumnAclExpansionStrict": true
+  },
+  "correction": {
+    "scope": "replace the impossible zero-membership condition with the production-proven PostgreSQL 17 creator-admin observable shape",
+    "provisioningMembershipPredicateCount": 8,
+    "readbackMembershipFieldsAdded": 9,
+    "controllerAdmissionPredicatesAdded": 6,
+    "controllerNullableAclReplacements": 2,
+    "parentMembershipAllowed": false,
+    "inboundSetOrInheritAllowed": false,
+    "grantSetChanged": false,
+    "rolePropertiesChanged": false,
+    "transactionBoundaryChanged": false
+  },
+  "directGrantSet": {
+    "database": [
+      "CONNECT on postgres"
+    ],
+    "schema": [
+      "USAGE on supabase_migrations"
+    ],
+    "columns": [
+      "SELECT on supabase_migrations.schema_migrations.version",
+      "SELECT on supabase_migrations.schema_migrations.name",
+      "SELECT on supabase_migrations.schema_migrations.statements"
+    ],
+    "relationLevel": [],
+    "functionLevel": [],
+    "defaultPrivileges": []
+  },
+  "sourceBoundary": {
+    "isSupabaseMigration": false,
+    "reason": "adding this operator credential to the migration ledger would change the exact G037 ledger being diagnosed",
+    "workflowReferencesProvisioningSql": false,
+    "automaticExecutionPathPresent": false
+  },
+  "syntaxValidation": {
+    "parser": "pglast",
+    "parserVersion": "7.10",
+    "provisioningStatementCount": 16,
+    "readbackStatementCount": 1,
+    "hostedConnectionUsed": false
+  },
+  "localValidation": {
+    "postgresVersion": "17.11",
+    "executorPrivilegeClass": "database_owner_nonsuperuser_createrole",
+    "provisioningCommitted": true,
+    "rolePresentAfterApply": true,
+    "creatorMembershipShapeExact": true,
+    "targetExecuteDenied": true,
+    "ownedObjectCount": 0,
+    "scratchClusterMovedToRecoverableTrash": true,
+    "hostedConnectionUsed": false
+  },
+  "approvalGate": {
+    "status": "corrected_v3_preview_owner_approval_required",
+    "previewOwnerApproved": false,
+    "hostedApplyAuthorized": false,
+    "previewExecuted": false,
+    "hostedStateChanged": false,
+    "credentialConfigured": false,
+    "repositorySecretChanged": false,
+    "controllerRetryAuthorized": false
+  },
+  "notEvidenceOf": [
+    "production provisioning v3 execution",
+    "production dedicated-role persistence",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

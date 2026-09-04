@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_preview_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T06:38:46Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "continuity": {
+    "priorApprovalPath": "backend/supabase/g037-readonly-role-preview-approval.v1.json",
+    "priorApprovalSha256": "de30f421190eff6185df7e136657aa5ff590585f9778b2dd281ff8306a172627",
+    "failedAttemptPath": "backend/supabase/g037-readonly-role-apply-attempt.v1.json",
+    "failedAttemptSha256": "184fc3caf143cba7f9fd9a97ce0d28372531990019e45760d94f2b7eca316046",
+    "priorExecutionAuthorizationReusable": false,
+    "externalCredentialCustodyProcedurePreviouslyApproved": true
+  },
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-provisioning-preview.v2.json",
+      "sha256": "9351623d80b179e46b335e65a6fd67faf86485783fa7e5e1117022cef4261fb3"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_provisioning_v2.sql",
+      "sha256": "b4241fa478ac287ba418a8a53cc826ccba4dc9b72eafe536c0c8aabad08cfdc3"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_readback_v2.sql",
+      "sha256": "62958564bcdef69cb7114b3c95d8f4e93e366468bcdc9ab060d82ab7c7a7e26b"
+    }
+  ],
+  "approvedScope": {
+    "correctedRoleAndGrantPreview": true,
+    "correctedProvisioningSqlReview": true,
+    "correctedReadbackSqlReview": true,
+    "hostedExecution": false,
+    "roleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "executionGate": {
+    "status": "fresh_one_time_hosted_apply_authorization_required",
+    "currentPreviewOwnerApproved": true,
+    "hostedApplyAuthorized": false,
+    "hostedApplyPerformed": false,
+    "postapplyReadbackPerformed": false
+  },
+  "notEvidenceOf": [
+    "dedicated role presence in production",
+    "v2 hosted SQL execution",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

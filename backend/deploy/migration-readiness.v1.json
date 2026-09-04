@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "kind": "migration_readiness_manifest",
+  "designSource": ".kiro/specs/platform-modernization/design.md#c10-이전-준비와-deployment_descriptor_set",
+  "requirements": ["14.1", "14.8", "14.12", "14.13"],
+  "statusVocabulary": ["unresolved", "external_evidence_confirmed"],
+  "statusInvariant": "외부 증거 참조 식별자(evidenceReference)가 없는 항목은 external_evidence_confirmed로 표기하지 않는다. 참조 없음 ⟹ ¬confirmed. 전 항목을 unresolved로 초기화한다.",
+  "productionReleaseBlocked": {
+    "blocked": true,
+    "note": "프로덕션 릴리스는 아래 releaseGates 8개 항목의 외부 증거 게이트가 모두 external_evidence_confirmed로 확인되기 전까지 차단 상태다. 이 소스 트리는 어떤 게이트도 충족되었다고 주장하지 않는다."
+  },
+  "components": [
+    {
+      "componentId": "Web_App",
+      "localRuntimeConfig": [
+        "Vercel 프리뷰 배포",
+        "로컬 Next.js dev 서버 (127.0.0.1)"
+      ],
+      "migrationTargetConfig": [
+        "관리형 Node 호스팅 (Node 24.x 런타임)"
+      ],
+      "externalizationRefs": [
+        "SUPABASE_URL_REF",
+        "SUPABASE_ANON_KEY_REF",
+        "SUPABASE_SERVICE_ROLE_KEY_REF"
+      ]
+    },
+    {
+      "componentId": "Backend_Runtime",
+      "localRuntimeConfig": [
+        "macOS launchd 스케줄",
+        "heavy_local 프로파일 워커"
+      ],
+      "migrationTargetConfig": [
+        "VPS 워커 또는 k3s 디플로이먼트"
+      ],
+      "externalizationRefs": [
+        "PIPELINE_PG_DSN_REF",
+        "GEMINI_API_KEY_REF",
+        "YOUTUBE_API_KEY_REF"
+      ]
+    },
+    {
+      "componentId": "Local_Stack",
+      "localRuntimeConfig": [
+        "14서비스 docker compose",
+        "로컬 Postgres + 로컬 Auth/Storage"
+      ],
+      "migrationTargetConfig": [
+        "관리형 Postgres",
+        "관리형 Auth/Storage"
+      ],
+      "externalizationRefs": [
+        "MANAGED_PG_DSN_REF",
+        "JWT_SECRET_REF"
+      ]
+    },
+    {
+      "componentId": "Observability_Stack",
+      "localRuntimeConfig": [
+        "compose 오버레이 (127.0.0.1 루프백 바인딩)"
+      ],
+      "migrationTargetConfig": [
+        "k3s + Helm 릴리스"
+      ],
+      "externalizationRefs": [
+        "GRAFANA_ADMIN_PASSWORD_REF",
+        "LOKI_STORAGE_REF"
+      ]
+    },
+    {
+      "componentId": "Log_Pipeline",
+      "localRuntimeConfig": [
+        "파일 기반 Log_Sink",
+        "로컬 Loki (127.0.0.1:3100)"
+      ],
+      "migrationTargetConfig": [
+        "관리형 로그 저장소"
+      ],
+      "externalizationRefs": [
+        "LOG_SINK_URL_REF",
+        "LOG_SINK_TOKEN_REF"
+      ]
+    }
+  ],
+  "hostedDatabaseEvidence": [
+    {
+      "evidenceId": "backup",
+      "evidenceType": "hosted_backup",
+      "description": "Hosted_Database 이전에 필요한 호스티드 백업 증거",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "evidenceId": "point_in_time_recovery",
+      "evidenceType": "point_in_time_recovery",
+      "description": "Hosted_Database 이전에 필요한 시점 복구(PITR) 증거",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    }
+  ],
+  "releaseGates": [
+    {
+      "gateId": "policy_version_tuple",
+      "gateNumber": 1,
+      "description": "공표·승인·배포된 정책 버전·해시·로케일·발효·게시 튜플",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "operator_approved_retention_class",
+      "gateNumber": 2,
+      "description": "법적 근거·트리거·기간·활성화와 호스티드 백업 및 시점 복구 증거를 갖춘 운영자 승인 보존 분류",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "hosted_catalog_match",
+      "gateNumber": 3,
+      "description": "배포 카탈로그와 일치하는 호스티드 마이그레이션·RLS·그랜트·RPC 리드백·생성된 Supabase 타입·카탈로그·키 관리·운영자 접근 증거",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "approved_https_marketing_provider",
+      "gateNumber": 4,
+      "description": "프로덕션 시크릿을 갖춘 승인된 HTTPS 마케팅 공급자",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "location_business_filing",
+      "gateNumber": 5,
+      "description": "위치정보사업 신고 또는 문서화된 비해당 확인",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "under14_guardian_provider",
+      "gateNumber": 6,
+      "description": "만 14세 미만 지원이 활성일 때 외부 검증된 보호자 공급자",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "incident_notice_evidence",
+      "gateNumber": 7,
+      "description": "사람 승인된 사고 통지와 불변 제출·접수 증거",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    },
+    {
+      "gateId": "korean_legal_privacy_review",
+      "gateNumber": 8,
+      "description": "기록된 한국 법무·프라이버시 책임자 검토",
+      "verifiedBy": null,
+      "status": "unresolved",
+      "evidenceReference": null
+    }
+  ]
+}

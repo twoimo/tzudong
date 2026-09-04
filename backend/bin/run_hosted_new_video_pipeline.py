@@ -20,6 +20,14 @@ def _repo_root() -> Path:
 
 
 REPO_ROOT = _repo_root()
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from backend.pipeline_control.worker import (  # noqa: E402
+    cadence_source_preflight,
+    env_contract_preflight,
+)
+
 EVALUATE = REPO_ROOT / "backend" / "bin" / "evaluate_new_youtube_videos.py"
 APPLY = REPO_ROOT / "backend" / "bin" / "apply_hosted_pending_candidates.py"
 
@@ -87,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     _load_backend_env(REPO_ROOT)
+    cadence_source_preflight(REPO_ROOT)
+    env_contract_preflight("hosted-pending-apply")
     _apply_local_runtime_environment()
     print(f"source={os.environ.get('TZUDONG_PIPELINE_SOURCE', 'local')}")
     evaluate_exit = _run(

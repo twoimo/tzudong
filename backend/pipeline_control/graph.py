@@ -226,6 +226,69 @@ ADAPTER_STEPS = tuple(spec.id for spec in STEP_SPECS)
 CANONICAL_STEP_NAMES = {spec.id: spec.canonical_name for spec in STEP_SPECS}
 STEP_BY_ID = {spec.id: spec for spec in STEP_SPECS}
 
+# Four step classes composed for a heavy_local + local_db run (R8.1). Every one
+# of the 18 STEP_SPECS ids belongs to exactly one class; the four classes are
+# the crawling, evaluation, media, and insertion stages the design fixes.
+CRAWLING_CLASS = "crawling"
+EVALUATION_CLASS = "evaluation"
+MEDIA_CLASS = "media"
+INSERTION_CLASS = "insertion"
+STEP_CLASSES: tuple[str, ...] = (
+    CRAWLING_CLASS,
+    EVALUATION_CLASS,
+    MEDIA_CLASS,
+    INSERTION_CLASS,
+)
+STEP_CLASS_BY_ID: dict[str, str] = {
+    "01-collect-urls": CRAWLING_CLASS,
+    "02-collect-meta": CRAWLING_CLASS,
+    "02-1-migrate": CRAWLING_CLASS,
+    "02-5-cleanup": CRAWLING_CLASS,
+    "03-transcript": CRAWLING_CLASS,
+    "03-1-context": CRAWLING_CLASS,
+    "03-2-visual": EVALUATION_CLASS,
+    "09-target": EVALUATION_CLASS,
+    "10-rule": EVALUATION_CLASS,
+    "11-laaj": EVALUATION_CLASS,
+    "12-transform": EVALUATION_CLASS,
+    "04-frames": MEDIA_CLASS,
+    "05-map-url": MEDIA_CLASS,
+    "06-frame-caption": MEDIA_CLASS,
+    "06-1-enrich": MEDIA_CLASS,
+    "08-chunk": MEDIA_CLASS,
+    "13-supabase-insert": INSERTION_CLASS,
+    "13-quality-gate": INSERTION_CLASS,
+}
+
+
+def step_class(step_id: str) -> str:
+    """Return the composed step class for a known step id.
+
+    Raises AdapterGraphError("step_class_unknown") for an id absent from the
+    mapping so an unmapped step can never be composed silently.
+    """
+
+    try:
+        return STEP_CLASS_BY_ID[step_id]
+    except KeyError:
+        raise AdapterGraphError("step_class_unknown") from None
+
+
+def validate_step_classes() -> None:
+    """Fail closed unless every step maps to exactly one of the four classes.
+
+    Every ``STEP_SPECS`` id must have a class, every mapped id must be a real
+    step, and each of the four classes must be non-empty. This keeps the
+    crawling/evaluation/media/insertion composition total and disjoint (R8.1).
+    """
+
+    spec_ids = {spec.id for spec in STEP_SPECS}
+    mapped_ids = set(STEP_CLASS_BY_ID)
+    if spec_ids != mapped_ids:
+        raise AdapterGraphError("step_class_incomplete")
+    if set(STEP_CLASS_BY_ID.values()) != set(STEP_CLASSES):
+        raise AdapterGraphError("step_class_incomplete")
+
 
 def _reject_escape(path: Path, root: Path) -> None:
     try:
@@ -247,6 +310,7 @@ def validate_graph(root: Path | None = None) -> None:
         raise AdapterGraphError("command_path_invalid")
     if "13-quality-gate" not in STEP_BY_ID:
         raise AdapterGraphError("quality_gate_missing")
+    validate_step_classes()
     for spec in STEP_SPECS:
         if spec.interpreter not in ALLOWED_INTERPRETERS:
             raise AdapterGraphError("interpreter_not_admitted")

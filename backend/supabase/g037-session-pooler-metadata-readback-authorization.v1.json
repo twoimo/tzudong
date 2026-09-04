@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_metadata_readback_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T16:29:16Z",
+  "authorizationEvidenceBoundary": "the named owner supplied the exact one-time metadata-read statement in the current task after the alternative preview approval and immutable metadata request were presented; no prior, standing, assistant-generated, or inferred approval is used",
+  "authorizationStatement": "최연우, production aqlcofblfxdrjhhdmarw G037 session-pooler metadata-only Dashboard Connect readback request f8101542b4f10bc8acaeb1bd657f7d5c0c1add9fbf30ccd456523255db9bcc22에 따라 1회 읽기 실행 승인",
+  "approvedTarget": {
+    "path": "backend/supabase/g037-session-pooler-metadata-readback-request.v1.json",
+    "sha256": "f8101542b4f10bc8acaeb1bd657f7d5c0c1add9fbf30ccd456523255db9bcc22",
+    "kind": "g037_session_pooler_metadata_readback_request",
+    "providerSurface": "supabase_dashboard_connect_dialog",
+    "connectionMethod": "Session pooler",
+    "maximumReadCount": 1
+  },
+  "boundPreviewApproval": {
+    "path": "backend/supabase/g037-session-pooler-alternative-preview-approval.v1.json",
+    "sha256": "50d9c3b69fe5ecd2024378c67141a7f41081434ecaec3a7ed1da0783b3ef9279",
+    "reviewApproved": true
+  },
+  "boundReceiptContract": {
+    "path": "backend/supabase/g037-session-pooler-metadata-receipt-contract.v1.json",
+    "sha256": "746a6c80cffd188ece7c39eb540216470154f1f09286d3e887a3836b7427fd81",
+    "verifierPath": "backend/supabase/scripts/g037_session_pooler_metadata_receipt.py",
+    "verifierSha256": "0b3dff6e278b48695d0672e637b582c7edb8970156af92c5fe64b8395eeadba2"
+  },
+  "evidenceAssessment": {
+    "currentTaskUserMessage": true,
+    "messagePostdatesAlternativePreviewApproval": true,
+    "messagePostdatesMetadataRequest": true,
+    "approverDisplayNameMatched": true,
+    "productionProjectReferenceMatched": true,
+    "requestSha256Matched": true,
+    "oneTimeExecutionWordingMatched": true,
+    "priorStandingApprovalUsed": false,
+    "assistantOrGeneratedEvidenceUsed": false,
+    "inferredIdentityUsed": false
+  },
+  "authorizedScope": {
+    "oneMetadataOnlyDashboardConnectRead": true,
+    "oneSanitizedFixedFieldReadback": true,
+    "productionProjectOnly": true,
+    "sessionPoolerMethodOnly": true,
+    "persistentMutation": false,
+    "databaseAuthentication": false,
+    "sqlExecution": false,
+    "networkProbe": false,
+    "credentialOrPasswordRead": false,
+    "clipboardUse": false,
+    "screenshotCapture": false,
+    "browserStorageOrNetworkHeaderInspection": false,
+    "rawConnectionStringOrDsnRetention": false,
+    "passwordGenerationOrAssignment": false,
+    "credentialContractAmendment": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "observationBoundary": {
+    "allowed": [
+      "exact project reference",
+      "exact region",
+      "exact Session pooler hostname",
+      "exact port",
+      "exact database name",
+      "provider-displayed username suffix",
+      "server root certificate availability",
+      "password-placeholder presence"
+    ],
+    "forbidden": [
+      "password value or credential",
+      "connection string or DSN",
+      "cookie, token, API key, or browser storage",
+      "network headers or provider response body",
+      "unrelated project or organization metadata",
+      "provider diagnostic or free-form error text",
+      "screenshot or clipboard contents"
+    ],
+    "repositoryReceiptExactHostnameAllowed": false,
+    "repositoryReceiptExactUsernameAllowed": false,
+    "sanitizedHostnameSha256Allowed": true,
+    "sanitizedUsernameShapeSha256Allowed": true
+  },
+  "executionBudget": {
+    "approvedReadCount": 1,
+    "consumedReadCount": 0,
+    "remainingReadCount": 1,
+    "authorizationReusable": false,
+    "failureAuthorizesRetry": false,
+    "networkProbeExecutionCountApproved": 0,
+    "passwordExecutionCountApproved": 0,
+    "repositorySecretExecutionCountApproved": 0,
+    "workflowDispatchCountApproved": 0
+  },
+  "authorizationGate": {
+    "alternativePreviewApproved": true,
+    "metadataReadAuthorized": true,
+    "metadataReadConsumed": false,
+    "metadataReceiptPresent": false,
+    "sessionPoolerSelected": false,
+    "fixedProbeConstructionAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "workflowDispatchAuthorized": false
+  },
+  "successorBoundary": {
+    "aSuccessfulReadMayPrepareFixedProbeSource": true,
+    "fixedProbeRequiresSeparateReview": true,
+    "fixedProbeExecutionRequiresSeparateAuthorization": true,
+    "directPathRemainsAvailable": true,
+    "directPathAbandoned": false,
+    "ipv4AddonUpgradeDeferred": true
+  },
+  "notEvidenceOf": [
+    "consumption or outcome of the authorized Dashboard read",
+    "an exact Session pooler hostname, username, DSN, credential, certificate, cookie, or token",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password generation or assignment",
+    "credential-contract amendment or repository secret mutation",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

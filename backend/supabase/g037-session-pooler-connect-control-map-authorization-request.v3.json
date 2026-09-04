@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_session_pooler_connect_control_map_authorization_request",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T18:22:12Z",
+  "requestStatus": "blocked_exact_named_owner_statement_required",
+  "requestedApproverDisplayName": "최연우",
+  "requestedExactStatement": "최연우, production aqlcofblfxdrjhhdmarw G037 wait-bounded control-only Dashboard Connect v3 request e0e33500d568d911412c0b0faf4fe2ecf732185655c128f25c6ae6d45c72e9b0·browser 6dbf2915400970b6de301a2f9aed5c0736d23bc7572d8a6ec7e8e4ced3a5d96e·stdout-filter f826640d6004d9baec9870130180fc189e75aa83b982dd14d4b44be8e1082855·receipt-contract 1336c656acd8abb1bdf4e51a157400160e87a28bde4bd159e40fe7e36e172daa·verifier 7c9d5033ea0e581df8e133310e8f8f923aa5313f8c8e84753bad4c3f6ed5c942에 따라 1회 실행 승인",
+  "reviewedArtifacts": {
+    "request": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v3.json",
+      "sha256": "e0e33500d568d911412c0b0faf4fe2ecf732185655c128f25c6ae6d45c72e9b0"
+    },
+    "browserSource": {
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_read_v3.mjs",
+      "sha256": "6dbf2915400970b6de301a2f9aed5c0736d23bc7572d8a6ec7e8e4ced3a5d96e",
+      "singleLine": true,
+      "nodeSyntaxCheckPassed": true,
+      "topLevelAwait": true,
+      "firstRestrictedControlWaitTimeoutMilliseconds": 15000,
+      "secondRestrictedControlWaitTimeoutMilliseconds": 10000
+    },
+    "stdoutFilter": {
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_stdout_filter_v3.py",
+      "sha256": "f826640d6004d9baec9870130180fc189e75aa83b982dd14d4b44be8e1082855",
+      "automaticTransportLinesDiscarded": true,
+      "exactlyOneCanonicalObservationRequired": true
+    },
+    "receiptContract": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v3.json",
+      "sha256": "1336c656acd8abb1bdf4e51a157400160e87a28bde4bd159e40fe7e36e172daa"
+    },
+    "receiptVerifier": {
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py",
+      "sha256": "7c9d5033ea0e581df8e133310e8f8f923aa5313f8c8e84753bad4c3f6ed5c942",
+      "offlineOnly": true
+    },
+    "priorAttempt": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-attempt.v2.json",
+      "sha256": "f624f78125c1c3938053569fa27e2d547aa3796f17d621f7707f8eb47580aad5"
+    }
+  },
+  "requestedScope": {
+    "maximumDashboardOpenCount": 1,
+    "maximumInspectionAttemptCount": 1,
+    "maximumControlSnapshotCount": 2,
+    "maximumControlClickCount": 1,
+    "exactBrowserSourceOnly": true,
+    "reviewedStdoutFilterRequired": true,
+    "controlOnlyObservation": true,
+    "sanitizedReceiptVerification": true,
+    "metadataValueRead": false,
+    "sessionPoolerControlClick": false,
+    "screenshotOrClipboard": false,
+    "dsnPasswordCredentialOrCertificateRead": false,
+    "browserStorageOrNetworkHeaderInspection": false,
+    "databaseAuthenticationOrSql": false,
+    "networkProbe": false,
+    "persistentProviderMutation": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "executionDiscipline": {
+    "consumeAuthorizationBeforeReplExecution": true,
+    "syntaxFilterOrTransportFailureConsumesAuthorization": true,
+    "ambiguousCompletionConsumesAuthorization": true,
+    "retryUnderSameAuthorization": false,
+    "rawTreeTransportTitleOrProviderTextRetention": false,
+    "fixedObservationAndReceiptOnly": true
+  },
+  "authorizationGate": {
+    "exactStatementReceived": false,
+    "executionAuthorizationPresent": false,
+    "approvedExecutionCount": 0,
+    "consumedExecutionCount": 0,
+    "controlMapV3ReceiptPresent": false,
+    "metadataReadV2Authorized": false,
+    "sessionPoolerSelected": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "workflowDispatchAuthorized": false
+  },
+  "notEvidenceOf": [
+    "named-owner approval or execution authorization",
+    "execution of the browser source or stdout filter",
+    "a successful Dashboard control map, observation, or receipt",
+    "an exact Session pooler hostname, username, region, port, or database",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password, repository Secret, controller, workflow, migration, release, or deployment authority"
+  ]
+}

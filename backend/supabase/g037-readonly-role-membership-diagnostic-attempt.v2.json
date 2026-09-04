@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_membership_diagnostic_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "attemptObservedAt": "2026-09-04T08:14:21Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "authorizationPath": "backend/supabase/g037-readonly-role-membership-diagnostic-authorization.v2.json",
+    "authorizationSha256": "ebf8bd6556691a8b444fc787ce80487d0510c6740ddd94e16dd77c072d5c920e",
+    "membershipDiagnosticApprovalPath": "backend/supabase/g037-readonly-role-membership-diagnostic-approval.v2.json",
+    "membershipDiagnosticApprovalSha256": "9631fab6ff13925b39aece61688c4e06df6c37e975121bcdb845ee0a9a49cef9",
+    "diagnosticSqlPath": "backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql",
+    "diagnosticSqlSha256": "29b7ef6084eb2732e65028dd1a0158a8cf5eec2ac60b3c081ddffd9d8461ad8a"
+  },
+  "preexecutionReadback": {
+    "projectActiveHealthy": true,
+    "postgresMajorVersion": 17,
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCountExact": true,
+    "terminalMigrationExact": true
+  },
+  "outcome": {
+    "status": "rolled_back",
+    "fixedCode": "g037_membership_diag_has_elevated_member",
+    "fixedCodeAllowlisted": true,
+    "transactionCommitObserved": false,
+    "persistentRolePresentAfterDiagnostic": false,
+    "persistentHostedStateChanged": false,
+    "providerErrorRetained": false
+  },
+  "rollbackReadback": {
+    "queryExecutionCount": 3,
+    "firstTwoResultWrapperParsesSucceeded": false,
+    "thirdResultWrapperParseSucceeded": true,
+    "roleAbsent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "diagnosisBoundary": {
+    "membershipDirection": "has_member",
+    "memberOfCount": 0,
+    "hasMemberCount": 1,
+    "hasElevatedMemberCount": 1,
+    "laterPriorityPropertiesEvaluatedByFixedCode": false,
+    "memberLoginKnown": false,
+    "adminOptionKnown": false,
+    "setOptionKnown": false,
+    "inheritOptionKnown": false,
+    "memberRoleIdentityRecorded": false,
+    "memberRoleNameRecorded": false,
+    "postgres17AutomaticCreatorMembershipHypothesis": true,
+    "postgres17AutomaticCreatorMembershipConfirmed": false
+  },
+  "retryGate": {
+    "membershipDiagnosticV2RetryAllowed": false,
+    "authorizationReusable": false,
+    "focusedCreatorMembershipDiagnosticPreviewRequired": true,
+    "freshFocusedDiagnosticPreviewApprovalRequired": true,
+    "freshFocusedDiagnosticExecutionAuthorizationRequired": true
+  },
+  "notEvidenceOf": [
+    "adjacent member role identity or name",
+    "creator-membership equivalence or grantor identity",
+    "membership admin, set, or inherit options",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

@@ -824,8 +824,26 @@ class LocalComposeInputContractTests(unittest.TestCase):
             self.assertTrue(local_stack._probe_local_cors_contract(18000, "functions", timeout=3))
             self.assertFalse(local_stack._probe_local_cors_contract(18000, "realtime", timeout=3))
 
-        self.assertEqual(len(preflights), 56)
-        self.assertEqual(len(actuals), 32)
+        # Four services have 1/2/2/1 admitted preflight paths respectively,
+        # plus one rejected-origin probe per service and target host. Derive
+        # the count from the current closed host/origin sets so adding an
+        # admitted local dev origin cannot leave a stale magic number here.
+        admitted_path_count = 1 + 2 + 2 + 1
+        service_count = 4
+        self.assertEqual(
+            len(preflights),
+            len(local_stack.LOCAL_CORS_TARGET_HOSTS)
+            * (
+                len(local_stack.LOCAL_BROWSER_ORIGINS) * admitted_path_count
+                + service_count
+            ),
+        )
+        self.assertEqual(
+            len(actuals),
+            len(local_stack.LOCAL_CORS_TARGET_HOSTS)
+            * len(local_stack.LOCAL_BROWSER_ORIGINS)
+            * service_count,
+        )
         rest_paths = {
             path
             for _port, path, kwargs in preflights
@@ -837,14 +855,18 @@ class LocalComposeInputContractTests(unittest.TestCase):
         })
         self.assertEqual(
             sum(not kwargs["expected_allowed"] for _port, _path, kwargs in preflights),
-            8,
+            service_count * len(local_stack.LOCAL_CORS_TARGET_HOSTS),
         )
         function_actuals = [
             kwargs
             for _port, path, kwargs in actuals
             if path == "/functions/v1/naver-geocode"
         ]
-        self.assertEqual(len(function_actuals), 8)
+        self.assertEqual(
+            len(function_actuals),
+            len(local_stack.LOCAL_CORS_TARGET_HOSTS)
+            * len(local_stack.LOCAL_BROWSER_ORIGINS),
+        )
         for kwargs in function_actuals:
             self.assertEqual(kwargs["request_method"], "POST")
             self.assertEqual(kwargs["request_headers"], {"Content-Type": "application/json"})
@@ -1395,6 +1417,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         with (
             patch.object(local_stack, "_run", side_effect=run),
             patch.object(local_stack, "_wait_ready", side_effect=wait_ready),
+            patch.object(local_stack, "_ensure_local_analytics_namespace") as namespace,
         ):
             local_stack._start_core_services(["docker", "compose"], {})
 
@@ -1409,6 +1432,46 @@ class LocalComposeInputContractTests(unittest.TestCase):
             waits,
             [(("vector",), 300), (("db",), 900), (("analytics",), 300)],
         )
+        namespace.assert_called_once_with(["docker", "compose"])
+
+    def test_local_analytics_namespace_bridge_is_bounded_and_read_back(self) -> None:
+        with patch.object(
+            local_stack,
+            "_run",
+            return_value=subprocess.CompletedProcess([], 0, "1\n", ""),
+        ) as run:
+            local_stack._ensure_local_analytics_namespace(["docker", "compose"])
+
+        command = run.call_args.args[0]
+        sql = command[-1]
+        self.assertEqual(command[:2], ["docker", "compose"])
+        self.assertIn("CREATE SCHEMA local_analytics AUTHORIZATION postgres", sql)
+        self.assertIn("REVOKE ALL ON SCHEMA local_analytics FROM PUBLIC", sql)
+        self.assertIn("local_analytics_namespace_owner_drift", sql)
+        self.assertIn("acl.grantee = 0", sql)
+        for role in ("anon", "authenticated", "service_role"):
+            self.assertIn(
+                f"has_schema_privilege('{role}', namespace.oid, 'CREATE')",
+                sql,
+            )
+        self.assertNotIn("CREATE TABLE", sql)
+        self.assertNotIn("GRANT ", sql)
+        self.assertEqual(run.call_args.kwargs["timeout"], 30)
+        self.assertEqual(
+            run.call_args.kwargs["error_code"],
+            "compose_local_analytics_namespace",
+        )
+
+        with patch.object(
+            local_stack,
+            "_run",
+            return_value=subprocess.CompletedProcess([], 0, "0\n", ""),
+        ):
+            with self.assertRaisesRegex(
+                local_stack.LocalStackError,
+                "compose_local_analytics_namespace_readback",
+            ):
+                local_stack._ensure_local_analytics_namespace(["docker", "compose"])
 
     def test_staging_clears_volumes_preserves_image_defaults_and_reads_back_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1678,6 +1741,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertIn('(("analytics",), ("analytics",))', source)
         self.assertIn("LOCAL_STACK_PRESERVE_FAILURE_STATE", source)
         self.assertIn("_probe_database_bootstrap", source)
+        self.assertIn("_ensure_local_analytics_namespace", source)
+        self.assertIn("compose_local_analytics_namespace_readback", source)
         self.assertIn("_analytics", source)
         self.assertIn("pg_namespace", source)
         self.assertIn("STAGED_INPUT_FILES", source)

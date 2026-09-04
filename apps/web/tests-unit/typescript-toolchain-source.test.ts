@@ -7,6 +7,19 @@ const source = (file: string) => readFileSync(resolve(root, file), "utf8");
 const parseBunLock = () => JSON.parse(source("bun.lock").replace(/,\s*([}\]])/g, "$1"));
 
 describe("TypeScript 7 dual-toolchain manifest contract", () => {
+  test("release, nightly, and benchmark lanes use the current Bun contract", () => {
+    for (const workflow of ["web-admin-ci.yml", "nightly-regression.yml", "release-governance-ci.yml"]) {
+      const contents = source(`../../.github/workflows/${workflow}`);
+      const pins = [...contents.matchAll(/bun-version: '([^']+)'/g)].map((match) => match[1]);
+      expect(pins.length).toBeGreaterThan(0);
+      expect(pins.every((pin) => pin === "1.4.0")).toBe(true);
+      if (workflow === "web-admin-ci.yml") {
+        expect(contents.match(/run typecheck:benchmark --/g)?.length).toBe(4);
+        expect(contents).toContain('test "$(bun --version)" = "1.4.0"');
+      }
+    }
+  });
+
   test("pins the native CLI, bridge, stable API, and ESLint owner exactly", () => {
     const manifest = JSON.parse(source("package.json"));
     expect(manifest.engines.node).toBe("24.x");
@@ -23,6 +36,7 @@ describe("TypeScript 7 dual-toolchain manifest contract", () => {
     expect(manifest.scripts["typecheck:compat"]).toContain("run-typecheck.mjs --compiler compat");
     expect(manifest.scripts["typecheck:parity"]).toContain("run-typecheck.mjs --compiler parity");
     expect(manifest.scripts["bench:typecheck"]).toBe("node scripts/measure-typecheck.mjs");
+    expect(manifest.scripts["typecheck:benchmark"]).toBe(manifest.scripts["bench:typecheck"]);
   });
 
   test("keeps TS7 config valid without weakening the app", () => {

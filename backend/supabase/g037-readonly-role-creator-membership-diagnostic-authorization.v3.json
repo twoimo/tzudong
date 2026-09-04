@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_creator_membership_diagnostic_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "approverDisplayName": "최연우",
+  "authorizedAt": "2026-09-04T08:34:53Z",
+  "authorizationEvidenceBoundary": "user-provided named-owner authorization in the current task transcript; no external immutable receipt",
+  "creatorMembershipDiagnosticApproval": {
+    "path": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-approval.v3.json",
+    "sha256": "8cc2520b8c7e667de009b34312db742fcb0eb64f50dc4ca7210944a7fda71108"
+  },
+  "authorizedArtifact": {
+    "path": "backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql",
+    "sha256": "9df2ba5db3e7a527d49df00025f15504fb29003fb543e6c3a735dc5d92a43e4b"
+  },
+  "continuity": {
+    "priorMembershipDiagnosticAttemptPath": "backend/supabase/g037-readonly-role-membership-diagnostic-attempt.v2.json",
+    "priorMembershipDiagnosticAttemptSha256": "a7cba5f5eac9fa241c75f53f0b0c169ef291fc7b2e8889c4627b243057919bdc",
+    "spentMembershipDiagnosticAuthorizationPath": "backend/supabase/g037-readonly-role-membership-diagnostic-authorization.v2.json",
+    "spentMembershipDiagnosticAuthorizationSha256": "ebf8bd6556691a8b444fc787ce80487d0510c6740ddd94e16dd77c072d5c920e",
+    "priorMembershipDiagnosticAuthorizationReusable": false
+  },
+  "authorizedScope": {
+    "maximumExecutionCount": 1,
+    "productionRollbackOnlyCreatorMembershipDiagnostic": true,
+    "immediateBoundedReadback": true,
+    "persistentProvisioning": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false,
+    "migrationLedgerMutation": false
+  },
+  "preconditions": {
+    "projectMustBeActiveHealthy": true,
+    "databaseMustEqualPostgres": true,
+    "roleMustBeAbsent": true,
+    "migrationLedgerMustExist": true,
+    "targetFunctionMustExist": true,
+    "migrationCountMustEqual50": true,
+    "terminalMigrationMustEqual20260804000500": true,
+    "currentDiagnosticSqlHashMustMatch": true
+  },
+  "executionStateAtAuthorization": {
+    "consumedExecutionCount": 0,
+    "diagnosticExecuted": false,
+    "boundedReadbackPerformed": false,
+    "persistentHostedStateChanged": false
+  },
+  "notEvidenceOf": [
+    "creator-membership diagnostic execution",
+    "production automatic creator-membership equivalence",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}
