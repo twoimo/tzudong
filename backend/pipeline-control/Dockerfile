@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r /workspace/backend/pipeline-control/requiremen
 COPY --chown=tzudong:tzudong backend/pipeline_control /workspace/backend/pipeline_control
 COPY --chown=tzudong:tzudong backend/utils /workspace/backend/utils
 COPY --chown=tzudong:tzudong backend/config /workspace/backend/config
+COPY --chown=tzudong:tzudong backend/rust/migration-ledger.v1.json /workspace/backend/rust/migration-ledger.v1.json
 COPY --chown=tzudong:tzudong backend/pipeline-control/fixtures /workspace/backend/pipeline-control/fixtures
 USER tzudong
 STOPSIGNAL SIGTERM
