@@ -1,21 +1,21 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-04T23:15:58.956870+00:00",
+  "generatedAt": "2026-09-04T23:33:28.466165+00:00",
   "branch": "codex/runtime-closure-20260905",
-  "sourceBaseHead": "251751133bb0c6c8d840767f3f5356c30242a767",
+  "sourceBaseHead": "01eb7a61e17c552a572d9551b46756ebedf9be9c",
   "workingTreeClean": false,
   "primaryPr": 2858,
-  "primaryReviewHead": "6511d183",
+  "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
   "overallStatus": "InProgressWithExternalGates",
   "productionReleased": false,
   "userApprovalProvided": true,
   "reconfirmationRequired": false,
   "taskCounts": {
     "total": 1310,
-    "completed": 1264,
-    "remaining": 46,
-    "external": 38,
+    "completed": 1269,
+    "remaining": 41,
+    "external": 33,
     "verification": 6,
     "repository": 2
   },
@@ -166,11 +166,6 @@
       "task": "Record the valid zero-admission outcome if no slice clears every gate; do not invent or rerun for a positive claim."
     },
     {
-      "taskId": "13.36",
-      "category": "external",
-      "task": "Keep GitHub issue creation, hosted writes, migrations, deployments, rollbacks, protection changes, secret changes, and DNS changes blocked until separately approved."
-    },
-    {
       "taskId": "14.15",
       "category": "external",
       "task": "Serialize changes through `develop -> data -> main` PRs."
@@ -189,11 +184,6 @@
       "taskId": "14.48",
       "category": "external",
       "task": "Locate and independently validate the externally retained G037/G038 execution, recovery, and post-readback receipts."
-    },
-    {
-      "taskId": "14.49",
-      "category": "external",
-      "task": "Keep `G037_WRITE_FREEZE` active unless the exact successor/recovery evidence proves its exit condition."
     },
     {
       "taskId": "14.50",
@@ -226,24 +216,9 @@
       "task": "Resolve the three stale-looking Gabia apex NS rows through documented registrar/Cloudflare ownership evidence before deleting or altering any record."
     },
     {
-      "taskId": "14.108",
-      "category": "external",
-      "task": "Retain a separately reviewable immutable approval receipt if release governance requires evidence stronger than the task transcript."
-    },
-    {
-      "taskId": "16.25",
-      "category": "external",
-      "task": "Keep every hosted apply, migration execution, GitHub write, deployment, DNS change, and approval claim outside this source reconciliation."
-    },
-    {
       "taskId": "16.100",
       "category": "external",
       "task": "Keep the queue feature flag disabled and do not execute either migration or any hosted publication without later bound approval and readback."
-    },
-    {
-      "taskId": "16.131",
-      "category": "external",
-      "task": "Keep all real phase evidence, rollback execution, branch-setting changes, hosted operations, and report claims pending separate authority and readback."
     },
     {
       "taskId": "16.151",
@@ -310,12 +285,14 @@
     "auth-eligibility-current-readback.json": "9d7c01fa98321987eb4f44776467ef7c5318aac6e25abba61375785709955297",
     "mac-scheduler-current-readback.json": "3c5a2764dc7ac0e8837d153c4e3dd6599b4d62784443b01a77a7c00bcbddfc53",
     "minio-compatibility-readback.json": "f52d8529fa274d8114df0581798b774023d5b1310472f2f0d8637514f88a30eb",
-    "review-runtime-corrections.v3.json": "ab6de39c9f6e2444402be93c540a7c272d37ea005f199cbc6fc52d1513df8668"
+    "review-runtime-corrections.v3.json": "ab6de39c9f6e2444402be93c540a7c272d37ea005f199cbc6fc52d1513df8668",
+    "review-runtime-corrections.v4.json": "0166395a2431cde7d98a7c21384d671935be3b60527068848ad57b71ec94d819",
+    "catalog-bc2005da-readback.json": "6e87303c8fe22c98ead1aba23155a301be8c7794c57545d5a95610a1780a7ba5"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 430,
+  "changedFileCount": 442,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -347,7 +324,7 @@
     },
     {
       "path": ".github/workflows/dependency-freshness.yml",
-      "sha256": "691961f3a91e44ca8ad3594697caf30ed63b7413234e4cac767f13f48ed8bc79"
+      "sha256": "84dba16a23abdb5866fe89a1e1396aa927227fc18d614d37f846d3dd9a999e02"
     },
     {
       "path": ".github/workflows/g014-catalog-contract-baseline.yml",
@@ -375,7 +352,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "8be4c9a316d36cfc8cfe949d553eeeae55b0bfe32ec0b7907818950cae275aa8"
+      "sha256": "38f6e208df5b75b052fc0a0112b2dad41cf214cf4f70ecfba474c155f39afa80"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -391,7 +368,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "1c538d92ec8ac2c78869d242e4cf276c0fcf20000c79567fed5d087cff44a6b1"
+      "sha256": "d0efcac4a523617f08826d0a34765f96ed81086844e8043bcae13a561609c898"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -411,11 +388,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "b0cdc657063598301f402dbc1f967bb28e384f6d6e3bce66195b2f05f16e7803"
+      "sha256": "16668a7c5653983999fb64fd6374e827228bf0f3e5048a19d61b20810db7ea0b"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "5a41d25827bf864bacdfcc9ab397a98e71607dd84c6da66f009cee0a569fa638"
+      "sha256": "a4a617fb914ce8035f7b2a9537ba4ad42ab56c6f8fb975d2dde9d5b740288188"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -438,12 +415,20 @@
       "sha256": "3ada41206a4a4917d2e4d1ea4906b665138e4cce03c5c14c84e48b2f3739f38f"
     },
     {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/review-runtime-corrections.v3.json",
+      "sha256": "197dd78166b4616c43e16042cd0a2888bd3477ddf2bc57f47a06597fbb31b32d"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/review-runtime-corrections.v4.json",
+      "sha256": "81adb5e24862e5b81160a5b423bd0cb27268daf20d7b03373199b159c1d39bba"
+    },
+    {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rollback.md",
       "sha256": "e35c454c0af31d83f1e6c509d09d24b4d4ca2080316c7570da203cc05228f902"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-candidate-provenance.v1.json",
-      "sha256": "f82d355dd9821de4b2a5e6f421de963e38cd6790f667e71da053f3345165eea4"
+      "sha256": "707a05b5f216a462039faa7825fe1e3deabb93692b2bb7f8c08e786715d515a7"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-source-provenance.v1.json",
@@ -459,7 +444,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md",
-      "sha256": "7ce19be4b5f6aa5f2048eddcaafe140d886df00143fe65abdf813687c25180db"
+      "sha256": "4b81a9b71eb58530fd19a6978385d861955698c58ca8858da5c8035b0921d428"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-orchestration/design.md",
@@ -535,11 +520,11 @@
     },
     {
       "path": "apps/web/scripts/verify-dependency-freshness.mjs",
-      "sha256": "95f9f67a1216785309dc73931cb410229b8bbf5d8bc5c78303afb7ffd56530cd"
+      "sha256": "7d756de907fa3dbc849cc86ae13144f63f05d4c5d018cab75a062a0dd03446d3"
     },
     {
       "path": "apps/web/scripts/verify-pin-contract.mjs",
-      "sha256": "b53c219c8f8391e93fa2382f6d39029fc225c6661c418a51b5ca67e37e838097"
+      "sha256": "73f106d381812d8d72c38e403a35f2648f9cb92ba16688cafaa7997ebfaa3b54"
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
@@ -551,7 +536,7 @@
     },
     {
       "path": "apps/web/tests-unit/dependency-freshness-workflow.test.ts",
-      "sha256": "99b529776e1b2c3c6b4acc7489297a634d8131a124803babd0a7ea621e75183f"
+      "sha256": "6ac8b83598c9e9d3fb99df2907ff8a7381eb5256f565a3b47e0c21790c7b82d7"
     },
     {
       "path": "apps/web/tests-unit/dependency-modernization-server-compatibility.test.ts",
@@ -615,7 +600,7 @@
     },
     {
       "path": "apps/web/tests-unit/verify-pin-contract-source.test.ts",
-      "sha256": "fa3e804568691a6c5382b2d1603b86a7d2b34580870ac629068d0e1323b375c5"
+      "sha256": "c66b90914afbebc52f7defe8ef78400876dc835a926126650cd4f9cc88a28d41"
     },
     {
       "path": "apps/web/tests/dependency-modernization.spec.ts",
@@ -643,7 +628,7 @@
     },
     {
       "path": "backend/bin/check_deployment_descriptor_set.py",
-      "sha256": "39c1830fabc62a7e2cc6f97e439efb27cf39d268d1089b845ff99fc149057bde"
+      "sha256": "233b7da534c26c3c0a9e3ed03c022b8609b07f77c854f4bafe214e4b22511163"
     },
     {
       "path": "backend/bin/check_layout_manifest.py",
@@ -667,15 +652,15 @@
     },
     {
       "path": "backend/bin/observability_up.py",
-      "sha256": "69e0f6750fdbbcf7d28a45b9e2ab749482aed64d670e1bc411d5bcb11c3af295"
+      "sha256": "3ea5bde9f2082debfd17b5ec6233023d9dc6611fcd682955bda74dffafb36210"
     },
     {
       "path": "backend/bin/phase_gate.py",
-      "sha256": "a2ce38820740fe139d97380aaaf6b157399678a8a199719eeef32c13a93f0ef9"
+      "sha256": "49ed515a37672f2373674f53f4341a722c28a5a22b2441b32c905f96e0e16b8c"
     },
     {
       "path": "backend/bin/run_hosted_new_video_pipeline.py",
-      "sha256": "294430244f522f5e9da1a5fd22a951e078aff8cf7a7e0ebde8097b0fbbb37b26"
+      "sha256": "3070f6cdcdf403ccf7e2fd882ca2a29a0971ccacd3c9c9fa90de11eec8faba58"
     },
     {
       "path": "backend/bin/run_p1_gate.py",
@@ -715,11 +700,11 @@
     },
     {
       "path": "backend/bin/tests/phase_gate_test_support.py",
-      "sha256": "1fa8c4744d5add6b91bb4ca041b6d7e7d0b1d0c64735c42b9e5b0b95ac15ff74"
+      "sha256": "3f3ab6f1f15fed566f56da6f9b000fb579053f20223a6bb17b06492cdcb2ce92"
     },
     {
       "path": "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
-      "sha256": "bc1d8cb3a02939b0e8182cef35940c3ace403b896b2544672e31606c4cc2e3c0"
+      "sha256": "1f14a1824016932cb99eafb456b7982c2acfce429722dbdcddcadcd45934b0b1"
     },
     {
       "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
@@ -732,6 +717,10 @@
     {
       "path": "backend/bin/tests/test_check_rename_ledger_unittest.py",
       "sha256": "7a474aae475096d20ac17e978abf6b11d0648a888eed4af20cbfcce6c5e54791"
+    },
+    {
+      "path": "backend/bin/tests/test_evaluate_new_youtube_videos.py",
+      "sha256": "ee5c0b81819a30446c987fe7e3a123857bb9e8195280c1778b7d5e1427b2da0c"
     },
     {
       "path": "backend/bin/tests/test_layout_move_pbt.py",
@@ -747,11 +736,11 @@
     },
     {
       "path": "backend/bin/tests/test_observability_up_unittest.py",
-      "sha256": "0277bfd3e83750ed9cb6a322cb0a73cf828e75737324c0beb99ba39c46e71536"
+      "sha256": "f41bd13274526a4de6b71f52231b683a130437e7c3efd63a109b4b9278855257"
     },
     {
       "path": "backend/bin/tests/test_phase_gate_unittest.py",
-      "sha256": "280795c359d3177c1d622dea5c2d24f84c44e9c17ba5d1f7da802f4f5dbdc9ae"
+      "sha256": "f5ed5f6e2da0cf972fb5bd19fe2b32fc62ae8ea75ed5fd5fe92753d8cedd5278"
     },
     {
       "path": "backend/bin/tests/test_publication_isolation_pbt.py",
@@ -855,7 +844,7 @@
     },
     {
       "path": "backend/deploy/opentofu/main.tf",
-      "sha256": "33b5edb953ef0000aa28de830a5a6eaa2ad39fe796da1d9314f878c8a4bec8c3"
+      "sha256": "1de3a4cda1f2372456b37b02f434f9e2197296ede09dc50e951d8b96ad68fd84"
     },
     {
       "path": "backend/deploy/opentofu/outputs.tf",
@@ -887,7 +876,7 @@
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
-      "sha256": "ab15549fd484b70c7b433a68fd318bd62b62737870c829c2cdaead099187f8b5"
+      "sha256": "a30bd996d43e8a364353b6d3ebf6060103721c92c8a923707b1112a32c7933c1"
     },
     {
       "path": "backend/pipeline-control/docker-compose.observability.yml",
@@ -906,12 +895,24 @@
       "sha256": "866f6cae2a4b96aa9b6c70a7f5c34bda91434562253941a4fc678682206d8135"
     },
     {
+      "path": "backend/pipeline/state.py",
+      "sha256": "16e009b1491cf71bb34c52ef2b4f464eff9dd7d8412450122f704a60086533cb"
+    },
+    {
       "path": "backend/pipeline/test_data_contracts_unittest.py",
       "sha256": "b5402f94dad867593e0be0240588f1ba7c76bfa78303104a248240e69d69c69e"
     },
     {
+      "path": "backend/pipeline/validators.py",
+      "sha256": "5fdcd75468bf228cca5498b7cbd603abab2ee2933ae59feed86a42e8bf724708"
+    },
+    {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "sha256": "f6b50bd8731f972cfe67659822359b83e845e1ca1aba4f896bb3cd008ec8fb66"
+      "sha256": "a2065244a46585649b215892da26878583ffc37ef7e42cdb9373a33958a145f9"
+    },
+    {
+      "path": "backend/pipeline_control/batch_upsert.py",
+      "sha256": "8069e040d283c6255e64c4c2efa6ab254beddd126556fd538d90ec504d33a2fc"
     },
     {
       "path": "backend/pipeline_control/cadence.schedule.json",
@@ -931,11 +932,11 @@
     },
     {
       "path": "backend/pipeline_control/graph.py",
-      "sha256": "0c0b7cfb90170d40fc634c680a45fab0967c1434c3e5e2c6124781496aeed1c5"
+      "sha256": "2bd30ce69410015aec98648e929f797badb69e67d129dbbe549315184f105774"
     },
     {
       "path": "backend/pipeline_control/impl_selector.py",
-      "sha256": "bdf21bd47e7dde9fd5245b3f84dc2fb52f3328457ac9eb7e1c131ee774f5c56c"
+      "sha256": "60d1a2e4aa43c7575e619354627b3fcbe2fc6c16a05bdacc72ec91194acba6f7"
     },
     {
       "path": "backend/pipeline_control/ledger_validation.py",
@@ -967,7 +968,7 @@
     },
     {
       "path": "backend/pipeline_control/ops_agent.py",
-      "sha256": "4c315280fa1a26b03129432cdac43dd3cd34418c4803855660cd8649e8c81b57"
+      "sha256": "f74f1ceef4739e2cb9b7a0d3538b43ac0857a4915e85aa5b235c54d7fb181719"
     },
     {
       "path": "backend/pipeline_control/performance_evidence.py",
@@ -983,7 +984,7 @@
     },
     {
       "path": "backend/pipeline_control/publish_queue.py",
-      "sha256": "bf498da7e1efb7d98712ce849349992bd7402966016add14e53b8d796b9c6cef"
+      "sha256": "44a6effe2509457eb1538ec01ba8c39b4a4f5feb263337f6fb64a6dd783fcd44"
     },
     {
       "path": "backend/pipeline_control/publish_worker.py",
@@ -995,11 +996,15 @@
     },
     {
       "path": "backend/pipeline_control/rust_parity.py",
-      "sha256": "dee44b420ffdfc9cac64792797198a5cdd775d1e07e6a876bedf313d2c524c8a"
+      "sha256": "a271078bd63a8848343a24010c7471e13147b4ed5d7f0df5741bee244d0950ea"
     },
     {
       "path": "backend/pipeline_control/schedule.py",
       "sha256": "893a19f3ae355e581c13e16a76d12fa8d5020c751771e03b1355460ac279f9e0"
+    },
+    {
+      "path": "backend/pipeline_control/state_machine.py",
+      "sha256": "1a6d1becf45939d7db9b882d8941aded6aa0664d3b14b7fd74bb9f022f351e84"
     },
     {
       "path": "backend/pipeline_control/test_agent_boundary_pbt.py",
@@ -1103,7 +1108,7 @@
     },
     {
       "path": "backend/pipeline_control/test_ops_agent_unittest.py",
-      "sha256": "62085d067220ec45f8faa19fc5988c39f861edf10e9889c6d745f527cfc1244b"
+      "sha256": "d8d31e1444029f3c138e31d94f178f7117608c539b716a1caad3b6869e2cec13"
     },
     {
       "path": "backend/pipeline_control/test_perf_noise_pbt.py",
@@ -1159,7 +1164,7 @@
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "sha256": "59e02d59caf49f4442088e6ca770edd8312bddab425aebb70c835752e5228501"
+      "sha256": "b5e60f8b811d2da4ecc7609e5c67b1f1517696d509bdf8eb73fc4d494b2062ea"
     },
     {
       "path": "backend/pipeline_control/test_publish_readback_pbt.py",
@@ -1219,7 +1224,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_impl_selector.py",
-      "sha256": "03a2546b905e1ba0b2e39705c46dda52e6f38964102e1c66d00fed8382e0fcf7"
+      "sha256": "8573b7d1eada5838a4e5448cd8bee0a5b82cc650110f5615c51c7ad67487e73a"
     },
     {
       "path": "backend/pipeline_control/tests/test_live_and_cutover.py",
@@ -1238,12 +1243,20 @@
       "sha256": "2aba418b5e35e3c7d3465e7a9cde6e60964e2553cca8c88894d65f944baea8c7"
     },
     {
+      "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
+      "sha256": "90a0c12c1f5fef76b3c3c08dfa5f247de906d5707827f906c1085a35062f28b7"
+    },
+    {
       "path": "backend/pipeline_control/tests/test_slice0_control_plane.py",
       "sha256": "f58a107a888cb535aaeeae2c54b81fcd0510243c91df42d11506b05b05c211df"
     },
     {
       "path": "backend/pipeline_control/worker.py",
       "sha256": "ddc558288112abf0f9f4d4e16912d26da1c1848e0c8f2b5790dac8a11d91e1e7"
+    },
+    {
+      "path": "backend/restaurant-crawling/scripts/chunk_planner.py",
+      "sha256": "7572187ee5d441cbbe3a72d681185a6bffcb106102f573982d9c190fa20a80c6"
     },
     {
       "path": "backend/restaurant-crawling/scripts/requirements.txt",
@@ -1262,6 +1275,10 @@
       "sha256": "8161bf0a1763d87d66bd3ab356f38ec79ed029962ffb23ac101333f72d0f4165"
     },
     {
+      "path": "backend/rust/RUNTIME_BINDINGS.md",
+      "sha256": "2cfa8fb7ec3008cc9327308dd056dc6153d80ded2f698325ca09a13cb806e6f1"
+    },
+    {
       "path": "backend/rust/migration-ledger.v1.json",
       "sha256": "62d42ab4d249e9cd949d74d992eb8c56be43767da2fc7be00bb293ca4d33918b"
     },
@@ -1275,7 +1292,7 @@
     },
     {
       "path": "backend/rust/tests/parity_pbt.py",
-      "sha256": "13ce7d7e6306cc0a08221aa00a378f534a3ba200699aa59fc4d28b0839bfa31f"
+      "sha256": "f273dc0149f126bb817d8e6d42eeeba1ad8762a7e1c0875a6aa777d7925dc700"
     },
     {
       "path": "backend/rust/tzudong-media-compute/Cargo.toml",
@@ -1383,7 +1400,7 @@
     },
     {
       "path": "backend/rust/tzudong-validators/src/validators.rs",
-      "sha256": "5c36879ac2fc00d5f1ff4f01bf03fe16d1de01f25e3e50b8d8a8fb5594feffa2"
+      "sha256": "b1c6a1fc82ca2c0ec72f9a816553460ce732e745d8228549bc2b25cb14a9f1f9"
     },
     {
       "path": "backend/rust/tzudong-validators/src/value.rs",
@@ -1668,6 +1685,10 @@
     {
       "path": "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
       "sha256": "fb8233c7076cf77af0f6ce7cff95822ea55612a583c5e50f8285e9723997f064"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql",
+      "sha256": "96e376aad7f58d59196f86ffba699dc16443d3b83a5a39dcdf94a461ad08a41f"
     },
     {
       "path": "backend/supabase/optional-s3-compatibility.v1.json",
@@ -1986,6 +2007,10 @@
       "sha256": "1498fa6936570111b240b04875577e36ab2938a6715e615abf29303c7d13ef60"
     },
     {
+      "path": "backend/utils/data_utils.py",
+      "sha256": "d2f996679f296b87ba832f062cdb0afd6eef6b3924a73dfc33a20bd58da983fe"
+    },
+    {
       "path": "backend/utils/tests/test_backfill_planner_pbt.py",
       "sha256": "d957d6c9ae4e8a78613a619c6404cbe31295e24c7e65bcd306962b57fffd3a6d"
     },
@@ -2019,7 +2044,7 @@
     },
     {
       "path": "backend/utils/tests/test_platform_modernization_reconciliation.py",
-      "sha256": "7e0cab8ebb182d33e82479a9fb776a090f6bdcb7914fa56e02a7ca26d13673cb"
+      "sha256": "40bb6ae8be555c7ad57faca53698460f1e4f965550f72d1f2472b3755f69bc2e"
     },
     {
       "path": "backend/utils/tests/test_publication_source_recovery.py",
@@ -2031,11 +2056,17 @@
     },
     {
       "path": "backend/utils/tests/test_rust_source_recovery.py",
-      "sha256": "52d62b22ba8a7ce441fd7eb3b4b41f84158b69eea952cf0cc27f2e3afddbd7ee"
+      "sha256": "6cb11e1a26ba2b162b742be70b880af10b7aa60dcb99d4c8987deb50d85f2179"
     },
     {
       "path": "backend/utils/tests/test_supply_chain_contract.py",
-      "sha256": "de45d2c4d2080810647b5f5be6b18c755f310fdca35e7603c5a517085d007a94"
+      "sha256": "5703c0f58c2c74cee39076ade32680e793d430aa2c58e6d64bbf3480ae15e2f0"
     }
-  ]
+  ],
+  "combinedFollowupVerification": {
+    "testsRun": 71,
+    "failures": 0,
+    "skipped": 0,
+    "bashSyntax": "passed"
+  }
 }

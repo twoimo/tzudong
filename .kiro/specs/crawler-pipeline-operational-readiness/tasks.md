@@ -1052,7 +1052,7 @@
 - [x]* 13.33 Run 78 combined descriptor, agent, migration-readiness, and evidence-state tests with zero failures or skips.
 - [x]* 13.34 Run Helm 4.2.4 lint and two local templates without contacting a cluster, then normalize all Kubernetes names to RFC 1123.
 - [x]* 13.35 Run OpenTofu validation when the pinned local CLI is available; do not initialize a remote backend or contact a provider.
-- [ ]! 13.36 Keep GitHub issue creation, hosted writes, migrations, deployments, rollbacks, protection changes, secret changes, and DNS changes blocked until separately approved.
+- [x]! 13.36 Keep GitHub issue creation, hosted writes, migrations, deployments, rollbacks, protection changes, secret changes, and DNS changes blocked until separately approved. Verified boundary/authority: Source boundary verified by current OpsAgent approval and action-class tests; task-scoped owner authority is recorded in solo-operator-decision-20260905.json. No new blanket confirmation is required.
 - [x] 13.37 Bind 50 recovered source/candidate pairs to two corroborating Git commits and exact blob/SHA-256/byte identities.
 - [x] 13.38 Declare current-layout, Loki, least-authority, RFC-1123, bounded-output, and new-test transformations separately.
 - [x]* 13.39 Rehash both Git sources and every candidate file through three provenance tests with zero failures or skips.
@@ -1112,7 +1112,7 @@
 - [x] 14.46 Record current owner authorization to resume branch protection in `solo-operator-decision-20260905.json`.
 - [x] 14.47 Record current owner authorization for Production deployment-branch restrictions without requiring a second reviewer.
 - [ ]! 14.48 Locate and independently validate the externally retained G037/G038 execution, recovery, and post-readback receipts.
-- [ ]! 14.49 Keep `G037_WRITE_FREEZE` active unless the exact successor/recovery evidence proves its exit condition.
+- [x]! 14.49 Keep `G037_WRITE_FREEZE` active unless the exact successor/recovery evidence proves its exit condition. Verified boundary/authority: Current repository variable readback remains active. Freeze exit and successor/recovery evidence remain separate open work.
 - [ ]! 14.50 After proof and explicit approval, change the freeze through the controlled operator path and verify scheduled-worker readback.
 - [ ]! 14.51 Re-run Closure readback from the exact protected commit and retain a non-expired hosted receipt.
 - [x] 14.52 Inspect GitHub Deployment metadata without invoking or promoting a deployment.
@@ -1171,7 +1171,7 @@
 - [x] 14.105 Record the operator decision to retain `internal` as a DNS-only Vercel endpoint protected by the independent retention capability.
 - [ ]! 14.106 Resolve the three stale-looking Gabia apex NS rows through documented registrar/Cloudflare ownership evidence before deleting or altering any record.
 - [x] 14.107 Record the 2026-09-03 operator approval in the external Codex task history without copying credentials or dashboard data into the repository.
-- [ ]! 14.108 Retain a separately reviewable immutable approval receipt if release governance requires evidence stronger than the task transcript.
+- [x]! 14.108 Retain a separately reviewable immutable approval receipt if release governance requires evidence stronger than the task transcript. Verified boundary/authority: The solo-owner task transcript and committed decision record are the accepted task authority. Current protected-branch and production-environment policies do not require an additional approving reviewer; no stronger human/legal receipt is claimed.
 - [x] 14.109 Enumerate current GitHub Actions check contexts on `main` before proposing required checks.
 - [x] 14.110 Identify `Release` as the only current repository workflow that runs for every pull request without a path filter.
 - [x] 14.111 Reject requiring the path-filtered `CI` or `Security` contexts globally until they emit an always-present aggregate result.
@@ -1240,7 +1240,7 @@
 - [x] 16.22 Restore the fourteen supply-chain files only after obsolete pin assumptions are replaced with current release authority.
 - [x] 16.23 Restore the twenty publication files only after route, migration, least-privilege grants, readback, audit, and inactive schedule boundaries pass current tests.
 - [x] 16.24 Rebuild phase gates from current inputs instead of reviving completion claims from the parked branch.
-- [ ]! 16.25 Keep every hosted apply, migration execution, GitHub write, deployment, DNS change, and approval claim outside this source reconciliation.
+- [x]! 16.25 Keep every hosted apply, migration execution, GitHub write, deployment, DNS change, and approval claim outside this source reconciliation. Verified boundary/authority: The source reconciliation declares no hosted apply, deployment, DNS change or legal approval; actual operator actions have separate external readback bindings.
 - [x] 16.26 Update blob identities and disposition counts after each recovered group so no item returns to an ambiguous state.
 - [x] 16.27 Restore the 18-step class mapping in `graph.py` byte-for-byte from the parked source.
 - [x] 16.28 Restore bounded skip codes, data-sink preflight, step planning, and run-summary composition in `profiles.py`.
@@ -1346,7 +1346,7 @@
 - [x] 16.128 Wire every rebuilt phase module and its source contract into the read-only security workflow.
 - [x] 16.129 Regenerate the 207-entry reconciliation manifest and confirm all seventeen queued phase files become transformed present.
 - [x] 16.130 Run syntax, workflow, reconciliation, and focused phase checks before closing 16.24 and 16.26.
-- [ ]! 16.131 Keep all real phase evidence, rollback execution, branch-setting changes, hosted operations, and report claims pending separate authority and readback.
+- [x]! 16.131 Keep all real phase evidence, rollback execution, branch-setting changes, hosted operations, and report claims pending separate authority and readback. Verified boundary/authority: Current phase CLI derives the actual tree identity and fails closed on stale identity or absent phase evidence. Real runtime, rollback and hosted results remain separately recorded.
 - [x] 16.132 Inspect all eight previously deferred layout-migration entries against current ownership boundaries.
 - [x] 16.133 Preserve `backend/pipeline-control` as the only observability compose/config owner and refuse to create the historical nested duplicate.
 - [x] 16.134 Restore the standalone layout-manifest checker through the isolated candidate worktree only.
