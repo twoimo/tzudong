@@ -38,7 +38,7 @@ export const PUBLISH_JOB_STATUS_LIST_LIMIT = 20;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RFC3339_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/;
-const LOCAL_QUEUE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const LOCAL_QUEUE_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 export function isPublishJobId(value: unknown): value is string {
   return typeof value === 'string' && UUID_PATTERN.test(value);

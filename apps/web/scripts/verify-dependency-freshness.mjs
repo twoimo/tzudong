@@ -168,6 +168,7 @@ export const classifyCandidate = (candidate) => {
     return { code: FIXED_CODES.TARGET_BRANCH_VIOLATION };
   }
   const packages = Array.isArray(candidate?.packages) ? candidate.packages : [];
+  if (candidate?.metadataIncomplete === true) return { code: FIXED_CODES.DEPENDENCY_CHECK_FAILED };
   for (const pkg of packages) {
     if (PIN_CONTRACT_PACKAGES.includes(pkg?.name)) {
       return { code: FIXED_CODES.PIN_CONTRACT_VIOLATION };
@@ -211,11 +212,16 @@ export const classifyVerification = (results) => {
   if (list.length !== VERIFICATION_COMMANDS.length) {
     return { code: FIXED_CODES.DEPENDENCY_CHECK_FAILED, reason: 'incomplete_attachment' };
   }
+  if (new Set(list.map((entry) => entry?.command)).size !== VERIFICATION_COMMANDS.length
+    || list.some((entry) => !VERIFICATION_COMMANDS.includes(entry?.command))) {
+    return { code: FIXED_CODES.DEPENDENCY_CHECK_FAILED, reason: 'incomplete_attachment' };
+  }
   for (const entry of list) {
     if (entry?.passed !== true) {
       return { code: FIXED_CODES.DEPENDENCY_CHECK_FAILED, reason: 'command_failed' };
     }
-    if (typeof entry?.durationMinutes === 'number' && entry.durationMinutes > COMMAND_TIMEOUT_MINUTES) {
+    if (!Number.isFinite(entry?.durationMinutes) || entry.durationMinutes < 0
+      || entry.durationMinutes > COMMAND_TIMEOUT_MINUTES) {
       return { code: FIXED_CODES.DEPENDENCY_CHECK_FAILED, reason: 'timeout' };
     }
     if (typeof entry?.finishedAt !== 'string' || entry.finishedAt.length === 0) {
@@ -249,11 +255,18 @@ export const buildRunReceipt = ({ runAtUtc, candidates = [] } = {}) => {
     if (unit) counts.set(unit.directory, (counts.get(unit.directory) ?? 0) + 1);
     const verdict = classifyCandidate(candidate);
     classified.push({
+      number: Number.isSafeInteger(candidate?.number) && candidate.number > 0 ? candidate.number : null,
+      headSha: /^[0-9a-f]{40}$/.test(candidate?.headSha ?? '') ? candidate.headSha : null,
       unit: unit ? unit.directory : 'unknown',
       title: redactForbiddenLogFields(candidate?.title ?? ''),
       standalone: candidate?.standalone === true,
       code: verdict.code,
     });
+  }
+  for (const entry of classified) {
+    if (entry.unit === 'unknown' || counts.get(entry.unit) > MAX_OPEN_PER_UNIT) {
+      entry.code ??= FIXED_CODES.DEPENDENCY_CHECK_FAILED;
+    }
   }
   return {
     schemaVersion: 1,
@@ -307,7 +320,8 @@ async function main() {
   let candidates = [];
   if (candidatesPath) {
     const raw = JSON.parse(await readFile(candidatesPath, 'utf8'));
-    candidates = Array.isArray(raw) ? raw : Array.isArray(raw?.candidates) ? raw.candidates : [];
+    if (!Array.isArray(raw)) throw new Error("candidate_metadata_invalid");
+    candidates = raw;
   }
 
   const receipt = buildRunReceipt({ candidates });
@@ -320,6 +334,7 @@ async function main() {
     const results = Array.isArray(raw) ? raw : Array.isArray(raw?.results) ? raw.results : [];
     const verdict = classifyVerification(results);
     receipt.verification = {
+      checkedCommit: /^[0-9a-f]{40}$/.test(process.env.GITHUB_SHA ?? '') ? process.env.GITHUB_SHA : null,
       workingDirectory: VERIFICATION_WORKING_DIRECTORY,
       results: results.map((entry) => ({
         command: VERIFICATION_COMMANDS.includes(entry?.command) ? entry.command : 'unknown',

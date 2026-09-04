@@ -279,6 +279,13 @@ jobs:
           backend.utils.tests.test_supply_chain_contract
           backend.utils.tests.test_rust_source_recovery
 
+      - name: Verify durable local publication queue and agent results
+        run: |
+          python -m pip install --disable-pip-version-check -r backend/pipeline-control/requirements.txt
+          export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
+          test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres -v
+
       - name: Verify recovered observability and readiness-agent boundaries
         run: >-
           python -m unittest

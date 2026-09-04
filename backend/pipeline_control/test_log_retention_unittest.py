@@ -131,6 +131,8 @@ class ActivationGateTests(unittest.TestCase):
                 {
                     "classId": "operational_logs",
                     "proposedRetentionDays": 30,
+                    "legalBasis": "operator-approved-test-basis",
+                    "trigger": "event_occurred",
                     "activation": {
                         "status": "approved",
                         "approverName": "operator-name",
@@ -148,6 +150,26 @@ class ActivationGateTests(unittest.TestCase):
             # require_active_retention returns the class rather than raising.
             active = require_active_retention(path)
             self.assertEqual(len(active), 1)
+
+    def test_incomplete_or_malformed_approved_tuple_stays_closed(self) -> None:
+        valid = {
+            "classId": "operational_logs", "proposedRetentionDays": 30,
+            "legalBasis": "operator-approved-test-basis", "trigger": "event_occurred",
+            "activation": {"status": "approved", "approverName": "test-operator",
+                           "approvedAt": "2026-01-01T00:00:00Z"},
+        }
+        cases = []
+        for field in ("classId", "legalBasis", "trigger"):
+            cases.extend({**valid, field: value} for value in (None, "", " ", 42))
+        cases.extend({**valid, "proposedRetentionDays": value}
+                     for value in (None, True, 0, -1, 1.5, "30"))
+        cases.extend({**valid, "activation": {**valid["activation"], "approvedAt": value}}
+                     for value in (None, "yesterday", "2026-02-30T00:00:00Z",
+                                   "2026-01-01", "2026-01-01T00:00:00",
+                                   "9999-01-01T00:00:00Z"))
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                self.assertEqual(active_retention_classes({"proposedClasses": [candidate]}), [])
 
     def test_unresolved_status_stays_closed(self) -> None:
         doc = {

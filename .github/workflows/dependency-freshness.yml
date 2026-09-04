@@ -16,6 +16,8 @@ on:
   schedule:
     - cron: '0 6 * * 1' # 06:00 UTC every Monday
   workflow_dispatch:
+  pull_request:
+    branches: [develop]
 
 concurrency:
   group: dependency-freshness-${{ github.ref }}
@@ -25,6 +27,7 @@ concurrency:
 # protection; candidates land only through human review (requirement 4.2).
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   NODE_VERSION: '24'
@@ -35,11 +38,13 @@ env:
 
 jobs:
   freshness:
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login == 'dependabot[bot]'
     name: Freshness
     runs-on: ubuntu-latest
     timeout-minutes: 180
     permissions:
       contents: read
+      pull-requests: read
     defaults:
       run:
         working-directory: apps/web
@@ -67,10 +72,15 @@ jobs:
       - name: Authoritative clean install
         run: npm ci
 
+      - name: Collect current Dependabot candidates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/collect-dependency-candidates.mjs "$RUNNER_TEMP/dependency-candidates.json"
+
       - name: Assert governance invariants and enumerate the seven units
         # Requirements 4.1, 4.2, 4.9, 5.6: seven units (cargo 7th), develop-only,
         # <=5 open per unit, never merged. Fails closed if the contract drifts.
-        run: node scripts/verify-dependency-freshness.mjs > "$RUNNER_TEMP/dependency-freshness-units.json"
+        run: node scripts/verify-dependency-freshness.mjs --candidates "$RUNNER_TEMP/dependency-candidates.json" > "$RUNNER_TEMP/dependency-freshness-units.json"
 
       - name: Preserve dependabot holds
         # Requirement 4.5: the four preserved holds must remain in dependabot.yml.
@@ -153,6 +163,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/verify-dependency-freshness.mjs \
+            --candidates "$RUNNER_TEMP/dependency-candidates.json" \
             --verification "$RUNNER_TEMP/dependency-freshness-verification.json" \
             > "$RUNNER_TEMP/dependency-freshness-run.json"
 

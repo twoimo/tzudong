@@ -145,6 +145,7 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
                 "bounded-descriptor-cli-test-output",
                 "migration-readiness-source-contract",
                 "synthetic-secret-fixture-source-safety",
+                "reviewed-operational-runtime-corrections",
             ],
         )
         declared = {

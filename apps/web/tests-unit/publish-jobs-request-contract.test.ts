@@ -51,6 +51,16 @@ describe('admin publish job queue helpers', () => {
   });
 
   test('admits the queue only behind an explicit loopback Supabase target', () => {
+    for (const url of ['http://[::1]:54321', 'https://[::1]:54321']) {
+      expect(isLocalPublishQueueAvailable({
+        TZUDONG_PUBLISH_QUEUE_ENABLED: '1', NEXT_PUBLIC_SUPABASE_URL: url,
+      })).toBe(true);
+    }
+    for (const url of ['http://[::2]:54321', 'http://[2001:db8::1]:54321']) {
+      expect(isLocalPublishQueueAvailable({
+        TZUDONG_PUBLISH_QUEUE_ENABLED: '1', NEXT_PUBLIC_SUPABASE_URL: url,
+      })).toBe(false);
+    }
     expect(isLocalPublishQueueAvailable({
       TZUDONG_PUBLISH_QUEUE_ENABLED: '1',
       NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',

@@ -74,7 +74,7 @@ SCHEMA_MIRROR_REPORT_SCHEMA_VERSION = 1
 # ---------------------------------------------------------------------------
 # Local_Only_Schema (design C5). The single schema that is intentionally
 # local-only and must have a zero-size intersection with the Publication_Set
-# (Requirement 9.6). Its ten tables come from the applied
+# (Requirement 9.6). Its base tables are defined by the immutable
 # ``20260901000100_local_analytics_schema.sql`` migration; a Local-only table
 # enumerated here is an APPROVED local-only item, not a mirroring defect
 # (Requirement 9.5).
@@ -101,7 +101,13 @@ LOCAL_ONLY_TABLE_NAMES: tuple[str, ...] = (
     "publish_audit_events",
     "phase_reports",
     "agent_action_records",
+    "agent_action_results",
 )
+
+LOCAL_ONLY_APPROVAL_REFERENCES = {
+    'local_analytics.agent_action_results':
+        'backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql',
+}
 
 # Fully-qualified ``schema.table`` identifiers for the Local_Only_Schema tables.
 LOCAL_ONLY_QUALIFIED_TABLES: frozenset[str] = frozenset(
@@ -267,7 +273,7 @@ def _build_local_only_tables(
         approved = qualified in local_only_enumeration
         item["approvedLocalOnly"] = approved
         item["operatorApprovalReference"] = (
-            LOCAL_ONLY_APPROVAL_REFERENCE if approved else None
+            LOCAL_ONLY_APPROVAL_REFERENCES.get(qualified, LOCAL_ONLY_APPROVAL_REFERENCE) if approved else None
         )
         items.append(item)
     return items

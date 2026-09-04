@@ -24,9 +24,11 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from backend.pipeline_control.es_index import EsIndexError, admit_es_url
+from backend.pipeline_control.log_redaction import prepare_record_for_sink
 from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 
 # Loki's HTTP push endpoint. Combined with the admitted base URL.
@@ -99,22 +101,21 @@ def _log_line(document: dict[str, Any]) -> str:
 def build_push_body(records: list[dict[str, Any]]) -> dict[str, Any]:
     """Build a Loki push body, grouping redacted records by stream labels.
 
-    A monotonic per-body nanosecond timestamp keeps line ordering stable without
-    leaking wall-clock precision from the record. Records themselves already
-    passed the redaction boundary.
+    Loki requires Unix epoch nanoseconds. Use the ingestion clock plus a
+    per-body offset so equal-label records remain ordered. Revalidate at this
+    final sink boundary, including records loaded from the pending retry queue.
     """
     streams: dict[str, dict[str, Any]] = {}
-    counter = 0
-    for record in records:
-        document = redacted_document(record)
+    timestamp = time.time_ns()
+    for counter, record in enumerate(records):
+        document = prepare_record_for_sink(record)
         labels = _stream_labels(document)
         key = json.dumps(labels, sort_keys=True, separators=(",", ":"))
         entry = streams.get(key)
         if entry is None:
             entry = {"stream": labels, "values": []}
             streams[key] = entry
-        entry["values"].append([str(counter), _log_line(document)])
-        counter += 1
+        entry["values"].append([str(timestamp + counter), _log_line(document)])
     return {"streams": [streams[key] for key in sorted(streams)]}
 
 

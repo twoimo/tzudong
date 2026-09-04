@@ -117,8 +117,16 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
 
         self.assertEqual(dict(sorted(counts.items())), document["dispositionCounts"])
         self.assertEqual(dict(sorted(states.items())), document["contentStateCounts"])
-        self.assertEqual(counts["source_exact_present"], 83)
-        self.assertEqual(counts["candidate_transformed_present"], 92)
+        self.assertEqual(counts["source_exact_present"], 79)
+        self.assertEqual(counts["candidate_transformed_present"], 96)
+        for path in (
+            "backend/bin/schema_mirror_report.py",
+            "backend/bin/tests/test_schema_mirror_pbt.py",
+            "backend/pipeline_control/log_retention.py",
+            "backend/pipeline_control/test_log_retention_unittest.py",
+        ):
+            entry = next(row for row in document["entries"] if row["sourcePath"] == path)
+            self.assertEqual(entry["disposition"], "candidate_transformed_present")
         descriptor = next(entry for entry in document["entries"]
                           if entry["sourcePath"] == "backend/bin/check_deployment_descriptor_set.py")
         self.assertEqual(descriptor["disposition"], "candidate_transformed_present")

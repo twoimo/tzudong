@@ -311,6 +311,24 @@ class DuplicateTests(unittest.TestCase):
 
 
 class RecordUnavailableTests(unittest.TestCase):
+    def test_terminal_write_failure_never_reports_success_or_repeats_action(self):
+        for raises in (False, True):
+            class FailedResultStore(oa.InMemoryAgentActionStore):
+                def record_result(self, *_args):
+                    if raises:
+                        raise RuntimeError("private provider diagnostic")
+                    return False
+            executed = []
+            agent = _make_agent(store=FailedResultStore(), executor=executed.append)
+            result = agent.process_signal(_signal(), [_rule("restart_local_container")])
+            self.assertFalse(result["ok"])
+            self.assertTrue(result["performed"])
+            self.assertTrue(result["halted"])
+            self.assertEqual(result["errorCode"], oa.AGENT_ACTION_RECORD_UNAVAILABLE)
+            agent.process_signal(_signal(), [_rule("restart_local_container")])
+            self.assertEqual(executed, ["restart_local_container"])
+            self.assertNotIn("private provider", str(result))
+
     def test_record_reservation_failure_blocks_action(self):
         executed = []
         store = oa.InMemoryAgentActionStore(fail_reserve=True)

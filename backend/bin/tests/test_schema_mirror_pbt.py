@@ -252,7 +252,8 @@ class SchemaMirrorClassificationCompletenessTests(unittest.TestCase):
                 self.assertTrue(item["approvedLocalOnly"])
                 self.assertEqual(
                     item["operatorApprovalReference"],
-                    smr.LOCAL_ONLY_APPROVAL_REFERENCE,
+                    smr.LOCAL_ONLY_APPROVAL_REFERENCES.get(
+                        f"{item['schemaName']}.{item['objectName']}", smr.LOCAL_ONLY_APPROVAL_REFERENCE),
                 )
 
 

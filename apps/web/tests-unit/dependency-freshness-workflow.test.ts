@@ -244,6 +244,9 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
     expect(classifyVerification(timedOut).code).toBe(FIXED_CODES.DEPENDENCY_CHECK_FAILED);
 
     expect(classifyVerification(ok.slice(0, 3)).code).toBe(FIXED_CODES.DEPENDENCY_CHECK_FAILED);
+    expect(classifyVerification(Array(4).fill(ok[0])).code).toBe(FIXED_CODES.DEPENDENCY_CHECK_FAILED);
+    expect(classifyVerification(ok.map((entry) => ({ ...entry, durationMinutes: undefined }))).code)
+      .toBe(FIXED_CODES.DEPENDENCY_CHECK_FAILED);
   });
 
   test('run receipt records UTC run time and per-unit candidate count', () => {

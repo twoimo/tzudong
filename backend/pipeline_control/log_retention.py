@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from datetime import datetime, timezone
 from typing import Any, Mapping
 
 # --- Fixed code (design fixed-code table, requirement 13.16) --------------
@@ -98,8 +100,26 @@ def _is_active_class(proposed_class: Any) -> bool:
         return False
     # An active status without a named approver is not a valid activation; the
     # design requires a named human to fill ``approverName``.
-    approver = activation.get("approverName")
-    return isinstance(approver, str) and approver.strip() != ""
+    for value in (
+        proposed_class.get("classId"), proposed_class.get("legalBasis"),
+        proposed_class.get("trigger"), activation.get("approverName"),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            return False
+    period = proposed_class.get("proposedRetentionDays")
+    if type(period) is not int or period <= 0:
+        return False
+    approved_at = activation.get("approvedAt")
+    if not isinstance(approved_at, str) or not re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})",
+        approved_at,
+    ):
+        return False
+    try:
+        approved = datetime.fromisoformat(approved_at.replace("Z", "+00:00"))
+        return approved <= datetime.now(timezone.utc)
+    except ValueError:
+        return False
 
 
 def active_retention_classes(

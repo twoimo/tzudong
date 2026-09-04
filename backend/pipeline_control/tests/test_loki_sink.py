@@ -9,8 +9,10 @@ existing otlp->prometheus metrics pipeline.
 from __future__ import annotations
 
 import os
+import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.pipeline_control import loki_sink
 from backend.pipeline_control.es_index import ALLOWED_ES_HOSTS
@@ -33,6 +35,8 @@ def _record(**overrides: object) -> dict[str, object]:
         "type": "run.lifecycle",
         "component": "backend_runtime",
         "severity": "info",
+        "occurred_at": "2026-09-05T00:00:00Z",
+        "correlation_id": "loki-test",
         "job_id": "j1",
         "status": "Succeeded",
     }
@@ -122,12 +126,16 @@ class LokiRedactionTests(unittest.TestCase):
             _record(severity="info", component="backend_runtime"),
             _record(severity="error", component="publish_worker", status="Failed"),
         ]
-        body = build_push_body(records)
+        with patch.object(loki_sink.time, "time_ns", return_value=1788566400000000000):
+            body = build_push_body(records)
+            again = build_push_body(records)
         self.assertIn("streams", body)
         self.assertEqual(len(body["streams"]), 2)
         # Deterministic: identical input yields identical serialization.
-        again = build_push_body(records)
         self.assertEqual(body, again)
+        self.assertEqual(sorted(int(value[0]) for stream in body["streams"]
+                                for value in stream["values"]),
+                         [1788566400000000000, 1788566400000000001])
         # Every stream carries at least the component label.
         for stream in body["streams"]:
             self.assertIn("component", stream["stream"])
@@ -137,6 +145,23 @@ class LokiRedactionTests(unittest.TestCase):
         body = build_push_body([_record(token="ghp_" + "a" * 36)])
         line = body["streams"][0]["values"][0][1]
         self.assertNotIn("ghp_", line)
+
+    def test_sink_drops_unknown_fields_and_bounds_surviving_values(self) -> None:
+        body = build_push_body([_record(
+            request_body={"note": "private arbitrary prose"},
+            status={str(i): "가" * 4000 for i in range(100)},
+        )])
+        line = body["streams"][0]["values"][0][1]
+        self.assertNotIn("request_body", line)
+        self.assertNotIn("private arbitrary prose", line)
+        self.assertLessEqual(len(line.encode("utf-8")), 65536)
+        self.assertEqual(json.loads(line)["status"], "[TRUNCATED]")
+
+    def test_missing_fields_and_unknown_class_never_reach_client(self) -> None:
+        from backend.pipeline_control.log_pipeline import LogPipelineError
+        for record in ({"type": "run.lifecycle"}, _record(type="unknown")):
+            with self.subTest(record=record), self.assertRaises(LogPipelineError):
+                build_push_body([record])
 
 
 class LokiPushTests(unittest.TestCase):

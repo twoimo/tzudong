@@ -712,6 +712,7 @@ class PublishWorker:
         *,
         hosted_apply: "HostedApplyFn",
         hosted_read: "HostedReadFn",
+        on_readback: Callable[[], None] | None = None,
         schedule: Mapping[str, Any] | None | object = _SCHEDULE_UNSET,
         schedule_path: str | None = None,
         now: float | None = None,
@@ -958,22 +959,15 @@ class PublishWorker:
                 table_sigs.append(sig)
             completed_batches += 1
 
-        if abort_code is not None:
-            # 10.16: no subsequent batch started; record completed / uncompleted
-            # batch counts. No readback on abort; the job is not a success.
-            return _apply_aborted_result(
-                preview,
-                abort_code,
-                confirm_result=confirm_result,
-                batch_records=batch_records,
-                completed_batches=completed_batches,
-                uncompleted_batches=total_batches - completed_batches,
-                insert_total=insert_total,
-                update_total=update_total,
-                converged_total=converged_total,
-            )
-
         # Gate 5: readback every applied identity key (10.7, 10.15).
+        if on_readback is not None:
+            try:
+                on_readback()
+            except Exception:
+                # A status observer must not prevent verification of writes
+                # that have already happened. The caller still persists the
+                # returned readback/audit before recording a terminal status.
+                pass
         readback_records: list[TableReadbackRecord] = []
         mismatch_found = False
         for table_key in sorted(applied_sigs_by_table):
@@ -1005,6 +999,22 @@ class PublishWorker:
                     matched_row_count=matched,
                     mismatched_row_count=mismatched,
                 )
+            )
+
+        if abort_code is not None:
+            # Stop applying, but retain readback/audit for every completed batch.
+            # Preserve the abort code even if a readback also reports mismatch.
+            return _apply_aborted_result(
+                preview,
+                abort_code,
+                confirm_result=confirm_result,
+                batch_records=batch_records,
+                readback_records=readback_records,
+                completed_batches=completed_batches,
+                uncompleted_batches=total_batches - completed_batches,
+                insert_total=insert_total,
+                update_total=update_total,
+                converged_total=converged_total,
             )
 
         final_code = PUBLISH_READBACK_MISMATCH if mismatch_found else None
@@ -1308,6 +1318,7 @@ def _apply_aborted_result(
     *,
     confirm_result: "ConfirmResult",
     batch_records: list["BatchApplyRecord"],
+    readback_records: list["TableReadbackRecord"],
     completed_batches: int,
     uncompleted_batches: int,
     insert_total: int,
@@ -1322,6 +1333,9 @@ def _apply_aborted_result(
     for record in batch_records:
         audit.append(record.audit_event(job_id))
         history.append(record.history_row(job_id))
+    for record in readback_records:
+        audit.append(record.audit_event(job_id))
+        history.append(record.history_row(job_id))
     return PublishJobResult(
         publish_job_id=job_id,
         succeeded=False,
@@ -1332,7 +1346,7 @@ def _apply_aborted_result(
         applied_update_count=update_total,
         converged_no_op_count=converged_total,
         batch_records=tuple(batch_records),
-        readback_records=(),
+        readback_records=tuple(readback_records),
         audit_events=tuple(audit),
         history_rows=tuple(history),
     )

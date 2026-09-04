@@ -374,8 +374,11 @@ class ApplyAbortTests(unittest.TestCase):
         self.assertEqual(result.uncompleted_batch_count, 2)
         # The third batch is never started (10.16).
         self.assertEqual(len(self.hosted.apply_calls), 2)
-        # No readback runs on abort.
-        self.assertEqual(result.readback_records, ())
+        self.assertEqual(len(result.readback_records), 1)
+        self.assertEqual(result.readback_records[0].matched_row_count, 200)
+        self.assertEqual(result.readback_records[0].mismatched_row_count, 0)
+        self.assertEqual(result.audit_events[-1]["stage"], "readback")
+        self.assertEqual(result.history_rows[-1]["stage"], "readback")
 
     def test_hosted_batch_limit_maps_to_fixed_code(self) -> None:
         rows = [_video_row(f"v{i}") for i in range(10)]
@@ -383,6 +386,22 @@ class ApplyAbortTests(unittest.TestCase):
         result = self._run(rows)
         self.assertFalse(result.succeeded)
         self.assertEqual(result.code, BATCH_UPSERT_LIMIT)
+
+    def test_partial_abort_audits_readback_drift_and_unavailability(self) -> None:
+        for unavailable in (False, True):
+            self.hosted = FakeHosted({"public.videos": ("id",)})
+            self.hosted.fail_on_batch = 1
+            self.hosted.tamper = {"public.videos": {("v0",): _video_row("v0", title="drift")}}
+            if unavailable:
+                def failed_read(*_args):
+                    raise RuntimeError("private database diagnostic")
+                self.hosted.read = failed_read
+            result = self._run([_video_row(f"v{i}") for i in range(450)])
+            self.assertEqual(result.code, PUBLISH_APPLY_ABORTED)
+            self.assertEqual(len(self.hosted.apply_calls), 2)
+            self.assertEqual(result.readback_records[0].mismatched_row_count, 200 if unavailable else 1)
+            self.assertEqual(result.audit_events[-1]["result_code"], PUBLISH_READBACK_MISMATCH)
+            self.assertNotIn("private database diagnostic", str(result))
 
     def test_unexpected_adapter_exception_maps_to_fixed_code_without_diagnostics(self) -> None:
         sentinel = "provider database error detail must not escape"

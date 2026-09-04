@@ -5,7 +5,7 @@
   "corroboratingCommit": "2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c",
   "note": "Source bytes are local Git evidence only. Candidate changes do not establish hosted state, approval, deployment, notification, or legal compliance.",
   "sourceFileCount": 50,
-  "candidateOnlyFileCount": 1,
+  "candidateOnlyFileCount": 8,
   "candidateTransformations": [
     {
       "id": "current-pipeline-control-layout",
@@ -75,6 +75,21 @@
         "backend/pipeline_control/test_deployment_descriptor_unittest.py",
         "backend/pipeline_control/test_descriptor_secret_pbt.py"
       ]
+    },
+    {
+      "id": "reviewed-operational-runtime-corrections",
+      "kind": "runtime-and-durable-audit-hardening",
+      "paths": [
+        "apps/web/scripts/collect-dependency-candidates.mjs",
+        "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+        "backend/pipeline-control/PUBLISH_QUEUE.md",
+        "backend/pipeline_control/agent_action_store.py",
+        "backend/pipeline_control/log_retention.py",
+        "backend/pipeline_control/publish_queue.py",
+        "backend/pipeline_control/test_log_retention_unittest.py",
+        "backend/pipeline_control/test_publish_queue_postgres.py",
+        "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql"
+      ]
     }
   ],
   "files": [
@@ -124,9 +139,9 @@
       "sourceGitBlobSha1": "46ec19827877b1ae5041396b57db414157b2453e",
       "sourceSha256": "c416e0a1b94670ac416cd587bf1b5f15d4c5f25094215ff82b633dbdf0a831e9",
       "sourceBytes": 33676,
-      "candidateGitBlobSha1": "89ac4aa3bbd9464931852055b4a220cdb55f3b25",
-      "candidateSha256": "ed0f3ee3c840b481cec62f2106ea386ca4b23974202c2467f99f17d491f8e154",
-      "candidateBytes": 34408
+      "candidateGitBlobSha1": "bffde04ed857582513587e73b10b8625a03e1634",
+      "candidateSha256": "4c315280fa1a26b03129432cdac43dd3cd34418c4803855660cd8649e8c81b57",
+      "candidateBytes": 35380
     },
     {
       "sourcePath": "backend/pipeline_control/test_cluster_render_pbt.py",
@@ -164,9 +179,9 @@
       "sourceGitBlobSha1": "cfffce95b6217b6d0417435d5b7daf08f3573e66",
       "sourceSha256": "3969e03e2d6e4d19314aab16b633460b967183cd0d0721eab80c4ef6dad9e41d",
       "sourceBytes": 20135,
-      "candidateGitBlobSha1": "13fa3b5f7548d11e7b56bb212dd1759adac4c539",
-      "candidateSha256": "a36764976d42341f0499c48569afff38088d2c4123a980a5bb1dd1cab2d810e9",
-      "candidateBytes": 22511
+      "candidateGitBlobSha1": "b249b317c34ba37838d0976447dabc96de21073d",
+      "candidateSha256": "62085d067220ec45f8faa19fc5988c39f861edf10e9889c6d745f527cfc1244b",
+      "candidateBytes": 23519
     },
     {
       "sourcePath": "backend/deploy/agent-action-allowlist.v1.json",
@@ -244,9 +259,9 @@
       "sourceGitBlobSha1": "5e3623810190ffddc0aa27b1a1f54ac240651459",
       "sourceSha256": "957500e1d5c723b933db9785e127850095daa6f94aeb49614264b40d2babcfb2",
       "sourceBytes": 7042,
-      "candidateGitBlobSha1": "5e3623810190ffddc0aa27b1a1f54ac240651459",
-      "candidateSha256": "957500e1d5c723b933db9785e127850095daa6f94aeb49614264b40d2babcfb2",
-      "candidateBytes": 7042
+      "candidateGitBlobSha1": "7145b4c8e40a22e0ee5a82c2cbd07b10861995dd",
+      "candidateSha256": "513ad72c7c8681f27bd94b16b26c3caf787afd2c6193586e357fc7a20679d3f7",
+      "candidateBytes": 7787
     },
     {
       "sourcePath": "backend/pipeline_control/loki_sink.py",
@@ -254,9 +269,9 @@
       "sourceGitBlobSha1": "bd3d1900083fc7eb3239fbfd1d452f7fe7fc52b5",
       "sourceSha256": "4cc3e71eefbc22c9fdd9745133d98e2db4d6b7f8559d453cc600beb5ca87cd38",
       "sourceBytes": 7112,
-      "candidateGitBlobSha1": "af88f99d3ca240ddacb7cdbf5099ecf0c25ad1d0",
-      "candidateSha256": "b66a9c68ede21e3cfa02c88f229e8041b4d50d2e0673a7d6c9b650a46adeb3b0",
-      "candidateBytes": 7105
+      "candidateGitBlobSha1": "b7f58a3548b9dfb3ca71fbd75c6e20174e11547c",
+      "candidateSha256": "4e2710266d16d96a11c916fb942dc99e21e0dd753a3f3029a4f720ee6dc05e9a",
+      "candidateBytes": 7262
     },
     {
       "sourcePath": "backend/pipeline_control/test_log_allowlist_pbt.py",
@@ -344,9 +359,9 @@
       "sourceGitBlobSha1": "2e615ef87d02518c8934b68ee5f28721ce5d22f7",
       "sourceSha256": "667473b5670fbedf6ff019fdb363311ff483b41ac198ee96b6282cd54d49f24a",
       "sourceBytes": 6764,
-      "candidateGitBlobSha1": "2e615ef87d02518c8934b68ee5f28721ce5d22f7",
-      "candidateSha256": "667473b5670fbedf6ff019fdb363311ff483b41ac198ee96b6282cd54d49f24a",
-      "candidateBytes": 6764
+      "candidateGitBlobSha1": "5493a66c99a253fa501275a42456f6afabe910d9",
+      "candidateSha256": "adb4d462b5e90d0602a0c2560e75c4a92188eb20962f6d5bb071b8e6ff78be5f",
+      "candidateBytes": 8067
     },
     {
       "sourcePath": "backend/pipeline_control/test_log_sink_url_pbt.py",
@@ -374,9 +389,9 @@
       "sourceGitBlobSha1": "705254ec78abddb79c253a1a2af4adcab7abb7be",
       "sourceSha256": "3cb2c9ed76ef595950debb39a7be65d1242a7ce7df3bcf02c5a5b355b5ce6a0e",
       "sourceBytes": 10809,
-      "candidateGitBlobSha1": "d9ddd77a567e4dc95308e93aaea7733ddc5777da",
-      "candidateSha256": "748fb9e7c4bc5ca13d3efd027e3009df8b91d0daa64ddd6b6f8d153c7c03cbd0",
-      "candidateBytes": 11013
+      "candidateGitBlobSha1": "3fa91a7749c7ab845966ef5fbb587bbd9924e468",
+      "candidateSha256": "f424a5c2fd84fcf54e7b120286d5b578561960e833a622641446f6fe82ed1ca7",
+      "candidateBytes": 12352
     },
     {
       "sourcePath": "backend/deploy/log-retention.proposed.json",
@@ -585,6 +600,48 @@
       "gitBlobSha1": "1ae385a35023db5dee65e5e6ddc0ddcb43f38dc0",
       "sha256": "addd67382847378198dca1a1d9c9b8a387d9a252840ddbb7048dafa6f782e660",
       "bytes": 3066
+    },
+    {
+      "path": "backend/pipeline_control/agent_action_store.py",
+      "gitBlobSha1": "25a1973e465194e5f4e5ed3945b392a05e96e9fb",
+      "sha256": "f6b50bd8731f972cfe67659822359b83e845e1ca1aba4f896bb3cd008ec8fb66",
+      "bytes": 2284
+    },
+    {
+      "path": "backend/pipeline_control/publish_queue.py",
+      "gitBlobSha1": "ff5ebc6d6aef944a214db06b1e10cdafec4c10fb",
+      "sha256": "bf498da7e1efb7d98712ce849349992bd7402966016add14e53b8d796b9c6cef",
+      "bytes": 14262
+    },
+    {
+      "path": "backend/pipeline_control/test_publish_queue_postgres.py",
+      "gitBlobSha1": "039184dd9619b4661d00f708aae23c458a47956d",
+      "sha256": "59e02d59caf49f4442088e6ca770edd8312bddab425aebb70c835752e5228501",
+      "bytes": 9631
+    },
+    {
+      "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
+      "gitBlobSha1": "bdd6d47be50c509837fc2563118ce1223e6cee1a",
+      "sha256": "ab15549fd484b70c7b433a68fd318bd62b62737870c829c2cdaead099187f8b5",
+      "bytes": 3193
+    },
+    {
+      "path": "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
+      "gitBlobSha1": "eeb07556d287925cd3a5d3f8bb07248ed6543b16",
+      "sha256": "fb8233c7076cf77af0f6ce7cff95822ea55612a583c5e50f8285e9723997f064",
+      "bytes": 1538
+    },
+    {
+      "path": "apps/web/scripts/collect-dependency-candidates.mjs",
+      "gitBlobSha1": "3608bf62c9bf196b99c8ddaa6ee689f27b4eee32",
+      "sha256": "6ee70512aefbb9388d2be1d997efb0bcf3f31d0741bc44093b0b17cac099b08e",
+      "bytes": 4353
+    },
+    {
+      "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+      "gitBlobSha1": "30ea48a21a4e5c3090a71637aa65b3a2dde5b01d",
+      "sha256": "ec75887bdd0710537fe84dc0f65205affe644ce3e73d7351a498a97099aa4731",
+      "bytes": 2606
     }
   ]
 }

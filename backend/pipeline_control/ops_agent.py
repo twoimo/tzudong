@@ -330,8 +330,10 @@ class InMemoryAgentActionStore:
 
     def record_result(self, action_id: str, result_code: Optional[str]) -> bool:
         key = self._by_action_id.get(action_id)
-        if key is None:
+        if key is None or result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:
             return False
+        if self._rows[key]["result_code"] is not None:
+            return self._rows[key]["result_code"] == result_code
         self._rows[key]["result_code"] = result_code
         return True
 
@@ -709,7 +711,9 @@ class OpsAgent:
         if category == "never_performed":
             # 어떤 승인 상태에서도 수행하지 않는다 (요구사항 15.13, 15.16).
             # 명명된 사람의 결정·실행 대기 상태로만 기록한다.
-            self.store.record_result(action_id, AGENT_ACTION_NOT_ALLOWLISTED)
+            if not self._record_terminal(action_id, AGENT_ACTION_NOT_ALLOWLISTED):
+                return self._deny(action_id, action_kind_id, trigger_signal_id,
+                                  AGENT_ACTION_RECORD_UNAVAILABLE, write_result=False)
             return _result(
                 False,
                 AGENT_ACTION_NOT_ALLOWLISTED,
@@ -774,7 +778,11 @@ class OpsAgent:
 
         # 수행·확인 성공. 상한 집계에 반영하고 결과 코드 기록.
         self.rate_limiter.record_performed(now)
-        self.store.record_result(action_id, AGENT_ACTION_PERFORMED)
+        if not self._record_terminal(action_id, AGENT_ACTION_PERFORMED):
+            self._halted_triggers.add(trigger_signal_id)
+            return self._deny(action_id, action_kind_id, trigger_signal_id,
+                              AGENT_ACTION_RECORD_UNAVAILABLE, performed=True,
+                              halted=True, write_result=False)
         return _result(
             True,
             None,
@@ -785,6 +793,12 @@ class OpsAgent:
             triggerSignalId=trigger_signal_id,
             humanApprovalRef=bound_ref,
         )
+
+    def _record_terminal(self, action_id: str, code: str) -> bool:
+        try:
+            return self.store.record_result(action_id, code) is True
+        except Exception:
+            return False
 
     def _verify(self, action_kind_id: str, start_seconds: float) -> bool:
         """결과 확인: 최대 3회 시도, 총 60초 이내 (요구사항 15.10)."""
@@ -813,8 +827,10 @@ class OpsAgent:
     ) -> dict:
         """조치를 수행하지 않고 결과 코드를 기록한 뒤 거부 결과를 반환한다."""
 
-        if write_result:
-            self.store.record_result(action_id, code)
+        if write_result and not self._record_terminal(action_id, code):
+            code = AGENT_ACTION_RECORD_UNAVAILABLE
+            self._halted_triggers.add(trigger_signal_id)
+            halted = True
         out = _result(
             False,
             code,

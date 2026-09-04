@@ -17,7 +17,7 @@ invariants:
     the job returns ``publish_apply_aborted``; exactly ``k`` batches complete,
     the failing batch is the last one started, no batch after ``k`` is ever
     started, the completed / uncompleted batch counts stay consistent with the
-    plan size, and no readback runs.
+    plan size, and completed batches retain readback and audit.
 
 The test drives the real ``PublishWorker.apply`` (Task 14) against the real
 committed ``backend/deploy/publication-set.v1.json`` ledger, using an in-memory
@@ -261,8 +261,8 @@ class PublishBatchSplitPropertyTests(unittest.TestCase):
             )
             # The failing batch is the last one started; none after it starts.
             self.assertEqual(len(hosted.apply_calls), k + 1)
-            # No readback runs on abort.
-            self.assertEqual(result.readback_records, ())
+            self.assertEqual(sum(r.matched_row_count for r in result.readback_records), k * BATCH_LIMIT)
+            self.assertEqual(sum(r.mismatched_row_count for r in result.readback_records), 0)
 
     # Feature: platform-modernization, Property 21: 배치 분할 불변식
     # Validates: Requirement 10.9
@@ -322,7 +322,7 @@ class PublishBatchSplitPropertyTests(unittest.TestCase):
         self.assertEqual(result.uncompleted_batch_count, 2)
         # Two calls only (batch 0 completed, batch 1 failed, batch 2 never starts).
         self.assertEqual(len(hosted.apply_calls), 2)
-        self.assertEqual(result.readback_records, ())
+        self.assertEqual(result.readback_records[0].matched_row_count, 200)
 
 
 if __name__ == "__main__":
