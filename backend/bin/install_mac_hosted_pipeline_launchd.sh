@@ -21,6 +21,11 @@ fi
   echo "python_runtime_unavailable" >&2
   exit 1
 }
+FREEZE_STATE="${G037_WRITE_FREEZE:-active}"
+case "$FREEZE_STATE" in
+  active|cleared) ;;
+  *) echo 'invalid_write_freeze_state' >&2; exit 2 ;;
+esac
 mkdir -p "$HOME/Library/LaunchAgents" "$SUPPORT" "$LOG_DIR" "$REPO_ROOT/backend/log/cron"
 cat > "$WRAPPER" <<EOF
 #!/bin/bash
@@ -28,6 +33,7 @@ set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 export TZUDONG_REPO_ROOT=$(printf '%q' "$REPO_ROOT")
 export TZUDONG_PIPELINE_SOURCE="mac"
+export G037_WRITE_FREEZE="${FREEZE_STATE}"
 cd "\$TZUDONG_REPO_ROOT"
 exec $(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 1
 EOF
@@ -52,6 +58,8 @@ cat > "$PLIST" <<EOF
     <string>mac</string>
     <key>TZUDONG_REPO_ROOT</key>
     <string>${REPO_ROOT}</string>
+    <key>G037_WRITE_FREEZE</key>
+    <string>${FREEZE_STATE}</string>
   </dict>
   <key>StartCalendarInterval</key>
   <dict>
@@ -73,4 +81,5 @@ echo "installed ${PLIST}"
 echo "wrapper=${WRAPPER}"
 echo "logs=${LOG_DIR}"
 echo "source=mac schedule=05:15 local evaluate+pending-apply limit=1"
+echo "write_freeze=${FREEZE_STATE}"
 echo "tcc=grant_full_disk_access_to_/bin/bash if repo is under Documents"

@@ -258,7 +258,7 @@ class MacEntrypointDryRunPrecedesLiveTest(unittest.TestCase):
         # before any live apply, so an operator-forced dry run cannot write.
         dry_run_ifs: list[ast.If] = []
         for node in ast.walk(self.main):
-            if isinstance(node, ast.If) and "args.dry_run" in ast.unparse(node.test):
+            if isinstance(node, ast.If) and ast.unparse(node.test) == "args.dry_run":
                 dry_run_ifs.append(node)
         self.assertTrue(
             dry_run_ifs,
@@ -397,6 +397,57 @@ class NoAutoEnableDuringUnattendedRunTest(unittest.TestCase):
             APPROVAL_ENV_NAME,
             msg="APPROVAL_ENV in hosted_data_plane.py must name the approval env var",
         )
+
+
+class RuntimeWriteFreezeTest(unittest.TestCase):
+    def test_held_run_starts_no_evaluation_or_apply_process(self) -> None:
+        import contextlib
+        import importlib.util
+        import io
+        import os
+        from unittest.mock import patch
+
+        spec = importlib.util.spec_from_file_location("mac_frozen_entrypoint", ENTRYPOINT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for state in (None, "", "active", "inactive"):
+            env = {} if state is None else {"G037_WRITE_FREEZE": state}
+            output = io.StringIO()
+            with patch.dict(os.environ, env, clear=True), \
+                    patch.object(module, "_load_backend_env"), \
+                    patch.object(module, "cadence_source_preflight") as cadence, \
+                    patch.object(module, "env_contract_preflight") as contract, \
+                    patch.object(module, "_run") as run, \
+                    contextlib.redirect_stdout(output):
+                self.assertEqual(module.main([]), 0)
+                run.assert_not_called()
+                cadence.assert_not_called()
+                contract.assert_not_called()
+            self.assertEqual(output.getvalue(), "pipeline=held_write_freeze\n")
+
+    def test_explicit_clear_keeps_preview_before_apply(self) -> None:
+        import contextlib
+        import importlib.util
+        import io
+        import os
+        import tempfile
+        from unittest.mock import patch
+
+        spec = importlib.util.spec_from_file_location("mac_cleared_entrypoint", ENTRYPOINT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch.dict(os.environ, {"G037_WRITE_FREEZE": "cleared"}, clear=True), \
+                patch.object(module, "_load_backend_env"), \
+                patch.object(module, "cadence_source_preflight"), \
+                patch.object(module, "env_contract_preflight"), \
+                patch.object(module, "_apply_local_runtime_environment"), \
+                patch.object(module, "_run", return_value=0) as run, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(module.main(["--preview-out", str(Path(tmp) / "preview.json")]), 0)
+            self.assertEqual(run.call_count, 3)
+            self.assertIn("--dry-run", run.call_args_list[1].args[0])
+            self.assertNotIn("--dry-run", run.call_args_list[2].args[0])
 
 
 class HostedApplyLatchStaysFalseConstantTest(unittest.TestCase):

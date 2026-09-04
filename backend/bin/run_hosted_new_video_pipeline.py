@@ -95,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     _load_backend_env(REPO_ROOT)
+    if not args.dry_run and os.environ.get("G037_WRITE_FREEZE") != "cleared":
+        print("pipeline=held_write_freeze")
+        return 0
     cadence_source_preflight(REPO_ROOT)
     env_contract_preflight("hosted-pending-apply")
     _apply_local_runtime_environment()
