@@ -930,7 +930,7 @@
 - [x] 12.9 Revalidate missing/unreadable manifest returns `UNKNOWN`.
 - [x] 12.10 Verify no provider/database/free-form error reaches the admin response.
 - [x]* 12.11 Exercise listed public routes in an isolated local server with a 5-second budget.
-- [ ]! 12.12 Obtain hosted observability/readback evidence without changing dashboards or production.
+- [x]! 12.12 Obtain hosted observability/readback evidence without changing dashboards or production: two bounded Supabase counter observations over 96.11558 seconds and exact Vercel production provider state; external receipt SHA-256 `437c63c8d8528dd0439bb3facc3219ef6ffcc4bdb4b1d7289c0da25156324d3c`. Provider READY is not end-to-end or scheduled-worker proof.
 - [x] 12.13 Pin the metric cardinality to four lifecycle counters, eight gauges, and one extra counter.
 - [x] 12.14 Reject unknown metric names and counter/gauge API misuse with closed codes.
 - [x] 12.15 Keep metric export off by default and reject opt-in OTLP export under GitHub Actions.
