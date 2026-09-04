@@ -41,8 +41,14 @@ test('workflow emits the required check on every PR and on base edits, without s
   const workflow = readFileSync(new URL('../workflows/promotion-path.yml', import.meta.url), 'utf8');
   assert.match(workflow, /name: Promotion Path/);
   assert.match(workflow, /types: \[opened, synchronize, reopened, edited, ready_for_review\]/);
-  assert.doesNotMatch(workflow, /paths:|branches:|pull_request_target|secrets\.|write/);
+  assert.doesNotMatch(workflow, /paths:|branches:|secrets\.|:\s*write\b/);
   assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /node --test .github\/scripts\/verify-promotion-path.test.mjs/);
-  assert.match(workflow, /node .github\/scripts\/verify-promotion-path.mjs/);
+  assert.match(workflow, /pull_request_target:/);
+  assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
+  assert.doesNotMatch(workflow, /refs\/pull|head\.sha|head\.ref/);
+  assert.match(workflow, /8a3a3a65ea41d4a5f20f1111aac9e0c3f8583b25/);
+  assert.doesNotMatch(workflow, /node --test/);
+  assert.match(workflow, /node --input-type=module/);
+  assert.match(workflow, /import \{ verifyPromotionPath \}/);
+  assert.doesNotMatch(workflow, /GITHUB_EVENT_NAME:/);
 });

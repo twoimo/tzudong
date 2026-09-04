@@ -333,14 +333,20 @@ def _category_approved(category: Mapping[str, Any]) -> bool:
     approval = category.get("operatorApproval")
     if not isinstance(approval, Mapping):
         return False
-    return approval.get("status") == APPROVED_STATUS
+    approver = approval.get("approverName")
+    return (
+        approval.get("status") == APPROVED_STATUS
+        and isinstance(approver, str)
+        and bool(approver.strip())
+    )
 
 
 def startup_gate(record: Mapping[str, Any]) -> dict:
     """Partition categories into the default startup set by approval (11.5).
 
     A category is admitted to the default startup set only when its
-    ``operatorApproval.status`` is exactly ``"approved"``. Every other category
+    ``operatorApproval.status`` is exactly ``"approved"`` and its approver name
+    is non-empty. Every other category
     is excluded and reported with ``tooling_approval_missing`` — there is no
     partial startup of an unapproved category's service.
 

@@ -281,8 +281,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--exposed",
         help=(
             "Path to a JSON file listing the dashboard-query target metric "
-            "names (array or {\"exposedMetrics\": [...]}). Defaults to the full "
-            "catalog when omitted."
+            "names (array or {\"exposedMetrics\": [...]}). Missing or unreadable "
+            "observations fail closed."
         ),
     )
     parser.add_argument("--broker-started", action="store_true")
@@ -296,10 +296,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
+    exposed = []
     if args.exposed:
-        exposed = _read_exposed_metrics(Path(args.exposed))
-    else:
-        exposed = list(CATALOG_METRICS)
+        try:
+            exposed = _read_exposed_metrics(Path(args.exposed))
+        except (OSError, ValueError, UnicodeError):
+            pass  # Missing/malformed observation is not evidence; no raw diagnostics.
 
     report = build_report(
         exposed,

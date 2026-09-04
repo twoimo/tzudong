@@ -497,15 +497,22 @@ def verify_vercel_project(
     """Verify the Git-integrated ``tzudong`` Vercel project before any action.
 
     Returns ``{"ok", "errorCode", "action", "readback"}``. Verification succeeds
-    only when ``project_identifier`` is exactly ``tzudong`` and a non-empty
-    linked-repository reference is present; the confirmed identifier is read back
+    only when ``project_identifier`` is exactly ``tzudong`` and the linked
+    repository is the canonical ``twoimo/tzudong`` GitHub repository; the confirmed identifier is read back
     in ``readback`` (Requirement 14.9). An unverified identifier or a ``web``
     project directive returns ``vercel_project_not_verified`` with no readback
     (Requirement 14.10). This function never contacts Vercel; it only gates.
     """
 
     identifier = project_identifier.strip() if isinstance(project_identifier, str) else ""
-    has_repo = isinstance(linked_repository, str) and bool(linked_repository.strip())
+    repository = linked_repository.strip() if isinstance(linked_repository, str) else ""
+    has_repo = repository in {
+        "twoimo/tzudong",
+        "github.com/twoimo/tzudong",
+        "https://github.com/twoimo/tzudong",
+        "https://github.com/twoimo/tzudong.git",
+        "git@github.com:twoimo/tzudong.git",
+    }
 
     if identifier == REJECTED_VERCEL_PROJECT:
         return _result(False, VERCEL_PROJECT_NOT_VERIFIED, action=action, readback=None)
@@ -518,7 +525,7 @@ def verify_vercel_project(
         action=action,
         readback={
             "projectIdentifier": identifier,
-            "linkedRepository": linked_repository.strip(),
+            "linkedRepository": "twoimo/tzudong",
             "gitIntegrated": True,
         },
     )

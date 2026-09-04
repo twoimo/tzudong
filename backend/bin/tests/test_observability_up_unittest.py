@@ -237,6 +237,14 @@ class ReadinessTests(unittest.TestCase):
             self.assertFalse(obs._http_readiness_probe("prometheus"))
         error.close()
 
+    def test_probe_requires_exact_success_for_each_fixed_endpoint(self):
+        for service in ("prometheus", "grafana", "loki", "otel-collector"):
+            for status in (200, 204, 301, 401, 404, 405, 429, 500):
+                response = mock.MagicMock()
+                response.__enter__.return_value.status = status
+                with self.subTest(service=service, status=status), mock.patch("urllib.request.urlopen", return_value=response):
+                    self.assertEqual(obs._http_readiness_probe(service), status == 200 or (service == "otel-collector" and status == 405))
+
     def test_all_ready_returns_ok(self):
         clock = _FakeClock()
         res = obs.check_service_readiness(

@@ -209,12 +209,25 @@ class CliTests(unittest.TestCase):
     def test_main_writes_artifact_and_returns_zero_on_full_catalog(self):
         with tempfile.TemporaryDirectory() as tmp:
             artifact = Path(tmp) / "report.json"
-            code = mcr.main(["--broker-started", "--log-search-started",
+            exposed = Path(tmp) / "observed.json"
+            exposed.write_text(json.dumps(_FULL), encoding="utf-8")
+            code = mcr.main(["--exposed", str(exposed), "--broker-started", "--log-search-started",
                              "--artifact", str(artifact)])
             self.assertEqual(code, 0)
             written = json.loads(artifact.read_text(encoding="utf-8"))
             self.assertTrue(written["ok"])
             self.assertEqual(written["catalogMetricCount"], 13)
+
+    def test_missing_or_unreadable_observations_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            artifact = Path(tmp) / "report.json"
+            invalid = Path(tmp) / "invalid.json"
+            invalid.write_text("not JSON", encoding="utf-8")
+            for extra in ([], ["--exposed", str(invalid)], ["--exposed", str(invalid)+"missing"]):
+                self.assertEqual(mcr.main(["--artifact", str(artifact), *extra]), 1)
+                report = json.loads(artifact.read_text())
+                self.assertFalse(report["ok"])
+                self.assertEqual(len(report["missing"]), 13)
 
     def test_main_returns_one_on_incomplete(self):
         with tempfile.TemporaryDirectory() as tmp:

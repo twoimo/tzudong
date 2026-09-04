@@ -9,7 +9,18 @@ PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 SUPPORT="$HOME/Library/Application Support/tzudong"
 LOG_DIR="$HOME/Library/Logs/tzudong"
 WRAPPER="$SUPPORT/run-hosted-new-video.sh"
-PYTHON="${PYTHON_CMD:-/usr/bin/python3}"
+if [[ -n "${PYTHON_CMD:-}" ]]; then
+  PYTHON="$PYTHON_CMD"
+elif [[ -x "$REPO_ROOT/.venv/bin/python" ]]; then
+  PYTHON="$REPO_ROOT/.venv/bin/python"
+else
+  PYTHON="/usr/bin/python3"
+fi
+# Validate before replacing a wrapper or unloading the installed agent.
+"$PYTHON" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' || {
+  echo "python_runtime_unavailable" >&2
+  exit 1
+}
 mkdir -p "$HOME/Library/LaunchAgents" "$SUPPORT" "$LOG_DIR" "$REPO_ROOT/backend/log/cron"
 cat > "$WRAPPER" <<EOF
 #!/bin/bash

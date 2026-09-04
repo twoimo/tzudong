@@ -212,12 +212,18 @@ class StartupGateTests(unittest.TestCase):
 
     def test_only_approved_admitted(self):
         record = _committed_record()
-        record["categories"][0]["operatorApproval"]["status"] = "approved"
+        record["categories"][0]["operatorApproval"].update(status="approved", approverName="test-operator")
         gate = tg.startup_gate(record)
         self.assertTrue(gate["ok"])
         self.assertIsNone(gate["errorCode"])
         self.assertEqual(gate["admitted"], [record["categories"][0]["category"]])
         self.assertEqual(len(gate["excluded"]), tg.EXPECTED_CATEGORY_COUNT - 1)
+
+    def test_status_only_or_blank_identity_never_admits_startup(self):
+        for name in (None, "", "  ", 1, [], {}):
+            record = _committed_record()
+            record["categories"][0]["operatorApproval"].update(status="approved", approverName=name)
+            self.assertFalse(tg.startup_gate(record)["ok"])
 
     def test_pending_and_rejected_not_admitted(self):
         record = _committed_record()
@@ -335,7 +341,7 @@ class EvaluateTests(unittest.TestCase):
     def test_approved_but_unverified_reports_install_code(self):
         record = _committed_record()
         for category in record["categories"]:
-            category["operatorApproval"]["status"] = "approved"
+            category["operatorApproval"].update(status="approved", approverName="test-operator")
         artifact = tg.evaluate(record, root=_ROOT)
         self.assertEqual(artifact["errorCode"], tg.LOCAL_INSTALL_UNVERIFIED)
         self.assertEqual(artifact["defaultStartupSet"], [])
@@ -343,7 +349,7 @@ class EvaluateTests(unittest.TestCase):
     def test_approved_and_verified_enters_default_set(self):
         record = _committed_record()
         target = record["categories"][0]
-        target["operatorApproval"]["status"] = "approved"
+        target["operatorApproval"].update(status="approved", approverName="test-operator")
         cmd = target["candidates"][0]["installVerifyCommand"]
         runner = _RecordingRunner({cmd: {"ran": True, "exitCode": 0, "observation": "ok"}})
         artifact = tg.evaluate(record, root=_ROOT, command_runner=runner)

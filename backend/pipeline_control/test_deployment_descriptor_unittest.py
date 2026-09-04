@@ -140,22 +140,31 @@ class ClusterRenderTests(unittest.TestCase):
 class VercelVerificationTests(unittest.TestCase):
     def test_tzudong_with_repo_verifies_and_reads_back(self):
         result = dd.verify_vercel_project(
-            "tzudong", "github.com/org/tzudong", action="deploy"
+            "tzudong", "github.com/twoimo/tzudong", action="deploy"
         )
         self.assertTrue(result["ok"])
         self.assertIsNone(result["errorCode"])
         self.assertEqual(result["readback"]["projectIdentifier"], "tzudong")
         self.assertTrue(result["readback"]["gitIntegrated"])
 
+    def test_unrelated_and_lookalike_repositories_fail_closed(self):
+        for repo in ("org/tzudong", "twoimo/other", "github.com/org/tzudong",
+                     "https://github.com.evil/twoimo/tzudong",
+                     "https://github.com/twoimo/tzudong/extra", " ", {}, None):
+            with self.subTest(repo=repo):
+                result = dd.verify_vercel_project("tzudong", repo)
+                self.assertFalse(result["ok"])
+                self.assertIsNone(result["readback"])
+
     def test_web_project_rejected(self):
-        result = dd.verify_vercel_project("web", "github.com/org/tzudong")
+        result = dd.verify_vercel_project("web", "github.com/twoimo/tzudong")
         self.assertFalse(result["ok"])
         self.assertEqual(result["errorCode"], dd.VERCEL_PROJECT_NOT_VERIFIED)
         self.assertIsNone(result["readback"])
 
     def test_unknown_project_rejected(self):
         self.assertEqual(
-            dd.verify_vercel_project("some-other", "github.com/org/tzudong")["errorCode"],
+            dd.verify_vercel_project("some-other", "github.com/twoimo/tzudong")["errorCode"],
             dd.VERCEL_PROJECT_NOT_VERIFIED,
         )
 

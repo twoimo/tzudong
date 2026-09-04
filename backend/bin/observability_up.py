@@ -672,7 +672,7 @@ def _http_readiness_probe(service: str) -> bool:
         return False
     try:
         with urllib.request.urlopen(url, timeout=2) as resp:  # noqa: S310 - loopback
-            return 200 <= resp.status < 500
+            return resp.status == 200 or (service == "otel-collector" and resp.status == 405)
     except urllib.error.HTTPError as error:
         return service == "otel-collector" and error.code == 405
     except Exception:  # noqa: BLE001 - readiness is a boolean, never raise

@@ -48,7 +48,7 @@ Persistence boundary
 ``local_analytics.parity_results`` is the recording target (design D2). This
 module never fabricates a database connection: ``record_parity_result`` takes an
 *injected* recorder callable that a Backend_Runtime worker supplies, and
-``run_parity`` itself performs no I/O. When no recorder is available the caller
+``run_parity`` uses only bounded memory pipes, never a database or disk output. When no recorder is available the caller
 fails closed rather than inventing connectivity.
 
 Discipline
@@ -63,6 +63,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib.machinery
+import json
+import math
+import multiprocessing
+import os
+import selectors
+import signal
 import threading
 import time
 from pathlib import Path
@@ -222,46 +228,139 @@ def compute_artifact_id(
 # ---------------------------------------------------------------------------
 # The harness (Requirements 2.1, 2.2, 2.3, 2.9).
 # ---------------------------------------------------------------------------
+# Backend parity workers are POSIX processes. Fork is admitted only from a
+# single-threaded worker; unsupported hosts/contexts fail closed. No raw output
+# is persisted to disk, and each implementation receives a separate payload.
+_MAX_OUTPUT_BYTES = 16 * 1024 * 1024
+
+
+def _json_output_value(value) -> bool:
+    # Refuse coercions (tuple->list, non-string keys->strings) that could turn
+    # an actual mismatch into a match. The normalizer declares no such rule.
+    if value is None or type(value) in (str, int, bool):
+        return True
+    if type(value) is float:
+        return math.isfinite(value)
+    if type(value) is list:
+        return all(_json_output_value(item) for item in value)
+    if type(value) is dict:
+        return all(type(key) is str and _json_output_value(item) for key, item in value.items())
+    return False
+
+
+def _parity_child(fn, payload, read_fd: int, write_fd: int) -> None:
+    os.close(read_fd)
+    try:
+        os.setsid()  # Descendants share a group that the parent always reaps.
+        sink = os.open(os.devnull, os.O_WRONLY)
+        try:
+            os.dup2(sink, 1)
+            os.dup2(sink, 2)
+        finally:
+            os.close(sink)
+        result = fn(payload)
+        if not isinstance(result, Mapping):
+            return
+        result = dict(result)
+        if not _json_output_value(result):
+            return
+        body = json.dumps(result, allow_nan=False).encode("utf-8")
+        if len(body) > _MAX_OUTPUT_BYTES:
+            return
+        view = memoryview(body)
+        while view:
+            view = view[os.write(write_fd, view):]
+    except BaseException:
+        pass  # No implementation output or provider diagnostic is surfaced.
+    finally:
+        os.close(write_fd)
+
+
+def _stop_parity_process(process) -> None:
+    # Kill the private group even when the leader has exited: an implementation
+    # may have left a descendant holding its pipe or doing delayed work.
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        # Darwin may report EPERM for an already-exited empty process group.
+        # An extant leader is still killed and synchronously reaped below.
+        pass
+    if process.is_alive():
+        process.kill()
+    process.join()
+    process.close()
+
+
 def _invoke_under_budget(
     python_impl: Callable[[Any], Any],
     rust_impl: Callable[[Any], Any],
     payload: Any,
     timeout_seconds: float,
 ) -> tuple[bool, Any, Any]:
-    """Run both implementations concurrently under a shared budget.
+    """Isolate both implementations and stop all workers before returning.
 
-    Returns ``(ok, python_output, rust_output)``. ``ok`` is False if either
-    implementation overruns the budget or terminates abnormally; in that case
-    the outputs are not usable and no comparison is attempted (Requirement 2.9).
+    The shared deadline includes startup and pipe transfer. Parent-side reads
+    are nonblocking and bounded, so a stalled or oversized result cannot evade
+    the timeout. Cleanup reaps both process groups before any subsequent input.
     """
-
-    box: dict[str, tuple[str, Any]] = {}
-
-    def _run(name: str, fn: Callable[[Any], Any]) -> None:
-        try:
-            box[name] = ("ok", fn(payload))
-        except BaseException:  # noqa: BLE001 - any abnormal termination fails closed
-            box[name] = ("error", None)
-
-    tp = threading.Thread(target=_run, args=("python", python_impl), daemon=True)
-    tr = threading.Thread(target=_run, args=("rust", rust_impl), daemon=True)
-
-    start = time.monotonic()
-    tp.start()
-    tr.start()
-    tp.join(timeout_seconds)
-    remaining = timeout_seconds - (time.monotonic() - start)
-    tr.join(remaining if remaining > 0 else 0.0)
-
-    if tp.is_alive() or tr.is_alive():
+    if (
+        "fork" not in multiprocessing.get_all_start_methods()
+        or threading.active_count() != 1
+        or threading.current_thread() is not threading.main_thread()
+        or not isinstance(timeout_seconds, (int, float))
+        or not math.isfinite(timeout_seconds)
+        or timeout_seconds <= 0
+    ):
         return False, None, None
-    py_status, py_output = box.get("python", ("error", None))
-    rust_status, rust_output = box.get("rust", ("error", None))
-    if py_status != "ok" or rust_status != "ok":
+    deadline = time.monotonic() + min(timeout_seconds, RUN_TIMEOUT_SECONDS)
+    context = multiprocessing.get_context("fork")
+    processes = []
+    descriptors = set()
+    buffers = {}
+    try:
+        with selectors.DefaultSelector() as selector:
+            for name, fn in (("python", python_impl), ("rust", rust_impl)):
+                read_fd, write_fd = os.pipe()
+                descriptors.update((read_fd, write_fd))
+                process = context.Process(target=_parity_child, args=(fn, payload, read_fd, write_fd))
+                process.start()
+                processes.append(process)
+                os.close(write_fd)
+                descriptors.remove(write_fd)
+                os.set_blocking(read_fd, False)
+                selector.register(read_fd, selectors.EVENT_READ, name)
+                buffers[name] = bytearray()
+            while selector.get_map():
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False, None, None
+                for key, _ in selector.select(remaining):
+                    chunk = os.read(key.fd, 65536)
+                    if chunk:
+                        buffers[key.data].extend(chunk)
+                        if len(buffers[key.data]) > _MAX_OUTPUT_BYTES:
+                            return False, None, None
+                    else:
+                        selector.unregister(key.fd)
+                        os.close(key.fd)
+                        descriptors.remove(key.fd)
+            for process in processes:
+                process.join(max(0, deadline - time.monotonic()))
+                if process.is_alive() or process.exitcode != 0:
+                    return False, None, None
+            if time.monotonic() > deadline:
+                return False, None, None
+            results = [json.loads(buffers[name]) for name in ("python", "rust")]
+            if time.monotonic() > deadline or not all(isinstance(result, dict) for result in results):
+                return False, None, None
+            return True, *results
+    except (OSError, ValueError, TypeError, RuntimeError):
         return False, None, None
-    if not isinstance(py_output, Mapping) or not isinstance(rust_output, Mapping):
-        return False, None, None
-    return True, py_output, rust_output
+    finally:
+        for process in processes:
+            _stop_parity_process(process)
+        for descriptor in descriptors:
+            os.close(descriptor)
 
 
 def run_parity(

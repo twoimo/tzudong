@@ -129,9 +129,9 @@
       "sourceGitBlobSha1": "bc35dca8b5851e991c1db1b912a896fc69384fbe",
       "sourceSha256": "73ed88ea80e1989645760362c65e924fc64d768271b3e035d687570e5d8e20b0",
       "sourceBytes": 21071,
-      "candidateGitBlobSha1": "15eaa1d6cf4a9fc70458241aee7449bd321e6bc4",
-      "candidateSha256": "e0ee52c13eec9e905535ffc658abc8f922ce5871b52fea8aeeca1d33945f4775",
-      "candidateBytes": 21311
+      "candidateGitBlobSha1": "9c035b5a7d1a8e16dfdf09e5e7f6f4a1aeac0c12",
+      "candidateSha256": "9f14315b995223606e8092b841656a4001c1925d05ac0aab7088735955a6b3cd",
+      "candidateBytes": 21569
     },
     {
       "sourcePath": "backend/pipeline_control/ops_agent.py",
@@ -159,9 +159,9 @@
       "sourceGitBlobSha1": "0d2a07eee8818c05b16a77af1b4907f2842bc861",
       "sourceSha256": "bd50a87907b0b4b1077bbd158d5a91e2c2368fe290cc2bba7b3da1c1057412f9",
       "sourceBytes": 7757,
-      "candidateGitBlobSha1": "01c05e8c6586c4c7350b99f28599acda28e8822a",
-      "candidateSha256": "cce65a44647fabe8249662275f448e69295f0b56ba41581b31cfbf568c3f2168",
-      "candidateBytes": 8038
+      "candidateGitBlobSha1": "be023dfd8877dea4559b15538b466494de98eeb0",
+      "candidateSha256": "94b43255730aaa949512315bc617ae7e0eecc359c7a46e98e92c431e8daf08db",
+      "candidateBytes": 8548
     },
     {
       "sourcePath": "backend/pipeline_control/test_descriptor_secret_pbt.py",
@@ -409,9 +409,9 @@
       "sourceGitBlobSha1": "ae8f827ea67798512c7495072fb26bb0acdcb08a",
       "sourceSha256": "d8babb2ec2e46aa4b70cb44e62cafcda37313dc2d8d1aa007d7814adf51f4e6d",
       "sourceBytes": 26218,
-      "candidateGitBlobSha1": "31277c9a047e5bff7d693e6372f5faf31f1c3551",
-      "candidateSha256": "dbb5535a2ed99a7b7ca50941b595ed14ca107d942f66a3390bed196cfe8f60cf",
-      "candidateBytes": 27491
+      "candidateGitBlobSha1": "b47b3a7b4265b7c31e082c10a328fc5fa38415c8",
+      "candidateSha256": "69e0f6750fdbbcf7d28a45b9e2ab749482aed64d670e1bc411d5bcb11c3af295",
+      "candidateBytes": 27541
     },
     {
       "sourcePath": "backend/bin/tests/test_observability_up_unittest.py",
@@ -419,9 +419,9 @@
       "sourceGitBlobSha1": "70bc067b1a847430b7baebd72404a8c5bb5a0cff",
       "sourceSha256": "5a1d1bafcb4d943644226f18d057a44ab460d4ffe96820035a350189fc60d862",
       "sourceBytes": 14849,
-      "candidateGitBlobSha1": "372abed6e999e19e95b9063ca32608bc14da6f75",
-      "candidateSha256": "ce19fd905cbe58f41c5aa89947f0747c76ea3d104c14acb912eef6bf3f40faeb",
-      "candidateBytes": 18002
+      "candidateGitBlobSha1": "a36f3a726fa29a8982e79bfa70fc8f2bfdc22515",
+      "candidateSha256": "0277bfd3e83750ed9cb6a322cb0a73cf828e75737324c0beb99ba39c46e71536",
+      "candidateBytes": 18595
     },
     {
       "sourcePath": "backend/bin/metrics_contract_report.py",
@@ -429,9 +429,9 @@
       "sourceGitBlobSha1": "77f4af09bdb1da1b71dc158836d38dc1ceb91005",
       "sourceSha256": "efbf7aa6e475cc05c573e4413260815ad421b1e821890414809af2c40de8a1a0",
       "sourceBytes": 11895,
-      "candidateGitBlobSha1": "3fc5b17ddef58e7bb8fe5e9153879277316c3446",
-      "candidateSha256": "1ee20c68476bd828713ce9255f6a27754ecdcaac6f2c7e5ffe5244b1035e9adb",
-      "candidateBytes": 11888
+      "candidateGitBlobSha1": "67e672c73e17f2503ff315f8c08b7b126a7204f4",
+      "candidateSha256": "49441bb5ce77716696a7540d02d842e51996f87979d2374dbe66b6414457236d",
+      "candidateBytes": 12016
     },
     {
       "sourcePath": "backend/bin/tests/test_metrics_contract_report_unittest.py",
@@ -439,9 +439,9 @@
       "sourceGitBlobSha1": "5c70477df4e0146600067d40f716484221203423",
       "sourceSha256": "fed3e713906d8b584ae689e4b0f7222181eb5631c762e873f76b47ea441d5cd3",
       "sourceBytes": 10111,
-      "candidateGitBlobSha1": "a5b595f6d2af8ae4abc2394ddf944e6fdfa9e796",
-      "candidateSha256": "c8d011e7e178911a0024124604076dbba1ac0a868526b9e08347d9d08559a4d8",
-      "candidateBytes": 10100
+      "candidateGitBlobSha1": "8d6da13460e14170ce7c241b869a528a54153895",
+      "candidateSha256": "2fb5844c2e13894b7c19f8f90417c315c33595d5539dca395e54a18d6caec7e3",
+      "candidateBytes": 10873
     },
     {
       "sourcePath": "backend/deploy/helm/tzudong-platform/.helmignore",

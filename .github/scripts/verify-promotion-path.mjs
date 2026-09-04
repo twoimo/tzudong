@@ -34,7 +34,7 @@ export function verifyPromotionPath(event, repositoryName) {
 function main() {
   let result;
   try {
-    result = process.env.GITHUB_EVENT_NAME === 'pull_request'
+    result = ['pull_request', 'pull_request_target'].includes(process.env.GITHUB_EVENT_NAME)
       ? verifyPromotionPath(JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')), process.env.GITHUB_REPOSITORY)
       : { passed: false, code: 'PROMOTION_EVENT_INVALID' };
   } catch {

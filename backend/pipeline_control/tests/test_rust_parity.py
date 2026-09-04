@@ -24,6 +24,11 @@ from __future__ import annotations
 
 import hashlib
 import importlib.machinery
+import multiprocessing
+import os
+import signal
+import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -126,6 +131,59 @@ class RunParityTests(unittest.TestCase):
         self.assertEqual(result["result_code"], rp.CODE_PARITY_RUN_INCOMPLETE)
         self.assertEqual(result["compared_fields"], [])
         self.assertEqual(result["mismatch_fields"], [])
+
+    def test_timeout_reaps_implementations_and_delayed_descendants(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            marker = Path(raw) / "late-write"
+            child = "import time,pathlib;time.sleep(0.4);pathlib.Path(%r).write_text('late')" % str(marker)
+            def hangs(_):
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+                descendant = subprocess.Popen([sys.executable, "-c", child])
+                self.assertIsNotNone(descendant.pid)
+                time.sleep(5)
+                marker.write_text("parent")
+                return {"a": 1}
+            existing = {p.pid for p in multiprocessing.active_children()}
+            result = rp.run_parity("R1", "timeout", {}, python_impl=hangs,
+                rust_impl=hangs, rust_artifact_id="art", timeout_seconds=0.15)
+            self.assertEqual(result["result_code"], rp.CODE_PARITY_RUN_INCOMPLETE)
+            self.assertEqual({p.pid for p in multiprocessing.active_children()}, existing)
+            time.sleep(0.5)
+            self.assertFalse(marker.exists(), "work continued after timeout")
+
+    def test_transport_never_silently_normalizes_unsupported_types(self) -> None:
+        result = rp.run_parity("R1", "types", {},
+            python_impl=lambda _: {"a": (1, 2)},
+            rust_impl=lambda _: {"a": [1, 2]}, rust_artifact_id="art")
+        self.assertFalse(result["matched"])
+        self.assertEqual(result["result_code"], rp.CODE_PARITY_RUN_INCOMPLETE)
+
+    def test_each_implementation_has_its_own_payload(self) -> None:
+        payload = {"items": []}
+        def mutates(value):
+            value["items"].append("one")
+            return {"count": len(value["items"])}
+        result = rp.run_parity("R1", "isolated", payload, python_impl=mutates,
+            rust_impl=mutates, rust_artifact_id="art")
+        self.assertTrue(result["matched"])
+        self.assertEqual(payload, {"items": []})
+
+    def test_large_pipe_output_does_not_deadlock(self) -> None:
+        result = rp.run_parity("R1", "large", {},
+            python_impl=lambda _: {"a": "x" * 200000},
+            rust_impl=lambda _: {"a": "x" * 200000}, rust_artifact_id="art",
+            timeout_seconds=3)
+        self.assertTrue(result["matched"])
+
+    def test_oversized_or_invalid_budget_fails_closed(self) -> None:
+        for budget in (0, -1, float("inf"), float("nan")):
+            result = rp.run_parity("R1", "invalid", {}, python_impl=_match_impl,
+                rust_impl=_match_impl, rust_artifact_id="art", timeout_seconds=budget)
+            self.assertEqual(result["result_code"], rp.CODE_PARITY_RUN_INCOMPLETE)
+        result = rp.run_parity("R1", "oversized", {},
+            python_impl=lambda _: {"a": "x" * rp._MAX_OUTPUT_BYTES},
+            rust_impl=_match_impl, rust_artifact_id="art")
+        self.assertEqual(result["result_code"], rp.CODE_PARITY_RUN_INCOMPLETE)
 
     def test_abnormal_termination_yields_incomplete(self) -> None:
         def _boom(payload):
