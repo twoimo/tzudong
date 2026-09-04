@@ -39,6 +39,10 @@ loaded by path by its tests. The repo root is put on ``sys.path`` so the shared
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
+import tempfile
 import sys
 from pathlib import Path
 from typing import Any, Sequence
@@ -63,7 +67,7 @@ _OPENTOFU_DIR = _DEPLOY_DIR / "opentofu"
 _DEFAULT_CLUSTER_IDS = ("local-a", "local-b")
 
 # Extensions treated as descriptor text for the secret scan.
-_DESCRIPTOR_SUFFIXES = (".yaml", ".yml", ".tpl", ".tf", ".json")
+_DESCRIPTOR_SUFFIXES = (".yaml", ".yml", ".tpl", ".tf", ".tfvars", ".json")
 
 
 def _result(ok: bool, error_code: Any, **extra: Any) -> dict:
@@ -90,6 +94,92 @@ def _descriptor_files(
             if path.is_file() and path.suffix.lower() in _DESCRIPTOR_SUFFIXES:
                 files.append(path)
     return files
+
+
+def _local_tool(argv, *, cwd, env):
+    result = subprocess.run(argv, cwd=cwd, env=env, capture_output=True, timeout=30, check=False)
+    if result.returncode != 0 or len(result.stdout) > 2 * 1024 * 1024:
+        raise ValueError("descriptor_source_render_denied")
+    return result.stdout
+
+
+def _expected_helm(component, cluster_id):
+    name = dd.kubernetes_name(component['componentId'])
+    labels = {'app.kubernetes.io/name': name, 'tzudong.io/cluster': cluster_id}
+    env = []
+    for item in component['envVars']:
+        source = item['source']
+        if source.startswith('secretRef:'):
+            reference = {'secretKeyRef': {'name': source.split(':',1)[1], 'key':'value'}}
+        else:
+            ref, key = source.split(':',1)[1].split('/',1)
+            reference = {'configMapKeyRef': {'name':ref, 'key':key}}
+        env.append({'name':item['name'], 'valueFrom':reference})
+    return {'apiVersion':'apps/v1','kind':'Deployment',
+        'metadata':{'name':dd.derived_fields(cluster_id,component['componentId'])['fullname'],
+                    'namespace':'tzudong-'+cluster_id,
+                    'labels':{**labels,'app.kubernetes.io/part-of':'tzudong-platform'}},
+        'spec':{'replicas':1,'selector':{'matchLabels':labels},
+                'template':{'metadata':{'labels':labels},'spec':{'containers':[
+                    {'name':name,'image':component['imageRef'],
+                     'resources':{'requests':dict(pair.split('=',1) for pair in component['resourceRequest'].split(','))},
+                     'env':env}]}}}}
+
+
+def validate_source_renders(catalog, helm_dir, opentofu_dir, cluster_ids):
+    """Render actual files without provider credentials, backend init or apply."""
+    import yaml
+    chart = helm_dir / 'tzudong-platform'
+    required = [chart/'Chart.yaml', chart/'values.yaml', chart/'templates/deployments.yaml',
+                chart/'templates/_helpers.tpl', *(opentofu_dir/name for name in ('main.tf','variables.tf','outputs.tf'))]
+    if any(not path.is_file() or path.is_symlink() for path in required):
+        return False
+    # Supply only process lookup and non-interactive settings, no TF_VAR,
+    # KUBECONFIG, cloud tokens, user CLI configuration or provider credentials.
+    env = {'PATH':os.environ.get('PATH',''), 'TF_IN_AUTOMATION':'1', 'CHECKPOINT_DISABLE':'1'}
+    try:
+        with tempfile.TemporaryDirectory(prefix='tz-descriptor-') as raw:
+            root = Path(raw)
+            helm_copy, tofu_copy = root/'helm', root/'tofu'
+            if any(path.is_symlink() for path in chart.rglob('*')):
+                return False
+            shutil.copytree(chart, helm_copy)
+            tofu_copy.mkdir()
+            for path in opentofu_dir.iterdir():
+                if path.name.endswith(('.tf', '.tf.json', '.tfvars', '.tfvars.json')):
+                    if not path.is_file() or path.is_symlink():
+                        return False
+                    shutil.copyfile(path, tofu_copy/path.name)
+            valid = json.loads(_local_tool(['tofu','validate','-json'],cwd=tofu_copy,env=env))
+            if valid.get('valid') is not True:
+                return False
+            for index, cluster_id in enumerate(cluster_ids):
+                output = _local_tool(['helm','template','tzudong-platform',str(helm_copy),
+                                     '--set-string','clusterId='+cluster_id],cwd=root,env=env)
+                docs = [doc for doc in yaml.safe_load_all(output) if doc is not None]
+                expected = [_expected_helm(c,cluster_id) for c in catalog['components']]
+                if sorted(docs,key=lambda d:d['metadata']['name']) != sorted(expected,key=lambda d:d['metadata']['name']):
+                    return False
+                plan = root/f'plan-{index}'
+                _local_tool(['tofu','plan','-input=false','-lock=false','-refresh=false',
+                             '-var=cluster_id='+cluster_id,'-out='+str(plan)],cwd=tofu_copy,env=env)
+                planned = json.loads(_local_tool(['tofu','show','-json',str(plan)],cwd=tofu_copy,env=env))
+                if planned.get('resource_changes'):
+                    return False
+                outputs = {k:v['value'] for k,v in planned['planned_values']['outputs'].items()}
+                components = {}
+                for c in catalog['components']:
+                    components[c['componentId']] = {
+                        'fullname': dd.derived_fields(cluster_id,c['componentId'])['fullname'],
+                        'namespace':'tzudong-'+cluster_id,'cluster_label':cluster_id,
+                        'image':c['imageRef'],
+                        'resources':dict(pair.split('=',1) for pair in c['resourceRequest'].split(',')),
+                        'env':c['envVars'],'secret_refs':c['secretRefs']}
+                if outputs != {'cluster_id':cluster_id,'namespace':'tzudong-'+cluster_id,'rendered_components':components}:
+                    return False
+        return True
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError, yaml.YAMLError):
+        return False  # Tool output, diagnostics and source values remain private.
 
 
 def run_check(
@@ -147,6 +237,9 @@ def run_check(
         render = dd.render_multi_cluster(
             catalog, cluster_ids, render_options=render_options
         )
+        if render['ok'] and not validate_source_renders(catalog, helm_dir, opentofu_dir, cluster_ids):
+            render = _result(False, 'descriptor_source_render_denied', clusterIds=list(cluster_ids),
+                             renders={}, differingFields=[], remoteApplyAttemptCount=0)
 
     # Aggregate: first failing code by precedence.
     error_code = None
@@ -218,7 +311,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 def public_summary(result: dict) -> dict:
     """Emit only fixed codes, booleans, and counts, never descriptor content."""
     def code(value):
-        for known in ledger_validation.LEDGER_ERROR_CODES | dd.DESCRIPTOR_CODES:
+        for known in ledger_validation.LEDGER_ERROR_CODES | dd.DESCRIPTOR_CODES | {'descriptor_source_render_denied'}:
             if value == known:
                 return known
         return "descriptor_check_denied"

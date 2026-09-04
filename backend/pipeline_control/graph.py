@@ -268,6 +268,13 @@ def step_class(step_id: str) -> str:
     mapping so an unmapped step can never be composed silently.
     """
 
+    from backend.pipeline_control.impl_selector import runtime_function
+    native = runtime_function("R5-pipeline-graph", "step_class")
+    if native is not None:
+        try:
+            return native(step_id)
+        except ValueError:
+            raise AdapterGraphError("step_class_unknown") from None
     try:
         return STEP_CLASS_BY_ID[step_id]
     except KeyError:
@@ -282,6 +289,13 @@ def validate_step_classes() -> None:
     crawling/evaluation/media/insertion composition total and disjoint (R8.1).
     """
 
+    from backend.pipeline_control.impl_selector import runtime_function
+    native = runtime_function("R5-pipeline-graph", "validate_step_classes")
+    if native is not None:
+        try:
+            native()
+        except ValueError:
+            raise AdapterGraphError("step_class_incomplete") from None
     spec_ids = {spec.id for spec in STEP_SPECS}
     mapped_ids = set(STEP_CLASS_BY_ID)
     if spec_ids != mapped_ids:
@@ -301,6 +315,13 @@ def _reject_escape(path: Path, root: Path) -> None:
 
 
 def validate_graph(root: Path | None = None) -> None:
+    from backend.pipeline_control.impl_selector import runtime_function
+    native = runtime_function("R5-pipeline-graph", "validate_graph_pure")
+    if native is not None:
+        try:
+            native()
+        except ValueError:
+            raise AdapterGraphError("command_path_invalid") from None
     base = root or REPO_ROOT
     context = next(spec for spec in STEP_SPECS if spec.id == "03-1-context")
     if "--channel" in context.extra_args:

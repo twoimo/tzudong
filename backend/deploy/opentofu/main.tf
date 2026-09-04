@@ -91,7 +91,7 @@ locals {
   # cluster-dependent fields.
   rendered = {
     for component_id, definition in local.components : component_id => {
-      fullname      = "${var.cluster_id}-${component_id}"
+      fullname      = replace(lower("${var.cluster_id}-${component_id}"), "_", "-")
       namespace     = local.namespace
       cluster_label = local.cluster_label
       image         = definition.image

@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import json
 import uuid
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence
@@ -311,6 +312,22 @@ class InMemoryAgentActionStore:
         self._rows: dict[tuple[str, str], dict] = {}
         self._by_action_id: dict[str, tuple[str, str]] = {}
         self._fail_reserve = fail_reserve
+        self._budget_claims: dict[str, float] = {}
+        self._budget_lock = threading.Lock()
+
+    def claim_rate_budget(self, action_id: str, limits, now_seconds: float) -> str:
+        """Shared-store admission; production uses a serialized database claim."""
+        with self._budget_lock:
+            if action_id not in self._by_action_id or not limits:
+                return 'unavailable'
+            if action_id in self._budget_claims:
+                return 'duplicate'
+            for limit in limits:
+                cutoff = now_seconds - limit['windowMinutes'] * 60
+                if sum(ts > cutoff for ts in self._budget_claims.values()) >= limit['maxActions']:
+                    return 'limited'
+            self._budget_claims[action_id] = now_seconds
+            return 'created'
 
     def reserve(self, record: AgentActionRecord) -> str:
         if self._fail_reserve:
@@ -477,11 +494,11 @@ def _approval_is_active(approval: Any) -> bool:
 # 슬라이딩 상한 (요구사항 15.9).
 # ---------------------------------------------------------------------------
 class SlidingRateLimiter:
-    """수행된 조치의 타임스탬프로 슬라이딩 창 상한을 강제한다.
+    """Local fast check; the store owns the shared durable execution budget.
 
-    실제로 수행된 조치만 집계한다(거부된 요청은 창을 소비하지 않는다). 새 후보가
-    어느 창에서든 상한에 도달했으면 수행을 거부한다. 상한 부재(비활성)이면 확인이
-    불가하므로 fail closed로 항상 거부한다.
+    Attempts are counted before the executor runs, including interrupted or
+    unverified attempts. Approval and allowlist denials consume no budget.
+    Missing active limits fail closed. A new limiter cannot reset store claims.
     """
 
     def __init__(self, limits: Sequence[Mapping[str, Any]], *, active: bool = True) -> None:
@@ -492,6 +509,10 @@ class SlidingRateLimiter:
     @property
     def active(self) -> bool:
         return self._active
+
+    @property
+    def limits(self) -> list[dict]:
+        return [dict(limit) for limit in self._limits] if self._active else []
 
     def would_exceed(self, now_seconds: float) -> bool:
         """지금 조치를 하나 더 수행하면 어느 상한이라도 초과하는지."""
@@ -746,6 +767,17 @@ class OpsAgent:
                 )
             # 승인이 결속됨 → 수행 경로로 진행.
 
+        # Commit a shared budget claim before executing. An interrupted or
+        # unverified attempt remains counted; rejected approvals consume none.
+        try:
+            budget = self.store.claim_rate_budget(action_id, self.rate_limiter.limits, now)
+        except Exception:
+            budget = 'unavailable'
+        if budget != 'created':
+            code = AGENT_ACTION_RATE_LIMITED if budget == 'limited' else AGENT_ACTION_RECORD_UNAVAILABLE
+            return self._deny(action_id, action_kind_id, trigger_signal_id, code)
+        self.rate_limiter.record_performed(now)
+
         # 여기부터 실제 로컬 조치 실행 (요구사항 15.3 / 15.5 승인 경로).
         try:
             self.executor(action_kind_id)
@@ -777,7 +809,6 @@ class OpsAgent:
             )
 
         # 수행·확인 성공. 상한 집계에 반영하고 결과 코드 기록.
-        self.rate_limiter.record_performed(now)
         if not self._record_terminal(action_id, AGENT_ACTION_PERFORMED):
             self._halted_triggers.add(trigger_signal_id)
             return self._deny(action_id, action_kind_id, trigger_signal_id,

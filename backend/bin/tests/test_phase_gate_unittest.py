@@ -6,6 +6,9 @@ import copy
 import json
 import tempfile
 import unittest
+import contextlib
+import io
+from unittest import mock
 from pathlib import Path
 
 from backend.bin import phase_gate
@@ -24,6 +27,22 @@ class PhaseGateEvaluatorTests(unittest.TestCase):
     def _evaluate(phase_id: str, inputs: dict):
         catalog = inputs.pop("catalog")
         return phase_gate.evaluate_phase_gate(catalog, phase_id, **inputs)
+
+    def test_stale_supplied_tree_is_rejected_before_verification_or_report(self) -> None:
+        phase = "P1-local-foundation"
+        with mock.patch.object(phase_gate, "candidate_tree_fingerprint", return_value="f" * 64), mock.patch.object(phase_gate, "run_verification_commands") as run:
+            for extra in ([], ["--run-verification"]):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    status = phase_gate.cli_for_phase(phase, ["--candidate-tree-id", TREE_ID, "--json", "--write-report", *extra])
+                self.assertEqual(status, 1)
+                result = json.loads(output.getvalue())
+                self.assertEqual(result["resultCode"], phase_gate.CANDIDATE_TREE_MISMATCH)
+                self.assertEqual(result["candidateTreeId"], "f" * 64)
+                self.assertIsNone(result["reportPath"])
+            run.assert_not_called()
+            result = phase_gate.run_configured_phase(phase, **valid_inputs(self.catalog, phase))
+            self.assertEqual(result["resultCode"], phase_gate.CANDIDATE_TREE_MISMATCH)
 
     def test_invalid_catalog_and_unknown_phase_are_bounded(self) -> None:
         result = phase_gate.evaluate_phase_gate(

@@ -43,6 +43,13 @@ free-form error strings, no provider or database diagnostics.
 from __future__ import annotations
 
 import json
+import math
+import multiprocessing
+import pickle
+import signal
+from contextlib import contextmanager
+from contextvars import ContextVar
+from functools import wraps
 import os
 import threading
 import time
@@ -295,8 +302,8 @@ def load_rust(
     If initialization exceeds the budget or raises, this fails closed with
     ``SelectorError(rust_component_unavailable)``: it does **not** retry, does
     **not** fall back to the python implementation, and returns no partial
-    result and writes nothing. On success it returns the imported extension
-    module. (Requirement 1.6)
+    result and writes nothing. On success it returns a callable proxy for an isolated extension
+    module; callers must close it after use. (Requirement 1.6)
 
     An ``slice_id`` absent from the ledger raises
     ``SelectorError(migration_slice_unknown)``.
@@ -314,23 +321,217 @@ def load_rust(
             raise SelectorError(CODE_RUST_UNAVAILABLE)
         importer = _default_importer(module_name)
 
-    holder: dict[str, Any] = {}
+    return _RustProcessModule(importer, timeout_seconds)
 
-    def _run() -> None:
+
+_RPC_MAX_BYTES = 16 * 1024 * 1024
+_NATIVE_ERROR_CODES = frozenset({
+    "step_class_unknown", "step_class_incomplete", "command_args_invalid",
+    "command_path_invalid", "quality_gate_missing", "interpreter_not_admitted",
+    "illegal_transition",
+})
+
+
+def _wire_value(value):
+    if value is None or type(value) in (str, int, bool):
+        return True
+    if type(value) is float:
+        return math.isfinite(value)
+    if type(value) in (list, tuple):
+        return all(_wire_value(item) for item in value)
+    if type(value) is dict:
+        return all(type(key) is str and _wire_value(item) for key,item in value.items())
+    return False
+
+
+def _send_wire(pipe, value):
+    if not _wire_value(value):
+        raise ValueError(CODE_RUST_UNAVAILABLE)
+    data = pickle.dumps(value, protocol=5)
+    if len(data) > _RPC_MAX_BYTES:
+        raise ValueError(CODE_RUST_UNAVAILABLE)
+    pipe.send_bytes(data)
+
+
+def _receive_wire(pipe):
+    value = pickle.loads(pipe.recv_bytes(maxlength=_RPC_MAX_BYTES))
+    if not _wire_value(value):
+        raise ValueError(CODE_RUST_UNAVAILABLE)
+    return value
+
+
+def _rust_process(importer, parent_pipe, child_pipe):
+    parent_pipe.close()
+    try:
+        os.setsid()
+        sink = os.open(os.devnull, os.O_WRONLY)
         try:
-            holder["module"] = importer()
-        except BaseException:  # noqa: BLE001 - any init failure fails closed
-            holder["failed"] = True
+            os.dup2(sink, 1)
+            os.dup2(sink, 2)
+        finally:
+            os.close(sink)
+        module = importer()
+        _send_wire(child_pipe, ('ready', None))
+        while True:
+            name, args, kwargs = _receive_wire(child_pipe)
+            try:
+                function = getattr(module, name)
+                if not callable(function):
+                    raise ValueError(CODE_RUST_UNAVAILABLE)
+                _send_wire(child_pipe, ('value', function(*args, **kwargs)))
+            except BaseException as error:
+                code = error.args[0] if isinstance(error, ValueError) and error.args else None
+                code = code if type(code) is str and code in _NATIVE_ERROR_CODES else CODE_RUST_UNAVAILABLE
+                _send_wire(child_pipe, ('error', code))
+    except BaseException:
+        pass
+    finally:
+        child_pipe.close()
 
-    worker = threading.Thread(target=_run, daemon=True)
-    worker.start()
-    worker.join(timeout_seconds)
 
-    # Timeout (thread still running), an init exception, or no module produced
-    # all collapse to the same bounded fixed code. No retry, no fallback.
-    if worker.is_alive() or holder.get("failed") or "module" not in holder:
+class _RustProcessModule:
+    """Callable module proxy; initialization and calls remain killable.
+
+    No Python module object or provider exception crosses the private pipe.
+    Runtime call sites close their proxy after each call. This deliberately
+    leaves the default as Python until real parity/performance evidence exists.
+    """
+    def __init__(self, importer, timeout_seconds):
+        self._owner_pid = os.getpid()
+        self._process = None
+        self._pipe = None
+        if ('fork' not in multiprocessing.get_all_start_methods()
+            or threading.active_count() != 1
+            or threading.current_thread() is not threading.main_thread()
+            or not isinstance(timeout_seconds, (int,float))
+            or not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
+            raise SelectorError(CODE_RUST_UNAVAILABLE)
+        context = multiprocessing.get_context('fork')
+        self._pipe, child_pipe = context.Pipe()
+        self._process = context.Process(target=_rust_process, args=(importer,self._pipe,child_pipe))
+        try:
+            self._process.start()
+            child_pipe.close()
+            if self._exchange(None, min(timeout_seconds, INIT_TIMEOUT_SECONDS)) != ('ready',None):
+                raise SelectorError(CODE_RUST_UNAVAILABLE)
+        except BaseException:
+            child_pipe.close()
+            self.close()
+            raise SelectorError(CODE_RUST_UNAVAILABLE) from None
+
+    def _kill(self):
+        process = self._process
+        if process is None or process.pid is None or os.getpid() != self._owner_pid:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+        if process.is_alive():
+            process.kill()
+
+    def _exchange(self, request, timeout):
+        finished = threading.Event()
+        expired = threading.Event()
+        def deadline():
+            if not finished.wait(timeout):
+                expired.set()
+                self._kill()
+        watchdog = threading.Thread(target=deadline)
+        watchdog.start()
+        try:
+            if request is not None:
+                _send_wire(self._pipe, request)
+            response = _receive_wire(self._pipe)
+            if expired.is_set():
+                raise SelectorError(CODE_RUST_UNAVAILABLE)
+            return response
+        except (OSError, EOFError, ValueError, TypeError, RecursionError, pickle.PickleError):
+            raise SelectorError(CODE_RUST_UNAVAILABLE) from None
+        finally:
+            finished.set()
+            watchdog.join()
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError(name)
+        def call(*args, **kwargs):
+            try:
+                status, value = self._exchange((name,args,kwargs), 600.0)
+            except BaseException:
+                self.close()
+                raise
+            if status == 'error':
+                if value in _NATIVE_ERROR_CODES:
+                    raise ValueError(value)
+                raise SelectorError(CODE_RUST_UNAVAILABLE)
+            if status != 'value':
+                raise SelectorError(CODE_RUST_UNAVAILABLE)
+            return value
+        return call
+
+    def close(self):
+        if os.getpid() != self._owner_pid:
+            return
+        if self._process is not None:
+            self._kill()
+            if self._process.pid is not None:
+                self._process.join()
+            self._process.close()
+            self._process = None
+        if self._pipe is not None:
+            self._pipe.close()
+            self._pipe = None
+
+    def __del__(self):
+        self.close()
+
+
+_FORCE_PYTHON_REFERENCE = ContextVar('tzudong_python_reference', default=False)
+
+
+@contextmanager
+def python_reference():
+    """Keep the Python side of a parity run independent of opt-in routing."""
+    token = _FORCE_PYTHON_REFERENCE.set(True)
+    try:
+        yield
+    finally:
+        _FORCE_PYTHON_REFERENCE.reset(token)
+
+
+def runtime_function(slice_id: str, function_name: str):
+    """Resolve the live call site; selected Rust never falls back silently."""
+    if _FORCE_PYTHON_REFERENCE.get():
+        return None
+    ledger = load_ledger()
+    selected = resolve_implementation(slice_id, ledger=ledger)
+    if selected != IMPL_RUST:
+        selected = resolve_default_implementation(slice_id, ledger=ledger)
+    if selected != IMPL_RUST:
+        return None
+    module = load_rust(slice_id, ledger=ledger)
+    function = getattr(module, function_name, None)
+    if not callable(function):
         raise SelectorError(CODE_RUST_UNAVAILABLE)
-    return holder["module"]
+    def invoke(*args, **kwargs):
+        try:
+            return function(*args, **kwargs)
+        finally:
+            if isinstance(module, _RustProcessModule):
+                module.close()
+    return invoke
+
+
+def rust_dispatch(slice_id: str):
+    """Preserve the public Python signature and retain its reference callable."""
+    def decorate(python_function):
+        @wraps(python_function)
+        def dispatch(*args, **kwargs):
+            native = runtime_function(slice_id, python_function.__name__)
+            return native(*args, **kwargs) if native is not None else python_function(*args, **kwargs)
+        return dispatch
+    return decorate
 
 
 # ---------------------------------------------------------------------------

@@ -145,6 +145,27 @@ class WatchRuleTests(unittest.TestCase):
 
 
 class AllowlistedActionTests(unittest.TestCase):
+    def test_new_agent_instances_share_the_stores_execution_budget(self):
+        store = oa.InMemoryAgentActionStore()
+        executed = []
+        for i in range(12):
+            agent = _make_agent(store=store, executor=executed.append)
+            result = agent.process_signal(_signal(str(i)), [_rule('restart_local_container')])
+            self.assertEqual(result['performed'], i < 10)
+        self.assertEqual(len(executed),10)
+
+    def test_uncertain_execution_still_consumes_shared_budget(self):
+        store = oa.InMemoryAgentActionStore()
+        limits = [{'windowMinutes':60,'maxActions':1}]
+        def failed(_):
+            raise RuntimeError('not retained')
+        first = _make_agent(store=store, limits=limits, executor=failed)
+        self.assertTrue(first.process_signal(_signal('first'), [_rule('restart_local_container')])['performed'])
+        second = _make_agent(store=store, limits=limits)
+        result = second.process_signal(_signal('second'), [_rule('restart_local_container')])
+        self.assertFalse(result['performed'])
+        self.assertEqual(result['errorCode'],oa.AGENT_ACTION_RATE_LIMITED)
+
     def test_allowlisted_action_performed_and_verified(self):
         store = oa.InMemoryAgentActionStore()
         agent = _make_agent(store=store)

@@ -21,6 +21,10 @@ and does not require a live rust build.
 from __future__ import annotations
 
 import time
+import multiprocessing
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -117,12 +121,21 @@ class DefaultImplementationTests(unittest.TestCase):
 
 
 class LoadRustTests(unittest.TestCase):
+    def test_process_start_failure_is_bounded_and_closes_pipes(self) -> None:
+        from multiprocessing.context import ForkProcess
+        with patch.object(ForkProcess, 'start', side_effect=OSError('not retained')):
+            with self.assertRaises(sel.SelectorError) as caught:
+                sel.load_rust('R1-validators', importer=lambda: None, ledger=_ledger())
+        self.assertEqual(caught.exception.code, sel.CODE_RUST_UNAVAILABLE)
+
     def test_successful_importer_returns_module(self) -> None:
-        sentinel = object()
         module = sel.load_rust(
-            "R1-validators", importer=lambda: sentinel, ledger=_ledger()
+            "R1-validators", importer=lambda: SimpleNamespace(identity=lambda value: value), ledger=_ledger()
         )
-        self.assertIs(module, sentinel)
+        try:
+            self.assertEqual(module.identity({'count':3}), {'count':3})
+        finally:
+            module.close()
 
     def test_import_failure_fails_closed(self) -> None:
         def _boom():
@@ -142,6 +155,20 @@ class LoadRustTests(unittest.TestCase):
                 "R1-validators", importer=_slow, ledger=_ledger(), timeout_seconds=0.05
             )
         self.assertEqual(ctx.exception.code, sel.CODE_RUST_UNAVAILABLE)
+
+    def test_timed_out_importer_is_stopped_before_return(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            marker = Path(raw)/'late'
+            def delayed():
+                time.sleep(0.2)
+                marker.write_text('late')
+                return object()
+            baseline = {p.pid for p in multiprocessing.active_children()}
+            with self.assertRaises(SelectorError):
+                sel.load_rust('R1-validators', importer=delayed, ledger=_ledger(), timeout_seconds=0.05)
+            self.assertEqual({p.pid for p in multiprocessing.active_children()}, baseline)
+            time.sleep(0.25)
+            self.assertFalse(marker.exists())
 
     def test_unknown_slice_raises_before_import(self) -> None:
         def _should_not_run():  # pragma: no cover - must not be called

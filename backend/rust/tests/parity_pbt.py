@@ -402,6 +402,20 @@ _error_list = st.lists(
 class Property6ValidatorParity(unittest.TestCase):
     """Feature: platform-modernization, Property 6: 파이썬 ↔ 러스트 출력 동등성."""
 
+    def test_python_whitespace_boundaries_are_preserved(self) -> None:
+        whitespace = [chr(code) for code in range(0x3100) if chr(code).isspace()]
+        for char in whitespace:
+            with self.subTest(codepoint=ord(char)):
+                data = {'evaluation_results': {
+                    key: {'values': [{'name': 'fixture', 'eval_value': None,
+                                     'eval_basis': char + '0000' + char}]}
+                    for key in ('visit_authenticity', 'rb_inference_score',
+                                'rb_grounding_TF', 'review_faithfulness_score', 'category_TF')
+                }}
+                self._assert_parity('whitespace', {'data': data},
+                    lambda p: {'errors': py_validators.validate_laaj_results('fixture', p['data'])},
+                    lambda p: {'errors': rs_validators.validate_laaj_results('fixture', p['data'])})
+
     def _assert_parity(self, input_id: str, payload, py_impl, rust_impl) -> None:
         result = run_parity(
             SLICE_ID,

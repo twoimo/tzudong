@@ -114,6 +114,9 @@ def main(argv: list[str] | None = None) -> int:
         required=False,
     )
     print(f"evaluate_exit={evaluate_exit}")
+    if evaluate_exit != 0:
+        print("pipeline=evaluation_failed")
+        return evaluate_exit
     preview = Path(args.preview_out)
     preview.parent.mkdir(parents=True, exist_ok=True)
     apply_cmd = [

@@ -137,3 +137,20 @@ describe("Pin_Contract verifier runtime behavior", () => {
     }
   });
 });
+
+
+describe("Bun reconciliation is a failing pin gate", () => {
+  test("missing or differently resolved direct dependencies fail with otherwise matching pins", async () => {
+    const { lockConflicts, hasPinDrift } = await import("../scripts/verify-pin-contract.mjs");
+    const manifest = { dependencies: { example: "1.2.3" } };
+    const npmLock = { packages: { "node_modules/example": { version: "1.2.3" } } };
+    for (const bun of [{ packages: {} }, { packages: { example: ["example@1.2.4"] } }]) {
+      const conflicts = lockConflicts({ manifest, npmLock, bun });
+      expect(conflicts).toEqual(["example"]);
+      expect(hasPinDrift([{ match: true }], true, conflicts)).toBe(true);
+    }
+    const conflicts = lockConflicts({ manifest, npmLock, bun: { packages: { example: ["example@1.2.3"] } } });
+    expect(conflicts).toEqual([]);
+    expect(hasPinDrift([{ match: true }], true, conflicts)).toBe(false);
+  });
+});

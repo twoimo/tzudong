@@ -16,6 +16,7 @@ import importlib.util
 import io
 import json
 import tempfile
+import shutil
 import unittest
 from unittest import mock
 from contextlib import redirect_stdout
@@ -53,6 +54,35 @@ class RealTreeTests(unittest.TestCase):
                 {"namespace", "releaseName", "clusterLabel", "fullname"}
             )
         )
+
+    def test_missing_descriptor_directories_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = check.run_check(helm_dir=Path(tmp)/'missing', opentofu_dir=Path(tmp)/'missing')
+            self.assertFalse(result['ok'])
+            self.assertEqual(result['errorCode'], 'descriptor_source_render_denied')
+            self.assertEqual(result['render']['renders'], {})
+
+    def test_actual_templates_and_tofu_sources_are_parsed_and_compared(self):
+        mutations = [
+            ('helm/tzudong-platform/templates/deployments.yaml', lambda s:s+'\n{{ invalid_function }}\n'),
+            ('helm/tzudong-platform/templates/deployments.yaml', lambda s:s.replace('replicas: 1','replicas: 2')),
+            ('helm/tzudong-platform/values.yaml', lambda s:s.replace('web-app:1.4.0','web-app:1.4.1')),
+            ('tofu/main.tf', lambda s:s+'\nthis is invalid HCL'),
+            ('tofu/main.tf', lambda s:s.replace('web-app:1.4.0','web-app:1.4.1')),
+            ('tofu/outputs.tf', lambda s:s.replace('value       = local.namespace','value       = "unrelated-namespace"')),
+        ]
+        for relative, mutate in mutations:
+            with self.subTest(relative=relative), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                shutil.copytree(_HELM_DIR, root/'helm')
+                shutil.copytree(_OPENTOFU_DIR, root/'tofu')
+                target = root/relative
+                target.write_text(mutate(target.read_text()))
+                result = check.run_check(helm_dir=root/'helm',opentofu_dir=root/'tofu')
+                self.assertFalse(result['ok'])
+                self.assertEqual(result['errorCode'], 'descriptor_source_render_denied')
+                self.assertEqual(result['render']['renders'], {})
+                self.assertEqual(result['remoteApplyAttemptCount'], 0)
 
     def test_remote_render_refused(self):
         result = check.run_check(render_options={"apply": True})

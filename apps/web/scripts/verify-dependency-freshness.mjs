@@ -23,6 +23,7 @@
 // a Pin_Contract package so pin values are never changed by an update PR.
 
 import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { redactCliText, logCliError } from './privacy-safe-cli-log.mjs';
 
 // --- Governance constants (asserted by tests, consumed by the workflow) ---
@@ -293,6 +294,29 @@ export const buildRunReceipt = ({ runAtUtc, candidates = [] } = {}) => {
 
 // --- Self-consistency guard ---
 
+/** Attach command results only to candidates whose exact source was checked. */
+export function bindVerificationToCommit(candidates, results, checkedCommit) {
+  if (!/^[0-9a-f]{40}$/.test(checkedCommit ?? '')) throw new Error('checked_commit_invalid');
+  const matching = candidates.filter((candidate) => candidate?.headSha === checkedCommit);
+  const receipt = buildRunReceipt({ candidates: matching });
+  const verdict = classifyVerification(results);
+  receipt.unverifiedCandidateCount = candidates.length - matching.length;
+  receipt.verification = {
+    checkedCommit,
+    scope: matching.length ? 'matching_candidate_commit' : 'repository_commit_only',
+    workingDirectory: VERIFICATION_WORKING_DIRECTORY,
+    results: results.map((entry) => ({
+      command: VERIFICATION_COMMANDS.includes(entry?.command) ? entry.command : 'unknown',
+      passed: entry?.passed === true,
+      finishedAt: typeof entry?.finishedAt === 'string' ? entry.finishedAt : null,
+      durationMinutes: typeof entry?.durationMinutes === 'number' ? entry.durationMinutes : null,
+    })),
+    code: verdict.code,
+  };
+  for (const candidate of receipt.candidates) candidate.code ??= verdict.code;
+  return receipt;
+}
+
 /** Fails closed if the governance constants ever drift from the contract. */
 export const assertGovernanceInvariants = () => {
   if (UNITS.length !== 7) throw Object.assign(new Error('unit_count_invalid'), { code: 'unit_count_invalid' });
@@ -325,7 +349,7 @@ async function main() {
     candidates = raw;
   }
 
-  const receipt = buildRunReceipt({ candidates });
+  let receipt = buildRunReceipt({ candidates });
 
   // Optional: fold the four-command verification verdict into the receipt so
   // the workflow fails closed (no merge) and records `dependency_check_failed`.
@@ -333,20 +357,9 @@ async function main() {
   if (verificationPath) {
     const raw = JSON.parse(await readFile(verificationPath, 'utf8'));
     const results = Array.isArray(raw) ? raw : Array.isArray(raw?.results) ? raw.results : [];
-    const verdict = classifyVerification(results);
-    receipt.verification = {
-      checkedCommit: /^[0-9a-f]{40}$/.test(process.env.GITHUB_SHA ?? '') ? process.env.GITHUB_SHA : null,
-      workingDirectory: VERIFICATION_WORKING_DIRECTORY,
-      results: results.map((entry) => ({
-        command: VERIFICATION_COMMANDS.includes(entry?.command) ? entry.command : 'unknown',
-        passed: entry?.passed === true,
-        finishedAt: typeof entry?.finishedAt === 'string' ? entry.finishedAt : null,
-        durationMinutes:
-          typeof entry?.durationMinutes === 'number' ? entry.durationMinutes : null,
-      })),
-      code: verdict.code,
-    };
-    if (verdict.code) process.exitCode = 1;
+    const checkedCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    receipt = bindVerificationToCommit(candidates, results, checkedCommit);
+    if (receipt.verification.code) process.exitCode = 1;
   }
 
   const anyCandidateBlocked = receipt.candidates.some((entry) => entry.code !== null);

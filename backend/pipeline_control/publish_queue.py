@@ -13,7 +13,8 @@ import re
 import signal
 import threading
 import time
-from datetime import datetime
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from urllib.parse import urlparse, parse_qs
 from uuid import UUID
 
@@ -32,6 +33,27 @@ MAX_SOURCE_ROWS = 10000
 def _rows(cursor) -> list[dict]:
     names = [c[0] for c in cursor.description]
     return [dict(zip(names, row)) for row in cursor.fetchall()]
+
+
+def canonical_pg_value(value):
+    """Lossless JSON form shared by source hashing and destination readback."""
+    if isinstance(value, Decimal):
+        if not value.is_finite():
+            raise ValueError("publish_scalar_invalid")
+        # A JSON string lets PostgreSQL cast NUMERIC exactly on publication;
+        # float would round large/precise values before hashing or readback.
+        number = format(value, "f")
+        number = number.rstrip("0").rstrip(".") if "." in number else number
+        return "0" if value.is_zero() else number
+    if isinstance(value, datetime):
+        return (value.astimezone(timezone.utc) if value.tzinfo else value).isoformat()
+    if isinstance(value, (date, UUID)):
+        return value.isoformat() if isinstance(value, date) else str(value)
+    if isinstance(value, dict):
+        return {key: canonical_pg_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [canonical_pg_value(item) for item in value]
+    return value
 
 
 class PublishQueueStore:
@@ -116,7 +138,7 @@ def load_source_request(connection, worker, job_id):
             if len(rows) > MAX_SOURCE_ROWS: raise ValueError('publish_source_limit')
             # PostgreSQL scalar timestamps have a stable JSON representation;
             # no raw rows are written to disk, logs, queue or audit columns.
-            rows = [{k: (v.isoformat() if isinstance(v, datetime) else v) for k,v in r.items()} for r in rows]
+            rows = canonical_pg_value(rows)
             tables.append({'schema': table.schema,'table': table.table,'rows': rows})
     return {'publishJobId': job_id,'tables': tables}
 
@@ -161,8 +183,15 @@ class PublishQueueConsumer:
         if job is None: return {'status': 'not_claimed'}
         preview = self.store.stored_preview(job_id)
         result = self.worker.confirm(preview, presented_hash)
+        # Confirmation evidence and state transition commit in one transaction,
+        # before an applying claim can become durable or a hosted write starts.
+        self.store.append([result.history_row()], [{
+            'publish_job_id': job_id, 'stage': 'confirm', 'target_table': '',
+            'row_count': 0, 'result_code': result.history_row()['result_code'],
+        }])
         if not result.admitted:
-            self.store.fail(job_id, result.code, 'confirm'); return {'status': 'failed','code': result.code}
+            self.store.transition(job_id, 'failed', result.code)
+            return {'status': 'failed','code': result.code}
         # Preserve original preview creation time in history; confirming does
         # not extend its 900-second lifetime.
         self.store.transition(job_id, 'confirmed')
@@ -185,8 +214,8 @@ class PublishQueueConsumer:
         # Preview was durably recorded before confirmation. Avoid duplicate
         # history keys and audit events; terminal status and remaining audit
         # commit together. Persistence failure leaves a non-retryable job.
-        self.store.append([r for r in result.history_rows if r['stage'] != 'preview'],
-                          [r for r in result.audit_events if r['stage'] != 'preview'])
+        self.store.append([r for r in result.history_rows if r['stage'] not in {'preview', 'confirm'}],
+                          [r for r in result.audit_events if r['stage'] not in {'preview', 'confirm'}])
         self.store.transition(job_id, 'succeeded' if result.succeeded else 'failed', result.code)
         return {'status': 'succeeded' if result.succeeded else 'failed','code': result.code}
 
@@ -227,8 +256,7 @@ def main():
                     with target.cursor() as c:
                         c.execute(sql, params); result = _rows(c)
                     target.commit()
-                    return [{k: (v.isoformat() if isinstance(v, datetime) else v)
-                             for k,v in row.items()} for row in result]
+                    return canonical_pg_value(result)
                 except Exception:
                     target.rollback(); raise
             def execute_one(sql, params):

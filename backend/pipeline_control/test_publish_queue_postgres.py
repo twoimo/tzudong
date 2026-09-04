@@ -5,6 +5,8 @@ credentials and no access to any existing database. Always stops that cluster.
 """
 from __future__ import annotations
 import os
+from decimal import Decimal
+from datetime import date, datetime, timezone
 import subprocess
 import tempfile
 import time
@@ -12,8 +14,8 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime
-from backend.pipeline_control.publish_worker import PublishWorker
+from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime, canonical_pg_value, load_source_request
+from backend.pipeline_control.publish_worker import PublishWorker, PublicationSet
 from backend.pipeline_control.agent_action_store import PostgresAgentActionStore
 from backend.pipeline_control import ops_agent as oa
 from backend.pipeline_control.test_publish_apply_unittest import _publication_set, _request, _video_row, FakeHosted, _ACTIVE_SCHEDULE
@@ -22,6 +24,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RuntimeAdmissionTests(unittest.TestCase):
+    def test_postgres_scalars_are_lossless_and_scale_stable(self):
+        identifier = uuid4()
+        value = canonical_pg_value({'lat': Decimal('37.1234567890123456789012345678900'),
+            'lng': Decimal('-0.000'), 'id': identifier, 'day': date(2026,9,5),
+            'at': datetime(2026,9,5,tzinfo=timezone.utc), 'nested': [Decimal('1E+3')]})
+        self.assertEqual(value['lat'], '37.12345678901234567890123456789')
+        self.assertEqual(value['lng'], '0')
+        self.assertEqual(value['id'], str(identifier))
+        self.assertEqual(value['nested'], ['1000'])
+        for invalid in ('NaN','Infinity','-Infinity'):
+            with self.assertRaises(ValueError): canonical_pg_value(Decimal(invalid))
+
     def test_runtime_rejects_hosted_queue_and_uncleared_destination(self):
         base = {'TZUDONG_PUBLISH_QUEUE_ENABLED': '1', 'PIPELINE_CONTROL_DSN': 'postgresql://localhost/queue',
                 'TZUDONG_PUBLICATION_DATA_ENV': 'local_db', 'TZUDONG_PUBLICATION_DSN': 'postgresql://[::1]/fixture'}
@@ -60,7 +74,8 @@ class DurableBackendTests(unittest.TestCase):
         with psycopg2.connect(cls.dsn) as c:
             with c.cursor() as cur:
                 cur.execute('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
-                for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql'):
+                for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql',
+                             '20260905000200_local_agent_rate_budget.sql'):
                     cur.execute((ROOT / 'supabase/migrations' / name).read_text())
 
     def connection(self):
@@ -75,6 +90,7 @@ class DurableBackendTests(unittest.TestCase):
         with self.psycopg2.connect(self.dsn) as c:
             with c.cursor() as cur:
                 cur.execute('TRUNCATE local_analytics.publish_jobs,local_analytics.publish_history,local_analytics.publish_audit_events')
+                cur.execute('TRUNCATE local_analytics.agent_action_budget_claims,local_analytics.agent_action_results,local_analytics.agent_action_records')
         self.conn = self.connection()
         self.store = PublishQueueStore(self.conn)
         self.hosted = FakeHosted({'public.videos': ('id',)})
@@ -105,6 +121,47 @@ class DurableBackendTests(unittest.TestCase):
         self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.publish_audit_events WHERE publish_job_id=%s',(self.job_id,)), 4)
         self.assertEqual(self.consumer.apply_once(), {'status': 'idle'})
         self.assertEqual(len(self.hosted.apply_calls), 1)
+
+    def test_confirmation_is_durable_before_apply_and_survives_claim_interruption(self):
+        preview = self.consumer.preview_once()
+        self.consumer.confirm(self.job_id, preview['previewHash'])
+        self.assertEqual(self.hosted.apply_calls, [])
+        other = self.connection()
+        with other.cursor() as c:
+            c.execute("SELECT h.preview_hash,a.result_code FROM local_analytics.publish_jobs j "
+                      "JOIN local_analytics.publish_history h USING(publish_job_id) "
+                      "JOIN local_analytics.publish_audit_events a USING(publish_job_id) "
+                      "WHERE j.status='confirmed' AND h.stage='confirm' AND a.stage='confirm'")
+            self.assertEqual(c.fetchone(), (preview['previewHash'], 'confirm_admitted'))
+        other.commit()
+        self.store.claim('confirmed')
+        with other.cursor() as c:
+            c.execute("SELECT count(*) FROM local_analytics.publish_history WHERE stage='confirm'")
+            self.assertEqual(c.fetchone()[0], 1)
+        self.assertEqual(self.hosted.apply_calls, [])
+
+    def test_real_numeric_restaurant_rows_reach_preview_apply_and_readback(self):
+        from backend.pipeline_control.publication_adapter import _RESTAURANT_COLUMNS
+        table = PublishWorker.from_ledger().publication_set.tables['public.restaurants']
+        worker = PublishWorker(PublicationSet(tables={table.key:table}, approval_status='approved',
+            approval_reference_valid=True), _ACTIVE_SCHEDULE, time.time)
+        with self.psycopg2.connect(self.dsn) as conn:
+            with conn.cursor() as c:
+                columns = ','.join(name + (' numeric' if name in {'lat','lng'} else ' text') for name in sorted(_RESTAURANT_COLUMNS))
+                c.execute('CREATE TABLE public.restaurants(id uuid PRIMARY KEY,'+columns+')')
+                c.execute('INSERT INTO public.restaurants(id,lat,lng) VALUES (%s,%s,%s)',
+                    (str(uuid4()), Decimal('37.1234567890123456789012345678900'),Decimal('127.5000')))
+                c.execute('GRANT SELECT ON public.restaurants TO service_role')
+        hosted = FakeHosted({'public.restaurants': ('id',)})
+        consumer = PublishQueueConsumer(self.store, worker,
+            lambda job: load_source_request(self.conn, worker, job), hosted)
+        preview = consumer.preview_once()
+        self.assertEqual(preview['status'], 'preview')
+        self.assertEqual(consumer.confirm(self.job_id, preview['previewHash'])['status'],'confirmed')
+        self.assertEqual(consumer.apply_once()['status'], 'succeeded')
+        row = next(iter(hosted.store['public.restaurants'].values()))
+        self.assertEqual(row['lat'], '37.12345678901234567890123456789')
+        self.assertEqual(row['lng'], '127.5')
 
     def test_locked_request_and_committed_apply_claim_cannot_be_claimed_twice(self):
         self.assertIsNotNone(self.store.claim('requested'))
@@ -159,6 +216,37 @@ class DurableBackendTests(unittest.TestCase):
                     self.scalar(sql)
                 self.conn.rollback()
         self.assertFalse(store.record_result(str(uuid4()),oa.AGENT_ACTION_PERFORMED))
+        self.conn.rollback()
+
+    def test_agent_budget_is_atomic_across_connections_restarts_and_windows(self):
+        from concurrent.futures import ThreadPoolExecutor
+        limits = [{'windowMinutes':60,'maxActions':10}, {'windowMinutes':1440,'maxActions':12}]
+        def attempt(_):
+            with self.psycopg2.connect(self.dsn) as conn:
+                with conn.cursor() as cur: cur.execute('SET ROLE service_role')
+                conn.commit()
+                def execute(sql, params):
+                    with conn.cursor() as cur:
+                        cur.execute(sql, params); row = cur.fetchone()
+                    conn.commit()
+                    return row[0] if row else None
+                store = PostgresAgentActionStore(execute)
+                record = oa.AgentActionRecord(str(uuid4()),str(uuid4()),'high','restart_local_container')
+                self.assertEqual(store.reserve(record),'created')
+                return store.claim_rate_budget(record.action_id,limits,0)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(attempt,range(24)))
+        self.assertEqual(results.count('created'),10)
+        self.assertEqual(results.count('limited'),14)
+        self.assertEqual(attempt(None),'limited')
+        # Only this test's private owner advances stored fixture timestamps.
+        with self.psycopg2.connect(self.dsn) as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE local_analytics.agent_action_budget_claims SET claimed_at=clock_timestamp()-interval '2 hours'")
+        self.assertEqual([attempt(None) for _ in range(4)],['created','created','limited','limited'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_budget_claims'),12)
+        with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege):
+            self.scalar('DELETE FROM local_analytics.agent_action_budget_claims')
         self.conn.rollback()
 
 if __name__ == '__main__': unittest.main()

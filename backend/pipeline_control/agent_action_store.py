@@ -49,3 +49,18 @@ class PostgresAgentActionStore:
             return actual == result_code
         except Exception:
             return False
+
+    def claim_rate_budget(self, action_id: str, limits, now_seconds: float) -> str:
+        """Atomic shared claim; the database owns time, not a process clock."""
+        try:
+            if not limits or any(type(item['windowMinutes']) is not int
+                or type(item['maxActions']) is not int for item in limits):
+                return 'unavailable'
+            result = self.execute_one(
+                'SELECT local_analytics.claim_agent_action_budget(%s::uuid,%s::integer[],%s::integer[])',
+                (action_id, [item['windowMinutes'] for item in limits],
+                 [item['maxActions'] for item in limits]),
+            )
+            return result if result in {'created', 'limited', 'duplicate'} else 'unavailable'
+        except Exception:
+            return 'unavailable'

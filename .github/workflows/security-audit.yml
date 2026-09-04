@@ -45,6 +45,7 @@ on:
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
       - 'backend/supabase/migrations/20260901000100_local_analytics_schema.sql'
       - 'backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql'
+      - 'backend/supabase/migrations/20260905*_local_agent_*.sql'
       - 'backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
@@ -260,6 +261,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Verify retained provenance commits
+        run: |
+          git fetch --no-tags origin refs/tags/kiro-provenance-platform-20260905 refs/tags/kiro-provenance-corroboration-20260905
+          git cat-file -e '880bf06d375dbc6ebe8dcf108419c3f455048a97^{commit}'
+          git cat-file -e '2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c^{commit}'
+
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
         with:
@@ -273,6 +280,15 @@ jobs:
       - name: Install focused test dependencies
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
 
+      - name: Install Helm for actual local descriptor rendering
+        uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: 'v4.2.4'
+      - name: Install OpenTofu for provider-free local descriptor plans
+        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
+        with:
+          tofu_version: '1.12.6'
+          tofu_wrapper: false
       - name: Verify crawler orchestration readiness
         run: python backend/bin/check_crawler_orchestration_readiness.py --run-tests --json
 
@@ -473,6 +489,10 @@ jobs:
           "$RUNNER_TEMP/rust-parity/bin/python" -m pip install --disable-pip-version-check maturin==1.15.0 hypothesis==6.165.10
           VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -m maturin develop --manifest-path backend/rust/tzudong-validators/Cargo.toml --locked
           VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -c "import tzudong_validators; assert tzudong_validators.__file__"
+          for crate in tzudong-normalize tzudong-upsert-payload tzudong-media-compute tzudong-pipeline-graph; do
+            VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -m maturin develop --manifest-path "backend/rust/$crate/Cargo.toml" --locked
+          done
+          TZUDONG_REQUIRE_RUST_CALL_SITES=1 "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_runtime_bindings
           "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.parity_pbt backend.rust.tests.parity_error_pbt
 
   secret-pattern-scan:
