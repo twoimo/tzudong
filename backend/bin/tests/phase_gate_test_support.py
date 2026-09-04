@@ -75,7 +75,7 @@ def valid_inputs(catalog: dict[str, Any], phase_id: str) -> dict[str, Any]:
     }
 
 
-def exercise_runner(testcase: Any, runner: Callable[..., dict[str, Any]], phase_id: str) -> None:
+def _exercise_runner_bound(testcase: Any, runner: Callable[..., dict[str, Any]], phase_id: str) -> None:
     catalog = copy.deepcopy(phase_gate.load_phase_catalog())
     testcase.assertTrue(phase_gate.validate_phase_assignment(catalog)["ok"])
 
@@ -131,3 +131,11 @@ def exercise_runner(testcase: Any, runner: Callable[..., dict[str, Any]], phase_
     bad_plan["rollback_plan"]["commands"][0]["argv"] = ["git", "reset", "--hard"]
     result = runner(**bad_plan)
     testcase.assertEqual(result["resultCode"], phase_gate.ROLLBACK_PLAN_INVALID)
+
+
+def exercise_runner(testcase, runner, phase_id):
+    # These tests exercise phase wiring against one explicit synthetic snapshot;
+    # stale real-source binding is covered at the CLI/runtime boundary.
+    from unittest.mock import patch
+    with patch.object(phase_gate, "candidate_tree_fingerprint", return_value=TREE_ID):
+        _exercise_runner_bound(testcase, runner, phase_id)

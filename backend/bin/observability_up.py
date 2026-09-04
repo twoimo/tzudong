@@ -31,6 +31,7 @@ bounded fields enumerated in design C8 (Requirement 12.9).
 from __future__ import annotations
 
 import json
+import hashlib
 import time
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -418,6 +419,51 @@ COMPOSE_FILES: dict[str, str] = {
 }
 
 
+def read_compose_bindings(overlays, *, compose_dir=_COMPOSE_DIR, enable_loki=True):
+    """Inspect the exact standalone YAML sources; reject unresolved composition.
+
+    Dynamic/includes/extends/host networking require a separate resolver, so
+    this starter never admits them from a guessed constant catalog.
+    """
+    import yaml
+    ports, images, hashes = {}, {}, {}
+    expected = {"observability": {"otel-collector", "prometheus", "grafana", "loki"},
+                "kafka": {"kafka", "kafka-ui"}, "elasticsearch": {"elasticsearch"}}
+    try:
+        for overlay in overlays:
+            path = Path(compose_dir) / COMPOSE_FILES[overlay]
+            raw = path.read_bytes()
+            if len(raw) > 2 * 1024 * 1024:
+                return None
+            doc = yaml.safe_load(raw)
+            if not isinstance(doc, dict) or 'include' in doc:
+                return None
+            services = doc.get('services')
+            if not isinstance(services, dict) or set(services) != expected[overlay]:
+                return None
+            hashes[overlay] = hashlib.sha256(raw).hexdigest()
+            for name, service in services.items():
+                if name == 'loki' and not enable_loki:
+                    continue
+                if not isinstance(service, dict) or 'extends' in service or 'network_mode' in service:
+                    return None
+                images[name] = service.get('image')
+                declarations = service.get('ports', [])
+                if not isinstance(declarations, list):
+                    return None
+                for index, declaration in enumerate(declarations):
+                    if isinstance(declaration, dict):
+                        if declaration.get('mode', 'ingress') != 'ingress':
+                            return None
+                        declaration = ':'.join(str(declaration.get(key, '')) for key in ('host_ip','published','target'))
+                    if not isinstance(declaration, str) or '$' in declaration:
+                        return None
+                    ports[f'{name}:{index}'] = declaration
+        return {'ports': ports, 'images': images, 'hashes': hashes}
+    except (OSError, ValueError, KeyError, yaml.YAMLError):
+        return None
+
+
 def _default_command_runner(cwd: str, argv: Sequence[str]) -> dict:
     """Run a compose command, returning ``{"exitCode": int}`` only.
 
@@ -498,24 +544,25 @@ def start_observability_stack(
         artifact["notPinnedImages"] = pinned["notPinned"]
         return artifact
 
-    # Assemble the loopback port declarations for the components in scope.
-    declarations: dict[str, str] = {}
-    for name, decl in CORE_PORT_DECLARATIONS.items():
-        if name == "loki" and not enable_loki:
-            continue
-        declarations[name] = decl
+    overlays = ["observability"]
     if enable_kafka:
-        declarations["kafka"] = OPTIONAL_PORT_DECLARATIONS["kafka"]
-        declarations["kafka-ui"] = OPTIONAL_PORT_DECLARATIONS["kafka-ui"]
+        overlays.insert(0, "kafka")
     if enable_elasticsearch:
-        declarations["elasticsearch"] = OPTIONAL_PORT_DECLARATIONS["elasticsearch"]
-
-    # 2. Every published port must bind 127.0.0.1 only; else start nothing.
-    ports = validate_port_declarations(declarations)
+        overlays.insert(0, "elasticsearch")
+    observed = read_compose_bindings(overlays, compose_dir=_COMPOSE_DIR, enable_loki=enable_loki)
+    if observed is None:
+        artifact["errorCode"] = NON_LOOPBACK_BIND_REJECTED
+        return artifact
+    ports = validate_port_declarations(observed["ports"])
     if not ports["ok"]:
         artifact["errorCode"] = ports["errorCode"]
         artifact["nonLoopback"] = ports["nonLoopback"]
         return artifact
+    if not validate_image_references(observed["images"])["ok"]:
+        artifact["errorCode"] = SERVICE_READINESS_TIMEOUT
+        return artifact
+    images = observed["images"]
+    artifact["composeSourceSha256"] = observed["hashes"]
 
     # 3. iframe embedding allowlist must be loopback admin origins only.
     origins = validate_iframe_origins(iframe_allowlist)
@@ -546,13 +593,16 @@ def start_observability_stack(
 
     # 5. Bring up the compose overlays in one run (injected runner).
     cwd = str(_COMPOSE_DIR)
-    overlays = ["observability"]
-    if enable_kafka:
-        overlays.insert(0, "kafka")
-    if enable_elasticsearch:
-        overlays.insert(0, "elasticsearch")
     for overlay in overlays:
         compose_file = COMPOSE_FILES[overlay]
+        # Do not start a file changed after its actual ports were validated.
+        try:
+            unchanged = hashlib.sha256((_COMPOSE_DIR / compose_file).read_bytes()).hexdigest() == observed["hashes"][overlay]
+        except OSError:
+            unchanged = False
+        if not unchanged:
+            artifact["errorCode"] = NON_LOOPBACK_BIND_REJECTED
+            return artifact
         argv: tuple[str, ...] = (
             "docker",
             "compose",

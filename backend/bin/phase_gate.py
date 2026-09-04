@@ -41,6 +41,7 @@ FORBIDDEN_COMMANDS = frozenset({"rm", "rmdir", "unlink", "shred"})
 EVIDENCE_CLASSES = frozenset({"local", "external"})
 
 CATALOG_INVALID = "phase_catalog_invalid"
+CANDIDATE_TREE_MISMATCH = "phase_candidate_tree_mismatch"
 PHASE_NOT_FOUND = "phase_not_found"
 ENTRY_NOT_SATISFIED = "phase_entry_not_satisfied"
 ROLLBACK_PLAN_INVALID = "rollback_plan_invalid"
@@ -55,6 +56,7 @@ PHASE_RESULT_CODES = frozenset(
     {
         None,
         CATALOG_INVALID,
+        CANDIDATE_TREE_MISMATCH,
         PHASE_NOT_FOUND,
         ENTRY_NOT_SATISFIED,
         ROLLBACK_PLAN_INVALID,
@@ -655,7 +657,9 @@ def run_configured_phase(
     """Evaluate one configured phase with fail-closed defaults."""
 
     resolved_catalog = catalog if catalog is not None else load_phase_catalog()
-    resolved_tree_id = candidate_tree_id or candidate_tree_fingerprint(root)
+    resolved_tree_id = candidate_tree_fingerprint(root)
+    if candidate_tree_id is not None and candidate_tree_id != resolved_tree_id:
+        return _bounded_gate_result(phase_id, CANDIDATE_TREE_MISMATCH, resolved_tree_id, [], evaluated_at=(now or _utc_now)())
     return evaluate_phase_gate(
         resolved_catalog,
         phase_id,
@@ -684,7 +688,14 @@ def cli_for_phase(phase_id: str, argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     catalog = load_phase_catalog(args.catalog)
-    tree_id = args.candidate_tree_id or candidate_tree_fingerprint(ROOT)
+    tree_id = candidate_tree_fingerprint(ROOT)
+    if args.candidate_tree_id is not None and args.candidate_tree_id != tree_id:
+        result = _bounded_gate_result(phase_id, CANDIDATE_TREE_MISMATCH, tree_id, [], evaluated_at=_utc_now())
+        if args.json:
+            print(json.dumps(result, ensure_ascii=True, sort_keys=True))
+        else:
+            print(f"{phase_id}: {CANDIDATE_TREE_MISMATCH}")
+        return 1
     commands: Any = _load_optional(args.command_results)
     if args.run_verification and isinstance(catalog, Mapping):
         commands = run_verification_commands(catalog, root=ROOT)

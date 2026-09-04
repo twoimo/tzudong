@@ -101,13 +101,18 @@ fn has_korean_province(addr: &str) -> bool {
     KOREAN_PROVINCES.iter().any(|p| addr.contains(p))
 }
 
+/// Python's Unicode whitespace also includes the four information separators.
+fn py_strip(value: &str) -> &str {
+    value.trim_matches(|c: char| c.is_whitespace() || ('\u{001c}'..='\u{001f}').contains(&c))
+}
+
 /// Port of `validators._as_non_empty_string_list`.
 fn as_non_empty_string_list(value: &Value) -> Vec<String> {
     match value {
         Value::List(items) => items
             .iter()
             .filter_map(|it| match it {
-                Value::Str(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
+                Value::Str(s) if !py_strip(s).is_empty() => Some(py_strip(s).to_string()),
                 _ => None,
             })
             .collect(),
@@ -726,7 +731,7 @@ pub fn validate_laaj_results(video_id: &str, data: &Value) -> Vec<ValidationErro
 
             let basis = get_or(item, "eval_basis", Value::Str(String::new()));
             let basis_too_short = match basis.as_str() {
-                Some(s) => s.trim().chars().count() < 5,
+                Some(s) => py_strip(s).chars().count() < 5,
                 None => false,
             };
             if !basis.truthy() || basis_too_short {

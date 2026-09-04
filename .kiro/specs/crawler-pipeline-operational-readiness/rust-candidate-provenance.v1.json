@@ -31,6 +31,16 @@
       "paths": [
         "backend/rust/Cargo.toml"
       ]
+    },
+    {
+      "id": "python-whitespace-parity",
+      "kind": "behavior-correction",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/tzudong-validators/src/validators.rs",
+        "backend/rust/tests/parity_pbt.py"
+      ]
     }
   ],
   "fileCount": 36,
@@ -73,9 +83,9 @@
     },
     {
       "path": "backend/rust/tests/parity_pbt.py",
-      "gitBlobSha1": "8ed1c79906a1d6ff137c20a3fb29f49834d2af5f",
-      "sha256": "13ce7d7e6306cc0a08221aa00a378f534a3ba200699aa59fc4d28b0839bfa31f",
-      "bytes": 20638
+      "gitBlobSha1": "7ecac512921f9bea99cf106dfc99d71ff5337bec",
+      "sha256": "f273dc0149f126bb817d8e6d42eeeba1ad8762a7e1c0875a6aa777d7925dc700",
+      "bytes": 21534
     },
     {
       "path": "backend/rust/tzudong-media-compute/Cargo.toml",
@@ -235,9 +245,9 @@
     },
     {
       "path": "backend/rust/tzudong-validators/src/validators.rs",
-      "gitBlobSha1": "4b07cefda13a45f805ef358a0a18c52af6701193",
-      "sha256": "5c36879ac2fc00d5f1ff4f01bf03fe16d1de01f25e3e50b8d8a8fb5594feffa2",
-      "bytes": 41180
+      "gitBlobSha1": "3153ce4f00de381691ddd89f3465964bb5af022c",
+      "sha256": "b1c6a1fc82ca2c0ec72f9a816553460ce732e745d8228549bc2b25cb14a9f1f9",
+      "bytes": 41400
     },
     {
       "path": "backend/rust/tzudong-validators/src/value.rs",

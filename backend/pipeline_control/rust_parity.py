@@ -248,7 +248,7 @@ def _json_output_value(value) -> bool:
     return False
 
 
-def _parity_child(fn, payload, read_fd: int, write_fd: int) -> None:
+def _parity_child(fn, payload, read_fd: int, write_fd: int, reference: bool) -> None:
     os.close(read_fd)
     try:
         os.setsid()  # Descendants share a group that the parent always reaps.
@@ -258,7 +258,12 @@ def _parity_child(fn, payload, read_fd: int, write_fd: int) -> None:
             os.dup2(sink, 2)
         finally:
             os.close(sink)
-        result = fn(payload)
+        if reference:
+            from backend.pipeline_control.impl_selector import python_reference
+            with python_reference():
+                result = fn(payload)
+        else:
+            result = fn(payload)
         if not isinstance(result, Mapping):
             return
         result = dict(result)
@@ -322,7 +327,7 @@ def _invoke_under_budget(
             for name, fn in (("python", python_impl), ("rust", rust_impl)):
                 read_fd, write_fd = os.pipe()
                 descriptors.update((read_fd, write_fd))
-                process = context.Process(target=_parity_child, args=(fn, payload, read_fd, write_fd))
+                process = context.Process(target=_parity_child, args=(fn, payload, read_fd, write_fd, name == "python"))
                 process.start()
                 processes.append(process)
                 os.close(write_fd)

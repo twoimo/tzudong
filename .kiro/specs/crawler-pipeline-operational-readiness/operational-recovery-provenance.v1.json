@@ -5,7 +5,7 @@
   "corroboratingCommit": "2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c",
   "note": "Source bytes are local Git evidence only. Candidate changes do not establish hosted state, approval, deployment, notification, or legal compliance.",
   "sourceFileCount": 50,
-  "candidateOnlyFileCount": 8,
+  "candidateOnlyFileCount": 10,
   "candidateTransformations": [
     {
       "id": "current-pipeline-control-layout",
@@ -82,12 +82,15 @@
       "paths": [
         "apps/web/scripts/collect-dependency-candidates.mjs",
         "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+        "backend/deploy/opentofu/main.tf",
         "backend/pipeline-control/PUBLISH_QUEUE.md",
         "backend/pipeline_control/agent_action_store.py",
         "backend/pipeline_control/log_retention.py",
         "backend/pipeline_control/publish_queue.py",
         "backend/pipeline_control/test_log_retention_unittest.py",
         "backend/pipeline_control/test_publish_queue_postgres.py",
+        "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
+        "backend/rust/RUNTIME_BINDINGS.md",
         "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql"
       ]
     }
@@ -99,9 +102,9 @@
       "sourceGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
       "sourceSha256": "2fdcd6529a9f435d3fec0107fc288fbb938e07786f88cdde8cde5e834f4bcff8",
       "sourceBytes": 8833,
-      "candidateGitBlobSha1": "3e55d4d36e257193599beef8a8c08c5b7b19be46",
-      "candidateSha256": "39c1830fabc62a7e2cc6f97e439efb27cf39d268d1089b845ff99fc149057bde",
-      "candidateBytes": 9332
+      "candidateGitBlobSha1": "64562f59ddabad73f4df2c585760e1ccd32a97dd",
+      "candidateSha256": "233b7da534c26c3c0a9e3ed03c022b8609b07f77c854f4bafe214e4b22511163",
+      "candidateBytes": 14885
     },
     {
       "sourcePath": "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
@@ -109,9 +112,9 @@
       "sourceGitBlobSha1": "4432746dd80ab9d5ea78c29a269de8e1dbdb2ad6",
       "sourceSha256": "7429ccddce7eabc907d73952983971270167cf2d846b13eac59242e9d5a8cb52",
       "sourceBytes": 3436,
-      "candidateGitBlobSha1": "467e652d59bebf95e66d6ee4b638bce0586cb4fa",
-      "candidateSha256": "bc1d8cb3a02939b0e8182cef35940c3ace403b896b2544672e31606c4cc2e3c0",
-      "candidateBytes": 5933
+      "candidateGitBlobSha1": "38305e515159d3178f77b9548359ac3c00619cd1",
+      "candidateSha256": "1f14a1824016932cb99eafb456b7982c2acfce429722dbdcddcadcd45934b0b1",
+      "candidateBytes": 7805
     },
     {
       "sourcePath": "backend/deploy/deployment-descriptor-set.v1.json",
@@ -409,9 +412,9 @@
       "sourceGitBlobSha1": "ae8f827ea67798512c7495072fb26bb0acdcb08a",
       "sourceSha256": "d8babb2ec2e46aa4b70cb44e62cafcda37313dc2d8d1aa007d7814adf51f4e6d",
       "sourceBytes": 26218,
-      "candidateGitBlobSha1": "b47b3a7b4265b7c31e082c10a328fc5fa38415c8",
-      "candidateSha256": "69e0f6750fdbbcf7d28a45b9e2ab749482aed64d670e1bc411d5bcb11c3af295",
-      "candidateBytes": 27541
+      "candidateGitBlobSha1": "b2f276f27ccd09d2cc1d7ba182f087f145c6ae75",
+      "candidateSha256": "3ea5bde9f2082debfd17b5ec6233023d9dc6611fcd682955bda74dffafb36210",
+      "candidateBytes": 30016
     },
     {
       "sourcePath": "backend/bin/tests/test_observability_up_unittest.py",
@@ -419,9 +422,9 @@
       "sourceGitBlobSha1": "70bc067b1a847430b7baebd72404a8c5bb5a0cff",
       "sourceSha256": "5a1d1bafcb4d943644226f18d057a44ab460d4ffe96820035a350189fc60d862",
       "sourceBytes": 14849,
-      "candidateGitBlobSha1": "a36f3a726fa29a8982e79bfa70fc8f2bfdc22515",
-      "candidateSha256": "0277bfd3e83750ed9cb6a322cb0a73cf828e75737324c0beb99ba39c46e71536",
-      "candidateBytes": 18595
+      "candidateGitBlobSha1": "2aac7e56e779dff7efa7638f6965745c1c0e3ce1",
+      "candidateSha256": "f41bd13274526a4de6b71f52231b683a130437e7c3efd63a109b4b9278855257",
+      "candidateBytes": 20396
     },
     {
       "sourcePath": "backend/bin/metrics_contract_report.py",
@@ -519,9 +522,9 @@
       "sourceGitBlobSha1": "469adbc5d8be7607dece979944f59927f5e61870",
       "sourceSha256": "33b5edb953ef0000aa28de830a5a6eaa2ad39fe796da1d9314f878c8a4bec8c3",
       "sourceBytes": 3976,
-      "candidateGitBlobSha1": "469adbc5d8be7607dece979944f59927f5e61870",
-      "candidateSha256": "33b5edb953ef0000aa28de830a5a6eaa2ad39fe796da1d9314f878c8a4bec8c3",
-      "candidateBytes": 3976
+      "candidateGitBlobSha1": "0b2f7caa3db818aeeeeafc3a5f271ec213eae5f7",
+      "candidateSha256": "1de3a4cda1f2372456b37b02f434f9e2197296ede09dc50e951d8b96ad68fd84",
+      "candidateBytes": 4002
     },
     {
       "sourcePath": "backend/deploy/opentofu/outputs.tf",
@@ -609,15 +612,15 @@
     },
     {
       "path": "backend/pipeline_control/publish_queue.py",
-      "gitBlobSha1": "ff5ebc6d6aef944a214db06b1e10cdafec4c10fb",
-      "sha256": "bf498da7e1efb7d98712ce849349992bd7402966016add14e53b8d796b9c6cef",
-      "bytes": 14262
+      "gitBlobSha1": "618e98364e11fbdaaea056484582b8243068cd05",
+      "sha256": "44a6effe2509457eb1538ec01ba8c39b4a4f5feb263337f6fb64a6dd783fcd44",
+      "bytes": 15593
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "gitBlobSha1": "039184dd9619b4661d00f708aae23c458a47956d",
-      "sha256": "59e02d59caf49f4442088e6ca770edd8312bddab425aebb70c835752e5228501",
-      "bytes": 9631
+      "gitBlobSha1": "1c80b22fe214f5874cc79a8031f5668aad83e51b",
+      "sha256": "a1fdfbcb762d9f6846e00fd937a1043ba917a399b72279ff3cf86bf9bb2fd284",
+      "bytes": 13244
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -642,6 +645,18 @@
       "gitBlobSha1": "6c99eb870e3a87b838be74d5608b44ef832cc14e",
       "sha256": "bebc34c6f24a9b48534696790df789ee10f15e8e5a5f01073a4d2630c2390b43",
       "bytes": 3132
+    },
+    {
+      "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
+      "bytes": 6850,
+      "sha256": "90a0c12c1f5fef76b3c3c08dfa5f247de906d5707827f906c1085a35062f28b7",
+      "gitBlobSha1": "8e9ac4047e648831291053867fc5ed03f95b0115"
+    },
+    {
+      "path": "backend/rust/RUNTIME_BINDINGS.md",
+      "bytes": 2219,
+      "sha256": "2cfa8fb7ec3008cc9327308dd056dc6153d80ded2f698325ca09a13cb806e6f1",
+      "gitBlobSha1": "0bf0f44f91df56448cd819a3844a1efda39eeb68"
     }
   ]
 }

@@ -7,7 +7,7 @@
 import { access, readFile, realpath } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { logCliError } from './privacy-safe-cli-log.mjs';
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -132,7 +132,7 @@ function pinItems({ manifest, npmLock, runtimeNpm, runtimeNode }) {
   ];
 }
 
-function lockConflicts({ manifest, npmLock, bun }) {
+export function lockConflicts({ manifest, npmLock, bun }) {
   const names = [
     ...Object.keys(manifest.dependencies ?? {}),
     ...Object.keys(manifest.devDependencies ?? {}),
@@ -145,6 +145,10 @@ function lockConflicts({ manifest, npmLock, bun }) {
       : null;
     return npmVersion === null || bunVersion === null || npmVersion !== bunVersion;
   }).sort();
+}
+
+export function hasPinDrift(items, typecheckMatch, mismatchPackages) {
+  return items.some((item) => !item.match) || !typecheckMatch || mismatchPackages.length > 0;
 }
 
 async function main() {
@@ -164,7 +168,7 @@ async function main() {
   const typecheckMatch =
     manifest.scripts?.['typecheck:parity'] === EXPECTED.typecheckParityScript;
   const mismatchPackages = lockConflicts({ manifest, npmLock, bun });
-  const drift = items.some((item) => !item.match) || !typecheckMatch;
+  const drift = hasPinDrift(items, typecheckMatch, mismatchPackages);
 
   process.stdout.write(`${JSON.stringify({
     status: drift ? 'failed' : 'passed',
@@ -186,7 +190,7 @@ async function main() {
   if (drift) process.exitCode = 1;
 }
 
-main().catch((error) => {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((error) => {
   logCliError(error, (line) => process.stderr.write(`[verify-pin-contract] ${line}`));
   process.exitCode = 1;
 });

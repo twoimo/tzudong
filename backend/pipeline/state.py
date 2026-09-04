@@ -113,6 +113,10 @@ class PipelineState(TypedDict):
     summary: str                  # 최종 리포트 텍스트
 
 
+from backend.pipeline_control.impl_selector import rust_dispatch
+
+
+@rust_dispatch("R1-validators")
 def create_initial_state(
     channel: str,
     crawling_path: str,

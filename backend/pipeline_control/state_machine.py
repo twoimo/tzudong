@@ -8,6 +8,7 @@ import json
 from typing import Any, Literal
 
 from backend.pipeline_control.graph import ADAPTER_STEPS
+from backend.pipeline_control.impl_selector import rust_dispatch, runtime_function
 
 RUN_STATUSES = (
     "Queued",
@@ -34,11 +35,13 @@ class ControlPlaneError(Exception):
         self.http_status = http_status
 
 
+@rust_dispatch("R3-upsert-payload")
 def payload_hash(payload: dict[str, Any]) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return sha256(canonical.encode("utf-8")).hexdigest()
 
 
+@rust_dispatch("R5-pipeline-graph")
 def lock_key(target: str, profile: str) -> str:
     return f"{target}:{profile}"
 
@@ -65,19 +68,35 @@ class RunRecord:
     checkpoint: dict[str, Any] = field(default_factory=dict)
 
 
+@rust_dispatch("R5-pipeline-graph")
 def can_pause(status: str) -> bool:
     return status in PAUSE_FROM
 
 
+@rust_dispatch("R5-pipeline-graph")
 def can_cancel(status: str) -> bool:
     return status in CANCEL_FROM
 
 
+@rust_dispatch("R5-pipeline-graph")
 def can_resume(status: str) -> bool:
     return status == "Paused"
 
 
 def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) -> RunRecord:
+    native = runtime_function("R5-pipeline-graph", "apply_transition_status")
+    if native is not None:
+        try:
+            next_status = native(run.status, action)
+        except ValueError:
+            raise ControlPlaneError(ILLEGAL_TRANSITION, 409) from None
+        if next_status not in {"Paused", "Queued", "Cancelled"}:
+            raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
+        run.status = next_status
+        if action in {"pause", "resume"}:
+            run.lease_until = now + lease_ttl
+            run.heartbeat_at = now
+        return run
     if action == "pause":
         if not can_pause(run.status):
             raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
@@ -101,6 +120,9 @@ def apply_transition(run: RunRecord, action: str, now: float, lease_ttl: float) 
 
 
 def stale_reclaim_eligible(run: RunRecord, now: float) -> bool:
+    native = runtime_function("R5-pipeline-graph", "stale_reclaim_eligible")
+    if native is not None:
+        return native(run.status, now, run.lease_until)
     if run.status == "Paused":
         return False
     if run.status not in {"Queued", "Fetching", "Inserting"}:
@@ -109,7 +131,9 @@ def stale_reclaim_eligible(run: RunRecord, now: float) -> bool:
 
 
 def heartbeat(run: RunRecord, now: float, lease_ttl: float) -> RunRecord:
-    if run.status not in ACTIVE_LOCK_STATUSES:
+    native = runtime_function("R5-pipeline-graph", "heartbeat_allowed")
+    allowed = native(run.status) if native is not None else run.status in ACTIVE_LOCK_STATUSES
+    if not allowed:
         raise ControlPlaneError(ILLEGAL_TRANSITION, 409)
     run.heartbeat_at = now
     run.lease_until = now + lease_ttl

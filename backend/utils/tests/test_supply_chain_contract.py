@@ -131,7 +131,8 @@ class SupplyChainContractTests(unittest.TestCase):
             self.assertEqual(
                 receipt["status"] == "passed",
                 all(item["match"] for item in receipt["pinContract"])
-                and receipt["typecheck"]["match"],
+                and receipt["typecheck"]["match"]
+                and receipt["lockReconciliation"]["mismatchCount"] == 0,
             )
             self.assertEqual(result.returncode, 0 if receipt["status"] == "passed" else 1)
         else:

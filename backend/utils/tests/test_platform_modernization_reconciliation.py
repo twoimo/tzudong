@@ -117,8 +117,8 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
 
         self.assertEqual(dict(sorted(counts.items())), document["dispositionCounts"])
         self.assertEqual(dict(sorted(states.items())), document["contentStateCounts"])
-        self.assertEqual(counts["source_exact_present"], 77)
-        self.assertEqual(counts["candidate_transformed_present"], 98)
+        self.assertEqual(counts["source_exact_present"], 73)
+        self.assertEqual(counts["candidate_transformed_present"], 102)
         for path in (
             "backend/bin/schema_mirror_report.py",
             "backend/bin/tests/test_schema_mirror_pbt.py",
@@ -126,6 +126,10 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
             "backend/pipeline_control/test_log_retention_unittest.py",
             "backend/bin/tooling_gate.py",
             "backend/bin/tests/test_tooling_gate_unittest.py",
+            "backend/deploy/opentofu/main.tf",
+            "backend/pipeline_control/graph.py",
+            "backend/pipeline_control/impl_selector.py",
+            "backend/rust/tests/parity_pbt.py",
         ):
             entry = next(row for row in document["entries"] if row["sourcePath"] == path)
             self.assertEqual(entry["disposition"], "candidate_transformed_present")

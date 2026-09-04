@@ -15,6 +15,8 @@ from __future__ import annotations
 import importlib.util
 import urllib.error
 import unittest
+import shutil
+import tempfile
 from unittest import mock
 from pathlib import Path
 
@@ -328,6 +330,33 @@ class StartupOrchestrationTests(unittest.TestCase):
         kwargs.update(overrides)
         return obs.start_observability_stack(**kwargs)
 
+    def test_actual_compose_port_drift_starts_nothing(self):
+        for overlay, service in (("observability", "grafana"), ("kafka", "kafka"), ("elasticsearch", "elasticsearch")):
+            for replacement in ("0.0.0.0:", "", "${BIND_HOST}:"):
+                with tempfile.TemporaryDirectory() as tmp:
+                    directory = Path(tmp)
+                    for filename in obs.COMPOSE_FILES.values():
+                        shutil.copyfile(obs._COMPOSE_DIR / filename, directory / filename)
+                    path = directory / obs.COMPOSE_FILES[overlay]
+                    path.write_text(path.read_text().replace('127.0.0.1:', replacement))
+                    runner = mock.Mock(return_value={'exitCode': 0})
+                    with mock.patch.object(obs, '_COMPOSE_DIR', directory):
+                        result = self._start(command_runner=runner, enable_kafka=True, enable_elasticsearch=True)
+                    self.assertFalse(result['ok'])
+                    self.assertEqual(result['errorCode'], obs.NON_LOOPBACK_BIND_REJECTED)
+                    runner.assert_not_called()
+
+    def test_missing_or_composed_source_never_passes_constant_port_catalog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            runner = mock.Mock(return_value={'exitCode': 0})
+            with mock.patch.object(obs, '_COMPOSE_DIR', directory):
+                self.assertFalse(self._start(command_runner=runner)['ok'])
+                path = directory / obs.COMPOSE_FILES['observability']
+                path.write_text('include: [remote.yaml]\nservices: {}\n')
+                self.assertFalse(self._start(command_runner=runner)['ok'])
+            runner.assert_not_called()
+
     def test_happy_path_artifact(self):
         art = self._start()
         self.assertTrue(art["ok"])
@@ -350,6 +379,7 @@ class StartupOrchestrationTests(unittest.TestCase):
             "nonLoopback",
             "rejectedOrigins",
             "notPinnedImages",
+            "composeSourceSha256",
         }
         self.assertTrue(set(art).issubset(allowed_top), set(art) - allowed_top)
         allowed_row = {"name", "imageTag", "readyState", "elapsedSeconds"}
