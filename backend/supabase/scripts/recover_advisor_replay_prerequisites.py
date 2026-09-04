@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recover eight current invoker definitions for disposable catalog replay only.
+"""Recover nine current invoker definitions for disposable catalog replay only.
 
 The older reconstruction archive lacks these functions. This supplements that
 archive from the tracked local prerequisite, without replaying a database dump,
@@ -23,6 +23,7 @@ SIGNATURES = (
     "match_documents_bge(extensions.vector,double precision,integer,jsonb)",
     "match_documents_hybrid(extensions.vector,jsonb,double precision,double precision,integer)",
     "search_restaurants_by_category(text,integer)",
+    "search_restaurants_by_name(text,integer)",
     "search_video_ids_by_query(extensions.vector,jsonb,double precision,double precision,integer)",
 )
 
@@ -39,6 +40,10 @@ def recover(source: bytes) -> tuple[bytes, dict]:
             rf"^CREATE FUNCTION public\.{re.escape(name)}\(.*?^\$\$;\n",
             text, re.MULTILINE | re.DOTALL,
         ))
+        if signature == "search_restaurants_by_name(text,integer)":
+            matches = [match for match in matches if match.group().startswith(
+                "CREATE FUNCTION public.search_restaurants_by_name(keyword text, p_limit integer DEFAULT 5)"
+            )]
         if len(matches) != 1 or "SECURITY DEFINER" in matches[0].group():
             raise ValueError("advisor_replay_prerequisite_definition_drift")
         block = matches[0].group()

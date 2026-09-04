@@ -11,14 +11,16 @@ spec.loader.exec_module(replay)
 
 
 class AdvisorReplayPrerequisiteTests(unittest.TestCase):
-    def test_only_eight_exact_invoker_definitions_are_recovered_with_no_data_or_grants(self):
+    def test_only_nine_exact_invoker_definitions_are_recovered_with_no_data_or_grants(self):
         source = (ROOT / replay.SOURCE_PATH).read_bytes()
         sql, receipt = replay.recover(source)
-        self.assertEqual(len(receipt["functions"]), 8)
-        self.assertEqual(sql.count(b"CREATE FUNCTION public."), 8)
-        self.assertEqual(sql.count(b"REVOKE ALL ON FUNCTION"), 8)
-        self.assertEqual(sql.count(b"OWNER TO postgres"), 8)
+        self.assertEqual(len(receipt["functions"]), 9)
+        self.assertEqual(sql.count(b"CREATE FUNCTION public."), 9)
+        self.assertEqual(sql.count(b"REVOKE ALL ON FUNCTION"), 9)
+        self.assertEqual(sql.count(b"OWNER TO postgres"), 9)
+        self.assertIn("public.search_restaurants_by_name(text,integer)", [entry["signature"] for entry in receipt["functions"]])
         self.assertNotIn(b"CREATE OR REPLACE", sql)
+        self.assertNotIn(b"search_categories text[]", sql)
         self.assertNotIn(b"SECURITY DEFINER", sql)
         self.assertNotIn(b"GRANT ", sql)
         self.assertNotIn(b"CREATE TABLE", sql)

@@ -241,7 +241,8 @@ jobs:
 
   orchestration-readiness:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # The recovered full contract suite extends beyond the original focused job.
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

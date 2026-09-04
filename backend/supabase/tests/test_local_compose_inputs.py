@@ -989,12 +989,18 @@ class LocalComposeInputContractTests(unittest.TestCase):
         completed = subprocess.CompletedProcess(
             ["node", "-e", "[bounded-script]"], 0, "", ""
         )
-        with patch.object(local_stack.subprocess, "run", return_value=completed) as run:
+        with patch.object(local_stack, "_regular_owned") as regular, patch.object(
+            local_stack.subprocess, "run", return_value=completed,
+        ) as run:
             self.assertTrue(local_stack._probe_local_realtime_websocket(
                 18000,
                 "local-test-anon-key",
                 timeout=4,
             ))
+        self.assertEqual(regular.call_args_list, [
+            call(ROOT / "apps/web/node_modules/ws/package.json"),
+            call(ROOT / "apps/web/node_modules/@supabase/realtime-js/dist/main/index.js"),
+        ])
         command = run.call_args.args[0]
         kwargs = run.call_args.kwargs
         self.assertEqual(command[:2], ["node", "-e"])
@@ -1014,7 +1020,7 @@ class LocalComposeInputContractTests(unittest.TestCase):
         self.assertTrue(kwargs["text"])
         self.assertFalse(kwargs["check"])
 
-        with patch.object(
+        with patch.object(local_stack, "_regular_owned"), patch.object(
             local_stack.subprocess,
             "run",
             return_value=subprocess.CompletedProcess(command, 1, "", ""),
@@ -1591,7 +1597,8 @@ class LocalComposeInputContractTests(unittest.TestCase):
             file.chmod(0o644)
             rendered = "; ".join(("set -eu", *commands)).replace("/functions", str(root))
             environment = dict(os.environ)
-            environment["PATH"] = f"{tool_root}:{environment.get('PATH', '/usr/bin:/bin')}"
+            if sys.platform == "darwin":
+                environment["PATH"] = f"{tool_root}:{environment.get('PATH', '/usr/bin:/bin')}"
             subprocess.run(
                 ["sh", "-c", rendered],
                 check=True,

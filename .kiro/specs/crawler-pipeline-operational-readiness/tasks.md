@@ -68,7 +68,7 @@
 - [x] 2.14 Add a clean-checkout orchestration-readiness job to security CI.
 - [x] 2.15 Pin checkout and Python setup actions by exact commit SHA.
 - [x] 2.16 Give the readiness job only `contents: read` permission.
-- [x] 2.17 Bound the readiness job to five minutes.
+- [x] 2.17 Bound the initial focused readiness job to five minutes; the recovered full contract suite now has a ten-minute bound based on measured CI duration, with all failing checks retained.
 - [x] 2.18 Keep operator secrets out of the readiness job.
 - [x] 2.19 Trigger security CI when crawler-pipeline Kiro specs change.
 - [x]* 2.20 Run the updated security workflow source contract.
@@ -151,7 +151,7 @@
 - [x] 5.9 Verify all four runner-to-profile mappings before work.
 - [x] 5.10 Verify non-zero env preflight exits are never swallowed.
 - [x] 5.11 Add a bounded runtime readiness code for missing operator secrets.
-- [ ]! 5.12 Obtain real operator-secret presence evidence without reading or persisting values.
+- [x] 5.12 Verify all nine daily runtime bindings against live GitHub Secret name/update metadata without reading values; see `daily-secret-presence-readback.v1.json`. Credential validity remains a runtime check.
 - [x] 5.13 Restore the shared Mac/GHA hosted-new-video entrypoint lost from the merged workflow.
 - [x] 5.14 Restore pinned Python/Node dependency setup before the GHA hosted apply.
 - [x] 5.15 Preserve the shared runner's preview-before-apply behavior in the GHA path.
@@ -795,7 +795,7 @@
 - [x] 8.9 Revalidate status-count conservation invariant.
 - [x] 8.10 Revalidate branch-scoped status restoration.
 - [x] 8.11 Revalidate staging material retention on incomplete GDrive upload.
-- [ ]! 8.12 Obtain approved external GDrive readback without persisting credentials.
+- [ ]! 8.12 Finish external GDrive completion readback: authenticated metadata and browser preview on 2026-09-05 confirmed a retained 2026-07-15 status with 191,849 residual items out of 192,095, 246 verified, and maximum prior attempts 212. Fresh frame-hash validation and residual recovery remain; external sanitized receipt SHA-256 `a101e756e28a60720a63837e7094898acb6a7bdfcb4027da4035c2f5d61e7dc6`. No credentials or remote state changed.
 - [x] 8.13 Anchor the soft-budget property model to the actual workflow guard and break order.
 - [x] 8.14 Anchor residual staging after the batch loop and before final status status emission.
 - [x] 8.15 Verify an empty backlog exits before lease creation and frame upload.
