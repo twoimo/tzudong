@@ -843,7 +843,7 @@
 - [x] 9.29 Run the supply-chain contract test directly from security audit CI.
 - [x] 9.30 Expand security CI path triggers to every source that governs this contract.
 - [x] 9.31 Inventory the bare `minio/minio` and `minio/mc` references in the separately owned Supabase development compose bundle.
-- [ ]! 9.32 Select and compatibility-test immutable MinIO image references in a dedicated Supabase local-stack update before changing that bundle.
+- [x] 9.32 Select immutable Chainguard MinIO/server-client indexes recommended by current Supabase legacy-compatibility documentation. Verify the actual Storage v1.33.0 S3 adapter, health command, idempotent bucket creation, access denials, multipart/copy/delete readback, and named-volume restart in an isolated linux/arm64 run. The optional overlay inherits the base Storage image, requires local credentials, and preserves filesystem data; see optional-s3-compatibility.v1.json. No hosted switch or zero-CVE certification.
 
 ## 10. Rust migration recovery and parity
 
