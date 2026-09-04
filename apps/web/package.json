@@ -104,7 +104,7 @@
     "idb": "^8.0.3",
     "input-otp": "^1.5.0",
     "lucide-react": "^1.33.0",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "^6.6.0",
     "next": "16.2.12",
     "openai": "^7.4.0",
     "react": "^19.2.8",
