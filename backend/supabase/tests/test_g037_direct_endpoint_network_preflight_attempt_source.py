@@ -115,11 +115,11 @@ class G037DirectEndpointNetworkPreflightAttemptSourceTests(unittest.TestCase):
             self.assertIs(gate["passwordCeremonyAdmitted"], False)
 
     def test_tasks_docs_and_workflow_track_the_blocked_attempt(self) -> None:
-        self.assertIn("- [ ]! 7.405 ", TASKS)
+        self.assertIn("- [x] 7.405 ", TASKS)
         self.assertIn("- [x]* 7.406 ", TASKS)
         for task_id in (407, 408):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
-        self.assertIn("- [ ]! 7.409 ", TASKS)
+        self.assertIn("- [x] 7.409 ", TASKS)
         attempt_sha = sha256(ATTEMPT_PATH)
         for source in (DESIGN, RUNBOOK):
             normalized = " ".join(source.split())

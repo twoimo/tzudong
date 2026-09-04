@@ -36,7 +36,7 @@ class AdvisorReplayPrerequisiteTests(unittest.TestCase):
         generator = (ROOT / "backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh").read_text()
         self.assertIn('g026_chain_apply "advisor-current-prerequisites" "$advisor_prerequisites"', generator)
         self.assertIn('--single-transaction -f -', generator)
-        self.assertIn('cat -- "$advisor_prerequisites" "$migration"', generator)
+        self.assertIn('cat -- "$advisor_prerequisites" "$advisor_replay"', generator)
         self.assertIn('advisor-prerequisite-recovery.json advisor-prerequisites.sql', generator)
         self.assertEqual(hashlib.sha256((ROOT / "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql").read_bytes()).hexdigest(),
                          "ae834917e3f6c6653d570dacd27d3894d15fcac2a4f09db86f0f9d0f51815148")

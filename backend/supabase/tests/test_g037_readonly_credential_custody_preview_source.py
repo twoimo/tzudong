@@ -202,12 +202,12 @@ class G037ReadonlyCredentialCustodyPreviewSourceTests(unittest.TestCase):
         self.assertIn("- [x]! 7.386 ", TASKS)
         self.assertIn("- [x] 7.387 ", TASKS)
         for task_id in (388, 389, 390):
-            self.assertIn(f"- [ ]! 7.{task_id} ", TASKS)
+            self.assertIn(f"- [x] 7.{task_id} ", TASKS)
         for task_id in range(397, 403):
             self.assertIn(f"- [x]* 7.{task_id} ", TASKS)
         for task_id in (403, 404):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
-        self.assertIn("- [ ]! 7.405 ", TASKS)
+        self.assertIn("- [x] 7.405 ", TASKS)
         preview_sha = sha256(PREVIEW_PATH)
         readback_sha = sha256(READBACK_PATH)
         for source in (DESIGN, RUNBOOK):

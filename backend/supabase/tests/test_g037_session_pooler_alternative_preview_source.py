@@ -159,7 +159,7 @@ class G037SessionPoolerAlternativePreviewSourceTests(unittest.TestCase):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
         self.assertIn("- [x] 7.448 ", TASKS)
         for task_id in range(449, 452):
-            self.assertIn(f"- [ ]! 7.{task_id} ", TASKS)
+            self.assertIn(f"- [x] 7.{task_id} ", TASKS)
         preview_sha = sha256(PREVIEW_PATH)
         for source in (DESIGN, RUNBOOK):
             normalized = " ".join(source.split())

@@ -139,7 +139,7 @@ class G037DirectEndpointHostEvidenceRequestSourceTests(unittest.TestCase):
     def test_tasks_docs_and_security_workflow_track_request_and_probe(self) -> None:
         for task_id in range(420, 431):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
-        self.assertIn("- [ ]! 7.431 ", TASKS)
+        self.assertIn("- [x] 7.431 ", TASKS)
         request_sha = sha256(REQUEST_PATH)
         probe_sha = REQUEST["probeArtifact"]["sha256"]
         for source in (DESIGN, RUNBOOK):

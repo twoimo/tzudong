@@ -10,6 +10,8 @@ on:
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
+      - 'backend/supabase/scripts/transform_advisor_replay.py'
+      - 'backend/supabase/tests/test_advisor_replay.py'
       - 'backend/supabase/volumes/db/**'
       - 'backend/supabase/migrations/**'
       - 'backend/supabase/baselines/**'
@@ -50,6 +52,7 @@ jobs:
           backend.supabase.tests.test_g026_reconstruction_bundle
           backend.supabase.tests.test_g014_guardian_replay
           backend.supabase.tests.test_advisor_replay_prerequisites
+          backend.supabase.tests.test_advisor_replay
 
       - name: Check generator shell syntax
         shell: bash

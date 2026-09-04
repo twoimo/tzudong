@@ -40,13 +40,17 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
         self.assertIn("- [x] 7.163 ", TASKS)
         self.assertIn("- [x]! 7.164 ", TASKS)
-        for open_id in range(165, 170):
+        for completed_id in (165, 166, 167):
+            self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
+        for open_id in (168, 169):
             self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
         for completed_id in range(170, 186):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
         self.assertIn("- [x]! 7.186 ", TASKS)
         self.assertIn("- [x]! 7.188 ", TASKS)
-        for open_id in (187, *range(189, 196)):
+        for completed_id in (187, *range(189, 195)):
+            self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
+        for open_id in (195,):
             self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
         self.assertIn("- [x]* 7.196 ", TASKS)
         self.assertIn("owner privileges without recording its value or role name", TASKS)

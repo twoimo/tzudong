@@ -365,7 +365,7 @@ class G037SessionPoolerControlMapV2SourceTests(unittest.TestCase):
     def test_tasks_docs_and_workflow_record_attempt_and_v2_preparation(self) -> None:
         for task_id in (*range(535, 541), *range(542, 555), 556):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
-        self.assertIn("- [ ]! 7.555 ", TASKS)
+        self.assertIn("- [x] 7.555 ", TASKS)
         for source in (DESIGN, RUNBOOK):
             normalized = " ".join(source.split())
             for path in (

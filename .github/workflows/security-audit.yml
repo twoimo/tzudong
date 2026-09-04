@@ -127,6 +127,10 @@ on:
       - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py'
       - 'backend/supabase/scripts/local-stack.py'
       - 'backend/supabase/tests/test_advisor_followup_source.py'
+      - 'backend/supabase/tests/test_advisor_replay.py'
+      - 'backend/supabase/scripts/transform_advisor_replay.py'
+      - 'backend/supabase/g037-dedicated-credential-readback.v2.json'
+      - 'backend/supabase/tests/test_g037_dedicated_credential_readback_source.py'
       - 'backend/supabase/tests/test_auth_hardening_evidence_source.py'
       - 'backend/supabase/tests/test_hosted_db_access_decision_source.py'
       - 'backend/supabase/tests/test_g037_preflight_attempt_evidence_source.py'
@@ -381,6 +385,9 @@ jobs:
         run: |
           python -m unittest \
             backend.supabase.tests.test_advisor_followup_source \
+            backend.supabase.tests.test_advisor_replay \
+            backend.supabase.tests.test_advisor_replay_prerequisites \
+            backend.supabase.tests.test_g037_dedicated_credential_readback_source \
             backend.supabase.tests.test_auth_hardening_evidence_source \
             backend.supabase.tests.test_hosted_db_access_decision_source \
             backend.supabase.tests.test_g037_preflight_attempt_evidence_source \
