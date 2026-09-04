@@ -34,7 +34,8 @@ def _load(name: str, path: Path):
 obs = _load("observability_up", _MODULE_PATH)
 
 _LOCAL_CTX = {"host": "unix:///var/run/docker.sock"}
-_GOOD_ENV = {"GRAFANA_ADMIN_PASSWORD": "s3cret-from-env"}
+# Inert fixture consumed only by injected runners, never a provider credential.
+_GOOD_ENV = {"GRAFANA_ADMIN_PASSWORD": "fixture"}
 
 
 class _FakeClock:
@@ -348,7 +349,7 @@ class StartupOrchestrationTests(unittest.TestCase):
             self.assertEqual(set(row), allowed_row)
         # No provider/credential/diagnostic leakage anywhere in the artifact.
         blob = repr(art)
-        self.assertNotIn("s3cret-from-env", blob)
+        self.assertNotIn(_GOOD_ENV["GRAFANA_ADMIN_PASSWORD"], blob)
 
     def test_remote_context_short_circuits(self):
         art = self._start(docker_context={"host": "ssh://remote"})
