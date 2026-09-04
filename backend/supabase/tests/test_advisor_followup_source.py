@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import unittest
 from pathlib import Path
@@ -47,10 +48,15 @@ class AdvisorFollowUpSourceTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, raw)
 
-    def test_follow_up_migration_is_the_newest_additive_source_unit(self) -> None:
-        migration_names = sorted(path.name for path in MIGRATIONS.glob("*.sql"))
-        self.assertTrue(migration_names)
-        self.assertEqual(migration_names[-1], FOLLOW_UP.name)
+    def test_follow_up_is_immutable_and_follows_its_privacy_prerequisites(self) -> None:
+        self.assertGreater(FOLLOW_UP.name, G010_DELETION.name)
+        self.assertGreater(FOLLOW_UP.name, G014_BOUNDARY.name)
+        # Later additive migrations are expected. Protect these exact reviewed
+        # bytes rather than requiring this migration to remain globally newest.
+        self.assertEqual(
+            hashlib.sha256(FOLLOW_UP.read_bytes()).hexdigest(),
+            "ae834917e3f6c6653d570dacd27d3894d15fcac2a4f09db86f0f9d0f51815148",
+        )
 
     def test_definer_view_is_retained_as_a_named_owner_approved_exception(self) -> None:
         item = self.document["securityDefinerView"]
