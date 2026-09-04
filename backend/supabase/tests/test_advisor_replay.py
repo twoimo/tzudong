@@ -14,10 +14,19 @@ class AdvisorReplayTests(unittest.TestCase):
     def test_assertions_keep_all_source_work_and_run_after_owner_cleanup(self):
         source = SOURCE.read_bytes()
         sql = replay.transform(source).decode()
-        restored = sql[sql.index("-- Source-only follow-up"): ].replace(
+        body = sql[sql.index("-- Source-only follow-up"): ]
+        source_text = source.decode()
+        validations = source_text[source_text.index(replay.VALIDATION_START):source_text.index(replay.VALIDATION_END)]
+        restored = body.replace(
+            "SET LOCAL ROLE privacy_workflow_owner;\n" + validations,
+            "SET LOCAL ROLE privacy_workflow_owner;", 1,
+        ).replace(replay.VALIDATION_END, validations + replay.VALIDATION_END, 1).replace(
             "PERFORM pg_temp.advisor_replay_assertion();", replay.ASSERTION
         ).encode()
         self.assertEqual(restored, source)
+        self.assertEqual(body.count("VALIDATE CONSTRAINT"), 4)
+        self.assertLess(body.index("SET LOCAL ROLE privacy_workflow_owner;"), body.index(replay.VALIDATION_START))
+        self.assertLess(body.index(replay.VALIDATION_START), body.index("DISABLE TRIGGER"))
         self.assertEqual(sql.count("PERFORM pg_temp.advisor_replay_assertion();"), 2)
         self.assertLess(sql.index("$replay_membership_readback$;"), sql.index("DO $catalog_preflight$"))
         self.assertIn("SECURITY DEFINER SET search_path = ''", sql)

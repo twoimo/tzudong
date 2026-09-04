@@ -12,6 +12,8 @@ from pathlib import Path
 
 SOURCE_SHA256 = "ae834917e3f6c6653d570dacd27d3894d15fcac2a4f09db86f0f9d0f51815148"
 ASSERTION = "PERFORM privacy_retention.assert_g014_catalog_manifest();"
+VALIDATION_START = "ALTER TABLE public.admin_audit_events\n  VALIDATE CONSTRAINT"
+VALIDATION_END = "-- Advancing validated state changes exactly four G014 manifest values."
 BRIDGE = """DO $replay_membership_preflight$
 BEGIN
   PERFORM pg_catalog.set_config(
@@ -74,6 +76,17 @@ def transform(source: bytes) -> bytes:
     closing = text[text.index("DO $catalog_membership_restore$"):text.index("DO $readback$")]
     bridge = BRIDGE.replace("__MEMBERSHIP_OPEN__", opening.replace("advisor.", "advisor_replay.")).replace(
         "__MEMBERSHIP_RESTORE__", closing.replace("advisor.", "advisor_replay.")
+    )
+    # The hosted operator inherits this owner, while the stricter disposable
+    # postgres executor does not. Keep all four validations inside the existing
+    # bounded owner window, before its exact manifest advance and cleanup.
+    validations = text[text.index(VALIDATION_START):text.index(VALIDATION_END)]
+    if validations.count("VALIDATE CONSTRAINT") != 4:
+        raise ValueError("advisor_replay_validation_drift")
+    text = text.replace(validations, "", 1).replace(
+        "SET LOCAL ROLE privacy_workflow_owner;",
+        "SET LOCAL ROLE privacy_workflow_owner;\n" + validations,
+        1,
     )
     return (bridge + text.replace(ASSERTION, "PERFORM pg_temp.advisor_replay_assertion();")).encode()
 
