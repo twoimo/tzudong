@@ -13,6 +13,7 @@ import re
 from typing import Callable
 
 from backend.pipeline_control.manifest import deletion_allowed
+from backend.pipeline_control.rust_performance_admission import verified_performance
 
 _ROOT = Path(__file__).resolve().parents[1] / 'rust/promotion-evidence'
 _REF = re.compile(r'sha256:([0-9a-f]{64})')
@@ -74,6 +75,9 @@ def verified_live_promotion(reference, slice_id, artifact_id, results, *, loader
         ledger = receipt.get('liveLedger')
         if not isinstance(ledger, dict) or not deletion_allowed(ledger):
             return False
+        performance_ref = receipt.get('performanceEvidenceRef')
+        if not verified_performance(performance_ref, slice_id, artifact_id, ledger['cohort']['gitSha']):
+            return False
         # Each live receipt must be bound to exactly one qualifying Rust result.
         # Duplicated jobs, hashes, changed cohorts and non-live manifests are
         # rejected by the shared live-ledger validator, recomputed above.
@@ -101,7 +105,8 @@ def verified_live_promotion(reference, slice_id, artifact_id, results, *, loader
                     or result.get('liveReceiptSha256') != attempt['evidenceReceiptSha256']):
                 return False
         binding = {'sliceId': slice_id, 'rustArtifactId': artifact_id,
-                   'liveLedgerSha256': digest(ledger), 'parityResultsSha256': digest(results)}
+                   'liveLedgerSha256': digest(ledger), 'parityResultsSha256': digest(results),
+                   'performanceEvidenceRef': performance_ref}
         approval = read_receipt(receipt.get('approvalRef'), loader)
         if not approved(approval, purpose='rust_default_switch', binding=binding):
             return False

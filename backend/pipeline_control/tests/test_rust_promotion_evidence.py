@@ -5,18 +5,27 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from backend.pipeline_control.manifest import record_parity_attempt
 from backend.pipeline_control.tests.test_manifest_parity import _ok_payload
 from backend.pipeline_control import rust_parity as rp, impl_selector as selector
 from backend.pipeline_control.rust_promotion_evidence import digest
+from backend.pipeline_control import rust_promotion_evidence as proof_module
 
 SLICE = 'R1-validators'
 ARTIFACT = 'tzudong-validators@sha256:' + 'f' * 64
+PERFORMANCE_REF = {'path': 'apps/web/performance/fixture-admission.json', 'sha256': 'e' * 64}
 
 
 class PromotionEvidenceTests(unittest.TestCase):
     def setUp(self):
+        # These tests isolate live/approval/readback binding. The separate
+        # performance adapter suite tests real retained files and validator calls.
+        admission = patch.object(proof_module, 'verified_performance',
+                                 side_effect=lambda ref, *_: ref == PERFORMANCE_REF)
+        admission.start()
+        self.addCleanup(admission.stop)
         self.blobs = {}
         self.results = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -41,7 +50,8 @@ class PromotionEvidenceTests(unittest.TestCase):
 
     def proof(self):
         binding = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT,
-                   'liveLedgerSha256': digest(self.ledger), 'parityResultsSha256': digest(self.results)}
+                   'liveLedgerSha256': digest(self.ledger), 'parityResultsSha256': digest(self.results),
+                   'performanceEvidenceRef': PERFORMANCE_REF}
         self.approval_ref = self.retain(self.approval('rust_default_switch', binding))
         self.readback_ref = self.retain({'kind': 'rust_promotion_readback_v1', 'binding': binding,
             'approvalRef': self.approval_ref,
@@ -49,7 +59,19 @@ class PromotionEvidenceTests(unittest.TestCase):
             'receiptSha256s': [a['evidenceReceiptSha256'] for a in self.ledger['attempts'][-3:]]})
         return self.retain({'kind': 'rust_promotion_evidence_v1', 'sliceId': SLICE,
             'rustArtifactId': ARTIFACT, 'parityResults': self.results, 'liveLedger': self.ledger,
-            'approvalRef': self.approval_ref, 'readbackRef': self.readback_ref})
+            'approvalRef': self.approval_ref, 'readbackRef': self.readback_ref,
+            'performanceEvidenceRef': PERFORMANCE_REF})
+
+    def test_parity_without_valid_performance_cannot_switch_or_remove_python(self):
+        ref = self.proof()
+        with patch.object(proof_module, 'verified_performance', return_value=False):
+            self.assertFalse(self.decision(ref)['allowed'])
+            entry = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'activeImplementation': 'rust',
+                     'consecutiveMatchedCount': 3, 'promotionEvidenceRef': ref}
+            self.assertFalse(selector.ledger_permits_rust_default(entry, evidence_loader=self.blobs.__getitem__))
+        proof = json.loads(self.blobs[ref])
+        del proof['performanceEvidenceRef']
+        self.assertFalse(self.decision(self.retain(proof))['allowed'])
 
     def decision(self, ref):
         return rp.evaluate_default_switch(SLICE, self.results, ARTIFACT,

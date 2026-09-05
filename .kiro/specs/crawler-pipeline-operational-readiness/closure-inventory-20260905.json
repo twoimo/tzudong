@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T02:28:47.486442+00:00",
+  "generatedAt": "2026-09-05T02:39:29.744537+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "5f7209336c2f4f5249d314f4bf252718f924edc5",
+  "sourceBaseHead": "a58df3a52fa46fcdfbab8657c6aec2ee3e9228a6",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -304,12 +304,13 @@
     "promotion-trusted-default-installation-readback.json": "a55c43a29eba898658a5c11aa0a0a3cc51f829ec17eeaf27a0545f20d2e5c482",
     "promotion-trusted-target-runtime-readback.json": "cfabf82890cb80a733f5e0235bac3c36f15220b6be8f442e65ab2e3edfa643c2",
     "gitguardian-artifact-hash-rescan-readback.json": "5f6653e0d2591b609ab77d28f50b802744aec1133aaacfcbf181902a5a8de6c8",
-    "review-runtime-corrections.v5.json": "6dc30e7580c897ad141d09109794b07d9f58a9e5e033d3a3db7f64bc213f98be"
+    "review-runtime-corrections.v5.json": "6dc30e7580c897ad141d09109794b07d9f58a9e5e033d3a3db7f64bc213f98be",
+    "rust-performance-admission-review.json": "f581fedc991688d926c0d332ead5c71d7c55744e8fe1474a39000625ad6fafa2"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 460,
+  "changedFileCount": 462,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -385,7 +386,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "d3021f4ed5a39a67048fe2a2d21d50ef0069c2e397ec1e7056d81b2d41f4e6e5"
+      "sha256": "85ee77393b561f60867e20e4f8d396c5c5608bd216c2d59756114f8c7b695647"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -405,7 +406,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "1d6eeb71ee66a485fb875c228d53026d1ff3d8102f21741af9b2349120b74bc0"
+      "sha256": "5ae0c85fadf80314edfb07ce08078e73d6327bf321daa8ba179a5f95f2b89f8e"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -1064,8 +1065,12 @@
       "sha256": "f8a359f927ef4192c20eb6502c4be96cbcf9bc6133dc0424c8c0611f63f6a5e3"
     },
     {
+      "path": "backend/pipeline_control/rust_performance_admission.py",
+      "sha256": "16aa135fb389af898690c8e1ee0e67303b56d0a3fbada9917a9ee6ea95229384"
+    },
+    {
       "path": "backend/pipeline_control/rust_promotion_evidence.py",
-      "sha256": "e553c25ae9f5ba5d4ea6e90a9a047d2cd3d07418abcb8d559ccd7b713a8affe5"
+      "sha256": "c269e303d034968befbdeea79fefa74c8fb7acdba0a177e1148743f738886d51"
     },
     {
       "path": "backend/pipeline_control/schedule.py",
@@ -1316,8 +1321,12 @@
       "sha256": "7cd90e7c73adf15e91939c147d8f09551e89af7a7238badcab2acc8b84757633"
     },
     {
+      "path": "backend/pipeline_control/tests/test_rust_performance_admission.py",
+      "sha256": "fc5dbc2849bbb721f139d13aa1f5c7062e17c0cfd02409aff19ccbc1bfc8a73f"
+    },
+    {
       "path": "backend/pipeline_control/tests/test_rust_promotion_evidence.py",
-      "sha256": "8d70ccc3b7d531dc0ed71b76bcbfb57be0fd5066557685429d0cab77c77e14be"
+      "sha256": "fe4275dcd1fdb4084d2192f89ce55da4e0fb48fb3cdf5826f0136b998ba352ed"
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
@@ -2234,7 +2243,8 @@
       "testsRun": 208,
       "workingTreeClean": true
     },
-    "environmentContract": "fail_closed_required_operator_secrets_absent"
+    "environmentContract": "fail_closed_required_operator_secrets_absent",
+    "rustGateAndCanonicalPerformanceAdapterTests": 76
   },
   "pendingReviewCorrectionPr": 2863
 }
