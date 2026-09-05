@@ -17,6 +17,7 @@ import io
 import json
 import tempfile
 import shutil
+import subprocess
 import unittest
 from unittest import mock
 from contextlib import redirect_stdout
@@ -160,6 +161,25 @@ class CliTests(unittest.TestCase):
         self.assertIn('define "tzudong.componentName"', helpers)
         self.assertIn('lower | replace "_" "-"', helpers)
         self.assertEqual(deployments.count('include "tzudong.componentName"'), 4)
+
+    def test_real_helm_secret_references_use_valid_object_names(self):
+        import yaml
+        output = subprocess.check_output([
+            "helm", "template", "tzudong-platform", str(_HELM_DIR / "tzudong-platform")
+        ], stderr=subprocess.PIPE, text=True)
+        refs = []
+        for document in yaml.safe_load_all(output):
+            for container in document["spec"]["template"]["spec"]["containers"]:
+                for entry in container["env"]:
+                    ref = entry["valueFrom"].get("secretKeyRef")
+                    if ref:
+                        refs.append(ref["name"])
+                        self.assertRegex(ref["name"], r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+                        self.assertEqual(ref["key"], "value")
+        self.assertIn("supabase-url-ref", refs)
+        catalog = json.loads(_CATALOG_PATH.read_text())
+        expected = {ref.lower().replace("_", "-") for component in catalog["components"] for ref in component["secretRefs"]}
+        self.assertEqual(set(refs), expected)
 
 
 if __name__ == "__main__":  # pragma: no cover

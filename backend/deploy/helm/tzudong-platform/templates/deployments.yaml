@@ -46,7 +46,7 @@ spec:
               {{- if eq (first $parts) "secretRef" }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ index $parts 1 }}
+                  name: {{ include "tzudong.secretName" (index $parts 1) }}
                   key: value
               {{- else if eq (first $parts) "configmap" }}
               {{- $ref := splitList "/" (index $parts 1) }}

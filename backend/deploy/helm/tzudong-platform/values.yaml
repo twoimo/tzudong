@@ -9,6 +9,8 @@
 # Secret values are NEVER written here. Credential, token, and connection-string
 # secret components are indicated by external secret reference names only
 # (the *_REF identifiers below), matching backend/deploy/migration-readiness.v1.json.
+# Their Kubernetes Secret object names are lowercase with underscores replaced
+# by hyphens (SUPABASE_URL_REF maps to supabase-url-ref), with key "value".
 #
 # clusterId is a render parameter (see templates/_helpers.tpl). Rendering the
 # same source for two or more cluster identifiers differs only in derived fields
