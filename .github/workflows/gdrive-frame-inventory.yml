@@ -1,0 +1,63 @@
+name: GDrive frame inventory
+run-name: GDrive read-only inventory · ${{ inputs.main_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      main_sha:
+        description: Exact protected main SHA to read from
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gdrive-frame-inventory-readonly
+  cancel-in-progress: false
+
+jobs:
+  inventory:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'twoimo/tzudong' &&
+      github.ref == 'refs/heads/main' && github.ref_protected &&
+      github.sha == inputs.main_sha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact protected main source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # actions/setup-python@v6
+        with:
+          python-version: '3.12.8'
+      - name: Check validator and workflow guards without credentials
+        run: python -m unittest backend.utils.tests.test_gdrive_frame_inventory
+      - name: Install read-only inventory client
+        run: |
+          set -euo pipefail
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends rclone
+      - name: Compare frame inventory in memory
+        env:
+          EXPECTED_MAIN_SHA: ${{ inputs.main_sha }}
+          GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/gdrive-frame-inventory"
+          python backend/bin/gdrive_frame_inventory.py > "$RUNNER_TEMP/gdrive-frame-inventory/summary.json"
+      - name: Retain only bounded counts and digests
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
+        with:
+          name: gdrive-frame-inventory-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/gdrive-frame-inventory/summary.json
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: false
