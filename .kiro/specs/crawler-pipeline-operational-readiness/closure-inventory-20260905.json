@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T02:39:29.744537+00:00",
+  "generatedAt": "2026-09-05T02:41:02.916014+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "a58df3a52fa46fcdfbab8657c6aec2ee3e9228a6",
+  "sourceBaseHead": "cf9ab2167b8052a8b0df5cfd51adf7ae4f9f3e40",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -430,7 +430,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "0a006fc335080ab9d9f200e10a5b65a13bf92ceec1755b8f268eb113da7c82f1"
+      "sha256": "a0d33d87289bb49fbd536246d1d4fd8360bd422d5f4166e5f48f7d436165f210"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
