@@ -27,6 +27,8 @@ HISTORICAL_SOURCE_SHA256 = "c7076254b4cef5757fd305ed50be57db8209c24715578f4394a9
 EXPECTED_IDENTITY_SHA256 = "a8df74b60b8e56f5438bcd9a038da4b410d5f586ec182a7bd9f29e4f74a94b1d"
 MAX_BYTES = 256 * 1024 * 1024
 MAX_REMOTE_FILES = 1000000
+MAX_STDERR_BYTES = 16 * 1024
+REMOTE_TIMEOUT_SECONDS = 1200
 MD5 = re.compile(r"[a-fA-F0-9]{32}")
 SHA = re.compile(r"[a-f0-9]{40}")
 CONFIG_KEYS = {"type", "client_id", "client_secret", "token", "scope", "root_folder_id", "team_drive", "service_account_credentials"}
@@ -34,6 +36,30 @@ CONFIG_KEYS = {"type", "client_id", "client_secret", "token", "scope", "root_fol
 
 class InventoryError(Exception):
     """Only fixed codes cross the publication boundary."""
+
+
+class RemoteReadError(InventoryError):
+    def __init__(self, code, status, exit_code=None, truncated=False):
+        super().__init__(code)
+        self.receipt = {"remoteStatus": status,
+                        "remoteExitCode": exit_code if type(exit_code) is int and -128 <= exit_code <= 255 else None,
+                        "diagnosticTruncated": bool(truncated)}
+
+
+def remote_error_code(stderr):
+    """Diagnostic hints only: never return a provider string or interpolated value."""
+    lowered = bytes(stderr).lower()
+    for code, markers in (
+        ("REMOTE_FLAG_UNSUPPORTED", (b"unknown flag:", b"unknown shorthand flag:")),
+        ("REMOTE_AUTH_FAILED", (b"invalid_grant", b"invalid_client", b"oauth2: cannot fetch token", b"unauthorized_client")),
+        ("REMOTE_PERMISSION_DENIED", (b"insufficientpermissions", b"insufficientfilepermissions", b"insufficient authentication scopes")),
+        ("REMOTE_RATE_LIMITED", (b"ratelimitexceeded", b"userratelimitexceeded")),
+        ("REMOTE_PATH_NOT_FOUND", (b"directory not found", b"error 404")),
+        ("REMOTE_NETWORK_FAILED", (b"no such host", b"i/o timeout", b"tls handshake timeout", b"connection refused")),
+    ):
+        if any(marker in lowered for marker in markers):
+            return code
+    return "REMOTE_READ_FAILED"
 
 
 def fail(code):
@@ -234,26 +260,53 @@ def read_remote(operation, env):
             "--retries", "1", "--low-level-retries", "1", "--contimeout", "20s", "--timeout", "60s"]
     child = None
     timer = None
+    reader = None
+    diagnostic = bytearray()
+    diagnostic_truncated = threading.Event()
+    diagnostic_failed = threading.Event()
     timed_out = threading.Event()
     try:
         child = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, shell=False)
-        def expire():
-            timed_out.set()
+                                 stderr=subprocess.PIPE, shell=False)
+        def stop_child():
             try:
                 child.kill()
             except OSError:
                 pass
-        timer = threading.Timer(1200, expire)
+        def drain_stderr():
+            try:
+                while chunk := child.stderr.read(4096):
+                    remaining = MAX_STDERR_BYTES - len(diagnostic)
+                    diagnostic.extend(chunk[:remaining])
+                    if len(chunk) > remaining:
+                        diagnostic_truncated.set()
+            except (OSError, ValueError):
+                diagnostic_failed.set()
+                stop_child()
+        def expire():
+            timed_out.set()
+            stop_child()
+        timer = threading.Timer(REMOTE_TIMEOUT_SECONDS, expire)
         timer.start()
+        # Drain concurrently even after the retained prefix is full; never communicate()
+        # or wait for stderr before reading stdout (either pipe may fill first).
+        reader = threading.Thread(target=drain_stderr)
+        reader.start()
         raw = child.stdout.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             fail("INPUT_TOO_LARGE")
-        if child.wait() != 0 or timed_out.is_set():
-            fail("REMOTE_READ_FAILED")
+        exit_code = child.wait()
+        reader.join()
+        if timed_out.is_set():
+            raise RemoteReadError("REMOTE_TIMEOUT", "timed_out", exit_code, diagnostic_truncated.is_set())
+        if diagnostic_failed.is_set():
+            raise RemoteReadError("REMOTE_IO_FAILED", "io_failed", exit_code, diagnostic_truncated.is_set())
+        if exit_code != 0:
+            raise RemoteReadError(remote_error_code(diagnostic), "exited", exit_code, diagnostic_truncated.is_set())
         return raw
     except (OSError, subprocess.SubprocessError):
-        fail("REMOTE_READ_FAILED")
+        raise RemoteReadError("REMOTE_LAUNCH_FAILED" if child is None else "REMOTE_IO_FAILED",
+                              "launch_failed" if child is None else "io_failed") from None
     finally:
         if timer is not None:
             timer.cancel()
@@ -265,7 +318,11 @@ def read_remote(operation, env):
                 except OSError:
                     pass
             child.wait()
+            if reader is not None and reader.ident is not None:
+                reader.join()
             child.stdout.close()
+            child.stderr.close()
+        diagnostic.clear()
 
 
 def source_binding(env):
@@ -297,6 +354,8 @@ def main():
         report["expectedGzipSha256"] = EXPECTED_GZIP_SHA256
     except InventoryError as error:
         report["code"] = str(error)
+        if isinstance(error, RemoteReadError):
+            report.update(error.receipt)
     except Exception:
         pass  # Never expose JSON, config, subprocess or provider diagnostics.
     report["validatorSourceSha256"] = digest(Path(__file__).read_bytes())
