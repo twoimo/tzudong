@@ -300,7 +300,12 @@ jobs:
           python -m pip install --disable-pip-version-check -r backend/pipeline-control/requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres -v
+
+      - name: Verify Collector crash recovery with disposable fixtures
+        run: |
+          docker pull python@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
+          TZUDONG_TEST_OTEL_RESTART=1 python -m unittest backend.bin.tests.test_otel_restart
 
       - name: Verify recovered observability and readiness-agent boundaries
         run: >-
@@ -490,6 +495,7 @@ jobs:
             VIRTUAL_ENV="$RUNNER_TEMP/rust-parity" "$RUNNER_TEMP/rust-parity/bin/python" -m maturin develop --manifest-path "backend/rust/$crate/Cargo.toml" --locked
           done
           TZUDONG_REQUIRE_RUST_CALL_SITES=1 "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_runtime_bindings
+          "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.pipeline_control.tests.test_rust_promotion_evidence backend.pipeline_control.tests.test_rust_parity backend.pipeline_control.tests.test_impl_selector backend.pipeline_control.test_rust_parity_gate_pbt backend.pipeline_control.test_impl_selector_pbt
           "$RUNNER_TEMP/rust-parity/bin/python" -m unittest backend.rust.tests.parity_pbt backend.rust.tests.parity_error_pbt
 
   secret-pattern-scan:

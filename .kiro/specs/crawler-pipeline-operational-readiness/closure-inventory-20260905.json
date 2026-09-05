@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T02:19:36.244775+00:00",
+  "generatedAt": "2026-09-05T02:28:47.486442+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "c6baa70a82b6e40dda09719a4c765a053f5a6962",
+  "sourceBaseHead": "5f7209336c2f4f5249d314f4bf252718f924edc5",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -385,7 +385,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "689151ae2b3e7e40c6635a6781a0f89d7e3070b3ad3aa6ebb1ebdf62371ee736"
+      "sha256": "d3021f4ed5a39a67048fe2a2d21d50ef0069c2e397ec1e7056d81b2d41f4e6e5"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -425,11 +425,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "16668a7c5653983999fb64fd6374e827228bf0f3e5048a19d61b20810db7ea0b"
+      "sha256": "2b3d0835a6863c60d55dc22e5466353e9717c5f46b1163c8b4fb7e411f82e8cd"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "f03b24c4de04d71a0a04f240bb2a5362c8b09b89dbf5c3ea3a39de1beae0177f"
+      "sha256": "0a006fc335080ab9d9f200e10a5b65a13bf92ceec1755b8f268eb113da7c82f1"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -469,7 +469,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-candidate-provenance.v1.json",
-      "sha256": "707a05b5f216a462039faa7825fe1e3deabb93692b2bb7f8c08e786715d515a7"
+      "sha256": "a0695582ab0dda1d1293f804beefc340eeb632cfd22d7cbad8f0daa32cac6a6c"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-source-provenance.v1.json",
@@ -793,7 +793,7 @@
     },
     {
       "path": "backend/bin/tests/test_otel_restart.py",
-      "sha256": "f1c62a085cc320a51be5d47bdf4575796e3b5377f22c1236993a51c562052b36"
+      "sha256": "07404f7e3a171869f4557f5c03aca60f1a4177979d7c65909fd213f18efb401e"
     },
     {
       "path": "backend/bin/tests/test_phase_gate_unittest.py",
@@ -2125,7 +2125,7 @@
     },
     {
       "path": "backend/utils/tests/test_operational_source_recovery.py",
-      "sha256": "6c8703f83c207338937fe9457edf7caff84a38ff6d38e096da9b955ce2055c44"
+      "sha256": "dca3e39f53c12b52e6ae1e3619820f3474d6e08b032f52dc8a0194095f828e0e"
     },
     {
       "path": "backend/utils/tests/test_phase_gate_source_recovery.py",
@@ -2133,7 +2133,7 @@
     },
     {
       "path": "backend/utils/tests/test_platform_modernization_reconciliation.py",
-      "sha256": "40bb6ae8be555c7ad57faca53698460f1e4f965550f72d1f2472b3755f69bc2e"
+      "sha256": "f59b396dd48b5e5b7336bf549832d0d05dbfc06383af65e8e9795c14598bd34f"
     },
     {
       "path": "backend/utils/tests/test_publication_source_recovery.py",
@@ -2145,7 +2145,7 @@
     },
     {
       "path": "backend/utils/tests/test_rust_source_recovery.py",
-      "sha256": "6cb11e1a26ba2b162b742be70b880af10b7aa60dcb99d4c8987deb50d85f2179"
+      "sha256": "db846e52007fe581baa6a1e485232391a99134f9e7c936aa7919163ad2d455dc"
     },
     {
       "path": "backend/utils/tests/test_supply_chain_contract.py",
@@ -2217,6 +2217,24 @@
       "diagnostics": 0,
       "logicalInputs": 2322
     },
-    "webLint": "passed"
-  }
+    "webLint": "passed",
+    "webUnit": {
+      "passed": 2062,
+      "skipped": 9,
+      "failed": 0
+    },
+    "requiredBackendRegression": {
+      "testsRun": 120,
+      "skipped": 4,
+      "failed": 0
+    },
+    "orchestrationAudit": {
+      "sourceHead": "5f7209336c2f4f5249d314f4bf252718f924edc5",
+      "status": "Ready",
+      "testsRun": 208,
+      "workingTreeClean": true
+    },
+    "environmentContract": "fail_closed_required_operator_secrets_absent"
+  },
+  "pendingReviewCorrectionPr": 2863
 }

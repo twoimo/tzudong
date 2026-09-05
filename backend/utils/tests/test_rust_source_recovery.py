@@ -110,7 +110,7 @@ class RustSourceRecoveryTests(unittest.TestCase):
         transformations = candidate["candidateTransformations"]
         self.assertEqual(
             [item["id"] for item in transformations],
-            ["rustfmt-1.97.0", "root-mit-license-alignment", "python-whitespace-parity"],
+            ["rustfmt-1.97.0", "root-mit-license-alignment", "python-whitespace-parity", "python-date-hash-parity"],
         )
         declared_paths = {
             path

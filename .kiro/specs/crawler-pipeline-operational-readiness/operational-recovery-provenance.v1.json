@@ -5,7 +5,7 @@
   "corroboratingCommit": "2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c",
   "note": "Source bytes are local Git evidence only. Candidate changes do not establish hosted state, approval, deployment, notification, or legal compliance.",
   "sourceFileCount": 50,
-  "candidateOnlyFileCount": 11,
+  "candidateOnlyFileCount": 12,
   "candidateTransformations": [
     {
       "id": "current-pipeline-control-layout",
@@ -94,6 +94,29 @@
         "backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql",
         "backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql"
       ]
+    },
+    {
+      "id": "promotion-review-runtime-corrections",
+      "kind": "runtime-hardening",
+      "paths": [
+        "apps/web/scripts/collect-dependency-candidates.mjs",
+        "apps/web/tests-unit/dependency-candidate-collection.test.ts",
+        "backend/bin/check_deployment_descriptor_set.py",
+        "backend/bin/observability_up.py",
+        "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
+        "backend/bin/tests/test_otel_restart.py",
+        "backend/deploy/helm/tzudong-platform/templates/_helpers.tpl",
+        "backend/deploy/helm/tzudong-platform/templates/deployments.yaml",
+        "backend/deploy/helm/tzudong-platform/values.yaml",
+        "backend/pipeline-control/docker-compose.observability.yml",
+        "backend/pipeline-control/otel-collector.yaml",
+        "backend/pipeline_control/agent_action_store.py",
+        "backend/pipeline_control/ops_agent.py",
+        "backend/pipeline_control/publish_queue.py",
+        "backend/pipeline_control/test_ops_agent_unittest.py",
+        "backend/pipeline_control/test_publish_queue_postgres.py",
+        "backend/pipeline_control/tests/test_rust_runtime_bindings.py"
+      ]
     }
   ],
   "files": [
@@ -103,9 +126,9 @@
       "sourceGitBlobSha1": "c93be76f2f6711a6c476b73de1d63877f1c3e4e6",
       "sourceSha256": "2fdcd6529a9f435d3fec0107fc288fbb938e07786f88cdde8cde5e834f4bcff8",
       "sourceBytes": 8833,
-      "candidateGitBlobSha1": "64562f59ddabad73f4df2c585760e1ccd32a97dd",
-      "candidateSha256": "233b7da534c26c3c0a9e3ed03c022b8609b07f77c854f4bafe214e4b22511163",
-      "candidateBytes": 14885
+      "candidateGitBlobSha1": "c0e4fe85af2497d131037002a212f7fd36e610b0",
+      "candidateSha256": "4961e68118de02ad719e1a5b094e9889b8e07c203e1ad5ace792f6fd67cd35b2",
+      "candidateBytes": 14905
     },
     {
       "sourcePath": "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
@@ -113,9 +136,9 @@
       "sourceGitBlobSha1": "4432746dd80ab9d5ea78c29a269de8e1dbdb2ad6",
       "sourceSha256": "7429ccddce7eabc907d73952983971270167cf2d846b13eac59242e9d5a8cb52",
       "sourceBytes": 3436,
-      "candidateGitBlobSha1": "38305e515159d3178f77b9548359ac3c00619cd1",
-      "candidateSha256": "1f14a1824016932cb99eafb456b7982c2acfce429722dbdcddcadcd45934b0b1",
-      "candidateBytes": 7805
+      "candidateGitBlobSha1": "6d15e5e93fe40a8e826bfa9503347ca3f095b59d",
+      "candidateSha256": "d8f4c533b89691a75497f04cb95a670b6a8a87e1a2df94b673d476931cf579ac",
+      "candidateBytes": 8866
     },
     {
       "sourcePath": "backend/deploy/deployment-descriptor-set.v1.json",
@@ -143,9 +166,9 @@
       "sourceGitBlobSha1": "46ec19827877b1ae5041396b57db414157b2453e",
       "sourceSha256": "c416e0a1b94670ac416cd587bf1b5f15d4c5f25094215ff82b633dbdf0a831e9",
       "sourceBytes": 33676,
-      "candidateGitBlobSha1": "afe34f9606631a418536c13f4ec223f15ed12b39",
-      "candidateSha256": "f74f1ceef4739e2cb9b7a0d3538b43ac0857a4915e85aa5b235c54d7fb181719",
-      "candidateBytes": 36809
+      "candidateGitBlobSha1": "7676f93652fbefa41f0e20687e8958f4d2a39416",
+      "candidateSha256": "611376f9172b748de627130b05e19e6ef0026f1170b5b64afd23a0ec8edf132f",
+      "candidateBytes": 40279
     },
     {
       "sourcePath": "backend/pipeline_control/test_cluster_render_pbt.py",
@@ -183,9 +206,9 @@
       "sourceGitBlobSha1": "cfffce95b6217b6d0417435d5b7daf08f3573e66",
       "sourceSha256": "3969e03e2d6e4d19314aab16b633460b967183cd0d0721eab80c4ef6dad9e41d",
       "sourceBytes": 20135,
-      "candidateGitBlobSha1": "1b83f385845de21f71f0c1365071aa436fcfe6e8",
-      "candidateSha256": "d8d31e1444029f3c138e31d94f178f7117608c539b716a1caad3b6869e2cec13",
-      "candidateBytes": 24656
+      "candidateGitBlobSha1": "5fc29bdf8f23f24b7e134b219540729313dd158c",
+      "candidateSha256": "c8aaa432121151f2cf4517328ca09d6e47ddcea355006a467ae5b09cf148209f",
+      "candidateBytes": 27369
     },
     {
       "sourcePath": "backend/deploy/agent-action-allowlist.v1.json",
@@ -413,9 +436,9 @@
       "sourceGitBlobSha1": "ae8f827ea67798512c7495072fb26bb0acdcb08a",
       "sourceSha256": "d8babb2ec2e46aa4b70cb44e62cafcda37313dc2d8d1aa007d7814adf51f4e6d",
       "sourceBytes": 26218,
-      "candidateGitBlobSha1": "b2f276f27ccd09d2cc1d7ba182f087f145c6ae75",
-      "candidateSha256": "3ea5bde9f2082debfd17b5ec6233023d9dc6611fcd682955bda74dffafb36210",
-      "candidateBytes": 30016
+      "candidateGitBlobSha1": "a8b1cda93b6b924d905b1f892a155fed98ff1c00",
+      "candidateSha256": "81bc2aa1d5ca52666b3f632a5cfd047d920b6aea3faf534a3ac0f3ac1815e20e",
+      "candidateBytes": 30882
     },
     {
       "sourcePath": "backend/bin/tests/test_observability_up_unittest.py",
@@ -473,9 +496,9 @@
       "sourceGitBlobSha1": "e7b0eed279e1cca498136d6ca0c2f15d70e3e957",
       "sourceSha256": "5d8c8804c94b72000cb87945fbf3c918c99d90f0736e1b747c7a47c246c298f0",
       "sourceBytes": 961,
-      "candidateGitBlobSha1": "8ace48ab759eeb504225c5ee05fe3d3b912511f6",
-      "candidateSha256": "aae495fd2a00f3738c6c3a7ba706c5a2d45795f910802d11dc45514cd3662802",
-      "candidateBytes": 1270
+      "candidateGitBlobSha1": "e60260669eb769f65de64ccfffa032a2b67cb49a",
+      "candidateSha256": "93ae60598ec9c6d45ace7ce3c9a7b2d40ed7965370fe570af5009608d7819415",
+      "candidateBytes": 1564
     },
     {
       "sourcePath": "backend/deploy/helm/tzudong-platform/templates/deployments.yaml",
@@ -483,9 +506,9 @@
       "sourceGitBlobSha1": "1168185390fa9c12b0a8f910be5a8115fbb63458",
       "sourceSha256": "b561fc62286897178f60cd5ffd485269a93b1fb0630207b334004366a86f46ca",
       "sourceBytes": 2295,
-      "candidateGitBlobSha1": "938de9fbdfaa9c798f4906057250ae26ec67708e",
-      "candidateSha256": "dd67e829be909b52380cdcfea8c034e934dcb1dc38f34587bcf412db91f9c14d",
-      "candidateBytes": 2415
+      "candidateGitBlobSha1": "f6bb65b08c8d0f6539cf3254da808875ea859790",
+      "candidateSha256": "1e1ea40220060ffaf60fffa21eb8d075a3ad0250ee3fe250956b142a57737372",
+      "candidateBytes": 2446
     },
     {
       "sourcePath": "backend/deploy/helm/tzudong-platform/values.yaml",
@@ -493,9 +516,9 @@
       "sourceGitBlobSha1": "11e25cc6b1f4f0999871bac57840364c2b220309",
       "sourceSha256": "9b94ca3891caeb5299a229af7fd8c16245687d7bbc4327ce5c2c22c58f6ed93b",
       "sourceBytes": 3766,
-      "candidateGitBlobSha1": "11e25cc6b1f4f0999871bac57840364c2b220309",
-      "candidateSha256": "9b94ca3891caeb5299a229af7fd8c16245687d7bbc4327ce5c2c22c58f6ed93b",
-      "candidateBytes": 3766
+      "candidateGitBlobSha1": "20c4fe8441822b8ff6b2a0e34558e0046d8be283",
+      "candidateSha256": "6857d8480469ce9b1acf399921dce27e295381ed253345b2282d13ea143da283",
+      "candidateBytes": 3921
     },
     {
       "sourcePath": "backend/deploy/migration-readiness.v1.json",
@@ -583,9 +606,9 @@
       "sourceGitBlobSha1": "09858cf109ded1fb4e1d5117445ec66268c376c4",
       "sourceSha256": "9149f8ff7e852912ea1c345a528851a68508d3d1e97103628f9dd26c323ca658",
       "sourceBytes": 755,
-      "candidateGitBlobSha1": "247e7d76950cb36ce290417182650e74dc28aad6",
-      "candidateSha256": "bf13c1a83048bbf22d2ad8c3b9222363e87437f95cdefd8ee8ef1be7f6d6d4b4",
-      "candidateBytes": 483
+      "candidateGitBlobSha1": "7b99017e76b9d6be72998f61953d4b115bfb93a7",
+      "candidateSha256": "11f9ecaf8032c1726883875c2de914e91fb3f815e7935cff999bbebe282d62c7",
+      "candidateBytes": 884
     },
     {
       "sourcePath": "backend/deploy/pipeline-control/docker-compose.observability.yml",
@@ -593,9 +616,9 @@
       "sourceGitBlobSha1": "3d0e9fe3ed1f0d54ba1e7fb5b74904be58beae64",
       "sourceSha256": "ac6793fcb515c33565fa2aba37fe4ccac8e61501d756bf2ca2bd9a749ed914d5",
       "sourceBytes": 2129,
-      "candidateGitBlobSha1": "19c284d0d4c8c53c9059e24b8f4d77b3b5ff8965",
-      "candidateSha256": "a0aad4853dd3d37573637a08cfd4064909951268a3fc799b498512c657e4cc50",
-      "candidateBytes": 2436
+      "candidateGitBlobSha1": "d623e5d9ce4654300ebd01c8ed0aaed139cb02b5",
+      "candidateSha256": "cfc14d3e8844bcc1c0d1d9c44d6e4c95c11586d3cb4e56681849637813aa3fee",
+      "candidateBytes": 3026
     }
   ],
   "candidateOnlyFiles": [
@@ -607,21 +630,21 @@
     },
     {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "gitBlobSha1": "9d06ef774bcdff673114250908975a19ad4892e7",
-      "sha256": "a2065244a46585649b215892da26878583ffc37ef7e42cdb9373a33958a145f9",
-      "bytes": 3090
+      "gitBlobSha1": "94927346e4df3dd657408c4af37fbf59206ddaa1",
+      "sha256": "25cab7faf423486dd4b52c8076da13100ae86a06899651f12a938011b654a949",
+      "bytes": 3749
     },
     {
       "path": "backend/pipeline_control/publish_queue.py",
-      "gitBlobSha1": "618e98364e11fbdaaea056484582b8243068cd05",
-      "sha256": "44a6effe2509457eb1538ec01ba8c39b4a4f5feb263337f6fb64a6dd783fcd44",
-      "bytes": 15593
+      "gitBlobSha1": "9597e72de072f2aa6f692d03045804d5971e77d5",
+      "sha256": "b8e50970cc78d470dd77dec93e58249f699af2272b6ef2f8a6d0ca6fc4d14898",
+      "bytes": 16054
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "gitBlobSha1": "1e8cc2be0535ddd8d6cf91473db695e5e9968c15",
-      "sha256": "b5e60f8b811d2da4ecc7609e5c67b1f1517696d509bdf8eb73fc4d494b2062ea",
-      "bytes": 15425
+      "gitBlobSha1": "fd214f7be600aae14264dfddc91f5bb10b136c90",
+      "sha256": "064d159700926806906c77edd16da994d951530d5aa6b352689a05c65f91de22",
+      "bytes": 17607
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -637,21 +660,21 @@
     },
     {
       "path": "apps/web/scripts/collect-dependency-candidates.mjs",
-      "gitBlobSha1": "3608bf62c9bf196b99c8ddaa6ee689f27b4eee32",
-      "sha256": "6ee70512aefbb9388d2be1d997efb0bcf3f31d0741bc44093b0b17cac099b08e",
-      "bytes": 4353
+      "gitBlobSha1": "bded5d517c3760555f01db920038b2be2a50e12e",
+      "sha256": "f87e9f11a69ae5fe45c73b2607b1aecee3036af49545b55d2393a7b9bf4d588a",
+      "bytes": 7994
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "gitBlobSha1": "6c99eb870e3a87b838be74d5608b44ef832cc14e",
-      "sha256": "bebc34c6f24a9b48534696790df789ee10f15e8e5a5f01073a4d2630c2390b43",
-      "bytes": 3132
+      "gitBlobSha1": "2fd65f63d52dae974cc85213c8e721ac0421366c",
+      "sha256": "1932e0c5a8cf3ef9d975ba93aaf5b166753dbacadb726a702ddbbedfb79c9dbe",
+      "bytes": 7117
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
-      "bytes": 6850,
-      "sha256": "90a0c12c1f5fef76b3c3c08dfa5f247de906d5707827f906c1085a35062f28b7",
-      "gitBlobSha1": "8e9ac4047e648831291053867fc5ed03f95b0115"
+      "bytes": 9443,
+      "sha256": "0f75f903d0abc5151a75fe397b40478c21ecc03a148859f08c0e0d1c148ce181",
+      "gitBlobSha1": "f13b6f55c74b723d4f9492f963d9cd1c2ceb2531"
     },
     {
       "path": "backend/rust/RUNTIME_BINDINGS.md",
@@ -664,6 +687,12 @@
       "bytes": 2712,
       "sha256": "96e376aad7f58d59196f86ffba699dc16443d3b83a5a39dcdf94a461ad08a41f",
       "gitBlobSha1": "8fc8ddc54d2e89d7659fe3ea4c92da461d70e37c"
+    },
+    {
+      "path": "backend/bin/tests/test_otel_restart.py",
+      "bytes": 7197,
+      "sha256": "07404f7e3a171869f4557f5c03aca60f1a4177979d7c65909fd213f18efb401e",
+      "gitBlobSha1": "82ef9f38b1d9a2d2f7e3b52a8439b83ccd96b4e8"
     }
   ]
 }

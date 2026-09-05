@@ -13,6 +13,7 @@ from uuid import uuid4
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
+SINK_IMAGE = 'python@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea'
 SINK = r'''
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -98,7 +99,7 @@ class CollectorRestartTests(unittest.TestCase):
                             '--cap-add', 'CHOWN', '--user', '0:0', '-v', volume + ':/var/lib/otelcol',
                             compose['services']['otel-storage-init']['image'],
                             'chown', '10001:10001', '/var/lib/otelcol')
-                sink_image = self.docker('image', 'inspect', 'python:3.12-slim', '--format', '{{.Id}}')
+                sink_image = self.docker('image', 'inspect', SINK_IMAGE, '--format', '{{.Id}}')
                 self.docker('run', '-d', '--name', sink, '--network', network, '--network-alias', 'fixture-sink',
                             '-v', raw + ':/fixture', sink_image, 'python', '/fixture/sink.py')
                 def start():
