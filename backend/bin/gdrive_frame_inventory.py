@@ -52,7 +52,7 @@ def remote_error_code(stderr):
     for code, markers in (
         ("REMOTE_FLAG_UNSUPPORTED", (b"unknown flag:", b"unknown shorthand flag:")),
         ("REMOTE_AUTH_FAILED", (b"invalid_grant", b"invalid_client", b"oauth2: cannot fetch token", b"unauthorized_client")),
-        ("REMOTE_PERMISSION_DENIED", (b"insufficientpermissions", b"insufficient authentication scopes")),
+        ("REMOTE_PERMISSION_DENIED", (b"insufficientpermissions", b"insufficientfilepermissions", b"insufficient authentication scopes")),
         ("REMOTE_RATE_LIMITED", (b"ratelimitexceeded", b"userratelimitexceeded")),
         ("REMOTE_PATH_NOT_FOUND", (b"directory not found", b"error 404")),
         ("REMOTE_NETWORK_FAILED", (b"no such host", b"i/o timeout", b"tls handshake timeout", b"connection refused")),

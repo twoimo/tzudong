@@ -218,6 +218,7 @@ class RemoteDiagnosticsTest(unittest.TestCase):
             (b"unknown flag: --private", "REMOTE_FLAG_UNSUPPORTED"),
             (b"oauth2: cannot fetch token: private", "REMOTE_AUTH_FAILED"),
             (b"invalid_grant: private", "REMOTE_AUTH_FAILED"),
+            (b"googleapi: Error 403: private, insufficientFilePermissions", "REMOTE_PERMISSION_DENIED"),
             (b"insufficientPermissions: private", "REMOTE_PERMISSION_DENIED"),
             (b"userRateLimitExceeded: private", "REMOTE_RATE_LIMITED"),
             (b"directory not found: private", "REMOTE_PATH_NOT_FOUND"),
