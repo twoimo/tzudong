@@ -23,7 +23,8 @@ tokens, file-backed credentials, default sections and executable configuration
 options are not forwarded. Unsupported configuration fails with `CONFIG_INVALID`.
 No secret, raw inventory, runtime path list, provider diagnostic or configuration
 file is written or uploaded. The minimized expected bindings are versioned in Git
-as described below; runtime reads them in memory. Child stderr is discarded. The only
+as described below; runtime reads them in memory. Child stderr is drained in memory
+and discarded after fixed-code classification; raw diagnostics never enter the receipt. The only
 uploaded artifact is the small `summary.json`; it is retained on gap/error too.
 No frame upload, remote lock, status update, reconciliation, delete, sync or remote
 mutation is implemented. The credential itself may have broad OAuth permissions;
@@ -75,6 +76,42 @@ sizes. Only 246 rows have an expected MD5; 191,849 do not. Only the compact iden
 bindings are included; credentials and operational metadata are excluded.
 
 ## Interpretation and completion
+
+### Runtime compatibility and bounded diagnostics
+
+Ubuntu 24.04's inspected `noble-updates`/`noble-security` amd64 package is
+`1.60.1+dfsg-3ubuntu0.24.04.6` (package SHA-256
+`f887e086389fa079b5e5b8f5832e140872cef2c808adc11c0a9047a989698e7d`).
+An offline local-directory listing with that exact package in Ubuntu 24.04 accepted
+every inventory command option, including `--drive-skip-shortcuts`, `--files-only`
+and `--hash`, with the same minimal child environment and `/dev/null` config.
+The container image digest was
+`sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517`.
+This checks command parsing, not Drive authentication or remote path resolution.
+The workflow installation remains unchanged; the inspected package version does
+not establish which package a different runner installed.
+References: [Ubuntu package](https://packages.ubuntu.com/noble/rclone),
+[versioned Drive options](https://github.com/rclone/rclone/blob/v1.60.1/backend/drive/drive.go),
+[versioned lsjson options](https://github.com/rclone/rclone/blob/v1.60.1/cmd/lsjson/lsjson.go).
+
+The subprocess stderr pipe is drained concurrently in 4 KiB chunks. Only its first
+16 KiB is retained in memory; overflow is discarded while draining continues, so
+a full stderr pipe cannot block stdout. The existing 256 MiB stdout limit and
+20-minute kill timer remain enforced. Cleanup kills/reaps an unfinished child,
+joins the reader, closes both pipes and clears the diagnostic buffer. No diagnostic
+file, unbounded `communicate()` capture, retry or second remote operation is added.
+
+On subprocess failure, the summary adds only `remoteStatus` (`exited`, `timed_out`,
+`launch_failed`, `io_failed`), `remoteExitCode` (integer -128 through 255, otherwise
+null), and boolean `diagnosticTruncated`. Fixed codes are `REMOTE_LAUNCH_FAILED`,
+`REMOTE_IO_FAILED`, `REMOTE_TIMEOUT`, or the following prefix-marker classifications:
+`REMOTE_FLAG_UNSUPPORTED`, `REMOTE_AUTH_FAILED`, `REMOTE_PERMISSION_DENIED`,
+`REMOTE_RATE_LIMITED`, `REMOTE_PATH_NOT_FOUND`, `REMOTE_NETWORK_FAILED`.
+Unrecognized failures remain `REMOTE_READ_FAILED`. These are diagnostic hints,
+not proof of the underlying cause: markers may be missing, truncated or ambiguous.
+No matched text, URLs, tokens, paths, provider bodies or stderr hashes are published.
+Successful subprocess stderr does not change the inventory verdict. Stdout overflow
+still fails with `INPUT_TOO_LARGE` before parsing or publishing inventory content.
 
 Expected duplicate identities are invalid; distinct historical versions of the
 same path remain counted and are **unverified**, never silently deduplicated or
