@@ -108,6 +108,15 @@
       "vcsTracked": true
     },
     {
+      "path": "backend/data",
+      "depth": 2,
+      "ownership": "운영자 검사기에 Git·해시로 고정한 최소 데이터 계약 입력",
+      "allowedContents": ["공개 영상 프레임의 상대 경로·크기·시각·해시 식별 목록"],
+      "forbiddenContents": ["시크릿 값 리터럴", "개인정보", "사용자 행", "원시 프레임·미디어", "런타임 로그·원시 원격 목록"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "backend/deploy",
       "depth": 2,
       "ownership": "배포 원장·IaC·승인 준비 자료 소유 경계",

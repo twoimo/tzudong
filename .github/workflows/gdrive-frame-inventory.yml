@@ -18,14 +18,23 @@ concurrency:
 
 jobs:
   inventory:
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      github.repository == 'twoimo/tzudong' &&
-      github.ref == 'refs/heads/main' && github.ref_protected &&
-      github.sha == inputs.main_sha
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
+      - name: Validate dispatch binding without credentials
+        env:
+          BINDING_VALID: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'twoimo/tzudong' && github.ref == 'refs/heads/main' && github.ref_protected && github.sha == inputs.main_sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PYCODE'
+          import json, os, pathlib, sys
+          if os.environ.get("BINDING_VALID") != "true":
+              directory = pathlib.Path(os.environ["RUNNER_TEMP"]) / "gdrive-frame-inventory"
+              directory.mkdir(parents=True, exist_ok=True)
+              (directory / "summary.json").write_text(json.dumps({"schemaVersion": 1, "status": "failed", "code": "SOURCE_BINDING_FAILED"}) + "\n")
+              sys.exit(1)
+          PYCODE
       - name: Checkout exact protected main source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6
         with:
