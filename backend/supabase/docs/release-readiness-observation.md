@@ -4,7 +4,7 @@ The collector reads bounded catalog/configuration metadata from the canonical `p
 
 ## Production receipt entrypoint
 
-Run the launcher as a **source-file script in isolated Python mode** with the authorized psycopg 3 environment. It never imports the project executor through Python's timestamp-based bytecode cache. It reads the SQL, executor, CA and launcher blobs from an actual Git commit (replacement objects disabled), compares them with the checkout, and directly compiles/executes the captured executor bytes. The SQL bytes executed are those in the same verified bundle.
+Run the launcher as a **source-file script in isolated Python mode** with the authorized psycopg 3 environment. It never imports the project executor through Python's timestamp-based bytecode cache. It reads the SQL, executor, CA and launcher blobs from an actual Git commit (replacement objects disabled), removes inherited Git environment overrides, anchors the Git and object directories to this checkout (including linked worktrees), compares the blobs with the checkout, and directly compiles/executes the captured executor bytes. The SQL bytes executed are those in the same verified bundle.
 
 ```text
 /path/to/authorized/python -I backend/supabase/scripts/release_readiness_receipt.py --source-sha COMMIT --verify-source-only

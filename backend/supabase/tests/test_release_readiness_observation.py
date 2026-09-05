@@ -223,6 +223,25 @@ class ReceiptBindingTests(unittest.TestCase):
             with self.assertRaises(self.launcher.ReceiptError):self.launcher.bundle_for(self.sha)
             p.write_bytes(original)
 
+    def test_foreign_git_environment_cannot_select_repository_or_objects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            foreign=Path(directory)
+            subprocess.run(['git','clone','-q',str(self.root),str(foreign)],check=True)
+            subprocess.run(['git','-C',str(foreign),'-c','user.name=Fixture',
+                '-c','user.email=fixture@local.invalid','commit','--allow-empty','-qm','Foreign'],check=True)
+            foreign_sha=subprocess.check_output(['git','-C',str(foreign),'rev-parse','HEAD'],text=True).strip()
+            self.assertNotEqual(foreign_sha,self.sha)
+            poisoned={'GIT_DIR':str(foreign/'.git'),'GIT_WORK_TREE':str(foreign),
+                'GIT_COMMON_DIR':str(foreign/'.git'),
+                'GIT_OBJECT_DIRECTORY':str(foreign/'.git/objects'),
+                'GIT_ALTERNATE_OBJECT_DIRECTORIES':str(foreign/'.git/objects')}
+            # Control: -C by itself really resolves the unrelated commit.
+            with patch.dict(os.environ,poisoned):
+                self.assertEqual(self.git('cat-file','-t',foreign_sha).strip(),b'commit')
+                self.assertEqual(self.launcher.bundle_for(self.sha)['source_sha'],self.sha)
+                with self.assertRaises(self.launcher.ReceiptError):
+                    self.launcher.bundle_for(foreign_sha)
+
     def test_timestamp_cache_cannot_select_executor(self):
         p=self.root/self.names[0];good=p.read_bytes();stamp=p.stat().st_mtime
         bad=good.replace(b"PROJECT_REF = 'aqlcofblfxdrjhhdmarw'",b"PROJECT_REF = 'xxxxxxxxxxxxxxxxxxxx'")

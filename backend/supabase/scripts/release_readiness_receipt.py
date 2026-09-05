@@ -28,9 +28,21 @@ def bundle_for(source_sha):
     if not re.fullmatch('[a-f0-9]{40}',source_sha):
         raise ReceiptError('release_observation_source_unverified')
     try:
+        # -C alone does not override inherited repository/object-store settings.
+        env={key:value for key,value in os.environ.items() if not key.startswith('GIT_')}
+        env.update(GIT_CONFIG_NOSYSTEM='1',GIT_CONFIG_GLOBAL=os.devnull)
+        def discover(*args):
+            return subprocess.check_output(['git','--no-replace-objects','-C',str(ROOT),
+                'rev-parse','--path-format=absolute',*args],env=env,
+                stderr=subprocess.DEVNULL,timeout=10).decode().strip()
+        git_dir=discover('--absolute-git-dir')
+        object_dir=discover('--git-path','objects')
+        env['GIT_OBJECT_DIRECTORY']=object_dir
+        env['GIT_ALTERNATE_OBJECT_DIRECTORIES']=''
         def git(*args):
-            return subprocess.check_output(['git','--no-replace-objects','-C',str(ROOT),*args],
-                                           stderr=subprocess.DEVNULL,timeout=10)
+            return subprocess.check_output(['git','--no-replace-objects',
+                '--git-dir='+git_dir,'--work-tree='+str(ROOT),*args],env=env,
+                cwd=ROOT,stderr=subprocess.DEVNULL,timeout=10)
         if git('cat-file','-t',source_sha).strip()!=b'commit':raise ValueError()
         paths={'executor_bytes':PREFIX+'release_readiness_observation.py',
                'sql_bytes':PREFIX+'release_readiness_observation.sql',
