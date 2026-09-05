@@ -88,12 +88,12 @@ jobs:
         shell: bash
         env:
           REQUESTED_MODE: ${{ inputs.mode }}
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_G037_READONLY_DB_URL: ${{ secrets.SUPABASE_G037_READONLY_DB_URL }}
         run: |
           set -euo pipefail
           umask 077
           mkdir -p -- "$RUNNER_TEMP/g037-receipts"
-          timeout --signal=TERM --kill-after=5s 120s python backend/supabase/scripts/g037_hosted_closure_executor.py "$REQUESTED_MODE" --db-env SUPABASE_DB_URL > "$RUNNER_TEMP/g037-receipts/${REQUESTED_MODE}-${GITHUB_SHA}.json"
+          timeout --signal=TERM --kill-after=5s 120s python backend/supabase/scripts/g037_hosted_closure_executor.py "$REQUESTED_MODE" --db-env SUPABASE_G037_READONLY_DB_URL > "$RUNNER_TEMP/g037-receipts/${REQUESTED_MODE}-${GITHUB_SHA}.json"
       - name: Upload sanitized hosted receipt
         if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # actions/upload-artifact@v4

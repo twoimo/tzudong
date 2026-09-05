@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import http from 'node:http';
 import { logCliError } from './privacy-safe-cli-log.mjs';
 
 function stripQuotes(value) {
@@ -136,16 +137,106 @@ function makeArgs() {
 
 const supabaseExecutable = process.env.SUPABASE_CLI || 'supabase';
 
-try {
+function loopbackPgMetaOrigin() {
+  const raw = process.env.SUPABASE_PG_META_URL;
+  if (!raw) return null;
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:') return null;
+  if (parsed.hostname !== '127.0.0.1') return null;
+  if (parsed.username || parsed.password) return null;
+  if (parsed.search || parsed.hash) return null;
+  if (parsed.pathname !== '/' && parsed.pathname !== '') return null;
+  const port = Number(parsed.port || '80');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return `http://127.0.0.1:${port}`;
+}
+
+function generateTypesFromPgMeta(origin) {
+  const included = schemas.map((schema) => encodeURIComponent(schema)).join(',');
+  const url = `${origin}/generators/typescript?included_schemas=${included}`;
+  return new Promise((resolve, reject) => {
+    const request = http.get(url, { family: 4, timeout: 30_000 }, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+      response.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (response.statusCode !== 200) {
+          const error = new Error('pg_meta_http');
+          error.status = response.statusCode;
+          error.stderr = `pg_meta_status_${response.statusCode}`;
+          reject(error);
+          return;
+        }
+        if (!body.includes('export type Json') || !body.includes('export type Database')) {
+          const error = new Error('pg_meta_shape');
+          error.stderr = 'pg_meta_shape';
+          reject(error);
+          return;
+        }
+        resolve(body);
+      });
+    });
+    request.on('timeout', () => {
+      request.destroy();
+      const error = new Error('pg_meta_timeout');
+      error.stderr = 'pg_meta_timeout';
+      reject(error);
+    });
+    request.on('error', (error) => {
+      error.stderr = error.message;
+      reject(error);
+    });
+  });
+}
+
+function classifyGenTypesFailure(error) {
+  const text = `${error?.stderr?.toString?.() || ''} ${error?.message || ''}`.toLowerCase();
+  if (text.includes('pg_meta_timeout')) return 'pg_meta_timeout';
+  if (text.includes('pg_meta_shape')) return 'pg_meta_shape';
+  if (text.includes('pg_meta_status_') || text.includes('pg_meta_http')) return 'pg_meta_http';
+  if (text.includes('password authentication failed') || text.includes('does not exist')) {
+    return 'database_auth';
+  }
+  if (text.includes('connection refused') || text.includes('econnrefused')) {
+    return 'database_unreachable';
+  }
+  if (text.includes('cannot connect to the docker') || text.includes('docker daemon')) {
+    return 'docker_unavailable';
+  }
+  if (typeof error?.status === 'number') {
+    return `cli_exit_${error.status}`;
+  }
+  return 'cli_failed';
+}
+
+function writeTypes(stdout) {
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
+  console.log(`[supabase-gen-types] Wrote ${outFile}`);
+}
+
+function generateTypesFromCli() {
   const { args } = makeArgs();
-  const stdout = execFileSync(supabaseExecutable, args, {
+  return execFileSync(supabaseExecutable, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 }
 
-  fs.mkdirSync(path.dirname(outFile), { recursive: true });
-  fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
+async function main() {
+  const metaOrigin = loopbackPgMetaOrigin();
+  const stdout = metaOrigin
+    ? await generateTypesFromPgMeta(metaOrigin)
+    : generateTypesFromCli();
+  writeTypes(stdout);
+}
 
 main().catch((error) => {
   const message = error?.stderr?.toString?.() || error?.message || String(error);
@@ -164,9 +255,7 @@ main().catch((error) => {
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
-        fs.mkdirSync(path.dirname(outFile), { recursive: true });
-        fs.writeFileSync(outFile, normalizeGeneratedTypes(stdout), 'utf8');
-        console.log(`[supabase-gen-types] Wrote ${outFile}`);
+        writeTypes(stdout);
         process.exit(0);
       } catch (fallbackError) {
         console.error('[supabase-gen-types] Access token missing and DB URL fallback failed.');
@@ -187,6 +276,7 @@ main().catch((error) => {
   }
 
   console.error('[supabase-gen-types] Failed to generate types.');
+  console.error(`[supabase-gen-types] failure_class=${classifyGenTypesFailure(error)}`);
   logCliError(error, (line) => process.stderr.write(`[supabase-gen-types] ${line}`));
   process.exit(1);
 });

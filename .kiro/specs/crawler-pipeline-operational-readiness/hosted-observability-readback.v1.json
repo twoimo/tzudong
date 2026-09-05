@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "hosted_observability_readback",
+  "observedAt": "2026-09-04T21:53:25.649651Z",
+  "externalReceiptFile": "hosted-observability-readback.json",
+  "externalReceiptSha256": "437c63c8d8528dd0439bb3facc3219ef6ffcc4bdb4b1d7289c0da25156324d3c",
+  "scope": "Read-only provider state and bounded database counters; no dashboard or production mutation.",
+  "supabase": {
+    "projectId": "aqlcofblfxdrjhhdmarw",
+    "status": "ACTIVE_HEALTHY",
+    "intervalSeconds": 96.11558,
+    "delta": {
+      "committedTransactions": 60,
+      "rolledBackTransactions": 0,
+      "deadlocks": 0,
+      "conflicts": 0,
+      "tempFiles": 3,
+      "tempBytes": 12397221
+    }
+  },
+  "vercel": {
+    "projectId": "prj_sau35J5uUtShIQ9OKofRtOVVnTSl",
+    "projectName": "tzudong",
+    "productionDeploymentId": "dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv",
+    "productionSourceSha": "29e432f7d96d98e6d09ba9237f05d6812ceb956b",
+    "providerState": "READY"
+  },
+  "limitations": [
+    "Cumulative statistics cover the period since statsReset; only delta describes this observation window.",
+    "READY is provider deployment state, not an end-to-end request or scheduled-worker proof.",
+    "No hosted publication, migration, release, dashboard edit or DNS mutation was performed."
+  ]
+}

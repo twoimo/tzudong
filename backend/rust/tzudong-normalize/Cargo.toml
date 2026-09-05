@@ -1,0 +1,39 @@
+# Migration_Slice R2-normalize (design C1/D1).
+#
+# Behavioral-parity Rust backing for the deterministic normalization /
+# text-parsing helpers under backend/utils/ (ledger replacedPythonPaths:
+# backend/utils/data_utils.py). This crate is NOT the public entry point: the
+# Python helpers keep their signatures and the Implementation_Selector
+# (backend/pipeline_control/impl_selector.py) chooses this Rust backing per
+# slice only when R2-normalize is opted in (requirements 1.1, 1.3; design C1).
+#
+# PyO3 is an OPTIONAL dependency behind the `python` feature, matching the
+# R1-validators pattern (task 42):
+#   * `cargo test` / `cargo check` with default features compiles only the pure
+#     Rust logic, so the pyo3 build script (which caps at CPython 3.13 in PyO3
+#     0.29) never runs. The pure logic stays verifiable on a newer interpreter.
+#   * maturin builds the extension module with `--features python` (configured
+#     in pyproject.toml [tool.maturin] features).
+[package]
+name = "tzudong-normalize"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+# snake_case module name so the built PyO3 extension imports as
+# `tzudong_normalize`.
+name = "tzudong_normalize"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Optional: only compiled when the `python` feature is enabled (maturin build).
+pyo3 = { workspace = true, optional = true }
+
+[features]
+default = []
+# Enables the PyO3 extension-module binding layer (src/python.rs). maturin turns
+# this on; plain cargo test/check leave it off.
+python = ["dep:pyo3"]

@@ -636,7 +636,7 @@ describe("mobile and desktop parity source contracts", () => {
       "검색·필터·상세를 왼쪽에서 빠르게 확인하세요.",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "fixed inset-y-0 z-[90] flex",
+      "absolute inset-y-0 z-[90] flex",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'desktopPanelSide === "right" ? "right-0 border-l" : "left-0 border-r"',

@@ -57,6 +57,13 @@ process.on('message', (message) => {
 });
 `;
 
+export function benchmarkInstallerMatches(installer, userAgent) {
+  if (typeof userAgent !== 'string') return false;
+  if (installer === 'bun') return /^bun\/1\.4\.0(?:\s|$)/.test(userAgent);
+  if (installer === 'npm') return /^npm\/11\.6\.2(?:\s|$)/.test(userAgent);
+  return false;
+}
+
 function parseArgs(argv) {
   const result = {};
   for (let index = 0; index < argv.length; index += 2) {
@@ -76,7 +83,7 @@ function parseArgs(argv) {
   const expectedPlatform = result.profile.startsWith('windows-') ? 'win32-x64' : 'linux-x64';
   if (result.platform !== expectedPlatform || `${process.platform}-${process.arch}` !== expectedPlatform || !result.profile.endsWith(`-${result.installer}`)) throw new Error('Profile, installer, and host disagree');
   const userAgent = process.env.npm_config_user_agent ?? '';
-  if (result.installer === 'bun' ? !/^bun\/1\.2\.16(?:\s|$)/.test(userAgent) : !/^npm\/11\.6\.2(?:\s|$)/.test(userAgent)) throw new Error(`Installer user-agent evidence does not match ${result.installer}`);
+  if (!benchmarkInstallerMatches(result.installer, userAgent)) throw new Error(`Installer user-agent evidence does not match ${result.installer}`);
   result.output ??= path.join(process.env.RUNNER_TEMP || tmpdir(), 'ts7-release', result.releaseId, result.profile, 'report.json');
   if (path.basename(result.output) !== 'report.json' || inside(result.output, REPO_ROOT)) throw new Error('Output must be an external report.json');
   return { ...result, userAgent };

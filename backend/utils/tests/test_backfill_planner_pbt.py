@@ -42,7 +42,10 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = BACKEND_ROOT.parent
 RUN_DAILY_HELPER_SOURCE = BACKEND_ROOT / "utils" / "run_daily_helpers.py"
+DAILY_WORKFLOW_SOURCE = REPO_ROOT / ".github/workflows/daily-crawler.yml"
+BACKFILL_WORKFLOW_SOURCE = REPO_ROOT / ".github/workflows/gdrive-frame-backfill.yml"
 
 
 def _load_run_daily_helpers():
@@ -422,6 +425,80 @@ class AttemptExhaustionProperties(unittest.TestCase):
                 self.assertTrue(outcome["retained"])
             else:
                 self.assertFalse(outcome["attempt_exhausted"])
+
+
+class WorkflowSourceContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.daily = DAILY_WORKFLOW_SOURCE.read_text(encoding="utf-8")
+        cls.backfill = BACKFILL_WORKFLOW_SOURCE.read_text(encoding="utf-8")
+
+    def test_soft_budget_break_precedes_staging_and_status_write(self) -> None:
+        budget_guard = self.daily.index(
+            'if [ "$REMAINING" -lt "${GDRIVE_UPLOAD_MIN_REMAINING_SECONDS:-420}" ]; then'
+        )
+        stop_starting = self.daily.index("break", budget_guard)
+        staging = self.daily.index("write-gdrive-staging-shards", stop_starting)
+        status_write = self.daily.index("write_upload_status", staging)
+        self.assertLess(budget_guard, stop_starting)
+        self.assertLess(stop_starting, staging)
+        self.assertLess(staging, status_write)
+
+    def test_empty_backlog_exits_before_lock_or_frame_mutation(self) -> None:
+        preflight = self.backfill.index("raise SystemExit(42)")
+        mapped_exit = self.backfill.index(
+            'if [ "$PREFLIGHT_STATUS" -eq 42 ]; then', preflight
+        )
+        early_exit = self.backfill.index("exit 0", mapped_exit)
+        lock_write = self.backfill.index(
+            'rclone copyto "$WORK_DIR/backfill.lock.json" "$LOCK_REMOTE"', early_exit
+        )
+        frame_write = self.backfill.index(
+            'rclone copy . "$GDRIVE_FRAMES_PATH"', early_exit
+        )
+        self.assertLess(early_exit, lock_write)
+        self.assertLess(early_exit, frame_write)
+
+    def test_backfill_limits_and_attempt_threshold_are_pinned(self) -> None:
+        self.assertIn("[:max_batches]", self.backfill)
+        self.assertIn("remaining = max_items - selected_item_count", self.backfill)
+        self.assertIn("--backfill-threshold-attempts 3", self.daily)
+        self.assertIn("--backfill-threshold-attempts 3", self.backfill)
+
+    def test_terminal_success_requires_cumulative_remote_hash_proof(self) -> None:
+        completion = self.backfill.index('COMPLETION_PROOF="remote_manifest_check"')
+        remote_inventory = self.backfill.index(
+            'rclone lsjson "$GDRIVE_FRAMES_PATH" --recursive --files-only --hash',
+            completion,
+        )
+        status_write = self.backfill.index("write-gdrive-upload-status", remote_inventory)
+        self.assertIn('--completion-proof "$COMPLETION_PROOF"', self.backfill[status_write:])
+
+    def test_status_scope_is_validated_and_applied_to_remote_state(self) -> None:
+        validation = self.backfill.index('STATUS_SCOPE_SAFE="${STATUS_SCOPE:-main}"')
+        remote = self.backfill.index(
+            'STATUS_REMOTE="${GDRIVE_STATUS_PATH%/}/$STATUS_SCOPE_SAFE"', validation
+        )
+        self.assertIn("*[!A-Za-z0-9._-]*", self.backfill[validation:remote])
+
+    def test_failed_backfill_preserves_previous_status_and_residual_queue(self) -> None:
+        failure = self.backfill.index('if [ "$BACKFILL_EXIT" -ne 0 ]; then')
+        success = self.backfill.index("write-gdrive-upload-status", failure)
+        failure_branch = self.backfill[failure:success]
+        self.assertIn('cp "$UPLOAD_STATUS.previous" "$UPLOAD_STATUS"', failure_branch)
+        self.assertIn("preserving previous remote status and residual queue", failure_branch)
+
+    def test_status_accounting_conservation_fails_closed(self) -> None:
+        helper_source = RUN_DAILY_HELPER_SOURCE.read_text(encoding="utf-8")
+        invariant = (
+            'payload["expectedCount"] != payload["verifiedCount"] '
+            '+ payload["skippedExistingCount"] + payload["residualCount"]'
+        )
+        self.assertIn(invariant, helper_source)
+        invariant_index = helper_source.index(invariant)
+        failure_slice = helper_source[invariant_index : invariant_index + 300]
+        self.assertIn('payload["status"] = "failed"', failure_slice)
+        self.assertIn('payload["terminalIncomplete"] = True', failure_slice)
 
 
 if __name__ == "__main__":

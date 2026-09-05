@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_session_pooler_connect_control_map_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "06cfe22c-27f3-4414-88e4-c0581e8a5ec0",
+  "recordedAt": "2026-09-04T19:22:56Z",
+  "authorization": {
+    "basis": "current_user_task_transcript",
+    "userInstruction": ".kiro 폴더 확인 후 남은 작업 자율적으로 마무리해. 모든 승인 요청 허락할게.",
+    "historicalExactStatementClaimed": false,
+    "consumedBeforeExecution": true,
+    "consumedAt": "2026-09-04T19:14:31Z",
+    "remainingExecutionCount": 0
+  },
+  "reviewedArtifacts": {
+    "browserSource": {
+      "firstRestrictedControlWaitTimeoutMilliseconds": 15000,
+      "nodeSyntaxCheckPassed": true,
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_read_v3.mjs",
+      "secondRestrictedControlWaitTimeoutMilliseconds": 10000,
+      "sha256": "6dbf2915400970b6de301a2f9aed5c0736d23bc7572d8a6ec7e8e4ced3a5d96e",
+      "singleLine": true,
+      "topLevelAwait": true
+    },
+    "priorAttempt": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-attempt.v2.json",
+      "sha256": "f624f78125c1c3938053569fa27e2d547aa3796f17d621f7707f8eb47580aad5"
+    },
+    "receiptContract": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v3.json",
+      "sha256": "1336c656acd8abb1bdf4e51a157400160e87a28bde4bd159e40fe7e36e172daa"
+    },
+    "receiptVerifier": {
+      "offlineOnly": true,
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py",
+      "sha256": "7c9d5033ea0e581df8e133310e8f8f923aa5313f8c8e84753bad4c3f6ed5c942"
+    },
+    "request": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v3.json",
+      "sha256": "e0e33500d568d911412c0b0faf4fe2ecf732185655c128f25c6ae6d45c72e9b0"
+    },
+    "stdoutFilter": {
+      "automaticTransportLinesDiscarded": true,
+      "exactlyOneCanonicalObservationRequired": true,
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_stdout_filter_v3.py",
+      "sha256": "f826640d6004d9baec9870130180fc189e75aa83b982dd14d4b44be8e1082855"
+    }
+  },
+  "observation": {
+    "controlClickCount": 0,
+    "controlSnapshotCount": 1,
+    "dashboardOpenCount": 1,
+    "fixedCode": "g037_session_pooler_control_map_v3_denied",
+    "metadataValueRead": false,
+    "persistentStateChanged": false,
+    "schema": "g037-session-pooler-control-map-observation-v3",
+    "stageCode": "reading_first_control_scope",
+    "status": "denied"
+  },
+  "canonicalObservationSha256": "17b00a0c627c5a0a5f115cd958e661ff27f7c8d00bbdc576bd99cb64d8cce734",
+  "successfulReceiptCreated": false,
+  "automaticRetry": false,
+  "successorMetadataReady": false
+}

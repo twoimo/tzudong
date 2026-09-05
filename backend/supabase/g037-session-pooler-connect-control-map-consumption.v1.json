@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_connect_control_map_authorization_consumption",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "e6cdccf0-208b-4eea-a6a4-76cde289cda4",
+  "consumedAt": "2026-09-04T17:01:31Z",
+  "authorization": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-authorization.v1.json",
+    "sha256": "3cfe7a899473aea6c31c2a50d1e644db4147c1e03fb3bf10f6118c759ed0f2a6",
+    "approvedReadCount": 1,
+    "consumedReadCount": 1,
+    "remainingReadCount": 0,
+    "reusable": false
+  },
+  "authorizationRequest": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v1.json",
+    "sha256": "48366c5e157a186a6c19647a70da40d027c01a70e83ba0e3b6087ec5679fca7f"
+  },
+  "receiptContract": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v1.json",
+    "sha256": "c696287a0246849ef774aa256eb27a982d4303c06e0fd9ed73a3f3a004e5d1f1",
+    "verifierPath": "backend/supabase/scripts/g037_session_pooler_control_map_receipt.py",
+    "verifierSha256": "f5b641d76d33ed8343751dabb634f90737c898b4a44f70f95d2f63c27f601764"
+  },
+  "executionBoundary": {
+    "dashboardOpenNotYetObserved": true,
+    "executionWithinThisBoundOperationRemaining": 1,
+    "maximumDashboardOpenCount": 1,
+    "maximumControlSnapshotCount": 2,
+    "maximumControlClickCount": 1,
+    "externalRetryAllowed": false,
+    "metadataValueReadAuthorized": false,
+    "sessionPoolerControlClickAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrCredentialWorkAuthorized": false,
+    "repositorySecretMutationAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false,
+    "migrationReleaseOrDeploymentAuthorized": false
+  },
+  "notEvidenceOf": [
+    "a Dashboard open or control-only read attempt",
+    "a successful control map or verified receipt",
+    "an exact hostname, username, region, port, database, DSN, credential, certificate, cookie, token, or key",
+    "session-pooler selection, metadata read, reachability, authentication, or role mapping",
+    "authorization for any retry or successor external action",
+    "password, repository Secret, controller, workflow, migration, release, or deployment work"
+  ]
+}

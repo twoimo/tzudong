@@ -3,24 +3,26 @@
 from __future__ import annotations
 
 import json
-from hashlib import sha256
 import tempfile
 import unittest
 from pathlib import Path
 
 from backend.pipeline_control.manifest import (
+    LIVE_EVIDENCE_FIELDS,
     REQUIRED_MATCH_COUNT,
     compare_policy,
     deletion_allowed,
+    is_live_evidence_eligible,
     record_parity_attempt,
     refuse_shim_deletion,
     write_compatible_summary,
 )
+from backend.pipeline_control.live_evidence import canonical_sha256
 from backend.utils.run_daily_helpers import validate_summary_manifest_payload
 
 def _ok_payload(*, execution_mode: str = "live", job_id: str = "job-live-1") -> dict:
     readback_sha = "c" * 64
-    return {
+    payload = {
         "generatedAt": "2026-08-17T00:00:00Z",
         "date": "2026-08-17",
         "finalStatus": "OK",
@@ -47,11 +49,19 @@ def _ok_payload(*, execution_mode: str = "live", job_id: str = "job-live-1") -> 
         "baselineSha256": readback_sha,
         "candidateSha256": readback_sha,
         "readbackSha256": readback_sha,
-        "evidenceReceiptSha256": sha256(job_id.encode("utf-8")).hexdigest(),
+        "evidenceReceiptSha256": None,
         "baselineRowCount": 25,
         "candidateRowCount": 25,
         "readbackRowCount": 25,
     }
+    payload["evidenceReceiptSha256"] = canonical_sha256(
+        {
+            field: payload.get(field)
+            for field in LIVE_EVIDENCE_FIELDS
+            if field != "evidenceReceiptSha256"
+        }
+    )
+    return payload
 
 
 class ManifestParityTests(unittest.TestCase):
@@ -106,6 +116,33 @@ class ManifestParityTests(unittest.TestCase):
             replay = record_parity_attempt(ledger_path, matched=True, candidate=live)
             self.assertEqual(replay["consecutiveMatches"], 0)
             self.assertTrue(replay["attempts"][-1]["duplicateJob"])
+
+    def test_same_receipt_cannot_count_for_a_different_job(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger_path = Path(raw) / "parity.json"
+            first = _ok_payload(job_id="job-receipt-1")
+            second = _ok_payload(job_id="job-receipt-2")
+            second["evidenceReceiptSha256"] = first["evidenceReceiptSha256"]
+            record_parity_attempt(ledger_path, matched=True, candidate=first)
+            ledger = record_parity_attempt(ledger_path, matched=True, candidate=second)
+            self.assertEqual(ledger["consecutiveMatches"], 0)
+            self.assertFalse(ledger["attempts"][-1]["liveEvidenceEligible"])
+
+    def test_receipt_hash_rebinds_every_exact_evidence_field(self) -> None:
+        baseline = _ok_payload(job_id="job-bound-receipt")
+        self.assertTrue(is_live_evidence_eligible(baseline))
+        for field in (
+            "gitSha",
+            "inputSha256",
+            "outputSha256",
+            "stepEvidenceSha256",
+            "baselineSha256",
+            "candidateSha256",
+            "readbackSha256",
+        ):
+            candidate = dict(baseline)
+            candidate[field] = "f" * (40 if field == "gitSha" else 64)
+            self.assertFalse(is_live_evidence_eligible(candidate), field)
 
     def test_n3_resets_when_frozen_input_or_git_cohort_changes(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_connect_control_map_receipt_contract",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T16:32:51Z",
+  "contractStatus": "source_ready_external_control_read_not_authorized",
+  "continuity": {
+    "controlMapRequestPath": "backend/supabase/g037-session-pooler-connect-control-map-request.v1.json",
+    "controlMapRequestSha256": "48366c5e157a186a6c19647a70da40d027c01a70e83ba0e3b6087ec5679fca7f",
+    "priorFailedAttemptPath": "backend/supabase/g037-session-pooler-metadata-readback-attempt.v1.json",
+    "priorFailedAttemptSha256": "6e5915d6d4f2e96f4aa07ade8e10277b6daab382370dec8c85649f797c1d036b",
+    "priorAuthorizationConsumed": true,
+    "controlMapReadAuthorized": false
+  },
+  "verifier": {
+    "path": "backend/supabase/scripts/g037_session_pooler_control_map_receipt.py",
+    "sha256": "f5b641d76d33ed8343751dabb634f90737c898b4a44f70f95d2f63c27f601764",
+    "modes": [
+      "validate",
+      "verify"
+    ],
+    "networkAccess": false,
+    "databaseAccess": false,
+    "persistentWrite": false,
+    "maximumReceiptBytes": 8192,
+    "absoluteReceiptPathRequired": true,
+    "symlinkAllowed": false,
+    "groupOrOtherPermissionBitsAllowed": false,
+    "canonicalSingleLineJsonRequired": true
+  },
+  "receiptIdentity": {
+    "schema": "g037-session-pooler-control-map-receipt-v1",
+    "status": "ready",
+    "fixedCode": "g037_session_pooler_control_map_ready",
+    "uuidVersion": 4,
+    "utcTimestampRequired": true,
+    "controlMapRequestSha256": "48366c5e157a186a6c19647a70da40d027c01a70e83ba0e3b6087ec5679fca7f",
+    "priorAttemptSha256": "6e5915d6d4f2e96f4aa07ade8e10277b6daab382370dec8c85649f797c1d036b"
+  },
+  "requiredCounts": {
+    "dashboardOpenCount": 1,
+    "controlSnapshotCount": 2,
+    "controlClickCount": 1
+  },
+  "requiredTrueFields": [
+    "connectDialogMatched",
+    "directConnectionEntryMatched",
+    "directConnectionEntryClicked",
+    "sessionPoolerControlIdentified"
+  ],
+  "requiredFalseFields": [
+    "metadataValueRead",
+    "sessionPoolerControlClicked",
+    "screenshotCaptured",
+    "clipboardUsed",
+    "valueBearingNodeObserved",
+    "projectOverviewObserved",
+    "organizationMetadataObserved",
+    "rawControlTreeRetained",
+    "controlNamesRetained",
+    "locatorRefsRetained",
+    "browserStorageInspected",
+    "networkHeadersInspected",
+    "databaseAuthenticationAttempted",
+    "sqlExecuted",
+    "networkProbeExecuted",
+    "persistentStateChanged"
+  ],
+  "requiredDigestFields": {
+    "controlShapeSha256": "nonzero_lowercase_sha256"
+  },
+  "verifierOutputBoundary": {
+    "allowedFields": [
+      "schema",
+      "status",
+      "fixedCode",
+      "metadataValueRead",
+      "credentialUsed",
+      "databaseAuthenticationAttempted",
+      "sqlExecuted",
+      "networkAccessed",
+      "persistentStateChanged",
+      "receiptSha256"
+    ],
+    "successFixedCode": "g037_session_pooler_control_map_receipt_ready",
+    "sourceValidationFixedCode": "g037_session_pooler_control_map_source_valid",
+    "argumentDenialFixedCode": "g037_session_pooler_control_map_argument_denied",
+    "receiptDenialFixedCode": "g037_session_pooler_control_map_receipt_denied",
+    "rawReceiptOrExceptionOutputAllowed": false
+  },
+  "executionGate": {
+    "verifierSourceReady": true,
+    "controlMapReadAuthorized": false,
+    "controlMapReceiptPresent": false,
+    "controlMapReceiptVerified": false,
+    "metadataReadV2ConstructionAuthorized": false,
+    "metadataReadV2ExecutionAuthorized": false,
+    "sessionPoolerSelectionAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false
+  },
+  "notEvidenceOf": [
+    "approval or execution of the control-map request",
+    "a Dashboard control map or metadata receipt",
+    "an exact hostname, username, region, port, database, DSN, credential, certificate, cookie, token, or key",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password or repository secret mutation",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "collector_linux_fixture_permission_correction",
+  "observedAt": "2026-09-05T04:19:58.010763+00:00",
+  "sourceBaseHead": "6552a8da3eb4573318641ecc8b1f0fe8cfae2b14",
+  "failedCiRun": 33944116864,
+  "failedJob": 101246977303,
+  "failureCode": "fixture_root_owned_file_truncation_denied",
+  "correction": "Read the append-only payload suffix without modifying sink-owned evidence.",
+  "sourceSha256": {
+    "backend/bin/tests/test_otel_restart.py": "af36dfb7e086f3e47fda9053aeaec8ffc3fe9d784873b70b85478894d033d345"
+  },
+  "localCollectorTestsPassed": 2,
+  "localDurationSeconds": 16.144,
+  "remoteCiRecheckPending": true,
+  "productRuntimeChanged": false,
+  "externalReceiptSha256": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e"
+}

@@ -17,8 +17,12 @@ from backend.pipeline_control.adapter import (
     execute_steps,
     noop_event_sink,
 )
-from backend.pipeline_control.graph import AdapterGraphError
-from backend.pipeline_control.profiles import ProfileError, resolve_compute_profile
+from backend.pipeline_control.graph import AdapterGraphError, STEP_SPECS
+from backend.pipeline_control.profiles import (
+    ProfileError,
+    preflight_data_sink,
+    resolve_compute_profile,
+)
 from backend.pipeline_control.events import KafkaPublishError
 from backend.pipeline_control.es_index import EsIndexError
 from backend.pipeline_control.live_evidence import (
@@ -44,6 +48,7 @@ from backend.pipeline_control.manifest import (
 )
 from backend.pipeline_control.schedule import (
     ERROR_WINDOW_SHAPE_INVALID,
+    inspect_committed_cadence_sources,
     validate_cadence,
 )
 from backend.pipeline_control.state_machine import RunRecord
@@ -62,6 +67,25 @@ DEFAULT_CADENCE_CONFIG = REPO_ROOT / "backend" / "pipeline_control" / "cadence.s
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
 _GIT_SHA_RE = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
 _MISSING_ENVIRONMENT_VALUE = object()
+_UNKNOWN_STEP_NAME = "unknown_step"
+_INVALID_SKIP_REASON = "skip_reason_invalid"
+_ALLOWED_SKIP_REASONS = frozenset(
+    {
+        SKIP_HEAVY_REASON,
+        "artifact_only_skips_mutating_step",
+        "target_lacks_insert_capability",
+        *(
+            f"target_lacks_{capability}_capability"
+            for spec in STEP_SPECS
+            for capability in spec.channel_capabilities
+        ),
+        *(
+            f"{spec.skip_after} skipped or failed"
+            for spec in STEP_SPECS
+            if spec.skip_after is not None
+        ),
+    }
+)
 
 
 @contextmanager
@@ -143,6 +167,17 @@ def cadence_preflight(path: Path | None = None) -> None:
     conflicting = result.get("conflictingWindows") or []
     windows = ",".join(str(label) for label in conflicting)
     raise SystemExit(f"cadence_invalid:{error_code}:{windows}")
+
+
+def cadence_source_preflight(repo_root: Path | None = None) -> None:
+    """Reject drift between cadence config, GHA cron, and LaunchAgent source."""
+
+    result = inspect_committed_cadence_sources(repo_root or REPO_ROOT)
+    if result.get("ok"):
+        return
+    error_code = result.get("errorCode") or "source_config_invalid"
+    source = result.get("source") or "cadence"
+    raise SystemExit(f"cadence_source_invalid:{error_code}:{source}")
 
 
 def _load_env_contract_module():
@@ -266,7 +301,7 @@ def write_run_manifest(
         if event.get("type") != "step.progress":
             continue
         slug = str(event.get("step") or "unknown")
-        name = CANONICAL_STEP_NAMES.get(slug, slug)
+        name = CANONICAL_STEP_NAMES.get(slug, _UNKNOWN_STEP_NAME)
         if slug in {"02-1-migrate", "02-5-cleanup"}:
             if emitted_migrate:
                 continue
@@ -274,7 +309,12 @@ def write_run_manifest(
             name = "Step 2.1+2.5 (Migration+Cleanup)"
         if event.get("skipped"):
             skip_kind = event.get("skipKind") or "optional"
-            reason = str(event.get("reason") or SKIP_HEAVY_REASON)
+            raw_reason = event.get("reason") or SKIP_HEAVY_REASON
+            reason = (
+                raw_reason
+                if isinstance(raw_reason, str) and raw_reason in _ALLOWED_SKIP_REASONS
+                else _INVALID_SKIP_REASON
+            )
             status = "downstream_skipped" if skip_kind == "downstream" else "optional_skipped"
             step_events.append({"name": name, "status": status, "reason": reason})
             if status == "downstream_skipped":
@@ -300,7 +340,7 @@ def write_run_manifest(
     if not step_events:
         step_events = [{"name": "pipeline-control-adapter", "status": "completed" if ok else "failed"}]
         if not ok:
-            failed = [f"adapter {run_status}"]
+            failed = ["pipeline-control-adapter"]
     input_sha = _bounded_sha256(os.environ.get("RUN_DAILY_INPUT_SHA256"))
     output_sha = _bounded_sha256(os.environ.get("RUN_DAILY_OUTPUT_SHA256"))
     payload = {
@@ -460,6 +500,19 @@ def process_one(
     use_live = live_enabled() if live is None else live
     execution_mode = "live" if use_live and not run.dry_run else "dry_run"
     try:
+        preflight_data_sink(compute_profile=run.profile)
+    except ProfileError as exc:
+        store.finish_failed(run.id, exc.code)
+        write_run_manifest(
+            "Failed",
+            manifest_path,
+            run=run,
+            execution_mode=execution_mode,
+            store=store,
+            job_id_scope=job_id_scope,
+        )
+        return "Failed"
+    try:
         boundary = admit_pipeline_supabase_boundary(
             profile=run.profile,
             execution_mode=execution_mode,
@@ -555,10 +608,15 @@ def main() -> int:
     # Fail-closed preflight (before any step): reject an invalid cadence config
     # (R1.6) and an unsatisfied env contract (R6.10, R7.2).
     cadence_preflight()
+    cadence_source_preflight()
     env_contract_preflight("pipeline-control")
     profile = resolve_compute_profile()
     if profile == "heavy_local" and not all(heavy_local_runtime_ready().values()):
         raise SystemExit("heavy_local_runtime_missing")
+    try:
+        preflight_data_sink(compute_profile=profile)
+    except ProfileError as exc:
+        raise SystemExit(exc.code) from None
     exit_code = live_main()
     # Govern run-health reporting with the staleness/absence rule (R5.7): a
     # stale or absent Run_Manifest is reported as not-Succeeded. Writing the

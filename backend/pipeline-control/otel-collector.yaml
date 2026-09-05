@@ -1,13 +1,73 @@
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/storage
+    create_directory: true
+    fsync: true
 receivers:
   otlp:
     protocols:
       http:
         endpoint: 0.0.0.0:4318
+  filelog:
+    include:
+      - /var/log/tzudong/*.log
+    start_at: end
+    storage: file_storage
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0s
+# File logs are untrusted, independently of the Python direct-push boundary.
+# Parse errors remain silent, then the allowlist drops every unparsed record.
+processors:
+  transform/parse:
+    error_mode: silent
+    log_statements:
+      - context: log
+        statements:
+          - set(body, ParseJSON(body))
+  filter/admitted:
+    error_mode: propagate
+    logs:
+      log_record:
+        - not IsMap(body)
+        - 'not IsString(body["component"]) or not IsMatch(body["component"], "^(web_app|backend_runtime|publish_worker|observability_stack|ops_agent)$")'
+        - 'not IsString(body["severity"]) or not IsMatch(body["severity"], "^(debug|info|warn|error)$")'
+        - 'not IsString(body["type"]) or not IsMatch(body["type"], "^(run[.]lifecycle|step[.]progress|record[.]upserted|publish[.]stage|agent[.]action|observability[.]service|adapter[.]raw)$")'
+        - 'not IsString(body["correlation_id"]) or not IsMatch(body["correlation_id"], "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")'
+        - 'not IsString(body["occurred_at"]) or not IsMatch(body["occurred_at"], "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,6})?(Z|[+]00:00)$")'
+  transform/minimize:
+    error_mode: propagate
+    log_statements:
+      - context: log
+        statements:
+          # No raw messages, diagnostics, arbitrary fields, file names or
+          # resource metadata enter the durable exporter queue or Loki.
+          - keep_keys(body, ["component", "occurred_at", "correlation_id", "severity", "type"])
+          - keep_keys(attributes, [])
+          - keep_keys(resource.attributes, [])
+          - keep_keys(instrumentation_scope.attributes, [])
 exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
+  otlphttp/loki_minimized_v1:
+    # A new exporter identity isolates any pre-redaction persistent queue.
+    # Old raw queues stay held for an explicit local retention decision.
+    # Loki 3.x native OTLP base URL. The Collector appends /v1/logs.
+    endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 10000
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0s
 service:
+  extensions: [file_storage]
   pipelines:
     metrics:
       receivers: [otlp]
       exporters: [prometheus]
+    logs:
+      receivers: [filelog]
+      processors: [transform/parse, filter/admitted, transform/minimize]
+      exporters: [otlphttp/loki_minimized_v1]

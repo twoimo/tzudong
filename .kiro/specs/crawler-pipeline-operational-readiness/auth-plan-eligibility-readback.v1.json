@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-04T22:05:40.766383+00:00",
+  "projectId": "aqlcofblfxdrjhhdmarw",
+  "projectVerified": true,
+  "leakedPasswordEligible": false,
+  "leakedPasswordEnabledBefore": false,
+  "changed": false,
+  "saved": false,
+  "independentReadback": true,
+  "leakedPasswordEnabledAfter": false,
+  "planRestriction": "Free plan; requires Pro or above. No upgrade or purchase.",
+  "privacyRendered": true,
+  "policyVersion": "2026-08-04.1",
+  "externalReceiptFile": "auth-eligibility-current-readback.json",
+  "externalReceiptSha256": "9d7c01fa98321987eb4f44776467ef7c5318aac6e25abba61375785709955297"
+}

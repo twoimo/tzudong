@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_hosted_preflight_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "workflow": ".github/workflows/g037-hosted-closure.yml",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "mode": "preflight",
+    "commitSha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+    "evidenceBoundary": "user-provided exact-revision authorization in the current task transcript"
+  },
+  "run": {
+    "id": 33838590366,
+    "url": "https://github.com/twoimo/tzudong/actions/runs/33838590366",
+    "event": "workflow_dispatch",
+    "headBranch": "main",
+    "headSha": "3d7557f6307c9f6696018324e559bff6e57afbce",
+    "createdAt": "2026-09-04T04:55:24Z",
+    "completedAt": "2026-09-04T04:56:52Z",
+    "conclusion": "failure"
+  },
+  "jobs": {
+    "sourceValidation": {
+      "id": 100916044062,
+      "conclusion": "success"
+    },
+    "remoteReadonly": {
+      "id": 100916210837,
+      "conclusion": "failure",
+      "controllerExitCode": 2,
+      "receiptUploadConclusion": "success",
+      "temporaryReceiptRemovalConclusion": "success"
+    }
+  },
+  "receipts": {
+    "validate": {
+      "artifactId": 9924134907,
+      "artifactName": "g037-hosted-closure-validate-3d7557f6307c9f6696018324e559bff6e57afbce",
+      "schema": "g037-hosted-closure-receipt-v3",
+      "mode": "validate",
+      "status": "valid",
+      "manifestSha256": "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95",
+      "receiptSha256": "c1c045b9b5d0acecf41fbddac08a0505e4249ddf4551fa6be00d41e0a54960fa",
+      "fileSha256": "018b3a92bb6aaa9e05c831fa7b8bc286679e1e555ae8318e4cd21cf028f49c43"
+    },
+    "preflight": {
+      "artifactId": 9924144323,
+      "artifactName": "g037-hosted-closure-preflight-3d7557f6307c9f6696018324e559bff6e57afbce",
+      "schema": "g037-hosted-closure-receipt-v3",
+      "mode": "preflight",
+      "status": "denied",
+      "ambiguousCommit": false,
+      "manifestSha256": "bba79f264f26158d2fd93f62a0632f44ff8a0575619b50928e23ecefccf8ab95",
+      "receiptSha256": "86f40c9d892caf17fe069cf9ab9640c8491e4db4a4ddb8e454ab1a8b3d262be9",
+      "fileSha256": "1e612be35ffc429caff82dd7855d57ecc5a39ce5b56f46e68e7221ddc99fe960"
+    }
+  },
+  "conclusions": {
+    "exactRevisionMatched": true,
+    "sourceValidationPassed": true,
+    "secretValueRead": false,
+    "mutationModeRequested": false,
+    "databaseConnectionState": "unproven",
+    "denialCause": "not_exposed_by_bounded_receipt",
+    "task7_37": "open",
+    "retryRequiresNewAuthorization": true
+  },
+  "notEvidenceOf": [
+    "invalid database credential",
+    "successful database connection",
+    "catalog or ledger conformance",
+    "hosted migration application",
+    "release readiness"
+  ]
+}

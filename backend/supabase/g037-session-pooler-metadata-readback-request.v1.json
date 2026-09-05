@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_metadata_readback_request",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T10:39:41Z",
+  "requestStatus": "blocked_exact_alternative_preview_approval_required",
+  "continuity": {
+    "alternativePreviewPath": "backend/supabase/g037-session-pooler-alternative-preview.v1.json",
+    "alternativePreviewSha256": "cdf4bd8f9c05eb2fd789228cdfffa563cf8b5dbf7e68f940b1c9689db8d8214e",
+    "alternativePreviewApproved": false,
+    "directHostEvidenceRequestPath": "backend/supabase/g037-direct-endpoint-host-evidence-request.v1.json",
+    "directHostEvidenceRequestSha256": "9055ed5533a1008300cba6bc666ddaeff6503d87ce6d81ae93f1c94fef8f103c",
+    "directPathStillAvailable": true,
+    "directPathAbandoned": false,
+    "ipv4AddonUpgradeDeferred": true
+  },
+  "requestedRead": {
+    "providerSurface": "supabase_dashboard_connect_dialog",
+    "productionProjectOnly": true,
+    "connectionMethod": "Session pooler",
+    "maximumReadCount": 1,
+    "persistentMutation": false,
+    "databaseAuthentication": false,
+    "sqlExecution": false,
+    "networkProbe": false,
+    "credentialRequiredOrRead": false,
+    "clipboardCopyRequired": false,
+    "screenshotRequired": false,
+    "rawConnectionStringRequired": false
+  },
+  "allowedObservation": {
+    "exactProjectReference": true,
+    "exactRegion": true,
+    "exactSessionPoolerHostname": true,
+    "exactPort": true,
+    "exactDatabaseName": true,
+    "providerDisplayedUsernameSuffix": true,
+    "serverRootCertificateAvailability": true,
+    "passwordPlaceholderPresence": true
+  },
+  "forbiddenObservation": {
+    "passwordValue": true,
+    "connectionStringOrDsn": true,
+    "accessOrRefreshToken": true,
+    "cookieOrSessionValue": true,
+    "apiKeyOrServiceRoleKey": true,
+    "unrelatedProjectOrOrganizationMetadata": true,
+    "providerDiagnosticsOrArbitraryResponseBody": true,
+    "browserStorageOrNetworkHeaders": true
+  },
+  "expectedFixedChecks": {
+    "projectReferenceMatches": true,
+    "regionMatchesReadOnlyProjectObservation": true,
+    "methodIsSharedSessionPooler": true,
+    "portEquals5432": true,
+    "port6543Absent": true,
+    "databaseNameEqualsPostgres": true,
+    "hostnameIsSingleLabelUnderPoolerSupabaseCom": true,
+    "usernameSuffixEqualsDotProjectReference": true,
+    "passwordIsOnlyAPlaceholder": true,
+    "serverRootCertificateAvailable": true
+  },
+  "sanitizedReadbackBoundary": {
+    "repositoryReceiptAllowed": true,
+    "exactHostnameMayAppearOnlyInFixedProbeSourceAfterSeparateReview": true,
+    "exactHostnameInReceiptAllowed": false,
+    "exactUsernameInReceiptAllowed": false,
+    "allowedReceiptFields": [
+      "operation identifier",
+      "source hashes",
+      "fixed status or denial code",
+      "booleans",
+      "bounded counts",
+      "hostname SHA-256",
+      "username-shape SHA-256"
+    ],
+    "forbiddenReceiptFields": [
+      "password or password placeholder",
+      "connection string or DSN",
+      "exact hostname or username",
+      "certificate bytes or private key",
+      "cookie, token, or browser storage",
+      "provider response, diagnostics, or error text"
+    ]
+  },
+  "failureDiscipline": {
+    "previewApprovalRequiredBeforeRead": true,
+    "exactProjectMismatchBlocksRead": true,
+    "sessionMethodUnavailableBlocksAlternative": true,
+    "missingOrAmbiguousFieldBlocksProbeConstruction": true,
+    "unexpectedCredentialDisplayStopsInspection": true,
+    "rawDsnExposureMustNotBeRetained": true,
+    "failureDoesNotAuthorizeRetry": true,
+    "failureDoesNotAuthorizeDirectPathRetry": true,
+    "failureDoesNotAuthorizeIpv4AddonChange": true,
+    "failureDoesNotAuthorizePasswordOrSecretWork": true
+  },
+  "authorizationGate": {
+    "exactAlternativePreviewApproved": false,
+    "metadataReadAuthorized": false,
+    "metadataReadConsumed": false,
+    "metadataReadbackPresent": false,
+    "fixedProbeConstructionAuthorized": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "workflowDispatchAuthorized": false
+  },
+  "requestedAuthorizationScope": {
+    "oneMetadataOnlyDashboardRead": true,
+    "oneSanitizedFixedFieldReadback": true,
+    "networkProbe": false,
+    "passwordGenerationOrAssignment": false,
+    "databaseAuthenticationOrSql": false,
+    "credentialContractAmendment": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "notEvidenceOf": [
+    "named-owner approval of the alternative preview",
+    "authorization or consumption of the requested metadata read",
+    "an exact session-pooler hostname or username",
+    "session-pooler reachability, authentication, or role mapping",
+    "password generation or assignment",
+    "repository secret presence or mutation",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

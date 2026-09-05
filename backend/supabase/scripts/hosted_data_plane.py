@@ -183,6 +183,8 @@ def assert_apply_authorized(
         _deny("preview_hash_mismatch")
     if environment.get(APPROVAL_ENV) != "1":
         _deny("approval_missing")
+    if environment.get("G037_WRITE_FREEZE") != "cleared":
+        _deny("hosted_write_freeze_not_cleared")
     if preview.get("insertStatus") != "pending":
         _deny("approved_status_forbidden")
     if preview.get("overwriteApprovedForbidden") is not True:

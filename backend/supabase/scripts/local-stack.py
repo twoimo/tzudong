@@ -620,7 +620,11 @@ def _env_values(root: Path, project: str, state: Path) -> dict[str, str]:
         "STUDIO_PORT": str(ports["STUDIO_PORT"]),
         "META_PORT": str(ports["META_PORT"]),
         "ANALYTICS_PORT": str(ports["ANALYTICS_PORT"]),
-        "PGRST_DB_SCHEMAS": "public,storage,graphql_public",
+        # local_analytics is exposed only by the generated local stack so the
+        # guarded admin queue route can reach it. SQL grants still restrict the
+        # schema and its tables to service_role; hosted configuration is not
+        # changed by this local environment generator.
+        "PGRST_DB_SCHEMAS": "public,storage,graphql_public,local_analytics",
         "SITE_URL": "http://127.0.0.1:8080",
         "ADDITIONAL_REDIRECT_URLS": LOCAL_ADDITIONAL_REDIRECT_URLS,
         "JWT_EXPIRY": "3600",
@@ -2368,6 +2372,63 @@ def _probe_database_bootstrap(command: list[str], timeout: int = 5) -> bool:
         return False
     return result.returncode == 0 and result.stdout.strip() == "1"
 
+
+def _ensure_local_analytics_namespace(command: list[str]) -> None:
+    """Create only the local Data API namespace before PostgREST starts.
+
+    Application tables and service-role grants remain owned by the canonical
+    migration. This ordering bridge prevents a fresh PostgREST instance from
+    failing its schema cache before local-migrate can connect to the stack.
+    """
+    sql = """
+BEGIN;
+DO $local_analytics_namespace$
+DECLARE
+  v_owner name;
+BEGIN
+  SELECT pg_catalog.pg_get_userbyid(namespace.nspowner)
+    INTO v_owner
+    FROM pg_catalog.pg_namespace AS namespace
+   WHERE namespace.nspname = 'local_analytics';
+  IF v_owner IS NULL THEN
+    CREATE SCHEMA local_analytics AUTHORIZATION postgres;
+  ELSIF v_owner <> 'postgres' THEN
+    RAISE EXCEPTION 'local_analytics_namespace_owner_drift';
+  END IF;
+END;
+$local_analytics_namespace$;
+REVOKE ALL ON SCHEMA local_analytics FROM PUBLIC;
+COMMIT;
+SELECT pg_catalog.count(*)
+  FROM pg_catalog.pg_namespace AS namespace
+ WHERE namespace.nspname = 'local_analytics'
+   AND pg_catalog.pg_get_userbyid(namespace.nspowner) = 'postgres'
+   AND NOT pg_catalog.has_schema_privilege('anon', namespace.oid, 'CREATE')
+   AND NOT pg_catalog.has_schema_privilege('authenticated', namespace.oid, 'CREATE')
+   AND NOT pg_catalog.has_schema_privilege('service_role', namespace.oid, 'CREATE')
+   AND NOT EXISTS (
+     SELECT 1
+       FROM pg_catalog.aclexplode(
+         COALESCE(
+           namespace.nspacl,
+           pg_catalog.acldefault('n', namespace.nspowner)
+         )
+       ) AS acl
+      WHERE acl.grantee = 0
+        AND acl.privilege_type IN ('USAGE', 'CREATE')
+   );
+"""
+    result = _run(
+        command + [
+            "exec", "-T", "db", "psql", "-X", "-v", "ON_ERROR_STOP=1",
+            "-U", "postgres", "-d", "postgres", "-Atqc", sql,
+        ],
+        timeout=30,
+        error_code="compose_local_analytics_namespace",
+    )
+    if result.stdout.strip() != "1":
+        _fail("compose_local_analytics_namespace_readback")
+
 def _probe_service(command: list[str], values: dict[str, str], service: str, timeout: int = 5) -> bool:
     if service == "db":
         return (
@@ -2915,6 +2976,8 @@ def _start_core_services(command: list[str], values: dict[str, str]) -> None:
                 ),
                 required=wait_for,
             )
+            if wait_for == ("db",):
+                _ensure_local_analytics_namespace(command)
 
 
 def _action_start(root: Path, project: str, state: Path) -> dict[str, Any]:

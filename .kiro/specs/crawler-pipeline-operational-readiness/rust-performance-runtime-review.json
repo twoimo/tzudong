@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "kind": "rust_performance_runtime_review",
+  "observedAt": "2026-09-05T03:01:46.286201+00:00",
+  "reviewPr": 2863,
+  "reviewThreads": [
+    "PRRT_kwDOQGRyNc6fflwM",
+    "PRRT_kwDOQGRyNc6fflwN",
+    "PRRT_kwDOQGRyNc6fflwP",
+    "PRRT_kwDOQGRyNc6fflwU"
+  ],
+  "sourceBaseHead": "07ad4aaebae707c4eb0abdf164418a1c8a5793c7",
+  "sourceSha256": {
+    ".github/workflows/security-audit.yml": "5ffbd07d93e86e09ed147acd250fb1661320ded344804d6cf5257415b89a64e9",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "968620c155f3c32616e47aa100a385952ff574e79802813b6aee8e29b791b6b6",
+    "backend/pipeline-control/Dockerfile": "c804a36312e7f026a23d2a8076bba23f93ff8f5343d3d18bf5b21725ddeedea5",
+    "backend/pipeline_control/rust_performance_admission.py": "3262b2f503eaf3008b3025ab25302983905f62d56ec91da9376dc03c7ec1ea18",
+    "backend/pipeline_control/rust_promotion_evidence.py": "f1311f23a378e9b58afdce260df47e31861c74ee5867d1e3e05507e1ce90945d",
+    "backend/pipeline_control/tests/performance_fixture.py": "dd6252dac8ef083021eb99b39020769bb4525081db7ba58d4237b982f63fc926",
+    "backend/pipeline_control/tests/test_rust_performance_admission.py": "b34195bdd91bf549e6506b2e97452cd337fd475d8ae59f18ad40a9db3437ebf4",
+    "backend/pipeline_control/tests/test_rust_promotion_evidence.py": "69e37e0980033771c335d5879753e9f46324663f89342812fc93aa3e0271e6f2",
+    "backend/rust/promotion-evidence/README.md": "83419925456d4c6a4acf96e26fc93baa30ffeadd23bd34aa8b4411f16bd8d767"
+  },
+  "verification": {
+    "gateAndContainerTests": 89,
+    "sourceProvenanceTests": 23,
+    "realCanonicalZeroAdmissionFixture": true,
+    "imageTarget": "worker",
+    "imageReadbackFile": "performance-runtime-image-readback.json",
+    "imageReadbackSha256": "ba6008503933e55532bef96370fa404bc2e7b270ad35f801a0e84878c8cc037f"
+  },
+  "liveMeasurementsEstablished": false,
+  "productionReleased": false,
+  "externalReceiptFile": "rust-performance-runtime-review.json",
+  "externalReceiptSha256": "f4db46db618d84d5271d6ff56276434edcdb70628d228fcb900e5f26e2d5f765"
+}

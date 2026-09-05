@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "kind": "runtime_transport_schema_review",
+  "observedAt": "2026-09-05T04:15:19.463524+00:00",
+  "sourceBaseHead": "f524e7bb68e8d164c58500bda74b32a90cef3b6f",
+  "reviewPr": 2863,
+  "reviewThreads": [
+    "PRRT_kwDOQGRyNc6ff_UM",
+    "PRRT_kwDOQGRyNc6ff_UP",
+    "PRRT_kwDOQGRyNc6ffFPQ",
+    "PRRT_kwDOQGRyNc6ffFPR",
+    "PRRT_kwDOQGRyNc6ffFPS",
+    "PRRT_kwDOQGRyNc6ffFPT",
+    "PRRT_kwDOQGRyNc6ffFPV",
+    "PRRT_kwDOQGRyNc6ffFPW",
+    "PRRT_kwDOQGRyNc6ffFPX"
+  ],
+  "sourceSha256": {
+    ".github/workflows/security-audit.yml": "313a366da740859e8f0a76910bbb0adcf6ea1410d27e284a775f04933857ac73",
+    "apps/web/scripts/supabase-gen-types.mjs": "2d087a6062fb7af88582c1b25fd664690d15086e0302b244aa86ffd1ef63039f",
+    "apps/web/tests-unit/supabase-gen-types-source.test.ts": "dccf9ffd1515d2329ab467d32d1f1090f90bacacf83e85932fbdc652d51923fc",
+    "backend/bin/schema_mirror_report.py": "bc91c991e3ec433d5e02daab1143452fa1319526b422eb1ac1d067cb10f1daa0",
+    "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py": "0c6243d9a200a57d2314009302454fde125ed993b01e10979691701cc8683ee8",
+    "backend/bin/tests/test_observability_up_unittest.py": "1d05327af86eb8c3115c975d6edc29de911437ec2592ca0134fa0fc75ba53f08",
+    "backend/bin/tests/test_otel_restart.py": "65ae8521b2a817cb59e15d6c5e20bd5d16573759da52927a6d041dbf84ac4596",
+    "backend/bin/tests/test_schema_mirror_report_unittest.py": "b8e32e573e5494a99a2d773a0164565fbb5dca4c832887a7b33a3da07a1b5d3f",
+    "backend/deploy/deployment-descriptor-set.v1.json": "a9de3c6ff8f19f4ab8e79775e667cd062cfc53f0ca72057d61665be686736e11",
+    "backend/deploy/helm/tzudong-platform/values.yaml": "11fdfaa54f2c363eda05e450a31910a3761ea743d49647ed45cf8cb4e04d8dd0",
+    "backend/deploy/opentofu/main.tf": "04853de29516361356ef906a05632eaa83dac8dc5ac431f3a96b8cbb7fb1fdc5",
+    "backend/pipeline-control/Dockerfile": "9ab9f8da4242b9fdf9ca7fe22707da657813514d507e084b44c3c2987460d1cd",
+    "backend/pipeline-control/otel-collector.yaml": "4de179071ab233eb0fcb8eacb50a904c396325b5b18c100850afd06cde2085dd",
+    "backend/pipeline_control/impl_selector.py": "51a6140d0cb115586969a81a9987f56c2bbf07fa54b80b80fbc645ee03ab24a2",
+    "backend/pipeline_control/ops_agent.py": "a5d4e6fb95c8457924d3cbada159f0a35fe79c32118345a35e8b0ea2e1be5d59",
+    "backend/pipeline_control/test_ops_agent_unittest.py": "eab3ee09e43036adaf4b1ee7e678e37a377d3db89e7c010e5b3a3be08fb9af04",
+    "backend/pipeline_control/tests/test_impl_selector.py": "269fb4fa745b6c23f11a1a7f227592d664c2aed549feab4b208904897b889234",
+    "backend/pipeline_control/tests/test_loki_sink.py": "6fcc67974ec5b2aad653ae159345694f8eb48b1375b6be0b39be385eacb04b0f",
+    "backend/pipeline_control/tests/test_rust_runtime_bindings.py": "3d4c4b8f19f6be800029dfd8863ecdf06887dcc7102eab3adc83a5e1cd969ff5",
+    "backend/utils/tests/test_platform_modernization_reconciliation.py": "075cb21d457425df0793e1de22663bc7fc48f2073811970cf6f1d98350bede41"
+  },
+  "verification": {
+    "focusedBackendTests": 133,
+    "collectorUpgradeAndRelatedTests": 68,
+    "provenanceAndPolicyTests": 69,
+    "finalSchemaTests": 17,
+    "schemaDefinitionMutationCases": 6,
+    "notNullMutationCase": 1,
+    "typegenBehaviorTests": 3,
+    "compilerParityDiagnostics": 0,
+    "compilerLogicalInputs": 2322,
+    "scopedEslintPassed": true,
+    "actualNativeNonfiniteCoordinateRoundtrips": 6,
+    "workerImageArchitecture": "linux/arm64",
+    "workerEntrypointStubbedAfterRealPreflights": true,
+    "workerImageRootReadOnly": true,
+    "workerUid": 10001,
+    "missingEnvironmentDenied": true,
+    "oldRawExporterQueueHeld": true,
+    "sourceAndTestsOverlapAcrossGroups": true
+  },
+  "externalReadbackBindings": {
+    "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14"
+  },
+  "limits": [
+    "No hosted schema application or production release.",
+    "Native worker image exercised on Linux arm64; amd64 not executed in this local receipt.",
+    "Collector forwards only five bounded canonical identity fields; unsupported raw file lines are dropped.",
+    "Legacy unredacted queue remains held under its prior exporter identity; no automatic deletion.",
+    "No live Rust parity or performance improvement established."
+  ],
+  "externalReceiptFile": "runtime-transport-schema-review.json",
+  "externalReceiptSha256": "430f734c8b61840e1a535f59dc9031d09bfd02bf99a059cfce7114da5b6be81c"
+}

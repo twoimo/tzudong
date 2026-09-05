@@ -17,7 +17,7 @@
       "profile": "heavy_local",
       "kstStart": "05:15",
       "kstEnd": "07:00",
-      "launchdCalendar": { "Hour": 5, "Minute": 0 },
+      "launchdCalendar": { "Hour": 5, "Minute": 15 },
       "agent": "dev.tzudong.hosted-new-video"
     }
   ]

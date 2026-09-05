@@ -1,5 +1,16 @@
+import { readFileSync } from "node:fs";
+
 const PRODUCTION_BRANCHES = new Set(["main"]);
 const PREVIEW_BRANCHES = new Set(["develop"]);
+
+function productionGitDeploymentEnabled() {
+  try {
+    const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+    return config.git?.deploymentEnabled?.main === true;
+  } catch {
+    return false;
+  }
+}
 
 function normalizeBranchRef(value) {
   const raw = String(value ?? "").trim();
@@ -35,6 +46,14 @@ function getVercelBuildDecision(env) {
 
   if (vercelEnv === "production") {
     if (PRODUCTION_BRANCHES.has(ref)) {
+      if (!productionGitDeploymentEnabled()) {
+        return {
+          ignore: true,
+          ref,
+          reason: "production Git deployment held by the reviewed release configuration",
+          vercelEnv,
+        };
+      }
       return {
         ignore: false,
         ref,

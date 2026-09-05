@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_session_pooler_metadata_readback_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "operationId": "decadec1-e495-4d0c-bf4d-d756ffe91ee2",
+  "attemptRecordedAt": "2026-09-04T16:32:51Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedReadCount": 1,
+    "consumedReadCount": 1,
+    "remainingReadCount": 0,
+    "authorizationReusable": false,
+    "authorizationPath": "backend/supabase/g037-session-pooler-metadata-readback-authorization.v1.json",
+    "authorizationSha256": "240b24087110c8e88c7859f3370f3fba21aa1bf6af4032410fefc99a7226a54f",
+    "consumptionPath": "backend/supabase/g037-session-pooler-metadata-readback-consumption.v1.json",
+    "consumptionSha256": "d203751ccd74cbb14297a56139f71de412b2ef5eff11876e32176f98bb6664e5"
+  },
+  "browserAttempt": {
+    "orchestrator": "Aside Browser",
+    "newProductionProjectTabOpened": true,
+    "dashboardOpenCount": 1,
+    "inspectionAttemptCount": 1,
+    "retryCount": 0,
+    "connectDialogObserved": true,
+    "accessibilityTreeUsed": true,
+    "imageOrScreenshotUsed": false,
+    "sessionPoolerMethodSelected": false,
+    "nonSessionConnectionControlActivated": true,
+    "stoppedImmediatelyAfterBoundaryViolation": true
+  },
+  "outcome": {
+    "status": "denied",
+    "fixedCode": "g037_session_pooler_metadata_scope_boundary_violated",
+    "successfulMetadataReadback": false,
+    "sanitizedReceiptCreated": false,
+    "sanitizedReceiptVerified": false,
+    "sessionPoolerExactMetadataPresent": false,
+    "unapprovedProjectOverviewFieldsObserved": true,
+    "providerUiTextStoredInRepository": false,
+    "providerUiTranscriptErasureClaimed": false,
+    "providerErrorRetained": false,
+    "rawProviderResponseRetained": false
+  },
+  "safetyReadback": {
+    "credentialRead": false,
+    "passwordValueRead": false,
+    "rawDsnRead": false,
+    "rawDsnRetained": false,
+    "clipboardUsed": false,
+    "screenshotCaptured": false,
+    "browserStorageInspected": false,
+    "networkHeadersInspected": false,
+    "databaseAuthenticationAttempted": false,
+    "sqlExecuted": false,
+    "networkProbeExecuted": false,
+    "persistentProviderStateChanged": false
+  },
+  "retryGate": {
+    "metadataReadRetryAllowed": false,
+    "authorizationReusable": false,
+    "freshMetadataReadRequestRequired": true,
+    "freshNamedOwnerAuthorizationRequired": true,
+    "fixedProbeConstructionAuthorized": false,
+    "fixedProbeExecutionAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "controllerOrWorkflowDispatchAuthorized": false
+  },
+  "notEvidenceOf": [
+    "successful Session pooler metadata readback",
+    "an exact Session pooler hostname, username, port, database, or region tuple",
+    "a verified metadata receipt",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password generation or assignment",
+    "credential-contract amendment or repository secret mutation",
+    "controller or workflow dispatch",
+    "migration, release, or deployment"
+  ]
+}

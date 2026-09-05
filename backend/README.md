@@ -53,12 +53,38 @@ Admin ops status는 manifest를 우선 읽고, 없거나 파싱 실패하면 bou
 
 ## 검증 명령
 
-백엔드 변경 후 최소 검증:
+### 최초 테스트 환경 구성
+
+저장소 루트에서 테스트 전용 가상환경을 만들고, 런타임/provider 패키지와 분리된 고정 버전
+의존성을 설치합니다. 실제 operator secret은 이 과정에 필요하지 않으며 placeholder 값도 넣지
+않습니다.
 
 ```bash
-python -m unittest backend.pipeline_control.tests.test_slice0_control_plane
-python3 backend/bin/check_env_contract.py --profile pipeline-control --json
-python3 backend/bin/check_env_contract.py --profile daily --json
+python3 -m venv .venv
+.venv/bin/python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
+```
+
+Windows에서는 두 번째 명령의 interpreter를 `.venv\\Scripts\\python.exe`로 바꿉니다.
+
+### 크롤러 오케스트레이션 준비도
+
+정적 감사는 완료된 Kiro 체크리스트, 필수 구현 파일, 테스트 의존성을 확인합니다. 전체 감사는
+동일한 interpreter로 19개 모듈의 집중 테스트를 실행합니다. 두 명령은 secret 값이나
+captured test output을 보고서에 포함하지 않고, 준비되지 않은 상태에서 non-zero로 종료합니다.
+
+```bash
+.venv/bin/python backend/bin/check_crawler_orchestration_readiness.py --json
+.venv/bin/python backend/bin/check_crawler_orchestration_readiness.py --run-tests --json
+```
+
+### 최소 회귀 검증
+
+백엔드 변경 후 최소 검증도 같은 가상환경 interpreter로 실행합니다.
+
+```bash
+.venv/bin/python -m unittest backend.pipeline_control.tests.test_slice0_control_plane
+.venv/bin/python backend/bin/check_env_contract.py --profile pipeline-control --json
+.venv/bin/python backend/bin/check_env_contract.py --profile daily --json
 ```
 
 web admin ops 상태까지 건드렸다면 repo root에서:

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "review_runtime_corrections_readback",
+  "baseCommit": "2a4c9c8cfc656e1ad3c880d6400b9a7d1a852591",
+  "externalReceiptFile": "review-runtime-corrections.json",
+  "externalReceiptSha256": "bee872940e445172951c8b28fc33c063f67683c48a5070a680f85952a880d18d",
+  "reviewThreads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4H",
+      "fix": "Durable local Backend_Runtime publication queue consumer with explicit hash confirmation, atomic claims, terminal history and audit."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4L",
+      "fix": "Read back and audit completed batches before returning partial apply failure."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4P",
+      "fix": "Admit WHATWG bracketed IPv6 loopback host only."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4S",
+      "fix": "Use Unix epoch nanosecond ingestion timestamps plus ordered offsets."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4W",
+      "fix": "Append-only agent terminal results and durable readback; failed result persistence never reports success."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4Z",
+      "fix": "Require complete approved retention tuple with valid timestamp, legal basis, trigger and positive integer period."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4g",
+      "fix": "Apply full record contract, value redaction and serialized-size bound at final Loki sink."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fbd4k",
+      "fix": "Read actual paginated Dependabot PR and file metadata, retain candidate identity, reject incomplete metadata and excess counts."
+    }
+  ],
+  "verification": {
+    "localPostgresIntegration": {
+      "passed": 6,
+      "realLocalDatabase": true,
+      "hostedWrites": false,
+      "isolatedClusterStopped": true
+    },
+    "focusedPythonSuite": {
+      "passed": 121
+    },
+    "webTypecheckParity": {
+      "passed": true,
+      "diagnostics": 0
+    },
+    "dependabotReadback": {
+      "candidateCount": 13,
+      "artifactFile": "dependency-candidates-readback.json",
+      "artifactSha256": "094b1ef34b4ce8ec634fd1a9564fb64cc6f596ff924e92cadb75c791528c6726"
+    },
+    "pipelineRuntimeDependencyAudit": {
+      "passed": true,
+      "knownVulnerabilities": 0
+    },
+    "additionalSourceAndRegressionTestsPassed": 75,
+    "focusedWebTestsPassed": 33
+  },
+  "limitations": [
+    "Hosted publication remains frozen.",
+    "Database integration tests use an in-memory destination adapter; durable queue and agent state use real isolated PostgreSQL.",
+    "New local migration has not been applied to the hosted project.",
+    "These receipts do not establish production deployment or legal approval."
+  ]
+}

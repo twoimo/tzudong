@@ -1,0 +1,1410 @@
+# Implementation Plan: Crawler Pipeline Operational Readiness
+
+## Status legend
+
+- `[x]` verified or implemented in this isolated recovery candidate
+- `[ ]` actionable repository work
+- `[ ]*` verification/evidence work
+- `[ ]!` externally gated; never fabricate or bypass
+
+## 0. Baseline preservation and evidence classification
+
+- [x] 0.1 Read all files under `.kiro/specs/crawler-pipeline-orchestration/`.
+- [x] 0.2 Count the predecessor checklist: 71 total, 71 checked, 48 optional.
+- [x] 0.3 Read the predecessor execution metadata without treating timestamps as current proof.
+- [x] 0.4 Confirm `develop` and `origin/develop` start at `3f4ca557`.
+- [x] 0.5 Confirm the original worktree contains untracked `backend/rust/target/` artifacts.
+- [x] 0.6 Preserve the original dirty worktree without reset, stash, clean, delete, or test writes.
+- [x] 0.7 Create isolated branch `codex/orchestration-followup-20260903` from the fresh HEAD.
+- [x] 0.8 Create isolated worktree `tzudong-orchestration-followup`.
+- [x] 0.9 Classify ignored phase reports as local historical evidence, not committed source.
+- [x] 0.10 Classify `.pyc`, Hypothesis cache, Cargo target files, and dylibs as non-source evidence.
+- [x]* 0.11 Re-run the predecessor focused suite under system `python3` and record dependency failure.
+- [x]* 0.12 Re-run the predecessor focused suite under the project virtualenv and record 121/121 pass.
+
+## 1. Executable readiness audit — first implementation slice
+
+- [x] 1.1 Define the readiness report schema and fixed `Ready`/`Blocked` status vocabulary.
+- [x] 1.2 Define closed blocker codes for missing/invalid/incomplete spec state.
+- [x] 1.3 Define closed blocker codes for missing artifacts and dependencies.
+- [x] 1.4 Define closed blocker codes for failed and timed-out tests.
+- [x] 1.5 Implement Kiro checkbox parsing for required and optional tasks.
+- [x] 1.6 Bound reported open-task count and label length.
+- [x] 1.7 Implement regular-file checks for required orchestration artifacts.
+- [x] 1.8 Emit only repository-relative artifact paths.
+- [x] 1.9 Probe test dependencies without importing provider/runtime code.
+- [x] 1.10 Declare the closed 22-module focused test plan, including Mac and hosted data-plane contracts.
+- [x] 1.11 Execute tests with `sys.executable` to preserve interpreter identity.
+- [x] 1.12 Capture child output internally but exclude it from reports.
+- [x] 1.13 Parse and retain only the bounded unittest count.
+- [x] 1.14 Add a bounded test timeout and fixed timeout result.
+- [x] 1.15 Skip test execution when static preflight is blocked.
+- [x] 1.16 Recompute overall readiness after test execution.
+- [x] 1.17 Add a human-readable CLI mode.
+- [x] 1.18 Add a machine-readable `--json` CLI mode.
+- [x] 1.19 Add opt-in `--run-tests` behavior.
+- [x] 1.20 Reject timeout values outside 1–1800 seconds.
+- [x] 1.21 Exit zero only when the final report is `Ready`.
+- [x]* 1.22 Run the new unit suite under the project virtualenv.
+- [x]* 1.23 Run the new CLI static audit under the project virtualenv.
+- [x]* 1.24 Run the new CLI with all 22 focused modules.
+- [x]* 1.25 Assert the real report contains no captured diagnostic fields.
+
+## 2. Deterministic Python test bootstrap
+
+- [x] 2.1 Add a dedicated backend test requirements manifest.
+- [x] 2.2 Pin Hypothesis to the version used by the passing environment.
+- [x] 2.3 Pin PyYAML to the version used by workflow source-contract tests.
+- [x] 2.4 Add a documented `python3 -m venv` bootstrap command.
+- [x] 2.5 Add a documented exact requirements install command.
+- [x] 2.6 Add a documented readiness static-check command.
+- [x] 2.7 Add a documented readiness full-test command.
+- [x] 2.8 Replace ambiguous backend `python -m unittest` docs with `python3` or activated-venv form.
+- [x] 2.9 Keep runtime/provider requirements out of the focused test manifest.
+- [x]* 2.10 Verify a clean temporary virtualenv can install the manifest.
+- [x]* 2.11 Verify the clean temporary virtualenv passes the readiness unit tests.
+- [x]* 2.12 Verify missing Hypothesis produces only `dependency_missing` + canonical package name.
+- [x]* 2.13 Verify placeholder operator secrets are never added during bootstrap.
+- [x] 2.14 Add a clean-checkout orchestration-readiness job to security CI.
+- [x] 2.15 Pin checkout and Python setup actions by exact commit SHA.
+- [x] 2.16 Give the readiness job only `contents: read` permission.
+- [x] 2.17 Bound the initial focused readiness job to five minutes; the recovered full contract suite now has a ten-minute bound based on measured CI duration, with all failing checks retained.
+- [x] 2.18 Keep operator secrets out of the readiness job.
+- [x] 2.19 Trigger security CI when crawler-pipeline Kiro specs change.
+- [x]* 2.20 Run the updated security workflow source contract.
+
+## 3. Readiness audit regression coverage
+
+- [x] 3.1 Test required/optional/open/completed task counting.
+- [x] 3.2 Test empty task documents fail as invalid.
+- [x] 3.3 Test missing task documents fail closed.
+- [x] 3.4 Test open tasks fail closed.
+- [x] 3.5 Test missing artifacts fail closed.
+- [x] 3.6 Test missing dependencies fail closed.
+- [x] 3.7 Test multiple blocker categories are retained together.
+- [x] 3.8 Test UTC timestamp normalization.
+- [x] 3.9 Test passing execution count parsing.
+- [x] 3.10 Test failing execution returns no stdout/stderr.
+- [x] 3.11 Test timeout maps to its fixed code.
+- [x] 3.12 Test failed execution changes Ready to Blocked.
+- [x] 3.13 Test open-task list truncation at 50 items.
+- [x] 3.14 Test task-label truncation at 160 characters.
+- [x] 3.15 Test dependency probe exceptions fail closed.
+- [x] 3.16 Test artifact directories do not satisfy regular-file requirements.
+- [x] 3.17 Test CLI JSON is parseable and contains the exact schema version.
+- [x] 3.18 Test invalid timeout exits with argparse code 2.
+- [x] 3.19 Add a source contract preventing dynamic test-module injection.
+- [x] 3.20 Hash the complete required-artifact set with stable path/content framing.
+- [x] 3.21 Suppress an artifact-set hash when any required artifact is missing.
+- [x] 3.22 Record a validated 40-character Git HEAD SHA.
+- [x] 3.23 Record only worktree cleanliness, never raw status paths.
+- [x] 3.24 Test invalid Git provenance without surfacing diagnostics.
+
+## 4. Predecessor specification traceability
+
+- [x] 4.1 Map every predecessor task to at least one implementation path or verification module.
+- [x] 4.2 Identify checklist items proven only by source-contract tests.
+- [x] 4.3 Identify checklist items requiring runtime behavior evidence.
+- [x] 4.4 Identify checklist items requiring hosted Supabase evidence.
+- [x] 4.5 Identify checklist items requiring GitHub branch-protection evidence.
+- [x] 4.6 Identify checklist items requiring Mac LaunchAgent evidence.
+- [x] 4.7 Reject mappings to ignored reports, bytecode, caches, or build products.
+- [x] 4.8 Add a machine-readable traceability map with schema validation.
+- [x] 4.9 Add orphan-task detection.
+- [x] 4.10 Add orphan-artifact/test detection.
+- [x]* 4.11 Verify all 71 predecessor tasks are mapped exactly as intended.
+- [x] 4.12 Stop clean-checkout data-contract tests from requiring absent local recovery evidence.
+- [x] 4.13 Preserve full reconciliation validation when an operator-retained manifest is present.
+- [x] 4.14 Avoid manufacturing or committing the missing 223-path recovery manifest.
+- [x] 4.15 Bind readiness evidence to both Git HEAD and the current artifact-set digest.
+- [x] 4.16 Define a versioned JSON Schema with closed top-level and entry keys.
+- [x] 4.17 Define a closed evidence-class vocabulary for source, source-contract, local-runtime, hosted, and checkpoint proof.
+- [x] 4.18 Define a closed external-evidence vocabulary for Supabase, GitHub protection, and Mac LaunchAgent readback.
+- [x] 4.19 Parse canonical numeric task IDs independently of free-form checklist labels.
+- [x] 4.20 Reject a predecessor task marker that has no canonical task ID.
+- [x] 4.21 Reject duplicate task IDs in either the checklist or traceability map.
+- [x] 4.22 Report checklist IDs missing from the map separately from unknown map IDs.
+- [x] 4.23 Require every task entry to name at least one implementation path.
+- [x] 4.24 Reject absolute, parent-traversing, backslash, bytecode, cache, build, and generated-report paths.
+- [x] 4.25 Confine resolved implementation and test-module paths to the repository root.
+- [x] 4.26 Require every mapped implementation path to resolve to a regular file.
+- [x] 4.27 Require verification modules to use the closed backend module-name grammar.
+- [x] 4.28 Require every mapped verification module to resolve to a Python source file.
+- [x] 4.29 Detect any default readiness artifact omitted from all task entries.
+- [x] 4.30 Detect any of the 22 default verification modules omitted from all task entries.
+- [x] 4.31 Bound every reported orphan, invalid reference, and duplicate list.
+- [x] 4.32 Bind the schema and map bytes into one deterministic traceability SHA-256 digest.
+- [x] 4.33 Distinguish missing, structurally invalid, and coverage-incomplete traceability blockers.
+- [x] 4.34 Keep externally required evidence classified without claiming that the receipt exists.
+- [x]* 4.35 Test canonical coverage, missing/unknown IDs, duplicates, unsafe references, missing files/modules, malformed schema, and absent documents.
+
+## 5. Cadence, runner, and environment-contract closure
+
+- [x] 5.1 Revalidate cadence JSON schema and fixed UTC+9 offset.
+- [x] 5.2 Revalidate non-overlap, ordering, and 30-minute minimum buffer.
+- [x] 5.3 Compare cadence windows to the actual GHA cron expression.
+- [x] 5.4 Compare cadence windows to the actual LaunchAgent calendar fields.
+- [ ]! 5.5 Verify GHA scheduled-start tolerance from a current external run without retaining secrets.
+- [ ]! 5.6 Verify Mac missed-window coalescing on the next real sleep/wake boundary.
+- [x] 5.7 Verify no per-missed-day replay loop is introduced.
+- [x] 5.8 Reconcile canonical versus runtime alias names in env-contract docs.
+- [x] 5.9 Verify all four runner-to-profile mappings before work.
+- [x] 5.10 Verify non-zero env preflight exits are never swallowed.
+- [x] 5.11 Add a bounded runtime readiness code for missing operator secrets.
+- [x] 5.12 Verify all nine daily runtime bindings against live GitHub Secret name/update metadata without reading values; see `daily-secret-presence-readback.v1.json`. Credential validity remains a runtime check.
+- [x] 5.13 Restore the shared Mac/GHA hosted-new-video entrypoint lost from the merged workflow.
+- [x] 5.14 Restore pinned Python/Node dependency setup before the GHA hosted apply.
+- [x] 5.15 Preserve the shared runner's preview-before-apply behavior in the GHA path.
+- [x] 5.16 Update env-preflight ordering markers to the restored shared runner boundary.
+- [x] 5.17 Detect the 05:15 cadence-config versus 05:00 LaunchAgent installer drift.
+- [x] 5.18 Restore the previously verified bash-wrapper boundary outside Documents.
+- [x] 5.19 Keep LaunchAgent stdout/stderr under `~/Library/Logs/tzudong`, not the repository.
+- [x] 5.20 Reconcile the generated LaunchAgent calendar to Hour 5 / Minute 15.
+- [x] 5.21 Reconcile the installer operator summary to 05:15.
+- [x] 5.22 Validate that the configured GHA UTC cron derives the exact KST window start.
+- [x] 5.23 Validate that the configured LaunchAgent calendar equals the exact Mac KST window start.
+- [x] 5.24 Reject duplicate or missing canonical runner identities in cadence config.
+- [x] 5.25 Reject a missing or divergent GHA cron with a fixed source code.
+- [x] 5.26 Reject a missing or divergent Mac calendar with a fixed source code.
+- [x] 5.27 Reject a divergent Mac LaunchAgent label with a fixed source code.
+- [x] 5.28 Keep source mismatch reports free of workflow, shell, or parser excerpts.
+- [x] 5.29 Run committed source reconciliation before worker pipeline execution.
+- [x] 5.30 Run cadence-source and hosted-env preflights before Mac evaluation or apply work.
+- [x] 5.31 Add both Mac entrypoint source-contract modules to the default focused test plan.
+- [x] 5.32 Expand the closed focused plan from 19 to 22 modules as previously omitted contracts are recovered.
+- [x] 5.33 Detect a mapped verification module that is not present in the executable test plan.
+- [x] 5.34 Pin one calendar event with no interval, keep-alive, or shell replay loop.
+- [x]* 5.35 Test committed agreement and independent GHA cron, Mac calendar, Mac label, and config drift failures.
+- [x] 5.36 Read the currently installed LaunchAgent metadata without executing, restarting, or unloading it.
+- [x] 5.37 Confirm the installed agent still represents the old 05:00 direct-Python/repository-log layout.
+- [x] 5.38 Confirm the installed agent is currently idle and retain only bounded run-count/last-exit metadata externally.
+- [x] 5.39 Installed and independently read back the 05:15 wrapper LaunchAgent from protected-develop source `0222bda7d83002bd3f9b9dd10bff4e87f402ae22` in a separate stable checkout outside Documents. The active write freeze and manual held result were verified; actual sleep/wake execution remains 5.6. External receipt SHA-256 `f6aef0fadaf914312e59fad51dfb4d9125b271b24226a625c661e872bb3f7ddb`.
+- [x] 5.40 Preserve the installed 05:00 agent unchanged during this read-only inspection.
+
+## 6. Manifest, health, and evidence artifact closure
+
+- [x] 6.1 Validate every current-summary required field and fixed vocabulary.
+- [x] 6.2 Validate UTC date and timestamp formats.
+- [x] 6.3 Validate failed-required-step identifiers against the canonical step graph.
+- [x] 6.4 Validate optional versus downstream skip-reason separation.
+- [x] 6.5 Validate operator-summary maximum length.
+- [x] 6.6 Validate hosted-gate rejection-code singularity.
+- [x] 6.7 Validate reflection partition completeness and mutual exclusivity.
+- [x] 6.8 Validate stale/absent manifest health is not successful.
+- [x] 6.9 Validate window-overrun reporting without schedule mutation.
+- [x] 6.10 Validate evidence SHA provenance and null semantics.
+- [x] 6.11 Validate artifact upload paths include summary and health outputs.
+- [x] 6.12 Add a secret-pattern negative test over generated readiness evidence.
+- [x]* 6.13 Run one throwaway lite execution and verify its manifest/readiness report.
+- [x] 6.14 Restrict operator-summary execution mode and data sink to closed vocabularies.
+- [x] 6.15 Normalize an invalid final status to the fixed error status in operator summaries.
+- [x] 6.16 Replace unknown step identifiers with a fixed `unknown_step` token.
+- [x] 6.17 Replace unrecognized skip reasons with a fixed `skip_reason_invalid` token.
+- [x] 6.18 Remove free-form run status text from the adapter-level failure fallback.
+- [x] 6.19 Restrict reflected identities to the actual 11-character video-ID contract.
+- [x] 6.20 Bound each reflection bucket to 100 identities.
+- [x] 6.21 Deduplicate identities within and across reflection buckets in outcome precedence order.
+- [x] 6.22 Drop non-string, malformed, duplicate, over-limit, and extra reflection fields.
+- [x] 6.23 Verify secret-shaped unknown steps, reasons, and reflection values cannot survive serialization.
+- [x] 6.24 Verify invalid hash-shaped values become null with `unavailable` provenance.
+- [x] 6.25 Verify exact lowercase SHA-256 inputs retain their canonical provenance names.
+- [x] 6.26 Pin unconditional artifact upload of both `current-summary.json` and `current-health.json`.
+
+## 7. Hosted apply and Supabase boundary closure
+
+- [x] 7.1 Reconfirm `PIPELINE_HOSTED_APPLY_ENABLED` remains compile-time false.
+- [x] 7.2 Reconfirm lite/local/artifact profiles cannot admit Hosted Store.
+- [x] 7.3 Reconfirm URL matching is byte-for-byte exact.
+- [x] 7.4 Reconfirm client construction occurs only after gate admission.
+- [x] 7.5 Reconfirm dry-run preview precedes any live apply attempt.
+- [x] 7.6 Reconfirm unattended runners never auto-approve or auto-enable apply.
+- [x] 7.7 Reconfirm unresolved candidates are skipped without insert.
+- [x] 7.8 Reconfirm applied/already-present/unresolved partition accounting.
+- [x] 7.9 Reconfirm concurrent candidate identity produces at most one record.
+- [x] 7.10 Verify the additive unique-index migration remains unchanged.
+- [x] 7.11 Scan for `logs.all` Management API usage before its removal date.
+- [x] 7.12 Review self-hosted Envoy/Kong compatibility without changing production.
+- [x] 7.13 Review extension SQL for obsolete explicit version pins.
+- [x]* 7.14 Run local Supabase boundary tests against an isolated local stack when available.
+- [ ]! 7.15 Obtain hosted migration/RLS/grants/RPC/type/catalog readback from an approved operator flow.
+- [x] 7.16 Bound the publisher source-contract extraction to the `daily-publish` job only.
+- [x] 7.17 Prevent the following hosted job's secret bindings from becoming publisher false positives.
+- [x] 7.18 Authenticate the Supabase CLI without copying an access token into the repository or chat.
+- [x] 7.19 Resolve the sole accessible healthy project to production ref `aqlcofblfxdrjhhdmarw` through explicit operator confirmation.
+- [x] 7.20 Verify read-only Management API SQL access and record PostgreSQL server version `17.6` without exposing connection material.
+- [x] 7.21 Read the hosted migration-ledger boundary as metadata only: 50 rows, first version `20251219`, terminal version `20260804000500`.
+- [x] 7.22 Read the ordered hosted migration identities without exporting application rows or provider diagnostics.
+- [x] 7.23 Identify that hosted typegen output differs from the checked-in local-catalog type artifact without overwriting either file.
+- [x] 7.24 Run the repository's bounded Supabase security-query set through a read-only Management API query.
+- [x] 7.25 Confirm the repository audit reports zero critical findings while retaining high/medium findings for triage.
+- [x] 7.26 Run the official Supabase security advisor in read-only mode with `fail-on none`.
+- [x] 7.27 Confirm all six canonical privacy tables reside in `privacy_retention` with RLS enabled and forced.
+- [x] 7.28 Confirm all five canonical privacy RPC names exist exactly once with pinned `search_path` configuration.
+- [x] 7.29 Confirm the sole effective published policy matches source version, locale, and content hash and has a non-empty approval binding.
+- [x] 7.30 Confirm retention activation is partial: one active class, zero approval pairs, zero active adapter versions, and zero active bindings.
+- [x] 7.31 Reconcile the official `security_definer_view` error for `public.privacy_consent_state` with the private-table/RLS access design.
+- [x] 7.32 Classify each of the four unvalidated hosted constraints as intentional staged validation or actionable drift.
+- [x] 7.33 Classify every official mutable-`search_path` function warning by invoker/definer status and executable role.
+- [x] 7.34 Reconcile official anonymous/authenticated `SECURITY DEFINER` warnings against the source-pinned RPC ACL allowlist.
+- [x]! 7.35 Obtain owner-authorized activation or documented deferral evidence for leaked-password protection.
+- [x]! 7.36 Obtain an owner-restricted production DB URL outside the repository so the canonical read-only controller can run.
+- [ ]! 7.37 Run canonical protected read-only controller modes from an exact authorized source revision and retain sanitized receipts externally.
+- [ ]! 7.38 Reconcile generated hosted types only after the approved migration state is established; never overwrite source from an unapproved snapshot.
+- [x] 7.39 Remove CLI-created project-link cache files from the isolated candidate after read-only inspection.
+- [x] 7.40 Preserve zero hosted mutation attempts throughout this inspection.
+- [x] 7.41 Re-read the current Supabase changelog before extending boundary verification.
+- [x] 7.42 Confirm the `logs.all`, extension-pin, Envoy, and Realtime breaking changes require no new mutation in this slice.
+- [x] 7.43 Repair the hosted data-plane test's package import so it runs from repository root.
+- [x] 7.44 Add the hosted data-plane test module to the deterministic readiness plan.
+- [x] 7.45 Re-run the boundary suite under a socket-denial guard with synthetic key material only.
+- [x] 7.46 Re-run preview/apply, unresolved partition, idempotency, and concurrency tests without hosted I/O.
+- [x] 7.47 Bind the unchanged additive migration to SHA-256 `ff6d5035e1dd553a5fe2f9b230de629fd44c42914697669769dde5aa86aed320`.
+- [x] 7.48 Capture the 60-item official advisor snapshot as bounded classifications only, without provider payloads or application-row export.
+- [x] 7.49 Retain `public.privacy_consent_state` as a documented bounded exception because switching it to invoker mode would bypass the current owner-mediated private-table design.
+- [x] 7.50 Confirm the view remains security-barrier protected, caller-filtered by `auth.uid()`, authenticated-only, and backed by FORCE RLS tables.
+- [x] 7.51 Count the four project-owned unvalidated constraints separately from the managed Realtime constraint.
+- [x] 7.52 Prove the four project-owned constraints have zero observed violating rows before authoring validation.
+- [x] 7.53 Create `20260903174413_advisor_followup_hardening.sql` through the repository-installed Supabase CLI rather than inventing a migration identity.
+- [x] 7.54 Recover the hosted-only `public.touch_admin_workflow_updated_at()` invoker function into the canonical source chain with its bounded trigger behavior.
+- [x] 7.55 Normalize the recovered function to the observed `postgres` owner and revoke PUBLIC/Data API execution.
+- [x] 7.56 Resolve the vector argument namespace from `pg_extension` so hosted `public.vector` and disposable-local `extensions.vector` are both exact and bounded.
+- [x] 7.57 Reject the function hardening unless PUBLIC, anon, authenticated, and service_role lack CREATE in every admitted search-path schema.
+- [x] 7.58 Pin all 26 advisor-listed invoker functions to the fixed trusted search path without changing any function to SECURITY DEFINER.
+- [x] 7.59 Preserve every existing function execution-role decision and add no broad `GRANT EXECUTE` statement.
+- [x] 7.60 Validate exactly the four project-owned staged constraints and no managed Realtime object.
+- [x] 7.61 Advance exactly four G014 constraint-manifest values under the existing owner-membership restoration protocol.
+- [x] 7.62 Disable the G014 immutability trigger only inside the migration transaction, re-enable it before readback, and rerun the complete catalog assertion.
+- [x] 7.63 Add the bounded `advisor-classification.v1.json` artifact with explicit non-evidence disclaimers and official remediation references.
+- [x] 7.64 Add source contracts for classification counts, exact signatures, ACL preservation, G014 baseline advancement, readback, and workflow wiring.
+- [x] 7.65 Add the advisor artifact, migration, and source-contract paths to security-audit triggers and execute the new module in that workflow.
+- [x] 7.66 Diagnose the fresh-stack REST 503 as a missing pre-migration `local_analytics` namespace rather than weakening readiness.
+- [x] 7.67 Add a namespace-only startup bridge that fixes owner, revokes PUBLIC access, proves Data API roles cannot CREATE, and leaves every table/grant to the canonical migration.
+- [x] 7.68 Prove a fresh candidate stack reaches healthy state for all 14 services without touching the pre-existing original-worktree stack.
+- [x] 7.69 Apply the complete 88-unit migration chain from a fresh prerequisite and retain a positive unit readback for the terminal advisor migration.
+- [x] 7.70 Update the local receipt, nightly publication verifier, nightly publication builder, and source tests from stale 78/83 counts to the same 88-unit ledger contract.
+- [x] 7.71 Extend the closure smoke allowlist only for the exact recovered trigger signature and expected PostgreSQL `0A000` outcome.
+- [x] 7.72 Resolve all 48 closure candidates with zero missing and zero ambiguous paths under a source/tool/extension-bound patch.
+- [x] 7.73 Pass all 48 candidate smoke cases, including the recovered trigger, with external effects blocked.
+- [x] 7.74 Apply the deterministic local seed and complete all five execution-sequence markers in order.
+- [x] 7.75 Pass schema convergence, public-profile read, leaderboard pagination, and profile-mutation SQL boundary probes with rollback semantics.
+- [x] 7.76 Produce a disposable local receipt binding 88 ledger rows, all five sequence markers, the source chain, closure, catalog, service, and readback hashes with no ambiguity marker.
+- [x] 7.77 Run 113 focused local-stack, advisor, closure, seed/receipt, and publication-verifier tests after the count and smoke-contract updates.
+- [x] 7.78 Preserve zero hosted mutations throughout classification, source authoring, and disposable-local verification.
+- [x]! 7.79 Obtain named-owner approval for retaining or redesigning the `privacy_consent_state` owner bridge before treating the advisor error as externally accepted.
+- [ ]! 7.80 Apply the new additive migration only from an exact approved source revision, then read back the 26 function paths, four constraints, G014 assertion, ACLs, and a fresh official advisor result.
+- [ ]! 7.81 Retain the hosted apply/readback/audit receipt outside the repository and reconcile generated types only after 7.80 succeeds.
+- [x] 7.82 Bind the retain decision to exact identity `public.privacy_consent_state` and named approver 최연우 without recording contact, account, or credential data.
+- [x] 7.83 Scope the decision to the current owner-bridge security-design exception and no broader system approval.
+- [x] 7.84 Keep the official Advisor severity at ERROR and require a separately approved implementation plus readback before any future redesign can replace the bridge.
+- [x] 7.85 Exclude hosted migration application, legal/privacy review, general production security certification, and release readiness from the retain decision.
+- [x] 7.86 Record the task-transcript evidence boundary without fabricating an immutable receipt or hosted audit record.
+- [x] 7.87 Prove in source contracts that the additive follow-up migration neither alters the view nor introduces `security_invoker`.
+- [x] 7.88 Bind the leaked-password activation authorization to named owner 최연우, exact project ref `aqlcofblfxdrjhhdmarw`, and that one Auth control only.
+- [x] 7.89 Verify the dashboard project link and project URL both resolve to the exact authorized project ref before considering a mutation.
+- [x] 7.90 Read back the pre-apply leaked-password protection value as disabled without persisting dashboard credentials, user rows, or provider diagnostics.
+- [x] 7.91 Confirm the target project is on the Free plan and that leaked-password protection requires Pro or above under the current dashboard and official documentation.
+- [x] 7.92 Stop before click/save, change zero settings, and preserve the final disabled value when plan eligibility is absent.
+- [x]! 7.93 Obtain explicit authorization for the cost-bearing Pro-plan upgrade or a documented decision to defer activation; the setting-level approval does not authorize purchase.
+- [ ]! 7.94 If a new named-owner decision later supersedes the deferral and plan eligibility exists, reverify exact project identity and prior state, then enable and save only leaked-password protection.
+- [ ]! 7.95 Reload or revisit Auth password security and read back the final enabled value independently of the save action.
+- [ ]! 7.96 Retain a sanitized activation/readback receipt outside the repository without tokens, cookies, user rows, or unrelated Auth configuration.
+- [x] 7.97 Add a source contract that distinguishes authorization, paid-plan eligibility, apply, readback, and externally retained receipt states.
+- [x] 7.98 Wire the Auth hardening source contract into the security workflow trigger set and execution step.
+- [x] 7.99 Re-read the current official Supabase changelog and password-security documentation before evaluating the hosted control.
+- [x] 7.100 Record named owner 최연우's paid-plan upgrade deferral in a bounded machine-readable decision contract.
+- [x] 7.101 Preserve the exact project ref, Free-plan eligibility blocker, disabled control value, and zero setting changes without storing billing or account data.
+- [x] 7.102 Require a new named-owner plan decision before any future purchase, leaked-password toggle, or save attempt can supersede the deferral.
+- [x] 7.103 Keep activation, reload readback, and sanitized hosted receipt tasks open rather than converting the deferral into a false completion claim.
+- [x] 7.104 Reconfirm that the current official password-security contract still limits leaked-password protection to Pro and above before recording the deferral.
+- [x] 7.105 Bind the hosted credential confirmation to named owner 최연우, exact repository `twoimo/tzudong`, exact project ref `aqlcofblfxdrjhhdmarw`, and secret name `SUPABASE_DB_URL`.
+- [x] 7.106 Record that the named owner confirms the credential is current, targets production, and is restricted to the owner and approved operators.
+- [x] 7.107 Re-read repository-secret metadata by exact name without requesting, displaying, hashing, testing, or persisting the secret value.
+- [x] 7.108 Preserve the metadata-only observation timestamp and last-updated timestamp while excluding unrelated repository secret names.
+- [x] 7.109 Distinguish named-owner attestation and secret presence from a successful hosted database connection.
+- [x] 7.110 Read the exact remote `main` SHA and confirm the G037 protected controller workflow exists at that observed revision without dispatching it.
+- [x] 7.111 Keep task 7.37 open and require a separate exact-revision authorization for every protected read-only controller execution.
+- [x] 7.112 Constrain any future credential-bearing execution to the four closed read-only modes and a sanitized external receipt.
+- [x] 7.113 Add a bounded machine-readable hosted DB access decision contract that explicitly excludes controller, migration, legal/privacy, and release claims.
+- [x] 7.114 Add source contracts for decision shape, secret-value exclusion, exact-SHA admission, read-only modes, workflow wiring, and the still-open execution gate.
+- [x] 7.115 Wire the hosted DB access artifact and source contract into security-audit triggers and execution.
+- [x] 7.116 Re-read the current official Supabase security and breaking-change changelogs before recording the credential prerequisite; no listed change alters this metadata-only boundary.
+- [x] 7.117 Revalidate remote `main`, active G037 workflow identity, and repository-secret name immediately before dispatching the approved preflight.
+- [x] 7.118 Dispatch exactly one `preflight` workflow run for authorized SHA `3d7557f6307c9f6696018324e559bff6e57afbce` without requesting any other mode.
+- [x] 7.119 Confirm run `33838590366` is a `workflow_dispatch` on branch `main` at the exact authorized SHA.
+- [x] 7.120 Read back successful detached-SHA binding, source validation, and hash-locked dependency installation before interpreting the hosted result.
+- [x] 7.121 Confirm the source-validation receipt is `valid` and bind its external artifact ID, receipt SHA-256, and downloaded-file SHA-256.
+- [x] 7.122 Confirm the hosted preflight receipt is `denied` with `ambiguous_commit=false` and bind its external artifact ID, receipt SHA-256, and downloaded-file SHA-256.
+- [x] 7.123 Confirm failure-path sanitized receipt upload and runner-temporary receipt removal both succeeded.
+- [x] 7.124 Classify the denial cause as intentionally undisclosed rather than inferring an invalid secret, successful connection, or catalog drift.
+- [x] 7.125 Keep 7.37 open because the canonical preflight did not reach `ready`, and prohibit automatic retry under the consumed authorization.
+- [x] 7.126 Record the bounded attempt in a machine-readable source index without copying credentials or the externally retained receipt into the repository.
+- [x] 7.127 Add source contracts for exact authorization, run identity, receipt hashes, denial semantics, no-retry behavior, and security-workflow wiring.
+- [x] 7.128 Wire the G037 preflight attempt index and source contract into security-audit triggers and execution.
+- [x] 7.129 Revalidate remote `main`, active G037 workflow identity, repository-secret name, and exact runtime-probe source immediately before dispatch.
+- [x] 7.130 Re-read the current official Supabase security and breaking-change changelogs before the hosted runtime probe.
+- [x] 7.131 Dispatch exactly one `runtime-probe` for authorized SHA `3d7557f6307c9f6696018324e559bff6e57afbce` without requesting another mode.
+- [x] 7.132 Confirm run `33839536300` is a `workflow_dispatch` on `main` at the exact authorized SHA.
+- [x] 7.133 Bind the successful source-validation job and `valid` source receipt to their external IDs and hashes.
+- [x] 7.134 Bind the failed remote-readonly job and `denied` runtime-probe receipt to their external IDs and hashes.
+- [x] 7.135 Confirm failure-path sanitized receipt upload and runner-temporary receipt removal both succeeded.
+- [x] 7.136 Confirm the denied receipt contains neither status `authorization-denied` nor `runtime_authorization_denied=true`.
+- [x] 7.137 Leave database connection, terminal-mutator presence, and current-role execute denial unproven rather than selecting an undisclosed cause.
+- [x] 7.138 Keep task 7.37 open and prohibit an automatic retry under the consumed runtime-probe authorization.
+- [x] 7.139 Record the bounded runtime-probe attempt in a machine-readable source index without credentials or receipt copies.
+- [x] 7.140 Add and wire source contracts for exact run identity, receipt hashes, missing success evidence, denial semantics, and no-retry behavior.
+- [x] 7.141 Identify the fixed-receipt diagnostic gap that collapses connection, function-presence, and privilege failures into the same result.
+- [x] 7.142 Define a closed source-owned denial-code set with no provider message, exception text, endpoint, credential, SQL, role identity, or row value.
+- [x] 7.143 Admit `denial_code` to a receipt only when it is a member of that exact allowlist.
+- [x] 7.144 Map credential admission, connection, ledger, retirement, lock, terminal-mutator, and unexpected-execute-privilege failures to fixed codes.
+- [x] 7.145 Collapse every unknown ClosureError or ContractError to a fixed generic code without serializing its message.
+- [x] 7.146 Add unit contracts proving malicious or arbitrary exception text cannot cross the receipt boundary.
+- [x] 7.147 Preserve the existing receipt schema, mode allowlist, read-only transactions, rollback, workflow admission, and zero automatic retry behavior.
+- [x] 7.148 Correct the G037 runbook's stale 28-migration statement to the source-validated 29 and document bounded denial-code interpretation.
+- [x] 7.149 Correct commit-uncertainty classification so both fixed `ambiguity` and `ambiguous` wording produce `ambiguous_commit=true` and the closed `commit_ambiguous` code.
+- [x] 7.150 Update the G037 runbook source contract to assert the same 29-migration manifest count as the controller and validation receipt.
+- [x] 7.151 Reclassify the edited G037 workflow source contract from retained base bytes to an explicit candidate transformation; later source-safe fixture hardening brings the current disposition counts to 91/8.
+- [x]! 7.152 Obtain named-owner confirmation that the current `SUPABASE_DB_URL` database role holds owner privileges without recording its value or role name.
+- [x] 7.153 Distinguish owner custody of a secret from the connected database role's privilege class in the machine-readable decision.
+- [x] 7.154 Preserve the prior runtime-probe denial cause as unproven while recording owner privilege as an independent least-privilege blocker.
+- [x] 7.155 Define the distinct G037 repository secret name `SUPABASE_G037_READONLY_DB_URL` and prohibit fallback to `SUPABASE_DB_URL`.
+- [x] 7.156 Change only the G037 workflow and executor default to the dedicated read-only secret name.
+- [x] 7.157 Keep migration workflows on their existing separately governed credential boundary without copying or renaming that secret.
+- [x] 7.158 Define exact negative role properties: no owner, superuser, BYPASSRLS, CREATEROLE, CREATEDB, replication, target-mutator EXECUTE, or inherited owner authority.
+- [x] 7.159 Require default read-only transactions and only the production-connect, migration-ledger, catalog-metadata, and exact-function-resolution read scope.
+- [x] 7.160 Bound G037 receipts to fixed status/code/boolean/count/hash fields and prohibit role names, connection strings, and provider errors.
+- [x] 7.161 Add source contracts proving the workflow has no owner-secret fallback and that the credential specification is closed and non-sensitive.
+- [x] 7.162 Update the G037 runbook, requirements, design, decision, attempt index, workflow tests, and security workflow wiring for the credential split.
+- [x] 7.163 Preview the exact hosted SQL for a dedicated G037 read-only login and minimal grants without executing it.
+- [x]! 7.164 Obtain named-owner approval for the exact role/grant preview and external credential-custody procedure.
+- [x] 7.165 Reconcile the previously applied v3 role with the current password assignment and sanitized operational receipt; no duplicate provisioning was run.
+- [x] 7.166 Create SUPABASE_G037_READONLY_DB_URL through stdin without reading its value back or altering SUPABASE_DB_URL.
+- [x] 7.167 Read back the dedicated role attributes, read-only defaults, grants, target-function denial, and new-secret metadata.
+- [ ]! 7.168 Promote the source change through the separately approved serialized branch path before any new G037 dispatch.
+- [ ]! 7.169 Obtain a fresh exact-main-SHA authorization and rerun only the selected G037 read-only mode with the dedicated credential.
+- [x] 7.170 Keep the role-provisioning source outside the Supabase migration ledger so the G037 baseline and terminal ledgers do not become self-invalidating.
+- [x] 7.171 Bind the preview to production project ref, database name, role-name hash, SQL paths, and exact SHA-256 source digests.
+- [x] 7.172 Require the role to be absent, the canonical ledger to exist, and the exact target mutator to resolve before any role creation statement.
+- [x] 7.173 Create the dedicated login with `PASSWORD NULL` so no credential value enters source, review, shell history, or test output.
+- [x] 7.174 Set NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOINHERIT, NOREPLICATION, NOBYPASSRLS, and a one-connection limit explicitly.
+- [x] 7.175 Pin read-only transactions, statement timeout, lock timeout, idle-transaction timeout, and catalog-only search path as role defaults.
+- [x] 7.176 Grant only CONNECT on `postgres`, USAGE on `supabase_migrations`, and column-level SELECT on the three ledger fields the controller reads.
+- [x] 7.177 Prohibit relation-level, function-level, default-privilege, and any other direct ACL grants in the provisioning postcondition.
+- [x] 7.178 Require zero memberships and zero database, schema, relation, function, or type ownership before the provisioning transaction commits.
+- [x] 7.179 Require effective database CREATE, public-schema CREATE, and exact target-mutator EXECUTE to remain denied.
+- [x] 7.180 Add a separate mutation-free owner readback that emits only fixed booleans and bounded counts.
+- [x] 7.181 Add the same exact role, settings, ownership, membership, grant, and target-denial admission to every connected G037 mode.
+- [x] 7.182 Add the fixed `readonly_role_contract_denied` receipt code without allowing role names, SQL, or provider diagnostics into receipts.
+- [x] 7.183 Prove neither the provisioning nor readback SQL is referenced by an executable workflow.
+- [x] 7.184 Add source-contract coverage for null-password creation, exact grants, source hashes, mutation-free readback, and external gate state.
+- [x] 7.185 Add every G037 credential source and test path to security-workflow change detection while leaving the SQL files unexecuted.
+- [x]! 7.186 Obtain named-owner approval bound to the exact provisioning and readback SQL SHA-256 digests.
+- [x] 7.187 Select and verify macOS login Keychain custody under the autonomous task authority, with repository owner twoimo as custodian.
+- [x]! 7.188 Recheck immediately before apply that the dedicated role is absent and the exact target function resolves on production.
+- [x] 7.189 Verify the already-consumed v3 provisioning using current owner-side readback and retain its sanitized evidence externally.
+- [x] 7.190 Require the v3 readback: every boolean true, zero parent memberships and owned objects, and the exact one creator ADMIN-only membership with no SET or INHERIT.
+- [x] 7.191 Assign one server-generated password through a verified RSA3072/PGP/AES256 transfer into Keychain, without plaintext arguments, files, chat, or artifacts.
+- [x] 7.192 Construct and verify the deliberately approved Session pooler DSN using the dedicated role, provider CA, and sslmode=verify-full.
+- [x] 7.193 Write SUPABASE_G037_READONLY_DB_URL once through the repository secret interface without reading its value back or touching another secret.
+- [x] 7.194 Bind new-secret name/update metadata to the current role and 19-condition dedicated-connection readback.
+- [ ]! 7.195 After serialized source promotion, obtain a new main SHA and a separate one-run authorization for the selected read-only mode.
+- [x]* 7.196 Parse the exact provisioning and readback sources with PostgreSQL grammar and confirm 16 and one top-level statements without opening a hosted connection.
+- [x]* 7.197 Reconcile the G037 core workflow source test with the existing two-item G016 freeze exception and its mandatory terminal-state verification guard.
+- [x] 7.198 Remove G037's stale dependency on the deleted text-SDDL helper and delegate Windows directory custody to G035's native DACL inspector.
+- [x] 7.199 Preserve already-instantiated path objects while Windows behavior is mocked so POSIX verification cannot instantiate an unsupported `WindowsPath`.
+- [x]* 7.200 Replace obsolete G037 SDDL-parser duplication tests with native-inspector delegation, fail-closed, identity, ACL-order, binary-readback, and cleanup coverage.
+- [x]* 7.201 Run the complete 260-test G037 discovery suite with the exact test and G037 cryptography manifests and no failures.
+- [x] 7.202 Recompute the preview, provisioning SQL, and readback SQL SHA-256 digests immediately before recording approval and require exact equality with the reviewed values.
+- [x] 7.203 Record the named-owner approval in a machine-readable artifact bound to approver, UTC timestamp, repository, production project ref, paths, and exact digests.
+- [x] 7.204 Limit the recorded approval to the role/grant preview and the external credential-custody procedure.
+- [x] 7.205 Record hosted execution, role creation, password configuration, repository-secret mutation, and workflow dispatch as unauthorized and unperformed.
+- [x] 7.206 Advance only the preview-approval gates in the credential contract and hosted-access decision while preserving every downstream fail-closed state.
+- [x] 7.207 Add source and security-workflow contracts that verify approval identity, current-byte hashes, exact scope, closed downstream gates, and task-state separation.
+- [x]! 7.208 Obtain separate named-owner authorization for one exact production execution of the approved provisioning SQL before any pre-apply readback or hosted mutation.
+- [x] 7.209 Consume the approved execution count exactly once and stop without retry when the provisioning postcondition rejects a zero-dimensional ACL array.
+- [x] 7.210 Read back the failed transaction immediately and prove the dedicated role remains absent.
+- [x] 7.211 Prove the failed transaction left the migration ledger at 50 rows with terminal version `20260804000500`.
+- [x] 7.212 Classify the failure with the fixed `acl_array_dimension_postcondition_denied` code without retaining provider diagnostics in the source receipt.
+- [x] 7.213 Verify through bounded production reads that a NULL ACL expands to zero rows, the empty ACL literal has no array dimension, and nullable column-ACL scanning succeeds.
+- [x] 7.214 Preserve the v1 preview, approval, provisioning SQL, and readback SQL as exact historical evidence and prohibit retry under the consumed authorization.
+- [x] 7.215 Create corrected v2 provisioning and readback sources instead of rewriting the approved v1 bytes.
+- [x] 7.216 Replace only the three zero-dimensional empty ACL substitutions with strict NULL ACL expansion while preserving role properties, grants, and transaction boundaries.
+- [x]* 7.217 Parse the corrected v2 sources with PostgreSQL grammar and confirm 16 and one top-level statements without opening a hosted mutation transaction.
+- [x] 7.218 Publish a corrected v2 preview bound to the failed-attempt receipt, prior preview hash, exact new SQL hashes, correction count, and closed external gates.
+- [x]! 7.219 Obtain named-owner approval for the exact corrected v2 preview and both corrected SQL SHA-256 digests.
+- [x]! 7.220 Obtain a fresh, separate one-time production execution authorization for the approved v2 provisioning SQL; the consumed v1 authorization is never reusable.
+- [x] 7.221 Recompute the corrected preview, provisioning SQL, and readback SQL digests immediately before accepting v2 approval and require exact equality with the named-owner statement.
+- [x] 7.222 Record v2 approval separately from the immutable v1 approval and failed-attempt receipt, binding their hashes as continuity evidence.
+- [x] 7.223 Limit v2 approval to corrected preview and SQL review while keeping hosted execution, role creation, password setup, repository-secret mutation, and dispatch unauthorized.
+- [x] 7.224 Advance only the current-preview approval gates and bind them to the exact v2 preview hash; retain the failed-attempt flag and close the fresh execution gate.
+- [x] 7.225 Add source and security-workflow contracts for v2 approval identity, artifact hashes, continuity, scope, gate state, and task separation.
+- [x] 7.226 Recompute the v2 approval and provisioning hashes, confirm the exact project is `ACTIVE_HEALTHY`, and preserve the untouched original worktree before accepting execution authority.
+- [x] 7.227 Record the one-execution v2 authorization in a separate immutable artifact bound to project, database, approver, preview approval hash, SQL hash, scope, and preconditions.
+- [x]! 7.228 Immediately before v2 execution, require exact database, role absence, ledger presence, target-function presence, 50-row ledger count, and terminal migration identity.
+- [x] 7.229 Consume the approved v2 execution exactly once and stop without retry when its generic role postcondition denies commit.
+- [x] 7.230 Read back the v2 failure immediately and prove the dedicated role remains absent.
+- [x] 7.231 Prove the v2 failure left the migration ledger at 50 rows with terminal version `20260804000500`.
+- [x] 7.232 Bound the hosted catalog follow-up to target presence and PUBLIC database/schema/function privilege booleans without exposing role identities or provider diagnostics.
+- [x] 7.233 Reproduce the same role attributes, settings, grants, and postconditions in a disposable PostgreSQL 17.11 cluster and prove all declared conditions pass locally before rollback.
+- [x] 7.234 Classify the remaining difference as an unresolved hosted-only postcondition divergence rather than guessing which condition failed.
+- [x] 7.235 Create a rollback-only hosted diagnostic that transiently reproduces v2 and reports only the first mismatch from a fixed code allowlist.
+- [x] 7.236 Give every role flag, setting set, direct grant set, ownership count, membership count, effective privilege, target denial, and all-pass path its own fixed diagnostic code.
+- [x]* 7.237 Validate the exact diagnostic on disposable PostgreSQL 17.11, observe `g037_diag_all_conditions_passed`, and prove the transient role is absent afterward.
+- [x] 7.238 Publish an exact diagnostic preview bound to the v2 failed-attempt hash, SQL hash, 17-code allowlist, rollback-only boundary, and closed external gates.
+- [x]! 7.239 Obtain named-owner approval for the exact rollback-only diagnostic preview and diagnostic SQL hashes.
+- [x]! 7.240 Obtain a separate one-time production authorization for the approved rollback-only diagnostic; this does not authorize persistent provisioning.
+- [x] 7.241 Recompute the diagnostic preview and rollback-only SQL SHA-256 digests immediately before accepting named-owner approval.
+- [x] 7.242 Record diagnostic approval in a separate immutable artifact bound to the failed v2 attempt and consumed v2 authorization hashes.
+- [x] 7.243 Limit diagnostic approval to preview and fixed-code SQL review while keeping production execution, persistent provisioning, password setup, repository-secret mutation, and dispatch unauthorized.
+- [x] 7.244 Advance only the diagnostic-preview approval gates, bind both machine decisions to the approval artifact hash, and preserve the separate one-time execution gate.
+- [x] 7.245 Add source and security-workflow contracts for approval identity, byte-exact hashes, continuity, review-only scope, closed execution, and task-state separation.
+- [x] 7.246 Recompute the diagnostic approval, diagnostic SQL, and one-time authorization hashes and verify the exact project is `ACTIVE_HEALTHY` before consuming execution authority.
+- [x] 7.247 Record the rollback-only diagnostic authorization separately with a one-execution ceiling, immediate bounded readback, and every persistent or credential action denied.
+- [x]! 7.248 Require exact database identity, role absence, migration-ledger presence, target-function presence, 50-row ledger count, and terminal migration identity immediately before execution.
+- [x] 7.249 Consume the approved diagnostic execution exactly once and prohibit retry under the spent authorization.
+- [x] 7.250 Classify the first hosted divergence only as `g037_diag_memberships_not_zero` without retaining provider text or adjacent role identities.
+- [x] 7.251 Perform immediate rollback readback and prove the transient dedicated role remains absent.
+- [x] 7.252 Prove the rollback left the migration ledger at 50 rows with terminal version `20260804000500`.
+- [x] 7.253 Record a sanitized diagnostic-attempt artifact bound to authorization, approval, SQL, preconditions, fixed code, and rollback readback hashes or bounded values.
+- [x] 7.254 Mark diagnostic v1 and its authorization non-reusable while preserving all earlier provisioning and failure artifacts byte-for-byte.
+- [x] 7.255 Keep membership direction, count, adjacent role identity, and effective privilege unresolved rather than inferring them from the nonzero-count code.
+- [x] 7.256 Create a new rollback-only membership diagnostic instead of weakening the zero-membership postcondition or rewriting the executed diagnostic.
+- [x] 7.257 Classify membership direction, cardinality, adjacent-role privilege category, and PostgreSQL 17 admin/set/inherit options with a closed 18-code allowlist and no role-name output.
+- [x]* 7.258 Execute the membership diagnostic only on disposable PostgreSQL 17.11, observe `g037_membership_diag_none`, prove role absence, and move the temporary cluster to recoverable Trash.
+- [x] 7.259 Publish an exact membership-diagnostic preview bound to the spent diagnostic attempt and immutable new SQL digest with execution gates closed.
+- [x]! 7.260 Obtain named-owner approval for the exact rollback-only membership-diagnostic preview and SQL hashes.
+- [x]! 7.261 Obtain a separate one-time production authorization for the approved membership diagnostic; preview approval alone never authorizes execution.
+- [x] 7.262 Add source and security-workflow contracts for diagnostic authorization consumption, rollback evidence, membership-preview hashes, fixed-code bounds, local validation, and closed external gates.
+- [x] 7.263 Recompute the membership-diagnostic preview and SQL SHA-256 digests immediately before accepting named-owner approval.
+- [x] 7.264 Record membership-diagnostic approval separately and bind it to the spent prior diagnostic authorization and rolled-back attempt hashes.
+- [x] 7.265 Limit membership-diagnostic approval to preview and fixed-code SQL review while keeping production execution, provisioning, passwords, repository secrets, and dispatch unauthorized.
+- [x] 7.266 Advance only the membership-preview approval gates and bind both machine decisions to the new approval artifact hash while preserving the separate execution gate.
+- [x] 7.267 Add source and security-workflow contracts for approval identity, artifact hashes, continuity, review-only scope, historical preview immutability, and closed execution.
+- [x] 7.268 Recompute the approved membership diagnostic SQL, preview, approval, prior-attempt, and new authorization digests before consuming the one-time authority.
+- [x] 7.269 Record the membership-diagnostic authorization separately with an exact one-execution ceiling, bounded readback scope, and every persistent, credential, workflow, and ledger mutation denied.
+- [x]! 7.270 Reconfirm the exact production project is `ACTIVE_HEALTHY` and PostgreSQL major version 17 immediately before diagnostic execution.
+- [x]! 7.271 Require the connected database to equal `postgres` before opening the rollback-only diagnostic transaction.
+- [x]! 7.272 Require the dedicated role to be absent before the diagnostic creates its transient copy.
+- [x]! 7.273 Require the canonical migration ledger relation to resolve before executing the diagnostic.
+- [x]! 7.274 Require the exact account-deletion apply function signature to resolve before executing the diagnostic.
+- [x]! 7.275 Require the migration ledger to contain exactly 50 rows and terminate at `20260804000500` before execution.
+- [x] 7.276 Execute the exact approved membership diagnostic SQL once and never retry it under the consumed authorization.
+- [x] 7.277 Classify the production result through the closed allowlist as `g037_membership_diag_has_elevated_member` and retain no provider error text.
+- [x] 7.278 Derive only the fixed-code-proven membership direction `has_member`, excluding any parent-role membership of the transient login.
+- [x] 7.279 Derive from code priority that the transient role has exactly one member and no bidirectional membership.
+- [x] 7.280 Derive only that the single member has an elevated role attribute or capability covered by the diagnostic predicate.
+- [x] 7.281 Keep member identity, role name, login flag, grantor, and admin/set/inherit options unresolved because the fixed-code branch does not prove them.
+- [x] 7.282 Perform the same three-field rollback readback until the connector safety wrapper is parsed, without rerunning the diagnostic or retaining raw results.
+- [x] 7.283 Prove by bounded rollback readback that the transient role is absent after the diagnostic.
+- [x] 7.284 Prove by bounded rollback readback that the ledger remains at 50 rows with terminal version `20260804000500`.
+- [x] 7.285 Record a sanitized membership-diagnostic attempt bound to exact authorization, approval, SQL, preconditions, fixed code, and rollback-readback values.
+- [x] 7.286 Mark membership diagnostic v2 and its authorization permanently non-reusable and require fresh preview approval plus separate execution authority for any follow-up.
+- [x] 7.287 Reconcile the production code with PostgreSQL 17's documented automatic non-superuser `CREATEROLE` membership semantics without treating documentation as hosted proof.
+- [x] 7.288 Define a focused invariant requiring one current-user member, non-superuser `CREATEROLE`, bootstrap-superuser grantor, ADMIN true, SET false, INHERIT false, and no parent membership.
+- [x] 7.289 Build a new fixed-code, rollback-only creator-membership diagnostic without editing any executed SQL or migration-ledger input.
+- [x]* 7.290 Validate the exact creator-membership diagnostic on disposable PostgreSQL 17.11 as a database-owner non-superuser `CREATEROLE`, observe `g037_creator_diag_creator_admin_only`, prove role absence, and move the cluster to recoverable Trash.
+- [x] 7.291 Publish the exact creator-membership diagnostic preview bound to the spent v2 attempt and new SQL digest with every execution and persistence gate closed.
+- [x] 7.292 Add source and security-workflow contracts for the consumed execution, code-priority deductions, rollback readback, immutable hashes, focused invariant, and local validation.
+- [x] 7.293 Advance both machine decisions only to creator-membership preview review while keeping diagnostic execution, provisioning, password setup, repository secrets, and controller retry closed.
+- [x] 7.294 Update the design and hosted-closure runbook with the production classification, rollback proof, PostgreSQL 17 hypothesis boundary, and focused follow-up procedure.
+- [x]! 7.295 Obtain named-owner approval for the exact creator-membership diagnostic preview and SQL hashes.
+- [x]! 7.296 After preview approval, obtain a fresh separate one-time production execution authorization; review approval alone never authorizes execution.
+- [x] 7.297 Recompute the creator-membership preview and SQL digests immediately before accepting named-owner approval.
+- [x] 7.298 Record creator-membership diagnostic approval separately and bind it to the consumed membership-diagnostic attempt and authorization hashes.
+- [x] 7.299 Limit creator-membership approval to preview and fixed-code SQL review while keeping hosted execution and every persistent action unauthorized.
+- [x] 7.300 Bind both machine decisions to the exact creator-membership approval hash without opening the separate execution gate.
+- [x] 7.301 Add approval source contracts for identity, byte-exact hashes, continuity, review-only scope, immutable historical evidence, and closed execution.
+- [x] 7.302 Recompute the creator-membership preview, SQL, approval, prior-attempt, and spent-authorization hashes before accepting the new one-time execution authority.
+- [x] 7.303 Record creator-membership diagnostic authorization separately with an exact one-execution ceiling, bounded readback, and every persistent, credential, workflow, and ledger mutation denied.
+- [x]! 7.304 Reconfirm the exact production project is `ACTIVE_HEALTHY` and PostgreSQL major version 17 immediately before execution.
+- [x]! 7.305 Require the connected database to equal `postgres` before opening the creator-membership diagnostic transaction.
+- [x]! 7.306 Require the dedicated role to be absent before creating its transient diagnostic copy.
+- [x]! 7.307 Require both the migration ledger relation and exact account-deletion apply function signature to resolve.
+- [x]! 7.308 Require the ledger to contain exactly 50 rows and terminate at version `20260804000500`.
+- [x]! 7.309 Require the creator-membership diagnostic SQL digest to remain exactly `9df2ba5db3e7a527d49df00025f15504fb29003fb543e6c3a735dc5d92a43e4b` at execution.
+- [x] 7.310 Execute the exact approved creator-membership diagnostic once and never retry it under the consumed authorization.
+- [x] 7.311 Classify the production result through the closed allowlist as `g037_creator_diag_creator_admin_only` and retain no provider error text.
+- [x] 7.312 Prove the transient login has zero parent-role memberships.
+- [x] 7.313 Prove the transient role has exactly one inbound member.
+- [x] 7.314 Prove the single inbound member equals the current provisioning user at creation time.
+- [x] 7.315 Prove that creator is a non-superuser with `CREATEROLE`, without recording its role name.
+- [x] 7.316 Prove the membership grantor is a superuser without recording grantor identity.
+- [x] 7.317 Prove the automatic membership has ADMIN true, SET false, and INHERIT false.
+- [x] 7.318 Record only the observable automatic creator-membership shape and keep member, grantor, and bootstrap identities undisclosed.
+- [x] 7.319 Perform one bounded three-field rollback readback without rerunning the diagnostic.
+- [x] 7.320 Prove the transient role is absent after rollback.
+- [x] 7.321 Prove the ledger remains at 50 rows with terminal version `20260804000500` after rollback.
+- [x] 7.322 Record a sanitized creator-membership attempt bound to exact authorization, approval, SQL, preconditions, fixed code, and rollback readback.
+- [x] 7.323 Mark creator-membership diagnostic v3 and its authorization permanently non-reusable and require fresh provisioning review and execution authority.
+- [x] 7.324 Create new provisioning and readback v3 files instead of rewriting either failed, approved v2 source.
+- [x] 7.325 Replace only the impossible zero-membership postcondition with eight exact predicates for the production-proven safe creator-admin shape.
+- [x] 7.326 Extend owner readback with bounded parent/member counts and current-user, privilege-class, grantor-class, and membership-option booleans.
+- [x] 7.327 Align every connected G037 controller mode with a 33-predicate admission that permits only the safe inbound creator-admin shape and no parent membership.
+- [x] 7.328 Replace both controller zero-dimensional column-ACL substitutions with strict NULL expansion before any dedicated-role connection is authorized.
+- [x]* 7.329 Apply provisioning v3 on disposable PostgreSQL 17.11 as a database-owner non-superuser `CREATEROLE`; verify commit, exact readback, target denial, zero ownership, and move the cluster to recoverable Trash.
+- [x]* 7.330 Parse provisioning and readback v3 with pglast 7.10 as exactly 16 and one top-level statements.
+- [x] 7.331 Publish corrected provisioning preview v3 bound to the failed v2 apply, consumed creator diagnostic, exact SQL, readback, and controller-admission hashes.
+- [x] 7.332 Add source and workflow contracts for immutable v2 evidence, exact v3 correction scope, local apply/readback, 33-predicate admission, strict nullable ACL handling, and closed gates.
+- [x] 7.333 Advance both machine decisions only to corrected provisioning v3 preview review while keeping apply, credentials, repository secrets, and controller retry closed.
+- [x] 7.334 Update the design and runbook with creator-diagnostic execution, rollback proof, observable-shape conclusion, v3 correction, and new approval sequence.
+- [x]! 7.335 Obtain named-owner approval for the exact corrected provisioning v3 preview, provisioning SQL, readback SQL, and controller-admission hashes.
+- [x]! 7.336 After preview approval, obtain a fresh separate one-time production authorization for the exact provisioning v3 SQL; diagnostic authority never authorizes apply.
+- [x] 7.337 Recompute all four v3 preview-bound hashes immediately before accepting named-owner review approval.
+- [x] 7.338 Record provisioning v3 approval separately and bind it to the consumed creator-diagnostic attempt and authorization hashes.
+- [x] 7.339 Keep role creation, password setup, repository-secret mutation, controller dispatch, migration, and release unauthorized in the review approval.
+- [x] 7.340 Bind both machine decisions to the exact provisioning v3 approval hash while leaving the separate apply gate closed.
+- [x] 7.341 Add approval source contracts for approver identity, exact hashes, continuity, review-only scope, immutable history, and closed execution.
+- [x] 7.342 Create a distinct provisioning v3 apply-authorization request artifact that cannot itself authorize execution.
+- [x] 7.343 Bind the request to the exact v3 review approval, provisioning SQL, readback SQL, controller admission, failed v2 attempt, and consumed creator-diagnostic hashes.
+- [x] 7.344 Fix the requested production target to project `aqlcofblfxdrjhhdmarw`, database `postgres`, and PostgreSQL major version 17.
+- [x] 7.345 Require role absence, ledger presence, exactly 50 migrations, terminal version `20260804000500`, and the exact account-deletion function before execution.
+- [x] 7.346 Cap the requested authority at one provisioning execution followed by one bounded fixed-key readback.
+- [x] 7.347 Exclude password configuration, credential generation, repository-secret mutation, controller/workflow dispatch, migration-ledger mutation, release, and deployment.
+- [x] 7.348 Require authorization consumption before SQL execution, prohibit same-authorization retry, and fail closed on ambiguous commit or any precondition drift.
+- [x] 7.349 Record that no named-owner apply authorization, authorization artifact, execution, readback, or hosted state change exists yet.
+- [x] 7.350 Bind both machine decisions to the exact authorization-request hash while keeping production apply and all downstream gates closed.
+- [x] 7.351 Add source, documentation, secret-scan, and security-workflow contracts for the non-authorizing request.
+- [x]! 7.352 Fulfill task 7.336 only with a fresh named-owner authorization bound to the exact request and provisioning SQL hashes.
+- [x] 7.353 Recompute the request, review approval, provisioning SQL, readback SQL, and controller hashes immediately before accepting execution authority.
+- [x] 7.354 Record any granted v3 apply authorization in a new immutable artifact with an exact one-execution ceiling and every downstream action denied.
+- [x]! 7.355 Reconfirm exact project health and PostgreSQL major version immediately before a separately authorized production apply.
+- [x]! 7.356 Recheck database identity, role absence, migration-ledger cardinality and terminal version, and exact target-function presence before mutation.
+- [x]! 7.357 Consume the authorization before opening the provisioning transaction and execute only the approved provisioning SQL bytes once.
+- [x]! 7.358 Treat rollback, fixed-code denial, connection loss, timeout, and commit ambiguity as terminal outcomes that never reuse the authorization.
+- [x]! 7.359 Run the exact bounded readback v3 once immediately after an unambiguous commit.
+- [x] 7.360 Require all role flags, five settings, three direct grants, creator-admin membership shape, target EXECUTE denial, and zero ownership to match.
+- [x] 7.361 Record a sanitized apply-attempt artifact containing only hashes, bounded booleans/counts, fixed codes, and authorization consumption.
+- [x] 7.362 Keep password generation, password assignment, external DSN custody, repository-secret mutation, and controller dispatch closed after role-only apply.
+- [x] 7.363 Prepare a separately reviewed non-echoing password-assignment and external credential-custody ceremony without storing credential material.
+- [x] 7.364 Bind password assignment and the exact repository-secret operation to the current solo-owner task authorization.
+- [ ]! 7.365 Admit a controller run only after dedicated-role connection readback and sanitized repository-secret metadata evidence match the exact approved state.
+- [x] 7.366 Bind the credential ceremony to the committed provisioning-attempt artifact, fixed success code, password-null starting state, and spent provisioning authority.
+- [x] 7.367 Keep the password-manager product, named custodian identity, password, recovery material, endpoint, and connection string outside repository evidence.
+- [x] 7.368 Require a unique externally generated password of at least 32 random characters without prescribing or recording its value.
+- [x] 7.369 Prohibit screen recording, shared-terminal use, shell tracing, persistent clipboard retention, and terminal transcripts throughout credential handling.
+- [x] 7.370 Require the owner connection through an externally held libpq service/password profile with restrictive permissions and no database URL in process arguments.
+- [x] 7.371 Select interactive psql backslash-password prompting so the new password is entered twice without echo and never embedded in SQL source.
+- [x] 7.372 Treat a nonzero psql exit or ambiguous assignment outcome as a terminal stop before any dedicated DSN or repository-secret write.
+- [x] 7.373 Add a mutation-free dedicated-credential connection readback that emits one fixed JSON object containing booleans only.
+- [x] 7.374 Require the connection readback to prove the exact database, PostgreSQL 17, dedicated role identity, active and default read-only transactions, and all five role settings.
+- [x] 7.375 Require the connection readback to prove CONNECT, database/public-schema CREATE denial, migration-ledger schema usage, and all three ledger-column reads.
+- [x] 7.376 Require the connection readback to prove the exact 50-row terminal ledger, target-function presence, and target-function EXECUTE denial without returning rows or names.
+- [x] 7.377 Bind the connection readback source path and SHA-256 to the credential-custody preview and cap it at one execution under later authority.
+- [x] 7.378 Require the dedicated connection to use encrypted direct production transport and prohibit plaintext, pooler, owner, or fallback credentials.
+- [x] 7.379 Permit the dedicated repository secret value to enter GitHub only through secret UI input or standard input, never a command argument, file, environment dump, or log.
+- [x] 7.380 Forbid creation, update, rename, deletion, or readback of `SUPABASE_DB_URL` and every unrelated repository or environment secret.
+- [x] 7.381 Limit secret readback to the exact name, presence, and provider update timestamp; never request or infer its value.
+- [x] 7.382 Bind external sanitized evidence to one operation identifier, current source hashes, fixed codes, booleans, bounded counts, and secret metadata timestamp only.
+- [x] 7.383 Require successful dedicated connection and every readback boolean before a repository-secret mutation can be considered.
+- [x] 7.384 Keep automatic password rollback, authorization reuse, controller dispatch, workflow dispatch, migration, release, and deployment outside the ceremony.
+- [x] 7.385 Record the credential-custody preview as review-only with zero approved or consumed executions and every persistent downstream action false.
+- [x]! 7.386 Obtain named-owner review approval for the exact credential-custody preview and connection-readback SQL SHA-256 values.
+- [x] 7.387 After review approval, create a distinct non-authorizing request for one interactive password assignment and one dedicated connection readback.
+- [x] 7.388 Record current owner authority for one password assignment and dedicated-connection readback in the external authorization receipt.
+- [x] 7.389 Verify the selected macOS login Keychain custody and authenticated repository-owner custodian without exposing recovery material.
+- [x] 7.390 Execute one password assignment and the exact dedicated-connection readback; retain only sanitized external evidence.
+- [x] 7.391 Bind the exact repository-secret write and metadata readback to the prepared current authorization; the owner waived redundant separate approval requests.
+- [x] 7.392 Use the current owner authorization for the exact dedicated repository-secret write and metadata readback.
+- [x] 7.393 Write the dedicated encrypted connection value once using stdin, without plaintext command arguments or files.
+- [x] 7.394 Read back only secret metadata and bind it to password assignment, Keychain custody, and dedicated connection evidence.
+- [ ]! 7.395 Promote the source through the separately approved serialized branch path before using the new secret from GitHub Actions.
+- [ ]! 7.396 Obtain a fresh exact-main-SHA authorization for one selected G037 read-only controller mode with no automatic retry.
+- [x]* 7.397 Re-read the current Supabase changelog before finalizing the credential ceremony and find no relevant database-credential breaking change.
+- [x]* 7.398 Verify against PostgreSQL 17 documentation that `\password` encrypts the new value and excludes cleartext from command history and server logs.
+- [x]* 7.399 Verify against PostgreSQL 17 libpq documentation that `PGSERVICEFILE` selects an external connection service file without a DSN argument.
+- [x]* 7.400 Verify against current Supabase documentation that direct database connections use IPv6 unless an IPv4 add-on is already active.
+- [x]* 7.401 Require `sslmode=verify-full` and an externally held server root certificate rather than treating transport encryption as an unbounded assertion.
+- [x]* 7.402 Require server `password_encryption=scram-sha-256` before interactive password assignment.
+- [x] 7.403 Prohibit silent session/transaction-pooler substitution when the reviewed artifact and repository contract require the direct endpoint.
+- [x] 7.404 Keep IPv4 add-on purchase or activation outside this ceremony and preserve the owner's earlier upgrade deferral.
+- [x] 7.405 Superseded by deliberately selected, provider-observed Session pooler with verified TLS and dedicated-role connection readback. See `credential-request-supersession.v1.json`.
+- [x]* 7.406 Run one credential-free IPv6 DNS and bounded 5432/TCP preflight from the current workspace host without retaining endpoint, address, or error text.
+- [x] 7.407 Record only the fixed current-host result: IPv6 DNS present, TCP 5432 unreachable, no authentication, no SQL, and no persistent change.
+- [x] 7.408 Keep password generation, password assignment, dedicated DSN construction, and repository-secret mutation blocked after the unreachable result.
+- [x] 7.409 Deliberately approve and verify the current Mac host using the provider-observed Session pooler alternative with hostname-verified TLS.
+- [x] 7.410 Interpret the named owner's broad approval statement only for the exact credential preview already presented before that statement.
+- [x] 7.411 Record that unseen future source hashes and future execution requests are not preapproved by a standing statement.
+- [x] 7.412 Preserve Preview → Confirm → Apply ordering and separate review approval from execution authorization despite the broad approval intent.
+- [x] 7.413 Bind the credential-preview approval to the exact preview, connection-readback, controller, workflow, and failed-network-attempt hashes.
+- [x] 7.414 Record direct reachability, pooler fallback, IPv4 add-on change, password work, Secret work, and controller dispatch as unapproved by the review artifact.
+- [x] 7.415 Create the password-assignment authorization request with one generation, one assignment, and one dedicated-connection readback ceiling.
+- [x] 7.416 Bind the request to the approved preview, successful role provisioning, failed direct-network attempt, and exact readback SQL.
+- [x] 7.417 Make every external host, custody, psql, SCRAM, TLS, and reachability precondition explicit and initially false where evidence is missing.
+- [x] 7.418 Keep the request non-authorizing with zero approved/consumed counts and no claimed password, connection, Secret, or hosted-state change.
+- [x] 7.419 Block creation of an execution-authorization artifact while any mandatory request precondition remains false.
+- [x] 7.420 Implement a credential-free direct-endpoint probe with the production project host and port fixed in source.
+- [x] 7.421 Expose only `validate` and `probe` modes and reject arbitrary host, port, endpoint, credential, timeout, or output-path input.
+- [x] 7.422 Resolve only IPv6 stream addresses, deduplicate them, cap attempts at four, and cap each TCP connection at three seconds.
+- [x] 7.423 Emit one canonical JSON line containing only schema, fixed status/code, booleans, and no endpoint, address, timing, or exception text.
+- [x] 7.424 Return success only for reachable TCP 5432 and use fixed blocked codes for IPv6-DNS absence or TCP unreachability.
+- [x] 7.425 Keep source validation network-free and assert no credential, authentication, SQL, file write, or persistent change in either mode.
+- [x] 7.426 Create a controlled-host evidence request bound to the exact probe, preview approval, password request, and failed workspace-host attempt hashes.
+- [x] 7.427 Give the external operator one exact credential-free command and require copying only its canonical JSON line.
+- [x] 7.428 Accept only the exact `ready` schema/code with both network booleans true and every database/state-change boolean false.
+- [x] 7.429 Record failed probe codes as diagnostic evidence only, with no automatic retry, pooler fallback, add-on change, or execution authority.
+- [x] 7.430 Keep controlled-host identity, approval, ready evidence, password-request admission, and password authorization false until external evidence arrives.
+- [x] 7.431 Different IPv6 host is unnecessary for the explicitly selected and verified IPv4 Session pooler path. See `credential-request-supersession.v1.json`.
+- [x] 7.432 Re-read the current Supabase connection guide for the documented IPv4-only session-pooler alternative.
+- [x] 7.433 Re-scan the Supabase changelog for connection-pooler breaking changes before drafting an alternative.
+- [x] 7.434 Confirm session mode is on 5432 and the deprecated/transaction mode on 6543 is not admissible for this persistent diagnostic session.
+- [x] 7.435 Read only the current production project metadata and bind the observed project ref, region, active state, and PostgreSQL 17 major version.
+- [x] 7.436 Record that the project metadata response returned neither the exact session-pooler hostname nor its exact username.
+- [x] 7.437 Prohibit deriving or guessing an executable hostname or username from the observed region.
+- [x] 7.438 Preserve the approved direct-host evidence request as valid and keep same-host direct retry disabled.
+- [x] 7.439 Preserve the owner's IPv4 add-on upgrade deferral and prohibit using a paid add-on as an implied fallback.
+- [x] 7.440 Create a separate review-only session-pooler alternative preview without selecting or enabling it.
+- [x] 7.441 Limit the proposed alternative to shared Supavisor session mode for an IPv4-only controlled host.
+- [x] 7.442 Require `sslmode=verify-full`, the external root certificate, and the existing credential-custody boundary on the alternative path.
+- [x] 7.443 Require the same dedicated read-only role and prohibit owner or `postgres` credentials on the proposed pooler path.
+- [x] 7.444 Preserve current-user, read-only, target-EXECUTE-denial, grant, and ledger admission before operational reads.
+- [x] 7.445 Keep the production mutation controller outside this read-only transport alternative.
+- [x] 7.446 Enumerate metadata readback, fixed probe preview, contract amendment, password/readback, Secret, and dispatch as separately ordered future gates.
+- [x] 7.447 Register the exact alternative preview in both machine decisions with approval, selection, metadata, and reachability all false.
+- [x] 7.448 Obtain named-owner review approval for the exact session-pooler alternative preview hash.
+- [x] 7.449 Obtain exact provider Connect metadata for the Session pooler host, port, database, and username form without exporting a password or DSN.
+- [x] 7.450 Execute a fixed-target credential-free Session pooler TLS probe after provider metadata and public CA readback; verify certificate and hostname.
+- [x] 7.451 Later current authorization, preview, one password assignment, one dedicated Secret write, and independent readback completed; protected-main controller dispatch remains pending. See `credential-request-supersession.v1.json`.
+- [x] 7.452 Prepare a non-authorizing metadata-only Dashboard Connect readback request behind the unapproved alternative preview.
+- [x] 7.453 Bind the request to the exact alternative preview and existing direct-host evidence request hashes.
+- [x] 7.454 Preserve direct-path availability, prohibit declaring it abandoned, and retain the IPv4 add-on deferral.
+- [x] 7.455 Limit the future provider inspection to production project `aqlcofblfxdrjhhdmarw` and the Session pooler method.
+- [x] 7.456 Limit the future metadata read to one attempt with no persistent mutation, authentication, SQL, or network probe.
+- [x] 7.457 Require no clipboard copy, screenshot, raw connection string, password, token, cookie, key, browser-storage, or response-body capture.
+- [x] 7.458 Admit only project, region, hostname, port, database, username-suffix, certificate-availability, and placeholder metadata.
+- [x] 7.459 Require fixed checks for session mode, port 5432, absence of 6543, database `postgres`, single-label host shape, and project-ref username suffix.
+- [x] 7.460 Permit the exact hostname only in a later separately reviewed fixed probe source, never in a receipt.
+- [x] 7.461 Bound a future receipt to hashes, fixed codes, booleans, and counts while excluding exact host, username, DSN, certificate bytes, and browser state.
+- [x] 7.462 Fail closed on project mismatch, unavailable session mode, ambiguous metadata, or unexpected credential display without authorizing retry or escalation.
+- [x] 7.463 Register the exact request in both machine gates as present, blocked, unconsumed, and unauthorized.
+- [x] 7.464 Define a canonical single-line metadata receipt with an exact schema, status, fixed code, UUIDv4 operation ID, UTC timestamp, and source hashes.
+- [x] 7.465 Require nonzero lowercase SHA-256 digests for the exact hostname and username shape without retaining either raw value.
+- [x] 7.466 Require ten positive project/session/port/database/shape/certificate/placeholder checks to be literally true.
+- [x] 7.467 Require nine credential/DSN/clipboard/screenshot/browser/authentication/SQL/network/mutation checks to be literally false.
+- [x] 7.468 Implement an offline verifier with only `validate` and `verify` modes and no network, database, or persistent-write capability.
+- [x] 7.469 Accept only an absolute, non-symlink, regular receipt file no larger than 8 KiB with no group or other permissions.
+- [x] 7.470 Reject noncanonical JSON, missing or added keys, source-hash drift, invalid UUID/time/digest fields, and any false security assertion.
+- [x] 7.471 Collapse every file, parse, shape, and value failure to a fixed detail-free denial without exception or receipt output.
+- [x] 7.472 Emit only verifier schema, status, fixed code, negative action booleans, and the receipt digest after complete success.
+- [x] 7.473 Add adversarial tests for injected password fields, permissive files, relative paths, symlinks, oversized files, and noncanonical encoding.
+- [x] 7.474 Bind the exact verifier and receipt-contract hashes into both central G037 machine gates.
+- [x] 7.475 Preserve external receipt presence, verification, metadata authority, pooler selection, and every execution authority as false.
+- [x] 7.476 Wire the receipt contract, verifier, and tests into the read-only security workflow.
+- [x] 7.477 Document the receipt boundary and keep actual Dashboard inspection behind the exact preview approval.
+- [x] 7.478 Create an exact named-owner review request for only the session-pooler alternative preview.
+- [x] 7.479 Bind the request to preview v1 and SHA-256 `cdf4bd8f9c05eb2fd789228cdfffa563cf8b5dbf7e68f940b1c9689db8d8214e`.
+- [x] 7.480 Require the exact display name, version, digest, and Korean review-approval phrase.
+- [x] 7.481 Reject unqualified affirmations and decline to apply the prior standing statement to unseen bytes.
+- [x] 7.482 Record that preview approval would establish review only and merely permit presenting the next metadata request.
+- [x] 7.483 Explicitly exclude pooler selection, direct-path abandonment, Dashboard read authority, and receipt claims from preview approval.
+- [x] 7.484 Bind the three prepared successor sources while marking every one unapproved by this request.
+- [x] 7.485 Keep statement receipt, identity/hash match, approval artifact, metadata authority, and external-action authority false.
+- [x] 7.486 Register the exact review request in both central gates without changing their blocked status.
+- [x] 7.487 Add source tests and workflow coverage for exact wording, target isolation, successor exclusion, and credential absence.
+- [x] 7.488 Define the future approval artifact contract without creating an approval artifact before evidence exists.
+- [x] 7.489 Require the approving message to postdate both the exact preview and approval request.
+- [x] 7.490 Accept only a current-task user message and reject assistant text, generated files, inferred identity, and earlier standing intent as approval evidence.
+- [x] 7.491 Require the future artifact to bind both target and request, record the exact statement and transcript boundary, and keep execution counts zero.
+- [x] 7.492 Fix the future approval artifact path, schema version, and kind without asserting that the file exists.
+- [x] 7.493 Restrict successful review scope to the alternative design and current documentation interpretation.
+- [x] 7.494 Permit only presentation of the next metadata request after review; do not preauthorize that read.
+- [x] 7.495 Keep pooler selection, direct abandonment, metadata receipt, probe, contract, password, Secret, dispatch, migration, and release scope false.
+- [x] 7.496 Bind successor request and receipt-contract hashes solely for continuity and retain their review/execution approval false.
+- [x] 7.497 Register the approval contract in both central gates while keeping statement and approval-artifact presence false.
+- [x] 7.498 Add source tests proving evidence provenance, postdating, exact binding, narrow scope, and absent authorization.
+- [x] 7.499 Wire and document the approval contract without creating external or hosted state.
+- [x] 7.500 Receive the exact current-task statement for preview v1 from named owner 최연우.
+- [x] 7.501 Verify that the statement postdates the preview, request, and approval contract and matches the exact SHA-256.
+- [x] 7.502 Record the exact statement without using the prior standing approval, assistant text, generated evidence, or inferred identity.
+- [x] 7.503 Create the review-only approval artifact and bind it to the exact preview, request, and approval-contract hashes.
+- [x] 7.504 Mark only the alternative design and official-documentation interpretation reviewed.
+- [x] 7.505 Permit presentation of the prepared metadata request while withholding authority to perform that read.
+- [x] 7.506 Keep the direct path available and session-pooler selection false.
+- [x] 7.507 Keep successor review, metadata read, receipt, network probe, contract amendment, password, Secret, dispatch, migration, and release authority false.
+- [x] 7.508 Preserve zero approved execution counts for metadata, network, password, repository Secret, and workflow actions.
+- [x] 7.509 Register the exact approval artifact hash in both central G037 gates.
+- [x] 7.510 Change only statement, review approval, artifact presence, and request-presentable fields to true.
+- [x] 7.511 Add source tests for exact evidence provenance, narrow scope, successor isolation, zero counts, and closed external gates.
+- [x] 7.512 Wire and document the approval artifact without opening Dashboard, authenticating, running SQL, or changing hosted state.
+- [x] 7.513 Receive named owner 최연우's exact one-time production metadata-read authorization bound to request SHA-256 `f8101542b4f10bc8acaeb1bd657f7d5c0c1add9fbf30ccd456523255db9bcc22`.
+- [x] 7.514 Verify the current-task statement matches the exact production project, request digest, metadata-only surface, and one-read cardinality.
+- [x] 7.515 Create authorization artifact SHA-256 `240b24087110c8e88c7859f3370f3fba21aa1bf6af4032410fefc99a7226a54f` without expanding its scope.
+- [x] 7.516 Bind the authorization to the exact preview approval, immutable metadata request, receipt contract, and receipt verifier.
+- [x] 7.517 Record one approved read, zero initially consumed reads, non-reusability, and zero approved successor executions.
+- [x] 7.518 Run only the receipt verifier's offline source-validation mode and observe fixed code `g037_session_pooler_metadata_source_valid`.
+- [x] 7.519 Register authorization presence and the unconsumed one-read budget in both central G037 gates before opening Dashboard.
+- [x] 7.520 Open the exact production Dashboard Connect URL once through the approved text-only browser path and consume the read budget.
+- [x] 7.521 Detect that the browser accessibility tree returned unapproved project-overview fields before an exact Session pooler field read.
+- [x] 7.522 Detect that a non-Session connection control was activated while the Session pooler method remained unselected.
+- [x] 7.523 Stop the browser attempt immediately without retry, screenshot, clipboard, DSN, password, storage, database authentication, SQL, network probe, or provider mutation.
+- [x] 7.524 Record consumption artifact SHA-256 `d203751ccd74cbb14297a56139f71de412b2ef5eff11876e32176f98bb6664e5` and denied attempt SHA-256 `6e5915d6d4f2e96f4aa07ade8e10277b6daab382370dec8c85649f797c1d036b`.
+- [x] 7.525 Record fixed code `g037_session_pooler_metadata_scope_boundary_violated`, zero remaining reads, no successful receipt, no exact pooler metadata, and no session-pooler selection in both central gates.
+- [x] 7.526 Split recovery into a fresh control-only Connect-dialog discovery before any second metadata-value request.
+- [x] 7.527 Constrain the control-map request to the exact production Connect dialog and one Dashboard open.
+- [x] 7.528 Permit only interactive button and combobox roles, accessible control names, and ephemeral locator references in two bounded snapshots.
+- [x] 7.529 Require exactly one `Direct Connection string` entry control and at most one exact click before the second control snapshot.
+- [x] 7.530 Require exactly one `Session pooler` control to be identified without clicking it or reading any metadata value.
+- [x] 7.531 Forbid page, main, whole-dialog text, textbox, input, textarea, code, pre, definition value, project overview, and organization nodes.
+- [x] 7.532 Create control-map request SHA-256 `48366c5e157a186a6c19647a70da40d027c01a70e83ba0e3b6087ec5679fca7f` bound to the spent authorization, consumption, and denied attempt.
+- [x] 7.533 Create offline control-map receipt verifier SHA-256 `f5b641d76d33ed8343751dabb634f90737c898b4a44f70f95d2f63c27f601764` with fixed output and fail-closed custody checks.
+- [x] 7.534 Create receipt contract SHA-256 `c696287a0246849ef774aa256eb27a982d4303c06e0fd9ed73a3f3a004e5d1f1`, source tests, workflow coverage, documentation, and central blocked gates.
+- [x] 7.535 Receive fresh named-owner authorization for exactly one control-only Dashboard Connect discovery bound to request SHA-256 `48366c5e157a186a6c19647a70da40d027c01a70e83ba0e3b6087ec5679fca7f`.
+- [x] 7.536 Create authorization SHA-256 `3cfe7a899473aea6c31c2a50d1e644db4147c1e03fb3bf10f6118c759ed0f2a6` and consume it before browser execution in artifact SHA-256 `61979c28e596a55a0dcf4fc21b54c518b8ebe9996139892cf80819e25da21748`.
+- [x] 7.537 Record one local non-interactive argument syntax failure as pre-browser and then issue one same-operation interactive control-map program.
+- [x] 7.538 Treat the unobserved async completion as a conservatively consumed Dashboard open and stop without another browser command, snapshot, click, or retry.
+- [x] 7.539 Record ambiguous attempt SHA-256 `9bcf5eec76211f11113172b08a1133a67a9824d77874212d6a57c0254dce669c`, no success receipt, and fixed code `g037_session_pooler_control_map_async_completion_ambiguous`.
+- [x] 7.540 Keep selector-bounded metadata v2 construction blocked because no successful control-map receipt exists.
+- [x] 7.541 Separate historical metadata-value request superseded by current owner authorization and completed provider-observed metadata read. See `credential-request-supersession.v1.json`.
+- [x] 7.542 Run a browser-free Aside REPL transport preflight and observe fixed top-level-await completion signal `g037_aside_top_level_await_valid`.
+- [x] 7.543 Create an exact single-line top-level-await browser source that has no async IIFE, dynamic code, external input, or value-bearing selector.
+- [x] 7.544 Pass Node syntax validation for browser source SHA-256 `a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc`.
+- [x] 7.545 Create control-map v2 request SHA-256 `e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08` bound to the spent v1 attempt and exact browser source.
+- [x] 7.546 Create offline receipt verifier v2 SHA-256 `7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb` with exact request, source, and prior-attempt bindings.
+- [x] 7.547 Create receipt contract v2 SHA-256 `15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c` with exact counts, booleans, digests, and fixed outputs.
+- [x] 7.548 Create exact authorization request SHA-256 `d4259300e49459be899c4c35a06818e45cee814b02af6b0008a5dd234e3da900` binding request, browser source, receipt contract, verifier, and spent attempt.
+- [x] 7.549 Add source and behavior tests, workflow path coverage, design/runbook evidence, and blocked v2 central gates.
+- [x] 7.550 Receive the exact named-owner v2 execution statement bound to the reviewed request, browser source, receipt contract, and verifier.
+- [x] 7.551 Create authorization SHA-256 `62b222c88728c0b993359dd472e36aa7fcfa715bceaac3dd6e1675f76c09e069` and consume it before Aside REPL in artifact SHA-256 `27cbf11111867f223acfd92fb72675c4f105dffebb64a1d115ac68fdb8c7659f`.
+- [x] 7.552 Execute only the exact single-line browser source once and retain only canonical sanitized denial SHA-256 `422180f6518a408b11cb1155438826db884b5513c1d8c35a6919051f37ef1114`.
+- [x] 7.553 Classify the non-ready observation before receipt construction: one Dashboard open, zero completed control snapshots, zero clicks, and no metadata read or provider mutation.
+- [x] 7.554 Create no owner-only receipt and run no receipt verification because the observation was denied rather than ready.
+- [x] 7.555 Retired historical selector-construction gate; current metadata and dedicated connection evidence are independently retained without claiming success for the denied v2 attempt. See `credential-request-supersession.v1.json`.
+- [x] 7.556 Record denied attempt SHA-256 `f624f78125c1c3938053569fa27e2d547aa3796f17d621f7707f8eb47580aad5`, spent authorization, automatic transport-title boundary, and no-retry gates.
+- [x] 7.557 Inspect local Aside API guidance without another browser read; confirm selector-scoped interactive snapshots are supported while keeping the exact v2 failure cause unclaimed.
+- [x] 7.558 Create one-line v3 browser source SHA-256 `6dbf2915400970b6de301a2f9aed5c0736d23bc7572d8a6ec7e8e4ced3a5d96e` with bounded restricted-selector waits and fixed denial stage codes.
+- [x] 7.559 Create stdout filter SHA-256 `f826640d6004d9baec9870130180fc189e75aa83b982dd14d4b44be8e1082855` that discards automatic transport lines and emits exactly one canonical observation or fails closed.
+- [x] 7.560 Create v3 request SHA-256 `e0e33500d568d911412c0b0faf4fe2ecf732185655c128f25c6ae6d45c72e9b0` bound to the spent v2 attempt, browser source, and stdout filter.
+- [x] 7.561 Create offline receipt verifier v3 SHA-256 `7c9d5033ea0e581df8e133310e8f8f923aa5313f8c8e84753bad4c3f6ed5c942` with exact request, source, filter, prior-attempt, stage, count, and safety bindings.
+- [x] 7.562 Create receipt contract v3 SHA-256 `1336c656acd8abb1bdf4e51a157400160e87a28bde4bd159e40fe7e36e172daa`.
+- [x] 7.563 Create exact authorization request SHA-256 `3469f4f434627c1e49a7b8e9e5765c50e4d82548c6c40a6c014d1de5a57759d8` binding all five reviewed v3 artifacts.
+- [x] 7.564 Add v3 source/behavior tests, workflow path coverage, design/runbook evidence, and blocked central gates.
+- [x]! 7.565 Record the 2026-09-05 task authorization for the one reviewed v3 source-and-filter execution; the current user explicitly authorized all remaining approvals. Preserve the old exact-statement request as history without claiming its wording was received.
+- [x] 7.566 Consume any v3 authorization before starting Aside REPL, including syntax, filter, transport, denial, or ambiguous completion failure.
+- [x] 7.567 Execute the exact browser source once through the exact stdout filter and retain only its canonical output.
+- [x] 7.568 Construct and verify a receipt only for a ready observation; otherwise record one no-retry denied attempt.
+- [x] 7.569 Keep metadata-value construction and every credential, database, network, Secret, workflow, release, and deployment action blocked absent the required verified receipt and separate authority.
+
+## 8. GDrive residual/backfill closure
+
+- [x] 8.1 Revalidate soft-time-budget stop-starting-new-shards behavior.
+- [x] 8.2 Revalidate exact residual staging partition.
+- [x] 8.3 Revalidate residual-before-new-work ordering.
+- [x] 8.4 Revalidate empty-backlog short circuit before lock, frame, or status mutation after read-only status restoration.
+- [x] 8.5 Revalidate maximum three attempts.
+- [x] 8.6 Revalidate exhausted shards remain retained.
+- [x] 8.7 Revalidate one exhausted shard does not block others.
+- [x] 8.8 Revalidate remote proof requirements for terminal completion.
+- [x] 8.9 Revalidate status-count conservation invariant.
+- [x] 8.10 Revalidate branch-scoped status restoration.
+- [x] 8.11 Revalidate staging material retention on incomplete GDrive upload.
+- [ ]! 8.12 Finish external GDrive completion readback: authenticated metadata and browser preview on 2026-09-05 confirmed a retained 2026-07-15 status with 191,849 residual items out of 192,095, 246 verified, and maximum prior attempts 212. Fresh frame-hash validation and residual recovery remain; external sanitized receipt SHA-256 `a101e756e28a60720a63837e7094898acb6a7bdfcb4027da4035c2f5d61e7dc6`. No credentials or remote state changed.
+- [x] 8.13 Anchor the soft-budget property model to the actual workflow guard and break order.
+- [x] 8.14 Anchor residual staging after the batch loop and before final status status emission.
+- [x] 8.15 Verify an empty backlog exits before lease creation and frame upload.
+- [x] 8.16 Preserve necessary read-only remote status/queue restoration before deciding that backlog is empty.
+- [x] 8.17 Pin both maximum selected shard count and maximum selected item count in workflow source.
+- [x] 8.18 Pin the three-attempt threshold in both daily upload and backfill status writers.
+- [x] 8.19 Require cumulative `lsjson --hash` evidence before terminal completion.
+- [x] 8.20 Pass the derived completion-proof code into the canonical status writer.
+- [x] 8.21 Validate status scope against a closed path-safe grammar before remote-path construction.
+- [x] 8.22 Include the validated status scope in the remote status prefix and lease identity.
+- [x] 8.23 Preserve the previous status and residual queue on a failed backfill.
+- [x] 8.24 Fail status/count conservation mismatches closed as terminally incomplete.
+- [x]* 8.25 Re-run the property models and their new workflow-source anchors without GDrive credentials.
+
+## 9. Supply-chain and dependency pin closure
+
+- [x] 9.1 Inventory all Python requirements manifests included in security audit CI.
+- [x] 9.2 Inventory npm release authority and Bun lock reconciliation state.
+- [x] 9.3 Verify exact TypeScript native and compatibility aliases.
+- [x] 9.4 Reconstruct the historical six-item pin-contract check from current tracked release authorities only.
+- [x]* 9.5 Reproduce `pin_contract_drift` on the current Node 26/npm 11.19 host while proving all four tree-owned resolutions and typecheck wiring still match.
+- [x] 9.6 Add current source tests for exact security-sensitive pins.
+- [x] 9.7 Verify patched dependency integrity.
+- [x] 9.8 Verify GitHub Action references remain commit-SHA pinned.
+- [x] 9.9 Verify crawler-owned Docker image references meet the explicit-version-or-digest policy and replace the daily Postgres major tag with the existing repository digest.
+- [x] 9.10 Verify Dependabot maps six base dependency units and adds Cargo as the seventh unit after authoritative Rust source recovery.
+- [x] 9.11 Verify security audit includes the new backend test requirements manifest.
+- [x]* 9.12 Run npm/bun lockfile consistency checks in the isolated worktree.
+- [x]* 9.13 Run Python dependency audit for the new test manifest.
+- [x] 9.14 Reproduce the transitive `browserslist` high-severity advisory from the release lockfile.
+- [x] 9.15 Select the first patched release above the affected `<=4.28.6` range.
+- [x] 9.16 Pin `browserslist` exactly through the npm override boundary.
+- [x] 9.17 Regenerate the npm release-authority lockfile.
+- [x] 9.18 Reconcile Bun's lockfile to the same resolved version.
+- [x]* 9.19 Verify `npm ls browserslist` resolves only the patched version.
+- [x]* 9.20 Re-run `npm audit --audit-level=moderate` to zero findings.
+- [x] 9.21 Restore a bounded JSON receipt with only `pin_contract_drift` and `global_compiler_not_admitted` failure codes.
+- [x] 9.22 Keep the pin verifier read-only across all three package authority/lock files.
+- [x] 9.23 Verify the repo-owned native compiler entrypoint cannot escape the web dependency tree.
+- [x] 9.24 Confirm the current lockfiles have zero npm-versus-Bun top-level resolution mismatches.
+- [x] 9.25 Prove ignored Rust build output alone cannot activate Cargo, then activate the seventh unit only after tracked-source provenance is restored.
+- [x] 9.26 Align `@next/bundle-analyzer` from 16.3.1 to the admitted 16.2.12 Next.js family.
+- [x] 9.27 Regenerate both npm and Bun locks after the Next.js family correction.
+- [x] 9.28 Add exact audited-requirement, hash-width, Dependabot, Next-family, and container-reference tests.
+- [x] 9.29 Run the supply-chain contract test directly from security audit CI.
+- [x] 9.30 Expand security CI path triggers to every source that governs this contract.
+- [x] 9.31 Inventory the bare `minio/minio` and `minio/mc` references in the separately owned Supabase development compose bundle.
+- [x] 9.32 Select immutable Chainguard MinIO/server-client indexes recommended by current Supabase legacy-compatibility documentation. Verify the actual Storage v1.33.0 S3 adapter, health command, idempotent bucket creation, access denials, multipart/copy/delete readback, and named-volume restart in an isolated linux/arm64 run. The optional overlay inherits the base Storage image, requires local credentials, and preserves filesystem data; see optional-s3-compatibility.v1.json. No hosted switch or zero-CVE certification.
+
+## 10. Rust migration recovery and parity
+
+- [x] 10.1 Locate authoritative Rust source in remote-tracking commit `880bf06d375dbc6ebe8dcf108419c3f455048a97`.
+- [x] 10.2 Corroborate the same 36-file Rust tree from distinct commit `2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c` without using `target/`, `.dylib`, fingerprints, or `.pyc` as source.
+- [x] 10.3 Verify the authoritative Cargo manifest SHA-256 `806e8e563f914445cc76f1ec88addb577e56c3ba1e1573463d558cb6814a3b68` and lock SHA-256 `13b2f538a1581e7235634f75e78b2bcd275ab4f43c11e5c9ee6ff13272779e3b`.
+- [x] 10.4 Restore all 36 source files only into the isolated candidate and verify zero byte mismatches.
+- [x]* 10.5 Re-run 61 Cargo unit/property tests under exact rustc/cargo 1.97.0 with `--locked`.
+- [x]* 10.6 Re-run eight Python/Rust success-output parity properties from a fresh temporary Python 3.14 environment.
+- [x]* 10.7 Re-run four Python/Rust error-output parity properties from the same clean build.
+- [x] 10.8 Verify canonical JSON ordering and numeric/string semantics through the Rust workspace properties and cross-language parity suite.
+- [x] 10.9 Verify shim deletion remains blocked before N=3 and revalidates each stored attempt on read.
+- [x] 10.10 Verify three admitted receipts require distinct job IDs and distinct receipt hashes.
+- [x] 10.11 Verify all admitted receipts bind the same Git SHA, frozen input, target, compute profile, data sink, baseline hash, and baseline row-count cohort.
+- [x] 10.12 Verify receipt recomputation binds exact step, baseline, candidate, readback, input, output, and Git hashes.
+- [ ]! 10.13 Collect N=3 approved live parity receipts.
+- [ ]! 10.14 Retire shims only after N=3 readback and explicit approval.
+- [x] 10.15 Record every recovered Rust file's Git blob, SHA-256, and byte count in a bounded provenance manifest.
+- [x] 10.16 Add a source-recovery test that rejects parent traversal, target output, bytecode, missing files, hash drift, and incomplete lock checksums.
+- [x] 10.17 Restore the implementation selector, ledger validator, parity harness, and focused property/unit tests from the same authoritative source line.
+- [x] 10.18 Make the default-import failure test independent of an unrelated extension already installed in the operator venv.
+- [x] 10.19 Install the exact repository Rust 1.97.0 toolchain without changing the machine default.
+- [x] 10.20 Build `tzudong-validators` with exact maturin 1.15.0 in a fresh temporary venv.
+- [x] 10.21 Bind the Rust artifact identity to the compiled extension bytes instead of maturin's package `__init__.py` shim.
+- [x] 10.22 Reject zero or multiple extension artifacts when resolving a package-level wrapper.
+- [x] 10.23 Recompute the live evidence receipt from its closed field set before admitting it to N=3.
+- [x] 10.24 Add tamper tests for every exact hash field and cross-job receipt replay.
+- [x] 10.25 Add the restored Cargo workspace as Dependabot's seventh dependency unit.
+- [x] 10.26 Apply exact Rust 1.97.0 formatting while preserving the original recovered-byte provenance separately from candidate-byte provenance.
+- [x] 10.27 Replace the recovered workspace's `UNLICENSED` metadata with the repository's actual MIT license contract and verify the fresh maturin metadata path has no license warning.
+- [x]* 10.28 Re-run `cargo fmt --check`, 61 locked Cargo tests, and both fresh-build parity suites after 10.26 and 10.27.
+- [x] 10.29 Add a bounded security-CI job for exact-toolchain formatting, locked Cargo tests, a fresh maturin build, and both parity suites.
+- [x] 10.30 Keep every Rust CI step fail closed without `continue-on-error` or an unqualified toolchain command.
+- [x] 10.31 Bind the post-format fresh native extension to `tzudong-validators@sha256:6d00fc5b18f8b3b56df5de2fd4da6dba663d0f0741fd9b7a2df151733ab2e3fc` without treating it as live N=3 evidence.
+
+## 11. Performance evidence closure
+
+- [x] 11.1 Inventory the three canonical `apps/web/performance/*` inputs and the two protected CLIs.
+- [x] 11.2 Verify all 36 rows define a positive absolute performance budget.
+- [x] 11.3 Verify all 36 rows define an exact integer relative threshold in basis points.
+- [x] 11.4 Verify all 36 rows define a non-negative absolute noise floor in their declared unit.
+- [x] 11.5 Bind candidate commit, candidate tree, configuration hash, data-profile hash, and frozen timestamp throughout the source contract.
+- [x] 11.6 Treat zero admitted slices as valid, non-improvement evidence.
+- [ ] 11.7 Retain raw measurements before scoring.
+- [ ]* 11.8 Run the canonical scorer on real retained measurements from one clean frozen candidate.
+- [ ]* 11.9 Run the independent canonical validator on that retained scored output.
+- [ ] 11.10 Build an artifact map and record its SHA out of band.
+- [x] 11.11 Refuse a G003 improvement claim without retained raw/scored artifacts and explicit establishment.
+- [ ]* 11.12 Repeat enough samples to evaluate the noise budget.
+- [x]* 11.13 Run the canonical scorer and validator end to end on bounded synthetic fixtures.
+- [x] 11.14 Verify deterministic scorer and independent-validator agreement for all 36 inventory rows.
+- [x] 11.15 Verify the embedded budget self-hash and the exact closed inventory tuple set.
+- [x] 11.16 Verify schemas and budget bytes are independently pinned by the artifact map.
+- [x] 11.17 Reject an incorrect out-of-band artifact-map SHA before parsing in both CLIs.
+- [x] 11.18 Reject a self-referential artifact map and every unlisted or substituted artifact.
+- [x] 11.19 Reject parent traversal, absolute paths, sibling-prefix paths, symlink roots, junction roots, and symlinked artifacts.
+- [x] 11.20 Reject duplicate JSON keys, noncanonical JSON bytes, invalid UTF-8, and non-LF endings.
+- [x] 11.21 Verify exact absolute-budget, noise-floor, relative-threshold, and confidence boundaries.
+- [x] 11.22 Verify zero through four eligible rows produce deterministic admission and rank-cap decisions.
+- [x] 11.23 Verify all score arithmetic uses independently checked bounded integer operations.
+- [x] 11.24 Verify unavailable-source reasons remain closed and distinguish access, production, redaction, and collection failure.
+- [x] 11.25 Verify six health gates override ranking and clear admitted/deferred IDs.
+- [x] 11.26 Verify sample minimum, ownership filtering, recency, and measurement-window bounds.
+- [x] 11.27 Verify per-role byte limits and the 64 MiB aggregate limit fail before unsafe allocation.
+- [x] 11.28 Constrain every retained performance role, including backend metrics, to `apps/web/performance/*`.
+- [x] 11.29 Reject unknown backend metric keys and any drift from the three canonical backend budget rows.
+- [x] 11.30 Require an exact 40-hex frozen commit pair, both clean and identical.
+- [x] 11.31 Require at least one raw path, the exact canonical budget reference, and a 64-hex artifact-map digest.
+- [ ]* 11.32 Capture real baseline and candidate observations from one clean, unchanged tree without mixing environments.
+- [ ]* 11.33 Retain real health, measurement, manifest, raw, scored, detached-hash, and validator outputs under the canonical tree.
+- [ ]! 11.34 Retain the artifact-map SHA outside the map and obtain independent readback of that exact value.
+- [ ]* 11.35 Record the valid zero-admission outcome if no slice clears every gate; do not invent or rerun for a positive claim.
+
+## 12. Observability and admin readback closure
+
+- [x] 12.1 Revalidate the 13-metric contract.
+- [x] 12.2 Revalidate loopback-only local service bindings.
+- [x] 12.3 Revalidate log field allowlists.
+- [x] 12.4 Revalidate log redaction and size bounds.
+- [x] 12.5 Revalidate pending log queue behavior.
+- [x] 12.6 Revalidate sink URL restrictions.
+- [x] 12.7 Revalidate admin orchestration handlers call `requireAdmin` first.
+- [x] 12.8 Revalidate admin responses use bounded fixed codes.
+- [x] 12.9 Revalidate missing/unreadable manifest returns `UNKNOWN`.
+- [x] 12.10 Verify no provider/database/free-form error reaches the admin response.
+- [x]* 12.11 Exercise listed public routes in an isolated local server with a 5-second budget.
+- [x]! 12.12 Obtain hosted observability/readback evidence without changing dashboards or production: two bounded Supabase counter observations over 96.11558 seconds and exact Vercel production provider state; external receipt SHA-256 `437c63c8d8528dd0439bb3facc3219ef6ffcc4bdb4b1d7289c0da25156324d3c`. Provider READY is not end-to-end or scheduled-worker proof.
+- [x] 12.13 Pin the metric cardinality to four lifecycle counters, eight gauges, and one extra counter.
+- [x] 12.14 Reject unknown metric names and counter/gauge API misuse with closed codes.
+- [x] 12.15 Keep metric export off by default and reject opt-in OTLP export under GitHub Actions.
+- [x] 12.16 Verify API, Kafka, Kafka UI, Elasticsearch, OTLP, Prometheus, and Grafana host publications are loopback-only.
+- [x] 12.17 Keep wildcard API/collector listeners container-internal and absent from host publish declarations.
+- [x] 12.18 Restrict Kafka bootstrap to the closed local host set and `local_db` environment.
+- [x] 12.19 Restrict Elasticsearch to HTTP(S), the closed local host set, and `local_db` environment.
+- [x] 12.20 Reject remote Elasticsearch hosts, userinfo tricks, redirects, missing URLs, and malformed schemes.
+- [x] 12.21 Separate lifecycle/progress log fields from adapter-raw document fields.
+- [x] 12.22 Remove DSNs, passwords, oversized strings, raw payload fields, coordinates, and unknown keys at the shared log boundary.
+- [x] 12.23 Verify broker failure preserves the outbox row and stale claims can be retried.
+- [x] 12.24 Verify publisher acknowledgement occurs only after a successful send and replay keeps one deterministic document ID.
+- [x] 12.25 Keep admin orchestration route discovery non-vacuous and require the known pipeline handler.
+- [x] 12.26 Verify authentication and its unauthorized short-circuit precede parsing, hashing, preview-ticket, and upstream work.
+- [x] 12.27 Restrict response error tokens to 2–64 identifier characters and numeric statuses to the closed admitted set.
+- [x] 12.28 Route caught exceptions through the admin-safe error-name mapper without returning messages or stacks.
+- [x] 12.29 Verify system status prefers reachable job-API evidence, then manifest fallback, then explicit no-source state.
+- [x] 12.30 Keep every system-status response no-store and prevent partial hosted counts from becoming healthy evidence.
+- [x] 12.31 Add the missing indexer image/tag and multi-architecture build-only examples to the Harbor handoff document.
+- [x] 12.32 Reconcile the overlay source test with the immutable Postgres digest while retaining the admitted `postgres:15` identity comment.
+- [x]* 12.33 Run 126 focused backend observability/control tests with zero failures; one optional SDK-dependent test remains skipped in the project venv.
+- [x]* 12.34 Run 57 focused admin orchestration, pipeline-control, and system-status tests with zero failures or skips.
+- [x] 12.35 Recover the dedicated log contract modules from two corroborating Git sources.
+- [x] 12.36 Enforce the five-component, four-required-field, and closed-severity record gate.
+- [x] 12.37 Apply the per-record-class key allowlists before sink delivery.
+- [x] 12.38 Align Python log sanitization with the eight-level shared privacy boundary.
+- [x] 12.39 Enforce string, collection, depth, and serialized-byte log bounds.
+- [x] 12.40 Reduce unsafe redaction and provider failures to bounded fixed codes.
+- [x] 12.41 Recover deterministic pending-log document identities and a 50-record retry cap.
+- [x] 12.42 Return stale claims to the retry set after the fixed 30-second occupancy window.
+- [x] 12.43 Remove pending records only after confirmed sink acknowledgement.
+- [x] 12.44 Prohibit Loki or any other log sink from becoming a job-status source.
+- [x] 12.45 Keep the proposed log-retention class inactive with no invented default period.
+- [x] 12.46 Add Loki to the shared local-only HTTP(S) sink host boundary.
+- [x] 12.47 Wire filelog-to-Loki without removing the established OTLP-to-Prometheus pipeline.
+- [x] 12.48 Add a pinned Loki service at loopback port 3100 and mount the bounded local log directory read-only.
+- [x] 12.49 Adapt recovered paths to the repository-owned `backend/pipeline-control` location and reject the obsolete moved path.
+- [x]* 12.50 Run all 135 focused log, queue, redaction, retention, sink, and loopback tests with zero failures or skips.
+- [x] 12.51 Recover the 13-metric contract reporter and bounded optional-component no-data states.
+- [x] 12.52 Recover the one-run observability starter with local-Docker, loopback, credential, pin, and readiness gates.
+- [x] 12.53 Include default Loki startup and readiness while making explicit `--no-loki` exclude the service.
+- [x]* 12.54 Run all 54 focused observability-starter and metric-reporter tests with zero failures or skips.
+- [x]* 12.55 Start the complete local container stack and retain a real readiness artifact only after the operator supplies the required local dashboard credential through the environment.
+- [x] 12.56 Inspect the pinned core Collector image's actual component catalog and record that it lacks `filelog` and `loki`.
+- [x] 12.57 Pull and inspect the exact contrib Collector tag, confirming `filelog`, `otlphttp`, and the deprecated `loki` exporter state.
+- [x] 12.58 Replace the incompatible core image with the exact contrib tag required by the file receiver.
+- [x] 12.59 Replace deprecated Loki-exporter delivery with Loki 3.x native OTLP/HTTP delivery.
+- [x] 12.60 Keep the Collector endpoint at `/otlp`, never `/otlp/v1/logs`, because the exporter appends the signal path.
+- [x] 12.61 Validate the real Collector configuration with the pinned contrib image's `validate` command.
+- [x] 12.62 Validate the pinned Loki image's embedded local configuration and confirm active TSDB/v13 structured-metadata support.
+- [x]* 12.63 Start an isolated Loki/Collector pair and verify an actual bounded log reaches native OTLP ingestion before the complete dashboard stack.
+- [x]* 12.64 Re-run focused observability and security source-contract suites after the native OTLP change.
+- [x] 12.65 Read back exactly one bounded probe record from Loki with `service_name=unknown_service` and structured metadata processed.
+- [x] 12.66 Stop and remove only the two validation containers, isolated network, and probe files created for the test.
+- [x] 12.67 Rebind every modified recovered file to its new exact Git blob, SHA-256, and byte count.
+- [x]* 12.68 Run the exact security-workflow integration command: 270 tests, zero failures, zero skips.
+- [x] 12.69 Bind the isolated public-route exercise to the candidate-only local Supabase project and loopback ports 28000/18080.
+- [x] 12.70 Verify `/`, `/global-map`, `/insights`, `/leaderboard`, `/feed`, and `/privacy` each return HTTP 200 under a per-request five-second ceiling.
+- [x] 12.71 Record the slowest bounded public-route observation as 1.803 seconds without retaining response bodies, cookies, headers, or database payloads.
+- [x] 12.72 Keep the pre-existing process on port 8080 untouched and choose a non-conflicting loopback port for candidate verification.
+- [x] 12.73 Validate the operator-supplied Grafana credential file as owner-matching, regular, non-symlinked, mode 0600, non-empty, and bounded without printing its value.
+- [x] 12.74 Load the dashboard credential into the child environment only for Compose execution and keep it absent from source, logs, and the readiness artifact.
+- [x]* 12.75 Start the isolated 14-service candidate Supabase network required by the complete observability overlays.
+- [x] 12.76 Pull the exact Elasticsearch 8.17.0, Kafka 3.9.0, and Kafka UI 0.7.2 images without changing source pins.
+- [x] 12.77 Detect the live Collector false-negative caused by probing an undefined root route through `urllib`.
+- [x] 12.78 Change Collector readiness to the exact `/v1/metrics` route and admit only its expected GET 405 boundary.
+- [x] 12.79 Add positive and negative HTTP 405 tests so other services cannot inherit the Collector exception.
+- [x]* 12.80 Run 37 observability-starter tests with ResourceWarning promoted to an error.
+- [x] 12.81 Detect Compose host interpolation erasing Grafana's runtime `$NONCE` placeholder from the CSP template.
+- [x] 12.82 Escape the placeholder as `$$NONCE` and add a source assertion rejecting the unescaped form.
+- [x] 12.83 Prove with an isolated disposable Compose container that `$$NONCE` becomes literal `$NONCE` rather than a host value.
+- [x]* 12.84 Recreate the complete stack from the corrected source and read back the literal nonce inside the running Grafana container without exposing the policy or credential.
+- [x] 12.85 Retain the final 677-byte, four-service all-ready artifact at SHA-256 `ea499b61540cf4530882f7f3cc610e221ebf47dc31fa2083b4c42aa311a92594` under the ignored canonical log path.
+- [x] 12.86 Verify Prometheus, Grafana, Loki, Kafka UI, Elasticsearch, and the exact OTLP method boundary over loopback only.
+- [x] 12.87 Verify the Kafka broker API locally without retaining broker payloads or container logs.
+- [x] 12.88 Stop and remove only the seven observability/Kafka/Elasticsearch validation containers, then stop the candidate Supabase project while preserving its ignored local evidence state.
+- [x]* 12.89 Re-run the security-workflow observability, log, descriptor, provenance, and least-authority integration set: 274 tests and zero failures or skips.
+- [x] 12.90 Run the repository-wide high-confidence secret scanner over tracked and non-ignored untracked candidate files.
+- [x] 12.91 Classify all 16 findings as contiguous synthetic detector/redaction fixtures rather than external credentials without dismissing the CI failure.
+- [x] 12.92 Split only the source representation of synthetic GitHub, AWS, Slack, and private-key markers while preserving their exact runtime fixture values.
+- [x]* 12.93 Re-run the seven affected detector, descriptor, manifest, publication, and lite-run modules: 48 tests and zero failures.
+- [x]* 12.94 Re-run the repository-wide high-confidence secret scanner and confirm zero findings.
+- [x] 12.95 Rebind the three operational-provenance fixtures changed by source-safe token construction and regenerate all 207 reconciliation entries to 84 source-exact, 91 transformed, and eight reviewed adaptations.
+
+## 13. Readiness agent and deployment descriptors
+
+- [x] 13.1 Revalidate descriptor schema and secret-literal scanning.
+- [x] 13.2 Revalidate at least two cluster identifiers render.
+- [x] 13.3 Revalidate cluster differences are derived fields only.
+- [x] 13.4 Revalidate remote apply attempt count remains zero during source checks.
+- [x] 13.5 Revalidate the ops-agent action allowlist.
+- [x] 13.6 Revalidate non-allowlisted actions are refused.
+- [x] 13.7 Revalidate high-risk actions require explicit approval.
+- [x] 13.8 Revalidate never-performed actions remain impossible.
+- [x] 13.9 Revalidate per-action rate bounds.
+- [x] 13.10 Keep the committed operational allowlist inactive by default.
+- [x]! 13.11 Record the current user authorization for remaining actions; require actual prerequisites and readback before claiming any external remediation succeeded.
+- [x] 13.12 Recover the five-component migration-readiness manifest without changing any evidence state.
+- [x] 13.13 Keep hosted backup and point-in-time recovery evidence unresolved with null references.
+- [x] 13.14 Keep all eight production release gates unresolved with null references.
+- [x] 13.15 Recover the two-state evidence helper and fail confirmed claims closed when a reference is absent.
+- [x] 13.16 Recover the five-component deployment catalog with non-empty image, resource, environment-source, and secret-reference fields.
+- [x] 13.17 Recover the Helm chart as local rendering source only.
+- [x] 13.18 Recover the OpenTofu module as local validation source only.
+- [x] 13.19 Scan the catalog, Helm, and OpenTofu set before rendering and suppress output on a secret finding.
+- [x] 13.20 Verify the real descriptor set scans eight files and reports zero secret literals.
+- [x] 13.21 Verify local-a and local-b render the same five base component definitions.
+- [x] 13.22 Restrict cross-cluster differences to namespace, release name, cluster label, and full name.
+- [x] 13.23 Reject remote target, credentials, kube-context, and apply options before producing artifacts.
+- [x] 13.24 Recover the six-action catalog and the 60-minute/24-hour sliding caps.
+- [x] 13.25 Keep both committed ledger approvals unresolved so file-based agent construction fails closed.
+- [x] 13.26 Require action-record reservation before every attempted execution.
+- [x] 13.27 Preserve unique trigger/action pairs, three verification attempts, and the 60-second verification ceiling.
+- [x] 13.28 Reclassify `open_github_issue` as an external write requiring bound named-human approval.
+- [x] 13.29 Reject blank, overlong, mismatched, or unnamed approval references.
+- [x] 13.30 Prevent an executor exception from being overwritten by a successful verifier result.
+- [x] 13.31 Halt later actions for the same trigger after an execution or verification failure.
+- [x]* 13.32 Run 41 focused agent unit/property tests with zero failures or skips.
+- [x]* 13.33 Run 78 combined descriptor, agent, migration-readiness, and evidence-state tests with zero failures or skips.
+- [x]* 13.34 Run Helm 4.2.4 lint and two local templates without contacting a cluster, then normalize all Kubernetes names to RFC 1123.
+- [x]* 13.35 Run OpenTofu validation when the pinned local CLI is available; do not initialize a remote backend or contact a provider.
+- [x]! 13.36 Keep GitHub issue creation, hosted writes, migrations, deployments, rollbacks, protection changes, secret changes, and DNS changes blocked until separately approved. Verified boundary/authority: Source boundary verified by current OpsAgent approval and action-class tests; task-scoped owner authority is recorded in solo-operator-decision-20260905.json. No new blanket confirmation is required.
+- [x] 13.37 Bind 50 recovered source/candidate pairs to two corroborating Git commits and exact blob/SHA-256/byte identities.
+- [x] 13.38 Declare current-layout, Loki, least-authority, RFC-1123, bounded-output, and new-test transformations separately.
+- [x]* 13.39 Rehash both Git sources and every candidate file through three provenance tests with zero failures or skips.
+- [x] 13.40 Verify the selected IaC tool pin is OpenTofu 1.12.6 before installing a local CLI.
+- [x] 13.41 Install and read back exactly OpenTofu 1.12.6 for darwin arm64 without changing repository dependency files.
+- [x] 13.42 Copy only the four OpenTofu source files into an isolated temporary directory before initialization.
+- [x] 13.43 Run `tofu fmt -check`, backend-disabled initialization, and `tofu validate` with checkpoint telemetry disabled.
+- [x] 13.44 Confirm validation succeeds with no declared provider, no remote backend, no provider credential, and no repository-local `.terraform` state.
+
+## 14. Repository-wide verification and release preparation
+
+- [x] 14.1 Run backend daily regression with the declared interpreter.
+- [x] 14.2 Run backend validator tests.
+- [x] 14.3 Run backend data-contract tests.
+- [x] 14.4 Run web lint under Node 24.
+- [x] 14.5 Run the complete web unit suite and retain the pass/skip/fail counts.
+- [x] 14.6 Run native TypeScript 7 versus stable TypeScript 6 parity.
+- [x] 14.7 Run TypeScript benchmark evidence flow: CI 33913693340 produced four retained and independently validated lanes; Ubuntu npm/Bun and Windows npm admitted two slices each, Windows Bun correctly admitted zero due to noise. Canonical `apps/web/performance/typecheck-recovery-20260905/verification.json` records absolute/relative/noise budgets and exact candidate identities; its SHA is retained out of band. No G003 improvement or later-tree claim.
+- [x] 14.8 Run the production build and route CSS boundary verifier under Node 24.
+- [x] 14.9 Run focused Playwright coverage when relevant.
+- [x] 14.10 Re-run the environment contract in an empty environment and preserve expected fail-closed status separately.
+- [x] 14.11 Review the final diff again for secrets, crawl data, generated logs, caches, and receipts after active implementation ends.
+- [x] 14.12 Confirm again that no existing user changes were overwritten after active implementation ends.
+- [x] 14.13 Prepare rollback notes for each content patch.
+- [x] 14.14 Bind current solo-owner task authority to independently verified develop/data/main protection; sanitized API receipts are retained externally and hashed in solo-operator-settings-readback.v1.json.
+- [ ]! 14.15 Serialize changes through `develop -> data -> main` PRs.
+- [x] 14.16 Verify exact Git-integrated Vercel `tzudong` project before any deployment action.
+- [ ]! 14.17 Obtain deployment readback receipt and keep DNS unchanged.
+- [ ]! 14.18 Obtain policy/retention/provider/location/guardian/incident/legal review receipts.
+- [x] 14.19 Trace the malformed one-line guardian module to the orchestration merge commit.
+- [x] 14.20 Restore the guardian API's pre-merge under-14 fail-closed response.
+- [x] 14.21 Remove the malformed guardian module after all imports are eliminated.
+- [x] 14.22 Restore the complete loopback-only Supabase type-generation implementation from its verified source commit.
+- [x] 14.23 Verify the restored type generator's source contract and JavaScript syntax.
+- [x] 14.24 Remove three duplicated imports whose target component never existed.
+- [x] 14.25 Reconcile Playwright's default base URL with the established port 8080 scripts.
+- [x] 14.26 Reconcile four stale source-contract assertions with the established port 8080 scripts.
+- [x] 14.27 Reconcile the desktop panel source assertion with the intentional absolute positioning change.
+- [x] 14.28 Reconcile direct Bun dependency identities with the npm release-authority lockfile.
+- [x] 14.29 Authenticate GitHub CLI as `twoimo` without exposing its stored token.
+- [x] 14.30 Verify the inspected remote is exactly the public `twoimo/tzudong` repository with default branch `main`.
+- [x] 14.31 Query classic branch protection for `main`, `data`, and `develop` and record that all three return unprotected.
+- [x] 14.32 Query repository rulesets and record that no branch ruleset currently exists.
+- [x] 14.33 Query GitHub environments and record that `Production` has no protection rules or deployment-branch policy.
+- [x] 14.34 Inspect repository and Production secret names and timestamps without reading any secret value.
+- [x] 14.35 Confirm the repository has a `SUPABASE_DB_URL` secret while the Production environment does not expose it there.
+- [x] 14.36 Confirm `TZUDONG_HOSTED_DATA_PLANE_APPROVED=1` is currently present as a repository variable.
+- [x] 14.37 Confirm `G037_WRITE_FREEZE=active` has remained present since 2026-07-17.
+- [x] 14.38 Correlate the active write freeze with repeated skipped Account Deletion and Retention scheduled runs.
+- [x] 14.39 Inspect the latest successful Closure run and confirm it produced source validation only while `remote-readonly` was skipped.
+- [x] 14.40 Inspect the Closure artifact metadata and confirm the retained artifact is a source-validation receipt, not hosted readback.
+- [x] 14.41 Inspect the latest successful Migrations apply run and record its exact main SHA, job sequence, and absence of retained artifacts.
+- [x] 14.42 Inspect the G041 main PR chain and confirm it was authored and merged by the same account with no approving review.
+- [x] 14.43 Record that several merged release PRs contained failed checks and that no branch rule prevented merging them.
+- [x] 14.44 Reject any claim that current GitHub state proves protected `develop -> data -> main` promotion.
+- [x] 14.45 Record the operator's decision to leave `develop`, `data`, and `main` unprotected until sufficient development is complete.
+- [x] 14.46 Record current owner authorization to resume branch protection in `solo-operator-decision-20260905.json`.
+- [x] 14.47 Record current owner authorization for Production deployment-branch restrictions without requiring a second reviewer.
+- [ ]! 14.48 Locate and independently validate the externally retained G037/G038 execution, recovery, and post-readback receipts.
+- [x]! 14.49 Keep `G037_WRITE_FREEZE` active unless the exact successor/recovery evidence proves its exit condition. Verified boundary/authority: Current repository variable readback remains active. Freeze exit and successor/recovery evidence remain separate open work.
+- [ ]! 14.50 After proof and explicit approval, change the freeze through the controlled operator path and verify scheduled-worker readback.
+- [ ]! 14.51 Re-run Closure readback from the exact protected commit and retain a non-expired hosted receipt.
+- [x] 14.52 Inspect GitHub Deployment metadata without invoking or promoting a deployment.
+- [x] 14.53 Bind the newest Production deployment record to main SHA `3d7557f6307c9f6696018324e559bff6e57afbce`.
+- [x] 14.54 Confirm the newest Production deployment record has terminal state `failure`.
+- [x] 14.55 Identify the newest successful Production deployment record as SHA `29e432f7d96d98e6d09ba9237f05d6812ceb956b`.
+- [x] 14.56 Confirm the repository's workflow named `Release` performs governance checks and artifact retention, not Vercel deployment.
+- [x] 14.57 Reject treating a successful `Release` workflow run as a deployment readback receipt.
+- [x] 14.58 Record that the current main commit is unsigned and has a failing latest scheduled CI run.
+- [x] 14.59 Confirm repository access currently includes one admin and one write collaborator, with no team bindings.
+- [x] 14.60 Verify through Vercel itself that the successful GitHub deployment belongs to the exact Git-integrated `tzudong` project.
+- [x] 14.61 Resolve the current production alias and deployed Git SHA from Vercel, independently of GitHub status metadata.
+- [ ]! 14.62 Obtain a current successful deployment/readback only after branch protection, approvals, CI, and rollback gates pass.
+- [x] 14.63 Authenticate Vercel CLI as `twoimo` without exposing the stored credential.
+- [x] 14.64 Bind the production project to ID `prj_sau35J5uUtShIQ9OKofRtOVVnTSl`, owner scope `twoimos-projects`, root `apps/web`, and Node 24.x.
+- [x] 14.65 Confirm the Vercel Git integration points to GitHub repository `twoimo/tzudong` with production branch `main`.
+- [x] 14.66 Bind the live production deployment to ID `dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv` and immutable URL `tzudong-a6hsww4ht-twoimos-projects.vercel.app`.
+- [x] 14.67 Confirm `www.tzudong.app`, `tzudong.app`, `internal.tzudong.app`, and the two canonical Vercel aliases all resolve to that deployment ID.
+- [x] 14.68 Verify `www.tzudong.app` and `internal.tzudong.app` return HTTP 200 and the apex resolves to the `www` origin.
+- [x] 14.69 Bind the failed production deployment `dpl_7aoMuydvfqaS34agA3xVRkunuH2M` to main SHA `3d7557f6307c9f6696018324e559bff6e57afbce` and terminal code `lint_or_type_error`.
+- [x] 14.70 Read the bounded failed build log and confirm the concrete cause was the malformed one-line `lib/privacy/guardian.ts` module.
+- [x] 14.71 Confirm the live deployment is a `twoimo`-initiated redeploy of older main SHA `29e432f7d96d98e6d09ba9237f05d6812ceb956b`, not the current main revision.
+- [x] 14.72 Record the production divergence explicitly: the site is reachable, but the latest main revision has no successful production deployment.
+- [x] 14.73 Inspect Vercel deployment protection without mutation and record Git-fork protection, SSO scope, and configured automation bypass metadata.
+- [x] 14.74 Confirm no Vercel deployment checks currently block build, promotion, or production alias assignment.
+- [x] 14.75 Inventory Vercel environment-variable names, targets, types, and timestamps without reading or persisting any value.
+- [x] 14.76 Record that environment-variable presence is configuration metadata only and does not prove secret correctness, provider approval, rotation, or runtime capability.
+- [x] 14.77 Confirm all three custom domains are marked verified on the Vercel project and that the apex is configured to redirect to `www`.
+- [x] 14.78 Record Vercel's `misconfigured=true` domain finding and the observed Cloudflare-proxied apex/`www` versus direct-Vercel `internal` DNS split.
+- [x] 14.79 Inspect Cloudflare zone ownership, proxied records, SSL/TLS mode, redirect behavior, and origin-health configuration without changing DNS.
+- [x] 14.80 Reconcile the Vercel domain warning with the operator-approved Cloudflare/Vercel ownership decision.
+- [x] 14.81 Keep all Vercel aliases, custom domains, DNS records, and Cloudflare proxy settings unchanged through the reconciliation decision.
+- [x] 14.82 Record inherited Vercel team access as one confirmed owner and one unconfirmed member, with no project-specific member rows.
+- [x] 14.83 Bind the verified current tzudong production deployment dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv and source SHA 29e432f7d96d98e6d09ba9237f05d6812ceb956b as the rollback target under current owner authority; immutable-ID readback and external hash are recorded in production-rollback-target.v1.json. No rollback executed.
+- [ ]! 14.84 Require the next deployment receipt to include project ID, deployment ID, source SHA, target, aliases, actor, timestamps, terminal state, and post-alias HTTP readback.
+- [x] 14.85 Verify `tzudong.app` is active under Cloudflare Full DNS setup and publicly delegates to the two assigned Cloudflare nameservers.
+- [x] 14.86 Read only the routing-relevant DNS rows and bind apex `A 216.198.79.1` to Proxied/Auto.
+- [x] 14.87 Bind `www` to the Vercel CNAME target with Proxied/Auto and `internal` to the same target with DNS-only/Auto.
+- [x] 14.88 Confirm the Vercel domain warning is caused by Cloudflare hiding the apex/`www` origin records rather than by an unreachable production site.
+- [x] 14.89 Record Cloudflare's origin-IP-exposure warning on the DNS-only `internal` record without dismissing it as harmless.
+- [x] 14.90 Verify the zone uses SSL/TLS `Full (strict)` with automatic mode disabled.
+- [x] 14.91 Verify Universal SSL has an active wildcard/apex certificate and a managed backup certificate.
+- [x] 14.92 Read back Always Use HTTPS on, HSTS on for six months with subdomains included, minimum TLS 1.2, and TLS 1.3 on.
+- [x] 14.93 Read back Automatic HTTPS Rewrites and Opportunistic Encryption on, with Certificate Transparency Monitoring off.
+- [x] 14.94 Confirm DNSSEC, multi-signer DNSSEC, and multi-provider DNS are off and the public parent publishes no DS record.
+- [x] 14.95 Confirm one active legacy Page Rule matches `tzudong.app/*` and sends a permanent 301 to `https://www.tzudong.app/$1`.
+- [x] 14.96 Verify a live apex probe is answered by Cloudflare with 301 while preserving the path and query string.
+- [x] 14.97 Confirm zero custom Redirect, URL Rewrite, request-header, response-header, Configuration, and Origin rules exist.
+- [x] 14.98 Confirm zero account Bulk Redirect lists and zero Bulk Redirect activation rules exist.
+- [x] 14.99 Confirm all available managed request/response transforms are disabled.
+- [x] 14.100 Confirm zero Workers Routes affect the zone and zero relevant Load Balancers, pools, or health monitors exist.
+- [x] 14.101 Record that Vercel also declares apex-to-`www` redirection while Cloudflare currently terminates the live redirect first.
+- [x] 14.102 Record Cloudflare as the operator-approved canonical apex/`www` DNS and redirect owner, with the Vercel redirect retained only as a fallback.
+- [ ]! 14.103 Obtain an explicit security/operations decision before enabling DNSSEC or changing HSTS, TLS, proxy, or certificate settings.
+- [x] 14.104 Retain a cropped Page Rule readback screenshot outside the source tree without storing account credentials or unrelated zone data.
+- [x] 14.105 Record the operator decision to retain `internal` as a DNS-only Vercel endpoint protected by the independent retention capability.
+- [ ]! 14.106 Resolve the three stale-looking Gabia apex NS rows through documented registrar/Cloudflare ownership evidence before deleting or altering any record.
+- [x] 14.107 Record the 2026-09-03 operator approval in the external Codex task history without copying credentials or dashboard data into the repository.
+- [x]! 14.108 Retain a separately reviewable immutable approval receipt if release governance requires evidence stronger than the task transcript. Verified boundary/authority: The solo-owner task transcript and committed decision record are the accepted task authority. Current protected-branch and production-environment policies do not require an additional approving reviewer; no stronger human/legal receipt is claimed.
+- [x] 14.109 Enumerate current GitHub Actions check contexts on `main` before proposing required checks.
+- [x] 14.110 Identify `Release` as the only current repository workflow that runs for every pull request without a path filter.
+- [x] 14.111 Reject requiring the path-filtered `CI` or `Security` contexts globally until they emit an always-present aggregate result.
+- [x] 14.112 Confirm the repository has no `CODEOWNERS` file and cannot currently enforce a meaningful code-owner review rule.
+- [x] 14.113 Confirm the repository permits merge commits, squash merges, and rebase merges and has not enabled automatic merge.
+- [x] 14.114 Decide solo-operator review count zero, stale-review dismissal, conversation resolution, and administrator enforcement.
+- [x] 14.115 Decide to prohibit force pushes and branch deletion on all three promotion branches.
+- [x] 14.116 Select always-running Release and Promotion Path checks with strict branch freshness and GitHub Actions app binding.
+- [x] 14.117 Implement the always-running promotion-path check after the operator resumed branch-protection work.
+- [x] 14.118 Verify forward promotion, shortcut/reverse rejection, foreign-branch impersonation, malformed input, and workflow triggers.
+- [x] 14.119 Keep path-filtered CI and security checks informational while branch protection is intentionally deferred.
+- [x] 14.120 Apply and independently verify protection in order develop, data, then main. Hold the two previously skipped scheduled write workflows until freeze-aware source is promoted and verified; preserve the active write freeze.
+- [x] 14.121 Keep the repository free of any newly configured owner/admin bypass actor during the deferment period.
+- [x] 14.122 Preserve existing merge behavior and leave linear-history enforcement disabled during the deferment period.
+- [x] 14.123 Record that the 2026-09-03 refusal supersedes the proposed protection-policy bundle and grants no mutation authority.
+- [x] 14.124 Record current repository evidence and the revised solo-operator protection decision under the current task authorization.
+- [x] 14.125 Detect the missing Playwright Chromium v1234 runtime before any browser assertion runs.
+- [x] 14.126 Install the repository-selected Playwright Chromium and headless-shell v1234 browser payloads without changing package manifests or locks.
+- [x] 14.127 Re-run the focused Chromium browser-title flow across eight public routes and the privacy heading with one pass and zero failures.
+- [x] 14.128 Remove the development server's automatic candidate-port TypeScript include additions so the verification run creates no source-config drift.
+- [x] 14.129 Stop the candidate web process and all 14 candidate Supabase services after local route and browser verification.
+- [x]* 14.130 Re-run the complete web unit runner: 2,045 passes, nine platform-conditional skips, and zero failures.
+- [x]* 14.131 Re-run the production Next.js build and route CSS boundary verifier after the final web-source adjustment.
+- [x] 14.132 Re-run the daily environment contract under an empty environment and preserve its expected exit 1 without adding placeholder secrets.
+- [x] 14.133 Supply exact Hypothesis 6.165.10 and PyYAML 6.0.3 only inside a temporary audit virtual environment.
+- [x] 14.134 Repair the historical R4 migration-order assertion so later additive migrations do not falsely violate applied-migration immutability.
+- [x] 14.135 Add a dedicated assertion that the current advisor follow-up remains the lexicographically newest additive migration source.
+- [x]* 14.136 Run the 22-module orchestration readiness audit: 199 tests, 18/18 required artifacts, 71/71 mapped tasks, and `Ready`.
+
+## 15. Candidate rollback and handoff evidence
+
+- [x] 15.1 Split rollback guidance by readiness audit, hosted runner, dependency, merge-recovery, and local-evidence patches.
+- [x] 15.2 State the verification command required after each inverse patch.
+- [x] 15.3 Keep rollback guidance free of destructive reset/checkout commands.
+- [x] 15.4 Record final changed-file inventory after all checks finish.
+- [x] 15.5 Record final predecessor artifact-set SHA after all checks finish.
+- [x] 15.6 Record final Todo totals and external-gate totals.
+- [x] 15.7 Confirm the original worktree still contains only its pre-existing untracked build directory.
+- [x] 15.8 Confirm no generated `.next`, cache, log, crawl, or receipt artifact is tracked.
+- [x] 15.9 Confirm the candidate contains no new secret values.
+- [x] 15.10 Hand off the isolated worktree and branch without commit, push, PR, or deployment.
+
+## 16. Parked platform-modernization reconciliation
+
+- [x] 16.1 Bind the comparison to base `3f4ca55742aa33869b776291e0d035a16024eef1` and parked source `880bf06d375dbc6ebe8dcf108419c3f455048a97`.
+- [x] 16.2 Enumerate all 207 source-delta entries with rename detection enabled.
+- [x] 16.3 Record base, source, and current candidate Git blob identities separately for every entry.
+- [x] 16.4 Distinguish path presence from content recovery so an unchanged base file cannot be counted as restored.
+- [x] 16.5 Confirm 86 candidate files now exactly match the parked source bytes after local-foundation, supply-chain, publication, phase, and layout recovery.
+- [x] 16.6 Confirm 88 source-delta files contain intentional current hardening or current-input transformations.
+- [x] 16.7 Separate the nine reviewed current-layout adaptations from the recovered graph, profile, and Elasticsearch index changes.
+- [x] 16.8 Confirm only eight source-added files remain absent rather than silently treating them as recovered.
+- [x] 16.9 Keep 16 control-plane path moves/deletions unapplied so `backend/pipeline-control` remains the only owned compose tree.
+- [x] 16.10 Classify five historical spec files as Git-addressable superseded source, not current operational truth.
+- [x] 16.11 Rebuild seven layout/naming files for the current tree while deferring only the rejected nested `backend/deploy/pipeline-control/otel-collector.yaml` path.
+- [x] 16.12 Defer two empty deployment scaffold markers with their parent deployment decisions.
+- [x] 16.13 Recover all ten local-foundation files after source-contract and dependency review.
+- [x] 16.14 Queue seventeen phase-gate files until every referenced input and evidence semantic is current.
+- [x] 16.15 Queue twenty publication files as fail-closed source-only work with no hosted apply authorization.
+- [x] 16.16 Queue fourteen supply-chain files for current npm, Bun, Rust, and workflow-pin review.
+- [x] 16.17 Eliminate the catch-all/manual bucket so every one of the 207 entries has a concrete disposition.
+- [x] 16.18 Add five executable reconciliation tests for exact entry coverage, current file presence, layout uniqueness, nine reviewed adaptations, and reproducible generation.
+- [x] 16.19 Add the exhaustive reconciliation test to the security workflow and its Python/Bun source contracts.
+- [x] 16.20 Review all twelve formerly base-exact modified files; recover graph/profiles, adapt the Elasticsearch test path, and retain nine current-layout variants.
+- [x] 16.21 Restore the ten local-foundation files only after their graph/profile/worker dependencies are reconciled.
+- [x] 16.22 Restore the fourteen supply-chain files only after obsolete pin assumptions are replaced with current release authority.
+- [x] 16.23 Restore the twenty publication files only after route, migration, least-privilege grants, readback, audit, and inactive schedule boundaries pass current tests.
+- [x] 16.24 Rebuild phase gates from current inputs instead of reviving completion claims from the parked branch.
+- [x]! 16.25 Keep every hosted apply, migration execution, GitHub write, deployment, DNS change, and approval claim outside this source reconciliation. Verified boundary/authority: The source reconciliation declares no hosted apply, deployment, DNS change or legal approval; actual operator actions have separate external readback bindings.
+- [x] 16.26 Update blob identities and disposition counts after each recovered group so no item returns to an ambiguous state.
+- [x] 16.27 Restore the 18-step class mapping in `graph.py` byte-for-byte from the parked source.
+- [x] 16.28 Restore bounded skip codes, data-sink preflight, step planning, and run-summary composition in `profiles.py`.
+- [x] 16.29 Preserve current cadence-source validation while adding preflight data-sink rejection to `worker.py`.
+- [x] 16.30 Make the worker persist the specific preflight code instead of collapsing it into a generic boundary error.
+- [x] 16.31 Enforce the same preflight before the live worker entry point can begin processing.
+- [x] 16.32 Restore local-boundary property tests for loopback-only container services and local DSNs.
+- [x] 16.33 Restore local pipeline-composition tests for all phases and explicitly skipped hosted-only work.
+- [x] 16.34 Restore run-summary tests for completed, skipped, and failed step accounting.
+- [x] 16.35 Restore step-composition property tests for deterministic order, dependency closure, and phase boundaries.
+- [x] 16.36 Pass the focused graph/profile/worker recovery run with 36 tests and no failures.
+- [x] 16.37 Restore the schema-mirror report and its bounded machine-readable output contract.
+- [x] 16.38 Restore schema-mirror property tests for stable hashes and deterministic object ordering.
+- [x] 16.39 Restore the seed-fixture guard and reject production-shaped or non-local targets before fixture work.
+- [x] 16.40 Add candidate-only local-runtime tests covering the closed registry, phase-one Rust deferment, bounded missing dependencies, and phase-six Rust requirement.
+- [x] 16.41 Pass the local-runtime, schema-mirror, and seed-guard recovery run with 46 tests and no failures.
+- [x] 16.42 Restore Elasticsearch index tests while translating only the rejected deploy/pipeline-control path to the owned current path.
+- [x] 16.43 Pass all 22 Elasticsearch opt-in, no-op, allowlist, local-URL, and Loki coexistence tests.
+- [x] 16.44 Add a deterministic manifest generator whose `--check` mode fails when any candidate blob or disposition becomes stale.
+- [x] 16.45 Wire every recovered local-foundation test module into the least-privilege security workflow and both Python and Bun source contracts.
+- [x] 16.46 Inspect all fourteen supply-chain source files for obsolete runtime pins, duplicate control-plane paths, mutable images, write permissions, and auto-merge behavior.
+- [x] 16.47 Restore the weekly/manual dependency-freshness workflow with read-only contents permission and immutable action revisions.
+- [x] 16.48 Update the workflow's Bun runtime from the parked 1.2.16 value to the current 1.4.0 release authority.
+- [x] 16.49 Preserve Node 24, npm 11.6.2, Rust 1.97.0, and the exact native/compat TypeScript aliases.
+- [x] 16.50 Keep all seven Dependabot units on `develop`, cap each at five open candidates, and keep auto-merge absent.
+- [x] 16.51 Translate the rejected `/backend/deploy/pipeline-control` freshness unit back to `/backend/pipeline-control`.
+- [x] 16.52 Restore four-command verification with an independent 30-minute ceiling for lint, unit, parity, and build.
+- [x] 16.53 Record each command result before classification and preserve the receipt on failure without making a failed candidate mergeable.
+- [x] 16.54 Restore fixed candidate codes for target-branch, Pin_Contract, held-dependency, and command-verification failures.
+- [x] 16.55 Restore major-bump standalone splitting while leaving minor and patch candidates grouped by unit.
+- [x] 16.56 Restore privacy-safe dependency receipts and exclude forbidden log fields from candidate titles and CLI failures.
+- [x] 16.57 Restore the twelve-category tooling-selection record with two through six fixed candidates per category.
+- [x] 16.58 Translate every tooling record asset reference to the sole current `backend/pipeline-control` tree.
+- [x] 16.59 Replace the incompatible core OTel image record with `otel/opentelemetry-collector-contrib:0.120.0`.
+- [x] 16.60 Preserve all twelve named-human approvals as unresolved and all real installation/memory observations as null.
+- [x] 16.61 Restore tooling-record coherence checks for cardinality, identity, fixed references, and current-tree path resolution.
+- [x] 16.62 Restore the default-startup intersection so both named approval and real local installation evidence are required.
+- [x] 16.63 Confirm the current tooling record is coherent while returning `tooling_approval_missing` and an empty default startup set.
+- [x] 16.64 Pass 46 recovered web supply-chain tests with 44,202 assertions.
+- [x] 16.65 Pass 48 focused tooling gate, image-fixity, and selection-record Python tests.
+- [x] 16.66 Add all recovered supply-chain modules to the least-privilege security job under exact Bun 1.4.0.
+- [x] 16.67 Pass the combined security-source and Python supply-chain wiring checks with 3 Bun tests and 56 Python tests.
+- [x] 16.68 Regenerate all 207 blob identities after supply-chain recovery and reduce the absent inventory from 66 to 52 without an ambiguous disposition.
+- [x] 16.69 Inspect all twenty parked publication files for route-boundary, approval, migration, CAS, readback, audit, and error-leak hazards.
+- [x] 16.70 Restore the queue-only admin route without invoking the Publish_Worker or any long-running backend work.
+- [x] 16.71 Preserve `requireAdmin` as the first operation and require trusted same-origin proof before parsing POST input.
+- [x] 16.72 Bound POST bodies at 4 KiB and admit only an empty plain object so callers cannot select arbitrary targets or columns.
+- [x] 16.73 Add an explicit queue feature flag and exact loopback Supabase URL gate before service-role client construction.
+- [x] 16.74 Return `publish_job_queue_unavailable` for unset, hosted, malformed, non-HTTP(S), and non-loopback configurations.
+- [x] 16.75 Bound list reads to twenty rows, validate single-job UUIDs, and mark every queue/status response `no-store`.
+- [x] 16.76 Validate queue row UUID, status, result code, and RFC3339 timestamps before exposing the bounded projection.
+- [x] 16.77 Restore the Publication_Set and publish schedule ledgers while retaining both named-human approvals as unresolved.
+- [x] 16.78 Require status, non-empty named approver, and RFC3339 approval time before either ledger can activate publication.
+- [x] 16.79 Make unresolved Publication_Set approval block preview before any target projection or hosted callable.
+- [x] 16.80 Make unresolved or structurally divergent schedule approval block both preview and apply with `publish_schedule_not_approved`.
+- [x] 16.81 Reject duplicate table entries, duplicate/null identities, and identity-only rows before preview generation.
+- [x] 16.82 Add `youtube_link` and `channel_name` to video publication because the current mirrored table requires both on insert.
+- [x] 16.83 Bind video updates to `id,updated_at` CAS while keeping `updated_at` outside the published payload.
+- [x] 16.84 Restore the local-only staging, evidence, preview/history, audit, phase, and agent tables as unapplied migration source.
+- [x] 16.85 Constrain publication queue status, stage, result code, preview hash, batch index, and count domains in SQL.
+- [x] 16.86 Revoke update and delete on publication audit records so persisted events are append-only.
+- [x] 16.87 Replace the unsafe crawler-RPC redefinition with a distinct `publish_upsert_restaurants` function.
+- [x] 16.88 Add a distinct `publish_upsert_videos` function with its own exact server-side column allowlist.
+- [x] 16.89 Preserve supplied restaurant and video identity keys on insert and require the video table's non-null service fields.
+- [x] 16.90 Keep both publication RPCs outside the Data API by revoking execute from PUBLIC, anon, authenticated, and service_role.
+- [x] 16.101 Expose `local_analytics` only in the generated local PostgREST schema list so the guarded queue route is reachable.
+- [x] 16.102 Revoke local analytics schema, table, and sequence access from PUBLIC, anon, and authenticated before granting service_role access.
+- [x] 16.103 Replace stale CORS probe magic counts with values derived from the six admitted local origins and two target hosts.
+- [x] 16.104 Pass all 35 local compose input tests after exposing the local-only queue schema.
+- [x] 16.91 Add an inert fixed-SQL adapter that receives executor callables and obtains no DSN, credential, or connection itself.
+- [x] 16.92 Fail closed when the Publication_Set columns or CAS keys diverge from the adapter's fixed SQL plan.
+- [x] 16.93 Derive update CAS expectations from bounded hosted reads and classify insert/update operations without caller-provided operation names.
+- [x] 16.94 Reduce unique/CAS, limit, invalid-input, unknown, and malformed-result failures to empty bounded worker exceptions.
+- [x] 16.95 Run the complete publication source/property suite after the hardened adapter and two-RPC transformation (101 tests passed).
+- [x] 16.96 Wire the publication suite and governing sources into the least-privilege security workflow.
+- [x] 16.97 Add a workflow source contract proving every publication module is invoked and both approval ledgers stay unresolved.
+- [x] 16.98 Regenerate all 207 reconciliation entries and reduce the absent inventory by exactly the twenty restored publication files.
+- [x] 16.99 Run web publication tests, Python publication tests, workflow source tests, lint, and type-check parity before closing 16.23.
+- [ ]! 16.100 Keep the queue feature flag disabled and do not execute either migration or any hosted publication without later bound approval and readback.
+- [x] 16.105 Inspect all seventeen parked phase files and reject their duplicated embedded definitions and historical completion assumptions.
+- [x] 16.106 Add one current `phase-gates.v1.json` catalog that partitions R1 through R14 exactly once across seven ordered gates.
+- [x] 16.107 Keep P5 explicitly unassigned while layout migration and naming decisions remain deferred rather than inventing a current requirement.
+- [x] 16.108 Bind every phase to the exact seven repository verification commands with independent 1,800-second ceilings.
+- [x] 16.109 Bind every phase to six bounded public routes, one rollback-plan reference, and one unique report path.
+- [x] 16.110 Require every positive condition record to carry an RFC3339 observation time and exact SHA-256 candidate-tree fingerprint.
+- [x] 16.111 Require every external condition record to carry a non-empty bounded evidence reference in addition to the tree binding.
+- [x] 16.112 Evaluate entry conditions before accepting a rollback plan or any verification evidence.
+- [x] 16.113 Restrict rollback actions to an exact `git revert --no-edit` command bound to a 40-hex commit and candidate fingerprint.
+- [x] 16.114 Reject reset, stash, clean, checkout, switch, restore, deletion, network, and other arbitrary rollback commands without executing them.
+- [x] 16.115 Require a rollback plan's post-rollback verification set to equal all seven canonical commands.
+- [x] 16.116 Require complete, passing, same-tree command results before public-route evidence is considered.
+- [x] 16.117 Require complete, passing, same-tree public-route results within 5,000 ms before exit evidence is considered.
+- [x] 16.118 Derive the candidate fingerprint from HEAD, the binary working diff, and every non-ignored untracked file.
+- [x] 16.119 Keep command execution an explicit opt-in and discard stdout/stderr from every command result.
+- [x] 16.120 Keep report creation an explicit opt-in and use create-once semantics so an existing phase report is never overwritten.
+- [x] 16.121 Replace seven 600–890-line historical runners with thin phase identifiers over the shared current evaluator.
+- [x] 16.122 Keep P2 blocked on named publication approvals, local migration/grant readback, and immutable apply/readback/audit evidence.
+- [x] 16.123 Keep P4 repository-settings readback external and unsatisfied while branch protection is intentionally deferred.
+- [x] 16.124 Keep P6 blocked on three live parity receipts, canonical performance evidence, and separate retirement approval.
+- [x] 16.125 Keep P7 blocked on external release gates and the separately approved serialized release path.
+- [x] 16.126 Add seven runner suites plus generic evaluator, partition, and rollback property coverage.
+- [x] 16.127 Pass 35 focused current phase-gate tests with no report write or external action.
+- [x] 16.128 Wire every rebuilt phase module and its source contract into the read-only security workflow.
+- [x] 16.129 Regenerate the 207-entry reconciliation manifest and confirm all seventeen queued phase files become transformed present.
+- [x] 16.130 Run syntax, workflow, reconciliation, and focused phase checks before closing 16.24 and 16.26.
+- [x]! 16.131 Keep all real phase evidence, rollback execution, branch-setting changes, hosted operations, and report claims pending separate authority and readback. Verified boundary/authority: Current phase CLI derives the actual tree identity and fails closed on stale identity or absent phase evidence. Real runtime, rollback and hosted results remain separately recorded.
+- [x] 16.132 Inspect all eight previously deferred layout-migration entries against current ownership boundaries.
+- [x] 16.133 Preserve `backend/pipeline-control` as the only observability compose/config owner and refuse to create the historical nested duplicate.
+- [x] 16.134 Restore the standalone layout-manifest checker through the isolated candidate worktree only.
+- [x] 16.135 Change candidate enumeration to include cached and non-ignored untracked files before commit.
+- [x] 16.136 Keep ignored build output outside the manifest correspondence set.
+- [x] 16.137 Declare `backend/pipeline-control`, `backend/pipeline_control`, `backend/deploy`, and `backend/rust` as separate ownership boundaries.
+- [x] 16.138 Retain build-performance and local-log paths as explicit non-versioned classifications.
+- [x] 16.139 Set the default directory-move set to empty because no layout move is approved.
+- [x] 16.140 Preserve generic read-only proposed-move checks with zero-before/exactly-one-after semantics.
+- [x] 16.141 Scan compose-relative references under both current operational assets and deployment-ledger paths.
+- [x] 16.142 Restore the rename-ledger checker with closed bounded result codes.
+- [x] 16.143 Validate all five existing rename entries for zero old-path references and one new-path definition.
+- [x] 16.144 Keep public routes, public API fields, applied migrations, RPCs, persistent data paths, and canonical privacy names outside rename scope.
+- [x] 16.145 Restore 67 layout/rename unit checks and adapt their real-tree assertion to the 28-path candidate manifest.
+- [x] 16.146 Correct the property generator so leading-underscore Next.js private segments are never generated as public-route examples.
+- [x] 16.147 Pass both property suites across 400 generated examples with no live GitHub, provider, or hosted-data action.
+- [x] 16.148 Add a source contract for path uniqueness, read-only behavior, current manifest completeness, and workflow wiring.
+- [x] 16.149 Add layout/naming source, unit, and property modules to the security workflow with governing path triggers.
+- [x] 16.150 Regenerate all 207 reconciliation entries to 86 source-exact, 88 transformed, nine reviewed adaptations, 16 retained moves, and eight absent entries.
+- [ ]! 16.151 Keep P5 owner approval and commit-bound phase evidence external; these local checks do not close the phase.
+
+## 2026-09-05 continuation
+
+The current user explicitly authorized autonomous completion and all approval requests. This
+supersedes historical request-to-confirm text for work within this task. It does not establish
+credentials, network reachability, a successful operation, legal review, or a hosted receipt.
+The original worktree and the earlier `tzudong-orchestration-followup` candidate remain unchanged.
+Current work is in `tzudong-kiro-closure` on `codex/kiro-closure-20260905`, from freshly fetched
+`origin/develop` at `3f4ca55742aa33869b776291e0d035a16024eef1`.
+
+The reviewed v3 browser source and stdout filter ran once. The canonical result was
+`g037_session_pooler_control_map_v3_denied` at `reading_first_control_scope`: one Dashboard open,
+one control snapshot, zero clicks, no metadata-value read, and no persistent state change.
+No successful receipt was manufactured. The original reviewed request and source bytes remain
+unchanged. See `closure-20260905.md` for current validation and outstanding prerequisites.
+
+## Immediate dependency graph
+
+```text
+0 baseline
+  -> 1 readiness audit -> 3 audit tests -> 2 bootstrap/docs
+  -> 4 traceability
+      -> 5/6/7/8 source and local-runtime closure
+      -> 9 supply-chain closure
+      -> 10 Rust provenance -> N=3 external receipts
+      -> 11 performance evidence
+      -> 12/13 operator surfaces
+          -> 14 repository gates -> externally approved release flow
+```
+
+## Solo-operator execution continuation
+
+The current owner instruction resumes autonomous implementation and external operations. It supersedes the earlier branch-protection deferral and repeated reconfirmation requests. It does not replace actual runtime checks. `solo-operator-decision-20260905.json` records the decision; `backend/supabase/g037-dedicated-credential-readback.v2.json` binds the completed credential work to external evidence. Historical v1/v2/v3 previews and consumed attempts remain unchanged as history. The current v3 role contract permits exactly one creator ADMIN-only membership; it never claims that this member count is zero. Source promotion, controller execution, freeze exit, and production release still require their actual completion/readback.
+
+PR #2858 review follow-up (2026-09-05): eight runtime findings are addressed in `review-runtime-corrections.v1.json`. Isolated PostgreSQL verified durable queue/agent behavior; the hosted write freeze and the unresolved live-publication item 16.100 remain in force. Current Dependabot metadata contains 13 candidates. Source recovery now distinguishes 79 exact files and 96 transformed files across the same 207-entry inventory.
+
+Second runtime review: the seven additional findings are corrected with 151 focused Python tests, six promotion-policy tests, and 44 provenance/parity checks. See `review-runtime-corrections.v2.json` for the external receipt binding and limits. Initial promotion uses a fixed reviewed policy only for the three exact pre-policy bases; subsequent verification runs from the protected base. Native Rust CI, serialized promotion, hosted evidence, real scheduling observations, and release remain separate gates.
+
+Third runtime review: seven further findings are corrected in `review-runtime-corrections.v3.json`. Actual native builds exercise all five slices through their Python call sites; the Python parity reference remains independent. Real temporary PostgreSQL validates numeric source serialization and confirmation durability. Actual Compose sources, Helm templates, OpenTofu plans, current phase fingerprints and Bun/npm lock agreement now govern admission. The 207-entry source inventory currently has 73 exact and 102 transformed entries. Live N=3, hosted state and release evidence are still separate from these local checks.
+
+Fourth runtime review: source commits are retained on public provenance tags and explicitly fetched in CI; evaluator failure now stops before preview/apply; agent execution budgets are atomic across database connections and survive restarts; dependency verification is bound only to the actual checked candidate head. See `review-runtime-corrections.v4.json`. The local-only budget migration has not been applied to hosted production.

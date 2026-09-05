@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_readonly_role_apply_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "attemptObservedAt": "2026-09-04T06:46:42Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "authorizationPath": "backend/supabase/g037-readonly-role-apply-authorization.v2.json",
+    "authorizationSha256": "7178b0bb2dd01a00c0d6f01d608564432fd002ad6a21f0677abd57613995ed1d",
+    "previewApprovalPath": "backend/supabase/g037-readonly-role-preview-approval.v2.json",
+    "previewApprovalSha256": "b579b7d11c2d82cef6e8502472399de341512b5d7ce08201354e19b018645dd8",
+    "provisioningSqlPath": "backend/supabase/scripts/g037_readonly_role_provisioning_v2.sql",
+    "provisioningSqlSha256": "b4241fa478ac287ba418a8a53cc826ccba4dc9b72eafe536c0c8aabad08cfdc3"
+  },
+  "preapplyReadback": {
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCountExact": true,
+    "terminalMigrationExact": true
+  },
+  "outcome": {
+    "status": "rolled_back",
+    "fixedCode": "role_postcondition_denied",
+    "transactionCommitObserved": false,
+    "persistentRolePresentAfterFailure": false,
+    "persistentHostedStateChanged": false,
+    "providerErrorRetained": false
+  },
+  "rollbackReadback": {
+    "roleAbsent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "boundedHostedCatalogReadback": {
+    "targetFunctionPresent": true,
+    "publicTargetExecute": false,
+    "publicDatabaseCreate": false,
+    "publicSchemaCreate": false
+  },
+  "localPostgresReproduction": {
+    "postgresVersion": "17.11",
+    "allDeclaredPostconditionsPassed": true,
+    "persistentStateChanged": false,
+    "evidenceBoundary": "disposable local cluster only; not hosted-state evidence"
+  },
+  "retryGate": {
+    "approvedSqlRetryAllowed": false,
+    "authorizationReusable": false,
+    "rollbackOnlyFixedCodeDiagnosticRequired": true,
+    "freshDiagnosticPreviewApprovalRequired": true,
+    "freshDiagnosticExecutionAuthorizationRequired": true
+  },
+  "notEvidenceOf": [
+    "successful role provisioning",
+    "which individual hosted postcondition differed",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

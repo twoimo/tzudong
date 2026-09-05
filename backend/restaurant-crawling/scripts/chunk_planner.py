@@ -21,7 +21,14 @@ from typing import List
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from utils.chunk_utils import format_time, Segment
 
+# This CLI is also invoked by absolute path from outside the repository.
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from backend.pipeline_control.impl_selector import rust_dispatch
 
+format_time = rust_dispatch("R4-media-compute")(format_time)
+
+
+@rust_dispatch("R4-media-compute")
 def compute_chunk_duration(total_duration: float) -> float:
     """영상 길이에 따른 적응형 청크 크기 반환 (초 단위)
 
@@ -38,6 +45,7 @@ def compute_chunk_duration(total_duration: float) -> float:
 
 
 
+@rust_dispatch("R4-media-compute")
 def align_to_subtitle_boundary(
     target_sec: float, segments: List[Segment], tolerance: float = 10.0
 ) -> float:
@@ -55,6 +63,7 @@ def align_to_subtitle_boundary(
     return min(within_tolerance, key=lambda s: abs(s - target_sec))
 
 
+@rust_dispatch("R4-media-compute")
 def format_transcript_range(
     segments: List[Segment], start_sec: float, end_sec: float
 ) -> str:
@@ -72,6 +81,7 @@ def format_transcript_range(
     return "\n".join(lines)
 
 
+@rust_dispatch("R4-media-compute")
 def plan_chunks(
     video_id: str, duration: float, segments: List[Segment], overlap_sec: float = 10.0
 ) -> List[dict]:

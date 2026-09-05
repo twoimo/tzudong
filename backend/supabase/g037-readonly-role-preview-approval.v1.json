@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_preview_approval",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "approverDisplayName": "최연우",
+  "approvedAt": "2026-09-04T05:57:03Z",
+  "approvalEvidenceBoundary": "user-provided named-owner approval in the current task transcript; no external immutable receipt",
+  "approvedArtifacts": [
+    {
+      "path": "backend/supabase/g037-readonly-role-provisioning-preview.v1.json",
+      "sha256": "59489e04a707651c11b403d0c72831fe63573b2c27ef212e306042bf3dad82d9"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_provisioning.sql",
+      "sha256": "d2fd03c0988a083baafef5b4f98eff2ae96350f93bb062bc2f1483846bf4f997"
+    },
+    {
+      "path": "backend/supabase/scripts/g037_readonly_role_readback.sql",
+      "sha256": "fb0da6c074cbca2a6534b9cf8ae99cd12c9f4af2915ad40bedf053a4624b4c0b"
+    }
+  ],
+  "approvedScope": {
+    "roleAndGrantPreview": true,
+    "externalCredentialCustodyProcedure": true,
+    "hostedExecution": false,
+    "roleCreation": false,
+    "passwordConfiguration": false,
+    "repositorySecretMutation": false,
+    "workflowDispatch": false
+  },
+  "executionGate": {
+    "status": "separate_hosted_apply_authorization_required",
+    "preapplyReadbackPerformed": false,
+    "hostedApplyAuthorized": false,
+    "hostedApplyPerformed": false,
+    "postapplyReadbackPerformed": false
+  },
+  "notEvidenceOf": [
+    "dedicated role presence or absence in production",
+    "hosted SQL execution",
+    "password generation or configuration",
+    "external credential-custody completion",
+    "repository secret presence",
+    "successful hosted database connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

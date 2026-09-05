@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 3,
+  "kind": "g037_readonly_role_creator_membership_diagnostic_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "attemptObservedAt": "2026-09-04T08:36:07Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "authorizationPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-authorization.v3.json",
+    "authorizationSha256": "25c763681bc2c3d141be7c363c945c16ff3c2aa3159d89f770361731b8a31254",
+    "creatorMembershipDiagnosticApprovalPath": "backend/supabase/g037-readonly-role-creator-membership-diagnostic-approval.v3.json",
+    "creatorMembershipDiagnosticApprovalSha256": "8cc2520b8c7e667de009b34312db742fcb0eb64f50dc4ca7210944a7fda71108",
+    "diagnosticSqlPath": "backend/supabase/scripts/g037_readonly_role_creator_membership_diagnostic_v3.sql",
+    "diagnosticSqlSha256": "9df2ba5db3e7a527d49df00025f15504fb29003fb543e6c3a735dc5d92a43e4b"
+  },
+  "preexecutionReadback": {
+    "projectActiveHealthy": true,
+    "postgresMajorVersion": 17,
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true,
+    "migrationCountExact": true,
+    "terminalMigrationExact": true
+  },
+  "outcome": {
+    "status": "rolled_back",
+    "fixedCode": "g037_creator_diag_creator_admin_only",
+    "fixedCodeAllowlisted": true,
+    "transactionCommitObserved": false,
+    "persistentRolePresentAfterDiagnostic": false,
+    "persistentHostedStateChanged": false,
+    "providerErrorRetained": false
+  },
+  "rollbackReadback": {
+    "queryExecutionCount": 1,
+    "resultWrapperParseSucceeded": true,
+    "roleAbsent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "diagnosisBoundary": {
+    "parentMembershipCount": 0,
+    "memberCount": 1,
+    "memberIsCurrentUser": true,
+    "currentUserIsNonSuperuserCreateRole": true,
+    "grantorIsSuperuser": true,
+    "adminOption": true,
+    "setOption": false,
+    "inheritOption": false,
+    "automaticCreatorMembershipObservableShapeMatched": true,
+    "bootstrapGrantorIdentityRecorded": false,
+    "memberRoleIdentityRecorded": false,
+    "memberRoleNameRecorded": false
+  },
+  "retryGate": {
+    "creatorMembershipDiagnosticV3RetryAllowed": false,
+    "authorizationReusable": false,
+    "correctedProvisioningV3PreviewRequired": true,
+    "freshProvisioningPreviewApprovalRequired": true,
+    "freshProvisioningExecutionAuthorizationRequired": true
+  },
+  "notEvidenceOf": [
+    "member or grantor role identity or name",
+    "bootstrap-superuser grantor identity",
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

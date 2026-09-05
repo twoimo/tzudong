@@ -180,9 +180,9 @@ describe('local Supabase runtime source contract', () => {
     const localDevRunner = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');
     const gitignore = readFileSync(path.resolve(import.meta.dir, '../.gitignore'), 'utf8');
     const eslintConfig = readFileSync(path.resolve(import.meta.dir, '../eslint.config.mjs'), 'utf8');
-    expect(packageSource).toContain('"dev": "node scripts/run-local-dev.mjs --port 3000"');
-    expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 3000"');
-    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted"');
+    expect(packageSource).toContain('"dev": "node scripts/run-local-dev.mjs --port 8080"');
+    expect(packageSource).toContain('"dev:local": "node scripts/run-local-dev.mjs --port 8080"');
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
     expect(packageSource).toContain('"supabase:gen-types:local": "node scripts/run-local-supabase-types.mjs"');
     const localTypeRunner = readFileSync(
       path.resolve(import.meta.dir, '../scripts/run-local-supabase-types.mjs'),
@@ -282,7 +282,7 @@ describe('local Supabase runtime source contract', () => {
         || source.includes('nightlyRun');
       expect(admitted, name).toBe(true);
     }
-    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 3000 --hosted"');
+    expect(packageSource).toContain('"dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted"');
     const cleanNext = readFileSync(path.resolve(import.meta.dir, '../scripts/clean-next.mjs'), 'utf8');
     const prewarm = readFileSync(path.resolve(import.meta.dir, '../scripts/dev-prewarm.mjs'), 'utf8');
     const localDev = readFileSync(path.resolve(import.meta.dir, '../scripts/run-local-dev.mjs'), 'utf8');

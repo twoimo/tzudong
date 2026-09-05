@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "timezone": "Asia/Seoul",
+  "utcOffsetMinutes": 540,
+  "cadence": "daily",
+  "kstWindowStart": "07:30",
+  "kstWindowEnd": "08:30",
+  "utcCron": "30 22 * * *",
+  "minBufferMinutesAfterHeavyLocal": 30,
+  "approval": {
+    "approverName": null,
+    "approvedAt": null,
+    "status": "unresolved"
+  }
+}

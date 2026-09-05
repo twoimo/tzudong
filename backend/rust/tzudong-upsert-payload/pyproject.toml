@@ -1,0 +1,22 @@
+# maturin build configuration for Migration_Slice R3-upsert-payload (design C1).
+#
+# maturin is pinned to the exact design C1 version. Building this project
+# produces the `tzudong_upsert_payload` PyO3 extension module, which
+# backend/pipeline_control/batch_upsert.py imports through the
+# Implementation_Selector. The public Python entry point (apply_restaurant_batch
+# and its RPC call) is unchanged (requirements 1.1, 1.3).
+[build-system]
+requires = ["maturin==1.15.0"]
+build-backend = "maturin"
+
+[project]
+name = "tzudong-upsert-payload"
+# PyO3 0.29 supports CPython up to 3.13; on a newer interpreter the build needs
+# PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 (or a 3.11-3.13 interpreter).
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.maturin]
+bindings = "pyo3"
+module-name = "tzudong_upsert_payload"
+features = ["python"]

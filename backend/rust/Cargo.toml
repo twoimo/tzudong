@@ -1,0 +1,44 @@
+# Tzudong Rust migration Cargo workspace (requirements 5.6, 1.1; design C1/D1).
+#
+# One crate per Migration_Slice, matching the slice order fixed in design C1:
+#   tzudong-validators      -> R1-validators
+#   tzudong-normalize       -> R2-normalize
+#   tzudong-upsert-payload  -> R3-upsert-payload
+#   tzudong-media-compute   -> R4-media-compute
+#   tzudong-pipeline-graph  -> R5-pipeline-graph
+#
+# The Rust toolchain is pinned in rust-toolchain.toml as a three-digit fixed
+# string (1.97.0) with no channel alias or floating range (requirement 5.6).
+#
+# Toolchain / library pins fixed by design C1:
+#   Rust toolchain : 1.97.0 (rust-toolchain.toml)
+#   PyO3           : 0.29.2  ([workspace.dependencies] below)
+#   maturin        : 1.15.0  (per-crate pyproject.toml [build-system])
+#   proptest       : 1.11.0  ([workspace.dependencies] below)
+#
+# The member crates are minimal skeletons at this task. PyO3 bindings and
+# proptest suites are activated per slice by later tasks (42, 44, 46), which
+# is why pyo3/proptest are declared here as a central version table rather than
+# already wired into each member.
+[workspace]
+resolver = "2"
+members = [
+    "tzudong-validators",
+    "tzudong-normalize",
+    "tzudong-upsert-payload",
+    "tzudong-media-compute",
+    "tzudong-pipeline-graph",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.97.0"
+license = "MIT"
+publish = false
+
+[workspace.dependencies]
+# Pinned to the exact design C1 versions using `=` so a bump surfaces as a
+# deliberate Dependency_Freshness_Workflow candidate rather than a silent drift.
+pyo3 = { version = "=0.29.2", features = ["extension-module"] }
+proptest = "=1.11.0"

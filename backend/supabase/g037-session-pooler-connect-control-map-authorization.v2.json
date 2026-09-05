@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_session_pooler_connect_control_map_authorization",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "approverDisplayName": "최연우",
+  "authorizedAt": "2026-09-04T18:14:25Z",
+  "authorizationEvidenceBoundary": "the named owner supplied the exact one-time top-level-await control-only Dashboard Connect v2 statement in the current task after the immutable request, browser source, receipt contract, and verifier were presented; no prior, standing, assistant-generated, or inferred approval is used",
+  "authorizationStatement": "최연우, production aqlcofblfxdrjhhdmarw G037 top-level-await control-only Dashboard Connect v2 request e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08·browser a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc·receipt-contract 15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c·verifier 7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb에 따라 1회 실행 승인",
+  "approvedTarget": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v2.json",
+    "sha256": "e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08",
+    "kind": "g037_session_pooler_connect_control_map_request",
+    "providerSurface": "supabase_dashboard_connect_dialog",
+    "browserExecutionMethod": "aside_repl_exact_single_line_top_level_await_source",
+    "maximumDashboardOpenCount": 1,
+    "maximumInspectionAttemptCount": 1
+  },
+  "boundBrowserSource": {
+    "path": "backend/supabase/scripts/g037_session_pooler_control_map_read_v2.mjs",
+    "sha256": "a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc",
+    "canonicalLineCount": 1,
+    "topLevelAwaitRequired": true,
+    "dynamicCodeOrExternalInputAllowed": false
+  },
+  "boundReceiptContract": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v2.json",
+    "sha256": "15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c",
+    "verifierPath": "backend/supabase/scripts/g037_session_pooler_control_map_receipt_v2.py",
+    "verifierSha256": "7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb"
+  },
+  "boundPriorAttempt": {
+    "path": "backend/supabase/g037-session-pooler-connect-control-map-attempt.v1.json",
+    "sha256": "9bcf5eec76211f11113172b08a1133a67a9824d77874212d6a57c0254dce669c",
+    "priorAuthorizationReusable": false,
+    "priorRemainingExecutionCount": 0
+  },
+  "evidenceAssessment": {
+    "currentTaskUserMessage": true,
+    "messagePostdatesV2Request": true,
+    "messagePostdatesBrowserSource": true,
+    "messagePostdatesReceiptContract": true,
+    "messagePostdatesVerifier": true,
+    "approverDisplayNameMatched": true,
+    "productionProjectReferenceMatched": true,
+    "requestSha256Matched": true,
+    "browserSourceSha256Matched": true,
+    "receiptContractSha256Matched": true,
+    "verifierSha256Matched": true,
+    "oneTimeExecutionWordingMatched": true,
+    "priorStandingApprovalUsed": false,
+    "assistantOrGeneratedEvidenceUsed": false,
+    "inferredIdentityUsed": false
+  },
+  "authorizedScope": {
+    "oneExactSourceControlOnlyDashboardRead": true,
+    "oneSanitizedControlMapObservation": true,
+    "productionProjectOnly": true,
+    "exactConnectDialogOnly": true,
+    "maximumControlSnapshotCount": 2,
+    "maximumControlClickCount": 1,
+    "directConnectionEntryClickOnly": true,
+    "sessionPoolerControlIdentificationOnly": true,
+    "sessionPoolerControlClick": false,
+    "metadataValueRead": false,
+    "screenshotOrImageCapture": false,
+    "clipboardUse": false,
+    "browserStorageOrNetworkHeaderInspection": false,
+    "connectionStringOrDsnRead": false,
+    "passwordCredentialOrCertificateRead": false,
+    "databaseAuthentication": false,
+    "sqlExecution": false,
+    "networkProbe": false,
+    "persistentProviderMutation": false,
+    "passwordGenerationOrAssignment": false,
+    "credentialContractAmendment": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "selectorBoundary": {
+    "allowedSelector": "[role=dialog] button, [role=dialog] [role=combobox]",
+    "interactiveNodesOnly": true,
+    "firstRequiredControlName": "Direct Connection string",
+    "requiredDiscoveredControlName": "Session pooler",
+    "forbiddenNodeClasses": [
+      "page body or main",
+      "whole dialog text",
+      "textbox, input, textarea, code, or pre",
+      "definition values or arbitrary text nodes",
+      "connection string or command container",
+      "project overview or organization content"
+    ],
+    "stopOnZeroOrMultipleExactMatch": true,
+    "stopOnValueBearingOrOutOfScopeNode": true
+  },
+  "executionBudget": {
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 0,
+    "remainingExecutionCount": 1,
+    "authorizationReusable": false,
+    "failureAuthorizesRetry": false,
+    "metadataReadExecutionCountApproved": 0,
+    "sessionPoolerSelectionCountApproved": 0,
+    "networkProbeExecutionCountApproved": 0,
+    "passwordExecutionCountApproved": 0,
+    "repositorySecretExecutionCountApproved": 0,
+    "workflowDispatchCountApproved": 0
+  },
+  "authorizationGate": {
+    "controlMapV2ReadAuthorized": true,
+    "controlMapV2ReadConsumed": false,
+    "controlMapV2ReceiptPresent": false,
+    "metadataReadV2Authorized": false,
+    "sessionPoolerSelected": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "workflowDispatchAuthorized": false
+  },
+  "notEvidenceOf": [
+    "consumption or outcome of the authorized control-only read",
+    "a successful control map or metadata readback",
+    "an exact Session pooler hostname, username, region, port, database, DSN, credential, certificate, cookie, token, or key",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "authorization for metadata values, password, Secret, controller, workflow, migration, release, or deployment work"
+  ]
+}

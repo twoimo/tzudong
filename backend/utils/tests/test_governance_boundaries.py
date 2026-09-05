@@ -256,6 +256,59 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
     def test_gdrive_backfill_scheduled_jobs_are_ref_guarded(self) -> None:
         self._assert_scheduled_entry_jobs_are_ref_guarded(GDRIVE_BACKFILL_WORKFLOW)
 
+    def test_active_write_freeze_blocks_every_crawler_and_backfill_job(self) -> None:
+        import ast
+
+        replacements = {
+            "github.repository": "twoimo/tzudong",
+            "github.event.repository.full_name": "twoimo/tzudong",
+            "github.ref_name": "main",
+            "github.event.repository.default_branch": "main",
+            "github.ref_protected": True,
+            "github.event.workflow_run.conclusion": "success",
+            "github.event.workflow_run.event": "schedule",
+            "github.event.workflow_run.head_branch": "main",
+            "github.event.workflow_run.head_repository.full_name": "twoimo/tzudong",
+            "vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED": "1",
+            "vars.TZUDONG_DATA_BRANCH_PUBLISH": "1",
+            "needs.daily-compute.outputs.publication_ready": "true",
+            "needs.daily-compute.outputs.publication_manifest_sha256": "a" * 64,
+        }
+        for path in (DAILY_CRAWLER_WORKFLOW, GDRIVE_BACKFILL_WORKFLOW):
+            for name, job in _load_workflow(path)["jobs"].items():
+                for event in ("schedule", "workflow_dispatch", "workflow_run"):
+                    for freeze in ("active", "cleared"):
+                        with self.subTest(workflow=path.name, job=name, event=event, freeze=freeze):
+                            expression = " ".join(job["if"].split()).removeprefix("${{").removesuffix("}}").strip()
+                            values = {**replacements, "github.event_name": event, "vars.G037_WRITE_FREEZE": freeze}
+                            for key in sorted(values, key=len, reverse=True):
+                                expression = expression.replace(key, repr(values[key]))
+                            expression = expression.replace("always()", "True").replace("&&", "and").replace("||", "or")
+                            tree = ast.parse(expression, mode="eval")
+                            allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.NotEq, ast.Constant)
+                            self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
+                            self.assertIs(eval(compile(tree, "<workflow-condition>", "eval"), {"__builtins__": {}}, {}), freeze != "active")
+
+    def test_public_repository_data_publication_requires_explicit_opt_in(self) -> None:
+        condition = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["daily-publish"]["if"]
+        self.assertIn("vars.TZUDONG_DATA_BRANCH_PUBLISH == '1'", condition)
+
+    def test_data_artifact_upload_also_requires_explicit_opt_in(self) -> None:
+        import ast
+        steps = _load_workflow(DAILY_CRAWLER_WORKFLOW)['jobs']['daily-compute']['steps']
+        upload = next(step for step in steps if step.get('id') == 'upload-publication')
+        for ready in ('true', 'false'):
+            for enabled in ('1', '0', ''):
+                with self.subTest(ready=ready, enabled=enabled):
+                    expression = upload['if'].removeprefix('${{').removesuffix('}}').strip()
+                    expression = expression.replace('steps.publication.outputs.ready',repr(ready))
+                    expression = expression.replace('vars.TZUDONG_DATA_BRANCH_PUBLISH',repr(enabled)).replace('&&','and')
+                    tree = ast.parse(expression,mode='eval')
+                    allowed = (ast.Expression,ast.BoolOp,ast.And,ast.Compare,ast.Eq,ast.Constant)
+                    self.assertTrue(all(isinstance(node,allowed) for node in ast.walk(tree)))
+                    self.assertIs(eval(compile(tree,'<artifact-condition>','eval'),{'__builtins__':{}},{}),
+                                  ready == 'true' and enabled == '1')
+
     def test_daily_crawler_wires_run_manifest_into_published_evidence(self) -> None:
         # R5.3: the scheduled crawler must publish the Run_Manifest
         # (current-summary.json) as evidence. In the current source the crawler binds
@@ -325,8 +378,9 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
 # `20260828000100_hosted_candidate_identity_unique.sql`. This test asserts that file
 # exists, is purely additive (creates a new object; performs no drop/alter/destructive
 # operation on prior migration objects), introduces an object name not created by any
-# prior migration, and is appended as the newest migration (prior applied migrations
-# remain in place, not renamed or overwritten).
+# prior migration, and remains ordered after the prior applied migration it extends.
+# Later additive migrations are allowed to sort after the R4 migration; otherwise this
+# historical immutability check would break every time a legitimate migration is added.
 # ---------------------------------------------------------------------------
 
 NEW_R4_MIGRATION = "20260828000100_hosted_candidate_identity_unique.sql"
@@ -434,17 +488,18 @@ class GovernanceAppliedMigrationImmutabilityTest(unittest.TestCase):
             ),
         )
 
-    def test_new_r4_migration_is_the_newest_appended_file(self) -> None:
-        # Appended as the newest migration: prior applied migrations are left in place
-        # (not renamed/overwritten) and the new file sorts last by its timestamp prefix.
+    def test_new_r4_migration_remains_after_its_referenced_history(self) -> None:
+        # The R4 migration must remain ordered after the applied migration it extends.
+        # Newer additive migrations may follow it without weakening this boundary.
         self.assertTrue(self.migration_names, msg="no migration files discovered")
-        self.assertEqual(
-            self.migration_names[-1],
-            NEW_R4_MIGRATION,
+        self.assertIn(NEW_R4_MIGRATION, self.migration_names)
+        self.assertLess(
+            self.migration_names.index(REFERENCED_PRIOR_MIGRATION),
+            self.migration_names.index(NEW_R4_MIGRATION),
             msg=(
-                f"{NEW_R4_MIGRATION} must be the newest (lexicographically last) "
-                "migration, confirming it was appended rather than inserted among or "
-                "overwriting already-applied migrations (R9.7)"
+                f"{NEW_R4_MIGRATION} must remain after the prior applied migration "
+                f"{REFERENCED_PRIOR_MIGRATION} instead of renaming, replacing, or "
+                "overwriting that history (R9.7)"
             ),
         )
 
