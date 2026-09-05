@@ -1,3 +1,8 @@
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol/storage
+    create_directory: true
+    fsync: true
 receivers:
   otlp:
     protocols:
@@ -6,14 +11,26 @@ receivers:
   filelog:
     include:
       - /var/log/tzudong/*.log
-    start_at: end
+    start_at: beginning
+    storage: file_storage
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0s
 exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
   otlphttp/loki:
     # Loki 3.x native OTLP base URL. The Collector appends /v1/logs.
     endpoint: http://loki:3100/otlp
+    sending_queue:
+      enabled: true
+      storage: file_storage
+      queue_size: 10000
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 0s
 service:
+  extensions: [file_storage]
   pipelines:
     metrics:
       receivers: [otlp]
