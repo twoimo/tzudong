@@ -81,7 +81,8 @@ class DurableBackendTests(unittest.TestCase):
             with c.cursor() as cur:
                 cur.execute('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
                 for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql',
-                             '20260905000200_local_agent_rate_budget.sql'):
+                             '20260905000200_local_agent_rate_budget.sql',
+                             '20260905031359_local_agent_trigger_reservation.sql'):
                     cur.execute((ROOT / 'supabase/migrations' / name).read_text())
 
     def connection(self):
@@ -284,5 +285,48 @@ class DurableBackendTests(unittest.TestCase):
         with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege):
             self.scalar('DELETE FROM local_analytics.agent_action_budget_claims')
         self.conn.rollback()
+
+    def test_trigger_reservation_serializes_different_kinds_after_racing_clear_reads(self):
+        from concurrent.futures import ThreadPoolExecutor
+        import threading
+        trigger = str(uuid4())
+        barrier = threading.Barrier(2)
+        def attempt(kind):
+            conn = self.psycopg2.connect(self.dsn)
+            try:
+                with conn.cursor() as cur: cur.execute('SET ROLE service_role')
+                conn.commit()
+                def execute(sql, params):
+                    with conn.cursor() as cur:
+                        cur.execute(sql, params); row = cur.fetchone()
+                    conn.commit()
+                    return row[0] if row else None
+                store = PostgresAgentActionStore(execute)
+                self.assertEqual(store.trigger_state(trigger), 'clear')
+                barrier.wait(timeout=5)
+                record = oa.AgentActionRecord(str(uuid4()), trigger, 'high', kind)
+                return record, store.reserve(record)
+            finally:
+                conn.close()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(attempt, ('restart_local_container', 'requeue_failed_pipeline_task')))
+        self.assertEqual(sorted(status for _, status in results), ['created', 'halted'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records WHERE trigger_signal_id=%s', (trigger,)), 1)
+        winner = next(record for record, status in results if status == 'created')
+        loser = next(record for record, status in results if status == 'halted')
+        store = PostgresAgentActionStore(self.scalar)
+        self.assertTrue(store.record_result(winner.action_id, oa.AGENT_ACTION_PERFORMED))
+        self.assertEqual(store.reserve(loser), 'created')
+        self.assertTrue(store.record_result(loser.action_id, oa.AGENT_ACTION_UNVERIFIED))
+        self.assertEqual(store.reserve(oa.AgentActionRecord(str(uuid4()), trigger, 'high', 'flush_log_pending_queue')), 'halted')
+
+    def test_trigger_reservation_rejects_stale_snapshot_isolation_and_public_execution(self):
+        record = oa.AgentActionRecord(str(uuid4()), str(uuid4()), 'high', 'restart_local_container')
+        with self.conn.cursor() as cur:
+            cur.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+        self.assertEqual(PostgresAgentActionStore(self.scalar).reserve(record), 'unavailable')
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records'), 0)
+        for role in ('anon', 'authenticated'):
+            self.assertFalse(self.scalar("SELECT has_function_privilege(%s, 'local_analytics.reserve_agent_action(uuid,text,text,text,text)', 'EXECUTE')", (role,)))
 
 if __name__ == '__main__': unittest.main()

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T03:01:46.286201+00:00",
+  "generatedAt": "2026-09-05T03:20:30.034775+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "07ad4aaebae707c4eb0abdf164418a1c8a5793c7",
+  "sourceBaseHead": "618588e4b1e833cca87753a94be270c687902405",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -307,12 +307,13 @@
     "review-runtime-corrections.v5.json": "6dc30e7580c897ad141d09109794b07d9f58a9e5e033d3a3db7f64bc213f98be",
     "rust-performance-admission-review.json": "f581fedc991688d926c0d332ead5c71d7c55744e8fe1474a39000625ad6fafa2",
     "rust-performance-runtime-review.json": "f4db46db618d84d5271d6ff56276434edcdb70628d228fcb900e5f26e2d5f765",
-    "performance-runtime-image-readback.json": "ba6008503933e55532bef96370fa404bc2e7b270ad35f801a0e84878c8cc037f"
+    "performance-runtime-image-readback.json": "ba6008503933e55532bef96370fa404bc2e7b270ad35f801a0e84878c8cc037f",
+    "atomic-trigger-dependency-time-review.json": "4067cb53a1eef5cd9fabd5a1e338e6b1d0c647198364b56416f879295aa25e9c"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 464,
+  "changedFileCount": 466,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -403,12 +404,16 @@
       "sha256": "d2cf4e8673926ee2669f59e22df692908e46e5045417941cfd7783884ebb50fe"
     },
     {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/atomic-trigger-dependency-time-review.json",
+      "sha256": "45b6981c1db489938cb32d2b40b2a123f6bcfda912caffc0dfba5c270c0a1c4c"
+    },
+    {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/auth-plan-eligibility-readback.v1.json",
       "sha256": "2c121a6b66072572b918a89b9797552df12a829bda9c3c5eec6dc12bdbf0fc35"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "14b2360a10922ad28824ff55e0956599b77c292570b94a29147e1b81442305fd"
+      "sha256": "48d2acadf5939a932673c1e5c17f01967ce32f7c3447e88b88e3fff4d52df2c9"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -428,11 +433,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "2b3d0835a6863c60d55dc22e5466353e9717c5f46b1163c8b4fb7e411f82e8cd"
+      "sha256": "cc3518751b8a881f0d05e15da2e16608cb80e313488da58f1a4292f069bab6a4"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "968620c155f3c32616e47aa100a385952ff574e79802813b6aee8e29b791b6b6"
+      "sha256": "6462bca7a7cc9ae1f3ecd0aa8bda06de76d2171ded5e8234a49b56462424806e"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -552,7 +557,7 @@
     },
     {
       "path": "apps/web/scripts/collect-dependency-candidates.mjs",
-      "sha256": "f87e9f11a69ae5fe45c73b2607b1aecee3036af49545b55d2393a7b9bf4d588a"
+      "sha256": "923283c81421d3b7bc46a7436bc8a9cfaf2e9b7c836784e4529c637495ae816b"
     },
     {
       "path": "apps/web/scripts/measure-typecheck.mjs",
@@ -580,7 +585,7 @@
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "sha256": "1932e0c5a8cf3ef9d975ba93aaf5b166753dbacadb726a702ddbbedfb79c9dbe"
+      "sha256": "63630bc594b11f4b7b0c41c3b3496d79ec9ef6e82158823714f2682c99d4160c"
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-split.test.ts",
@@ -972,7 +977,7 @@
     },
     {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "sha256": "25cab7faf423486dd4b52c8076da13100ae86a06899651f12a938011b654a949"
+      "sha256": "8c93440c909b3ee13c8866fc1aa4d0326b405d872bafb333d0450f465c3a8711"
     },
     {
       "path": "backend/pipeline_control/api.py",
@@ -1036,7 +1041,7 @@
     },
     {
       "path": "backend/pipeline_control/ops_agent.py",
-      "sha256": "611376f9172b748de627130b05e19e6ef0026f1170b5b64afd23a0ec8edf132f"
+      "sha256": "f2759d828026f662ef7fd07a48504e1124efb1cbca1482510f154da90333e028"
     },
     {
       "path": "backend/pipeline_control/performance_evidence.py",
@@ -1072,7 +1077,7 @@
     },
     {
       "path": "backend/pipeline_control/rust_promotion_evidence.py",
-      "sha256": "f1311f23a378e9b58afdce260df47e31861c74ee5867d1e3e05507e1ce90945d"
+      "sha256": "d7c3221c4fe574855420a41ca27db76b6921a5118e72ff02f7b80778566953fb"
     },
     {
       "path": "backend/pipeline_control/schedule.py",
@@ -1184,7 +1189,7 @@
     },
     {
       "path": "backend/pipeline_control/test_ops_agent_unittest.py",
-      "sha256": "c8aaa432121151f2cf4517328ca09d6e47ddcea355006a467ae5b09cf148209f"
+      "sha256": "26d625b51fa5dcc9cc010a609e9b8eb8ec78fe830cf5a4a02d57073108378366"
     },
     {
       "path": "backend/pipeline_control/test_perf_noise_pbt.py",
@@ -1244,7 +1249,7 @@
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "sha256": "064d159700926806906c77edd16da994d951530d5aa6b352689a05c65f91de22"
+      "sha256": "62991f46aece21d22b1ef8b7196d1344f42a90ca69e2bb6d37976e90d2dc3750"
     },
     {
       "path": "backend/pipeline_control/test_publish_readback_pbt.py",
@@ -1791,6 +1796,10 @@
       "sha256": "779fd778efea18907d46b31a46a8c939054777a7d2447abeecd5d772ab1d1763"
     },
     {
+      "path": "backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+      "sha256": "2bec4a8e62ea92393ea2e7085fda0fa43114c88702086f809e27c36bc5b5d091"
+    },
+    {
       "path": "backend/supabase/optional-s3-compatibility.v1.json",
       "sha256": "fd625fc03ac36a250d10b4ac6d6cb9ee342ba096a90a59ce1dc598ea9d7a78c7"
     },
@@ -2262,6 +2271,24 @@
       "imageTarget": "worker",
       "imageReadbackFile": "performance-runtime-image-readback.json",
       "imageReadbackSha256": "ba6008503933e55532bef96370fa404bc2e7b270ad35f801a0e84878c8cc037f"
+    },
+    "atomicTriggerDependencyTime": {
+      "focusedPythonTestsPerVersion": 67,
+      "pythonVersions": [
+        "3.13.15",
+        "3.14.7"
+      ],
+      "dependencyTests": 31,
+      "scopedEslint": "passed",
+      "sourceProvenanceTests": 23,
+      "concurrentPostgresConnections": 2,
+      "competingClearPrechecks": 2,
+      "admittedReservations": 1,
+      "haltedReservations": 1,
+      "inMemoryConcurrentExecutorCalls": 1,
+      "strongerIsolationDenied": true,
+      "unauthorizedRpcExecutionDenied": true,
+      "githubCompareApiMergeBaseReadback": true
     }
   },
   "pendingReviewCorrectionPr": 2863

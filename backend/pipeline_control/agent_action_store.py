@@ -34,15 +34,12 @@ class PostgresAgentActionStore:
             assert_record_shape(record.to_row())
             if record.result_code is not None:
                 return "unavailable"
-            created = self.execute_one(
-                "INSERT INTO local_analytics.agent_action_records "
-                "(action_id, trigger_signal_id, signal_severity, action_kind_id, human_approval_ref) "
-                "VALUES (%s::uuid,%s,%s,%s,%s) "
-                "ON CONFLICT (trigger_signal_id, action_kind_id) DO NOTHING RETURNING action_id",
+            result = self.execute_one(
+                "SELECT local_analytics.reserve_agent_action(%s::uuid,%s,%s,%s,%s)",
                 (record.action_id, record.trigger_signal_id, record.signal_severity,
                  record.action_kind_id, record.human_approval_ref),
             )
-            return "created" if created is not None else "duplicate"
+            return result if result in {'created', 'duplicate', 'halted'} else 'unavailable'
         except Exception:
             return "unavailable"
 

@@ -294,7 +294,7 @@ def assert_record_shape(row: Mapping[str, Any]) -> None:
 # 저장 계층 (설계 D8: append-only, unique(trigger_signal_id, action_kind_id)).
 # ---------------------------------------------------------------------------
 # 저장소 프로토콜:
-#   reserve(record) -> "created" | "duplicate" | "unavailable"
+#   reserve(record) -> "created" | "duplicate" | "halted" | "unavailable"
 #       * 기록이 조치보다 먼저(요구사항 15.15). 6개 필드 중 트리거/심각도/조치
 #         종류/action_id를 append-only로 삽입해 (트리거, 조치) 조합을 선점한다.
 #       * unique 제약 위반이면 "duplicate" (요구사항 15.8).
@@ -319,13 +319,16 @@ class InMemoryAgentActionStore:
         self._fail_reserve = fail_reserve
         self._budget_claims: dict[str, float] = {}
         self._budget_lock = threading.Lock()
+        self._reservation_lock = threading.RLock()
 
     def trigger_state(self, trigger_signal_id: str) -> str:
-        return 'halted' if any(
-            row['trigger_signal_id'] == trigger_signal_id and row['result_code'] in
-            {None, AGENT_ACTION_UNVERIFIED, AGENT_ACTION_RECORD_UNAVAILABLE}
-            for row in self._rows.values()
-        ) else 'clear'
+        with self._reservation_lock:
+            return 'halted' if self._trigger_halted(trigger_signal_id) else 'clear'
+
+    def _trigger_halted(self, trigger_signal_id: str) -> bool:
+        return any(row['trigger_signal_id'] == trigger_signal_id and row['result_code'] in
+                   {None, AGENT_ACTION_UNVERIFIED, AGENT_ACTION_RECORD_UNAVAILABLE}
+                   for row in self._rows.values())
 
     def claim_rate_budget(self, action_id: str, limits, now_seconds: float) -> str:
         """Shared-store admission; production uses a serialized database claim."""
@@ -351,20 +354,24 @@ class InMemoryAgentActionStore:
             # 스키마 위반은 기록 확정 실패로 취급(fail closed).
             return "unavailable"
         key = (record.trigger_signal_id, record.action_kind_id)
-        if key in self._rows:
-            return "duplicate"
-        self._rows[key] = dict(row)
-        self._by_action_id[record.action_id] = key
-        return "created"
+        with self._reservation_lock:
+            if key in self._rows:
+                return "duplicate"
+            if self._trigger_halted(record.trigger_signal_id):
+                return 'halted'
+            self._rows[key] = dict(row)
+            self._by_action_id[record.action_id] = key
+            return "created"
 
     def record_result(self, action_id: str, result_code: Optional[str]) -> bool:
-        key = self._by_action_id.get(action_id)
-        if key is None or result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:
-            return False
-        if self._rows[key]["result_code"] is not None:
-            return self._rows[key]["result_code"] == result_code
-        self._rows[key]["result_code"] = result_code
-        return True
+        with self._reservation_lock:
+            key = self._by_action_id.get(action_id)
+            if key is None or result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:
+                return False
+            if self._rows[key]["result_code"] is not None:
+                return self._rows[key]["result_code"] == result_code
+            self._rows[key]["result_code"] = result_code
+            return True
 
     # 검사 편의(테스트에서만 사용).
     def rows(self) -> list[dict]:
@@ -715,6 +722,11 @@ class OpsAgent:
             human_approval_ref=bound_ref,
         )
         reservation = self.store.reserve(record)
+
+        if reservation == 'halted':
+            return _result(False, AGENT_ACTION_UNVERIFIED, performed=False,
+                           resultCode=AGENT_ACTION_UNVERIFIED, halted=True,
+                           triggerSignalId=trigger_signal_id)
 
         if reservation == "duplicate":
             # 동일 조합 재요청 (요구사항 15.8).

@@ -484,6 +484,41 @@ class VerificationHaltTests(unittest.TestCase):
         self.assertEqual(result['errorCode'], oa.AGENT_ACTION_RECORD_UNAVAILABLE)
         self.assertEqual(executed, [])
 
+    def test_concurrent_kinds_cannot_both_execute_after_clear_prechecks(self):
+        from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+        import threading
+        barrier = threading.Barrier(2)
+        release = threading.Event()
+        class RacingStore(oa.InMemoryAgentActionStore):
+            def trigger_state(self, trigger):
+                state = super().trigger_state(trigger)
+                barrier.wait(timeout=5)
+                return state
+        store = RacingStore()
+        executed = []
+        def execute(kind):
+            executed.append(kind)
+            if not release.wait(timeout=5):
+                raise AssertionError('competing reservation did not halt')
+        def attempt(kind):
+            agent = _make_agent(store=store, executor=execute)
+            # This test exercises execution admission, not fork-based verification.
+            agent._verify = lambda *_: True
+            return agent.process_signal(_signal(), [_rule(kind)])
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(attempt, kind) for kind in
+                       ('restart_local_container', 'requeue_failed_pipeline_task')]
+            try:
+                done, _ = wait(futures, timeout=3, return_when=FIRST_COMPLETED)
+                self.assertEqual(len(done), 1)
+                self.assertTrue(next(iter(done)).result()['halted'])
+                self.assertEqual(len(executed), 1)
+            finally:
+                release.set()
+            results = [f.result() for f in futures]
+        self.assertEqual(sum(r['performed'] for r in results), 1)
+        self.assertEqual(len(store.rows()), 1)
+
     def test_subsequent_action_halted_for_same_trigger(self):
         agent = _make_agent(verifier=lambda kind: False)
         rules1 = [_rule("restart_local_container")]

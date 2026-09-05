@@ -32,8 +32,9 @@ describe('real dependency candidate ingestion', () => {
     expect(calls.some((path) => path.includes('/pulls/99/'))).toBe(false);
   });
 
-  test('derives a lockfile-only transitive update from exact base/head Git blobs', async () => {
+  test('derives a lockfile-only update from the merge base even after develop advances', async () => {
     const baseSha = 'b'.repeat(40);
+    const mergeBase = 'c'.repeat(40);
     const lock = (version: string) => ({ lockfileVersion: 3, packages: {
       '': { name: 'fixture' },
       'node_modules/parent/node_modules/@scope/leaf': { version },
@@ -46,7 +47,13 @@ describe('real dependency candidate ingestion', () => {
     const calls: string[] = [];
     const candidates = await collectCandidates(async (path: string) => {
       calls.push(path);
-      if (path.includes('/contents/')) return blob(lock(path.endsWith(baseSha) ? '1.2.3' : '1.2.4'));
+      if (path.includes('/compare/')) return { base_commit: { sha: baseSha }, merge_base_commit: { sha: mergeBase } };
+      if (path.includes('/contents/')) {
+        // Updated develop has unrelated additions/held-package changes. Its
+        // lockfile is not the old side of this PR's actual diff.
+        if (path.endsWith(baseSha)) throw new Error('unrelated_base_lockfile_requested');
+        return blob(lock(path.endsWith(mergeBase) ? '1.2.3' : '1.2.4'));
+      }
       if (path.includes('/files')) return [{ filename: 'apps/web/package-lock.json', status: 'modified' }];
       return [{ ...pr, base: { ...pr.base, sha: baseSha } }];
     });
@@ -55,7 +62,7 @@ describe('real dependency candidate ingestion', () => {
     expect(candidates[0].packages).toEqual([{ name: '@scope/leaf', fromVersion: '1.2.3', toVersion: '1.2.4' }]);
     expect(buildRunReceipt({ candidates }).candidates[0].code).toBeNull();
     expect(calls.filter((path) => path.includes('/contents/'))).toEqual([
-      `/contents/apps/web/package-lock.json?ref=${baseSha}`,
+      `/contents/apps/web/package-lock.json?ref=${mergeBase}`,
       `/contents/apps/web/package-lock.json?ref=${pr.head.sha}`,
     ]);
   });
@@ -68,9 +75,21 @@ describe('real dependency candidate ingestion', () => {
     expect(descriptor(pr, [file]).metadataIncomplete).toBe(true);
     expect(lockfileChanges(lock('16.2.1'), { lockfileVersion: 3, packages: {} }).incomplete).toBe(true);
     await expect(collectCandidates(async (path: string) => {
+      if (path.includes('/compare/')) return { base_commit: { sha: 'b'.repeat(40) }, merge_base_commit: { sha: 'c'.repeat(40) } };
       if (path.includes('/contents/')) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
       return path.includes('/files') ? [file] : [{ ...pr, base: { ...pr.base, sha: 'b'.repeat(40) } }];
     })).rejects.toThrow('candidate_metadata_unavailable');
+  });
+
+  test('missing or mismatched merge-base metadata cannot admit a lockfile candidate', async () => {
+    for (const comparison of [{}, { base_commit: { sha: 'd'.repeat(40) }, merge_base_commit: { sha: 'c'.repeat(40) } },
+      { base_commit: { sha: 'b'.repeat(40) }, merge_base_commit: { sha: 'invalid' } }]) {
+      await expect(collectCandidates(async (path: string) => {
+        if (path.includes('/compare/')) return comparison;
+        if (path.includes('/files')) return [{ filename: 'apps/web/package-lock.json', status: 'modified' }];
+        return [{ ...pr, base: { ...pr.base, sha: 'b'.repeat(40) } }];
+      })).rejects.toThrow('candidate_metadata_unavailable');
+    }
   });
 
   test('fetches Dependabot PR files and enforces hold and target on actual descriptors', async () => {

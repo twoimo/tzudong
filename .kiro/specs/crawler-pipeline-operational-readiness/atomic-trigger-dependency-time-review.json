@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "merge_base_timestamp_atomic_reservation_review",
+  "observedAt": "2026-09-05T03:20:30.034775+00:00",
+  "reviewPr": 2863,
+  "reviewThreads": [
+    "PRRT_kwDOQGRyNc6ffuza",
+    "PRRT_kwDOQGRyNc6ffuzc",
+    "PRRT_kwDOQGRyNc6ffuze"
+  ],
+  "sourceBaseHead": "618588e4b1e833cca87753a94be270c687902405",
+  "sourceSha256": {
+    ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json": "cc3518751b8a881f0d05e15da2e16608cb80e313488da58f1a4292f069bab6a4",
+    ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json": "6462bca7a7cc9ae1f3ecd0aa8bda06de76d2171ded5e8234a49b56462424806e",
+    "apps/web/scripts/collect-dependency-candidates.mjs": "923283c81421d3b7bc46a7436bc8a9cfaf2e9b7c836784e4529c637495ae816b",
+    "apps/web/tests-unit/dependency-candidate-collection.test.ts": "63630bc594b11f4b7b0c41c3b3496d79ec9ef6e82158823714f2682c99d4160c",
+    "backend/pipeline_control/agent_action_store.py": "8c93440c909b3ee13c8866fc1aa4d0326b405d872bafb333d0450f465c3a8711",
+    "backend/pipeline_control/ops_agent.py": "f2759d828026f662ef7fd07a48504e1124efb1cbca1482510f154da90333e028",
+    "backend/pipeline_control/rust_promotion_evidence.py": "d7c3221c4fe574855420a41ca27db76b6921a5118e72ff02f7b80778566953fb",
+    "backend/pipeline_control/test_ops_agent_unittest.py": "26d625b51fa5dcc9cc010a609e9b8eb8ec78fe830cf5a4a02d57073108378366",
+    "backend/pipeline_control/test_publish_queue_postgres.py": "62991f46aece21d22b1ef8b7196d1344f42a90ca69e2bb6d37976e90d2dc3750",
+    "backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql": "2bec4a8e62ea92393ea2e7085fda0fa43114c88702086f809e27c36bc5b5d091"
+  },
+  "verification": {
+    "focusedPythonTestsPerVersion": 67,
+    "pythonVersions": [
+      "3.13.15",
+      "3.14.7"
+    ],
+    "dependencyTests": 31,
+    "scopedEslint": "passed",
+    "sourceProvenanceTests": 23,
+    "concurrentPostgresConnections": 2,
+    "competingClearPrechecks": 2,
+    "admittedReservations": 1,
+    "haltedReservations": 1,
+    "inMemoryConcurrentExecutorCalls": 1,
+    "strongerIsolationDenied": true,
+    "unauthorizedRpcExecutionDenied": true,
+    "githubCompareApiMergeBaseReadback": true
+  },
+  "newLocalMigration": "backend/supabase/migrations/20260905031359_local_agent_trigger_reservation.sql",
+  "hostedMigrationApplied": false,
+  "productionReleased": false,
+  "supersedesNoHistoricalReceipts": true,
+  "externalReceiptFile": "atomic-trigger-dependency-time-review.json",
+  "externalReceiptSha256": "4067cb53a1eef5cd9fabd5a1e338e6b1d0c647198364b56416f879295aa25e9c"
+}

@@ -55,6 +55,10 @@ def _valid_approval_time(value) -> bool:
     if not isinstance(value, str) or re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|\+00:00)', value) is None:
         return False
     try:
+        # Python versions differ on ISO-8601 end-of-day rollover. RFC3339
+        # permits only hours 00..23; validate components before parsing.
+        year, month, day, hour, minute, second = map(int, re.findall(r'[0-9]+', value)[:6])
+        datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
         instant = datetime.fromisoformat(value.replace('Z', '+00:00'))
         return instant.tzinfo is not None and instant.utcoffset() == timezone.utc.utcoffset(instant)
     except ValueError:

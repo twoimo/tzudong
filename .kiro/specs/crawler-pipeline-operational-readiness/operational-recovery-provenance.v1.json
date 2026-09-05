@@ -166,9 +166,9 @@
       "sourceGitBlobSha1": "46ec19827877b1ae5041396b57db414157b2453e",
       "sourceSha256": "c416e0a1b94670ac416cd587bf1b5f15d4c5f25094215ff82b633dbdf0a831e9",
       "sourceBytes": 33676,
-      "candidateGitBlobSha1": "7676f93652fbefa41f0e20687e8958f4d2a39416",
-      "candidateSha256": "611376f9172b748de627130b05e19e6ef0026f1170b5b64afd23a0ec8edf132f",
-      "candidateBytes": 40279
+      "candidateGitBlobSha1": "e95fb2a0989a568a0d863759cd26c7b6012c9bbf",
+      "candidateSha256": "f2759d828026f662ef7fd07a48504e1124efb1cbca1482510f154da90333e028",
+      "candidateBytes": 40961
     },
     {
       "sourcePath": "backend/pipeline_control/test_cluster_render_pbt.py",
@@ -206,9 +206,9 @@
       "sourceGitBlobSha1": "cfffce95b6217b6d0417435d5b7daf08f3573e66",
       "sourceSha256": "3969e03e2d6e4d19314aab16b633460b967183cd0d0721eab80c4ef6dad9e41d",
       "sourceBytes": 20135,
-      "candidateGitBlobSha1": "5fc29bdf8f23f24b7e134b219540729313dd158c",
-      "candidateSha256": "c8aaa432121151f2cf4517328ca09d6e47ddcea355006a467ae5b09cf148209f",
-      "candidateBytes": 27369
+      "candidateGitBlobSha1": "1e7da023d2b3d06e1bfdfc8dbacf9136e973472a",
+      "candidateSha256": "26d625b51fa5dcc9cc010a609e9b8eb8ec78fe830cf5a4a02d57073108378366",
+      "candidateBytes": 29054
     },
     {
       "sourcePath": "backend/deploy/agent-action-allowlist.v1.json",
@@ -630,9 +630,9 @@
     },
     {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "gitBlobSha1": "94927346e4df3dd657408c4af37fbf59206ddaa1",
-      "sha256": "25cab7faf423486dd4b52c8076da13100ae86a06899651f12a938011b654a949",
-      "bytes": 3749
+      "gitBlobSha1": "88af680ebec0077ae6fc2f0ba65bc246d0cde33f",
+      "sha256": "8c93440c909b3ee13c8866fc1aa4d0326b405d872bafb333d0450f465c3a8711",
+      "bytes": 3539
     },
     {
       "path": "backend/pipeline_control/publish_queue.py",
@@ -642,9 +642,9 @@
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "gitBlobSha1": "fd214f7be600aae14264dfddc91f5bb10b136c90",
-      "sha256": "064d159700926806906c77edd16da994d951530d5aa6b352689a05c65f91de22",
-      "bytes": 17607
+      "gitBlobSha1": "2228e22d77acd426efb259294cc6f65378b04826",
+      "sha256": "62991f46aece21d22b1ef8b7196d1344f42a90ca69e2bb6d37976e90d2dc3750",
+      "bytes": 20441
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -660,15 +660,15 @@
     },
     {
       "path": "apps/web/scripts/collect-dependency-candidates.mjs",
-      "gitBlobSha1": "bded5d517c3760555f01db920038b2be2a50e12e",
-      "sha256": "f87e9f11a69ae5fe45c73b2607b1aecee3036af49545b55d2393a7b9bf4d588a",
-      "bytes": 7994
+      "gitBlobSha1": "4f670649dfefb93b8a0f43c306da72b01578a19e",
+      "sha256": "923283c81421d3b7bc46a7436bc8a9cfaf2e9b7c836784e4529c637495ae816b",
+      "bytes": 8578
     },
     {
       "path": "apps/web/tests-unit/dependency-candidate-collection.test.ts",
-      "gitBlobSha1": "2fd65f63d52dae974cc85213c8e721ac0421366c",
-      "sha256": "1932e0c5a8cf3ef9d975ba93aaf5b166753dbacadb726a702ddbbedfb79c9dbe",
-      "bytes": 7117
+      "gitBlobSha1": "c0c9a34c127ae2b9acaca5d595c357e4a8930ff6",
+      "sha256": "63630bc594b11f4b7b0c41c3b3496d79ec9ef6e82158823714f2682c99d4160c",
+      "bytes": 8353
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",

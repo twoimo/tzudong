@@ -101,13 +101,23 @@ export async function collectCandidates(request, checkedCommit = null) {
         if (fp === 3) throw new Error('candidate_metadata_limit');
       }
       const lockfiles = {};
+      let mergeBase = null;
       for (const file of files) {
         const unit = UNITS.find((u) => u.ecosystem === 'npm'
           && file.filename === `${u.directory.slice(1)}/package-lock.json`);
         if (!unit || file.status !== 'modified'
           || files.some((entry) => entry.filename === `${unit.directory.slice(1)}/package.json`)) continue;
+        if (mergeBase === null) {
+          if (![pr.base?.sha, pr.head?.sha].every((sha) => /^[0-9a-f]{40}$/.test(sha ?? '')))
+            throw new Error('candidate_metadata_unavailable');
+          const comparison = await request(`/compare/${pr.base.sha}...${pr.head.sha}?per_page=1`);
+          if (comparison?.base_commit?.sha !== pr.base.sha
+            || !/^[0-9a-f]{40}$/.test(comparison?.merge_base_commit?.sha ?? ''))
+            throw new Error('candidate_metadata_unavailable');
+          mergeBase = comparison.merge_base_commit.sha;
+        }
         const pair = [];
-        for (const sha of [pr.base?.sha, pr.head?.sha]) {
+        for (const sha of [mergeBase, pr.head?.sha]) {
           if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('candidate_metadata_unavailable');
           const blob = await request(`/contents/${file.filename}?ref=${sha}`);
           if (blob?.encoding !== 'base64' || typeof blob.content !== 'string'
