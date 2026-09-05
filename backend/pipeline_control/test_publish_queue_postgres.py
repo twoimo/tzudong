@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime, canonical_pg_value, load_source_request
+from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime, canonical_pg_value, load_source_request, LOCAL_SEED_RESTAURANT_IDS
 from backend.pipeline_control.publish_worker import PublishWorker, PublicationSet
 from backend.pipeline_control.agent_action_store import PostgresAgentActionStore
 from backend.pipeline_control import ops_agent as oa
@@ -24,6 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RuntimeAdmissionTests(unittest.TestCase):
+    def test_seed_exclusion_covers_the_canonical_restaurant_fixtures(self):
+        import re
+        source = (ROOT / 'supabase/scripts/local-seed.sql').read_text()
+        rows = source.split('INSERT INTO public.restaurants (', 1)[1].split('ON CONFLICT', 1)[0]
+        identities = set(re.findall(r"'([0-9a-f]{8}-[0-9a-f-]{27})'", rows))
+        self.assertEqual(identities, set(LOCAL_SEED_RESTAURANT_IDS))
     def test_postgres_scalars_are_lossless_and_scale_stable(self):
         identifier = uuid4()
         value = canonical_pg_value({'lat': Decimal('37.1234567890123456789012345678900'),
@@ -151,6 +157,9 @@ class DurableBackendTests(unittest.TestCase):
                 c.execute('CREATE TABLE public.restaurants(id uuid PRIMARY KEY,'+columns+')')
                 c.execute('INSERT INTO public.restaurants(id,lat,lng) VALUES (%s,%s,%s)',
                     (str(uuid4()), Decimal('37.1234567890123456789012345678900'),Decimal('127.5000')))
+                for seed_id in LOCAL_SEED_RESTAURANT_IDS:
+                    c.execute('INSERT INTO public.restaurants(id,approved_name) VALUES (%s,%s)',
+                              (seed_id, 'unmarked local fixture'))
                 c.execute('GRANT SELECT ON public.restaurants TO service_role')
         hosted = FakeHosted({'public.restaurants': ('id',)})
         consumer = PublishQueueConsumer(self.store, worker,
@@ -160,6 +169,8 @@ class DurableBackendTests(unittest.TestCase):
         self.assertEqual(consumer.confirm(self.job_id, preview['previewHash'])['status'],'confirmed')
         self.assertEqual(consumer.apply_once()['status'], 'succeeded')
         row = next(iter(hosted.store['public.restaurants'].values()))
+        self.assertEqual(len(hosted.store['public.restaurants']), 1)
+        self.assertNotIn(row['id'], LOCAL_SEED_RESTAURANT_IDS)
         self.assertEqual(row['lat'], '37.12345678901234567890123456789')
         self.assertEqual(row['lng'], '127.5')
 

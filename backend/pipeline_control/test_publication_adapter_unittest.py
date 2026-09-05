@@ -141,6 +141,23 @@ class PublicationSqlAdapterTests(unittest.TestCase):
             self.adapter.apply("public.restaurants", [row])
         self.assertEqual(self.executor.one_calls, [])
 
+    def test_present_null_trace_is_preserved_but_missing_trace_and_null_timestamp_fail(self) -> None:
+        row = _restaurant_row()
+        current = {"id": row["id"], "trace_id": None, "updated_at": "2026-09-01T00:00:00Z"}
+        self.executor.all_result = [current]
+        self.executor.one_result = {"inserted_count": 0, "updated_count": 1, "readback": [row]}
+        self.adapter.apply("public.restaurants", [row])
+        operation = json.loads(self.executor.one_calls[0][1][0])[0]
+        self.assertIn("trace_id", operation["expected"])
+        self.assertIsNone(operation["expected"]["trace_id"])
+        for invalid in ({k: v for k, v in current.items() if k != "trace_id"},
+                        {**current, "updated_at": None}):
+            self.executor.one_calls.clear()
+            self.executor.all_result = [invalid]
+            with self.assertRaises(HostedApplyFailure):
+                self.adapter.apply("public.restaurants", [row])
+            self.assertEqual(self.executor.one_calls, [])
+
     def test_unknown_target_never_interpolates_or_executes(self) -> None:
         with self.assertRaises(HostedApplyFailure):
             self.adapter.read("public.videos; DROP TABLE public.videos", [("x",)])

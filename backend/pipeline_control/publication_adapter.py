@@ -33,6 +33,7 @@ class _TablePlan:
     published_columns: frozenset[str]
     cas_keys: tuple[str, ...]
     required_insert_columns: frozenset[str]
+    nullable_cas_keys: frozenset[str] = frozenset()
 
 
 _RESTAURANT_COLUMNS = frozenset(
@@ -101,6 +102,7 @@ _TABLE_PLANS: Mapping[str, _TablePlan] = {
         published_columns=_RESTAURANT_COLUMNS,
         cas_keys=("id", "trace_id", "updated_at"),
         required_insert_columns=frozenset({"id"}),
+        nullable_cas_keys=frozenset({"trace_id"}),
     ),
     "public.videos": _TablePlan(
         rpc_sql="SELECT pipeline_control.publish_upsert_videos(%s::jsonb)",
@@ -253,8 +255,10 @@ class PublicationSqlAdapter:
                     raise HostedApplyFailure()
                 operations.append({"op": "insert", "payload": row})
                 continue
-            expected = {key: current.get(key) for key in plan.cas_keys}
-            if any(value is None for value in expected.values()):
+            if any(key not in current for key in plan.cas_keys):
+                raise HostedApplyFailure()
+            expected = {key: current[key] for key in plan.cas_keys}
+            if any(value is None and key not in plan.nullable_cas_keys for key, value in expected.items()):
                 raise HostedApplyFailure()
             operations.append({"op": "update", "payload": row, "expected": expected})
 
