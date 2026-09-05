@@ -238,7 +238,8 @@ def ledger_permits_rust_default(entry: Mapping[str, Any], *, evidence_loader=Non
     receipt = read_receipt(reference, evidence_loader)
     return bool(count >= PARITY_GATE_COUNT and receipt and verified_live_promotion(
         reference, entry.get('sliceId'), entry.get('rustArtifactId'),
-        receipt.get('parityResults'), loader=evidence_loader))
+        receipt.get('parityResults'), loader=evidence_loader,
+        readback_ref=entry.get('promotionReadbackRef'), expected_entry=entry))
 
 
 def resolve_default_implementation(

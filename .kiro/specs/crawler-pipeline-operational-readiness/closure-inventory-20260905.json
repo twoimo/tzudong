@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T04:29:15.384550+00:00",
+  "generatedAt": "2026-09-05T04:51:08.532480+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "51bf49a5528bba82aa6d426d8c6fc277a1505922",
+  "sourceBaseHead": "1452946ef96d2cbe541941e8e6c2c00804cceb44",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -315,12 +315,13 @@
     "runtime-transport-schema-review.json": "430f734c8b61840e1a535f59dc9031d09bfd02bf99a059cfce7114da5b6be81c",
     "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14",
     "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e",
-    "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9"
+    "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9",
+    "rust-applied-readback-review.json": "a287bf1100b59b0a5d293e7cc037c6aec9a13274f556a03dfa46ff2bde7cb054"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 471,
+  "changedFileCount": 472,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -396,7 +397,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "313a366da740859e8f0a76910bbb0adcf6ea1410d27e284a775f04933857ac73"
+      "sha256": "51fb7f71af2011e14fd14654a4d0b17a8da32fca892fdaa87770a5c04c48ee6d"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -420,7 +421,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "ffbda46f0b7ba65cba19e3439482f93fff7789cca5394d075fa165ac5a5df3bf"
+      "sha256": "18d24034a9242b8cac9e630feaaa4842313ff96da7ff0a8b0bf2a08714f86a5b"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
@@ -448,7 +449,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "7d7ed696957e8bd122c0871ebc5a569020206e7893f41a19e2b0e73f0b9019a7"
+      "sha256": "6580acd7dc6ad676df580a6226b1f23439a669c2f590d19cc683a1a534c6955b"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -489,6 +490,10 @@
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/runtime-transport-schema-review.json",
       "sha256": "61797f2d8f7aec0c3f73d5fc5e9a38e250b614e65e9ea6a14380ff9a7f76e904"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-applied-readback-review.json",
+      "sha256": "6db601979d2168935b9025b117b7ca74cda27034725f6affcbe1299b1e6226de"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-candidate-provenance.v1.json",
@@ -1032,7 +1037,7 @@
     },
     {
       "path": "backend/pipeline_control/impl_selector.py",
-      "sha256": "51a6140d0cb115586969a81a9987f56c2bbf07fa54b80b80fbc645ee03ab24a2"
+      "sha256": "cc78a647e616e126110a00b36880e8cb60fc18b85211ca8ded9c64bcaa659600"
     },
     {
       "path": "backend/pipeline_control/ledger_validation.py",
@@ -1096,7 +1101,7 @@
     },
     {
       "path": "backend/pipeline_control/rust_parity.py",
-      "sha256": "f8a359f927ef4192c20eb6502c4be96cbcf9bc6133dc0424c8c0611f63f6a5e3"
+      "sha256": "95282e4900c4b7e43813e1ee3e9508c2d607823df6e2388dd6648e2f321ab8bc"
     },
     {
       "path": "backend/pipeline_control/rust_performance_admission.py",
@@ -1104,7 +1109,7 @@
     },
     {
       "path": "backend/pipeline_control/rust_promotion_evidence.py",
-      "sha256": "b6ceb2a5ae2540534c939fb5b234e352cab4d5e4ab14e508c0a0eba1f8abe1eb"
+      "sha256": "3a0e47b7b3f235cbe99614eebb0daf9c34eaba431fc37698bdd3a2dd9e3c4c8e"
     },
     {
       "path": "backend/pipeline_control/schedule.py",
@@ -1356,7 +1361,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_parity.py",
-      "sha256": "7cd90e7c73adf15e91939c147d8f09551e89af7a7238badcab2acc8b84757633"
+      "sha256": "dc84201d03c37215902e48b7c14fd2df99c148f381ae69f250234ca87a618b99"
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_performance_admission.py",
@@ -1364,7 +1369,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_promotion_evidence.py",
-      "sha256": "6f00a97569d2ecd9b82bfd921861929fe95533a9a7553d924344fd518ca85991"
+      "sha256": "774b52f1562faf4e3ead73e30da9e81bfb1e5f521dd8dafb5015af1811838957"
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
@@ -1408,7 +1413,7 @@
     },
     {
       "path": "backend/rust/promotion-evidence/README.md",
-      "sha256": "f9b52d6c09ecb8d4542ff15876674d13ab0d43e10cced6da3370364fcc611015"
+      "sha256": "902a99585fc0156f6137cd65d00e7675becc70fe17aafd222610251557e34141"
     },
     {
       "path": "backend/rust/rust-toolchain.toml",
@@ -2204,7 +2209,7 @@
     },
     {
       "path": "backend/utils/tests/test_supply_chain_contract.py",
-      "sha256": "5703c0f58c2c74cee39076ade32680e793d430aa2c58e6d64bbf3480ae15e2f0"
+      "sha256": "119bb2941192013c42272799dddfdd721a814fc9ca2a5d6465cfe3d2c7b0a51d"
     }
   ],
   "inventoryComparisonBase": "3f4ca55742aa33869b776291e0d035a16024eef1",
@@ -2355,6 +2360,18 @@
       "rustFiles": 36,
       "testsPassed": 15,
       "remoteCiPending": true
+    },
+    "appliedLedgerReadback": {
+      "gateSuiteTests": 94,
+      "finalReadbackTestsPython313": 13,
+      "finalReadbackTestsPython314": 13,
+      "nativeCallSiteTests": 9,
+      "provenanceTests": 15,
+      "precomputedReadbackBeforeApplyDenied": true,
+      "missingChangedAliasedOrDuplicateActualLedgerDenied": true,
+      "substitutedReadbackInputsDenied": true,
+      "pythonRemovalAfterLedgerReversionDenied": true,
+      "migrationOnlyTriggerCovered": true
     }
   },
   "pendingReviewCorrectionPr": 2863

@@ -18,6 +18,7 @@ from backend.pipeline_control.rust_performance_admission import verified_perform
 from backend.pipeline_control.receipt_json import parse_receipt_json
 
 _ROOT = Path(__file__).resolve().parents[1] / 'rust/promotion-evidence'
+_LEDGER_PATH = Path(__file__).resolve().parents[1] / 'rust/migration-ledger.v1.json'
 _REF = re.compile(r'sha256:([0-9a-f]{64})')
 _MAX_BYTES = 1024 * 1024
 
@@ -77,11 +78,12 @@ def approved(receipt, *, purpose: str, binding: dict) -> bool:
                 and receipt.get('binding') == binding)
 
 
-def verified_live_promotion(reference, slice_id, artifact_id, results, *, loader=None) -> bool:
-    """Verify all three retained live runs, their cohort, approval and readback."""
+def verified_live_proposal(reference, slice_id, artifact_id, results, *, loader=None) -> bool:
+    """Admit an apply proposal from live runs/performance and exact approval."""
     try:
         receipt = read_receipt(reference, loader)
-        if (receipt is None or receipt.get('kind') != 'rust_promotion_evidence_v1'
+        if (receipt is None or receipt.get('kind') != 'rust_promotion_evidence_v2'
+                or 'readbackRef' in receipt
                 or receipt.get('sliceId') != slice_id or receipt.get('rustArtifactId') != artifact_id
                 or not isinstance(artifact_id, str)
                 or re.fullmatch(r'[A-Za-z0-9_-]+@sha256:[0-9a-f]{64}', artifact_id) is None
@@ -125,11 +127,70 @@ def verified_live_promotion(reference, slice_id, artifact_id, results, *, loader
         approval = read_receipt(receipt.get('approvalRef'), loader)
         if not approved(approval, purpose='rust_default_switch', binding=binding):
             return False
-        readback = read_receipt(receipt.get('readbackRef'), loader)
-        return bool(readback and readback.get('kind') == 'rust_promotion_readback_v1'
-                    and readback.get('binding') == binding
-                    and readback.get('approvalRef') == receipt.get('approvalRef')
-                    and readback.get('jobIds') == [a['jobId'] for a in ledger['attempts'][-3:]]
-                    and readback.get('receiptSha256s') == [a['evidenceReceiptSha256'] for a in ledger['attempts'][-3:]])
+        return True
+    except Exception:
+        return False
+
+
+def applied_ledger_state_digest(ledger: dict) -> str:
+    """Hash every applied field except post-apply receipt links.
+
+    Receipt links are attached after observing the applied state, avoiding a
+    self-referential content hash. They authorize nothing without this re-read.
+    """
+    projected = dict(ledger)
+    projected['slices'] = [
+        {key: value for key, value in entry.items() if key != 'promotionReadbackRef'}
+        for entry in ledger['slices']
+    ]
+    return digest(projected)
+
+
+def verified_live_promotion(reference, slice_id, artifact_id, results, *, loader=None,
+                            readback_ref=None, expected_entry=None) -> bool:
+    """Re-read the actual applied ledger independently of the receipt loader."""
+    try:
+        if not verified_live_proposal(reference, slice_id, artifact_id, results, loader=loader):
+            return False
+        receipt = read_receipt(reference, loader)
+        approval = read_receipt(receipt['approvalRef'], loader)
+        readback = read_receipt(readback_ref, loader)
+        live = receipt['liveLedger']
+        binding = approval['binding']
+        if (not readback or readback.get('kind') != 'rust_promotion_readback_v2'
+                or readback.get('binding') != binding
+                or readback.get('approvalRef') != receipt['approvalRef']
+                or readback.get('promotionEvidenceRef') != reference
+                or readback.get('jobIds') != [a['jobId'] for a in live['attempts'][-3:]]
+                or readback.get('receiptSha256s') != [a['evidenceReceiptSha256'] for a in live['attempts'][-3:]]
+                or not _valid_approval_time(readback.get('observedAt'))
+                or datetime.fromisoformat(readback['observedAt'].replace('Z', '+00:00'))
+                   < datetime.fromisoformat(approval['approvedAt'].replace('Z', '+00:00'))
+                or datetime.fromisoformat(readback['observedAt'].replace('Z', '+00:00'))
+                   > datetime.now(timezone.utc)):
+            return False
+        if _LEDGER_PATH.is_symlink():
+            return False
+        with _LEDGER_PATH.open('rb') as stream:
+            raw = stream.read(_MAX_BYTES + 1)
+        if len(raw) > _MAX_BYTES:
+            return False
+        applied = parse_receipt_json(raw)
+        if (not isinstance(applied, dict) or applied.get('schemaVersion') != 1
+                or not isinstance(applied.get('slices'), list)
+                or not all(isinstance(e, dict) for e in applied['slices'])):
+            return False
+        entries = [e for e in applied['slices'] if e.get('sliceId') == slice_id]
+        if len(entries) != 1:
+            return False
+        entry = entries[0]
+        count = entry.get('consecutiveMatchedCount')
+        return bool(entry.get('activeImplementation') == 'rust'
+                    and entry.get('rustArtifactId') == artifact_id
+                    and type(count) is int and count >= 3
+                    and entry.get('promotionEvidenceRef') == reference
+                    and entry.get('promotionReadbackRef') == readback_ref
+                    and (expected_entry is None or dict(expected_entry) == entry)
+                    and applied_ledger_state_digest(applied) == readback.get('appliedLedgerStateSha256'))
     except Exception:
         return False

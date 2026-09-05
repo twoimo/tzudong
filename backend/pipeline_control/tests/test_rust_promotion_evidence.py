@@ -26,6 +26,12 @@ class PromotionEvidenceTests(unittest.TestCase):
                                  side_effect=lambda ref, *_: ref == PERFORMANCE_REF)
         admission.start()
         self.addCleanup(admission.stop)
+        self.applied_directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.applied_directory.cleanup)
+        self.applied_path = Path(self.applied_directory.name) / 'migration-ledger.json'
+        applied_path_patch = patch.object(proof_module, '_LEDGER_PATH', self.applied_path)
+        applied_path_patch.start()
+        self.addCleanup(applied_path_patch.stop)
         self.blobs = {}
         self.results = []
         with tempfile.TemporaryDirectory() as tmp:
@@ -48,26 +54,106 @@ class PromotionEvidenceTests(unittest.TestCase):
         return {'kind': 'rust_operator_approval_v1', 'purpose': purpose, 'status': 'approved',
                 'approverName': 'Fixture operator', 'approvedAt': '2026-09-05T00:00:00Z', 'binding': binding}
 
-    def proof(self):
+    def write_applied(self, entry):
+        self.applied_path.write_text(json.dumps({'schemaVersion': 1, 'slices': [entry]}))
+
+    def applied_gate(self):
+        return selector.ledger_permits_rust_default(self.applied_entry,
+                                                   evidence_loader=self.blobs.__getitem__)
+
+    def proof(self, *, apply=True):
         binding = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT,
                    'liveLedgerSha256': digest(self.ledger), 'parityResultsSha256': digest(self.results),
                    'performanceEvidenceRef': PERFORMANCE_REF}
         self.approval_ref = self.retain(self.approval('rust_default_switch', binding))
-        self.readback_ref = self.retain({'kind': 'rust_promotion_readback_v1', 'binding': binding,
-            'approvalRef': self.approval_ref,
+        reference = self.retain({'kind': 'rust_promotion_evidence_v2', 'sliceId': SLICE,
+            'rustArtifactId': ARTIFACT, 'parityResults': self.results, 'liveLedger': self.ledger,
+            'approvalRef': self.approval_ref, 'performanceEvidenceRef': PERFORMANCE_REF})
+        entry = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'activeImplementation': 'rust',
+                 'consecutiveMatchedCount': 3, 'promotionEvidenceRef': reference}
+        state = {'schemaVersion': 1, 'slices': [entry]}
+        self.readback_ref = self.retain({'kind': 'rust_promotion_readback_v2', 'binding': binding,
+            'approvalRef': self.approval_ref, 'promotionEvidenceRef': reference,
+            'observedAt': '2026-09-05T00:01:00Z',
+            'appliedLedgerStateSha256': proof_module.applied_ledger_state_digest(state),
             'jobIds': [a['jobId'] for a in self.ledger['attempts'][-3:]],
             'receiptSha256s': [a['evidenceReceiptSha256'] for a in self.ledger['attempts'][-3:]]})
-        return self.retain({'kind': 'rust_promotion_evidence_v1', 'sliceId': SLICE,
-            'rustArtifactId': ARTIFACT, 'parityResults': self.results, 'liveLedger': self.ledger,
-            'approvalRef': self.approval_ref, 'readbackRef': self.readback_ref,
-            'performanceEvidenceRef': PERFORMANCE_REF})
+        self.applied_entry = {**entry, 'promotionReadbackRef': self.readback_ref}
+        self.write_applied(self.applied_entry if apply else {**entry, 'activeImplementation': 'python'})
+        return reference
+
+    def test_precomputed_readback_cannot_enable_rust_before_apply(self):
+        reference = self.proof(apply=False)
+        proposal = self.decision(reference)
+        self.assertTrue(proposal['allowed'])
+        self.assertTrue(proposal['requiresReadback'])
+        self.assertEqual(proposal['defaultImplementation'], 'python')
+        self.assertEqual(proposal['proposedLedgerUpdate']['activeImplementation'], 'rust')
+        self.assertFalse(self.applied_gate())
+        self.write_applied(proposal['proposedLedgerUpdate'])
+        self.assertFalse(self.applied_gate())  # no post-apply receipt attached
+        self.write_applied(self.applied_entry)
+        self.assertTrue(self.applied_gate())
+        self.applied_path.unlink()
+        self.assertFalse(self.applied_gate())
+
+    def test_changed_actual_state_cannot_be_overridden_by_proposed_or_retained_objects(self):
+        self.proof()
+        for key, value in [('activeImplementation', 'python'), ('rustArtifactId', 'other'),
+                           ('consecutiveMatchedCount', 4), ('promotionEvidenceRef', 'other'),
+                           ('promotionReadbackRef', 'other'), ('replacementScope', 'changed')]:
+            self.write_applied({**self.applied_entry, key: value})
+            self.assertFalse(self.applied_gate(), key)
+        self.write_applied(self.applied_entry)
+        self.assertFalse(selector.ledger_permits_rust_default(
+            {**self.applied_entry, 'replacementScope': 'changed'}, evidence_loader=self.blobs.__getitem__))
+        self.assertTrue(self.applied_gate())
+
+    def test_unreadable_aliased_or_duplicate_applied_state_fails_closed(self):
+        self.proof()
+        original = self.applied_path.read_bytes()
+        self.applied_path.write_bytes(b'{"schemaVersion":1,"schemaVersion":1,"slices":[]}')
+        self.assertFalse(self.applied_gate())
+        self.applied_path.write_text(json.dumps({'schemaVersion': 1,
+                                   'slices': [self.applied_entry, self.applied_entry]}))
+        self.assertFalse(self.applied_gate())
+        target = self.applied_path.with_name('other.json')
+        target.write_bytes(original)
+        self.applied_path.unlink()
+        self.applied_path.symlink_to(target)
+        self.assertFalse(self.applied_gate())
+
+    def test_post_apply_readback_helper_reads_the_actual_ledger(self):
+        reference = self.proof()
+        evidence = self.decision(reference)['evidence']
+        readback = {**evidence, 'promotionReadbackRef': self.readback_ref}
+        self.assertTrue(rp.verify_switch_readback(evidence, readback,
+                            evidence_loader=self.blobs.__getitem__)['verified'])
+        substituted = {**evidence, 'inputIds': ['different']}
+        self.assertFalse(rp.verify_switch_readback(substituted, {**readback, 'inputIds': ['different']},
+                            evidence_loader=self.blobs.__getitem__)['verified'])
+        self.write_applied({**self.applied_entry, 'activeImplementation': 'python'})
+        self.assertFalse(rp.verify_switch_readback(evidence, readback,
+                            evidence_loader=self.blobs.__getitem__)['verified'])
+
+    def test_applied_readback_requires_post_approval_time_and_exact_state_binding(self):
+        for key, value in [('observedAt', None), ('observedAt', '2026-09-04T23:59:59Z'),
+                           ('observedAt', '2999-01-01T00:00:00Z'),
+                           ('appliedLedgerStateSha256', '0' * 64),
+                           ('promotionEvidenceRef', 'sha256:' + '0' * 64),
+                           ('kind', 'rust_promotion_readback_v1')]:
+            self.proof()
+            changed = {**json.loads(self.blobs[self.readback_ref]), key: value}
+            ref = self.retain(changed)
+            self.applied_entry['promotionReadbackRef'] = ref
+            self.write_applied(self.applied_entry)
+            self.assertFalse(self.applied_gate(), key)
 
     def test_parity_without_valid_performance_cannot_switch_or_remove_python(self):
         ref = self.proof()
         with patch.object(proof_module, 'verified_performance', return_value=False):
             self.assertFalse(self.decision(ref)['allowed'])
-            entry = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'activeImplementation': 'rust',
-                     'consecutiveMatchedCount': 3, 'promotionEvidenceRef': ref}
+            entry = dict(self.applied_entry)
             self.assertFalse(selector.ledger_permits_rust_default(entry, evidence_loader=self.blobs.__getitem__))
         proof = json.loads(self.blobs[ref])
         del proof['performanceEvidenceRef']
@@ -80,8 +166,7 @@ class PromotionEvidenceTests(unittest.TestCase):
     def test_complete_retained_evidence_is_admitted_by_gate_and_selector(self):
         ref = self.proof()
         self.assertTrue(self.decision(ref)['allowed'])
-        entry = {'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'activeImplementation': 'rust',
-                 'consecutiveMatchedCount': 3, 'promotionEvidenceRef': ref}
+        entry = dict(self.applied_entry)
         self.assertTrue(selector.ledger_permits_rust_default(entry, evidence_loader=self.blobs.__getitem__))
         self.assertFalse(selector.ledger_permits_rust_default(entry))  # no retained source receipt
         self.assertFalse(rp.evaluate_default_switch(SLICE, self.results, ARTIFACT)['allowed'])
@@ -111,7 +196,10 @@ class PromotionEvidenceTests(unittest.TestCase):
             ref = self.proof()
             key = {'approval': self.approval_ref, 'readback': self.readback_ref, 'evidence': ref}[target]
             self.blobs[key] = b'{}'
-            self.assertFalse(self.decision(ref)['allowed'])
+            if target == 'readback':
+                self.assertFalse(self.applied_gate())
+            else:
+                self.assertFalse(self.decision(ref)['allowed'])
         ref = self.proof()
         receipt = json.loads(self.blobs[ref])
         approval = json.loads(self.blobs[self.approval_ref])
@@ -151,15 +239,18 @@ class PromotionEvidenceTests(unittest.TestCase):
     def test_python_removal_requires_both_verified_live_evidence_and_exact_separate_approval(self):
         ref = self.proof()
         candidate = {'separateExplicitCandidate': True, 'candidateCommitSha': 'a' * 40,
-                     'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'ledgerParityRef': ref}
+                     'sliceId': SLICE, 'rustArtifactId': ARTIFACT, 'ledgerParityRef': ref,
+                     'promotionReadbackRef': self.readback_ref}
         binding = {k: v for k, v in candidate.items() if k != 'separateExplicitCandidate'}
         candidate['operatorApprovalRef'] = self.retain(self.approval('python_removal', binding))
         check = lambda c: rp.check_python_removal_candidate(c, evidence_loader=self.blobs.__getitem__)['admitted']
         self.assertTrue(check(candidate))
-        for missing in ('ledgerParityRef', 'operatorApprovalRef'):
+        for missing in ('ledgerParityRef', 'operatorApprovalRef', 'promotionReadbackRef'):
             self.assertFalse(check({k: v for k, v in candidate.items() if k != missing}))
         self.assertFalse(check({**candidate, 'candidateCommitSha': 'b' * 40}))
         self.assertFalse(check({**candidate, 'operatorApprovalRef': self.approval_ref}))
+        self.write_applied({**self.applied_entry, 'activeImplementation': 'python'})
+        self.assertFalse(check(candidate))
 
 
 if __name__ == '__main__':

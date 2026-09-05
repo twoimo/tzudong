@@ -326,15 +326,15 @@ class ArtifactChangeTests(unittest.TestCase):
 
 
 class ReadbackTests(unittest.TestCase):
-    def test_matching_readback_keeps_rust(self) -> None:
+    def test_matching_unretained_objects_cannot_claim_an_applied_switch(self) -> None:
         evidence = {
             "inputIds": ["i1", "i2", "i3"],
             "rustArtifactId": "art-1",
             "activeImplementation": "rust",
         }
         decision = rp.verify_switch_readback(evidence, dict(evidence))
-        self.assertTrue(decision["verified"])
-        self.assertEqual(decision["defaultImplementation"], rp.IMPL_RUST)
+        self.assertFalse(decision["verified"])
+        self.assertEqual(decision["defaultImplementation"], rp.IMPL_PYTHON)
 
     def test_divergent_readback_reverts_python(self) -> None:
         evidence = {

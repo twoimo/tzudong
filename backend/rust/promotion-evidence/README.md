@@ -35,3 +35,23 @@ JSON with duplicate keys, non-finite numbers or non-UTF-8 encoding is rejected.
 Failed validation is not cached and continues to deny promotion. The operating
 system and running verifier code remain trusted. Native extension installation is a
 separate runtime requirement; missing selected extensions fail closed.
+
+
+Default switching separates apply authorization from activation. A
+`rust_promotion_evidence_v2` proposal retains live runs, performance and exact
+operator approval, with no precomputed `readbackRef`. `evaluate_default_switch`
+returns a `proposedLedgerUpdate` and keeps `defaultImplementation: python`.
+The authorized apply writes that update to the migration ledger. An independent
+post-apply observation then creates a `rust_promotion_readback_v2` receipt with
+`promotionEvidenceRef`, approval/job receipt bindings, `observedAt`, and
+`appliedLedgerStateSha256`. Attach its content-addressed reference in the ledger's
+`promotionReadbackRef` only after observation.
+
+The state digest covers the entire parsed ledger except per-slice
+`promotionReadbackRef` links, avoiding a self-referential hash. All activation and
+Python-removal paths independently reopen the actual canonical ledger file;
+receipt-loader data cannot substitute for that read. The applied slice must
+select Rust with the exact artifact/proposal/readback references, and the entire
+applied state must match the retained digest. Missing, reverted or changed files
+keep Python selected. Matching proposed objects alone do not constitute readback.
+No live receipts or real switch are established by the synthetic tests here.

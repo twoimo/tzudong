@@ -482,14 +482,16 @@ def evaluate_default_switch(
     Returns ``allowed=True`` with the supporting evidence (the input ids of the
     three qualifying matched results and the artifact id) only when
     :func:`consecutive_matched_count` reaches :data:`PARITY_GATE_COUNT` (3)
-    AND retained live receipts, operator approval and readback verify.
+    AND retained live receipts, performance and operator approval verify.
+    This authorizes a proposed ledger update only; default resolution remains
+    Python until a separate post-apply receipt matches the actual ledger file.
     Otherwise the default stays python and the result carries
     ``code == parity_evidence_insufficient`` (Requirements 2.4, 2.5).
     """
 
-    from backend.pipeline_control.rust_promotion_evidence import verified_live_promotion
+    from backend.pipeline_control.rust_promotion_evidence import verified_live_proposal
     count = consecutive_matched_count(results, rust_artifact_id)
-    if count >= PARITY_GATE_COUNT and verified_live_promotion(
+    if count >= PARITY_GATE_COUNT and verified_live_proposal(
         evidence_ref, slice_id, rust_artifact_id, results, loader=evidence_loader
     ):
         # The most recent PARITY_GATE_COUNT distinct qualifying input ids.
@@ -512,7 +514,13 @@ def evaluate_default_switch(
         return {
             "sliceId": slice_id,
             "allowed": True,
-            "defaultImplementation": IMPL_RUST,
+            "defaultImplementation": IMPL_PYTHON,
+            "requiresReadback": True,
+            "proposedLedgerUpdate": {
+                "sliceId": slice_id, "activeImplementation": IMPL_RUST,
+                "rustArtifactId": rust_artifact_id, "consecutiveMatchedCount": count,
+                "promotionEvidenceRef": evidence_ref,
+            },
             "consecutiveMatchedCount": count,
             "evidence": {
                 "inputIds": evidence_inputs,
@@ -559,7 +567,7 @@ def apply_artifact_change(
 # Post-switch readback verification (Requirement 2.11).
 # ---------------------------------------------------------------------------
 def verify_switch_readback(
-    evidence: Mapping[str, Any], readback: Mapping[str, Any]
+    evidence: Mapping[str, Any], readback: Mapping[str, Any], *, evidence_loader=None
 ) -> dict[str, Any]:
     """Verify a rust-default flip against a fresh ledger readback.
 
@@ -578,6 +586,17 @@ def verify_switch_readback(
         and evidence.get("activeImplementation") == readback.get("activeImplementation")
         and readback.get("activeImplementation") == IMPL_RUST
     )
+    from backend.pipeline_control.rust_promotion_evidence import read_receipt, verified_live_promotion
+    reference = evidence.get('promotionEvidenceRef')
+    retained = read_receipt(reference, evidence_loader)
+    proposal = (evaluate_default_switch(retained.get('sliceId'), retained.get('parityResults'),
+                evidence.get('rustArtifactId'), evidence_ref=reference, evidence_loader=evidence_loader)
+                if retained else {})
+    matches = matches and proposal.get('evidence') == dict(evidence)
+    matches = bool(matches and retained and verified_live_promotion(
+        reference, retained.get('sliceId'), evidence.get('rustArtifactId'),
+        retained.get('parityResults'), loader=evidence_loader,
+        readback_ref=readback.get('promotionReadbackRef')))
     return {
         "verified": matches,
         "defaultImplementation": IMPL_RUST if matches else IMPL_PYTHON,
@@ -611,12 +630,14 @@ def check_python_removal_candidate(candidate: Mapping[str, Any], *, evidence_loa
     approval = read_receipt(candidate.get('operatorApprovalRef'), evidence_loader)
     candidate_sha = candidate.get('candidateCommitSha')
     binding = {'candidateCommitSha': candidate_sha, 'sliceId': candidate.get('sliceId'),
-               'rustArtifactId': candidate.get('rustArtifactId'), 'ledgerParityRef': evidence_ref}
+               'rustArtifactId': candidate.get('rustArtifactId'), 'ledgerParityRef': evidence_ref,
+               'promotionReadbackRef': candidate.get('promotionReadbackRef')}
     import re
     if (not isinstance(candidate_sha, str) or re.fullmatch(r'[0-9a-f]{40}', candidate_sha) is None
             or evidence is None
             or not verified_live_promotion(evidence_ref, candidate.get('sliceId'),
-                candidate.get('rustArtifactId'), evidence.get('parityResults'), loader=evidence_loader)
+                candidate.get('rustArtifactId'), evidence.get('parityResults'), loader=evidence_loader,
+                readback_ref=candidate.get('promotionReadbackRef'))
             or not approved(approval, purpose='python_removal', binding=binding)):
         return {"admitted": False, "code": CODE_PYTHON_REMOVAL_EVIDENCE_MISSING}
     return {"admitted": True, "code": None}
