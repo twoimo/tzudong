@@ -195,39 +195,40 @@ class G037AuthorityTests(unittest.TestCase):
     def test_windows_acl_precedes_write_and_failures_cleanup(self):
         events = []
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "output"; real_open = c.os.open; real_write = c.os.write
+            path = Path(directory) / "output"; repository = Path(directory) / "repository"; real_open = c.os.open; real_write = c.os.write
             def tracked_open(*args): events.append("open"); return real_open(*args)
             with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=lambda *a, **k: events.append(("icacls", a[0]))), patch.object(c, "restrictive_regular_file", side_effect=lambda *a: events.append("validate")), patch.object(c.os, "open", side_effect=tracked_open), patch.object(c.os, "write", side_effect=lambda fd, data: (events.append("write") or real_write(fd, data))):
-                c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+                c._write_fresh_restrictive(path, b"x", repository)
             commands = [event[1] for event in events if isinstance(event, tuple)]
-            self.assertEqual(commands, [["icacls", str(path), "/reset"], ["icacls", str(path), "/inheritance:r", "/remove:g", "SYSTEM", "Administrators", "OWNER RIGHTS", "/grant:r", "*S-1-5-21:F", "SYSTEM:F", "Administrators:F"]]); self.assertLess(events.index(("icacls", commands[1])), events.index("write"))
+            resolved_path = str(path.resolve())
+            self.assertEqual(commands, [["icacls", resolved_path, "/reset"], ["icacls", resolved_path, "/inheritance:r", "/remove:g", "SYSTEM", "Administrators", "OWNER RIGHTS", "/grant:r", "*S-1-5-21:F", "SYSTEM:F", "Administrators:F"]]); self.assertLess(events.index(("icacls", commands[1])), events.index("write"))
         for failing in ("write", "fsync"):
             with self.subTest(failing=failing), tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / "output"
+                path = Path(directory) / "output"; repository = Path(directory) / "repository"
                 with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run"), patch.object(c, "restrictive_regular_file"), patch.object(c.os, failing, side_effect=OSError()), self.assertRaises(OSError):
-                    c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+                    c._write_fresh_restrictive(path, b"x", repository)
                 self.assertFalse(path.exists())
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "output"
+            path = Path(directory) / "output"; repository = Path(directory) / "repository"
             with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run"), patch.object(c, "restrictive_regular_file"), patch.object(c.os, "read", side_effect=OSError()), self.assertRaises(OSError):
-                c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+                c._write_fresh_restrictive(path, b"x", repository)
             self.assertFalse(path.exists())
         for failure in (0, 1):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / "output"
+                path = Path(directory) / "output"; repository = Path(directory) / "repository"
                 def fail_on_call(*args, **kwargs):
                     if fail_on_call.calls == failure: raise OSError()
                     fail_on_call.calls += 1
                 fail_on_call.calls = 0
                 with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=fail_on_call), self.assertRaises(OSError):
-                    c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+                    c._write_fresh_restrictive(path, b"x", repository)
                 self.assertFalse(path.exists())
     def test_windows_binary_output_round_trips_hostile_bytes(self):
         payload = b"\x00\x01\x0a\x0d\x1a\x7f\x80\xff\x0a\x0d"
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "output"
+            path = Path(directory) / "output"; repository = Path(directory) / "repository"
             with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run"), patch.object(c, "restrictive_regular_file"):
-                c._write_fresh_restrictive(path, payload, Path(directory) / "repository")
+                c._write_fresh_restrictive(path, payload, repository)
             self.assertEqual(path.read_bytes(), payload)
 
     def test_windows_output_open_flags_include_binary_mode(self):
@@ -275,36 +276,35 @@ class G037AuthorityTests(unittest.TestCase):
     def test_windows_identity_checks_surround_acl_and_write(self):
         events = []
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "output"; real_write = c.os.write
+            path = Path(directory) / "output"; repository = Path(directory) / "repository"; real_write = c.os.write
             original = c._same_output_file
             def identity(fd, candidate):
                 events.append("identity")
                 return original(fd, candidate)
             with patch.object(c.os, "name", "nt"), patch.object(c, "_windows_restrictive_directory", return_value=True), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", side_effect=lambda *a, **k: events.append("acl")), patch.object(c, "restrictive_regular_file"), patch.object(c, "_same_output_file", side_effect=identity), patch.object(c.os, "write", side_effect=lambda fd, data: (events.append("write") or real_write(fd, data))):
-                c._write_fresh_restrictive(path, b"x", Path(directory) / "repository")
+                c._write_fresh_restrictive(path, b"x", repository)
             self.assertGreaterEqual(events.count("identity"), 5)
             self.assertLess(events.index("acl"), events.index("write"))
-    def test_windows_directory_acl_custody_allows_only_explicit_restrictive_parent(self):
-        valid = "D:PAI(A;;FA;;;S-1-5-21)S:PAINO_ACCESS_CONTROL"
-        broad = "D:AI(A;;FA;;;S-1-5-21)"
+    def test_windows_directory_acl_custody_delegates_to_native_g035_inspection(self):
         with tempfile.TemporaryDirectory() as directory:
-            parent = Path(directory) / "parent"; parent.mkdir(); path = parent / "output"
-            with patch.object(c.os, "name", "nt"), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch("g035_hosted_recovery._windows_saved_sddl", return_value=valid), patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)), patch.object(c, "restrictive_regular_file"):
-                c._write_fresh_restrictive(path, b"payload", Path(directory) / "repository")
+            parent = Path(directory) / "parent"; parent.mkdir(); path = parent / "output"; repository = Path(directory) / "repository"
+            with patch.object(c.os, "name", "nt"), patch("g035_hosted_recovery._windows_dacl_restrictive", return_value=True) as inspect, patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)), patch.object(c, "restrictive_regular_file"):
+                c._write_fresh_restrictive(path, b"payload", repository)
+            inspect.assert_called_once_with(parent.resolve(), directory=True)
             self.assertEqual(path.read_bytes(), b"payload")
         with tempfile.TemporaryDirectory() as directory:
-            parent = Path(directory) / "parent"; parent.mkdir(); path = parent / "output"
-            with patch.object(c.os, "name", "nt"), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch("g035_hosted_recovery._windows_saved_sddl", return_value=broad), patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
-                with self.assertRaises(c.ContractError): c._write_fresh_restrictive(path, b"payload", Path(directory) / "repository")
+            parent = Path(directory) / "parent"; parent.mkdir(); path = parent / "output"; repository = Path(directory) / "repository"
+            with patch.object(c.os, "name", "nt"), patch("g035_hosted_recovery._windows_dacl_restrictive", return_value=False) as inspect, patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
+                with self.assertRaises(c.ContractError): c._write_fresh_restrictive(path, b"payload", repository)
+            inspect.assert_called_once_with(parent.resolve(), directory=True)
             self.assertFalse(path.exists())
-            self.assertEqual(run.call_count, 1)
-    def test_windows_directory_acl_rejects_inherited_ace_and_extra_sid(self):
-        cases = ("D:PAI(A;ID;FA;;;S-1-5-21)", "D:PAI(A;;FA;;;S-1-5-21)(A;;FA;;;S-1-5-32-545)", "D:PAI(A;;FA;;;S-1-5-21)S:PAI(A;;FA;;;SY)", "D:PAI(A;;FA;;;S-1-5-21)S:PAINO_ACCESS_CONTROLX")
+            self.assertEqual(run.call_count, 0)
+    def test_windows_directory_acl_rejects_non_directory_before_native_inspection(self):
         with tempfile.TemporaryDirectory() as directory:
-            parent = Path(directory) / "parent"; parent.mkdir()
-            for sddl in cases:
-                with self.subTest(sddl=sddl), patch("g035_hosted_recovery._windows_current_sid", return_value="S-1-5-21"), patch("g035_hosted_recovery._windows_saved_sddl", return_value=sddl), patch.object(c.subprocess, "run", return_value=SimpleNamespace(returncode=0)):
-                    self.assertFalse(c._windows_restrictive_directory(parent))
+            missing = Path(directory) / "missing"
+            with patch("g035_hosted_recovery._windows_dacl_restrictive") as inspect:
+                self.assertFalse(c._windows_restrictive_directory(missing))
+            inspect.assert_not_called()
 
     def test_cli_has_no_private_key_or_secret_argument(self):
         source = Path(c.__file__).read_text(encoding="utf8")

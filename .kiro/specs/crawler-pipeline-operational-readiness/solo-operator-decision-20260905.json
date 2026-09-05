@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "solo_operator_continuation_decision",
+  "repository": "twoimo/tzudong",
+  "taskId": "01a06dcf-ede3-7813-9516-4be3972e8b53",
+  "authority": {
+    "source": "current_user_task_instruction",
+    "statement": "남은 항목 마무리 해줘. 모두 승인할게. 별도 증빙 가능한 상황 아니야. 자율적으로 처리해야돼. 나는 1인 개발자야.",
+    "authenticatedRepositoryOwner": "twoimo",
+    "operatorMode": "solo",
+    "reconfirmationRequired": false,
+    "supersedesPriorProtectionDeferral": true
+  },
+  "branchProtection": {
+    "applyOrder": ["develop", "data", "main"],
+    "requiredChecks": ["Release", "Promotion Path"],
+    "checkAppId": 15368,
+    "strict": true,
+    "requirePullRequest": true,
+    "requiredApprovingReviewCount": 0,
+    "requireLastPushApproval": false,
+    "dismissStaleReviews": true,
+    "requireConversationResolution": true,
+    "enforceAdmins": true,
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "bypassActors": [],
+    "requireLinearHistory": false,
+    "reason": "One operator can merge reviewed PRs after required checks without inventing a second human reviewer. Existing path-filtered CI remains additional verification and all triggered checks must pass for this recovery promotion."
+  },
+  "productionEnvironment": {
+    "deploymentBranches": ["main"],
+    "requiredReviewers": [],
+    "reason": "The owner has authorized the work in this task; deployment remains bound to protected main and actual runtime prerequisites."
+  },
+  "evidence": {
+    "method": "Collect actual API readbacks and command outputs, retain sanitized artifacts outside source control, and pin hashes in the source handoff.",
+    "syntheticSuccessAllowed": false,
+    "legalReviewClaimed": false,
+    "hostedMutationClaimed": false,
+    "freezeExitClaimed": false
+  }
+}

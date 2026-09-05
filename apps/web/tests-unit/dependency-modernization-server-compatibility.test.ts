@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const appRoot = join(import.meta.dir, '..');
 const source = (relativePath: string) => readFileSync(join(appRoot, relativePath), 'utf8');
@@ -57,6 +58,33 @@ describe('dependency modernization release authority', () => {
       "'tests/dependency-modernization.spec.ts', '--project=chromium'",
     ]) expect(runner).toContain(token);
   });
+  test('the built server, health probe, and isolated browser share the admitted origin', () => {
+    const runner = source('scripts/run-dependency-modernization-browser.mjs');
+    const browser = source('tests/dependency-modernization.spec.ts');
+    expect(runner).toContain("process.env.TZUDONG_DEPENDENCY_PROOF_PORT?.trim() || '8080'");
+    expect(runner).toContain('`http://localhost:${proofPort}`');
+    expect(runner).toContain('`node scripts/start-standalone.mjs --port ${proofPort} --hostname localhost`');
+    expect(runner).toContain('PLAYWRIGHT_BASE_URL: proofOrigin');
+    expect(runner).toContain('PLAYWRIGHT_WEB_SERVER_URL: `${proofOrigin}/api/health`');
+    expect(runner).toContain("PLAYWRIGHT_REUSE_EXISTING_SERVER: '0'");
+    expect(browser).toContain('url.origin === admittedOrigin.origin');
+    expect(browser).toContain("expect(admittedOrigin.hostname).toBe('localhost')");
+  });
+
+  test('invalid proof ports fail before package installation or server execution', () => {
+    for (const port of ['0', '80', '65536', '8080;echo unsafe', 'https://example.com']) {
+      const result = spawnSync(process.execPath, ['scripts/run-dependency-modernization-browser.mjs'], {
+        cwd: appRoot,
+        env: { ...process.env, TZUDONG_DEPENDENCY_PROOF_PORT: port },
+        encoding: 'utf8',
+        timeout: 5000,
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('DEPENDENCY_MODERNIZATION_PORT_INVALID');
+      expect(result.stdout).toBe('');
+    }
+  });
+
   test('the dependency runner retains no raw child diagnostics or exception messages', () => {
     const runner = source('scripts/run-dependency-modernization-browser.mjs');
 

@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "sourceProvenance": ".kiro/specs/crawler-pipeline-operational-readiness/rust-source-provenance.v1.json",
+  "sourceProvenanceSha256": "67233878212d05f654b81c7980c48244861e90fa7c7a231fa6d6b6e7b3628091",
+  "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
+  "candidateTransformations": [
+    {
+      "id": "rustfmt-1.97.0",
+      "kind": "format",
+      "tool": "rustfmt",
+      "version": "1.97.0",
+      "paths": [
+        "backend/rust/tzudong-media-compute/src/lib.rs",
+        "backend/rust/tzudong-media-compute/src/python.rs",
+        "backend/rust/tzudong-pipeline-graph/src/graph.rs",
+        "backend/rust/tzudong-pipeline-graph/src/state.rs",
+        "backend/rust/tzudong-upsert-payload/src/lib.rs",
+        "backend/rust/tzudong-upsert-payload/src/value.rs",
+        "backend/rust/tzudong-validators/src/lib.rs",
+        "backend/rust/tzudong-validators/src/python.rs",
+        "backend/rust/tzudong-validators/src/state.rs",
+        "backend/rust/tzudong-validators/src/validators.rs",
+        "backend/rust/tzudong-validators/tests/prop.rs"
+      ]
+    },
+    {
+      "id": "root-mit-license-alignment",
+      "kind": "metadata",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/Cargo.toml"
+      ]
+    },
+    {
+      "id": "python-whitespace-parity",
+      "kind": "behavior-correction",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/tzudong-validators/src/validators.rs",
+        "backend/rust/tests/parity_pbt.py"
+      ]
+    },
+    {
+      "id": "python-date-hash-parity",
+      "kind": "behavior-correction",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/tzudong-normalize/src/lib.rs",
+        "backend/rust/tzudong-normalize/src/python.rs",
+        "backend/rust/tzudong-upsert-payload/src/python.rs",
+        "backend/rust/tzudong-upsert-payload/src/value.rs"
+      ]
+    }
+  ],
+  "fileCount": 36,
+  "files": [
+    {
+      "path": "backend/rust/.gitignore",
+      "gitBlobSha1": "623032b5cd7f778a9d714020a75e2f1e9d9310ed",
+      "sha256": "591515d9d5876e98eee493cf69763b15c08ead5e81bf1ea7e7d4a4b8b8f184af",
+      "bytes": 71
+    },
+    {
+      "path": "backend/rust/Cargo.lock",
+      "gitBlobSha1": "5d638984f3d98b63137caa688b23834ec76febfd",
+      "sha256": "13b2f538a1581e7235634f75e78b2bcd275ab4f43c11e5c9ee6ff13272779e3b",
+      "bytes": 11188
+    },
+    {
+      "path": "backend/rust/Cargo.toml",
+      "gitBlobSha1": "8b6947e997a94aa8a95d614f8bf301737ad15801",
+      "sha256": "8161bf0a1763d87d66bd3ab356f38ec79ed029962ffb23ac101333f72d0f4165",
+      "bytes": 1672
+    },
+    {
+      "path": "backend/rust/migration-ledger.v1.json",
+      "gitBlobSha1": "1737a272ce73cd6b803447971061313248973720",
+      "sha256": "62d42ab4d249e9cd949d74d992eb8c56be43767da2fc7be00bb293ca4d33918b",
+      "bytes": 5003
+    },
+    {
+      "path": "backend/rust/rust-toolchain.toml",
+      "gitBlobSha1": "32312385cff45b09bca7174a4d05ce48464a68f1",
+      "sha256": "0b4dfd1eb44e276cce3152273d1b1981b940d9299fc4dd4b820d289fb83b650c",
+      "bytes": 615
+    },
+    {
+      "path": "backend/rust/tests/parity_error_pbt.py",
+      "gitBlobSha1": "f62987f0f2867a239bf33c8523f28c0cce3b50e9",
+      "sha256": "e30cb3717e3a2c8930a5f8357041cc7e3f315b78bd5e644fb67ad4bca6cfc9bb",
+      "bytes": 11986
+    },
+    {
+      "path": "backend/rust/tests/parity_pbt.py",
+      "gitBlobSha1": "7ecac512921f9bea99cf106dfc99d71ff5337bec",
+      "sha256": "f273dc0149f126bb817d8e6d42eeeba1ad8762a7e1c0875a6aa777d7925dc700",
+      "bytes": 21534
+    },
+    {
+      "path": "backend/rust/tzudong-media-compute/Cargo.toml",
+      "gitBlobSha1": "f7924b6b814891d0c0b2f97dda432982108ea7d9",
+      "sha256": "22ab66afe126e6c064924734795c29aaf9f2e9563f14fb95474b4e1f2b5a0b1e",
+      "bytes": 889
+    },
+    {
+      "path": "backend/rust/tzudong-media-compute/pyproject.toml",
+      "gitBlobSha1": "5c5921b4608f2c856006338bd3a77b25f8ed73be",
+      "sha256": "4f9ea97daf7fc66ef78b11cc37d3e372400ade507ccd2f1705a0aa205af372eb",
+      "bytes": 803
+    },
+    {
+      "path": "backend/rust/tzudong-media-compute/src/lib.rs",
+      "gitBlobSha1": "84b25dbba6f617dd2e051c9ccbe65f53313ed796",
+      "sha256": "ed6f2907db0f258acee1df36bff4738b7081b815246e5ec0d058ddc8b5107f86",
+      "bytes": 11530
+    },
+    {
+      "path": "backend/rust/tzudong-media-compute/src/python.rs",
+      "gitBlobSha1": "978efd736c897a649b72e135546495fec541b856",
+      "sha256": "b47adb1caf02090a4396a309248fbbfd91842a1f9f255c363f39c648f09f718b",
+      "bytes": 3933
+    },
+    {
+      "path": "backend/rust/tzudong-normalize/Cargo.toml",
+      "gitBlobSha1": "e2f7cb014210ecb4adbddfb21719a46455b31edb",
+      "sha256": "e1ec7bde62ad66561b9d1d908a0b9e51621677ed8654e531d448fc205c41f761",
+      "bytes": 1605
+    },
+    {
+      "path": "backend/rust/tzudong-normalize/pyproject.toml",
+      "gitBlobSha1": "527cfef88617afb7268bd1b455c0fbeeaf521b80",
+      "sha256": "61e111db1fec0354e8311218fffe8e87b1a14b6d7edf95acc7e6e6fabe6e8584",
+      "bytes": 1097
+    },
+    {
+      "path": "backend/rust/tzudong-normalize/src/lib.rs",
+      "gitBlobSha1": "f0b1d312b53a881464a34df6cee460dc75e0107a",
+      "sha256": "2f897ee432345bd2929c261c694721a3a106a76d4197f09000ee4e3d905f0509",
+      "bytes": 7381
+    },
+    {
+      "path": "backend/rust/tzudong-normalize/src/python.rs",
+      "gitBlobSha1": "64e5616a02fed427dba8c5e34e3053d83ff5d323",
+      "sha256": "e8db981dc537d75aa884fa6d6c3cb0e9ba2c705f298566ba292f2f12b2d630b6",
+      "bytes": 2335
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/Cargo.toml",
+      "gitBlobSha1": "68197d23b991b480b97d353a4ef148812259ed4b",
+      "sha256": "78190dc3b07601846dce327b8b8df2d50a45532d0f3905949fc95739be20c035",
+      "bytes": 944
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/pyproject.toml",
+      "gitBlobSha1": "ec0393d08347e0f125f2e1ba05c03a1191906ff0",
+      "sha256": "81eed29d5e9ef038645f6b06bb75229e3dfb6aeb342fe541407687f7a6dbbf03",
+      "bytes": 839
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/src/graph.rs",
+      "gitBlobSha1": "31e860d4dcb1e2e67fb8ad6d59f8fb6ac0b1d432",
+      "sha256": "be4f9d6a4c83fcaa688e43cfeafe8bb5fe297674b69461edf6a4d3b3f694b728",
+      "bytes": 16263
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/src/lib.rs",
+      "gitBlobSha1": "37cd485d732247ebde6170211b099ddb1f4397e7",
+      "sha256": "a5c5b297d2049cd661f2908cb66bdc6a56947c979fc6a7021c60d378511c4619",
+      "bytes": 1585
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/src/python.rs",
+      "gitBlobSha1": "4574d3f7a9087a2cacad7f9e626a381696814df3",
+      "sha256": "250a3dfd2cc7e03b5b96261c1ba5ac1fa0d3757be283cc4144d1f23e74fa6e5c",
+      "bytes": 3247
+    },
+    {
+      "path": "backend/rust/tzudong-pipeline-graph/src/state.rs",
+      "gitBlobSha1": "bf18c98cea22b490c62418fada3e32efb72f7b7a",
+      "sha256": "297d72c39af2b065530ee97013acc44a5865dd7e7c43925a02533772f6be3316",
+      "bytes": 4786
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/Cargo.toml",
+      "gitBlobSha1": "9e3e1b3c6edfdf05af352f94bfb2238ddd4ee6f8",
+      "sha256": "01f2d50f5f54efb96fb43a1bd1910c1429d6365ca92ea5f7de1bbc5a4cae7fb9",
+      "bytes": 1150
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/pyproject.toml",
+      "gitBlobSha1": "8b39dd6168108a78a28ca23b4e5d0e53a87a4463",
+      "sha256": "0b4faaafc9bb38e4e3b385b5e57d15a00c74beb858fc45cddf6108f94728cab9",
+      "bytes": 833
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/src/lib.rs",
+      "gitBlobSha1": "216fe61fa9520c4b4ed6b2149f31271b5204363f",
+      "sha256": "b6c93734f12211ba7c1addca1cf5a83187a3c3d198968b34d6b6bf8d8ad758c5",
+      "bytes": 6543
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/src/python.rs",
+      "gitBlobSha1": "a9e0c1df021ee161c0955717b55426d380b0392f",
+      "sha256": "1e4e5939ebc222d15d0d82e4c09ebbc8779983e6edea38e6c529e834165d5bae",
+      "bytes": 2386
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/src/sha256.rs",
+      "gitBlobSha1": "f4a30ff4d46e4a7a115abdcf37cb02b6457bf5df",
+      "sha256": "783e2dbd9684f1ddfabb705fb00673e8042fdf57248330ff4cac8b15207628a6",
+      "bytes": 4616
+    },
+    {
+      "path": "backend/rust/tzudong-upsert-payload/src/value.rs",
+      "gitBlobSha1": "e6a16ae2242d862030696a8c49480f49611969fe",
+      "sha256": "0ca9fcafafe39089523127ebd096b5466f49d12a017bdf0031fd046d9559c9ed",
+      "bytes": 6897
+    },
+    {
+      "path": "backend/rust/tzudong-validators/Cargo.toml",
+      "gitBlobSha1": "c74bd64d87286e86b84447f702f8f29212fe3408",
+      "sha256": "a49086d4e31babcbf161924a1b242ec956d6f5f0ccdbdff884f172987c92d81c",
+      "bytes": 2025
+    },
+    {
+      "path": "backend/rust/tzudong-validators/pyproject.toml",
+      "gitBlobSha1": "7e9da6fdb50342845bc3d48930af0eada0e2a730",
+      "sha256": "61790cdcd8840ad772480fdb1f621ad293208b1e03cf62a0bfd8e299231e09b7",
+      "bytes": 1194
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/errors.rs",
+      "gitBlobSha1": "3f9c7fd0f008567218c53d2f84823c9717cf7e66",
+      "sha256": "a7407e45e0d955a7b70b2136de6b4d9354f75157b58296ab4804d0f8eb200a31",
+      "bytes": 3125
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/lib.rs",
+      "gitBlobSha1": "ff50aa19f180820fdfbdca0ec3b66d6fc87963f6",
+      "sha256": "99fe4e73daccd321c896be549dc025d7c91bf190f32e9c3b4a19472f11d3b445",
+      "bytes": 21787
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/python.rs",
+      "gitBlobSha1": "2f452dafe520f2a0295d646fa6381afcd76a4c5f",
+      "sha256": "ae5d06f0c8d5cd79611efd7acd25368d40cdeefd2e6a40157ceec5c3ab601e25",
+      "bytes": 7866
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/state.rs",
+      "gitBlobSha1": "640b55c6b9b0fa2a1e7b0cab1817c686af1a6d15",
+      "sha256": "a36ab6eeee1acc99e8e61b82c3f0d80bd731e105f6554914e9bd0c71b5ca1364",
+      "bytes": 2758
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/validators.rs",
+      "gitBlobSha1": "3153ce4f00de381691ddd89f3465964bb5af022c",
+      "sha256": "b1c6a1fc82ca2c0ec72f9a816553460ce732e745d8228549bc2b25cb14a9f1f9",
+      "bytes": 41400
+    },
+    {
+      "path": "backend/rust/tzudong-validators/src/value.rs",
+      "gitBlobSha1": "fc712be2cee58fe2fdd4215ebdf8cf70c08c3159",
+      "sha256": "1ecd9fda1b96cae0c526c3ca115a0663dd45598a04bed25c154ee59a8a4d804d",
+      "bytes": 7579
+    },
+    {
+      "path": "backend/rust/tzudong-validators/tests/prop.rs",
+      "gitBlobSha1": "8aac77911cb8681875858bbad5b2e3b98388f7f0",
+      "sha256": "02e0785efbf7014fa4c98782d5f9694b178a0ccd05bcce20d68ed5686fe233a5",
+      "bytes": 17176
+    }
+  ]
+}

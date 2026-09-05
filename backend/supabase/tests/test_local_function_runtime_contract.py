@@ -75,6 +75,12 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
         )
         self.assertIn("'0A000'", trigger_sql)
         self.assertIn("expected_sqlstate_", trigger_sql)
+        self.assertEqual(
+            self.scanner.EXPECTED_CANDIDATE_SQLSTATES[
+                ("public", "touch_admin_workflow_updated_at", "")
+            ],
+            ("0A000",),
+        )
 
     def test_candidate_smoke_allows_privacy_incident_guard_outcomes(self):
         sql = self.scanner._smoke_candidate_blocks(
@@ -285,7 +291,7 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
 
     def test_frozen_source_closure_candidate_receipt_is_exact(self):
         candidates = self.scanner._candidate_functions(self.scanner._source_inventory())
-        self.assertEqual(len(candidates), 47)
+        self.assertEqual(len(candidates), 48)
         target = [
             item for item in candidates
             if item["name"] == "public.approve_submission_item"

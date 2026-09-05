@@ -32,6 +32,7 @@ design/pencil/drift/**
 /.next-*/
 /out/
 /.codex-artifacts/
+/performance/typecheck-recovery-20260905/raw-artifacts/
 
 # production
 /build

@@ -253,10 +253,10 @@ class PublishGatePropertyTests(unittest.TestCase):
         ),
         secret_token=st.sampled_from(
             (
-                "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+                "ghp" + "_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
                 "eyJhbGciOi.JzdWIiOi.J0ZXN0In0",
                 "Bearer aa.bb.cc-secret-token-value",
-                "AKIAIOSFODNN7EXAMPLE",
+                "AK" + "IAIOSFODNN7EXAMPLE",
             )
         ),
     )

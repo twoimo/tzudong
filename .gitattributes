@@ -4,3 +4,9 @@
 # 셸 스크립트는 LF 강제 (크로스 플랫폼 호환)
 *.sh text eol=lf
 *.bash text eol=lf
+
+# Historical G037 SQL is bound to retained SHA-256 authorization receipts.
+# Preserve its exact trailing newlines; all other whitespace checks still apply.
+backend/supabase/scripts/g037_readonly_role_membership_diagnostic_v2.sql whitespace=-blank-at-eof
+backend/supabase/scripts/g037_readonly_role_provisioning_v3.sql whitespace=-blank-at-eof
+backend/supabase/scripts/g037_readonly_role_readback_v3.sql whitespace=-blank-at-eof

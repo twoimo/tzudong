@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "kind": "g037_session_pooler_connect_control_map_authorization_request",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "preparedAt": "2026-09-04T17:05:42Z",
+  "requestStatus": "blocked_exact_named_owner_statement_required",
+  "requestedApproverDisplayName": "최연우",
+  "requestedExactStatement": "최연우, production aqlcofblfxdrjhhdmarw G037 top-level-await control-only Dashboard Connect v2 request e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08·browser a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc·receipt-contract 15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c·verifier 7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb에 따라 1회 실행 승인",
+  "reviewedArtifacts": {
+    "request": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-request.v2.json",
+      "sha256": "e74e85936b4d44776ffacf878a65604c03e91ac03b91f4416090ed5efecd0a08"
+    },
+    "browserSource": {
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_read_v2.mjs",
+      "sha256": "a07dd10e07c0cd0a1db050230206b6e5ebfd4402c172556d1a159b571e3044bc",
+      "singleLine": true,
+      "nodeSyntaxCheckPassed": true,
+      "topLevelAwaitTransportPreflightPassed": true
+    },
+    "receiptContract": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-receipt-contract.v2.json",
+      "sha256": "15150608fcb788f847b8053f6fe61522717759206b6c5e405093bf81635bea1c"
+    },
+    "receiptVerifier": {
+      "path": "backend/supabase/scripts/g037_session_pooler_control_map_receipt_v2.py",
+      "sha256": "7b6be03f1ac15ee93f5b10ddf33d070382e5eb9939f7bab30857f71ce8a631eb",
+      "offlineOnly": true
+    },
+    "priorAttempt": {
+      "path": "backend/supabase/g037-session-pooler-connect-control-map-attempt.v1.json",
+      "sha256": "9bcf5eec76211f11113172b08a1133a67a9824d77874212d6a57c0254dce669c"
+    }
+  },
+  "requestedScope": {
+    "maximumDashboardOpenCount": 1,
+    "maximumInspectionAttemptCount": 1,
+    "maximumControlSnapshotCount": 2,
+    "maximumControlClickCount": 1,
+    "exactBrowserSourceOnly": true,
+    "controlOnlyObservation": true,
+    "sanitizedReceiptVerification": true,
+    "metadataValueRead": false,
+    "sessionPoolerControlClick": false,
+    "screenshotOrClipboard": false,
+    "dsnPasswordCredentialOrCertificateRead": false,
+    "browserStorageOrNetworkHeaderInspection": false,
+    "databaseAuthenticationOrSql": false,
+    "networkProbe": false,
+    "persistentProviderMutation": false,
+    "repositorySecretMutation": false,
+    "controllerOrWorkflowDispatch": false,
+    "migrationReleaseOrDeployment": false
+  },
+  "executionDiscipline": {
+    "consumeAuthorizationBeforeReplExecution": true,
+    "syntaxFailureConsumesAuthorization": true,
+    "transportFailureConsumesAuthorization": true,
+    "ambiguousCompletionConsumesAuthorization": true,
+    "retryUnderSameAuthorization": false,
+    "rawTreeOrProviderTextRetention": false,
+    "fixedObservationAndReceiptOnly": true
+  },
+  "authorizationGate": {
+    "exactStatementReceived": false,
+    "executionAuthorizationPresent": false,
+    "approvedExecutionCount": 0,
+    "consumedExecutionCount": 0,
+    "controlMapV2ReceiptPresent": false,
+    "metadataReadV2Authorized": false,
+    "sessionPoolerSelected": false,
+    "networkProbeAuthorized": false,
+    "passwordOrSecretWorkAuthorized": false,
+    "workflowDispatchAuthorized": false
+  },
+  "notEvidenceOf": [
+    "named-owner approval or execution authorization",
+    "execution of the browser source",
+    "a successful Dashboard control map, observation, or receipt",
+    "an exact Session pooler hostname, username, region, port, or database",
+    "session-pooler selection, reachability, authentication, or role mapping",
+    "password, repository Secret, controller, workflow, migration, release, or deployment authority"
+  ]
+}

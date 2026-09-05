@@ -88,6 +88,10 @@ def _iter_evaluation_items(value: Any) -> list[dict]:
 # 1. Gemini 크롤링 출력 검증 (Step 7)
 # ═══════════════════════════════════════════════════════════
 
+from backend.pipeline_control.impl_selector import rust_dispatch
+
+
+@rust_dispatch("R1-validators")
 def validate_gemini_output(video_id: str, data: dict) -> list[dict]:
     """
     Gemini 크롤링 결과 스키마 + 의미 검증.
@@ -203,6 +207,7 @@ def validate_gemini_output(video_id: str, data: dict) -> list[dict]:
 # 2. Target Selection 검증 (Step 8)
 # ═══════════════════════════════════════════════════════════
 
+@rust_dispatch("R1-validators")
 def validate_selection(video_id: str, data: dict) -> list[dict]:
     """
     평가 대상 선정 결과 검증.
@@ -252,6 +257,7 @@ def validate_selection(video_id: str, data: dict) -> list[dict]:
 # 3. Rule 평가 결과 검증 (Step 9)
 # ═══════════════════════════════════════════════════════════
 
+@rust_dispatch("R1-validators")
 def validate_rule_results(video_id: str, data: dict) -> list[dict]:
     """
     Rule 기반 평가 결과 검증.
@@ -371,6 +377,7 @@ SCORE_RANGES = {
 }
 
 
+@rust_dispatch("R1-validators")
 def validate_laaj_results(video_id: str, data: dict) -> list[dict]:
     """
     LAAJ (LLM) 평가 결과 검증.
@@ -446,6 +453,7 @@ def validate_laaj_results(video_id: str, data: dict) -> list[dict]:
 # 5. Rule vs LAAJ 교차 검증
 # ═══════════════════════════════════════════════════════════
 
+@rust_dispatch("R1-validators")
 def cross_validate(video_id: str, rule_data: dict, laaj_data: dict) -> list[dict]:
     """
     Rule 평가와 LAAJ 평가 결과 간 교차 검증.
@@ -557,6 +565,7 @@ def _allows_empty_transform_evaluation_results(record: dict) -> bool:
     )
 
 
+@rust_dispatch("R1-validators")
 def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
     """
     Transform 결과(최종 출력) 스키마 검증.
@@ -627,11 +636,13 @@ def validate_transform_output(video_id: str, records: list[dict]) -> list[dict]:
 # 집계 유틸리티
 # ═══════════════════════════════════════════════════════════
 
+@rust_dispatch("R1-validators")
 def has_blocking_errors(errors: list[dict]) -> bool:
     """ERROR 심각도의 검증 실패가 있으면 True"""
     return any(e.get("severity") == ValidationSeverity.ERROR.value for e in errors)
 
 
+@rust_dispatch("R1-validators")
 def error_summary(errors: list[dict]) -> str:
     """검증 오류 요약 텍스트 생성"""
     if not errors:

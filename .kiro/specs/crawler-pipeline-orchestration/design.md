@@ -49,7 +49,7 @@ fail-closed control and does not assert hosted production state or legal complia
 |---|---|---|
 | GHA_Runner | `.github/workflows/daily-crawler.yml` | cron `0 19 * * *` UTC = 04:00 KST; lite compute on `ubuntu-latest` against a `postgres:15` loopback service; prepares data-only publication artifact; uploads frames to GDrive with soft-timeout staging |
 | Backfill_Runner | `.github/workflows/gdrive-frame-backfill.yml` | cron `0 21`/`0 23` UTC + `workflow_run` after Crawler; reconciles staged frame shards idempotently under a remote lease lock |
-| Mac_Runner | launchd `dev.tzudong.hosted-new-video` (installed by `backend/bin/install_mac_hosted_pipeline_launchd.sh`) | `StartCalendarInterval` 05:00 local KST; runs `run_hosted_new_video_pipeline.py --channel tzuyang --limit 1` |
+| Mac_Runner | launchd `dev.tzudong.hosted-new-video` (installed by `backend/bin/install_mac_hosted_pipeline_launchd.sh`) | `StartCalendarInterval` 05:15 local KST; runs `run_hosted_new_video_pipeline.py --channel tzuyang --limit 1` |
 | Mac entrypoint | `backend/bin/run_hosted_new_video_pipeline.py` | chains `evaluate_new_youtube_videos.py` then `apply_hosted_pending_candidates.py` (always dry-run preview first); self-loads `backend/.env`; does not auto-enable hosted apply |
 | Pipeline_Worker | `backend.pipeline_control.worker` (`process_one`) | claims a run, classifies sink via `admit_pipeline_supabase_boundary` before any client, binds `TZUDONG_DATA_SINK/EXECUTION_MODE/COMPUTE_PROFILE` into child env, runs `execute_steps`, writes Run_Manifest |
 | Step graph | `backend/pipeline_control/graph.py` (`STEP_SPECS`) | declarative numbered-script graph; capabilities `mutating_db`/`heavy_compute`/`map_url`/`frame_caption`/`chunk`; `skip_when_lite`; fail-closed `validate_graph`/`build_argv` |
@@ -69,7 +69,7 @@ sequenceDiagram
     participant GHA as GHA_Runner (lite_gha)
     participant PG as postgres:15 loopback
     participant Art as Evidence Artifact
-    participant Mac as Mac_Runner (heavy_local, 05:00 KST)
+    participant Mac as Mac_Runner (heavy_local, 05:15 KST)
     participant Hosted as Hosted_Store (Supabase)
     participant BF as Backfill_Runner (21:00/23:00 UTC)
 
@@ -118,8 +118,8 @@ This section maps each requirement to the concrete existing module(s) and the ad
 ### R1 — Coherent staggered daily schedule
 
 - **Existing**: GHA cron `0 19 * * *` UTC (04:00 KST); launchd `StartCalendarInterval` Hour 5 /
-  Minute 0 (05:00 KST). These are ~60 minutes apart with GHA first, already satisfying "GHA precedes
-  Mac" in spirit.
+  Minute 15 (05:15 KST). The committed GHA window ends at 04:45, preserving the required 30-minute
+  buffer before the Mac runner begins.
 - **Additive**:
   - A committed **cadence config artifact** (`backend/pipeline_control/cadence.schedule.json`, see
     Data Models) recording each runner's KST window start/end (R1.5).
@@ -276,16 +276,16 @@ Committed, Operator-readable, no secrets. Path: `backend/pipeline_control/cadenc
       "runner": "GHA_Runner",
       "profile": "lite_gha",
       "kstStart": "04:00",
-      "kstEnd": "05:30",
+      "kstEnd": "04:45",
       "utcCron": "0 19 * * *",
       "workflow": ".github/workflows/daily-crawler.yml"
     },
     {
       "runner": "Mac_Runner",
       "profile": "heavy_local",
-      "kstStart": "05:00",
+      "kstStart": "05:15",
       "kstEnd": "07:00",
-      "launchdCalendar": { "Hour": 5, "Minute": 0 },
+      "launchdCalendar": { "Hour": 5, "Minute": 15 },
       "agent": "dev.tzudong.hosted-new-video"
     }
   ]
@@ -294,11 +294,10 @@ Committed, Operator-readable, no secrets. Path: `backend/pipeline_control/cadenc
 
 `validate_cadence` returns `{ "ok": bool, "errorCode": str|null, "conflictingWindows": [str,...] }`
 with `errorCode` drawn from `{ null, "windows_overlap", "buffer_too_small", "order_violation",
-"window_shape_invalid" }`. Note: the example above intentionally shows a schedule the current repo
-uses (GHA 04:00, Mac 05:00) — the design flags that if windows are literally 04:00–05:30 and
-05:00–07:00 they overlap; the committed config must encode non-overlapping windows with the ≥30-min
-buffer (e.g. GHA end 04:45, Mac start 05:15) and the validator enforces exactly that. The real cron
-and launchd times are the source of truth the config must reconcile against.
+"window_shape_invalid" }`. The example matches the committed schedule: GHA begins at 04:00 and its
+window ends at 04:45; the Mac runner begins at 05:15, leaving the required 30-minute buffer. The
+source-contract validator fails closed when the workflow cron, installer calendar, agent label, or
+their KST derivations diverge from this artifact.
 
 ### Run_Manifest (`backend/log/cron/current-summary.json`) — existing + additive fields
 

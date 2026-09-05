@@ -1,0 +1,503 @@
+{
+  "schemaVersion": 1,
+  "specPath": ".kiro/specs/crawler-pipeline-orchestration/tasks.md",
+  "entries": [
+    {
+      "taskId": "1",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": ["backend/pipeline_control/cadence.schedule.json", "backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_cadence_config_unittest", "backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.1",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/pipeline_control/cadence.schedule.json"],
+      "verificationModules": ["backend.pipeline_control.test_cadence_config_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.2",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.3",
+      "evidenceClasses": ["source", "source_contract"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", "backend/bin/install_mac_hosted_pipeline_launchd.sh", "backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_cadence_config_unittest", "backend.utils.tests.test_mac_launchd_install_script"],
+      "externalEvidenceTypes": ["mac_launchagent_readback"]
+    },
+    {
+      "taskId": "1.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.5",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.6",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "1.7",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/cadence.schedule.json"],
+      "verificationModules": ["backend.pipeline_control.test_cadence_config_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": ["backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_unittest", "backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.1",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.2",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/pipeline_control/health.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_pbt", "backend.pipeline_control.test_health_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.5",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.6",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.7",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/health.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.8",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_unittest", "backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.9",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "2.10",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/health.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_pbt"],
+      "externalEvidenceTypes": ["mac_launchagent_readback"]
+    },
+    {
+      "taskId": "2.11",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_manifest_presence_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "3",
+      "evidenceClasses": ["checkpoint"],
+      "implementationPaths": ["backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/schedule.py"],
+      "verificationModules": ["backend.pipeline_control.test_health_pbt", "backend.pipeline_control.test_manifest_pbt", "backend.pipeline_control.test_schedule_pbt"],
+      "externalEvidenceTypes": ["mac_launchagent_readback"]
+    },
+    {
+      "taskId": "4",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": ["backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/profiles.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "4.1",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/profiles.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt", "backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "4.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "4.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "4.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "4.5",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "4.6",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py", "backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "4.7",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["backend/bin/install_mac_hosted_pipeline_launchd.sh", "backend/bin/run_hosted_new_video_pipeline.py", "backend/bin/tests/test_mac_dry_run_no_auto_enable_unittest.py"],
+      "verificationModules": ["backend.bin.tests.test_mac_dry_run_no_auto_enable_unittest", "backend.utils.tests.test_mac_launchd_install_script"],
+      "externalEvidenceTypes": ["mac_launchagent_readback"]
+    },
+    {
+      "taskId": "5",
+      "evidenceClasses": ["checkpoint", "hosted_supabase", "source"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py", "backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql", "backend/supabase/scripts/hosted_data_plane.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt", "backend.supabase.scripts.test_hosted_data_plane"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "5.1",
+      "evidenceClasses": ["hosted_supabase", "source"],
+      "implementationPaths": ["backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt", "backend.supabase.scripts.test_hosted_data_plane"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "5.2",
+      "evidenceClasses": ["hosted_supabase", "source"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py", "backend/supabase/scripts/hosted_data_plane.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "5.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "5.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "5.5",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/supabase/scripts/hosted_data_plane.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "5.6",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "6",
+      "evidenceClasses": ["checkpoint", "hosted_supabase"],
+      "implementationPaths": ["backend/bin/apply_hosted_pending_candidates.py", "backend/pipeline_control/profiles.py", "backend/supabase/scripts/hosted_data_plane.py"],
+      "verificationModules": ["backend.pipeline_control.test_reflection_pbt", "backend.utils.tests.test_supabase_boundary_pbt"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "7",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", ".github/workflows/gdrive-frame-backfill.yml", "backend/bin/check_env_contract.py", "backend/bin/run_hosted_new_video_pipeline.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt", "backend.utils.tests.test_env_contract_preflight_ordering"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.1",
+      "evidenceClasses": ["source"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.5",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.6",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/bin/check_env_contract.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "7.7",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.utils.tests.test_env_contract_preflight_ordering"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "8",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt", "backend.pipeline_control.test_profiles_source_contract_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "8.1",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "8.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "8.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "8.4",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_profiles_source_contract_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": [".gitignore", "backend/pipeline_control/manifest.py", "backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_publish_gate_pbt", "backend.utils.tests.test_gitignore_forbidden_paths"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9.1",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_publish_gate_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/manifest.py"],
+      "verificationModules": ["backend.pipeline_control.test_publish_gate_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": [".gitignore"],
+      "verificationModules": ["backend.utils.tests.test_gitignore_forbidden_paths"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/profiles.py"],
+      "verificationModules": ["backend.pipeline_control.test_publish_gate_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "9.5",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": [".gitignore"],
+      "verificationModules": ["backend.utils.tests.test_gitignore_forbidden_paths"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": [".github/workflows/gdrive-frame-backfill.yml", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_backfill_planner_pbt", "backend.utils.tests.test_gha_degradation_evidence"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10.1",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_backfill_planner_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_backfill_planner_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10.3",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_backfill_planner_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10.4",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_backfill_planner_pbt"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "10.5",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": [".github/workflows/gdrive-frame-backfill.yml"],
+      "verificationModules": ["backend.utils.tests.test_gha_degradation_evidence"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "11",
+      "evidenceClasses": ["checkpoint", "source_contract"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", "apps/web/app/api/admin/pipeline/route.ts", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_governance_boundaries"],
+      "externalEvidenceTypes": ["github_branch_protection_readback"]
+    },
+    {
+      "taskId": "11.1",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["apps/web/app/api/admin/pipeline/route.ts", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.utils.tests.test_governance_boundaries"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "11.2",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["apps/web/app/api/admin/pipeline/route.ts"],
+      "verificationModules": ["backend.utils.tests.test_governance_boundaries"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "11.3",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", ".github/workflows/gdrive-frame-backfill.yml"],
+      "verificationModules": ["backend.utils.tests.test_governance_boundaries"],
+      "externalEvidenceTypes": ["github_branch_protection_readback"]
+    },
+    {
+      "taskId": "11.4",
+      "evidenceClasses": ["source_contract"],
+      "implementationPaths": ["backend/supabase/migrations/20260828000100_hosted_candidate_identity_unique.sql"],
+      "verificationModules": ["backend.utils.tests.test_governance_boundaries"],
+      "externalEvidenceTypes": ["hosted_supabase_readback"]
+    },
+    {
+      "taskId": "12",
+      "evidenceClasses": ["checkpoint", "source"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", "backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_end_to_end_lite_run"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "12.1",
+      "evidenceClasses": ["source"],
+      "implementationPaths": [".github/workflows/daily-crawler.yml", "backend/bin/run_hosted_new_video_pipeline.py", "backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_end_to_end_lite_run", "backend.pipeline_control.test_manifest_presence_unittest"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "12.2",
+      "evidenceClasses": ["local_runtime"],
+      "implementationPaths": ["backend/pipeline_control/health.py", "backend/pipeline_control/manifest.py", "backend/pipeline_control/worker.py"],
+      "verificationModules": ["backend.pipeline_control.test_end_to_end_lite_run"],
+      "externalEvidenceTypes": []
+    },
+    {
+      "taskId": "13",
+      "evidenceClasses": ["checkpoint", "source_contract"],
+      "implementationPaths": [".kiro/specs/crawler-pipeline-orchestration/design.md", ".kiro/specs/crawler-pipeline-orchestration/requirements.md", ".kiro/specs/crawler-pipeline-orchestration/tasks.md", ".kiro/specs/crawler-pipeline-orchestration/traceability.map.json", ".kiro/specs/crawler-pipeline-orchestration/traceability.schema.json", "backend/bin/check_crawler_orchestration_readiness.py", "backend/pipeline_control/readiness.py"],
+      "verificationModules": ["backend.pipeline_control.test_readiness_unittest"],
+      "externalEvidenceTypes": []
+    }
+  ]
+}

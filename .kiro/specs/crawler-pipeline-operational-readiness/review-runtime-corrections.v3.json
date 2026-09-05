@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "review_runtime_corrections_third_pass",
+  "baseCommit": "73e11491960ec4757d84def5c612bb172b9bd2b3",
+  "reviewThreads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1S",
+      "fix": "Normalize PostgreSQL Decimal, date, datetime and UUID values without float precision loss before source hashing and destination comparison."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1T",
+      "fix": "Persist confirmation history and minimized audit before committing the confirmed queue state."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1V",
+      "fix": "Validate the actual Helm render and provider-free OpenTofu plan outputs against the reviewed descriptor contract."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1X",
+      "fix": "Read and hash the selected Compose sources; reject non-loopback, unresolved or unsupported port bindings before Docker execution."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1a",
+      "fix": "Wire all five migrated slices into real public Python call sites and preserve an independent Python parity reference."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1f",
+      "fix": "Derive the actual current candidate fingerprint and reject a supplied stale identity before verification commands or report creation."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdP1h",
+      "fix": "Fail the release pin contract when Bun direct-dependency resolutions differ from npm release authority."
+    }
+  ],
+  "verification": {
+    "regressionPhaseAndSupplyChain": {
+      "testsRun": 126,
+      "skipped": 3,
+      "exitCode": 0
+    },
+    "provenanceSelectorAndSupplyChain": {
+      "testsRun": 44,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "nativeBindingsAndParity": {
+      "testsRun": 19,
+      "skipped": 0,
+      "exitCode": 0,
+      "durationSeconds": 14.632
+    },
+    "queueAndPhaseFocused": {
+      "testsRun": 20,
+      "exitCode": 0,
+      "postgres": "17 private temporary cluster",
+      "destination": "in_memory_fixture"
+    },
+    "actualDescriptorTests": {
+      "testsRun": 9,
+      "exitCode": 0,
+      "helm": "4.2.4",
+      "opentofu": "1.12.6",
+      "remoteApplyCount": 0
+    },
+    "composeAdmission": {
+      "testsRun": 40,
+      "exitCode": 0
+    },
+    "bunPinContractTests": {
+      "passed": 15,
+      "assertions": 939
+    },
+    "readiness": {
+      "testsRun": 202,
+      "moduleCount": 22,
+      "durationMilliseconds": 12803,
+      "status": "Ready",
+      "exitCode": 0
+    },
+    "pinContract": {
+      "node": "24.20.0",
+      "npm": "11.6.2",
+      "mismatchCount": 0,
+      "status": "passed"
+    }
+  },
+  "limitations": [
+    "No hosted database write, migration, production deployment or Mac scheduler replacement occurred in this review batch.",
+    "Native integration was observed on macOS arm64/Python 3.13.15; CI must verify its own built extensions.",
+    "Native process isolation requires a single-threaded POSIX backend worker and adds overhead; no performance improvement or live N=3 admission is claimed.",
+    "Helm template and provider-free OpenTofu plans are local descriptor checks, not Kubernetes API admission or deployment.",
+    "The retained verification groups overlap and must not be added as a count of unique tests."
+  ],
+  "regressionsFound": [
+    {
+      "code": "python_rust_unicode_whitespace_mismatch",
+      "fixture": "U+001F around a four-character evaluation basis",
+      "resolution": "Use Python whitespace rules including U+001C through U+001F; retain a regression over all Python whitespace below U+3100."
+    }
+  ],
+  "externalReceiptFile": "review-runtime-corrections.v3.json",
+  "externalReceiptSha256": "ab6de39c9f6e2444402be93c540a7c272d37ea005f199cbc6fc52d1513df8668"
+}

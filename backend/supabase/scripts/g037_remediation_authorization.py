@@ -122,33 +122,15 @@ def authorize_exact_baseline(envelope,*,expected_bindings,now=None,baseline_is_e
  return _freeze(v)
 def verify_execution_authorization(authorization,signature,*,require_custody,expected_bindings,now=None,baseline_is_exact):
  return authorize_exact_baseline(authenticate_execution_authorization_document(authorization,signature,require_custody=require_custody,expected_bindings=expected_bindings,now=now),expected_bindings=expected_bindings,now=now,baseline_is_exact=baseline_is_exact)
+def _path(value):
+ return value if isinstance(value,Path) else Path(value)
 def _windows_restrictive_directory(path):
- path=Path(path)
+ path=_path(path)
  if path.is_symlink() or not path.is_dir(): return False
- from g035_hosted_recovery import _WINDOWS_ALLOWED_SIDS, _windows_current_sid, _windows_saved_sddl
- current=_windows_current_sid()
- if not current: return False
- try:
-  with tempfile.TemporaryDirectory(prefix="g037-acl-") as raw:
-   export=Path(raw)/"acl.txt"
-   completed=subprocess.run(["icacls",str(path),"/save",str(export),"/c"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",timeout=10,check=True)
-   sddl=_windows_saved_sddl(export)
-  if completed.returncode or not sddl or not sddl.startswith("D:"): return False
-  dacl=sddl[2:]; controls=re.match(r"(?:(?:P|AR|AI))*(?=\()",dacl)
-  if not controls or "P" not in controls.group(0): return False
-  aces_text,*suffix=dacl[controls.end():].split("S:",1)
-  if suffix and suffix[0]!="PAINO_ACCESS_CONTROL": return False
-  aces=re.findall(r"\(([^()]*)\)",aces_text)
-  if not aces or "".join(f"({ace})" for ace in aces)!=aces_text: return False
-  allowed={current.upper(),"SY","BA",*_WINDOWS_ALLOWED_SIDS}; found_current=False
-  for ace in aces:
-   fields=ace.split(";")
-   if len(fields)!=6 or fields[0]!="A" or fields[1] or not fields[2] or fields[3] or fields[4] or fields[5].upper() not in allowed: return False
-   found_current |= fields[5].upper()==current.upper()
-  return found_current
- except (OSError,subprocess.TimeoutExpired,subprocess.CalledProcessError): return False
+ from g035_hosted_recovery import _windows_dacl_restrictive
+ return _windows_dacl_restrictive(path,directory=True)
 def _restrictive_output_parent(path, root):
- parent=Path(path).parent.resolve(strict=True); root=Path(root).resolve()
+ parent=_path(path).parent.resolve(strict=True); root=_path(root).resolve()
  try: mode=parent.stat(follow_symlinks=False).st_mode
  except OSError as exc: raise ContractError("output parent inaccessible") from exc
  if parent.is_symlink() or not stat.S_ISDIR(mode) or parent==root or root in parent.parents: raise ContractError("output parent must be restrictive and outside repository")
@@ -166,7 +148,7 @@ def _write_all(fd,data):
   if not isinstance(written,int) or written<=0: raise ContractError("output write failed")
   offset+=written
 def _write_fresh_restrictive(path,data,root):
- path=Path(path); parent=_restrictive_output_parent(path,root); path=parent/path.name
+ path=_path(path); parent=_restrictive_output_parent(path,root); path=parent/path.name
  if path.exists() or path.is_symlink(): raise ContractError("output must be fresh and outside repository")
  fd=None; identity=None
  try:
@@ -181,7 +163,7 @@ def _write_fresh_restrictive(path,data,root):
    subprocess.run(["icacls",str(path),"/inheritance:r","/remove:g","SYSTEM","Administrators","OWNER RIGHTS","/grant:r","*"+sid+":F","SYSTEM:F","Administrators:F"],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,timeout=10,check=True)
   else: os.fchmod(fd,0o600)
   _same_output_file(fd,path)
-  restrictive_regular_file(path,"output",Path(root).resolve())
+  restrictive_regular_file(path,"output",_path(root).resolve())
   _same_output_file(fd,path)
   _write_all(fd,data); os.fsync(fd); _same_output_file(fd,path)
   os.lseek(fd,0,os.SEEK_SET)

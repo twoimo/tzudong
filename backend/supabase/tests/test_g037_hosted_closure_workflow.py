@@ -110,22 +110,23 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
         self.assertNotIn("permissions", remote)
 
         source_values = list(values(source))
-        self.assertNotIn("secrets.SUPABASE_DB_URL", "\n".join(source_values))
+        self.assertNotIn("secrets.SUPABASE_G037_READONLY_DB_URL", "\n".join(source_values))
         controller = next(step for step in remote["steps"] if step.get("name") == "Run protected read-only controller")
         self.assertEqual(
             {
                 "REQUESTED_MODE": "${{ inputs.mode }}",
-                "SUPABASE_DB_URL": "${{ secrets.SUPABASE_DB_URL }}",
+                "SUPABASE_G037_READONLY_DB_URL": "${{ secrets.SUPABASE_G037_READONLY_DB_URL }}",
             },
             controller["env"],
         )
         self.assertEqual(
             "timeout --signal=TERM --kill-after=5s 120s "
             "python backend/supabase/scripts/g037_hosted_closure_executor.py "
-            '"$REQUESTED_MODE" --db-env SUPABASE_DB_URL > '
+            '"$REQUESTED_MODE" --db-env SUPABASE_G037_READONLY_DB_URL > '
             '"$RUNNER_TEMP/g037-receipts/${REQUESTED_MODE}-${GITHUB_SHA}.json"\n',
             controller["run"].split("mkdir -p -- \"$RUNNER_TEMP/g037-receipts\"\n", 1)[1],
         )
+        self.assertNotIn("secrets.SUPABASE_DB_URL", "\n".join(values(remote)))
 
     def test_actions_graph_has_only_read_only_modes_and_no_private_or_mutation_paths(self):
         remote = self.workflow["jobs"]["remote-readonly"]
@@ -202,7 +203,7 @@ class G037HostedClosureWorkflowTests(unittest.TestCase):
             "keep the freeze active through G038",
             "zero-cost/no-paid-service",
             "G036",
-            "exactly 28",
+            "exactly 29",
             "G026",
             "20260713002500",
             "20260713002600",

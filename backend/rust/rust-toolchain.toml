@@ -1,0 +1,12 @@
+# Repository-owned Rust toolchain pin (requirement 5.6, design C1).
+#
+# The toolchain version is a three-digit major.minor.patch fixed string. No
+# channel alias (stable/beta/nightly) and no floating range specifier is used,
+# so Dependency_Freshness_Workflow can treat this value as a fixed pin and
+# surface any bump as a deliberate standalone candidate rather than a silent
+# drift. A patch/minor/major bump to this value is a Migration_Slice-adjacent
+# toolchain change handled by the freshness workflow's cargo unit checks.
+[toolchain]
+channel = "1.97.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

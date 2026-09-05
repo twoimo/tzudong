@@ -7,13 +7,41 @@
 name: tzudong-pipeline-observability
 
 services:
+  otel-storage-init:
+    # Only initialize ownership of this private volume. The collector stays
+    # unprivileged; no host directory or network is available to this helper.
+    image: busybox:1.37.0
+    user: "0:0"
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    command: ["chown", "10001:10001", "/var/lib/otelcol"]
+    volumes:
+      - otel-storage:/var/lib/otelcol
+
   otel-collector:
-    image: otel/opentelemetry-collector:0.120.0
+    # filelog is a contrib receiver; the core distribution does not contain it.
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    user: "10001:10001"
+    depends_on:
+      otel-storage-init:
+        condition: service_completed_successfully
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      - ../log:/var/log/tzudong:ro
+      - otel-storage:/var/lib/otelcol
     ports:
       - "127.0.0.1:4318:4318"
+    networks:
+      - supabase_network_local
+
+  loki:
+    image: grafana/loki:3.7.7
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "127.0.0.1:3100:3100"
     networks:
       - supabase_network_local
 
@@ -38,11 +66,14 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SECURITY_ALLOW_EMBEDDING: "true"
       GF_SECURITY_CONTENT_SECURITY_POLICY: "true"
-      GF_SECURITY_CONTENT_SECURITY_POLICY_TEMPLATE: "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://127.0.0.1:3000;manifest-src 'self';media-src 'none';form-action 'self';frame-ancestors http://127.0.0.1:3000"
+      GF_SECURITY_CONTENT_SECURITY_POLICY_TEMPLATE: "script-src 'self' 'unsafe-eval' 'unsafe-inline' 'strict-dynamic' $$NONCE;object-src 'none';font-src 'self';style-src 'self' 'unsafe-inline' blob:;img-src * data:;base-uri 'self';connect-src 'self' grafana.com ws://127.0.0.1:3000;manifest-src 'self';media-src 'none';form-action 'self';frame-ancestors http://127.0.0.1:3000"
       GF_SECURITY_COOKIE_SAMESITE: "lax"
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
     networks:
       - supabase_network_local
+
+volumes:
+  otel-storage:
 
 networks:
   supabase_network_local:

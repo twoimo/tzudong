@@ -37,6 +37,9 @@ g028_reauth_test="$supabase_dir/tests/g028_account_deletion_reauth_proof.sql"
 partition_version='g014-source-baseline-partition-v1'
 relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+  'backend/supabase/scripts/transform_g014_guardian_replay.py'
+  'backend/supabase/scripts/transform_advisor_replay.py'
+  'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
   'backend/supabase/volumes/db'
   'backend/supabase/baselines'
   'backend/supabase/migrations'
@@ -989,7 +992,11 @@ chain_file="$staging_dir/migration-chain.txt"
 previous_hash=$(printf '%s\n' "$partition_version" | sha256sum | cut -d' ' -f1)
 for artifact in "$bootstrap_manifest" "$platform_auth_bootstrap" "$gotrue_manifest" "$gotrue_inventory" \
   "$supabase_dir/docker-compose.yml" "$storage_inventory" "$reconstruction_validator" "$g026_validator" \
-  "$reconstruction_archive" "$reconstruction_manifest" "$g026_bundle"; do
+  "$reconstruction_archive" "$reconstruction_manifest" "$g026_bundle" \
+  "$script_dir/transform_g014_guardian_replay.py" \
+  "$script_dir/transform_advisor_replay.py" \
+  "$script_dir/recover_advisor_replay_prerequisites.py" \
+  "$baselines_dir/local/application-prerequisites.sql"; do
   canonical_path=${artifact#"$repo_root"/}
   file_hash=$(sha256sum -- "$artifact" | cut -d' ' -f1)
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
@@ -1347,6 +1354,20 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260903174413_advisor_followup_hardening.sql)
+      advisor_prerequisites="$staging_dir/advisor-prerequisites.sql"
+      python3 "$script_dir/recover_advisor_replay_prerequisites.py" \
+        --source "$baselines_dir/local/application-prerequisites.sql" \
+        --output "$advisor_prerequisites" \
+        --receipt "$staging_dir/advisor-prerequisite-recovery.json"
+      g026_chain_apply "advisor-current-prerequisites" "$advisor_prerequisites"
+      advisor_replay="$staging_dir/advisor-replay.sql"
+      python3 "$script_dir/transform_advisor_replay.py" \
+        --source "$migration" --output "$advisor_replay"
+      g026_chain_apply "advisor-owner-assertion-bridge" "$advisor_replay"
+      cat -- "$advisor_prerequisites" "$advisor_replay" |
+        compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres --single-transaction -f -
+      ;;
     20260713000450_g013_address_admin_approval.sql|20260713002000_g014_public_api_private_boundary.sql)
       transformed_migration=$(g026_apply_role_management_transform "$migration")
       g026_chain_apply "role-management-transform:${migration##*/}" "$transformed_migration"
@@ -1360,6 +1381,13 @@ for migration in "${effective_migrations[@]}"; do
     20260801000300_g016_onboarding_allowlist_freshness.sql)
       transformed_migration=$(g016_apply_catalog_assertion_membership_window "$migration")
       g026_chain_apply "g016-catalog-assertion-membership-window:${migration##*/}" "$transformed_migration"
+      compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
+      ;;
+    20260827084200_g014_8_guardian_provider_verification.sql)
+      transformed_migration="$work_dir/g014-guardian-replay.sql"
+      python3 "$script_dir/transform_g014_guardian_replay.py" \
+        --source "$migration" --output "$transformed_migration"
+      g026_chain_apply "guardian-replay-assertion-window:${migration##*/}" "$transformed_migration"
       compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres <"$transformed_migration"
       ;;
     20260813085342_current_profile_mutation_boundary.sql)
@@ -1575,6 +1603,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     g026-readback-receipt.json g026-semantic-receipt.json g026-validation-ledger.json gotrue-container-migration-files.tsv \
     gotrue-inventory-files.tsv gotrue-schema-migrations.expected.tsv gotrue-schema-migrations.tsv initialization-inputs.sha256 \
     metadata.json migration-chain.txt platform-auth-schema-migrations.expected.tsv platform-auth-schema-migrations.manifest.tsv \
+    advisor-prerequisite-recovery.json advisor-prerequisites.sql advisor-replay.sql \
     postgres-image-00000000000001-auth-schema.sql pre-20260214-overlap-classification.jsonl \
     reconstruction-compatibility-exclusions.jsonl reconstruction-compatibility-relocations.jsonl reconstruction-source-members.tsv \
     storage-container-migration-files.tsv storage-inventory-files.tsv storage-migration-inventory-source-map.tsv storage-migration-ledger.tsv \

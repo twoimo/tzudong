@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "kind": "phase_gate_catalog",
+  "currentRequirementCount": 14,
+  "verificationCommands": [
+    {"id": "web_lint", "cwd": "apps/web", "argv": ["bun", "run", "lint"], "timeoutSeconds": 1800},
+    {"id": "web_unit", "cwd": "apps/web", "argv": ["bun", "run", "test:unit"], "timeoutSeconds": 1800},
+    {"id": "web_typecheck_parity", "cwd": "apps/web", "argv": ["npm", "run", "typecheck:parity"], "timeoutSeconds": 1800},
+    {"id": "web_build", "cwd": "apps/web", "argv": ["npm", "run", "build"], "timeoutSeconds": 1800},
+    {"id": "backend_daily_regression", "cwd": ".", "argv": ["python", "-m", "unittest", "backend.utils.tests.test_run_daily_regression"], "timeoutSeconds": 1800},
+    {"id": "backend_validators", "cwd": ".", "argv": ["python", "-m", "unittest", "backend.pipeline.test_validators_unittest"], "timeoutSeconds": 1800},
+    {"id": "backend_data_contracts", "cwd": ".", "argv": ["python", "-m", "unittest", "backend.pipeline.test_data_contracts_unittest"], "timeoutSeconds": 1800}
+  ],
+  "phases": [
+    {
+      "phaseId": "P1-local-foundation",
+      "sequence": 1,
+      "assignedRequirements": [1, 2, 3, 4, 5, 6, 7, 8],
+      "entryConditions": [
+        {"conditionId": "P1-E1", "statement": "Base and parked-source Git objects are bound in the reconciliation manifest.", "evidenceClass": "local"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P1-X1", "statement": "Readiness, traceability, cadence, manifest, and local-boundary source tests pass.", "evidenceClass": "local"},
+        {"conditionId": "P1-X2", "statement": "No hosted write is admitted by the local execution profile.", "evidenceClass": "local"},
+        {"conditionId": "P1-X3", "statement": "Any claimed local schema mirror is complete and has zero unapproved defects.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P1-local-foundation-rollback.json",
+      "reportPath": "backend/log/phases/P1-local-foundation-report.json"
+    },
+    {
+      "phaseId": "P2-publication",
+      "sequence": 2,
+      "assignedRequirements": [14],
+      "entryConditions": [
+        {"conditionId": "P2-E1", "statement": "P1 has a passing commit-bound report.", "evidenceClass": "external"},
+        {"conditionId": "P2-E2", "statement": "Publication_Set and schedule carry named approvals bound to their current hashes.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P2-X1", "statement": "Publication source, route, adapter, migration, readback, and audit tests pass.", "evidenceClass": "local"},
+        {"conditionId": "P2-X2", "statement": "Local publication migrations and least-privilege grants have an exact readback receipt.", "evidenceClass": "external"},
+        {"conditionId": "P2-X3", "statement": "An approved preview-confirm-apply-readback-audit run has an immutable receipt.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P2-publication-rollback.json",
+      "reportPath": "backend/log/phases/P2-publication-report.json"
+    },
+    {
+      "phaseId": "P3-observability",
+      "sequence": 3,
+      "assignedRequirements": [12],
+      "entryConditions": [
+        {"conditionId": "P3-E1", "statement": "P2 has a passing commit-bound report.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P3-X1", "statement": "All thirteen catalog metrics are admitted and unknown metrics fail closed.", "evidenceClass": "local"},
+        {"conditionId": "P3-X2", "statement": "Loopback, redaction, retry, and admin readback contracts pass.", "evidenceClass": "local"},
+        {"conditionId": "P3-X3", "statement": "Real collector, Loki, Prometheus, Grafana, and alert delivery readback is retained.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P3-observability-rollback.json",
+      "reportPath": "backend/log/phases/P3-observability-report.json"
+    },
+    {
+      "phaseId": "P4-supply-chain",
+      "sequence": 4,
+      "assignedRequirements": [9],
+      "entryConditions": [
+        {"conditionId": "P4-E1", "statement": "P3 has a passing commit-bound report.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P4-X1", "statement": "Pin, freshness, Dependabot, image, and requirement source contracts pass.", "evidenceClass": "local"},
+        {"conditionId": "P4-X2", "statement": "Every selected tool has a real local installation measurement and named approval.", "evidenceClass": "external"},
+        {"conditionId": "P4-X3", "statement": "Required protected-branch checks have a repository-settings readback receipt.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P4-supply-chain-rollback.json",
+      "reportPath": "backend/log/phases/P4-supply-chain-report.json"
+    },
+    {
+      "phaseId": "P5-layout-naming",
+      "sequence": 5,
+      "assignedRequirements": [],
+      "entryConditions": [
+        {"conditionId": "P5-E1", "statement": "P4 has a passing commit-bound report.", "evidenceClass": "external"},
+        {"conditionId": "P5-E2", "statement": "A named owner approves the current single-control-plane layout decision.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P5-X1", "statement": "The current layout manifest resolves every owned path without a duplicate control-plane tree.", "evidenceClass": "local"},
+        {"conditionId": "P5-X2", "statement": "Any accepted rename ledger has complete references and no unexplained move.", "evidenceClass": "local"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P5-layout-naming-rollback.json",
+      "reportPath": "backend/log/phases/P5-layout-naming-report.json"
+    },
+    {
+      "phaseId": "P6-rust-performance",
+      "sequence": 6,
+      "assignedRequirements": [10, 11],
+      "entryConditions": [
+        {"conditionId": "P6-E1", "statement": "P5 has a passing commit-bound report.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P6-X1", "statement": "Three distinct matching approved live parity receipts exist in one frozen cohort.", "evidenceClass": "external"},
+        {"conditionId": "P6-X2", "statement": "Canonical raw and scored performance evidence passes independent validation.", "evidenceClass": "external"},
+        {"conditionId": "P6-X3", "statement": "Python or shim retirement has a separate named-human approval.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P6-rust-performance-rollback.json",
+      "reportPath": "backend/log/phases/P6-rust-performance-report.json"
+    },
+    {
+      "phaseId": "P7-readiness-agent",
+      "sequence": 7,
+      "assignedRequirements": [13],
+      "entryConditions": [
+        {"conditionId": "P7-E1", "statement": "P6 has a passing commit-bound report.", "evidenceClass": "external"}
+      ],
+      "exitConditions": [
+        {"conditionId": "P7-X1", "statement": "Descriptor rendering and agent least-authority source contracts pass.", "evidenceClass": "local"},
+        {"conditionId": "P7-X2", "statement": "Every release gate in migration-readiness has external evidence and readback.", "evidenceClass": "external"},
+        {"conditionId": "P7-X3", "statement": "The serialized develop-to-data-to-main release path has separate approval and rollback evidence.", "evidenceClass": "external"}
+      ],
+      "verificationCommandIds": ["web_lint", "web_unit", "web_typecheck_parity", "web_build", "backend_daily_regression", "backend_validators", "backend_data_contracts"],
+      "publicRoutes": ["/", "/global-map", "/insights", "/leaderboard", "/feed", "/privacy"],
+      "rollbackPlanRef": "backend/log/phases/P7-readiness-agent-rollback.json",
+      "reportPath": "backend/log/phases/P7-readiness-agent-report.json"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "kind": "review_runtime_corrections_fourth_pass",
+  "observedAt": "2026-09-04T23:25:23.800607+00:00",
+  "baseCommit": "6511d1833e2ed821c777df42bad40c94fef98ef1",
+  "reviewThreads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6fdeK9",
+      "resolution": "Both original commits were fetched into a brand-new empty repository from existing public refs. Retention tags now pin them, and CI fetches and checks both objects explicitly."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdeK_",
+      "resolution": "A nonzero evaluator status returns before any preview or live pending apply, in both dry-run and normal modes."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdeLC",
+      "resolution": "Atomically commit a shared database-time execution budget before the executor. Restarted and concurrent agents cannot reset it; uncertain attempts consume capacity."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fdeLH",
+      "resolution": "Checkout the exact triggering head and restrict verification receipts to candidates matching the actual checked Git HEAD. Other candidates retain only separate discovery evidence."
+    }
+  ],
+  "verification": {
+    "focusedPython": {
+      "testsRun": 63,
+      "exitCode": 0,
+      "skipped": 0
+    },
+    "boundaryAndProvenance": {
+      "testsRun": 21,
+      "exitCode": 0
+    },
+    "webFreshness": {
+      "testsRun": 24,
+      "assertions": 130,
+      "exitCode": 0
+    },
+    "focusedLint": {
+      "exitCode": 0
+    },
+    "orchestration": {
+      "testsRun": 202,
+      "moduleCount": 22,
+      "status": "Ready",
+      "durationMilliseconds": 11313
+    },
+    "postgresConcurrency": {
+      "connectionsConcurrent": 8,
+      "requests": 24,
+      "admitted": 10,
+      "rateLimited": 14,
+      "afterRestart": "limited",
+      "dailyLimitEnforced": true,
+      "database": "owned temporary PostgreSQL 17 cluster"
+    }
+  },
+  "externalReadbackBindings": {
+    "provenance-remote-readback.json": "4d0e556afd7e05df6dd96648b6ce494b652fcb200b6b2cdb8539247b2c219617",
+    "provenance-retention-refs.json": "09e37c8d8802507f2cfabdbb5b8d3122e4506f86c75814c8ae3dbe9f3b25db9c",
+    "opentofu-ci-action-admission.json": "381738e0de7a5ef03c78a11e5a202aabea450ce425d666607b74306e8ff7d25d"
+  },
+  "limitations": [
+    "The added agent-budget migration was applied only inside the private test cluster; no hosted schema was mutated.",
+    "Source retention tags point to already-public objects. They are not release or deployment tags.",
+    "The exact pinned OpenTofu action was added to selected-actions after its startup rejection. Broader GitHub Actions permissions remain unchanged.",
+    "Latest-head CI and review are required before serialized protected promotion."
+  ],
+  "externalReceiptFile": "review-runtime-corrections.v4.json",
+  "externalReceiptSha256": "0166395a2431cde7d98a7c21384d671935be3b60527068848ad57b71ec94d819"
+}

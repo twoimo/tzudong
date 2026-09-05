@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kind": "strict_receipt_json_and_cache_invalidation_review",
+  "observedAt": "2026-09-05T03:43:40.051911+00:00",
+  "reviewPr": 2863,
+  "reviewThreads": [
+    "PRRT_kwDOQGRyNc6ff22s",
+    "PRRT_kwDOQGRyNc6ff22u"
+  ],
+  "sourceBaseHead": "7e0449fa39f29bb4b9c9278fb846c9d172b94022",
+  "sourceSha256": {
+    "backend/pipeline_control/receipt_json.py": "1a6a4c5eb1756521b2f03514cd461e5be7fd33b4e73b3f7afa629a02735970e6",
+    "backend/pipeline_control/rust_performance_admission.py": "5c214b4b058930baedfe9f43adf190f8bf61d84d30a5ceb17c17baf23236777f",
+    "backend/pipeline_control/rust_promotion_evidence.py": "b6ceb2a5ae2540534c939fb5b234e352cab4d5e4ab14e508c0a0eba1f8abe1eb",
+    "backend/pipeline_control/tests/test_rust_performance_admission.py": "1ddc81999103527134231b3322d3b4772e86c857adf78ea01c1927844d2fb4c7",
+    "backend/pipeline_control/tests/test_rust_promotion_evidence.py": "6f00a97569d2ecd9b82bfd921861929fe95533a9a7553d924344fd518ca85991",
+    "backend/rust/promotion-evidence/README.md": "f9b52d6c09ecb8d4542ff15876674d13ab0d43e10cced6da3370364fcc611015"
+  },
+  "verification": {
+    "rustGateTestsPython313": 86,
+    "receiptAndCacheTestsPython314": 20,
+    "sourceProvenanceTests": 23,
+    "independentlyTamperedEvidenceRoles": 11,
+    "sameSizeRestoredMtimeRejected": true,
+    "deletedAndAliasedFilesRejected": true,
+    "duplicateJsonKeysAndNonfiniteValuesRejected": true
+  },
+  "externalReadbackBindings": {
+    "performance-runtime-image-readback.v2.json": "990642211807ed06e424583343a02cd4fb34f6be69bf3458f3b3ad0197f00d9c",
+    "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27"
+  },
+  "liveMeasurementsEstablished": false,
+  "productionReleased": false,
+  "verificationLimit": "POSIX file change metadata and the running verifier are trusted; other platforms perform full uncached validation.",
+  "externalReceiptFile": "strict-receipt-cache-review.json",
+  "externalReceiptSha256": "b68ccda4d21b090652ff4d4a41e79cb1b3cd8ff917c85c8b2592835627d5ce34"
+}

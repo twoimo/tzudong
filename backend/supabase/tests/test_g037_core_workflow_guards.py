@@ -11,17 +11,18 @@ FREEZE_GUARD = "vars.G037_WRITE_FREEZE != 'active'"
 DAILY_COMPUTE_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
     "github.ref_name == github.event.repository.default_branch && "
-    "github.ref_protected }}"
+    "github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' }}"
 )
 DAILY_UPLOAD_GUARD = "${{ always() }}"
 DAILY_PUBLICATION_GUARD = (
-    "${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && "
+    "${{ always() && vars.G037_WRITE_FREEZE == 'cleared' && "
+    "vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && "
     "needs.daily-compute.outputs.publication_manifest_sha256 != '' }}"
 )
 BACKFILL_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
     "github.ref_name == github.event.repository.default_branch && "
-    "github.ref_protected && "
+    "github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' && "
     "(github.event_name != 'workflow_run' || "
     "(github.event.workflow_run.conclusion == 'success' && "
     "github.event.workflow_run.event == 'schedule' && "
@@ -72,14 +73,27 @@ class G037CoreWorkflowGuardTests(unittest.TestCase):
             "github.event.repository.full_name == 'twoimo/tzudong' && "
             "github.event.repository.default_branch == 'main' && "
             "github.ref == 'refs/heads/main' && github.ref_name == 'main' && "
-            + FREEZE_GUARD,
+            "(vars.G037_WRITE_FREEZE != 'active' || "
+            "contains(fromJSON('[\"g016_privacy_audit_owner_policy\","
+            "\"g016_onboarding_confirmation_freshness\"]'), "
+            "needs.validate.outputs.migration_id)) && "
+            "(!contains(fromJSON('[\"g016_privacy_audit_owner_policy\","
+            "\"g016_onboarding_confirmation_freshness\"]'), "
+            "needs.validate.outputs.migration_id) || "
+            "github.event.inputs.verify_terminal_state == 'true')",
         )
-        self.assertLess(list(apply).index("if"), list(apply).index("environment"))
-        writer = self._step(apply, "Apply reviewed migration through direct Postgres")
+        self.assertNotIn("environment", apply)
+        self.assertLess(list(apply).index("if"), list(apply).index("steps"))
+        writer = self._step(
+            apply,
+            "Apply reviewed migration or verify provider-applied terminal state",
+        )
         self.assertEqual(writer["env"], {
             "SUPABASE_DB_URL": "${{ secrets.SUPABASE_DB_URL }}",
             "MIGRATION_ID": "${{ needs.validate.outputs.migration_id }}",
             "VERIFY_TERMINAL_STATE": "${{ github.event.inputs.verify_terminal_state }}",
+            "PROVIDER_MIGRATION_RECEIPT_SHA256": "${{ secrets.PROVIDER_MIGRATION_RECEIPT_SHA256 }}",
+            "PROVIDER_RECEIPT": "${{ github.event.inputs.provider_receipt }}",
         })
         self.assert_run_fragments_in_order(
             writer["run"],
@@ -88,6 +102,7 @@ class G037CoreWorkflowGuardTests(unittest.TestCase):
                 'args=(--migration-id "$MIGRATION_ID" --json)',
                 'if [ "$VERIFY_TERMINAL_STATE" = "true" ]; then',
                 "args+=(--verify-terminal-state)",
+                'args+=(--provider-receipt "$PROVIDER_RECEIPT")',
                 'node apps/web/scripts/apply-supabase-migration.mjs "${args[@]}"',
             ),
         )

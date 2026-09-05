@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_role_apply_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "attemptObservedAt": "2026-09-04T06:25:40Z",
+  "authorization": {
+    "approverDisplayName": "최연우",
+    "approvedExecutionCount": 1,
+    "consumedExecutionCount": 1,
+    "approvalArtifactPath": "backend/supabase/g037-readonly-role-preview-approval.v1.json",
+    "approvalArtifactSha256": "de30f421190eff6185df7e136657aa5ff590585f9778b2dd281ff8306a172627",
+    "provisioningSqlPath": "backend/supabase/scripts/g037_readonly_role_provisioning.sql",
+    "provisioningSqlSha256": "d2fd03c0988a083baafef5b4f98eff2ae96350f93bb062bc2f1483846bf4f997"
+  },
+  "preapplyReadback": {
+    "databaseExact": true,
+    "roleAbsent": true,
+    "migrationLedgerPresent": true,
+    "targetFunctionPresent": true
+  },
+  "outcome": {
+    "status": "rolled_back",
+    "fixedCode": "acl_array_dimension_postcondition_denied",
+    "transactionCommitObserved": false,
+    "persistentRolePresentAfterFailure": false,
+    "persistentHostedStateChanged": false,
+    "providerErrorRetained": false
+  },
+  "rollbackReadback": {
+    "roleAbsent": true,
+    "migrationCount": 50,
+    "terminalMigrationVersion": "20260804000500"
+  },
+  "causeReadback": {
+    "emptyAclLiteralHasNoDimension": true,
+    "nullAclYieldsZeroRows": true,
+    "nullableColumnAclScanSucceeds": true,
+    "classification": "source_postcondition_empty_acl_substitution"
+  },
+  "retryGate": {
+    "approvedSqlRetryAllowed": false,
+    "correctedPreviewRequired": true,
+    "freshPreviewOwnerApprovalRequired": true,
+    "freshOneTimeHostedApplyAuthorizationRequired": true
+  },
+  "notEvidenceOf": [
+    "successful role provisioning",
+    "password generation or configuration",
+    "repository secret presence or mutation",
+    "successful dedicated-role connection",
+    "controller retry authorization",
+    "migration, release, or deployment"
+  ]
+}

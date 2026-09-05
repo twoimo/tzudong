@@ -1777,6 +1777,7 @@ EXPECTED_CANDIDATE_SQLSTATES: dict[tuple[str, str, str], tuple[str, ...]] = {
     ("public", "set_admin_user_preferences_updated_at", ""): ("0A000",),
     ("public", "set_documents_updated_at", ""): ("0A000",),
     ("public", "storyboard_sparse_dot_product", "jsonb,jsonb"): ("22023",),
+    ("public", "touch_admin_workflow_updated_at", ""): ("0A000",),
     ("public", "update_announcements_updated_at", ""): ("0A000",),
     ("public", "verify_review_like_counts", ""): ("0A000", "P0001"),
 }

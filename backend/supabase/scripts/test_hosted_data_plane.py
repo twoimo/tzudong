@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import unittest
 
-from hosted_data_plane import (
+from backend.supabase.scripts.hosted_data_plane import (
     APPROVAL_ENV,
     HOSTED_URL,
     HostedDataPlaneError,
@@ -164,7 +164,7 @@ class HostedDataPlaneTests(unittest.TestCase):
         with self.assertRaises(HostedDataPlaneError) as raised:
             assert_apply_authorized(
                 preview,
-                environment={APPROVAL_ENV: "1"},
+                environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
                 presented_preview_sha256="0" * 64,
             )
         self.assertEqual(str(raised.exception), "preview_hash_mismatch")
@@ -178,9 +178,27 @@ class HostedDataPlaneTests(unittest.TestCase):
         )
         assert_apply_authorized(
             preview,
-            environment={APPROVAL_ENV: "1"},
+            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
             presented_preview_sha256=preview["previewSha256"],
         )
+
+    def test_active_missing_or_unknown_freeze_blocks_before_any_request(self) -> None:
+        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
+                                      hosted_youtube_ids=[], evaluation_rows=[])
+        for value in (None, "", "active", "inactive", "unknown"):
+            calls = []
+            env = {APPROVAL_ENV: "1"}
+            if value is not None:
+                env["G037_WRITE_FREEZE"] = value
+            with self.subTest(value=value), self.assertRaises(HostedDataPlaneError) as raised:
+                apply_pending_candidates(
+                    preview=preview, evaluation_rows=[], url=HOSTED_URL,
+                    service_role_key="", environment=env,
+                    presented_preview_sha256=preview["previewSha256"],
+                    fetch=lambda *args, **kwargs: calls.append(True),
+                )
+            self.assertEqual(str(raised.exception), "hosted_write_freeze_not_cleared")
+            self.assertEqual(calls, [])
 
     def test_pending_payload_never_stays_approved(self) -> None:
         payload = pending_insert_payload(
@@ -244,7 +262,7 @@ class HostedDataPlaneTests(unittest.TestCase):
             ],
             url=HOSTED_URL,
             service_role_key="service-role",
-            environment={APPROVAL_ENV: "1"},
+            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
             presented_preview_sha256=preview["previewSha256"],
             fetch=fake_fetch,
         )
@@ -327,7 +345,7 @@ class HostedDataPlaneTests(unittest.TestCase):
             evaluation_rows=rows,
             url=HOSTED_URL,
             service_role_key="service-role",
-            environment={APPROVAL_ENV: "1"},
+            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
             presented_preview_sha256=preview["previewSha256"],
             fetch=fake_fetch,
         )
@@ -406,7 +424,7 @@ class HostedDataPlaneTests(unittest.TestCase):
             evaluation_rows=rows,
             url=HOSTED_URL,
             service_role_key="service-role",
-            environment={APPROVAL_ENV: "1"},
+            environment={APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"},
             presented_preview_sha256=preview["previewSha256"],
             fetch=fake_fetch,
         )

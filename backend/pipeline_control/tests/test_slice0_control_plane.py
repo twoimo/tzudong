@@ -9,6 +9,7 @@ import socket
 import threading
 import tempfile
 import unittest
+from unittest import mock
 from http.client import HTTPConnection
 from pathlib import Path
 
@@ -589,6 +590,14 @@ class HttpLoopTests(unittest.TestCase):
         self.assertEqual(miss_body["error"], "run_not_found")
 
 
+    def test_threaded_api_retains_python_when_rust_is_selected(self) -> None:
+        with mock.patch.dict(os.environ, {"TZUDONG_RUST_SLICES": "R5-pipeline-graph"}), mock.patch(
+            "backend.pipeline_control.impl_selector.load_rust",
+            side_effect=AssertionError("threaded_native_dispatch_not_admitted"),
+        ) as native:
+            self.test_post_pause_resume_cancel_file_store_cycle()
+            native.assert_not_called()
+
     def test_post_pause_resume_cancel_file_store_cycle(self) -> None:
         post, body, _ = self._request(
             "POST",
@@ -731,7 +740,10 @@ class OverlayAndDocsTests(unittest.TestCase):
         workflow = (ROOT.parent / ".github" / "workflows" / "daily-crawler.yml").read_text(
             encoding="utf-8"
         )
-        self.assertIn("image: postgres:15", workflow)
+        self.assertRegex(
+            workflow,
+            r"image: postgres@sha256:[0-9a-f]{64} # postgres:15",
+        )
         self.assertIn("python3 -m backend.pipeline_control.worker", workflow)
         self.assertIn("TZUDONG_COMPUTE_PROFILE: lite_gha", workflow)
         self.assertNotIn("bash backend/run_daily.sh", workflow)

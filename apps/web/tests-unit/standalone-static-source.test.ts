@@ -9,7 +9,7 @@ const startScript = readFileSync(join(import.meta.dir, '..', 'scripts', 'start-s
 describe('standalone static sync source contract', () => {
     test('start scripts copy static and public assets before launching standalone server', () => {
         expect(packageJson).toContain('"start": "node scripts/start-standalone.mjs"');
-        expect(packageJson).toContain('"start:playwright": "node scripts/start-standalone.mjs --port 3000 --hostname localhost"');
+        expect(packageJson).toContain('"start:playwright": "node scripts/start-standalone.mjs --port 8080 --hostname localhost"');
         expect(startScript).toContain("spawnSync(process.execPath, ['scripts/sync-standalone-static.mjs']");
         expect(startScript).toContain("'--skip-clean'");
         expect(startScript).toContain("'.next/standalone/apps/web/server.js'");

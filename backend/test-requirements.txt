@@ -1,0 +1,4 @@
+# Focused backend contract/property-test dependencies.
+# Runtime/provider dependencies remain in their component-specific manifests.
+hypothesis==6.165.10
+PyYAML==6.0.3

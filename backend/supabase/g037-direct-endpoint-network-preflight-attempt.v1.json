@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_direct_endpoint_network_preflight_attempt",
+  "repository": "twoimo/tzudong",
+  "projectRef": "aqlcofblfxdrjhhdmarw",
+  "databaseName": "postgres",
+  "observedAt": "2026-09-04T10:04:21Z",
+  "source": {
+    "hostClass": "current_workspace_host",
+    "credentialHostIdentityRecorded": false,
+    "endpointRecorded": false,
+    "addressRecorded": false,
+    "providerErrorRecorded": false
+  },
+  "reviewedBoundary": {
+    "credentialCustodyPreviewPath": "backend/supabase/g037-readonly-credential-custody-preview.v1.json",
+    "credentialCustodyPreviewSha256": "43f50049495a0324491fa8fafc9e359e68e3f6bb0430c1c01a42af28c59cd113",
+    "networkCheck": "IPv6 DNS resolution followed by bounded TCP port reachability",
+    "maximumResolvedAddressesTried": 4,
+    "perAddressTimeoutSeconds": 3
+  },
+  "observation": {
+    "ipv6DnsPresent": true,
+    "tcp5432Reachable": false,
+    "credentialUsed": false,
+    "databaseAuthenticationAttempted": false,
+    "sqlExecuted": false,
+    "persistentStateChanged": false
+  },
+  "outcome": {
+    "status": "blocked",
+    "fixedCode": "g037_direct_endpoint_tcp_unreachable",
+    "directEndpointReachabilityProved": false,
+    "passwordCeremonyAdmitted": false,
+    "poolerFallbackAdmitted": false,
+    "ipv4AddonChangeAdmitted": false
+  },
+  "nextEvidenceRequired": {
+    "differentApprovedControlledHostAllowed": true,
+    "sameHostAutomaticRetryAllowed": false,
+    "freshBoundedReachabilityObservationRequired": true,
+    "namedOwnerScopeChangeRequiredForPoolerOrAddon": true
+  },
+  "notEvidenceOf": [
+    "database connection or credential validity",
+    "password generation or assignment",
+    "repository secret presence or mutation",
+    "provider outage or firewall root cause",
+    "controller or workflow authorization",
+    "migration, release, or deployment"
+  ]
+}

@@ -100,6 +100,34 @@ class G037ExecutorTests(unittest.TestCase):
  def test_receipts_have_no_raw_sensitive_values(self):
   value=e.receipt("validate","denied",{"sql":"select secret","database_url":"postgres://x","subject":"person","commit_sha256":"a"*40})
   text=json.dumps(value); self.assertEqual(value["schema"],"g037-hosted-closure-receipt-v3"); self.assertNotIn("select secret",text); self.assertNotIn("postgres",text); self.assertNotIn("person",text)
+ def test_denial_codes_are_closed_and_phase_specific(self):
+  expected={
+   "database credential environment unavailable":"credential_environment_unavailable",
+   "database connection unavailable":"database_connection_unavailable",
+   "database role contract failed":"readonly_role_contract_denied",
+   "ledger state does not match requested mode":"ledger_state_mismatch",
+   "terminal mutator unavailable":"runtime_terminal_mutator_unavailable",
+   "runtime probe authorization unexpectedly granted":"runtime_execute_privilege_present",
+  }
+  for message,code in expected.items():
+   with self.subTest(message=message):
+    self.assertEqual(e.denial_evidence(e.ClosureError(message)),{"ambiguous_commit":False,"denial_code":code})
+  self.assertEqual(e.denial_evidence(e.ClosureError("commit ambiguity: readback only; retry forbidden")),{"ambiguous_commit":True,"denial_code":"commit_ambiguous"})
+  self.assertEqual(e.denial_evidence(e.ClosureError("commit result ambiguous")),{"ambiguous_commit":True,"denial_code":"commit_ambiguous"})
+  self.assertEqual(e.denial_evidence(c.ContractError("arbitrary source detail")),{"ambiguous_commit":False,"denial_code":"source_contract_denied"})
+ def test_arbitrary_denial_text_cannot_cross_receipt_boundary(self):
+  secret="postgresql://operator:credential@provider.invalid/database"
+  evidence=e.denial_evidence(e.ClosureError(secret))
+  self.assertEqual(evidence,{"ambiguous_commit":False,"denial_code":"controller_contract_denied"})
+  value=e.receipt("runtime-probe","denied",{"denial_code":secret,"provider_message":secret})
+  self.assertNotIn("denial_code",value["evidence"])
+  self.assertNotIn(secret,json.dumps(value))
+ def test_main_collapses_unhandled_exception_without_serializing_it(self):
+  emitted=[]
+  with patch.object(e,"run",side_effect=RuntimeError("provider endpoint and credential")),patch.object(e,"emit",side_effect=emitted.append):
+   self.assertEqual(e.main(["runtime-probe","--db-env","TEST_DB"]),2)
+  self.assertEqual(emitted[0]["evidence"],{"ambiguous_commit":False,"denial_code":"controller_internal_denied"})
+  self.assertNotIn("provider endpoint",json.dumps(emitted[0]))
  def test_modes_are_controller_read_only_exact(self):
   self.assertEqual(c.MODES,{"validate","preflight","readback","runtime-probe","reconciliation-readback"})
  def test_parser_rejects_direct_apply_before_credential_access(self):
@@ -431,19 +459,47 @@ class G037ExecutorTests(unittest.TestCase):
    return {"catalog_root":"d"*64,"acl_root":"a"*64,"ledger_root":"l"*64}
   connections=[Connection(),Connection()]
   catalog_calls=[]
-  with patch.object(e,"connection",side_effect=connections),patch.object(e,"catalog",side_effect=catalog),patch.object(e,"terminal_readback_assert",side_effect=terminal):
+  with patch.object(e,"connection",side_effect=connections),patch.object(e,"readonly_role_admission") as role_admission,patch.object(e,"catalog",side_effect=catalog),patch.object(e,"terminal_readback_assert",side_effect=terminal):
    preflight=e.run(SimpleNamespace(mode="preflight",db_env="TEST_DB"))
    readback=e.run(SimpleNamespace(mode="readback",db_env="TEST_DB"))
   self.assertEqual(preflight["status"],"ready")
   self.assertEqual(readback["status"],"readback")
   self.assertEqual(catalog_calls,[False,True])
+  self.assertEqual(role_admission.call_count,2)
   for conn in connections: self.assertEqual(conn.events,["cursor","rollback","close"])
   runtime=Connection()
-  with patch.object(e,"connection",return_value=runtime):
+  with patch.object(e,"connection",return_value=runtime),patch.object(e,"readonly_role_admission") as role_admission:
    probe=e.run(SimpleNamespace(mode="runtime-probe",db_env="TEST_DB"))
   self.assertEqual(probe["status"],"authorization-denied")
+  role_admission.assert_called_once_with(runtime.cursor_value)
   self.assertEqual(runtime.events,["cursor","rollback","close"])
   self.assertEqual([sql for sql,_ in runtime.cursor_value.calls],["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY","SELECT pg_catalog.to_regprocedure(%s)","SELECT NOT pg_catalog.has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')"])
+ def test_readonly_role_admission_requires_all_thirty_three_checks(self):
+  class Cursor:
+   description=object()
+   def __init__(self,rows): self.rows=rows; self.calls=[]
+   def execute(self,sql,params=()): self.calls.append((sql,params))
+   def fetchall(self): return self.rows
+  admitted=Cursor([(True,)*33])
+  e.readonly_role_admission(admitted)
+  sql,params=admitted.calls[0]
+  self.assertEqual(len(params),2)
+  self.assertEqual(params[0],params[1])
+  self.assertIn("current_user='tzudong_g037_readonly'",sql)
+  self.assertIn("current_setting('transaction_read_only')='on'",sql)
+  self.assertIn("unexpected_direct_grants",sql)
+  self.assertIn("membership_shape",sql)
+  self.assertIn("member_nonsuperuser_createrole_count",sql)
+  self.assertIn("superuser_grantor_count",sql)
+  self.assertIn("admin_option_count",sql)
+  self.assertIn("set_option_count",sql)
+  self.assertIn("inherit_option_count",sql)
+  self.assertNotIn("COALESCE(attribute_row.attacl",sql)
+  self.assertIn("has_function_privilege",sql)
+  for index in range(33):
+   values=[True]*33; values[index]=False
+   with self.subTest(index=index),self.assertRaisesRegex(e.ClosureError,"database role contract failed"):
+    e.readonly_role_admission(Cursor([tuple(values)]))
  def test_runtime_probe_resolves_terminal_eight_argument_mutator(self):
   class Cursor:
    description=object()

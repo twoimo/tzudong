@@ -1,0 +1,15 @@
+apiVersion: v2
+name: tzudong-platform
+description: >-
+  Deployment_Descriptor_Set for the tzudong platform-modernization migration
+  readiness (design C10, Requirement 14). Defines the five migration components
+  (Web_App, Backend_Runtime, Local_Stack, Observability_Stack, Log_Pipeline).
+  The chart is a local-render descriptor set: it declares image references,
+  resource requests, environment variable names with their source references,
+  and secret reference names only. It contains no credential, token, or
+  connection-string literal. Secret values are indicated by external secret
+  reference names (values.yaml *_REF entries) and never embedded here.
+type: application
+version: 1.4.0
+appVersion: "1.4.0"
+kubeVersion: ">=1.29.0"

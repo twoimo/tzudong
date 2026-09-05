@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "review_runtime_corrections_second_pass",
+  "baseCommit": "8a3a3a65ea41d4a5f20f1111aac9e0c3f8583b25",
+  "reviewThreads": [
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXc",
+      "fix": "Prefer an explicit interpreter, then executable repository virtualenv; validate Python >=3.10 before replacing the installed wrapper."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXd",
+      "fix": "Execute protected-base policy under pull_request_target; initial pre-policy bases use one immutable reviewed anchor, never PR source."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXh",
+      "fix": "Missing, malformed or unreadable metric observations produce an incomplete report."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXj",
+      "fix": "Require HTTP 200 at fixed readiness endpoints; admit HTTP 405 only for the OTLP metrics receiver."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXm",
+      "fix": "Admit only canonical twoimo/tzudong GitHub identities and read back canonical owner/repository."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXo",
+      "fix": "Stop and reap isolated parity workers and their private process groups before returning; bound nonblocking in-memory output and preserve declared normalization."
+    },
+    {
+      "id": "PRRT_kwDOQGRyNc6fchXr",
+      "fix": "Require a nonblank named approver alongside approved tooling status."
+    }
+  ],
+  "verification": {
+    "focusedPythonTestsPassed": 151,
+    "promotionPolicyTestsPassed": 6,
+    "provenanceAndParityTestsPassed": 44,
+    "macInstallerExecuted": false,
+    "hostedWrites": false,
+    "productionDeployment": false
+  },
+  "limitations": [
+    "POSIX single-threaded backend worker required for fork-based parity; unsupported contexts fail closed.",
+    "No native Rust extension is installed in the local verification venv; current CI must build it and run the property tests.",
+    "One-time promotion bootstrap is restricted to three exact old base revisions and a fixed reviewed policy SHA.",
+    "Protected pull_request_target policy must be observed after serialized promotion."
+  ],
+  "externalReceiptFile": "review-runtime-corrections.v2.json",
+  "externalReceiptSha256": "99035bbd7bf33981deaea294c5662302fd7319059a9fcb481c972d2554b35bc3"
+}

@@ -34,6 +34,15 @@ def get_today_folder_name() -> str:
 
 def parse_folder_date(folder_name: str) -> Optional[datetime]:
     """폴더명에서 날짜 파싱. 유효하지 않으면 None 반환"""
+    import sys
+    repository_root = str(Path(__file__).resolve().parents[2])
+    if repository_root not in sys.path:
+        sys.path.append(repository_root)
+    from backend.pipeline_control.impl_selector import runtime_function
+    native = runtime_function("R2-normalize", "parse_folder_date")
+    if native is not None:
+        parsed = native(folder_name)
+        return datetime(*parsed) if parsed is not None else None
     match = DATE_FOLDER_PATTERN.match(folder_name)
     if not match:
         return None

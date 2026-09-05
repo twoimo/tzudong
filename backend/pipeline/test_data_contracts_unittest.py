@@ -714,7 +714,19 @@ class DataContractBaselineTests(unittest.TestCase):
             self.assertIn(key, docs)
 
 
+@unittest.skipUnless(
+    RECOVERY_RECONCILIATION_MANIFEST.is_file(),
+    "local recovery reconciliation evidence is not present in this checkout",
+)
 class RecoveryDataReconciliationManifestTests(unittest.TestCase):
+    """Validate local recovery evidence only when the operator retained it.
+
+    The reconciliation manifest binds hundreds of local crawl/evaluation files
+    and is intentionally not a source-tree prerequisite. A clean checkout must
+    still run the canonical data-contract suite without manufacturing or
+    committing that evidence.
+    """
+
     def test_reconciliation_manifest_binds_inventory_results_and_privacy(self) -> None:
         manifest_bytes = RECOVERY_RECONCILIATION_MANIFEST.read_bytes()
         manifest_text = manifest_bytes.decode("utf-8")

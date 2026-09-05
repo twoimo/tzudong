@@ -1,0 +1,41 @@
+name: Promotion
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promotion-path-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  promotion-path:
+    name: Promotion Path
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # Use the exact protected default-branch revision supplying this
+          # target-event workflow, including when a PR targets an older base.
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+      - name: Verify the event using protected policy code
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+          import { verifyPromotionPath } from './.github/scripts/verify-promotion-path.mjs';
+          let result = { passed: false, code: 'PROMOTION_EVENT_INVALID' };
+          if (process.env.GITHUB_EVENT_NAME === 'pull_request_target') {
+            try {
+              result = verifyPromotionPath(JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')), process.env.GITHUB_REPOSITORY);
+            } catch {}
+          }
+          process.stdout.write(`${JSON.stringify(result)}\n`);
+          process.exitCode = result.passed ? 0 : 1;
+          JS

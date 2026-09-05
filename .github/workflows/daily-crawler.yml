@@ -57,10 +57,10 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' }}
     services:
       postgres:
-        image: postgres:15
+        image: postgres@sha256:be01cf82fc7dbba824acf0a82e150b4b360f3ff93c6631d7844af431e841a95c # postgres:15
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -729,7 +729,8 @@ jobs:
 
       - name: Upload validated data-only publication artifact
         id: upload-publication
-        if: ${{ steps.publication.outputs.ready == 'true' }}
+        # Data artifacts follow the same explicit public-publication opt-in.
+        if: ${{ steps.publication.outputs.ready == 'true' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
         with:
           name: daily-data-publication-${{ github.run_id }}
@@ -767,7 +768,8 @@ jobs:
 
   daily-publish:
     needs: daily-compute
-    if: ${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
+    # Public repository data publication remains explicitly opt-in.
+    if: ${{ always() && vars.G037_WRITE_FREEZE == 'cleared' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -913,13 +915,14 @@ jobs:
 
   hosted-pending-apply:
     needs: []
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 80
     permissions:
       contents: read
     env:
       TZUDONG_HOSTED_DATA_PLANE_APPROVED: ${{ vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED }}
+      G037_WRITE_FREEZE: ${{ vars.G037_WRITE_FREEZE }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY }}
@@ -937,18 +940,27 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.12"
-      - name: Preflight hosted pending apply env
-        run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
-      - name: Evaluate youtube IDs absent from hosted
+      - name: Install crawler Python deps for evaluate
         run: |
           set -euo pipefail
-          python3 backend/bin/evaluate_new_youtube_videos.py --channel tzuyang --limit 1
-      - name: Preview then apply only new pending restaurants
+          python3 -m pip install --disable-pip-version-check -r backend/restaurant-crawling/scripts/requirements.txt
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install locked Node dependencies for evaluate
+        working-directory: backend
+        run: npm ci --ignore-scripts
+      - name: Preflight hosted pending apply env
+        run: python3 backend/bin/check_env_contract.py --profile hosted-pending-apply
+      - name: Evaluate new videos then pending-apply
+        env:
+          TZUDONG_PIPELINE_SOURCE: github_actions
         run: |
           set -euo pipefail
           mkdir -p backend/log/cron
-          python3 backend/bin/apply_hosted_pending_candidates.py \
-            --preview-out backend/log/cron/hosted-apply-preview.json \
-            --dry-run
-          python3 backend/bin/apply_hosted_pending_candidates.py \
+          python3 backend/bin/run_hosted_new_video_pipeline.py \
+            --channel tzuyang \
+            --limit 1 \
             --preview-out backend/log/cron/hosted-apply-preview.json
