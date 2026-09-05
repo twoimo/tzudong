@@ -54,6 +54,16 @@ function getVercelBuildDecision(env) {
           vercelEnv,
         };
       }
+      const approvedSha = String(env.TZUDONG_APPROVED_PRODUCTION_SHA ?? "");
+      const currentSha = String(env.VERCEL_GIT_COMMIT_SHA ?? "");
+      if (!/^[0-9a-f]{40}$/.test(approvedSha) || approvedSha !== currentSha) {
+        return {
+          ignore: true,
+          ref,
+          reason: "production commit lacks matching release authorization",
+          vercelEnv,
+        };
+      }
       return {
         ignore: false,
         ref,
