@@ -691,9 +691,9 @@
     },
     {
       "path": "backend/bin/tests/test_otel_restart.py",
-      "bytes": 10314,
-      "sha256": "65ae8521b2a817cb59e15d6c5e20bd5d16573759da52927a6d041dbf84ac4596",
-      "gitBlobSha1": "0817d642726b22174c7a9e04b08ff6bbc55a0a41"
+      "bytes": 10505,
+      "sha256": "af36dfb7e086f3e47fda9053aeaec8ffc3fe9d784873b70b85478894d033d345",
+      "gitBlobSha1": "4c7fe1564b800d8a153583984597f74a2daca8ca"
     }
   ]
 }

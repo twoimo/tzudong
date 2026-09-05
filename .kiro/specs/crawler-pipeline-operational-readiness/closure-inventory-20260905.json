@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T04:19:58.010763+00:00",
+  "generatedAt": "2026-09-05T04:29:15.384550+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "6552a8da3eb4573318641ecc8b1f0fe8cfae2b14",
+  "sourceBaseHead": "51bf49a5528bba82aa6d426d8c6fc277a1505922",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -314,7 +314,8 @@
     "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27",
     "runtime-transport-schema-review.json": "430f734c8b61840e1a535f59dc9031d09bfd02bf99a059cfce7114da5b6be81c",
     "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14",
-    "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e"
+    "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e",
+    "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
@@ -419,7 +420,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "71dfb800981f9029ad2c661a40d3e0e9afaf79faf52dabff2683583344fcfda6"
+      "sha256": "ffbda46f0b7ba65cba19e3439482f93fff7789cca5394d075fa165ac5a5df3bf"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
@@ -443,7 +444,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "fe5b416e6c4d6a94cf01de3c6da734e49f4d35c54ef853931fae033390f76c13"
+      "sha256": "313c165a83294f7d329684713f391e65aa8fd84ab2e9ff0add2bd3dfb7ffeef6"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
@@ -2347,6 +2348,12 @@
     },
     "collectorLinuxFixtureCorrection": {
       "localTestsPassed": 2,
+      "remoteCiPending": true
+    },
+    "collectorLinuxProvenanceCorrection": {
+      "operationalFiles": 62,
+      "rustFiles": 36,
+      "testsPassed": 15,
       "remoteCiPending": true
     }
   },
