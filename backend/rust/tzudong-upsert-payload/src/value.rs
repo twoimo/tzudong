@@ -107,15 +107,8 @@ fn write_json_string(s: &str, out: &mut String) {
     out.push('"');
 }
 
-/// Best-effort port of CPython's `float.__repr__` for JSON output.
-///
-/// Divergence note: CPython uses the shortest round-tripping repr and emits
-/// scientific notation with a two-digit exponent (`1e+16`, `1e-05`). This
-/// implementation covers the finite non-scientific range that restaurant
-/// coordinates and scores occupy. Values that would require CPython's
-/// scientific formatting fall outside the declared parity domain (design C1:
-/// the Parity_Harness constrains generators to the real input space and records
-/// a mismatch otherwise rather than silently diverging).
+/// Standalone fixture formatter. Runtime hashing uses CPython's authoritative
+/// serializer in python.rs to retain every float/int/key/error edge case.
 fn py_json_float(f: f64) -> String {
     // json.dumps emits Infinity / -Infinity / NaN (non-standard JSON) for these.
     if f.is_nan() {
@@ -123,6 +116,12 @@ fn py_json_float(f: f64) -> String {
     }
     if f.is_infinite() {
         return if f > 0.0 { "Infinity" } else { "-Infinity" }.to_string();
+    }
+    if f != 0.0 && (f.abs() < 1e-4 || f.abs() >= 1e16) {
+        let scientific = format!("{:e}", f);
+        let (mantissa, exponent) = scientific.split_once('e').expect("float exponent");
+        let exponent: i32 = exponent.parse().expect("integer exponent");
+        return format!("{}e{:+03}", mantissa, exponent);
     }
     let s = format!("{}", f);
     if s.contains('.') || s.contains('e') || s.contains('E') {
@@ -174,6 +173,20 @@ mod tests {
         // U+1F600 GRINNING FACE -> \ud83d\ude00
         let v = Value::Str("\u{1F600}".into());
         assert_eq!(v.to_canonical_json(), r#""\ud83d\ude00""#);
+    }
+
+    #[test]
+    fn scientific_float_thresholds_match_python_spelling() {
+        for (value, expected) in [
+            (1e20, "1e+20"),
+            (1e-7, "1e-07"),
+            (-1e-5, "-1e-05"),
+            (1e-4, "0.0001"),
+            (1e16, "1e+16"),
+            (-0.0, "-0.0"),
+        ] {
+            assert_eq!(Value::Float(value).to_canonical_json(), expected);
+        }
     }
 
     #[test]

@@ -8,27 +8,47 @@
 
 use pyo3::prelude::*;
 
-/// `parse_folder_date(name) -> (year, month, day) | None`.
-///
-/// Returns a Python tuple `(int, int, int)` for a valid `yy-mm-dd` calendar
-/// date, else `None`. The Python caller reconstructs `datetime(...)` from the
-/// tuple; the parity comparison uses the tuple form (a non-deterministic
-/// `datetime` object identity is out of the comparison domain).
+/// Match with the running Python Unicode database and regex end anchor.
+/// Python \d admits Unicode decimal digits and $ admits one final newline.
+/// Conversion stays at this boundary; Rust validates the Gregorian date.
 #[pyfunction]
-fn parse_folder_date(name: &str) -> Option<(i32, u32, u32)> {
-    crate::parse_folder_date(name)
+fn parse_folder_date(name: Bound<'_, PyAny>) -> PyResult<Option<(i32, u32, u32)>> {
+    let py = name.py();
+    let matched =
+        PyModule::import(py, "re")?.call_method1("match", (r"^(\d{2})-(\d{2})-(\d{2})$", name))?;
+    if matched.is_none() {
+        return Ok(None);
+    }
+    let int = PyModule::import(py, "builtins")?.getattr("int")?;
+    let mut fields = Vec::new();
+    for index in 1..=3 {
+        fields.push(
+            int.call1((matched.call_method1("group", (index,))?,))?
+                .extract::<u32>()?,
+        );
+    }
+    Ok(crate::parse_folder_date(&format!(
+        "{:02}-{:02}-{:02}",
+        fields[0], fields[1], fields[2]
+    )))
 }
 
-/// `sort_date_folders(names) -> list[str]` — valid names, ascending by date.
+/// Stable order preserves original Unicode spellings, including equal dates.
 #[pyfunction]
-fn sort_date_folders(names: Vec<String>) -> Vec<String> {
-    crate::sort_date_folders(&names)
+fn sort_date_folders(py: Python<'_>, names: Vec<Py<PyAny>>) -> PyResult<Vec<Py<PyAny>>> {
+    let mut parsed = Vec::new();
+    for name in names {
+        if let Some(date) = parse_folder_date(name.bind(py).clone())? {
+            parsed.push((date, name));
+        }
+    }
+    parsed.sort_by_key(|(date, _)| *date);
+    Ok(parsed.into_iter().map(|(_, name)| name).collect())
 }
 
-/// `latest_folder(names) -> str | None`.
 #[pyfunction]
-fn latest_folder(names: Vec<String>) -> Option<String> {
-    crate::latest_folder(&names)
+fn latest_folder(py: Python<'_>, names: Vec<Py<PyAny>>) -> PyResult<Option<Py<PyAny>>> {
+    Ok(sort_date_folders(py, names)?.pop())
 }
 
 /// The `tzudong_normalize` extension module.
