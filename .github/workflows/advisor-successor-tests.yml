@@ -1,0 +1,35 @@
+name: Advisor current-state successor tests
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/advisor-successor-tests.yml'
+      - 'backend/supabase/scripts/advisor_successor_plan.py'
+      - 'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
+      - 'backend/supabase/tests/test_advisor_successor_*.py'
+      - 'backend/supabase/docs/advisor-current50-successor.md'
+      - 'backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql'
+      - 'backend/supabase/migrations/20260713002500_g014_catalog_contract.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-postgres17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: '24'
+      - name: Offline plan and private network-disabled PostgreSQL17 transition
+        env:
+          TZUDONG_ADVISOR_PG17_TEST: '1'
+        run: >-
+          python3 -B -m unittest
+          backend.supabase.tests.test_advisor_successor_plan
+          backend.supabase.tests.test_advisor_successor_postgres
