@@ -5,6 +5,8 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "bun:test";
 
+const APPROVED_SHA = "a".repeat(40);
+
 const WEB_ROOT = resolve(import.meta.dir, "..");
 
 function runIgnoreCommand(env: Record<string, string>) {
@@ -13,6 +15,8 @@ function runIgnoreCommand(env: Record<string, string>) {
     encoding: "utf8",
     env: {
       ...process.env,
+      TZUDONG_APPROVED_PRODUCTION_SHA: "",
+      VERCEL_GIT_COMMIT_SHA: "",
       ...env,
     },
   });
@@ -30,22 +34,44 @@ describe("Vercel ignored build branch policy", () => {
 
     expect(config.git?.deploymentEnabled).toEqual({
       "*": false,
-      main: false,
+      main: true,
       develop: true,
     });
     expect(config.regions).toEqual(["icn1"]);
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
   });
 
-  it("holds production builds while source promotion and hosted verification proceed", () => {
+  it("continues exactly authorized production builds from main", () => {
     const result = runIgnoreCommand({
       VERCEL_ENV: "production",
       VERCEL_GIT_COMMIT_REF: "main",
+      VERCEL_GIT_COMMIT_SHA: APPROVED_SHA,
+      TZUDONG_APPROVED_PRODUCTION_SHA: APPROVED_SHA,
     });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("skip: production Git deployment held");
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("build: production branch deployment");
     expect(result.stdout).toContain("ref=main");
+  });
+
+  it("holds production when authorization is missing, malformed, or for another commit", () => {
+    for (const [approved, current] of [
+      ["", APPROVED_SHA],
+      [APPROVED_SHA, ""],
+      ["short", "short"],
+      ["A".repeat(40), "A".repeat(40)],
+      [APPROVED_SHA, "b".repeat(40)],
+      [` ${APPROVED_SHA}`, APPROVED_SHA],
+    ]) {
+      const result = runIgnoreCommand({
+        VERCEL_ENV: "production",
+        VERCEL_GIT_COMMIT_REF: "main",
+        VERCEL_GIT_COMMIT_SHA: current,
+        TZUDONG_APPROVED_PRODUCTION_SHA: approved,
+      });
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("production commit lacks matching release authorization");
+    }
   });
 
   it("requires an explicit true configuration and fails closed on unreadable or malformed configuration", () => {
@@ -56,6 +82,7 @@ describe("Vercel ignored build branch policy", () => {
       for (const [config, expected] of [
         [null, 0],
         ["invalid-json", 0],
+        [JSON.stringify({ git: { deploymentEnabled: { main: false } } }), 0],
         [JSON.stringify({ git: { deploymentEnabled: { main: "true" } } }), 0],
         [JSON.stringify({ git: { deploymentEnabled: { main: true } } }), 1],
       ] as const) {
@@ -63,7 +90,7 @@ describe("Vercel ignored build branch policy", () => {
         const result = spawnSync("node", ["scripts/vercel-ignore-build.mjs"], {
           cwd: root,
           encoding: "utf8",
-          env: { ...process.env, VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: "main" },
+          env: { ...process.env, VERCEL_GIT_COMMIT_SHA: APPROVED_SHA, TZUDONG_APPROVED_PRODUCTION_SHA: APPROVED_SHA, VERCEL_ENV: "production", VERCEL_GIT_COMMIT_REF: "main" },
         });
         expect(result.status).toBe(expected);
       }
