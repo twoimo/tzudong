@@ -245,6 +245,9 @@ class HighRiskApprovalTests(unittest.TestCase):
             self.assertEqual(result['resultCode'], oa.HUMAN_APPROVAL_REQUIRED)
             self.assertNotIn('actionId', result)
         self.assertEqual(store.trigger_state('sig-1'), 'clear')
+        self.assertEqual(len(store.pending_decisions()), 2)
+        self.assertEqual(len({row['action_id'] for row in store.pending_decisions()}), 2)
+        self.assertEqual(store.rows(), [])
         approval = oa.Approval(approval_ref='APR-RESUME-001', approver_name='Named Operator',
                               action_kind_id='deployment_execution', trigger_signal_id='sig-1')
         # A fresh agent can resume: no process-local waiting state is required.
@@ -255,6 +258,28 @@ class HighRiskApprovalTests(unittest.TestCase):
         self.assertEqual(resumed.process_signal(signal, rules, approval=approval)['resultCode'],
                          oa.AGENT_ACTION_DUPLICATE)
         self.assertEqual(executed, ['deployment_execution'])
+        self.assertEqual(len(store.pending_decisions()), 2)
+
+    def test_pending_decision_failure_is_bounded_and_does_not_claim_persistence(self):
+        from backend.pipeline_control.agent_action_store import PostgresAgentActionStore
+        for readback in (False, None, 1, 'true'):
+            store = PostgresAgentActionStore(lambda *_: readback)
+            record = oa.AgentActionRecord('id', 'sig-1', 'high', 'deployment_execution',
+                                          oa.HUMAN_APPROVAL_REQUIRED)
+            self.assertFalse(store.record_approval_pending(record))
+        for failure in (False, RuntimeError('private-provider-diagnostic')):
+            store = oa.InMemoryAgentActionStore()
+            executed = []
+            with patch.object(store, 'record_approval_pending',
+                              **({'side_effect': failure} if isinstance(failure, Exception)
+                                 else {'return_value': failure})):
+                result = _make_agent(store=store, executor=executed.append).process_signal(
+                    _signal(), [_rule('deployment_execution')])
+            self.assertEqual(result['resultCode'], oa.AGENT_ACTION_RECORD_UNAVAILABLE)
+            self.assertNotIn('pendingDecisionId', result)
+            self.assertNotIn('private-provider-diagnostic', str(result))
+            self.assertEqual(store.rows(), [])
+            self.assertEqual(executed, [])
 
     def test_high_risk_with_bound_approval_performs(self):
         agent = _make_agent()

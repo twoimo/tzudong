@@ -104,9 +104,12 @@ LOCAL_ONLY_TABLE_NAMES: tuple[str, ...] = (
     "agent_action_records",
     "agent_action_results",
     "agent_action_budget_claims",
+    "agent_approval_pending_decisions",
 )
 
 LOCAL_ONLY_APPROVAL_REFERENCES = {
+    'local_analytics.agent_approval_pending_decisions':
+        'backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql',
     'local_analytics.agent_action_budget_claims':
         'backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql',
     'local_analytics.agent_action_results':

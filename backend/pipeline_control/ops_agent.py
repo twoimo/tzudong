@@ -294,6 +294,9 @@ def assert_record_shape(row: Mapping[str, Any]) -> None:
 # 저장 계층 (설계 D8: append-only, unique(trigger_signal_id, action_kind_id)).
 # ---------------------------------------------------------------------------
 # 저장소 프로토콜:
+#   record_approval_pending(record) -> bool
+#       * 별도 append-only 결정 기록을 확정하고 readback한다. 실행 예약이나
+#         수행 상한은 소비하지 않는다. 동일 요청의 재관측도 별도 기록으로 남긴다.
 #   reserve(record) -> "created" | "duplicate" | "halted" | "unavailable"
 #       * 기록이 조치보다 먼저(요구사항 15.15). 6개 필드 중 트리거/심각도/조치
 #         종류/action_id를 append-only로 삽입해 (트리거, 조치) 조합을 선점한다.
@@ -320,6 +323,26 @@ class InMemoryAgentActionStore:
         self._budget_claims: dict[str, float] = {}
         self._budget_lock = threading.Lock()
         self._reservation_lock = threading.RLock()
+        self._pending_decisions: dict[str, dict] = {}
+
+    def record_approval_pending(self, record: AgentActionRecord) -> bool:
+        try:
+            row = record.to_row()
+            assert_record_shape(row)
+            if (self._fail_reserve or record.result_code != HUMAN_APPROVAL_REQUIRED
+                    or record.human_approval_ref is not None
+                    or record.action_kind_id not in HUMAN_APPROVAL_REQUIRED_CLASSES
+                    or record.signal_severity not in SEVERITY_ORDER):
+                return False
+            with self._reservation_lock:
+                self._pending_decisions.setdefault(record.action_id, dict(row))
+                return self._pending_decisions[record.action_id] == row
+        except (TypeError, ValueError):
+            return False
+
+    def pending_decisions(self) -> list[dict]:
+        with self._reservation_lock:
+            return [dict(row) for row in self._pending_decisions.values()]
 
     def trigger_state(self, trigger_signal_id: str) -> str:
         with self._reservation_lock:
@@ -641,7 +664,7 @@ class OpsAgent:
 
         설계 C11 결정 흐름을 따른다: 허용목록 활성 → Watch_Rule 매칭 → 기록 확정
         (조치보다 먼저) → 중복 → 상한 → 실행 → 결과 확인.
-        고위험 조치의 승인 대기는 일회성 실행 예약 전에 반환한다.
+        고위험 조치의 승인 대기는 별도 결정 기록 확정 후 실행 예약 전에 반환한다.
         """
 
         # 감시 입력 원본 제한 (요구사항 15.1).
@@ -716,9 +739,21 @@ class OpsAgent:
         if category == "high_risk" and bound_ref is None:
             # Approval waiting is not an execution attempt. Do not consume the
             # append-only (trigger, action) reservation: the same signal must
-            # remain resumable once its exact named approval arrives.
+            # remain resumable once its exact named approval arrives. Retain each
+            # pending decision in a separate immutable audit and read it back.
+            pending = AgentActionRecord(action_id, trigger_signal_id, signal_severity,
+                                        action_kind_id, HUMAN_APPROVAL_REQUIRED, None)
+            try:
+                recorded = self.store.record_approval_pending(pending)
+            except Exception:
+                recorded = False
+            if recorded is not True:
+                return _result(False, AGENT_ACTION_RECORD_UNAVAILABLE, performed=False,
+                               resultCode=AGENT_ACTION_RECORD_UNAVAILABLE,
+                               actionKindId=action_kind_id, triggerSignalId=trigger_signal_id)
             return _result(False, HUMAN_APPROVAL_REQUIRED, performed=False,
                            resultCode=HUMAN_APPROVAL_REQUIRED,
+                           pendingDecisionId=action_id,
                            humanDecisionPending=True, actionKindId=action_kind_id,
                            triggerSignalId=trigger_signal_id)
 

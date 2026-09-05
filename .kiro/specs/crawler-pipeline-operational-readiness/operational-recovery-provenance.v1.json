@@ -5,7 +5,7 @@
   "corroboratingCommit": "2d7a8f6ed5fe9e14d8f5046f45a4ea2d45fb725c",
   "note": "Source bytes are local Git evidence only. Candidate changes do not establish hosted state, approval, deployment, notification, or legal compliance.",
   "sourceFileCount": 50,
-  "candidateOnlyFileCount": 12,
+  "candidateOnlyFileCount": 13,
   "candidateTransformations": [
     {
       "id": "current-pipeline-control-layout",
@@ -116,7 +116,8 @@
         "backend/pipeline_control/publish_queue.py",
         "backend/pipeline_control/test_ops_agent_unittest.py",
         "backend/pipeline_control/test_publish_queue_postgres.py",
-        "backend/pipeline_control/tests/test_rust_runtime_bindings.py"
+        "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
+        "backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql"
       ]
     }
   ],
@@ -167,9 +168,9 @@
       "sourceGitBlobSha1": "46ec19827877b1ae5041396b57db414157b2453e",
       "sourceSha256": "c416e0a1b94670ac416cd587bf1b5f15d4c5f25094215ff82b633dbdf0a831e9",
       "sourceBytes": 33676,
-      "candidateGitBlobSha1": "820f377f06fdc429edda67f79f89c7f6b15bd1af",
-      "candidateSha256": "a5d4e6fb95c8457924d3cbada159f0a35fe79c32118345a35e8b0ea2e1be5d59",
-      "candidateBytes": 41130
+      "candidateGitBlobSha1": "7c11477be25b53b26d40fc3b2a470b32f773906c",
+      "candidateSha256": "58ea90abff91e578deda00077def6a4c6b5fbf988e90aac30ed57cea10c242c8",
+      "candidateBytes": 43129
     },
     {
       "sourcePath": "backend/pipeline_control/test_cluster_render_pbt.py",
@@ -207,9 +208,9 @@
       "sourceGitBlobSha1": "cfffce95b6217b6d0417435d5b7daf08f3573e66",
       "sourceSha256": "3969e03e2d6e4d19314aab16b633460b967183cd0d0721eab80c4ef6dad9e41d",
       "sourceBytes": 20135,
-      "candidateGitBlobSha1": "cb6b14070b32bd8113cc54774d41d129823baf20",
-      "candidateSha256": "eab3ee09e43036adaf4b1ee7e678e37a377d3db89e7c010e5b3a3be08fb9af04",
-      "candidateBytes": 30438
+      "candidateGitBlobSha1": "5e391eb6b4d20497f9b9f6342e7e91874da86ea5",
+      "candidateSha256": "596ee546f32f3e9590090425e3a56badee5fb0784169beda095cbc3db045d53b",
+      "candidateBytes": 32051
     },
     {
       "sourcePath": "backend/deploy/agent-action-allowlist.v1.json",
@@ -631,9 +632,9 @@
     },
     {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "gitBlobSha1": "88af680ebec0077ae6fc2f0ba65bc246d0cde33f",
-      "sha256": "8c93440c909b3ee13c8866fc1aa4d0326b405d872bafb333d0450f465c3a8711",
-      "bytes": 3539
+      "gitBlobSha1": "831992ba1349d960c1a2f2cc535ad4b5413ea21c",
+      "sha256": "d65b1706f8347a70c79299b5fa8963d56f61deaee746d0a4c07f509e27d1bfad",
+      "bytes": 5228
     },
     {
       "path": "backend/pipeline_control/publish_queue.py",
@@ -643,9 +644,9 @@
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "gitBlobSha1": "2228e22d77acd426efb259294cc6f65378b04826",
-      "sha256": "62991f46aece21d22b1ef8b7196d1344f42a90ca69e2bb6d37976e90d2dc3750",
-      "bytes": 20441
+      "gitBlobSha1": "bb3a33bdb09a066e87dc417d505ef31f22b5b5db",
+      "sha256": "a2d88211c61cdc032c462ae1c7a057bc92094fee23f6fbea3cf8c1f10a269cd2",
+      "bytes": 23718
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -694,6 +695,12 @@
       "bytes": 10505,
       "sha256": "af36dfb7e086f3e47fda9053aeaec8ffc3fe9d784873b70b85478894d033d345",
       "gitBlobSha1": "4c7fe1564b800d8a153583984597f74a2daca8ca"
+    },
+    {
+      "path": "backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "bytes": 1335,
+      "sha256": "81db4a47149acfbf2662830950bd8c126065d5136d3bd147410541128502f5b0",
+      "gitBlobSha1": "099759bcb5efb3a96661a048436c5e8b20c405b1"
     }
   ]
 }

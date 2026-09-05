@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T04:51:08.532480+00:00",
+  "generatedAt": "2026-09-05T05:10:14.789846+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "1452946ef96d2cbe541941e8e6c2c00804cceb44",
+  "sourceBaseHead": "319f5782d701d41c2821c7929ddb4d8ae2a3f5a3",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -316,12 +316,13 @@
     "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14",
     "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e",
     "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9",
-    "rust-applied-readback-review.json": "a287bf1100b59b0a5d293e7cc037c6aec9a13274f556a03dfa46ff2bde7cb054"
+    "rust-applied-readback-review.json": "a287bf1100b59b0a5d293e7cc037c6aec9a13274f556a03dfa46ff2bde7cb054",
+    "approval-pending-audit-review.json": "74ca1c26b52306dd82996a86053c69bd788017112b47a9b30a9646c44cec2bae"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 472,
+  "changedFileCount": 473,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -421,7 +422,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "18d24034a9242b8cac9e630feaaa4842313ff96da7ff0a8b0bf2a08714f86a5b"
+      "sha256": "35bbb7d1e1a75e6d1ea731ef254b706a9f7e5ac7aaf861c282f2f3f58f887273"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
@@ -445,11 +446,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "313c165a83294f7d329684713f391e65aa8fd84ab2e9ff0add2bd3dfb7ffeef6"
+      "sha256": "56aded40ff4ed90ea4fcd394de59079c9e48c6dafce1af3291554bfd9f4a07b4"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "6580acd7dc6ad676df580a6226b1f23439a669c2f590d19cc683a1a534c6955b"
+      "sha256": "5ce01e3c7109f440b5d7a0a01df26d822daf415430390be8608cf5f5840d3545"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -781,7 +782,7 @@
     },
     {
       "path": "backend/bin/schema_mirror_report.py",
-      "sha256": "bc91c991e3ec433d5e02daab1143452fa1319526b422eb1ac1d067cb10f1daa0"
+      "sha256": "522e6f9c65339a4825fa27c8fcbee4001b00c1fea5e4a665c9eeb1ef3a8278e6"
     },
     {
       "path": "backend/bin/seed_fixture_guard.py",
@@ -1005,7 +1006,7 @@
     },
     {
       "path": "backend/pipeline_control/agent_action_store.py",
-      "sha256": "8c93440c909b3ee13c8866fc1aa4d0326b405d872bafb333d0450f465c3a8711"
+      "sha256": "d65b1706f8347a70c79299b5fa8963d56f61deaee746d0a4c07f509e27d1bfad"
     },
     {
       "path": "backend/pipeline_control/api.py",
@@ -1069,7 +1070,7 @@
     },
     {
       "path": "backend/pipeline_control/ops_agent.py",
-      "sha256": "a5d4e6fb95c8457924d3cbada159f0a35fe79c32118345a35e8b0ea2e1be5d59"
+      "sha256": "58ea90abff91e578deda00077def6a4c6b5fbf988e90aac30ed57cea10c242c8"
     },
     {
       "path": "backend/pipeline_control/performance_evidence.py",
@@ -1221,7 +1222,7 @@
     },
     {
       "path": "backend/pipeline_control/test_ops_agent_unittest.py",
-      "sha256": "eab3ee09e43036adaf4b1ee7e678e37a377d3db89e7c010e5b3a3be08fb9af04"
+      "sha256": "596ee546f32f3e9590090425e3a56badee5fb0784169beda095cbc3db045d53b"
     },
     {
       "path": "backend/pipeline_control/test_perf_noise_pbt.py",
@@ -1281,7 +1282,7 @@
     },
     {
       "path": "backend/pipeline_control/test_publish_queue_postgres.py",
-      "sha256": "62991f46aece21d22b1ef8b7196d1344f42a90ca69e2bb6d37976e90d2dc3750"
+      "sha256": "a2d88211c61cdc032c462ae1c7a057bc92094fee23f6fbea3cf8c1f10a269cd2"
     },
     {
       "path": "backend/pipeline_control/test_publish_readback_pbt.py",
@@ -1832,6 +1833,10 @@
       "sha256": "2bec4a8e62ea92393ea2e7085fda0fa43114c88702086f809e27c36bc5b5d091"
     },
     {
+      "path": "backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql",
+      "sha256": "81db4a47149acfbf2662830950bd8c126065d5136d3bd147410541128502f5b0"
+    },
+    {
       "path": "backend/supabase/optional-s3-compatibility.v1.json",
       "sha256": "fd625fc03ac36a250d10b4ac6d6cb9ee342ba096a90a59ce1dc598ea9d7a78c7"
     },
@@ -2197,7 +2202,7 @@
     },
     {
       "path": "backend/utils/tests/test_publication_source_recovery.py",
-      "sha256": "ef3de836f57b753a500ffb96426526bdf83c1252096177dd358894cf6e0c607b"
+      "sha256": "c34142dd6694e99371ac5d311bf4f211e48f2beca999c613e8d70d04b6ff470d"
     },
     {
       "path": "backend/utils/tests/test_run_daily_regression.py",
@@ -2372,6 +2377,27 @@
       "substitutedReadbackInputsDenied": true,
       "pythonRemovalAfterLedgerReversionDenied": true,
       "migrationOnlyTriggerCovered": true
+    },
+    "approvalPendingAudit": {
+      "focusedPython313Tests": 90,
+      "focusedPython313Seconds": 10.155,
+      "agentAndActualPostgresPython314Tests": 63,
+      "agentAndActualPostgresPython314Seconds": 4.112,
+      "publicationRecoveryTests": 140,
+      "publicationRecoverySeconds": 65.52,
+      "operationalAndReconciliationTests": 10,
+      "rustProvenanceTests": 5,
+      "actualPostgresUsed": true,
+      "newConnectionReadsPendingDecisions": true,
+      "repeatedPendingObservationsRetained": true,
+      "decisionRetryIdempotent": true,
+      "identityCollisionRejected": true,
+      "executionReservationNotConsumedByPending": true,
+      "approvedResumeExecutesOnce": true,
+      "pendingUpdateDeleteDenied": true,
+      "anonAuthenticatedPrivilegesDenied": true,
+      "readbackFailureDoesNotClaimPersistence": true,
+      "groupsOverlap": true
     }
   },
   "pendingReviewCorrectionPr": 2863

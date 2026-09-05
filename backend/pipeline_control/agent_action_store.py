@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Callable
 from backend.pipeline_control.ops_agent import (
     AGENT_CODES, AGENT_ACTION_PERFORMED, AgentActionRecord, assert_record_shape,
+    HUMAN_APPROVAL_REQUIRED, HUMAN_APPROVAL_REQUIRED_CLASSES, SEVERITY_ORDER,
 )
 
 
@@ -42,6 +43,37 @@ class PostgresAgentActionStore:
             return result if result in {'created', 'duplicate', 'halted'} else 'unavailable'
         except Exception:
             return "unavailable"
+
+    def record_approval_pending(self, record: AgentActionRecord) -> bool:
+        """Commit and independently read back the minimized historical decision.
+
+        No execution reservation or rate claim is consumed. Retrying this exact
+        decision is idempotent; a new observation has its own decision identity.
+        """
+        try:
+            assert_record_shape(record.to_row())
+            if (record.result_code != HUMAN_APPROVAL_REQUIRED
+                    or record.human_approval_ref is not None
+                    or record.action_kind_id not in HUMAN_APPROVAL_REQUIRED_CLASSES
+                    or record.signal_severity not in SEVERITY_ORDER):
+                return False
+            values = (record.action_id, record.trigger_signal_id,
+                      record.signal_severity, record.action_kind_id)
+            self.execute_one(
+                'INSERT INTO local_analytics.agent_approval_pending_decisions '
+                '(decision_id,trigger_signal_id,signal_severity,action_kind_id) '
+                'VALUES (%s::uuid,%s,%s,%s) ON CONFLICT (decision_id) DO NOTHING '
+                'RETURNING decision_id', values,
+            )
+            actual = self.execute_one(
+                'SELECT EXISTS (SELECT 1 FROM local_analytics.agent_approval_pending_decisions '
+                'WHERE decision_id=%s::uuid AND trigger_signal_id=%s '
+                'AND signal_severity=%s AND action_kind_id=%s '
+                "AND result_code='human_approval_required')", values,
+            )
+            return actual is True
+        except Exception:
+            return False
 
     def record_result(self, action_id: str, result_code: str | None) -> bool:
         if result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:

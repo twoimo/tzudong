@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import ast
+import fnmatch
 import json
 import unittest
+import yaml
 from pathlib import Path
 
 
@@ -142,6 +144,8 @@ class PublicationSourceRecoveryTests(unittest.TestCase):
             "bun test apps/web/tests-unit/publish-jobs-request-contract.test.ts",
             source,
         )
+        workflow = yaml.safe_load(source)
+        triggers = workflow.get('on', workflow.get(True))['pull_request']['paths']
         for trigger in (
             "apps/web/app/api/admin/publish-jobs/**",
             "apps/web/lib/admin-publish-jobs.ts",
@@ -149,7 +153,7 @@ class PublicationSourceRecoveryTests(unittest.TestCase):
             "backend/supabase/migrations/20260901000200_pipeline_batch_upsert_publication_allowlist.sql",
             "backend/supabase/tests/test_local_compose_inputs.py",
         ):
-            self.assertIn(trigger, source)
+            self.assertTrue(any(fnmatch.fnmatchcase(trigger, pattern) for pattern in triggers), trigger)
         self.assertNotIn("continue-on-error: true", source)
 
 

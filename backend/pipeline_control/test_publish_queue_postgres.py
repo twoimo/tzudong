@@ -82,7 +82,8 @@ class DurableBackendTests(unittest.TestCase):
                 cur.execute('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
                 for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql',
                              '20260905000200_local_agent_rate_budget.sql',
-                             '20260905031359_local_agent_trigger_reservation.sql'):
+                             '20260905031359_local_agent_trigger_reservation.sql',
+                             '20260905050509_local_agent_approval_pending_decisions.sql'):
                     cur.execute((ROOT / 'supabase/migrations' / name).read_text())
 
     def connection(self):
@@ -98,6 +99,7 @@ class DurableBackendTests(unittest.TestCase):
             with c.cursor() as cur:
                 cur.execute('TRUNCATE local_analytics.publish_jobs,local_analytics.publish_history,local_analytics.publish_audit_events')
                 cur.execute('TRUNCATE local_analytics.agent_action_budget_claims,local_analytics.agent_action_results,local_analytics.agent_action_records')
+                cur.execute('TRUNCATE local_analytics.agent_approval_pending_decisions')
         self.conn = self.connection()
         self.store = PublishQueueStore(self.conn)
         self.hosted = FakeHosted({'public.videos': ('id',)})
@@ -229,6 +231,51 @@ class DurableBackendTests(unittest.TestCase):
                 self.conn.rollback()
         self.assertFalse(store.record_result(str(uuid4()),oa.AGENT_ACTION_PERFORMED))
         self.conn.rollback()
+
+    def test_pending_decisions_survive_reconnect_without_consuming_execution(self):
+        from backend.pipeline_control.test_ops_agent_unittest import _make_agent, _signal, _rule
+        trigger = str(uuid4())
+        signal, rules = _signal(trigger), [_rule('deployment_execution')]
+        executed = []
+        original = PostgresAgentActionStore(self.scalar)
+        agent = _make_agent(store=original, executor=executed.append)
+        decisions = [agent.process_signal(signal, rules) for _ in range(2)]
+        ids = [result['pendingDecisionId'] for result in decisions]
+        self.assertEqual(len(set(ids)), 2)
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records'), 0)
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_budget_claims'), 0)
+        conn = self.connection()
+        def execute(sql, params):
+            with conn.cursor() as cur:
+                cur.execute(sql, params); row = cur.fetchone()
+            conn.commit()
+            return row[0] if row else None
+        resumed = PostgresAgentActionStore(execute)
+        for identity in ids:
+            record = oa.AgentActionRecord(identity, trigger, 'critical', 'deployment_execution',
+                                          oa.HUMAN_APPROVAL_REQUIRED)
+            self.assertTrue(resumed.record_approval_pending(record))
+            # An identity collision cannot silently confirm different content.
+            record.trigger_signal_id = str(uuid4())
+            self.assertFalse(resumed.record_approval_pending(record))
+        self.assertEqual(execute('SELECT count(*) FROM local_analytics.agent_approval_pending_decisions', ()), 2)
+        self.assertEqual(resumed.trigger_state(trigger), 'clear')
+        approval = oa.Approval(approval_ref='APR-RESUME-001', approver_name='Named Operator',
+                              trigger_signal_id=trigger, action_kind_id='deployment_execution')
+        resumed_agent = _make_agent(store=resumed, executor=executed.append)
+        self.assertTrue(resumed_agent.process_signal(signal, rules, approval=approval)['performed'])
+        self.assertEqual(resumed_agent.process_signal(signal, rules, approval=approval)['resultCode'],
+                         oa.AGENT_ACTION_DUPLICATE)
+        self.assertEqual(executed, ['deployment_execution'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_approval_pending_decisions'), 2)
+        for sql in ('DELETE FROM local_analytics.agent_approval_pending_decisions',
+                    "UPDATE local_analytics.agent_approval_pending_decisions SET result_code='human_approval_required'"):
+            with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege): self.scalar(sql)
+            self.conn.rollback()
+        for role in ('anon', 'authenticated'):
+            for privilege in ('SELECT', 'INSERT', 'UPDATE', 'DELETE'):
+                self.assertFalse(self.scalar('SELECT has_table_privilege(%s,%s,%s)',
+                    (role, 'local_analytics.agent_approval_pending_decisions', privilege)))
 
     def test_agent_trigger_halt_survives_reconnect_for_a_different_action(self):
         from backend.pipeline_control.test_ops_agent_unittest import _make_agent, _signal, _rule
