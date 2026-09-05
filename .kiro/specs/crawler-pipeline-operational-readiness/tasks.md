@@ -178,7 +178,7 @@
 - [x] 5.36 Read the currently installed LaunchAgent metadata without executing, restarting, or unloading it.
 - [x] 5.37 Confirm the installed agent still represents the old 05:00 direct-Python/repository-log layout.
 - [x] 5.38 Confirm the installed agent is currently idle and retain only bounded run-count/last-exit metadata externally.
-- [ ]! 5.39 Reinstall and read back the 05:15 wrapper-based LaunchAgent only from a stable approved checkout.
+- [x] 5.39 Installed and independently read back the 05:15 wrapper LaunchAgent from protected-develop source `0222bda7d83002bd3f9b9dd10bff4e87f402ae22` in a separate stable checkout outside Documents. The active write freeze and manual held result were verified; actual sleep/wake execution remains 5.6. External receipt SHA-256 `f6aef0fadaf914312e59fad51dfb4d9125b271b24226a625c661e872bb3f7ddb`.
 - [x] 5.40 Preserve the installed 05:00 agent unchanged during this read-only inspection.
 
 ## 6. Manifest, health, and evidence artifact closure
