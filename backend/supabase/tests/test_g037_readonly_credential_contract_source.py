@@ -42,7 +42,13 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
         self.assertIn("- [x]! 7.164 ", TASKS)
         for completed_id in (165, 166, 167):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
-        for open_id in (168, 169):
+        for historical_id in (168, 169, 195):
+            line = next(line for line in TASKS.splitlines() if line.startswith(f"- [x]! 7.{historical_id} "))
+            self.assertIn("047ae53da5d45383a96cfd7ad1c2d69fb84a11c8", line)
+            self.assertIn("no authorization for a later revision or hosted closure", line)
+            self.assertIn("SHA-256", line)
+            self.assertIn("closure-20260906.md", line)
+        for open_id in (15, 37, 38):
             self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
         for completed_id in range(170, 186):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
@@ -50,8 +56,6 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
         self.assertIn("- [x]! 7.188 ", TASKS)
         for completed_id in (187, *range(189, 195)):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
-        for open_id in (195,):
-            self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
         self.assertIn("- [x]* 7.196 ", TASKS)
         self.assertIn("owner privileges without recording its value or role name", TASKS)
         self.assertIn("prohibit fallback to `SUPABASE_DB_URL`", TASKS)
