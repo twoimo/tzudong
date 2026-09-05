@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T03:43:40.051911+00:00",
+  "generatedAt": "2026-09-05T04:15:19.463524+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "7e0449fa39f29bb4b9c9278fb846c9d172b94022",
+  "sourceBaseHead": "f524e7bb68e8d164c58500bda74b32a90cef3b6f",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -311,12 +311,14 @@
     "atomic-trigger-dependency-time-review.json": "4067cb53a1eef5cd9fabd5a1e338e6b1d0c647198364b56416f879295aa25e9c",
     "strict-receipt-cache-review.json": "b68ccda4d21b090652ff4d4a41e79cb1b3cd8ff917c85c8b2592835627d5ce34",
     "performance-runtime-image-readback.v2.json": "990642211807ed06e424583343a02cd4fb34f6be69bf3458f3b3ad0197f00d9c",
-    "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27"
+    "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27",
+    "runtime-transport-schema-review.json": "430f734c8b61840e1a535f59dc9031d09bfd02bf99a059cfce7114da5b6be81c",
+    "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 468,
+  "changedFileCount": 470,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -392,7 +394,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "5ffbd07d93e86e09ed147acd250fb1661320ded344804d6cf5257415b89a64e9"
+      "sha256": "313a366da740859e8f0a76910bbb0adcf6ea1410d27e284a775f04933857ac73"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -416,7 +418,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "63c27fb4ab5effa6df6c0c80b7518f89cd6ca77018a449620c977e65cbabd2bc"
+      "sha256": "938a5a48fc7d86d45508b05702a7f9e0d07133b4085cc4c7631c10bc0738fdaa"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -436,11 +438,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/operational-recovery-provenance.v1.json",
-      "sha256": "cc3518751b8a881f0d05e15da2e16608cb80e313488da58f1a4292f069bab6a4"
+      "sha256": "fe5b416e6c4d6a94cf01de3c6da734e49f4d35c54ef853931fae033390f76c13"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "6462bca7a7cc9ae1f3ecd0aa8bda06de76d2171ded5e8234a49b56462424806e"
+      "sha256": "7d7ed696957e8bd122c0871ebc5a569020206e7893f41a19e2b0e73f0b9019a7"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -477,6 +479,10 @@
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rollback.md",
       "sha256": "e35c454c0af31d83f1e6c509d09d24b4d4ca2080316c7570da203cc05228f902"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/runtime-transport-schema-review.json",
+      "sha256": "61797f2d8f7aec0c3f73d5fc5e9a38e250b614e65e9ea6a14380ff9a7f76e904"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/rust-candidate-provenance.v1.json",
@@ -576,7 +582,7 @@
     },
     {
       "path": "apps/web/scripts/supabase-gen-types.mjs",
-      "sha256": "623ca3529e65e09719ec8ddef8e99545f31fd134a9fcb336038042b581ee2489"
+      "sha256": "2d087a6062fb7af88582c1b25fd664690d15086e0302b244aa86ffd1ef63039f"
     },
     {
       "path": "apps/web/scripts/vercel-ignore-build.mjs",
@@ -653,6 +659,10 @@
     {
       "path": "apps/web/tests-unit/supabase-entrypoint-source.test.ts",
       "sha256": "fe7ab06498b0e5d3e63474e39c884f8b9e8c112d85e6804ea77645a3a2d68802"
+    },
+    {
+      "path": "apps/web/tests-unit/supabase-gen-types-source.test.ts",
+      "sha256": "dccf9ffd1515d2329ab467d32d1f1090f90bacacf83e85932fbdc652d51923fc"
     },
     {
       "path": "apps/web/tests-unit/typecheck-benchmark-source.test.ts",
@@ -760,7 +770,7 @@
     },
     {
       "path": "backend/bin/schema_mirror_report.py",
-      "sha256": "b7580d92e33f16ffd995dc70e09ee722c373ae30c83feb8ff5c3c0311f533ef4"
+      "sha256": "bc91c991e3ec433d5e02daab1143452fa1319526b422eb1ac1d067cb10f1daa0"
     },
     {
       "path": "backend/bin/seed_fixture_guard.py",
@@ -772,7 +782,7 @@
     },
     {
       "path": "backend/bin/tests/test_check_deployment_descriptor_set_unittest.py",
-      "sha256": "d8f4c533b89691a75497f04cb95a670b6a8a87e1a2df94b673d476931cf579ac"
+      "sha256": "0c6243d9a200a57d2314009302454fde125ed993b01e10979691701cc8683ee8"
     },
     {
       "path": "backend/bin/tests/test_check_layout_manifest_unittest.py",
@@ -804,11 +814,11 @@
     },
     {
       "path": "backend/bin/tests/test_observability_up_unittest.py",
-      "sha256": "f41bd13274526a4de6b71f52231b683a130437e7c3efd63a109b4b9278855257"
+      "sha256": "1d05327af86eb8c3115c975d6edc29de911437ec2592ca0134fa0fc75ba53f08"
     },
     {
       "path": "backend/bin/tests/test_otel_restart.py",
-      "sha256": "07404f7e3a171869f4557f5c03aca60f1a4177979d7c65909fd213f18efb401e"
+      "sha256": "65ae8521b2a817cb59e15d6c5e20bd5d16573759da52927a6d041dbf84ac4596"
     },
     {
       "path": "backend/bin/tests/test_phase_gate_unittest.py",
@@ -856,7 +866,7 @@
     },
     {
       "path": "backend/bin/tests/test_schema_mirror_report_unittest.py",
-      "sha256": "e8559edad54d7c05eb1c6e3aa7ce45f0dd4ba852a04d9192476a45a8b66950f3"
+      "sha256": "b8e32e573e5494a99a2d773a0164565fbb5dca4c832887a7b33a3da07a1b5d3f"
     },
     {
       "path": "backend/bin/tests/test_seed_fixture_guard_unittest.py",
@@ -880,7 +890,7 @@
     },
     {
       "path": "backend/deploy/deployment-descriptor-set.v1.json",
-      "sha256": "7c8af91c229fc2b586ed5a1a6742f6964bd427591323b109ecc7c994be520136"
+      "sha256": "a9de3c6ff8f19f4ab8e79775e667cd062cfc53f0ca72057d61665be686736e11"
     },
     {
       "path": "backend/deploy/helm/tzudong-platform/.helmignore",
@@ -900,7 +910,7 @@
     },
     {
       "path": "backend/deploy/helm/tzudong-platform/values.yaml",
-      "sha256": "6857d8480469ce9b1acf399921dce27e295381ed253345b2282d13ea143da283"
+      "sha256": "11fdfaa54f2c363eda05e450a31910a3761ea743d49647ed45cf8cb4e04d8dd0"
     },
     {
       "path": "backend/deploy/log-retention.proposed.json",
@@ -916,7 +926,7 @@
     },
     {
       "path": "backend/deploy/opentofu/main.tf",
-      "sha256": "1de3a4cda1f2372456b37b02f434f9e2197296ede09dc50e951d8b96ad68fd84"
+      "sha256": "04853de29516361356ef906a05632eaa83dac8dc5ac431f3a96b8cbb7fb1fdc5"
     },
     {
       "path": "backend/deploy/opentofu/outputs.tf",
@@ -948,7 +958,7 @@
     },
     {
       "path": "backend/pipeline-control/Dockerfile",
-      "sha256": "c804a36312e7f026a23d2a8076bba23f93ff8f5343d3d18bf5b21725ddeedea5"
+      "sha256": "9ab9f8da4242b9fdf9ca7fe22707da657813514d507e084b44c3c2987460d1cd"
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -964,7 +974,7 @@
     },
     {
       "path": "backend/pipeline-control/otel-collector.yaml",
-      "sha256": "11f9ecaf8032c1726883875c2de914e91fb3f815e7935cff999bbebe282d62c7"
+      "sha256": "4de179071ab233eb0fcb8eacb50a904c396325b5b18c100850afd06cde2085dd"
     },
     {
       "path": "backend/pipeline-control/requirements.txt",
@@ -1016,7 +1026,7 @@
     },
     {
       "path": "backend/pipeline_control/impl_selector.py",
-      "sha256": "6ac171b39b773bd16d5f76ff624719437adc5b30a66f04a885aa5d37ac46973d"
+      "sha256": "51a6140d0cb115586969a81a9987f56c2bbf07fa54b80b80fbc645ee03ab24a2"
     },
     {
       "path": "backend/pipeline_control/ledger_validation.py",
@@ -1048,7 +1058,7 @@
     },
     {
       "path": "backend/pipeline_control/ops_agent.py",
-      "sha256": "f2759d828026f662ef7fd07a48504e1124efb1cbca1482510f154da90333e028"
+      "sha256": "a5d4e6fb95c8457924d3cbada159f0a35fe79c32118345a35e8b0ea2e1be5d59"
     },
     {
       "path": "backend/pipeline_control/performance_evidence.py",
@@ -1200,7 +1210,7 @@
     },
     {
       "path": "backend/pipeline_control/test_ops_agent_unittest.py",
-      "sha256": "26d625b51fa5dcc9cc010a609e9b8eb8ec78fe830cf5a4a02d57073108378366"
+      "sha256": "eab3ee09e43036adaf4b1ee7e678e37a377d3db89e7c010e5b3a3be08fb9af04"
     },
     {
       "path": "backend/pipeline_control/test_perf_noise_pbt.py",
@@ -1324,7 +1334,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_impl_selector.py",
-      "sha256": "29ef0a3468639b766c25dffd32b04612733f9655ba6c2be9a6cb724ff2adb1cf"
+      "sha256": "269fb4fa745b6c23f11a1a7f227592d664c2aed549feab4b208904897b889234"
     },
     {
       "path": "backend/pipeline_control/tests/test_live_and_cutover.py",
@@ -1332,7 +1342,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_loki_sink.py",
-      "sha256": "f424a5c2fd84fcf54e7b120286d5b578561960e833a622641446f6fe82ed1ca7"
+      "sha256": "6fcc67974ec5b2aad653ae159345694f8eb48b1375b6be0b39be385eacb04b0f"
     },
     {
       "path": "backend/pipeline_control/tests/test_manifest_parity.py",
@@ -1352,7 +1362,7 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
-      "sha256": "0f75f903d0abc5151a75fe397b40478c21ecc03a148859f08c0e0d1c148ce181"
+      "sha256": "3d4c4b8f19f6be800029dfd8863ecdf06887dcc7102eab3adc83a5e1cd969ff5"
     },
     {
       "path": "backend/pipeline_control/tests/test_slice0_control_plane.py",
@@ -2172,7 +2182,7 @@
     },
     {
       "path": "backend/utils/tests/test_platform_modernization_reconciliation.py",
-      "sha256": "f59b396dd48b5e5b7336bf549832d0d05dbfc06383af65e8e9795c14598bd34f"
+      "sha256": "075cb21d457425df0793e1de22663bc7fc48f2073811970cf6f1d98350bede41"
     },
     {
       "path": "backend/utils/tests/test_publication_source_recovery.py",
@@ -2309,6 +2319,26 @@
       "sameSizeRestoredMtimeRejected": true,
       "deletedAndAliasedFilesRejected": true,
       "duplicateJsonKeysAndNonfiniteValuesRejected": true
+    },
+    "runtimeTransportSchema": {
+      "focusedBackendTests": 133,
+      "collectorUpgradeAndRelatedTests": 68,
+      "provenanceAndPolicyTests": 69,
+      "finalSchemaTests": 17,
+      "schemaDefinitionMutationCases": 6,
+      "notNullMutationCase": 1,
+      "typegenBehaviorTests": 3,
+      "compilerParityDiagnostics": 0,
+      "compilerLogicalInputs": 2322,
+      "scopedEslintPassed": true,
+      "actualNativeNonfiniteCoordinateRoundtrips": 6,
+      "workerImageArchitecture": "linux/arm64",
+      "workerEntrypointStubbedAfterRealPreflights": true,
+      "workerImageRootReadOnly": true,
+      "workerUid": 10001,
+      "missingEnvironmentDenied": true,
+      "oldRawExporterQueueHeld": true,
+      "sourceAndTestsOverlapAcrossGroups": true
     }
   },
   "pendingReviewCorrectionPr": 2863

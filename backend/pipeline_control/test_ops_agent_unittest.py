@@ -235,6 +235,27 @@ class HighRiskApprovalTests(unittest.TestCase):
         self.assertFalse(result["performed"])
         self.assertEqual(result["errorCode"], oa.HUMAN_APPROVAL_REQUIRED)
 
+    def test_waiting_signal_resumes_after_bound_approval_and_executes_only_once(self):
+        store = oa.InMemoryAgentActionStore()
+        executed = []
+        agent = _make_agent(store=store, executor=executed.append)
+        signal, rules = _signal(), [_rule('deployment_execution')]
+        for _ in range(2):
+            result = agent.process_signal(signal, rules)
+            self.assertEqual(result['resultCode'], oa.HUMAN_APPROVAL_REQUIRED)
+            self.assertNotIn('actionId', result)
+        self.assertEqual(store.trigger_state('sig-1'), 'clear')
+        approval = oa.Approval(approval_ref='APR-RESUME-001', approver_name='Named Operator',
+                              action_kind_id='deployment_execution', trigger_signal_id='sig-1')
+        # A fresh agent can resume: no process-local waiting state is required.
+        resumed = _make_agent(store=store, executor=executed.append)
+        with patch.object(store, 'reserve', wraps=store.reserve) as reserve:
+            self.assertTrue(resumed.process_signal(signal, rules, approval=approval)['performed'])
+            self.assertEqual(reserve.call_args.args[0].human_approval_ref, 'APR-RESUME-001')
+        self.assertEqual(resumed.process_signal(signal, rules, approval=approval)['resultCode'],
+                         oa.AGENT_ACTION_DUPLICATE)
+        self.assertEqual(executed, ['deployment_execution'])
+
     def test_high_risk_with_bound_approval_performs(self):
         agent = _make_agent()
         approval = oa.Approval(

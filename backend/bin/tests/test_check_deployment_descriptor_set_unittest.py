@@ -162,6 +162,28 @@ class CliTests(unittest.TestCase):
         self.assertIn('lower | replace "_" "-"', helpers)
         self.assertEqual(deployments.count('include "tzudong.componentName"'), 4)
 
+    def test_rendered_backend_environment_satisfies_the_actual_runtime_contract(self):
+        import yaml
+        from backend.bin.check_env_contract import validate
+        from backend.pipeline_control.profiles import resolve_compute_profile
+        docs = list(yaml.safe_load_all(subprocess.check_output([
+            'helm', 'template', 'tzudong-platform', str(_HELM_DIR / 'tzudong-platform')
+        ], stderr=subprocess.PIPE, text=True)))
+        containers = [doc['spec']['template']['spec']['containers'][0] for doc in docs]
+        backend = next(item for item in containers if item['name'] == 'backend-runtime')
+        refs = {item['name']: item['valueFrom'] for item in backend['env']}
+        self.assertEqual(refs['PIPELINE_CONTROL_DSN'],
+                         {'secretKeyRef': {'name': 'pipeline-pg-dsn-ref', 'key': 'value'}})
+        self.assertEqual(refs['TZUDONG_DATA_ENV'],
+                         {'configMapKeyRef': {'name': 'backend-runtime-config', 'key': 'data_env'}})
+        values = {'TZUDONG_DATA_ENV': 'local_db', 'TZUDONG_COMPUTE_PROFILE': 'lite_gha',
+                  'PIPELINE_CONTROL_DSN': 'postgresql://postgres@db:5432/postgres'}
+        self.assertTrue(set(values).issubset(refs))
+        self.assertTrue(validate('pipeline-control', values)['ok'])
+        with mock.patch.dict('os.environ', values, clear=True):
+            self.assertEqual(resolve_compute_profile(), 'lite_gha')
+        self.assertTrue(check.run_check()['ok'])
+
     def test_real_helm_secret_references_use_valid_object_names(self):
         import yaml
         output = subprocess.check_output([

@@ -341,7 +341,10 @@ def _wire_value(value):
     if value is None or type(value) in (str, int, bool):
         return True
     if type(value) is float:
-        return math.isfinite(value)
+        # Private, bounded pickle IPC preserves IEEE-754 values. Validators
+        # must receive NaN/infinity and return their normal coordinate errors.
+        # Evidence JSON has a separate strict finite-number contract.
+        return True
     if type(value) in (list, tuple):
         return all(_wire_value(item) for item in value)
     if type(value) is dict:

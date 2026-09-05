@@ -640,7 +640,8 @@ class OpsAgent:
         """하나의 감시 신호를 평가하고 조치 경계를 강제한다 (요구사항 15 전반).
 
         설계 C11 결정 흐름을 따른다: 허용목록 활성 → Watch_Rule 매칭 → 기록 확정
-        (조치보다 먼저) → 중복 → 상한 → 조치 분류/승인 → 실행 → 결과 확인.
+        (조치보다 먼저) → 중복 → 상한 → 실행 → 결과 확인.
+        고위험 조치의 승인 대기는 일회성 실행 예약 전에 반환한다.
         """
 
         # 감시 입력 원본 제한 (요구사항 15.1).
@@ -711,6 +712,16 @@ class OpsAgent:
         ):
             bound_ref = approval.approval_ref
 
+        category = classify_action(action_kind_id, self.allowlist_kinds)
+        if category == "high_risk" and bound_ref is None:
+            # Approval waiting is not an execution attempt. Do not consume the
+            # append-only (trigger, action) reservation: the same signal must
+            # remain resumable once its exact named approval arrives.
+            return _result(False, HUMAN_APPROVAL_REQUIRED, performed=False,
+                           resultCode=HUMAN_APPROVAL_REQUIRED,
+                           humanDecisionPending=True, actionKindId=action_kind_id,
+                           triggerSignalId=trigger_signal_id)
+
         # 기록이 조치보다 먼저 (요구사항 15.2, 15.15). reserve가 (트리거, 조치)
         # 조합을 append-only로 선점하고 D8 unique 제약이 중복을 강제한다.
         record = AgentActionRecord(
@@ -758,9 +769,6 @@ class OpsAgent:
                 AGENT_ACTION_RATE_LIMITED,
             )
 
-        # 조치 분류.
-        category = classify_action(action_kind_id, self.allowlist_kinds)
-
         if category == "never_performed":
             # 어떤 승인 상태에서도 수행하지 않는다 (요구사항 15.13, 15.16).
             # 명명된 사람의 결정·실행 대기 상태로만 기록한다.
@@ -787,17 +795,6 @@ class OpsAgent:
                 trigger_signal_id,
                 AGENT_ACTION_NOT_ALLOWLISTED,
             )
-
-        if category == "high_risk":
-            # 결속된 명명된 사람 승인 참조 이후에만 수행 (요구사항 15.5, 15.6).
-            if bound_ref is None:
-                return self._deny(
-                    action_id,
-                    action_kind_id,
-                    trigger_signal_id,
-                    HUMAN_APPROVAL_REQUIRED,
-                )
-            # 승인이 결속됨 → 수행 경로로 진행.
 
         # Commit a shared budget claim before executing. An interrupted or
         # unverified attempt remains counted; rejected approvals consume none.

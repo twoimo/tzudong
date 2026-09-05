@@ -117,8 +117,8 @@ class PlatformModernizationReconciliationTests(unittest.TestCase):
 
         self.assertEqual(dict(sorted(counts.items())), document["dispositionCounts"])
         self.assertEqual(dict(sorted(states.items())), document["contentStateCounts"])
-        self.assertEqual(counts["source_exact_present"], 68)
-        self.assertEqual(counts["candidate_transformed_present"], 107)
+        self.assertEqual(counts["source_exact_present"], 66)
+        self.assertEqual(counts["candidate_transformed_present"], 109)
         for path in (
             "backend/bin/schema_mirror_report.py",
             "backend/bin/tests/test_schema_mirror_pbt.py",

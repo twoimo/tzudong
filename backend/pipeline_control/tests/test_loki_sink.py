@@ -283,11 +283,11 @@ class OtelCollectorWiringTests(unittest.TestCase):
         self.assertEqual(pipelines["metrics"]["exporters"], ["prometheus"])
         # New logs pipeline: filelog -> Loki's native OTLP/HTTP endpoint.
         self.assertEqual(pipelines["logs"]["receivers"], ["filelog"])
-        self.assertEqual(pipelines["logs"]["exporters"], ["otlphttp/loki"])
+        self.assertEqual(pipelines["logs"]["exporters"], ["otlphttp/loki_minimized_v1"])
         # Receivers/exporters declared.
         self.assertIn("filelog", config["receivers"])
         self.assertIn("otlp", config["receivers"])
-        self.assertIn("otlphttp/loki", config["exporters"])
+        self.assertIn("otlphttp/loki_minimized_v1", config["exporters"])
         self.assertNotIn("loki", config["exporters"])
         self.assertIn("prometheus", config["exporters"])
 

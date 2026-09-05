@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import importlib.util
 import unittest
+import os
+import subprocess
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -296,6 +299,92 @@ class DifferenceUniquenessTests(unittest.TestCase):
         self.assertEqual(cats["rpcNameDifferences"]["count"], 2)  # local_rpc, hosted_rpc
         # No duplicate classification.
         self.assertEqual(len(reported), len(set(reported)))
+
+
+
+
+@unittest.skipUnless(os.environ.get('TZUDONG_TEST_POSTGRES_BIN'), 'disposable postgres opt-in absent')
+class CatalogDefinitionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import psycopg2
+        cls.pg = psycopg2
+        cls.tmp = tempfile.TemporaryDirectory(prefix='tzmirror-', dir='/tmp')
+        cls.addClassCleanup(cls.tmp.cleanup)
+        bindir = Path(os.environ['TZUDONG_TEST_POSTGRES_BIN'])
+        data = str(Path(cls.tmp.name) / 'data')
+        def run(*args):
+            subprocess.run([str(bindir / args[0]), *args[1:]], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        run('initdb', '-D', data, '-U', 'postgres', '-A', 'trust', '--no-locale', '--encoding=UTF8')
+        run('pg_ctl', '-D', data, '-l', str(Path(cls.tmp.name) / 'server.log'),
+            '-o', f"-c listen_addresses='' -c unix_socket_directories='{cls.tmp.name}'", '-w', 'start')
+        cls.addClassCleanup(lambda: run('pg_ctl', '-D', data, '-m', 'immediate', '-w', 'stop'))
+        cls.dsn = f'dbname=postgres user=postgres host={cls.tmp.name}'
+
+    def test_not_null_is_compared_by_column_without_catalog_oid_noise(self):
+        conn = self.pg.connect(self.dsn, options='-c search_path=pg_catalog')
+        try:
+            with conn.cursor() as cur:
+                cur.execute('CREATE TABLE public.nullability_fixture(value int NOT NULL)')
+            before = smr.read_schema_snapshot(conn)
+            with conn.cursor() as cur:
+                cur.execute('ALTER TABLE public.nullability_fixture ALTER COLUMN value DROP NOT NULL')
+            after = smr.read_schema_snapshot(conn)
+            report = smr.build_schema_mirror_report(local=before, hosted=after)
+            self.assertFalse(report['mirrorPass'])
+            self.assertEqual(report['categories']['constraintDifferences']['items'][0]['nullabilityDifferences'], ['value'])
+            conn.rollback()
+        finally:
+            conn.close()
+
+    def test_same_constraint_name_detects_check_fk_type_and_validation_drift(self):
+        cases = [
+            ('CHECK (value > 0)', 'CHECK (value >= 0)'),
+            ('FOREIGN KEY (value) REFERENCES public.ref_a(id)',
+             'FOREIGN KEY (value) REFERENCES public.ref_b(id)'),
+            ('FOREIGN KEY (value) REFERENCES public.ref_a(id)',
+             'FOREIGN KEY (value) REFERENCES public.ref_a(id) ON DELETE CASCADE'),
+            ('CHECK (value > 0) NOT VALID', 'CHECK (value > 0)'),
+            ('UNIQUE (value)', 'PRIMARY KEY (value)'),
+            ('UNIQUE (value)', 'UNIQUE (value) DEFERRABLE INITIALLY DEFERRED'),
+        ]
+        for before, after in cases:
+            with self.subTest(before=before, after=after):
+                conn = self.pg.connect(self.dsn, options='-c search_path=pg_catalog')
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute('CREATE TABLE public.ref_a(id int PRIMARY KEY); '
+                                    'CREATE TABLE public.ref_b(id int PRIMARY KEY); '
+                                    'CREATE TABLE public.target(value int NOT NULL); '
+                                    'ALTER TABLE public.target ADD CONSTRAINT same_name ' + before)
+                    conn.commit()
+                    conn.set_session(readonly=True)
+                    original = smr.read_schema_snapshot(conn)
+                    conn.rollback()
+                    conn.set_session(readonly=False)
+                    with conn.cursor() as cur:
+                        cur.execute('ALTER TABLE public.target DROP CONSTRAINT same_name; '
+                                    'ALTER TABLE public.target ADD CONSTRAINT same_name ' + after)
+                    conn.commit()
+                    conn.set_session(readonly=True)
+                    changed = smr.read_schema_snapshot(conn)
+                    self.assertEqual(original.tables['public.target'].constraints,
+                                     changed.tables['public.target'].constraints)
+                    report = smr.build_schema_mirror_report(local=original, hosted=changed)
+                    self.assertFalse(report['mirrorPass'])
+                    self.assertEqual(report['errorCode'], 'schema_mirror_defect')
+                    differences = report['categories']['constraintDifferences']['items']
+                    self.assertEqual(differences[0]['definitionDifferences'], ['same_name'])
+                    self.assertNotIn(before, __import__('json').dumps(report))
+                    self.assertTrue(smr.build_schema_mirror_report(local=changed, hosted=changed)['mirrorPass'])
+                    conn.rollback()
+                    conn.set_session(readonly=False)
+                    with conn.cursor() as cur:
+                        cur.execute('DROP TABLE public.target, public.ref_a, public.ref_b')
+                    conn.commit()
+                finally:
+                    conn.close()
 
 
 if __name__ == "__main__":

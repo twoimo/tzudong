@@ -137,6 +137,17 @@ class LoadRustTests(unittest.TestCase):
         finally:
             module.close()
 
+    def test_private_ipc_preserves_nonfinite_nested_float_values(self) -> None:
+        import math
+        module = sel.load_rust('R1-validators',
+            importer=lambda: SimpleNamespace(identity=lambda value: value), ledger=_ledger())
+        try:
+            result = module.identity({'values': [float('nan'), float('inf'), float('-inf')]})
+            self.assertTrue(math.isnan(result['values'][0]))
+            self.assertEqual(result['values'][1:], [float('inf'), float('-inf')])
+        finally:
+            module.close()
+
     def test_import_failure_fails_closed(self) -> None:
         def _boom():
             raise ImportError("not built")

@@ -463,9 +463,9 @@ class StartupOrchestrationTests(unittest.TestCase):
         )
         self.assertNotIn("image: otel/opentelemetry-collector:0.120.0", compose)
         self.assertRegex(collector, r"(?m)^  filelog:")
-        self.assertRegex(collector, r"(?m)^  otlphttp/loki:")
+        self.assertRegex(collector, r"(?m)^  otlphttp/loki_minimized_v1:")
         self.assertIn("endpoint: http://loki:3100/otlp", collector)
-        self.assertIn("exporters: [otlphttp/loki]", collector)
+        self.assertIn("exporters: [otlphttp/loki_minimized_v1]", collector)
         self.assertNotIn("/loki/api/v1/push", collector)
 
     def test_compose_overlays_started_in_order(self):

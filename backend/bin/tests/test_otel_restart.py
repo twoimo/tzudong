@@ -3,6 +3,7 @@
 No published ports, real logs, credentials or existing Compose stack are used.
 """
 import os
+import json
 from pathlib import Path
 import subprocess
 import tempfile
@@ -23,7 +24,8 @@ class Sink(BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get('Content-Length', '0')))
         if self.headers.get('Content-Encoding') == 'gzip': body = gzip.decompress(body)
-        markers = re.findall(rb'TZOTEL_FIXTURE_[a-z]+', body)
+        markers = re.findall(rb'00000000-0000-4000-8000-[0-9]{12}', body)
+        with open('/fixture/payloads', 'ab') as f: f.write(body + b'\n')
         fail = Path('/fixture/fail').exists()
         with open('/fixture/attempts', 'a') as f:
             for marker in markers: f.write(marker.decode() + '\n')
@@ -43,9 +45,11 @@ class StorageContractTests(unittest.TestCase):
         config = yaml.safe_load((ROOT / 'backend/pipeline-control/otel-collector.yaml').read_text())
         compose = yaml.safe_load((ROOT / 'backend/pipeline-control/docker-compose.observability.yml').read_text())
         self.assertEqual(config['receivers']['filelog']['storage'], 'file_storage')
-        self.assertEqual(config['receivers']['filelog']['start_at'], 'beginning')
-        self.assertEqual(config['exporters']['otlphttp/loki']['sending_queue']['storage'], 'file_storage')
-        for stage in (config['receivers']['filelog'], config['exporters']['otlphttp/loki']):
+        self.assertEqual(config['receivers']['filelog']['start_at'], 'end')
+        self.assertEqual(config['service']['pipelines']['logs']['processors'],
+                         ['transform/parse', 'filter/admitted', 'transform/minimize'])
+        self.assertEqual(config['exporters']['otlphttp/loki_minimized_v1']['sending_queue']['storage'], 'file_storage')
+        for stage in (config['receivers']['filelog'], config['exporters']['otlphttp/loki_minimized_v1']):
             self.assertEqual(stage['retry_on_failure'], {'enabled': True, 'max_elapsed_time': '0s'})
         service = compose['services']['otel-collector']
         self.assertEqual(service['user'], '10001:10001')
@@ -82,11 +86,18 @@ class CollectorRestartTests(unittest.TestCase):
             logs.mkdir(mode=0o755)
             logs.chmod(0o755)
             log = logs / 'fixture.log'
-            log.write_text('TZOTEL_FIXTURE_delivered\n')
+            def marker(index):
+                return f'00000000-0000-4000-8000-{index:012d}'
+            def line(index, **fields):
+                return json.dumps({'component': 'backend_runtime', 'severity': 'info',
+                    'type': 'run.lifecycle', 'occurred_at': '2026-09-05T00:00:00Z',
+                    'correlation_id': marker(index), **fields}) + '\n'
+            # Existing logs on a fresh volume must not be replayed.
+            log.write_text(line(0) * 10)
             log.chmod(0o644)
             (path / 'sink.py').write_text(SINK)
             cfg = yaml.safe_load((ROOT / 'backend/pipeline-control/otel-collector.yaml').read_text())
-            cfg['exporters']['otlphttp/loki']['endpoint'] = 'http://fixture-sink:3100/otlp'
+            cfg['exporters']['otlphttp/loki_minimized_v1']['endpoint'] = 'http://fixture-sink:3100/otlp'
             config = path / 'config.yaml'
             config.write_text(yaml.safe_dump(cfg))
             config.chmod(0o644)
@@ -108,22 +119,62 @@ class CollectorRestartTests(unittest.TestCase):
                                 '-v', str(logs) + ':/var/log/tzudong:ro',
                                 '-v', volume + ':/var/lib/otelcol', image, '--config=/etc/otelcol/config.yaml')
                 start()
-                self.await_marker(path / 'delivered', 'TZOTEL_FIXTURE_delivered')
+                # Allow the first receiver scan to checkpoint the pre-existing
+                # file before writing the first new record (200ms poll default).
+                time.sleep(1)
+                with log.open('a') as f:
+                    f.write(line(1, message='FORBIDDEN_fixture_message',
+                                 password='FORBIDDEN_fixture_credential',
+                                 nested={'email': 'FORBIDDEN_fixture_contact'}))
+                    f.write('FORBIDDEN_fixture_raw_diagnostic\n')
+                    f.write('null\n[]\n42\n')
+                    f.write(line(4, component='FORBIDDEN_fixture_component'))
+                    f.write(line(5, correlation_id='FORBIDDEN_fixture_identifier'))
+                self.await_marker(path / 'delivered', marker(1))
                 (path / 'fail').touch()
                 with log.open('a') as f:
-                    f.write('TZOTEL_FIXTURE_pending\n')
-                self.await_marker(path / 'attempts', 'TZOTEL_FIXTURE_pending')
+                    f.write(line(2, message='FORBIDDEN_fixture_pending'))
+                self.await_marker(path / 'attempts', marker(2))
                 self.docker('kill', '--signal', 'KILL', collector)
                 self.docker('rm', collector)
                 with log.open('a') as f:
-                    f.write('TZOTEL_FIXTURE_downtime\n')
+                    f.write(line(3, occurred_at='2026-09-05T00:00:00+00:00'))
                 (path / 'fail').unlink()
                 start()
-                for marker in ('TZOTEL_FIXTURE_pending', 'TZOTEL_FIXTURE_downtime'):
-                    self.await_marker(path / 'delivered', marker)
+                for expected in (marker(2), marker(3)):
+                    self.await_marker(path / 'delivered', expected)
                 delivered = (path / 'delivered').read_text().splitlines()
-                self.assertEqual(set(delivered), {'TZOTEL_FIXTURE_delivered', 'TZOTEL_FIXTURE_pending', 'TZOTEL_FIXTURE_downtime'})
-                self.assertEqual(delivered.count('TZOTEL_FIXTURE_delivered'), 1)
+                self.assertEqual(set(delivered), {marker(1), marker(2), marker(3)})
+                self.assertEqual(delivered.count(marker(1)), 1)
+                self.assertNotIn(b'FORBIDDEN_fixture_', (path / 'payloads').read_bytes())
+                self.assertNotIn(b'fixture.log', (path / 'payloads').read_bytes())
+                # A pre-redaction exporter queue must not bypass the new
+                # processors during an upgrade. Seed only synthetic legacy data.
+                self.docker('kill', '--signal', 'KILL', collector)
+                self.docker('rm', collector)
+                legacy = yaml.safe_load(config.read_text())
+                legacy['exporters']['otlphttp/loki'] = legacy['exporters'].pop('otlphttp/loki_minimized_v1')
+                legacy['service']['pipelines']['logs']['exporters'] = ['otlphttp/loki']
+                legacy['service']['pipelines']['logs'].pop('processors')
+                config.write_text(yaml.safe_dump(legacy))
+                (path / 'fail').touch()
+                start()
+                time.sleep(0.5)
+                with log.open('a') as f:
+                    f.write(line(9, message='FORBIDDEN_fixture_legacy_queue'))
+                self.await_marker(path / 'attempts', marker(9))
+                self.docker('kill', '--signal', 'KILL', collector)
+                self.docker('rm', collector)
+                config.write_text(yaml.safe_dump(cfg))
+                (path / 'payloads').write_bytes(b'')
+                (path / 'fail').unlink()
+                start()
+                with log.open('a') as f:
+                    f.write(line(6))
+                self.await_marker(path / 'delivered', marker(6))
+                time.sleep(1)
+                self.assertNotIn(marker(9), (path / 'delivered').read_text().splitlines())
+                self.assertNotIn(b'FORBIDDEN_fixture_', (path / 'payloads').read_bytes())
             finally:
                 self.docker('rm', '-f', collector, sink, check=False)
                 self.docker('volume', 'rm', volume, check=False)

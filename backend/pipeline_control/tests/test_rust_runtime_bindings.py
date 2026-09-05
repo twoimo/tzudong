@@ -75,6 +75,37 @@ class NativeCallSiteTests(unittest.TestCase):
                 expected = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
                 self.assertEqual(state_machine.payload_hash(payload), expected)
 
+    def test_nonfinite_coordinates_cross_real_isolated_validator_boundary(self):
+        import math
+        def normalized(value):
+            if isinstance(value, float) and math.isnan(value):
+                return 'NaN'
+            if isinstance(value, dict):
+                return {key: normalized(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [normalized(item) for item in value]
+            return value
+        for value in (float('nan'), float('inf'), float('-inf')):
+            record = {key: 'fixture' for key in validators.TRANSFORM_REQUIRED_FIELDS}
+            record.update(lat=value, lng=value, evaluation_results={'fixture': True})
+            with selector.python_reference():
+                expected = validators.validate_transform_output('fixture', [record])
+            with mock.patch.dict(os.environ, {'TZUDONG_RUST_SLICES': 'R1-validators'}):
+                actual = validators.validate_transform_output('fixture', [record])
+            self.assertEqual(normalized(actual), normalized(expected))
+            self.assertTrue(any(item.get('rule') == 'coordinate_range' for item in actual), actual)
+            payload = {'youtube_link': 'fixture', 'restaurants': [
+                {'origin_name': 'fixture', 'address': '서울', 'category': '한식',
+                 'lat': value, 'lng': value, 'youtuber_review': 'fixture', 'reasoning_basis': 'fixture'}]}
+            with selector.python_reference():
+                expected = validators.validate_gemini_output('fixture', payload)
+            with mock.patch.dict(os.environ, {'TZUDONG_RUST_SLICES': 'R1-validators'}):
+                actual = validators.validate_gemini_output('fixture', payload)
+            self.assertEqual(normalized(actual), normalized(expected))
+            coordinate_errors = [item for item in actual if item.get('rule') == 'coordinate_range']
+            self.assertEqual(len(coordinate_errors), 2)
+            self.assertTrue(all(not math.isfinite(item['actual_value']) for item in coordinate_errors))
+
     def test_native_date_matches_all_python_decimal_alphabets_and_end_anchor(self):
         import tzudong_normalize as native
         # Enumerate the running interpreter's Unicode database; do not freeze a

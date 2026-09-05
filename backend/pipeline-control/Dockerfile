@@ -8,6 +8,9 @@ WORKDIR /workspace
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 RUN useradd --system --uid 10001 --create-home --home-dir /home/tzudong --shell /usr/sbin/nologin tzudong
+# The copied Node executable needs the destination architecture's runtime
+# libraries, including libatomic on arm64. Validate loading at image build time.
+RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 libstdc++6 && rm -rf /var/lib/apt/lists/*
 COPY backend/pipeline-control/requirements.txt /workspace/backend/pipeline-control/requirements.txt
 RUN pip install --no-cache-dir -r /workspace/backend/pipeline-control/requirements.txt
 COPY --chown=tzudong:tzudong backend/pipeline_control /workspace/backend/pipeline_control
@@ -18,6 +21,10 @@ COPY --chown=tzudong:tzudong backend/rust/migration-ledger.v1.json /workspace/ba
 # Git tree identity comes from a hashed retained commit object; no .git, Git
 # credentials, or external source checkout is copied into the image.
 COPY --from=performance-node /usr/local/bin/node /usr/local/bin/node
+RUN node --version
+# Worker preflights inspect these exact committed scheduler/checker sources.
+COPY .github/workflows/daily-crawler.yml /workspace/.github/workflows/daily-crawler.yml
+COPY backend/bin/install_mac_hosted_pipeline_launchd.sh backend/bin/check_env_contract.py /workspace/backend/bin/
 COPY backend/rust/promotion-evidence /workspace/backend/rust/promotion-evidence
 COPY apps/web/performance /workspace/apps/web/performance
 COPY apps/web/scripts/validate-performance-backlog.mjs /workspace/apps/web/scripts/validate-performance-backlog.mjs

@@ -300,7 +300,7 @@ jobs:
           python -m pip install --disable-pip-version-check -r backend/pipeline-control/requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests -v
 
       - name: Verify Collector crash recovery with disposable fixtures
         run: |
