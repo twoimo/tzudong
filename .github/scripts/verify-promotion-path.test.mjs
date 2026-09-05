@@ -52,3 +52,17 @@ test('workflow emits the required check on every PR and on base edits, without s
   assert.match(workflow, /import \{ verifyPromotionPath \}/);
   assert.doesNotMatch(workflow, /GITHUB_EVENT_NAME:/);
 });
+
+test('bounded bootstrap runs reviewed develop policy while default main is still uninstalled', () => {
+  const workflow = readFileSync(new URL('../workflows/promotion-path.yml', import.meta.url), 'utf8');
+  const lists = [...workflow.matchAll(/contains\(fromJSON\('([^']+)'\), github\.event\.pull_request\.base\.sha\)/g)]
+    .map((match) => JSON.parse(match[1]));
+  assert.equal(lists.length, 2);
+  const [bootstrapBases, anchorBases] = lists;
+  const reviewedDevelop = 'f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f';
+  assert.deepEqual(bootstrapBases, [...anchorBases, reviewedDevelop]);
+  assert.equal(anchorBases.length, 3);
+  assert.equal(anchorBases.includes(reviewedDevelop), false);
+  assert.equal(bootstrapBases.includes('a'.repeat(40)), false);
+  assert.match(workflow, /\|\| github\.event\.pull_request\.base\.sha/);
+});
