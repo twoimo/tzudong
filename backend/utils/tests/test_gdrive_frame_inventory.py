@@ -1,6 +1,7 @@
 """Offline contracts: no credentials, network, remote writes or raw publication."""
 import base64
 import contextlib
+import gzip
 import io
 import json
 import os
@@ -15,16 +16,11 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def item(rel, size=10, mtime=1, md5="a" * 32):
-    value = {"relativePath": rel, "remotePath": inv.FRAMES + "/" + rel,
-             "size": size, "mtimeEpoch": mtime, "dedupeKey": f"{rel}:{size}:{mtime}"}
-    if md5 is not None:
-        value["md5"] = md5
-    return value
+    return {"relativePath": rel, "size": size, "mtimeEpoch": mtime, "md5": md5}
 
 
 def expected(items):
-    return {"schemaVersion": 2, "remoteRoot": inv.FRAMES, "expectedCount": len(items),
-            "dedupeKey": "relativePath:size:mtime", "items": items}
+    return {"schemaVersion": 1, "remoteRoot": inv.FRAMES, "expectedCount": len(items), "items": items}
 
 
 def remote(rel, size=10, md5="a" * 32):
@@ -135,23 +131,27 @@ class CredentialAndRunnerTest(unittest.TestCase):
             inv.child_environment("not-base64")
 
     def test_exact_read_commands_discard_stderr_without_files(self):
-        for operation in ["expected", "inventory"]:
+        for operation in ["inventory"]:
             child = MagicMock(); child.stdout = io.BytesIO(b"[]"); child.wait.return_value = 0; child.poll.return_value = 0
             with patch.object(inv.subprocess, "Popen", return_value=child) as launch:
                 self.assertEqual(inv.read_remote(operation, {"PATH": "/usr/bin:/bin"}), b"[]")
             args = launch.call_args.args[0]
-            self.assertEqual(args[:3], ["rclone", "cat", inv.EXPECTED_REMOTE] if operation == "expected" else ["rclone", "lsjson", inv.FRAMES])
+            self.assertEqual(args[:6], ["rclone", "lsjson", inv.FRAMES, "--recursive", "--files-only", "--hash"])
             self.assertEqual(launch.call_args.kwargs["stderr"], subprocess.DEVNULL)
             self.assertFalse(launch.call_args.kwargs["shell"])
             self.assertIn("--drive-skip-shortcuts", args)
             self.assertEqual(args[args.index("--config") + 1], "/dev/null")
         with self.assertRaisesRegex(inv.InventoryError, "OPERATION_INVALID"):
             inv.read_remote("copy", {})
+        with patch.object(inv.subprocess, "Popen") as launch:
+            with self.assertRaisesRegex(inv.InventoryError, "OPERATION_INVALID"):
+                inv.read_remote("expected", {})
+            launch.assert_not_called()
 
     def test_transport_failure_and_oversize_do_not_retain_diagnostics(self):
         with patch.object(inv.subprocess, "Popen", side_effect=OSError("token=sentinel-private")):
             with self.assertRaisesRegex(inv.InventoryError, "^REMOTE_READ_FAILED$"):
-                inv.read_remote("expected", {})
+                inv.read_remote("inventory", {})
         child = MagicMock(); child.stdout = io.BytesIO(b"12345"); child.poll.return_value = None
         with patch.object(inv, "MAX_BYTES", 4), patch.object(inv.subprocess, "Popen", return_value=child):
             with self.assertRaisesRegex(inv.InventoryError, "INPUT_TOO_LARGE"):
@@ -173,12 +173,14 @@ class CredentialAndRunnerTest(unittest.TestCase):
             timer.cancel.assert_called_once()
             timer.join.assert_called_once()
 
-    def test_main_failure_redaction_and_drift_stops_second_call(self):
-        with patch.object(inv, "source_binding", return_value="a" * 40), patch.object(inv, "child_environment", return_value={}), \
-                patch.object(inv, "read_remote", return_value=inv.canonical(expected([item("a")]))) as read, \
+    def test_main_failure_redaction_and_drift_stops_transport(self):
+        with patch.object(inv, "source_binding", return_value="a" * 40), patch.object(inv, "child_environment", return_value={}) as config, \
+                patch.object(inv, "load_expected", side_effect=inv.InventoryError("EXPECTED_IDENTITY_DRIFT")), \
+                patch.object(inv, "read_remote") as read, \
                 contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(inv.main(), 1)
-        self.assertEqual(read.call_count, 1)
+        read.assert_not_called()
+        config.assert_not_called()
         self.assertEqual(json.loads(output.getvalue())["code"], "EXPECTED_IDENTITY_DRIFT")
         with patch.object(inv, "source_binding", side_effect=RuntimeError("token=sentinel-private")), contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(inv.main(), 1)
@@ -198,7 +200,91 @@ class CredentialAndRunnerTest(unittest.TestCase):
                 inv.source_binding(env)
 
 
+class ImmutableExpectedTest(unittest.TestCase):
+    def test_retained_fixture_exact_identity_and_minimal_fields(self):
+        raw = inv.load_expected()
+        self.assertEqual(len(raw), 22915062)
+        self.assertEqual(inv.digest(raw), "a8df74b60b8e56f5438bcd9a038da4b410d5f586ec182a7bd9f29e4f74a94b1d")
+        payload = inv.parse(raw)
+        self.assertEqual(payload["expectedCount"], 192095)
+        self.assertEqual(len({r["relativePath"] for r in payload["items"]}), 149645)
+        self.assertEqual(sum(r["md5"] is None for r in payload["items"]), 191849)
+        self.assertEqual(raw, inv.canonical(inv.expected_identity(payload)))
+
+    def test_operational_metadata_rejected(self):
+        for level in ("root", "item"):
+            payload = expected([item("a")])
+            (payload if level == "root" else payload["items"][0])["runId"] = "private"
+            with self.assertRaises(inv.InventoryError):
+                inv.expected_identity(payload)
+
+    def test_missing_corrupt_and_oversized_compressed_source(self):
+        corrupt = bytearray(inv.EXPECTED_FILE.read_bytes()); corrupt[20] ^= 1
+        for content in (b"bad", bytes(corrupt), b"x" * (inv.EXPECTED_GZIP_BYTES + 1)):
+            mocked = MagicMock()
+            mocked.open.return_value.__enter__.return_value = io.BytesIO(content)
+            with patch.object(inv, "EXPECTED_FILE", mocked), self.assertRaisesRegex(inv.InventoryError, "EXPECTED_GZIP_INTEGRITY"):
+                inv.load_expected()
+        mocked = MagicMock(); mocked.open.side_effect = OSError("private-path-token")
+        with patch.object(inv, "EXPECTED_FILE", mocked), self.assertRaisesRegex(inv.InventoryError, "^EXPECTED_FILE_INVALID$"):
+            inv.load_expected()
+
+    def test_decompression_limit_crc_truncation_and_raw_integrity(self):
+        good = gzip.compress(b"12345", mtime=0)
+        corrupt = bytearray(good); corrupt[-8] ^= 1
+        cases = [(good, 4, "EXPECTED_TOO_LARGE"), (good, 5, "EXPECTED_RAW_INTEGRITY"),
+                 (good, 6, "EXPECTED_RAW_INTEGRITY"), (good[:-1], 5, "EXPECTED_FILE_INVALID"),
+                 (bytes(corrupt), 5, "EXPECTED_FILE_INVALID")]
+        for content, limit, code in cases:
+            mocked = MagicMock(); mocked.open.return_value.__enter__.return_value = io.BytesIO(content)
+            with self.subTest(code=code, limit=limit), patch.object(inv, "EXPECTED_FILE", mocked), \
+                    patch.object(inv, "EXPECTED_GZIP_BYTES", len(content)), \
+                    patch.object(inv, "EXPECTED_GZIP_SHA256", inv.digest(content)), \
+                    patch.object(inv, "EXPECTED_RAW_BYTES", limit), self.assertRaisesRegex(inv.InventoryError, "^" + code + "$"):
+                inv.load_expected()
+
+    def test_mutable_remote_expected_is_never_used(self):
+        def inventory_only(operation, env):
+            self.assertEqual(operation, "inventory")
+            return b"[]"
+        with patch.object(inv, "source_binding", return_value="a" * 40), \
+                patch.object(inv, "child_environment", return_value={}), \
+                patch.object(inv, "read_remote", side_effect=inventory_only) as read, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inv.main(), 2)
+        read.assert_called_once_with("inventory", {})
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["inputSha256"], inv.EXPECTED_IDENTITY_SHA256)
+        self.assertEqual(report["counts"]["expectedCount"], 192095)
+        self.assertEqual(report["counts"]["duplicateExpectedRowCount"], 84900)
+        self.assertEqual(report["counts"]["conflictingExpectedSizePathCount"], 917)
+        self.assertEqual(sum(report["counts"][key + "Count"] for key in report["manifestHashes"]), 192095)
+        self.assertLess(len(output.getvalue()), 2000)
+        self.assertNotIn("relativePath", output.getvalue())
+
+
 class WorkflowGuardTest(unittest.TestCase):
+    def test_invalid_dispatch_fails_and_retains_bounded_summary_before_credentials(self):
+        import tempfile
+        import textwrap
+        text = (ROOT / ".github/workflows/gdrive-frame-inventory.yml").read_text()
+        job = text.split("  inventory:\n", 1)[1].split("    steps:\n", 1)[0]
+        self.assertNotIn("if:", job)
+        step = text.split("      - name: Validate dispatch binding without credentials\n", 1)[1].split("      - name:", 1)[0]
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        self.assertLess(text.index("Validate dispatch binding"), text.index("Checkout exact protected main source"))
+        for valid in ("true", "false", "", "unknown"):
+            with self.subTest(valid=valid), tempfile.TemporaryDirectory() as directory:
+                result = subprocess.run(["/bin/bash", "-c", script], capture_output=True, text=True,
+                                        env={"PATH": os.environ["PATH"], "RUNNER_TEMP": directory, "BINDING_VALID": valid})
+                path = Path(directory) / "gdrive-frame-inventory/summary.json"
+                self.assertEqual(result.returncode, 0 if valid == "true" else 1)
+                if valid == "true":
+                    self.assertFalse(path.exists())
+                else:
+                    self.assertEqual(json.loads(path.read_text()), {"schemaVersion": 1, "status": "failed", "code": "SOURCE_BINDING_FAILED"})
+                self.assertEqual(result.stdout, "")
+
     def test_manual_exact_main_least_privilege_and_bounded_upload(self):
         text = (ROOT / ".github/workflows/gdrive-frame-inventory.yml").read_text()
         for required in ["workflow_dispatch:", "github.event_name == 'workflow_dispatch'", "github.ref == 'refs/heads/main'",

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import base64
 import configparser
+import gzip
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -12,10 +14,14 @@ import re
 import subprocess
 import sys
 import threading
+import zlib
 from collections import Counter
 
 FRAMES = "gdrive:04_빠른공유/tzudong_tzuyang_data/frames"
-EXPECTED_REMOTE = "gdrive:04_빠른공유/tzudong_tzuyang_data/status/main/current-upload-expected.json"
+EXPECTED_FILE = Path(__file__).resolve().parents[1] / "data/gdrive-frame-inventory/expected-b5.v1.json.gz"
+EXPECTED_GZIP_BYTES = 1026505
+EXPECTED_RAW_BYTES = 22915062
+EXPECTED_GZIP_SHA256 = "4d5f757ca08eb8754f175ccabed1bb83bb15cc94f93311090672e98069901b6b"
 EXPECTED_COUNT = 192095
 HISTORICAL_SOURCE_SHA256 = "c7076254b4cef5757fd305ed50be57db8209c24715578f4394a9f11c96a1a65e"
 EXPECTED_IDENTITY_SHA256 = "a8df74b60b8e56f5438bcd9a038da4b410d5f586ec182a7bd9f29e4f74a94b1d"
@@ -86,9 +92,9 @@ def md5(value):
 
 def expected_identity(payload):
     if (not isinstance(payload, dict) or type(payload.get("schemaVersion")) is not int
-            or payload.get("schemaVersion") != 2
+            or set(payload) != {"schemaVersion", "remoteRoot", "expectedCount", "items"}
+            or payload.get("schemaVersion") != 1
             or payload.get("remoteRoot") != FRAMES
-            or payload.get("dedupeKey") != "relativePath:size:mtime"
             or not isinstance(payload.get("items"), list)
             or type(payload.get("expectedCount")) is not int
             or not 0 < payload["expectedCount"] <= EXPECTED_COUNT
@@ -96,20 +102,38 @@ def expected_identity(payload):
         fail("EXPECTED_CONTRACT_INVALID")
     rows, identities = [], set()
     for item in payload["items"]:
-        if not isinstance(item, dict):
+        if not isinstance(item, dict) or set(item) != {"relativePath", "size", "mtimeEpoch", "md5"}:
             fail("EXPECTED_ITEM_INVALID")
         rel, byte_count = relative_path(item.get("relativePath")), size(item.get("size"))
         mtime = size(item.get("mtimeEpoch"))
         identity = (rel, byte_count, mtime)
-        if (item.get("remotePath") != FRAMES + "/" + rel
-                or item.get("dedupeKey") != f"{rel}:{byte_count}:{mtime}"):
-            fail("EXPECTED_ITEM_BINDING")
         if identity in identities:
             fail("EXPECTED_DUPLICATE_IDENTITY")
         identities.add(identity)
         rows.append({"relativePath": rel, "size": byte_count, "mtimeEpoch": mtime, "md5": md5(item.get("md5"))})
     rows.sort(key=lambda row: (row["relativePath"], row["size"], row["mtimeEpoch"]))
     return {"schemaVersion": 1, "remoteRoot": FRAMES, "expectedCount": len(rows), "items": rows}
+
+
+def load_expected():
+    """Load the reviewed Git fixture, with bounds before decompression or parsing."""
+    try:
+        with EXPECTED_FILE.open("rb") as source:
+            compressed = source.read(EXPECTED_GZIP_BYTES + 1)
+        if len(compressed) != EXPECTED_GZIP_BYTES or digest(compressed) != EXPECTED_GZIP_SHA256:
+            fail("EXPECTED_GZIP_INTEGRITY")
+        with gzip.GzipFile(fileobj=io.BytesIO(compressed), mode="rb") as source:
+            raw = source.read(EXPECTED_RAW_BYTES + 1)
+        if len(raw) > EXPECTED_RAW_BYTES:
+            fail("EXPECTED_TOO_LARGE")
+        if len(raw) != EXPECTED_RAW_BYTES or digest(raw) != EXPECTED_IDENTITY_SHA256:
+            fail("EXPECTED_RAW_INTEGRITY")
+        identity = expected_identity(parse(raw))
+        if identity["expectedCount"] != EXPECTED_COUNT or digest(canonical(identity)) != EXPECTED_IDENTITY_SHA256:
+            fail("EXPECTED_IDENTITY_DRIFT")
+        return raw
+    except (OSError, EOFError, zlib.error):
+        fail("EXPECTED_FILE_INVALID")
 
 
 def remote_records(payload):
@@ -202,8 +226,7 @@ def child_environment(encoded):
 
 
 def read_remote(operation, env):
-    commands = {"expected": ["cat", EXPECTED_REMOTE],
-                "inventory": ["lsjson", FRAMES, "--recursive", "--files-only", "--hash"]}
+    commands = {"inventory": ["lsjson", FRAMES, "--recursive", "--files-only", "--hash"]}
     if operation not in commands:
         fail("OPERATION_INVALID")
     args = ["rclone", *commands[operation], "--config", "/dev/null", "--stats", "0",
@@ -265,16 +288,13 @@ def main():
     try:
         sha = source_binding(os.environ)
         report["sourceSha"] = sha
-        env = child_environment(os.environ.pop("GDRIVE_RCLONE_CONFIG", ""))
-        expected = read_remote("expected", env)
+        expected = load_expected()
         report["inputSha256"] = digest(expected)
-        # Do not make the large listing call after a drifted or malformed expected file.
-        identity = expected_identity(parse(expected))
-        if identity["expectedCount"] != EXPECTED_COUNT or digest(canonical(identity)) != EXPECTED_IDENTITY_SHA256:
-            fail("EXPECTED_IDENTITY_DRIFT")
+        env = child_environment(os.environ.pop("GDRIVE_RCLONE_CONFIG", ""))
         inventory = read_remote("inventory", env)
         report["inventoryInputSha256"] = digest(inventory)
         report = validate_inventory(expected, inventory, sha)
+        report["expectedGzipSha256"] = EXPECTED_GZIP_SHA256
     except InventoryError as error:
         report["code"] = str(error)
     except Exception:
