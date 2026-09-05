@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import fnmatch
 import hashlib
 import re
 import unittest
+import yaml
 from pathlib import Path
 
 
@@ -221,6 +223,8 @@ class AdvisorFollowUpSourceTests(unittest.TestCase):
 
     def test_security_workflow_runs_this_contract(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
+        workflow = yaml.safe_load(source)
+        triggers = workflow.get('on', workflow.get(True))['pull_request']['paths']
         self.assertEqual(
             source.count("backend.supabase.tests.test_advisor_followup_source"),
             1,
@@ -230,7 +234,7 @@ class AdvisorFollowUpSourceTests(unittest.TestCase):
             "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
             "backend/supabase/tests/test_advisor_followup_source.py",
         ):
-            self.assertIn(trigger, source)
+            self.assertTrue(any(fnmatch.fnmatchcase(trigger, pattern) for pattern in triggers), trigger)
 
 
 if __name__ == "__main__":

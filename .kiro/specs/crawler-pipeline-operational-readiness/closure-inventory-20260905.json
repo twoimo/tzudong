@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T05:10:14.789846+00:00",
+  "generatedAt": "2026-09-05T05:18:06.022175+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "319f5782d701d41c2821c7929ddb4d8ae2a3f5a3",
+  "sourceBaseHead": "1c2bc13d034ab1c8dfad1d1d0215358730af29d5",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -317,7 +317,8 @@
     "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e",
     "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9",
     "rust-applied-readback-review.json": "a287bf1100b59b0a5d293e7cc037c6aec9a13274f556a03dfa46ff2bde7cb054",
-    "approval-pending-audit-review.json": "74ca1c26b52306dd82996a86053c69bd788017112b47a9b30a9646c44cec2bae"
+    "approval-pending-audit-review.json": "74ca1c26b52306dd82996a86053c69bd788017112b47a9b30a9646c44cec2bae",
+    "advisor-workflow-trigger-correction.json": "38508b054ed6aff4f6365ad90446b32565b6804999d90f67d17d480d3c2de789"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
@@ -422,7 +423,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "35bbb7d1e1a75e6d1ea731ef254b706a9f7e5ac7aaf861c282f2f3f58f887273"
+      "sha256": "8c273c5695712e7f1866083a8aa1972328f5e2cbd0e1ff81fdd3c301ce43e83f"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
@@ -1958,7 +1959,7 @@
     },
     {
       "path": "backend/supabase/tests/test_advisor_followup_source.py",
-      "sha256": "9b60396c31c35741a10f6fb57651f1bf00e631e7dd3626cbabd0e70b76f4b003"
+      "sha256": "013d31bc7eceb945919952b407d81f98de32cf57ac50d17216df3068ad80398e"
     },
     {
       "path": "backend/supabase/tests/test_advisor_replay.py",
@@ -2398,6 +2399,13 @@
       "anonAuthenticatedPrivilegesDenied": true,
       "readbackFailureDoesNotClaimPersistence": true,
       "groupsOverlap": true
+    },
+    "advisorWorkflowTriggerCorrection": {
+      "completeSupabaseWorkflowStepTests": 315,
+      "completeSupabaseWorkflowStepSeconds": 1.372,
+      "workflowPathAndRelatedTests": 23,
+      "workflowPathAndRelatedSeconds": 0.356,
+      "reconciliationCurrent": true
     }
   },
   "pendingReviewCorrectionPr": 2863
