@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest.mock import patch
 import uuid
 sys.path.insert(0,str(Path(__file__).parents[1]/'scripts'))
 import advisor_successor_plan as a
@@ -162,6 +163,86 @@ CREATE TRIGGER g014_catalog_manifest_immutable BEFORE UPDATE OR DELETE ON privac
             self.assertEqual(self.sql('SELECT count(*) FROM supabase_migrations.schema_migrations').stdout.strip(),'50')
         finally:
             self.sql('GRANT privacy_workflow_owner TO postgres WITH INHERIT TRUE;',admin=True)
+
+    def replace_touch_body(self,body):
+        self.sql('CREATE OR REPLACE FUNCTION '+a.TOUCH_SIGNATURE+
+                 ' RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER AS '+a.literal(body)+';')
+
+    def test_touch_body_recovery_and_rollback_with_synthetic_reviewed_preimage(self):
+        # The hosted raw body was deliberately not exported. A test-only digest
+        # surrogate exercises the real transition; production accepts ONLY the
+        # two committed digests, tested separately without any patch.
+        body=a.TOUCH_BODY.replace('pg_catalog.now()','now()')
+        self.assertNotEqual(a.sha(body.encode()),a.OBSERVED_TOUCH_BODY_SHA)
+        self.replace_touch_body(body)
+        with patch.object(a,'OBSERVED_TOUCH_BODY_SHA',a.sha(body.encode())):
+            self.before=self.snapshot();self.preview['snapshot']=self.before
+            self.assertFalse(self.before['touch_ok'])
+            receipt=self.rehearse()
+            self.assertEqual(self.snapshot()['touch_body_sha256'],a.sha(body.encode()))
+            self.sql(a.plan(self.preview,'apply',receipt))
+            after=self.snapshot()
+            self.assertTrue(after['touch_ok'])
+            self.assertEqual(after['touch_body_sha256'],a.sha(a.TOUCH_BODY.encode()))
+            self.assertEqual(after['functions_stable'],self.before['functions_stable'])
+            self.sql(a.plan(self.preview,'readback'))
+            self.replace_touch_body(body)
+            self.sql(a.plan(self.preview,'readback'),ok=False)
+
+    def test_equivalent_but_unreviewed_touch_body_denied(self):
+        self.replace_touch_body(a.TOUCH_BODY.replace('pg_catalog.now()','now()'))
+        changed=self.snapshot()
+        self.assertFalse(changed['touch_body_admissible'])
+        self.assertTrue(changed['touch_structure_ok'])
+        with self.assertRaises(a.Denied): a.validate_snapshot(changed)
+        self.sql(a.plan(self.preview,'rehearse'),ok=False)
+        self.assertEqual(self.snapshot(),changed)
+
+    def test_even_admissible_touch_preimage_change_after_preview_denied(self):
+        body=a.TOUCH_BODY.replace('pg_catalog.now()','now()')
+        self.replace_touch_body(body)
+        with patch.object(a,'OBSERVED_TOUCH_BODY_SHA',a.sha(body.encode())):
+            self.before=self.snapshot();self.preview['snapshot']=self.before
+            a.validate_snapshot(self.before)
+            self.replace_touch_body(a.TOUCH_BODY)
+            changed=self.snapshot();a.validate_snapshot(changed)
+            self.assertEqual(changed['functions_stable'],self.before['functions_stable'])
+            self.sql(a.plan(self.preview,'rehearse'),ok=False)
+            self.assertEqual(self.snapshot(),changed)
+
+    def test_touch_acl_is_not_normalized(self):
+        self.sql('GRANT EXECUTE ON FUNCTION '+a.TOUCH_SIGNATURE+' TO authenticated;')
+        changed=self.snapshot()
+        self.assertFalse(changed['touch_structure_ok'])
+        self.assertNotEqual(changed['functions_stable'],self.before['functions_stable'])
+        with self.assertRaises(a.Denied): a.validate_snapshot(changed)
+        self.sql(a.plan(self.preview,'rehearse'),ok=False)
+        self.assertEqual(self.snapshot(),changed)
+
+    def test_touch_owner_is_not_normalized(self):
+        self.sql('ALTER FUNCTION '+a.TOUCH_SIGNATURE+' OWNER TO privacy_workflow_owner;')
+        changed=self.snapshot()
+        self.assertFalse(changed['touch_structure_ok'])
+        self.assertNotEqual(changed['functions_stable'],self.before['functions_stable'])
+        with self.assertRaises(a.Denied): a.validate_snapshot(changed)
+        self.sql(a.plan(self.preview,'rehearse'),ok=False)
+        self.assertEqual(self.snapshot(),changed)
+
+    def test_unapproved_touch_attribute_reset_is_detected_and_rolled_back(self):
+        self.sql('ALTER FUNCTION '+a.TOUCH_SIGNATURE+' COST 101;')
+        self.before=self.snapshot();self.preview['snapshot']=self.before
+        # CREATE OR REPLACE resets unspecified COST. It must not be hidden by
+        # the prosrc-only normalization even with a freshly bound preview.
+        a.validate_snapshot(self.before)
+        self.sql(a.plan(self.preview,'rehearse'),ok=False)
+        self.assertEqual(self.snapshot(),self.before)
+
+    def test_other_function_body_is_not_normalized(self):
+        self.sql('CREATE OR REPLACE FUNCTION public.extract_youtube_video_id(text) RETURNS integer LANGUAGE sql AS $$SELECT 2$$;')
+        changed=self.snapshot()
+        self.assertNotEqual(changed['functions_stable'],self.before['functions_stable'])
+        self.sql(a.plan(self.preview,'rehearse'),ok=False)
+        self.assertEqual(self.snapshot(),changed)
 
     def test_concurrent_apply_only_one_commits(self):
         receipt=self.rehearse(); sql=a.plan(self.preview,'apply',receipt)

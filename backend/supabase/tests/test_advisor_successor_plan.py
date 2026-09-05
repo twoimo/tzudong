@@ -18,7 +18,8 @@ def fixture_snapshot():
     s={k:'a'*64 for k in a.SNAP_KEYS}
     s.update(ledger=rows,database='postgres',server_major=17,executor_ok=True,vector_schema='public',
              function_count=26,function_configs_ok=True,function_paths_fixed=0,constraint_count=4,
-             constraint_name_count=4,constraints_valid=0,manifest_target_count=4,trigger_ok=True,touch_ok=True)
+             constraint_name_count=4,constraints_valid=0,manifest_target_count=4,trigger_ok=True,touch_ok=True,touch_structure_ok=True,touch_body_admissible=True,
+             touch_body_sha256=a.sha(a.TOUCH_BODY.encode()))
     return s
 
 class SourceTests(unittest.TestCase):
@@ -49,6 +50,22 @@ class SourceTests(unittest.TestCase):
         self.assertIn('LOCK TABLE supabase_migrations.schema_migrations IN ACCESS EXCLUSIVE MODE',sql)
         self.assertNotIn('ON CONFLICT',sql)
         for statement in a.vectors(): self.assertIn('EXECUTE '+a.literal(statement)+';',sql)
+
+    def test_reviewed_touch_body_only_and_v1_cannot_be_reused(self):
+        s=fixture_snapshot()
+        s.update(touch_ok=False,touch_body_sha256=a.OBSERVED_TOUCH_BODY_SHA)
+        a.validate_snapshot(s)
+        for key,val in [('touch_body_sha256','b'*64),('touch_structure_ok',False),
+                        ('touch_body_admissible',False),('touch_ok',True)]:
+            changed=dict(s);changed[key]=val
+            with self.assertRaises(a.Denied): a.validate_snapshot(changed)
+        evidence={'schema':'hosted-current50-ledger-metadata-v1','projectId':a.PROJECT,'ledger':s['ledger']}
+        v=a.preview(evidence,s)
+        v['schema']='advisor-current-state-successor-v1'
+        with self.assertRaises(a.Denied): a.plan(v,'rehearse')
+        self.assertEqual(a.sha(a.OBSERVED_TOUCH_NORMALIZED.encode()),a.OBSERVED_TOUCH_NORMALIZED_SHA)
+        self.assertIn('to_jsonb(f)-ARRAY[\'proconfig\',\'prosrc\',\'signature\']',a.snapshot_sql())
+        self.assertIn("ELSE to_jsonb(f)-ARRAY['proconfig','signature']",a.snapshot_sql())
 
     def test_reject_duplicate_json_and_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:

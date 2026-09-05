@@ -25,7 +25,13 @@ CONSTRAINTS = (
  ('account_deletion_requests', 'account_deletion_requests_count_summary_safe'),
  ('account_deletion_request_items', 'account_deletion_request_items_reason_code_allowed'),
 )
-SCHEMA = 'advisor-current-state-successor-v1'
+SCHEMA = 'advisor-current-state-successor-v2'
+TOUCH_SIGNATURE = 'public.touch_admin_workflow_updated_at()'
+TOUCH_BODY = '\nBEGIN\n  NEW.updated_at = pg_catalog.now();\n  RETURN NEW;\nEND;\n'
+# External minimized body + semantic predicate readbacks, not inferred history.
+OBSERVED_TOUCH_BODY_SHA = '7b8fa73618493b886781741cfe7eeb7e6d8140c72647054cd31b5d3dae390c9d'
+OBSERVED_TOUCH_NORMALIZED_SHA = '951d65d5a5b24cd8b4b413ce00f0a74955d1d05219a107e1cccf86a46fc9c4fe'
+OBSERVED_TOUCH_NORMALIZED = 'beginnew.updated_at=now();returnnew;end;'
 
 class Denied(ValueError):
     pass
@@ -50,6 +56,8 @@ def vectors():
         raise Denied('parser_denied')
     value = json.loads(result.stdout)
     statements = value['statements']
+    if statements[0].split('$function$')[1] != TOUCH_BODY:
+        raise Denied('touch_source_body_drift')
     if len(statements) != 17 or sha(canonical(statements).encode()) != VECTOR_SHA:
         raise Denied('vector_drift')
     return statements
@@ -69,6 +77,17 @@ LEDGER_SQL = """SELECT coalesce(jsonb_agg(jsonb_build_object(
 
 def fingerprint(expression):
     return f"encode(sha256(convert_to(({expression})::text,'UTF8')),'hex')"
+
+def touch_structure_sql():
+    # Only prosrc/proconfig may change on the observed touch function. Owner,
+    # invoker, trigger identity and owner-only ACL remain mandatory pre AND post.
+    return """proowner='postgres'::regrole AND NOT prosecdef
+ AND prorettype='trigger'::regtype AND NOT proretset AND prokind='f'
+ AND prolang=(SELECT oid FROM pg_language WHERE lanname='plpgsql')
+ AND NOT has_function_privilege('anon',oid,'EXECUTE')
+ AND NOT has_function_privilege('authenticated',oid,'EXECUTE')
+ AND NOT has_function_privilege('service_role',oid,'EXECUTE')
+ AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(proacl,acldefault('f',proowner))) a WHERE a.grantee<>proowner)"""
 
 def snapshot_sql():
     """No user rows, SQL bodies or raw ACL/membership metadata leave this projection."""
@@ -102,7 +121,7 @@ def snapshot_sql():
  'function_configs_ok',(SELECT bool_and(NOT prosecdef AND
     (proconfig IS NULL OR proconfig=ARRAY['search_path=pg_catalog, public, extensions'])) FROM funcs),
  'function_paths_fixed',(SELECT count(*) FROM funcs WHERE proconfig=ARRAY['search_path=pg_catalog, public, extensions']),
- 'functions_stable',{fingerprint("(SELECT jsonb_agg(jsonb_build_array(signature,to_jsonb(f)-'proconfig'-'signature') ORDER BY signature) FROM funcs f)")},
+ 'functions_stable',{fingerprint("(SELECT jsonb_agg(jsonb_build_array(signature,CASE WHEN signature='public.touch_admin_workflow_updated_at()' THEN to_jsonb(f)-ARRAY['proconfig','prosrc','signature'] ELSE to_jsonb(f)-ARRAY['proconfig','signature'] END) ORDER BY signature) FROM funcs f)")},
  'constraint_count',(SELECT count(oid) FROM cons WHERE contype='c'),
  'constraint_name_count',(SELECT count(*) FROM pg_constraint WHERE conname IN (SELECT name FROM targets)),
  'constraints_valid',(SELECT count(*) FROM cons WHERE convalidated),
@@ -118,18 +137,21 @@ def snapshot_sql():
  'triggers',{fingerprint("(SELECT jsonb_agg(to_jsonb(t) ORDER BY oid) FROM pg_trigger t WHERE tgrelid IN ('public.admin_audit_events'::regclass,'public.account_deletion_requests'::regclass,'public.account_deletion_request_items'::regclass,'privacy_retention.g014_catalog_contract_manifest'::regclass))")},
  'helpers',{fingerprint("(SELECT jsonb_agg(to_jsonb(p) ORDER BY oid) FROM pg_proc p WHERE oid IN ('privacy_retention.assert_g014_catalog_manifest()'::regprocedure,'privacy_retention.g014_catalog_manifest_rows()'::regprocedure,'privacy_retention.g014_account_deletion_append_only()'::regprocedure))")},
  'policies',{fingerprint("(SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY oid),'[]'::jsonb) FROM pg_policy p WHERE polrelid IN ('public.admin_audit_events'::regclass,'public.account_deletion_requests'::regclass,'public.account_deletion_request_items'::regclass,'privacy_retention.g014_catalog_contract_manifest'::regclass))")},
- 'touch_ok',(SELECT proowner='postgres'::regrole AND NOT prosecdef AND prorettype='trigger'::regtype
- AND prosrc={literal(chr(10)+'BEGIN'+chr(10)+'  NEW.updated_at = pg_catalog.now();'+chr(10)+'  RETURN NEW;'+chr(10)+'END;'+chr(10))}
- AND NOT has_function_privilege('anon',oid,'EXECUTE') AND NOT has_function_privilege('authenticated',oid,'EXECUTE')
- AND NOT has_function_privilege('service_role',oid,'EXECUTE')
- AND NOT EXISTS (SELECT 1 FROM aclexplode(coalesce(proacl,acldefault('f',proowner))) a WHERE a.grantee<>proowner)
- FROM pg_proc WHERE oid='public.touch_admin_workflow_updated_at()'::regprocedure)
+ 'touch_structure_ok',(SELECT {touch_structure_sql()} FROM pg_proc WHERE oid=to_regprocedure('{TOUCH_SIGNATURE}')),
+ 'touch_body_sha256',(SELECT {fingerprint('prosrc')} FROM pg_proc WHERE oid=to_regprocedure('{TOUCH_SIGNATURE}')),
+ 'touch_body_admissible',(SELECT
+   (prosrc={literal(TOUCH_BODY)} OR
+     ({fingerprint('prosrc')}={literal(OBSERVED_TOUCH_BODY_SHA)} AND
+      lower(regexp_replace(prosrc,'[[:space:]]','','g'))={literal(OBSERVED_TOUCH_NORMALIZED)}))
+   FROM pg_proc WHERE oid=to_regprocedure('{TOUCH_SIGNATURE}')),
+ 'touch_ok',(SELECT {touch_structure_sql()} AND prosrc={literal(TOUCH_BODY)}
+   FROM pg_proc WHERE oid=to_regprocedure('{TOUCH_SIGNATURE}'))
  )"""
 
 SNAP_KEYS = frozenset(('ledger','database','server_major','executor_ok','vector_schema','function_count',
  'function_configs_ok','function_paths_fixed','functions_stable','constraint_count','constraint_name_count',
  'constraints_valid','constraints_stable','manifest_target_count','manifest_normalized','membership',
- 'relations','schemas','trigger_ok','triggers','touch_ok','helpers','policies'))
+ 'relations','schemas','trigger_ok','triggers','touch_ok','helpers','policies','touch_structure_ok','touch_body_admissible','touch_body_sha256'))
 
 def validate_ledger(rows):
     if not isinstance(rows,list) or len(rows)!=50:
@@ -155,12 +177,16 @@ def validate_snapshot(value):
     validate_ledger(value['ledger'])
     expected={'database':'postgres','server_major':17,'executor_ok':True,'vector_schema':'public',
               'function_count':26,'function_configs_ok':True,'constraint_count':4,'constraint_name_count':4,
-              'constraints_valid':0,'manifest_target_count':4,'trigger_ok':True,'touch_ok':True}
+              'constraints_valid':0,'manifest_target_count':4,'trigger_ok':True,'touch_structure_ok':True,'touch_body_admissible':True}
     if any(type(value[k]) is not type(v) or value[k]!=v for k,v in expected.items()):
         raise Denied('snapshot_precondition')
+    if value['touch_body_sha256'] not in (sha(TOUCH_BODY.encode()), OBSERVED_TOUCH_BODY_SHA):
+        raise Denied('touch_body_unreviewed')
+    if type(value['touch_ok']) is not bool or value['touch_ok'] != (value['touch_body_sha256']==sha(TOUCH_BODY.encode())):
+        raise Denied('touch_body_predicate_mismatch')
     if type(value['function_paths_fixed']) is not int or not 0<=value['function_paths_fixed']<=26:
         raise Denied('snapshot_paths')
-    for k in ('functions_stable','constraints_stable','manifest_normalized','membership','relations','schemas','triggers','helpers','policies'):
+    for k in ('functions_stable','constraints_stable','manifest_normalized','membership','relations','schemas','triggers','helpers','policies','touch_body_sha256'):
         if not isinstance(value[k],str) or not re.fullmatch('[0-9a-f]{64}',value[k]):
             raise Denied('snapshot_hash')
 
@@ -199,6 +225,8 @@ def plan(value, mode, rehearsal=None):
     expected=f"""expected := {before};
  expected := jsonb_set(expected,'{{constraints_valid}}','4');
  expected := jsonb_set(expected,'{{function_paths_fixed}}','26');
+ expected := jsonb_set(expected,'{{touch_ok}}','true');
+ expected := jsonb_set(expected,'{{touch_body_sha256}}',to_jsonb({literal(sha(TOUCH_BODY.encode()))}::text));
  expected := jsonb_set(expected,'{{ledger}}',expected->'ledger'||jsonb_build_array(jsonb_build_object(
  'version','{VERSION}','name','{NAME}','statement_count',17,
  'statements_pg_json_sha256',encode(sha256(convert_to(to_jsonb({vector})::text,'UTF8')),'hex'))));"""
