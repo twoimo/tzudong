@@ -1,6 +1,8 @@
 # Harbor-ready multi-stage image. Tags: image.registry/tzudong/pipeline-{api,worker,indexer}:<gitsha>
 # Bakes kafka-python==3.0.11 plus the pinned OpenTelemetry SDK and OTLP HTTP exporter from requirements.txt.
 # Native arm64 and amd64 via buildx. Harbor push is out of this slice.
+# Official Node 24.20.0 bookworm-slim multi-architecture index.
+FROM node@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS performance-node
 FROM python:3.12-slim AS base
 WORKDIR /workspace
 ENV PYTHONUNBUFFERED=1 \
@@ -12,6 +14,14 @@ COPY --chown=tzudong:tzudong backend/pipeline_control /workspace/backend/pipelin
 COPY --chown=tzudong:tzudong backend/utils /workspace/backend/utils
 COPY --chown=tzudong:tzudong backend/config /workspace/backend/config
 COPY --chown=tzudong:tzudong backend/rust/migration-ledger.v1.json /workspace/backend/rust/migration-ledger.v1.json
+# Immutable evidence and its fixed verifier travel with every runtime target.
+# Git tree identity comes from a hashed retained commit object; no .git, Git
+# credentials, or external source checkout is copied into the image.
+COPY --from=performance-node /usr/local/bin/node /usr/local/bin/node
+COPY backend/rust/promotion-evidence /workspace/backend/rust/promotion-evidence
+COPY apps/web/performance /workspace/apps/web/performance
+COPY apps/web/scripts/validate-performance-backlog.mjs /workspace/apps/web/scripts/validate-performance-backlog.mjs
+RUN chmod -R a+rX,a-w /workspace/backend/rust/promotion-evidence /workspace/apps/web/performance /workspace/apps/web/scripts
 COPY --chown=tzudong:tzudong backend/pipeline-control/fixtures /workspace/backend/pipeline-control/fixtures
 USER tzudong
 STOPSIGNAL SIGTERM

@@ -4,6 +4,9 @@ The canonical validator's complete scoring/zero-admission corpus lives in the
 web governance suite. Here we verify file/hash/commit binding, mandatory command
 execution and failure propagation, including rejection by the real validator.
 """
+import base64
+from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
@@ -11,9 +14,12 @@ import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from backend.pipeline_control.rust_performance_admission import verified_performance, VALIDATOR
 from backend.pipeline_control.performance_evidence import BACKEND_METRIC_BUDGETS
+from backend.pipeline_control import rust_performance_admission as admission
+from backend.pipeline_control.tests.performance_fixture import canonical_fixture
 
 
 class PerformanceAdmissionTests(unittest.TestCase):
@@ -30,12 +36,33 @@ class PerformanceAdmissionTests(unittest.TestCase):
         self.map = {'schemaVersion': 'performance-trusted-artifacts.v1',
             'candidate': {'sha': self.sha, 'tree': self.tree}, 'releaseId': 'fixture',
             'configSha256': 'b' * 64, 'dataProfileSha256': 'c' * 64,
-            'frozenAsOf': '2026-09-05T00:00:00.000000Z'}
+            'frozenAsOf': '2026-09-05T00:00:00.000000Z', 'artifacts': {}}
+        self.raw = {'schemaVersion': 'performance-backlog-raw.v2', 'items': []}
+        self.captures = {}
+        self.measurements = {}
+        capture_refs = {}
+        for key in BACKEND_METRIC_BUDGETS:
+            observations = [{'id': str(i), 'cohort': 'candidate', 'value': 10,
+                'capturedAt': self.map['frozenAsOf'], 'ownershipBasisPoints': 10000} for i in range(7)]
+            binding = {k: self.map[k] for k in ('candidate', 'releaseId', 'configSha256', 'dataProfileSha256')}
+            self.captures[key] = {'kind': 'rust_measurement_execution_v1', **binding, 'key': key,
+                'sliceId': 'R1', 'implementation': 'rust', 'rustArtifactId': self.artifact,
+                'compiledArtifactSha256': 'a' * 64, 'observations': observations}
+            capture_refs[key] = self.write(key + '-capture.json', self.captures[key])
+            self.measurements[key] = {**binding, 'observations': observations, 'attestations': [
+                {'cohort': 'candidate', 'evidenceForm': 'rss_ndjson' if key == 'backend.peak_rss_mib' else 'benchmark_summary', 'sourceSha256': capture_refs[key]['sha256']}]}
+            measurement = self.write(key + '-measurement.json', self.measurements[key])
+            self.map['artifacts'][measurement['path']] = measurement['sha256']
+            self.raw['items'].append({'key': key, 'measurement': measurement})
+        commit = subprocess.check_output(['git', 'cat-file', 'commit', self.sha], cwd=self.root)
         self.receipt = {'kind': 'rust_performance_admission_v1', 'sliceId': 'R1',
             'rustArtifactId': self.artifact, 'frozenTree': {'startCommit': self.sha,
             'endCommit': self.sha, 'startClean': True, 'endClean': True},
+            'candidateCommitObject': self.write('commit.json', {'kind': 'git_commit_object_v1',
+                'contentBase64': base64.b64encode(commit).decode()}),
+            'runtimeCaptures': capture_refs,
             'artifactMap': self.write('map.json', self.map),
-            'raw': self.write('raw.json', {'schemaVersion': 'performance-backlog-raw.v2'}),
+            'raw': self.write('raw.json', self.raw),
             'scored': self.write('scored.json', self.scored())}
 
     def scored(self):
@@ -71,6 +98,14 @@ class PerformanceAdmissionTests(unittest.TestCase):
         self.assertEqual(args['--candidate-tree'], self.tree)
         self.assertEqual(kwargs['timeout'], 60)
 
+    def test_complete_canonical_zero_admission_passes_real_validator_without_git(self):
+        with tempfile.TemporaryDirectory(prefix='canonical-rust-') as tmp:
+            fixture = canonical_fixture(tmp)
+            self.assertEqual(fixture['admittedCount'], 0)
+            self.assertFalse((Path(tmp) / '.git').exists())
+            self.assertTrue(verified_performance(fixture['reference'], 'R1', fixture['artifact'],
+                                                fixture['sha'], repo_root=tmp))
+
     def test_validator_rejection_or_timeout_fails_closed(self):
         self.assertFalse(self.check(lambda *_a, **_k: SimpleNamespace(returncode=1)))
         def timed_out(*args, **kwargs):
@@ -94,7 +129,7 @@ class PerformanceAdmissionTests(unittest.TestCase):
         runner = lambda *_a, **_k: calls.append(True) or SimpleNamespace(returncode=0)
         (self.root / self.receipt['raw']['path']).write_text('{}')
         self.assertFalse(self.check(runner))
-        self.receipt['raw'] = self.write('raw.json', {'schemaVersion': 'performance-backlog-raw.v2'})
+        self.receipt['raw'] = self.write('raw.json', self.raw)
         self.receipt['frozenTree']['endClean'] = False
         self.assertFalse(self.check(runner))
         self.receipt['frozenTree']['endClean'] = True
@@ -110,6 +145,52 @@ class PerformanceAdmissionTests(unittest.TestCase):
         real.symlink_to(replacement)
         self.assertFalse(self.check(runner))
         self.assertEqual(calls, [])
+
+    def test_commit_object_works_without_git_and_rejects_a_forged_tree(self):
+        with patch.object(subprocess, 'run', side_effect=AssertionError('no Git invocation')):
+            self.assertTrue(self.check(lambda *_a, **_k: SimpleNamespace(returncode=0)))
+        commit = json.loads((self.root / self.receipt['candidateCommitObject']['path']).read_text())
+        commit['contentBase64'] = base64.b64encode(b'tree ' + b'f' * 40 + b'\n').decode()
+        self.receipt['candidateCommitObject'] = self.write('commit.json', commit)
+        self.assertFalse(self.check(lambda *_a, **_k: SimpleNamespace(returncode=0)))
+
+    def test_python_wrong_slice_artifact_and_observation_substitution_are_rejected(self):
+        key = next(iter(BACKEND_METRIC_BUDGETS))
+        original = self.captures[key]
+        for change in ({'implementation': 'python'}, {'sliceId': 'R2'},
+                       {'rustArtifactId': 'other@sha256:' + 'b' * 64},
+                       {'compiledArtifactSha256': 'b' * 64}, {'observations': []}):
+            capture = self.write(key + '-capture.json', {**original, **change})
+            self.receipt['runtimeCaptures'][key] = capture
+            measurement = deepcopy(self.measurements[key])
+            measurement['attestations'][0]['sourceSha256'] = capture['sha256']
+            ref = self.write(key + '-measurement.json', measurement)
+            self.map['artifacts'][ref['path']] = ref['sha256']
+            self.raw['items'][0]['measurement'] = ref
+            self.receipt['artifactMap'] = self.write('map.json', self.map)
+            self.receipt['raw'] = self.write('raw.json', self.raw)
+            self.assertFalse(self.check(lambda *_a, **_k: SimpleNamespace(returncode=0)), change)
+
+    def test_unrelated_canonical_run_cannot_be_relabelled_by_outer_receipt(self):
+        key = next(iter(BACKEND_METRIC_BUDGETS))
+        self.receipt['runtimeCaptures'][key] = self.write('unrelated.json', self.captures[key] | {'key': 'unrelated'})
+        self.assertFalse(self.check(lambda *_a, **_k: SimpleNamespace(returncode=0)))
+
+    def test_immutable_verdict_is_cached_once_and_new_bindings_revalidate(self):
+        reference = self.write('receipt.json', self.receipt)
+        def invoke(artifact=self.artifact, ref=reference):
+            return verified_performance(ref, 'R1', artifact, self.sha, repo_root=self.root)
+        with patch.object(admission, '_verify_performance', return_value=True) as validator:
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                self.assertTrue(all(pool.map(lambda _: invoke(), range(32))))
+            self.assertEqual(validator.call_count, 1)
+            self.assertTrue(invoke('other@sha256:' + 'b' * 64))
+            self.assertTrue(invoke(ref={**reference, 'sha256': 'c' * 64}))
+            self.assertEqual(validator.call_count, 3)
+        with patch.object(admission, '_verify_performance', return_value=False) as validator:
+            self.assertFalse(invoke('missing'))
+            self.assertFalse(invoke('missing'))
+            self.assertEqual(validator.call_count, 2)
 
 
 if __name__ == '__main__':

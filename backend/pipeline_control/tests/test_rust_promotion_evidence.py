@@ -119,6 +119,19 @@ class PromotionEvidenceTests(unittest.TestCase):
         receipt['approvalRef'] = self.retain(approval)
         self.assertFalse(self.decision(self.retain(receipt))['allowed'])
 
+    def test_approval_requires_a_real_utc_instant_for_both_purposes(self):
+        for purpose in ('rust_default_switch', 'python_removal'):
+            approval = self.approval(purpose, {'exact': 'binding'})
+            for invalid in ('2026-99-99T99:99:99Z', '2026-02-29T00:00:00Z',
+                            '0000-01-01T00:00:00Z', '2026-09-05T24:00:00Z',
+                            '2026-09-05T00:00:60Z', '2026-09-05T00:00:00',
+                            '2026-09-05T00:00:00-00:00', '2026-09-05T00:00:00+09:00'):
+                self.assertFalse(proof_module.approved({**approval, 'approvedAt': invalid},
+                    purpose=purpose, binding={'exact': 'binding'}), invalid)
+            for valid in ('2024-02-29T00:00:00Z', '2026-09-05T00:00:00.123456+00:00'):
+                self.assertTrue(proof_module.approved({**approval, 'approvedAt': valid},
+                    purpose=purpose, binding={'exact': 'binding'}), valid)
+
     def test_python_removal_requires_both_verified_live_evidence_and_exact_separate_approval(self):
         ref = self.proof()
         candidate = {'separateExplicitCandidate': True, 'candidateCommitSha': 'a' * 40,

@@ -7,6 +7,7 @@ verified here. Missing receipts never fall back to claimed counts or booleans.
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
@@ -50,6 +51,16 @@ def read_receipt(reference, loader: Callable[[str], bytes] | None = None) -> dic
         return None
 
 
+def _valid_approval_time(value) -> bool:
+    if not isinstance(value, str) or re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|\+00:00)', value) is None:
+        return False
+    try:
+        instant = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return instant.tzinfo is not None and instant.utcoffset() == timezone.utc.utcoffset(instant)
+    except ValueError:
+        return False
+
+
 def approved(receipt, *, purpose: str, binding: dict) -> bool:
     return bool(isinstance(receipt, dict)
                 and receipt.get('kind') == 'rust_operator_approval_v1'
@@ -57,8 +68,7 @@ def approved(receipt, *, purpose: str, binding: dict) -> bool:
                 and receipt.get('status') == 'approved'
                 and isinstance(receipt.get('approverName'), str)
                 and 0 < len(receipt['approverName'].strip()) <= 128
-                and isinstance(receipt.get('approvedAt'), str)
-                and re.fullmatch(r'\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ', receipt['approvedAt'])
+                and _valid_approval_time(receipt.get('approvedAt'))
                 and receipt.get('binding') == binding)
 
 

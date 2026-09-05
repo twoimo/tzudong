@@ -476,6 +476,11 @@ jobs:
           rustup run 1.97.0 rustc --version
           rustup run 1.97.0 cargo --version
 
+      - name: Set up canonical performance verifier runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
       - name: Verify formatting and locked Cargo workspace
         env:
           RUSTUP_TOOLCHAIN: '1.97.0'

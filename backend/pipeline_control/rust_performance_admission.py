@@ -5,17 +5,22 @@ zero-admission scored result is sufficient; missing data and health blocks are
 not. No caller-supplied executable, script or command is accepted.
 """
 from __future__ import annotations
+import base64
+from collections import OrderedDict
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
+import threading
 
 from backend.pipeline_control.performance_evidence import BACKEND_METRIC_BUDGETS, is_frozen_tree_valid
 
 ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR = ROOT / 'apps/web/scripts/validate-performance-backlog.mjs'
+_VERDICTS = OrderedDict()
+_VERDICT_LOCK = threading.Lock()
 
 
 def _read(root, reference, maximum):
@@ -40,7 +45,65 @@ def _read(root, reference, maximum):
     return json.loads(raw)
 
 
-def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root=ROOT, runner=None):
+def _candidate_tree(root, reference, git_sha):
+    """Verify a retained Git commit object without a checkout or Git executable.
+
+    Retain `git cat-file commit <sha>` bytes as base64 in the canonical
+    performance tree. The Git object ID independently binds its tree header;
+    a caller-supplied tree string alone is never trusted.
+    """
+    commit = _read(root, reference, 1024 * 1024)
+    if commit.get('kind') != 'git_commit_object_v1':
+        raise ValueError('invalid_commit_object')
+    payload = base64.b64decode(commit['contentBase64'], validate=True)
+    object_id = hashlib.sha1(b'commit ' + str(len(payload)).encode() + b'\0' + payload).hexdigest()
+    match = re.match(rb'tree ([0-9a-f]{40})\n', payload)
+    if object_id != git_sha or match is None:
+        raise ValueError('invalid_commit_object')
+    return match[1].decode('ascii')
+
+
+def _measured_rust(root, receipt, raw, artifact_map, slice_id, artifact_id):
+    """Bind each canonical candidate measurement to its captured Rust runtime.
+
+    The measurement's required benchmark or RSS attestation hashes the retained
+    execution receipt, including the exact candidate observations and binary
+    digest. This extends the source attestation; relabeling an outer admission
+    receipt cannot convert an unrelated Python run into Rust measurements.
+    """
+    captures = receipt.get('runtimeCaptures')
+    if not isinstance(captures, dict) or set(captures) != set(BACKEND_METRIC_BUDGETS):
+        return False
+    if not isinstance(artifact_id, str) or re.fullmatch(r'[A-Za-z0-9_-]+@sha256:[0-9a-f]{64}', artifact_id) is None:
+        return False
+    for key, budget in BACKEND_METRIC_BUDGETS.items():
+        items = [item for item in raw['items'] if item['key'] == key]
+        if len(items) != 1:
+            return False
+        reference = items[0]['measurement']
+        if artifact_map['artifacts'].get(reference['path']) != reference['sha256']:
+            return False
+        measurement = _read(root, reference, 8 * 1024 * 1024)
+        capture = _read(root, captures[key], 8 * 1024 * 1024)
+        observations = [row for row in measurement['observations'] if row['cohort'] == 'candidate']
+        if (capture.get('kind') != 'rust_measurement_execution_v1'
+                or capture.get('sliceId') != slice_id or capture.get('implementation') != 'rust'
+                or capture.get('rustArtifactId') != artifact_id
+                or capture.get('compiledArtifactSha256') != artifact_id.split('@sha256:')[1]
+                or capture.get('key') != key or capture.get('candidate') != artifact_map['candidate']
+                or capture.get('observations') != observations
+                or len(observations) < budget['sampleMinimum']
+                or any(capture.get(k) != measurement.get(k) for k in ('releaseId', 'configSha256', 'dataProfileSha256'))):
+            return False
+        attestations = [a for a in measurement['attestations']
+                        if a['cohort'] == 'candidate' and a['evidenceForm'] ==
+                        ('rss_ndjson' if key == 'backend.peak_rss_mib' else 'benchmark_summary')]
+        if len(attestations) != 1 or attestations[0]['sourceSha256'] != captures[key]['sha256']:
+            return False
+    return True
+
+
+def _verify_performance(reference, slice_id, artifact_id, git_sha, *, repo_root=ROOT, runner=None):
     """Fail closed unless retained bytes pass the real canonical validator."""
     try:
         root = Path(repo_root).resolve()
@@ -59,6 +122,8 @@ def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root
                 or scored.get('schemaVersion') != 'performance-backlog-scored.v2'
                 or scored.get('releaseBlocked') is not False):
             return False
+        if not _measured_rust(root, receipt, raw, artifact_map, slice_id, artifact_id):
+            return False
         # Unavailable measurements are not zero-admission measurements. All
         # three backend metrics need real, sufficient observations; they may
         # legitimately admit no improvements after budget/noise evaluation.
@@ -75,8 +140,7 @@ def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root
                 return False
         # The map SHA is supplied by a separately addressed receipt, outside
         # the map. Its candidate tree must resolve to the frozen Git object.
-        tree = subprocess.run(['git', 'rev-parse', '--verify', git_sha + '^{tree}'], cwd=root,
-                              capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+        tree = _candidate_tree(root, receipt.get('candidateCommitObject'), git_sha)
         if tree != artifact_map['candidate']['tree']:
             return False
         node = shutil.which('node')
@@ -99,5 +163,31 @@ def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root
         # Successful validation recomputes budgets, scoring, pins, data/health
         # receipts and detached hashes. Do not require a positive admitted count.
         return result.returncode == 0
+    except Exception:
+        return False
+
+
+def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root=ROOT, runner=None):
+    """Validate once per immutable evidence/artifact binding in this process.
+
+    Runtime images package root-owned evidence and the fixed validator. A new
+    receipt hash, artifact, commit, or process requires a fresh validation.
+    Failures are never cached; trusted test runners bypass the shared cache.
+    The bounded cache is serialized so concurrent first calls validate once.
+    """
+    if runner is not None:
+        return _verify_performance(reference, slice_id, artifact_id, git_sha, repo_root=repo_root, runner=runner)
+    try:
+        key = (str(Path(repo_root).resolve()), json.dumps(reference, sort_keys=True), slice_id, artifact_id, git_sha)
+        with _VERDICT_LOCK:
+            if key in _VERDICTS:
+                _VERDICTS.move_to_end(key)
+                return True
+            if not _verify_performance(reference, slice_id, artifact_id, git_sha, repo_root=repo_root):
+                return False
+            _VERDICTS[key] = True
+            if len(_VERDICTS) > 128:
+                _VERDICTS.popitem(last=False)
+            return True
     except Exception:
         return False
