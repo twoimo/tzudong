@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T05:18:06.022175+00:00",
-  "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "1c2bc13d034ab1c8dfad1d1d0215358730af29d5",
+  "generatedAt": "2026-09-05T06:21:04.915597+00:00",
+  "branch": "codex/g037-readonly-transaction-20260905",
+  "sourceBaseHead": "f26d78fda521537f5a1cfc941bc94a3c0a95ca2b",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -318,12 +318,23 @@
     "collector-linux-provenance-correction.json": "6c3e110d141475cb4aec5dd57a95cb762f47422296bcc6af366aae60859f24a9",
     "rust-applied-readback-review.json": "a287bf1100b59b0a5d293e7cc037c6aec9a13274f556a03dfa46ff2bde7cb054",
     "approval-pending-audit-review.json": "74ca1c26b52306dd82996a86053c69bd788017112b47a9b30a9646c44cec2bae",
-    "advisor-workflow-trigger-correction.json": "38508b054ed6aff4f6365ad90446b32565b6804999d90f67d17d480d3c2de789"
+    "advisor-workflow-trigger-correction.json": "38508b054ed6aff4f6365ad90446b32565b6804999d90f67d17d480d3c2de789",
+    "pr-2863-merge-readback.json": "bd1127fad2bd447248e7710573e1bdf86d8a25e1f9755b88c7a0ee475a45b32e",
+    "pr-2859-merge-readback.json": "80a16ac249ed6b5955748bb6199bbb8a6beff7a40bb89cf2c984083ce5efd45f",
+    "pr-2864-merge-readback.json": "7b8869df6d71195b539b047bbb6a59a0deef643a633e1171d83fdc7c306b3200",
+    "promotion-default-main-restoration-readback.json": "bbc5956e7c49c4b7ff6f97ee939903fe3e559e194d93d6331c8426482fbd4474",
+    "promotion-restored-main-target-event-readback.json": "3ea722da909fa4faaf5a6424d56b82de4f19004115999c471baa4772bf040848",
+    "g037-runtime-probe-exact-main-authorization.json": "d20c7fdf9812c87b3f04ddd19b189c27cf55f7a695e4ebbb6e3ad79947bbebf2",
+    "g037-runtime-probe-run-readback.json": "8f8488d0c443f778b6b74e1547bc568bcb960099dbd0c54b82c833197a845f34",
+    "g037-local-admission-diagnostic.json": "0b4c3c9df3c49a6056ad546f762600035536d8a5330c50782ffb1f8cb1ec9b06",
+    "guarded-scheduler-restoration-readback.json": "77ecd15bdef9aeaf3692172249bf81f7d07f40bca2c4591c3da33cbb8ac02064",
+    "mac-launchagent-installed-readback.v2.json": "f67496ac0822d4a90dbbe59d28ff18e1334ee12af6da76df6e5fd383eb08254d",
+    "vercel-protected-develop-ready-readback.v2.json": "4917803e2cd438b42865b3523ea3fed06259c31911edbacb952c4ac88d063ff3"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 473,
+  "changedFileCount": 474,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -399,7 +410,7 @@
     },
     {
       "path": ".github/workflows/security-audit.yml",
-      "sha256": "51fb7f71af2011e14fd14654a4d0b17a8da32fca892fdaa87770a5c04c48ee6d"
+      "sha256": "8b018beb8b73383cfa0f85f257258b0b5bb49bd5823273de3a3ca38e3128c8ce"
     },
     {
       "path": ".github/workflows/web-admin-ci.yml",
@@ -423,7 +434,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "8c273c5695712e7f1866083a8aa1972328f5e2cbd0e1ff81fdd3c301ce43e83f"
+      "sha256": "bf60d3c3af59f1f4438bc22a2e3ea550fd1171527a2869ebfbdd5bc475031671"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
@@ -451,7 +462,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "5ce01e3c7109f440b5d7a0a01df26d822daf415430390be8608cf5f5840d3545"
+      "sha256": "0347059b91401cfca57f99319344d594b43ce182df896e53e3d99ee9ad143016"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -1847,7 +1858,7 @@
     },
     {
       "path": "backend/supabase/scripts/g037_hosted_closure_executor.py",
-      "sha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0"
+      "sha256": "fe908fad3738ad520f99955fae88b74076e149c044eb7f32aeebf5e33be13836"
     },
     {
       "path": "backend/supabase/scripts/g037_readonly_role_connection_readback_v1.sql",
@@ -2003,7 +2014,7 @@
     },
     {
       "path": "backend/supabase/tests/test_g037_hosted_closure_executor.py",
-      "sha256": "d990021af59e74a3aa3421472492b26c893a7ee6eccd0e47341804e30a5fde8e"
+      "sha256": "02f7fcc8291eb5017db838dccb18f1bd3c9391cc8e1a80ecc8e377c466471e80"
     },
     {
       "path": "backend/supabase/tests/test_g037_hosted_closure_workflow.py",
@@ -2088,6 +2099,10 @@
     {
       "path": "backend/supabase/tests/test_g037_readonly_role_v3_source.py",
       "sha256": "6874a9d80ad7bca684f26f02a696c13e9e50cf2aba0822064f170a720cb925b9"
+    },
+    {
+      "path": "backend/supabase/tests/test_g037_readonly_transaction_postgres.py",
+      "sha256": "b47cda6e352143345ebe60703b58af64e97ea28d7eb0c69dd0c9376c9951999c"
     },
     {
       "path": "backend/supabase/tests/test_g037_remediation_authorization.py",
@@ -2219,21 +2234,21 @@
     }
   ],
   "inventoryComparisonBase": "3f4ca55742aa33869b776291e0d035a16024eef1",
-  "snapshotStage": "precommit_source_inventory",
+  "snapshotStage": "g037_readonly_transaction_correction_before_commit",
   "primaryMergedDevelop": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f",
   "correctionPr": 2861,
-  "currentProtectedDevelop": "0222bda7d83002bd3f9b9dd10bff4e87f402ae22",
+  "currentProtectedDevelop": "f26d78fda521537f5a1cfc941bc94a3c0a95ca2b",
   "pendingPromotionPr": 2859,
   "trustedPromotionInstallation": {
-    "status": "installed_on_protected_develop_pending_serial_promotion",
+    "status": "installed_on_protected_main_default_restored",
     "defaultBefore": "main",
     "temporaryDefault": "develop",
     "restoreDefault": "main",
     "planReceipt": "promotion-trusted-default-installation-plan.json",
     "executed": true,
-    "restoreRequired": true,
-    "currentDefault": "develop",
-    "readbackReceipt": "promotion-trusted-default-installation-readback.json"
+    "restoreRequired": false,
+    "currentDefault": "main",
+    "readbackReceipt": "promotion-default-main-restoration-readback.json"
   },
   "runtimePr": 2862,
   "historicalCombinedFollowupVerification": {
@@ -2408,5 +2423,17 @@
       "reconciliationCurrent": true
     }
   },
-  "pendingReviewCorrectionPr": 2863
+  "pendingReviewCorrectionPr": 2863,
+  "currentProtectedData": "4fa8addf0efceaffde40f5a11ee3b6d1ab62ef49",
+  "currentProtectedMain": "4af2ae6b3d53f0c1ea66d122a186284dfee344fa",
+  "g037TransactionCorrection": {
+    "status": "local_regression_passed_pending_protected_promotion",
+    "priorRun": 33948684277,
+    "priorResult": "controller_internal_denied",
+    "localSqlstate": "25001",
+    "realPostgresTests": 4,
+    "controllerUnitTests": 72,
+    "newHostedProbePerformed": false,
+    "priorReceiptsImmutable": true
+  }
 }

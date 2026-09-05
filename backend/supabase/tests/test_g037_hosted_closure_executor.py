@@ -474,6 +474,22 @@ class G037ExecutorTests(unittest.TestCase):
   role_admission.assert_called_once_with(runtime.cursor_value)
   self.assertEqual(runtime.events,["cursor","rollback","close"])
   self.assertEqual([sql for sql,_ in runtime.cursor_value.calls],["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY","SELECT pg_catalog.to_regprocedure(%s)","SELECT NOT pg_catalog.has_function_privilege(current_user, pg_catalog.to_regprocedure(%s), 'EXECUTE')"])
+ def test_admission_sees_explicit_snapshot_and_cleanup_closes_after_rollback_error(self):
+  events=[]
+  class Cursor:
+   def execute(self,sql): events.append(sql)
+  class Connection:
+   def cursor(self): return Cursor()
+   def rollback(self): events.append("rollback"); raise RuntimeError("fixture rollback failure")
+   def close(self): events.append("close")
+  def admission(cursor):
+   self.assertEqual(events,["BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY"])
+   events.append("admission")
+   raise e.ClosureError("fixture denied")
+  with patch.object(e,"connection",return_value=Connection()),patch.object(e,"readonly_role_admission",side_effect=admission):
+   with self.assertRaisesRegex(RuntimeError,"fixture rollback failure"):
+    e.run(SimpleNamespace(mode="runtime-probe",db_env="TEST_DB"))
+  self.assertEqual(events[-3:],["admission","rollback","close"])
  def test_readonly_role_admission_requires_all_thirty_three_checks(self):
   class Cursor:
    description=object()
@@ -505,11 +521,11 @@ class G037ExecutorTests(unittest.TestCase):
    description=object()
    def __init__(self): self.calls=[]
    def execute(self,sql,params=()): self.calls.append((sql,params))
-   def fetchall(self): return [(True,)] if len(self.calls)==3 else [(12345,)]
+   def fetchall(self): return [(True,)] if len(self.calls)==2 else [(12345,)]
   cursor=Cursor()
   self.assertTrue(e.runtime_probe(cursor))
-  self.assertIn("timestamptz,text)",cursor.calls[1][1][0])
-  self.assertIn("to_regprocedure",cursor.calls[2][0])
+  self.assertIn("timestamptz,text)",cursor.calls[0][1][0])
+  self.assertIn("to_regprocedure",cursor.calls[1][0])
  def test_runtime_probe_rejects_missing_terminal_mutator(self):
   class Cursor:
    description=object()
