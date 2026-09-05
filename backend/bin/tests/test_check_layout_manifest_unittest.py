@@ -415,7 +415,7 @@ class RealTreeTest(unittest.TestCase):
         self.assertTrue(result["ok"], result)
         self.assertIsNone(result["errorCode"])
         self.assertIn(result["errorCode"], clm.LAYOUT_CHECK_RESULT_CODES)
-        self.assertEqual(result["trackedDirectoryCount"], 28)
+        self.assertEqual(result["trackedDirectoryCount"], 29)
         self.assertEqual(result["checks"]["staleReferences"]["unresolvedCount"], 0)
         self.assertEqual(result["checks"]["moves"], [])
         paths = {entry["path"] for entry in clm.load_manifest(_MANIFEST_PATH)["entries"]}
