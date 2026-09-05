@@ -76,6 +76,10 @@ function command(args) {
     shell: false,
     windowsHide: true,
   });
+  return checkedCommandOutput(result);
+}
+
+export function checkedCommandOutput(result) {
   const stdout = typeof result.stdout === 'string'
     ? redactCliText(result.stdout, 512)
     : '';
@@ -91,7 +95,9 @@ function command(args) {
   if (result.status !== 0) {
     throw compilerFailure('TOOLCHAIN_COMMAND_STATUS', stderr || stdout);
   }
-  return stdout.trim();
+  // Successful output is an internal protocol (including filesystem paths).
+  // Redaction belongs only on the diagnostic path; it can corrupt valid paths.
+  return typeof result.stdout === 'string' ? result.stdout.trim() : '';
 }
 
 async function main() {
@@ -179,7 +185,9 @@ async function main() {
   })}\n`);
 }
 
-main().catch((error) => {
-  logCliError(error, (line) => process.stderr.write(`[verify-typescript-toolchain] ${line}`));
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    logCliError(error, (line) => process.stderr.write(`[verify-typescript-toolchain] ${line}`));
+    process.exitCode = 1;
+  });
+}

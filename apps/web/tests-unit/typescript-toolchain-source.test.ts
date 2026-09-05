@@ -107,6 +107,8 @@ describe("TypeScript 7 dual-toolchain manifest contract", () => {
     expect(verifier).toContain("TOOLCHAIN_OLD_OVERRIDE_FORBIDDEN");
     expect(verifier).toContain("redactCliText(result.stdout, 512)");
     expect(verifier).toContain("redactCliText(result.stderr, 512)");
+    expect(verifier).toContain("return checkedCommandOutput(result)");
+    expect(verifier).toContain("return typeof result.stdout === 'string' ? result.stdout.trim() : ''");
     expect(verifier).toContain("if (result.error)");
     expect(verifier).toContain("TOOLCHAIN_COMMAND_LAUNCH_FAILED");
     expect(verifier).toContain("TOOLCHAIN_COMMAND_SIGNAL");
