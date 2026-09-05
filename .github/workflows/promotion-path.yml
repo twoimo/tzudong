@@ -2,11 +2,6 @@ name: Promotion
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited, ready_for_review]
-  # Bounded installation until this workflow reaches the default branch (main).
-  # The two reviewed develop bases have their own protected policy, even though
-  # default main still predates it. No unlisted pull_request base is admitted.
-  pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
 
 permissions:
   contents: read
@@ -17,19 +12,15 @@ concurrency:
 
 jobs:
   promotion-path:
-    if: >-
-      github.event_name == 'pull_request_target' ||
-      contains(fromJSON('["3f4ca55742aa33869b776291e0d035a16024eef1","cdb21ef3abc60f5346300e2353dafcf910c18170","3d7557f6307c9f6696018324e559bff6e57afbce","f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f","cb8bcc376acf4ca3d4470f3be71eca7de717d750"]'), github.event.pull_request.base.sha)
     name: Promotion Path
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # The fixed recovery anchor contains the already reviewed policy for
-          # initial bases which predate this file. Never execute the PR tree.
-          ref: >-
-            ${{ contains(fromJSON('["3f4ca55742aa33869b776291e0d035a16024eef1","cdb21ef3abc60f5346300e2353dafcf910c18170","3d7557f6307c9f6696018324e559bff6e57afbce"]'), github.event.pull_request.base.sha) && '8a3a3a65ea41d4a5f20f1111aac9e0c3f8583b25' || github.event.pull_request.base.sha }}
+          # Use the exact protected default-branch revision supplying this
+          # target-event workflow, including when a PR targets an older base.
+          ref: ${{ github.workflow_sha }}
           persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
@@ -40,7 +31,7 @@ jobs:
           import { readFileSync } from 'node:fs';
           import { verifyPromotionPath } from './.github/scripts/verify-promotion-path.mjs';
           let result = { passed: false, code: 'PROMOTION_EVENT_INVALID' };
-          if (['pull_request', 'pull_request_target'].includes(process.env.GITHUB_EVENT_NAME)) {
+          if (process.env.GITHUB_EVENT_NAME === 'pull_request_target') {
             try {
               result = verifyPromotionPath(JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8')), process.env.GITHUB_REPOSITORY);
             } catch {}

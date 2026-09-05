@@ -15,6 +15,9 @@ Do not print rendered environments or reuse operator/provider credentials.
 
 The overlay publishes no MinIO host ports. Its named `minio-data` volume is
 separate from the existing filesystem storage directory. Enabling S3 does not
+retain the base Storage or imgproxy filesystem mounts: both use Compose's
+`volumes: !reset []`, and a real merged-descriptor test verifies their removal.
+An omitted or plain empty list would retain the inherited bind mounts. S3 does not
 copy existing objects; any actual backend migration needs an explicit copy,
 readback and rollback procedure. The normal managed `local-stack.py` workflow
 continues to use its existing filesystem overlay.

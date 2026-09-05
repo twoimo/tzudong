@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T00:29:51.823599+00:00",
+  "generatedAt": "2026-09-05T00:59:29.899585+00:00",
   "branch": "codex/runtime-closure-20260905",
-  "sourceBaseHead": "94e87c63d4561912ecf3c90bd06f862e95586a67",
+  "sourceBaseHead": "3017996472d29955240f8578e6c79c4e046f727a",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -297,16 +297,24 @@
     "mac-runtime-environment-readback.json": "89bd9e2df20100588bb55f4e7a1fab5409cd57b69661921902243b44c555a45c",
     "vercel-adapter-path-readback.json": "e1363863e8f854ac303eb669183efff76114b1a2c7e0de3806cb384a4ea6454d",
     "g037-promotion-prerequisites-v2.json": "689e728b9cbc6d1e80be3b0ded3ae28f04fbb498db10968b158ac2fbba156116",
-    "vercel-pre-promotion-readback-v2.json": "f5ef52d82c6dd255e32fafb197afd17380fbb5d8a32e7ecac9e0829ce79a43fa"
+    "vercel-pre-promotion-readback-v2.json": "f5ef52d82c6dd255e32fafb197afd17380fbb5d8a32e7ecac9e0829ce79a43fa",
+    "gitguardian-s3-template-readback.json": "abf4e3c5e3e7c0925a4f8fdbef47c47e2782592b606cf1b4b3228cd185cf778c",
+    "gitguardian-s3-rescan-readback.json": "5a8dca02c7d6a5a5affe617642e217f57f66e2ae9b3d543eebb49fbfc95a4992",
+    "promotion-trusted-default-installation-plan.json": "ece00142f155f109d6686862edf28ce771790bd271d47617b558a9f4383c1b6c",
+    "s3-merged-mount-readback.json": "fe4d65ac289f2857af33e32bf1cba8a5d2c446d6ee8c195c6840e4b60bff9f55"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 446,
+  "changedFileCount": 447,
   "changedFiles": [
     {
       "path": ".gitattributes",
       "sha256": "9e6ea23fbbac351c32a516d841f463ffa36e8b3afb328168ae78ce464b23bd13"
+    },
+    {
+      "path": ".github/PROMOTION_POLICY.md",
+      "sha256": "6492a07fab903c985bfb12d4c2b7cc75395512c8b4ee60cb0708090ef6ff55d6"
     },
     {
       "path": ".github/dependabot.yml",
@@ -326,7 +334,7 @@
     },
     {
       "path": ".github/scripts/verify-promotion-path.test.mjs",
-      "sha256": "7efa686a8dfb5fb1b05d9869b0a55b43ceaeb1cdd61d7f4914655419b4540b41"
+      "sha256": "0d2b8a6cfcd74a7562e9a666cd804c22e2217367d0cc8bec04368ee957fb320f"
     },
     {
       "path": ".github/workflows/daily-crawler.yml",
@@ -354,7 +362,7 @@
     },
     {
       "path": ".github/workflows/promotion-path.yml",
-      "sha256": "304f6470606709a6be5c053f00eff18ad766cf37355a30aad920a486607b9041"
+      "sha256": "f5c1dd07f5c94f3894bc583f3cb483b9bff7399983e9cea7bedce21f28bb8913"
     },
     {
       "path": ".github/workflows/release-governance-ci.yml",
@@ -378,7 +386,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "a89d12a997b9fdcebb971be248a63517f70351d7f7c60a08fc1e16a6169848f0"
+      "sha256": "d563e2fdf3277bf129cbac13b1d051be127df6e5a0faf7b86319f41af13fc695"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -1450,7 +1458,7 @@
     },
     {
       "path": "backend/supabase/docker-compose.s3.yml",
-      "sha256": "4f0d6526d4f704d77511c191011c4719de1df4bd6a5a976178320bd047709a44"
+      "sha256": "51f8e3a9e889d73438596221504eec5f2b705834098b1b9dad53ae155058101b"
     },
     {
       "path": "backend/supabase/docs/g037-hosted-closure-runbook.md",
@@ -1458,7 +1466,7 @@
     },
     {
       "path": "backend/supabase/docs/optional-s3.md",
-      "sha256": "ac4220b2df2da5b81ed811e0d4849a420a50cea45a1c84e032c659f4faf1d99d"
+      "sha256": "75c2c88b0504d948f0750c3e5edb3473622d0e385f2b57b7aa10eaac88fa0a1e"
     },
     {
       "path": "backend/supabase/g037-dedicated-credential-readback.v2.json",
@@ -2026,7 +2034,7 @@
     },
     {
       "path": "backend/supabase/tests/test_optional_s3_overlay.py",
-      "sha256": "ec69211cdb3c7f56af7d191b2df79f505a826124131e9a387df9862587769e6a"
+      "sha256": "60713a71e93204cf1ebfbb59e6a9cbaf14ffd2e7d6b52a0e1231787bea9914b9"
     },
     {
       "path": "backend/test-requirements.txt",
@@ -2090,7 +2098,7 @@
     }
   ],
   "combinedFollowupVerification": {
-    "pythonOperationalTests": 53,
+    "pythonOperationalTests": 54,
     "pythonProvenanceAndRunnerTests": 30,
     "webFocusedTests": 48,
     "promotionPolicyTests": 7,
@@ -2105,12 +2113,24 @@
     "missingMappedFiles": 0,
     "manualMacHeldRun": "passed",
     "actualMacScheduleInstallation": false,
-    "previewReadbackPending": true
+    "previewReadbackPending": true,
+    "renderedS3MountsAfter": {
+      "storage": 0,
+      "imgproxy": 0
+    }
   },
   "inventoryComparisonBase": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "snapshotStage": "precommit_source_inventory",
   "primaryMergedDevelop": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f",
   "correctionPr": 2861,
   "currentProtectedDevelop": "cb8bcc376acf4ca3d4470f3be71eca7de717d750",
-  "pendingPromotionPr": 2859
+  "pendingPromotionPr": 2859,
+  "trustedPromotionInstallation": {
+    "status": "prepared",
+    "defaultBefore": "main",
+    "temporaryDefault": "develop",
+    "restoreDefault": "main",
+    "planReceipt": "promotion-trusted-default-installation-plan.json",
+    "executed": false
+  }
 }

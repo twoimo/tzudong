@@ -31,6 +31,8 @@ services:
 
   storage:
     # Inherit the reviewed Storage image and other settings from the base stack.
+    # An omitted or plain empty list would retain the base filesystem bind.
+    volumes: !reset []
     depends_on:
       minio-createbucket:
         condition: service_completed_successfully
@@ -46,6 +48,9 @@ services:
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set a dedicated local S3 secret}
       AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
       REGION: ${S3_REGION:-us-east-1}
+
+  imgproxy:
+    volumes: !reset []
 
 volumes:
   minio-data:
