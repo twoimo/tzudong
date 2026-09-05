@@ -1,0 +1,11 @@
+# Production release and write continuation
+
+The owner requests completion of the remaining 33 items through verified production deployment and writes. The objective remains active and is not replaced by read-only readiness or passing tests. Prior protected main is `047ae53da5d45383a96cfd7ad1c2d69fb84a11c8`; existing producer freeze and production deployment remain in place until actual prerequisites are established.
+
+The first continuation adds a repeatable read-only SQL/Python observation collector, covering the actual private privacy schema, policy tuple, six workflow-related retention configurations, private-table RLS flags, and aggregate catalog gaps. It provides metadata evidence without requiring the solo operator to hand-author assertions. It does not turn reference presence into approval or activate disabled retention classes.
+
+Live discovery on 2026-09-05 confirmed a 50-entry hosted ledger ending in `20260804000500`, published Korean policy `2026-08-04.1`, and only one active retention class among 12. The tables live in `privacy_retention`; absence from `public` is not a missing-table incident. Existing identity-audit configuration must not be copied to other classes as an invented legal basis or period. A fresh official Advisor query still reports catalog findings; the approved consent-view owner-bridge exception must be assessed against its actual predicates/grants rather than blindly changed to security_invoker.
+
+Next execution work remains: collect and bind the current hosted observation; reconcile it with the pending additive advisor migration and exact producer/capture/recovery requirements; obtain actual backup evidence; implement/operate canonical timed measurements; establish the remaining operator/privacy/provider evidence; then perform approved deployment and bounded writes with readback. No listed external item is marked complete by this source-only addition.
+
+Local validation of this addition: 7 collector tests (including real private-schema PostgreSQL observations and minimized error/cleanup behavior) plus 15 source/reconciliation tests pass. Fixture intervals are test values, not production retention recommendations. Security CI runs the real PostgreSQL collector tests.

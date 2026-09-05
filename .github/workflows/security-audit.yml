@@ -41,6 +41,8 @@ on:
       - 'backend/rust/**'
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
       - 'backend/supabase/scripts/g037_hosted_closure_executor.py'
+      - 'backend/supabase/scripts/release_readiness_observation.*'
+      - 'backend/supabase/tests/test_release_readiness_observation.py'
       - 'backend/supabase/tests/test_g037_readonly_transaction_postgres.py'
       - 'backend/supabase/tests/g037_reviewed_artifacts.py'
       - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
@@ -303,7 +305,7 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r backend/supabase/scripts/g037-hosted-closure-requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres backend.supabase.tests.test_release_readiness_observation -v
 
       - name: Verify Collector crash recovery with disposable fixtures
         run: |
