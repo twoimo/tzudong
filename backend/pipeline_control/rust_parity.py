@@ -473,18 +473,25 @@ def evaluate_default_switch(
     slice_id: str,
     results: Sequence[Mapping[str, Any]],
     rust_artifact_id: str,
+    *,
+    evidence_ref: str | None = None,
+    evidence_loader=None,
 ) -> dict[str, Any]:
     """Decide whether the Implementation_Selector default may flip to rust.
 
     Returns ``allowed=True`` with the supporting evidence (the input ids of the
     three qualifying matched results and the artifact id) only when
-    :func:`consecutive_matched_count` reaches :data:`PARITY_GATE_COUNT` (3).
+    :func:`consecutive_matched_count` reaches :data:`PARITY_GATE_COUNT` (3)
+    AND retained live receipts, operator approval and readback verify.
     Otherwise the default stays python and the result carries
     ``code == parity_evidence_insufficient`` (Requirements 2.4, 2.5).
     """
 
+    from backend.pipeline_control.rust_promotion_evidence import verified_live_promotion
     count = consecutive_matched_count(results, rust_artifact_id)
-    if count >= PARITY_GATE_COUNT:
+    if count >= PARITY_GATE_COUNT and verified_live_promotion(
+        evidence_ref, slice_id, rust_artifact_id, results, loader=evidence_loader
+    ):
         # The most recent PARITY_GATE_COUNT distinct qualifying input ids.
         evidence_inputs: list[str] = []
         seen: set[str] = set()
@@ -511,6 +518,7 @@ def evaluate_default_switch(
                 "inputIds": evidence_inputs,
                 "rustArtifactId": rust_artifact_id,
                 "activeImplementation": IMPL_RUST,
+                "promotionEvidenceRef": evidence_ref,
             },
             "code": None,
         }
@@ -587,22 +595,29 @@ def _is_blank(value: Any) -> bool:
     return False
 
 
-def check_python_removal_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
-    """Gate a python-removal merge candidate (Requirement 2.6).
+def check_python_removal_candidate(candidate: Mapping[str, Any], *, evidence_loader=None) -> dict[str, Any]:
+    """Require verified live parity AND exact, separate removal approval.
 
-    Python removal is only admitted as a *separate explicit* merge candidate
-    (``separateExplicitCandidate`` truthy) that references either a
-    Migration_Ledger entry proving the N=3 condition (``ledgerParityRef``) or an
-    operator approval reference (``operatorApprovalRef``). A candidate that is
-    not separate is rejected with ``python_removal_not_separate``; one lacking
-    both references is rejected with ``python_removal_evidence_missing``.
+    Both references resolve to retained, content-addressed receipts. Unresolved
+    strings, a default-switch approval, or a different candidate cannot admit
+    deletion of the Python fallback.
     """
 
-    if not candidate.get("separateExplicitCandidate"):
+    from backend.pipeline_control.rust_promotion_evidence import approved, read_receipt, verified_live_promotion
+    if candidate.get("separateExplicitCandidate") is not True:
         return {"admitted": False, "code": CODE_PYTHON_REMOVAL_NOT_SEPARATE}
-    has_ledger_ref = not _is_blank(candidate.get("ledgerParityRef"))
-    has_operator_ref = not _is_blank(candidate.get("operatorApprovalRef"))
-    if not (has_ledger_ref or has_operator_ref):
+    evidence_ref = candidate.get('ledgerParityRef')
+    evidence = read_receipt(evidence_ref, evidence_loader)
+    approval = read_receipt(candidate.get('operatorApprovalRef'), evidence_loader)
+    candidate_sha = candidate.get('candidateCommitSha')
+    binding = {'candidateCommitSha': candidate_sha, 'sliceId': candidate.get('sliceId'),
+               'rustArtifactId': candidate.get('rustArtifactId'), 'ledgerParityRef': evidence_ref}
+    import re
+    if (not isinstance(candidate_sha, str) or re.fullmatch(r'[0-9a-f]{40}', candidate_sha) is None
+            or evidence is None
+            or not verified_live_promotion(evidence_ref, candidate.get('sliceId'),
+                candidate.get('rustArtifactId'), evidence.get('parityResults'), loader=evidence_loader)
+            or not approved(approval, purpose='python_removal', binding=binding)):
         return {"admitted": False, "code": CODE_PYTHON_REMOVAL_EVIDENCE_MISSING}
     return {"admitted": True, "code": None}
 

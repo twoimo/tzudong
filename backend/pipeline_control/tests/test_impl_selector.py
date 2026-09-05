@@ -102,10 +102,10 @@ class DefaultImplementationTests(unittest.TestCase):
             sel.IMPL_PYTHON,
         )
 
-    def test_default_flips_rust_when_gate_met(self) -> None:
+    def test_claimed_count_without_live_receipts_stays_python(self) -> None:
         self.assertEqual(
             sel.resolve_default_implementation("R1-validators", ledger=_ledger(active="rust", count=3)),
-            sel.IMPL_RUST,
+            sel.IMPL_PYTHON,
         )
 
     def test_active_python_never_defaults_rust(self) -> None:
