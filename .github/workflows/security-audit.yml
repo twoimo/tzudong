@@ -40,6 +40,11 @@ on:
       - 'backend/pipeline_control/**'
       - 'backend/rust/**'
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
+      - 'backend/supabase/scripts/g037_hosted_closure_executor.py'
+      - 'backend/supabase/tests/test_g037_readonly_transaction_postgres.py'
+      - 'backend/supabase/tests/g037_reviewed_artifacts.py'
+      - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
+      - 'backend/supabase/g037-readonly-transaction-source-transition.v1.json'
       - 'backend/supabase/migrations/*.sql'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
@@ -295,9 +300,10 @@ jobs:
       - name: Verify durable local publication queue and agent results
         run: |
           python -m pip install --disable-pip-version-check -r backend/pipeline-control/requirements.txt
+          python -m pip install --require-hashes --only-binary=:all: -r backend/supabase/scripts/g037-hosted-closure-requirements.txt
           export TZUDONG_TEST_POSTGRES_BIN="$(pg_config --bindir)"
           test -x "$TZUDONG_TEST_POSTGRES_BIN/initdb"
-          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests -v
+          python -m unittest backend.pipeline_control.test_publish_queue_postgres backend.pipeline_control.test_publication_cas_postgres backend.bin.tests.test_schema_mirror_report_unittest.CatalogDefinitionTests backend.supabase.tests.test_g037_readonly_transaction_postgres -v
 
       - name: Verify Collector crash recovery with disposable fixtures
         run: |
@@ -409,6 +415,7 @@ jobs:
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |
           python -m unittest \
+            backend.supabase.tests.test_g037_reviewed_artifacts \
             backend.supabase.tests.test_optional_s3_overlay \
             backend.supabase.tests.test_advisor_followup_source \
             backend.supabase.tests.test_advisor_replay \

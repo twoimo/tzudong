@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "kind": "g037_readonly_transaction_source_transition",
+  "sourcePath": "backend/supabase/scripts/g037_hosted_closure_executor.py",
+  "reviewedCommit": "f26d78fda521537f5a1cfc941bc94a3c0a95ca2b",
+  "reviewedSha256": "188095df7df30edbe890d3cb0df9b1d69f59b7942dd449ae5f0b7b8fad5e89b0",
+  "candidateSha256": "fe908fad3738ad520f99955fae88b74076e149c044eb7f32aeebf5e33be13836",
+  "reason": "Begin the shared read-only snapshot before role admission; close even after rollback failure.",
+  "priorApprovalsApplyToReviewedBytesOnly": true,
+  "priorApprovalArtifactsModified": false,
+  "newHostedExecutionAuthorizedByThisFile": false,
+  "freshExactMainAuthorizationRequired": true
+}

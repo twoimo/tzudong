@@ -50,8 +50,7 @@ READBACK = READBACK_PATH.read_text(encoding="utf-8")
 CONTROLLER = CONTROLLER_PATH.read_text(encoding="utf-8")
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+from backend.supabase.tests.g037_reviewed_artifacts import reviewed_sha256 as sha256
 
 
 class G037ReadonlyRoleV3SourceTests(unittest.TestCase):
