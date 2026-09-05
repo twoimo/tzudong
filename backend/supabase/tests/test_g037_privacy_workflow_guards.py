@@ -28,6 +28,7 @@ class G037PrivacyWorkflowGuardTests(unittest.TestCase):
     def assert_job_admission_guard(self, job: dict) -> None:
         self.assertEqual(next(iter(job)), "if")
         self.assertIn(FREEZE_GUARD, job["if"])
+        self.assertIn("vars.G037_WRITE_FREEZE == 'cleared'", job["if"])
         self.assertLess(list(job).index("if"), list(job).index("runs-on"))
         self.assertNotIn("environment", job)
 

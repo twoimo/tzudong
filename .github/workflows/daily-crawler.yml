@@ -57,7 +57,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE != 'active' }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' }}
     services:
       postgres:
         image: postgres@sha256:be01cf82fc7dbba824acf0a82e150b4b360f3ff93c6631d7844af431e841a95c # postgres:15
@@ -769,7 +769,7 @@ jobs:
   daily-publish:
     needs: daily-compute
     # Public repository data publication remains explicitly opt-in.
-    if: ${{ always() && vars.G037_WRITE_FREEZE != 'active' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
+    if: ${{ always() && vars.G037_WRITE_FREEZE == 'cleared' && vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && needs.daily-compute.outputs.publication_manifest_sha256 != '' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -915,7 +915,7 @@ jobs:
 
   hosted-pending-apply:
     needs: []
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE != 'active' && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 80
     permissions:
