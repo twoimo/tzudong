@@ -3,8 +3,8 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited, ready_for_review]
   # Bounded installation until this workflow reaches the default branch (main).
-  # The fourth base is reviewed develop after the first recovery merge; its own
-  # protected policy is available even though default main still predates it.
+  # The two reviewed develop bases have their own protected policy, even though
+  # default main still predates it. No unlisted pull_request base is admitted.
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
 
@@ -19,7 +19,7 @@ jobs:
   promotion-path:
     if: >-
       github.event_name == 'pull_request_target' ||
-      contains(fromJSON('["3f4ca55742aa33869b776291e0d035a16024eef1","cdb21ef3abc60f5346300e2353dafcf910c18170","3d7557f6307c9f6696018324e559bff6e57afbce","f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f"]'), github.event.pull_request.base.sha)
+      contains(fromJSON('["3f4ca55742aa33869b776291e0d035a16024eef1","cdb21ef3abc60f5346300e2353dafcf910c18170","3d7557f6307c9f6696018324e559bff6e57afbce","f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f","cb8bcc376acf4ca3d4470f3be71eca7de717d750"]'), github.event.pull_request.base.sha)
     name: Promotion Path
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -59,10 +59,10 @@ test('bounded bootstrap runs reviewed develop policy while default main is still
     .map((match) => JSON.parse(match[1]));
   assert.equal(lists.length, 2);
   const [bootstrapBases, anchorBases] = lists;
-  const reviewedDevelop = 'f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f';
-  assert.deepEqual(bootstrapBases, [...anchorBases, reviewedDevelop]);
+  const reviewedDevelop = ['f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f', 'cb8bcc376acf4ca3d4470f3be71eca7de717d750'];
+  assert.deepEqual(bootstrapBases, [...anchorBases, ...reviewedDevelop]);
   assert.equal(anchorBases.length, 3);
-  assert.equal(anchorBases.includes(reviewedDevelop), false);
+  assert.equal(reviewedDevelop.some((base) => anchorBases.includes(base)), false);
   assert.equal(bootstrapBases.includes('a'.repeat(40)), false);
   assert.match(workflow, /\|\| github\.event\.pull_request\.base\.sha/);
 });

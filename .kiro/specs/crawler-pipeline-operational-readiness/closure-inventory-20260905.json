@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-04T23:33:28.466165+00:00",
+  "generatedAt": "2026-09-05T00:29:51.823599+00:00",
   "branch": "codex/runtime-closure-20260905",
-  "sourceBaseHead": "01eb7a61e17c552a572d9551b46756ebedf9be9c",
+  "sourceBaseHead": "94e87c63d4561912ecf3c90bd06f862e95586a67",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -287,12 +287,22 @@
     "minio-compatibility-readback.json": "f52d8529fa274d8114df0581798b774023d5b1310472f2f0d8637514f88a30eb",
     "review-runtime-corrections.v3.json": "ab6de39c9f6e2444402be93c540a7c272d37ea005f199cbc6fc52d1513df8668",
     "review-runtime-corrections.v4.json": "0166395a2431cde7d98a7c21384d671935be3b60527068848ad57b71ec94d819",
-    "catalog-bc2005da-readback.json": "6e87303c8fe22c98ead1aba23155a301be8c7794c57545d5a95610a1780a7ba5"
+    "catalog-bc2005da-readback.json": "6e87303c8fe22c98ead1aba23155a301be8c7794c57545d5a95610a1780a7ba5",
+    "pr-2858-merge-admission.json": "b6a9fad2c794cea0e766c278dc70d2a9d272bf510225d31ece2338e3a126c07e",
+    "pr-2858-merge-readback.json": "13dd8f4c570b2682e71527c3a1bfef8d31ae299fa37655d000bb7f31fa6b29ea",
+    "pr-2861-merge-admission.json": "a7a55831ad8a4cc51106e49eb4c1cb9991c77c6fd8bd73c64798bae77ffdca16",
+    "pr-2861-merge-readback.json": "9040964245fb1bbf204911e5694eb369de9d9c05fccd511c8aaba47c755c0d94",
+    "promotion-bootstrap-image-readback.json": "512ed08ca3603910cd529bf319d615ab2b246164931f752512fe885a1c6e85a2",
+    "pipeline-image-runtime-readback.json": "7d5ff7c335a6a7da71edd9b96b1486ec4bb52b03f584a468eaf42e053d689724",
+    "mac-runtime-environment-readback.json": "89bd9e2df20100588bb55f4e7a1fab5409cd57b69661921902243b44c555a45c",
+    "vercel-adapter-path-readback.json": "e1363863e8f854ac303eb669183efff76114b1a2c7e0de3806cb384a4ea6454d",
+    "g037-promotion-prerequisites-v2.json": "689e728b9cbc6d1e80be3b0ded3ae28f04fbb498db10968b158ac2fbba156116",
+    "vercel-pre-promotion-readback-v2.json": "f5ef52d82c6dd255e32fafb197afd17380fbb5d8a32e7ecac9e0829ce79a43fa"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 442,
+  "changedFileCount": 446,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -316,11 +326,11 @@
     },
     {
       "path": ".github/scripts/verify-promotion-path.test.mjs",
-      "sha256": "fddfe623d0266490fe6c3a788e01f77ed2877e3be30c0cb990b49f4129eb5bd8"
+      "sha256": "7efa686a8dfb5fb1b05d9869b0a55b43ceaeb1cdd61d7f4914655419b4540b41"
     },
     {
       "path": ".github/workflows/daily-crawler.yml",
-      "sha256": "63bec278f3483245ff12ebb3a5b604fcdc22f767c377a6cd74e96366abca2b3c"
+      "sha256": "c38338f8a7291603a1a557e99b0d789b367df13077cb4ddfa6cd276990bfa7bf"
     },
     {
       "path": ".github/workflows/dependency-freshness.yml",
@@ -344,7 +354,7 @@
     },
     {
       "path": ".github/workflows/promotion-path.yml",
-      "sha256": "e9cbea998f594f271aea43bde755493fafadd263688ae3e4acdd7e70b201aab4"
+      "sha256": "304f6470606709a6be5c053f00eff18ad766cf37355a30aad920a486607b9041"
     },
     {
       "path": ".github/workflows/release-governance-ci.yml",
@@ -368,7 +378,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "d0efcac4a523617f08826d0a34765f96ed81086844e8043bcae13a561609c898"
+      "sha256": "a89d12a997b9fdcebb971be248a63517f70351d7f7c60a08fc1e16a6169848f0"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -392,7 +402,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/platform-modernization-reconciliation.v1.json",
-      "sha256": "a4a617fb914ce8035f7b2a9537ba4ad42ab56c6f8fb975d2dde9d5b740288188"
+      "sha256": "f03b24c4de04d71a0a04f240bb2a5362c8b09b89dbf5c3ea3a39de1beae0177f"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/policy-retention-readback.v1.json",
@@ -483,6 +493,14 @@
       "sha256": "c9a339f979696a95f4af7ed28ed089301032624971781fa59ec72fd45933cd82"
     },
     {
+      "path": "apps/web/lib/privacy/guardian.ts",
+      "deleted": true
+    },
+    {
+      "path": "apps/web/next.config.mjs",
+      "sha256": "5cbaaabe02bbaf76ad79b712ee91bfab2fcd3c93be52bcceae6f813000453f3f"
+    },
+    {
       "path": "apps/web/package-lock.json",
       "sha256": "9c5eaa251d3150bc3940f426ea85ed65511586c7c030913650b79d31eed11971"
     },
@@ -557,6 +575,10 @@
     {
       "path": "apps/web/tests-unit/naver-live-provider-smoke-source.test.ts",
       "sha256": "4dea60f599852c29a439528f548a3f5f0d76bb1407a9a6eb6e8e509e248750ca"
+    },
+    {
+      "path": "apps/web/tests-unit/next-tracing-root.test.ts",
+      "sha256": "137e438861aeba6570034fd675c71a7d388894bce8cc3149e30702a0732bde89"
     },
     {
       "path": "apps/web/tests-unit/nightly-regression-workflow.test.ts",
@@ -873,6 +895,10 @@
     {
       "path": "backend/layout-manifest.v1.json",
       "sha256": "51867e25a83ef7755d5be42bcd52dfae0a00e16d280255f72b97f2444e94ecb7"
+    },
+    {
+      "path": "backend/pipeline-control/Dockerfile",
+      "sha256": "2e79fb3fd0f3710826283c1dd88a1eeda57103d968cc8e3889b40aea044b77dc"
     },
     {
       "path": "backend/pipeline-control/PUBLISH_QUEUE.md",
@@ -2024,7 +2050,7 @@
     },
     {
       "path": "backend/utils/tests/test_governance_boundaries.py",
-      "sha256": "3d8c44ba40848753a0e8ede48677d9081980536a0059f9239fcfc07fbab6cb40"
+      "sha256": "07908cbe4251122969dbd8b1cb6297653a615ab8225e81887d3e42abfa575c98"
     },
     {
       "path": "backend/utils/tests/test_layout_naming_source_recovery.py",
@@ -2064,9 +2090,27 @@
     }
   ],
   "combinedFollowupVerification": {
-    "testsRun": 71,
+    "pythonOperationalTests": 53,
+    "pythonProvenanceAndRunnerTests": 30,
+    "webFocusedTests": 48,
+    "promotionPolicyTests": 7,
     "failures": 0,
     "skipped": 0,
-    "bashSyntax": "passed"
-  }
+    "bashSyntax": "passed",
+    "typescriptParity": "passed",
+    "scopedEslint": "passed",
+    "actualVercelAdapterBuild": "passed",
+    "adapterFunctions": 228,
+    "uniqueMappedFiles": 667,
+    "missingMappedFiles": 0,
+    "manualMacHeldRun": "passed",
+    "actualMacScheduleInstallation": false,
+    "previewReadbackPending": true
+  },
+  "inventoryComparisonBase": "3f4ca55742aa33869b776291e0d035a16024eef1",
+  "snapshotStage": "precommit_source_inventory",
+  "primaryMergedDevelop": "f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f",
+  "correctionPr": 2861,
+  "currentProtectedDevelop": "cb8bcc376acf4ca3d4470f3be71eca7de717d750",
+  "pendingPromotionPr": 2859
 }

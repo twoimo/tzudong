@@ -109,7 +109,11 @@ export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEX
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
-    outputFileTracingRoot: __dirname,
+    // Vercel resolves adapter output paths from the Git repository root.
+    // Using apps/web here emits .next paths that cannot be found at that root.
+    outputFileTracingRoot: process.env.VERCEL === '1'
+        ? path.join(__dirname, '../../')
+        : __dirname,
     allowedDevOrigins: ['127.0.0.1', 'localhost'],
     images: {
         // [OPTIMIZATION] 이미지 최적화 설정 (예상 LCP 개선: ~300ms)
