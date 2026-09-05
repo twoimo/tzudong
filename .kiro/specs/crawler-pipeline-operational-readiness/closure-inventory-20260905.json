@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T04:15:19.463524+00:00",
+  "generatedAt": "2026-09-05T04:19:58.010763+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "f524e7bb68e8d164c58500bda74b32a90cef3b6f",
+  "sourceBaseHead": "6552a8da3eb4573318641ecc8b1f0fe8cfae2b14",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -313,12 +313,13 @@
     "performance-runtime-image-readback.v2.json": "990642211807ed06e424583343a02cd4fb34f6be69bf3458f3b3ad0197f00d9c",
     "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27",
     "runtime-transport-schema-review.json": "430f734c8b61840e1a535f59dc9031d09bfd02bf99a059cfce7114da5b6be81c",
-    "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14"
+    "performance-runtime-image-readback.v3.json": "883a9e48bec3eaa87fc7d7ee948b54098f139cffdba7940b8b50ebfe83640c14",
+    "collector-linux-fixture-review.json": "a04b6be1e192ba7b1760829e94116b58969a27c67d950e2ddbd2ccf282181d5e"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 470,
+  "changedFileCount": 471,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -418,7 +419,11 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "938a5a48fc7d86d45508b05702a7f9e0d07133b4085cc4c7631c10bc0738fdaa"
+      "sha256": "71dfb800981f9029ad2c661a40d3e0e9afaf79faf52dabff2683583344fcfda6"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/collector-linux-fixture-review.json",
+      "sha256": "98fb3acef874e94c6bcfa2bae12d2938a846a2872f1b578ea3080906669335d1"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -818,7 +823,7 @@
     },
     {
       "path": "backend/bin/tests/test_otel_restart.py",
-      "sha256": "65ae8521b2a817cb59e15d6c5e20bd5d16573759da52927a6d041dbf84ac4596"
+      "sha256": "af36dfb7e086f3e47fda9053aeaec8ffc3fe9d784873b70b85478894d033d345"
     },
     {
       "path": "backend/bin/tests/test_phase_gate_unittest.py",
@@ -2339,6 +2344,10 @@
       "missingEnvironmentDenied": true,
       "oldRawExporterQueueHeld": true,
       "sourceAndTestsOverlapAcrossGroups": true
+    },
+    "collectorLinuxFixtureCorrection": {
+      "localTestsPassed": 2,
+      "remoteCiPending": true
     }
   },
   "pendingReviewCorrectionPr": 2863

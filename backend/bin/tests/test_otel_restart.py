@@ -166,7 +166,9 @@ class CollectorRestartTests(unittest.TestCase):
                 self.docker('kill', '--signal', 'KILL', collector)
                 self.docker('rm', collector)
                 config.write_text(yaml.safe_dump(cfg))
-                (path / 'payloads').write_bytes(b'')
+                # Linux retains the sink container's root ownership. Read the
+                # append-only suffix rather than truncate or chmod its evidence.
+                payload_offset = (path / 'payloads').stat().st_size
                 (path / 'fail').unlink()
                 start()
                 with log.open('a') as f:
@@ -174,7 +176,7 @@ class CollectorRestartTests(unittest.TestCase):
                 self.await_marker(path / 'delivered', marker(6))
                 time.sleep(1)
                 self.assertNotIn(marker(9), (path / 'delivered').read_text().splitlines())
-                self.assertNotIn(b'FORBIDDEN_fixture_', (path / 'payloads').read_bytes())
+                self.assertNotIn(b'FORBIDDEN_fixture_', (path / 'payloads').read_bytes()[payload_offset:])
             finally:
                 self.docker('rm', '-f', collector, sink, check=False)
                 self.docker('volume', 'rm', volume, check=False)
