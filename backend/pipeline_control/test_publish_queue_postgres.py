@@ -229,6 +229,31 @@ class DurableBackendTests(unittest.TestCase):
         self.assertFalse(store.record_result(str(uuid4()),oa.AGENT_ACTION_PERFORMED))
         self.conn.rollback()
 
+    def test_agent_trigger_halt_survives_reconnect_for_a_different_action(self):
+        from backend.pipeline_control.test_ops_agent_unittest import _make_agent, _signal, _rule
+        for result_code in (oa.AGENT_ACTION_UNVERIFIED, None):
+            trigger = str(uuid4())
+            original = PostgresAgentActionStore(self.scalar)
+            record = oa.AgentActionRecord(str(uuid4()), trigger, 'high', 'restart_local_container')
+            self.assertEqual(original.reserve(record), 'created')
+            if result_code is not None:
+                self.assertTrue(original.record_result(record.action_id, result_code))
+            # A fresh backend connection and fresh agent must read the durable halt.
+            conn = self.connection()
+            def execute(sql, params):
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    row = cur.fetchone()
+                conn.commit()
+                return row[0] if row else None
+            resumed = PostgresAgentActionStore(execute)
+            executed = []
+            agent = _make_agent(store=resumed, executor=executed.append)
+            result = agent.process_signal(_signal(trigger), [_rule('requeue_failed_pipeline_task')])
+            self.assertTrue(result['halted'])
+            self.assertFalse(result['performed'])
+            self.assertEqual(executed, [])
+
     def test_agent_budget_is_atomic_across_connections_restarts_and_windows(self):
         from concurrent.futures import ThreadPoolExecutor
         limits = [{'windowMinutes':60,'maxActions':10}, {'windowMinutes':1440,'maxActions':12}]

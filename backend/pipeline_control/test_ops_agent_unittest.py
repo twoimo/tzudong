@@ -15,6 +15,9 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import os
+import time
+from unittest.mock import patch
 from pathlib import Path
 
 from backend.pipeline_control import ops_agent as oa
@@ -419,18 +422,67 @@ class VerificationHaltTests(unittest.TestCase):
         self.assertNotIn("provider detail", repr(result))
 
     def test_unverified_after_three_failed_attempts(self):
-        attempts = {"n": 0}
+        with tempfile.TemporaryDirectory() as tmp:
+            attempts = Path(tmp) / 'attempts'
+            def verifier(kind):
+                with attempts.open('a') as stream:
+                    stream.write('attempt\n')
+                return False
+            agent = _make_agent(verifier=verifier)
+            result = agent.process_signal(_signal(signal_id="s1"), [_rule("restart_local_container")])
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["errorCode"], oa.AGENT_ACTION_UNVERIFIED)
+            self.assertTrue(result["performed"])
+            self.assertEqual(len(attempts.read_text().splitlines()), oa.MAX_VERIFY_ATTEMPTS)
 
-        def verifier(kind):
-            attempts["n"] += 1
-            return False
+    def test_success_returned_after_deadline_is_rejected(self):
+        clock = _FakeClock()
+        def late(_):
+            clock.advance(61)
+            return True
+        agent = _make_agent(verifier=late, clock=clock)
+        result = agent.process_signal(_signal(), [_rule('restart_local_container')])
+        self.assertEqual(result['errorCode'], oa.AGENT_ACTION_UNVERIFIED)
 
-        agent = _make_agent(verifier=verifier)
-        result = agent.process_signal(_signal(signal_id="s1"), [_rule("restart_local_container")])
-        self.assertFalse(result["ok"])
-        self.assertEqual(result["errorCode"], oa.AGENT_ACTION_UNVERIFIED)
-        self.assertTrue(result["performed"])
-        self.assertEqual(attempts["n"], oa.MAX_VERIFY_ATTEMPTS)
+    def test_hung_verifier_is_killed_and_reaped_within_real_budget(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pidfile = Path(tmp) / 'worker-pid'
+            def hung(_):
+                pidfile.write_text(str(os.getpid()))
+                time.sleep(30)
+                return True
+            agent = _make_agent(verifier=hung)
+            started = time.monotonic()
+            with patch.object(oa, 'MAX_VERIFY_SECONDS', 0.2):
+                result = agent.process_signal(_signal(), [_rule('restart_local_container')])
+            self.assertLess(time.monotonic() - started, 2)
+            self.assertEqual(result['errorCode'], oa.AGENT_ACTION_UNVERIFIED)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(int(pidfile.read_text()), 0)
+
+    def test_new_agent_halts_durable_failure_or_unfinished_action(self):
+        for failure in ('unverified', 'unfinished'):
+            store = oa.InMemoryAgentActionStore()
+            first = _make_agent(store=store, verifier=lambda _: False)
+            if failure == 'unverified':
+                first.process_signal(_signal(), [_rule('restart_local_container')])
+            else:
+                store.reserve(oa.AgentActionRecord('interrupted', 'sig-1', 'high', 'restart_local_container'))
+            executed = []
+            resumed = _make_agent(store=store, executor=executed.append)
+            result = resumed.process_signal(_signal(), [_rule('requeue_failed_pipeline_task')])
+            self.assertTrue(result['halted'])
+            self.assertFalse(result['performed'])
+            self.assertEqual(executed, [])
+
+    def test_unavailable_trigger_readback_blocks_execution(self):
+        store = oa.InMemoryAgentActionStore()
+        store.trigger_state = lambda _: 'unavailable'
+        executed = []
+        result = _make_agent(store=store, executor=executed.append).process_signal(
+            _signal(), [_rule('restart_local_container')])
+        self.assertEqual(result['errorCode'], oa.AGENT_ACTION_RECORD_UNAVAILABLE)
+        self.assertEqual(executed, [])
 
     def test_subsequent_action_halted_for_same_trigger(self):
         agent = _make_agent(verifier=lambda kind: False)

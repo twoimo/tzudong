@@ -51,6 +51,11 @@ from __future__ import annotations
 import json
 import uuid
 import threading
+import math
+import os
+import select
+import signal
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence
@@ -314,6 +319,13 @@ class InMemoryAgentActionStore:
         self._fail_reserve = fail_reserve
         self._budget_claims: dict[str, float] = {}
         self._budget_lock = threading.Lock()
+
+    def trigger_state(self, trigger_signal_id: str) -> str:
+        return 'halted' if any(
+            row['trigger_signal_id'] == trigger_signal_id and row['result_code'] in
+            {None, AGENT_ACTION_UNVERIFIED, AGENT_ACTION_RECORD_UNAVAILABLE}
+            for row in self._rows.values()
+        ) else 'clear'
 
     def claim_rate_budget(self, action_id: str, limits, now_seconds: float) -> str:
         """Shared-store admission; production uses a serialized database claim."""
@@ -636,7 +648,15 @@ class OpsAgent:
             )
 
         # 동일 트리거 후속 중단 (요구사항 15.10).
-        if signal.signal_id in self._halted_triggers:
+        try:
+            trigger_state = self.store.trigger_state(signal.signal_id)
+        except Exception:
+            trigger_state = 'unavailable'
+        if trigger_state not in {'clear', 'halted'}:
+            return _result(False, AGENT_ACTION_RECORD_UNAVAILABLE, performed=False,
+                           resultCode=AGENT_ACTION_RECORD_UNAVAILABLE, halted=True,
+                           triggerSignalId=signal.signal_id)
+        if signal.signal_id in self._halted_triggers or trigger_state == 'halted':
             return _result(
                 False,
                 AGENT_ACTION_UNVERIFIED,
@@ -832,18 +852,73 @@ class OpsAgent:
             return False
 
     def _verify(self, action_kind_id: str, start_seconds: float) -> bool:
-        """결과 확인: 최대 3회 시도, 총 60초 이내 (요구사항 15.10)."""
+        """At most three read-only probes, bounded by a killable process.
 
-        for _ in range(MAX_VERIFY_ATTEMPTS):
-            if float(self.clock()) - start_seconds > MAX_VERIFY_SECONDS:
+        Callbacks run in an isolated single-threaded POSIX worker, and must open
+        their own readback resources. Only a boolean crosses the pipe. Unsafe
+        fork contexts fail closed; no background thread can outlive a timeout.
+        Both the injected clock and real wall time enforce the total deadline.
+        """
+        if (not hasattr(os, 'fork') or threading.current_thread() is not threading.main_thread()
+                or threading.active_count() != 1):
+            return False
+        try:
+            remaining = MAX_VERIFY_SECONDS - (float(self.clock()) - start_seconds)
+            if not math.isfinite(remaining) or not 0 < remaining <= MAX_VERIFY_SECONDS:
                 return False
-            try:
-                if self.verifier(action_kind_id):
-                    return True
-            except Exception:
-                # 확인 콜러블의 실패는 미확인으로 취급(오류 원문 미노출).
-                return False
-        return False
+            deadline = time.monotonic() + remaining
+            reader, writer = os.pipe()
+        except Exception:
+            return False
+        pid = None
+        try:
+            pid = os.fork()
+            if pid == 0:
+                os.close(reader)
+                try:
+                    os.setsid()
+                    # Callback diagnostics must never reach logs or receipts.
+                    with open(os.devnull, 'wb') as sink:
+                        os.dup2(sink.fileno(), 1)
+                        os.dup2(sink.fileno(), 2)
+                    result = False
+                    for _ in range(MAX_VERIFY_ATTEMPTS):
+                        if time.monotonic() >= deadline or float(self.clock()) - start_seconds >= MAX_VERIFY_SECONDS:
+                            break
+                        observed = self.verifier(action_kind_id) is True
+                        if time.monotonic() >= deadline or float(self.clock()) - start_seconds >= MAX_VERIFY_SECONDS:
+                            break
+                        if observed:
+                            result = True
+                            break
+                    os.write(writer, b'1' if result else b'0')
+                except BaseException:
+                    pass
+                finally:
+                    os._exit(0)
+            os.close(writer)
+            writer = None
+            ready, _, _ = select.select([reader], [], [], max(0, deadline - time.monotonic()))
+            return (bool(ready) and os.read(reader, 1) == b'1'
+                    and time.monotonic() < deadline
+                    and float(self.clock()) - start_seconds < MAX_VERIFY_SECONDS)
+        except Exception:
+            return False
+        finally:
+            os.close(reader)
+            if writer is not None:
+                os.close(writer)
+            if pid is not None and pid > 0:
+                # Kill the worker's group even after a result, so no probe
+                # descendant survives. A pre-setsid race still kills the child.
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                os.waitpid(pid, 0)
 
     def _deny(
         self,

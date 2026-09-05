@@ -16,6 +16,19 @@ class PostgresAgentActionStore:
     def __init__(self, execute_one: Callable[[str, tuple[Any, ...]], Any]) -> None:
         self.execute_one = execute_one
 
+    def trigger_state(self, trigger_signal_id: str) -> str:
+        """Pending or failed durable results block every action for this signal."""
+        try:
+            halted = self.execute_one(
+                'SELECT EXISTS (SELECT 1 FROM local_analytics.agent_action_state '
+                'WHERE trigger_signal_id=%s AND (result_code IS NULL OR result_code IN '
+                "('agent_action_unverified','agent_action_record_unavailable')))",
+                (trigger_signal_id,),
+            )
+            return ('halted' if halted else 'clear') if type(halted) is bool else 'unavailable'
+        except Exception:
+            return 'unavailable'
+
     def reserve(self, record: AgentActionRecord) -> str:
         try:
             assert_record_shape(record.to_row())
