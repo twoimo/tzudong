@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -130,14 +131,15 @@ class CredentialAndRunnerTest(unittest.TestCase):
         with self.assertRaisesRegex(inv.InventoryError, "CONFIG_INVALID"):
             inv.child_environment("not-base64")
 
-    def test_exact_read_commands_discard_stderr_without_files(self):
+    def test_exact_read_commands_capture_stderr_only_in_memory(self):
         for operation in ["inventory"]:
             child = MagicMock(); child.stdout = io.BytesIO(b"[]"); child.wait.return_value = 0; child.poll.return_value = 0
+            child.stderr = io.BytesIO(b"")
             with patch.object(inv.subprocess, "Popen", return_value=child) as launch:
                 self.assertEqual(inv.read_remote(operation, {"PATH": "/usr/bin:/bin"}), b"[]")
             args = launch.call_args.args[0]
             self.assertEqual(args[:6], ["rclone", "lsjson", inv.FRAMES, "--recursive", "--files-only", "--hash"])
-            self.assertEqual(launch.call_args.kwargs["stderr"], subprocess.DEVNULL)
+            self.assertEqual(launch.call_args.kwargs["stderr"], subprocess.PIPE)
             self.assertFalse(launch.call_args.kwargs["shell"])
             self.assertIn("--drive-skip-shortcuts", args)
             self.assertEqual(args[args.index("--config") + 1], "/dev/null")
@@ -150,9 +152,10 @@ class CredentialAndRunnerTest(unittest.TestCase):
 
     def test_transport_failure_and_oversize_do_not_retain_diagnostics(self):
         with patch.object(inv.subprocess, "Popen", side_effect=OSError("token=sentinel-private")):
-            with self.assertRaisesRegex(inv.InventoryError, "^REMOTE_READ_FAILED$"):
+            with self.assertRaisesRegex(inv.InventoryError, "^REMOTE_LAUNCH_FAILED$"):
                 inv.read_remote("inventory", {})
         child = MagicMock(); child.stdout = io.BytesIO(b"12345"); child.poll.return_value = None
+        child.stderr = io.BytesIO(b"")
         with patch.object(inv, "MAX_BYTES", 4), patch.object(inv.subprocess, "Popen", return_value=child):
             with self.assertRaisesRegex(inv.InventoryError, "INPUT_TOO_LARGE"):
                 inv.read_remote("inventory", {})
@@ -161,6 +164,7 @@ class CredentialAndRunnerTest(unittest.TestCase):
     def test_nonzero_and_timeout_fail_closed_even_with_parseable_stdout(self):
         for timed_out in [False, True]:
             child = MagicMock(); child.stdout = io.BytesIO(b"[]")
+            child.stderr = io.BytesIO(b"")
             child.wait.return_value = 0 if timed_out else 3; child.poll.return_value = 0
             timer = MagicMock()
             def make_timer(_seconds, callback):
@@ -168,7 +172,7 @@ class CredentialAndRunnerTest(unittest.TestCase):
                     timer.start.side_effect = callback
                 return timer
             with patch.object(inv.subprocess, "Popen", return_value=child), patch.object(inv.threading, "Timer", side_effect=make_timer):
-                with self.assertRaisesRegex(inv.InventoryError, "^REMOTE_READ_FAILED$"):
+                with self.assertRaisesRegex(inv.InventoryError, "^REMOTE_TIMEOUT$" if timed_out else "^REMOTE_READ_FAILED$"):
                     inv.read_remote("inventory", {})
             timer.cancel.assert_called_once()
             timer.join.assert_called_once()
@@ -198,6 +202,83 @@ class CredentialAndRunnerTest(unittest.TestCase):
         with patch.object(inv.subprocess, "run", return_value=subprocess.CompletedProcess([], 0, b"b" * 40)):
             with self.assertRaisesRegex(inv.InventoryError, "SOURCE_BINDING_FAILED"):
                 inv.source_binding(env)
+
+
+class RemoteDiagnosticsTest(unittest.TestCase):
+    def run_child(self, script):
+        # Real OS pipes, entirely local child, no config or network access.
+        popen = subprocess.Popen
+        def launch(_args, **kwargs):
+            return popen([sys.executable, "-B", "-c", script], **kwargs)
+        with patch.object(inv.subprocess, "Popen", side_effect=launch):
+            return inv.read_remote("inventory", {"PATH": "/usr/bin:/bin"})
+
+    def test_fixed_marker_allowlist_and_unknown_fallback(self):
+        for message, code in [
+            (b"unknown flag: --private", "REMOTE_FLAG_UNSUPPORTED"),
+            (b"oauth2: cannot fetch token: private", "REMOTE_AUTH_FAILED"),
+            (b"invalid_grant: private", "REMOTE_AUTH_FAILED"),
+            (b"insufficientPermissions: private", "REMOTE_PERMISSION_DENIED"),
+            (b"userRateLimitExceeded: private", "REMOTE_RATE_LIMITED"),
+            (b"directory not found: private", "REMOTE_PATH_NOT_FOUND"),
+            (b"dial tcp: no such host: private", "REMOTE_NETWORK_FAILED"),
+            (b"unknown provider failure with token=private", "REMOTE_READ_FAILED"),
+        ]:
+            with self.subTest(code=code):
+                self.assertEqual(inv.remote_error_code(message), code)
+
+    def test_stderr_flood_before_stdout_does_not_deadlock_or_escape(self):
+        with patch.object(inv, "REMOTE_TIMEOUT_SECONDS", 5), self.assertRaises(inv.RemoteReadError) as caught:
+            self.run_child("import os; os.write(2,b'invalid_grant token=sentinel-private\\n'); "
+                           "[os.write(2,b'x'*4096) for _ in range(512)]; os.write(1,b'[]'); raise SystemExit(7)")
+        self.assertEqual(str(caught.exception), "REMOTE_AUTH_FAILED")
+        self.assertEqual(caught.exception.receipt, {"remoteStatus": "exited", "remoteExitCode": 7, "diagnosticTruncated": True})
+        self.assertNotIn("sentinel", repr(caught.exception.__dict__))
+
+    def test_prefix_cap_discards_late_markers_and_success_warnings(self):
+        with patch.object(inv, "REMOTE_TIMEOUT_SECONDS", 5), self.assertRaises(inv.RemoteReadError) as caught:
+            self.run_child("import os; os.write(2,b'x'*32768+b'invalid_grant'); raise SystemExit(1)")
+        self.assertEqual(str(caught.exception), "REMOTE_READ_FAILED")
+        self.assertTrue(caught.exception.receipt["diagnosticTruncated"])
+        self.assertEqual(self.run_child("import os; os.write(2,b'invalid_grant sentinel'); os.write(1,b'[]')"), b"[]")
+
+    def test_real_timeout_and_stdout_limit_reap_child(self):
+        with patch.object(inv, "REMOTE_TIMEOUT_SECONDS", 0.2), self.assertRaises(inv.RemoteReadError) as caught:
+            self.run_child("import time; time.sleep(10)")
+        self.assertEqual(str(caught.exception), "REMOTE_TIMEOUT")
+        self.assertEqual(caught.exception.receipt["remoteStatus"], "timed_out")
+        self.assertEqual(caught.exception.receipt["remoteExitCode"], -9)
+        with patch.object(inv, "MAX_BYTES", 3), patch.object(inv, "REMOTE_TIMEOUT_SECONDS", 5), \
+                self.assertRaisesRegex(inv.InventoryError, "^INPUT_TOO_LARGE$"):
+            self.run_child("import os,time; os.write(1,b'12345'); os.write(2,b'x'*65536); time.sleep(10)")
+
+    def test_main_publishes_only_fixed_receipt_for_remote_failure(self):
+        error = inv.RemoteReadError("REMOTE_AUTH_FAILED", "exited", 7, True)
+        with patch.object(inv, "source_binding", return_value="a" * 40), \
+                patch.object(inv, "load_expected", return_value=b"{}"), \
+                patch.object(inv, "child_environment", return_value={}), \
+                patch.object(inv, "read_remote", side_effect=error), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(inv.main(), 1)
+        report = json.loads(output.getvalue())
+        self.assertEqual(set(report), {"schemaVersion", "status", "code", "sourceSha", "inputSha256",
+                                     "validatorSourceSha256", "remoteStatus", "remoteExitCode", "diagnosticTruncated"})
+        self.assertEqual(report["code"], "REMOTE_AUTH_FAILED")
+        self.assertEqual(report["remoteExitCode"], 7)
+        for value in [True, -129, 256, "private"]:
+            self.assertIsNone(inv.RemoteReadError("REMOTE_READ_FAILED", "exited", value).receipt["remoteExitCode"])
+
+    def test_stderr_read_failure_kills_child_and_redacts_exception(self):
+        child = MagicMock(); child.stdout = io.BytesIO(b"[]")
+        child.stderr.read.side_effect = OSError("token=sentinel-private")
+        child.wait.return_value = -9; child.poll.return_value = -9
+        with patch.object(inv.subprocess, "Popen", return_value=child), self.assertRaises(inv.RemoteReadError) as caught:
+            inv.read_remote("inventory", {})
+        self.assertEqual(str(caught.exception), "REMOTE_IO_FAILED")
+        self.assertEqual(caught.exception.receipt["remoteStatus"], "io_failed")
+        child.kill.assert_called_once()
+        child.stderr.close.assert_called_once()
+        self.assertTrue(child.stdout.closed)
 
 
 class ImmutableExpectedTest(unittest.TestCase):
