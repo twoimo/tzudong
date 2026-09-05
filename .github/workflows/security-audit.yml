@@ -127,6 +127,9 @@ on:
       - 'backend/supabase/scripts/g037_session_pooler_control_map_stdout_filter_v3.py'
       - 'backend/supabase/scripts/g037_session_pooler_control_map_receipt_v3.py'
       - 'backend/supabase/scripts/local-stack.py'
+      - 'backend/supabase/docker-compose.s3.yml'
+      - 'backend/supabase/optional-s3-compatibility.v1.json'
+      - 'backend/supabase/tests/test_optional_s3_overlay.py'
       - 'backend/supabase/tests/test_advisor_followup_source.py'
       - 'backend/supabase/tests/test_advisor_replay.py'
       - 'backend/supabase/scripts/transform_advisor_replay.py'
@@ -407,6 +410,7 @@ jobs:
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |
           python -m unittest \
+            backend.supabase.tests.test_optional_s3_overlay \
             backend.supabase.tests.test_advisor_followup_source \
             backend.supabase.tests.test_advisor_replay \
             backend.supabase.tests.test_advisor_replay_prerequisites \

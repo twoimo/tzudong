@@ -44,25 +44,18 @@ test('workflow emits the required check on every PR and on base edits, without s
   assert.doesNotMatch(workflow, /paths:|branches:|secrets\.|:\s*write\b/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /pull_request_target:/);
-  assert.match(workflow, /github\.event\.pull_request\.base\.sha/);
+  assert.match(workflow, /ref: \$\{\{ github\.workflow_sha \}\}/);
   assert.doesNotMatch(workflow, /refs\/pull|head\.sha|head\.ref/);
-  assert.match(workflow, /8a3a3a65ea41d4a5f20f1111aac9e0c3f8583b25/);
   assert.doesNotMatch(workflow, /node --test/);
   assert.match(workflow, /node --input-type=module/);
   assert.match(workflow, /import \{ verifyPromotionPath \}/);
   assert.doesNotMatch(workflow, /GITHUB_EVENT_NAME:/);
 });
 
-test('bounded bootstrap runs reviewed develop policy while default main is still uninstalled', () => {
+test('the required policy has no PR-defined bootstrap or conditional job skip', () => {
   const workflow = readFileSync(new URL('../workflows/promotion-path.yml', import.meta.url), 'utf8');
-  const lists = [...workflow.matchAll(/contains\(fromJSON\('([^']+)'\), github\.event\.pull_request\.base\.sha\)/g)]
-    .map((match) => JSON.parse(match[1]));
-  assert.equal(lists.length, 2);
-  const [bootstrapBases, anchorBases] = lists;
-  const reviewedDevelop = 'f5ac706239c1aaf9c0c62ab1f6c539959c8cf70f';
-  assert.deepEqual(bootstrapBases, [...anchorBases, reviewedDevelop]);
-  assert.equal(anchorBases.length, 3);
-  assert.equal(anchorBases.includes(reviewedDevelop), false);
-  assert.equal(bootstrapBases.includes('a'.repeat(40)), false);
-  assert.match(workflow, /\|\| github\.event\.pull_request\.base\.sha/);
+  assert.doesNotMatch(workflow, /^\s+pull_request:|^\s+if:/m);
+  assert.doesNotMatch(workflow, /fromJSON|base\.sha|head\.sha|head\.ref|refs\/pull/);
+  assert.match(workflow, /GITHUB_EVENT_NAME === 'pull_request_target'/);
+  assert.equal((workflow.match(/ref: \$\{\{ github\.workflow_sha \}\}/g) ?? []).length, 1);
 });

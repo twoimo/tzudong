@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "scope": "disposable local MinIO and actual Supabase Storage S3 adapter compatibility; no hosted access or user data",
+  "startedAt": "2026-09-04T21:19:28.104022+00:00",
+  "serverImage": "cgr.dev/chainguard/minio@sha256:0d54f6c86e53138c6cfc242e21309a18941624d9034d9cdf598dbba61f69d872",
+  "clientImage": "cgr.dev/chainguard/minio-client@sha256:fce18c0d1a830273b51e422e6d8962f56c4e253d4858826ee5b5533deb7cbd6a",
+  "storageImage": "supabase/storage-api@sha256:3e3742049427313d167578ba7af753069947972b64fcc5374cfb750f66a26177",
+  "hostPortsPublished": 0,
+  "hostVolumesMounted": 0,
+  "disposableNamedVolumes": 1,
+  "operatorCredentialsUsed": false,
+  "checks": {
+    "ready": true,
+    "temporaryConfigHealthCommandWorks": true,
+    "bucketCreated": true,
+    "bucketCreateIdempotent": true,
+    "namedVolumeRestartReadback": true
+  },
+  "cleanupVerified": true,
+  "adapter": {
+    "checks": {
+      "smallUploadReadback": true,
+      "metadataMatches": true,
+      "rangeReadback": true,
+      "copyReadback": true,
+      "signedReadback": true,
+      "anonymousReadDenied": true,
+      "wrongSecretDenied": true,
+      "multipartReadback": true,
+      "multipartCommandsObserved": true,
+      "listMatches": true,
+      "deleteReadback": true
+    },
+    "operationCounts": {
+      "PutObjectCommand": 1,
+      "HeadObjectCommand": 3,
+      "GetObjectCommand": 5,
+      "CopyObjectCommand": 1,
+      "CreateMultipartUploadCommand": 1,
+      "UploadPartCommand": 2,
+      "CompleteMultipartUploadCommand": 1,
+      "ListObjectsV2Command": 2,
+      "DeleteObjectCommand": 1,
+      "DeleteObjectsCommand": 1
+    },
+    "ok": true
+  },
+  "adapterExitCode": 0,
+  "finishedAt": "2026-09-04T21:19:41.242067+00:00",
+  "ok": true,
+  "externalReceipt": {
+    "name": "minio-compatibility-readback.json",
+    "sha256": "f52d8529fa274d8114df0581798b774023d5b1310472f2f0d8637514f88a30eb"
+  },
+  "testedArchitecture": "linux/arm64",
+  "indexPlatforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "allArchitecturesRuntimeTested": false,
+  "securityCertificationClaimed": false,
+  "documentation": [
+    "https://supabase.com/docs/guides/self-hosting/self-hosted-s3",
+    "https://github.com/supabase/supabase/blob/master/docker/docker-compose.s3.yml",
+    "https://images.chainguard.dev/directory/image/minio/vulnerabilities"
+  ],
+  "vendorVulnerabilityPage": "The current vendor page still lists a medium glibc finding and unknown-severity x/crypto findings; it is not a digest-specific zero-CVE certificate."
+}

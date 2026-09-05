@@ -23,6 +23,7 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
         from backend.bin import run_hosted_new_video_pipeline as runner
         for args in ([], ['--dry-run']):
             with self.subTest(args=args), patch.object(runner, '_load_backend_env'), \
+                patch.dict('os.environ', {'G037_WRITE_FREEZE': 'cleared'}), \
                 patch.object(runner, 'cadence_source_preflight'), \
                 patch.object(runner, 'env_contract_preflight'), \
                 patch.object(runner, '_apply_local_runtime_environment'), \

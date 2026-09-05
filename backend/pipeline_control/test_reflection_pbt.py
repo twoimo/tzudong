@@ -28,7 +28,7 @@ from backend.supabase.scripts.hosted_data_plane import (
 # Fixed, non-sensitive drivers for the real apply path.
 # --------------------------------------------------------------------------- #
 _SERVICE_ROLE_KEY = "test-service-role-key"  # non-empty; never a real secret
-_ENVIRONMENT = {APPROVAL_ENV: "1"}
+_ENVIRONMENT = {APPROVAL_ENV: "1", "G037_WRITE_FREEZE": "cleared"}
 
 # Stable YouTube video ids are exactly 11 chars from [A-Za-z0-9_-].
 _YT_ALPHABET = (
