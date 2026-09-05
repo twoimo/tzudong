@@ -23,9 +23,15 @@ capture's SHA in `sourceSha256`. Capture these identities during the measured
 execution; changing an outer admission label cannot authorize a Python run or
 another slice/artifact. Do not manufacture captures from old measurements.
 
-Full validation runs once per immutable receipt/slice/artifact/commit binding
+Full validation runs once per unchanged receipt/slice/artifact/commit binding
 per process. Only successful verdicts are cached (bounded to 128 bindings),
-including simultaneous callers. New evidence needs a new content hash; updates
-to an installed evidence set require a new image/process. Failed validation is
-not cached and continues to deny promotion. Native extension installation is a
+including simultaneous callers. Every reuse fingerprints all nested evidence,
+schema/budget pins and validator files, including inode/device, size, nanosecond
+mtime/ctime and file mode. Missing files, aliases, atomic replacement, and
+same-size edits with restored mtime invalidate the verdict, including writable
+Compose checkouts. The entire file set must also remain unchanged across initial
+validation. Changed evidence requires valid pinned hashes and full revalidation.
+JSON with duplicate keys, non-finite numbers or non-UTF-8 encoding is rejected.
+Failed validation is not cached and continues to deny promotion. The operating
+system and running verifier code remain trusted. Native extension installation is a
 separate runtime requirement; missing selected extensions fail closed.

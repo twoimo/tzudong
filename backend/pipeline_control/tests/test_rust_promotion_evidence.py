@@ -132,6 +132,22 @@ class PromotionEvidenceTests(unittest.TestCase):
                 self.assertTrue(proof_module.approved({**approval, 'approvedAt': valid},
                     purpose=purpose, binding={'exact': 'binding'}), valid)
 
+    def test_duplicate_receipt_keys_and_nonfinite_json_fail_before_authorization(self):
+        approval = self.approval('rust_default_switch', {'exact': 'binding'})
+        canonical = json.dumps(approval, separators=(',', ':')).encode()
+        for prefix in (b'"purpose":"python_removal",', b'"status":"denied",',
+                       b'"binding":{},', b'"sta\\u0074us":"denied",'):
+            raw = b'{' + prefix + canonical[1:]
+            reference = 'sha256:' + hashlib.sha256(raw).hexdigest()
+            self.blobs[reference] = raw
+            self.assertIsNone(proof_module.read_receipt(reference, self.blobs.__getitem__))
+        for raw in (b'{"binding":{"id":1,"id":2}}', b'{"kind":"a","kind":"b"}',
+                    b'{"value":NaN}', b'{"value":Infinity}', b'{"value":1e999}',
+                    '{}'.encode('utf-16')):
+            reference = 'sha256:' + hashlib.sha256(raw).hexdigest()
+            self.blobs[reference] = raw
+            self.assertIsNone(proof_module.read_receipt(reference, self.blobs.__getitem__))
+
     def test_python_removal_requires_both_verified_live_evidence_and_exact_separate_approval(self):
         ref = self.proof()
         candidate = {'separateExplicitCandidate': True, 'candidateCommitSha': 'a' * 40,

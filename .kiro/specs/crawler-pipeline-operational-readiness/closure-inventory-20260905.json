@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
   "kind": "kiro_operational_progress_inventory",
-  "generatedAt": "2026-09-05T03:20:30.034775+00:00",
+  "generatedAt": "2026-09-05T03:43:40.051911+00:00",
   "branch": "codex/promotion-review-closure-20260905",
-  "sourceBaseHead": "618588e4b1e833cca87753a94be270c687902405",
+  "sourceBaseHead": "7e0449fa39f29bb4b9c9278fb846c9d172b94022",
   "workingTreeClean": false,
   "primaryPr": 2858,
   "primaryReviewHead": "bc2005da501d933ef58110958aedb0901a4b66b9",
@@ -308,12 +308,15 @@
     "rust-performance-admission-review.json": "f581fedc991688d926c0d332ead5c71d7c55744e8fe1474a39000625ad6fafa2",
     "rust-performance-runtime-review.json": "f4db46db618d84d5271d6ff56276434edcdb70628d228fcb900e5f26e2d5f765",
     "performance-runtime-image-readback.json": "ba6008503933e55532bef96370fa404bc2e7b270ad35f801a0e84878c8cc037f",
-    "atomic-trigger-dependency-time-review.json": "4067cb53a1eef5cd9fabd5a1e338e6b1d0c647198364b56416f879295aa25e9c"
+    "atomic-trigger-dependency-time-review.json": "4067cb53a1eef5cd9fabd5a1e338e6b1d0c647198364b56416f879295aa25e9c",
+    "strict-receipt-cache-review.json": "b68ccda4d21b090652ff4d4a41e79cb1b3cd8ff917c85c8b2592835627d5ce34",
+    "performance-runtime-image-readback.v2.json": "990642211807ed06e424583343a02cd4fb34f6be69bf3458f3b3ad0197f00d9c",
+    "performance-writable-mount-readback.json": "2783271fe22a6ef082582957d12ffffcbbd307697773b07944cd823f3c77fa27"
   },
   "hashExclusions": [
     ".kiro/specs/crawler-pipeline-operational-readiness/closure-inventory-20260905.json"
   ],
-  "changedFileCount": 466,
+  "changedFileCount": 468,
   "changedFiles": [
     {
       "path": ".gitattributes",
@@ -413,7 +416,7 @@
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/closure-20260905.md",
-      "sha256": "48d2acadf5939a932673c1e5c17f01967ce32f7c3447e88b88e3fff4d52df2c9"
+      "sha256": "63c27fb4ab5effa6df6c0c80b7518f89cd6ca77018a449620c977e65cbabd2bc"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/credential-request-supersession.v1.json",
@@ -494,6 +497,10 @@
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/solo-operator-settings-readback.v1.json",
       "sha256": "f6e7eca5b9bf8277afa363750e7689d6a08b0ca60d082434db023b599dd21cac"
+    },
+    {
+      "path": ".kiro/specs/crawler-pipeline-operational-readiness/strict-receipt-cache-review.json",
+      "sha256": "f2344e4f2ab6e7f1e28f5e16241edd945596e2f8dff827b147940e9fc7ab294d"
     },
     {
       "path": ".kiro/specs/crawler-pipeline-operational-readiness/tasks.md",
@@ -1068,16 +1075,20 @@
       "sha256": "76fa6f55537c0c2cd06d51f48b476dc8eb592f44d4f9549f45e7c3a2f9d261a4"
     },
     {
+      "path": "backend/pipeline_control/receipt_json.py",
+      "sha256": "1a6a4c5eb1756521b2f03514cd461e5be7fd33b4e73b3f7afa629a02735970e6"
+    },
+    {
       "path": "backend/pipeline_control/rust_parity.py",
       "sha256": "f8a359f927ef4192c20eb6502c4be96cbcf9bc6133dc0424c8c0611f63f6a5e3"
     },
     {
       "path": "backend/pipeline_control/rust_performance_admission.py",
-      "sha256": "3262b2f503eaf3008b3025ab25302983905f62d56ec91da9376dc03c7ec1ea18"
+      "sha256": "5c214b4b058930baedfe9f43adf190f8bf61d84d30a5ceb17c17baf23236777f"
     },
     {
       "path": "backend/pipeline_control/rust_promotion_evidence.py",
-      "sha256": "d7c3221c4fe574855420a41ca27db76b6921a5118e72ff02f7b80778566953fb"
+      "sha256": "b6ceb2a5ae2540534c939fb5b234e352cab4d5e4ab14e508c0a0eba1f8abe1eb"
     },
     {
       "path": "backend/pipeline_control/schedule.py",
@@ -1333,11 +1344,11 @@
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_performance_admission.py",
-      "sha256": "b34195bdd91bf549e6506b2e97452cd337fd475d8ae59f18ad40a9db3437ebf4"
+      "sha256": "1ddc81999103527134231b3322d3b4772e86c857adf78ea01c1927844d2fb4c7"
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_promotion_evidence.py",
-      "sha256": "69e37e0980033771c335d5879753e9f46324663f89342812fc93aa3e0271e6f2"
+      "sha256": "6f00a97569d2ecd9b82bfd921861929fe95533a9a7553d924344fd518ca85991"
     },
     {
       "path": "backend/pipeline_control/tests/test_rust_runtime_bindings.py",
@@ -1381,7 +1392,7 @@
     },
     {
       "path": "backend/rust/promotion-evidence/README.md",
-      "sha256": "83419925456d4c6a4acf96e26fc93baa30ffeadd23bd34aa8b4411f16bd8d767"
+      "sha256": "f9b52d6c09ecb8d4542ff15876674d13ab0d43e10cced6da3370364fcc611015"
     },
     {
       "path": "backend/rust/rust-toolchain.toml",
@@ -2289,6 +2300,15 @@
       "strongerIsolationDenied": true,
       "unauthorizedRpcExecutionDenied": true,
       "githubCompareApiMergeBaseReadback": true
+    },
+    "strictReceiptAndCache": {
+      "rustGateTestsPython313": 86,
+      "receiptAndCacheTestsPython314": 20,
+      "sourceProvenanceTests": 23,
+      "independentlyTamperedEvidenceRoles": 11,
+      "sameSizeRestoredMtimeRejected": true,
+      "deletedAndAliasedFilesRejected": true,
+      "duplicateJsonKeysAndNonfiniteValuesRejected": true
     }
   },
   "pendingReviewCorrectionPr": 2863

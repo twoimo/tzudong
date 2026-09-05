@@ -9,13 +9,16 @@ import base64
 from collections import OrderedDict
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
+import stat
 import threading
 
 from backend.pipeline_control.performance_evidence import BACKEND_METRIC_BUDGETS, is_frozen_tree_valid
+from backend.pipeline_control.receipt_json import parse_receipt_json
 
 ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR = ROOT / 'apps/web/scripts/validate-performance-backlog.mjs'
@@ -42,7 +45,7 @@ def _read(root, reference, maximum):
         raw = stream.read(maximum + 1)
     if len(raw) > maximum or hashlib.sha256(raw).hexdigest() != reference['sha256']:
         raise ValueError('performance_hash_mismatch')
-    return json.loads(raw)
+    return parse_receipt_json(raw)
 
 
 def _candidate_tree(root, reference, git_sha):
@@ -167,25 +170,74 @@ def _verify_performance(reference, slice_id, artifact_id, git_sha, *, repo_root=
         return False
 
 
+def _snapshot_paths(root, reference):
+    receipt = _read(root, reference, 1024 * 1024)
+    artifact_map = _read(root, receipt['artifactMap'], 1024 * 1024)
+    references = [reference, receipt['artifactMap'], receipt['raw'], receipt['scored'],
+                  receipt['candidateCommitObject'], *receipt['runtimeCaptures'].values(),
+                  *artifact_map.get('pins', {}).values()]
+    paths = {ref['path'] for ref in references} | set(artifact_map['artifacts'])
+    if len(paths) > 256:
+        raise ValueError('performance_file_limit')
+    for path in paths:
+        if (not isinstance(path, str) or not path.startswith('apps/web/performance/')
+                or '\\' in path or any(p in {'', '.', '..'} for p in path.split('/'))):
+            raise ValueError('invalid_performance_path')
+    return tuple(sorted({root / path for path in paths} | {VALIDATOR}))
+
+
+def _snapshot(paths):
+    """Fingerprint every previously hash-validated file and its directory chain.
+
+    Includes ctime/inode/device, so same-size edits, mtime restoration and atomic
+    replacement invalidate a verdict. This assumes the OS metadata is trusted;
+    an actor controlling the kernel or process can also replace this verifier.
+    """
+    directories = {parent for path in paths for parent in path.parents}
+    for parent in directories:
+        mode = parent.lstat().st_mode
+        if not stat.S_ISDIR(mode):
+            raise ValueError('performance_directory_alias')
+    result = []
+    for path in paths:
+        snapshot = path.lstat()
+        if not stat.S_ISREG(snapshot.st_mode):
+            raise ValueError('performance_file_alias')
+        result.append((str(path), snapshot.st_dev, snapshot.st_ino, snapshot.st_size,
+                       snapshot.st_mtime_ns, snapshot.st_ctime_ns, snapshot.st_mode))
+    return tuple(result)
+
+
 def verified_performance(reference, slice_id, artifact_id, git_sha, *, repo_root=ROOT, runner=None):
     """Validate once per immutable evidence/artifact binding in this process.
 
-    Runtime images package root-owned evidence and the fixed validator. A new
-    receipt hash, artifact, commit, or process requires a fresh validation.
+    Every reuse checks the full retained file set, including nested map inputs,
+    runtime captures, pins, and the validator. Writable Compose mounts therefore
+    cannot retain a passing verdict after a file changes, disappears or aliases.
+    Changed bytes must pass their pinned hashes and full validation again.
     Failures are never cached; trusted test runners bypass the shared cache.
     The bounded cache is serialized so concurrent first calls validate once.
     """
-    if runner is not None:
+    # Windows ctime is a creation timestamp, not a reliable change timestamp.
+    # Native worker execution is POSIX-only; other hosts validate without cache.
+    if runner is not None or os.name != 'posix':
         return _verify_performance(reference, slice_id, artifact_id, git_sha, repo_root=repo_root, runner=runner)
     try:
-        key = (str(Path(repo_root).resolve()), json.dumps(reference, sort_keys=True), slice_id, artifact_id, git_sha)
+        root = Path(repo_root).resolve()
+        key = (str(root), json.dumps(reference, sort_keys=True), slice_id, artifact_id, git_sha)
         with _VERDICT_LOCK:
             if key in _VERDICTS:
-                _VERDICTS.move_to_end(key)
-                return True
+                paths, previous = _VERDICTS.pop(key)
+                if _snapshot(paths) == previous:
+                    _VERDICTS[key] = (paths, previous)
+                    return True
+            paths = _snapshot_paths(root, reference)
+            before = _snapshot(paths)
             if not _verify_performance(reference, slice_id, artifact_id, git_sha, repo_root=repo_root):
                 return False
-            _VERDICTS[key] = True
+            if _snapshot(paths) != before:
+                return False
+            _VERDICTS[key] = (paths, before)
             if len(_VERDICTS) > 128:
                 _VERDICTS.popitem(last=False)
             return True

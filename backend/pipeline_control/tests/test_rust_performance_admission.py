@@ -9,7 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 import hashlib
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 from types import SimpleNamespace
@@ -185,12 +187,63 @@ class PerformanceAdmissionTests(unittest.TestCase):
                 self.assertTrue(all(pool.map(lambda _: invoke(), range(32))))
             self.assertEqual(validator.call_count, 1)
             self.assertTrue(invoke('other@sha256:' + 'b' * 64))
-            self.assertTrue(invoke(ref={**reference, 'sha256': 'c' * 64}))
+            self.assertTrue(invoke(ref=self.write('receipt2.json', self.receipt | {'revision': 2})))
             self.assertEqual(validator.call_count, 3)
         with patch.object(admission, '_verify_performance', return_value=False) as validator:
             self.assertFalse(invoke('missing'))
             self.assertFalse(invoke('missing'))
             self.assertEqual(validator.call_count, 2)
+
+    def test_writable_tree_changes_in_every_evidence_role_invalidate_cached_verdict(self):
+        roles = ('admission', 'raw', 'scored', 'artifactMap', 'capture', 'measurement',
+                 'manifest', 'health', 'budget', 'candidateCommitObject', 'validator')
+        for role in roles:
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                fixture = canonical_fixture(root)
+                receipt = json.loads((root / fixture['reference']['path']).read_text())
+                raw = json.loads((root / receipt['raw']['path']).read_text())
+                artifact_map = json.loads((root / receipt['artifactMap']['path']).read_text())
+                script = root / 'validator.mjs'
+                shutil.copyfile(VALIDATOR, script)
+                refs = {**receipt, 'admission': fixture['reference'],
+                    'capture': next(iter(receipt['runtimeCaptures'].values())),
+                    'measurement': raw['items'][0]['measurement'], 'manifest': raw['items'][0]['manifest'],
+                    'health': raw['healthReceipt'], 'budget': artifact_map['pins']['budget']}
+                target = script if role == 'validator' else root / refs[role]['path']
+                with patch.object(admission, 'VALIDATOR', script):
+                    self.assertTrue(verified_performance(fixture['reference'], 'R1', fixture['artifact'], fixture['sha'], repo_root=root))
+                    original = target.stat()
+                    data = target.read_bytes()
+                    target.write_bytes(b'!' + data[1:])
+                    # Mtime and size alone cannot detect this edit; ctime does.
+                    os.utime(target, ns=(original.st_atime_ns, original.st_mtime_ns))
+                    self.assertFalse(verified_performance(fixture['reference'], 'R1', fixture['artifact'], fixture['sha'], repo_root=root))
+
+    def test_deleted_or_aliased_nested_file_cannot_reuse_cached_success(self):
+        for mutation in ('delete', 'alias'):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                fixture = canonical_fixture(root)
+                receipt = json.loads((root / fixture['reference']['path']).read_text())
+                target = root / receipt['raw']['path']
+                self.assertTrue(verified_performance(fixture['reference'], 'R1', fixture['artifact'], fixture['sha'], repo_root=root))
+                data = target.read_bytes()
+                target.unlink()
+                if mutation == 'alias':
+                    replacement = target.with_suffix('.replacement')
+                    replacement.write_bytes(data)
+                    target.symlink_to(replacement)
+                self.assertFalse(verified_performance(fixture['reference'], 'R1', fixture['artifact'], fixture['sha'], repo_root=root))
+
+    def test_duplicate_outer_performance_receipt_keys_are_rejected(self):
+        data = json.dumps(self.receipt, separators=(',', ':')).encode()
+        data = b'{"kind":"unapproved",' + data[1:]
+        path = self.root / 'apps/web/performance/ambiguous.json'
+        path.write_bytes(data)
+        ref = {'path': str(path.relative_to(self.root)), 'sha256': hashlib.sha256(data).hexdigest()}
+        self.assertFalse(verified_performance(ref, 'R1', self.artifact, self.sha,
+            repo_root=self.root, runner=lambda *_a, **_k: SimpleNamespace(returncode=0)))
 
 
 if __name__ == '__main__':

@@ -15,6 +15,7 @@ from typing import Callable
 
 from backend.pipeline_control.manifest import deletion_allowed
 from backend.pipeline_control.rust_performance_admission import verified_performance
+from backend.pipeline_control.receipt_json import parse_receipt_json
 
 _ROOT = Path(__file__).resolve().parents[1] / 'rust/promotion-evidence'
 _REF = re.compile(r'sha256:([0-9a-f]{64})')
@@ -45,7 +46,7 @@ def read_receipt(reference, loader: Callable[[str], bytes] | None = None) -> dic
         raw = (loader or _read_local)(reference)
         if not isinstance(raw, bytes) or len(raw) > _MAX_BYTES or hashlib.sha256(raw).hexdigest() != match[1]:
             return None
-        receipt = json.loads(raw)
+        receipt = parse_receipt_json(raw)
         return receipt if isinstance(receipt, dict) else None
     except Exception:
         return None
