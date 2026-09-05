@@ -59,6 +59,9 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         self.assertIn("backend/pipeline_control", entries)
         self.assertIn("backend/deploy", entries)
         self.assertIn("backend/rust", entries)
+        self.assertEqual(entries["backend/data"]["classification"], "source")
+        self.assertTrue(entries["backend/data"]["vcsTracked"])
+        self.assertIn("개인정보", entries["backend/data"]["forbiddenContents"])
         self.assertFalse(HISTORICAL_DUPLICATE.exists())
         self.assertEqual(layout.DEFAULT_MOVES, ())
         self.assertIn("관측성", entries["backend/pipeline-control"]["ownership"])
@@ -68,7 +71,7 @@ class LayoutNamingSourceRecoveryTests(unittest.TestCase):
         result = layout.run_check(root=ROOT, manifest_path=LAYOUT_MANIFEST)
         self.assertEqual(result["errorCode"], None, result)
         self.assertTrue(result["ok"], result)
-        self.assertEqual(result["trackedDirectoryCount"], 28)
+        self.assertEqual(result["trackedDirectoryCount"], 29)
         self.assertEqual(result["checks"]["moves"], [])
 
     def test_existing_rename_ledger_is_complete_without_aliases(self) -> None:
