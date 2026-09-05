@@ -30,21 +30,21 @@ describe("Vercel ignored build branch policy", () => {
 
     expect(config.git?.deploymentEnabled).toEqual({
       "*": false,
-      main: false,
+      main: true,
       develop: true,
     });
     expect(config.regions).toEqual(["icn1"]);
     expect(config.ignoreCommand).toBe("node scripts/vercel-ignore-build.mjs");
   });
 
-  it("holds production builds while source promotion and hosted verification proceed", () => {
+  it("continues authorized production builds from main", () => {
     const result = runIgnoreCommand({
       VERCEL_ENV: "production",
       VERCEL_GIT_COMMIT_REF: "main",
     });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("skip: production Git deployment held");
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("build: production branch deployment");
     expect(result.stdout).toContain("ref=main");
   });
 
@@ -56,6 +56,7 @@ describe("Vercel ignored build branch policy", () => {
       for (const [config, expected] of [
         [null, 0],
         ["invalid-json", 0],
+        [JSON.stringify({ git: { deploymentEnabled: { main: false } } }), 0],
         [JSON.stringify({ git: { deploymentEnabled: { main: "true" } } }), 0],
         [JSON.stringify({ git: { deploymentEnabled: { main: true } } }), 1],
       ] as const) {
