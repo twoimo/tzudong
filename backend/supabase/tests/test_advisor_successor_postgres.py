@@ -101,6 +101,29 @@ CREATE TRIGGER g014_catalog_manifest_immutable BEFORE UPDATE OR DELETE ON privac
         self.sql(sql,ok=False)
         self.assertEqual(self.snapshot(),after)
 
+    def test_synthesized_receipt_cannot_omit_in_transaction_rehearsal(self):
+        # Sequence increments survive subtransaction rollback and observe real DDL.
+        # This observer exists only in the private network-disabled fixture DB.
+        self.sql("""CREATE SEQUENCE public.advisor_ddl_observer;
+CREATE FUNCTION public.advisor_ddl_observer_fn() RETURNS event_trigger LANGUAGE plpgsql SECURITY DEFINER
+AS $$BEGIN PERFORM nextval('public.advisor_ddl_observer'); END$$;
+CREATE EVENT TRIGGER advisor_ddl_observer ON ddl_command_end WHEN TAG IN ('ALTER FUNCTION')
+EXECUTE FUNCTION public.advisor_ddl_observer_fn();""",admin=True)
+        self.addCleanup(lambda:self.sql('DROP EVENT TRIGGER IF EXISTS advisor_ddl_observer;',admin=True))
+        self.rehearse()
+        one_pass=int(self.sql('SELECT last_value FROM public.advisor_ddl_observer;',admin=True).stdout)
+        self.assertGreater(one_pass,0)
+        self.sql('ALTER SEQUENCE public.advisor_ddl_observer RESTART WITH 1;',admin=True)
+        synthetic={'schema':a.SCHEMA,'projectId':a.PROJECT,
+                   'preview_sha256':a.sha(a.canonical(self.preview).encode()),
+                   'source_sha256':a.SOURCE_SHA,'vector_sha256':a.VECTOR_SHA,
+                   'status':'rehearsed-rolled-back'}
+        self.sql(a.plan(self.preview,'apply',synthetic))
+        actual=int(self.sql('SELECT last_value FROM public.advisor_ddl_observer;',admin=True).stdout)
+        self.assertEqual(actual,2*one_pass)
+        self.assertEqual(len(self.snapshot()['ledger']),51)
+        self.sql(a.plan(self.preview,'readback'))
+
     def test_constraint_violation_rolls_back_no_raw_row_diagnostic(self):
         self.sql('SET ROLE privacy_workflow_owner; ALTER TABLE public.admin_audit_events DROP CONSTRAINT admin_audit_events_whitelisted_contract; INSERT INTO public.admin_audit_events VALUES(false); ALTER TABLE public.admin_audit_events ADD CONSTRAINT admin_audit_events_whitelisted_contract CHECK(ok) NOT VALID; ALTER TABLE privacy_retention.g014_catalog_contract_manifest DISABLE TRIGGER g014_catalog_manifest_immutable; DELETE FROM privacy_retention.g014_catalog_contract_manifest; INSERT INTO privacy_retention.g014_catalog_contract_manifest SELECT * FROM privacy_retention.g014_catalog_manifest_rows(); ALTER TABLE privacy_retention.g014_catalog_contract_manifest ENABLE TRIGGER g014_catalog_manifest_immutable;')
         self.before=self.snapshot();self.preview['snapshot']=self.before

@@ -53,10 +53,17 @@ No migration, legacy manifest, parser or historical ledger row is rewritten.
    intentionally rolls back that subtransaction, then checks the original state
    again before returning `rehearsed-rolled-back`. Only temporary execution state
    remains in the outer transaction; no persistent objects are added by rehearsal.
-6. Retain that rehearsal JSON and its external SHA-256. Only an exact matching
-   rehearsal permits generating `apply`. Review and retain the generated plan
-   hash. The apply plan locks/rechecks the same preview, runs the same unchanged
-   statements and insertion, verifies, and commits one transaction. Preview drift
+6. Retain that rehearsal JSON and its external SHA-256 as an operator custody
+   reference. Its deterministic equality check is only a file binding: it cannot
+   authenticate an operator or prove rehearsal execution. Before transport,
+   verify that the current authenticated owner's authorization covers the exact
+   preview/plan; this offline generator does not perform that confirmation step.
+   Review and retain the generated plan hash. In **version 3**, every apply plan
+   itself locks/rechecks the preview, executes the unchanged migration and ledger
+   insertion in a subtransaction, verifies the intended state, deliberately rolls
+   that subtransaction back, and verifies the original state. Only then does it
+   execute the unchanged migration again for the final commit. A synthesized
+   receipt file cannot skip this real in-transaction rehearsal. Preview drift
    never causes automatic rebase, refresh, repair, or retry.
 7. The apply result is intentionally `apply-verified-uncommitted`: a result row
    preceding COMMIT is not proof of commit. After transport completion, run the
@@ -164,9 +171,9 @@ original first statement. No old body is executed to classify it.
 Prestate requires `touch_structure_ok=true` and `touch_body_admissible=true`;
 `touch_ok` may be false only for the exact reviewed prior body. Poststate requires
 `touch_ok=true` and the exact canonical body SHA. A switch between even the two
-admissible bodies after preview is still drift and is denied. The v2 schema and
-new fields require a fresh snapshot, preview and rehearsal; v1 receipts cannot
-be reused or patched by hand. The old 17-statement migration remains untouched.
+admissible bodies after preview is still drift and is denied. The v3 schema
+requires fresh preview and rehearsal bindings; v1/v2 receipts cannot be reused
+or patched by hand. The old 17-statement migration remains untouched.
 
 The four constraints retain their OIDs/predicates and change only validated state.
 Exactly their four existing manifest values advance; PostgreSQL also removes the

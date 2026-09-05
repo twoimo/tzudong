@@ -25,7 +25,7 @@ CONSTRAINTS = (
  ('account_deletion_requests', 'account_deletion_requests_count_summary_safe'),
  ('account_deletion_request_items', 'account_deletion_request_items_reason_code_allowed'),
 )
-SCHEMA = 'advisor-current-state-successor-v2'
+SCHEMA = 'advisor-current-state-successor-v3'
 TOUCH_SIGNATURE = 'public.touch_admin_workflow_updated_at()'
 TOUCH_BODY = '\nBEGIN\n  NEW.updated_at = pg_catalog.now();\n  RETURN NEW;\nEND;\n'
 # External minimized body + semantic predicate readbacks, not inferred history.
@@ -219,6 +219,8 @@ def plan(value, mode, rehearsal=None):
              'source_sha256':SOURCE_SHA,'vector_sha256':VECTOR_SHA,'status':'rehearsed-rolled-back'}
     if mode=='apply' and rehearsal!=receipt:
         raise Denied('rehearsal_required')
+    # This offline file binding is not authentication or proof of execution.
+    # Every apply plan below performs its own mandatory real rollback rehearsal.
     before=literal(canonical(value['snapshot']))+'::jsonb'
     vector='ARRAY['+','.join(literal(s) for s in statements)+']::text[]'
     read=snapshot_sql()
@@ -246,7 +248,12 @@ SELECT jsonb_build_object('schema','{SCHEMA}','status','current51-observed','pro
 ROLLBACK;
 """
     execution='\n'.join('EXECUTE '+literal(s)+';' for s in statements)
-    rollback="RAISE EXCEPTION USING ERRCODE='P5101', MESSAGE='advisor_rehearsal_rollback';" if mode=='rehearse' else ''
+    mutate_and_verify=f"""{execution}
+ INSERT INTO supabase_migrations.schema_migrations(version,name,statements)
+ VALUES ('{VERSION}','{NAME}',{vector});
+ {expected}
+ observed := ({read});
+ IF observed IS DISTINCT FROM expected THEN RAISE EXCEPTION 'advisor_postcondition_denied'; END IF;"""
     receipt['status']='apply-verified-uncommitted' if mode=='apply' else receipt['status']
     return f"""-- Fixed transport target: {PROJECT}. Never substitute project or retry this plan.
 -- A returned apply receipt is PRECOMMIT; use separate current51 readback after transport completion.
@@ -267,21 +274,17 @@ DO $advisor_successor$ DECLARE observed jsonb; expected jsonb; completed boolean
  IF observed IS DISTINCT FROM {before} THEN RAISE EXCEPTION 'advisor_preview_drift'; END IF;
  PERFORM privacy_retention.assert_g014_catalog_manifest();
  BEGIN
- {execution}
- INSERT INTO supabase_migrations.schema_migrations(version,name,statements)
- VALUES ('{VERSION}','{NAME}',{vector});
- {expected}
- observed := ({read});
- IF observed IS DISTINCT FROM expected THEN RAISE EXCEPTION 'advisor_postcondition_denied'; END IF;
+ {mutate_and_verify}
  completed := true;
- {rollback}
+ RAISE EXCEPTION USING ERRCODE='P5101', MESSAGE='advisor_rehearsal_rollback';
  EXCEPTION WHEN SQLSTATE 'P5101' THEN
-   IF NOT completed OR {literal(mode)}<>'rehearse' THEN RAISE EXCEPTION 'advisor_rehearsal_denied'; END IF;
+   IF NOT completed THEN RAISE EXCEPTION 'advisor_rehearsal_denied'; END IF;
  END;
- IF {literal(mode)}='rehearse' THEN
-   observed := ({read});
-   IF observed IS DISTINCT FROM {before} THEN RAISE EXCEPTION 'advisor_rollback_denied'; END IF;
-   PERFORM privacy_retention.assert_g014_catalog_manifest();
+ observed := ({read});
+ IF observed IS DISTINCT FROM {before} THEN RAISE EXCEPTION 'advisor_rollback_denied'; END IF;
+ PERFORM privacy_retention.assert_g014_catalog_manifest();
+ IF {literal(mode)}='apply' THEN
+   {mutate_and_verify}
  END IF;
 EXCEPTION WHEN OTHERS THEN
  RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='advisor_successor_denied';

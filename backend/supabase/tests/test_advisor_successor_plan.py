@@ -51,6 +51,18 @@ class SourceTests(unittest.TestCase):
         self.assertNotIn('ON CONFLICT',sql)
         for statement in a.vectors(): self.assertIn('EXECUTE '+a.literal(statement)+';',sql)
 
+    def test_apply_embeds_real_rollback_before_final_mutation(self):
+        s=fixture_snapshot()
+        v=a.preview({'schema':'hosted-current50-ledger-metadata-v1','projectId':a.PROJECT,'ledger':s['ledger']},s)
+        # A deterministic file can be synthesized. It is not execution proof.
+        receipt={'schema':a.SCHEMA,'projectId':a.PROJECT,'preview_sha256':a.sha(a.canonical(v).encode()),
+                 'source_sha256':a.SOURCE_SHA,'vector_sha256':a.VECTOR_SHA,'status':'rehearsed-rolled-back'}
+        sql=a.plan(v,'apply',receipt)
+        self.assertLess(sql.index("MESSAGE='advisor_rehearsal_rollback'"),sql.index("IF 'apply'='apply' THEN"))
+        self.assertLess(sql.index("RAISE EXCEPTION 'advisor_rollback_denied'"),sql.index("IF 'apply'='apply' THEN"))
+        old=dict(v,schema='advisor-current-state-successor-v2')
+        with self.assertRaises(a.Denied): a.plan(old,'apply',receipt)
+
     def test_reviewed_touch_body_only_and_v1_cannot_be_reused(self):
         s=fixture_snapshot()
         s.update(touch_ok=False,touch_body_sha256=a.OBSERVED_TOUCH_BODY_SHA)

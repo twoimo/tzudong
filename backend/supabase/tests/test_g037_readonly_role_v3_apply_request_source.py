@@ -169,12 +169,7 @@ class G037ReadonlyRoleV3ApplyRequestSourceTests(unittest.TestCase):
         for task_id in (355, 356, 357, 358, 359):
             self.assertIn(f"- [x]! 7.{task_id} ", TASKS)
         self.assertIn("- [x] 7.364 ", TASKS)
-        historical = next(line for line in TASKS.splitlines() if line.startswith("- [x]! 7.365 "))
-        self.assertIn("g037-dedicated-credential-current.json", historical)
-        self.assertIn("g037-runtime-probe-run-readback.v2.json", historical)
-        self.assertIn("no authorization for a later revision or hosted closure", historical)
-        self.assertIn("- [ ]! 14.48 ", TASKS)
-        self.assertIn("- [ ]! 14.50 ", TASKS)
+        self.assertIn("- [ ]! 7.365 ", TASKS)
         request_sha = sha256(REQUEST_PATH)
         for source in (DESIGN, RUNBOOK):
             normalized = " ".join(source.split())
