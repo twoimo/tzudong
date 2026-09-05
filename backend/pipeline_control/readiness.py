@@ -43,6 +43,8 @@ BLOCKER_ARTIFACT_MISSING = "artifact_missing"
 BLOCKER_DEPENDENCY_MISSING = "dependency_missing"
 BLOCKER_TESTS_FAILED = "tests_failed"
 BLOCKER_TEST_TIMEOUT = "test_timeout"
+BLOCKER_SOURCE_UNAVAILABLE = "source_unavailable"
+BLOCKER_SOURCE_DIRTY = "source_dirty"
 
 BLOCKER_CODES = frozenset(
     {
@@ -56,6 +58,8 @@ BLOCKER_CODES = frozenset(
         BLOCKER_DEPENDENCY_MISSING,
         BLOCKER_TESTS_FAILED,
         BLOCKER_TEST_TIMEOUT,
+        BLOCKER_SOURCE_UNAVAILABLE,
+        BLOCKER_SOURCE_DIRTY,
     }
 )
 
@@ -641,7 +645,12 @@ def build_readiness_report(
             test_modules=test_modules,
         )
 
+    source = inspect_source_revision(root)
     blockers: list[str] = []
+    if source["available"] is not True:
+        blockers.append(BLOCKER_SOURCE_UNAVAILABLE)
+    elif source["workingTreeClean"] is not True:
+        blockers.append(BLOCKER_SOURCE_DIRTY)
     if not spec["present"]:
         blockers.append(BLOCKER_SPEC_MISSING)
     elif not spec["valid"]:
@@ -666,7 +675,7 @@ def build_readiness_report(
         "generatedAt": _utc_timestamp(now),
         "status": REPORT_STATUS_READY if not blockers else REPORT_STATUS_BLOCKED,
         "blockerCodes": blockers,
-        "source": inspect_source_revision(root),
+        "source": source,
         "spec": spec,
         "traceability": traceability,
         "artifacts": artifacts,

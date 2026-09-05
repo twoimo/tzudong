@@ -15,6 +15,8 @@ from unittest import mock
 from backend.pipeline_control.readiness import (
     BLOCKER_ARTIFACT_MISSING,
     BLOCKER_DEPENDENCY_MISSING,
+    BLOCKER_SOURCE_DIRTY,
+    BLOCKER_SOURCE_UNAVAILABLE,
     BLOCKER_SPEC_INCOMPLETE,
     BLOCKER_SPEC_INVALID,
     BLOCKER_SPEC_MISSING,
@@ -42,6 +44,13 @@ from backend.pipeline_control.readiness import (
 
 def _present(_name: str) -> object:
     return object()
+
+
+def _commit_fixture(root: Path) -> None:
+    for args in (["init", "--quiet"], ["add", "."],
+                 ["-c", "user.name=Fixture", "-c", "user.email=fixture@invalid.example",
+                  "commit", "--quiet", "--allow-empty", "-m", "fixture"]):
+        subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -273,7 +282,7 @@ class TraceabilityTest(unittest.TestCase):
                 traceability_map_path=Path("missing-map.json"),
                 test_modules=(),
             )
-        self.assertEqual(report["blockerCodes"], [BLOCKER_TRACEABILITY_MISSING])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_TRACEABILITY_MISSING, BLOCKER_SOURCE_UNAVAILABLE]))
 
     def test_present_invalid_traceability_uses_invalid_blocker(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -291,7 +300,7 @@ class TraceabilityTest(unittest.TestCase):
                 traceability_map_path=mapping,
                 test_modules=(),
             )
-        self.assertEqual(report["blockerCodes"], [BLOCKER_TRACEABILITY_INVALID])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_TRACEABILITY_INVALID, BLOCKER_SOURCE_UNAVAILABLE]))
 
 
 class StaticReadinessTest(unittest.TestCase):
@@ -303,6 +312,7 @@ class StaticReadinessTest(unittest.TestCase):
             (root / spec).parent.mkdir(parents=True)
             (root / spec).write_text("- [x] 1. done\n", encoding="utf-8")
             (root / artifact).write_text("# present\n", encoding="utf-8")
+            _commit_fixture(root)
 
             report = build_readiness_report(
                 root,
@@ -330,7 +340,7 @@ class StaticReadinessTest(unittest.TestCase):
                 traceability_map_path=None,
             )
         self.assertEqual(report["status"], REPORT_STATUS_BLOCKED)
-        self.assertEqual(report["blockerCodes"], [BLOCKER_SPEC_MISSING])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_SPEC_MISSING, BLOCKER_SOURCE_UNAVAILABLE]))
 
     def test_invalid_spec_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -345,7 +355,7 @@ class StaticReadinessTest(unittest.TestCase):
                 traceability_schema_path=None,
                 traceability_map_path=None,
             )
-        self.assertEqual(report["blockerCodes"], [BLOCKER_SPEC_INVALID])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_SPEC_INVALID, BLOCKER_SOURCE_UNAVAILABLE]))
 
     def test_open_tasks_missing_artifacts_and_dependencies_are_all_reported(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -368,6 +378,7 @@ class StaticReadinessTest(unittest.TestCase):
                     BLOCKER_SPEC_INCOMPLETE,
                     BLOCKER_ARTIFACT_MISSING,
                     BLOCKER_DEPENDENCY_MISSING,
+                    BLOCKER_SOURCE_UNAVAILABLE,
                 ]
             ),
         )
@@ -392,7 +403,7 @@ class StaticReadinessTest(unittest.TestCase):
                 traceability_map_path=None,
                 find_spec=raising_probe,
             )
-        self.assertEqual(report["blockerCodes"], [BLOCKER_DEPENDENCY_MISSING])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_DEPENDENCY_MISSING, BLOCKER_SOURCE_UNAVAILABLE]))
         self.assertEqual(report["dependencies"]["missing"], ["UnavailablePackage"])
 
     def test_directory_does_not_satisfy_regular_file_requirement(self) -> None:
@@ -410,7 +421,7 @@ class StaticReadinessTest(unittest.TestCase):
                 traceability_schema_path=None,
                 traceability_map_path=None,
             )
-        self.assertEqual(report["blockerCodes"], [BLOCKER_ARTIFACT_MISSING])
+        self.assertEqual(report["blockerCodes"], sorted([BLOCKER_ARTIFACT_MISSING, BLOCKER_SOURCE_UNAVAILABLE]))
 
     def test_artifact_set_hash_is_stable_and_content_bound(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -499,6 +510,24 @@ class TestExecutionTest(unittest.TestCase):
 
 
 class SourceRevisionTest(unittest.TestCase):
+    def test_ready_requires_real_clean_git_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = root / "tasks.md"
+            task.write_text("- [x] 1. complete\n")
+            def inspect():
+                return build_readiness_report(root, spec_path=Path("tasks.md"),
+                    required_artifacts=(Path("tasks.md"),), dependencies={},
+                    traceability_schema_path=None, traceability_map_path=None, test_modules=())
+            self.assertEqual(inspect()["blockerCodes"], [BLOCKER_SOURCE_UNAVAILABLE])
+            _commit_fixture(root)
+            self.assertEqual(inspect()["status"], REPORT_STATUS_READY)
+            task.write_text("- [x] 1. modified after commit\n")
+            self.assertEqual(inspect()["blockerCodes"], [BLOCKER_SOURCE_DIRTY])
+            _commit_fixture(root)
+            (root / "untracked.txt").write_text("uncommitted evidence\n")
+            self.assertEqual(inspect()["blockerCodes"], [BLOCKER_SOURCE_DIRTY])
+
     def test_revision_report_keeps_only_sha_and_cleanliness(self) -> None:
         runner = mock.Mock(
             side_effect=[
@@ -545,6 +574,7 @@ class CliContractTest(unittest.TestCase):
     SECURITY_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "security-audit.yml"
 
     def test_json_cli_emits_parseable_schema_without_raw_diagnostics(self) -> None:
+        dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=self.REPO_ROOT))
         completed = subprocess.run(
             [sys.executable, str(self.SCRIPT), "--json"],
             cwd=str(self.REPO_ROOT),
@@ -552,10 +582,11 @@ class CliContractTest(unittest.TestCase):
             text=True,
             check=False,
         )
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1 if dirty else 0, completed.stderr)
         report = json.loads(completed.stdout)
         self.assertEqual(report["schemaVersion"], 1)
-        self.assertEqual(report["status"], REPORT_STATUS_READY)
+        self.assertEqual(report["status"], REPORT_STATUS_BLOCKED if dirty else REPORT_STATUS_READY)
+        self.assertEqual(report["blockerCodes"], [BLOCKER_SOURCE_DIRTY] if dirty else [])
         serialized = json.dumps(report).lower()
         self.assertNotIn("stdout", serialized)
         self.assertNotIn("stderr", serialized)
@@ -573,6 +604,7 @@ class CliContractTest(unittest.TestCase):
         self.assertEqual(completed.stdout, "")
 
     def test_human_cli_reports_traceability_coverage(self) -> None:
+        dirty = bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=self.REPO_ROOT))
         completed = subprocess.run(
             [sys.executable, str(self.SCRIPT)],
             cwd=str(self.REPO_ROOT),
@@ -580,7 +612,7 @@ class CliContractTest(unittest.TestCase):
             text=True,
             check=False,
         )
-        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(completed.returncode, 1 if dirty else 0, completed.stderr)
         self.assertIn("traceability=71/71", completed.stdout)
 
     def test_test_plan_is_closed_and_backend_scoped(self) -> None:
@@ -592,6 +624,13 @@ class CliContractTest(unittest.TestCase):
     def test_security_audit_includes_backend_test_requirements(self) -> None:
         workflow = self.SECURITY_WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("- backend/test-requirements.txt", workflow)
+
+    def test_security_runs_for_ledger_only_changes(self) -> None:
+        import fnmatch
+        import yaml
+        workflow = yaml.safe_load(self.SECURITY_WORKFLOW.read_text())
+        paths = (workflow.get("on") or workflow[True])["pull_request"]["paths"]
+        self.assertTrue(any(fnmatch.fnmatch("backend/rust/migration-ledger.v1.json", pattern) for pattern in paths))
 
 
 if __name__ == "__main__":
