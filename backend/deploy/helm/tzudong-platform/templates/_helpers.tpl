@@ -11,6 +11,14 @@ namespace, releaseName, clusterLabel, fullname.
 {{- required "clusterId render parameter is required" .Values.clusterId | lower | replace "_" "-" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{/* Keep external *_REF identities separate from valid Secret object names. */}}
+{{- define "tzudong.secretName" -}}
+{{- if or (gt (len .) 63) (not (regexMatch "^[A-Z][A-Z0-9_]*_REF$" .)) -}}
+{{- fail "secret_reference_invalid" -}}
+{{- end -}}
+{{- . | lower | replace "_" "-" -}}
+{{- end -}}
+
 {{/* Kubernetes object, label, and container-safe component identifier. */}}
 {{- define "tzudong.componentName" -}}
 {{- . | lower | replace "_" "-" | trunc 63 | trimSuffix "-" -}}

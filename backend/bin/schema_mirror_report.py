@@ -54,6 +54,7 @@ Forbidden_Log_Field.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Callable, Mapping, NamedTuple, Sequence
 
@@ -102,9 +103,15 @@ LOCAL_ONLY_TABLE_NAMES: tuple[str, ...] = (
     "phase_reports",
     "agent_action_records",
     "agent_action_results",
+    "agent_action_budget_claims",
+    "agent_approval_pending_decisions",
 )
 
 LOCAL_ONLY_APPROVAL_REFERENCES = {
+    'local_analytics.agent_approval_pending_decisions':
+        'backend/supabase/migrations/20260905050509_local_agent_approval_pending_decisions.sql',
+    'local_analytics.agent_action_budget_claims':
+        'backend/supabase/migrations/20260905000200_local_agent_rate_budget.sql',
     'local_analytics.agent_action_results':
         'backend/supabase/migrations/20260905000100_local_agent_terminal_results.sql',
 }
@@ -148,10 +155,12 @@ CATEGORY_KEYS: tuple[str, ...] = (
 
 
 class TableShape(NamedTuple):
-    """A single table's column and constraint identifier sets."""
+    """Identifiers and catalog-definition hashes; never stored row values."""
 
     columns: frozenset[str]
     constraints: frozenset[str]
+    constraint_signatures: Mapping[str, str] | None = None
+    not_null_columns: frozenset[str] = frozenset()
 
 
 class SchemaSnapshot(NamedTuple):
@@ -336,7 +345,13 @@ def _build_constraint_differences(
     for qualified in shared_tables:
         local_cons = local.tables[qualified].constraints
         hosted_cons = hosted.tables[qualified].constraints
-        if local_cons == hosted_cons:
+        local_signatures = local.tables[qualified].constraint_signatures or {}
+        hosted_signatures = hosted.tables[qualified].constraint_signatures or {}
+        changed = {name for name in local_cons & hosted_cons
+                   if local_signatures.get(name) != hosted_signatures.get(name)}
+        nullability_changed = (local.tables[qualified].not_null_columns
+                               ^ hosted.tables[qualified].not_null_columns)
+        if local_cons == hosted_cons and not changed and not nullability_changed:
             continue
         schema, obj = _split_qualified(qualified)
         items.append(
@@ -346,6 +361,8 @@ def _build_constraint_differences(
                 "differenceClass": DIFF_CONSTRAINT_SET_DIFFERS,
                 "localOnlyConstraints": sorted(local_cons - hosted_cons),
                 "hostedOnlyConstraints": sorted(hosted_cons - local_cons),
+                "definitionDifferences": sorted(changed),
+                "nullabilityDifferences": sorted(nullability_changed),
             }
         )
     return items
@@ -504,7 +521,8 @@ def build_schema_mirror_report(
         if item["hostedOnlyColumns"]:
             defects.append(dict(item))
     for item in constraint_items:
-        if item["hostedOnlyConstraints"]:
+        if (item["hostedOnlyConstraints"] or item["definitionDifferences"]
+                or item["nullabilityDifferences"]):
             defects.append(dict(item))
 
     # A Hosted-only RPC is a Hosted-only item.
@@ -600,19 +618,24 @@ _SYSTEM_SCHEMAS: frozenset[str] = frozenset(
     }
 )
 
-# Schema-read-only catalog queries. These SELECT only object/column/constraint
-# NAMES from the catalog; they never read row data and never mutate.
+# Schema-read-only catalog queries. Definitions are hashed in memory and never
+# included in the report; these queries never read row data or mutate it.
 _TABLES_SQL = (
     "SELECT table_schema, table_name FROM information_schema.tables "
     "WHERE table_type = 'BASE TABLE' AND table_schema <> ALL(%s)"
 )
 _COLUMNS_SQL = (
-    "SELECT table_schema, table_name, column_name FROM information_schema.columns "
+    "SELECT table_schema, table_name, column_name, is_nullable FROM information_schema.columns "
     "WHERE table_schema <> ALL(%s)"
 )
 _CONSTRAINTS_SQL = (
-    "SELECT table_schema, table_name, constraint_name "
-    "FROM information_schema.table_constraints WHERE table_schema <> ALL(%s)"
+    "SELECT n.nspname, t.relname, c.conname, c.contype, c.convalidated, "
+    "c.condeferrable, c.condeferred, c.connoinherit, "
+    "pg_catalog.pg_get_constraintdef(c.oid, false) "
+    "FROM pg_catalog.pg_constraint c "
+    "JOIN pg_catalog.pg_class t ON t.oid = c.conrelid "
+    "JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace "
+    "WHERE n.nspname <> ALL(%s)"
 )
 _RPC_SQL = (
     "SELECT n.nspname, p.proname FROM pg_catalog.pg_proc p "
@@ -633,6 +656,8 @@ def read_schema_snapshot(connection) -> SchemaSnapshot:
     excluded = list(_SYSTEM_SCHEMAS)
     columns: dict[str, set[str]] = {}
     constraints: dict[str, set[str]] = {}
+    signatures: dict[str, dict[str, str]] = {}
+    not_null: dict[str, set[str]] = {}
     table_keys: set[str] = set()
     rpcs: set[str] = set()
 
@@ -642,16 +667,24 @@ def read_schema_snapshot(connection) -> SchemaSnapshot:
             table_keys.add(f"{schema}.{table}")
 
         cur.execute(_COLUMNS_SQL, (excluded,))
-        for schema, table, column in cur.fetchall():
+        for schema, table, column, nullable in cur.fetchall():
             key = f"{schema}.{table}"
             if key in table_keys:
                 columns.setdefault(key, set()).add(column)
+                # PostgreSQL 17 keeps NOT NULL in pg_attribute, outside
+                # pg_constraint. Compare the column identity, not an OID-based
+                # information_schema synthetic constraint name.
+                if nullable == 'NO':
+                    not_null.setdefault(key, set()).add(column)
 
         cur.execute(_CONSTRAINTS_SQL, (excluded,))
-        for schema, table, constraint in cur.fetchall():
+        for schema, table, constraint, *definition in cur.fetchall():
             key = f"{schema}.{table}"
             if key in table_keys:
                 constraints.setdefault(key, set()).add(constraint)
+                signatures.setdefault(key, {})[constraint] = hashlib.sha256(
+                    json.dumps(definition, separators=(",", ":")).encode()
+                ).hexdigest()
 
         cur.execute(_RPC_SQL, (excluded,))
         for schema, proc in cur.fetchall():
@@ -661,6 +694,8 @@ def read_schema_snapshot(connection) -> SchemaSnapshot:
         key: TableShape(
             columns=frozenset(columns.get(key, set())),
             constraints=frozenset(constraints.get(key, set())),
+            constraint_signatures=signatures.get(key, {}),
+            not_null_columns=frozenset(not_null.get(key, set())),
         )
         for key in table_keys
     }
@@ -745,7 +780,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     def _reader(dsn: str) -> SchemaReader:
         def read() -> SchemaSnapshot:
-            conn = psycopg2.connect(dsn)
+            conn = psycopg2.connect(dsn, options="-c search_path=pg_catalog")
             try:
                 # Read-only transaction guards against any accidental write.
                 conn.set_session(readonly=True, autocommit=True)

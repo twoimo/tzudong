@@ -43,8 +43,8 @@ pub type FolderDate = (i32, u32, u32);
 
 /// Port of `data_utils.parse_folder_date`.
 ///
-/// The Python regex is `^(\d{2})-(\d{2})-(\d{2})$` (exactly two ASCII digits per
-/// field), then `datetime(yy+2000, mm, dd)` which raises `ValueError` for an
+/// The Python binding first applies Python's Unicode regex/int rules. This
+/// kernel receives normalized ASCII fields, then mirrors datetime's check for an
 /// out-of-range month/day. This returns `Some((year, month, day))` iff the name
 /// matches the pattern *and* forms a real calendar date, else `None`.
 pub fn parse_folder_date(folder_name: &str) -> Option<FolderDate> {

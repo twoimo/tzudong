@@ -51,6 +51,11 @@ from __future__ import annotations
 import json
 import uuid
 import threading
+import math
+import os
+import select
+import signal
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping, MutableMapping, Optional, Sequence
@@ -289,7 +294,10 @@ def assert_record_shape(row: Mapping[str, Any]) -> None:
 # 저장 계층 (설계 D8: append-only, unique(trigger_signal_id, action_kind_id)).
 # ---------------------------------------------------------------------------
 # 저장소 프로토콜:
-#   reserve(record) -> "created" | "duplicate" | "unavailable"
+#   record_approval_pending(record) -> bool
+#       * 별도 append-only 결정 기록을 확정하고 readback한다. 실행 예약이나
+#         수행 상한은 소비하지 않는다. 동일 요청의 재관측도 별도 기록으로 남긴다.
+#   reserve(record) -> "created" | "duplicate" | "halted" | "unavailable"
 #       * 기록이 조치보다 먼저(요구사항 15.15). 6개 필드 중 트리거/심각도/조치
 #         종류/action_id를 append-only로 삽입해 (트리거, 조치) 조합을 선점한다.
 #       * unique 제약 위반이면 "duplicate" (요구사항 15.8).
@@ -314,6 +322,36 @@ class InMemoryAgentActionStore:
         self._fail_reserve = fail_reserve
         self._budget_claims: dict[str, float] = {}
         self._budget_lock = threading.Lock()
+        self._reservation_lock = threading.RLock()
+        self._pending_decisions: dict[str, dict] = {}
+
+    def record_approval_pending(self, record: AgentActionRecord) -> bool:
+        try:
+            row = record.to_row()
+            assert_record_shape(row)
+            if (self._fail_reserve or record.result_code != HUMAN_APPROVAL_REQUIRED
+                    or record.human_approval_ref is not None
+                    or record.action_kind_id not in HUMAN_APPROVAL_REQUIRED_CLASSES
+                    or record.signal_severity not in SEVERITY_ORDER):
+                return False
+            with self._reservation_lock:
+                self._pending_decisions.setdefault(record.action_id, dict(row))
+                return self._pending_decisions[record.action_id] == row
+        except (TypeError, ValueError):
+            return False
+
+    def pending_decisions(self) -> list[dict]:
+        with self._reservation_lock:
+            return [dict(row) for row in self._pending_decisions.values()]
+
+    def trigger_state(self, trigger_signal_id: str) -> str:
+        with self._reservation_lock:
+            return 'halted' if self._trigger_halted(trigger_signal_id) else 'clear'
+
+    def _trigger_halted(self, trigger_signal_id: str) -> bool:
+        return any(row['trigger_signal_id'] == trigger_signal_id and row['result_code'] in
+                   {None, AGENT_ACTION_UNVERIFIED, AGENT_ACTION_RECORD_UNAVAILABLE}
+                   for row in self._rows.values())
 
     def claim_rate_budget(self, action_id: str, limits, now_seconds: float) -> str:
         """Shared-store admission; production uses a serialized database claim."""
@@ -339,20 +377,24 @@ class InMemoryAgentActionStore:
             # 스키마 위반은 기록 확정 실패로 취급(fail closed).
             return "unavailable"
         key = (record.trigger_signal_id, record.action_kind_id)
-        if key in self._rows:
-            return "duplicate"
-        self._rows[key] = dict(row)
-        self._by_action_id[record.action_id] = key
-        return "created"
+        with self._reservation_lock:
+            if key in self._rows:
+                return "duplicate"
+            if self._trigger_halted(record.trigger_signal_id):
+                return 'halted'
+            self._rows[key] = dict(row)
+            self._by_action_id[record.action_id] = key
+            return "created"
 
     def record_result(self, action_id: str, result_code: Optional[str]) -> bool:
-        key = self._by_action_id.get(action_id)
-        if key is None or result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:
-            return False
-        if self._rows[key]["result_code"] is not None:
-            return self._rows[key]["result_code"] == result_code
-        self._rows[key]["result_code"] = result_code
-        return True
+        with self._reservation_lock:
+            key = self._by_action_id.get(action_id)
+            if key is None or result_code not in (AGENT_CODES - {None}) | {AGENT_ACTION_PERFORMED}:
+                return False
+            if self._rows[key]["result_code"] is not None:
+                return self._rows[key]["result_code"] == result_code
+            self._rows[key]["result_code"] = result_code
+            return True
 
     # 검사 편의(테스트에서만 사용).
     def rows(self) -> list[dict]:
@@ -621,7 +663,8 @@ class OpsAgent:
         """하나의 감시 신호를 평가하고 조치 경계를 강제한다 (요구사항 15 전반).
 
         설계 C11 결정 흐름을 따른다: 허용목록 활성 → Watch_Rule 매칭 → 기록 확정
-        (조치보다 먼저) → 중복 → 상한 → 조치 분류/승인 → 실행 → 결과 확인.
+        (조치보다 먼저) → 중복 → 상한 → 실행 → 결과 확인.
+        고위험 조치의 승인 대기는 별도 결정 기록 확정 후 실행 예약 전에 반환한다.
         """
 
         # 감시 입력 원본 제한 (요구사항 15.1).
@@ -636,7 +679,15 @@ class OpsAgent:
             )
 
         # 동일 트리거 후속 중단 (요구사항 15.10).
-        if signal.signal_id in self._halted_triggers:
+        try:
+            trigger_state = self.store.trigger_state(signal.signal_id)
+        except Exception:
+            trigger_state = 'unavailable'
+        if trigger_state not in {'clear', 'halted'}:
+            return _result(False, AGENT_ACTION_RECORD_UNAVAILABLE, performed=False,
+                           resultCode=AGENT_ACTION_RECORD_UNAVAILABLE, halted=True,
+                           triggerSignalId=signal.signal_id)
+        if signal.signal_id in self._halted_triggers or trigger_state == 'halted':
             return _result(
                 False,
                 AGENT_ACTION_UNVERIFIED,
@@ -684,6 +735,28 @@ class OpsAgent:
         ):
             bound_ref = approval.approval_ref
 
+        category = classify_action(action_kind_id, self.allowlist_kinds)
+        if category == "high_risk" and bound_ref is None:
+            # Approval waiting is not an execution attempt. Do not consume the
+            # append-only (trigger, action) reservation: the same signal must
+            # remain resumable once its exact named approval arrives. Retain each
+            # pending decision in a separate immutable audit and read it back.
+            pending = AgentActionRecord(action_id, trigger_signal_id, signal_severity,
+                                        action_kind_id, HUMAN_APPROVAL_REQUIRED, None)
+            try:
+                recorded = self.store.record_approval_pending(pending)
+            except Exception:
+                recorded = False
+            if recorded is not True:
+                return _result(False, AGENT_ACTION_RECORD_UNAVAILABLE, performed=False,
+                               resultCode=AGENT_ACTION_RECORD_UNAVAILABLE,
+                               actionKindId=action_kind_id, triggerSignalId=trigger_signal_id)
+            return _result(False, HUMAN_APPROVAL_REQUIRED, performed=False,
+                           resultCode=HUMAN_APPROVAL_REQUIRED,
+                           pendingDecisionId=action_id,
+                           humanDecisionPending=True, actionKindId=action_kind_id,
+                           triggerSignalId=trigger_signal_id)
+
         # 기록이 조치보다 먼저 (요구사항 15.2, 15.15). reserve가 (트리거, 조치)
         # 조합을 append-only로 선점하고 D8 unique 제약이 중복을 강제한다.
         record = AgentActionRecord(
@@ -695,6 +768,11 @@ class OpsAgent:
             human_approval_ref=bound_ref,
         )
         reservation = self.store.reserve(record)
+
+        if reservation == 'halted':
+            return _result(False, AGENT_ACTION_UNVERIFIED, performed=False,
+                           resultCode=AGENT_ACTION_UNVERIFIED, halted=True,
+                           triggerSignalId=trigger_signal_id)
 
         if reservation == "duplicate":
             # 동일 조합 재요청 (요구사항 15.8).
@@ -726,9 +804,6 @@ class OpsAgent:
                 AGENT_ACTION_RATE_LIMITED,
             )
 
-        # 조치 분류.
-        category = classify_action(action_kind_id, self.allowlist_kinds)
-
         if category == "never_performed":
             # 어떤 승인 상태에서도 수행하지 않는다 (요구사항 15.13, 15.16).
             # 명명된 사람의 결정·실행 대기 상태로만 기록한다.
@@ -755,17 +830,6 @@ class OpsAgent:
                 trigger_signal_id,
                 AGENT_ACTION_NOT_ALLOWLISTED,
             )
-
-        if category == "high_risk":
-            # 결속된 명명된 사람 승인 참조 이후에만 수행 (요구사항 15.5, 15.6).
-            if bound_ref is None:
-                return self._deny(
-                    action_id,
-                    action_kind_id,
-                    trigger_signal_id,
-                    HUMAN_APPROVAL_REQUIRED,
-                )
-            # 승인이 결속됨 → 수행 경로로 진행.
 
         # Commit a shared budget claim before executing. An interrupted or
         # unverified attempt remains counted; rejected approvals consume none.
@@ -832,18 +896,73 @@ class OpsAgent:
             return False
 
     def _verify(self, action_kind_id: str, start_seconds: float) -> bool:
-        """결과 확인: 최대 3회 시도, 총 60초 이내 (요구사항 15.10)."""
+        """At most three read-only probes, bounded by a killable process.
 
-        for _ in range(MAX_VERIFY_ATTEMPTS):
-            if float(self.clock()) - start_seconds > MAX_VERIFY_SECONDS:
+        Callbacks run in an isolated single-threaded POSIX worker, and must open
+        their own readback resources. Only a boolean crosses the pipe. Unsafe
+        fork contexts fail closed; no background thread can outlive a timeout.
+        Both the injected clock and real wall time enforce the total deadline.
+        """
+        if (not hasattr(os, 'fork') or threading.current_thread() is not threading.main_thread()
+                or threading.active_count() != 1):
+            return False
+        try:
+            remaining = MAX_VERIFY_SECONDS - (float(self.clock()) - start_seconds)
+            if not math.isfinite(remaining) or not 0 < remaining <= MAX_VERIFY_SECONDS:
                 return False
-            try:
-                if self.verifier(action_kind_id):
-                    return True
-            except Exception:
-                # 확인 콜러블의 실패는 미확인으로 취급(오류 원문 미노출).
-                return False
-        return False
+            deadline = time.monotonic() + remaining
+            reader, writer = os.pipe()
+        except Exception:
+            return False
+        pid = None
+        try:
+            pid = os.fork()
+            if pid == 0:
+                os.close(reader)
+                try:
+                    os.setsid()
+                    # Callback diagnostics must never reach logs or receipts.
+                    with open(os.devnull, 'wb') as sink:
+                        os.dup2(sink.fileno(), 1)
+                        os.dup2(sink.fileno(), 2)
+                    result = False
+                    for _ in range(MAX_VERIFY_ATTEMPTS):
+                        if time.monotonic() >= deadline or float(self.clock()) - start_seconds >= MAX_VERIFY_SECONDS:
+                            break
+                        observed = self.verifier(action_kind_id) is True
+                        if time.monotonic() >= deadline or float(self.clock()) - start_seconds >= MAX_VERIFY_SECONDS:
+                            break
+                        if observed:
+                            result = True
+                            break
+                    os.write(writer, b'1' if result else b'0')
+                except BaseException:
+                    pass
+                finally:
+                    os._exit(0)
+            os.close(writer)
+            writer = None
+            ready, _, _ = select.select([reader], [], [], max(0, deadline - time.monotonic()))
+            return (bool(ready) and os.read(reader, 1) == b'1'
+                    and time.monotonic() < deadline
+                    and float(self.clock()) - start_seconds < MAX_VERIFY_SECONDS)
+        except Exception:
+            return False
+        finally:
+            os.close(reader)
+            if writer is not None:
+                os.close(writer)
+            if pid is not None and pid > 0:
+                # Kill the worker's group even after a result, so no probe
+                # descendant survives. A pre-setsid race still kills the child.
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                os.waitpid(pid, 0)
 
     def _deny(
         self,

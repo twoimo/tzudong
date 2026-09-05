@@ -294,6 +294,17 @@ export const buildRunReceipt = ({ runAtUtc, candidates = [] } = {}) => {
 
 // --- Self-consistency guard ---
 
+/** Scope a PR's preflight before any aggregate candidate verdict can block it. */
+export function buildPreflightReceipt(candidates, checkedCommit = null) {
+  if (checkedCommit === null) return buildRunReceipt({ candidates });
+  if (!/^[0-9a-f]{40}$/.test(checkedCommit)) throw new Error('checked_commit_invalid');
+  const matching = candidates.filter((candidate) => candidate?.headSha === checkedCommit);
+  if (matching.length !== 1) throw new Error('checked_candidate_metadata_unavailable');
+  const receipt = buildRunReceipt({ candidates: matching });
+  receipt.unverifiedCandidateCount = candidates.length - matching.length;
+  return receipt;
+}
+
 /** Attach command results only to candidates whose exact source was checked. */
 export function bindVerificationToCommit(candidates, results, checkedCommit) {
   if (!/^[0-9a-f]{40}$/.test(checkedCommit ?? '')) throw new Error('checked_commit_invalid');
@@ -349,7 +360,9 @@ async function main() {
     candidates = raw;
   }
 
-  let receipt = buildRunReceipt({ candidates });
+  const prCommit = process.env.GITHUB_EVENT_NAME === 'pull_request'
+    ? execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim() : null;
+  let receipt = buildPreflightReceipt(candidates, prCommit);
 
   // Optional: fold the four-command verification verdict into the receipt so
   // the workflow fails closed (no merge) and records `dependency_check_failed`.

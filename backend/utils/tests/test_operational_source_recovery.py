@@ -146,6 +146,7 @@ class OperationalRecoveryProvenanceTests(unittest.TestCase):
                 "migration-readiness-source-contract",
                 "synthetic-secret-fixture-source-safety",
                 "reviewed-operational-runtime-corrections",
+                "promotion-review-runtime-corrections",
             ],
         )
         declared = {

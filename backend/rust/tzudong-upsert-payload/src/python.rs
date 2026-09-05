@@ -6,62 +6,25 @@
 //! module through the Implementation_Selector without changing its public
 //! signature or moving the RPC call out of Python (requirements 1.1, 1.3).
 
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDict, PyFloat, PyInt, PyList, PyString};
+use pyo3::types::PyDict;
 
-use crate::value::Value;
-
-/// Convert an arbitrary Python object into the parity value model.
-///
-/// bool is checked before int (Python bool subclasses int). Only the JSON-ish
-/// types that appear in an upsert payload are modeled; anything else raises
-/// `ValueError`, matching `json.dumps` refusing a non-serializable object.
-fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
-    if obj.is_none() {
-        return Ok(Value::None);
-    }
-    if obj.is_instance_of::<PyBool>() {
-        return Ok(Value::Bool(obj.extract::<bool>()?));
-    }
-    if obj.is_instance_of::<PyInt>() {
-        return Ok(Value::Int(obj.extract::<i64>()?));
-    }
-    if obj.is_instance_of::<PyFloat>() {
-        return Ok(Value::Float(obj.extract::<f64>()?));
-    }
-    if obj.is_instance_of::<PyString>() {
-        return Ok(Value::Str(obj.extract::<String>()?));
-    }
-    if obj.is_instance_of::<PyList>() {
-        let list = obj.cast::<PyList>().expect("checked is_instance_of PyList");
-        let mut out = Vec::with_capacity(list.len());
-        for item in list.iter() {
-            out.push(py_to_value(&item)?);
-        }
-        return Ok(Value::List(out));
-    }
-    if obj.is_instance_of::<PyDict>() {
-        let dict = obj.cast::<PyDict>().expect("checked is_instance_of PyDict");
-        let mut out: Vec<(String, Value)> = Vec::with_capacity(dict.len());
-        for (k, v) in dict.iter() {
-            let key = if k.is_instance_of::<PyString>() {
-                k.extract::<String>()?
-            } else {
-                k.str()?.extract::<String>()?
-            };
-            out.push((key, py_to_value(&v)?));
-        }
-        return Ok(Value::Dict(out));
-    }
-    Err(PyValueError::new_err("payload_not_serializable"))
-}
-
-/// `payload_hash(payload) -> str` — hex SHA-256 of the canonical JSON.
+/// Preserve the running interpreter's complete JSON contract (including float
+/// exponent spelling, arbitrary-size ints, tuples and key/error semantics).
+/// Canonical serialization remains at the Python boundary; only SHA-256 and
+/// the pure batch/error guards are Rust. This is not a serialization speedup.
 #[pyfunction]
 fn payload_hash(payload: Bound<'_, PyAny>) -> PyResult<String> {
-    let value = py_to_value(&payload)?;
-    Ok(crate::payload_hash(&value))
+    let py = payload.py();
+    let kwargs = PyDict::new(py);
+    kwargs.set_item("sort_keys", true)?;
+    kwargs.set_item("separators", (",", ":"))?;
+    kwargs.set_item("ensure_ascii", true)?;
+    let canonical: String = PyModule::import(py, "json")?
+        .getattr("dumps")?
+        .call((payload,), Some(&kwargs))?
+        .extract()?;
+    Ok(crate::sha256::sha256_hex(canonical.as_bytes()))
 }
 
 /// `check_batch_limit(count) -> str | None`.

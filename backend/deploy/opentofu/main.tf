@@ -43,8 +43,9 @@ locals {
         memory = "1Gi"
       }
       env = [
-        { name = "TZUDONG_PROFILE", source = "configmap:backend-runtime-config/profile" },
-        { name = "PIPELINE_PG_DSN", source = "secretRef:PIPELINE_PG_DSN_REF" },
+        { name = "TZUDONG_DATA_ENV", source = "configmap:backend-runtime-config/data_env" },
+        { name = "TZUDONG_COMPUTE_PROFILE", source = "configmap:backend-runtime-config/profile" },
+        { name = "PIPELINE_CONTROL_DSN", source = "secretRef:PIPELINE_PG_DSN_REF" },
         { name = "GEMINI_API_KEY", source = "secretRef:GEMINI_API_KEY_REF" },
         { name = "YOUTUBE_API_KEY", source = "secretRef:YOUTUBE_API_KEY_REF" },
       ]

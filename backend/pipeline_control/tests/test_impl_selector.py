@@ -102,10 +102,10 @@ class DefaultImplementationTests(unittest.TestCase):
             sel.IMPL_PYTHON,
         )
 
-    def test_default_flips_rust_when_gate_met(self) -> None:
+    def test_claimed_count_without_live_receipts_stays_python(self) -> None:
         self.assertEqual(
             sel.resolve_default_implementation("R1-validators", ledger=_ledger(active="rust", count=3)),
-            sel.IMPL_RUST,
+            sel.IMPL_PYTHON,
         )
 
     def test_active_python_never_defaults_rust(self) -> None:
@@ -134,6 +134,17 @@ class LoadRustTests(unittest.TestCase):
         )
         try:
             self.assertEqual(module.identity({'count':3}), {'count':3})
+        finally:
+            module.close()
+
+    def test_private_ipc_preserves_nonfinite_nested_float_values(self) -> None:
+        import math
+        module = sel.load_rust('R1-validators',
+            importer=lambda: SimpleNamespace(identity=lambda value: value), ledger=_ledger())
+        try:
+            result = module.identity({'values': [float('nan'), float('inf'), float('-inf')]})
+            self.assertTrue(math.isnan(result['values'][0]))
+            self.assertEqual(result['values'][1:], [float('inf'), float('-inf')])
         finally:
             module.close()
 

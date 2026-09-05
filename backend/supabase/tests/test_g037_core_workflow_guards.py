@@ -11,17 +11,18 @@ FREEZE_GUARD = "vars.G037_WRITE_FREEZE != 'active'"
 DAILY_COMPUTE_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
     "github.ref_name == github.event.repository.default_branch && "
-    "github.ref_protected }}"
+    "github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' }}"
 )
 DAILY_UPLOAD_GUARD = "${{ always() }}"
 DAILY_PUBLICATION_GUARD = (
-    "${{ always() && needs.daily-compute.outputs.publication_ready == 'true' && "
+    "${{ always() && vars.G037_WRITE_FREEZE == 'cleared' && "
+    "vars.TZUDONG_DATA_BRANCH_PUBLISH == '1' && needs.daily-compute.outputs.publication_ready == 'true' && "
     "needs.daily-compute.outputs.publication_manifest_sha256 != '' }}"
 )
 BACKFILL_GUARD = (
     "${{ github.repository == github.event.repository.full_name && "
     "github.ref_name == github.event.repository.default_branch && "
-    "github.ref_protected && "
+    "github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' && "
     "(github.event_name != 'workflow_run' || "
     "(github.event.workflow_run.conclusion == 'success' && "
     "github.event.workflow_run.event == 'schedule' && "

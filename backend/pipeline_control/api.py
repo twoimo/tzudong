@@ -20,6 +20,7 @@ from backend.pipeline_control.targets import assert_admitted, load_targets
 from backend.utils.privacy_log import safe_error_name, sanitize_log_value
 from backend.pipeline_control.metrics import gauge_snapshot
 from backend.pipeline_control.queue import enqueue
+from backend.pipeline_control.impl_selector import python_reference
 
 STORE = FileStore()
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
@@ -88,6 +89,13 @@ def _read_json(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
 
 class PipelineApiHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def handle_one_request(self) -> None:
+        # The killable Rust runner requires a single-threaded fork owner.
+        # HTTP handler threads retain Python until a threaded native runner is
+        # separately admitted; this also covers ledger-selected Rust defaults.
+        with python_reference():
+            return super().handle_one_request()
 
     def log_message(self, fmt: str, *args: Any) -> None:
         return

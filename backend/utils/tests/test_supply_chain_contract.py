@@ -91,6 +91,19 @@ class SupplyChainContractTests(unittest.TestCase):
                     for digest in digests:
                         self.assertEqual(len(digest), 64, package)
 
+    def test_nullable_cas_migration_alone_triggers_its_real_postgres_suite(self) -> None:
+        import fnmatch
+        import yaml
+        workflow = yaml.safe_load((ROOT / '.github/workflows/security-audit.yml').read_text())
+        event = workflow.get('on', workflow.get(True))
+        migration = 'backend/supabase/migrations/20260905015816_publication_nullable_trace_cas.sql'
+        self.assertTrue(any(fnmatch.fnmatchcase(migration, pattern)
+                            for pattern in event['pull_request']['paths']))
+        job = workflow['jobs']['orchestration-readiness']
+        self.assertNotIn('if', job)
+        self.assertTrue(any('backend.pipeline_control.test_publication_cas_postgres' in step.get('run', '')
+                            for step in job['steps']))
+
     def test_pin_contract_is_read_only_and_has_six_closed_items(self) -> None:
         verifier = (WEB / "scripts/verify-pin-contract.mjs").read_text(encoding="utf-8")
         for forbidden in ("writeFile", "appendFile", "unlink", "truncate", "rmSync"):

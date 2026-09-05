@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "review_runtime_corrections_fifth_pass",
+  "observedAt": "2026-09-05T02:18:41.084644+00:00",
+  "protectedDevelopBase": "0222bda7d83002bd3f9b9dd10bff4e87f402ae22",
+  "verifiedCodeHead": "c6baa70a82b6e40dda09719a4c765a053f5a6962",
+  "reviewPr": 2859,
+  "correctedReviewThreads": [
+    "PRRT_kwDOQGRyNc6feT6Q",
+    "PRRT_kwDOQGRyNc6feT6S",
+    "PRRT_kwDOQGRyNc6feT6V",
+    "PRRT_kwDOQGRyNc6feT6Z",
+    "PRRT_kwDOQGRyNc6feT6e",
+    "PRRT_kwDOQGRyNc6fekHf",
+    "PRRT_kwDOQGRyNc6fekHo",
+    "PRRT_kwDOQGRyNc6feT6f",
+    "PRRT_kwDOQGRyNc6fekHu",
+    "PRRT_kwDOQGRyNc6feT6W",
+    "PRRT_kwDOQGRyNc6feT6Y",
+    "PRRT_kwDOQGRyNc6feT6a",
+    "PRRT_kwDOQGRyNc6feT6c",
+    "PRRT_kwDOQGRyNc6fekHj",
+    "PRRT_kwDOQGRyNc6fekHs",
+    "PRRT_kwDOQGRyNc6fekHx"
+  ],
+  "verification": {
+    "dependencyFocusedTests": 27,
+    "readinessTests": 32,
+    "threadedApiAndDescriptors": 63,
+    "workflowFreezeTests": 50,
+    "publicationTests": 34,
+    "agentAndDurableQueueTests": 60,
+    "rustGateTests": 71,
+    "rustWorkspaceTests": 62,
+    "nativeCallSiteTests": 8,
+    "nativeFloatComparisons": 10008,
+    "nativeDateCorpus": "all decimal zero alphabets in CPython 3.13.15 plus end-anchor and invalid cases",
+    "collectorAndObservabilityTests": 42,
+    "collectorCrashReadback": {
+      "pendingExportDeliveredAfterRestart": true,
+      "downtimeLineDelivered": true,
+      "deliveredCheckpointReplayCount": 0,
+      "privateFixtureNetwork": true,
+      "temporaryContainersAndVolumeRemoved": true
+    },
+    "typescriptParity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logicalInputs": 2322
+    },
+    "webLint": "passed"
+  },
+  "externalReadbackBindings": {
+    "mac-launchagent-installed-readback.json": "f6aef0fadaf914312e59fad51dfb4d9125b271b24226a625c661e872bb3f7ddb",
+    "vercel-protected-develop-ready-readback.json": "0bf69213ea0be700fa5e4f07446b30d8cfd004e60ea2f8b60913d33520c40e54",
+    "pr-2862-merge-admission.json": "9061ee466ce9f78930bab37198e4ed973873de1dada18f948ba563065d312070",
+    "pr-2862-merge-readback.json": "16f0312f798a039f9505cbe3015019b21617c959c706967adf24221d08e74d77",
+    "promotion-trusted-default-installation-plan.json": "ece00142f155f109d6686862edf28ce771790bd271d47617b558a9f4383c1b6c",
+    "promotion-trusted-default-installation-readback.json": "a55c43a29eba898658a5c11aa0a0a3cc51f829ec17eeaf27a0545f20d2e5c482",
+    "promotion-trusted-target-runtime-readback.json": "cfabf82890cb80a733f5e0235bac3c36f15220b6be8f442e65ab2e3edfa643c2",
+    "gitguardian-artifact-hash-rescan-readback.json": "5f6653e0d2591b609ab77d28f50b802744aec1133aaacfcbf181902a5a8de6c8"
+  },
+  "limitations": [
+    "Test groups overlap and are not an additive unique coverage denominator.",
+    "New migrations were tested only in disposable local PostgreSQL, not applied hosted.",
+    "Native comparison fixtures do not supply approved live N=3 evidence.",
+    "The Mac wrapper is installed and held; no real scheduled-start or sleep-wake outcome is claimed.",
+    "PR CI, serialized data/main promotion, default-branch restoration and G037 runtime-probe remain pending.",
+    "Production release, freeze clearance, legal review and actual performance windows remain unestablished."
+  ],
+  "externalReceiptFile": "review-runtime-corrections.v5.json",
+  "externalReceiptSha256": "6dc30e7580c897ad141d09109794b07d9f58a9e5e033d3a3db7f64bc213f98be"
+}

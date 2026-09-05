@@ -259,12 +259,11 @@ def _unmatched(input_id, artifact="art-1"):
 
 
 class GateTests(unittest.TestCase):
-    def test_three_distinct_matched_allows_switch(self) -> None:
+    def test_three_synthetic_matches_cannot_allow_switch(self) -> None:
         results = [_matched("i1"), _matched("i2"), _matched("i3")]
         decision = rp.evaluate_default_switch("R1", results, "art-1")
-        self.assertTrue(decision["allowed"])
-        self.assertEqual(decision["defaultImplementation"], rp.IMPL_RUST)
-        self.assertEqual(set(decision["evidence"]["inputIds"]), {"i1", "i2", "i3"})
+        self.assertFalse(decision["allowed"])
+        self.assertEqual(decision["defaultImplementation"], rp.IMPL_PYTHON)
 
     def test_fewer_than_three_is_insufficient(self) -> None:
         results = [_matched("i1"), _matched("i2")]
@@ -327,15 +326,15 @@ class ArtifactChangeTests(unittest.TestCase):
 
 
 class ReadbackTests(unittest.TestCase):
-    def test_matching_readback_keeps_rust(self) -> None:
+    def test_matching_unretained_objects_cannot_claim_an_applied_switch(self) -> None:
         evidence = {
             "inputIds": ["i1", "i2", "i3"],
             "rustArtifactId": "art-1",
             "activeImplementation": "rust",
         }
         decision = rp.verify_switch_readback(evidence, dict(evidence))
-        self.assertTrue(decision["verified"])
-        self.assertEqual(decision["defaultImplementation"], rp.IMPL_RUST)
+        self.assertFalse(decision["verified"])
+        self.assertEqual(decision["defaultImplementation"], rp.IMPL_PYTHON)
 
     def test_divergent_readback_reverts_python(self) -> None:
         evidence = {
@@ -350,11 +349,11 @@ class ReadbackTests(unittest.TestCase):
 
 
 class PythonRemovalTests(unittest.TestCase):
-    def test_separate_with_ledger_ref_admitted(self) -> None:
+    def test_separate_with_unverified_ledger_ref_rejected(self) -> None:
         result = rp.check_python_removal_candidate(
             {"separateExplicitCandidate": True, "ledgerParityRef": "R1#n3"}
         )
-        self.assertTrue(result["admitted"])
+        self.assertFalse(result["admitted"])
 
     def test_not_separate_rejected(self) -> None:
         result = rp.check_python_removal_candidate(

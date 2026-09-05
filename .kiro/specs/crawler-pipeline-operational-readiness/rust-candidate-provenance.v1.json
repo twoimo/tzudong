@@ -41,6 +41,18 @@
         "backend/rust/tzudong-validators/src/validators.rs",
         "backend/rust/tests/parity_pbt.py"
       ]
+    },
+    {
+      "id": "python-date-hash-parity",
+      "kind": "behavior-correction",
+      "tool": "apply_patch",
+      "version": "1",
+      "paths": [
+        "backend/rust/tzudong-normalize/src/lib.rs",
+        "backend/rust/tzudong-normalize/src/python.rs",
+        "backend/rust/tzudong-upsert-payload/src/python.rs",
+        "backend/rust/tzudong-upsert-payload/src/value.rs"
+      ]
     }
   ],
   "fileCount": 36,
@@ -125,15 +137,15 @@
     },
     {
       "path": "backend/rust/tzudong-normalize/src/lib.rs",
-      "gitBlobSha1": "c11b868b5af8b76f9ef9724b60fda0a9d8f8719f",
-      "sha256": "2fac4482c55857a6001d3168363179d20eaa5607f6a5656de2fb33e8947b7823",
-      "bytes": 7383
+      "gitBlobSha1": "f0b1d312b53a881464a34df6cee460dc75e0107a",
+      "sha256": "2f897ee432345bd2929c261c694721a3a106a76d4197f09000ee4e3d905f0509",
+      "bytes": 7381
     },
     {
       "path": "backend/rust/tzudong-normalize/src/python.rs",
-      "gitBlobSha1": "055d4c8824dd2b492a5f520289950af7736ba1de",
-      "sha256": "43034d89de6d4b2616076859848e6bc036d018cda078b163d3c596f067bf335f",
-      "bytes": 1622
+      "gitBlobSha1": "64e5616a02fed427dba8c5e34e3053d83ff5d323",
+      "sha256": "e8db981dc537d75aa884fa6d6c3cb0e9ba2c705f298566ba292f2f12b2d630b6",
+      "bytes": 2335
     },
     {
       "path": "backend/rust/tzudong-pipeline-graph/Cargo.toml",
@@ -191,9 +203,9 @@
     },
     {
       "path": "backend/rust/tzudong-upsert-payload/src/python.rs",
-      "gitBlobSha1": "d59276208049e22c0be1576825dfa87639cf1ef8",
-      "sha256": "a9ba0a42a2d7de7dcc76c7fefcee55f150797ab8db19b766948953fb649d0d70",
-      "bytes": 3645
+      "gitBlobSha1": "a9e0c1df021ee161c0955717b55426d380b0392f",
+      "sha256": "1e4e5939ebc222d15d0d82e4c09ebbc8779983e6edea38e6c529e834165d5bae",
+      "bytes": 2386
     },
     {
       "path": "backend/rust/tzudong-upsert-payload/src/sha256.rs",
@@ -203,9 +215,9 @@
     },
     {
       "path": "backend/rust/tzudong-upsert-payload/src/value.rs",
-      "gitBlobSha1": "bcd1fc0d24e35da18af0237ea441ce47263e8980",
-      "sha256": "81f908ca33c71b094c8d51e39e147c56ed21a4230fced736f27ed661e8880e58",
-      "bytes": 6615
+      "gitBlobSha1": "e6a16ae2242d862030696a8c49480f49611969fe",
+      "sha256": "0ca9fcafafe39089523127ebd096b5466f49d12a017bdf0031fd046d9559c9ed",
+      "bytes": 6897
     },
     {
       "path": "backend/rust/tzudong-validators/Cargo.toml",

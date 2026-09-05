@@ -70,6 +70,7 @@ READINESS_INTERVAL_SECONDS = 5
 # Pinned image references (12.10). These mirror the compose overlays exactly and
 # must never be `latest`, untagged, or a movable alias.
 PINNED_IMAGES: dict[str, str] = {
+    "otel-storage-init": "busybox:1.37.0",
     "otel-collector": "otel/opentelemetry-collector-contrib:0.120.0",
     "prometheus": "prom/prometheus:v3.2.1",
     "grafana": "grafana/grafana:11.5.2",
@@ -427,7 +428,7 @@ def read_compose_bindings(overlays, *, compose_dir=_COMPOSE_DIR, enable_loki=Tru
     """
     import yaml
     ports, images, hashes = {}, {}, {}
-    expected = {"observability": {"otel-collector", "prometheus", "grafana", "loki"},
+    expected = {"observability": {"otel-storage-init", "otel-collector", "prometheus", "grafana", "loki"},
                 "kafka": {"kafka", "kafka-ui"}, "elasticsearch": {"elasticsearch"}}
     try:
         for overlay in overlays:
@@ -445,7 +446,18 @@ def read_compose_bindings(overlays, *, compose_dir=_COMPOSE_DIR, enable_loki=Tru
             for name, service in services.items():
                 if name == 'loki' and not enable_loki:
                     continue
-                if not isinstance(service, dict) or 'extends' in service or 'network_mode' in service:
+                if not isinstance(service, dict) or 'extends' in service:
+                    return None
+                if name == 'otel-storage-init':
+                    # The sole admitted network_mode is a networkless helper
+                    # with a fixed command and a single named-volume target.
+                    if (service.get('network_mode') != 'none' or service.get('user') != '0:0'
+                            or service.get('read_only') is not True or service.get('cap_drop') != ['ALL']
+                            or service.get('cap_add') != ['CHOWN'] or service.get('ports') or service.get('networks')
+                            or service.get('command') != ['chown', '10001:10001', '/var/lib/otelcol']
+                            or service.get('volumes') != ['otel-storage:/var/lib/otelcol']):
+                        return None
+                elif 'network_mode' in service:
                     return None
                 images[name] = service.get('image')
                 declarations = service.get('ports', [])

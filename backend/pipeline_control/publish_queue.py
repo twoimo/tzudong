@@ -28,6 +28,10 @@ from backend.pipeline_control.publish_worker import (
 )
 
 MAX_SOURCE_ROWS = 10000
+LOCAL_SEED_RESTAURANT_IDS = (
+    "00000000-0000-4000-8000-000000000101",
+    "00000000-0000-4000-8000-000000000102",
+)
 
 
 def _rows(cursor) -> list[dict]:
@@ -132,8 +136,11 @@ def load_source_request(connection, worker, job_id):
                                             execute_all=lambda *_: [])
             plan = adapter._admitted_plan(key)
             columns = sorted(plan.published_columns | {'id'})
-            c.execute('SELECT ' + ','.join(columns) + ' FROM ' + key + ' ORDER BY id LIMIT %s',
-                      (MAX_SOURCE_ROWS + 1,))
+            # Existing nightly fixture rows predate publication markers. Their
+            # source-owned identities must be excluded before the row limit.
+            exclusion = ' WHERE id <> ALL(%s::uuid[])' if key == 'public.restaurants' else ''
+            params = (list(LOCAL_SEED_RESTAURANT_IDS), MAX_SOURCE_ROWS + 1) if exclusion else (MAX_SOURCE_ROWS + 1,)
+            c.execute('SELECT ' + ','.join(columns) + ' FROM ' + key + exclusion + ' ORDER BY id LIMIT %s', params)
             rows = _rows(c)
             if len(rows) > MAX_SOURCE_ROWS: raise ValueError('publish_source_limit')
             # PostgreSQL scalar timestamps have a stable JSON representation;

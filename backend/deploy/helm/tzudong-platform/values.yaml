@@ -9,6 +9,8 @@
 # Secret values are NEVER written here. Credential, token, and connection-string
 # secret components are indicated by external secret reference names only
 # (the *_REF identifiers below), matching backend/deploy/migration-readiness.v1.json.
+# Their Kubernetes Secret object names are lowercase with underscores replaced
+# by hyphens (SUPABASE_URL_REF maps to supabase-url-ref), with key "value".
 #
 # clusterId is a render parameter (see templates/_helpers.tpl). Rendering the
 # same source for two or more cluster identifiers differs only in derived fields
@@ -49,9 +51,11 @@ components:
         cpu: 500m
         memory: 1Gi
     env:
-      - name: TZUDONG_PROFILE
+      - name: TZUDONG_DATA_ENV
+        source: configmap:backend-runtime-config/data_env
+      - name: TZUDONG_COMPUTE_PROFILE
         source: configmap:backend-runtime-config/profile
-      - name: PIPELINE_PG_DSN
+      - name: PIPELINE_CONTROL_DSN
         source: secretRef:PIPELINE_PG_DSN_REF
       - name: GEMINI_API_KEY
         source: secretRef:GEMINI_API_KEY_REF

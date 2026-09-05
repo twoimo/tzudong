@@ -174,7 +174,7 @@ function generateTypesFromPgMeta(origin) {
           reject(error);
           return;
         }
-        if (!body.includes('export type Json') && !body.includes('export type Database')) {
+        if (!body.includes('export type Json') || !body.includes('export type Database')) {
           const error = new Error('pg_meta_shape');
           error.stderr = 'pg_meta_shape';
           reject(error);

@@ -168,21 +168,12 @@ class ParityGateCountProperty(unittest.TestCase):
 
         decision = evaluate_default_switch(_SLICE_ID, results, target)
         self.assertEqual(decision["consecutiveMatchedCount"], expected_count)
-        # The gate allows the flip to rust exactly when the count reaches N=3.
-        self.assertEqual(decision["allowed"], expected_count >= PARITY_GATE_COUNT)
-
-        if expected_count >= PARITY_GATE_COUNT:
-            self.assertEqual(decision["defaultImplementation"], IMPL_RUST)
-            self.assertIsNone(decision["code"])
-            evidence = decision["evidence"]
-            self.assertEqual(evidence["rustArtifactId"], target)
-            self.assertEqual(len(evidence["inputIds"]), PARITY_GATE_COUNT)
-            # The supporting evidence carries distinct input ids only.
-            self.assertEqual(len(set(evidence["inputIds"])), PARITY_GATE_COUNT)
-        else:
-            self.assertEqual(decision["defaultImplementation"], IMPL_PYTHON)
-            self.assertIsNone(decision["evidence"])
-            self.assertEqual(decision["code"], CODE_PARITY_EVIDENCE_INSUFFICIENT)
+        # Synthetic results verify counting only. They cannot authorize a
+        # default change without retained live evidence, approval and readback.
+        self.assertFalse(decision["allowed"])
+        self.assertEqual(decision["defaultImplementation"], IMPL_PYTHON)
+        self.assertIsNone(decision["evidence"])
+        self.assertEqual(decision["code"], CODE_PARITY_EVIDENCE_INSUFFICIENT)
 
     @settings(max_examples=100, deadline=None)
     @given(
@@ -206,7 +197,7 @@ class ParityGateCountProperty(unittest.TestCase):
 
         self.assertEqual(consecutive_matched_count(results, _TARGET), newer)
         decision = evaluate_default_switch(_SLICE_ID, results, _TARGET)
-        self.assertEqual(decision["allowed"], newer >= PARITY_GATE_COUNT)
+        self.assertFalse(decision["allowed"])
 
     @settings(max_examples=100, deadline=None)
     @given(repeats=st.integers(min_value=1, max_value=8))

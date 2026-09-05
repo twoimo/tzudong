@@ -219,13 +219,13 @@ def resolve_implementation(
 # ---------------------------------------------------------------------------
 # Default selection gate (Requirements 2.4, 2.5).
 # ---------------------------------------------------------------------------
-def ledger_permits_rust_default(entry: Mapping[str, Any]) -> bool:
+def ledger_permits_rust_default(entry: Mapping[str, Any], *, evidence_loader=None) -> bool:
     """Whether the ledger permits ``rust`` as the *default* for this entry.
 
     True only when the entry's ``activeImplementation`` is ``rust`` and its
     ``consecutiveMatchedCount`` is at least :data:`PARITY_GATE_COUNT` (3). This
-    enforces the requirement-2.4/2.5 invariant that the default may not flip to
-    rust before three consecutive matched parity results.
+    also requires content-addressed live parity, approval and readback receipts.
+    Claimed counts alone never authorize a default change.
     """
 
     if entry.get("activeImplementation") != IMPL_RUST:
@@ -233,7 +233,13 @@ def ledger_permits_rust_default(entry: Mapping[str, Any]) -> bool:
     count = entry.get("consecutiveMatchedCount")
     if isinstance(count, bool) or not isinstance(count, int):
         return False
-    return count >= PARITY_GATE_COUNT
+    from backend.pipeline_control.rust_promotion_evidence import read_receipt, verified_live_promotion
+    reference = entry.get('promotionEvidenceRef')
+    receipt = read_receipt(reference, evidence_loader)
+    return bool(count >= PARITY_GATE_COUNT and receipt and verified_live_promotion(
+        reference, entry.get('sliceId'), entry.get('rustArtifactId'),
+        receipt.get('parityResults'), loader=evidence_loader,
+        readback_ref=entry.get('promotionReadbackRef'), expected_entry=entry))
 
 
 def resolve_default_implementation(
@@ -336,7 +342,10 @@ def _wire_value(value):
     if value is None or type(value) in (str, int, bool):
         return True
     if type(value) is float:
-        return math.isfinite(value)
+        # Private, bounded pickle IPC preserves IEEE-754 values. Validators
+        # must receive NaN/infinity and return their normal coordinate errors.
+        # Evidence JSON has a separate strict finite-number contract.
+        return True
     if type(value) in (list, tuple):
         return all(_wire_value(item) for item in value)
     if type(value) is dict:

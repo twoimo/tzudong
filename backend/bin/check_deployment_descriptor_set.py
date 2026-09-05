@@ -110,7 +110,7 @@ def _expected_helm(component, cluster_id):
     for item in component['envVars']:
         source = item['source']
         if source.startswith('secretRef:'):
-            reference = {'secretKeyRef': {'name': source.split(':',1)[1], 'key':'value'}}
+            reference = {'secretKeyRef': {'name': dd.kubernetes_name(source.split(':',1)[1]), 'key':'value'}}
         else:
             ref, key = source.split(':',1)[1].split('/',1)
             reference = {'configMapKeyRef': {'name':ref, 'key':key}}

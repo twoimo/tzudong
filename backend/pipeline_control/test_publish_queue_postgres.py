@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime, canonical_pg_value, load_source_request
+from backend.pipeline_control.publish_queue import PublishQueueStore, PublishQueueConsumer, admit_runtime, canonical_pg_value, load_source_request, LOCAL_SEED_RESTAURANT_IDS
 from backend.pipeline_control.publish_worker import PublishWorker, PublicationSet
 from backend.pipeline_control.agent_action_store import PostgresAgentActionStore
 from backend.pipeline_control import ops_agent as oa
@@ -24,6 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RuntimeAdmissionTests(unittest.TestCase):
+    def test_seed_exclusion_covers_the_canonical_restaurant_fixtures(self):
+        import re
+        source = (ROOT / 'supabase/scripts/local-seed.sql').read_text()
+        rows = source.split('INSERT INTO public.restaurants (', 1)[1].split('ON CONFLICT', 1)[0]
+        identities = set(re.findall(r"'([0-9a-f]{8}-[0-9a-f-]{27})'", rows))
+        self.assertEqual(identities, set(LOCAL_SEED_RESTAURANT_IDS))
     def test_postgres_scalars_are_lossless_and_scale_stable(self):
         identifier = uuid4()
         value = canonical_pg_value({'lat': Decimal('37.1234567890123456789012345678900'),
@@ -75,7 +81,9 @@ class DurableBackendTests(unittest.TestCase):
             with c.cursor() as cur:
                 cur.execute('CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;')
                 for name in ('20260901000100_local_analytics_schema.sql','20260905000100_local_agent_terminal_results.sql',
-                             '20260905000200_local_agent_rate_budget.sql'):
+                             '20260905000200_local_agent_rate_budget.sql',
+                             '20260905031359_local_agent_trigger_reservation.sql',
+                             '20260905050509_local_agent_approval_pending_decisions.sql'):
                     cur.execute((ROOT / 'supabase/migrations' / name).read_text())
 
     def connection(self):
@@ -91,6 +99,7 @@ class DurableBackendTests(unittest.TestCase):
             with c.cursor() as cur:
                 cur.execute('TRUNCATE local_analytics.publish_jobs,local_analytics.publish_history,local_analytics.publish_audit_events')
                 cur.execute('TRUNCATE local_analytics.agent_action_budget_claims,local_analytics.agent_action_results,local_analytics.agent_action_records')
+                cur.execute('TRUNCATE local_analytics.agent_approval_pending_decisions')
         self.conn = self.connection()
         self.store = PublishQueueStore(self.conn)
         self.hosted = FakeHosted({'public.videos': ('id',)})
@@ -151,6 +160,9 @@ class DurableBackendTests(unittest.TestCase):
                 c.execute('CREATE TABLE public.restaurants(id uuid PRIMARY KEY,'+columns+')')
                 c.execute('INSERT INTO public.restaurants(id,lat,lng) VALUES (%s,%s,%s)',
                     (str(uuid4()), Decimal('37.1234567890123456789012345678900'),Decimal('127.5000')))
+                for seed_id in LOCAL_SEED_RESTAURANT_IDS:
+                    c.execute('INSERT INTO public.restaurants(id,approved_name) VALUES (%s,%s)',
+                              (seed_id, 'unmarked local fixture'))
                 c.execute('GRANT SELECT ON public.restaurants TO service_role')
         hosted = FakeHosted({'public.restaurants': ('id',)})
         consumer = PublishQueueConsumer(self.store, worker,
@@ -160,6 +172,8 @@ class DurableBackendTests(unittest.TestCase):
         self.assertEqual(consumer.confirm(self.job_id, preview['previewHash'])['status'],'confirmed')
         self.assertEqual(consumer.apply_once()['status'], 'succeeded')
         row = next(iter(hosted.store['public.restaurants'].values()))
+        self.assertEqual(len(hosted.store['public.restaurants']), 1)
+        self.assertNotIn(row['id'], LOCAL_SEED_RESTAURANT_IDS)
         self.assertEqual(row['lat'], '37.12345678901234567890123456789')
         self.assertEqual(row['lng'], '127.5')
 
@@ -218,6 +232,76 @@ class DurableBackendTests(unittest.TestCase):
         self.assertFalse(store.record_result(str(uuid4()),oa.AGENT_ACTION_PERFORMED))
         self.conn.rollback()
 
+    def test_pending_decisions_survive_reconnect_without_consuming_execution(self):
+        from backend.pipeline_control.test_ops_agent_unittest import _make_agent, _signal, _rule
+        trigger = str(uuid4())
+        signal, rules = _signal(trigger), [_rule('deployment_execution')]
+        executed = []
+        original = PostgresAgentActionStore(self.scalar)
+        agent = _make_agent(store=original, executor=executed.append)
+        decisions = [agent.process_signal(signal, rules) for _ in range(2)]
+        ids = [result['pendingDecisionId'] for result in decisions]
+        self.assertEqual(len(set(ids)), 2)
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records'), 0)
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_budget_claims'), 0)
+        conn = self.connection()
+        def execute(sql, params):
+            with conn.cursor() as cur:
+                cur.execute(sql, params); row = cur.fetchone()
+            conn.commit()
+            return row[0] if row else None
+        resumed = PostgresAgentActionStore(execute)
+        for identity in ids:
+            record = oa.AgentActionRecord(identity, trigger, 'critical', 'deployment_execution',
+                                          oa.HUMAN_APPROVAL_REQUIRED)
+            self.assertTrue(resumed.record_approval_pending(record))
+            # An identity collision cannot silently confirm different content.
+            record.trigger_signal_id = str(uuid4())
+            self.assertFalse(resumed.record_approval_pending(record))
+        self.assertEqual(execute('SELECT count(*) FROM local_analytics.agent_approval_pending_decisions', ()), 2)
+        self.assertEqual(resumed.trigger_state(trigger), 'clear')
+        approval = oa.Approval(approval_ref='APR-RESUME-001', approver_name='Named Operator',
+                              trigger_signal_id=trigger, action_kind_id='deployment_execution')
+        resumed_agent = _make_agent(store=resumed, executor=executed.append)
+        self.assertTrue(resumed_agent.process_signal(signal, rules, approval=approval)['performed'])
+        self.assertEqual(resumed_agent.process_signal(signal, rules, approval=approval)['resultCode'],
+                         oa.AGENT_ACTION_DUPLICATE)
+        self.assertEqual(executed, ['deployment_execution'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_approval_pending_decisions'), 2)
+        for sql in ('DELETE FROM local_analytics.agent_approval_pending_decisions',
+                    "UPDATE local_analytics.agent_approval_pending_decisions SET result_code='human_approval_required'"):
+            with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege): self.scalar(sql)
+            self.conn.rollback()
+        for role in ('anon', 'authenticated'):
+            for privilege in ('SELECT', 'INSERT', 'UPDATE', 'DELETE'):
+                self.assertFalse(self.scalar('SELECT has_table_privilege(%s,%s,%s)',
+                    (role, 'local_analytics.agent_approval_pending_decisions', privilege)))
+
+    def test_agent_trigger_halt_survives_reconnect_for_a_different_action(self):
+        from backend.pipeline_control.test_ops_agent_unittest import _make_agent, _signal, _rule
+        for result_code in (oa.AGENT_ACTION_UNVERIFIED, None):
+            trigger = str(uuid4())
+            original = PostgresAgentActionStore(self.scalar)
+            record = oa.AgentActionRecord(str(uuid4()), trigger, 'high', 'restart_local_container')
+            self.assertEqual(original.reserve(record), 'created')
+            if result_code is not None:
+                self.assertTrue(original.record_result(record.action_id, result_code))
+            # A fresh backend connection and fresh agent must read the durable halt.
+            conn = self.connection()
+            def execute(sql, params):
+                with conn.cursor() as cur:
+                    cur.execute(sql, params)
+                    row = cur.fetchone()
+                conn.commit()
+                return row[0] if row else None
+            resumed = PostgresAgentActionStore(execute)
+            executed = []
+            agent = _make_agent(store=resumed, executor=executed.append)
+            result = agent.process_signal(_signal(trigger), [_rule('requeue_failed_pipeline_task')])
+            self.assertTrue(result['halted'])
+            self.assertFalse(result['performed'])
+            self.assertEqual(executed, [])
+
     def test_agent_budget_is_atomic_across_connections_restarts_and_windows(self):
         from concurrent.futures import ThreadPoolExecutor
         limits = [{'windowMinutes':60,'maxActions':10}, {'windowMinutes':1440,'maxActions':12}]
@@ -248,5 +332,48 @@ class DurableBackendTests(unittest.TestCase):
         with self.assertRaises(self.psycopg2.errors.InsufficientPrivilege):
             self.scalar('DELETE FROM local_analytics.agent_action_budget_claims')
         self.conn.rollback()
+
+    def test_trigger_reservation_serializes_different_kinds_after_racing_clear_reads(self):
+        from concurrent.futures import ThreadPoolExecutor
+        import threading
+        trigger = str(uuid4())
+        barrier = threading.Barrier(2)
+        def attempt(kind):
+            conn = self.psycopg2.connect(self.dsn)
+            try:
+                with conn.cursor() as cur: cur.execute('SET ROLE service_role')
+                conn.commit()
+                def execute(sql, params):
+                    with conn.cursor() as cur:
+                        cur.execute(sql, params); row = cur.fetchone()
+                    conn.commit()
+                    return row[0] if row else None
+                store = PostgresAgentActionStore(execute)
+                self.assertEqual(store.trigger_state(trigger), 'clear')
+                barrier.wait(timeout=5)
+                record = oa.AgentActionRecord(str(uuid4()), trigger, 'high', kind)
+                return record, store.reserve(record)
+            finally:
+                conn.close()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(attempt, ('restart_local_container', 'requeue_failed_pipeline_task')))
+        self.assertEqual(sorted(status for _, status in results), ['created', 'halted'])
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records WHERE trigger_signal_id=%s', (trigger,)), 1)
+        winner = next(record for record, status in results if status == 'created')
+        loser = next(record for record, status in results if status == 'halted')
+        store = PostgresAgentActionStore(self.scalar)
+        self.assertTrue(store.record_result(winner.action_id, oa.AGENT_ACTION_PERFORMED))
+        self.assertEqual(store.reserve(loser), 'created')
+        self.assertTrue(store.record_result(loser.action_id, oa.AGENT_ACTION_UNVERIFIED))
+        self.assertEqual(store.reserve(oa.AgentActionRecord(str(uuid4()), trigger, 'high', 'flush_log_pending_queue')), 'halted')
+
+    def test_trigger_reservation_rejects_stale_snapshot_isolation_and_public_execution(self):
+        record = oa.AgentActionRecord(str(uuid4()), str(uuid4()), 'high', 'restart_local_container')
+        with self.conn.cursor() as cur:
+            cur.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+        self.assertEqual(PostgresAgentActionStore(self.scalar).reserve(record), 'unavailable')
+        self.assertEqual(self.scalar('SELECT count(*) FROM local_analytics.agent_action_records'), 0)
+        for role in ('anon', 'authenticated'):
+            self.assertFalse(self.scalar("SELECT has_function_privilege(%s, 'local_analytics.reserve_agent_action(uuid,text,text,text,text)', 'EXECUTE')", (role,)))
 
 if __name__ == '__main__': unittest.main()
