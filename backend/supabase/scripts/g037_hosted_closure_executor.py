@@ -272,7 +272,7 @@ def retirement_gate(cur, *, terminal=False):
     )
     if set(results)!=set(contract) or not all(results.values()): raise ClosureError("source-bound retirement approval contract drift")
 def catalog(cur, manifest, *, terminal=False):
-    cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+    # The caller owns the snapshot, including the preceding role admission.
     rows=ledger(cur)
     expected_pairs=BASELINE_PAIRS+tuple((x.version,x.name) for x in manifest.migrations)
     pairs=tuple((version,name) for version,name,_ in rows)
@@ -282,7 +282,7 @@ def catalog(cur, manifest, *, terminal=False):
     if int(locks): raise ClosureError("waiting locks present")
     return rows,digest({"ledger":rows,"retirement":"passed"})
 def runtime_probe(cur):
-    cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
+    # Inspect privileges in the same read-only snapshot used for admission.
     signature="public.begin_account_deletion_apply(uuid,uuid,uuid,text,text,text,timestamptz,text)"
     rows=q(cur,"SELECT pg_catalog.to_regprocedure(%s)",(signature,))
     if len(rows)!=1 or rows[0][0] is None: raise ClosureError("terminal mutator unavailable")
@@ -1211,6 +1211,9 @@ def run(args):
     conn=connection(args.db_env)
     try:
         cur=conn.cursor()
+        # Start before any SELECT: psycopg otherwise opens a READ COMMITTED
+        # transaction for admission, after which changing isolation fails.
+        cur.execute("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY")
         readonly_role_admission(cur)
         if args.mode=="runtime-probe":
             probe=runtime_probe(cur)
@@ -1222,8 +1225,10 @@ def run(args):
         if args.mode in {"preflight","readback","reconciliation-readback"}: return receipt(args.mode,"ready" if args.mode=="preflight" else "readback",base)
         raise ClosureError("unsupported non-controller mode")
     finally:
-        conn.rollback()
-        conn.close()
+        try:
+            conn.rollback()
+        finally:
+            conn.close()
 def main(argv=None):
     p=argparse.ArgumentParser(); p.add_argument("mode",choices=sorted(MODES)); p.add_argument("--db-env",default="SUPABASE_G037_READONLY_DB_URL")
     a=p.parse_args(argv)
