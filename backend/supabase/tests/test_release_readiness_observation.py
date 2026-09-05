@@ -242,6 +242,22 @@ class ReceiptBindingTests(unittest.TestCase):
                 with self.assertRaises(self.launcher.ReceiptError):
                     self.launcher.bundle_for(foreign_sha)
 
+    def test_file_based_alternate_object_stores_are_denied(self):
+        with tempfile.TemporaryDirectory() as directory:
+            foreign=Path(directory)
+            subprocess.run(['git','clone','-q',str(self.root),str(foreign)],check=True)
+            subprocess.run(['git','-C',str(foreign),'-c','user.name=Fixture',
+                '-c','user.email=fixture@local.invalid','commit','--allow-empty','-qm','Foreign alternate'],check=True)
+            foreign_sha=subprocess.check_output(['git','-C',str(foreign),'rev-parse','HEAD'],text=True).strip()
+            alternate=self.root/'.git/objects/info/alternates'
+            alternate.write_text(str(foreign/'.git/objects')+'\n')
+            with patch.dict(os.environ,{'GIT_ALTERNATE_OBJECT_DIRECTORIES':''}):
+                self.assertEqual(self.git('cat-file','-t',foreign_sha).strip(),b'commit')
+                for sha in (self.sha,foreign_sha):
+                    with self.assertRaises(self.launcher.ReceiptError):self.launcher.bundle_for(sha)
+            alternate.unlink()
+            self.assertEqual(self.launcher.bundle_for(self.sha)['source_sha'],self.sha)
+
     def test_timestamp_cache_cannot_select_executor(self):
         p=self.root/self.names[0];good=p.read_bytes();stamp=p.stat().st_mtime
         bad=good.replace(b"PROJECT_REF = 'aqlcofblfxdrjhhdmarw'",b"PROJECT_REF = 'xxxxxxxxxxxxxxxxxxxx'")

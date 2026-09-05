@@ -37,6 +37,10 @@ def bundle_for(source_sha):
                 stderr=subprocess.DEVNULL,timeout=10).decode().strip()
         git_dir=discover('--absolute-git-dir')
         object_dir=discover('--git-path','objects')
+        # Empty environment alternates do not disable objects/info/alternates.
+        if any(os.path.lexists(Path(object_dir)/'info'/name)
+               for name in ('alternates','http-alternates')):
+            raise ValueError()
         env['GIT_OBJECT_DIRECTORY']=object_dir
         env['GIT_ALTERNATE_OBJECT_DIRECTORIES']=''
         def git(*args):
