@@ -42,6 +42,9 @@ on:
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
       - 'backend/supabase/scripts/g037_hosted_closure_executor.py'
       - 'backend/supabase/tests/test_g037_readonly_transaction_postgres.py'
+      - 'backend/supabase/tests/g037_reviewed_artifacts.py'
+      - 'backend/supabase/tests/test_g037_reviewed_artifacts.py'
+      - 'backend/supabase/g037-readonly-transaction-source-transition.v1.json'
       - 'backend/supabase/migrations/*.sql'
       - 'backend/supabase/advisor-classification.v1.json'
       - 'backend/supabase/auth-hardening-decision.v1.json'
@@ -412,6 +415,7 @@ jobs:
       - name: Verify Supabase advisor, Auth hardening, and hosted DB access source
         run: |
           python -m unittest \
+            backend.supabase.tests.test_g037_reviewed_artifacts \
             backend.supabase.tests.test_optional_s3_overlay \
             backend.supabase.tests.test_advisor_followup_source \
             backend.supabase.tests.test_advisor_replay \

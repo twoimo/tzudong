@@ -42,8 +42,7 @@ DECISION = json.loads(
 )
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+from backend.supabase.tests.g037_reviewed_artifacts import reviewed_sha256 as sha256
 
 
 class G037ReadonlyCredentialCustodyPreviewSourceTests(unittest.TestCase):
