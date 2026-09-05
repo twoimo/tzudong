@@ -293,6 +293,22 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
         condition = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["daily-publish"]["if"]
         self.assertIn("vars.TZUDONG_DATA_BRANCH_PUBLISH == '1'", condition)
 
+    def test_data_artifact_upload_also_requires_explicit_opt_in(self) -> None:
+        import ast
+        steps = _load_workflow(DAILY_CRAWLER_WORKFLOW)['jobs']['daily-compute']['steps']
+        upload = next(step for step in steps if step.get('id') == 'upload-publication')
+        for ready in ('true', 'false'):
+            for enabled in ('1', '0', ''):
+                with self.subTest(ready=ready, enabled=enabled):
+                    expression = upload['if'].removeprefix('${{').removesuffix('}}').strip()
+                    expression = expression.replace('steps.publication.outputs.ready',repr(ready))
+                    expression = expression.replace('vars.TZUDONG_DATA_BRANCH_PUBLISH',repr(enabled)).replace('&&','and')
+                    tree = ast.parse(expression,mode='eval')
+                    allowed = (ast.Expression,ast.BoolOp,ast.And,ast.Compare,ast.Eq,ast.Constant)
+                    self.assertTrue(all(isinstance(node,allowed) for node in ast.walk(tree)))
+                    self.assertIs(eval(compile(tree,'<artifact-condition>','eval'),{'__builtins__':{}},{}),
+                                  ready == 'true' and enabled == '1')
+
     def test_daily_crawler_wires_run_manifest_into_published_evidence(self) -> None:
         # R5.3: the scheduled crawler must publish the Run_Manifest
         # (current-summary.json) as evidence. In the current source the crawler binds

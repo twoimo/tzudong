@@ -3,7 +3,7 @@
   "kind": "platform_modernization_reconciliation",
   "baseCommit": "3f4ca55742aa33869b776291e0d035a16024eef1",
   "sourceCommit": "880bf06d375dbc6ebe8dcf108419c3f455048a97",
-  "candidateContentSha256": "25f3dae54e7f2b1c9c69d553676f3d345ae79c42d0238db76f8656c3cf4632e6",
+  "candidateContentSha256": "9b9351de61b23099eb8e9d37b46e7812b4b91bdb06d094097a708dc56f79b52d",
   "candidateWorkingTreeStateIncluded": true,
   "sourceDeltaEntryCount": 207,
   "dispositionCounts": {
@@ -16,9 +16,9 @@
     "superseded_spec_source": 5
   },
   "contentStateCounts": {
-    "base_exact": 10,
+    "base_exact": 9,
     "candidate_absent": 8,
-    "candidate_transformed": 106,
+    "candidate_transformed": 107,
     "source_and_base_exact": 10,
     "source_exact": 73
   },
@@ -1055,8 +1055,8 @@
       "candidatePresentAtInspectionPath": true,
       "baseGitBlobSha1": "a24d47dca8db8b3b785b0348bd53fd8d0ceeb932",
       "sourceGitBlobSha1": "dae742a80dcc5ab87097175ff962a2191304d326",
-      "candidateGitBlobSha1": "a24d47dca8db8b3b785b0348bd53fd8d0ceeb932",
-      "contentState": "base_exact",
+      "candidateGitBlobSha1": "5fc2ef8b7e548dfd72409bf87be176b7c0a82426",
+      "contentState": "candidate_transformed",
       "disposition": "current_layout_retained",
       "rationale": "The parked path move or deletion stays unapplied so backend/pipeline-control remains the sole owned compose tree."
     },
