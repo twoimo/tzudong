@@ -7,11 +7,12 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import subprocess
+import ipaddress
+import ssl
+import tempfile
 
 SQL_PATH = Path(__file__).with_suffix('.sql')
 REPOSITORY_ROOT = SQL_PATH.resolve().parents[3]
-EXECUTOR_BYTES = Path(__file__).read_bytes()
 PROJECT_REF = 'aqlcofblfxdrjhhdmarw'
 DIRECT_HOST = f'db.{PROJECT_REF}.supabase.co'
 AUDIT_CLASSES = frozenset({'privacy_identity_audit','privacy_marketing_audit',
@@ -101,8 +102,12 @@ def _owned_connection(connection):
 
 
 def _observe(connection, sql):
+    if connection.info.transaction_status != 0:
+        raise ObservationError('release_observation_transaction_not_idle')
     with connection.cursor() as cursor:
         cursor.execute('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        cursor.execute("SELECT current_setting('transaction_read_only')='on', current_setting('transaction_isolation')='repeatable read'")
+        require(cursor.fetchone() == (True, True))
         cursor.execute(sql.decode('utf-8'))
         row=cursor.fetchone()
         require(row is not None and len(row)==1)
@@ -115,61 +120,56 @@ def collect(connection):
         return _observe(connection, SQL_PATH.read_bytes())
 
 
-def _verified_target(connection):
-    # Only the direct endpoint has a project-specific TLS hostname. Poolers and
-    # caller labels are not admitted as interchangeable target identities.
-    info = connection.info
-    parameters = info.get_parameters()
-    if not (info.host == DIRECT_HOST and info.dbname == 'postgres'
-            and info.port == 5432 and info.status == 0
-            and parameters.get('sslmode') == 'verify-full'
-            and connection.pgconn.ssl_in_use is True):
-        raise ObservationError('release_observation_target_unverified')
-    return {'kind':'direct_postgres_tls','projectRef':PROJECT_REF,
-            'host':DIRECT_HOST,'database':'postgres','port':5432,
-            'tlsHostnameVerified':True}
+def _verified_peer(connection):
+    info=connection.info
+    require(info.host==DIRECT_HOST and info.dbname=='postgres' and info.port==5432
+            and info.status==0 and connection.pgconn.ssl_in_use is True
+            and info.get_parameters().get('sslmode')=='verify-full')
+    address=ipaddress.ip_address(info.hostaddr)
+    require(address.is_global)
+    return hashlib.sha256(address.packed).hexdigest()
 
 
-def _reviewed_sql(source_sha):
-    require(type(source_sha) is str and re.fullmatch('[a-f0-9]{40}',source_sha) is not None)
-    sql = SQL_PATH.read_bytes()
+def _receipt_from_bundle(bundle, user, password):
+    """Private executor entry; supported only through the source-file launcher."""
+    require(globals().get('__verified_source_bundle__') is bundle)
+    import psycopg
     try:
-        def git(*args):
-            return subprocess.check_output(
-                ['git','--no-replace-objects','-C',str(REPOSITORY_ROOT),*args],
-                stderr=subprocess.DEVNULL, timeout=10)
-        if git('cat-file','-t',source_sha).strip() != b'commit':
-            raise ValueError()
-        for name, current in [('release_readiness_observation.sql',sql),
-                              ('release_readiness_observation.py',EXECUTOR_BYTES)]:
-            ref = f'{source_sha}:backend/supabase/scripts/{name}'
-            size = int(git('cat-file','-s',ref))
-            if size != len(current) or size > 65536:
-                raise ValueError()
-            if git('cat-file','blob',ref) != current:
-                raise ValueError()
+        ca_der=ssl.PEM_cert_to_DER_cert(bundle['ca_bytes'].decode('ascii'))
+        ca_hash=hashlib.sha256(ca_der).hexdigest()
+        require(ca_hash=='807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa')
+        with tempfile.TemporaryDirectory(prefix='tzudong-observation-ca-') as directory:
+            ca_path=Path(directory)/'root.crt'
+            ca_path.write_bytes(bundle['ca_bytes']);ca_path.chmod(0o600)
+            # The launcher strips PG* environment settings. Caller inputs contain
+            # credentials only: neither an existing connection nor trust/peer
+            # overrides cross this interface. The approved CA is copied from the
+            # verified bundle and held for this newly-created connection.
+            connection=psycopg.connect(host=DIRECT_HOST,hostaddr='',port=5432,
+                dbname='postgres',user=user,password=password,autocommit=True,
+                sslmode='verify-full',sslrootcert=str(ca_path),sslcert='',sslkey='',
+                sslcrl='',sslcrldir='',gssencmode='disable',options='',
+                ssl_min_protocol_version='TLSv1.2',connect_timeout=10,
+                application_name='tzudong-release-observation')
+            with _owned_connection(connection):
+                peer=_verified_peer(connection)
+                observation=_observe(connection,bundle['sql_bytes'])
+                require(_verified_peer(connection)==peer)
+                body={'schemaVersion':3,'kind':'release_readiness_observation',
+                      'projectRef':PROJECT_REF,'targetIdentity':{
+                        'kind':'owned_direct_postgres_tls','projectRef':PROJECT_REF,
+                        'host':DIRECT_HOST,'database':'postgres','port':5432,
+                        'tlsHostnameVerified':True,'trustAnchorSha256':ca_hash,
+                        'peerAddressSha256':peer},
+                      'sourceSha':bundle['source_sha'],
+                      'sqlSha256':hashlib.sha256(bundle['sql_bytes']).hexdigest(),
+                      'executorSha256':hashlib.sha256(bundle['executor_bytes']).hexdigest(),
+                      'launcherSha256':bundle['launcher_sha256'],
+                      'observation':observation,'releaseApprovalEstablished':False,
+                      'legalReviewEstablished':False,'backupPitrEstablished':False}
+                body['receiptSha256']=hashlib.sha256(json.dumps(body,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
+                return body
+    except ObservationError:
+        raise
     except Exception:
-        raise ObservationError('release_observation_source_unverified') from None
-    return sql
-
-
-def receipt(connection, *, source_sha):
-    """Collect and bind one verified connection and committed SQL/executor pair.
-
-    A raw observation or caller-supplied project label cannot issue a receipt.
-    No connection strings, role names, credentials, or TLS file paths are retained.
-    """
-    with _owned_connection(connection):
-        target = _verified_target(connection)
-        sql = _reviewed_sql(source_sha)
-        observation = _observe(connection, sql)
-        # Bind the endpoint before and after the snapshot on the same connection.
-        require(_verified_target(connection) == target)
-        body={'schemaVersion':2,'kind':'release_readiness_observation',
-              'projectRef':target['projectRef'],'targetIdentity':target,
-              'sourceSha':source_sha,'sqlSha256':hashlib.sha256(sql).hexdigest(),
-              'executorSha256':hashlib.sha256(EXECUTOR_BYTES).hexdigest(),
-              'observation':observation,'releaseApprovalEstablished':False,
-              'legalReviewEstablished':False,'backupPitrEstablished':False}
-        body['receiptSha256']=hashlib.sha256(json.dumps(body,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest()
-        return body
+        raise ObservationError('release_observation_unavailable') from None

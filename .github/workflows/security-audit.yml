@@ -42,6 +42,8 @@ on:
       - 'backend/supabase/scripts/g037-hosted-closure-requirements.txt'
       - 'backend/supabase/scripts/g037_hosted_closure_executor.py'
       - 'backend/supabase/scripts/release_readiness_observation.*'
+      - 'backend/supabase/scripts/release_readiness_receipt.py'
+      - 'backend/supabase/certificates/prod-ca-2021.crt'
       - 'backend/supabase/tests/test_release_readiness_observation.py'
       - 'backend/supabase/tests/test_g037_readonly_transaction_postgres.py'
       - 'backend/supabase/tests/g037_reviewed_artifacts.py'

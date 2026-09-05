@@ -5,6 +5,9 @@ import json
 import os
 import sys
 import subprocess
+import importlib.util
+import py_compile
+import ssl
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -18,13 +21,13 @@ from backend.supabase.tests import test_g037_readonly_transaction_postgres as po
 
 class CleanupTests(unittest.TestCase):
     def test_provider_error_is_fixed_code_and_connection_closes(self):
-        conn=Mock();conn.cursor.side_effect=RuntimeError('private provider diagnostics')
+        conn=Mock();conn.info.transaction_status=0;conn.cursor.side_effect=RuntimeError('private provider diagnostics')
         with self.assertRaisesRegex(observation.ObservationError,'^release_observation_unavailable$'):
             observation.collect(conn)
         conn.rollback.assert_called_once();conn.close.assert_called_once()
 
     def test_close_still_runs_after_rollback_failure(self):
-        conn=Mock();conn.cursor.side_effect=RuntimeError('provider detail')
+        conn=Mock();conn.info.transaction_status=0;conn.cursor.side_effect=RuntimeError('provider detail')
         conn.rollback.side_effect=RuntimeError('sensitive cleanup detail')
         with self.assertRaisesRegex(observation.ObservationError,'^release_observation_cleanup_failed$'):
             observation.collect(conn)
@@ -80,11 +83,17 @@ class ObservationPostgresTests(unittest.TestCase):
         self.assertEqual([x['code'] for x in value['retention'] if x['configured']],['privacy_identity_audit'])
         self.assertNotIn('private-reference-not-for-output',json.dumps(value))
 
-    def test_real_local_cluster_cannot_issue_production_receipt(self):
+    def test_existing_snapshot_is_rejected_and_fresh_connection_sees_new_policy(self):
         conn=self.psycopg.connect(host=self.tmp.name,dbname='postgres')
-        with self.assertRaisesRegex(observation.ObservationError,'^release_observation_target_unverified$'):
-            observation.receipt(conn,source_sha='f'*40)
+        conn.execute('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
+        self.assertEqual(conn.execute('SELECT count(*) FROM privacy_retention.privacy_policy_versions').fetchone()[0],0)
+        with self.psycopg.connect(host=self.tmp.name,dbname='postgres') as writer:
+            writer.execute("INSERT INTO privacy_retention.privacy_policy_versions VALUES ('new-policy','ko-KR','published',%s,now()-interval '1 hour',now()-interval '1 hour','fixture-reference')",('a'*64,))
+        with self.assertRaisesRegex(observation.ObservationError,'transaction_not_idle'):
+            observation.collect(conn)
         self.assertTrue(conn.closed)
+        self.assertEqual(self.collect()['policy']['version'],'new-policy')
+        self.assertFalse(hasattr(observation,'receipt'))
 
     def test_schema_rejects_extra_sensitive_fields_duplicates_and_write_transaction(self):
         value=self.collect()
@@ -116,19 +125,23 @@ class ObservationPostgresTests(unittest.TestCase):
 
 
 class ReceiptBindingTests(unittest.TestCase):
-    """Mock TLS transport tests are never hosted-production evidence."""
+    """Transport mocks are not hosted evidence; source/cache tests use real Git."""
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name)
-        directory=self.root/'backend/supabase/scripts';directory.mkdir(parents=True)
-        (directory/observation.SQL_PATH.name).write_bytes(observation.SQL_PATH.read_bytes())
-        (directory/'release_readiness_observation.py').write_bytes(observation.EXECUTOR_BYTES)
-        self.git('init','-q');self.git('add','.')
-        self.git('-c','user.name=Fixture','-c','user.email=fixture@local.invalid','commit','-qm','Source fixture')
+        self.names=['backend/supabase/scripts/release_readiness_observation.py',
+                    'backend/supabase/scripts/release_readiness_observation.sql',
+                    'backend/supabase/scripts/release_readiness_receipt.py',
+                    'backend/supabase/certificates/prod-ca-2021.crt']
+        for name in self.names:
+            dest=self.root/name;dest.parent.mkdir(parents=True,exist_ok=True)
+            dest.write_bytes((observation.REPOSITORY_ROOT/name).read_bytes())
+        self.git('init','-q');self.git('add','.');self.commit()
         self.sha=self.git('rev-parse','HEAD').decode().strip()
-        self.addCleanup(patch.stopall)
-        patch.object(observation,'REPOSITORY_ROOT',self.root).start()
+        path=self.root/self.names[2]
+        spec=importlib.util.spec_from_file_location('test_receipt_launcher',path)
+        self.launcher=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.launcher)
+        self.bundle=self.launcher.bundle_for(self.sha)
         self.value={'schemaVersion':1,'observedAt':'2026-09-05T00:00:00+00:00',
           'transactionReadOnly':True,'ledger':{'count':0,'terminalVersion':None},'policy':None,
           'retention':[{'code':code,'present':False,'configured':False} for code in sorted(observation.AUDIT_CLASSES)],
@@ -137,64 +150,99 @@ class ReceiptBindingTests(unittest.TestCase):
     def git(self,*args):
         return subprocess.check_output(['git','-C',str(self.root),*args],stderr=subprocess.DEVNULL)
 
+    def commit(self):
+        self.git('-c','user.name=Fixture','-c','user.email=fixture@local.invalid','commit','-qm','Fixture')
+
     def connection(self):
         conn=MagicMock()
-        conn.info=SimpleNamespace(host=observation.DIRECT_HOST,dbname='postgres',port=5432,status=0,
-                                 get_parameters=lambda:{'sslmode':'verify-full'})
+        conn.info=SimpleNamespace(host=observation.DIRECT_HOST,hostaddr='1.1.1.1',dbname='postgres',
+            port=5432,status=0,transaction_status=0,get_parameters=lambda:{'sslmode':'verify-full'})
         conn.pgconn=SimpleNamespace(ssl_in_use=True)
-        conn.cursor.return_value.__enter__.return_value.fetchone.return_value=(self.value,)
+        conn.cursor.return_value.__enter__.return_value.fetchone.side_effect=[(True,True),(self.value,)]
         return conn
 
-    def test_receipt_binds_verified_transport_and_real_committed_files(self):
-        conn=self.connection()
-        result=observation.receipt(conn,source_sha=self.sha)
-        self.assertEqual(result['sourceSha'],self.sha)
-        self.assertEqual(result['projectRef'],observation.PROJECT_REF)
-        self.assertEqual(result['executorSha256'],hashlib.sha256(observation.EXECUTOR_BYTES).hexdigest())
+    def test_owned_connection_pins_trust_and_collects_committed_sql(self):
+        executor=self.launcher.compiled_executor(self.bundle);conn=self.connection()
+        captured={}
+        def connect(**kwargs):
+            captured.update(kwargs);captured['ca_bytes']=Path(kwargs['sslrootcert']).read_bytes()
+            return conn
+        with patch('psycopg.connect',side_effect=connect):
+            result=executor['_receipt_from_bundle'](self.bundle,'fixture-role','fixture-pass')
+        self.assertEqual(captured['host'],observation.DIRECT_HOST)
+        self.assertEqual(captured['hostaddr'],'')
+        self.assertEqual(captured['sslmode'],'verify-full')
+        self.assertEqual(captured['ca_bytes'],self.bundle['ca_bytes'])
+        self.assertTrue(captured['autocommit'])
+        self.assertEqual(result['schemaVersion'],3)
+        self.assertEqual(result['executorSha256'],hashlib.sha256(self.bundle['executor_bytes']).hexdigest())
+        self.assertEqual(result['targetIdentity']['trustAnchorSha256'],'807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa')
+        self.assertNotIn('fixture-pass',json.dumps(result))
         digest=result.pop('receiptSha256')
         self.assertEqual(digest,hashlib.sha256(json.dumps(result,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode()).hexdigest())
-        self.assertFalse(result['releaseApprovalEstablished'])
         conn.rollback.assert_called_once();conn.close.assert_called_once()
 
-    def test_wrong_project_pooler_database_and_unverified_tls_are_denied_before_query(self):
-        for field,value in [('host','db.wrong-project.supabase.co'),('host','127.0.0.1'),
-                            ('host','aws-0-ap-southeast-1.pooler.supabase.com'),
-                            ('dbname','other'),('port',6543),('status',1)]:
-            with self.subTest(field=field,value=value):
-                conn=self.connection();setattr(conn.info,field,value)
-                with self.assertRaisesRegex(observation.ObservationError,'target_unverified'):
-                    observation.receipt(conn,source_sha=self.sha)
-                conn.cursor.assert_not_called();conn.close.assert_called_once()
-        for mode,tls in [('require',True),('verify-ca',True),('verify-full',False)]:
-            conn=self.connection();conn.info.get_parameters=lambda:{'sslmode':mode};conn.pgconn.ssl_in_use=tls
-            with self.assertRaisesRegex(observation.ObservationError,'target_unverified'):
-                observation.receipt(conn,source_sha=self.sha)
-            conn.cursor.assert_not_called();conn.close.assert_called_once()
+    def test_nonidle_or_wrong_isolation_never_collects_metadata(self):
+        executor=self.launcher.compiled_executor(self.bundle)
+        for state,first in [(2,(True,True)),(0,(True,False))]:
+            conn=self.connection();conn.info.transaction_status=state
+            cursor=conn.cursor.return_value.__enter__.return_value
+            cursor.fetchone.side_effect=[first,(self.value,)]
+            with patch('psycopg.connect',return_value=conn):
+                with self.assertRaises(executor['ObservationError']):
+                    executor['_receipt_from_bundle'](self.bundle,'fixture-role','fixture-pass')
+            self.assertLess(cursor.execute.call_count,3);conn.close.assert_called_once()
 
-    def test_nonexistent_commit_and_changed_sql_or_executor_are_denied(self):
-        conn=self.connection()
-        with self.assertRaisesRegex(observation.ObservationError,'source_unverified'):
-            observation.receipt(conn,source_sha='f'*40)
+    def test_fake_ca_and_local_peer_are_denied(self):
+        bad=dict(self.bundle)
+        roots=ssl.create_default_context().get_ca_certs(binary_form=True)
+        wrong=next(cert for cert in roots if hashlib.sha256(cert).hexdigest()!='807025ad50d4ed219d2c9c7d299c004f824eb00cf7f65afef607d07b72e6cafa')
+        bad['ca_bytes']=ssl.DER_cert_to_PEM_cert(wrong).encode('ascii')
+        executor=self.launcher.compiled_executor(bad)
+        with patch('psycopg.connect') as connect:
+            with self.assertRaises(executor['ObservationError']):
+                executor['_receipt_from_bundle'](bad,'fixture-role','fixture-pass')
+            connect.assert_not_called()
+        executor=self.launcher.compiled_executor(self.bundle);conn=self.connection();conn.info.hostaddr='127.0.0.1'
+        with patch('psycopg.connect',return_value=conn):
+            with self.assertRaises(executor['ObservationError']):
+                executor['_receipt_from_bundle'](self.bundle,'fixture-role','fixture-pass')
         conn.cursor.assert_not_called();conn.close.assert_called_once()
-        for name in ['release_readiness_observation.sql','release_readiness_observation.py']:
-            (self.root/'backend/supabase/scripts/release_readiness_observation.sql').write_bytes(observation.SQL_PATH.read_bytes())
-            (self.root/'backend/supabase/scripts/release_readiness_observation.py').write_bytes(observation.EXECUTOR_BYTES)
-            file=self.root/'backend/supabase/scripts'/name
-            file.write_bytes(file.read_bytes()+b'\n')
-            self.git('add','.');self.git('-c','user.name=Fixture','-c','user.email=fixture@local.invalid','commit','-qm','Changed fixture')
-            sha=self.git('rev-parse','HEAD').decode().strip();conn=self.connection()
-            with self.assertRaisesRegex(observation.ObservationError,'source_unverified'):
-                observation.receipt(conn,source_sha=sha)
-            conn.cursor.assert_not_called();conn.close.assert_called_once()
 
-    def test_query_uses_captured_verified_sql_even_if_disk_changes(self):
-        copied=self.root/'backend/supabase/scripts/release_readiness_observation.sql'
-        sql=copied.read_bytes()
-        with patch.object(observation,'SQL_PATH',copied):
-            conn=self.connection();cursor=conn.cursor.return_value.__enter__.return_value
-            def execute(command):
-                if command.startswith('BEGIN'):copied.write_bytes(b'SELECT 0;')
-            cursor.execute.side_effect=execute
-            result=observation.receipt(conn,source_sha=self.sha)
-        self.assertEqual(cursor.execute.call_args_list[1].args[0],sql.decode())
-        self.assertEqual(result['sqlSha256'],hashlib.sha256(sql).hexdigest())
+    def test_credentials_reject_peer_and_trust_overrides(self):
+        with tempfile.TemporaryDirectory() as outside:
+            p=Path(outside)/'credentials.json'
+            for key in ['host','hostaddr','sslrootcert','sslmode','options','service']:
+                p.write_text(json.dumps({'user':'fixture-role','password':'fixture-pass',key:'override'}));p.chmod(0o600)
+                with self.assertRaises(self.launcher.ReceiptError):self.launcher.credentials_from(p)
+
+    def test_fabricated_commit_or_changed_working_files_are_denied(self):
+        with self.assertRaises(self.launcher.ReceiptError):self.launcher.bundle_for('f'*40)
+        for name in self.names:
+            p=self.root/name;original=p.read_bytes();p.write_bytes(original+b'\n')
+            with self.assertRaises(self.launcher.ReceiptError):self.launcher.bundle_for(self.sha)
+            p.write_bytes(original)
+
+    def test_timestamp_cache_cannot_select_executor(self):
+        p=self.root/self.names[0];good=p.read_bytes();stamp=p.stat().st_mtime
+        bad=good.replace(b"PROJECT_REF = 'aqlcofblfxdrjhhdmarw'",b"PROJECT_REF = 'xxxxxxxxxxxxxxxxxxxx'")
+        self.assertEqual(len(good),len(bad));self.assertNotEqual(good,bad)
+        p.write_bytes(bad);os.utime(p,(stamp,stamp));py_compile.compile(str(p),doraise=True,invalidation_mode=py_compile.PycInvalidationMode.TIMESTAMP)
+        p.write_bytes(good);os.utime(p,(stamp,stamp))
+        control_spec=importlib.util.spec_from_file_location('poisoned_cache_control',p)
+        control=importlib.util.module_from_spec(control_spec);control_spec.loader.exec_module(control)
+        self.assertEqual(control.PROJECT_REF,'x'*20)
+        run=subprocess.run([sys.executable,'-I',str(self.root/self.names[2]),'--source-sha',self.sha,'--verify-source-only'],capture_output=True,text=True)
+        self.assertEqual(run.returncode,0)
+        result=json.loads(run.stdout)
+        self.assertTrue(result['sourceSnapshotCompiled'])
+        self.assertEqual(result['projectRef'],observation.PROJECT_REF)
+        self.assertEqual(result['executorSha256'],hashlib.sha256(good).hexdigest())
+
+    def test_cli_argument_errors_do_not_echo_inputs(self):
+        run=subprocess.run([sys.executable,'-I',str(self.root/self.names[2]),
+            '--source-sha',self.sha,'--unexpected-private-input','private-fixture-value'],capture_output=True,text=True)
+        self.assertEqual(run.returncode,1)
+        self.assertEqual(run.stderr,'')
+        self.assertNotIn('private-fixture-value',run.stdout)
+        self.assertEqual(json.loads(run.stdout)['code'],'release_observation_receipt_unavailable')
