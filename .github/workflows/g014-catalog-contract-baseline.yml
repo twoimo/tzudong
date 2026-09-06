@@ -13,6 +13,8 @@ on:
       - 'backend/supabase/scripts/transform_advisor_replay.py'
       - 'backend/supabase/tests/test_advisor_replay.py'
       - 'backend/supabase/scripts/verify_admin_management_group_replay.py'
+      - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+      - 'backend/supabase/tests/test_g014_pg17_owner_contract.py'
       - 'backend/supabase/scripts/admin_management_group_plan.py'
       - 'backend/supabase/tests/test_admin_management_group.py'
       - 'backend/supabase/tests/test_admin_management_group_replay.py'
@@ -71,6 +73,7 @@ jobs:
           backend.supabase.tests.test_admin_user_ids_replay
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
+          backend.supabase.tests.test_g014_pg17_owner_contract
           backend.supabase.tests.test_admin_user_ids_catalog_slice
 
       - name: Pull the pinned private test database images
@@ -88,6 +91,7 @@ jobs:
           backend.supabase.tests.test_admin_user_ids_replay
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
+          backend.supabase.tests.test_g014_pg17_owner_contract
 
       - name: Check generator shell syntax
         shell: bash

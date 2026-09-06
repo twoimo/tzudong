@@ -41,6 +41,7 @@ relevant_sources=(
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
   'backend/supabase/scripts/verify_admin_management_group_replay.py'
+  'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
   'backend/supabase/scripts/admin_management_group_plan.py'
   'backend/supabase/scripts/advisor_successor_plan.py'
   'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
@@ -1364,6 +1365,17 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260906064252_g014_pg17_workflow_owner_contract.sql)
+      owner_verification="$staging_dir/g014-owner-pg15-verification.sql"
+      python3 "$script_dir/verify_g014_pg17_owner_replay.py" --source "$migration" --output "$owner_verification"
+      g026_chain_apply "g014-owner-pg15-source-verifier" "$script_dir/verify_g014_pg17_owner_replay.py"
+      g026_chain_apply "g014-owner-pg15-verification" "$owner_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$owner_verification" >"$staging_dir/g014-owner-pg15-receipt.json"
+      jq -e '.schema == "g014-owner-pg15-replay-v1" and .read_only == true and .disposition == "legacy-contract-preserved"' \
+        "$staging_dir/g014-owner-pg15-receipt.json" >/dev/null
+      g026_chain_apply "g014-owner-pg15-receipt" "$staging_dir/g014-owner-pg15-receipt.json"
+      ;;
     20260906053936_admin_management_group_catalog_slice.sql)
       admin_group_verification="$staging_dir/admin-management-group-overlap-verification.sql"
       for dependency in verify_admin_management_group_replay.py admin_management_group_plan.py advisor_successor_plan.py g037_supabase_statement_vector.mjs; do
@@ -1646,6 +1658,7 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     advisor-prerequisite-recovery.json advisor-prerequisites.sql advisor-replay.sql \
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
     admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
+    g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     postgres-image-00000000000001-auth-schema.sql pre-20260214-overlap-classification.jsonl \
     reconstruction-compatibility-exclusions.jsonl reconstruction-compatibility-relocations.jsonl reconstruction-source-members.tsv \
     storage-container-migration-files.tsv storage-inventory-files.tsv storage-migration-inventory-source-map.tsv storage-migration-ledger.tsv \
