@@ -73,6 +73,16 @@ class LocalPostgresContract(unittest.TestCase):
         definition = re.search(r'CREATE OR REPLACE FUNCTION public.read_admin_user_ids_for_management\(\).*?END\n\$\$;', PREDECESSOR.read_text(), re.S).group()
         result = cls.query('''ALTER ROLE postgres NOSUPERUSER NOBYPASSRLS NOINHERIT;
 CREATE ROLE privacy_workflow_owner NOLOGIN NOINHERIT;
+GRANT USAGE ON SCHEMA public TO privacy_workflow_owner;
+CREATE TYPE public.app_role AS ENUM ('admin','user');
+CREATE TABLE public.user_roles(user_id uuid NOT NULL, role public.app_role NOT NULL);
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+GRANT SELECT(user_id,role) ON public.user_roles TO privacy_workflow_owner;
+CREATE POLICY g014_privacy_workflow_owner_access ON public.user_roles
+  FOR ALL TO privacy_workflow_owner USING (true) WITH CHECK (true);
+INSERT INTO public.user_roles VALUES
+  ('00000000-0000-0000-0000-000000000001','admin'),
+  ('00000000-0000-0000-0000-000000000002','admin');
 CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;
 REVOKE ALL ON SCHEMA privacy_retention FROM PUBLIC,postgres;
 GRANT USAGE ON SCHEMA privacy_retention TO postgres;
@@ -99,6 +109,64 @@ INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES('public','read_ad
         self.assertTrue(receipt['read_only'])
         self.assertEqual(receipt['source_sha256'], replay.SOURCE_SHA256)
         self.assertEqual(self.query(snapshot).stdout, before)
+        count = self.query('SET ROLE service_role; SELECT count(*) FROM public.read_admin_user_ids_for_management();')
+        self.assertEqual(count.returncode, 0, count.stderr)
+        self.assertEqual(count.stdout.strip(), '2')
+
+    def test_owner_visibility_drift_is_rejected(self):
+        cases = [
+            'REVOKE SELECT(user_id) ON public.user_roles FROM privacy_workflow_owner;',
+            'REVOKE SELECT(role) ON public.user_roles FROM privacy_workflow_owner;',
+            'REVOKE USAGE ON SCHEMA public FROM PUBLIC,privacy_workflow_owner;',
+            'DROP POLICY g014_privacy_workflow_owner_access ON public.user_roles;',
+            'ALTER POLICY g014_privacy_workflow_owner_access ON public.user_roles TO authenticated;',
+            "ALTER POLICY g014_privacy_workflow_owner_access ON public.user_roles USING (role::text='admin');",
+            'ALTER TABLE public.user_roles DISABLE ROW LEVEL SECURITY;',
+            'ALTER TABLE public.user_roles FORCE ROW LEVEL SECURITY;',
+            'ALTER TABLE public.user_roles OWNER TO privacy_workflow_owner;',
+            *['ALTER ROLE privacy_workflow_owner ' + attribute + ';'
+              for attribute in ('LOGIN', 'INHERIT', 'SUPERUSER', 'BYPASSRLS')],
+        ]
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        membership = 'SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) FROM pg_auth_members m;'
+        before = self.query(membership).stdout
+        for mutation in cases:
+            with self.subTest(mutation=mutation):
+                result = self.query('BEGIN;\n' + mutation + '\nSET SESSION AUTHORIZATION postgres;\n' + body + '\nROLLBACK;')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('admin_ids_replay_visibility_denied', result.stderr)
+                self.assertNotIn('already-present-contract-verified', result.stdout)
+        self.assertEqual(self.query(membership).stdout, before)
+        restored = self.query(self.verification, role='postgres')
+        self.assertEqual(restored.returncode, 0, restored.stderr)
+
+    def test_partial_restrictive_policy_denies_after_actual_rpc_undercount(self):
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        # PUBLIC applies to the definer too. Keep the unconditional permissive
+        # policy, proving that its presence alone cannot establish full visibility.
+        result = self.query('''BEGIN;
+CREATE POLICY partial_visibility ON public.user_roles AS RESTRICTIVE FOR SELECT TO PUBLIC
+  USING (user_id='00000000-0000-0000-0000-000000000001'::uuid);
+SET LOCAL ROLE service_role;
+SELECT count(*) FROM public.read_admin_user_ids_for_management();
+RESET ROLE;
+SET SESSION AUTHORIZATION postgres;
+''' + body + '\nROLLBACK;')
+        self.assertEqual(result.stdout.strip(), '1')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('admin_ids_replay_visibility_denied', result.stderr)
+        restored = self.query(self.verification, role='postgres')
+        self.assertEqual(restored.returncode, 0, restored.stderr)
+
+    def test_harmless_or_inapplicable_restrictive_policies_pass(self):
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        result = self.query('''BEGIN;
+CREATE POLICY full_visibility ON public.user_roles AS RESTRICTIVE FOR SELECT TO PUBLIC USING (true);
+CREATE POLICY unrelated_visibility ON public.user_roles AS RESTRICTIVE FOR SELECT TO authenticated USING (false);
+SET SESSION AUTHORIZATION postgres;
+''' + body + '\nROLLBACK;')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['disposition'], 'already-present-contract-verified')
 
     def test_catalog_drift_is_rejected(self):
         cases = [

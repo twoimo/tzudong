@@ -37,6 +37,26 @@ BEGIN
        AND pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p.prosrc,'UTF8')),'hex')='{BODY_SHA256}') THEN
     RAISE EXCEPTION 'admin_ids_replay_rpc_mismatch';
   END IF;
+  -- The exact function body is insufficient if its owner can see only some rows.
+  -- Check effective SELECT visibility in the same read-only snapshot as the receipt.
+  IF NOT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE oid=owner_id
+       AND NOT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls AND NOT rolinherit)
+     OR NOT pg_catalog.has_schema_privilege(owner_id,'public','USAGE')
+     OR NOT pg_catalog.has_column_privilege(owner_id,'public.user_roles','user_id','SELECT')
+     OR NOT pg_catalog.has_column_privilege(owner_id,'public.user_roles','role','SELECT')
+     OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_class WHERE oid='public.user_roles'::regclass
+       AND relkind='r' AND relrowsecurity AND NOT relforcerowsecurity AND relowner<>owner_id)
+     OR NOT EXISTS(SELECT 1 FROM pg_catalog.pg_policy p WHERE polrelid='public.user_roles'::regclass
+       AND polcmd IN ('r','*') AND polpermissive
+       AND pg_catalog.pg_get_expr(polqual,polrelid) IN ('true','(true)')
+       AND EXISTS(SELECT 1 FROM pg_catalog.unnest(polroles) r WHERE r=0 OR pg_catalog.pg_has_role(owner_id,r,'USAGE')))
+     OR EXISTS(SELECT 1 FROM pg_catalog.pg_policy p WHERE polrelid='public.user_roles'::regclass
+       AND polcmd IN ('r','*') AND NOT polpermissive
+       AND pg_catalog.pg_get_expr(polqual,polrelid) IS DISTINCT FROM 'true'
+       AND pg_catalog.pg_get_expr(polqual,polrelid) IS DISTINCT FROM '(true)'
+       AND EXISTS(SELECT 1 FROM pg_catalog.unnest(polroles) r WHERE r=0 OR pg_catalog.pg_has_role(owner_id,r,'USAGE'))) THEN
+    RAISE EXCEPTION 'admin_ids_replay_visibility_denied';
+  END IF;
   IF NOT pg_catalog.has_function_privilege('service_role',target,'EXECUTE')
      OR pg_catalog.has_function_privilege('anon',target,'EXECUTE')
      OR pg_catalog.has_function_privilege('authenticated',target,'EXECUTE')
