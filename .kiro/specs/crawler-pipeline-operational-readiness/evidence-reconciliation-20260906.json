@@ -223,8 +223,7 @@
       "taskIds": [
         "7.15",
         "7.37",
-        "7.38",
-        "7.81"
+        "7.38"
       ],
       "status": "hosted-convergence-incomplete",
       "gap": "The advisor operation is committed, with unchanged before/after generated types. This does not reconcile source types and the entire hosted catalog or establish all G037 read-only modes. The admin-ID rehearsal has no success receipt and its separate readback remains at ledger 51; no RPC apply admitted.",
@@ -234,6 +233,17 @@
         "rehearsal-failure",
         "rehearsal-restored",
         "diagnostic-denied"
+      ]
+    },
+    {
+      "taskIds": [
+        "7.81"
+      ],
+      "status": "advisor-scoped-parent-review",
+      "gap": "Advisor apply/readback/audit and before/after generated-type equality are retained; parent review can close this narrow task without whole-catalog parity. Historical g014AssertionPassed refers to catalog-manifest only.",
+      "evidenceIds": [
+        "advisor-audit",
+        "types-comparison"
       ]
     },
     {
