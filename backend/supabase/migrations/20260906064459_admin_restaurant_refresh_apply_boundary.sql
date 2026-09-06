@@ -36,7 +36,12 @@ BEGIN
       RAISE EXCEPTION 'refresh_apply_dependency_denied' USING ERRCODE='55000';
     END IF;
   END LOOP;
-  IF pg_catalog.to_regprocedure('privacy_retention.g014_reject_audit_mutation()') IS NULL THEN
+  -- This writer relies on the verified table owner, not workflow-owner
+  -- membership. Reject owner/FORCE-RLS drift instead of weakening policies.
+  IF EXISTS(SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relname IN('restaurants','restaurant_refresh_candidates','user_roles')
+      AND (c.relowner<>'postgres'::regrole OR NOT c.relrowsecurity OR c.relforcerowsecurity)) THEN
     RAISE EXCEPTION 'refresh_apply_dependency_denied' USING ERRCODE='55000';
   END IF;
 END;
@@ -54,9 +59,20 @@ CREATE TABLE public.restaurant_refresh_apply_receipts (
 ALTER TABLE public.restaurant_refresh_apply_receipts OWNER TO postgres;
 ALTER TABLE public.restaurant_refresh_apply_receipts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.restaurant_refresh_apply_receipts FROM PUBLIC,anon,authenticated,service_role;
+-- A dedicated invoker trigger avoids installing a trigger through inherited
+-- EXECUTE on the shared workflow-owned audit helper. No shared ACL is changed.
+CREATE FUNCTION public.reject_restaurant_refresh_receipt_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = ''
+AS $receipt_append_only$
+BEGIN
+  RAISE EXCEPTION 'append_only_audit_ledger' USING ERRCODE='55000';
+END;
+$receipt_append_only$;
+ALTER FUNCTION public.reject_restaurant_refresh_receipt_mutation() OWNER TO postgres;
+REVOKE ALL ON FUNCTION public.reject_restaurant_refresh_receipt_mutation() FROM PUBLIC,anon,authenticated,service_role;
 CREATE TRIGGER restaurant_refresh_apply_receipts_append_only
 BEFORE UPDATE OR DELETE ON public.restaurant_refresh_apply_receipts
-FOR EACH ROW EXECUTE FUNCTION privacy_retention.g014_reject_audit_mutation();
+FOR EACH ROW EXECUTE FUNCTION public.reject_restaurant_refresh_receipt_mutation();
 
 CREATE FUNCTION public.apply_restaurant_refresh_candidate(
   p_actor_user_id uuid,
@@ -102,7 +118,7 @@ BEGIN
   SELECT id,restaurant_id,candidate_status,detected_change_types,previous_snapshot,candidate_snapshot
   INTO c FROM public.restaurant_refresh_candidates WHERE id=p_candidate_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'refresh_apply_missing' USING ERRCODE='P0002'; END IF;
-  IF c.candidate_status<>'needs_review'
+  IF c.candidate_status IS DISTINCT FROM 'needs_review'
      OR c.previous_snapshot IS DISTINCT FROM p_expected_previous_snapshot
      OR c.candidate_snapshot IS DISTINCT FROM p_expected_candidate_snapshot THEN
     RAISE EXCEPTION 'refresh_apply_stale' USING ERRCODE='40001';

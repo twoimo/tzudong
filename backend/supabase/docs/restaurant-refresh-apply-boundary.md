@@ -14,7 +14,7 @@ The admin refresh route previously updated `restaurants` and then recorded the c
 
 ## RPC contract
 
-Only `service_role` receives EXECUTE; PUBLIC, anon and authenticated do not. The owner is `postgres`, with empty search_path and a two-second lock timeout. This is an intentional narrow write boundary rather than elevating existing invoker functions. The private fixture proves operation with a non-superuser, non-BYPASSRLS owner that owns the affected tables; hosted ownership/full-visibility still requires binding.
+Only `service_role` receives EXECUTE; PUBLIC, anon and authenticated do not. The owner is `postgres`, with empty search_path and a two-second lock timeout. This is an intentional narrow write boundary rather than elevating existing invoker functions. The private fixture proves operation with a non-superuser, non-BYPASSRLS owner that owns the affected tables; a fresh read-only hosted check also confirms all three existing tables are postgres-owned with RLS enabled and FORCE RLS disabled. The migration now rejects drift in those properties. Final catalog binding remains pending.
 
 The trusted server supplies the actor returned by `requireAdmin`, candidate ID, and both snapshots read from the candidate row. Client-supplied actors or arbitrary patches are ignored. The function independently requires an admin `user_roles` row, held FOR SHARE against concurrent removal. It locks the candidate and restaurant, requires `needs_review` and approved restaurant status, compares both candidate snapshots exactly, then compares all seven fields of the original restaurant preview (including updated_at) with the current restaurant. Stale data fails without writes.
 
@@ -32,9 +32,9 @@ Existing column types are explicitly checked before persistent DDL:
 - `restaurant_refresh_candidates`: id/restaurant_id/decided_by_admin_id uuid; candidate_status/operator_decision/operator_notes text; detected_change_types text[]; previous_snapshot/candidate_snapshot jsonb; decided_at/applied_at timestamptz.
 - `user_roles`: user_id uuid, role public.app_role (admin enum value).
 - `privacy_retention.g014_public_rpc_allowlist`: canonical five-column identity/grantee tuple. One new service-role row only.
-- Existing `privacy_retention.g014_reject_audit_mutation()` trigger function.
+- New `public.reject_restaurant_refresh_receipt_mutation()` is a postgres-owned SECURITY INVOKER trigger function, with no API-role EXECUTE and no public RPC allowlist entry. Its fixed rejection behavior follows the canonical append-only helper without changing or depending on that shared helper.
 
-The new `restaurant_refresh_apply_receipts` table contains only operation ID, candidate/restaurant/actor UUIDs, SHA-256 preview hash, fixed applied outcome and timestamp. Candidate ID is unique. It contains no snapshots, coordinates, notes, arbitrary bodies, provider diagnostics or credentials. RLS is enabled; all API roles have no direct table privileges. The canonical append-only trigger denies UPDATE/DELETE. No Auth foreign key is introduced. Parent must integrate this relation into catalog and operator-approved retention governance; no period is invented here.
+The new `restaurant_refresh_apply_receipts` table contains only operation ID, candidate/restaurant/actor UUIDs, SHA-256 preview hash, fixed applied outcome and timestamp. Candidate ID is unique. It contains no snapshots, coordinates, notes, arbitrary bodies, provider diagnostics or credentials. RLS is enabled; all API roles have no direct table privileges. The dedicated append-only trigger denies UPDATE/DELETE. A read-only hosted check found the shared G014 audit helper grants EXECUTE only to privacy_workflow_owner; postgres currently reaches it through inherited privileges. This migration avoids that dependency entirely, so parent can remove the self-INHERIT row without granting extra shared helper access. The private fixture omits the shared helper and still installs this migration as non-superuser postgres. No Auth foreign key is introduced. Parent must integrate this relation into catalog and operator-approved retention governance; no period is invented here.
 
 ## Verification
 
@@ -44,7 +44,7 @@ From the repository root:
 TZUDONG_REFRESH_PRIVATE_PG=1 python3 -m unittest backend.supabase.tests.test_restaurant_refresh_apply_boundary
 ```
 
-Thirteen tests pass: pending admission/dependency failures; exact retained helper grants; anon/authenticated/non-admin denial; successful atomic decision/readback/receipt; null-coordinate preservation; stale candidate/previous/restaurant; closure/invalid coordinates; unique-identity conflict; trigger-induced readback failure; append-only/private receipt; non-superuser owner; disallowed patch columns; receipt insertion failure rollback; lock timeout; duplicate apply. Tests use only synthetic rows in a network-isolated disposable PG17 container and remove their container even on setup failure.
+Fifteen tests pass: pending admission/dependency failures; exact retained helper grants; anon/authenticated/non-admin denial; successful atomic decision/readback/receipt; null-coordinate preservation; stale candidate/previous/restaurant; closure/invalid coordinates; unique-identity conflict; trigger-induced readback failure; append-only/private receipt; non-superuser owner; disallowed patch columns; receipt insertion failure rollback; lock timeout; duplicate apply; null candidate status and owner/FORCE-RLS drift denial. Tests use only synthetic rows in a network-isolated disposable PG17 / pgvector 0.8.0 container (arm64 digest `09c8aaae717baf4412f6efd174f51172c0638720a72a86e804cd698197fc8ba2`; amd64 digest `082fcb2ad21352ebc605414ce5e8ad83b469139398d5b8b06475c842add1979b`; the executing arm64 fixture checks the server major and installed extension version) and remove their container even on setup failure.
 
 From `apps/web`:
 

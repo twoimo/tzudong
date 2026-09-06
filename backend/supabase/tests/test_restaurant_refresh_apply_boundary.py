@@ -1,8 +1,8 @@
 """Private network-isolated PG17 checks; never imports hosted credentials."""
 import json
 import os
+import platform
 from pathlib import Path
-import re
 import subprocess
 import time
 import unittest
@@ -26,6 +26,7 @@ class SourceBoundary(unittest.TestCase):
         self.assertLess(s.index(GATE), s.index('CREATE TABLE'))
         self.assertNotIn('REVOKE ALL ON FUNCTION public.extract_youtube_video_id', s)
         self.assertNotIn('CREATE OR REPLACE FUNCTION', s)
+        self.assertNotIn('privacy_retention.g014_reject_audit_mutation()', s)
         self.assertNotIn('ALTER ROLE', s)
         self.assertNotIn('GRANT privacy_workflow_owner', s)
 
@@ -33,16 +34,23 @@ class SourceBoundary(unittest.TestCase):
 class PrivatePostgres(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        digests = {'arm64':'09c8aaae717baf4412f6efd174f51172c0638720a72a86e804cd698197fc8ba2',
+            'aarch64':'09c8aaae717baf4412f6efd174f51172c0638720a72a86e804cd698197fc8ba2',
+            'x86_64':'082fcb2ad21352ebc605414ce5e8ad83b469139398d5b8b06475c842add1979b'}
+        cls.image = 'pgvector/pgvector@sha256:' + digests[platform.machine()]
         cls.container = 'refresh-apply-test-' + uuid.uuid4().hex[:10]
         cls.run_command(['docker','run','--rm','-d','--network','none','--name',cls.container,
             '-e','POSTGRES_HOST_AUTH_METHOD=trust',
-            'pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f']).check_returncode()
+            cls.image]).check_returncode()
         cls.addClassCleanup(cls.run_command, ['docker','rm','-f',cls.container])
         for _ in range(100):
             if cls.run_command(['docker','exec',cls.container,'pg_isready','-h','127.0.0.1','-U','postgres']).returncode == 0:
                 break
             time.sleep(.1)
         cls.user = 'postgres'
+        cls.query('CREATE EXTENSION vector;')
+        if cls.query("SELECT current_setting('server_version_num')::integer / 10000,extversion FROM pg_extension WHERE extname='vector'").stdout.strip() != '17|0.8.0':
+            raise AssertionError('exact private fixture version mismatch')
         cls.query('CREATE ROLE fixture_bootstrap LOGIN SUPERUSER;')
         cls.user = 'fixture_bootstrap'
         cls.query('ALTER ROLE postgres RENAME TO original_bootstrap; CREATE ROLE postgres LOGIN NOSUPERUSER NOCREATEROLE NOCREATEDB NOBYPASSRLS;')
@@ -77,8 +85,6 @@ CREATE TABLE public.restaurant_refresh_candidates(id uuid PRIMARY KEY,restaurant
 CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,function_name name,
  identity_arguments text,grantee name,source_signature text,PRIMARY KEY(source_signature,grantee));
 """)
-        canonical = (ROOT/'backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql').read_text()
-        self.q(re.search(r'CREATE OR REPLACE FUNCTION privacy_retention.g014_reject_audit_mutation\(\).*?\$function\$;', canonical, re.S).group())
         helpers = (ROOT/'backend/supabase/migrations/20260417_prevent_active_restaurant_identity_duplicates.sql').read_text().split('with identity_rows as')[0]
         self.q(helpers+"CREATE UNIQUE INDEX fixture_identity ON restaurants(extract_youtube_video_id(youtube_link),normalize_restaurant_identity_name(resolve_restaurant_identity_name(approved_name,NULL,NULL,NULL))); GRANT EXECUTE ON FUNCTION extract_youtube_video_id(text),normalize_restaurant_identity_name(text),resolve_restaurant_identity_name(text,text,text,text) TO service_role;")
         # Only an exact, asserted gate is removed in the disposable private DB.
@@ -131,6 +137,10 @@ CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,fu
         self.q("UPDATE restaurants SET phone='changed'")
         self.assert_denied('40001')
 
+    def test_null_candidate_status_fails_closed(self):
+        self.q('UPDATE restaurant_refresh_candidates SET candidate_status=NULL')
+        self.assert_denied('40001')
+
     def test_invalid_closure_and_coordinate_denied(self):
         self.q("UPDATE restaurant_refresh_candidates SET detected_change_types=ARRAY['closure']")
         self.assert_denied('22023')
@@ -151,6 +161,8 @@ CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,fu
         self.apply()
         self.assertIn('55000',self.q('DELETE FROM restaurant_refresh_apply_receipts',check=False).stderr)
         self.assertIn('42501',self.q('SET ROLE service_role; SELECT * FROM restaurant_refresh_apply_receipts',check=False).stderr)
+        self.assertEqual(self.q("SELECT has_function_privilege('service_role','public.reject_restaurant_refresh_receipt_mutation()','EXECUTE'),prosecdef,pg_get_userbyid(proowner) FROM pg_proc WHERE oid='public.reject_restaurant_refresh_receipt_mutation()'::regprocedure").stdout.strip(),'f|f|postgres')
+        self.assertEqual(self.q("SELECT to_regprocedure('privacy_retention.g014_reject_audit_mutation()') IS NULL").stdout.strip(),'t')
 
     def test_rpc_owner_is_not_superuser_or_bypassrls(self):
         self.assertEqual(self.q("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname='postgres'").stdout.strip(),'f|f')
@@ -183,6 +195,12 @@ CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,fu
             locker.wait(timeout=10)
             locker.stdout.close()
             locker.stderr.close()
+
+    def test_owner_and_force_rls_drift_rejected(self):
+        self.q('ALTER TABLE restaurants FORCE ROW LEVEL SECURITY')
+        self.assertIn('55000',self.q(SOURCE.read_text().replace(GATE,'',1),check=False).stderr)
+        self.q('ALTER TABLE restaurants NO FORCE ROW LEVEL SECURITY; ALTER TABLE restaurants OWNER TO fixture_bootstrap')
+        self.assertIn('55000',self.q(SOURCE.read_text().replace(GATE,'',1),check=False).stderr)
 
     def test_unbound_migration_and_dependency_mismatch_denied(self):
         self.assertIn('55000',self.q(SOURCE.read_text(),check=False).stderr)
