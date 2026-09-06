@@ -67,6 +67,11 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Pull the pinned private test database images
+        run: |
+          docker pull pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
+          docker pull supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b
+
       - name: Exercise admin ID plans and denied replay branches on private databases
         env:
           TZUDONG_ADMIN_IDS_LOCAL_PG: '1'

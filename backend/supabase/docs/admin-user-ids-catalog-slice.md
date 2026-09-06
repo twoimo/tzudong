@@ -113,7 +113,10 @@ overlap in a read-only transaction instead of executing the PostgreSQL 17 hosted
 successor against an incompatible starting state. Both canonical migration
 hashes are pinned. Missing RPCs, overloads, changed bodies/output signatures,
 owner/configuration changes, widened ACLs, and mismatched allowlist tuples fail
-the replay. The migration chain includes the verifier, generated SQL, and actual
+the replay. The same snapshot must prove full owner SELECT visibility: a missing
+column grant, missing unconditional permissive policy, or applicable nontrivial
+restrictive policy is denied even when the RPC body and allowlist match.
+The migration chain includes the verifier, generated SQL, and actual
 bounded readback receipt; the SQL and receipt are retained in the artifact map
 and compared across two independent clean replays. The final G014 catalog
 assertion still runs. This evidence is not a hosted migration receipt.
