@@ -131,6 +131,13 @@ END $$; ALTER FUNCTION privacy_retention.{name}() OWNER TO privacy_workflow_owne
         read=f"SELECT jsonb_set({planner.literal(planner.canonical(baseline))}::jsonb,'{{ledger}}',({planner.baseline.LEDGER_SQL}))"
         with patch.object(planner.baseline,'snapshot_sql',return_value=read):
             with self.assertRaisesRegex(ValueError,'external_rehearsal'): planner.plan(bound,'apply')
+            original_assertion = self.sql("SELECT pg_get_functiondef('privacy_retention.assert_g014_catalog_contract()'::regprocedure);").stdout
+            self.sql("CREATE OR REPLACE FUNCTION privacy_retention.assert_g014_catalog_contract() RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$ BEGIN RAISE EXCEPTION USING ERRCODE='ZP001', MESSAGE='injected_rehearsal_code_collision'; END $$;")
+            collision = self.sql(planner.plan(bound,'rehearse'),role='postgres',check=False)
+            self.assertNotEqual(collision.returncode, 0)
+            self.assertIn('admin_ids_rehearsal_did_not_finish', collision.stderr)
+            self.assertEqual(self.before, self.state())
+            self.sql(original_assertion)
             got=self.sql(planner.plan(bound,'rehearse'),role='postgres')
             self.assertEqual(json.loads(got.stdout),planner.receipt(bound))
             self.assertEqual(self.sql('SELECT count(*) FROM supabase_migrations.schema_migrations;').stdout.strip(),'51')
@@ -138,9 +145,15 @@ END $$; ALTER FUNCTION privacy_retention.{name}() OWNER TO privacy_workflow_owne
             self.sql(planner.plan(bound,'apply',planner.receipt(bound)),role='postgres')
             self.assertEqual(self.sql('SELECT count(*) FROM supabase_migrations.schema_migrations;').stdout.strip(),'52')
             self.assertEqual(self.sql('SELECT cardinality(statements) FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 1;').stdout.strip(),'2')
-            self.sql("INSERT INTO public.user_roles(user_id,role) VALUES(gen_random_uuid(),'admin');")
+            self.sql("INSERT INTO public.user_roles(user_id,role) VALUES('00000000-0000-0000-0000-000000000001','admin'),('00000000-0000-0000-0000-000000000002','admin');")
             result=self.sql(planner.plan(bound,'readback'),role='postgres')
             self.assertTrue(all(json.loads(result.stdout).values()))
+            self.sql("CREATE POLICY partial_owner ON public.user_roles AS RESTRICTIVE TO privacy_workflow_owner USING(user_id='00000000-0000-0000-0000-000000000001'::uuid);")
+            self.assertEqual(self.sql('SELECT count(*) FROM public.read_admin_user_ids_for_management();',role='service_role').stdout.strip(),'1')
+            partial=self.sql(planner.plan(bound,'readback'),role='postgres',check=False)
+            self.assertNotEqual(partial.returncode,0)
+            self.assertIn('admin_ids_visibility_readback_denied',partial.stderr)
+            self.sql('DROP POLICY partial_owner ON public.user_roles;')
             self.assertIn('admin_ids_preview_drift',self.sql(planner.plan(bound,'apply',planner.receipt(bound)),role='postgres',check=False).stderr)
             self.assertEqual(self.before,self.state())
 

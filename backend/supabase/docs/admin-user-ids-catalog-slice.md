@@ -65,7 +65,8 @@ observed empty. No apply_migration timestamp generation, db push, replay or ledg
 Rehearsal executes the whole slice plus canonical ledger insertion in a subtransaction,
 verifies the candidate and deliberately rolls it back, then compares the original
 snapshot again before returning the fixed receipt. The outer transaction ends in
-ROLLBACK. Apply verifies inside the transaction and commits once. Its returned
+ROLLBACK. A completion flag rejects a matching rollback error code raised before
+the full installation and postcheck finish. Apply verifies inside the transaction and commits once. Its returned
 `verified_before_commit` object is explicitly not a commit receipt. An ambiguous
 transport outcome requires independent readback; never retry automatically.
 
@@ -78,6 +79,8 @@ The previous advisor exception is not an authorization token for this separate s
 
 Readback runs the immutable broad comparison in READ ONLY, then SET LOCAL ROLE
 service_role and emits only nonempty/within_limit/uuid_nonnull/distinct_ids booleans.
+Before calling the RPC, the same snapshot rechecks owner attributes, SELECT rights,
+and complete RLS visibility; a nonempty but policy-filtered admin subset is denied.
 Runner SET permission on service_role is required; do not add a grant to obtain it.
 No user UUID leaves that query. The readback does not invoke any deletion route.
 After commit, reversal is a separately reviewed compensating migration, not deleting

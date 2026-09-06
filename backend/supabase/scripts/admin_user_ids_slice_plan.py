@@ -15,6 +15,22 @@ SOURCE = ROOT / f'backend/supabase/migrations/{VERSION}_{NAME}.sql'
 # Recomputed deliberately only when reviewing a change to this new migration.
 SOURCE_SHA = 'f1b5a6878752c3004f74e057cf230bf26acca432271415f609c103b2bd1cb492'
 PARSER_SHA = '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd'
+# A nonempty RPC result can still be an RLS-filtered subset. Recheck the
+# complete visibility contract in the same read-only snapshot as the call.
+READBACK_VISIBILITY_GUARD = """
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE oid=v_owner AND NOT rolcanlogin AND NOT rolsuper AND NOT rolbypassrls AND NOT rolinherit)
+ OR NOT has_schema_privilege(v_owner,'public','USAGE')
+ OR NOT has_column_privilege(v_owner,'public.user_roles','user_id','SELECT')
+ OR NOT has_column_privilege(v_owner,'public.user_roles','role','SELECT')
+ OR NOT EXISTS(SELECT 1 FROM pg_class WHERE oid='public.user_roles'::regclass AND relkind='r' AND relrowsecurity AND NOT relforcerowsecurity AND relowner<>v_owner)
+ OR NOT EXISTS(SELECT 1 FROM pg_policy p WHERE polrelid='public.user_roles'::regclass AND polcmd IN ('r','*') AND polpermissive
+   AND pg_get_expr(polqual,polrelid) IN ('true','(true)')
+   AND EXISTS(SELECT 1 FROM unnest(polroles) r WHERE r=0 OR pg_has_role(v_owner,r,'USAGE')))
+ OR EXISTS(SELECT 1 FROM pg_policy p WHERE polrelid='public.user_roles'::regclass AND polcmd IN ('r','*') AND NOT polpermissive
+   AND pg_get_expr(polqual,polrelid) IS DISTINCT FROM 'true' AND pg_get_expr(polqual,polrelid) IS DISTINCT FROM '(true)'
+   AND EXISTS(SELECT 1 FROM unnest(polroles) r WHERE r=0 OR pg_has_role(v_owner,r,'USAGE')))
+ THEN RAISE EXCEPTION 'admin_ids_visibility_readback_denied'; END IF;
+"""
 sha = lambda b: hashlib.sha256(b).hexdigest()
 canonical = baseline.canonical
 literal = baseline.literal
@@ -57,9 +73,10 @@ def plan(p,mode,rehearsal=None):
         return f"""BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL search_path=pg_catalog,public,extensions;
 SET LOCAL statement_timeout='30s';
-DO $readback$ DECLARE prior jsonb:={prior}; actual jsonb; BEGIN
+DO $readback$ DECLARE prior jsonb:={prior}; actual jsonb; v_owner oid:='privacy_workflow_owner'::regrole; BEGIN
  SELECT ({read}) INTO actual;
  IF actual IS DISTINCT FROM {expected} THEN RAISE EXCEPTION 'admin_ids_readback_drift'; END IF;
+ {READBACK_VISIBILITY_GUARD}
  IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure('public.read_admin_user_ids_for_management()')
    AND p.proowner='privacy_workflow_owner'::regrole AND p.prosecdef AND p.provolatile='s'
    AND p.proretset AND p.prorettype='uuid'::regtype AND p.pronargs=0
@@ -81,8 +98,10 @@ ROLLBACK;
     if mode=='rehearse':
         work=f"""BEGIN
  {install}
+ rehearsal_finished := true;
  RAISE EXCEPTION USING ERRCODE='ZP001',MESSAGE='admin_ids_intentional_rehearsal_rollback';
-EXCEPTION WHEN SQLSTATE 'ZP001' THEN NULL;
+EXCEPTION WHEN SQLSTATE 'ZP001' THEN
+ IF NOT rehearsal_finished THEN RAISE EXCEPTION 'admin_ids_rehearsal_did_not_finish'; END IF;
 END;
 SELECT ({read}) INTO actual;
 IF actual IS DISTINCT FROM prior THEN RAISE EXCEPTION 'admin_ids_rehearsal_restore_drift'; END IF;"""
@@ -97,7 +116,7 @@ SET LOCAL search_path=pg_catalog,public,extensions;
 SET LOCAL statement_timeout='60s';
 SET LOCAL lock_timeout='2s';
 LOCK TABLE supabase_migrations.schema_migrations IN SHARE ROW EXCLUSIVE MODE;
-DO $plan$ DECLARE prior jsonb:={prior}; actual jsonb; BEGIN
+DO $plan$ DECLARE prior jsonb:={prior}; actual jsonb; rehearsal_finished boolean := false; BEGIN
  SELECT ({read}) INTO actual;
  IF actual IS DISTINCT FROM prior THEN RAISE EXCEPTION 'admin_ids_preview_drift'; END IF;
  {work}
