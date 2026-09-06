@@ -12,6 +12,12 @@ on:
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
       - 'backend/supabase/scripts/transform_advisor_replay.py'
       - 'backend/supabase/tests/test_advisor_replay.py'
+      - 'backend/supabase/scripts/verify_admin_user_ids_replay.py'
+      - 'backend/supabase/tests/test_admin_user_ids_replay.py'
+      - 'backend/supabase/scripts/admin_user_ids_slice_plan.py'
+      - 'backend/supabase/scripts/advisor_successor_plan.py'
+      - 'backend/supabase/tests/test_admin_user_ids_catalog_slice.py'
+      - 'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
       - 'backend/supabase/volumes/db/**'
       - 'backend/supabase/migrations/**'
       - 'backend/supabase/baselines/**'
@@ -53,6 +59,26 @@ jobs:
           backend.supabase.tests.test_g014_guardian_replay
           backend.supabase.tests.test_advisor_replay_prerequisites
           backend.supabase.tests.test_advisor_replay
+          backend.supabase.tests.test_admin_user_ids_replay
+          backend.supabase.tests.test_admin_user_ids_catalog_slice
+
+      - name: Set up the migration statement parser runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+
+      - name: Pull the pinned private test database images
+        run: |
+          docker pull pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
+          docker pull supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b
+
+      - name: Exercise admin ID plans and denied replay branches on private databases
+        env:
+          TZUDONG_ADMIN_IDS_LOCAL_PG: '1'
+        run: >-
+          python -m unittest
+          backend.supabase.tests.test_admin_user_ids_catalog_slice
+          backend.supabase.tests.test_admin_user_ids_replay
 
       - name: Check generator shell syntax
         shell: bash
