@@ -9,6 +9,13 @@ No other missing RPC, table, policy, retention approval or role is added.
 
 ## Source and admission
 
+Preview admission pins the complete canonical current51 snapshot SHA256
+`21d1072d628ef4caa46524aa7d2904b0b45334581a06e5b8913939833dda12f0`.
+This binds every historical ledger name/count/statement hash and every expected
+catalog projection. A fresh snapshot containing drift cannot become a new trusted
+baseline merely because it still has 51 ordered versions and the same final entry.
+The pin is a reviewed input contract; it is not an application or legal receipt.
+
 The exact function body comes from
 `20260812000300_local_admin_data_boundary_convergence.sql:145` (file SHA256
 `b23e7150d94538744fd34f061c426def63b2c9e25d3c30539a221d40845306bf`).

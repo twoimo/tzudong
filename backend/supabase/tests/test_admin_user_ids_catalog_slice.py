@@ -1,5 +1,6 @@
 """Private PostgreSQL 17 slice tests. No hosted transport or credentials."""
 import hashlib
+import copy
 import json
 import os
 from pathlib import Path
@@ -21,12 +22,39 @@ class SourceContract(unittest.TestCase):
         for forbidden in ('CREATE ROLE', 'ALTER ROLE', 'CREATE POLICY', 'ALTER TABLE', 'UPDATE privacy_retention', 'DELETE FROM', 'CREATE OR REPLACE FUNCTION'):
             self.assertNotIn(forbidden, SOURCE.read_text())
 
+    def test_preview_rejects_past_ledger_and_catalog_drift(self):
+        import sys
+        from unittest.mock import patch
+        sys.path.insert(0, str(ROOT / 'backend/supabase/scripts'))
+        import admin_user_ids_slice_plan as planner
+        # An explicitly substituted fixture trust anchor tests drift denial;
+        # production retains its independently reviewed current51 fingerprint.
+        fixture = {k: False for k in planner.baseline.SNAP_KEYS}
+        fixture.update(executor_ok=True, constraints_valid=4, function_paths_fixed=26, touch_ok=True)
+        fixture['ledger'] = [{'version': str(i).zfill(14), 'name': 'fixture_'+str(i), 'statement_count': 0, 'statements_pg_json_sha256': 'a'*64} for i in range(50)]
+        fixture['ledger'].append({'version': planner.baseline.VERSION, 'name': planner.baseline.NAME, 'statement_count': 17, 'statements_pg_json_sha256': 'b'*64})
+        with self.assertRaisesRegex(ValueError, 'current51_snapshot_binding_denied'):
+            planner.preview(fixture)
+        trusted = planner.sha(planner.canonical(fixture).encode())
+        with patch.object(planner, 'CURRENT51_SNAPSHOT_SHA256', trusted), patch.object(planner, 'vectors', return_value=['fixture']):
+            self.assertEqual(planner.preview(fixture)['snapshot'], fixture)
+            for field, changed in [('name','corrupted_name'), ('statement_count',1), ('statements_pg_json_sha256','c'*64)]:
+                drift = copy.deepcopy(fixture)
+                drift['ledger'][2][field] = changed
+                with self.subTest(ledger_field=field), self.assertRaisesRegex(ValueError, 'current51_snapshot_binding_denied'):
+                    planner.preview(drift)
+            for field in ('membership','policies','schemas','relations','helpers','functions_stable','constraints_stable','manifest_normalized','triggers','server_major'):
+                drift = copy.deepcopy(fixture)
+                drift[field] = 'changed'
+                with self.subTest(catalog_field=field), self.assertRaisesRegex(ValueError, 'current51_snapshot_binding_denied'):
+                    planner.preview(drift)
+
 @unittest.skipUnless(os.environ.get('TZUDONG_ADMIN_IDS_LOCAL_PG') == '1', 'explicit private local PG17 opt-in required')
 class PostgresContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.container = 'admin-ids-test-' + uuid.uuid4().hex[:10]
-        cls.docker('run', '--rm', '-d', '--network', 'none', '--name', cls.container, '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'pgvector/pgvector:pg17')
+        cls.docker('run', '--rm', '-d', '--network', 'none', '--name', cls.container, '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f')
         for _ in range(100):
             if cls.docker('exec', cls.container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', check=False).returncode == 0: break
             time.sleep(.1)
@@ -126,6 +154,9 @@ END $$; ALTER FUNCTION privacy_retention.{name}() OWNER TO privacy_workflow_owne
         ledger=json.loads(self.sql(planner.baseline.LEDGER_SQL+';').stdout)
         baseline={k:False for k in planner.baseline.SNAP_KEYS}
         baseline.update(ledger=ledger,executor_ok=True,constraints_valid=4,function_paths_fixed=26,touch_ok=True)
+        fixture_pin = patch.object(planner, 'CURRENT51_SNAPSHOT_SHA256', planner.sha(planner.canonical(baseline).encode()))
+        fixture_pin.start()
+        self.addCleanup(fixture_pin.stop)
         bound=planner.preview(baseline)
         # Harness ledger/transaction test only; broad advisor SQL is independently tested by its suite.
         read=f"SELECT jsonb_set({planner.literal(planner.canonical(baseline))}::jsonb,'{{ledger}}',({planner.baseline.LEDGER_SQL}))"

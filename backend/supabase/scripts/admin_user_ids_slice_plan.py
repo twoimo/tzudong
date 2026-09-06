@@ -15,6 +15,11 @@ SOURCE = ROOT / f'backend/supabase/migrations/{VERSION}_{NAME}.sql'
 # Recomputed deliberately only when reviewing a change to this new migration.
 SOURCE_SHA = 'f1b5a6878752c3004f74e057cf230bf26acca432271415f609c103b2bd1cb492'
 PARSER_SHA = '398e3945c0d0fb656daef0d0a42409dbdeb45a9bb1f6f8c03445e4436d4db0bd'
+# Canonical JSON SHA256 of the independently retained post-advisor current51
+# snapshot. Pin every historical ledger tuple and every catalog projection;
+# cardinality/order/terminal identity alone do not establish this starting state.
+# A changed starting state requires a new reviewed plan, never a fresh blind pin.
+CURRENT51_SNAPSHOT_SHA256 = '21d1072d628ef4caa46524aa7d2904b0b45334581a06e5b8913939833dda12f0'
 # A nonempty RPC result can still be an RLS-filtered subset. Recheck the
 # complete visibility contract in the same read-only snapshot as the call.
 READBACK_VISIBILITY_GUARD = """
@@ -46,6 +51,8 @@ def vectors():
     return rows
 
 def preview(snapshot):
+    if not isinstance(snapshot, dict) or sha(canonical(snapshot).encode()) != CURRENT51_SNAPSHOT_SHA256:
+        raise ValueError('current51_snapshot_binding_denied')
     if set(snapshot) != baseline.SNAP_KEYS or len(snapshot['ledger']) != 51 or snapshot['ledger'][-1]['version'] != baseline.VERSION or snapshot['ledger'][-1]['name'] != baseline.NAME:
         raise ValueError('current51_required')
     ledger=snapshot['ledger']
