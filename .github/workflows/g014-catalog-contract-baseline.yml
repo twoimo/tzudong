@@ -6,6 +6,12 @@ on:
     paths:
       - '.github/workflows/g014-catalog-contract-baseline.yml'
       - 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+      - 'backend/supabase/scripts/catalog_docker_endpoint.py'
+      - 'backend/supabase/tests/test_catalog_docker_endpoint.py'
+      - 'backend/supabase/tests/test_g014_catalog_baseline_generator.py'
+      - 'backend/supabase/scripts/g014_catalog_diagnostic.py'
+      - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
+      - 'backend/supabase/tests/test_restaurant_refresh_apply_boundary.py'
       - 'backend/supabase/scripts/transform_g014_guardian_replay.py'
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
@@ -63,6 +69,8 @@ jobs:
       - name: Run G026 and reconstruction unit tests
         run: >-
           python -m unittest
+          backend.supabase.tests.test_catalog_docker_endpoint
+          backend.supabase.tests.test_g014_catalog_baseline_generator
           backend.supabase.tests.test_reconstruction_source_archive
           backend.supabase.tests.test_g024_source_reconstruction
           backend.supabase.tests.test_compare_g024_clean_replays
@@ -75,6 +83,8 @@ jobs:
           backend.supabase.tests.test_admin_management_group_replay
           backend.supabase.tests.test_g014_pg17_owner_contract
           backend.supabase.tests.test_admin_user_ids_catalog_slice
+          backend.supabase.tests.test_g014_diagnostic_admission
+          backend.supabase.tests.test_restaurant_refresh_apply_boundary
 
       - name: Pull the pinned private test database images
         run: |
@@ -83,11 +93,14 @@ jobs:
 
       - name: Exercise admin RPC plans and denied replay branches on private databases
         env:
+          TZUDONG_REFRESH_PRIVATE_PG: '1'
           TZUDONG_ADMIN_IDS_LOCAL_PG: '1'
           TZUDONG_ADMIN_GROUP_LOCAL_PG: '1'
         run: >-
           python -m unittest
           backend.supabase.tests.test_admin_user_ids_catalog_slice
+          backend.supabase.tests.test_g014_diagnostic_admission
+          backend.supabase.tests.test_restaurant_refresh_apply_boundary
           backend.supabase.tests.test_admin_user_ids_replay
           backend.supabase.tests.test_admin_management_group
           backend.supabase.tests.test_admin_management_group_replay
