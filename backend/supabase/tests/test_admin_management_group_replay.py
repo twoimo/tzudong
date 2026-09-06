@@ -13,6 +13,21 @@ from backend.supabase.tests import test_admin_management_group as group_fixture
 
 
 class SourceContract(unittest.TestCase):
+    def test_generator_and_ci_bind_all_runtime_dependencies(self):
+        generator=(ROOT/'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh').read_text()
+        workflow=(ROOT/'.github/workflows/g014-catalog-contract-baseline.yml').read_text()
+        for dependency in ('verify_admin_management_group_replay.py','admin_management_group_plan.py','advisor_successor_plan.py','g037_supabase_statement_vector.mjs'):
+            self.assertIn("'backend/supabase/scripts/"+dependency+"'",generator)
+            self.assertIn(dependency,generator.split('20260906053936_admin_management_group_catalog_slice.sql)',1)[1].split(';;',1)[0])
+            self.assertIn(dependency,workflow)
+        self.assertIn('admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json',generator)
+        self.assertIn('ON_ERROR_STOP=1',generator)
+        self.assertIn('.already_present_contract_verified == true',generator)
+        self.assertIn("TZUDONG_ADMIN_GROUP_LOCAL_PG: '1'",workflow)
+        for module in ('test_admin_management_group','test_admin_management_group_replay'):
+            self.assertGreaterEqual(workflow.count('backend.supabase.tests.'+module),2)
+        self.assertLess(workflow.index('Set up the migration statement parser runtime'),workflow.index('Run G026 and reconstruction unit tests'))
+
     def test_pins_and_no_ddl(self):
         sql=replay.verification_sql(plan.SOURCE.read_bytes(),plan.PREDECESSOR.read_bytes()).decode()
         self.assertIn('READ ONLY',sql)
