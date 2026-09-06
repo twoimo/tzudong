@@ -1,5 +1,5 @@
 kafka-python==3.0.11
-psycopg2-binary==2.9.11
+psycopg2-binary==2.9.12
 opentelemetry-api==1.44.0
 opentelemetry-sdk==1.44.0
 opentelemetry-exporter-otlp-proto-http==1.44.0
