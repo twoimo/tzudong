@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import subprocess
 import time
 import unittest
@@ -45,34 +46,42 @@ class SourceContract(unittest.TestCase):
 class LocalPostgresContract(unittest.TestCase):
     @classmethod
     def docker(cls, *args, input=None):
-        return subprocess.run(['docker', *args], input=input, text=True, capture_output=True, timeout=60)
+        return subprocess.run(['docker', *args], input=input, text=True, capture_output=True, timeout=60,
+                              env={**os.environ, 'POSTGRES_PASSWORD': cls.password, 'PGPASSWORD': cls.password})
 
     @classmethod
-    def query(cls, sql):
-        return cls.docker('exec', '-i', cls.container, 'psql', '-XAtq', '-h', '127.0.0.1', '-U', 'postgres', '-v', 'ON_ERROR_STOP=1', input=sql)
+    def query(cls, sql, role='supabase_admin'):
+        return cls.docker('exec', '-i', '-e', 'PGPASSWORD', cls.container, 'psql', '-XAtq', '-h', '127.0.0.1', '-U', role, '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', input=sql)
 
     @classmethod
     def setUpClass(cls):
         cls.container = 'admin-ids-replay-test-' + uuid.uuid4().hex[:10]
-        # Isolated fixture, not the canonical PG15 clean replay image. CI also
-        # executes the verifier against the complete pinned PG15 replay twice.
+        cls.password = secrets.token_hex(24)
+        # Match the canonical PG15 image. This narrower fixture explicitly gives
+        # a non-superuser reader catalog access; missing access must fail closed.
+        # CI also executes against the complete canonical source replay twice.
         started = cls.docker('run', '--rm', '-d', '--network', 'none', '--name', cls.container,
-                             '-e', 'POSTGRES_HOST_AUTH_METHOD=trust', 'pgvector/pgvector:pg17')
+                             '-e', 'POSTGRES_PASSWORD',
+                             'supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b')
         if started.returncode:
             raise AssertionError(started.stderr)
         cls.addClassCleanup(cls.docker, 'rm', '-f', cls.container)
-        for _ in range(100):
-            if cls.docker('exec', cls.container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres').returncode == 0:
+        for _ in range(200):
+            if cls.query('SELECT 1;').returncode == 0:
                 break
             time.sleep(.1)
         definition = re.search(r'CREATE OR REPLACE FUNCTION public.read_admin_user_ids_for_management\(\).*?END\n\$\$;', PREDECESSOR.read_text(), re.S).group()
-        result = cls.query('''CREATE ROLE privacy_workflow_owner NOLOGIN NOINHERIT;
-CREATE ROLE service_role; CREATE ROLE anon; CREATE ROLE authenticated;
-CREATE SCHEMA privacy_retention;
+        result = cls.query('''ALTER ROLE postgres NOSUPERUSER NOBYPASSRLS NOINHERIT;
+CREATE ROLE privacy_workflow_owner NOLOGIN NOINHERIT;
+CREATE SCHEMA privacy_retention AUTHORIZATION privacy_workflow_owner;
+REVOKE ALL ON SCHEMA privacy_retention FROM PUBLIC,postgres;
+GRANT USAGE ON SCHEMA privacy_retention TO postgres;
 CREATE TABLE privacy_retention.g014_public_rpc_allowlist(function_schema name,function_name name,identity_arguments text,grantee name,source_signature text);
+ALTER TABLE privacy_retention.g014_public_rpc_allowlist OWNER TO privacy_workflow_owner;
+GRANT SELECT ON privacy_retention.g014_public_rpc_allowlist TO postgres;
 ''' + definition + '''
 ALTER FUNCTION public.read_admin_user_ids_for_management() OWNER TO privacy_workflow_owner;
-REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM PUBLIC,anon,authenticated,service_role,postgres,supabase_admin;
 GRANT EXECUTE ON FUNCTION public.read_admin_user_ids_for_management() TO service_role;
 INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES('public','read_admin_user_ids_for_management','','service_role','public.read_admin_user_ids_for_management()');
 ''')
@@ -83,7 +92,7 @@ INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES('public','read_ad
     def test_exact_overlap_passes_without_mutating_catalog(self):
         snapshot = "SELECT md5(string_agg(row_to_json(p)::text,',' ORDER BY oid)) FROM pg_proc p;"
         before = self.query(snapshot).stdout
-        result = self.query(self.verification)
+        result = self.query(self.verification, role='postgres')
         self.assertEqual(result.returncode, 0, result.stderr)
         receipt = json.loads(result.stdout)
         self.assertEqual(receipt['disposition'], 'already-present-contract-verified')
@@ -111,7 +120,19 @@ INSERT INTO privacy_retention.g014_public_rpc_allowlist VALUES('public','read_ad
                 # Each bad fixture is rolled back when psql exits on the real
                 # verifier exception; the production query itself stays read-only.
                 body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
-                result = self.query('BEGIN;\n' + mutation + '\n' + body + '\nROLLBACK;')
+                result = self.query('BEGIN;\n' + mutation + '\nSET SESSION AUTHORIZATION postgres;\n' + body + '\nROLLBACK;')
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('admin_ids_replay_' + code, result.stderr)
-        self.assertEqual(self.query(self.verification).returncode, 0)
+        self.assertEqual(self.query(self.verification, role='postgres').returncode, 0)
+
+    def test_missing_private_access_fails_without_granting_membership(self):
+        before = self.query('SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) FROM pg_auth_members m;').stdout
+        self.query('REVOKE USAGE ON SCHEMA privacy_retention FROM postgres;')
+        try:
+            denied = self.query(self.verification, role='postgres')
+            self.assertNotEqual(denied.returncode, 0)
+            self.assertIn('permission denied for schema privacy_retention', denied.stderr)
+            self.assertEqual(self.query('SELECT jsonb_agg(to_jsonb(m) ORDER BY roleid,member,grantor) FROM pg_auth_members m;').stdout, before)
+            self.assertEqual(self.query("SELECT has_schema_privilege('postgres','privacy_retention','USAGE');").stdout.strip(), 'f')
+        finally:
+            self.query('GRANT USAGE ON SCHEMA privacy_retention TO postgres;')
