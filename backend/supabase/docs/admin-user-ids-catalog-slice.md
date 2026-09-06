@@ -97,3 +97,16 @@ of the entire hosted G014 catalog. Harness tests substitute only the broad advis
 snapshot SELECT with a fixture projection; the reused full advisor snapshot retains
 its independent existing tests and must pass on parent's exact hosted readback.
 Local tests prove this slice's execution/rollback/denial behavior, not hosted closure.
+
+## Clean source replay
+
+The disposable PostgreSQL 15 catalog replay already creates this exact RPC in
+`20260812000300_local_admin_data_boundary_convergence.sql`. It verifies that
+overlap in a read-only transaction instead of executing the PostgreSQL 17 hosted
+successor against an incompatible starting state. Both canonical migration
+hashes are pinned. Missing RPCs, overloads, changed bodies/output signatures,
+owner/configuration changes, widened ACLs, and mismatched allowlist tuples fail
+the replay. The migration chain includes the verifier, generated SQL, and actual
+bounded readback receipt; the SQL and receipt are retained in the artifact map
+and compared across two independent clean replays. The final G014 catalog
+assertion still runs. This evidence is not a hosted migration receipt.
