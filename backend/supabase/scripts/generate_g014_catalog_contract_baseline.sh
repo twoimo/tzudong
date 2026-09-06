@@ -37,6 +37,7 @@ g028_reauth_test="$supabase_dir/tests/g028_account_deletion_reauth_proof.sql"
 partition_version='g014-source-baseline-partition-v1'
 relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+  'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
@@ -613,29 +614,12 @@ initialization_inputs="$staging_dir/initialization-inputs.sha256"
 } >"$initialization_inputs"
 initialization_inputs_hash=$(sha256sum -- "$initialization_inputs" | cut -d' ' -f1)
 
-# Resolve the active context before isolating Docker config, then allow only local
-# Docker Desktop/Linux-container endpoints.
-docker_context_name=$(docker context show) || {
-  printf 'unable to resolve the current Docker context\n' >&2
+# Admit the account's saved local context before isolating operation config.
+# The resolver never changes context and admits only the fixed local endpoints.
+docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py") || {
+  printf 'unable to admit a canonical local Docker endpoint\n' >&2
   exit 1
 }
-[[ "$docker_context_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
-  printf 'current Docker context name is invalid\n' >&2
-  exit 1
-}
-docker_context_endpoint=$(docker context inspect "$docker_context_name" --format '{{ .Endpoints.docker.Host }}') || {
-  printf 'unable to inspect the current Docker context endpoint\n' >&2
-  exit 1
-}
-case "$docker_context_endpoint" in
-  'unix:///var/run/docker.sock'|'npipe:////./pipe/docker_engine'|'npipe:////./pipe/dockerDesktopLinuxEngine')
-    docker_endpoint=$docker_context_endpoint
-    ;;
-  *)
-    printf 'current Docker context is not a validated local Docker Desktop/Linux-container endpoint: %s\n' "$docker_context_endpoint" >&2
-    exit 1
-    ;;
-esac
 # The public, digest-pinned image is a reproducible build dependency, never
 # a source of catalog data. Compose itself remains pull-free. Select the same
 # pinned AMD64 variant for inspection and execution on multi-architecture stores.
