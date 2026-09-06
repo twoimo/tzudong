@@ -22,6 +22,9 @@ class SourceContract(unittest.TestCase):
             self.assertIn(dependency,workflow)
         self.assertIn('admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json',generator)
         self.assertIn('ON_ERROR_STOP=1',generator)
+        self.assertEqual(generator.count('    platform: linux/amd64'),3)
+        self.assertIn('docker_local image inspect --platform linux/amd64',generator)
+        self.assertIn('docker_local pull --platform linux/amd64',generator)
         self.assertIn('.already_present_contract_verified == true',generator)
         self.assertIn("TZUDONG_ADMIN_GROUP_LOCAL_PG: '1'",workflow)
         for module in ('test_admin_management_group','test_admin_management_group_replay'):
