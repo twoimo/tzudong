@@ -292,7 +292,7 @@
 - [x] 7.78 Preserve zero hosted mutations throughout classification, source authoring, and disposable-local verification.
 - [x]! 7.79 Obtain named-owner approval for retaining or redesigning the `privacy_consent_state` owner bridge before treating the advisor error as externally accepted.
 - [x]! 7.80 Apply the new additive migration only from an exact approved source revision, then read back the 26 function paths, four constraints, G014 assertion, ACLs, and a fresh official advisor result. Historical receipt scope: `evidence-reconciliation-20260906.md`.
-- [ ]! 7.81 Retain the hosted apply/readback/audit receipt outside the repository and reconcile generated types only after 7.80 succeeds.
+- [x]! 7.81 Retain the hosted apply/readback/audit receipt outside the repository and reconcile generated types only after 7.80 succeeds.
 - [x] 7.82 Bind the retain decision to exact identity `public.privacy_consent_state` and named approver 최연우 without recording contact, account, or credential data.
 - [x] 7.83 Scope the decision to the current owner-bridge security-design exception and no broader system approval.
 - [x] 7.84 Keep the official Advisor severity at ERROR and require a separately approved implementation plus readback before any future redesign can replace the bridge.

@@ -8,9 +8,9 @@
     "total": 1310,
     "beforeChecked": 1270,
     "beforeOpen": 40,
-    "newlyReflectedHistoricalActions": 11,
-    "afterChecked": 1281,
-    "afterOpen": 29
+    "newlyReflectedHistoricalActions": 12,
+    "afterChecked": 1282,
+    "afterOpen": 28
   },
   "artifactRoots": {
     "B5": "/Users/twoimo/.codex/artifacts/tzudong-kiro-closure-20260905",
@@ -204,6 +204,13 @@
         "web-completion",
         "web-actor"
       ]
+    },
+    {
+      "taskId": "7.81",
+      "evidenceIds": [
+        "advisor-audit",
+        "types-comparison"
+      ]
     }
   ],
   "remainingTaskGroups": [
@@ -233,17 +240,6 @@
         "rehearsal-failure",
         "rehearsal-restored",
         "diagnostic-denied"
-      ]
-    },
-    {
-      "taskIds": [
-        "7.81"
-      ],
-      "status": "advisor-scoped-parent-review",
-      "gap": "Advisor apply/readback/audit and before/after generated-type equality are retained; parent review can close this narrow task without whole-catalog parity. Historical g014AssertionPassed refers to catalog-manifest only.",
-      "evidenceIds": [
-        "advisor-audit",
-        "types-comparison"
       ]
     },
     {
