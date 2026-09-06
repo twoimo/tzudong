@@ -163,7 +163,8 @@ describe("admin restaurant refresh history source contracts", () => {
     expect(routeSource).toContain("readback_state: readbackStateForCandidate(");
     expect(routeSource).toContain("readbackRunMap.get(candidate.id)");
     expect(routeSource).toContain('.eq("status", "approved")');
-    expect(routeSource).toContain("!isIdRow(updatedRestaurant)");
+    expect(routeSource).toContain('"apply_restaurant_refresh_candidate"');
+    expect(routeSource).not.toContain('.update(patch)');
     expect(routeSource).toContain('"Cache-Control": "no-store"');
     expect(routeSource).not.toContain("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE");
   });
