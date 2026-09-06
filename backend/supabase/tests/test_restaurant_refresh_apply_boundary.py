@@ -9,7 +9,7 @@ import unittest
 import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
-SOURCE = ROOT / 'backend/supabase/migrations/20260906064459_admin_restaurant_refresh_apply_boundary.sql'
+SOURCE = ROOT / 'backend/supabase/candidates/20260906064459_admin_restaurant_refresh_apply_boundary.sql'
 GATE = """DO $catalog_binding_pending$
 BEGIN
   RAISE EXCEPTION 'refresh_apply_catalog_binding_pending' USING ERRCODE = '55000';
@@ -21,6 +21,7 @@ CANDIDATE = '00000000-0000-0000-0000-000000000003'
 
 class SourceBoundary(unittest.TestCase):
     def test_pending_gate_and_no_legacy_revocation(self):
+        self.assertFalse((ROOT / "backend/supabase/migrations" / SOURCE.name).exists())
         s = SOURCE.read_text()
         self.assertEqual(s.count(GATE), 1)
         self.assertLess(s.index(GATE), s.index('CREATE TABLE'))
