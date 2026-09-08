@@ -413,15 +413,24 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
     const n = restaurants.length;
     const parent = Array.from({ length: n }, (_, i) => i);
+    const groupSize = new Uint32Array(n).fill(1);
+    // Iterative path halving avoids call-stack growth on large merge chains.
     const find = (i: number): number => {
-        if (parent[i] === i) return i;
-        parent[i] = find(parent[i]);
-        return parent[i];
+        while (parent[i] !== i) {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        return i;
     };
     const union = (i: number, j: number) => {
-        const rootI = find(i);
-        const rootJ = find(j);
-        if (rootI !== rootJ) parent[rootI] = rootJ;
+        let rootI = find(i);
+        let rootJ = find(j);
+        if (rootI === rootJ) return;
+        if (groupSize[rootI] < groupSize[rootJ]) {
+            [rootI, rootJ] = [rootJ, rootI];
+        }
+        parent[rootJ] = rootI;
+        groupSize[rootI] += groupSize[rootJ];
     };
 
     const nameToIndices = new Map<string, number[]>();
