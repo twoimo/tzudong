@@ -556,10 +556,9 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
   ) {
     fail('database_container');
   }
-  let schema;
+  const schema = readCurrentMigrationLedger(local, containers[0]);
   let migrationReceipt;
   if (requireDeterministicReceipt) {
-    schema = readCurrentMigrationLedger(local, containers[0]);
     const binding = [
       '--container', containers[0],
       '--allow-local',
