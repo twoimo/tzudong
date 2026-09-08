@@ -163,3 +163,36 @@ class LocalReplayContractTests(unittest.TestCase):
                                  '--container', 'unadmitted-fixture'], capture_output=True, timeout=30)
         self.assertEqual(result.returncode, 2)
         self.assertIn(b'replay_requires_allow_local', result.stderr)
+
+    def test_replay_batches_never_submit_raw_hosted_repair_sql(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        manifest = local_migrate.build_manifest()
+        for item in manifest['source']['files']:
+            if item['path'] not in contract.supported_sources():
+                continue
+            path, sql = local_migrate._execution_batch(item, item['ordinal'] - 1)
+            self.assertEqual(sql, self.sql[path])
+            self.assertNotIn((ROOT / path).read_bytes(), sql)
+            self.assertNotIn(b'INSERT INTO _tzudong_local', sql)
+            self.assertNotIn(b'GRANT privacy_workflow_owner', sql)
+
+    def test_full_snapshot_requires_all_96_exact_sources_and_distinct_terminal_states(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
+        self.assertEqual(len(rows), 96)
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 93)
+        self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
+        self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
+        local_migrate._validate_ledger_snapshot(rows)
+        for mutation in ('applied', 'missing-proof', 'missing-row', 'foreign-proof'):
+            changed = copy.deepcopy(rows)
+            if mutation == 'applied':
+                changed[-1]['status'] = 'applied'
+            elif mutation == 'missing-proof':
+                changed[-1]['replayProof'] = None
+            elif mutation == 'missing-row':
+                changed.pop()
+            else:
+                changed[-1]['replayProof'] = changed[-2]['replayProof']
+            with self.subTest(mutation=mutation), self.assertRaises(local_migrate.LocalMigrationError):
+                local_migrate._validate_ledger_snapshot(changed)

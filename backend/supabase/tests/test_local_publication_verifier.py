@@ -1,4 +1,5 @@
 import importlib.util
+import copy
 import hashlib
 import json
 import os
@@ -9,6 +10,21 @@ import tempfile
 import types
 import unittest
 from unittest import mock
+
+from backend.supabase.scripts import local_replay_contract
+
+
+def fixture_replay_proofs():
+    """Pinned offline fixture values, not evidence of database execution."""
+    proofs = {}
+    for path in local_replay_contract.supported_sources():
+        receipt = copy.deepcopy(local_replay_contract._CONTRACTS[path]["receipt"])
+        proofs[path] = {
+            **local_replay_contract.plan(path),
+            "receipt": receipt,
+            "receipt_sha256": local_replay_contract.digest(local_replay_contract.canonical(receipt)),
+        }
+    return proofs
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -574,7 +590,7 @@ complete_lifecycle_stage
         ]
         return hashlib.sha256(verifier.canonical_json(evidence)).hexdigest()
 
-    def test_builder_validates_private_rows_but_emits_only_counts_and_digests(self) -> None:
+    def test_builder_omits_private_rows_and_preserves_full_replay_proofs(self) -> None:
         manifest = local_migrate.verify_manifest()
         manifest_digest = verifier.sha256_bytes(verifier.canonical_json(manifest))
         digest = "a" * 64
@@ -605,6 +621,7 @@ complete_lifecycle_stage
             "closure_binding_sha256": digest,
             "ledger": [["private"]] * verifier.EXPECTED_LEDGER_UNITS,
             "ledger_sha256": digest,
+            "replay_proofs": fixture_replay_proofs(),
             "readback": readback,
             "readback_sha256": digest,
             "readback_sql_sha256": digest,
@@ -638,6 +655,9 @@ complete_lifecycle_stage
         self.assertEqual(summary["ledger_count"], verifier.EXPECTED_LEDGER_UNITS)
         self.assertNotIn("readback", summary)
         self.assertNotIn("ledger", summary)
+        self.assertEqual(summary["replay_proofs"], receipt["replay_proofs"])
+        self.assertEqual(set(summary), verifier.MIGRATION_SUMMARY_FIELDS)
+        local_migrate._validate_replay_proofs(manifest, summary["replay_proofs"])
         self.assertNotIn("private@example.invalid", serialized)
         self.assertNotIn("@", serialized)
 
@@ -877,14 +897,10 @@ complete_lifecycle_stage
             "environment_contract_sha256": digest,
             "commit_sha256": self.FIXTURE_GITHUB_SHA,
             "ledger_count": verifier.EXPECTED_LEDGER_UNITS,
-            "ledger_sha256": verifier.sha256_bytes(verifier.serialize_rows([
-                [
-                    "ledger", item["path"], item["ordinal"], item["sha256"],
-                    item["byteLength"], item["transaction"]["class"], "applied",
-                    verifier.expected_unit_evidence(item),
-                ]
-                for item in files
-            ])),
+            "ledger_sha256": verifier.sha256_bytes(verifier.serialize_rows(
+                local_migrate._expected_ledger_records(manifest)
+            )),
+            "replay_proofs": fixture_replay_proofs(),
             "readback_sql_sha256": verifier.sha256_file(
                 REPOSITORY_ROOT / local_migrate.READBACK_SOURCE
             ),
@@ -916,6 +932,87 @@ complete_lifecycle_stage
             root = Path(raw)
             self._write_bundle(root)
             verifier.verify(root)
+
+    def test_publication_uses_the_current_96_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 96)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 96)
+
+    def test_rejects_missing_extra_swapped_or_digest_only_replay_proofs(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            payloads = self._write_bundle(root)
+            summary = payloads["local-migration-summary.json"]
+            manifest = payloads["local-migration-manifest.json"]
+            proofs = summary["replay_proofs"]
+            first, second, _ = sorted(proofs)
+            cases = [None, {}, {key: value for key, value in proofs.items() if key != first},
+                     {**proofs, "unrecognized.sql": proofs[first]},
+                     {**proofs, first: proofs[second]},
+                     {key: value["receipt_sha256"] for key, value in proofs.items()}]
+            for bad in cases:
+                with self.subTest(proofs=type(bad).__name__):
+                    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+                        verifier.verify_migration_summary({**summary, "replay_proofs": bad}, manifest)
+            del summary["replay_proofs"]
+            (root / "local-migration-summary.json").write_text(json.dumps(summary), encoding="utf-8")
+            with self.assertRaisesRegex(SystemExit, "artifact schema mismatch"):
+                verifier.verify(root)
+
+    def test_rejects_changed_full_packet_proofs_even_with_recomputed_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            payloads = self._write_bundle(Path(raw))
+            summary = payloads["local-migration-summary.json"]
+            manifest = payloads["local-migration-manifest.json"]
+            path = sorted(summary["replay_proofs"])[-1]
+            for field, value in (
+                ("disposition", "applied"),
+                ("disposition", "new-status"),
+                ("schema", "local-replay-proof-v2"),
+                ("source_sha256", "0" * 64),
+                ("verification_sql_sha256", "0" * 64),
+                ("bindings", {}),
+                ("receipt", {"read_only": True}),
+                ("unexpected", True),
+            ):
+                bad = copy.deepcopy(summary)
+                proof = bad["replay_proofs"][path]
+                proof[field] = value
+                proof["receipt_sha256"] = verifier.sha256_bytes(verifier.canonical_json(proof["receipt"]))
+                proof["bindings_sha256"] = verifier.sha256_bytes(verifier.canonical_json(proof["bindings"]))
+                with self.subTest(field=field, value=value):
+                    with self.assertRaisesRegex(SystemExit, "replay proof binding mismatch"):
+                        verifier.verify_migration_summary(bad, manifest)
+
+    def test_rejects_blanket_applied_or_arbitrary_status_ledger_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            payloads = self._write_bundle(Path(raw))
+            summary = payloads["local-migration-summary.json"]
+            manifest = payloads["local-migration-manifest.json"]
+            for status in ("applied", "new-status"):
+                rows = copy.deepcopy(local_migrate._expected_ledger_records(manifest))
+                for row in rows:
+                    if row[1] in summary["replay_proofs"]:
+                        row[6] = status
+                bad = {**summary, "ledger_sha256": verifier.sha256_bytes(verifier.serialize_rows(rows))}
+                with self.subTest(status=status):
+                    with self.assertRaisesRegex(SystemExit, "ledger digest mismatch"):
+                        verifier.verify_migration_summary(bad, manifest)
+
+    def test_replay_proofs_do_not_replace_independent_publication_bindings(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            payloads = self._write_bundle(Path(raw))
+            summary = payloads["local-migration-summary.json"]
+            manifest = payloads["local-migration-manifest.json"]
+            for field, error in (
+                ("ledger_sha256", "ledger digest mismatch"),
+                ("sequence_sha256", "sequence digest mismatch"),
+                ("service_sha256", "service digest mismatch"),
+                ("prerequisite_sha256", "sequence mismatch"),
+                ("readback_sql_sha256", "tracked source binding mismatch"),
+            ):
+                with self.subTest(field=field):
+                    with self.assertRaisesRegex(SystemExit, error):
+                        verifier.verify_migration_summary({**summary, field: "0" * 64}, manifest)
 
     def test_accepts_action_specific_stack_health_receipts(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

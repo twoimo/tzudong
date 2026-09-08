@@ -81,6 +81,7 @@ const localMigrationReceiptExpectedKeys = [
   'readback',
   'readback_sha256',
   'readback_sql_sha256',
+  'replay_proofs',
   'schema',
   'seed_sha256',
   'seed_source_sha256',
@@ -1313,27 +1314,34 @@ function parseDockerServiceRows(stdout) {
   return services;
 }
 
-async function assertLocalMigrationReceipt(stateRoot, stackReceipt) {
-  const receiptPath = path.join(stateRoot, localMigrationReceiptFilename);
-  assertLocalStateFile(receiptPath, 'Local migration receipt');
-  const receipt = readJsonFile(receiptPath, 'Local migration receipt');
+function assertLocalMigrationReceiptEnvelope(receipt, stackReceipt) {
   if (
     !receipt
     || typeof receipt !== 'object'
     || Object.keys(receipt).sort().join(',') !== localMigrationReceiptExpectedKeys
-    || receipt.schema !== 'local-receipt-v1'
+    || receipt.schema !== 'local-receipt-v2'
     || receipt.serializer !== 'receipt-v1'
     || receipt.project_name !== localProjectName
     || !Array.isArray(receipt.ledger)
-    || receipt.ledger.length !== 77
+    || receipt.ledger.length !== 96
+    || !receipt.replay_proofs
+    || typeof receipt.replay_proofs !== 'object'
+    || Array.isArray(receipt.replay_proofs)
     || !Array.isArray(receipt.sequence)
     || receipt.sequence.length !== localReceiptSequenceMarkers.length
     || receipt.config_sha256 !== stackReceipt.config_sha256
     || receipt.input_provenance_sha256 !== stackReceipt.input_provenance_sha256
     || receipt.env_provenance_sha256 !== stackReceipt.env_provenance_sha256
   ) {
-    throw new Error('Local migration receipt is not the required source-bound receipt-v1 evidence.');
+    throw new Error('Local migration receipt is not the required source-bound local-receipt-v2 evidence.');
   }
+}
+
+async function assertLocalMigrationReceipt(stateRoot, stackReceipt) {
+  const receiptPath = path.join(stateRoot, localMigrationReceiptFilename);
+  assertLocalStateFile(receiptPath, 'Local migration receipt');
+  const receipt = readJsonFile(receiptPath, 'Local migration receipt');
+  assertLocalMigrationReceiptEnvelope(receipt, stackReceipt);
 
   for (const field of localReceiptSourceBindings) {
     if (!localReceiptDigestPattern.test(receipt[field])) {

@@ -142,6 +142,13 @@ def validate_proof(proof: dict[str, Any], verification_sql: bytes, *, root: Path
         raise ReplayContractError('replay_proof_mismatch')
 
 
+def expected_proof_shape(migration_path: str, *, root: Path = ROOT) -> dict[str, Any]:
+    """Expected comparison value only, never evidence of database execution."""
+    binding = plan(migration_path, root=root)
+    receipt = dict(_CONTRACTS[migration_path]['receipt'])
+    return {**binding, 'receipt': receipt, 'receipt_sha256': digest(canonical(receipt))}
+
+
 def generate_verification_sql(migration_path: str, *, root: Path = ROOT) -> bytes:
     """Run the pinned offline generator, then recheck inputs and exact SQL bytes."""
     import subprocess

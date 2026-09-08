@@ -1,0 +1,89 @@
+{
+  "kind": "versioned_local_replay_integration",
+  "base_commit": "6cd3ccf9",
+  "receipt_schema": "local-receipt-v2",
+  "row_serializer": "receipt-v1",
+  "artifact_filename": "local-receipt-v1.json",
+  "required_source_accounting": {
+    "total": 96,
+    "applied": 93,
+    "verified-existing": 2,
+    "legacy-contract-preserved": 1
+  },
+  "behavior": [
+    "Pinned read-only verifiers replace the three hosted PG17 repair sources during local replay",
+    "Verified terminal rows retain complete proofs and canonical proof hashes",
+    "Conflicting terminal rows are never overwritten",
+    "Independent row readback and a second contract verification follow proof storage",
+    "Web, closure, nightly and publication admission validate exact source/proof bindings",
+    "Old receipt content and missing or substituted proofs are rejected"
+  ],
+  "validation": {
+    "backend_replay_migration_seed_tests": {
+      "passed": 45
+    },
+    "web_runtime_nightly_tests": {
+      "passed": 46
+    },
+    "closure_publication_tests": {
+      "passed": 58
+    },
+    "private_pg15_overlap_suite": {
+      "passed": 10
+    },
+    "final_private_pg15_ledger_regression": {
+      "passed": 1,
+      "covers": [
+        "proof storage",
+        "idempotency",
+        "terminal preservation during ambiguity marking",
+        "conflicting evidence preservation",
+        "post-storage contract readback"
+      ]
+    },
+    "receipt_comparison_followup": {
+      "passed": 20
+    },
+    "typecheck_parity": {
+      "diagnostics": 0,
+      "logical_inputs": 2455
+    },
+    "targeted_eslint": "passed",
+    "independent_reviews": {
+      "completed": 2,
+      "actionable_findings": 0
+    }
+  },
+  "limitations": [
+    "Test counts include overlapping follow-up runs; not an aggregate unique-test count",
+    "Full 96-unit replay and normal web runtime admission remain unverified",
+    "Preserved failed database still has an unresolved extra executor ACL and ambiguity marker",
+    "Browser startup regression and production first-marker latency remain unverified",
+    "No hosted migration, merge or deployment performed"
+  ],
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Local validation infrastructure change; no application latency measurement"
+  },
+  "source_sha256": {
+    ".github/scripts/build-nightly-local-publication.py": "978b75fcf6a19c5eeef0cc4a3c5d7f87cd4b3577031800a2349fdb141b39dce9",
+    ".github/scripts/verify-nightly-local-publication.py": "dbf89aa83e593a4dcc1024288eb4fbb837fc70cead5fc74e396819ac19ff36de",
+    "apps/web/scripts/local-supabase-runtime.mjs": "dc5f0e86ba553b0e816dfb0b2e86a884cb8538260460827bd5de4b966a8238cd",
+    "apps/web/scripts/run-nightly-regression.mjs": "8db18ae85d377dabe07569506e719e6a45b2379c8f5af5437da8c7f6f52eea02",
+    "apps/web/tests-unit/local-supabase-runtime.test.ts": "4a7a80c5c6db51cf2b2adc6ce72a1dfbeb4837f8f631734a339eb8fb604267ab",
+    "apps/web/tests-unit/nightly-regression-workflow.test.ts": "1a4c291cafb88236142e0badfb8a2688a8df1ee122096f0596805f4b5f2adc76",
+    "backend/supabase/scripts/local-function-runtime-scan.py": "851c0a7392b9473865c50483343ddb47dfc8a2c100287a83c31bb5703b22ba84",
+    "backend/supabase/scripts/local-migrate.py": "128dc7388889f9cd5e804525fe96d511b4e6d830c9fb16eabc000a2c924c7818",
+    "backend/supabase/scripts/local_replay_contract.py": "05274025fe166aadc950c1e702b56993a5d6f85775c362c07440b37534519c0b",
+    "backend/supabase/tests/test_admin_user_ids_replay.py": "1e11b1cbf4270320014572b30de6a05491b8f763e925072f56079889bd3a8d8d",
+    "backend/supabase/tests/test_local_function_runtime_contract.py": "f879eac26cfc879259733d98edaac9affdbf5d2821486fbd34f73a3e0bb0b5dd",
+    "backend/supabase/tests/test_local_publication_verifier.py": "bf327fe67cace582c774f5945b73fef1c57ee403dc2258df1fd1176c128e1c61",
+    "backend/supabase/tests/test_local_replay_contract.py": "86e903709f95b8129eb99b549fa8b153b69a94b992d9383e2ca75ef11d1a2aa6",
+    "backend/supabase/tests/test_local_seed_receipt_contract.py": "48744307276a334abdd20220cc08c5add36c60ac96ab9eb9d0dc785a5a0cad3f",
+    "docs/operations/nightly-regression.md": "5a4c7a76813d551efea1399257207214ccebf99a96594cb17d9fc6c258fd524b"
+  }
+}
