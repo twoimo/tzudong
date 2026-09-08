@@ -287,7 +287,7 @@ class G026BundleTests(unittest.TestCase):
         )
         self.assertEqual(
             binding['applicationPrerequisites']['outputSha256'],
-            '34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15',
+            'c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356',
         )
         normalization = source.index(verify.LEGACY_SHAPE_NORMALIZATION_LABEL)
         rename = source.index('ALTER TABLE public.profiles RENAME COLUMN profile_picture TO avatar_url;')

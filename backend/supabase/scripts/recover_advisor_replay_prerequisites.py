@@ -14,7 +14,7 @@ from pathlib import Path
 import re
 
 SOURCE_PATH = "backend/supabase/baselines/local/application-prerequisites.sql"
-SOURCE_SHA256 = "34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15"
+SOURCE_SHA256 = "c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356"
 SIGNATURES = (
     "get_all_approved_restaurant_names()",
     "get_categories_by_restaurant_name_or_youtube_url(text,text)",

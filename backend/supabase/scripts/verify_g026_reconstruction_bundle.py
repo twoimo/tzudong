@@ -131,13 +131,13 @@ LEGACY_SHAPE_NORMALIZATION = {
     'applicationPrerequisites': {
         'manifestPath': 'backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json',
         'manifestByteLength': 1252,
-        'manifestSha256': '055d31e0d7597ec026e570eaf85adfb2c4a6c5480f80a3ed7a7ca525a6b2a9f3',
+        'manifestSha256': '550411023fde2088b785676af5dc33dfa2569c0f01ececf24420c66332f860b3',
         'sourcePath': 'backend/supabase/baselines/pre-20260214-public-schema.sql',
         'sourceByteLength': 203938,
         'sourceSha256': '7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119',
         'outputPath': 'backend/supabase/baselines/local/application-prerequisites.sql',
-        'outputByteLength': 210374,
-        'outputSha256': '34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15',
+        'outputByteLength': 210720,
+        'outputSha256': 'c4fce4f7ddaf6315474cb3a3d408eef1fb7ff538af7f39183ebdc46828630356',
     },
     'operations': [
         {
