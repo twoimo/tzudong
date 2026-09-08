@@ -1,0 +1,127 @@
+"""Offline proof-shape validation; fixture receipts are not database evidence."""
+import copy
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+from backend.supabase.scripts import local_replay_contract as contract
+
+ROOT = Path(__file__).resolve().parents[3]
+PREDECESSOR = 'backend/supabase/migrations/20260812000300_local_admin_data_boundary_convergence.sql'
+
+
+class LocalReplayContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.sql = {}
+        cls.receipts = {}
+        with tempfile.TemporaryDirectory() as directory:
+            for path in contract.supported_sources():
+                plan = contract.plan(path)
+                verifier = next(p for p in plan['bindings'] if '/verify_' in p)
+                output = Path(directory) / Path(path).name
+                args = ['python3', str(ROOT / verifier), '--source', str(ROOT / path), '--output', str(output)]
+                if PREDECESSOR in plan['bindings']:
+                    args += ['--predecessor', str(ROOT / PREDECESSOR)]
+                subprocess.run(args, check=True, capture_output=True, timeout=30)
+                cls.sql[path] = output.read_bytes()
+                receipt = {'source_sha256': plan['source_sha256'], 'read_only': True}
+                if 'admin_user_ids' in path:
+                    receipt.update(schema='admin-ids-source-replay-overlap-v1', disposition='already-present-contract-verified',
+                                   body_sha256='be57e320d7a79e6e7382bce9e942b3e684fc50246beb44deaa67c408cb553acd')
+                elif 'admin_management_group' in path:
+                    receipt.update(schema='admin-management-group-source-overlap-v1', already_present_contract_verified=True)
+                else:
+                    receipt.update(schema='g014-owner-pg15-replay-v1', disposition='legacy-contract-preserved')
+                if PREDECESSOR in plan['bindings']:
+                    receipt['predecessor_sha256'] = plan['bindings'][PREDECESSOR]
+                cls.receipts[path] = receipt
+
+    def proof(self, path):
+        return contract.assemble_proof(path, self.sql[path], json.dumps(self.receipts[path]).encode())
+
+    def test_generated_sql_and_exact_fixture_receipts_match_all_pins(self):
+        self.assertEqual(len(contract.supported_sources()), 3)
+        for path in contract.supported_sources():
+            proof = self.proof(path)
+            self.assertNotEqual(proof['disposition'], 'applied')
+            contract.validate_proof(proof, self.sql[path])
+
+    def test_unknown_source_cannot_gain_a_replay_disposition(self):
+        for path in (PREDECESSOR, '../migrations.sql', '/tmp/migration.sql'):
+            with self.assertRaisesRegex(contract.ReplayContractError, 'source_unsupported'):
+                contract.plan(path)
+
+    def test_every_source_and_verifier_dependency_is_bound(self):
+        for path in contract.supported_sources():
+            plan = contract.plan(path)
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                for name in plan['bindings']:
+                    target = root / name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(ROOT / name, target)
+                contract.plan(path, root=root)
+                for name in plan['bindings']:
+                    with self.subTest(path=path, dependency=name):
+                        target = root / name
+                        original = target.read_bytes()
+                        target.write_bytes(original + b'\n')
+                        with self.assertRaisesRegex(contract.ReplayContractError, 'source_drift'):
+                            contract.plan(path, root=root)
+                        target.write_bytes(original)
+
+    def test_symlinked_sources_are_rejected_even_with_matching_bytes(self):
+        path = contract.supported_sources()[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'backend').symlink_to(ROOT / 'backend', target_is_directory=True)
+            with self.assertRaisesRegex(contract.ReplayContractError, 'source_custody'):
+                contract.plan(path, root=root)
+
+    def test_sql_changes_and_raw_migration_bytes_are_rejected(self):
+        for path in contract.supported_sources():
+            for sql in (self.sql[path] + b'\n', (ROOT / path).read_bytes()):
+                with self.assertRaisesRegex(contract.ReplayContractError, 'sql_drift'):
+                    contract.assemble_proof(path, sql, json.dumps(self.receipts[path]).encode())
+
+    def test_receipt_requires_exact_boolean_read_only_and_fields(self):
+        for path in contract.supported_sources():
+            for wrong in (False, 1, 'true', None):
+                receipt = {**self.receipts[path], 'read_only': wrong}
+                with self.assertRaisesRegex(contract.ReplayContractError, 'receipt_mismatch'):
+                    contract.assemble_proof(path, self.sql[path], json.dumps(receipt).encode())
+            receipt = {**self.receipts[path], 'applied': True}
+            with self.assertRaisesRegex(contract.ReplayContractError, 'receipt_mismatch'):
+                contract.assemble_proof(path, self.sql[path], json.dumps(receipt).encode())
+
+    def test_duplicate_and_oversized_receipts_are_rejected(self):
+        path = contract.supported_sources()[0]
+        for raw in (b'{"read_only":false,"read_only":true}', b' ' * 16385, b'not JSON'):
+            with self.assertRaises(contract.ReplayContractError):
+                contract.assemble_proof(path, self.sql[path], raw)
+
+    def test_oversized_integer_has_a_bounded_parser_failure(self):
+        path = contract.supported_sources()[0]
+        raw = b'{"x":' + b'9' * 5000 + b'}'
+        with self.assertRaisesRegex(contract.ReplayContractError, 'replay_receipt_invalid'):
+            contract.assemble_proof(path, self.sql[path], raw)
+
+    def test_changed_proof_cannot_become_applied_or_hide_binding_drift(self):
+        path = contract.supported_sources()[-1]
+        for field, value in [('disposition', 'applied'), ('schema', 'local-receipt-v1'),
+                             ('receipt_sha256', '0' * 64), ('bindings_sha256', '0' * 64), ('bindings', {})]:
+            proof = copy.deepcopy(self.proof(path))
+            proof[field] = value
+            with self.assertRaisesRegex(contract.ReplayContractError, 'proof_mismatch'):
+                contract.validate_proof(proof, self.sql[path])
+
+    def test_proofs_for_different_migrations_cannot_be_swapped(self):
+        paths = contract.supported_sources()
+        proof = self.proof(paths[0])
+        proof['migration_path'] = paths[1]
+        with self.assertRaises(contract.ReplayContractError):
+            contract.validate_proof(proof, self.sql[paths[1]])
