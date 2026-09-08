@@ -149,6 +149,24 @@ REVOKE ALL ON FUNCTION privacy_retention.assert_g014_workflow_owner_contract() F
         if setup.returncode:
             raise AssertionError(setup.stderr)
 
+    def test_local_replay_uses_required_login_actor(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        sql = replay.verification_sql(MIGRATION.read_bytes())
+        rejected = self.fixture.query(sql.decode(), role='supabase_admin')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('g014_owner_replay_executor_denied', rejected.stderr)
+        fixture = self.fixture
+        class Executor:
+            def capture(self, statement, *, role='supabase_admin'):
+                result = fixture.query(statement.decode(), role=role)
+                if result.returncode:
+                    raise AssertionError(result.stderr)
+                return result.stdout.encode()
+            def run(self, statement):
+                raise AssertionError('Read-only replay must not write')
+        proof = local_migrate.verify_replay(Executor(), MIGRATION.relative_to(ROOT).as_posix())
+        self.assertEqual(proof['disposition'], 'legacy-contract-preserved')
+
     def test_legacy_contract_passes_without_private_schema_access(self):
         before = self.fixture.query('SELECT md5(string_agg(row_to_json(p)::text,\',\' ORDER BY oid)) FROM pg_proc p;').stdout
         result = self.fixture.query(replay.verification_sql(MIGRATION.read_bytes()).decode(), role='postgres')
