@@ -1,0 +1,58 @@
+{
+  "kind": "isolated-local-runtime-admission-diagnosis",
+  "source_commit": "03c9c7ca",
+  "project": "tzudong-local-007e6680d206",
+  "port_base": 19000,
+  "compose_renderer": "2.39.4",
+  "stack_start": {
+    "ok": true,
+    "healthy_services": 14
+  },
+  "prerequisite": {
+    "applied": true,
+    "sha256": "34e7904a4dfb271d811d433102e92c94aceff6528c751bf5b02f94c2a56f3d15"
+  },
+  "migration_apply": {
+    "exit_code": 2,
+    "fixed_code": "psql_failed",
+    "ambiguous_source": "backend/supabase/migrations/20260906040116_admin_user_ids_catalog_slice.sql",
+    "recorded_error": "commit_ambiguous_readback_only",
+    "ledger_status_counts": {
+      "applied": 93,
+      "ambiguous": 1
+    }
+  },
+  "readonly_readback": {
+    "postgres_server_version_num": 150008,
+    "target_rpc_exists": true,
+    "source_required_postgres_major": 17,
+    "source_requires_rpc_absent": true,
+    "existing_overlap_verifier": {
+      "kind": "read_only_existing_overlap_verifier",
+      "exit_code": 3,
+      "fixed_errors": [
+        "admin_ids_replay_acl_mismatch"
+      ]
+    }
+  },
+  "remaining": [
+    "Resolve local replay permissions and exact source overlap using existing source-bound verifier; preserve hosted guards",
+    "Use a fresh isolated database after ambiguous transaction; never replay in place or forge ledger",
+    "Run browser regression only after full runtime admission"
+  ],
+  "browser_execution": "not_run",
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Runtime prerequisite diagnosis only"
+  },
+  "boundaries": [
+    "No hosted mutation",
+    "Existing other local stack preserved",
+    "Generated credentials not retained in this report",
+    "Ambiguous database retained for read-only diagnosis"
+  ]
+}
