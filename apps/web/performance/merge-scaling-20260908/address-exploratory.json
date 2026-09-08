@@ -1,0 +1,60 @@
+{
+  "scope": "Exploratory synthetic test-case timing, not a G003 admission or user-latency claim",
+  "inputRows": 12000,
+  "samplesPerVariant": 7,
+  "metric": "Bun test-case duration including assertions",
+  "budgets": {
+    "absoluteMs": 200,
+    "relativeImprovementMinimum": 0.1,
+    "absoluteNoiseFloorMs": 5,
+    "noiseRule": "improvement must exceed max(5ms,2*MAD of either variant)"
+  },
+  "environment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "bun": "1.4.0"
+  },
+  "baselineCommit": "300482eb5e89983aba0239e91eba3ebb5280c87b",
+  "baselineMs": [
+    388.51,
+    385.88,
+    305.52,
+    277.36,
+    274.95,
+    281.29,
+    305.29
+  ],
+  "candidateCommit": "ee175dfa4a898bb716ff764730695684147f0e1d",
+  "candidateMs": [
+    29.16,
+    27.48,
+    27.95,
+    34.33,
+    26.32,
+    21.98,
+    24.14
+  ],
+  "summary": {
+    "baselineMedianMs": 305.29,
+    "candidateMedianMs": 27.48,
+    "relativeReduction": 0.909987225261227,
+    "baselineMadMs": 27.930000000000007,
+    "candidateMadMs": 1.6799999999999997,
+    "noiseThresholdMs": 55.860000000000014,
+    "exploratoryBudgetsPassed": true
+  },
+  "limitations": [
+    "Synthetic already-connected same-address fixture only",
+    "Test duration includes assertions and module setup",
+    "Sequential local cohorts, uncontrolled host load, not interleaved",
+    "No 24-hour window or production measurement; no canonical G003 scored admission",
+    "Mixed unconnected address groups retain pairwise comparisons"
+  ],
+  "sourceSha256": "82c619681039717d78f54fcff35af07b9bdb838a1f97b81cd63a07bd50a332bc",
+  "checks": {
+    "relatedTestsPassed": 16,
+    "relatedTestsFailed": 0,
+    "typecheckParity": "passed, zero diagnostics",
+    "targetedEslint": "passed",
+    "diffCheck": "passed"
+  }
+}
