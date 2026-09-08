@@ -103,7 +103,7 @@ EXPECTED_SOURCE = Path("backend/supabase/migrations")
 PREREQUISITE_SOURCE = Path("backend/supabase/baselines/pre-20260214-public-schema.sql")
 PREREQUISITE_OUTPUT = Path("backend/supabase/baselines/local/application-prerequisites.sql")
 PREREQUISITE_MANIFEST = Path("backend/supabase/baselines/local/APPLICATION_PREREQUISITES.v1.json")
-PREREQUISITE_TRANSFORM_VERSION = "local-application-prerequisite-v1"
+PREREQUISITE_TRANSFORM_VERSION = "local-application-prerequisite-v2"
 BASELINE_REMOVALS = (
     r"\restrict CFkUqswlnIOxGIipA4VAbdNrwJZOQL0n0ud8ggBuRxMk3QqgorIxPnrRTjeg9VD",
     "SET transaction_timeout = 0;",
@@ -559,7 +559,14 @@ SELECT migration_id, ordinal, source_sha256, source_byte_length,
   FROM _tzudong_local.migration_ledger
  WHERE migration_id = {migration_id};
 """
-PREREQUISITE_COMPATIBILITY_SQL = """\
+LOCAL_CREATOR_DEFAULT_ACL_SQL = """\
+-- Local PG15 grants postgres EXECUTE on future supabase_admin public functions.
+-- Canonical migrations revoke their named clients and set their final owner;
+-- remove this local-only inherited ACL before those functions are created.
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM postgres;
+"""
+PREREQUISITE_COMPATIBILITY_SQL = LOCAL_CREATOR_DEFAULT_ACL_SQL + """\
 -- Compatibility predecessors required by canonical backend migrations.
 DO $$
 BEGIN

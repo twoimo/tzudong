@@ -1,5 +1,5 @@
 -- tzudong local application prerequisite
--- transform_version: local-application-prerequisite-v1
+-- transform_version: local-application-prerequisite-v2
 -- source_sha256: 7660b1650c8cd974991437948d65e70cb7c8a65665a16eeb90162e0c2fe3e119
 -- extension_schema: extensions
 -- search_path: public,extensions,pg_catalog
@@ -6382,6 +6382,11 @@ ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
 
 
+-- Local PG15 grants postgres EXECUTE on future supabase_admin public functions.
+-- Canonical migrations revoke their named clients and set their final owner;
+-- remove this local-only inherited ACL before those functions are created.
+ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM postgres;
 -- Compatibility predecessors required by canonical backend migrations.
 DO $$
 BEGIN

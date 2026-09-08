@@ -109,6 +109,15 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertTrue(committing["hasCommit"])
         self.assertFalse(committing["hasRollback"])
 
+    def test_generated_prerequisite_matches_source_and_creator_acl_transform(self) -> None:
+        output, manifest = local_migrate.build_prerequisite(
+            (ROOT / local_migrate.PREREQUISITE_SOURCE).read_bytes()
+        )
+        self.assertEqual(output, (ROOT / local_migrate.PREREQUISITE_OUTPUT).read_bytes())
+        self.assertEqual(manifest, json.loads((ROOT / local_migrate.PREREQUISITE_MANIFEST).read_text()))
+        self.assertEqual(output.count(local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL.encode()), 1)
+        self.assertEqual(manifest["transformVersion"], "local-application-prerequisite-v2")
+
     def test_ddl_prerequisite_is_ddl_only_and_localizes_extensions(self) -> None:
         sql = b"CREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE sample(id integer);\n"
         transformed = local_migrate.transform_ddl_prerequisite(sql).decode("utf-8")
