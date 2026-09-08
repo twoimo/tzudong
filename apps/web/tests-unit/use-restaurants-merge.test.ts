@@ -101,6 +101,29 @@ describe('buildRestaurantSelectFields', () => {
 });
 
 describe('mergeRestaurants', () => {
+    test('retains every member of a large already-connected address group', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({
+            id: `address-${index}`, approved_name: '같은 주소 식당',
+            created_at: '2026-01-01T00:00:00Z',
+        }));
+        const result = mergeRestaurants(rows) as Array<Record<string, unknown>>;
+        expect(result).toHaveLength(1);
+        expect(result[0].mergedRestaurants).toEqual(rows);
+        expect(result[0].review_count).toBe(rows.length);
+    });
+
+    test('still joins similar names and retains different names within one address', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const longName = '서울특별시정성가득한전통한식전문음식점';
+        const rows = [longName + '가', '해물횟집', longName + '나', longName + '가'].map((name, index) =>
+            makeRestaurant({ id: `mixed-${index}`, approved_name: name }));
+        const result = mergeRestaurants(rows) as Array<{ mergedRestaurants: Array<{ id: string }> }>;
+        expect(result.map(group => group.mergedRestaurants.map(row => row.id))).toEqual([
+            ['mixed-0', 'mixed-2', 'mixed-3'], ['mixed-1'],
+        ]);
+    });
+
     test('preserves first-seen group and member order with interleaved duplicates', async () => {
         const { mergeRestaurants } = await loadUseRestaurants();
         const rows = ['서울식당', '부산횟집', '서울식당', '부산횟집'].map((name, index) =>
