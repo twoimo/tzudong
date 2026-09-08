@@ -1591,7 +1591,9 @@ class PsqlExecutor:
         environment.setdefault("HOME", str(Path.home()))
         return environment
 
-    def _base(self, variables: Mapping[str, str] | None = None) -> list[str]:
+    def _base(self, variables: Mapping[str, str] | None = None, *, role: str = "supabase_admin") -> list[str]:
+        if role not in {"supabase_admin", "postgres"}:
+            raise LocalMigrationError("psql_role_denied")
         if "://" in self.docker or (not shutil.which(self.docker) and not Path(self.docker).is_file()):
             raise LocalMigrationError("docker_unavailable")
         _safe_identifier(self.database, "database")
@@ -1622,7 +1624,7 @@ class PsqlExecutor:
             "--no-align",
             "--tuples-only",
             "--username",
-            "supabase_admin",
+            role,
             "--set",
             "ON_ERROR_STOP=1",
         ])
@@ -1793,12 +1795,12 @@ class PsqlExecutor:
                 raise LocalMigrationError("psql_ambiguous")
             raise LocalMigrationError("psql_failed")
 
-    def capture(self, sql: bytes) -> bytes:
+    def capture(self, sql: bytes, *, role: str = "supabase_admin") -> bytes:
         """Run a read-only query and return stdout without exposing stderr."""
         self._admit_container()
         try:
             result = subprocess.run(
-                self._base(), input=sql, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                self._base(role=role), input=sql, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=self.timeout, env=self._docker_env(),
             )
         except subprocess.TimeoutExpired as error:
@@ -4240,13 +4242,21 @@ def _capture_replay_proofs(executor: PsqlExecutor) -> dict[str, Any]:
     return result
 
 
+def _capture_replay_sql(executor: PsqlExecutor, migration_path: str, sql: bytes) -> bytes:
+    # This pinned catalog-only verifier requires the postgres login identity.
+    # Source migrations and ledger operations retain their supabase_admin actor.
+    if migration_path == "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql":
+        return executor.capture(sql, role="postgres")
+    return executor.capture(sql)
+
+
 def _apply_replay_verification(executor: PsqlExecutor, item: Mapping[str, Any], sql: bytes) -> None:
     contract = _load_replay_contract()
     try:
         # Validate fresh source and verifier bytes before executing read-only SQL.
         if sql != contract.generate_verification_sql(item["path"]):
             raise LocalMigrationError("replay_sql_drift")
-        proof = contract.assemble_proof(item["path"], sql, executor.capture(sql))
+        proof = contract.assemble_proof(item["path"], sql, _capture_replay_sql(executor, item["path"], sql))
         contract.validate_proof(proof, sql)
     except contract.ReplayContractError as error:
         raise LocalMigrationError(str(error)) from error
@@ -4276,7 +4286,7 @@ def _apply_replay_verification(executor: PsqlExecutor, item: Mapping[str, Any], 
     if canonical_json(actual) != canonical_json(_expected_snapshot_row(item)):
         raise LocalMigrationError("replay_terminal_readback")
     try:
-        contract_readback = contract.assemble_proof(item["path"], sql, executor.capture(sql))
+        contract_readback = contract.assemble_proof(item["path"], sql, _capture_replay_sql(executor, item["path"], sql))
         contract.validate_proof(contract_readback, sql)
     except contract.ReplayContractError as error:
         raise LocalMigrationError("replay_contract_readback") from error
@@ -4289,7 +4299,7 @@ def verify_replay(executor: PsqlExecutor, migration_path: str) -> dict[str, Any]
     contract = _load_replay_contract()
     try:
         sql = contract.generate_verification_sql(migration_path)
-        raw = executor.capture(sql)
+        raw = _capture_replay_sql(executor, migration_path, sql)
         proof = contract.assemble_proof(migration_path, sql, raw)
         contract.validate_proof(proof, sql)
         return proof

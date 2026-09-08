@@ -132,13 +132,14 @@ class LocalReplayContractTests(unittest.TestCase):
             calls = []
             receipt = json.dumps(self.receipts[path]).encode()
             class Executor:
-                def capture(self, sql):
-                    calls.append(sql)
+                def capture(self, sql, *, role="supabase_admin"):
+                    calls.append((sql, role))
                     return receipt
                 def run(self, sql):
                     raise AssertionError('Replay diagnosis must never write a ledger')
             proof = local_migrate.verify_replay(Executor(), path)
-            self.assertEqual(calls, [self.sql[path]])
+            expected_role = "postgres" if path.endswith("20260906064252_g014_pg17_workflow_owner_contract.sql") else "supabase_admin"
+            self.assertEqual(calls, [(self.sql[path], expected_role)])
             contract.validate_proof(proof, self.sql[path])
 
     def test_executor_rejects_invalid_result_and_unknown_source(self):
