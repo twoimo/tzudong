@@ -96,6 +96,14 @@ apps/web/tests/temp-*.spec.ts
 .codex/
 .agent/
 .agents/
+# Share only the project instruction-audit skill; keep other local agent state ignored.
+!/.agents/
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/tzudong-guidance-audit/
+/.agents/skills/tzudong-guidance-audit/*
+!/.agents/skills/tzudong-guidance-audit/SKILL.md
 .gemini/
 AGENTS.md
 !/AGENTS.md
