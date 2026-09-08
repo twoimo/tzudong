@@ -168,6 +168,21 @@ SET SESSION AUTHORIZATION postgres;
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)['disposition'], 'already-present-contract-verified')
 
+    def test_extra_postgres_acl_is_not_mistaken_for_verified_source_overlap(self):
+        # Match the extra explicit ACL observed in the failed local replay.
+        # This tests contract rejection, not how that ACL was originally created.
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        snapshot = "SELECT proacl::text FROM pg_proc WHERE oid='public.read_admin_user_ids_for_management()'::regprocedure;"
+        before = self.query(snapshot).stdout
+        setup = 'BEGIN; GRANT EXECUTE ON FUNCTION public.read_admin_user_ids_for_management() TO postgres;\n'
+        rejected = self.query(setup + body + '\nROLLBACK;')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('admin_ids_replay_acl_mismatch', rejected.stderr)
+        accepted = self.query(setup + 'REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM postgres;\n' + body + '\nROLLBACK;')
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(json.loads(accepted.stdout)['disposition'], 'already-present-contract-verified')
+        self.assertEqual(self.query(snapshot).stdout, before)
+
     def test_catalog_drift_is_rejected(self):
         cases = [
             ('DROP FUNCTION public.read_admin_user_ids_for_management();', 'rpc_mismatch'),
