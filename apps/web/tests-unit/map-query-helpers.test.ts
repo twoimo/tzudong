@@ -67,7 +67,6 @@ describe('map query helpers', () => {
                 minUserVisits: 0,
                 minJjyangVisits: 0,
             },
-            isLoaded: true,
             selectedRegion: '서울',
         });
 
@@ -99,7 +98,6 @@ describe('map query helpers', () => {
                 minUserVisits: 0,
                 minJjyangVisits: 0,
             },
-            isLoaded: true,
             selectedRegion: '서울',
         });
 
@@ -130,7 +128,6 @@ describe('map query helpers', () => {
                 minJjyangVisits: 0,
                 featuredTheme: 'hot-view' as never,
             },
-            isLoaded: true,
             selectedRegion: '서울',
         });
 

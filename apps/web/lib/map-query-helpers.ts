@@ -61,7 +61,6 @@ export function buildNaverRestaurantsQueryOptions({
     bounds,
     compact = false,
     filters,
-    isLoaded,
     selectedRegion,
 }: {
     bounds?: {
@@ -72,7 +71,6 @@ export function buildNaverRestaurantsQueryOptions({
     };
     compact?: boolean;
     filters: FilterState;
-    isLoaded: boolean;
     selectedRegion: Region | null;
 }) {
     return {
@@ -83,7 +81,8 @@ export function buildNaverRestaurantsQueryOptions({
         minReviews: filters.minReviews,
         featuredTheme: filters.featuredTheme ?? null,
         includeVerifiedReviewCounts: false,
-        enabled: isLoaded,
+        // Public restaurant data has no dependency on the map SDK.
+        enabled: true,
     };
 }
 export function resolveNaverRestaurantEmptyStateMessage(filters: Pick<FilterState, 'categories' | 'featuredTheme' | 'minReviews'>): string {

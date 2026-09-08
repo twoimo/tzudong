@@ -1,0 +1,41 @@
+{
+  "kind": "naver-query-scheduling-verification",
+  "baseline_commit": "90268c46",
+  "change": "Start public Naver restaurant query independently of SDK readiness; retain SDK/map initialization guards",
+  "checks": {
+    "affected_tests": {
+      "passed": 14,
+      "assertions": 58
+    },
+    "regression_against_baseline": {
+      "failed": 2,
+      "reason": "SDK-unready baseline started zero requests; candidate starts one"
+    },
+    "targeted_eslint": "passed",
+    "typecheck_parity": {
+      "status": "passed",
+      "diagnostics": 0,
+      "logical_inputs": 2454
+    }
+  },
+  "scope": "Real TanStack QueryObserver with controlled queryFn; helper and map overlay tests; source inspection of initialization guards",
+  "limitations": [
+    "Does not mount NaverMapView or exercise useRestaurants transport",
+    "No browser marker, SDK failure rendering, hosted behavior or latency evidence",
+    "Mobile bounded-to-full query transition still needs investigation and can cause overlapping requests"
+  ],
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Behavioral dependency removal, not a timing benchmark"
+  },
+  "source_sha256": {
+    "apps/web/components/map/NaverMapView.tsx": "521de53944fdd24c59e33c219f255928f3b824312173b37216b74fbdbeccb449",
+    "apps/web/lib/map-query-helpers.ts": "16321d2923143934bc5ee9239c5a8970e145783407d95768d75883be02fb6b5e",
+    "apps/web/tests-unit/map-query-helpers.test.ts": "2b27b88ebd12aeba1089816a4d0c12162518da05871b47f99b06546c66fd9683",
+    "apps/web/tests-unit/naver-query-startup.test.ts": "53d3ebc0b65a9b831c26f5db250497420afe7fcf544b0c8b04959dba097364cb"
+  }
+}
