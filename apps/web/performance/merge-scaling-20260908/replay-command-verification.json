@@ -1,0 +1,21 @@
+{
+  "command": "local-migrate.py verify-replay",
+  "exit_code": 2,
+  "fixed_code": "local-migrate: psql_ambiguous",
+  "proof_emitted": false,
+  "ledger_and_target_metadata_unchanged": true,
+  "snapshot_sha256": "dea06b3cc10b34c678f332bc6262e44a477a4e16d9d8ed99956a55164d8c1659",
+  "kind": "read_only_replay_command_verification",
+  "base_commit": "76595300",
+  "unit_tests_passed": 23,
+  "positive_database_verification": "not_completed",
+  "browser_execution": "not_run",
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Runtime prerequisite diagnostic only"
+  }
+}
