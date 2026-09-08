@@ -1,0 +1,50 @@
+{
+  "kind": "local-replay-acl-diagnosis",
+  "base_commit": "c8f479eb",
+  "observed_target": "public.read_admin_user_ids_for_management()",
+  "observed_explicit_execute_roles": [
+    "postgres",
+    "privacy_workflow_owner",
+    "service_role"
+  ],
+  "effective_api_execute": {
+    "anon": false,
+    "authenticated": false,
+    "service_role": true
+  },
+  "test_command": "TZUDONG_ADMIN_IDS_LOCAL_PG=1 python3 -m unittest backend.supabase.tests.test_admin_user_ids_replay",
+  "tests_passed": 9,
+  "isolated_pg15_regression": "Extra postgres ACL rejected; exact removal passes contract; mutations rolled back; fixture container removed",
+  "rejected_hypothesis": "Creator default ACL and ownership transfer alone did not reproduce the grant; its original introduction remains unproven",
+  "runtime_state": "Failed database preserved and owned stack stopped; no replay or persistent ACL mutation",
+  "required_implementation": {
+    "status": "not_implemented",
+    "dispositions": {
+      "20260906040116_admin_user_ids_catalog_slice.sql": "verified-existing",
+      "20260906053936_admin_management_group_catalog_slice.sql": "verified-existing",
+      "20260906064252_g014_pg17_workflow_owner_contract.sql": "legacy-contract-preserved"
+    },
+    "authority": "Existing exact-source read-only verifiers used by generate_g014_catalog_contract_baseline.sh",
+    "consumer_paths": [
+      "backend/supabase/scripts/local-migrate.py",
+      "backend/supabase/scripts/local-function-runtime-scan.py",
+      "apps/web/scripts/local-supabase-runtime.mjs",
+      "apps/web/scripts/run-nightly-regression.mjs",
+      ".github/scripts/verify-nightly-local-publication.py"
+    ],
+    "requirements": [
+      "Pin source, predecessor, verifier dependencies and generated SQL hashes",
+      "Retain verified receipt and independent readback separately from applied status",
+      "Version receipt contract and validate all consumers; never accept arbitrary alternate terminal states",
+      "Resolve ACL replay origin and use fresh database before full replay"
+    ]
+  },
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Behavioral regression and replay integration scope only; browser performance remains unverified"
+  }
+}
