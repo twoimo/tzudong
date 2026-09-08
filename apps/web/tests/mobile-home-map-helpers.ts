@@ -900,6 +900,22 @@ export async function installMobileHomeMapTestMocks(page: Page) {
     await installMobileHomeDataMocks(page);
 }
 
+// Deliberately leave window.naver absent until the test releases the local SDK.
+export async function installDeferredMobileHomeMapTestMocks(page: Page) {
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => { release = resolve; });
+    await installMobileHomeDataMocks(page);
+    await page.route('**/__local/naver-maps.js', async (route) => {
+        if (!isAllowedLocalNightlyUrl(new URL(route.request().url()))) {
+            await route.abort('blockedbyclient');
+            return;
+        }
+        await ready;
+        await route.fulfill({ contentType: 'application/javascript', body: MOCK_NAVER_MAPS_SOURCE });
+    });
+    return release;
+}
+
 export async function installMobileHomeDataMocks(page: Page) {
     await page.route(SUPABASE_REST_ROUTE, handleSupabaseRestRoute);
     await page.route(SUPABASE_AUTH_ROUTE, handleSupabaseAuthRoute);
