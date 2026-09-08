@@ -4153,6 +4153,30 @@ def compare_receipts(first: Path, second: Path) -> dict[str, Any]:
     }
 
 
+def _load_replay_contract() -> Any:
+    path = _require_owned_regular_file(repository_root() / "backend/supabase/scripts/local_replay_contract.py", "replay_contract_invalid")
+    _reject_path_custody(path)
+    spec = importlib.util.spec_from_file_location("tzudong_local_replay_contract", path)
+    if spec is None or spec.loader is None:
+        raise LocalMigrationError("replay_contract_invalid")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def verify_replay(executor: PsqlExecutor, migration_path: str) -> dict[str, Any]:
+    """Read-only diagnosis; never update a ledger or admit a web runtime."""
+    contract = _load_replay_contract()
+    try:
+        sql = contract.generate_verification_sql(migration_path)
+        raw = executor.capture(sql)
+        proof = contract.assemble_proof(migration_path, sql, raw)
+        contract.validate_proof(proof, sql)
+        return proof
+    except contract.ReplayContractError as error:
+        raise LocalMigrationError(str(error)) from error
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="local-migrate.py", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -4202,6 +4226,15 @@ def _parser() -> argparse.ArgumentParser:
     receipt.add_argument("--allow-local", action="store_true", help="required explicit local-only admission")
     receipt.add_argument("--timeout", type=float, default=300.0)
     receipt.add_argument("--output", type=Path, help="create a new receipt file instead of stdout")
+    replay = sub.add_parser("verify-replay", help="read-only pinned replay diagnosis; does not mark applied or admit runtime")
+    replay.add_argument("--migration", required=True)
+    replay.add_argument("--container", required=True)
+    replay.add_argument("--database", default="postgres")
+    replay.add_argument("--docker", default="docker")
+    replay.add_argument("--timeout", type=float, default=60.0)
+    replay.add_argument("--allow-local", action="store_true")
+    replay.add_argument("--output", type=Path)
+    add_binding_options(replay)
     compare = sub.add_parser("compare-receipts", help="compare two sanitized local receipt-v1 files")
     compare.add_argument("--first", required=True, type=Path)
     compare.add_argument("--second", required=True, type=Path)
@@ -4236,6 +4269,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     try:
+        if args.command == "verify-replay":
+            if not args.allow_local:
+                raise LocalMigrationError("replay_requires_allow_local")
+            _emit(verify_replay(_executor_from_args(args), args.migration), args.output)
+            return 0
         if args.command == "generate-prerequisite":
             candidate = (repository_root() / args.input) if not args.input.is_absolute() else args.input
             input_path = _require_owned_regular_file(candidate, "prerequisite_source_invalid")

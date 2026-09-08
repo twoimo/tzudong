@@ -142,6 +142,31 @@ def validate_proof(proof: dict[str, Any], verification_sql: bytes, *, root: Path
         raise ReplayContractError('replay_proof_mismatch')
 
 
+def generate_verification_sql(migration_path: str, *, root: Path = ROOT) -> bytes:
+    """Run the pinned offline generator, then recheck inputs and exact SQL bytes."""
+    import subprocess
+    import sys
+    import tempfile
+    binding = plan(migration_path, root=root)
+    verifier = next(path for path in binding['bindings'] if '/verify_' in path)
+    predecessors = [path for path in binding['bindings'] if '/migrations/' in path and path != migration_path]
+    with tempfile.TemporaryDirectory(prefix='tzudong-replay-') as directory:
+        output = Path(directory) / 'verification.sql'
+        args = [sys.executable, str(root / verifier), '--source', str(root / migration_path), '--output', str(output)]
+        if predecessors:
+            args += ['--predecessor', str(root / predecessors[0])]
+        try:
+            result = subprocess.run(args, capture_output=True, timeout=30, env={'PATH': os.defpath})
+            if result.returncode != 0:
+                raise ReplayContractError('replay_generator_failed')
+            sql = output.read_bytes()
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise ReplayContractError('replay_generator_failed') from error
+    if plan(migration_path, root=root) != binding or digest(sql) != binding['verification_sql_sha256']:
+        raise ReplayContractError('replay_sql_drift')
+    return sql
+
+
 def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description='Inspect pinned local replay bindings; does not execute SQL or admit a runtime.')

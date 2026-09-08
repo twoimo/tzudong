@@ -201,6 +201,12 @@ preflight; a self-hosted runner is not a silent fallback.
 A manual dispatch from any non-main ref is read-only and cannot publish a
 prerelease; publication is limited to the protected default branch.
 
+## Read-only replay diagnosis
+
+`python3 backend/supabase/scripts/local-migrate.py verify-replay --migration <exact repository-relative source path> --container <this checkout's db container> --allow-local` validates one of the three pinned September 6 recovery-source overlap contracts. It uses the same project/container/environment admission as the local executor. Optional `--output` creates a new proof file only after the exact verifier SQL and bounded result are validated.
+
+This diagnostic does not repair ACLs, update the migration ledger, clear ambiguity, seed data, or admit the web/nightly runtime. A failed verifier emits no success proof. A successful result describes `verified-existing` or `legacy-contract-preserved`, never application of the hosted PG17 source. Versioned ledger and runtime-consumer integration is still required before these proofs can participate in full local replay admission.
+
 ## Local Compose bootstrap
 
 Local nightly is canonical. It uses the pinned local-only

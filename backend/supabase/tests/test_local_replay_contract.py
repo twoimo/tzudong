@@ -125,3 +125,41 @@ class LocalReplayContractTests(unittest.TestCase):
         proof['migration_path'] = paths[1]
         with self.assertRaises(contract.ReplayContractError):
             contract.validate_proof(proof, self.sql[paths[1]])
+
+    def test_executor_uses_only_pinned_read_only_sql_and_preserves_ledger(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        for path in contract.supported_sources():
+            calls = []
+            receipt = json.dumps(self.receipts[path]).encode()
+            class Executor:
+                def capture(self, sql):
+                    calls.append(sql)
+                    return receipt
+                def run(self, sql):
+                    raise AssertionError('Replay diagnosis must never write a ledger')
+            proof = local_migrate.verify_replay(Executor(), path)
+            self.assertEqual(calls, [self.sql[path]])
+            contract.validate_proof(proof, self.sql[path])
+
+    def test_executor_rejects_invalid_result_and_unknown_source(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        calls = []
+        class Executor:
+            def capture(self, sql):
+                calls.append(sql)
+                return b'{"applied":true}'
+            def run(self, sql):
+                raise AssertionError('Unexpected write')
+        with self.assertRaisesRegex(local_migrate.LocalMigrationError, 'replay_receipt_mismatch'):
+            local_migrate.verify_replay(Executor(), contract.supported_sources()[0])
+        calls.clear()
+        with self.assertRaisesRegex(local_migrate.LocalMigrationError, 'replay_source_unsupported'):
+            local_migrate.verify_replay(Executor(), '../unknown.sql')
+        self.assertEqual(calls, [])
+
+    def test_cli_requires_explicit_local_admission(self):
+        result = subprocess.run(['python3', str(ROOT / 'backend/supabase/scripts/local-migrate.py'),
+                                 'verify-replay', '--migration', contract.supported_sources()[0],
+                                 '--container', 'unadmitted-fixture'], capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn(b'replay_requires_allow_local', result.stderr)
