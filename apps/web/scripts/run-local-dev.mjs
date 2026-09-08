@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import {
   assertLocalSupabaseReady,
+  assertLocalWebOrigin,
   buildLocalWebEnvironment,
   loadLocalSupabaseEnvironment,
   loadLocalWebInputEnvironment,
@@ -61,6 +62,7 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) {
 let local;
 try {
   local = loadLocalSupabaseEnvironment();
+  assertLocalWebOrigin(local, port);
   assertLocalSupabaseReady(local);
 } catch (error) {
   const message = error instanceof Error ? error.message : '[local-supabase] admission_failed';

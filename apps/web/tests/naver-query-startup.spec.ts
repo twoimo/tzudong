@@ -3,7 +3,7 @@ import { installDeferredMobileHomeMapTestMocks, waitForMockMapReady, waitForVisi
 
 // Requires the repository's admitted local stack and local Naver script mode.
 // No real provider traffic, screenshots, traces, payloads or credentials are retained.
-test.use({ trace: 'off', screenshot: 'off', video: 'off' });
+test.use({ trace: 'off', screenshot: 'off', video: 'off', preloadNaverMock: false });
 test.setTimeout(60000);
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
@@ -30,11 +30,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
             await expect(page.locator('[data-testid="marker"]')).toHaveCount(0);
             releaseSdk();
             await waitForMockMapReady(page);
-            await waitForVisibleMarkers(page, 1);
+            // At the initial national zoom, the three fixtures form one cluster.
+            const cluster = page.locator('.cluster-marker-container').first();
+            await expect(cluster).toBeAttached();
+            // Use the mock's existing cluster event path, which recenters as it zooms.
+            await cluster.evaluate((element) => (element as HTMLElement).click());
+            await waitForVisibleMarkers(page, 3);
             await expect(page.locator('[data-nextjs-dialog]')).toHaveCount(0);
         } finally {
             releaseSdk();
-            await page.unrouteAll({ behavior: 'wait' });
+            // The page fixture owns route teardown; retain its network guards until then.
         }
     });
 }

@@ -1,0 +1,111 @@
+{
+  "schema": "local-runtime-functional-verification-v1",
+  "observedAtUtc": "2026-09-08T05:55:46.671869+00:00",
+  "baseCommit": "e03423206c72f75605c7596b800eef87a79d0b37",
+  "scope": "isolated local development and synthetic fixtures; no hosted writes or production performance claim",
+  "sources": {
+    "apps/web/public/__local/naver-maps.js": "fc06f23cbd8651d94ad862846a5cbc5e2b8c677aa2b9cab4c89197c26efa1cb1",
+    "apps/web/scripts/local-supabase-runtime.mjs": "fdabb69226514acaf3129e5687931c0308fef1753899b9dd3a20a58ac0326a1a",
+    "apps/web/scripts/run-local-dev.mjs": "f3bf0b8534cb37c92c95ef794266595b55728498bfd64409c5493860a6f8c093",
+    "apps/web/tests-unit/local-supabase-runtime.test.ts": "da5c0f57adb90d5f1e1d6adecbf141a0e09d72756c9c054ac852c6507f7b09b5",
+    "apps/web/tests-unit/local-naver-map-stub.test.ts": "6d18cf2b44a9f0a1261b1900bc408d9cefe683826dae81e0c5267fb9e6ae5e33",
+    "apps/web/tests/naver-query-startup.spec.ts": "473d76df7323f71758b63a9e83d230f86d1b1546ae0af62a0124b479eee9acec",
+    "apps/web/tests/nightly/nightly-test.ts": "815532c9473b990c5664b676a0bf99b13e5085dc3eda0fdd7a57d350e5c8cfa9",
+    "docs/operations/nightly-regression.md": "a59cd6be810a8249d21bf2f8206f2793d56ddfbb117d584fcd8f2ccb1eac1deb"
+  },
+  "database": {
+    "project": "tzudong-local-94b16f077221",
+    "sourceUnits": 96,
+    "applied": 93,
+    "verifiedExisting": 2,
+    "legacyContractPreserved": 1,
+    "closureCandidates": 48,
+    "unresolvedPaths": 0,
+    "schemaConvergenceExit": 0,
+    "receiptSchema": "local-receipt-v2",
+    "receiptSha256": "4fc50df65555829a5ece2e7ea26395c29821105ba322154a00446d6fc1912f63",
+    "receiptPrivate": true
+  },
+  "browser": {
+    "delayedSdk": {
+      "engine": "Chromium",
+      "viewportWidths": [
+        390,
+        1280
+      ],
+      "passed": 2,
+      "fixtureSdk": "deferred mock; default eager fixture disabled explicitly",
+      "assertions": [
+        "compact restaurant request before SDK readiness",
+        "SDK absent and markers absent before release",
+        "three individual markers after mock cluster expansion",
+        "no Next error overlay"
+      ]
+    },
+    "aside": {
+      "session": "Ip2y9E50XlTvzu1A",
+      "viewport": [
+        1440,
+        900
+      ],
+      "approvedRestaurantCount": 2,
+      "searchOpenAndClose": "passed",
+      "clusterExpansion": "passed",
+      "markerBoundsBefore": [
+        [
+          494,
+          -162,
+          32,
+          32
+        ],
+        [
+          528,
+          -180,
+          32,
+          32
+        ]
+      ],
+      "markerBoundsAfter": [
+        [
+          783.15625,
+          225.1328125,
+          32,
+          32
+        ],
+        [
+          793.0625,
+          218.515625,
+          32,
+          32
+        ]
+      ],
+      "markersVisibleAfter": 2,
+      "screenshotSha256": "e2fe51373d218a1f141e35161324341f8c56156023279a0ef841ef4dca85a392",
+      "limitations": [
+        "markers partly overlap",
+        "exact viewport resizing unavailable in this Aside API",
+        "local offline map, not the external Naver provider"
+      ]
+    }
+  },
+  "checks": {
+    "localPg15OwnerAndReplayTests": 30,
+    "g026AndAdvisorBindingTests": 39,
+    "nightlyNetworkContractTests": 30,
+    "localRuntimeTests": 17,
+    "localProjectionTests": 2,
+    "typescriptParityDiagnostics": 0,
+    "targetedEslintExit": 0,
+    "unsupported21080DevStartupExit": 2
+  },
+  "cleanup": {
+    "removedObsolete21080BuildBytes": 254349312,
+    "removedGeneratedTsconfigIncludes": 2,
+    "active8080BuildPreserved": true
+  },
+  "remaining": [
+    "production latency budgets and canonical G003 admission not measured",
+    "broader solo-developer environment audit remains",
+    "protected promotion and external release/legal evidence remain separate"
+  ]
+}

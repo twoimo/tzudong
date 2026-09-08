@@ -6,12 +6,24 @@ import path from 'node:path';
 
 import {
   __localSupabaseRuntimeForTests,
+  assertLocalWebOrigin,
   buildLocalTypeGenerationEnvironment,
   buildLocalWebEnvironment,
   loadLocalWebInputEnvironment,
 } from '../scripts/local-supabase-runtime.mjs';
 
 describe('local Supabase runtime source contract', () => {
+  test('rejects a development port absent from the admitted local browser origins', () => {
+    const local = { values: { ADDITIONAL_REDIRECT_URLS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:18080' } };
+    expect(assertLocalWebOrigin(local, 8080)).toBe('http://127.0.0.1:8080');
+    expect(assertLocalWebOrigin(local, 18080)).toBe('http://127.0.0.1:18080');
+    for (const port of [21080, 808, 80800, NaN, 8080.5]) {
+      expect(() => assertLocalWebOrigin(local, port)).toThrow('browser_origin');
+    }
+    expect(() => assertLocalWebOrigin({ values: {} }, 8080)).toThrow('browser_origin');
+    expect(() => assertLocalWebOrigin({ values: { ADDITIONAL_REDIRECT_URLS: 'http://127.0.0.1:80800' } }, 8080)).toThrow('browser_origin');
+  });
+
   test('delegates replay ledger admission to Python over stdin and fails closed', () => {
     const rows = Array.from({ length: 96 }, (_, ordinal) => ({
       path: `fixture-${ordinal}`, ordinal, sha256: 'a'.repeat(64), byteLength: 1,
