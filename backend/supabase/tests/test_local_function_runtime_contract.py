@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 import json
+import re
 import stat
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+from backend.supabase.scripts import local_replay_contract
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
@@ -27,6 +31,107 @@ class LocalFunctionRuntimeContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.scanner = load_scanner()
+
+    def _migration_admission_fixture(self):
+        """Source-bound synthetic snapshot; no SQL or database execution."""
+        scanner = self.scanner
+        migrate = scanner._load_local_contract_module("local-migrate.py", "scanner_replay_test_authority")
+        manifest = migrate.verify_manifest()
+        records = migrate._expected_ledger_records(manifest)
+        proofs = {}
+        for path in local_replay_contract.supported_sources():
+            receipt = copy.deepcopy(local_replay_contract._CONTRACTS[path]["receipt"])
+            proofs[path] = {
+                **local_replay_contract.plan(path),
+                "receipt": receipt,
+                "receipt_sha256": local_replay_contract.digest(local_replay_contract.canonical(receipt)),
+            }
+        fields = ("path", "ordinal", "sha256", "byteLength", "transactionClass", "status", "readbackSha256")
+        ledger = [{**dict(zip(fields, row[1:])), "replayProof": proofs.get(row[1])} for row in records]
+        bindings = {
+            "manifestSha256": migrate.manifest_digest(manifest),
+            "sourceChainSha256": manifest["source"]["chainSha256"],
+            "prerequisiteSha256": "a" * 64,
+            "platformBootstrapEvidenceSha256": "b" * 64,
+            "seedSourceSha256": "c" * 64,
+            "files": [{key: row[key] for key in fields[:5]} for row in ledger],
+        }
+        sequence = [{
+            "marker": marker,
+            "ordinal": ordinal,
+            "evidenceSha256": evidence,
+            "sourceManifestSha256": bindings["manifestSha256"],
+            "closureBindingSha256": "",
+        } for ordinal, (marker, evidence) in enumerate((
+            ("prerequisite", bindings["prerequisiteSha256"]),
+            ("migration", bindings["sourceChainSha256"]),
+        ), 1)]
+        return {"ledger": ledger, "sequence": sequence}, bindings
+
+    def test_migration_admission_sql_projects_exact_authority_fields(self):
+        sql = self.scanner._migration_admission_sql({}).decode()
+        ledger_sql = sql.split("'ledger',", 1)[1].split("'sequence',", 1)[0]
+        projected = dict(re.findall(r"'([A-Za-z0-9]+)',\s*([a-z0-9_]+)", ledger_sql))
+        self.assertEqual(projected, {
+            "path": "migration_id", "ordinal": "ordinal", "sha256": "source_sha256",
+            "byteLength": "source_byte_length", "transactionClass": "transaction_class",
+            "status": "status", "readbackSha256": "readback_sha256", "replayProof": "replay_proof",
+        })
+        self.assertIn("REPEATABLE READ READ ONLY", sql)
+
+    def test_admission_accepts_exact_current_source_replay_dispositions(self):
+        snapshot, bindings = self._migration_admission_fixture()
+        self.assertEqual(len(snapshot["ledger"]), 96)
+        self.assertEqual([row["status"] for row in snapshot["ledger"] if row["replayProof"]],
+                         ["verified-existing", "verified-existing", "legacy-contract-preserved"])
+        self.assertTrue(all(row["replayProof"] is None for row in snapshot["ledger"] if row["status"] == "applied"))
+        self.scanner._validate_database_admission(snapshot, bindings, None)
+
+    def test_admission_delegates_full_snapshot_to_source_authority(self):
+        snapshot, bindings = self._migration_admission_fixture()
+        with patch.object(self.scanner, "_load_local_contract_module") as loader:
+            self.scanner._validate_database_admission(snapshot, bindings, None)
+            loader.return_value._validate_ledger_snapshot.assert_called_once_with(snapshot["ledger"])
+            loader.return_value._validate_ledger_snapshot.side_effect = ValueError("private diagnostic")
+            with self.assertRaisesRegex(self.scanner.RuntimeScanError, "^local_migration_binding$"):
+                self.scanner._validate_database_admission(snapshot, bindings, None)
+
+    def test_admission_rejects_unproved_statuses_and_ledger_field_drift(self):
+        snapshot, bindings = self._migration_admission_fixture()
+        recovery = next(index for index, row in enumerate(snapshot["ledger"]) if row["replayProof"])
+        owner = next(index for index, row in enumerate(snapshot["ledger"]) if row["status"] == "legacy-contract-preserved")
+        for index, field, value in (
+            (0, "status", "verified-existing"), (0, "status", "new-status"),
+            (0, "replayProof", snapshot["ledger"][recovery]["replayProof"]),
+            (0, "readbackSha256", "0" * 64), (0, "ordinal", True),
+            (0, "sha256", "0" * 64), (0, "byteLength", 0),
+            (0, "transactionClass", "self_committing"), (0, "extra", True),
+            (recovery, "replayProof", None), (recovery, "status", "applied"),
+            (owner, "status", "applied"),
+            (owner, "replayProof", snapshot["ledger"][recovery]["replayProof"]),
+        ):
+            bad = copy.deepcopy(snapshot)
+            bad["ledger"][index][field] = value
+            with self.subTest(index=index, field=field):
+                with self.assertRaisesRegex(self.scanner.RuntimeScanError, "^local_migration_binding$"):
+                    self.scanner._validate_database_admission(bad, bindings, None)
+        bad = copy.deepcopy(snapshot)
+        del bad["ledger"][0]["replayProof"]
+        with self.assertRaisesRegex(self.scanner.RuntimeScanError, "^local_migration_binding$"):
+            self.scanner._validate_database_admission(bad, bindings, None)
+
+    def test_admission_replay_does_not_relax_source_or_sequence_bindings(self):
+        snapshot, bindings = self._migration_admission_fixture()
+        stale = copy.deepcopy(bindings)
+        stale["files"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(self.scanner.RuntimeScanError, "^local_migration_binding$"):
+            self.scanner._validate_database_admission(snapshot, stale, None)
+        for field in ("evidenceSha256", "sourceManifestSha256", "closureBindingSha256"):
+            bad = copy.deepcopy(snapshot)
+            bad["sequence"][0][field] = "0" * 64
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(self.scanner.RuntimeScanError, "^local_sequence_binding$"):
+                    self.scanner._validate_database_admission(bad, bindings, None)
 
     def test_drop_if_exists_lifecycle_uses_function_name(self):
         scanner = self.scanner

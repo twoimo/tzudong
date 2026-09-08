@@ -17,7 +17,7 @@ import sys
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 LOCAL_MIGRATE_PATH = REPOSITORY_ROOT / "backend" / "supabase" / "scripts" / "local-migrate.py"
 PUBLICATION_VERIFIER_PATH = REPOSITORY_ROOT / ".github" / "scripts" / "verify-nightly-local-publication.py"
-EXPECTED_LEDGER_UNITS = 88
+EXPECTED_LEDGER_UNITS = 96
 HEX64 = re.compile(r"[a-f0-9]{64}")
 LOCAL_PROJECT = re.compile(r"tzudong-local-[a-f0-9]{12}")
 SUMMARY_FIELDS = {
@@ -31,6 +31,7 @@ SUMMARY_FIELDS = {
     "input_provenance_sha256",
     "ledger_count",
     "ledger_sha256",
+    "replay_proofs",
     "platform_bootstrap_evidence_sha256",
     "platform_bootstrap_sha256",
     "prerequisite_sha256",
@@ -261,6 +262,9 @@ def build_summary(state_root: Path) -> dict[str, object]:
         "closure_binding_sha256": receipt["closure_binding_sha256"],
         "ledger_count": len(ledger),
         "ledger_sha256": receipt["ledger_sha256"],
+        # Canonical receipt validation above admits only full pinned proofs.
+        # Keep them intact for the independent publication verifier's readback.
+        "replay_proofs": receipt["replay_proofs"],
         "readback_row_count": len(readback),
         "readback_section_counts": section_counts,
         "readback_sha256": receipt["readback_sha256"],

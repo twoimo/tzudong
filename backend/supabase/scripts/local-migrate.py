@@ -34,7 +34,7 @@ LOCAL_ENV_PROVENANCE_SCHEMA = "local-stack-env-provenance-v1"
 LOCAL_INPUT_PROVENANCE_SCHEMA = "local-stack-input-provenance-v2"
 LOCAL_STACK_RECEIPT_SCHEMA = "local-stack-receipt-v1"
 AMBIGUITY_MARKER = "migration-ambiguity.json"
-RECEIPT_SCHEMA = "local-receipt-v1"
+RECEIPT_SCHEMA = "local-receipt-v2"
 RECEIPT_SERIALIZER = "receipt-v1"
 RECEIPT_TOP_LEVEL_FIELDS = frozenset({
     "source_manifest_sha256",
@@ -62,6 +62,7 @@ RECEIPT_TOP_LEVEL_FIELDS = frozenset({
     "image_service_digests",
     "commit_sha256",
     "ledger",
+    "replay_proofs",
     "readback_sql_sha256",
     "readback",
     "service",
@@ -115,7 +116,7 @@ MIGRATION_ORDER_OVERRIDES = {
 }
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 88
+EXPECTED_LEDGER_UNITS = 96
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -1830,7 +1831,8 @@ CREATE TABLE IF NOT EXISTS _tzudong_local.migration_ledger (
   source_byte_length integer NOT NULL CHECK (source_byte_length > 0),
   ordinal integer NOT NULL CHECK (ordinal > 0),
   transaction_class text NOT NULL CHECK (transaction_class IN ('transactional','transactional_explicit','self_committing')),
-  status text NOT NULL CHECK (status IN ('planned','running','failed','ambiguous','applied')),
+  status text NOT NULL CHECK (status IN ('planned','running','failed','ambiguous','applied','verified-existing','legacy-contract-preserved')),
+  replay_proof jsonb,
   error_code text,
   readback_sha256 text CHECK (readback_sha256 IS NULL OR readback_sha256 ~ '^[0-9a-f]{64}$'),
   readback_at timestamptz,
@@ -1838,6 +1840,19 @@ CREATE TABLE IF NOT EXISTS _tzudong_local.migration_ledger (
   finished_at timestamptz,
   updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+ALTER TABLE _tzudong_local.migration_ledger ADD COLUMN IF NOT EXISTS replay_proof jsonb;
+DO $ledger_v2_constraints$
+BEGIN
+  ALTER TABLE _tzudong_local.migration_ledger DROP CONSTRAINT IF EXISTS migration_ledger_status_check;
+  ALTER TABLE _tzudong_local.migration_ledger ADD CONSTRAINT migration_ledger_status_check
+    CHECK (status IN ('planned','running','failed','ambiguous','applied','verified-existing','legacy-contract-preserved'));
+  ALTER TABLE _tzudong_local.migration_ledger DROP CONSTRAINT IF EXISTS migration_ledger_replay_proof_check;
+  ALTER TABLE _tzudong_local.migration_ledger ADD CONSTRAINT migration_ledger_replay_proof_check CHECK (
+    (status NOT IN ('verified-existing','legacy-contract-preserved') AND replay_proof IS NULL)
+    OR (status IN ('verified-existing','legacy-contract-preserved') AND replay_proof IS NOT NULL AND jsonb_typeof(replay_proof)='object')
+  );
+END
+$ledger_v2_constraints$;
 ALTER TABLE _tzudong_local.migration_ledger ADD COLUMN IF NOT EXISTS source_byte_length integer;
 ALTER TABLE _tzudong_local.migration_ledger ADD COLUMN IF NOT EXISTS readback_sha256 text;
 ALTER TABLE _tzudong_local.migration_ledger ADD COLUMN IF NOT EXISTS readback_at timestamptz;
@@ -2189,28 +2204,8 @@ def _assert_sequence_prefix(
 
 
 def execution_sql(manifest: dict[str, Any]) -> bytes:
-    """Build one psql input stream; migration bytes are appended verbatim."""
-    lines: list[str] = ["SET lock_timeout = '5s';", "SET statement_timeout = '0';", _ledger_ddl()]
-    files = manifest["source"]["files"]
-    for item in files:
-        migration_id = item["path"]
-        transaction_class = item["transaction"]["class"]
-        lines.extend(
-            [
-                "BEGIN;",
-                "INSERT INTO _tzudong_local.migration_ledger(migration_id,source_sha256,source_byte_length,ordinal,transaction_class,status,started_at,updated_at) VALUES ("
-                + ",".join((_q(migration_id), _q(item["sha256"]), str(item["byteLength"]), str(item["ordinal"]), _q(transaction_class), _q("planned"), "NULL", "clock_timestamp()"))
-                + ") ON CONFLICT (migration_id) DO UPDATE SET source_sha256=EXCLUDED.source_sha256,source_byte_length=EXCLUDED.source_byte_length,ordinal=EXCLUDED.ordinal,transaction_class=EXCLUDED.transaction_class,status='planned',error_code=NULL,readback_sha256=NULL,readback_at=NULL,started_at=NULL,finished_at=NULL,updated_at=clock_timestamp();",
-                "COMMIT;",
-                "BEGIN;",
-                "UPDATE _tzudong_local.migration_ledger SET status='running',started_at=clock_timestamp(),finished_at=NULL,error_code=NULL,updated_at=clock_timestamp() WHERE migration_id=" + _q(migration_id) + ";",
-                "COMMIT;",
-                "-- local-migrate source: " + migration_id,
-            ]
-        )
-        body = _verified_migration_bytes(item)
-        lines.append(body.decode("utf-8"))
-    return "\n".join(lines).encode("utf-8") + b"\n"
+    """Build the planned stream, substituting only pinned read-only verifiers."""
+    return b"\n".join(sql for _, sql in execution_batches(manifest))
 
 
 def _verified_migration_bytes(item: Mapping[str, Any]) -> bytes:
@@ -2251,6 +2246,12 @@ def _verified_migration_bytes(item: Mapping[str, Any]) -> bytes:
 
 def _execution_body(item: Mapping[str, Any]) -> bytes:
     body = _verified_migration_bytes(item)
+    contract = _load_replay_contract()
+    if item["path"] in contract.supported_sources():
+        try:
+            return contract.generate_verification_sql(item["path"])
+        except contract.ReplayContractError as error:
+            raise LocalMigrationError(str(error)) from error
     if item.get("path") == "backend/supabase/migrations/20260713002000_g014_public_api_private_boundary.sql":
         body = G014_OWNER_NORMALIZATION_SQL.encode("utf-8") + body
     return body
@@ -2258,6 +2259,8 @@ def _execution_body(item: Mapping[str, Any]) -> bytes:
 
 def _execution_batch(item: Mapping[str, Any], index: int) -> tuple[str, bytes]:
     migration_id = item["path"]
+    if migration_id in _load_replay_contract().supported_sources():
+        return migration_id, _execution_body(item)
     prefix = _ledger_ddl() + "\n" if index == 0 else ""
     setup = (
         "BEGIN;\n"
@@ -2302,7 +2305,7 @@ def mark_terminal(executor: PsqlExecutor, migration_id: str, status: str, error_
         + _q(error_code)
         + ",finished_at=clock_timestamp(),updated_at=clock_timestamp() WHERE migration_id="
         + _q(migration_id)
-        + "; COMMIT;\n"
+        + " AND status NOT IN ('verified-existing','legacy-contract-preserved'); COMMIT;\n"
     ).encode("utf-8")
     executor.run(sql)
 def _ambiguity_path(executor: PsqlExecutor) -> Path:
@@ -2441,6 +2444,7 @@ def plan(manifest: dict[str, Any]) -> dict[str, Any]:
                 "sourceSha256": item["sha256"],
                 "transactionClass": item["transaction"]["class"],
                 "status": "planned",
+                "executionMode": "verify-existing" if _expected_replay_proof(item) is not None else "apply-source",
             }
             for item in manifest["source"]["files"]
         ],
@@ -3137,6 +3141,9 @@ def serialize_receipt_v1(value: bytes | str | Sequence[Any]) -> bytes:
 
 
 def _expected_unit_evidence(item: Mapping[str, Any]) -> str:
+    proof = _expected_replay_proof(item)
+    if proof is not None:
+        return _sha256_bytes(canonical_json(proof))
     return _sha256_bytes(
         _serialize_rows(
             [
@@ -3167,7 +3174,7 @@ def _expected_ledger_records(manifest: Mapping[str, Any]) -> list[list[Any]]:
             item["sha256"],
             item["byteLength"],
             item["transaction"]["class"],
-            "applied",
+            _expected_terminal_status(item),
             _expected_unit_evidence(item),
         ]
         for item in files
@@ -3860,11 +3867,13 @@ def build_receipt(executor: PsqlExecutor) -> dict[str, Any]:
             or source_sha256 != expected["sha256"]
             or byte_length_text != str(expected["byteLength"])
             or transaction_class != expected["transaction"]["class"]
-            or status != "applied"
+            or status != _expected_terminal_status(expected)
             or readback_sha256 != _expected_unit_evidence(expected)
         ):
             raise LocalMigrationError("receipt_ledger_state")
         ledger_records.append(["ledger", migration_id, int(ordinal_text), source_sha256, int(byte_length_text), transaction_class, status, readback_sha256])
+    replay_proofs = _capture_replay_proofs(executor)
+    _validate_replay_proofs(manifest, replay_proofs)
     prerequisite_path, prerequisite_manifest = _verify_generated_prerequisite(PREREQUISITE_OUTPUT)
     prerequisite_sha256 = prerequisite_manifest["output"]["sha256"]
     seed_path = _require_owned_regular_file(
@@ -3908,6 +3917,7 @@ def build_receipt(executor: PsqlExecutor) -> dict[str, Any]:
         "image_service_digests": provenance["image_service_digests"],
         "commit_sha256": provenance["commit_sha256"],
         "ledger": ledger_records,
+        "replay_proofs": replay_proofs,
         "readback_sql_sha256": provenance["readback_sql_sha256"],
         "readback": records,
         "service": service_records,
@@ -4006,6 +4016,7 @@ def _load_receipt_file(path: Path) -> dict[str, Any]:
         raise LocalMigrationError("receipt_ledger_empty")
     records, ledger_records, service_records = _parse_receipt_payloads(value)
     manifest = verify_manifest()
+    _validate_replay_proofs(manifest, value.get("replay_proofs"))
     if len(ledger_records) != EXPECTED_LEDGER_UNITS:
         raise LocalMigrationError("receipt_ledger_state")
     payload_digests = _receipt_payload_digests(records, ledger_records, service_records, manifest)
@@ -4135,6 +4146,7 @@ def compare_receipts(first: Path, second: Path) -> dict[str, Any]:
     if (
         left["project_name"] != right["project_name"]
         or left["ledger"] != right["ledger"]
+        or left["replay_proofs"] != right["replay_proofs"]
         or left_provenance != right_provenance
         or any(left[field] != right[field] for field in fields)
     ):
@@ -4144,7 +4156,7 @@ def compare_receipts(first: Path, second: Path) -> dict[str, Any]:
         "serializer": RECEIPT_SERIALIZER,
         "equal": True,
         "project_name": left["project_name"],
-        "comparedFields": ["project_name", "ledger", *fields],
+        "comparedFields": ["project_name", "ledger", "replay_proofs", *fields],
         "ledgerUnitCount": len(left["ledger"]),
         "catalogSha256": left["catalog_sha256"],
         "seedSha256": left["seed_sha256"],
@@ -4162,6 +4174,107 @@ def _load_replay_contract() -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _expected_replay_proof(item: Mapping[str, Any]) -> dict[str, Any] | None:
+    contract = _load_replay_contract()
+    if item.get("path") not in contract.supported_sources():
+        return None
+    _verified_migration_bytes(item)
+    try:
+        return contract.expected_proof_shape(item["path"])
+    except contract.ReplayContractError as error:
+        raise LocalMigrationError(str(error)) from error
+
+
+def _expected_terminal_status(item: Mapping[str, Any]) -> str:
+    proof = _expected_replay_proof(item)
+    return proof["disposition"] if proof is not None else "applied"
+
+
+def _validate_replay_proofs(manifest: Mapping[str, Any], proofs: Any) -> None:
+    contract = _load_replay_contract()
+    expected = {item["path"] for item in manifest["source"]["files"] if item["path"] in contract.supported_sources()}
+    if not isinstance(proofs, dict) or set(proofs) != expected:
+        raise LocalMigrationError("receipt_replay_proofs")
+    for path in sorted(expected):
+        try:
+            sql = contract.generate_verification_sql(path)
+            contract.validate_proof(proofs[path], sql)
+        except contract.ReplayContractError as error:
+            raise LocalMigrationError("receipt_replay_proofs") from error
+
+
+def _expected_snapshot_row(item: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "path": item["path"], "ordinal": item["ordinal"], "sha256": item["sha256"],
+        "byteLength": item["byteLength"], "transactionClass": item["transaction"]["class"],
+        "status": _expected_terminal_status(item), "readbackSha256": _expected_unit_evidence(item),
+        "replayProof": _expected_replay_proof(item),
+    }
+
+
+def _validate_ledger_snapshot(rows: Any) -> None:
+    manifest = verify_manifest()
+    expected = [_expected_snapshot_row(item) for item in manifest["source"]["files"]]
+    if not isinstance(rows, list) or canonical_json(rows) != canonical_json(expected):
+        raise LocalMigrationError("migration_ledger_snapshot")
+    _validate_replay_proofs(manifest, {row["path"]: row["replayProof"] for row in rows if row["replayProof"] is not None})
+
+
+def _capture_replay_proofs(executor: PsqlExecutor) -> dict[str, Any]:
+    sql = b"SELECT coalesce(json_object_agg(migration_id,replay_proof),'{}'::json) FROM _tzudong_local.migration_ledger WHERE replay_proof IS NOT NULL;"
+    try:
+        result = json.loads(executor.capture(sql))
+    except (ValueError, UnicodeDecodeError) as error:
+        raise LocalMigrationError("receipt_replay_proofs") from error
+    if not isinstance(result, dict):
+        raise LocalMigrationError("receipt_replay_proofs")
+    return result
+
+
+def _apply_replay_verification(executor: PsqlExecutor, item: Mapping[str, Any], sql: bytes) -> None:
+    contract = _load_replay_contract()
+    try:
+        # Validate fresh source and verifier bytes before executing read-only SQL.
+        if sql != contract.generate_verification_sql(item["path"]):
+            raise LocalMigrationError("replay_sql_drift")
+        proof = contract.assemble_proof(item["path"], sql, executor.capture(sql))
+        contract.validate_proof(proof, sql)
+    except contract.ReplayContractError as error:
+        raise LocalMigrationError(str(error)) from error
+    proof_json = canonical_json(proof)
+    evidence = _sha256_bytes(proof_json)
+    # An identical terminal row is immutable. A conflicting row is never overwritten.
+    values = [item["path"], item["sha256"], item["byteLength"], item["ordinal"],
+              item["transaction"]["class"], proof["disposition"], evidence]
+    insert = (
+        "BEGIN; INSERT INTO _tzudong_local.migration_ledger "
+        "(migration_id,source_sha256,source_byte_length,ordinal,transaction_class,status,readback_sha256,replay_proof,readback_at,started_at,finished_at) VALUES ("
+        + ",".join(str(value) if type(value) is int else _q(value) for value in values)
+        + "," + _q(proof_json.decode()) + "::jsonb,clock_timestamp(),clock_timestamp(),clock_timestamp()) "
+        "ON CONFLICT (migration_id) DO NOTHING; COMMIT;"
+    )
+    executor.run(insert.encode())
+    readback = (
+        "SELECT json_build_object('path',migration_id,'ordinal',ordinal,'sha256',source_sha256,"
+        "'byteLength',source_byte_length,'transactionClass',transaction_class,'status',status,"
+        "'readbackSha256',readback_sha256,'replayProof',replay_proof) "
+        "FROM _tzudong_local.migration_ledger WHERE migration_id=" + _q(item["path"]) + ";"
+    )
+    try:
+        actual = json.loads(executor.capture(readback.encode()))
+    except (ValueError, UnicodeDecodeError) as error:
+        raise LocalMigrationError("replay_terminal_readback") from error
+    if canonical_json(actual) != canonical_json(_expected_snapshot_row(item)):
+        raise LocalMigrationError("replay_terminal_readback")
+    try:
+        contract_readback = contract.assemble_proof(item["path"], sql, executor.capture(sql))
+        contract.validate_proof(contract_readback, sql)
+    except contract.ReplayContractError as error:
+        raise LocalMigrationError("replay_contract_readback") from error
+    if canonical_json(contract_readback) != canonical_json(proof):
+        raise LocalMigrationError("replay_contract_readback")
 
 
 def verify_replay(executor: PsqlExecutor, migration_path: str) -> dict[str, Any]:
@@ -4422,6 +4535,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             if not args.allow_local:
                 raise LocalMigrationError("apply_requires_allow_local")
             manifest = verify_manifest(args.manifest)
+            contract = _load_replay_contract()
+            for planned in manifest["source"]["files"]:
+                if planned["path"] in contract.supported_sources():
+                    try:
+                        contract.generate_verification_sql(planned["path"])
+                    except contract.ReplayContractError as error:
+                        raise LocalMigrationError(str(error)) from error
             executor = _executor_from_args(args)
             _assert_no_ambiguity(executor)
             prerequisite_path, prerequisite_manifest = _verify_generated_prerequisite(PREREQUISITE_OUTPUT)
@@ -4435,6 +4555,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 item = next(item for item in manifest["source"]["files"] if item["path"] == migration_id)
                 _assert_execution_batch_fresh(item, sql)
                 try:
+                    if migration_id in _load_replay_contract().supported_sources():
+                        _apply_replay_verification(executor, item, sql)
+                        continue
                     executor.run(sql)
                     evidence_sha256 = _unit_readback(executor, item)
                     _mark_applied(executor, migration_id, evidence_sha256)

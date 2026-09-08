@@ -183,6 +183,44 @@ SET SESSION AUTHORIZATION postgres;
         self.assertEqual(json.loads(accepted.stdout)['disposition'], 'already-present-contract-verified')
         self.assertEqual(self.query(snapshot).stdout, before)
 
+    def test_replay_ledger_records_verified_disposition_and_preserves_conflicting_evidence(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        from backend.supabase.scripts import local_replay_contract
+        path = SOURCE.relative_to(ROOT).as_posix()
+        item = next(row for row in local_migrate.build_manifest()['source']['files'] if row['path'] == path)
+        sql = local_replay_contract.generate_verification_sql(path)
+        test_case = self
+        class Executor:
+            def capture(self, statement):
+                result = test_case.query(statement.decode())
+                if result.returncode:
+                    raise local_migrate.LocalMigrationError('fixture_psql_failed')
+                return result.stdout.encode()
+            def run(self, statement):
+                self.capture(statement)
+        executor = Executor()
+        self.assertEqual(self.query("SELECT to_regnamespace('_tzudong_local') IS NULL;").stdout.strip(), 't')
+        try:
+            executor.run(local_migrate._ledger_ddl().encode())
+            local_migrate._apply_replay_verification(executor, item, sql)
+            snapshot = "SELECT row_to_json(x)::text FROM _tzudong_local.migration_ledger x;"
+            first = self.query(snapshot).stdout
+            row = json.loads(first)
+            self.assertEqual(row['status'], 'verified-existing')
+            self.assertEqual(row['replay_proof']['disposition'], 'verified-existing')
+            self.assertEqual(row['source_sha256'], replay.SOURCE_SHA256)
+            local_migrate.mark_terminal(executor, path, 'ambiguous', 'fixture_readback_failed')
+            self.assertEqual(self.query(snapshot).stdout, first)
+            local_migrate._apply_replay_verification(executor, item, sql)
+            self.assertEqual(self.query(snapshot).stdout, first)
+            self.query("UPDATE _tzudong_local.migration_ledger SET readback_sha256=repeat('0',64);")
+            conflict = self.query(snapshot).stdout
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, 'replay_terminal_readback'):
+                local_migrate._apply_replay_verification(executor, item, sql)
+            self.assertEqual(self.query(snapshot).stdout, conflict)
+        finally:
+            self.query('DROP SCHEMA IF EXISTS _tzudong_local CASCADE;')
+
     def test_catalog_drift_is_rejected(self):
         cases = [
             ('DROP FUNCTION public.read_admin_user_ids_for_management();', 'rpc_mismatch'),
