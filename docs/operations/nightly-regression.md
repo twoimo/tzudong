@@ -366,6 +366,14 @@ bun run dev
 bun run supabase:gen-types:local
 ```
 
+Local browser origins are explicitly limited to ports `3000`, `8080`, and
+`18080` on `127.0.0.1` or `localhost`. `npm run dev` uses `8080`; if it is
+occupied, use `node scripts/run-local-dev.mjs --port 3000` from `apps/web`.
+The wrapper rejects an origin absent from the generated stack inputs with
+`[local-supabase] browser_origin` before starting Next. A healthy API does not
+prove that a browser on another port can read it: CORS must admit the exact
+origin. Keep the Supabase service port base separate from the web port.
+
 The default `dev`/`dev:local` wrapper deliberately checks schema state rather than the deterministic seed
 receipt, so application writes do not make the local development database
 inadmissible. The nightly lane still requires the exact seed/catalog receipt.

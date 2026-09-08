@@ -475,6 +475,15 @@ function readCurrentMigrationLedger(local, databaseContainer) {
   return { manifest, ledger };
 }
 
+export function assertLocalWebOrigin(local, port) {
+  const origin = `http://127.0.0.1:${port}`;
+  const admittedOrigins = local.values.ADDITIONAL_REDIRECT_URLS?.split(',') ?? [];
+  if (!Number.isInteger(port) || !admittedOrigins.includes(origin)) {
+    fail('browser_origin');
+  }
+  return origin;
+}
+
 export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = false } = {}) {
   const serviceRows = spawnSync(
     'docker',
