@@ -221,6 +221,25 @@ SET SESSION AUTHORIZATION postgres;
         finally:
             self.query('DROP SCHEMA IF EXISTS _tzudong_local CASCADE;')
 
+    def test_supabase_admin_creator_defaults_reproduce_the_extra_postgres_acl(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        definition = re.search(r'CREATE OR REPLACE FUNCTION public.read_admin_user_ids_for_management\(\).*?END\n\$\$;', PREDECESSOR.read_text(), re.S).group()
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        # Match PsqlExecutor._base(): source runs as supabase_admin, not postgres.
+        setup = "BEGIN; DROP FUNCTION public.read_admin_user_ids_for_management();\n"
+        finish = """
+ALTER FUNCTION public.read_admin_user_ids_for_management() OWNER TO privacy_workflow_owner;
+REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.read_admin_user_ids_for_management() TO service_role;
+"""
+        rejected = self.query(setup + definition + finish + body + '\nROLLBACK;')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('admin_ids_replay_acl_mismatch', rejected.stderr)
+        normalized = local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL
+        accepted = self.query(setup + normalized + definition + finish + body + '\nROLLBACK;')
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(json.loads(accepted.stdout)['disposition'], 'already-present-contract-verified')
+
     def test_catalog_drift_is_rejected(self):
         cases = [
             ('DROP FUNCTION public.read_admin_user_ids_for_management();', 'rpc_mismatch'),
