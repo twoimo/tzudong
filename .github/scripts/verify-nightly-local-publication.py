@@ -45,6 +45,7 @@ MIGRATION_SUMMARY_FIELDS = {
     "input_provenance_sha256",
     "ledger_count",
     "ledger_sha256",
+    "replay_proofs",
     "platform_bootstrap_evidence_sha256",
     "platform_bootstrap_sha256",
     "prerequisite_sha256",
@@ -125,7 +126,7 @@ STACK_SERVICES = {
     "supavisor",
     "vector",
 }
-EXPECTED_LEDGER_UNITS = 88
+EXPECTED_LEDGER_UNITS = 96
 SEQUENCE_MARKERS = (
     "prerequisite",
     "migration",
@@ -684,21 +685,6 @@ def verify_manifest(payload: dict[str, object]) -> None:
         fail("local migration manifest chain digest mismatch")
 
 
-def expected_unit_evidence(item: dict[str, object]) -> str:
-    transaction = item["transaction"]
-    assert isinstance(transaction, dict)
-    return sha256_bytes(serialize_rows([[
-        "unit",
-        item["path"],
-        item["ordinal"],
-        item["sha256"],
-        item["byteLength"],
-        transaction["class"],
-        "running",
-        "",
-    ]]))
-
-
 def verify_migration_summary(
     payload: dict[str, object],
     manifest: dict[str, object],
@@ -805,16 +791,14 @@ def verify_migration_summary(
     ):
         fail("local migration publication tracked source binding mismatch")
 
-    expected_ledger = []
-    for item in files:
-        assert isinstance(item, dict)
-        transaction = item["transaction"]
-        assert isinstance(transaction, dict)
-        expected_ledger.append([
-            "ledger", item["path"], item["ordinal"], item["sha256"],
-            item["byteLength"], transaction["class"], "applied",
-            expected_unit_evidence(item),
-        ])
+    try:
+        # Retain and validate full pinned proofs, not just their declared hashes.
+        # Only the source authority decides which migrations were verified rather
+        # than applied; publication still independently serializes their ledger.
+        local_migrate._validate_replay_proofs(manifest, payload.get("replay_proofs"))
+        expected_ledger = local_migrate._expected_ledger_records(manifest)
+    except Exception as error:
+        raise SystemExit("local migration publication replay proof binding mismatch") from error
     if payload.get("ledger_sha256") != sha256_bytes(serialize_rows(expected_ledger)):
         fail("local migration publication ledger digest mismatch")
     sequence_rows = [

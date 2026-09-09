@@ -37,9 +37,15 @@ g028_reauth_test="$supabase_dir/tests/g028_account_deletion_reauth_proof.sql"
 partition_version='g014-source-baseline-partition-v1'
 relevant_sources=(
   'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+  'backend/supabase/scripts/catalog_docker_endpoint.py'
   'backend/supabase/scripts/transform_g014_guardian_replay.py'
   'backend/supabase/scripts/transform_advisor_replay.py'
   'backend/supabase/scripts/verify_admin_user_ids_replay.py'
+  'backend/supabase/scripts/verify_admin_management_group_replay.py'
+  'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+  'backend/supabase/scripts/admin_management_group_plan.py'
+  'backend/supabase/scripts/advisor_successor_plan.py'
+  'backend/supabase/scripts/g037_supabase_statement_vector.mjs'
   'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
   'backend/supabase/volumes/db'
   'backend/supabase/baselines'
@@ -608,47 +614,32 @@ initialization_inputs="$staging_dir/initialization-inputs.sha256"
 } >"$initialization_inputs"
 initialization_inputs_hash=$(sha256sum -- "$initialization_inputs" | cut -d' ' -f1)
 
-# Resolve the active context before isolating Docker config, then allow only local
-# Docker Desktop/Linux-container endpoints.
-docker_context_name=$(docker context show) || {
-  printf 'unable to resolve the current Docker context\n' >&2
+# Admit the account's saved local context before isolating operation config.
+# The resolver never changes context and admits only the fixed local endpoints.
+docker_endpoint=$(python3 "$script_dir/catalog_docker_endpoint.py") || {
+  printf 'unable to admit a canonical local Docker endpoint\n' >&2
   exit 1
 }
-[[ "$docker_context_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || {
-  printf 'current Docker context name is invalid\n' >&2
-  exit 1
-}
-docker_context_endpoint=$(docker context inspect "$docker_context_name" --format '{{ .Endpoints.docker.Host }}') || {
-  printf 'unable to inspect the current Docker context endpoint\n' >&2
-  exit 1
-}
-case "$docker_context_endpoint" in
-  'unix:///var/run/docker.sock'|'npipe:////./pipe/docker_engine'|'npipe:////./pipe/dockerDesktopLinuxEngine')
-    docker_endpoint=$docker_context_endpoint
-    ;;
-  *)
-    printf 'current Docker context is not a validated local Docker Desktop/Linux-container endpoint: %s\n' "$docker_context_endpoint" >&2
-    exit 1
-    ;;
-esac
 # The public, digest-pinned image is a reproducible build dependency, never
-# a source of catalog data. Compose itself remains pull-free.
-if ! docker_local image inspect "$db_image" >/dev/null; then
-  docker_local pull "$db_image" >/dev/null
+# a source of catalog data. Compose itself remains pull-free. Select the same
+# pinned AMD64 variant for inspection and execution on multi-architecture stores.
+# Docker image inspect --platform requires API 1.49+; unsupported clients deny.
+if ! docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null; then
+  docker_local pull --platform linux/amd64 "$db_image" >/dev/null
 fi
-docker_local image inspect "$db_image" >/dev/null || {
+docker_local image inspect --platform linux/amd64 "$db_image" >/dev/null || {
   printf 'required pinned DB image is unavailable after pull\n' >&2
   exit 1
 }
-[[ $(docker_local image inspect "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Postgres image architecture is not amd64\n' >&2; exit 1;
 }
-db_resolved_repo_digests=$(docker_local image inspect "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+db_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$db_resolved_repo_digests" == *"@${db_index_digest}"* || "$db_resolved_repo_digests" == *"@${db_amd64_manifest_digest}"* ]] || {
   printf 'Postgres resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
 platform_auth_image_evidence="$staging_dir/postgres-image-00000000000001-auth-schema.sql"
-docker_local run --rm --network none --entrypoint /bin/sh "$db_image" -ec '
+docker_local run --rm --platform linux/amd64 --network none --entrypoint /bin/sh "$db_image" -ec '
   test -f "$1" && test -r "$1"
   cat -- "$1"
 ' sh '/docker-entrypoint-initdb.d/init-scripts/00000000000001-auth-schema.sql' >"$platform_auth_image_evidence" || {
@@ -660,31 +651,31 @@ cmp -s "$platform_auth_bootstrap" "$platform_auth_image_evidence" || {
   exit 1
 }
 platform_auth_image_sha256=$(sha256sum -- "$platform_auth_image_evidence" | cut -d' ' -f1)
-if ! docker_local image inspect "$storage_image" >/dev/null; then
-  docker_local pull "$storage_image" >/dev/null
+if ! docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null; then
+  docker_local pull --platform linux/amd64 "$storage_image" >/dev/null
 fi
-docker_local image inspect "$storage_image" >/dev/null || {
+docker_local image inspect --platform linux/amd64 "$storage_image" >/dev/null || {
   printf 'required pinned Storage image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required Storage image architecture is not amd64\n' >&2; exit 1;
 }
-storage_resolved_image_id=$(docker_local image inspect "$storage_image" --format '{{.Id}}')
-storage_resolved_repo_digests=$(docker_local image inspect "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+storage_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{.Id}}')
+storage_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$storage_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$storage_resolved_repo_digests" == *"@${storage_index_digest}"* || "$storage_resolved_repo_digests" == *"@${storage_amd64_manifest_digest}"* ]] || {
   printf 'Storage resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
-if ! docker_local image inspect "$gotrue_image" >/dev/null; then
-  docker_local pull "$gotrue_image" >/dev/null
+if ! docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null; then
+  docker_local pull --platform linux/amd64 "$gotrue_image" >/dev/null
 fi
-docker_local image inspect "$gotrue_image" >/dev/null || {
+docker_local image inspect --platform linux/amd64 "$gotrue_image" >/dev/null || {
   printf 'required pinned GoTrue image is unavailable after pull\n' >&2; exit 1;
 }
-[[ $(docker_local image inspect "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
+[[ $(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Architecture}}') == 'amd64' ]] || {
   printf 'required GoTrue image architecture is not amd64\n' >&2; exit 1;
 }
-gotrue_resolved_image_id=$(docker_local image inspect "$gotrue_image" --format '{{.Id}}')
-gotrue_resolved_repo_digests=$(docker_local image inspect "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
+gotrue_resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{.Id}}')
+gotrue_resolved_repo_digests=$(docker_local image inspect --platform linux/amd64 "$gotrue_image" --format '{{range .RepoDigests}}{{println .}}{{end}}')
 [[ "$gotrue_resolved_repo_digests" == *"@${gotrue_index_digest}"* || "$gotrue_resolved_repo_digests" == *"@${gotrue_amd64_manifest_digest}"* ]] || {
   printf 'GoTrue resolved RepoDigest does not match pinned index or amd64 manifest evidence\n' >&2; exit 1;
 }
@@ -722,6 +713,7 @@ cat >"$compose_file" <<EOF
 services:
   db:
     image: $db_image
+    platform: linux/amd64
     pull_policy: never
     container_name: \${G014_DB_CONTAINER_NAME}
     networks: [isolated]
@@ -746,6 +738,7 @@ services:
       - 'db-data:/var/lib/postgresql/data'
   auth:
     image: $gotrue_image
+    platform: linux/amd64
     pull_policy: never
     depends_on: [db]
     networks: [isolated]
@@ -770,6 +763,7 @@ services:
       GOTRUE_MAILER_AUTOCONFIRM: 'true'
   storage:
     image: $storage_image
+    platform: linux/amd64
     pull_policy: never
     container_name: \${G014_STORAGE_CONTAINER_NAME}
     depends_on: [db]
@@ -1355,6 +1349,33 @@ for migration in "${effective_migrations[@]}"; do
   previous_hash=$(printf '%s  %s  %s\n' "$previous_hash" "$canonical_path" "$file_hash" | sha256sum | cut -d' ' -f1)
   printf '%s  %s  %s\n' "$previous_hash" "$file_hash" "$canonical_path" >>"$chain_file"
   case "${migration##*/}" in
+    20260906064252_g014_pg17_workflow_owner_contract.sql)
+      owner_verification="$staging_dir/g014-owner-pg15-verification.sql"
+      python3 "$script_dir/verify_g014_pg17_owner_replay.py" --source "$migration" --output "$owner_verification"
+      g026_chain_apply "g014-owner-pg15-source-verifier" "$script_dir/verify_g014_pg17_owner_replay.py"
+      g026_chain_apply "g014-owner-pg15-verification" "$owner_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$owner_verification" >"$staging_dir/g014-owner-pg15-receipt.json"
+      jq -e '.schema == "g014-owner-pg15-replay-v1" and .read_only == true and .disposition == "legacy-contract-preserved"' \
+        "$staging_dir/g014-owner-pg15-receipt.json" >/dev/null
+      g026_chain_apply "g014-owner-pg15-receipt" "$staging_dir/g014-owner-pg15-receipt.json"
+      ;;
+    20260906053936_admin_management_group_catalog_slice.sql)
+      admin_group_verification="$staging_dir/admin-management-group-overlap-verification.sql"
+      for dependency in verify_admin_management_group_replay.py admin_management_group_plan.py advisor_successor_plan.py g037_supabase_statement_vector.mjs; do
+        g026_chain_apply "admin-management-group-source-dependency:$dependency" "$script_dir/$dependency"
+      done
+      python3 "$script_dir/verify_admin_management_group_replay.py" \
+        --source "$migration" \
+        --predecessor "$backend_migrations_dir/20260812000300_local_admin_data_boundary_convergence.sql" \
+        --output "$admin_group_verification"
+      g026_chain_apply "admin-management-group-source-overlap-verification" "$admin_group_verification"
+      compose exec -T db psql -XAtq -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres \
+        <"$admin_group_verification" >"$staging_dir/admin-management-group-overlap-receipt.json"
+      jq -e '.schema == "admin-management-group-source-overlap-v1" and .read_only == true and .already_present_contract_verified == true' \
+        "$staging_dir/admin-management-group-overlap-receipt.json" >/dev/null
+      g026_chain_apply "admin-management-group-source-overlap-receipt" "$staging_dir/admin-management-group-overlap-receipt.json"
+      ;;
     20260906040116_admin_user_ids_catalog_slice.sql)
       admin_ids_verification="$staging_dir/admin-user-ids-overlap-verification.sql"
       python3 "$script_dir/verify_admin_user_ids_replay.py" \
@@ -1583,8 +1604,8 @@ jsonl_hash=$(sha256sum -- "$jsonl" | cut -d' ' -f1)
 tuple_hash=$(sha256sum -- "$tuple_evidence" | cut -d' ' -f1)
 chain_hash=$(sha256sum -- "$chain_file" | cut -d' ' -f1)
 source_sha=$(git -C "$repo_root" rev-parse HEAD)
-resolved_image_id=$(docker_local image inspect "$db_image" --format '{{.Id}}')
-resolved_image_digest=$(docker_local image inspect "$db_image" --format '{{index .RepoDigests 0}}')
+resolved_image_id=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{.Id}}')
+resolved_image_digest=$(docker_local image inspect --platform linux/amd64 "$db_image" --format '{{index .RepoDigests 0}}')
 server_version=$(compose exec -T db psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 5432 -U postgres -d postgres -At -c 'SHOW server_version;')
 row_count=$(wc -l <"$jsonl" | tr -d '[:space:]')
 reconstruction_entries=$(jq -c '.entries' "$reconstruction_manifest")
@@ -1620,6 +1641,8 @@ jq -n --arg source_sha "$source_sha" --arg migration_chain_sha256 "$chain_hash" 
     metadata.json migration-chain.txt platform-auth-schema-migrations.expected.tsv platform-auth-schema-migrations.manifest.tsv \
     advisor-prerequisite-recovery.json advisor-prerequisites.sql advisor-replay.sql \
     admin-user-ids-overlap-verification.sql admin-user-ids-overlap-receipt.json \
+    admin-management-group-overlap-verification.sql admin-management-group-overlap-receipt.json \
+    g014-owner-pg15-verification.sql g014-owner-pg15-receipt.json \
     postgres-image-00000000000001-auth-schema.sql pre-20260214-overlap-classification.jsonl \
     reconstruction-compatibility-exclusions.jsonl reconstruction-compatibility-relocations.jsonl reconstruction-source-members.tsv \
     storage-container-migration-files.tsv storage-inventory-files.tsv storage-migration-inventory-source-map.tsv storage-migration-ledger.tsv \

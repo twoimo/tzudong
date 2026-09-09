@@ -413,15 +413,24 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
     const n = restaurants.length;
     const parent = Array.from({ length: n }, (_, i) => i);
+    const groupSize = new Uint32Array(n).fill(1);
+    // Iterative path halving avoids call-stack growth on large merge chains.
     const find = (i: number): number => {
-        if (parent[i] === i) return i;
-        parent[i] = find(parent[i]);
-        return parent[i];
+        while (parent[i] !== i) {
+            parent[i] = parent[parent[i]];
+            i = parent[i];
+        }
+        return i;
     };
     const union = (i: number, j: number) => {
-        const rootI = find(i);
-        const rootJ = find(j);
-        if (rootI !== rootJ) parent[rootI] = rootJ;
+        let rootI = find(i);
+        let rootJ = find(j);
+        if (rootI === rootJ) return;
+        if (groupSize[rootI] < groupSize[rootJ]) {
+            [rootI, rootJ] = [rootJ, rootI];
+        }
+        parent[rootJ] = rootI;
+        groupSize[rootI] += groupSize[rootJ];
     };
 
     const nameToIndices = new Map<string, number[]>();
@@ -464,6 +473,10 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     // 3. 동일 주소 내 유사 이름 병합 (O(N * M^2), M은 동일 주소 맛집 수 - 대개 매우 작음)
     for (const indices of addressToIndices.values()) {
         if (indices.length < 2) continue;
+        // Exact-name or earlier address unions may already connect this whole bucket.
+        // Skip its quadratic pair scan only when every member has the same root.
+        const firstRoot = find(indices[0]);
+        if (indices.every(index => find(index) === firstRoot)) continue;
         for (let j = 0; j < indices.length; j++) {
             const idx1 = indices[j];
             for (let k = j + 1; k < indices.length; k++) {

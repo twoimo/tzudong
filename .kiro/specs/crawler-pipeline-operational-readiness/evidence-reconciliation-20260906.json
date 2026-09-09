@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "scope": "Documentation-only reconciliation of retained evidence; no hosted action or fresh external verification",
+  "sourceBaseMain": "535ff5e27c2e7c27f385e862a824a58d0cc30b92",
+  "sourceBaseTree": "8e93abd2d3564b5d33609c05e751e4ccdd718005",
+  "retainedEvidenceCutoffUtc": "2026-09-06T06:11:13.413463+00:00",
+  "counts": {
+    "total": 1310,
+    "beforeChecked": 1270,
+    "beforeOpen": 40,
+    "newlyReflectedHistoricalActions": 12,
+    "afterChecked": 1282,
+    "afterOpen": 28
+  },
+  "artifactRoots": {
+    "B5": "/Users/twoimo/.codex/artifacts/tzudong-kiro-closure-20260905",
+    "B6": "/Users/twoimo/.codex/artifacts/tzudong-kiro-db-completion-20260906",
+    "B9": "/Users/twoimo/.codex/artifacts/tzudong-admin-rpc-apply-v3-20260906"
+  },
+  "evidence": {
+    "promotion-develop": {
+      "root": "B5",
+      "relativePath": "pr-2865-merge-readback.json",
+      "fileSha256": "d5fadd8ef2bdb54cb320fb439dc3b5be3f3ba8d73e0448ee7910697aa5019ed6"
+    },
+    "promotion-data": {
+      "root": "B5",
+      "relativePath": "pr-2866-merge-readback.json",
+      "fileSha256": "80993eb81e52bcc82d53d7ec5a886899593a478b4baeddaad50ea09a475487d9"
+    },
+    "promotion-main": {
+      "root": "B5",
+      "relativePath": "pr-2867-merge-readback.json",
+      "fileSha256": "b8532bebdb5e2a54925d783556ec2d7ec1ab823bc50df5f8e96ebee1aed405bc"
+    },
+    "probe-authorization": {
+      "root": "B5",
+      "relativePath": "g037-runtime-probe-exact-main-authorization.v2.json",
+      "fileSha256": "e3af85d9c1d1ce9c5862e64e2abbf02c5c40b639ea4c50a6a431791752be2601"
+    },
+    "probe-readback": {
+      "root": "B5",
+      "relativePath": "g037-runtime-probe-run-readback.v2.json",
+      "fileSha256": "6d70aa9b909d1dc497d2498c8b6ecd9cb683fe629fde103fc34dbe27d4eca67d"
+    },
+    "dedicated-role": {
+      "root": "B5",
+      "relativePath": "g037-dedicated-credential-current.json",
+      "fileSha256": "1607b04beeb92f28daeddc06babcc930f7e1faaa64871b4e29685a9a56d40a5b"
+    },
+    "web-completion": {
+      "root": "B5",
+      "relativePath": "production-deployment-complete-5af1e1f6.json",
+      "fileSha256": "acb2343ca7b7770094f27247c6df00269fc0f44c39be562ec4a1d4f57ca0a48e"
+    },
+    "web-actor": {
+      "root": "B6",
+      "relativePath": "production-deployment-actor-readback.json",
+      "fileSha256": "a3c1d49933a32731be1f7e24e8cb8768c5b385a4858aaad044d3e653d0ff04bb"
+    },
+    "advisor-audit": {
+      "root": "B6",
+      "relativePath": "advisor-committed-audit-v3.json",
+      "fileSha256": "9afa9fcd81a274613f43babc35bebd7eddfb05a6164254b6880d8ca41b9ef81a"
+    },
+    "types-comparison": {
+      "root": "B6",
+      "relativePath": "hosted-types-comparison-after-advisor.json",
+      "fileSha256": "f619c8019ef0f0fa980587cf09eefa14c76322f1cb5fd2dbdeba3d3f8209f0e5"
+    },
+    "current-main": {
+      "root": "B6",
+      "relativePath": "pr-2886-merge-readback.json",
+      "fileSha256": "b31027dffceff8bebda3c1f9312974a3419b7cf6755932cdb7aa6bc97ccafee2"
+    },
+    "rehearsal-failure": {
+      "root": "B9",
+      "relativePath": "rehearse-outcome.json",
+      "fileSha256": "0a5e93feb9bb5cfcbe5271f12374ace424bb2074bc64dd949d2055154f26b40f"
+    },
+    "rehearsal-restored": {
+      "root": "B9",
+      "relativePath": "failed-rehearsal-independent-snapshot.json",
+      "fileSha256": "851910e255bbbd0c3c4ed9ef9091870bc7292cacc53bb1c7cedbca7d14a7d695"
+    },
+    "diagnostic-denied": {
+      "root": "B9",
+      "relativePath": "post-failure-diagnostic-status.json",
+      "fileSha256": "54e98ba0c7e32b8431b08b7c426faaa363d0ac433d8c336837ea1c9a02d17ac9"
+    },
+    "schedule": {
+      "root": "B6",
+      "relativePath": "schedule-cadence-assessment-33991530487.json",
+      "fileSha256": "256a4113517afc2d808976a8fe07f9f991e54bc4e65f54a6e6df5b2e12113379"
+    },
+    "mac-held": {
+      "root": "B6",
+      "relativePath": "natural-schedule-held-readback-20260906.json",
+      "fileSha256": "1d6d4596f084ac3e4141e7efb40bab3dc1dcee279e0ca72c974e407258e1122d"
+    },
+    "performance": {
+      "root": "B6",
+      "relativePath": "performance-custody-parent-readback.json",
+      "fileSha256": "6127d2ef7127a9895c8078a95543fa5d79201405a92aa31c22d64ba56c994b1d"
+    },
+    "orchestration": {
+      "root": "B6",
+      "relativePath": "orchestration-current-main-20260906.json",
+      "fileSha256": "3013fad23be7a7219c11c67b4aacefaaf535e956fed3c595cff9ef9f63f9cb14"
+    },
+    "backend-checks": {
+      "root": "B6",
+      "relativePath": "backend-canonical-checks-current-main.json",
+      "fileSha256": "d60d41e6c9012abd35e966a45e37865588fcbd637db4f4c2ef3723c2b27175e0"
+    },
+    "drive-diagnostics": {
+      "root": "B6",
+      "relativePath": "gdrive-inventory-diagnostics-readback/summary.json",
+      "fileSha256": "6e7ef0b8dd97b1fc2bf55814ed992e2719212fac5422638d176046049fe59cc1"
+    },
+    "web-health": {
+      "root": "B6",
+      "relativePath": "production-health-admin-rpc-before-apply.json",
+      "fileSha256": "2b1adb0598a0dc47d1bf3e9b464982a7a8bf88abf9ee844376a1ff7aa14d1167"
+    },
+    "web-canceled-target": {
+      "root": "B9",
+      "relativePath": "vercel-target-deployment-readback.json",
+      "fileSha256": "a8ad43cf57d62dc735d9519a22cd0152dbdaa2adcd35bfd0929c75f27a23a5c0"
+    }
+  },
+  "completedHistoricalTasks": [
+    {
+      "taskId": "7.80",
+      "evidenceIds": [
+        "advisor-audit"
+      ]
+    },
+    {
+      "taskId": "7.168",
+      "evidenceIds": [
+        "promotion-main"
+      ]
+    },
+    {
+      "taskId": "7.169",
+      "evidenceIds": [
+        "probe-authorization",
+        "probe-readback"
+      ]
+    },
+    {
+      "taskId": "7.195",
+      "evidenceIds": [
+        "probe-authorization"
+      ]
+    },
+    {
+      "taskId": "7.365",
+      "evidenceIds": [
+        "dedicated-role",
+        "probe-authorization",
+        "probe-readback"
+      ]
+    },
+    {
+      "taskId": "7.395",
+      "evidenceIds": [
+        "promotion-develop",
+        "promotion-data",
+        "promotion-main"
+      ]
+    },
+    {
+      "taskId": "7.396",
+      "evidenceIds": [
+        "probe-authorization",
+        "probe-readback"
+      ]
+    },
+    {
+      "taskId": "14.15",
+      "evidenceIds": [
+        "promotion-develop",
+        "promotion-data",
+        "promotion-main"
+      ]
+    },
+    {
+      "taskId": "14.17",
+      "evidenceIds": [
+        "web-completion"
+      ]
+    },
+    {
+      "taskId": "14.62",
+      "evidenceIds": [
+        "web-completion"
+      ]
+    },
+    {
+      "taskId": "14.84",
+      "evidenceIds": [
+        "web-completion",
+        "web-actor"
+      ]
+    },
+    {
+      "taskId": "7.81",
+      "evidenceIds": [
+        "advisor-audit",
+        "types-comparison"
+      ]
+    }
+  ],
+  "remainingTaskGroups": [
+    {
+      "taskIds": [
+        "5.5",
+        "5.6"
+      ],
+      "status": "execution-evidence-missing",
+      "gap": "Scheduled run 33991530487 was created at 05:55:36 KST, outside 04:00-04:45, and skipped. Mac held marker proves no producer execution; no real sleep/wake coalescing proof.",
+      "evidenceIds": [
+        "schedule",
+        "mac-held"
+      ]
+    },
+    {
+      "taskIds": [
+        "7.15",
+        "7.37",
+        "7.38"
+      ],
+      "status": "hosted-convergence-incomplete",
+      "gap": "The advisor operation is committed, with unchanged before/after generated types. This does not reconcile source types and the entire hosted catalog or establish all G037 read-only modes. The admin-ID rehearsal has no success receipt and its separate readback remains at ledger 51; no RPC apply admitted.",
+      "evidenceIds": [
+        "advisor-audit",
+        "types-comparison",
+        "rehearsal-failure",
+        "rehearsal-restored",
+        "diagnostic-denied"
+      ]
+    },
+    {
+      "taskIds": [
+        "7.94",
+        "7.95",
+        "7.96"
+      ],
+      "status": "external-decision-and-eligibility",
+      "gap": "Deferred leaked-password protection requires a superseding named-owner decision, plan eligibility, actual activation and independent readback.",
+      "evidenceIds": []
+    },
+    {
+      "taskIds": [
+        "8.12"
+      ],
+      "status": "authentication-and-identity-reconciliation",
+      "gap": "Latest retained Drive run failed REMOTE_AUTH_FAILED. Existing 246 remote-byte verifications stand; 192095 manifest rows are not unique files or all-version completion. Valid automation authentication and duplicate/version/size reconciliation remain.",
+      "evidenceIds": [
+        "drive-diagnostics"
+      ]
+    },
+    {
+      "taskIds": [
+        "10.13",
+        "10.14"
+      ],
+      "status": "live-parity-and-retirement-gate",
+      "gap": "Three approved live Rust parity receipts and subsequent explicit shim-retirement approval are absent.",
+      "evidenceIds": []
+    },
+    {
+      "taskIds": [
+        "11.7",
+        "11.8",
+        "11.9",
+        "11.10",
+        "11.12",
+        "11.32",
+        "11.33",
+        "11.34",
+        "11.35"
+      ],
+      "status": "canonical-performance-evidence-incomplete",
+      "gap": "A custody map and local compiler observations exist, but the map is not a scoring map. Required real frozen baseline/candidate cohorts, health/manifest/raw/scored/validator artifacts and measurement windows are incomplete. Neither improvement nor valid zero admission is established.",
+      "evidenceIds": [
+        "performance"
+      ]
+    },
+    {
+      "taskIds": [
+        "14.18"
+      ],
+      "status": "external-documents-absent",
+      "gap": "User explicitly reported no retention/legal/location documents. Named policy, retention, provider, location, applicable guardian/incident and Korean legal/privacy receipts remain required; authorization is not a substitute.",
+      "evidenceIds": []
+    },
+    {
+      "taskIds": [
+        "14.48",
+        "14.50",
+        "14.51"
+      ],
+      "status": "historical-recovery-and-current-closure-incomplete",
+      "gap": "Historical G037/G038 execution/recovery is not established by current ledger 51 or a denied read-only probe. Freeze remains active; controlled freeze exit and a non-expired exact-protected-commit Closure readback remain unproven.",
+      "evidenceIds": [
+        "advisor-audit",
+        "probe-readback"
+      ]
+    },
+    {
+      "taskIds": [
+        "14.103",
+        "14.106"
+      ],
+      "status": "external-security-and-dns-ownership",
+      "gap": "Named security/operations decisions and registrar/Cloudflare ownership evidence remain missing. No DNS or security settings changed.",
+      "evidenceIds": []
+    },
+    {
+      "taskIds": [
+        "16.100",
+        "16.151"
+      ],
+      "status": "phase-approval-and-execution-evidence",
+      "gap": "Queue flag remains disabled; later bound approval/publication and P5 owner/commit-bound phase evidence remain external gates.",
+      "evidenceIds": []
+    }
+  ],
+  "allKiroComplete": false,
+  "hostedMutationPerformed": false,
+  "productionDeploymentPerformed": false,
+  "freezeExitPerformed": false
+}

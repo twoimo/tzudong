@@ -47,7 +47,16 @@
     getSW() { return this._sw; }
     getNE() { return this._ne; }
   }
-  const scaleForZoom = (zoom) => 2500 * Math.pow(2, Number(zoom) - 10);
+  // Use a 256-pixel Web Mercator world at zoom zero. The previous linear
+  // scale moved nearby Seoul fixtures above the viewport after cluster zoom.
+  const worldSize = (zoom) => 256 * Math.pow(2, Number(zoom));
+  const project = (coord, size) => {
+    const lat = Math.max(-85.05112878, Math.min(85.05112878, coord.lat())) * Math.PI / 180;
+    return new Point(
+      (coord.lng() + 180) / 360 * size,
+      (1 - Math.log(Math.tan(Math.PI / 4 + lat / 2)) / Math.PI) / 2 * size,
+    );
+  };
 
   class MockMap {
     constructor(container, options = {}) {
@@ -90,12 +99,15 @@
       const map = this;
       return {
         fromCoordToOffset(coordLike) {
-          const coord = asLatLng(coordLike); const rect = map._rect(); const scale = scaleForZoom(map._zoom);
-          return new Point(rect.width / 2 + (coord.lng() - map._center.lng()) * scale, rect.height / 2 - (coord.lat() - map._center.lat()) * scale);
+          const rect = map._rect(); const size = worldSize(map._zoom);
+          const coord = project(asLatLng(coordLike), size); const center = project(map._center, size);
+          return new Point(rect.width / 2 + coord.x - center.x, rect.height / 2 + coord.y - center.y);
         },
         fromOffsetToCoord(pointLike) {
-          const point = pointLike instanceof Point ? pointLike : new Point(pointLike.x, pointLike.y); const rect = map._rect(); const scale = scaleForZoom(map._zoom);
-          return new LatLng(map._center.lat() - (point.y - rect.height / 2) / scale, map._center.lng() + (point.x - rect.width / 2) / scale);
+          const point = pointLike instanceof Point ? pointLike : new Point(pointLike.x, pointLike.y);
+          const rect = map._rect(); const size = worldSize(map._zoom); const center = project(map._center, size);
+          const x = center.x + point.x - rect.width / 2; const y = center.y + point.y - rect.height / 2;
+          return new LatLng(Math.atan(Math.sinh(Math.PI * (1 - 2 * y / size))) * 180 / Math.PI, x / size * 360 - 180);
         },
       };
     }

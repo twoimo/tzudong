@@ -468,11 +468,11 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
 
     def test_manifest_contains_exactly_eighty_eight_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 88)
-        self.assertEqual(len(manifest["source"]["files"]), 88)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 96)
+        self.assertEqual(len(manifest["source"]["files"]), 96)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20260903174413_advisor_followup_hardening.sql",
+            "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
@@ -489,7 +489,7 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                 item["sha256"],
                 item["byteLength"],
                 item["transaction"]["class"],
-                "applied",
+                local_migrate._expected_terminal_status(item),
                 local_migrate._expected_unit_evidence(item),
             ]
             for item in local_migrate.build_manifest()["source"]["files"]
@@ -511,7 +511,7 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
             "commit_sha256": "2" * 40,
         }
         receipt = {
-            "schema": "local-receipt-v1",
+            "schema": "local-receipt-v2",
             "serializer": "receipt-v1",
             "project_name": project,
             "stack_provenance": stack_provenance,
@@ -522,6 +522,7 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
             "image_service_digests": image_service_digests,
             "commit_sha256": "2" * 40,
             "ledger": ledger,
+            "replay_proofs": {item["path"]: local_migrate._expected_replay_proof(item) for item in local_migrate.build_manifest()["source"]["files"] if local_migrate._expected_replay_proof(item) is not None},
             "readback_sql_sha256": "b" * 64,
             "readback_sha256": "c" * 64,
             "catalog_sha256": "d" * 64,
@@ -586,6 +587,18 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
             second.write_text(json.dumps(receipt), encoding="utf-8")
             compared = local_migrate.compare_receipts(first, second)
             self.assertTrue(compared["equal"])
+            self.assertIn("replay_proofs", compared["comparedFields"])
+            old_schema = dict(receipt)
+            old_schema["schema"] = "local-receipt-v1"
+            second.write_text(json.dumps(old_schema), encoding="utf-8")
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_file_schema"):
+                local_migrate.compare_receipts(first, second)
+            missing_proofs = dict(receipt)
+            missing_proofs["replay_proofs"] = {}
+            second.write_text(json.dumps(missing_proofs), encoding="utf-8")
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "receipt_replay_proofs"):
+                local_migrate.compare_receipts(first, second)
+            second.write_text(json.dumps(receipt), encoding="utf-8")
             self.assertIn("environment_contract_sha256", compared["comparedFields"])
             changed = dict(receipt)
             changed["seed_sha256"] = "1" * 64

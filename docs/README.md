@@ -10,6 +10,7 @@ Keep at the repository root: `README.md`, `README.ko.md`, `LICENSE`,
 
 | Path | What belongs here |
 | --- | --- |
+| [agents/](agents/) | Conditional agent guidance for verification, privacy and hosted release work. |
 | [product/](product/) | Durable product/UX design. `DESIGN.md` is the public-surface contract. |
 | [operations/](operations/) | How we run Nightly, crawlers, and operator playbooks that are still current. |
 | [archive/handoffs/](archive/handoffs/) | Dated session notes. Not source of truth. |

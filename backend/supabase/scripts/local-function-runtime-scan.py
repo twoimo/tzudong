@@ -1399,12 +1399,14 @@ def _migration_admission_sql(bindings: Mapping[str, Any]) -> bytes:
 SELECT jsonb_build_object(
   'ledger', COALESCE((
     SELECT jsonb_agg(jsonb_build_object(
-      'migrationId', migration_id,
+      'path', migration_id,
       'ordinal', ordinal,
-      'sourceSha256', source_sha256,
-      'sourceByteLength', source_byte_length,
+      'sha256', source_sha256,
+      'byteLength', source_byte_length,
       'transactionClass', transaction_class,
-      'status', status
+      'status', status,
+      'readbackSha256', readback_sha256,
+      'replayProof', replay_proof
     ) ORDER BY ordinal, migration_id)
       FROM _tzudong_local.migration_ledger
   ), '[]'::jsonb),
@@ -1432,15 +1434,20 @@ def _validate_database_admission(
     expected_files = bindings.get("files")
     if not isinstance(ledger, list) or not isinstance(expected_files, list) or len(ledger) != len(expected_files):
         raise RuntimeScanError("local_migration_binding")
+    try:
+        migrate = _load_local_contract_module("local-migrate.py", "_tzudong_local_migrate_admission")
+        migrate._validate_ledger_snapshot(ledger)
+    except Exception as error:
+        raise RuntimeScanError("local_migration_binding") from error
+    # Also bind admission to the source snapshot used for this scanner run.
     for actual, expected in zip(ledger, expected_files):
         if (
             not isinstance(actual, dict)
-            or actual.get("migrationId") != expected["path"]
+            or actual.get("path") != expected["path"]
             or actual.get("ordinal") != expected["ordinal"]
-            or actual.get("sourceSha256") != expected["sha256"]
-            or actual.get("sourceByteLength") != expected["byteLength"]
+            or actual.get("sha256") != expected["sha256"]
+            or actual.get("byteLength") != expected["byteLength"]
             or actual.get("transactionClass") != expected["transactionClass"]
-            or actual.get("status") != "applied"
         ):
             raise RuntimeScanError("local_migration_binding")
     sequence = value.get("sequence")

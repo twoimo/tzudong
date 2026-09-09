@@ -22,6 +22,7 @@ type CandidateDecisionRow = {
   candidate_status: RefreshCandidateStatus;
   detected_change_types: string[] | null;
   candidate_snapshot: JsonObject;
+  previous_snapshot: JsonObject;
 };
 type IdRow = {
   id: string;
@@ -149,7 +150,8 @@ function isCandidateDecisionRow(value: unknown): value is CandidateDecisionRow {
     && typeof value.restaurant_id === "string"
     && isRefreshCandidateStatus(value.candidate_status)
     && (value.detected_change_types === null || isStringArray(value.detected_change_types))
-    && isJsonObject(value.candidate_snapshot);
+    && isJsonObject(value.candidate_snapshot)
+    && isJsonObject(value.previous_snapshot);
 }
 
 function isIdRow(value: unknown): value is IdRow {
@@ -194,8 +196,8 @@ function candidatePatchFromSnapshot(snapshot: JsonObject, adminUserId: string): 
   const phone = stringValue(snapshot.phone);
   const roadAddress = stringValue(snapshot.road_address);
   const jibunAddress = stringValue(snapshot.jibun_address);
-  const lat = Number(snapshot.lat);
-  const lng = Number(snapshot.lng);
+  const lat = typeof snapshot.lat === "number" ? snapshot.lat : NaN;
+  const lng = typeof snapshot.lng === "number" ? snapshot.lng : NaN;
 
   if (name) patch.approved_name = name;
   if (phone !== null) patch.phone = phone;
@@ -491,7 +493,7 @@ export async function POST(request: NextRequest) {
 
       const { data: candidate, error: candidateError } = await supabase
         .from("restaurant_refresh_candidates")
-        .select("id, restaurant_id, candidate_status, detected_change_types, candidate_snapshot")
+        .select("id, restaurant_id, candidate_status, detected_change_types, candidate_snapshot, previous_snapshot")
         .eq("id", candidateId)
         .single()
         .overrideTypes<CandidateDecisionRow, { merge: false }>();
@@ -519,21 +521,50 @@ export async function POST(request: NextRequest) {
             { status: 400 },
           );
         }
-        const { data: updatedRestaurant, error: updateError } = await supabase
-          .from("restaurants")
-          .update(patch)
-          .eq("id", candidate.restaurant_id)
-          .eq("status", "approved")
-          .select("id")
-          .single()
-          .overrideTypes<IdRow, { merge: false }>();
-        if (updateError || !isIdRow(updatedRestaurant)) {
-          return NextResponse.json({ error: "승인된 맛집에만 최신화 후보를 적용할 수 있습니다." }, { status: 409 });
+        const { data: rawReceipt, error: applyError } = await supabase.rpc(
+          "apply_restaurant_refresh_candidate" as never,
+          {
+            p_actor_user_id: auth.userId,
+            p_candidate_id: candidateId,
+            p_expected_previous_snapshot: candidate.previous_snapshot,
+            p_expected_candidate_snapshot: candidate.candidate_snapshot,
+            p_operator_notes: stringValue(body.operator_notes),
+          } as never,
+        );
+        if (applyError) {
+          const invalid = applyError.code === "22023";
+          return noStoreJson(
+            { error: invalid
+              ? "적용 가능한 상호명·전화번호·주소·좌표 변경값이 없습니다."
+              : "승인된 맛집에만 최신화 후보를 적용할 수 있습니다." },
+            { status: invalid ? 400 : 409 },
+          );
         }
+        // Generated hosted types are not advanced before catalog integration.
+        const receipt: unknown = rawReceipt;
+        if (!isRecord(receipt) || receipt.ok !== true || receipt.readback !== true
+          || receipt.candidate_status !== "applied" || receipt.candidate_id !== candidateId
+          || receipt.restaurant_id !== candidate.restaurant_id
+          || typeof receipt.preview_hash !== "string" || !/^[0-9a-f]{64}$/.test(receipt.preview_hash)
+          || typeof receipt.audit_id !== "string" || !/^[0-9a-f-]{36}$/i.test(receipt.audit_id)) {
+          throw new Error("refresh_apply_receipt_denied");
+        }
+        // Separate committed readback; never retry an uncertain apply outcome.
+        const { data: appliedCandidate, error: readbackError } = await supabase
+          .from("restaurant_refresh_candidates")
+          .select("id, candidate_status, operator_decision, decided_by_admin_id, applied_at")
+          .eq("id", candidateId)
+          .single();
+        if (readbackError || !isRecord(appliedCandidate) || appliedCandidate.id !== candidateId
+          || appliedCandidate.candidate_status !== "applied" || appliedCandidate.operator_decision !== "approved"
+          || appliedCandidate.decided_by_admin_id !== auth.userId || typeof appliedCandidate.applied_at !== "string") {
+          throw new Error("refresh_apply_readback_denied");
+        }
+        return noStoreJson({ ok: true, candidate_status: "applied" });
       }
 
       const nextStatus: RefreshCandidateStatus = decision === "approved" && apply ? "applied" : decision;
-      const { error: decisionError } = await supabase
+      const { data: decidedCandidate, error: decisionError } = await supabase
         .from("restaurant_refresh_candidates")
         .update({
           candidate_status: nextStatus,
@@ -543,9 +574,14 @@ export async function POST(request: NextRequest) {
           decided_at: now,
           applied_at: nextStatus === "applied" ? now : null,
         })
-        .eq("id", candidateId);
+        .eq("id", candidateId)
+        .eq("candidate_status", "needs_review")
+        .select("id")
+        .single();
 
-      if (decisionError) throw decisionError;
+      if (decisionError || !isIdRow(decidedCandidate)) {
+        return noStoreJson({ error: "이미 결정된 후보입니다." }, { status: 409 });
+      }
       return NextResponse.json({ ok: true, candidate_status: nextStatus }, { headers: { "Cache-Control": "no-store" } });
     }
 

@@ -620,9 +620,9 @@ describe("nightly regression package and source contracts", () => {
     for (const token of [
       "const localMigrationReceiptFilename = 'local-receipt-v1.json';",
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
-      "receipt.schema !== 'local-receipt-v1'",
+      "receipt.schema !== 'local-receipt-v2'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 77",
+      "receipt.ledger.length !== 96",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -639,7 +639,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(operationsDocSource).toContain("77-unit migration ledger");
+    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 96");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -1145,7 +1145,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 88",
+      "EXPECTED_LEDGER_UNITS = 96",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1156,7 +1156,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 88");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 96");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -1648,5 +1648,40 @@ describe("nightly regression package and source contracts", () => {
       expect(pullPaths).toContain(line);
       expect(pushPaths).toContain(line);
     }
+  });
+});
+
+
+describe('local migration v2 receipt envelope', () => {
+  const keysDeclaration = sourceBlock(nightlyRunnerSource,
+    'const localMigrationReceiptExpectedKeys =', 'const localStackProvenanceExpectedKeys =');
+  const envelope = sourceBlock(nightlyRunnerSource,
+    'function assertLocalMigrationReceiptEnvelope(', 'async function assertLocalMigrationReceipt(');
+  const { validate, keys } = new Function('localProjectName', 'localReceiptSequenceMarkers',
+    `${keysDeclaration}\n${envelope}\nreturn { validate: assertLocalMigrationReceiptEnvelope, keys: localMigrationReceiptExpectedKeys.split(',') };`,
+  )('fixture-project', ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']);
+  const receipt = (): Record<string, unknown> => ({
+    ...Object.fromEntries(keys.map((key: string) => [key, 'fixture'])),
+    schema: 'local-receipt-v2', serializer: 'receipt-v1', project_name: 'fixture-project',
+    ledger: Array(96).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
+  });
+  const stack = { config_sha256: 'fixture', input_provenance_sha256: 'fixture', env_provenance_sha256: 'fixture' };
+
+  test('admits v2 envelope for subsequent full authority validation, retaining v1 filename', () => {
+    expect(() => validate(receipt(), stack)).not.toThrow();
+    expect(nightlyRunnerSource).toContain("const localMigrationReceiptFilename = 'local-receipt-v1.json'");
+    expect(nightlyRunnerSource).toContain('module._load_receipt_file(pathlib.Path(sys.argv[2]))');
+  });
+
+  test('rejects stale counts/schema, absent proofs, extra fields and provenance drift', () => {
+    for (const patch of [
+      { schema: 'local-receipt-v1' }, { serializer: 'receipt-v2' },
+      { ledger: Array(77).fill(null) }, { ledger: Array(88).fill(null) },
+      { replay_proofs: null }, { replay_proofs: [] }, { replay_proofs: undefined },
+      { extra: true }, { config_sha256: 'drift' },
+    ]) expect(() => validate({ ...receipt(), ...patch }, stack)).toThrow('local-receipt-v2');
+    const missing = receipt();
+    delete missing.replay_proofs;
+    expect(() => validate(missing, stack)).toThrow('local-receipt-v2');
   });
 });

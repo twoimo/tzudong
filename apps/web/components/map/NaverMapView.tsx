@@ -1851,9 +1851,8 @@ const NaverMapView = memo(({
         bounds: restaurantQueryBounds,
         compact: true,
         filters,
-        isLoaded,
         selectedRegion,
-    }), [filters, isLoaded, restaurantQueryBounds, selectedRegion]);
+    }), [filters, restaurantQueryBounds, selectedRegion]);
     const restaurantEmptyStateMessage = useMemo(
         () => resolveNaverRestaurantEmptyStateMessage(filters),
         [filters],
