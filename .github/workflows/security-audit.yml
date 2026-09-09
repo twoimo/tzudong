@@ -284,7 +284,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r backend/test-requirements.txt
 
       - name: Install Helm for actual local descriptor rendering
-        uses: Azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: 'v4.2.4'
       - name: Install OpenTofu for provider-free local descriptor plans
