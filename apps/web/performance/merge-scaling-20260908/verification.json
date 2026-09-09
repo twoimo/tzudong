@@ -1,0 +1,40 @@
+{
+  "scope": "Synthetic-input correctness and scaling guard, not a scored G003 performance claim",
+  "baseCommit": "071552e064f286260c8a534b12b97a8d9a496231",
+  "input": {
+    "synthetic": true,
+    "rows": 100000,
+    "sameName": true,
+    "emptyAddresses": true
+  },
+  "baselineResult": "RangeError: Maximum call stack size exceeded at recursive find",
+  "candidateResult": "one merged group, 100000 reviews, all input members retained in order",
+  "verification": {
+    "bunVersion": "1.4.0",
+    "testsPassed": 14,
+    "testsFailed": 0,
+    "typescriptParity": "passed, zero diagnostics",
+    "targetedEslint": "passed",
+    "diffCheck": "passed"
+  },
+  "sourceHashes": {
+    "apps/web/hooks/use-restaurants.tsx": "7612a6c094c4070b0a1943804677b01c5fa4aca74b0947c9dca0781deab8be67",
+    "apps/web/tests-unit/use-restaurants-merge.test.ts": "1860b89b9ca3267c82941457c9bde59fee28dccd0d301f09ab0da74b679e97de"
+  },
+  "performanceClaim": {
+    "established": false,
+    "absoluteBudget": "No elapsed-time acceptance threshold claimed for this correctness regression",
+    "relativeBudget": "No latency improvement claimed",
+    "noiseBudget": "No timed cohort or noise estimate collected",
+    "canonicalBudgetFile": "apps/web/performance/performance-budgets.v1.json",
+    "canonicalScoredAdmission": false
+  },
+  "remaining": [
+    "same-address pairwise comparison scaling",
+    "public map and search real-user latency and transfer measurements",
+    "API/database query and cache costs",
+    "backend execution reliability and throughput",
+    "protected source integration and deployed readback"
+  ],
+  "allGoalRequirementsComplete": false
+}

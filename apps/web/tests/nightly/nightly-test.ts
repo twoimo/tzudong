@@ -974,13 +974,16 @@ async function fulfillNaverSdk(route: Route, diagnostics: NightlyRouteDiagnostic
     recordDiagnostic(diagnostics, diagnosticForUrl(url, route.request().method(), 200, 'naver-offline'));
 }
 
-export const test = base.extend({
-    page: async ({ page }, fixtureUse, testInfo) => {
+export const test = base.extend<{ preloadNaverMock: boolean }>({
+    preloadNaverMock: [true, { option: true }],
+    page: async ({ page, preloadNaverMock }, fixtureUse, testInfo) => {
         const diagnostics: NightlyRouteDiagnostic[] = [];
         let applicationConsoleErrorCount = 0;
         const usesRealLocalSupabase = isLocalNightlyMode
             && testInfo.file.replaceAll('\\', '/').endsWith('/tests/local-supabase-admin.spec.ts');
-        await page.addInitScript({ content: MOCK_NAVER_MAPS_SOURCE });
+        if (preloadNaverMock) {
+            await page.addInitScript({ content: MOCK_NAVER_MAPS_SOURCE });
+        }
         page.on('console', (message) => {
             if (message.type() === 'error' && FORBIDDEN_PUBLIC_DATA_CONSOLE_ERRORS.has(message.text())) {
                 applicationConsoleErrorCount += 1;

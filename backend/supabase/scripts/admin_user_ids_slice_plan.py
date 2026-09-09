@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import advisor_successor_plan as baseline
+import g014_catalog_diagnostic as diagnostic
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = 'aqlcofblfxdrjhhdmarw'
@@ -63,10 +64,11 @@ def preview(snapshot):
 def receipt(p):
     return {'schema':'admin-ids-slice-rehearsal-v1','projectId':PROJECT,'preview_sha256':sha(canonical(p).encode()),'source_sha256':SOURCE_SHA,'rolled_back':True}
 
-def plan(p,mode,rehearsal=None):
+def plan(p,mode,rehearsal=None,*,diagnostic_receipt=None):
     if p != preview(p['snapshot']): raise ValueError('preview_binding_denied')
     if mode not in ('rehearse','apply','readback'): raise ValueError('mode_denied')
     if mode=='apply' and rehearsal!=receipt(p): raise ValueError('external_rehearsal_receipt_required')
+    stamp = diagnostic.require_passed(diagnostic_receipt,p) if mode in ('rehearse','apply') else None
     statements=vectors()
     vector='ARRAY['+','.join(literal(s) for s in statements)+']::text[]'
     prior=literal(canonical(p['snapshot']))+'::jsonb'
@@ -126,6 +128,7 @@ LOCK TABLE supabase_migrations.schema_migrations IN SHARE ROW EXCLUSIVE MODE;
 DO $plan$ DECLARE prior jsonb:={prior}; actual jsonb; rehearsal_finished boolean := false; BEGIN
  SELECT ({read}) INTO actual;
  IF actual IS DISTINCT FROM prior THEN RAISE EXCEPTION 'admin_ids_preview_drift'; END IF;
+ {diagnostic.execution_guard(stamp,diagnostic_receipt['assertionCatalogSha256'])}
  {work}
 END $plan$;
 {tail}
@@ -134,7 +137,9 @@ END $plan$;
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--project-ref',required=True,choices=[PROJECT]);p.add_argument('--snapshot',required=True,type=Path)
-    p.add_argument('--mode',required=True,choices=['preview','rehearse','apply','readback']);p.add_argument('--rehearsal',type=Path)
+    p.add_argument('--mode',required=True,choices=['preview','diagnose','rehearse','apply','readback']);p.add_argument('--rehearsal',type=Path)
+    p.add_argument('--diagnostic-receipt',type=Path)
     a=p.parse_args()
     bound=preview(json.loads(a.snapshot.read_text()))
-    print(canonical(bound) if a.mode=='preview' else plan(bound,a.mode,json.loads(a.rehearsal.read_text()) if a.rehearsal else None))
+    evidence=diagnostic.load_receipt(a.diagnostic_receipt) if a.diagnostic_receipt else None
+    print(canonical(bound) if a.mode=='preview' else diagnostic.diagnostic_sql(bound) if a.mode=='diagnose' else plan(bound,a.mode,json.loads(a.rehearsal.read_text()) if a.rehearsal else None,diagnostic_receipt=evidence))

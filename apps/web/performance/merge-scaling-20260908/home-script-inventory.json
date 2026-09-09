@@ -1,0 +1,141 @@
+{
+  "kind": "local_production_html_script_inventory",
+  "recorded_at_utc": "2026-09-08T04:23:33.867814+00:00",
+  "source_commit": "a6076134b9b83636f5e45c3a7168e48bcd521d39",
+  "status": 200,
+  "scripts": [
+    {
+      "path": "/_next/static/chunks/2024-9ded2bdad78d01e4.js",
+      "nomodule": false,
+      "raw_bytes": 32389,
+      "gzip_bytes": 10574,
+      "sha256": "c4395fe57d2c84fdfd1b5d9b715ef75568e000f0215660101a977ce442359ead"
+    },
+    {
+      "path": "/_next/static/chunks/4453-dbfd2565e397d3b7.js",
+      "nomodule": false,
+      "raw_bytes": 7182,
+      "gzip_bytes": 2641,
+      "sha256": "83987cec057d0f80135cbe16cd62138f536f0332d7bc94788646daed19dcfcc8"
+    },
+    {
+      "path": "/_next/static/chunks/5111-3111e4c790163c0b.js",
+      "nomodule": false,
+      "raw_bytes": 11629,
+      "gzip_bytes": 4529,
+      "sha256": "95657cf34888314b413b6bca30981bae242c8dd54bc8536b448ac740d9c3dec1"
+    },
+    {
+      "path": "/_next/static/chunks/5289-4817983c05bf4600.js",
+      "nomodule": false,
+      "raw_bytes": 12224,
+      "gzip_bytes": 4265,
+      "sha256": "6636341e30e28c3b84fcdffb4a59c2e66585734e6052781f6076ff47e5ed8b26"
+    },
+    {
+      "path": "/_next/static/chunks/6662-8e3023f6506e473b.js",
+      "nomodule": false,
+      "raw_bytes": 222811,
+      "gzip_bytes": 61102,
+      "sha256": "dc7e71a589e050bedc954f12be55a4bbd315b0113df26b82c66cbb6f9fa774d3"
+    },
+    {
+      "path": "/_next/static/chunks/6846-c25ca0a4ff0f88a7.js",
+      "nomodule": false,
+      "raw_bytes": 52570,
+      "gzip_bytes": 16983,
+      "sha256": "3bd4fd698ee9c7245017a0741b978806059e7dc1f8f6f9b355fef973c6074e27"
+    },
+    {
+      "path": "/_next/static/chunks/850-03fb57f67da90712.js",
+      "nomodule": false,
+      "raw_bytes": 11229,
+      "gzip_bytes": 4008,
+      "sha256": "b20174b3ee2a612fa2f3baba37e61dd897381f0d13bedc6f5b395ae8dd925007"
+    },
+    {
+      "path": "/_next/static/chunks/9315-c2270f582bb230ad.js",
+      "nomodule": false,
+      "raw_bytes": 16713,
+      "gzip_bytes": 5442,
+      "sha256": "99db02df9cd64e306ae0375bd468d29ecc2c0912a19e9d51e54ba5affaaf9817"
+    },
+    {
+      "path": "/_next/static/chunks/949-f443159ed98c3486.js",
+      "nomodule": false,
+      "raw_bytes": 16257,
+      "gzip_bytes": 5649,
+      "sha256": "ce38e69895826fd6a4c406098db233592b84fba7fca8476de24c2d147c8d2af0"
+    },
+    {
+      "path": "/_next/static/chunks/app/error-1eb4d54b8aa67b9a.js",
+      "nomodule": false,
+      "raw_bytes": 4349,
+      "gzip_bytes": 1926,
+      "sha256": "b3f227fe192a16f812528d31901300e08638ae318318bbae96271f99b6475cb8"
+    },
+    {
+      "path": "/_next/static/chunks/app/page-a4c12c911c6a87f7.js",
+      "nomodule": false,
+      "raw_bytes": 166,
+      "gzip_bytes": 148,
+      "sha256": "a5090da4999e87d2e91b47deca9bab9191ceb31f5229a1321f453319f587d310"
+    },
+    {
+      "path": "/_next/static/chunks/c4ce77ce-ad81e008472ae2a7.js",
+      "nomodule": false,
+      "raw_bytes": 199868,
+      "gzip_bytes": 62750,
+      "sha256": "bccde7fffb48257480e27b036d82640d1c4bde76e41b2de050d09b8ec91f6ce6"
+    },
+    {
+      "path": "/_next/static/chunks/main-app-3138c2d1b8d7fe59.js",
+      "nomodule": false,
+      "raw_bytes": 527,
+      "gzip_bytes": 232,
+      "sha256": "650addc27ff6ec5308320a9c9fe29b84381aba1201e9dccf599e71259679369d"
+    },
+    {
+      "path": "/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "nomodule": true,
+      "raw_bytes": 112594,
+      "gzip_bytes": 39373,
+      "sha256": "0973c1d64c88adc8e3c950410cb58b288f72118d5965b78049438deb8f2f9683"
+    },
+    {
+      "path": "/_next/static/chunks/webpack-d1777d10cdd534da.js",
+      "nomodule": false,
+      "raw_bytes": 9749,
+      "gzip_bytes": 4813,
+      "sha256": "250de6caac499eea9619bd2f0a28ed74d0c0804fd90f9264c1a9b13d7a186d63"
+    }
+  ],
+  "modern_script_raw_bytes": 597663,
+  "modern_script_gzip_bytes": 185062,
+  "all_script_raw_bytes": 710257,
+  "all_script_gzip_bytes": 224435,
+  "build_validation": {
+    "command": "npm run build",
+    "runtime": "Node 24",
+    "exit_code": 0,
+    "css_boundary_home_bytes": 198090
+  },
+  "performance_claim": {
+    "admitted_slices": 0,
+    "improvement_claim": false,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "reason": "Static byte inventory only; no before-after timing experiment or G003 admission"
+  },
+  "limitations": [
+    "Only script src entries in server HTML; excludes dynamic imports, preloads, styles, fonts, SDK and data traffic",
+    "Modern subtotal excludes nomodule polyfills; not measured browser network transfer",
+    "Gzip computed locally with Python default compression; deployed encoding may differ",
+    "HTTP 200 does not validate hydration, map behavior, production credentials, or hosted state"
+  ],
+  "review_hypotheses": [
+    "Naver SDK readiness currently gates independently computable restaurant queries",
+    "Mobile overlay readiness can change bounds and trigger a second overlapping query; timing dependent; requires first-marker and coverage comparison before changing"
+  ]
+}

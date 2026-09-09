@@ -400,6 +400,31 @@ export function loadLocalSupabaseEnvironment({ repositoryRoot = defaultRepositor
   };
 }
 
+function validateLedgerSnapshot(local, ledger, execute = spawnSync) {
+  const verifier = [
+    'import importlib.util, json, pathlib, sys',
+    'root = pathlib.Path(sys.argv[1])',
+    'spec = importlib.util.spec_from_file_location("web_local_migrate", root / "backend/supabase/scripts/local-migrate.py")',
+    'module = importlib.util.module_from_spec(spec)',
+    'sys.modules[spec.name] = module',
+    'spec.loader.exec_module(module)',
+    'module._validate_ledger_snapshot(json.load(sys.stdin))',
+    'print("ledger-snapshot-ok")',
+  ].join('\n');
+  const result = execute('python3', ['-B', '-c', verifier, local.repositoryRoot], {
+    cwd: local.repositoryRoot,
+    env: safeProcessEnvironment(),
+    input: JSON.stringify(ledger),
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    timeout: 120_000,
+    maxBuffer: MAX_RECEIPT_BYTES,
+  });
+  if (result.error || result.signal || result.status !== 0 || result.stdout?.trim() !== 'ledger-snapshot-ok') {
+    fail('migration_ledger');
+  }
+}
+
 function readCurrentMigrationLedger(local, databaseContainer) {
   const manifest = runJson(
     'python3',
@@ -410,7 +435,7 @@ function readCurrentMigrationLedger(local, databaseContainer) {
     { cwd: local.repositoryRoot, code: 'migration_manifest', timeout: 120_000 },
   );
   const query = [
-    "SELECT COALESCE(json_agg(json_build_object('path', migration_id, 'ordinal', ordinal, 'sha256', source_sha256, 'byteLength', source_byte_length, 'status', status, 'readbackSha256', readback_sha256) ORDER BY ordinal)::text, '[]')",
+    "SELECT COALESCE(json_agg(json_build_object('path', migration_id, 'ordinal', ordinal, 'sha256', source_sha256, 'byteLength', source_byte_length, 'transactionClass', transaction_class, 'status', status, 'readbackSha256', readback_sha256, 'replayProof', replay_proof) ORDER BY ordinal)::text, '[]')",
     'FROM _tzudong_local.migration_ledger;',
   ].join(' ');
   const result = spawnSync(
@@ -443,19 +468,20 @@ function readCurrentMigrationLedger(local, databaseContainer) {
     || !Array.isArray(expected)
     || !Array.isArray(ledger)
     || ledger.length !== expected.length
-    || ledger.some((row, index) => {
-      const source = expected[index];
-      return row?.path !== source?.path
-        || row?.ordinal !== source?.ordinal
-        || row?.sha256 !== source?.sha256
-        || row?.byteLength !== source?.byteLength
-        || row?.status !== 'applied'
-        || !/^[a-f0-9]{64}$/.test(row?.readbackSha256 ?? '');
-    })
   ) {
     fail('migration_ledger');
   }
+  validateLedgerSnapshot(local, ledger);
   return { manifest, ledger };
+}
+
+export function assertLocalWebOrigin(local, port) {
+  const origin = `http://127.0.0.1:${port}`;
+  const admittedOrigins = local.values.ADDITIONAL_REDIRECT_URLS?.split(',') ?? [];
+  if (!Number.isInteger(port) || !admittedOrigins.includes(origin)) {
+    fail('browser_origin');
+  }
+  return origin;
 }
 
 export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = false } = {}) {
@@ -530,10 +556,9 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
   ) {
     fail('database_container');
   }
-  let schema;
+  const schema = readCurrentMigrationLedger(local, containers[0]);
   let migrationReceipt;
   if (requireDeterministicReceipt) {
-    schema = readCurrentMigrationLedger(local, containers[0]);
     const binding = [
       '--container', containers[0],
       '--allow-local',
@@ -551,7 +576,8 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
       { cwd: local.repositoryRoot, code: 'migration_receipt', timeout: 300_000 },
     );
     if (
-      migrationReceipt?.schema !== 'local-receipt-v1'
+      migrationReceipt?.schema !== 'local-receipt-v2'
+      || migrationReceipt.serializer !== 'receipt-v1'
       || migrationReceipt.project_name !== local.projectName
       || !Array.isArray(migrationReceipt.ledger)
       || migrationReceipt.ledger.length !== schema.ledger.length
@@ -624,6 +650,7 @@ export function buildLocalNightlyEnvironment(local, inherited = process.env) {
 
 export const __localSupabaseRuntimeForTests = {
   localStackStatusEnvironment,
+  validateLedgerSnapshot,
   projectName,
   parseGeneratedEnvironment,
 };

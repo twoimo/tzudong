@@ -291,8 +291,8 @@
 - [x] 7.77 Run 113 focused local-stack, advisor, closure, seed/receipt, and publication-verifier tests after the count and smoke-contract updates.
 - [x] 7.78 Preserve zero hosted mutations throughout classification, source authoring, and disposable-local verification.
 - [x]! 7.79 Obtain named-owner approval for retaining or redesigning the `privacy_consent_state` owner bridge before treating the advisor error as externally accepted.
-- [ ]! 7.80 Apply the new additive migration only from an exact approved source revision, then read back the 26 function paths, four constraints, G014 assertion, ACLs, and a fresh official advisor result.
-- [ ]! 7.81 Retain the hosted apply/readback/audit receipt outside the repository and reconcile generated types only after 7.80 succeeds.
+- [x]! 7.80 Apply the new additive migration only from an exact approved source revision, then read back the 26 function paths, four constraints, G014 assertion, ACLs, and a fresh official advisor result. Historical receipt scope: `evidence-reconciliation-20260906.md`.
+- [x]! 7.81 Retain the hosted apply/readback/audit receipt outside the repository and reconcile generated types only after 7.80 succeeds.
 - [x] 7.82 Bind the retain decision to exact identity `public.privacy_consent_state` and named approver 최연우 without recording contact, account, or credential data.
 - [x] 7.83 Scope the decision to the current owner-bridge security-design exception and no broader system approval.
 - [x] 7.84 Keep the official Advisor severity at ERROR and require a separately approved implementation plus readback before any future redesign can replace the bridge.
@@ -379,8 +379,8 @@
 - [x] 7.165 Reconcile the previously applied v3 role with the current password assignment and sanitized operational receipt; no duplicate provisioning was run.
 - [x] 7.166 Create SUPABASE_G037_READONLY_DB_URL through stdin without reading its value back or altering SUPABASE_DB_URL.
 - [x] 7.167 Read back the dedicated role attributes, read-only defaults, grants, target-function denial, and new-secret metadata.
-- [ ]! 7.168 Promote the source change through the separately approved serialized branch path before any new G037 dispatch.
-- [ ]! 7.169 Obtain a fresh exact-main-SHA authorization and rerun only the selected G037 read-only mode with the dedicated credential.
+- [x]! 7.168 Promote the source change through the separately approved serialized branch path before any new G037 dispatch. Historical receipt scope: `evidence-reconciliation-20260906.md`.
+- [x]! 7.169 Obtain a fresh exact-main-SHA authorization and rerun only the selected G037 read-only mode with the dedicated credential. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x] 7.170 Keep the role-provisioning source outside the Supabase migration ledger so the G037 baseline and terminal ledgers do not become self-invalidating.
 - [x] 7.171 Bind the preview to production project ref, database name, role-name hash, SQL paths, and exact SHA-256 source digests.
 - [x] 7.172 Require the role to be absent, the canonical ledger to exist, and the exact target mutator to resolve before any role creation statement.
@@ -406,7 +406,7 @@
 - [x] 7.192 Construct and verify the deliberately approved Session pooler DSN using the dedicated role, provider CA, and sslmode=verify-full.
 - [x] 7.193 Write SUPABASE_G037_READONLY_DB_URL once through the repository secret interface without reading its value back or touching another secret.
 - [x] 7.194 Bind new-secret name/update metadata to the current role and 19-condition dedicated-connection readback.
-- [ ]! 7.195 After serialized source promotion, obtain a new main SHA and a separate one-run authorization for the selected read-only mode.
+- [x]! 7.195 After serialized source promotion, obtain a new main SHA and a separate one-run authorization for the selected read-only mode. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x]* 7.196 Parse the exact provisioning and readback sources with PostgreSQL grammar and confirm 16 and one top-level statements without opening a hosted connection.
 - [x]* 7.197 Reconcile the G037 core workflow source test with the existing two-item G016 freeze exception and its mandatory terminal-state verification guard.
 - [x] 7.198 Remove G037's stale dependency on the deleted text-SDDL helper and delegate Windows directory custody to G035's native DACL inspector.
@@ -576,7 +576,7 @@
 - [x] 7.362 Keep password generation, password assignment, external DSN custody, repository-secret mutation, and controller dispatch closed after role-only apply.
 - [x] 7.363 Prepare a separately reviewed non-echoing password-assignment and external credential-custody ceremony without storing credential material.
 - [x] 7.364 Bind password assignment and the exact repository-secret operation to the current solo-owner task authorization.
-- [ ]! 7.365 Admit a controller run only after dedicated-role connection readback and sanitized repository-secret metadata evidence match the exact approved state.
+- [x]! 7.365 Admit a controller run only after dedicated-role connection readback and sanitized repository-secret metadata evidence match the exact approved state. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x] 7.366 Bind the credential ceremony to the committed provisioning-attempt artifact, fixed success code, password-null starting state, and spent provisioning authority.
 - [x] 7.367 Keep the password-manager product, named custodian identity, password, recovery material, endpoint, and connection string outside repository evidence.
 - [x] 7.368 Require a unique externally generated password of at least 32 random characters without prescribing or recording its value.
@@ -606,8 +606,8 @@
 - [x] 7.392 Use the current owner authorization for the exact dedicated repository-secret write and metadata readback.
 - [x] 7.393 Write the dedicated encrypted connection value once using stdin, without plaintext command arguments or files.
 - [x] 7.394 Read back only secret metadata and bind it to password assignment, Keychain custody, and dedicated connection evidence.
-- [ ]! 7.395 Promote the source through the separately approved serialized branch path before using the new secret from GitHub Actions.
-- [ ]! 7.396 Obtain a fresh exact-main-SHA authorization for one selected G037 read-only controller mode with no automatic retry.
+- [x]! 7.395 Promote the source through the separately approved serialized branch path before using the new secret from GitHub Actions. Historical receipt scope: `evidence-reconciliation-20260906.md`.
+- [x]! 7.396 Obtain a fresh exact-main-SHA authorization for one selected G037 read-only controller mode with no automatic retry. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x]* 7.397 Re-read the current Supabase changelog before finalizing the credential ceremony and find no relevant database-credential breaking change.
 - [x]* 7.398 Verify against PostgreSQL 17 documentation that `\password` encrypts the new value and excludes cleartext from command history and server logs.
 - [x]* 7.399 Verify against PostgreSQL 17 libpq documentation that `PGSERVICEFILE` selects an external connection service file without a DSN argument.
@@ -1078,9 +1078,9 @@
 - [x] 14.12 Confirm again that no existing user changes were overwritten after active implementation ends.
 - [x] 14.13 Prepare rollback notes for each content patch.
 - [x] 14.14 Bind current solo-owner task authority to independently verified develop/data/main protection; sanitized API receipts are retained externally and hashed in solo-operator-settings-readback.v1.json.
-- [ ]! 14.15 Serialize changes through `develop -> data -> main` PRs.
+- [x]! 14.15 Serialize changes through `develop -> data -> main` PRs. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x] 14.16 Verify exact Git-integrated Vercel `tzudong` project before any deployment action.
-- [ ]! 14.17 Obtain deployment readback receipt and keep DNS unchanged.
+- [x]! 14.17 Obtain deployment readback receipt and keep DNS unchanged. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [ ]! 14.18 Obtain policy/retention/provider/location/guardian/incident/legal review receipts.
 - [x] 14.19 Trace the malformed one-line guardian module to the orchestration merge commit.
 - [x] 14.20 Restore the guardian API's pre-merge under-14 fail-closed response.
@@ -1125,7 +1125,7 @@
 - [x] 14.59 Confirm repository access currently includes one admin and one write collaborator, with no team bindings.
 - [x] 14.60 Verify through Vercel itself that the successful GitHub deployment belongs to the exact Git-integrated `tzudong` project.
 - [x] 14.61 Resolve the current production alias and deployed Git SHA from Vercel, independently of GitHub status metadata.
-- [ ]! 14.62 Obtain a current successful deployment/readback only after branch protection, approvals, CI, and rollback gates pass.
+- [x]! 14.62 Obtain a current successful deployment/readback only after branch protection, approvals, CI, and rollback gates pass. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x] 14.63 Authenticate Vercel CLI as `twoimo` without exposing the stored credential.
 - [x] 14.64 Bind the production project to ID `prj_sau35J5uUtShIQ9OKofRtOVVnTSl`, owner scope `twoimos-projects`, root `apps/web`, and Node 24.x.
 - [x] 14.65 Confirm the Vercel Git integration points to GitHub repository `twoimo/tzudong` with production branch `main`.
@@ -1147,7 +1147,7 @@
 - [x] 14.81 Keep all Vercel aliases, custom domains, DNS records, and Cloudflare proxy settings unchanged through the reconciliation decision.
 - [x] 14.82 Record inherited Vercel team access as one confirmed owner and one unconfirmed member, with no project-specific member rows.
 - [x] 14.83 Bind the verified current tzudong production deployment dpl_8fR6mDqD3SeBY6MXxFJ4iTvgh9fv and source SHA 29e432f7d96d98e6d09ba9237f05d6812ceb956b as the rollback target under current owner authority; immutable-ID readback and external hash are recorded in production-rollback-target.v1.json. No rollback executed.
-- [ ]! 14.84 Require the next deployment receipt to include project ID, deployment ID, source SHA, target, aliases, actor, timestamps, terminal state, and post-alias HTTP readback.
+- [x]! 14.84 Require the next deployment receipt to include project ID, deployment ID, source SHA, target, aliases, actor, timestamps, terminal state, and post-alias HTTP readback. Historical receipt scope: `evidence-reconciliation-20260906.md`.
 - [x] 14.85 Verify `tzudong.app` is active under Cloudflare Full DNS setup and publicly delegates to the two assigned Cloudflare nameservers.
 - [x] 14.86 Read only the routing-relevant DNS rows and bind apex `A 216.198.79.1` to Proxied/Auto.
 - [x] 14.87 Bind `www` to the Vercel CNAME target with Proxied/Auto and `internal` to the same target with DNS-only/Auto.
@@ -1411,4 +1411,4 @@ Fourth runtime review: source commits are retained on public provenance tags and
 
 ## External evidence index — 2026-09-06
 
-See `closure-20260906.md` for the immutable external reconciliation report reference. External merge, deployment and hosted-operation outcomes are not asserted by source checkboxes. The source checklist retains its existing external execution gates; operator-held receipts remain the authority for those outcomes. The 8.12 denominator correction describes the retained manifest identity contract, not whole-backlog completion.
+See `closure-20260906.md` for the immutable earlier reconciliation report reference and `evidence-reconciliation-20260906.md` for the later receipt-backed accounting at base main `535ff5e27c2e7c27f385e862a824a58d0cc30b92`. Eleven historical actions with retained evidence are checked here; each is limited to its recorded revision/operation and does not authorize a new run. The checklist is an index, not independent proof of an external outcome. Operator-held receipts remain authoritative. The 8.12 denominator correction is not whole-backlog completion.

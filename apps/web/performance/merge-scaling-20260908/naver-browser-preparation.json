@@ -1,0 +1,38 @@
+{
+  "kind": "naver-browser-regression-preparation",
+  "source_base": "e8f2177f",
+  "checks": {
+    "playwright_discovery": {
+      "cases": 2,
+      "viewport_widths": [
+        390,
+        1280
+      ]
+    },
+    "targeted_eslint": "passed",
+    "typecheck_parity": {
+      "diagnostics": 0,
+      "logical_inputs": 2455
+    },
+    "browser_execution": "not_run"
+  },
+  "runtime_admission": {
+    "command": "node scripts/run-local-dev.mjs --port 18088",
+    "exit_code": 2,
+    "fixed_code": "[local-supabase] env_read"
+  },
+  "test_scope": "Hold local SDK response; assert compact restaurant GET while SDK absent and zero markers; release mocked SDK and assert visible marker",
+  "remaining": [
+    "Prepare this isolated checkout local stack through repository lifecycle",
+    "Execute browser tests and verify slow SDK, failure and mobile bounded-to-full query behavior",
+    "Measure first-marker latency using retained controlled baseline and candidate artifacts"
+  ],
+  "performance": {
+    "admitted_slices": 0,
+    "absolute_budget": null,
+    "relative_budget": null,
+    "noise_budget": null,
+    "improvement_claim": false,
+    "reason": "Test preparation only; no browser or latency results"
+  }
+}
