@@ -6,12 +6,115 @@ import path from 'node:path';
 
 import {
   __localSupabaseRuntimeForTests,
+  assertLocalWebOrigin,
   buildLocalTypeGenerationEnvironment,
   buildLocalWebEnvironment,
   loadLocalWebInputEnvironment,
 } from '../scripts/local-supabase-runtime.mjs';
 
 describe('local Supabase runtime source contract', () => {
+  test('rejects a development port absent from the admitted local browser origins', () => {
+    const local = { values: { ADDITIONAL_REDIRECT_URLS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:18080' } };
+    expect(assertLocalWebOrigin(local, 8080)).toBe('http://127.0.0.1:8080');
+    expect(assertLocalWebOrigin(local, 18080)).toBe('http://127.0.0.1:18080');
+    for (const port of [21080, 808, 80800, NaN, 8080.5]) {
+      expect(() => assertLocalWebOrigin(local, port)).toThrow('browser_origin');
+    }
+    expect(() => assertLocalWebOrigin({ values: {} }, 8080)).toThrow('browser_origin');
+    expect(() => assertLocalWebOrigin({ values: { ADDITIONAL_REDIRECT_URLS: 'http://127.0.0.1:80800' } }, 8080)).toThrow('browser_origin');
+  });
+
+  test('delegates replay ledger admission to Python over stdin and fails closed', () => {
+    const rows = Array.from({ length: 96 }, (_, ordinal) => ({
+      path: `fixture-${ordinal}`, ordinal, sha256: 'a'.repeat(64), byteLength: 1,
+      transactionClass: 'transactional', status: ordinal === 95 ? 'legacy-contract-preserved' : ordinal >= 93 ? 'verified-existing' : 'applied',
+      readbackSha256: 'b'.repeat(64), replayProof: ordinal >= 93 ? { schema: 'local-replay-proof-v1' } : null,
+    }));
+    let calls = 0;
+    const execute = (command: string, args: string[], options: { input: string; env: Record<string, string> }) => {
+      calls += 1;
+      expect(command).toBe('python3');
+      expect(args).toContain('/fixture/repository');
+      expect(args.join(' ')).toContain('module._validate_ledger_snapshot(json.load(sys.stdin))');
+      expect(args.join(' ')).not.toContain('fixture-94');
+      expect(JSON.parse(options.input)).toEqual(rows);
+      expect(options.env.DATABASE_URL).toBeUndefined();
+      return { status: 0, stdout: 'ledger-snapshot-ok\n' };
+    };
+    __localSupabaseRuntimeForTests.validateLedgerSnapshot({ repositoryRoot: '/fixture/repository' }, rows, execute);
+    expect(calls).toBe(1);
+    for (const result of [
+      { status: 1, stdout: '', stderr: 'private diagnostics' },
+      { status: 0, stdout: '' },
+      { status: 0, stdout: 'ledger-snapshot-ok', signal: 'SIGTERM' },
+      { status: null, error: new Error('python unavailable') },
+    ]) {
+      expect(() => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
+        { repositoryRoot: '/fixture/repository' }, rows, () => result,
+      )).toThrow('migration_ledger');
+    }
+    const runner = readFileSync(path.resolve(import.meta.dir, '../scripts/local-supabase-runtime.mjs'), 'utf8');
+    expect(runner).toContain("'transactionClass', transaction_class");
+    expect(runner).toContain("'replayProof', replay_proof");
+    expect(runner).not.toContain("row?.status !== 'applied'");
+  });
+
+  test('runs the offline Python bridge and propagates authority rejection without diagnostics', () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'tzudong-ledger-authority-'));
+    const scripts = path.join(root, 'backend', 'supabase', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    // This stub tests transport only; backend owns proof/manifest semantics.
+    writeFileSync(path.join(scripts, 'local-migrate.py'), [
+      'class LocalMigrationError(ValueError): pass',
+      'def _validate_ledger_snapshot(rows):',
+      '    if rows != [{"fixture": "accepted"}]:',
+      '        raise LocalMigrationError("private authority diagnostics")',
+    ].join('\n'));
+    try {
+      expect(() => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
+        { repositoryRoot: root }, [{ fixture: 'accepted' }],
+      )).not.toThrow();
+      expect(() => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
+        { repositoryRoot: root }, [{ fixture: 'rejected' }],
+      )).toThrow('migration_ledger');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('validates current 96-source fixture snapshots through the real offline authority', () => {
+    const root = path.resolve(import.meta.dir, '../../..');
+    const generated = spawnSync('python3', ['-B', '-c', [
+      'import importlib.util, json, pathlib, sys',
+      'root = pathlib.Path(sys.argv[1])',
+      'spec = importlib.util.spec_from_file_location("web_snapshot_fixture", root / "backend/supabase/scripts/local-migrate.py")',
+      'module = importlib.util.module_from_spec(spec)',
+      'sys.modules[spec.name] = module',
+      'spec.loader.exec_module(module)',
+      'manifest = module.verify_manifest()',
+      'print(json.dumps([module._expected_snapshot_row(item) for item in manifest["source"]["files"]]))',
+    ].join('\n'), root], { encoding: 'utf8', timeout: 30_000 });
+    expect(generated.status).toBe(0);
+    const rows = JSON.parse(generated.stdout);
+    expect(rows).toHaveLength(96);
+    expect(rows.filter((row: { replayProof: unknown }) => row.replayProof !== null)).toHaveLength(3);
+    const validate = (snapshot: unknown) => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
+      { repositoryRoot: root }, snapshot,
+    );
+    // Synthetic expected rows test the bridge, not an executed database replay.
+    expect(() => validate(rows)).not.toThrow();
+    const replayIndex = rows.findIndex((row: { replayProof: unknown }) => row.replayProof !== null);
+    for (const patch of [
+      { status: 'applied' }, { replayProof: null }, { sha256: '0'.repeat(64) },
+      { readbackSha256: '0'.repeat(64) }, { extra: true },
+    ]) {
+      const changed = structuredClone(rows);
+      Object.assign(changed[replayIndex], patch);
+      expect(() => validate(changed)).toThrow('migration_ledger');
+    }
+    expect(() => validate(rows.slice(0, 88))).toThrow('migration_ledger');
+  }, 30_000);
+
   test('derives a path-bound Compose project name', () => {
     expect(__localSupabaseRuntimeForTests.projectName('/fixture/repository')).toMatch(
       /^tzudong-local-[a-f0-9]{12}$/,

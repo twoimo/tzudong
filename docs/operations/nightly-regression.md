@@ -201,6 +201,18 @@ preflight; a self-hosted runner is not a silent fallback.
 A manual dispatch from any non-main ref is read-only and cannot publish a
 prerelease; publication is limited to the protected default branch.
 
+## Read-only replay diagnosis
+
+`python3 backend/supabase/scripts/local-migrate.py verify-replay --migration <exact repository-relative source path> --container <this checkout's db container> --allow-local` validates one of the three pinned September 6 recovery-source overlap contracts. It uses the same project/container/environment admission as the local executor. Optional `--output` creates a new proof file only after the exact verifier SQL and bounded result are validated.
+
+This diagnostic does not repair ACLs, update the migration ledger, clear ambiguity, seed data, or admit the web/nightly runtime. A failed verifier emits no success proof. A successful result describes `verified-existing` or `legacy-contract-preserved`, never application of the hosted PG17 source. The v2 receipt and current runtime consumers validate these proofs separately from ordinary application records. The diagnostic alone still cannot admit the runtime: a complete fresh replay, closure checks, bootstrap and seed evidence must also pass.
+
+## Replay receipt version and source accounting
+
+Admission requires accounting for 96 source units: 93 source applications, two `verified-existing` overlaps, and one `legacy-contract-preserved` PG15 contract. Each non-application row contains its full pinned verification proof and an independently read-back proof digest. These statuses do not assert that hosted PG17 repair SQL ran. A conflicting terminal proof is never overwritten; uncertain outcomes still require a fresh isolated database.
+
+Receipt content now uses `local-receipt-v2` with the unchanged `receipt-v1` row serializer. The historical artifact filename `local-receipt-v1.json` remains the workflow path, but readers reject v1 **content** and require the v2 `replay_proofs` field. The web, closure and publication checks validate the same exact source/proof bindings. These source changes do not establish a successful current full-stack replay.
+
 ## Local Compose bootstrap
 
 Local nightly is canonical. It uses the pinned local-only
@@ -344,7 +356,7 @@ set +a
 
 For ordinary development and generated schema types, do not source the file.
 The wrappers validate owner-only provenance, current service readiness, and the
-77-unit migration ledger before exposing only mapped loopback values to the
+96-unit source ledger before exposing only mapped loopback values to the
 child process:
 
 ```sh
@@ -353,6 +365,14 @@ bun run dev
 # `bun run dev:local` is an equivalent explicit alias.
 bun run supabase:gen-types:local
 ```
+
+Local browser origins are explicitly limited to ports `3000`, `8080`, and
+`18080` on `127.0.0.1` or `localhost`. `npm run dev` uses `8080`; if it is
+occupied, use `node scripts/run-local-dev.mjs --port 3000` from `apps/web`.
+The wrapper rejects an origin absent from the generated stack inputs with
+`[local-supabase] browser_origin` before starting Next. A healthy API does not
+prove that a browser on another port can read it: CORS must admit the exact
+origin. Keep the Supabase service port base separate from the web port.
 
 The default `dev`/`dev:local` wrapper deliberately checks schema state rather than the deterministic seed
 receipt, so application writes do not make the local development database

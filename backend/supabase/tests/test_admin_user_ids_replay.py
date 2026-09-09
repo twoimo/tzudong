@@ -168,6 +168,78 @@ SET SESSION AUTHORIZATION postgres;
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)['disposition'], 'already-present-contract-verified')
 
+    def test_extra_postgres_acl_is_not_mistaken_for_verified_source_overlap(self):
+        # Match the extra explicit ACL observed in the failed local replay.
+        # This tests contract rejection, not how that ACL was originally created.
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        snapshot = "SELECT proacl::text FROM pg_proc WHERE oid='public.read_admin_user_ids_for_management()'::regprocedure;"
+        before = self.query(snapshot).stdout
+        setup = 'BEGIN; GRANT EXECUTE ON FUNCTION public.read_admin_user_ids_for_management() TO postgres;\n'
+        rejected = self.query(setup + body + '\nROLLBACK;')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('admin_ids_replay_acl_mismatch', rejected.stderr)
+        accepted = self.query(setup + 'REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM postgres;\n' + body + '\nROLLBACK;')
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(json.loads(accepted.stdout)['disposition'], 'already-present-contract-verified')
+        self.assertEqual(self.query(snapshot).stdout, before)
+
+    def test_replay_ledger_records_verified_disposition_and_preserves_conflicting_evidence(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        from backend.supabase.scripts import local_replay_contract
+        path = SOURCE.relative_to(ROOT).as_posix()
+        item = next(row for row in local_migrate.build_manifest()['source']['files'] if row['path'] == path)
+        sql = local_replay_contract.generate_verification_sql(path)
+        test_case = self
+        class Executor:
+            def capture(self, statement):
+                result = test_case.query(statement.decode())
+                if result.returncode:
+                    raise local_migrate.LocalMigrationError('fixture_psql_failed')
+                return result.stdout.encode()
+            def run(self, statement):
+                self.capture(statement)
+        executor = Executor()
+        self.assertEqual(self.query("SELECT to_regnamespace('_tzudong_local') IS NULL;").stdout.strip(), 't')
+        try:
+            executor.run(local_migrate._ledger_ddl().encode())
+            local_migrate._apply_replay_verification(executor, item, sql)
+            snapshot = "SELECT row_to_json(x)::text FROM _tzudong_local.migration_ledger x;"
+            first = self.query(snapshot).stdout
+            row = json.loads(first)
+            self.assertEqual(row['status'], 'verified-existing')
+            self.assertEqual(row['replay_proof']['disposition'], 'verified-existing')
+            self.assertEqual(row['source_sha256'], replay.SOURCE_SHA256)
+            local_migrate.mark_terminal(executor, path, 'ambiguous', 'fixture_readback_failed')
+            self.assertEqual(self.query(snapshot).stdout, first)
+            local_migrate._apply_replay_verification(executor, item, sql)
+            self.assertEqual(self.query(snapshot).stdout, first)
+            self.query("UPDATE _tzudong_local.migration_ledger SET readback_sha256=repeat('0',64);")
+            conflict = self.query(snapshot).stdout
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, 'replay_terminal_readback'):
+                local_migrate._apply_replay_verification(executor, item, sql)
+            self.assertEqual(self.query(snapshot).stdout, conflict)
+        finally:
+            self.query('DROP SCHEMA IF EXISTS _tzudong_local CASCADE;')
+
+    def test_supabase_admin_creator_defaults_reproduce_the_extra_postgres_acl(self):
+        from backend.supabase.tests.test_local_migration_contract import local_migrate
+        definition = re.search(r'CREATE OR REPLACE FUNCTION public.read_admin_user_ids_for_management\(\).*?END\n\$\$;', PREDECESSOR.read_text(), re.S).group()
+        body = self.verification.split('READ ONLY;\n', 1)[1].rsplit('COMMIT;', 1)[0]
+        # Match PsqlExecutor._base(): source runs as supabase_admin, not postgres.
+        setup = "BEGIN; DROP FUNCTION public.read_admin_user_ids_for_management();\n"
+        finish = """
+ALTER FUNCTION public.read_admin_user_ids_for_management() OWNER TO privacy_workflow_owner;
+REVOKE ALL ON FUNCTION public.read_admin_user_ids_for_management() FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION public.read_admin_user_ids_for_management() TO service_role;
+"""
+        rejected = self.query(setup + definition + finish + body + '\nROLLBACK;')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('admin_ids_replay_acl_mismatch', rejected.stderr)
+        normalized = local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL
+        accepted = self.query(setup + normalized + definition + finish + body + '\nROLLBACK;')
+        self.assertEqual(accepted.returncode, 0, accepted.stderr)
+        self.assertEqual(json.loads(accepted.stdout)['disposition'], 'already-present-contract-verified')
+
     def test_catalog_drift_is_rejected(self):
         cases = [
             ('DROP FUNCTION public.read_admin_user_ids_for_management();', 'rpc_mismatch'),

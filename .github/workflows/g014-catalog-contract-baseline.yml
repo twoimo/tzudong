@@ -6,12 +6,24 @@ on:
     paths:
       - '.github/workflows/g014-catalog-contract-baseline.yml'
       - 'backend/supabase/scripts/generate_g014_catalog_contract_baseline.sh'
+      - 'backend/supabase/scripts/catalog_docker_endpoint.py'
+      - 'backend/supabase/tests/test_catalog_docker_endpoint.py'
+      - 'backend/supabase/tests/test_g014_catalog_baseline_generator.py'
+      - 'backend/supabase/scripts/g014_catalog_diagnostic.py'
+      - 'backend/supabase/tests/test_g014_diagnostic_admission.py'
+      - 'backend/supabase/tests/test_restaurant_refresh_apply_boundary.py'
       - 'backend/supabase/scripts/transform_g014_guardian_replay.py'
       - 'backend/supabase/tests/test_g014_guardian_replay.py'
       - 'backend/supabase/scripts/recover_advisor_replay_prerequisites.py'
       - 'backend/supabase/tests/test_advisor_replay_prerequisites.py'
       - 'backend/supabase/scripts/transform_advisor_replay.py'
       - 'backend/supabase/tests/test_advisor_replay.py'
+      - 'backend/supabase/scripts/verify_admin_management_group_replay.py'
+      - 'backend/supabase/scripts/verify_g014_pg17_owner_replay.py'
+      - 'backend/supabase/tests/test_g014_pg17_owner_contract.py'
+      - 'backend/supabase/scripts/admin_management_group_plan.py'
+      - 'backend/supabase/tests/test_admin_management_group.py'
+      - 'backend/supabase/tests/test_admin_management_group_replay.py'
       - 'backend/supabase/scripts/verify_admin_user_ids_replay.py'
       - 'backend/supabase/tests/test_admin_user_ids_replay.py'
       - 'backend/supabase/scripts/admin_user_ids_slice_plan.py'
@@ -49,9 +61,16 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           ! git symbolic-ref -q HEAD
 
+      - name: Set up the migration statement parser runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+
       - name: Run G026 and reconstruction unit tests
         run: >-
           python -m unittest
+          backend.supabase.tests.test_catalog_docker_endpoint
+          backend.supabase.tests.test_g014_catalog_baseline_generator
           backend.supabase.tests.test_reconstruction_source_archive
           backend.supabase.tests.test_g024_source_reconstruction
           backend.supabase.tests.test_compare_g024_clean_replays
@@ -60,25 +79,32 @@ jobs:
           backend.supabase.tests.test_advisor_replay_prerequisites
           backend.supabase.tests.test_advisor_replay
           backend.supabase.tests.test_admin_user_ids_replay
+          backend.supabase.tests.test_admin_management_group
+          backend.supabase.tests.test_admin_management_group_replay
+          backend.supabase.tests.test_g014_pg17_owner_contract
           backend.supabase.tests.test_admin_user_ids_catalog_slice
-
-      - name: Set up the migration statement parser runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: '24'
+          backend.supabase.tests.test_g014_diagnostic_admission
+          backend.supabase.tests.test_restaurant_refresh_apply_boundary
 
       - name: Pull the pinned private test database images
         run: |
           docker pull pgvector/pgvector@sha256:cf134a767f474095eeba57e0117be8e568e011a63f33fbf252f14c9b760f8e6f
           docker pull supabase/postgres@sha256:af083ef64d0408c8f098ee6f5c364a59b26f36fbc0f3a334a62c5c1d57362e9b
 
-      - name: Exercise admin ID plans and denied replay branches on private databases
+      - name: Exercise admin RPC plans and denied replay branches on private databases
         env:
+          TZUDONG_REFRESH_PRIVATE_PG: '1'
           TZUDONG_ADMIN_IDS_LOCAL_PG: '1'
+          TZUDONG_ADMIN_GROUP_LOCAL_PG: '1'
         run: >-
           python -m unittest
           backend.supabase.tests.test_admin_user_ids_catalog_slice
+          backend.supabase.tests.test_g014_diagnostic_admission
+          backend.supabase.tests.test_restaurant_refresh_apply_boundary
           backend.supabase.tests.test_admin_user_ids_replay
+          backend.supabase.tests.test_admin_management_group
+          backend.supabase.tests.test_admin_management_group_replay
+          backend.supabase.tests.test_g014_pg17_owner_contract
 
       - name: Check generator shell syntax
         shell: bash

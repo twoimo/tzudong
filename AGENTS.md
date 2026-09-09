@@ -1,81 +1,37 @@
-# Repository Guidelines
+# Tzudong agent guidance
 
-## Product and architecture
+Tzudong is a Korean-first restaurant map for places featured in Tzuyang videos. `apps/web` owns the Next.js public app and guarded admin console; `backend` owns crawlers, evaluation, media and batch work. Keep long-running work out of route handlers.
 
-Tzudong is a Korean-first restaurant-map product for places featured in Tzuyang videos.
+Supabase is the persistence boundary. Clients: browser `apps/web/integrations/supabase/client.ts`, session-aware server `apps/web/lib/supabase/server.ts`, privileged server-only `apps/web/lib/supabase/service-role.ts`.
 
-- `apps/web` is the Next.js 16 public app and guarded `/admin` console.
-- `backend` owns crawling, evaluation, media work, batch operations, and Supabase preparation. Do not move long-running crawler, ffmpeg, Gemini bulk, GDrive, or batch insert work into route handlers.
-- Supabase is the persistence boundary. Browser code uses `apps/web/integrations/supabase/client.ts`; session-aware server code uses `apps/web/lib/supabase/server.ts`; privileged server-only code uses `apps/web/lib/supabase/service-role.ts`.
-- Admin API handlers must call `requireAdmin` before work, return bounded fixed-code responses, and never expose provider or database errors.
-- Risky admin flows follow Preview → Confirm → Apply → Readback → Audit.
+## Work and completion
 
-## Commands
+- Implement the requested result, choose reasonable local details, fix affected failures, and verify the result without repeated permission checks. Reuse explicit authorization for the same scope. Ask only when a material decision or action is still unauthorized; prepare a concrete reviewable result first and explain the exact reason for the question.
+- Identify the requested outcome and observable completion criteria. Finish when the change works, relevant checks pass, and remaining dependencies are accurately reported. Do not expand into unrelated cleanup or repeat passing suites without new evidence.
+- Parallelize independent work with disjoint ownership; serialize shared edits and dependent mutations. Status questions steer ongoing work rather than cancel it. After interruption, inspect actual process, Git and external state before resuming; never repeat an uncertain external write blindly.
+- Preserve dirty/untracked user work. Use an isolated candidate from a fresh head; never reset, stash or clean either worktree. Keep source promotion serialized through `develop -> data -> main` under branch protection.
 
-From `apps/web`, Bun remains supported for day-to-day install, development, lint, and unit-test flows:
+## Load context when needed
 
-```text
-bun install
-bun run dev
-bun run lint
-bun run test:unit
-npm run typecheck:parity
-npm run typecheck:benchmark
-npm run build
-npx playwright test
-```
+Start with the affected files and callers. Use scoped `rg` searches; read linked guidance only when the task meets its trigger. Already-read unchanged guidance need not be loaded again. Do not preload all documentation, Kiro receipts, skills, or historical transcripts.
 
-The web runtime is Node 24.x. npm 11.6.2, `package.json`, and `package-lock.json` are the release package authority; reconcile `bun.lock` with them rather than treating it as release authority. The native TypeScript CLI is the exact `@typescript/native` alias at `7.0.2`; the stable API/compatibility bridge is TypeScript `6.0.2`. Use the explicit `npm run typecheck:parity` and `npm run typecheck:benchmark` scripts for compiler parity and benchmark evidence. Never substitute a global compiler.
+| Trigger | Read |
+| --- | --- |
+| Choosing tests, toolchain/release-package changes, performance work | [verification](docs/agents/verification.md) |
+| Auth, privacy, personal data, location, consent, deletion/retention or notifications | [privacy](docs/agents/privacy.md) |
+| Any Vercel action (including inspection), hosted DB writes, producer/freeze changes, protected promotion, release/rollback, DNS/security settings | [release](docs/agents/release.md) |
+| Pipeline architecture or data contracts | Relevant sections of `backend/ARCHITECTURE.md` or `backend/DATA_CONTRACTS.md` |
+| Kiro completion or operational evidence | Requested spec's task IDs and their referenced receipts under `.kiro/specs/` |
 
-Performance evidence belongs only under canonical `apps/web/performance/*` inputs, scorer/validator outputs, and an artifact map whose SHA is recorded out of band. Every performance report must state absolute, relative, and noise budgets; retain frozen-tree evidence; and treat zero admitted slices as a valid result. No current G003 measured improvement is established without retained raw and scored artifacts.
+## Skills, tools and continuity
 
-Backend checks from the repository root:
+- Use a skill when explicitly named or its concrete workflow fits the task; a database noun in copy is not a database operation. For project-owned skills, state the actual input/action and nearby exclusions in the description. Respect higher-priority host-required skill triggers; this file cannot disable them.
+- Prefer an available purpose-built tool/CLI for the requested operation. Discover only relevant capabilities. Verify a tool's actual version/interface after an error; do not repeatedly retry an unchanged failure, expose credentials, or alter global plugins/settings as a project fix.
+- Keep brief task handoffs with the goal, decisions, changed paths/commit, checks, remaining work and any spent external operation. Use prior notes to locate evidence; recheck mutable hosted state before acting. Never save secrets or treat old approval/readback as a new execution receipt. Persistent personal memory changes require the user's explicit request.
+- Use the targeted guidance-audit skill for a requested instruction/skill audit, not for every feature or bug fix. Evaluate changes against realistic tasks; record measured results separately from hoped-for token or speed improvements.
 
-```text
-python -m unittest backend.utils.tests.test_run_daily_regression
-python -m unittest backend.pipeline.test_validators_unittest
-python -m unittest backend.pipeline.test_data_contracts_unittest
-python backend/bin/check_env_contract.py --profile daily
-```
+## Boundaries that always apply
 
-The environment-contract check is expected to fail closed when required operator secrets are absent; never add fake values to make it pass.
+Privileged clients stay server-only. Admin handlers call `requireAdmin` before work and return bounded fixed codes without exposing provider or database errors. Risky admin flows use Preview → Confirm → Apply → Readback → Audit. Never log/persist credentials, session tokens, personal data, precise device location, raw OCR, request bodies or provider diagnostics; use `apps/web/lib/privacy/sanitize.ts`.
 
-## Privacy and communications boundaries
-
-G010/G013/G014 source safeguards reduce risk but do not certify statutory compliance, policy publication, filing, deployment, or legal approval.
-
-- Canonical privacy objects are `privacy_policy_versions`, `privacy_onboarding_challenges`, `privacy_age_profiles`, `privacy_guardian_verifications`, `privacy_consent_events`, the derived `privacy_consent_state` view, and append-only `privacy_audit_events`.
-- Canonical RPCs include `get_current_privacy_policy_version`, `create_privacy_onboarding_challenge`, `confirm_privacy_onboarding`, `submit_privacy_consent`, and `record_privacy_guardian_verification`. Do not add fallback aliases.
-- Account creation is challenge-bound to the exact published policy version, locale, content hash, and operator approval readback. Unsupported under-14 registration stays blocked until a verified guardian workflow is deployed and read back; do not collect a date of birth, guardian contact, or resident registration number as a workaround.
-- Ordinary marketing consent is purpose- and channel-specific. Advertising between 21:00 and 08:00 requires the separate `night_marketing` decision for the same channel. Transactional notifications must not silently become advertising.
-- `apps/web/lib/privacy/sanitize.ts` is the shared privacy assertion/redaction boundary. Never log or persist passwords, credentials, cookies, session/onboarding tokens, email addresses, phone numbers, resident registration numbers, precise location, raw OCR, arbitrary request bodies, provider diagnostics, or free-form errors.
-- Device location requires a just-in-time disclosure, remains memory-only, and must stop its watcher on cancellation/unmount. Stored restaurant/business coordinates are a separate contract.
-- Account deletion and retention operations remain fail closed: recent reauthentication, exact typed confirmation, stable preview hash, readback, append-only minimized audit, legal-hold/last-admin checks, session revocation, database cleanup, and Auth deletion last.
-- Retention periods and legal bases come only from active operator-approved classes. Code must not invent periods. Applied Supabase migrations are immutable; add a new migration for a correction.
-- Privacy incident handling records bounded detection/decision/notice/receipt state under one operation ID. A named human determines and performs any authority or subject notification; source code must not claim that a filing was submitted or accepted.
-
-## Release gates and recovery discipline
-
-The dirty original worktree is immutable. Work only in an isolated recovery candidate; never reset, stash, or clean either worktree. Content patches start from a fresh head and move as serialized PRs `develop -> data -> main`, subject to external approval and branch protection.
-
-A production release remains blocked until current external evidence proves all of the following:
-
-- the exact policy version/hash/locale/effective/published tuple is published, approved, and deployed;
-- retention classes have named operator approval, legal basis, trigger, period, activation, and hosted backup/PITR evidence;
-- hosted production migrations, RLS/grants, RPC readback, generated Supabase types, catalog, key-management, and operator-access evidence match the deployed catalog;
-- marketing delivery uses an approved HTTPS provider with production secrets and internal capability controls;
-- location-business filing or documented non-applicability is externally confirmed;
-- under-14 support, if enabled, uses an externally verified guardian provider;
-- incident notices have named human approval and immutable submission/receipt evidence; and
-- Korean legal/privacy-owner review is recorded.
-
-Before any Vercel action, verify the exact Git-integrated `tzudong` project. Do not use a stale `web` project or mutate DNS. A release or rollback needs external approval, branch-protection evidence, a rollback plan, and deployment readback receipt. This source tree makes no claim that a merge or deployment occurred.
-
-Do not fabricate these receipts, weaken fail-closed behavior, bypass branch protection, commit credentials, or claim that local tests prove legal compliance or hosted production state.
-
-## Testing conventions
-
-- `apps/web/tests-unit` contains Bun unit and source-contract tests; copy, route wiring, security, and order changes often require paired assertions.
-- `apps/web/tests` contains Playwright public/admin/responsive coverage. Evidence must exclude cookies, headers, local storage, raw admin body/table content, and Supabase payloads.
-- Verify observable branches, error paths, idempotency, and readback—not defaults or tautologies.
-- Keep unexpected worktree changes as user work. Never reset, stash, clean, commit, push, or delete them unless explicitly authorized.
+Keep fail-closed behavior and applied migrations immutable. Never invent retention periods, legal approvals or external receipts. Local code/tests do not prove hosted correctness, legal compliance, deployment or full Kiro completion. Complete independent local work while an external dependency remains blocked; report the exact missing evidence and next action. Details live in the triggered guides above.

@@ -29,6 +29,25 @@ local_migrate = _load_module()
 
 
 class LocalMigrationContractTests(unittest.TestCase):
+    def test_psql_capture_role_does_not_change_migration_actor(self) -> None:
+        executor = local_migrate.PsqlExecutor("docker", "fixture-db", "postgres")
+        calls = []
+        def command_run(command, **kwargs):
+            calls.append((command[command.index("--username") + 1], kwargs["input"]))
+            return SimpleNamespace(returncode=0, stdout=b"{}", stderr=b"")
+        with patch.object(local_migrate.PsqlExecutor, "_admit_container"), \
+             patch.object(local_migrate.PsqlExecutor, "_inspect"), \
+             patch.object(local_migrate.PsqlExecutor, "_binding", return_value=("fixture", Path("/tmp/fixture"), {})), \
+             patch.object(local_migrate.PsqlExecutor, "_docker_env", return_value={}), \
+             patch.object(local_migrate.shutil, "which", return_value="/usr/bin/docker"), \
+             patch.object(local_migrate.subprocess, "run", side_effect=command_run):
+            executor.capture(b"SELECT 1;", role="postgres")
+            executor.run(b"SELECT 2;")
+            executor.capture(b"SELECT 3;")
+            with self.assertRaisesRegex(local_migrate.LocalMigrationError, "psql_role_denied"):
+                executor.capture(b"SELECT 4;", role="service_role")
+        self.assertEqual(calls, [("postgres", b"SELECT 1;"), ("supabase_admin", b"SELECT 2;"), ("supabase_admin", b"SELECT 3;")])
+
     def test_function_source_evidence_binds_both_exact_edge_functions(self) -> None:
         functions = {
             "root": "functions",
@@ -108,6 +127,15 @@ class LocalMigrationContractTests(unittest.TestCase):
         self.assertEqual(committing["class"], "self_committing")
         self.assertTrue(committing["hasCommit"])
         self.assertFalse(committing["hasRollback"])
+
+    def test_generated_prerequisite_matches_source_and_creator_acl_transform(self) -> None:
+        output, manifest = local_migrate.build_prerequisite(
+            (ROOT / local_migrate.PREREQUISITE_SOURCE).read_bytes()
+        )
+        self.assertEqual(output, (ROOT / local_migrate.PREREQUISITE_OUTPUT).read_bytes())
+        self.assertEqual(manifest, json.loads((ROOT / local_migrate.PREREQUISITE_MANIFEST).read_text()))
+        self.assertEqual(output.count(local_migrate.LOCAL_CREATOR_DEFAULT_ACL_SQL.encode()), 1)
+        self.assertEqual(manifest["transformVersion"], "local-application-prerequisite-v2")
 
     def test_ddl_prerequisite_is_ddl_only_and_localizes_extensions(self) -> None:
         sql = b"CREATE EXTENSION IF NOT EXISTS vector;\nCREATE TABLE sample(id integer);\n"
