@@ -10,5 +10,5 @@ langchain-ollama==1.1.0
 langchain-openai==1.6.0
 supabase==2.30.0
 curl_cffi==0.15.0
-scrapling[fetchers]==0.4.8
+scrapling[fetchers]==0.4.15
 playwright==1.59.0
