@@ -41,6 +41,7 @@ import {
     type HomeMapRenderMode,
 } from "@/lib/home-map-contextual-restaurants";
 import type Supercluster from 'supercluster';
+import type { ClusterFeature as ScClusterFeature, PointFeature as ScPointFeature } from 'supercluster';
 import {
     createClusterIndex,
     expandCluster,
@@ -534,8 +535,8 @@ function wrapNaverMarkerContentWithReviewBubble(
 }
 
 type NaverClusterFeature =
-    | Supercluster.ClusterFeature<ClusterProperties>
-    | Supercluster.PointFeature<ClusterProperties>;
+    | ScClusterFeature<ClusterProperties>
+    | ScPointFeature<ClusterProperties>;
 
 
 const CLUSTER_SIGNATURE_COORD_PRECISION = 5;
@@ -669,7 +670,7 @@ const NaverMapView = memo(({
     // [Cluster] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
     const [clusterIndexVersion, setClusterIndexVersion] = useState(0);
-    const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
+    const [clusters, setClusters] = useState<Array<ScClusterFeature<ClusterProperties> | ScPointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
     const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 줄 9-10: 서울 자치구 25개 모두
     const [seoulDistrictClustersFiltered, setSeoulDistrictClustersFiltered] = useState<SeoulDistrictCluster[]>([]); // 줄 11-12: 마커 3개 이상만

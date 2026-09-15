@@ -7,6 +7,7 @@
  */
 
 import Supercluster from 'supercluster';
+import type { ClusterFeature as ScClusterFeature, PointFeature as ScPointFeature } from 'supercluster';
 import { REGION_MAP_CONFIG } from '@/config/maps';
 import type { Restaurant, Region } from '@/types/restaurant';
 import { getPerformanceBasedClusterOptions } from './device-performance';
@@ -190,8 +191,8 @@ export const getClusters = (
     index: Supercluster<ClusterProperties>,
     bbox: BBox,
     zoom: number
-): Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>> => {
-    return index.getClusters(bbox, Math.floor(zoom)) as Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>;
+): Array<ScClusterFeature<ClusterProperties> | ScPointFeature<ClusterProperties>> => {
+    return index.getClusters(bbox, Math.floor(zoom)) as Array<ScClusterFeature<ClusterProperties> | ScPointFeature<ClusterProperties>>;
 };
 
 /**
@@ -243,8 +244,8 @@ export const getClusterCategories = (
  * @returns 클러스터면 true
  */
 export const isCluster = (
-    feature: Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>
-): feature is Supercluster.ClusterFeature<ClusterProperties> => {
+    feature: ScClusterFeature<ClusterProperties> | ScPointFeature<ClusterProperties>
+): feature is ScClusterFeature<ClusterProperties> => {
     return feature.properties.cluster === true;
 };
 
@@ -255,7 +256,7 @@ export const isCluster = (
  * @returns 포함된 포인트 개수
  */
 export const getClusterCount = (
-    feature: Supercluster.ClusterFeature<ClusterProperties>
+    feature: ScClusterFeature<ClusterProperties>
 ): number => {
     return feature.properties.point_count || 0;
 };

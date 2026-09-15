@@ -251,7 +251,6 @@ const nextConfig = {
             '@radix-ui/react-tabs',
             '@radix-ui/react-tooltip',
             '@radix-ui/react-toast',
-            'framer-motion',
             'react-hook-form',
             'zod',
             'cmdk',

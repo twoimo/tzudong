@@ -1,4 +1,4 @@
-import type Supercluster from 'supercluster';
+import type { ClusterFeature as ScClusterFeature } from 'supercluster';
 import { createClusterMarkerHTML } from '@/lib/cluster-marker';
 import type { ClusterProperties } from '@/lib/clustering';
 
@@ -18,11 +18,11 @@ export function buildClusterMarkerFeature({
     count: number;
     lat: number;
     lng: number;
-}): Supercluster.ClusterFeature<ClusterProperties> {
+}): ScClusterFeature<ClusterProperties> {
     return {
         properties: { point_count: count },
         geometry: { coordinates: [lng, lat] },
-    } as unknown as Supercluster.ClusterFeature<ClusterProperties>;
+    } as unknown as ScClusterFeature<ClusterProperties>;
 }
 
 export function buildClusterMarkerContent({

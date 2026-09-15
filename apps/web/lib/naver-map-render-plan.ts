@@ -1,5 +1,5 @@
 import type { Restaurant } from '@/types/restaurant';
-import type Supercluster from 'supercluster';
+import type { ClusterFeature as ScClusterFeature, PointFeature as ScPointFeature } from 'supercluster';
 import { isCluster, type ClusterProperties, type RegionalCluster, type SeoulDistrictCluster } from '@/lib/clustering';
 import { getPrimaryCategory, isRestaurantInViewport, type ExtendedBounds } from '@/lib/naver-map-view-helpers';
 import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
@@ -103,7 +103,7 @@ export function buildRenderTargetIdsForSignature({
 }: {
     activeSearchedRestaurant: Restaurant | null;
     selectedRestaurant?: Restaurant | null;
-    clusters: Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>;
+    clusters: Array<ScClusterFeature<ClusterProperties> | ScPointFeature<ClusterProperties>>;
     displayRestaurantIds: Set<string>;
     displayRestaurants: Restaurant[];
     mergedRestaurantById: Map<string, Restaurant>;

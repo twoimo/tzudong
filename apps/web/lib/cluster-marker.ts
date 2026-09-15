@@ -2,7 +2,7 @@
  * 클러스터 마커 HTML 생성 및 애니메이션 관리
  */
 
-import type Supercluster from 'supercluster';
+import type { ClusterFeature as ScClusterFeature } from 'supercluster';
 import type { ClusterProperties } from './clustering';
 import { escapeHtmlAttribute } from './html-escape';
 
@@ -187,7 +187,7 @@ const createCategoryImageHTML = ({
  * @returns HTML 문자열
  */
 export const createClusterMarkerHTML = (
-  cluster: Supercluster.ClusterFeature<ClusterProperties>,
+  cluster: ScClusterFeature<ClusterProperties>,
   categories: string[],
   currentIndex: number
 ): string => {
