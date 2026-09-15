@@ -98,7 +98,29 @@ def main(argv: list[str] | None = None) -> int:
 
     hosted = set(hosted_youtube)
     env = os.environ.copy()
-    python = env.get("PYTHON_CMD", "python3")
+    python = env.get("PYTHON_CMD")
+    if not python or not Path(python).is_file():
+        for root in (REPO_ROOT, REPO_ROOT.parent / "tzudong"):
+            candidate = root / ".venv" / "bin" / "python3"
+            if candidate.is_file():
+                python = str(candidate)
+                break
+        if not python:
+            python = "python3"
+    env["PYTHON_CMD"] = python
+    venv_site = None
+    for root in (REPO_ROOT, REPO_ROOT.parent / "tzudong"):
+        candidate_lib = root / ".venv" / "lib"
+        if candidate_lib.is_dir():
+            matches = sorted(candidate_lib.glob("python3.*/site-packages"))
+            if matches:
+                venv_site = str(matches[-1])
+                break
+    if venv_site:
+        current_pp = env.get("PYTHONPATH", "")
+        env["PYTHONPATH"] = f"{venv_site}:{current_pp}" if current_pp else venv_site
+        venv_bin = str(Path(venv_site).parents[2] / "bin")
+        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
     crawling = REPO_ROOT / "backend/restaurant-crawling/data" / args.channel
     evaluation = REPO_ROOT / "backend/restaurant-evaluation/data" / args.channel
     urls_path = crawling / "urls.txt"

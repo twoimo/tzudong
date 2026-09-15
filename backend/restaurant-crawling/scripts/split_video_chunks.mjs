@@ -850,7 +850,7 @@ export function buildFfmpegArgs(chunk, sourcePath, tempOutFile, windowsExecutabl
     return [
         ...common,
         '-c:v', 'libx264',
-        '-vf', 'scale=-2:240:force_original_aspect_ratio=decrease',
+        '-vf', 'scale=-2:240:force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2',
         '-r', '15',
         '-preset', 'veryfast',
         '-crf', '32',

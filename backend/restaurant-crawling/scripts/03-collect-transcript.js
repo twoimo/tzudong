@@ -36,9 +36,31 @@ const __dirname = path.dirname(__filename);
 
 async function loadEnvironment() {
     const envPath = path.resolve(__dirname, '../.env');
-    if (!fs.existsSync(envPath)) return;
-    const { config } = await import('dotenv');
-    config({ path: envPath });
+    if (fs.existsSync(envPath)) {
+        const { config } = await import('dotenv');
+        config({ path: envPath });
+    }
+    if (!process.env.PYTHON_CMD) {
+        for (const root of [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../tzudong')]) {
+            const venvPy = path.join(root, '.venv/bin/python3');
+            if (fs.existsSync(venvPy)) {
+                process.env.PYTHON_CMD = venvPy;
+                break;
+            }
+        }
+    }
+    if (!process.env.PYTHONPATH) {
+        for (const root of [path.resolve(__dirname, '../../..'), path.resolve(__dirname, '../../../../tzudong')]) {
+            const venvLib = path.join(root, '.venv/lib');
+            if (fs.existsSync(venvLib)) {
+                const pyDirs = fs.readdirSync(venvLib).filter(name => name.startsWith('python3.'));
+                if (pyDirs.length > 0) {
+                    process.env.PYTHONPATH = path.join(venvLib, pyDirs[0], 'site-packages');
+                    break;
+                }
+            }
+        }
+    }
 }
 
 // config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
