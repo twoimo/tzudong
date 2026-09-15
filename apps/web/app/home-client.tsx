@@ -25,6 +25,7 @@ import {
   type HomeMapUserPreferencesEvent,
 } from "@/lib/home-map-user-preferences";
 import type { Restaurant } from "@/types/restaurant";
+import { findOverseasRegionForRestaurant } from "@/lib/overseas-region-matching";
 import {
   resolveDeviceOrientationHeading,
   resolveGeolocationHeading,
@@ -44,6 +45,7 @@ import type { HomeMapContextualRestaurantsPayload } from "@/lib/home-map-context
 import {
   buildHomeDetailState,
   buildHomeDetailUrl,
+  buildHomeListUrl,
   resolveHomeDetailRestaurantParam,
   buildHomeListState,
   createHomeRestoreKey,
@@ -56,15 +58,6 @@ import {
   type HomeRestoreCompactRestaurant,
   type HomeRestoreSnapshotV1,
 } from "@/lib/home-detail-route-state";
-
-function HomeMapContainerPendingShell() {
-  return (
-    <section
-      aria-hidden="true"
-      className="relative flex-1 overflow-hidden bg-background"
-    />
-  );
-}
 
 function HomeMapUserMenuPendingShell() {
   return (
@@ -87,22 +80,10 @@ function HomeMapUserMenuPendingShell() {
   );
 }
 
-// [OPTIMIZATION] 동적 임포트
-const HomeControlPanel = dynamic(
-  () => import("../components/home/home-control-panel"),
-  {
-    ssr: false,
-    loading: () => null,
-  },
-);
+// The page frame and controls participate in SSR; only browser SDKs and opened panels are deferred.
+import HomeControlPanel from '@/components/home/home-control-panel';
+import HomeMapContainer from '@/components/home/home-map-container';
 
-const HomeMapContainer = dynamic(
-  () => import("../components/home/home-map-container"),
-  {
-    ssr: false,
-    loading: () => <HomeMapContainerPendingShell />,
-  },
-);
 const SubmissionFloatingButton = dynamic(
   () => import("../components/home/SubmissionFloatingButton"),
   { ssr: false },
@@ -349,6 +330,9 @@ export default function HomeClient() {
       }
     }
 
+    if (typeof window !== "undefined" && resolveHomeDetailRestaurantParam(new URLSearchParams(window.location.search))) {
+      window.history.replaceState(null, "", buildHomeListUrl(new URL(window.location.href)));
+    }
     closeRestaurantDetailPanel();
     setActiveRightPanel(null);
     setIsAnnouncementSheetOpen(false);
@@ -594,6 +578,10 @@ export default function HomeClient() {
       }
 
       const detailMapMode = options?.mapMode ?? mapMode;
+      if (detailMapMode === "overseas") {
+        const region = findOverseasRegionForRestaurant(restaurant);
+        if (region) setSelectedCountry(region);
+      }
       if (typeof window !== "undefined") {
         const restoreKey =
           isHomeDetailHistoryState(window.history.state) &&
@@ -636,7 +624,7 @@ export default function HomeClient() {
         }
       }
     },
-    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection],
+    [createHomeRestoreSnapshot, mapMode, openRestaurantDetailSelection, setSelectedCountry],
   );
   useEffect(() => {
     openDetailPanelRef.current = openDetailPanel;
@@ -646,6 +634,7 @@ export default function HomeClient() {
 
     const handlePopState = (event: PopStateEvent) => {
       if (isHomeListHistoryState(event.state)) {
+        window.history.replaceState(event.state, "", buildHomeListUrl(new URL(window.location.href)));
         applyHomeRestoreSnapshot(event.state.restoreKey);
         return;
       }
@@ -1286,12 +1275,12 @@ export default function HomeClient() {
         onReleaseSearchSelectionOwnership={releaseSearchSelectionOwnership}
         onContextualRestaurantsChange={setContextualRestaurantsPayload}
         onMapInteraction={handleMapInteraction}
-        renderDesktopDetailPanel={!isDesktop}
+        renderDesktopDetailPanel={isMobileOrTablet}
         showUserSubmittedMarkers={showUserSubmittedMarkers}
       />
 
 
-      {isViewportResolved && !(isMobileOrTablet && isMapFullscreen) && (
+      {!(isMobileOrTablet && isMapFullscreen) && (
         <HomeControlPanel
           mapMode={mapMode}
           selectedRegion={state.selectedRegion}

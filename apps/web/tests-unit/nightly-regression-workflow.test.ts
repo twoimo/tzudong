@@ -622,7 +622,7 @@ describe("nightly regression package and source contracts", () => {
       "async function assertLocalMigrationReceipt(stateRoot, stackReceipt)",
       "receipt.schema !== 'local-receipt-v2'",
       "receipt.serializer !== 'receipt-v1'",
-      "receipt.ledger.length !== 96",
+      "receipt.ledger.length !== 97",
       "localReceiptSequenceMarkers = ['prerequisite', 'migration', 'closure', 'platform-bootstrap', 'seed']",
       "  'platform_bootstrap_evidence_sha256',",
       "  'platform_bootstrap_sha256',",
@@ -639,7 +639,7 @@ describe("nightly regression package and source contracts", () => {
     expect(createHash("sha256").update(localThumbnailRpcAllowlistMigrationSource).digest("hex")).toBe(
       "33735c6661ff8b555424bc2ccc28467baee182dd455f8283bfced356c0793ff7",
     );
-    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 96");
+    expect(nightlyRunnerSource).toContain("receipt.ledger.length !== 97");
   });
 
   test("keeps nightly web log custody owner-only and symlink-safe", () => {
@@ -1145,7 +1145,7 @@ describe("nightly regression package and source contracts", () => {
       "files != allowed",
       "publication artifact exceeds size bound",
       "CREDENTIAL_VALUE = re.compile(",
-      "EXPECTED_LEDGER_UNITS = 96",
+      "EXPECTED_LEDGER_UNITS = 97",
       "def verify_manifest(",
       "def verify_migration_summary(",
       "def verify_runtime_receipt(",
@@ -1156,7 +1156,7 @@ describe("nightly regression package and source contracts", () => {
     ]) {
       expect(publicationVerifierSource).toContain(token);
     }
-    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 96");
+    expect(publicationBuilderSource).toContain("EXPECTED_LEDGER_UNITS = 97");
     expect(localWorkflowSource.match(/verify-nightly-local-publication\.py/g)).toHaveLength(3);
     expect(localWorkflowSource.indexOf("Verify publication bundle before artifact persistence"))
       .toBeLessThan(localWorkflowSource.indexOf("Upload allowlisted publication bundle"));
@@ -1663,7 +1663,7 @@ describe('local migration v2 receipt envelope', () => {
   const receipt = (): Record<string, unknown> => ({
     ...Object.fromEntries(keys.map((key: string) => [key, 'fixture'])),
     schema: 'local-receipt-v2', serializer: 'receipt-v1', project_name: 'fixture-project',
-    ledger: Array(96).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
+    ledger: Array(97).fill(null), sequence: Array(5).fill(null), replay_proofs: {},
   });
   const stack = { config_sha256: 'fixture', input_provenance_sha256: 'fixture', env_provenance_sha256: 'fixture' };
 

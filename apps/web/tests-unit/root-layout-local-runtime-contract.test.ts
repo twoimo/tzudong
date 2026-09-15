@@ -2,6 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { LocalWorkspaceBanner } from '@/components/home/LocalWorkspaceBanner';
 import { resolveRootLayoutResourceHintPolicy } from '@/lib/root-layout-resource-hints';
 import {
   VIEWPORT_HEIGHT_BOOTSTRAP_SHA256,
@@ -39,6 +42,25 @@ describe('root layout local runtime and CSP nonce contract', () => {
     expect(layoutSource).toContain('<LocalWorkspaceBanner />');
     expect(layoutSource).toContain('<div data-local-workspace-app="true">');
     expect(layoutSource.indexOf('<LocalWorkspaceBanner />')).toBeLessThan(layoutSource.indexOf('data-local-workspace-app'));
+  });
+
+  test('identifies an offline test map and hides that notice for the real provider', () => {
+    const keys = ['NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME', 'NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL'] as const;
+    const saved = keys.map(key => process.env[key]);
+    try {
+      process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = '1';
+      process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL = '/__local/naver-maps.js';
+      expect(renderToStaticMarkup(createElement(LocalWorkspaceBanner))).toContain('테스트 지도 사용 중');
+      process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL = '';
+      expect(renderToStaticMarkup(createElement(LocalWorkspaceBanner))).not.toContain('테스트 지도 사용 중');
+      process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = '0';
+      expect(renderToStaticMarkup(createElement(LocalWorkspaceBanner))).toBe('');
+    } finally {
+      keys.forEach((key, index) => {
+        if (saved[index] === undefined) delete process.env[key];
+        else process.env[key] = saved[index];
+      });
+    }
   });
 
   test('inlines only the hash-pinned source-controlled viewport bootstrap', () => {

@@ -22,7 +22,8 @@ export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
     const LEADERBOARD_PAGE_SIZE = 15;
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
-    const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
+    const { data: leaderboardResult, isLoading, isFetching, isError, refetch } = useLeaderboard(period);
+    const leaderboardData = useMemo(() => leaderboardResult ?? [], [leaderboardResult]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const userItemRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -93,8 +94,6 @@ export default function LeaderboardPage() {
         }
     }, [isLoading, currentUser, leaderboardData]);
 
-    if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden relative">
@@ -166,14 +165,20 @@ export default function LeaderboardPage() {
 
                 {/* List Content */}
                 <div>
-                    <div data-mobile-leaderboard-panel-list="true">
-                        {isLoading ? (
+                    <div data-mobile-leaderboard-panel-list="true" aria-busy={isFetching}>
+                        {isError && (
+                            <div role="alert" className="m-4 flex items-center justify-between gap-3 rounded-lg border p-3 text-sm text-muted-foreground">
+                                <p>랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+                                <Button type="button" variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>다시 시도</Button>
+                            </div>
+                        )}
+                        {isLoading && leaderboardResult === undefined ? (
                             <LeaderboardSkeleton
                                 count={8}
                                 showHeader={false}
                                 className="px-4"
                             />
-                        ) : (
+                        ) : isError && leaderboardResult === undefined ? null : (
                             <LeaderboardList
                                 users={displayedUsers}
                                 currentUserId={currentUser?.id}

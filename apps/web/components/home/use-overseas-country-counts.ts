@@ -7,9 +7,9 @@ import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import { OVERSEAS_REGIONS, OVERSEAS_REGION_LIST } from '@/constants/overseas-regions';
 import type { Restaurant } from '@/types/restaurant';
 
-export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
-    const { data: globalRestaurants = [] } = useQuery({
-        queryKey: ['global-restaurants-count'],
+export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas', enabled = true) {
+    const { data: globalRestaurants = [], isError, isPending } = useQuery({
+        queryKey: ['restaurants-count'],
         queryFn: async () => {
             try {
                 const data = await fetchSupabaseRows<Restaurant>('restaurants', [
@@ -18,20 +18,24 @@ export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
                 ]);
                 return mergeRestaurants(data);
             } catch {
-                return [];
+                throw new Error('RESTAURANT_COUNTS_UNAVAILABLE');
             }
         },
-        enabled: mapMode === 'overseas',
+        enabled: enabled && mapMode === 'overseas',
+        retry: 1,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        refetchOnWindowFocus: false,
     });
 
-    return useMemo(() => {
+    const counts = useMemo(() => {
         const counts: Record<string, number> = {};
         OVERSEAS_REGION_LIST.forEach((region) => {
             counts[region] = 0;
         });
 
         globalRestaurants.forEach((restaurant) => {
-            const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+            const address = [restaurant.english_address, restaurant.road_address, restaurant.jibun_address].filter(Boolean).join(' ');
             const lowerAddress = address.toLowerCase();
 
             OVERSEAS_REGION_LIST.forEach((regionKey) => {
@@ -48,4 +52,5 @@ export function useOverseasCountryCounts(mapMode: 'domestic' | 'overseas') {
 
         return counts;
     }, [globalRestaurants]);
+    return { counts, isError, isPending };
 }

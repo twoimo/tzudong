@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DataPending } from '@/components/ui/data-pending';
 
 type IncidentStatus =
   | 'detected'
@@ -522,6 +523,8 @@ export default function PrivacyIncidentsPage() {
   const [receipt, setReceipt] = useState<ReadbackReceipt | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [listState, setListState] = useState<'pending' | 'ready' | 'error'>('pending');
+  const [hasListReadback, setHasListReadback] = useState(false);
   const [detectionSeverity, setDetectionSeverity] = useState<IncidentSeverity>('medium');
   const [detectedAt, setDetectedAt] = useState(localDateTimeValue);
   const [detectionConfirmationText, setDetectionConfirmationText] = useState('');
@@ -530,6 +533,7 @@ export default function PrivacyIncidentsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setListState('pending');
     try {
       const response = await fetch('/api/admin/privacy-incidents', {
         headers: { Accept: 'application/json' },
@@ -546,10 +550,13 @@ export default function PrivacyIncidentsPage() {
       setIncidents(sortedIncidents);
       setNotices(nextNotices);
       setActions(nextActions);
+      setListState('ready');
+      setHasListReadback(true);
       setSelectedIncidentId((current) => current && sortedIncidents.some((incident) => incident.id === current)
         ? current
         : sortedIncidents[0]?.id ?? null);
     } catch (error) {
+      setListState('error');
       setMessage(errorMessage(error));
     } finally {
       setLoading(false);
@@ -850,12 +857,17 @@ export default function PrivacyIncidentsPage() {
         ) : null}
       </section>
 
-      <section className="rounded-lg border p-4" aria-label="사고 목록">
+      <section className="rounded-lg border p-4" aria-label="사고 목록" aria-busy={listState === 'pending'}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-semibold">사고 목록</h2>
           <button type="button" className="rounded border px-3 py-1 text-sm" onClick={() => void load()} disabled={loading}>새로고침</button>
         </div>
-        {incidents.length === 0 ? (
+        {listState === 'pending' && hasListReadback ? <p role="status" className="mb-3 text-sm text-muted-foreground">사고 목록을 새로 확인하는 중입니다.</p> : null}
+        {!hasListReadback && listState === 'pending' ? (
+          <DataPending label="사고 목록 확인 중" variant="list" />
+        ) : incidents.length === 0 && listState === 'error' ? (
+          <p className="text-sm text-muted-foreground">사고 목록을 확인하지 못했습니다. 새로고침으로 다시 확인해주세요.</p>
+        ) : incidents.length === 0 ? (
           <p className="text-sm text-muted-foreground">표시할 사고가 없습니다. 위 탐지 등록으로 첫 사고를 기록한 뒤 상태 전환을 진행하세요.</p>
         ) : (
           <div className="grid gap-2 md:grid-cols-2">

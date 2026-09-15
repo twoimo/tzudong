@@ -112,6 +112,30 @@ test.describe('Phase 1: mobile home map regressions', () => {
         await page.getByLabel('검색 닫기').click();
     });
 
+    test('MHM-01-reload: reload retains the restaurant detail selected in the URL', async ({ page }) => {
+        await openMobileSearchAndSelect(page, '정원분식');
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        const selectedUrl = new URL(page.url());
+        expect(selectedUrl.searchParams.get('restaurant')).toBe('restaurant-search');
+
+        await page.reload();
+        await waitForMockMapReady(page);
+        await expect(page.getByTestId('restaurant-detail-panel')).toBeVisible({ timeout: 15000 });
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        expect(new URL(page.url()).searchParams.get('restaurant')).toBe('restaurant-search');
+        const readZoom = () => page.evaluate(() =>
+            (window as typeof window & { __TZUDONG_DEBUG_MAP__?: { getZoom: () => number } })
+                .__TZUDONG_DEBUG_MAP__?.getZoom());
+        await expect.poll(readZoom).toBe(15);
+
+        const explicitZoomUrl = new URL(page.url());
+        explicitZoomUrl.searchParams.set('z', '13');
+        await page.goto(explicitZoomUrl.toString());
+        await waitForMockMapReady(page);
+        await expect(page.getByTestId('restaurant-detail-panel')).toContainText('정원분식');
+        await expect.poll(readZoom).toBe(13);
+    });
+
     test('MHM-01b: browser back from search detail restores mobile search context without leaving home', async ({ page }) => {
         await page.evaluate(() => {
             const restoreEvents: Array<{ type: string; detail: unknown }> = [];

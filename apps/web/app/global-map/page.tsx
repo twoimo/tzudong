@@ -25,7 +25,7 @@ import { toast } from "@/lib/no-toast";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataPending } from "@/components/ui/data-pending";
 import { debugLog as logDebug } from "@/lib/debug-log";
 import { restaurantMatchesOverseasCountry } from "@/lib/overseas-region-matching";
 import { GOOGLE_MAPS_LOAD_STATE_EVENT } from "@/hooks/use-google-maps";
@@ -41,7 +41,7 @@ import {
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 const MapView = dynamic(() => import("@/components/map/MapView"), {
     ssr: false,
-    loading: () => null,
+    loading: () => <DataPending label="지도를 준비하는 중입니다." className="h-full min-h-[360px]" />,
 });
 const AdminRestaurantModal = dynamic(
     () => import("@/components/admin/AdminRestaurantModal").then((mod) => ({ default: mod.AdminRestaurantModal })),
@@ -63,16 +63,10 @@ const GLOBAL_COUNTRIES = [
 
 type GlobalCountry = typeof GLOBAL_COUNTRIES[number];
 
-function GlobalMapSearchSkeleton() {
-    return (
-        <div
-            className="w-full sm:col-span-2 lg:col-span-1"
-            aria-hidden="true"
-            data-global-map-search-skeleton="true"
-        >
-            <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-    );
+function GlobalMapSearchPending() {
+    return <div className="w-full sm:col-span-2 lg:col-span-1">
+        <Input disabled aria-label="맛집 검색 준비 중" placeholder="맛집 검색..." className="h-10 w-full" />
+    </div>;
 }
 
 // 그리드 지역 설정 (글로벌 국가)
@@ -126,6 +120,7 @@ export default function GlobalMapPage() {
     const [panelWidth, setPanelWidth] = useState(0);
     const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [countryMenuOpen, setCountryMenuOpen] = useState(false);
     const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
     const [isGridMode, setIsGridMode] = useState(false);
@@ -216,7 +211,7 @@ export default function GlobalMapPage() {
     }, []);
 
     // 글로벌 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
-    const { data: globalRestaurants = [] } = useQuery({
+    const { data: globalRestaurants = [], isPending: globalRestaurantsPending, isError: globalRestaurantsError } = useQuery({
         queryKey: ['global-restaurants-count'],
         queryFn: async () => {
             const { data: allRestaurants, error } = await supabase
@@ -225,12 +220,12 @@ export default function GlobalMapPage() {
                 .eq('status', 'approved')
                 .returns<Restaurant[]>();
 
-            if (error) {
-                return [];
-            }
+            if (error) throw new Error('global-restaurants-unavailable');
             // 병합 로직 적용하여 중복 제거
             return mergeRestaurants(allRestaurants || []);
         },
+        enabled: countryMenuOpen || googleMapsFallbackState === "error",
+        staleTime: 5 * 60_000,
     });
 
     // 국가별 맛집 수 계산 (병합된 데이터 기준)
@@ -531,11 +526,14 @@ export default function GlobalMapPage() {
 
     return (
         <>
+            <h1 className="sr-only">해외 맛집 지도</h1>
             {/* 하단 컨트롤 패널 */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-[min(calc(100vw-1rem),72rem)] px-2">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_minmax(0,1fr)_auto] gap-2 lg:gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-2 lg:p-3 shadow-lg">
                     {/* 국가 선택 */}
                     <Select
+                        open={countryMenuOpen}
+                        onOpenChange={setCountryMenuOpen}
                         value={selectedCountry || "튀르키예"}
                         onValueChange={(value) => {
                             setSelectedCountry(value as GlobalCountry);
@@ -552,7 +550,7 @@ export default function GlobalMapPage() {
                                     <SelectItem key={country} value={country} textValue={country}>
                                         <div className="flex items-center justify-between w-full">
                                             <span className="whitespace-nowrap">{country}</span>
-                                            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
+                                            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({globalRestaurantsPending ? "집계 중" : globalRestaurantsError && globalRestaurants.length === 0 ? "확인 필요" : `${count}개`})</span>
                                         </div>
                                     </SelectItem>
                                 );
@@ -569,7 +567,7 @@ export default function GlobalMapPage() {
                     />
 
                     {/* 맛집 검색 */}
-                    <Suspense fallback={<GlobalMapSearchSkeleton />}>
+                    <Suspense fallback={<GlobalMapSearchPending />}>
                         <RestaurantSearch
                             onRestaurantSelect={handleRestaurantSelect}
                             onRestaurantSearch={handleRestaurantSearch}
@@ -596,7 +594,7 @@ export default function GlobalMapPage() {
                 <div className="grid grid-cols-2 grid-rows-2 h-full w-full gap-1 p-1">
                     {GRID_COUNTRIES.map((country) => (
                         <div key={country} className="relative min-h-0 overflow-hidden rounded-md border border-border">
-                            <Suspense fallback={null}>
+                            <Suspense fallback={<DataPending label="지도를 준비하는 중입니다." className="h-full min-h-[360px]" />}>
                                 <MapView
                                     filters={filters}
                                     selectedCountry={country}
@@ -621,7 +619,7 @@ export default function GlobalMapPage() {
                 </div>
             ) : (
                 // 단일 지도 모드
-                <Suspense fallback={null}>
+                <Suspense fallback={<DataPending label="지도를 준비하는 중입니다." className="h-full min-h-[360px]" />}>
                     <Group
                         orientation="horizontal"
                         className="w-full h-full"
@@ -673,11 +671,15 @@ export default function GlobalMapPage() {
                                             />
 
                                             <div className="text-xs text-muted-foreground" aria-live="polite">
-                                                {fallbackRestaurants.length}개 중 {visibleFallbackRestaurants.length}개 표시
+                                                {globalRestaurantsPending ? "맛집을 불러오는 중입니다." : globalRestaurantsError && globalRestaurants.length === 0 ? "목록 확인 필요" : `${fallbackRestaurants.length}개 중 ${visibleFallbackRestaurants.length}개 표시`}
                                             </div>
 
                                             <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                                                {visibleFallbackRestaurants.length > 0 ? (
+                                                {globalRestaurantsPending ? (
+                                                    <DataPending label="글로벌 맛집을 불러오는 중입니다." variant="list" />
+                                                ) : globalRestaurantsError && globalRestaurants.length === 0 ? (
+                                                    <p role="alert" className="text-sm text-muted-foreground">맛집 목록을 불러오지 못했습니다.</p>
+                                                ) : visibleFallbackRestaurants.length > 0 ? (
                                                     visibleFallbackRestaurants.map((restaurant) => {
                                                         const categories = getGlobalMapFallbackCategories(restaurant);
                                                         return (

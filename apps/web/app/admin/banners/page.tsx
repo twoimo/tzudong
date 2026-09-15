@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import {
     Plus,
     Trash2,
@@ -53,47 +53,8 @@ const IMAGE_COMPRESSION_OPTIONS = {
     useWebWorker: true,
 };
 
-function InlineCountSkeleton({ className }: { className?: string }) {
-    return <span className={cn("inline-block h-3 w-6 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none", className)} aria-hidden="true" />;
-}
-
-function BannerListItemSkeleton({ index }: { index: number }) {
-    return (
-        <div className="w-full rounded-lg border border-border bg-background/80 p-2 text-left" aria-hidden="true">
-            <div className="flex gap-2">
-                <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border">
-                    <Skeleton className="h-full w-full rounded-none motion-reduce:animate-none" />
-                </div>
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">
-                            <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-32" : "w-24")} />
-                        </p>
-                        <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
-                            <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
-                        </Badge>
-                    </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="rounded-full text-[10px]">
-                            <Skeleton className="h-3 w-14 rounded-full motion-reduce:animate-none" />
-                        </Badge>
-                        <Badge variant="secondary" className="rounded-full text-[10px]">
-                            <Skeleton className="h-3 w-12 rounded-full motion-reduce:animate-none" />
-                        </Badge>
-                        {index % 2 === 0 && (
-                            <span className="inline-flex items-center text-[10px] text-primary">
-                                <ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />
-                                <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+function InlinePendingCount({ className, failed = false }: { className?: string; failed?: boolean }) {
+    return <span className={className}>{failed ? "확인 불가" : "집계 중"}</span>;
 }
 
 const revokeObjectUrlIfNeeded = (url: string | null) => {
@@ -145,7 +106,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
     const { user, isAdmin, isLoading: authLoading } = useAuth();
 
     // 배너 데이터
-    const { data: banners = [], isLoading: bannersLoading } = useAdBannersAdmin();
+    const { data: banners = [], isLoading: bannersLoading, isError: bannersError } = useAdBannersAdmin();
     const createBanner = useCreateAdBanner();
     const updateBanner = useUpdateAdBanner();
     const deleteBanner = useDeleteAdBanner();
@@ -567,15 +528,15 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             <div className="min-w-0">
                                 <h1 className={embedded ? "whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent" : "truncate text-lg font-bold tracking-[-0.04em] text-foreground md:text-xl"}>배너 관리</h1>
                                 <p className="mt-0.5 text-xs leading-4 text-muted-foreground" data-admin-module-summary={embedded ? "true" : undefined}>
-                                    전체 {bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length}개 · 활성 {bannersLoading ? <InlineCountSkeleton /> : activeBannerCount}개 · 비활성 {bannersLoading ? <InlineCountSkeleton /> : inactiveBannerCount}개
+                                    전체 {(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} /> : sortedBanners.length}개 · 활성 {(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} /> : activeBannerCount}개 · 비활성 {(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} /> : inactiveBannerCount}개
                                 </p>
                             </div>
                         </div>
                     </div>
                     <div className="flex w-full min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:w-auto" data-admin-module-actions={embedded ? "top-right" : undefined}>
                         <div className="flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
-                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
-                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {bannersLoading ? <InlineCountSkeleton className="ml-1 w-5" /> : mobileTargetCount}</Badge>
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Monitor className="mr-1 h-3.5 w-3.5" aria-hidden="true" />데스크톱 배너 {(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} className="ml-1 w-5" /> : sidebarTargetCount}</Badge>
+                            <Badge variant="secondary" className="shrink-0 whitespace-nowrap rounded-full border border-border bg-muted/50 text-muted-foreground"><Smartphone className="mr-1 h-3.5 w-3.5" aria-hidden="true" />모바일 팝업 {(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} className="ml-1 w-5" /> : mobileTargetCount}</Badge>
                         </div>
                         <Button onClick={openCreatePanel} className="h-9 w-full rounded-xl bg-primary px-3 text-primary-foreground shadow-primary hover:bg-primary/90 sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" aria-hidden="true" />새 배너
@@ -585,19 +546,18 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
 
                 <div className={cn("grid min-h-0 flex-1 gap-2 overflow-y-auto overflow-x-hidden scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", embedded ? "p-2 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" : "rounded-b-2xl bg-background/70 p-2 sm:p-3 md:border md:border-t-0 xl:grid-cols-[minmax(360px,0.95fr)_minmax(460px,1.05fr)] xl:overflow-hidden")} data-admin-module-content={embedded ? "bounded" : undefined}>
                     <section className="min-h-0 overflow-hidden rounded-xl bg-card/95 shadow-sm md:border md:border-border xl:flex xl:flex-col" aria-labelledby="banner-list-title">
-                        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border p-2.5">
+                        <div data-admin-panel-padding="true" className="flex shrink-0 items-center justify-between gap-2 border-b border-border p-2.5">
                             <div>
                                 <h2 id="banner-list-title" className="text-sm font-bold text-foreground">배너 목록</h2>
                                 <p className="text-xs text-muted-foreground">선택하면 오른쪽에서 바로 수정합니다.</p>
                             </div>
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
-                            {bannersLoading ? (
-                                <div className="space-y-2" role="status" aria-busy="true" aria-label="배너 목록 로딩 중">
-                                    <span className="sr-only">배너 목록 데이터를 불러오는 중입니다.</span>
-                                    {Array.from({ length: 5 }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
-                                </div>
+                        <div data-admin-panel-padding="true" className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록" aria-busy={bannersLoading}>
+                            {bannersError && sortedBanners.length === 0 ? (
+                                <p role="alert" className="p-4 text-sm text-muted-foreground">배너 목록을 불러오지 못했습니다. 다시 시도해주세요.</p>
+                            ) : bannersLoading && sortedBanners.length === 0 ? (
+                                <AdminDataPending label="배너 목록을 불러오는 중입니다." />
                             ) : sortedBanners.length === 0 ? (
                                 <Card className="border-dashed border-border bg-background/70 p-4 text-center text-sm text-muted-foreground">
                                     등록된 배너가 없습니다. 오른쪽 패널에서 첫 배너를 추가하세요.
@@ -643,7 +603,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                     </section>
 
                     <section className="min-h-0 overflow-hidden rounded-xl bg-card/95 shadow-sm md:border md:border-border xl:flex xl:flex-col" aria-labelledby="banner-editor-title">
-                        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-2.5">
+                        <div data-admin-panel-padding="true" className="flex shrink-0 items-start justify-between gap-3 border-b border-border p-2.5">
                             <div className="min-w-0">
                                 <h2 id="banner-editor-title" className="text-sm font-bold text-foreground">{editingBanner ? '배너 상세·수정' : '새 배너 작성'}</h2>
                                 <p className="text-xs text-muted-foreground">모달 없이 선택·편집·삭제를 이 패널에서 처리합니다.</p>
@@ -651,7 +611,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             {editingBanner && <Button type="button" variant="outline" size="sm" className="shrink-0 rounded-lg" onClick={openCreatePanel}>새로 작성</Button>}
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div data-admin-panel-padding="true" className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <div className="grid gap-2 md:grid-cols-2">
                                 <div className="space-y-1.5 md:col-span-2">
                                     <Label htmlFor="title">제목 *</Label>
@@ -718,7 +678,7 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             </div>
 
                             {editingBanner && (
-                                <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3">
+                                <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-3" data-admin-panel-padding="true">
                                     <h3 className="flex items-center gap-2 text-sm font-bold text-destructive"><Trash2 className="h-4 w-4" aria-hidden="true" />삭제 전 확인</h3>
                                     <p className="mt-1 text-xs leading-5 text-muted-foreground">삭제는 모달 없이 이 패널에서 처리합니다. 삭제하려면 <strong>배너삭제</strong>를 입력하세요.</p>
                                     <div className="mt-2 flex flex-col gap-2 sm:flex-row">

@@ -431,9 +431,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "components/admin/AdminEmbeddedModuleShell.tsx",
     );
 
-    expect(mainLayoutSource).toContain(
-      '<main id="main-content" tabIndex={-1} className="h-full min-h-0 min-w-0 w-full">',
-    );
+    const mainOpeningTag = mainLayoutSource.match(/<main\b[^>]*>/)?.[0] ?? "";
+    expect(mainOpeningTag).toContain('id="main-content"');
+    expect(mainOpeningTag).toContain('tabIndex={-1}');
+    expect(mainOpeningTag).toContain("min-h-0 min-w-0 flex-1 overflow-hidden");
+    expect(mainLayoutSource).toContain('<div className="h-full min-h-0 min-w-0 w-full">{children}</div>');
     expect(mainLayoutSource).toContain(
       'className="relative min-h-0 min-w-0 flex-1 overflow-hidden transition-[margin] duration-300"',
     );
@@ -491,6 +493,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       expect(sharedShellSource).not.toContain("TrendProposalQueue");
     }
   });
+  test("keeps unrelated user and navigation prefetch out of admin routes", () => {
+    for (const path of ["components/layout/MainLayout.tsx", "components/layout/OverlayLayout.tsx"]) {
+      const layoutSource = source(path);
+      expect(layoutSource).toContain('pathname === "/admin" || pathname?.startsWith("/admin/") === true');
+      expect(layoutSource).toContain("{user && !isAdminConsolePath && <UserDataPrefetcher />}");
+      expect(layoutSource).not.toContain("{user && <UserDataPrefetcher />}");
+    }
+    const navigationSource = source("components/layout/NavigationPrefetcher.tsx");
+    const prefetchEffect = navigationSource.split("useEffect(() => {")[1] ?? "";
+    expect(prefetchEffect).toMatch(/if \(pathname === "\/admin" \|\| pathname\?\.startsWith\("\/admin\/"\) \|\| !canPrefetchRoutes\(\)\) \{\s*return;/);
+    expect(prefetchEffect).toContain("router.prefetch(route)");
+    expect(prefetchEffect.indexOf('pathname === "/admin"')).toBeLessThan(prefetchEffect.indexOf("router.prefetch(route)"));
+    expect(prefetchEffect).toContain("cancelled = true");
+    expect(prefetchEffect).toContain("cancel();");
+  });
+
   test("aligns mobile admin menu state and KPI loading without desktop restyle", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const guardedSource = source("lib/admin/guarded-mutation-contract.ts");
@@ -499,10 +517,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}');
     expect(consoleSource).toContain('data-admin-console-menu-item-state={isActive ? "active" : "inactive"}');
     expect(consoleSource).toContain('? "border-primary/20 bg-primary text-primary-foreground shadow-primary"');
-    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="true"');
-    expect(consoleSource).toContain('data-admin-dashboard-mobile-loading-prompt="live"');
-    expect(consoleSource).toContain("shouldShowMobileDashboardLoadingPrompt");
-    expect(consoleSource).toContain("KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.");
+    expect(consoleSource).toContain('data-admin-dashboard-data-pending={variant}');
     expect(consoleSource).toContain("md:h-7 md:min-h-0 md:min-w-0");
     expect(guardedSource).toContain('GUARDED_MUTATION_STEPS.join(" -> ")');
   });
@@ -608,25 +623,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(insightsSource).toContain('summary={summary}');
     expect(insightsSource).toContain('contentClassName="p-2"');
 
-    const loadingBranch =
-      insightsSource.match(
-        /if \(isLoading && !canRender\) \{([\s\S]*?)if \(treemapQuery\.isError \|\| !treemapQuery\.data\)/,
-      )?.[1] ?? "";
-    expect(loadingBranch).toContain("if (embedded)");
-    expect(loadingBranch).toContain("return renderEmbeddedShell(");
-    expect(loadingBranch).toContain("<InsightsClientLoadingSkeleton />");
-    expect(loadingBranch).toContain("'데이터를 불러오는 중입니다.'");
-    expect(loadingBranch).toContain("return <InsightsClientLoadingSkeleton />");
-
-    const errorBranch =
-      insightsSource.match(
-        /if \(treemapQuery\.isError \|\| !treemapQuery\.data\) \{([\s\S]*?)const insightsContent =/,
-      )?.[1] ?? "";
-    expect(errorBranch).toContain("const errorContent = (");
-    expect(errorBranch).toContain("onClick={handleRetry}");
-    expect(errorBranch).toContain("return renderEmbeddedShell(errorContent");
-    expect(errorBranch).toContain("'데이터를 불러오지 못했습니다.'");
-    expect(errorBranch).toContain("return errorContent");
+    expect(insightsSource).not.toContain("InsightsClientLoadingSkeleton");
+    expect(insightsSource).not.toContain("if (isLoading && !canRender)");
+    expect(insightsSource).toContain("isLoading || treemapQuery.isFetching ? <AdminDataPending");
+    expect(insightsSource).toContain("treemapQuery.isError && user && !isAuthLoading");
+    expect(insightsSource).toContain('role="alert"');
+    expect(insightsSource).toContain("onClick={handleRetry}");
+    expect(insightsSource).toContain("void treemapQuery.refetch()");
+    expect(insightsSource).toContain("enabled: !isAuthLoading && !!user");
+    expect(insightsSource).toContain("!isLoading && !treemapQuery.isError");
 
     expect(insightsSource).toContain("return renderEmbeddedShell(insightsContent)");
     expect(insightsSource).toContain('className="flex h-full min-h-0 flex-col bg-background overflow-hidden"');
@@ -778,16 +783,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "pointer-events-none absolute left-3 top-3 flex flex-wrap gap-1.5",
     );
     expect(overviewSource).not.toContain("홈 마커·클러스터 재사용");
-    expect(overviewSource).toContain("function AdminMapLoadingSkeleton");
-    expect(overviewSource).toContain("function AdminMapInfoPanelSkeleton");
-    expect(overviewSource).toContain('data-admin-map-info-skeleton="true"');
-    expect(overviewSource).toContain('aria-label="관리자 지도 동선 추천 로딩"');
-    expect(overviewSource).toContain("if (isLoading && !selectedRestaurant)");
-    expect(overviewSource).toContain('aria-label="관리자 네이버 지도 로딩"');
-    expect(overviewSource).toContain('data-admin-map-loading-skeleton="true"');
-    expect(overviewSource).toContain(
-      "pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-[1px]",
-    );
+    expect(overviewSource).not.toContain("AdminMapLoadingSkeleton");
+    expect(overviewSource).not.toContain("AdminMapInfoPanelSkeleton");
+    expect(overviewSource).toContain('aria-busy={isMapPreparing}');
+    expect(overviewSource).toContain('aria-label="네이버 지도 맛집 마커와 클러스터"');
+    expect(overviewSource).toContain('isMapPreparing && <AdminDataPending');
+    expect(overviewSource).toContain('<AdminDataPending label="동선 데이터를 불러오는 중입니다." />');
     expect(overviewSource).not.toContain("지도 준비 중");
     expect(overviewSource).not.toContain(
       "w-full max-w-xs space-y-3 rounded-2xl border border-border bg-card/95 p-4 shadow-sm",
@@ -882,56 +883,57 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(overviewSource).not.toContain("4분할");
   });
 
-  test("keeps all admin skeletons compact and layout-faithful", () => {
+  test("keeps real admin frames mounted with accessible data-slot status", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
-    const adminLoadingSource = source("app/admin/loading.tsx");
-    const routeSkeletonSource = source("app/admin/evaluations/page.tsx");
-    const evaluationTableSource = source(
-      "components/admin/EvaluationTableNew.tsx",
-    );
-    const submissionListSource = source(
-      "components/admin/SubmissionListView.tsx",
-    );
     const usersSource = source("components/admin/AdminUsersPanel.tsx");
-    const refreshHistorySource = source(
-      "components/admin/AdminRestaurantRefreshHistoryPanel.tsx",
-    );
-    const insightsSource = source("app/insights/insights-client.tsx");
-
-    expect(consoleSource).not.toContain(
-      "aria-label={`${title} 작업 화면 준비 상태`}",
-    );
-    expect(consoleSource).not.toContain(
-      "Array.from({ length: 6 }).map((_, index) => (",
-    );
-    expect(adminLoadingSource).toContain("return null;");
-    expect(adminLoadingSource).toContain("모듈별 스켈레톤만 한 번");
-    expect(consoleSource).not.toContain("AdminConsoleLoadingSkeleton");
-    expect(consoleSource).toContain("function AdminConsoleCanvasSkeleton");
-    expect(consoleSource).toContain(
-      'data-admin-console-content-loading="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading="page-shell"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-header="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-grid="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-list="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-detail="true"',
-    );
-    expect(consoleSource).toContain(
-      "function AdminStoryboardModuleLoadingSkeleton()",
-    );
-    expect(consoleSource).not.toContain(
-      'import { AdminStoryboardGenerator } from "@/components/admin/storyboard/AdminStoryboardGenerator";',
-    );
+    const pendingSource = source("components/ui/data-pending.tsx");
+    const adminPendingSource = source("components/admin/AdminDataPending.tsx");
+    expect(adminPendingSource).toContain('<DataPending {...props} />');
+    expect(adminPendingSource).toContain('data-admin-data-pending="true"');
+    const routeSource = source("app/admin/evaluations/page.tsx");
+    expect(source("app/admin/loading.tsx")).toContain("return null;");
+    expect(pendingSource).toContain('role="status"');
+    expect(pendingSource).toContain('aria-live="polite"');
+    expect(pendingSource).toContain("{label}");
+    // Necessary data placeholders are bounded, decorative shapes announced once.
+    expect(pendingSource).toContain('aria-busy="true"');
+    expect(pendingSource).toContain('<span className="sr-only">{label}</span>');
+    expect(pendingSource).toContain('<div aria-hidden="true"');
+    expect(pendingSource).toContain('<Skeleton');
+    expect(pendingSource).toContain('max-w-56');
+    expect(pendingSource).not.toMatch(/fixed\s+inset-0|min-h-screen|h-screen|<h[1-6]\b|<Button\b/);
+    expect(source("components/ui/skeleton.tsx")).toContain('data-slot="skeleton"');
+    const modulePending = consoleSource.split("function getAdminConsoleModulePending(")[1]?.split("const EMPTY_SEARCH_PARAMS")[0] ?? "";
+    expect(modulePending).toContain("<AdminEmbeddedModuleShell");
+    expect(modulePending).toContain("title={title ?? selectedModule?.title");
+    expect(modulePending).toContain('aria-busy="true"');
+    expect(modulePending).toContain("<AdminDataPending");
+    expect(modulePending).not.toMatch(/Array\.from|AdminConsoleCanvasSkeleton/);
+    expect(consoleSource).not.toContain("AdminDashboardManagementSkeleton");
+    expect(consoleSource).not.toContain("AdminConsoleCanvasSkeleton");
+    expect(consoleSource).not.toContain("AdminStoryboardModuleLoadingSkeleton");
+    expect(consoleSource).not.toContain("AdminYoutubeThumbnailModuleLoadingSkeleton");
+    // The real KPI component precedes the module bootstrap fallback.
+    expect(consoleSource).toMatch(/activeModuleId === "overview" \? \([\s\S]*?<AdminDashboardManagementPanel[\s\S]*?isAdmin=\{canLoadAdminConsoleData\}[\s\S]*?\) : isAdminCanvasBootstrapping \? \(/);
+    expect(consoleSource).toContain("getAdminConsoleModulePending(activeModuleId, activeModuleLabel)");
+    expect(consoleSource).toContain("isShellBootstrapping || !loadedModuleIds.has(activeModuleId)");
+    expect(routeSource).toContain("fallback={embedded ? null : <AdminEvaluationRoutePending />}");
+    expect(routeSource).toContain("<h1 className=\"text-lg font-bold\">관리자 데이터 검수</h1>");
+    expect(routeSource).toContain('<AdminDataPending label="검수 화면을 준비하고 있습니다." />');
+    const evaluationSource = source("components/admin/EvaluationTableNew.tsx");
+    expect(evaluationSource).toContain('<TableBody aria-busy={loading || isLoadingMore}>');
+    expect(evaluationSource).toContain('<TableCell colSpan={11}><AdminDataPending');
+    expect(evaluationSource).not.toContain("desktopLoadingRows = Array.from");
+    const submissionsSource = source("components/admin/SubmissionListView.tsx");
+    expect(submissionsSource).toContain('<AdminDataPending label="리뷰를 불러오는 중입니다." />');
+    expect(submissionsSource).toContain('<AdminDataPending label="제보를 불러오는 중입니다." />');
+    expect(submissionsSource).toContain("reviewsLoading && reviews.length === 0");
+    expect(usersSource).toContain("data-admin-users-list aria-busy={isLoading}");
+    expect(usersSource).toContain('<AdminDataPending label="사용자 목록을 불러오는 중입니다." />');
+    expect(usersSource).toContain('<th scope="col" className="px-3 py-2 font-semibold">사용자</th>');
+    expect(usersSource).toContain('aria-label="아직 확인되지 않음"');
+    expect(usersSource).toContain("!isLoading && !errorMessage && users.length === 0");
+    expect(usersSource).not.toContain("function UserTableSkeleton");
     expect(consoleSource).toContain(
       "function loadAdminStoryboardGenerator()",
     );
@@ -945,284 +947,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "void preloadAdminConsoleModule(activeModuleId)",
     );
     expect(consoleSource).toContain(
-      "const isAdminCanvasBootstrapping =",
-    );
-    expect(consoleSource).toContain(
-      "isShellBootstrapping || !loadedModuleIds.has(activeModuleId)",
-    );
-    expect(consoleSource).toContain(
-      "getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)",
-    );
-    expect(consoleSource).toContain(
       "function createInitialAdminConsoleLoadedModuleIds()",
     );
-    expect(consoleSource).not.toContain(
-      "loading: () => <AdminStoryboardModuleLoadingSkeleton />",
-    );
-    expect(consoleSource).not.toContain(
-      "loading: () => <AdminYoutubeThumbnailModuleLoadingSkeleton />",
-    );
-    expect(consoleSource).not.toContain(
-      "loading: () => getAdminConsoleModuleLoadingSkeleton(",
-    );
-    expect(
-      (consoleSource.match(/loading: \(\) => null/g) ?? []).length,
-    ).toBeGreaterThanOrEqual(7);
-    expect(consoleSource).toContain(
-      "loading: () => <AdminEvaluationModuleStaticShell />",
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-evaluation="viewport-table"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-refresh-history="viewport-split"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-banners="viewport-editor"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-users="viewport-table"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-insights="viewport-charts"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-routes="viewport-map"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-sidebar-module-loading-ops="viewport-cards"',
-    );
-    expect(consoleSource).not.toContain(
-      'isShellBootstrapping && activeModuleId !== "storyboard"',
-    );
-    expect(consoleSource).toContain("<AdminStoryboardModuleLoadingSkeleton />");
     expect(consoleSource).toContain(
       "initialStoryboardResult={initialStoryboardResult}",
     );
     expect(consoleSource).toContain(
-      'moduleId === "youtube-thumbnail-generator"',
-    );
-    expect(consoleSource).toContain(
-      "<AdminYoutubeThumbnailModuleLoadingSkeleton />",
-    );
-    expect(consoleSource).toContain('data-storyboard-module-loading="true"');
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-layout="page-shell"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-storyboard-generator-loading="true"',
-    );
-    expect(consoleSource).toContain('data-storyboard-viewport-fit="bounded"');
-    expect(consoleSource).toContain(
-      'data-admin-console-content-loading="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-grid="true"',
-    );
-    expect(consoleSource).toContain(
-      "flex h-full min-h-0 flex-col overflow-hidden bg-background p-2",
-    );
-    expect(consoleSource).toContain(
-      "rounded-2xl border border-border/70 bg-card/80 shadow-sm",
-    );
-    expect(consoleSource).toContain(
-      "border-0 bg-card/80 shadow-none",
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-layout="canvas-only"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-chat="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-chat-shell="static"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-canvas="true"',
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-canvas-blank="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-frame-grid="true"',
-    );
-    expect(consoleSource).not.toContain(
-      "grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_auto]",
-    );
-    expect(consoleSource).not.toContain(
-      "grid h-full min-h-[420px] grid-cols-1 gap-2 overflow-hidden sm:grid-cols-2",
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-composer="true"',
-    );
-    expect(consoleSource).not.toContain(
-      'data-storyboard-module-loading-chat-actions="outside-bubble"',
-    );
-    expect(consoleSource).toContain(
-      "data-storyboard-module-loading-cut={String(cutNo)}",
-    );
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-shimmer="true"',
-    );
-    expect(consoleSource).toContain("admin-module-loading-shimmer");
-    expect(consoleSource).toContain("STORYBOARD_MODULE_LOADING_CUT_NOS.map");
-    expect(consoleSource).toContain(
-      'data-storyboard-module-loading-glass="true"',
-    );
-    expect(consoleSource).toContain('data-thumbnail-module-loading="true"');
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-layout="page-shell"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-parity="storyboard-shell"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-frame="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-aspect="16:9"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-glass="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-glass-shell="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-page-shimmer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-card-glass="chat"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-card-glass="canvas"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shell-glass="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shell-shimmer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-glass="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shimmer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-shell-glass="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-canvas-shell-shimmer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-toolbar="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-tone="neutral-storyboard"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-shell="static"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-log="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-bubble="guide"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-bubble="assistant"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-composer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-chat-actions="outside-bubble"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-shimmer="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-tool-glass="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-thumbnail-module-loading-tool-shimmer="true"',
-    );
-    expect(consoleSource).toContain("THUMBNAIL_MODULE_LOADING_TOOL_IDS.map");
-    expect(consoleSource).not.toContain("[animation:storyboard-glass-shimmer_");
-    const thumbnailLoadingSkeletonSource =
-      consoleSource
-        .split("function AdminYoutubeThumbnailModuleLoadingSkeleton()")[1]
-        ?.split("export function AdminConsoleOverview")[0] ?? "";
-    expect(thumbnailLoadingSkeletonSource).not.toContain("blur-sm");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("blur-md");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("backdrop-blur-[1px]");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/10");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/15");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-primary/18");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-sky-500/15");
-    expect(thumbnailLoadingSkeletonSource).not.toContain("bg-sky-500/10");
-    expect(consoleSource).not.toContain(
-      'className="flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-muted/20 p-3 md:min-h-0"',
-    );
-    expect(consoleSource).not.toContain("bg-slate-200/80 text-slate-600");
-    expect(consoleSource).not.toContain(
-      "absolute right-[7%] top-[12%] h-[30%] w-[22%] rounded-full",
-    );
-    expect(consoleSource).not.toContain(
-      "absolute bottom-[13%] left-[9%] h-[30%] w-[42%] rounded-[999px]",
-    );
-    expect(consoleSource).not.toContain(
-      "absolute bottom-[19%] left-[27%] h-16 w-[42%] rounded-2xl",
-    );
-    expect(consoleSource).not.toContain(
-      'className="grid h-full min-h-[420px] grid-cols-2 grid-rows-2 gap-2 bg-transparent p-3 md:min-h-0"',
-    );
-    expect(consoleSource).toContain(
-      "aria-label={`${config.title} 화면 로딩 중`}",
-    );
-    expect(consoleSource).toContain('aria-busy="true"');
-    expect(source("components/admin/AdminOverviewDashboard.tsx")).toContain(
-      'data-admin-map-loading-skeleton="true"',
-    );
-    expect(consoleSource).toContain(
-      "const isShellBootstrapping = authLoading || !hasHydrated;",
-    );
-    expect(consoleSource).toContain("{isAdminCanvasBootstrapping ? (");
-    expect(consoleSource).not.toContain("{isShellBootstrapping ? (");
-    expect(consoleSource).toContain(
-      "function AdminDashboardManagementSkeleton()",
-    );
-    expect(consoleSource).toContain("<AdminDashboardManagementSkeleton />");
-    expect(consoleSource).toContain(
-      "getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)",
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-management-skeleton="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-skeleton-card="trend"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-skeleton-card="topContent"',
-    );
-    expect(consoleSource).toContain(
       "useState<AdminModuleId>(requestedModuleId)",
     );
-    expect(consoleSource).toContain('activeModuleId === "overview" ? (');
-    expect(source("components/admin/AdminOverviewDashboard.tsx")).toContain(
-      "backdrop-blur-[1px]",
-    );
-    expect(consoleSource).not.toContain("지도 준비 중");
-    expect(consoleSource).not.toContain("group-hover:scale-[1.02]");
-    expect(consoleSource).toContain("return null;");
-    expect(adminLoadingSource).not.toContain("AdminConsoleLoadingSkeleton");
     expect(source("app/app-globals.css")).toMatch(
       /grid-template-columns:\s*fit-content\(var\(--admin-sidebar-expanded-max-width\)\)\s*minmax\(0, 1fr\);/,
     );
@@ -1230,53 +962,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "bg-gradient-to-br from-card via-card to-primary/5 p-3",
     );
-    expect(routeSkeletonSource).toContain(
-      'className="flex h-full min-h-0 flex-col overflow-hidden"',
-    );
-    expect(routeSkeletonSource).toContain(
-      "lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]",
-    );
-    expect(routeSkeletonSource).not.toContain("repeat(8,96px)");
-    expect(routeSkeletonSource).toContain(
-      "fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}",
-    );
-    expect(consoleSource).toContain('role="status"');
-    expect(evaluationTableSource).toContain(
-      'aria-label="맛집 검수 카드 로딩 중"',
-    );
-    expect(evaluationTableSource).toContain(
-      'role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중"',
-    );
-    expect(evaluationTableSource).toContain("Array.from({ length: 4 }).map");
-    expect(evaluationTableSource).toContain(
-      "const desktopLoadingRows = Array.from({ length: 6 })",
-    );
-    expect(submissionListSource).toContain("Array.from({ length: 4 }).map");
-    expect(submissionListSource).toContain(
-      "grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px]",
-    );
-    expect(submissionListSource).toContain(
-      'role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}',
-    );
-    expect(usersSource).toContain(
-      'role="status" aria-busy="true" aria-label="사용자 목록 로딩 중"',
-    );
-    expect(usersSource).toContain("function UserTableSkeleton");
-    expect(usersSource).toContain(
-      '<caption className="sr-only">관리자 사용자 목록 로딩</caption>',
-    );
-    expect(usersSource).toContain(
-      '<th scope="col" className="px-3 py-2 font-semibold">사용자</th>',
-    );
-    expect(refreshHistorySource).toContain(
-      "function RefreshCandidateListSkeleton()",
-    );
-    expect(refreshHistorySource).toContain(
-      'aria-label="맛집 최신화 이력 로딩 중"',
-    );
-    expect(insightsSource).toContain("function InsightsClientLoadingSkeleton()");
-    expect(insightsSource).toContain('data-insights-client-loading="true"');
-    expect(insightsSource).toContain("return <InsightsClientLoadingSkeleton />;");
     expect(usersSource).toContain("block min-w-0 text-left");
     expect(usersSource).toContain("hidden overflow-hidden rounded-lg border bg-card md:block");
     expect(usersSource).toContain(
@@ -1285,12 +970,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(usersSource).not.toContain(
       'Badge variant="outline" className="border-border bg-background text-muted-foreground"',
     );
-    expect(usersSource).not.toContain(
-      "h-8 w-14 rounded-lg motion-reduce:animate-none",
-    );
-    expect(usersSource).not.toContain(
-      "h-10 rounded-lg motion-reduce:animate-none",
-    );
+  });
+
+  test("gates KPI requests on authorization and fetches overview data only for the KPI module", () => {
+    const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
+    expect(consoleSource).toContain("(Boolean(user) || hasE2EAdminShellBypass) && !isShellBootstrapping");
+    expect(consoleSource).toContain('useAdminOverviewStats(canLoadAdminConsoleData, activeModuleId === "overview")');
+    const summaryQuery = consoleSource.split("const dashboardSummaryQuery = useQuery({")[1]?.split("});")[0] ?? "";
+    expect(summaryQuery).toContain("enabled: isAdmin && includeOverview");
+    expect(consoleSource).toContain("useAdBannersAdmin(isAdmin && includeOverview)");
+    const pendingCountsQuery = consoleSource.split("const pendingCountsQuery = useQuery({")[1]?.split("});")[0] ?? "";
+    expect(pendingCountsQuery).toContain("enabled: isAdmin,");
+    expect(pendingCountsQuery).not.toContain("includeOverview");
+    for (const queryName of ["insightQuery", "youtubeChannelQuery"]) {
+      const query = consoleSource.split(`const ${queryName} = useQuery({`)[1]?.split("});")[0] ?? "";
+      expect(query).toContain("enabled: isAdmin,");
+      expect(query).toContain("placeholderData: () => undefined,");
+      expect(query).toContain("refetchIntervalInBackground: false");
+    }
+    const adminPageSource = source("app/admin/page.tsx");
+    expect(adminPageSource).toMatch(/const initialStoryboardResult = params\.module === "storyboard"\s*\? await readInitialStoryboardResult\(\)\s*: null/);
+    const logsQuery = consoleSource.split("const collectionLogsQuery = useQuery({")[1]?.split("});")[0] ?? "";
+    expect(logsQuery).toContain("enabled: isAdmin && isCollectionLogsOpen");
+    expect(logsQuery).toContain("refetchInterval: isCollectionLogsOpen ? 60 * 1000 : false");
   });
 
   test("keeps overview reference widgets uncluttered and source-honest", () => {
@@ -1467,9 +1169,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(appGlobalsSource).toContain(
       '[data-admin-dashboard-management="true"]',
     );
-    expect(appGlobalsSource).toContain(
-      '[data-admin-dashboard-management-skeleton="true"]',
-    );
     expect(appGlobalsSource).toContain("font-family: var(--font-sans);");
     expect(appGlobalsSource).not.toContain('var(--font-noto-serif-kr, "Noto Serif KR")');
     expect(appGlobalsSource).not.toContain("serif !important;");
@@ -1480,23 +1179,25 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('? "overflow-y-auto"');
     expect(consoleSource).toContain('activeModuleId === "storyboard"');
     expect(consoleSource).toContain("overflow-y-auto md:overflow-hidden");
-    expect(consoleSource).toContain('from "recharts"');
-    expect(consoleSource).toContain("ResponsiveContainer");
+    expect(consoleSource).not.toContain('from "recharts"');
+    expect(consoleSource).toContain('import("semiotic/line")');
+    expect(consoleSource).toContain('import("semiotic/xy")');
+    expect(consoleSource).toContain("responsiveWidth responsiveHeight maxDevicePixelRatio={2}");
     expect(consoleSource).toContain("LineChart");
-    expect(consoleSource).toContain("ScatterChart");
+    expect(consoleSource).toContain("SemioticScatterplot");
     expect(consoleSource).toContain("AreaChart");
     expect(consoleSource).toContain(
-      'data-admin-dashboard-line-chart="recharts"',
+      'data-admin-dashboard-line-chart="semiotic"',
     );
     expect(consoleSource).toContain(
-      'data-admin-dashboard-bubble-chart="recharts"',
+      'data-admin-dashboard-bubble-chart="semiotic"',
     );
     expect(consoleSource).toContain(
-      'data-admin-dashboard-area-chart="recharts"',
+      'data-admin-dashboard-area-chart="semiotic"',
     );
     expect(consoleSource).toContain("function AdminDashboardTooltipPanel");
     expect(consoleSource).toContain("adminDashboardTooltipContentClassName");
-    expect(consoleSource).toContain("adminDashboardTooltipWrapperStyle");
+    expect(consoleSource).toContain("tooltip={point =>");
     expect(consoleSource).toContain("adminDashboardTooltipPortalClassName");
     expect(consoleSource).toContain("function AdminDashboardTooltipLinesPanel");
     expect(consoleSource).toContain(
@@ -1518,7 +1219,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "구독자·조회수·좋아요·댓글·영상 수를 1페이지 KPI 보드에서 한눈에 봅니다.",
     );
-    expect(consoleSource).toContain("기간 구독자 증가");
+
     expect(consoleSource).not.toContain('{ value: "ALL", label: "현재" }');
     expect(consoleSource).toContain('{ value: "ALL", label: "전체" }');
     expect(consoleSource).toContain("기간 조회 증가");
@@ -1532,10 +1233,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain('{ value: "1D", label: "1일" }');
     expect(consoleSource).toContain('{ value: "6M", label: "6개월" }');
     expect(consoleSource).toContain('{ value: "1Y", label: "1년" }');
-    expect(consoleSource).toContain('? "전체 · 현재 합계"');
-    expect(consoleSource).toContain(
-      "? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`",
-    );
+
     expect(consoleSource).toContain("fetchAdminYouTubeChannelStats");
     expect(consoleSource).toContain("/api/admin/youtube-channel");
     expect(consoleSource).toContain("fetchAdminYouTubeChannelStats(");
@@ -1580,6 +1278,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("/api/insights/treemap");
     expect(consoleSource).toContain("subscriberValue");
     expect(consoleSource).toContain("subscriberCaption");
+    expect(consoleSource).toContain("수집 영상 기준");
+    expect(consoleSource).not.toContain("현재 전체 누적");
     expect(consoleSource).toContain("subscriberSparklinePoints");
     expect(consoleSource).toContain(
       "buildAdminDashboardChannelGrowthSparklinePoints",
@@ -1587,7 +1287,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "sparklineData={subscriberSparklinePoints}",
     );
-    expect(consoleSource).toContain("YouTube Data API");
+
     expect(consoleSource).toContain("로컬 채널 스냅샷 없음 · KPI 수집 후 표시");
     expect(consoleSource).toContain("채널 통계 확인 필요");
     expect(consoleSource).toContain(
@@ -1610,8 +1310,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("grid gap-0.5");
     expect(consoleSource).toContain("gap-x-1.5 gap-y-0");
-    expect(consoleSource).toContain("fontSize: 11");
-    expect(consoleSource).toContain("toneClass.bar");
+    expect(consoleSource).toContain("[&_text]:!text-[13px]");
+
     expect(consoleSource).toContain('emphasis?: "primary" | "supporting";');
     expect(consoleSource).toContain("data-admin-dashboard-kpi-emphasis={emphasis}");
     expect(consoleSource).toContain("data-admin-dashboard-kpi-tone={tone}");
@@ -1634,7 +1334,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("data-admin-dashboard-rank-segment={rankSegment}");
     expect(consoleSource).toContain("rankSegment={index + 1}");
     expect(consoleSource).toContain(
-      "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
+      'colorScheme={{ "1": "#14b8a6", "2": "#4ec8ba", "3": "#80d8ce", "4": "#a1a1aa", "5": "#d4d4d8" }}',
     );
     expect(source("app/app-globals.css")).toContain(
       '[data-admin-dashboard-rank-segment="5"]',
@@ -1651,20 +1351,20 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
     );
-    expect(consoleSource).toContain("adminDashboardChartMargin");
+    expect(consoleSource).toContain("margin={{ top: 18, right: 16, bottom: 30, left: 36 }}");
     expect(consoleSource).not.toContain("adminDashboardTrendChartMargin");
-    expect(consoleSource).toContain("adminDashboardScatterChartMargin");
+    expect(consoleSource).toContain("margin={{ top: 16, right: 20, bottom: 32, left: 48 }}");
     expect(consoleSource).toContain(
-      "const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };",
+      "margin={{ top: 20, right: 16, bottom: 30, left: 48 }}",
     );
     expect(consoleSource).not.toContain("const adminDashboardAxisLabelStyle");
-    expect(consoleSource).toContain("top: 10");
-    expect(consoleSource).toContain("bottom: 2");
+    expect(consoleSource).toContain("[&_text]:!text-[13px]");
+    expect(consoleSource).toContain("accessibleTable={false}");
     expect(consoleSource).toContain("adminDashboardChartViewportClassName");
-    expect(consoleSource).toContain("[&_.recharts-surface]:overflow-visible");
-    expect(consoleSource).toContain("[&_.recharts-wrapper]:overflow-visible");
-    expect(consoleSource).toContain("Math.max(1, dataMax * 1.08)");
-    expect(consoleSource).toContain("Math.max(1, dataMax * 1.12)");
+    expect(consoleSource).toContain("relative h-full min-h-0 w-full overflow-visible");
+    expect(consoleSource).toContain("frameProps={{ accessibleTable: false }}");
+    expect(consoleSource).toContain("Math.max(1, Math.max(...chartData.map(row => row.조회수)) * 1.08)");
+    expect(consoleSource).toContain("Math.max(1, Math.max(...chartData.map(row => row.참여)) * 1.12)");
     expect(consoleSource).toContain("type AdminDashboardTrendSeriesKey");
     expect(consoleSource).toContain("type AdminDashboardTopContentSeriesKey");
     expect(consoleSource).toContain(
@@ -1779,8 +1479,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "읽는 법: 원이 클수록 조회수와 반응을 합친 영향도가 큰 영상입니다. 색은 순위 구분입니다.",
     );
     expect(consoleSource).toContain("line-clamp-2 leading-5");
-    expect(consoleSource).toContain("formatNumber(row.조회수)");
-    expect(consoleSource).toContain("formatNumber(row.참여)");
+    expect(consoleSource).toContain("formatNumber(Number(row.조회수))");
+    expect(consoleSource).toContain("formatNumber(Number(row.참여))");
     expect(consoleSource).toContain("콘텐츠 성과 상위 항목은");
     expect(consoleSource).toContain(
       "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
@@ -1799,7 +1499,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className={cn("grid gap-1.5", isFullscreen && "gap-2.5")}',
     );
     expect(consoleSource).toContain(
-      "flex min-w-0 overflow-x-auto overflow-y-visible",
+      "relative min-w-0 rounded-xl bg-muted",
     );
     expect(consoleSource).toContain('isFullscreen ? "h-12 sm:h-14" : "h-9"');
     expect(consoleSource).toContain(
@@ -1841,21 +1541,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'video.comparisonStatus !== "missing_previous"',
     );
     expect(consoleSource).toContain("topContentVideosByInsightScore");
-    expect(consoleSource).toContain(
-      "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다.",
-    );
-    expect(consoleSource).toContain(
-      "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
-    );
-    expect(consoleSource).toContain(
-      "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
-    );
+
     expect(consoleSource).toContain("합계 {formatCompactNumber(total)}");
     expect(consoleSource).toContain("formatDashboardPercent(percent)");
     expect(consoleSource).toContain("{percent.toFixed(0)}%");
-    expect(consoleSource).toContain("overflow-x-auto overflow-y-visible");
+    expect(consoleSource).toContain('data-admin-dashboard-top-content-stacks="semiotic"');
     expect(consoleSource).not.toContain("percent >= 13");
-    expect(consoleSource).toContain("min-w-[8%]");
+    expect(consoleSource).not.toContain("min-w-[8%]");
+    expect(consoleSource).toContain("style={{ width: `${percent}%` }}");
     expect(consoleSource).not.toContain("조회수 TOP 5");
     expect(consoleSource).not.toContain("좋아요 TOP 5");
     expect(consoleSource).not.toContain('Bar dataKey="댓글"');
@@ -1884,7 +1577,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'data-admin-dashboard-diagnosis-meta="header-inline"',
     );
     expect(consoleSource).toContain(
-      "성과 진단 기준 ${periodLabel}, 비교 채널 평균",
+      "성과 진단 기준 ${periodLabel}, 비교 수집 영상 분포",
     );
     expect(consoleSource).not.toContain("목적 다음 액션");
     expect(consoleSource).toContain(
@@ -1896,31 +1589,21 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px]",
     );
-    expect(consoleSource).toContain("영상 성과 신호 진단");
     expect(consoleSource).toContain("score: number");
     expect(consoleSource).toContain("scoreLabel: string");
-    expect(consoleSource).toContain("getDashboardInsightSignalScore");
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-diagnosis-visual="signal-bar"',
-    );
+
     expect(consoleSource).toContain(
       'data-admin-dashboard-diagnosis-tooltip-trigger="title"',
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-diagnosis-tooltip="standard"',
     );
-    expect(consoleSource).toContain(
-      "계산식: 신호 강도 = 카드별 규칙 점수를 0~100으로 표시합니다.",
-    );
+
     expect(consoleSource).not.toContain(
       "계산식: 신호 강도는 기여도, 참여율, 게시 후 경과일 같은 규칙별 점수를 0~100으로 표시합니다.",
     );
-    expect(consoleSource).toContain("signalBarClass[insight.tone]");
-    expect(consoleSource).toContain("신호 강도");
-    expect(consoleSource).toContain("후보를 채널");
-    expect(consoleSource).toContain(
-      "기여도와 참여율로 우선 점검할 영상을 표시합니다.",
-    );
+
+
     expect(consoleSource).toContain("상위 영상 영향도");
     expect(consoleSource).toContain("영상별 성과 분포");
     expect(consoleSource).toContain("콘텐츠 성과 TOP 5");
@@ -1937,8 +1620,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("const impactMetricLabel =");
     expect(consoleSource).toContain("const trendMetricLabel =");
-    expect(consoleSource).toContain("metric={impactMetricLabel}");
-    expect(consoleSource).toContain("metric={trendMetricLabel}");
+    expect(consoleSource).toContain('metric={isChartLoading ? "데이터 확인 중" : impactMetricLabel}');
+    expect(consoleSource).toContain('metric={isChartLoading ? "데이터 확인 중" : trendMetricLabel}');
     expect(consoleSource).toContain(
       "상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개",
     );
@@ -1951,9 +1634,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT = 80",
     );
     expect(consoleSource).toContain("displayLimit={impactChartVideoLimit}");
-    expect(consoleSource).toContain(
-      "전체 ${formatNumber(trendDisplayedPointCount)}개",
-    );
+
     expect(consoleSource).toContain(
       "표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.",
     );
@@ -1971,9 +1652,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "const topContentCardMetric = hasPeriodGrowthComparison",
     );
-    expect(consoleSource).toContain("metric={topContentCardMetric}");
+    expect(consoleSource).toContain('metric={isChartLoading ? "데이터 확인 중" : topContentCardMetric}');
     expect(consoleSource).toContain(
-      "metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}",
+      'metric={isChartLoading ? "데이터 확인 중" : `진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}',
     );
     expect(consoleSource).not.toContain("engagementChange");
     expect(consoleSource).toContain("const visibleRows = rows.slice(0, 5)");
@@ -1995,39 +1676,29 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT");
     expect(consoleSource).not.toContain("videosByPublishedAt.slice(-9)");
     expect(consoleSource).not.toContain("videosByPublishedAt.slice(-7)");
-    expect(consoleSource).toContain("LabelList");
-    expect(consoleSource).toContain('dataKey="조회수최고"');
-    expect(consoleSource).toContain('dataKey="조회수최저"');
-    expect(consoleSource).toContain('dataKey="참여최고"');
-    expect(consoleSource).toContain('dataKey="참여최저"');
-    expect(consoleSource).toContain('dataKey="참여율최고"');
-    expect(consoleSource).toContain('dataKey="참여율최저"');
+    expect(consoleSource).toContain('type: "widget"');
+    expect(consoleSource).toContain("조회수최고");
+    expect(consoleSource).toContain("조회수최저");
+    expect(consoleSource).toContain("참여최고");
+    expect(consoleSource).toContain("참여최저");
+    expect(consoleSource).toContain("참여율최고");
+    expect(consoleSource).toContain("참여율최저");
     expect(consoleSource).toContain("adminDashboardFocusPalette");
     expect(consoleSource).toContain('warning: "#f59e0b"');
-    expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.primary}");
+    expect(consoleSource).toContain('key: "조회수", visible: seriesVisibility.views, color: adminDashboardFocusPalette.primary');
     expect(consoleSource).toContain("stroke={adminDashboardFocusPalette.warning}");
-    expect(consoleSource).toContain("stopColor={adminDashboardFocusPalette.warning}");
-    expect(consoleSource).toContain(
-      "계산식: 정규화 점수 = 해당 값 / 해당 지표 최고값 × 100.",
-    );
+    expect(consoleSource).toContain("areaOpacity={0.25} gradientFill");
+
     expect(consoleSource).toContain("function AdminDashboardTrendTooltip");
     expect(consoleSource).toContain('dataAttribute="trend-simple"');
-    expect(consoleSource).toContain(
-      "100점은 선택 기간에서 해당 지표가 가장 큰 영상입니다.",
-    );
-    expect(consoleSource).toContain("영상 조회수 기준");
-    expect(consoleSource).toContain("좋아요+댓글 기준");
-    expect(consoleSource).toContain("조회수 대비 참여 기준");
-    expect(consoleSource).toContain("content={<AdminDashboardTrendTooltip />}");
+
+    expect(consoleSource).toContain("<AdminDashboardTrendTooltip active label={row.label} payload={visibleSeries.map");
     expect(consoleSource).toContain("계산식: 참여 = 좋아요 + 댓글.");
     expect(consoleSource).toContain(
       "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
     );
     expect(consoleSource).toContain(
       "참고: 참여율은 조회수 대비 좋아요와 댓글 반응 비중입니다.",
-    );
-    expect(consoleSource).toContain(
-      "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
     );
     expect(consoleSource).toContain(
       "막대 기준: 같은 묶음 안에서 가장 큰 항목을 100%로 두고 비교합니다.",
@@ -2041,12 +1712,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("title={viewCardTitle}");
     expect(consoleSource).toContain("title={likeCardTitle}");
     expect(consoleSource).toContain("title={commentCardTitle}");
-    expect(consoleSource).toContain("기간 영상 현재");
+
     expect(consoleSource).toContain("기간 순증");
     expect(consoleSource).not.toContain(
       'data-admin-dashboard-kpi-data-scope="true"',
     );
-    expect(consoleSource).toContain('title="업로드 영상 수"');
+    expect(consoleSource).toContain('title={period === "ALL" ? "분석 영상 수" : "기간 내 업로드"}');
     expect(consoleSource).toContain("periodMetricCaption");
     expect(consoleSource).toContain("periodCohortViewValue");
     expect(consoleSource).toContain("periodViewDisplayValue");
@@ -2060,9 +1731,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("getDashboardMedian");
     expect(consoleSource).toContain("formatDashboardAverageComparison");
     expect(consoleSource).toContain("기간 성과 기여");
-    expect(consoleSource).toContain(
-      "용어: 조회·좋아요·댓글 증가 기여는 각각 선택 기간 업로드 영상 전체 증가 합계 중 이 영상이 차지한 비율입니다.",
-    );
+
     expect(consoleSource).toContain(
       "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다.",
     );
@@ -2087,22 +1756,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(runtimeSpecSource).toContain("not.toContainText('KPI 회귀 테스트 영상')");
     expect(runtimeSpecSource).toContain("getByText(operationalVideoTitle");
     expect(consoleSource).not.toContain("단일 지배");
-    expect(consoleSource).not.toContain("집중도");
+
     expect(consoleSource).toContain("slice(0, maxVisible)");
     expect(consoleSource).toContain("max-w-[7rem]");
     expect(consoleSource).toContain("flex-wrap");
     expect(consoleSource).toContain("fallbackReasonCode");
     expect(consoleSource).toContain("getAdminDashboardCoverageLabel");
-    expect(consoleSource).toContain(
-      "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다.",
-    );
+
     expect(consoleSource).toContain("periodUploadVideoCount?: number | null");
-    expect(consoleSource).toContain(
-      "`비교 대상: 선택 기간 업로드 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
-    );
-    expect(consoleSource).toContain(
-      "`비교 대상: 선택 기간 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`",
-    );
+
     expect(consoleSource).toContain(
       "`업로드 영상 수 카드는 ${formatNumber(periodUploadVideoCount)}개이고, 이 비교에는 성과 데이터가 있는 ${formatNumber(scoredRows.length)}개를 사용합니다.`",
     );
@@ -2167,9 +1829,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "contributionTotalOverride?: number | null",
     );
     expect(consoleSource).toContain("topContentVideosByInsightScore,");
-    expect(consoleSource).toContain(
-      "설명: 그래프는 선택 기간 업로드 영상 중 상위 5개를 요약하고, 표는 전체 영상을 보여줍니다.",
-    );
+
     expect(consoleSource).toContain(
       "막대 기준: 각 색 조각은 그래프에 표시된 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
     );
@@ -2194,19 +1854,18 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("성과 기여");
     expect(consoleSource).toContain("viewBenchmark");
     expect(consoleSource).toContain("buildAdminDashboardContentInsights");
-    expect(consoleSource).toContain("getDashboardVideoAgeDays");
+
     expect(consoleSource).not.toContain(
       'data-admin-dashboard-content-insights="average-benchmark"',
     );
-    expect(consoleSource).toContain("초반 반응 점검");
-    expect(consoleSource).toContain("재상승 후보");
-    expect(consoleSource).toContain("구독자 기여 후보");
+
+
     expect(consoleSource).not.toContain("조회 보강 후보");
     expect(consoleSource).not.toContain("참여 보강 후보");
-    expect(consoleSource).toContain("신규 반응 확인");
+
     expect(consoleSource).toContain('tone: "primary"');
     expect(consoleSource).toContain('tone: "warning"');
-    expect(consoleSource).toContain('tone: "risk"');
+
     expect(consoleSource).not.toContain('tone: "emerald"');
     expect(consoleSource).not.toContain('tone: "sky"');
     expect(consoleSource).not.toContain("진단 대기");
@@ -2214,15 +1873,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain(
       "getAdminDashboardPendingContentInsight",
     );
-    expect(consoleSource).toContain("if (metricRows.length === 0)");
+
     expect(consoleSource).not.toContain(
       "while (insights.length < ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT)",
     );
     expect(consoleSource).toContain(
-      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`",
+      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)}`",
     );
     expect(consoleSource).toContain(
-      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`",
+      "`${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)}`",
     );
     expect(consoleSource).toContain("cumulativeViewValue");
     expect(consoleSource).toContain("cumulativeVideoTotal");
@@ -2231,9 +1890,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("calculateDashboardPeriodMetricChange");
     expect(consoleSource).toContain('"channel-growth"');
-    expect(consoleSource).toContain(
-      "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
-    );
+
     expect(consoleSource).toContain(
       "const isChartLoading = isInsightDynamicLoading;",
     );
@@ -2258,59 +1915,22 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("opsStatSummary");
     expect(consoleSource).not.toContain("topContentViewStats");
     expect(consoleSource).not.toContain("engagementRateStats");
-    expect(consoleSource).toContain("function AdminDashboardKpiValueSkeleton");
-    expect(consoleSource).toContain("function AdminDashboardPanelBodySkeleton");
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="kpi"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="chart"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="bubble"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="line"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="stacked"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="diagnosis"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-dynamic-skeleton="table"',
-    );
-    expect(consoleSource).toContain(
-      '<AdminDashboardPanelBodySkeleton variant="bubble" />',
-    );
-    expect(consoleSource).toContain(
-      '<AdminDashboardPanelBodySkeleton variant="line" />',
-    );
-    expect(consoleSource).toContain(
-      '<AdminDashboardPanelBodySkeleton variant="stacked" />',
-    );
-    expect(consoleSource).toContain(
-      '<AdminDashboardPanelBodySkeleton variant="diagnosis" />',
-    );
-    expect(consoleSource).toContain(
-      'getDashboardCardView("impact") === "table" ? "table" : "bubble"',
-    );
-    expect(consoleSource).toContain(
-      'getDashboardCardView("trend") === "table" ? "table" : "line"',
-    );
-    expect(consoleSource).toContain(': "stacked"');
-    expect(consoleSource).toContain(': "diagnosis"');
-    expect(consoleSource).toContain("pendingSkeletonPeriod");
-    expect(consoleSource).toContain("setPendingSkeletonPeriod(nextPeriod)");
-    expect(consoleSource).toContain("growthInsightQuery.isLoading");
-    expect(consoleSource).toContain("pendingSkeletonPeriod === period");
+    expect(consoleSource).toContain("function AdminDashboardPanelPending");
+    expect(consoleSource).toContain('data-admin-dashboard-data-pending={variant}');
+    expect(consoleSource).toContain('<AdminDataPending variant={variant === "table" ? "list" : "chart"} />');
+    const kpiValueSlot = consoleSource.match(/<p\b[^>]*data-admin-dashboard-kpi-value-size="bounded"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? "";
+    expect(kpiValueSlot).toContain('isLoading ?');
+    expect(kpiValueSlot).toContain('<span aria-hidden="true" data-slot="skeleton"');
+    expect(kpiValueSlot).toContain('<span className="sr-only">값 확인 중</span>');
+    expect(kpiValueSlot).toContain(': value');
+    expect(consoleSource).toContain('isLoading && row.rawValue === null ? <span aria-label="값 확인 중" data-slot="skeleton"');
+    // Forbid simulated visualizations, while permitting a bounded KPI value skeleton.
+    expect(consoleSource).not.toMatch(/data-admin-dashboard-dynamic-skeleton=["'](?:chart|bubble|line|stacked|diagnosis|table)["']/);
+    expect(consoleSource).not.toContain("pendingSkeletonPeriod");
+    expect(consoleSource).toContain("!isAdmin || (insightQuery.isPending && !insightQuery.data)");
+    expect(consoleSource).toContain("!isAdmin || (youtubeChannelQuery.isPending && !youtubeChannelQuery.data)");
     expect(consoleSource).toContain("isLoading={isChartLoading}");
     expect(consoleSource).toContain("isLoading={isSubscriberLoading}");
-    expect(consoleSource).toContain(
-      "youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period",
-    );
-    expect(consoleSource).toContain("youtubeChannelQuery.isFetching");
     expect(consoleSource).toContain("AdminDashboardInfoTooltip");
     expect(consoleSource).toContain("초보자 설명");
     expect(consoleSource).toContain("설명:");
@@ -2482,20 +2102,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("그래프");
     expect(consoleSource).toContain("표");
     expect(consoleSource).toContain("function AdminDashboardScrollTable");
-    expect(consoleSource).toContain('data-admin-dashboard-table-view="true"');
-    expect(consoleSource).toContain("useAdminDashboardProgressiveItems");
-    expect(consoleSource).toContain(
-      "ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS = 40",
-    );
-    expect(consoleSource).toContain(
-      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS = 18",
-    );
-    expect(consoleSource).toContain(
-      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS = 24",
-    );
-    expect(consoleSource).toContain(
-      "ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS = 48",
-    );
     expect(consoleSource).toContain("function AdminDashboardDeferredBody");
     expect(consoleSource).toContain(
       'data-admin-dashboard-mobile-deferred="true"',
@@ -2505,27 +2111,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("isDashboardMobileViewport &&");
     expect(consoleSource).toContain("refetchOnWindowFocus: false");
     expect(consoleSource).toContain("refetchIntervalInBackground: false");
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-progressive-table="true"',
-    );
-    expect(consoleSource).toContain(
-      'data-admin-dashboard-progressive-chart="true"',
-    );
-    expect(consoleSource).toContain(
-      "추가 행 표시 중 {formatNumber(rows.length)}/{formatNumber(totalRows)}",
-    );
-    expect(consoleSource).toContain("const progressiveImpactTableRows =");
-    expect(consoleSource).toContain("const progressiveTrendPoints =");
-    expect(consoleSource).toContain("const progressiveTrendTableRows =");
-    expect(consoleSource).toContain("const progressiveTopContentTableRows =");
-    expect(consoleSource).toContain(
-      "overflow-y-auto overflow-x-hidden scrollbar-hide rounded-xl border border-border/70",
-    );
-    expect(consoleSource).toContain(
-      'className="w-full table-fixed border-separate border-spacing-0 text-xs"',
-    );
     expect(consoleSource).toContain("title={row.title}");
-    expect(consoleSource).toContain("sticky top-0 z-10 bg-background");
+
     expect(consoleSource).toContain("dashboardCardViews");
     expect(consoleSource).toContain('value={getDashboardCardView("impact")}');
     expect(consoleSource).toContain(
@@ -2539,14 +2126,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("trendTableRows");
     expect(consoleSource).toContain("topContentTableRows");
     expect(consoleSource).toContain("totalPointCount={trendPoints.length}");
-    expect(consoleSource).toContain("dot={isDenseChart ? false");
+    expect(consoleSource).toContain("showPoints={!isDenseChart}");
     expect(consoleSource).not.toContain("isDenseChart ? null");
-    expect(consoleSource).toContain('dataKey="조회수최고"');
-    expect(consoleSource).toContain('dataKey="조회수최저"');
-    expect(consoleSource).toContain('dataKey="참여최고"');
-    expect(consoleSource).toContain('dataKey="참여최저"');
-    expect(consoleSource).toContain('dataKey="참여율최고"');
-    expect(consoleSource).toContain('dataKey="참여율최저"');
+    expect(consoleSource).toContain("조회수최고");
+    expect(consoleSource).toContain("조회수최저");
+    expect(consoleSource).toContain("참여최고");
+    expect(consoleSource).toContain("참여최저");
+    expect(consoleSource).toContain("참여율최고");
+    expect(consoleSource).toContain("참여율최저");
     expect(consoleSource).toContain("영상 제목");
     expect(consoleSource).toContain("참여율");
     expect(consoleSource).toContain("formatDashboardChangeLabel");
@@ -2567,11 +2154,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("periodUploadVideoValue");
     expect(consoleSource).toContain("calculateDashboardUploadCountChange");
     expect(consoleSource).toContain("uploadCountCohortChange");
-    expect(consoleSource).toContain("hasSnapshotVideoCountComparison");
-    expect(consoleSource).toContain("channelStats?.videoDelta");
-    expect(consoleSource).toContain(
-      'typeof channelStats.previousVideoCount === "number"',
-    );
+
     expect(consoleSource).toContain(
       "getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)",
     );
@@ -2583,31 +2166,27 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("subscriberScopeLabel");
     expect(consoleSource).not.toContain("periodMetricScopeLabel");
     expect(consoleSource).not.toContain("기간 업로드</span>");
+
     expect(consoleSource).toContain(
-      "현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}",
-    );
-    expect(consoleSource).toContain(
-      "`현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`",
+      "`${selectedPeriodLabel} 순증 ${formatSignedNumber(subscriberDelta)}`",
     );
     expect(consoleSource).toContain(
       'const subscriberCardTitle = "현재 구독자"',
     );
     expect(consoleSource).toContain("formatSignedNumber(subscriberDelta)");
-    expect(consoleSource).toContain('deltaLabel="기간 대비"');
+
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-delta="timeframe"',
     );
     expect(consoleSource).toContain('deltaLabel = "기간 대비"');
-    expect(consoleSource).toContain('deltaLabel="기간 대비"');
+
     expect(consoleSource).toContain(
       "계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100",
     );
     expect(consoleSource).not.toContain(
       "title={`${title} ${deltaLabel}: ${delta}. 계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100`}",
     );
-    expect(consoleSource).toContain(
-      "계산식: 기간 구독자 증가 = API가 제공한 delta를 우선 사용하고, 없을 때만 현재 구독자 - 이전 구독자로 계산합니다.",
-    );
+
     expect(consoleSource).toContain(
       "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
     );
@@ -2626,9 +2205,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
     );
-    expect(consoleSource).toContain(
-      "계산식: 업로드 영상 수 = API가 제공한 videoDelta를 우선 사용하고, 없을 때만 현재 channel videoCount - 이전 channel videoCount로 계산합니다.",
-    );
+
     expect(consoleSource).not.toContain(
       "계산식: 스냅샷이 없으면 업로드 영상 수 = 선택 기간 영상 목록 개수.",
     );
@@ -2647,16 +2224,14 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
     );
     expect(consoleSource).not.toContain("md:h-5 md:w-5");
-    expect(consoleSource).toContain(
-      "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
-    );
+
     expect(consoleSource).toContain('year: "2-digit"');
     expect(consoleSource).toContain(
       "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
     );
     expect(consoleSource).toContain("반응(좋아요+댓글)·반응률");
     expect(consoleSource).toContain(
-      'data-admin-dashboard-kpi-card="recharts-sparkline"',
+      'data-admin-dashboard-kpi-card="semiotic-sparkline"',
     );
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-sparkline="true"',
@@ -2665,19 +2240,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       consoleSource.indexOf('data-admin-dashboard-kpi-sparkline="true"'),
       consoleSource.indexOf("function AdminDashboardOpsSummaryCard"),
     );
-    expect(kpiSparklineSource).toContain("<RechartsTooltip");
-    expect(kpiSparklineSource).toMatch(
-      /content=\{\s*<AdminDashboardKpiSparklineTooltip title=\{title\} \/>\s*\}/,
-    );
+    expect(kpiSparklineSource).toContain('<SemioticKpiSparkline points={chartData} color={toneClass.stroke} title={title} />');
+    expect(kpiSparklineSource).not.toContain("<RechartsTooltip");
     expect(kpiSparklineSource).not.toContain("contentStyle=");
     expect(kpiSparklineSource).not.toContain("labelFormatter=");
-    expect(consoleSource).toContain('dataAttribute="kpi-sparkline"');
+    expect(consoleSource).toContain('data-admin-dashboard-kpi-history-empty="true"');
     expect(consoleSource).toContain(
       "설명: 채널 구독자 수를 보여주는 카드입니다.",
     );
-    expect(consoleSource).toContain(
-      "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
-    );
+
     expect(consoleSource).toContain(
       'data-admin-dashboard-kpi-title-row="single-line"',
     );
@@ -2698,11 +2269,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(compactKpiCardTitleSource).not.toContain("md:h-7 md:min-h-0");
     expect(consoleSource).toContain("h-11 w-24 shrink-0 overflow-visible");
     expect(consoleSource).toContain("buildAdminDashboardSparklinePoints");
+    expect(kpiSparklineSource).not.toContain("overflow-hidden");
     expect(consoleSource).toContain(
-      "allowEscapeViewBox={{ x: true, y: true }}",
-    );
-    expect(consoleSource).toContain(
-      "wrapperStyle={adminDashboardTooltipWrapperStyle}",
+      "tooltip={row => <AdminDashboardTooltipPanel",
     );
     expect(consoleSource).toContain("AdminDashboardOpsSummaryCard");
     expect(consoleSource).toContain("운영·검수 요약");
@@ -2716,10 +2285,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain(
       'data-admin-dashboard-ops-summary-visual="progress-bars"',
     );
-    expect(consoleSource).toContain("rawValue: stats.totalRestaurants ?? 0");
+    expect(consoleSource).toContain("rawValue: stats.totalRestaurants,");
     expect(consoleSource).toContain("rawValue: missingCoordinates ?? 0");
     expect(consoleSource).toContain("const maxRawValue = Math.max");
-    expect(consoleSource).toContain("const rowPercent = clampDashboardPercent");
+    expect(consoleSource).toContain("valueExtent={[0, maxRawValue]}");
+    expect(consoleSource).toContain('data-admin-dashboard-ops-bars="semiotic"');
     expect(consoleSource).toContain(
       "adminDashboardVisualizationShellClassName",
     );
@@ -2777,8 +2347,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(consoleSource).toContain("min-h-[190px] flex flex-1 flex-col");
     expect(consoleSource).toContain("min-h-[230px] flex flex-1 flex-col");
-    expect(consoleSource).toContain("height={18}");
-    expect(consoleSource).toContain("tickMargin={2}");
+    expect(consoleSource).toContain("bottom: 30");
+    expect(consoleSource).toContain("maxDevicePixelRatio={2}");
     expect(consoleSource).not.toContain("AdminDashboardLedgerCard");
     expect(consoleSource).not.toContain("AdminDashboardGaugeCard");
     expect(consoleSource).toContain("AdminDashboardGroupedBarChart");
@@ -2946,7 +2516,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     const consoleSource = source("components/admin/AdminConsoleOverview.tsx");
     const routeSource = source("app/api/admin/pending-counts/route.ts");
 
-
     expect(consoleSource).toContain('fetch("/api/admin/pending-counts"');
     expect(consoleSource).not.toContain("fetchSupabaseExactCount");
     expect(routeSource).toContain("await requireAdmin()");
@@ -3063,7 +2632,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "(Boolean(user) || hasE2EAdminShellBypass) && !isShellBootstrapping",
     );
     expect(consoleSource).toContain(
-      "useAdminOverviewStats(canLoadAdminConsoleData)",
+      'useAdminOverviewStats(canLoadAdminConsoleData, activeModuleId === "overview")',
     );
     expect(consoleSource).toContain("return null;");
     expect(consoleSource).not.toContain('router.replace("/")');
@@ -3325,10 +2894,15 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "grid-template-rows: auto minmax(0, 1fr);",
     );
     expect(appGlobalsSource).toContain("@media (max-width: 767px)");
-    expect(appGlobalsSource).toContain(
-      '[data-admin-dashboard-management="true"] .recharts-wrapper',
+    expectCssDeclaration(
+      appGlobalsSource,
+      '[data-admin-dashboard-management="true"] .recharts-responsive-container',
+      "max-width",
+      "100%",
     );
-    expect(appGlobalsSource).toContain("max-width: 100% !important;");
+    // The inner wrapper lives inside Recharts' zero-width measurement node.
+    // Percentage clamping there made mobile charts disappear despite valid paths.
+    expect(appGlobalsSource).not.toMatch(/\.recharts-wrapper\s*\{[^}]*max-width:\s*100%/);
     expect(appGlobalsSource).toContain(
       "grid-template-columns: 4.5rem minmax(0, 1fr);",
     );
@@ -4370,56 +3944,10 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(componentSource).toContain('data-thumbnail-history-panel="true"');
     expect(componentSource).toContain("data-thumbnail-history-load-run=");
     expect(componentSource).toContain("생성 히스토리");
-    expect(componentSource).toContain(
-      'data-thumbnail-generation-skeleton="true"',
-    );
-    expect(componentSource).toContain(
-      'data-thumbnail-generation-skeleton-variant="neutral-gray"',
-    );
-    expect(componentSource).toContain(
-      'data-thumbnail-generation-skeleton-effect="glass-shimmer"',
-    );
-    expect(componentSource).toContain(
-      'data-thumbnail-unified-generation-skeleton="true"',
-    );
-    expect(componentSource).toContain(
-      'data-thumbnail-generation-skeleton-glass-surface="true"',
-    );
-    expect(componentSource).toContain(
-      'data-thumbnail-generation-skeleton-shimmer="true"',
-    );
-    expect(componentSource).toContain("admin-module-loading-shimmer");
-    expect(componentSource).not.toContain(
-      "[animation:storyboard-glass-shimmer_1.65s_ease-in-out_infinite]",
-    );
-    expect(componentSource).not.toContain("backdrop-blur-[1px]");
-    expect(componentSource).toContain("from-slate-50/86");
-    expect(componentSource).toContain("to-slate-200/68");
-    expect(componentSource).toContain("rgba(203,213,225,0.28)");
-    expect(componentSource).toContain("rgba(100,116,139,0.20)");
-    expect(componentSource).not.toContain(
-      'data-thumbnail-generation-skeleton-panel="copy-zone"',
-    );
-    expect(componentSource).not.toContain(
-      'data-thumbnail-generation-skeleton-panel="host-food-zone"',
-    );
-    expect(componentSource).not.toContain(
-      'data-thumbnail-generation-skeleton-panel="foreground-food-zone"',
-    );
-    expect(componentSource).not.toContain(
-      'data-thumbnail-generation-skeleton="glass"',
-    );
-    expect(componentSource).not.toContain(
-      "data-thumbnail-generation-skeleton-glint",
-    );
-    expect(componentSource).not.toContain("thumbnailGlassGlint");
-    expect(componentSource).not.toContain(
-      "bg-background/35 p-[clamp(1rem,3cqw,2.25rem)]",
-    );
-    expect(componentSource).not.toContain("animate-pulse rounded-xl");
-    expect(componentSource).toContain(
-      '<span className="sr-only">썸네일 생성 중</span>',
-    );
+    expect(componentSource).not.toContain('data-thumbnail-generation-skeleton="true"');
+    expect(componentSource).toContain('data-thumbnail-generation-pending="true"');
+    expect(componentSource).toContain('<AdminDataPending label="썸네일을 생성하는 중입니다."');
+    expect(componentSource).toContain('historyStatus === "loading" ? <AdminDataPending');
     expect(componentSource).toContain(
       "이제 실제 썸네일 이미지를 만들고 있어요. 시간이 오래 걸리면 생성 중단을 누를 수 있습니다.",
     );
@@ -7253,13 +6781,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "getStoryboardImageGenerationTargetScenes",
     );
     expect(canvasModuleSource).toContain('data-storyboard-frame-fill="true"');
-    expect(storyboardSource).toContain('data-storyboard-glass-skeleton="true"');
-    expect(storyboardSource).toContain(
-      'data-storyboard-unified-skeleton="true"',
-    );
-    expect(storyboardSource).toContain('data-storyboard-glass-shimmer="true"');
+    expect(storyboardSource).not.toContain('data-storyboard-glass-skeleton="true"');
+    expect(storyboardSource).toContain('data-storyboard-cut-image-pending={sceneNo}');
+    expect(storyboardSource).toContain('isActive ? "생성 중" : "생성 대기 중"');
+    expect(storyboardSource).toContain("<AdminDataPending");
     expect(storyboardSource).not.toContain("rounded-2xl bg-transparent");
-    expect(storyboardSource).toContain("rgba(203,213,225,0.82)");
     expect(storyboardSource).not.toContain("rgba(244,114,182");
     expect(storyboardSource).not.toContain("rgba(251,191,36");
     expect(storyboardSource).not.toContain("rgba(34,197,94");
@@ -7277,11 +6803,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(storyboardSource).not.toContain("rgba(148,163,184,0.22)");
     expect(storyboardSource).not.toContain("rgba(71,85,105,0.24)");
-    expect(storyboardSource).toContain("rgba(148,163,184,0.28)");
-    expect(storyboardSource).toContain("rgba(71,85,105,0.26)");
-    expect(storyboardSource).toContain("from-slate-100");
-    expect(storyboardSource).toContain("via-slate-200/85");
-    expect(storyboardSource).toContain("to-slate-400/70");
     expect(storyboardSource).not.toContain("border border-slate-300/80");
     expect(storyboardSource).not.toContain("dark:border-slate-700/70");
     expect(storyboardSource).not.toContain("border border-slate-300/70");
@@ -7318,38 +6839,9 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'mode === "empty" ? "true" : undefined',
     );
     expect(storyboardSource).toContain(
-      'data-storyboard-realtime-skeleton="true"',
-    );
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-skeleton="true"',
-    );
-    expect(storyboardSource).toContain(
       "activeGeneratingStoryboardImageSceneNo",
     );
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-skeleton-active={isActive ? "true" : "false"}',
-    );
     expect(storyboardSource).toContain("isSceneImageActivelyGenerating");
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-skeleton-variant="legacy-glass"',
-    );
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-skeleton-effect="glass-shimmer"',
-    );
-    expect(storyboardSource).toContain(
-      'data-storyboard-unified-generation-skeleton="true"',
-    );
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-shimmer="true"',
-    );
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-glass-surface="true"',
-    );
-    expect(storyboardSource).toContain('data-storyboard-glass-surface="true"');
-    expect(storyboardSource).toContain("storyboard-cut-image-shimmer");
-    expect(storyboardSource).toContain(
-      'data-storyboard-cut-image-shimmer-effect="glass-sweep"',
-    );
     expect(storyboardSource).toContain("const storyboardTotalPages = useMemo(");
     expect(storyboardSource).toContain(
       "const activeStoryboardPageSourceScenes = useMemo(",
@@ -7375,80 +6867,13 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(storyboardSource).not.toContain(
       "chatDraft,\n    isChatAgentStreaming",
     );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-skeleton="true"]',
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-glass-surface="true"]',
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-shimmer="true"]',
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-skeleton="true"]::after',
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-skeleton="true"]::before',
-    );
-    expect(appGlobalsSource).toContain("@keyframes storyboard-glass-sparkle");
-    expect(appGlobalsSource).toContain("@keyframes storyboard-glass-prism");
-    expect(appGlobalsSource).toContain(
-      "animation: storyboard-glass-prism 2.2s ease-in-out infinite;",
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-skeleton-active="true"]::after',
-    );
-    expect(appGlobalsSource).toContain(
-      "animation: storyboard-glass-sparkle 1.6s ease-in-out infinite;",
-    );
-    expect(appGlobalsSource).not.toContain(
-      "@keyframes storyboard-glass-reduced-sparkle",
-    );
-    expect(appGlobalsSource).not.toContain(
-      "@keyframes storyboard-glass-reduced-sheen",
-    );
-    expect(appGlobalsSource).not.toContain(
-      "animation: storyboard-glass-reduced-sparkle 2.4s ease-in-out infinite;",
-    );
-    expect(appGlobalsSource).not.toContain(
-      "animation: storyboard-glass-reduced-sheen 2.4s ease-in-out infinite;",
-    );
+    // Removed page/canvas glass templates no longer require dead CSS selectors.
+    // Keep reduced-motion accessibility and image-only pending coverage.
+    expect(appGlobalsSource).toContain("prefers-reduced-motion: reduce");
     expect(appGlobalsSource).toContain("animation: none !important;");
     expect(storyboardSource).not.toContain("motion-reduce:hidden");
-    expect(appGlobalsSource).toMatch(/radial-gradient\(\s*ellipse at 16% 12%/);
-    expect(appGlobalsSource).toContain("left: -42%;");
-    expect(appGlobalsSource).toContain("width: max(10rem, 34%);");
-    expect(appGlobalsSource).toContain("contain: paint;");
-    expect(appGlobalsSource).toContain("rgba(255, 255, 255, 0.78) 50%");
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-cut-image-skeleton-active="false"]',
-    );
-    expect(appGlobalsSource).toContain("display: none;");
-    expect(appGlobalsSource).not.toContain("filter: blur(14px);");
-    expect(appGlobalsSource).not.toContain("mix-blend-mode: screen;");
-    expect(appGlobalsSource).not.toContain("backdrop-filter: blur(1px);");
     expect(storyboardSource).not.toContain(
       "bg-slate-950/25 opacity-85 backdrop-blur-[1px]",
-    );
-    expect(appGlobalsSource).toContain(".storyboard-cut-image-shimmer");
-    expect(appGlobalsSource).toContain(".admin-module-loading-shimmer");
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-module-loading-grid="true"]',
-    );
-    expect(appGlobalsSource).toContain(
-      "grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);",
-    );
-    expect(appGlobalsSource).toContain(
-      '[data-storyboard-module-loading-frame-grid="true"]',
-    );
-    expect(appGlobalsSource).toContain(
-      "grid-template-rows: repeat(2, minmax(0, 1fr));",
-    );
-    expect(appGlobalsSource).toContain("@keyframes storyboard-glass-shimmer");
-    expect(appGlobalsSource).toContain("transform: translate3d(380%, 0, 0)");
-    expect(appGlobalsSource).toContain("will-change: transform, opacity");
-    expect(appGlobalsSource).toContain(
-      '[data-thumbnail-generation-skeleton="true"]',
     );
     expect(storyboardSource).toContain("STORYBOARD_PENDING_IMAGE_BACKGROUND");
     expect(storyboardSource).toContain(
@@ -8011,7 +7436,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("setIsOrderLoading(false);");
     expect(consoleSource).toContain("isOrderLoading ||");
     expect(consoleSource).toContain("data-admin-sidebar-order-loading=");
-    expect(consoleSource).toContain("useAdBannersAdmin(isAdmin)");
+    expect(consoleSource).toContain("useAdBannersAdmin(isAdmin && includeOverview)");
     expect(consoleSource).not.toContain("useAnnouncementsAdmin(isAdmin)");
     expect(source("hooks/use-ad-banners.tsx")).toContain(
       "export function useAdBannersAdmin(enabled = true)",
@@ -8687,9 +8112,11 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).toContain("controller.abort();");
     expect(consoleSource).toContain("if (!controller.signal.aborted)");
     expect(usersSource).toContain(
-      "const loadUsers = useCallback(async (signal?: AbortSignal)",
+      "const loadUsers = useCallback(async () =>",
     );
-    expect(usersSource).toContain("return () => controller.abort();");
+    expect(usersSource).toContain("return () => usersRequestRef.current?.abort();");
+    expect(usersSource).toContain("usersRequestRef.current?.abort();");
+    expect(usersSource).toContain("if (!accountId) return;");
     expect(usersSource).toContain("if (!signal?.aborted)");
     expect(evaluationsSource).toContain(
       'embedded ? "shrink-0 border-b border-border bg-card px-2 py-1.5"',
@@ -8743,18 +8170,16 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       "xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)]",
     );
     expect(bannersSource).toContain(
-      "bannersLoading ? <InlineCountSkeleton /> : sortedBanners.length",
+      "(bannersLoading || (bannersError && banners.length === 0)) ? <InlinePendingCount failed={bannersError} /> : sortedBanners.length",
     );
-    expect(bannersSource).toContain('aria-label="배너 목록 로딩 중"');
-    expect(bannersSource).toContain("function BannerListItemSkeleton");
-    expect(bannersSource).toContain(
-      "<BannerListItemSkeleton key={index} index={index} />",
-    );
+    expect(bannersSource).toContain('role="list" aria-label="배너 목록" aria-busy={bannersLoading}');
+    expect(bannersSource).toContain('<AdminDataPending label="배너 목록을 불러오는 중입니다." />');
+    expect(bannersSource).not.toContain("BannerListItemSkeleton");
     expect(bannersSource).toContain(
       "relative h-12 w-16 shrink-0 overflow-hidden rounded-md border border-border",
     );
     expect(bannersSource).toContain(
-      'Badge variant="secondary" className="rounded-full text-[10px]"',
+      'Badge variant="secondary" className="shrink-0 rounded-full text-[10px]"',
     );
     expect(bannersSource).not.toContain("bannersLoading && <Loader2");
     expect(bannersSource).toContain(
@@ -8815,7 +8240,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(consoleSource).not.toContain("function ConnectedRoutesCard()");
     expect(usersSource).not.toContain("min-h-[560px]");
     expect(usersSource).toContain(
-      'isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12"',
+      'isLoading ? <span aria-label="아직 확인되지 않음">—</span> : value',
     );
     expect(usersSource).not.toContain(
       "value={isLoading ? '—' : summary.loadedUsers}",
@@ -8985,7 +8410,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
         ?.length ?? 0,
     ).toBe(1);
     expect(submissionSource).toContain(
-      ") : (\n                    <div className={listContainerClassName}>",
+      '<div className={listContainerClassName} aria-busy={loading}>',
     );
     expect(reviewRouteSource).toContain("requireAdmin()");
     expect(reviewRouteSource).toContain("createSupabaseServiceRoleClient()");
@@ -9288,5 +8713,106 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(backendAgentSource).toContain("rag|r\\.a\\.g");
     expect(chatRouteSource).toContain("rag|r\\.a\\.g");
+  });
+});
+
+describe("dashboard observed-data visualization wiring", () => {
+  const dashboard = source("components/admin/AdminConsoleOverview.tsx");
+  const functionSource = (name: string) => {
+    const start = dashboard.indexOf(`function ${name}(`);
+    expect(start).toBeGreaterThanOrEqual(0);
+    const rest = dashboard.slice(start);
+    const next = rest.slice(1).search(/\nfunction /);
+    return next < 0 ? rest : rest.slice(0, next + 1);
+  };
+  // Boolean assertions keep a failed wiring check from dumping the entire component.
+  const includes = (text: string, fragment: string) =>
+    expect(text.includes(fragment), `Missing wiring: ${fragment}`).toBe(true);
+  const excludes = (text: string, fragment: string) =>
+    expect(text.includes(fragment), `Removed misleading logic returned: ${fragment}`).toBe(false);
+
+  test("uses ALL initially and one channel-growth observation set across periods", () => {
+    includes(dashboard, 'useState<AdminDashboardPeriod>("ALL")');
+    includes(dashboard, 'queryKey: ["admin-dashboard-management", "insights", "channel-growth", period]');
+    includes(dashboard, 'queryFn: () => fetchAdminDashboardInsightSummary(period, "channel-growth")');
+    includes(dashboard, 'const growthInsightQuery = insightQuery;');
+    excludes(dashboard, 'const growthInsightQuery = useQuery(');
+    excludes(dashboard, 'queryFn: () => fetchAdminDashboardInsightSummary(period)');
+    includes(dashboard, '() => insightQuery.data?.videos ?? []');
+    includes(dashboard, '() => growthInsightQuery.data?.videos ?? []');
+    const runtime = source("tests/admin-kpi-dashboard-runtime.spec.ts");
+    includes(runtime, "url.searchParams.get('period') === 'ALL'");
+    includes(runtime, "url.searchParams.get('scope') === 'channel-growth'");
+  });
+
+  test("counts actual published videos and removes decorative KPI progress", () => {
+    const uploadCounter = functionSource("countDashboardPublishedVideosInWindow");
+    includes(uploadCounter, 'getVideoPublishedTime(video)');
+    includes(uploadCounter, 'publishedAtMs >= windowStartMs && publishedAtMs < windowEndMs');
+    includes(dashboard, 'const periodUploadVideoValue = period === "ALL"');
+    includes(dashboard, ': countDashboardPublishedVideosInWindow(');
+    includes(dashboard, 'const videoCountChange = uploadCountCohortChange;');
+    excludes(dashboard, 'hasSnapshotVideoCountComparison');
+    excludes(dashboard, 'channelStats?.videoDelta');
+    excludes(dashboard, 'typeof channelStats.previousVideoCount === "number"');
+    const card = functionSource("AdminDashboardKpiCard");
+    excludes(card, 'toneClass.bar');
+    excludes(card, 'role="progressbar"');
+    includes(card, 'const chartData = sparklineData.filter(');
+    includes(card, 'chartData.length > 1');
+    includes(card, 'data-admin-dashboard-kpi-delta="timeframe"');
+  });
+
+  test("delegates full table datasets to bounded pagination and renders every month immediately", () => {
+    includes(dashboard, 'from "@/components/admin/DashboardDataTable"');
+    includes(dashboard, '<DashboardDataTable rows={rows} columns={columns} getRowKey={getRowKey} emptyText={emptyText} />');
+    for (const rows of ['impactTableRows', 'trendTableRows', 'topContentTableRows']) {
+      includes(dashboard, `rows={${rows}}`);
+    }
+    includes(dashboard, 'points={trendPoints}');
+    includes(dashboard, 'totalPointCount={trendPoints.length}');
+    for (const removed of ['useAdminDashboardProgressiveItems', 'progressiveImpactTableRows', 'progressiveTrendTableRows', 'progressiveTopContentTableRows', 'progressiveTrendPoints', 'ADMIN_DASHBOARD_PROGRESSIVE_', 'ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_']) excludes(dashboard, removed);
+    const table = source("components/admin/DashboardDataTable.tsx");
+    includes(table, 'DASHBOARD_TABLE_PAGE_SIZE = 50');
+    includes(table, 'Math.ceil(rows.length / DASHBOARD_TABLE_PAGE_SIZE)');
+    includes(table, 'Math.min(page, pageCount - 1)');
+    includes(table, 'rows.slice(start, start + DASHBOARD_TABLE_PAGE_SIZE)');
+    includes(table, 'setPage(0); }, [rows]');
+    includes(table, 'visibleRows.map(');
+    includes(table, 'getRowKey(row, start + index)');
+    includes(table, 'column.cell(row, start + index)');
+    includes(table, 'aria-rowcount={rows.length + 1}');
+    includes(table, 'aria-rowindex={start + index + 2}');
+    includes(table, 'disabled={currentPage === 0}');
+    includes(table, 'disabled={currentPage + 1 === pageCount}');
+    includes(table, 'selectPage(currentPage - 1)');
+    includes(table, 'selectPage(currentPage + 1)');
+    includes(table, 'scrollRef.current?.scrollTo({ top: 0 })');
+    includes(table, 'data-admin-dashboard-table-pagination="bounded"');
+    includes(table, 'data-admin-dashboard-table-view="true"');
+    includes(table, 'if (!rows.length)');
+    includes(table, 'sticky top-0 z-10 bg-background');
+    excludes(table, 'setTimeout(');
+    excludes(table, 'setInterval(');
+  });
+
+  test("connects monthly averages, raw tooltip metrics and descriptive evidence", () => {
+    includes(dashboard, 'from "@/lib/admin/dashboard-visualization-data"');
+    includes(dashboard, 'return buildDashboardMonthlyPerformance(videosByPublishedAt, metricMode);');
+    includes(dashboard, 'rawViews: point.secondaryValue');
+    includes(dashboard, 'rawEngagement: point.value');
+    includes(dashboard, 'rawRate: point.secondaryValue > 0 ? point.value / point.secondaryValue * 100 : null');
+    includes(dashboard, 'videoCount: point.videoCount');
+    const tooltip = functionSource("AdminDashboardTrendTooltip");
+    for (const metric of ['rawViews', 'rawEngagement', 'rawRate', 'videoCount']) includes(tooltip, `point?.${metric}`);
+    includes(tooltip, 'dataAttribute="trend-simple"');
+    const insights = functionSource("buildAdminDashboardContentInsights");
+    includes(insights, 'buildDashboardEvidence(videos, metricMode)');
+    for (const metric of ['topShare', 'medianViews', 'meanViews', 'strongestEngagement', 'engagementCandidateCount', 'latestVideo']) includes(insights, `evidence.${metric}`);
+    includes(insights, 'asOf ? Date.parse(asOf)');
+    includes(insights, 'Date.parse(latest.publishedAt!)');
+    includes(insights, 'if (!evidence.count) return [];');
+    includes(dashboard, 'data-admin-dashboard-diagnosis-visual="evidence"');
+    for (const removed of ['getDashboardInsightSignalScore', 'signalBarClass[insight.tone]', 'data-admin-dashboard-diagnosis-visual="signal-bar"', '구독자 기여 후보']) excludes(dashboard, removed);
   });
 });

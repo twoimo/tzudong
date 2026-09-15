@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
+import { FeedReadCount } from './FeedReadCount';
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
@@ -243,6 +244,9 @@ export default function FeedContent({
         fetchNextPage,
         hasNextPage,
         isLoading,
+        isFetching,
+        isError,
+        refetch,
         isFetchingNextPage,
     } = useInfiniteQuery({
         queryKey: [queryKey, user?.id],
@@ -258,7 +262,8 @@ export default function FeedContent({
 
             const typedReviewsData = (reviewsData ?? []) as FeedReviewRow[];
 
-            if (reviewsError || typedReviewsData.length === 0) {
+            if (reviewsError) throw new Error('review-feed-unavailable');
+            if (typedReviewsData.length === 0) {
                 return { reviews: [], nextCursor: null };
             }
 
@@ -543,9 +548,7 @@ export default function FeedContent({
                                 <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
                                     <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
                                     <span className="min-w-0 truncate">쯔동여지도 리뷰</span>
-                                    <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
-                                        ({allReviews.length}개)
-                                    </span>
+                                    <FeedReadCount hasData={feedPages !== undefined} count={allReviews.length} error={isError} />
                                 </h1>
                                 <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                     {isLoggedIn
@@ -613,10 +616,16 @@ export default function FeedContent({
                 <div className={cn(
                     "flex-1 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+2rem)] md:pb-8",
                     isOverlay && "overflow-y-auto"
-                )}>
-                    {isLoading ? (
+                )} aria-busy={isFetching}>
+                    {isError && (
+                        <div role="alert" className="m-4 flex items-center justify-between gap-3 rounded-lg border p-3 text-sm text-muted-foreground">
+                            <p>리뷰를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+                            <Button type="button" variant="outline" size="sm" onClick={() => void refetch()} disabled={isFetching}>다시 시도</Button>
+                        </div>
+                    )}
+                    {isLoading && feedPages === undefined ? (
                         <FeedSkeleton count={4} />
-                    ) : allReviews.length === 0 ? (
+                    ) : isError && feedPages === undefined ? null : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>
                         </div>

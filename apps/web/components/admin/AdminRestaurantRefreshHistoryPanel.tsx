@@ -12,7 +12,7 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { cn } from "@/lib/utils";
 
 type RefreshCandidateStatus =
@@ -218,37 +218,8 @@ function RefreshWorkflowSteps() {
   );
 }
 
-function RefreshCandidateListSkeleton() {
-  return (
-    <div
-      className="space-y-2 p-2 xl:divide-y xl:divide-border xl:space-y-0 xl:p-0"
-      role="status"
-      aria-busy="true"
-      aria-label="맛집 최신화 이력 로딩 중"
-    >
-      <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
-      {Array.from({ length: 5 }).map((_, rowIndex) => (
-        <div
-          key={rowIndex}
-          className="grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:shadow-none xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
-          aria-hidden="true"
-        >
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-48 max-w-full rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-10 rounded-lg motion-reduce:animate-none" />
-          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-7 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-8 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 type RefreshCandidateListProps = {
+  hasError: boolean;
   candidates: RefreshCandidateRow[];
   isLoading: boolean;
   selectedCandidateId: string | null;
@@ -256,6 +227,7 @@ type RefreshCandidateListProps = {
 };
 
 function RefreshCandidateList({
+  hasError,
   candidates,
   isLoading,
   selectedCandidateId,
@@ -288,9 +260,12 @@ function RefreshCandidateList({
       <div
         className="min-h-0 flex-1 overflow-y-auto scrollbar-hide [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-admin-restaurant-refresh-list="management-like"
+        aria-busy={isLoading}
       >
-        {isLoading ? (
-          <RefreshCandidateListSkeleton />
+        {hasError && candidates.length === 0 ? (
+          <p role="alert" className="p-4 text-sm text-muted-foreground">최신화 이력을 불러오지 못했습니다. 다시 시도해주세요.</p>
+        ) : isLoading && candidates.length === 0 ? (
+          <AdminDataPending label="최신화 이력을 불러오는 중입니다." />
         ) : candidates.length === 0 ? (
           <div className="p-6 text-center text-sm text-muted-foreground">
             아직 기록된 최신화 후보가 없습니다. 승인 맛집 점검 job 또는 수동
@@ -451,9 +426,9 @@ function RefreshCandidateDetailPanel({
             </Button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scrollbar-hide p-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-admin-panel-padding="true" data-admin-section-gap="stack">
+            <div className="grid gap-2 sm:grid-cols-2" data-admin-section-gap="grid">
+              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5" data-admin-panel-padding="true">
                 <p className="font-semibold text-foreground">현재 스냅샷</p>
                 <p>
                   상호:{" "}
@@ -478,7 +453,7 @@ function RefreshCandidateDetailPanel({
                   )}
                 </p>
               </div>
-              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5">
+              <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5" data-admin-panel-padding="true">
                 <p className="font-semibold text-foreground">후보 스냅샷</p>
                 <p>
                   상호:{" "}
@@ -505,7 +480,7 @@ function RefreshCandidateDetailPanel({
               </div>
             </div>
 
-            <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5 text-muted-foreground">
+            <div className="break-words rounded-lg border border-border/70 bg-background/80 p-3 text-xs leading-5 text-muted-foreground" data-admin-panel-padding="true">
               <p className="mb-1 flex items-center gap-1 font-semibold text-foreground">
                 <ListChecks className="h-3.5 w-3.5 text-primary" />
                 유형별 검토 체크리스트
@@ -745,22 +720,22 @@ export function AdminRestaurantRefreshHistoryPanel() {
     },
     {
       label: "검토 필요",
-      value: summary?.needs_review ?? 0,
+      value: summary?.needs_review ?? "집계 중",
       tone: "text-amber-700 dark:text-amber-300",
     },
     {
       label: "승인",
-      value: summary?.approved ?? 0,
+      value: summary?.approved ?? "집계 중",
       tone: "text-emerald-700 dark:text-emerald-300",
     },
     {
       label: "적용",
-      value: summary?.applied ?? 0,
+      value: summary?.applied ?? "집계 중",
       tone: "text-sky-700 dark:text-sky-300",
     },
     {
       label: "반려",
-      value: summary?.rejected ?? 0,
+      value: summary?.rejected ?? "집계 중",
       tone: "text-slate-700 dark:text-slate-300",
     },
   ];
@@ -823,7 +798,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
             </div>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm" data-admin-module-summary="true">
               필터링: {filteredCandidates.length}개 | 검토 필요{" "}
-              {summary?.needs_review ?? 0}개 | 최근 점검{" "}
+              {summary?.needs_review ?? "집계 중"}개 | 최근 점검{" "}
               {formatDate(summary?.last_checked_at)}
             </p>
             <p className="mt-0.5 text-xs leading-5 text-muted-foreground sm:hidden">
@@ -902,6 +877,7 @@ export function AdminRestaurantRefreshHistoryPanel() {
         ) : null}
 
         <RefreshCandidateList
+          hasError={Boolean(error)}
           candidates={filteredCandidates}
           isLoading={isLoading}
           selectedCandidateId={selectedCandidate?.id ?? null}

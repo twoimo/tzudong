@@ -74,7 +74,7 @@ process.stdout.write(
   `[local-dev] admitted project=${local.projectName} app=http://127.0.0.1:${port} supabase=${local.supabaseOrigin}\n`,
 );
 const child = spawn(
-  'node',
+  process.execPath,
   [
     'scripts/dev-prewarm.mjs',
     '--port',

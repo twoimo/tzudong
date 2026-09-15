@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "files": {
+    "README.md": "55e760108444d72aa5701c0b12fe036d37360c64782b76d025582d8eb738049f",
+    "frozen-after/AdminConsoleOverview.tsx.txt": "cb1e78b245d2a7e3580af298973a593666101d646e02cb95eea956d201d8c062",
+    "frozen-after/DashboardDataTable.tsx.txt": "abaccae59749095a33891e842cd2ee82e0486d215b02be6e241d074d64dbb0da",
+    "frozen-after/dashboard-visualization-data.ts.txt": "cc65a85a745bd98e0cc0594038f3e87d7483115394a07fe862085557d7820ccc",
+    "frozen-before/AdminConsoleOverview.tsx.txt": "a47692af421f551162ff16b0c09ecbc4c243f88ee6d817427f7cac82604718ad",
+    "kpi-behavior-readback.json": "ed0a4ff619d5bb57fde4f4be0d412d2e956658028f59cb59dfa98a7360921c8d",
+    "layout-readback.json": "b781071e076594bb852664970ff4c790e8bd99d266838a8b2045037882743621",
+    "measure-table-render.tsx": "17d945d75e592c8872aa76c9244dfacb171e69bca64f1d6ea274b1cd90254fc1",
+    "table-render-raw.json": "735ec9db1bf24682be233ce0467642244d4eec32c2bd17b87953d35402a98c63",
+    "table-render-scored.json": "125b4d054f4303efd72a430b869648e1bd35b586c63d5fbc721e33ac2402dd76",
+    "verification.json": "8d25cdfb6ee360195a8537dea3b6e6687e8a9ab2d95355c8f492b01593233d06"
+  }
+}

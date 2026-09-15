@@ -1,6 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
+const SemioticKpiSparkline = dynamic(() => import("./SemioticKpiSparkline"), { ssr: false });
+const SemioticLineChart = dynamic(() => import("semiotic/line").then(module => module.LineChart), { ssr: false });
+const SemioticAreaChart = dynamic(() => import("semiotic/xy").then(module => module.AreaChart), { ssr: false });
+const SemioticScatterplot = dynamic(() => import("semiotic/xy").then(module => module.Scatterplot), { ssr: false });
+const SemioticBarChart = dynamic(() => import("semiotic/ordinal").then(module => module.BarChart), { ssr: false });
+const SemioticStackedBarChart = dynamic(() => import("semiotic/ordinal").then(module => module.StackedBarChart), { ssr: false });
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -52,22 +58,6 @@ import {
   XCircle,
   Workflow,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Scatter,
-  ScatterChart,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-  ZAxis,
-} from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,7 +66,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import {
   Tooltip as UiTooltip,
   TooltipContent as UiTooltipContent,
@@ -108,6 +98,7 @@ import {
   normalizeAdminPendingCountsResponse,
   type AdminPendingCountsResponse,
 } from "@/lib/admin/pending-counts";
+import { buildDashboardMonthlyPerformance, buildDashboardEvidence } from "@/lib/admin/dashboard-visualization-data";
 import { cn } from "@/lib/utils";
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
@@ -132,6 +123,7 @@ import {
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
 import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
+import { DashboardDataTable } from "@/components/admin/DashboardDataTable";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 
@@ -459,7 +451,7 @@ type AdminDashboardTrendSeriesKey = "views" | "engagement" | "engagementRate";
 type AdminDashboardTopContentSeriesKey = "views" | "likes" | "comments";
 
 type AdminDashboardSeriesVisibility<Key extends string> = Record<Key, boolean>;
-type AdminDashboardSkeletonVariant =
+type AdminDashboardPanelVariant =
   | "chart"
   | "table"
   | "ops"
@@ -722,145 +714,9 @@ function loadAdminRouteRecommendationModule() {
 }
 
 
-const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
-
-function AdminEvaluationModuleStaticShell() {
-  return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      aria-label="관리자 데이터 검수 화면 로딩 중"
-      className="flex h-full min-h-0 flex-col overflow-hidden"
-      data-admin-evaluation-dynamic-loading-shell="true"
-    >
-      <span className="sr-only">정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.</span>
-      <div className="border-b border-border bg-card px-2 py-1.5">
-        <div className="flex min-h-10 items-start justify-between gap-1.5 lg:items-center">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary" aria-hidden="true">
-                <ClipboardCheck className="h-5 w-5" strokeWidth={2.25} />
-              </span>
-              <h1 className="whitespace-nowrap bg-gradient-primary bg-clip-text text-base font-bold text-transparent">
-                관리자 데이터 검수
-              </h1>
-            </div>
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
-            </div>
-          </div>
-          <div className="ml-auto flex items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
-              <LayoutList className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">리스트</span>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
-              <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">슬라이드</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
-        <div className="space-y-2 lg:hidden" data-admin-evaluation-static-loading-controls="true">
-          <div className="grid grid-cols-3 gap-1.5">
-            {ADMIN_EVALUATION_STATIC_STATUS_FILTERS.map((label, index) => (
-              <Button
-                key={label}
-                type="button"
-                variant={index === 0 ? "default" : "outline"}
-                size="sm"
-                disabled
-                className="h-8 min-w-0 rounded-full px-2 text-xs font-medium disabled:opacity-100"
-                aria-pressed={index === 0}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <div className="flex h-9 items-center rounded-md border bg-background pl-8 pr-3 text-sm text-muted-foreground">
-              영상 제목 검색...
-            </div>
-          </div>
-
-          <div className="flex min-w-0 items-center justify-between gap-2 py-0.5">
-            <div className="min-w-0 truncate px-0.5 text-xs text-muted-foreground">
-              <span>검수 항목</span>
-              <span className="ml-1 font-medium">집계 중</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <Button type="button" variant="outline" size="sm" disabled className="h-8 rounded-full px-2.5 text-xs font-semibold disabled:opacity-100">
-                상세 필터
-              </Button>
-              <Button type="button" variant="ghost" size="sm" disabled aria-label="필터 초기화" className="h-8 w-8 rounded-full p-0 text-muted-foreground disabled:opacity-100">
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-                  <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                    <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="hidden min-h-0 overflow-hidden rounded-lg border bg-background lg:block">
-          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: 6 }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-              >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const AdminEvaluationModule = dynamic(loadAdminEvaluationModule, {
   ssr: false,
-  loading: () => <AdminEvaluationModuleStaticShell />,
+  loading: () => <AdminDataPending label="검수 화면 준비 중" />,
 });
 
 const AdminBannerModule = dynamic(loadAdminBannerModule, {
@@ -1435,6 +1291,7 @@ async function fetchAdminYouTubeChannelStats(
 ): Promise<AdminYouTubeChannelStats> {
   const params = new URLSearchParams({ period });
   const response = await fetch(`/api/admin/youtube-channel?${params}`, {
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
 
@@ -1506,7 +1363,7 @@ async function fetchAdminAuditEvents(): Promise<AdminAuditEventsResponse> {
   return payload;
 }
 
-function useAdminOverviewStats(isAdmin: boolean): {
+function useAdminOverviewStats(isAdmin: boolean, includeOverview: boolean): {
   stats: AdminOverviewStats;
   isLoading: boolean;
   hasError: boolean;
@@ -1522,13 +1379,13 @@ function useAdminOverviewStats(isAdmin: boolean): {
   const dashboardSummaryQuery = useQuery({
     queryKey: ["admin-overview", "dashboard-summary"],
     queryFn: fetchDashboardSummary,
-    enabled: isAdmin,
+    enabled: isAdmin && includeOverview,
     staleTime: 5 * 60 * 1000,
   });
 
-  const bannersQuery = useAdBannersAdmin(isAdmin);
-  const banners = bannersQuery.data ?? [];
-  const pendingCounts = pendingCountsQuery.data ?? null;
+  const bannersQuery = useAdBannersAdmin(isAdmin && includeOverview);
+  const banners = isAdmin ? bannersQuery.data ?? [] : [];
+  const pendingCounts = isAdmin ? pendingCountsQuery.data ?? null : null;
 
   return {
     stats: {
@@ -1557,7 +1414,7 @@ function useAdminOverviewStats(isAdmin: boolean): {
       dashboardVideos: dashboardSummaryQuery.data?.videos ?? null,
     },
     isLoading:
-      pendingCountsQuery.isLoading ||
+      !isAdmin || pendingCountsQuery.isLoading ||
       dashboardSummaryQuery.isLoading ||
       bannersQuery.isLoading,
     hasError:
@@ -1588,6 +1445,7 @@ type AdminDashboardTrendPoint = {
   label: string;
   value: number;
   secondaryValue: number;
+  videoCount?: number;
 };
 
 type AdminDashboardSparklinePoint = {
@@ -1649,12 +1507,6 @@ const ADMIN_DASHBOARD_PERIOD_OPTIONS: Array<{
 
 const ADMIN_DASHBOARD_IMPACT_FULL_CHART_LIMIT = 60;
 const ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT = 80;
-const ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS = 40;
-const ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS = 80;
-const ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS = 24;
-const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS = 18;
-const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS = 24;
-const ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS = 48;
 const ADMIN_DASHBOARD_MOBILE_DEFER_ROOT_MARGIN = "420px 0px";
 const ADMIN_DASHBOARD_SPARKLINE_POINT_LIMIT = 7;
 const ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT = 4;
@@ -1705,6 +1557,12 @@ function formatCompactNumber(value: number | null | undefined) {
     : "—";
 }
 
+function formatDashboardObservationLabel(value: string | null | undefined) {
+  const timestamp = value ? Date.parse(value) : NaN;
+  if (!Number.isFinite(timestamp)) return "수집 시각 미확인";
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(timestamp);
+}
+
 function formatDashboardDateLabel(value: string | null) {
   if (!value) return "날짜 없음";
   const date = new Date(value);
@@ -1722,46 +1580,6 @@ function getAdminDashboardImpactChartLimit(videoCount: number) {
   return Math.min(videoCount, ADMIN_DASHBOARD_IMPACT_MAX_CHART_LIMIT);
 }
 
-function useAdminDashboardProgressiveItems<T>(
-  items: T[],
-  initialCount = ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS,
-  batchCount = ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS,
-  delayMs = ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS,
-) {
-  const [visibleCount, setVisibleCount] = useState(() =>
-    Math.min(initialCount, items.length),
-  );
-
-  useEffect(() => {
-    let isCancelled = false;
-    let timer: number | undefined;
-
-    setVisibleCount(Math.min(initialCount, items.length));
-    if (items.length <= initialCount) return;
-
-    const scheduleNextBatch = () => {
-      timer = window.setTimeout(() => {
-        if (isCancelled) return;
-
-        setVisibleCount((currentCount) => {
-          const nextCount = Math.min(items.length, currentCount + batchCount);
-          if (nextCount < items.length) scheduleNextBatch();
-          return nextCount;
-        });
-      }, delayMs);
-    };
-
-    scheduleNextBatch();
-
-    return () => {
-      isCancelled = true;
-      if (typeof timer === "number") window.clearTimeout(timer);
-    };
-  }, [batchCount, delayMs, initialCount, items]);
-
-  return items.slice(0, Math.min(visibleCount, items.length));
-}
-
 function getIsAdminDashboardMobileViewport() {
   return (
     typeof window !== "undefined" &&
@@ -1777,7 +1595,7 @@ function AdminDashboardDeferredBody({
 }: {
   enabled: boolean;
   resetKey: string;
-  variant: AdminDashboardSkeletonVariant;
+  variant: AdminDashboardPanelVariant;
   children: ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -1793,8 +1611,8 @@ function AdminDashboardDeferredBody({
 
     const container = containerRef.current;
     if (!container || !("IntersectionObserver" in window)) {
-      const fallbackTimer = window.setTimeout(() => setIsReady(true), 80);
-      return () => window.clearTimeout(fallbackTimer);
+      setIsReady(true);
+      return;
     }
 
     const observer = new IntersectionObserver(
@@ -1818,7 +1636,7 @@ function AdminDashboardDeferredBody({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [enabled, resetKey]);
+  }, [enabled]);
 
   if (isReady) {
     return <>{children}</>;
@@ -1831,7 +1649,7 @@ function AdminDashboardDeferredBody({
       data-admin-dashboard-mobile-deferred="true"
       data-admin-dashboard-mobile-deferred-reset-key={resetKey}
     >
-      <AdminDashboardPanelBodySkeleton variant={variant} />
+      <AdminDashboardPanelPending variant={variant} />
     </div>
   );
 }
@@ -1872,10 +1690,10 @@ function getAdminDashboardDataQualityStatus(
 function getAdminDashboardDeltaSourceLabel(
   source: AdminYouTubeChannelStats["deltaSource"],
 ) {
-  if (source === "snapshot-delta") return "수집 delta";
+  if (source === "snapshot-delta") return "수집 시점 비교";
   if (source === "derived-live-comparison") return "실시간-스냅샷 비교";
   if (source === "derived-snapshot-comparison") return "스냅샷 재계산";
-  return "delta 대기";
+  return "비교 이력 없음";
 }
 
 function getVideoEngagementTotal(video: InsightTreemapVideoRow) {
@@ -2000,9 +1818,10 @@ function calculateDashboardChange(current: number, previous: number) {
 
 function formatDashboardChangeLabel(change: number | null) {
   if (typeof change !== "number" || !Number.isFinite(change)) return "—";
-  if (Math.abs(change) < 0.05) return "0.0%";
+  if (change === 0) return "0.0%";
+  if (Math.abs(change) < 0.01) return `${change > 0 ? "+" : "−"}<0.01%`;
 
-  return `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
+  return `${change > 0 ? "+" : ""}${change.toFixed(Math.abs(change) < 0.1 ? 2 : 1)}%`;
 }
 
 function getVideoPublishedTime(video: InsightTreemapVideoRow) {
@@ -2199,6 +2018,7 @@ async function fetchAdminDashboardInsightSummary(
   const liveResponse = await fetch(
     `/api/admin/youtube-kpis?${params.toString()}`,
     {
+      cache: "no-store",
       headers: { Accept: "application/json" },
     },
   );
@@ -2232,12 +2052,9 @@ async function fetchAdminDashboardInsightSummary(
 
 function buildAdminDashboardTrendPoints(
   videosByPublishedAt: InsightTreemapVideoRow[],
+  metricMode: "current" | "delta" = "current",
 ): AdminDashboardTrendPoint[] {
-  return videosByPublishedAt.map((video) => ({
-    label: formatDashboardDateLabel(video.publishedAt),
-    value: getVideoEngagementTotal(video),
-    secondaryValue: video.viewCount,
-  }));
+  return buildDashboardMonthlyPerformance(videosByPublishedAt, metricMode);
 }
 
 function sampleAdminDashboardPeriodPoints<T>(items: T[], limit: number): T[] {
@@ -2445,8 +2262,8 @@ function buildAdminDashboardBarRows(
     )} · ${viewRank}위 · ${viewTopPercentLabel}`;
     const comparisonTargetLine =
       metricMode === "delta"
-        ? `비교 대상: 선택 기간 업로드 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`
-        : `비교 대상: 선택 기간 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`;
+        ? `비교 대상: 분석 대상 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`
+        : `비교 대상: 수집 영상 ${formatNumber(scoredRows.length)}개 중 ${viewRank}위 (${viewTopPercentLabel})`;
     const uploadScopeLine =
       metricMode === "delta" &&
       hasPeriodUploadVideoCount &&
@@ -2502,7 +2319,7 @@ function clampDashboardPercent(value: number | null | undefined) {
 
 function formatDashboardPercent(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value)
-    ? `${value.toFixed(value >= 10 ? 0 : 1)}%`
+    ? `${value.toFixed(Math.abs(value) >= 10 ? 0 : Math.abs(value) > 0 && Math.abs(value) < 0.1 ? 2 : 1)}%`
     : "—";
 }
 
@@ -2635,27 +2452,6 @@ type AdminDashboardContentInsight = {
   qualityBadges: AdminDashboardDataQualityBadge[];
 };
 
-function getDashboardInsightSignalScore(value: number, average: number) {
-  const deltaPercent = getDashboardAverageDeltaPercent(value, average);
-  if (deltaPercent == null) return 50;
-
-  return Math.max(8, Math.min(100, Math.abs(deltaPercent)));
-}
-
-function getDashboardVideoAgeDays(
-  video: InsightTreemapVideoRow,
-  asOf: string | null | undefined,
-) {
-  const publishedMs = video.publishedAt
-    ? new Date(video.publishedAt).getTime()
-    : Number.NaN;
-  const asOfMs = asOf ? new Date(asOf).getTime() : Date.now();
-
-  if (!Number.isFinite(publishedMs) || !Number.isFinite(asOfMs)) return null;
-
-  return Math.max(1, (asOfMs - publishedMs) / ADMIN_DASHBOARD_DAY_MS);
-}
-
 function getDashboardVideoMetricSnapshot(
   video: InsightTreemapVideoRow,
   metricMode: "current" | "delta",
@@ -2688,252 +2484,55 @@ function buildAdminDashboardContentInsights(
   videos: InsightTreemapVideoRow[],
   metricMode: "current" | "delta",
   asOf: string | null | undefined,
-  subscriberDelta: number | null,
-  contributionTotalOverride?: number | null,
+  _subscriberDelta: number | null,
+  _contributionTotalOverride?: number | null,
 ): AdminDashboardContentInsight[] {
-  const metricRows = videos
-    .map((video) => {
-      const metric = getDashboardVideoMetricSnapshot(video, metricMode);
-      const ageDays = getDashboardVideoAgeDays(video, asOf);
-
-      return {
-        ...metric,
-        ageDays,
-        viewsPerDay: ageDays ? metric.viewValue / ageDays : 0,
-      };
-    })
-    .filter((row) => row.viewValue > 0);
-
-  if (metricRows.length === 0) return [];
-
-  const viewAverage = getDashboardAverage(
-    metricRows.map((row) => row.viewValue),
-  );
-  const engagementRateAverage = getDashboardAverage(
-    metricRows.map((row) => row.engagementRate),
-  );
-  const dailyViewAverage = getDashboardAverage(
-    metricRows.map((row) => row.viewsPerDay),
-  );
-  const metricNoun = metricMode === "delta" ? "증가" : "성과";
-  const calculatedTotalViewValue = metricRows.reduce(
-    (sum, row) => sum + row.viewValue,
-    0,
-  );
-  const totalViewValue =
-    typeof contributionTotalOverride === "number" &&
-    Number.isFinite(contributionTotalOverride) &&
-    contributionTotalOverride > 0
-      ? contributionTotalOverride
-      : calculatedTotalViewValue;
-  const totalLikeValue = metricRows.reduce(
-    (sum, row) => sum + row.likeValue,
-    0,
-  );
-  const totalCommentValue = metricRows.reduce(
-    (sum, row) => sum + row.commentValue,
-    0,
-  );
-  const metricRowsWithContribution = metricRows.map((row) => {
-    const viewContributionPercent = getDashboardMetricContributionPercent(
-      row.viewValue,
-      totalViewValue,
-    );
-    const likeContributionPercent = getDashboardMetricContributionPercent(
-      row.likeValue,
-      totalLikeValue,
-    );
-    const commentContributionPercent = getDashboardMetricContributionPercent(
-      row.commentValue,
-      totalCommentValue,
-    );
-    const performanceContributionPercent =
-      getDashboardWeightedPerformanceContribution({
-        viewContributionPercent,
-        likeContributionPercent,
-        commentContributionPercent,
-      });
-
-    return {
-      ...row,
-      performanceContributionPercent,
-    };
-  });
-  const rankedByContribution = [...metricRowsWithContribution].sort((a, b) => {
-    const contributionDelta =
-      (b.performanceContributionPercent ?? -Infinity) -
-      (a.performanceContributionPercent ?? -Infinity);
-    if (contributionDelta !== 0) return contributionDelta;
-
-    return b.viewValue - a.viewValue;
-  });
-  const strongestContribution = rankedByContribution[0];
-  const strongestContributionRank = strongestContribution
-    ? rankedByContribution.findIndex(
-        (row) => row.video.id === strongestContribution.video.id,
-      ) + 1
-    : 0;
-  const strongestContributionTopPercentLabel = getDashboardTopPercentLabel(
-    strongestContributionRank,
-    metricRowsWithContribution.length,
-  );
-  const strongestContributionScore =
-    strongestContribution?.performanceContributionPercent ?? 0;
-  const strongestEngagement = [...metricRows].sort(
-    (a, b) =>
-      (getDashboardAverageDeltaPercent(
-        b.engagementRate,
-        engagementRateAverage,
-      ) ?? -Infinity) -
-      (getDashboardAverageDeltaPercent(
-        a.engagementRate,
-        engagementRateAverage,
-      ) ?? -Infinity),
-  )[0];
-  const recentUnderperformer = metricRows
-    .filter((row) => row.ageDays != null && row.ageDays <= 14)
-    .sort(
-      (a, b) =>
-        (getDashboardAverageDeltaPercent(a.viewsPerDay, dailyViewAverage) ??
-          Infinity) -
-        (getDashboardAverageDeltaPercent(b.viewsPerDay, dailyViewAverage) ??
-          Infinity),
-    )[0];
-  const reboundCandidate = metricRows
-    .filter((row) => row.ageDays != null && row.ageDays >= 90)
-    .sort((a, b) => b.viewValue - a.viewValue)[0];
+  const evidence = buildDashboardEvidence(videos, metricMode);
+  if (!evidence.count) return [];
   const insights: AdminDashboardContentInsight[] = [];
-
-  if (strongestContribution) {
-    const scoreLabel = formatDashboardContribution(
-      strongestContribution.performanceContributionPercent,
-    );
-    const averageComparison = formatDashboardAverageComparison(
-      strongestContribution.viewValue,
-      viewAverage,
-    );
-
+  const basis = metricMode === "delta" ? "양의 조회 증가" : "누적 조회";
+  if (evidence.topVideo && evidence.topShare !== null) {
     insights.push({
-      label: "성과 기여",
-      title: strongestContribution.video.title,
-      description: `${metricNoun} ${scoreLabel} · ${strongestContributionRank}위 · ${strongestContributionTopPercentLabel}`,
-      tone: "primary",
-      score: Math.max(8, Math.min(100, strongestContributionScore * 2)),
-      scoreLabel: `${scoreLabel} · 평균 참고 ${averageComparison}`,
-      qualityBadges: getAdminDashboardVideoQualityBadges(strongestContribution.video),
+      label: "조회 집중도",
+      title: `상위 ${evidence.topCount}개가 ${formatDashboardPercent(evidence.topShare)} 차지`,
+      description: `${basis} 기준 · 1위 ${evidence.topVideo.title}`,
+      tone: "primary", score: evidence.topShare,
+      scoreLabel: "상위 영상의 소재를 비교해 후속 콘텐츠 후보를 찾으세요.",
+      qualityBadges: getAdminDashboardVideoQualityBadges(evidence.topVideo),
     });
   }
-
-  if (strongestEngagement) {
-    const scoreLabel = formatDashboardAverageComparison(
-      strongestEngagement.engagementRate,
-      engagementRateAverage,
-    );
-
+  const engagement = evidence.strongestEngagement;
+  if (engagement) {
     insights.push({
       label: "참여율 강세",
-      title: strongestEngagement.video.title,
-      description: `참여율 ${scoreLabel} · ${formatDashboardPercent(strongestEngagement.engagementRate)}`,
-      tone: "warning",
-      score: getDashboardInsightSignalScore(
-        strongestEngagement.engagementRate,
-        engagementRateAverage,
-      ),
-      scoreLabel,
-      qualityBadges: getAdminDashboardVideoQualityBadges(strongestEngagement.video),
+      title: engagement.video.title,
+      description: `좋아요+댓글 / 조회수 ${formatDashboardPercent(engagement.engagement / engagement.views * 100)}`,
+      tone: "warning", score: 0,
+      scoreLabel: `조회 중앙값 이상 ${formatNumber(evidence.engagementCandidateCount)}개 중 최고 · 댓글 반응을 살펴보세요.`,
+      qualityBadges: getAdminDashboardVideoQualityBadges(engagement.video),
     });
   }
-
-  if (recentUnderperformer) {
-    const scoreLabel = formatDashboardAverageComparison(
-      recentUnderperformer.viewsPerDay,
-      dailyViewAverage,
-    );
-
+  insights.push({
+    label: "일반적인 영상 성과",
+    title: `조회 중앙값 ${formatCompactNumber(evidence.medianViews ?? 0)}`,
+    description: `${formatNumber(evidence.count)}개 영상 · 평균 ${formatCompactNumber(evidence.meanViews ?? 0)}`,
+    tone: "primary", score: 0,
+    scoreLabel: metricMode === "delta" ? `기간 변화 기준 · 감소가 관측된 영상 ${evidence.negativeCount}개` : "대형 영상에 치우친 평균과 함께 중앙값을 기준으로 비교하세요.",
+    qualityBadges: [],
+  });
+  if (evidence.latestVideo) {
+    const latest = evidence.latestVideo;
+    const observedMs = asOf ? Date.parse(asOf) : Date.now();
+    const ageDays = Math.max(0, Math.floor((observedMs - Date.parse(latest.publishedAt!)) / ADMIN_DASHBOARD_DAY_MS));
     insights.push({
-      label: "초반 반응 점검",
-      title: recentUnderperformer.video.title,
-      description: `일평균 조회 ${scoreLabel} · 업로드 ${Math.round(recentUnderperformer.ageDays ?? 0)}일`,
-      tone: "risk",
-      score: getDashboardInsightSignalScore(
-        recentUnderperformer.viewsPerDay,
-        dailyViewAverage,
-      ),
-      scoreLabel,
-      qualityBadges: getAdminDashboardVideoQualityBadges(recentUnderperformer.video),
+      label: "수집 범위의 최신 영상",
+      title: latest.title,
+      description: `${formatDashboardDateLabel(latest.publishedAt)} 업로드 · 수집 시점 기준 ${ageDays}일 전`,
+      tone: ageDays > 30 ? "warning" : "primary", score: 0,
+      scoreLabel: ageDays > 30 ? "최근 채널 영상이 분석에 포함됐는지 수집 범위를 확인하세요." : "누적 조회를 업로드 후 경과일과 함께 해석하세요.",
+      qualityBadges: getAdminDashboardVideoQualityBadges(latest),
     });
   }
-
-  if (reboundCandidate && reboundCandidate !== strongestContribution) {
-    const scoreLabel = formatDashboardAverageComparison(
-      reboundCandidate.viewValue,
-      viewAverage,
-    );
-
-    insights.push({
-      label: metricMode === "delta" ? "재상승 후보" : "롱테일 후보",
-      title: reboundCandidate.video.title,
-      description: `업로드 ${Math.round(
-        reboundCandidate.ageDays ?? 0,
-      )}일 · 조회 ${metricNoun} ${formatCompactNumber(reboundCandidate.viewValue)}`,
-      tone: "warning",
-      score: getDashboardInsightSignalScore(
-        reboundCandidate.viewValue,
-        viewAverage,
-      ),
-      scoreLabel,
-      qualityBadges: getAdminDashboardVideoQualityBadges(reboundCandidate.video),
-    });
-  }
-
-  if (
-    typeof subscriberDelta === "number" &&
-    subscriberDelta > 0 &&
-    strongestContribution
-  ) {
-    insights.push({
-      label: "구독자 기여 후보",
-      title: strongestContribution.video.title,
-      description: `구독자 ${formatSignedNumber(
-        subscriberDelta,
-      )} 기간의 성과 ${metricNoun} 1위 후보`,
-      tone: "primary",
-      score: Math.max(8, Math.min(100, strongestContributionScore)),
-      scoreLabel: `구독자 ${formatSignedNumber(subscriberDelta)}`,
-      qualityBadges: getAdminDashboardVideoQualityBadges(strongestContribution.video),
-    });
-  }
-
-  const addFallbackInsight = (insight: AdminDashboardContentInsight) => {
-    if (insights.length >= ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT) return;
-    if (insights.some((existing) => existing.label === insight.label)) return;
-    insights.push(insight);
-  };
-
-  const newestCandidate = [...metricRows].sort(
-    (a, b) => (a.ageDays ?? Infinity) - (b.ageDays ?? Infinity),
-  )[0];
-
-  if (newestCandidate) {
-    const scoreLabel = formatDashboardAverageComparison(
-      newestCandidate.viewsPerDay,
-      dailyViewAverage,
-    );
-
-    addFallbackInsight({
-      label: "신규 반응 확인",
-      title: newestCandidate.video.title,
-      description: `업로드 ${Math.round(newestCandidate.ageDays ?? 0)}일 · 일평균 조회 ${scoreLabel}`,
-      tone: "warning",
-      score: getDashboardInsightSignalScore(
-        newestCandidate.viewsPerDay,
-        dailyViewAverage,
-      ),
-      scoreLabel,
-      qualityBadges: getAdminDashboardVideoQualityBadges(newestCandidate.video),
-    });
-  }
-
   return insights.slice(0, ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT);
 }
 
@@ -2954,42 +2553,21 @@ function getDashboardRatio(
   return (numerator / denominator) * 100;
 }
 
-function getDashboardChangeProgress(change: number | null) {
-  if (typeof change !== "number" || !Number.isFinite(change)) {
-    return 50;
-  }
-
-  return clampDashboardPercent(50 + change * 2);
-}
-
 const adminDashboardCardClass =
   "min-h-0 min-w-0 w-full overflow-hidden border border-border/70 bg-background shadow-[0_1px_2px_rgba(15,23,42,0.06)]";
 
-const adminDashboardChartMargin = { top: 10, right: 10, bottom: 2, left: 0 };
-const adminDashboardScatterChartMargin = {
-  top: 10,
-  right: 12,
-  bottom: 2,
-  left: 0,
-};
 const adminDashboardVisualizationShellClassName =
   "min-h-0 flex-1 overflow-hidden rounded-xl p-1 sm:p-1.5";
 const adminDashboardChartViewportClassName =
-  "relative h-full min-h-0 w-full overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible";
-const adminDashboardTooltipWrapperStyle = {
-  zIndex: 50,
-  pointerEvents: "none",
-} satisfies CSSProperties;
+  "relative h-full min-h-0 w-full overflow-visible";
 const adminDashboardTooltipContentClassName =
-  "max-w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border bg-popover px-2.5 py-1.5 text-xs leading-4 text-popover-foreground shadow-xl";
+  "max-w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-border bg-popover px-2.5 py-1.5 text-sm leading-6 text-popover-foreground shadow-xl";
 const adminDashboardTooltipPortalClassName =
   "border-0 bg-transparent p-0 text-popover-foreground shadow-none";
 const adminDashboardTooltipLineClassName =
   "whitespace-normal break-keep text-muted-foreground [text-wrap:pretty]";
 const adminDashboardTooltipFirstLineClassName =
   "font-extrabold text-foreground";
-const adminDashboardGridColor = "hsl(var(--border) / 0.55)";
-const adminDashboardAxisColor = "hsl(var(--muted-foreground))";
 const adminDashboardFocusPalette = {
   primary: "#14b8a6",
   primarySoft: "#5eead4",
@@ -3003,11 +2581,11 @@ const adminDashboardFocusPalette = {
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
-  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary admin-dashboard-control";
 const adminDashboardFullscreenCardClassName =
   "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto scrollbar-hide rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
-function formatRechartsTooltipValue(value: unknown) {
+function formatDashboardTooltipValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value)
     ? formatCompactNumber(value)
     : String(value ?? "—");
@@ -3139,73 +2717,29 @@ function AdminDashboardTooltipLinesPanel({
   );
 }
 
-function AdminDashboardKpiSparklineTooltip({
-  active,
-  label,
-  payload,
-  title,
-}: AdminDashboardLineTooltipProps & { title: string }) {
-  const value = payload?.[0]?.value;
-  if (!active || value == null) return null;
-
-  return (
-    <AdminDashboardTooltipPanel
-      title={`${title} · ${String(label ?? "기간")}`}
-      rows={[
-        {
-          label: "값",
-          value: formatRechartsTooltipValue(value),
-          note: "해당 지점의 카드 값",
-          color: payload?.[0]?.color,
-        },
-      ]}
-      footer="계산식: 점 값 = 해당 기간의 카드 값."
-      dataAttribute="kpi-sparkline"
-    />
-  );
-}
-
 const adminDashboardTrendTooltipLabels: Record<string, string> = {
   조회수: "조회수",
   참여: "참여",
   참여율: "참여율",
 };
 
-const adminDashboardTrendTooltipNotes: Record<string, string> = {
-  조회수: "영상 조회수 기준",
-  참여: "좋아요+댓글 기준",
-  참여율: "조회수 대비 참여 기준",
-};
-
-function AdminDashboardTrendTooltip({
-  active,
-  label,
-  payload,
-}: AdminDashboardLineTooltipProps) {
+function AdminDashboardTrendTooltip({ active, label, payload }: AdminDashboardLineTooltipProps) {
   if (!active || !payload?.length) return null;
-
-  const rows = payload.filter(
-    (item) =>
-      typeof item.name === "string" &&
-      item.name in adminDashboardTrendTooltipLabels,
-  );
-
-  if (rows.length === 0) return null;
-
+  const rows = payload.filter(item => typeof item.name === "string" && item.name in adminDashboardTrendTooltipLabels);
+  const point = payload[0]?.payload as { rawViews?: number; rawEngagement?: number; rawRate?: number | null; videoCount?: number } | undefined;
+  if (!rows.length) return null;
   return (
     <AdminDashboardTooltipPanel
-      title={String(label ?? "날짜 없음")}
-      rows={rows.map((item) => {
+      title={`${String(label ?? "게시월 미상")} 업로드 · ${formatNumber(point?.videoCount)}개 영상`}
+      rows={rows.map(item => {
         const name = String(item.name);
-
-        return {
-          label: adminDashboardTrendTooltipLabels[name] ?? name,
-          value: `${formatRechartsTooltipValue(item.value)}점`,
-          note: adminDashboardTrendTooltipNotes[name],
-          color: item.color,
-        };
+        const value = name === "조회수" ? formatNumber(point?.rawViews == null ? null : Math.round(point.rawViews))
+          : name === "참여" ? formatNumber(point?.rawEngagement == null ? null : Math.round(point.rawEngagement))
+          : formatDashboardPercent(point?.rawRate ?? null);
+        return { label: adminDashboardTrendTooltipLabels[name] ?? name, value,
+          note: `${name === "참여율" ? "합계 참여 / 합계 조회" : "영상당 평균"} · 상대지수 ${formatDashboardTooltipValue(item.value)}`, color: item.color };
       })}
-      footer="100점은 선택 기간에서 해당 지표가 가장 큰 영상입니다."
+      footer="같은 업로드 월의 영상 묶음입니다. 그 달에 발생한 실제 조회수가 아닙니다."
       dataAttribute="trend-simple"
     />
   );
@@ -3360,7 +2894,7 @@ function AdminDashboardDiagnosisMeta({ periodLabel }: { periodLabel: string }) {
   return (
     <div
       className="hidden min-w-0 max-w-[28rem] items-center justify-end gap-1.5 text-[11px] font-bold leading-none text-muted-foreground lg:flex"
-      aria-label={`성과 진단 기준 ${periodLabel}, 비교 채널 평균`}
+      aria-label={`성과 진단 기준 ${periodLabel}, 비교 수집 영상 분포`}
       data-admin-dashboard-diagnosis-meta="header-inline"
     >
       <span className="min-w-0 truncate">
@@ -3368,7 +2902,7 @@ function AdminDashboardDiagnosisMeta({ periodLabel }: { periodLabel: string }) {
       </span>
       <span aria-hidden="true">·</span>
       <span className="min-w-0 truncate">
-        비교 <b className="font-black text-foreground">채널 평균</b>
+        비교 <b className="font-black text-foreground">수집 영상 분포</b>
       </span>
     </div>
   );
@@ -3478,664 +3012,18 @@ type AdminDashboardTableColumn<Row> = {
   className?: string;
 };
 
-function AdminDashboardScrollTable<Row>({
-  rows,
-  columns,
-  getRowKey,
-  emptyText,
-  totalRows = rows.length,
-}: {
+function AdminDashboardScrollTable<Row>({ rows, columns, getRowKey, emptyText }: {
   rows: Row[];
   columns: Array<AdminDashboardTableColumn<Row>>;
   getRowKey: (row: Row, index: number) => string;
   emptyText: string;
   totalRows?: number;
 }) {
-  if (rows.length === 0) {
-    return (
-      <div
-        className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-border/80 bg-background text-xs font-semibold text-muted-foreground"
-        data-admin-dashboard-table-view="true"
-      >
-        {emptyText}
-      </div>
-    );
-  }
-
-  const hasMoreRows = rows.length < totalRows;
-
-  return (
-    <div
-      className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide rounded-xl border border-border/70 bg-background"
-      data-admin-dashboard-table-view="true"
-      data-admin-dashboard-progressive-table="true"
-    >
-      <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
-        <thead className="sticky top-0 z-10 bg-background">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={cn(
-                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-[10px] font-extrabold text-muted-foreground",
-                  column.align === "right" && "text-right",
-                  column.className,
-                )}
-              >
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={getRowKey(row, rowIndex)} className="odd:bg-muted/20">
-              {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={cn(
-                    "min-w-0 border-b border-border/45 px-2.5 py-2 align-middle text-foreground last:border-b-0",
-                    column.align === "right" &&
-                      "text-right font-extrabold tabular-nums",
-                    column.className,
-                  )}
-                >
-                  {column.cell(row, rowIndex)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {hasMoreRows ? (
-        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-[11px] font-extrabold tabular-nums text-muted-foreground backdrop-blur">
-          추가 행 표시 중 {formatNumber(rows.length)}/{formatNumber(totalRows)}
-        </div>
-      ) : null}
-    </div>
-  );
+  return <DashboardDataTable rows={rows} columns={columns} getRowKey={getRowKey} emptyText={emptyText} />;
 }
 
-function AdminDashboardKpiValueSkeleton() {
-  return (
-    <div
-      className="flex min-h-0 min-w-0 items-center justify-between gap-3"
-      data-admin-dashboard-dynamic-skeleton="kpi"
-      aria-hidden="true"
-    >
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-8 w-32 max-w-full rounded-full motion-reduce:animate-none" />
-        <Skeleton className="h-3 w-24 max-w-full rounded-full motion-reduce:animate-none" />
-      </div>
-      <Skeleton className="h-11 w-24 shrink-0 rounded-xl motion-reduce:animate-none" />
-    </div>
-  );
-}
-
-function AdminDashboardPanelBodySkeleton({
-  variant = "chart",
-}: {
-  variant?: AdminDashboardSkeletonVariant;
-}) {
-  if (variant === "table") {
-    return (
-      <div
-        className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="table"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"
-          >
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-4 rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "ops") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 gap-3"
-        data-admin-dashboard-dynamic-skeleton="ops"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 2 }).map((_, sectionIndex) => (
-          <div key={sectionIndex} className="grid gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-4 w-12 rounded-full motion-reduce:animate-none" />
-            </div>
-            {Array.from({ length: 4 }).map((__, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid grid-cols-[5.5rem_minmax(0,1fr)_3rem] items-center gap-2"
-              >
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-2 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-3 rounded-full motion-reduce:animate-none" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "bubble") {
-    return (
-      <div
-        className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="bubble"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-x-5 bottom-10 h-px bg-border/60" />
-        <div className="absolute inset-y-5 left-10 w-px bg-border/60" />
-        {[
-          ["left-[9%] top-[58%] h-10 w-10", "bg-teal-100 dark:bg-teal-950/45"],
-          ["left-[25%] top-[38%] h-14 w-14", "bg-teal-100/80 dark:bg-teal-950/35"],
-          [
-            "left-[43%] top-[52%] h-11 w-11",
-            "bg-teal-100/60 dark:bg-teal-950/25",
-          ],
-          [
-            "left-[62%] top-[30%] h-16 w-16",
-            "bg-muted-foreground/20 dark:bg-muted-foreground/18",
-          ],
-          [
-            "left-[78%] top-[62%] h-9 w-9",
-            "bg-muted-foreground/10 dark:bg-muted-foreground/12",
-          ],
-        ].map(([positionClassName, colorClassName], index) => (
-          <Skeleton
-            key={index}
-            className={cn(
-              "absolute rounded-full motion-reduce:animate-none",
-              positionClassName,
-              colorClassName,
-            )}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "line") {
-    return (
-      <div
-        className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="line"
-        aria-hidden="true"
-      >
-        <div className="relative h-full min-h-[8rem] overflow-hidden">
-          <div className="absolute inset-x-1 top-1/4 h-px bg-border/50" />
-          <div className="absolute inset-x-1 top-1/2 h-px bg-border/50" />
-          <div className="absolute inset-x-1 top-3/4 h-px bg-border/50" />
-          <svg
-            className="absolute inset-0 h-full w-full text-muted/80"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            focusable="false"
-          >
-            <polyline
-              points="2,68 18,44 34,58 50,30 66,48 82,24 98,38"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,48 18,56 34,34 50,52 66,26 82,45 98,28"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.62"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <polyline
-              points="2,75 18,72 34,82 50,61 66,70 82,54 98,63"
-              fill="none"
-              stroke="currentColor"
-              strokeOpacity="0.42"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="absolute bottom-0 h-2 w-2 rounded-full motion-reduce:animate-none"
-              style={{ left: `${7 + index * 17}%` }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (variant === "stacked") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 content-evenly gap-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
-        data-admin-dashboard-dynamic-skeleton="stacked"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 3 }).map((_, rowIndex) => (
-          <div key={rowIndex} className="grid gap-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-3 w-16 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-24 rounded-full motion-reduce:animate-none" />
-            </div>
-            <div className="flex h-9 overflow-hidden rounded-xl bg-muted/40">
-              {[28, 23, 19, 17, 13].map((width, segmentIndex) => (
-                <Skeleton
-                  key={segmentIndex}
-                  className="h-full rounded-none motion-reduce:animate-none"
-                  style={{
-                    width: `${width + ((rowIndex + segmentIndex) % 3)}%`,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "diagnosis") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-1"
-        data-admin-dashboard-dynamic-skeleton="diagnosis"
-        aria-hidden="true"
-      >
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex min-h-0 flex-col justify-between rounded-xl border border-border/70 bg-muted/20 px-2 py-1.5"
-          >
-            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-            <div className="space-y-1">
-              <Skeleton className="h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-3 w-3/4 rounded-full motion-reduce:animate-none" />
-            </div>
-            <Skeleton className="h-1.5 w-full rounded-full motion-reduce:animate-none" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="min-h-0 flex-1 rounded-xl border border-border/70 bg-background p-3"
-      data-admin-dashboard-dynamic-skeleton="chart"
-      aria-hidden="true"
-    >
-      <div className="flex h-full min-h-[8rem] items-end gap-3">
-        {Array.from({ length: 7 }).map((_, index) => (
-          <Skeleton
-            key={index}
-            className="flex-1 rounded-t-xl motion-reduce:animate-none"
-            style={{ height: `${36 + ((index * 17) % 48)}%` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AdminDashboardManagementSkeleton() {
-  const placeholderInfoLines = ["설명: 관리자 KPI 데이터를 불러오는 중입니다."];
-
-  return (
-    <section
-      className="flex h-full min-h-0 min-w-0 flex-col overflow-visible bg-background p-0 font-sans text-foreground lg:min-h-0 lg:overflow-visible"
-      aria-label="관리자 대시보드 (KPI) 로딩 중"
-      data-admin-dashboard-management-skeleton="true"
-      data-layout-recipe="command-surface"
-      role="status"
-      aria-busy="true"
-    >
-      <div className="mb-2 flex shrink-0 flex-col gap-2 md:flex-row md:items-start md:justify-between">
-        <div className="hidden min-w-0 md:block">
-          <h1 className="text-sm font-extrabold leading-tight tracking-[0.01em] text-foreground text-balance">
-            Tzuyang KPI Dashboard
-          </h1>
-        </div>
-        <div
-          className="flex w-full min-w-0 shrink-0 flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 scrollbar-hide [scrollbar-width:none] md:w-auto md:flex-wrap md:items-start md:justify-end md:overflow-visible md:pb-0 md:gap-1 [&::-webkit-scrollbar]:hidden"
-          data-admin-dashboard-action-bar="true"
-          data-admin-dashboard-action-order="order-reset-report-collection-period"
-          data-allow-horizontal-scroll="true"
-          data-horizontal-scroll-owner="admin-dashboard-action-bar"
-        >
-          <div
-            className="order-1 flex shrink-0 items-center justify-end gap-1"
-            data-admin-dashboard-action-group="order"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
-              disabled
-            >
-              카드 순서
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
-              disabled
-            >
-              초기화
-            </Button>
-          </div>
-          <div
-            className="order-2 flex shrink-0 items-center justify-end gap-1"
-            data-admin-dashboard-action-group="report"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-bold"
-              disabled
-            >
-              <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">PDF 보고서</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 shrink-0 rounded-full p-0"
-              aria-label="데이터 수집 상태 로딩 중"
-              disabled
-            >
-              <ScrollText className="h-3.5 w-3.5" aria-hidden="true" />
-            </Button>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-extrabold text-muted-foreground md:hidden"
-            aria-label="대시보드 타임프레임 로딩 중: 1개월"
-            disabled
-          >
-            <span className="text-muted-foreground">기간</span>
-            <span className="text-foreground">1개월</span>
-          </Button>
-          <div
-            className="order-3 hidden shrink-0 flex-wrap justify-end gap-1 md:flex"
-            aria-label="대시보드 타임프레임 로딩 중"
-          >
-            {ADMIN_DASHBOARD_PERIOD_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                variant={option.value === "1M" ? "default" : "outline"}
-                size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[10px]"
-                aria-pressed={option.value === "1M"}
-                disabled
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-      <p
-        className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
-        data-admin-dashboard-mobile-loading-prompt="true"
-      >
-        KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
-      </p>
-
-      <div className="grid min-w-0 auto-rows-min grid-cols-1 gap-2 overflow-x-hidden overflow-y-visible sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-10 lg:grid-rows-[auto_minmax(0,1.15fr)_minmax(0,1fr)] lg:overflow-visible">
-        <AdminDashboardKpiCard
-          widgetId="subscribers"
-          title="현재 구독자"
-          value="—"
-          progress={0}
-          tone="neutral"
-          className="lg:col-span-2"
-          delta="—"
-          deltaLabel="기간 대비"
-          isLoading
-          infoLines={placeholderInfoLines}
-        />
-        <AdminDashboardKpiCard
-          widgetId="views"
-          title="기간 조회 합계"
-          value="—"
-          progress={0}
-          tone="neutral"
-          className="lg:col-span-2"
-          delta="—"
-          deltaLabel="기간 대비"
-          isLoading
-          infoLines={placeholderInfoLines}
-        />
-        <AdminDashboardKpiCard
-          widgetId="likes"
-          title="기간 좋아요 합계"
-          value="—"
-          progress={0}
-          tone="neutral"
-          className="lg:col-span-2"
-          delta="—"
-          deltaLabel="기간 대비"
-          isLoading
-          infoLines={placeholderInfoLines}
-        />
-        <AdminDashboardKpiCard
-          widgetId="comments"
-          title="기간 댓글 합계"
-          value="—"
-          progress={0}
-          tone="neutral"
-          className="lg:col-span-2"
-          delta="—"
-          deltaLabel="기간 대비"
-          isLoading
-          infoLines={placeholderInfoLines}
-        />
-        <AdminDashboardKpiCard
-          widgetId="videos"
-          title="업로드 영상 수"
-          value="—"
-          progress={0}
-          tone="neutral"
-          className="lg:col-span-2"
-          delta="—"
-          deltaLabel="기간 대비"
-          isLoading
-          infoLines={placeholderInfoLines}
-        />
-
-        <div
-          className={cn(
-            adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-3",
-          )}
-          data-admin-dashboard-skeleton-card="impact"
-        >
-          <AdminDashboardCardTitle
-            title="상위 영상 영향도"
-            metric="현재값 기준 · 전체 0개"
-            infoLines={placeholderInfoLines}
-            action={
-              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
-                <AdminDashboardImpactRankLegend />
-                <AdminDashboardViewToggle
-                  value="chart"
-                  onChange={() => undefined}
-                  label="상위 영상 영향도"
-                />
-              </div>
-            }
-          />
-          <AdminDashboardPanelBodySkeleton variant="bubble" />
-        </div>
-
-        <div
-          className={cn(
-            adminDashboardCardClass,
-            "flex min-h-[280px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-4",
-          )}
-          data-admin-dashboard-skeleton-card="trend"
-        >
-          <AdminDashboardCardTitle
-            title="영상별 성과 분포"
-            metric="현재값 기준 · 전체 0개"
-            infoLines={placeholderInfoLines}
-            action={
-              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
-                <AdminDashboardSeriesToggle
-                  label="영상별 성과 분포"
-                  options={[
-                    {
-                      key: "views",
-                      label: "조회수",
-                      dotClassName: "bg-teal-500",
-                    },
-                    {
-                      key: "engagement",
-                      label: "참여",
-                      dotClassName: "bg-muted-foreground/45",
-                    },
-                    {
-                      key: "engagementRate",
-                      label: "참여율",
-                      dotClassName: "bg-amber-500",
-                    },
-                  ]}
-                  visibility={DEFAULT_ADMIN_DASHBOARD_TREND_SERIES_VISIBILITY}
-                  onToggle={() => undefined}
-                />
-                <AdminDashboardViewToggle
-                  value="chart"
-                  onChange={() => undefined}
-                  label="영상별 성과 분포"
-                />
-              </div>
-            }
-          />
-          <AdminDashboardPanelBodySkeleton variant="line" />
-        </div>
-
-        <div
-          className={cn(
-            adminDashboardCardClass,
-            "flex min-h-[280px] flex-col p-3 text-xs sm:col-span-2 lg:col-span-3",
-          )}
-          data-admin-dashboard-skeleton-card="ops"
-        >
-          <AdminDashboardCardTitle
-            title="운영·검수 요약"
-            metric="검수 리스크 0"
-            infoLines={placeholderInfoLines}
-            action={
-              <AdminDashboardViewToggle
-                value="chart"
-                onChange={() => undefined}
-                label="운영·검수 요약"
-              />
-            }
-          />
-          <AdminDashboardPanelBodySkeleton variant="ops" />
-        </div>
-
-        <div
-          className={cn(
-            adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-3 sm:col-span-2 lg:col-span-5",
-          )}
-          data-admin-dashboard-skeleton-card="topContent"
-        >
-          <AdminDashboardCardTitle
-            title="콘텐츠 성과 TOP 5"
-            metric="선택 영상 0개"
-            infoLines={placeholderInfoLines}
-            action={
-              <div className="flex min-w-fit flex-nowrap items-center justify-end gap-1">
-                <AdminDashboardSeriesToggle
-                  label="콘텐츠 성과 TOP 5"
-                  options={[
-                    {
-                      key: "views",
-                      label: "조회수",
-                      dotClassName: "bg-teal-500",
-                    },
-                    {
-                      key: "likes",
-                      label: "좋아요",
-                      dotClassName: "bg-muted-foreground/45",
-                    },
-                    {
-                      key: "comments",
-                      label: "댓글",
-                      dotClassName: "bg-muted-foreground/30",
-                    },
-                  ]}
-                  visibility={
-                    DEFAULT_ADMIN_DASHBOARD_TOP_CONTENT_SERIES_VISIBILITY
-                  }
-                  onToggle={() => undefined}
-                />
-                <AdminDashboardViewToggle
-                  value="chart"
-                  onChange={() => undefined}
-                  label="콘텐츠 성과 TOP 5"
-                />
-              </div>
-            }
-          />
-          <AdminDashboardPanelBodySkeleton variant="stacked" />
-        </div>
-
-        <div
-          className={cn(
-            adminDashboardCardClass,
-            "flex min-h-[220px] flex-col overflow-hidden p-2 sm:col-span-2 lg:col-span-5",
-          )}
-          data-admin-dashboard-skeleton-card="engagementRate"
-        >
-          <AdminDashboardCardTitle
-            title="성과 진단"
-            metric="진단 신호 0개 · 선택 영상 0개"
-            infoLines={placeholderInfoLines}
-            action={
-              <div className="ml-auto flex min-w-fit shrink-0 flex-nowrap items-center gap-2">
-                <AdminDashboardDiagnosisMeta periodLabel="1개월" />
-                <AdminDashboardViewToggle
-                  value="chart"
-                  onChange={() => undefined}
-                  label="성과 진단"
-                />
-              </div>
-            }
-          />
-          <AdminDashboardPanelBodySkeleton variant="diagnosis" />
-        </div>
-      </div>
-    </section>
-  );
+function AdminDashboardPanelPending({ variant = "chart" }: { variant?: AdminDashboardPanelVariant }) {
+  return <div className="flex min-h-0 flex-1 items-center justify-center" aria-busy="true" data-admin-dashboard-data-pending={variant}><AdminDataPending variant={variant === "table" ? "list" : "chart"} /></div>;
 }
 
 function AdminDashboardCardTitle({
@@ -4231,7 +3119,6 @@ function AdminDashboardKpiCard({
   title,
   value,
   caption,
-  progress,
   delta,
   deltaLabel = "기간 대비",
   className,
@@ -4249,7 +3136,6 @@ function AdminDashboardKpiCard({
   title: string;
   value: string;
   caption?: string;
-  progress: number;
   delta?: string;
   deltaLabel?: string;
   className?: string;
@@ -4263,7 +3149,6 @@ function AdminDashboardKpiCard({
   isFullscreen?: boolean;
   fullscreenAction?: ReactNode;
 }) {
-  const safeProgress = clampDashboardPercent(progress);
   const toneClass = {
     sky: {
       bar: "bg-sky-500 dark:bg-sky-400",
@@ -4296,22 +3181,18 @@ function AdminDashboardKpiCard({
       "border-sky-500/35 bg-sky-50/20 dark:border-sky-400/45 dark:bg-sky-950/20",
     supporting: undefined,
   }[emphasis];
-  const cursorStrokeOpacity = emphasis === "primary" ? 0.45 : 0.32;
-  const sparklineFillOpacity = emphasis === "primary" ? 0.36 : 0.24;
-  const chartData = sparklineData.filter((point) =>
-    Number.isFinite(point.value),
-  );
+  const chartData = sparklineData.filter((point) => Number.isFinite(point.value));
 
   return (
     <div
       className={cn(
         adminDashboardCardClass,
-        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
+        "relative z-0 grid min-h-[132px] grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-visible p-3 sm:p-3.5 hover:z-20 focus-within:z-20",
         emphasisClass,
         className,
         isFullscreen && adminDashboardFullscreenCardClassName,
       )}
-      data-admin-dashboard-kpi-card="recharts-sparkline"
+      data-admin-dashboard-kpi-card="semiotic-sparkline"
       data-admin-dashboard-widget-card={widgetId}
       data-admin-dashboard-kpi-emphasis={emphasis}
       data-admin-dashboard-kpi-tone={tone}
@@ -4341,18 +3222,12 @@ function AdminDashboardKpiCard({
             data-horizontal-scroll-owner="admin-dashboard-kpi-title-actions"
             data-admin-dashboard-kpi-title-actions="single-line-scroll"
           >
-            {isLoading ? (
-              <Skeleton
-                className="h-5 w-20 shrink-0 rounded-full motion-reduce:animate-none"
-                data-admin-dashboard-dynamic-skeleton="delta"
-                aria-label={`${title} 기간 대비 로딩 중`}
-              />
-            ) : delta !== undefined ? (
+            {delta !== undefined ? (
               <AdminDashboardInlineTooltip
                 label={`${title} ${deltaLabel}`}
                 lines={[
                   `${title} ${deltaLabel}: ${delta}`,
-                  "계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100",
+                  delta === "—" ? "동일한 채널과 비교 기간의 관측 이력이 있어야 변화율을 계산할 수 있습니다." : "계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100",
                 ]}
                 className={cn(
                   "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary dark:bg-muted/35",
@@ -4372,79 +3247,37 @@ function AdminDashboardKpiCard({
         </div>
         <div className="h-px bg-border/70" aria-hidden="true" />
       </div>
-      {isLoading ? (
-        <AdminDashboardKpiValueSkeleton />
-      ) : (
-        <div className="flex min-h-0 min-w-0 items-center justify-between gap-3">
-          <div className="min-w-0">
+      {
+        <div className="flex min-h-0 min-w-0 flex-col items-stretch justify-between gap-2" data-admin-dashboard-kpi-body="true">
+          <div className="flex min-w-0 items-center justify-between gap-2" data-admin-dashboard-kpi-value-row="true">
             <p
               className="whitespace-nowrap text-sm font-black leading-none tracking-[-0.035em] tabular-nums text-foreground sm:text-base"
               data-admin-dashboard-kpi-value-size="bounded"
+              style={{ "--admin-kpi-value-length": Math.max(value.length, isLoading ? 13 : 1) } as CSSProperties}
             >
-              {value}
+              {isLoading ? <><span aria-hidden="true" data-slot="skeleton" className="inline-block h-[1em] w-[7ch] max-w-full rounded-md bg-muted/50 align-middle" /><span className="sr-only">값 확인 중</span></> : value}
             </p>
-            {caption ? (
-              <p className="mt-1.5 truncate text-[11px] font-semibold leading-none text-muted-foreground">
-                {caption}
-              </p>
-            ) : null}
-          </div>
           {chartData.length > 1 ? (
             <div
-              className="h-11 w-24 shrink-0 overflow-visible [&_.recharts-surface]:overflow-visible [&_.recharts-wrapper]:overflow-visible"
+              className="h-11 w-24 shrink-0 overflow-visible"
               aria-hidden="true"
               data-admin-dashboard-kpi-sparkline="true"
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={chartData}
-                  margin={{ top: 6, right: 2, bottom: 2, left: 2 }}
-                >
-                  <RechartsTooltip
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    content={
-                      <AdminDashboardKpiSparklineTooltip title={title} />
-                    }
-                    wrapperStyle={adminDashboardTooltipWrapperStyle}
-                    cursor={{
-                      stroke: toneClass.stroke,
-                      strokeOpacity: cursorStrokeOpacity,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke={toneClass.stroke}
-                    strokeWidth={2}
-                    fill={toneClass.stroke}
-                    fillOpacity={sparklineFillOpacity}
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <SemioticKpiSparkline points={chartData} color={toneClass.stroke} title={title} />
             </div>
+          ) : (
+            <span className="shrink-0 whitespace-nowrap text-[13px] text-muted-foreground" data-admin-dashboard-kpi-history-empty="true" title="비교할 추이 이력이 없습니다">
+              {isLoading ? "확인 중" : "이력 없음"}
+            </span>
+          )}
+          </div>
+          {caption ? (
+            <p className="line-clamp-2 text-[13px] leading-5 text-muted-foreground" data-admin-dashboard-kpi-caption="true" title={caption}>
+              {caption}
+            </p>
           ) : null}
         </div>
-      )}
-      {isLoading ? (
-        <Skeleton
-          className="h-1.5 rounded-full motion-reduce:animate-none"
-          aria-hidden="true"
-        />
-      ) : (
-        <div className="grid gap-1.5">
-          <div
-            className="h-1.5 overflow-hidden rounded-full bg-muted"
-            aria-hidden="true"
-          >
-            <div
-              className={cn("h-full rounded-full", toneClass.bar)}
-              style={{ width: `${safeProgress}%` }}
-            />
-          </div>
-        </div>
-      )}
+      }
     </div>
   );
 }
@@ -4495,6 +3328,7 @@ function AdminDashboardOpsSummaryCard({
         "flex h-full min-h-[320px] flex-col p-3 text-xs sm:min-h-[280px]",
         className,
       )}
+      aria-busy={isLoading}
       data-admin-dashboard-ops-summary-visual="progress-bars"
       data-admin-dashboard-widget-card="ops"
       style={style}
@@ -4502,7 +3336,7 @@ function AdminDashboardOpsSummaryCard({
     >
       <AdminDashboardCardTitle
         title="운영·검수 요약"
-        metric={`검수 리스크 ${formatNumber(riskTotal)}`}
+        metric={`검수 리스크 ${isLoading ? "—" : formatNumber(riskTotal)}`}
         infoLines={[
           "설명: 위쪽은 운영 중인 데이터 수, 아래쪽은 확인이 필요한 데이터 수입니다.",
           "읽는 법: 막대는 같은 묶음 안에서 가장 큰 항목을 기준으로 얼마나 큰지 보여줍니다.",
@@ -4522,11 +3356,7 @@ function AdminDashboardOpsSummaryCard({
           </div>
         }
       />
-      {isLoading ? (
-        <AdminDashboardPanelBodySkeleton
-          variant={view === "table" ? "table" : "ops"}
-        />
-      ) : view === "table" ? (
+      {view === "table" ? (
         <AdminDashboardScrollTable
           rows={tableRows}
           emptyText="표시할 운영·검수 데이터가 없습니다."
@@ -4571,10 +3401,6 @@ function AdminDashboardOpsSummaryCard({
               1,
               ...section.rows.map((row) => row.rawValue ?? 0),
             );
-            const barTone =
-              sectionIndex === 0
-                ? "bg-muted-foreground/35"
-                : "bg-rose-500 dark:bg-rose-400";
             const labelTone =
               sectionIndex === 0
                 ? "text-muted-foreground"
@@ -4593,34 +3419,25 @@ function AdminDashboardOpsSummaryCard({
                   </span>
                 </div>
                 <div className="grid gap-2">
-                  {section.rows.map((row) => {
-                    const rowPercent = clampDashboardPercent(
-                      ((row.rawValue ?? 0) / maxRawValue) * 100,
-                    );
-
-                    return (
-                      <div
-                        key={`${section.title}-${row.label}`}
-                        className="grid grid-cols-[minmax(4.5rem,5.5rem)_minmax(0,1fr)_minmax(3.25rem,max-content)] items-center gap-2"
-                      >
-                        <span className="min-w-0 truncate text-muted-foreground">
-                          {row.label}
-                        </span>
-                        <div
-                          className="h-1.5 overflow-hidden rounded-full bg-muted"
-                          aria-hidden="true"
-                        >
-                          <div
-                            className={cn("h-full rounded-full", barTone)}
-                            style={{ width: `${rowPercent}%` }}
-                          />
-                        </div>
-                        <span className="shrink-0 text-right text-[12px] font-extrabold tabular-nums text-foreground sm:text-[13px]">
-                          {row.value}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {section.rows.map(row => <div key={`${section.title}-${row.label}`}
+                    className="grid grid-cols-[minmax(4.5rem,5.5rem)_minmax(0,1fr)_minmax(3.25rem,max-content)] items-center gap-2">
+                    <span className="min-w-0 truncate text-muted-foreground">{row.label}</span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true" data-admin-dashboard-ops-bars="semiotic">
+                      <SemioticBarChart
+                        data={[{ label: row.label, value: row.rawValue ?? 0 }]}
+                        categoryAccessor="label" valueAccessor="value" orientation="horizontal" mode="sparkline"
+                        valueExtent={[0, maxRawValue]} sort={false} barPadding={0}
+                        color={sectionIndex === 0 ? "#a1a1aa" : "#f43f5e"}
+                        width={120} height={6} responsiveWidth responsiveHeight maxDevicePixelRatio={2}
+                        margin={0} showLegend={false} showGrid={false} showCategoryTicks={false}
+                        accessibleTable={false} frameProps={{ accessibleTable: false, showAxes: false }}
+                        enableHover={false} animate={false}
+                      />
+                    </div>
+                    <span className="shrink-0 text-right text-[12px] font-extrabold tabular-nums text-foreground sm:text-[13px]">
+                      {isLoading && row.rawValue === null ? <span aria-label="값 확인 중" data-slot="skeleton" className="inline-block h-3 w-8 rounded bg-muted/50" /> : row.value}
+                    </span>
+                  </div>)}
                 </div>
               </div>
             );
@@ -4669,9 +3486,9 @@ function AdminDashboardMultiLineChart({
   seriesVisibility: AdminDashboardSeriesVisibility<AdminDashboardTrendSeriesKey>;
   totalPointCount?: number;
 }) {
-  const isDenseChart = points.length > 80;
+  const isDenseChart = points.length > 24;
   const normalizeValues = (values: number[]) => {
-    const maxSeriesValue = Math.max(1, ...values);
+    const maxSeriesValue = Math.max(1, ...values.map(Math.abs));
     return values.map((value) => Math.round((value / maxSeriesValue) * 100));
   };
   const viewIndex = normalizeValues(
@@ -4697,6 +3514,10 @@ function AdminDashboardMultiLineChart({
   );
   const chartData = points.map((point, index) => ({
     label: point.label,
+    rawViews: point.secondaryValue,
+    rawEngagement: point.value,
+    rawRate: point.secondaryValue > 0 ? point.value / point.secondaryValue * 100 : null,
+    videoCount: point.videoCount ?? 1,
     조회수: viewIndex[index] ?? 0,
     참여: engagementIndex[index] ?? 0,
     참여율: rateIndex[index] ?? 0,
@@ -4707,6 +3528,15 @@ function AdminDashboardMultiLineChart({
     참여율최고: rateExtremeLabels[index]?.high ?? "",
     참여율최저: rateExtremeLabels[index]?.low ?? "",
   }));
+
+  const visibleSeries = [
+    { key: "조회수", visible: seriesVisibility.views, color: adminDashboardFocusPalette.primary },
+    { key: "참여", visible: seriesVisibility.engagement, color: adminDashboardFocusPalette.muted },
+    { key: "참여율", visible: seriesVisibility.engagementRate, color: adminDashboardFocusPalette.warning },
+  ].filter(series => series.visible);
+  const lineData = visibleSeries.flatMap(series => chartData.map((row, index) => ({
+    ...row, x: index, y: Number(row[series.key as "조회수" | "참여" | "참여율"]), series: series.key,
+  })));
 
   if (points.length === 0) {
     return (
@@ -4725,121 +3555,45 @@ function AdminDashboardMultiLineChart({
       )}
       role="group"
       aria-label="영상별 성과 분포: 조회수, 참여, 참여율 정규화 비교"
-      data-admin-dashboard-line-chart="recharts"
-      data-admin-dashboard-progressive-chart="true"
+      data-admin-dashboard-line-chart="semiotic"
+      data-admin-dashboard-monthly-chart="true"
     >
       <p className="sr-only">
-        조회수, 참여, 참여율을 선택 기간 영상의 게시일 순서로 정규화해
-        비교합니다. 현재 {formatNumber(points.length)}개를 표시하고 전체 대상은{" "}
-        {formatNumber(totalPointCount)}개입니다. 사용자가 각 지표를 숨김/보임
+        영상을 업로드 월별로 묶어 영상당 평균 조회수와 참여를 비교합니다.
+        현재 {formatNumber(points.length)}개월을 표시하고 전체 대상은 {formatNumber(totalPointCount)}개월입니다. 사용자가 각 지표를 숨김/보임
         처리할 수 있습니다.
       </p>
+      <p className="mb-1 text-[11px] leading-4 text-muted-foreground">업로드 월별 · 영상당 평균 · 지표별 최고 월 = 100</p>
       <div className="min-h-0 flex-1">
-        <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-          <LineChart data={chartData} margin={adminDashboardChartMargin}>
-            <CartesianGrid stroke={adminDashboardGridColor} vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              height={18}
-              tickMargin={2}
-              minTickGap={12}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={2}
-              width={28}
-            />
-            <RechartsTooltip
-              content={<AdminDashboardTrendTooltip />}
-              wrapperStyle={adminDashboardTooltipWrapperStyle}
-              cursor={{ stroke: adminDashboardGridColor }}
-            />
-            {seriesVisibility.views ? (
-              <Line
-                type="monotone"
-                dataKey="조회수"
-                stroke={adminDashboardFocusPalette.primary}
-                strokeWidth={2.4}
-                dot={isDenseChart ? false : { r: 2.4 }}
-                activeDot={{ r: isDenseChart ? 3 : 4 }}
-                isAnimationActive={false}
-              >
-                <LabelList
-                  dataKey="조회수최고"
-                  position="top"
-                  fill={adminDashboardFocusPalette.primary}
-                  fontSize={10}
-                  fontWeight={800}
-                />
-                <LabelList
-                  dataKey="조회수최저"
-                  position="bottom"
-                  fill={adminDashboardFocusPalette.mutedStrong}
-                  fontSize={10}
-                  fontWeight={800}
-                />
-              </Line>
-            ) : null}
-            {seriesVisibility.engagement ? (
-              <Line
-                type="monotone"
-                dataKey="참여"
-                stroke={adminDashboardFocusPalette.muted}
-                strokeWidth={2.4}
-                dot={isDenseChart ? false : { r: 2.4 }}
-                activeDot={{ r: isDenseChart ? 3 : 4 }}
-                isAnimationActive={false}
-              >
-                <LabelList
-                  dataKey="참여최고"
-                  position="top"
-                  fill={adminDashboardFocusPalette.mutedStrong}
-                  fontSize={10}
-                  fontWeight={800}
-                />
-                <LabelList
-                  dataKey="참여최저"
-                  position="bottom"
-                  fill={adminDashboardFocusPalette.mutedStrong}
-                  fontSize={10}
-                  fontWeight={800}
-                />
-              </Line>
-            ) : null}
-            {seriesVisibility.engagementRate ? (
-              <Line
-                type="monotone"
-                dataKey="참여율"
-                stroke={adminDashboardFocusPalette.warning}
-                strokeWidth={2.8}
-                dot={isDenseChart ? false : { r: 2.6 }}
-                activeDot={{ r: isDenseChart ? 3 : 4.2 }}
-                isAnimationActive={false}
-              >
-                <LabelList
-                  dataKey="참여율최고"
-                  position="top"
-                  fill={adminDashboardFocusPalette.warning}
-                  fontSize={10}
-                  fontWeight={900}
-                />
-                <LabelList
-                  dataKey="참여율최저"
-                  position="bottom"
-                  fill={adminDashboardFocusPalette.warning}
-                  fontSize={10}
-                  fontWeight={900}
-                />
-              </Line>
-            ) : null}
-          </LineChart>
-        </ResponsiveContainer>
+        <SemioticLineChart
+          data={lineData}
+          xAccessor="x" yAccessor="y" lineBy="series" colorBy="series"
+          colorScheme={Object.fromEntries(visibleSeries.map(series => [series.key, series.color]))}
+          width={600} height={240} responsiveWidth responsiveHeight maxDevicePixelRatio={2}
+          margin={{ top: 18, right: 16, bottom: 30, left: 36 }}
+          curve="monotoneX" lineWidth={2.4} showPoints={!isDenseChart} pointRadius={2.4}
+          yExtent={[chartData.some(row => row.조회수 < 0 || row.참여 < 0) ? -100 : 0, 100]}
+          xFormat={value => chartData[Math.round(Number(value))]?.label ?? ""}
+          yFormat={value => String(Math.round(Number(value)))}
+          showGrid showLegend={false} accessibleTable={false} animate={false}
+          className="[&_text]:!text-[13px] [&_text]:fill-muted-foreground"
+          emptyContent={<p className="p-4 text-[13px] text-muted-foreground">표시할 지표를 선택해 주세요.</p>}
+          annotations={isDenseChart ? [] : lineData.flatMap(point => {
+            const row = point as typeof point & Record<string, unknown>;
+            return ["최고", "최저"].flatMap(extreme => row[`${point.series}${extreme}`] ? [{
+              type: "widget", x: point.x, y: point.y, dy: extreme === "최고" ? -16 : 16,
+              content: <span className="whitespace-nowrap text-[13px] font-extrabold text-foreground">{String(row[`${point.series}${extreme}`])}</span>,
+            }] : []);
+          })}
+          tooltip={point => {
+            const row = chartData[Math.round(Number(point.x))];
+            if (!row) return null;
+            return <AdminDashboardTrendTooltip active label={row.label} payload={visibleSeries.map(series => ({
+              name: series.key, color: series.color,
+              value: row[series.key as "조회수" | "참여" | "참여율"], payload: row,
+            }))} />;
+          }}
+        />
       </div>
     </div>
   );
@@ -4919,7 +3673,7 @@ function AdminDashboardBubbleChart({
       )}
       role="img"
       aria-label={`성과 분산 분석: 조회수와 참여 규모 ${topVideos.length}개 버블 차트`}
-      data-admin-dashboard-bubble-chart="recharts"
+      data-admin-dashboard-bubble-chart="semiotic"
     >
       <p className="sr-only">
         상위 영상 영향도 첫 항목은 {topVideo.title}이며 조회수는{" "}
@@ -4928,98 +3682,28 @@ function AdminDashboardBubbleChart({
         위치와 크기가 의미값입니다.
       </p>
       <div className="min-h-0 flex-1">
-        <ResponsiveContainer width="100%" height="100%" minHeight={210}>
-          <ScatterChart margin={adminDashboardScatterChartMargin}>
-            <CartesianGrid stroke={adminDashboardGridColor} />
-            <XAxis
-              type="number"
-              dataKey="조회수"
-              name="조회수"
-              domain={[
-                (dataMin: number) => Math.max(0, dataMin * 0.92),
-                (dataMax: number) => Math.max(1, dataMax * 1.08),
-              ]}
-              tickFormatter={formatCompactNumber}
-              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              height={18}
-              tickMargin={2}
-            />
-            <YAxis
-              type="number"
-              dataKey="참여"
-              name="참여"
-              domain={[
-                (dataMin: number) => Math.max(0, dataMin * 0.9),
-                (dataMax: number) => Math.max(1, dataMax * 1.12),
-              ]}
-              tickFormatter={formatCompactNumber}
-              tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              tickMargin={2}
-              width={38}
-            />
-            <ZAxis type="number" dataKey="규모" range={[120, 1200]} />
-            <RechartsTooltip
-              cursor={{ stroke: adminDashboardGridColor }}
-              wrapperStyle={adminDashboardTooltipWrapperStyle}
-              content={({ active, payload }) => {
-                const row = payload?.[0]?.payload as
-                  | (typeof chartData)[number]
-                  | undefined;
-
-                if (!active || !row) return null;
-
-                return (
-                  <AdminDashboardTooltipPanel
-                    title={
-                      <span className="line-clamp-2 leading-5">
-                        {row.title}
-                      </span>
-                    }
-                    rows={[
-                      {
-                        label: "조회수",
-                        value: formatNumber(row.조회수),
-                        note: "오른쪽일수록 큼",
-                        color: adminDashboardFocusPalette.primary,
-                      },
-                      {
-                        label: "참여",
-                        value: formatNumber(row.참여),
-                        note: "좋아요+댓글",
-                        color: adminDashboardFocusPalette.muted,
-                      },
-                    ]}
-                    footer="계산식: 참여 = 좋아요 + 댓글 · 원 크기 = 참여"
-                    dataAttribute="bubble-video"
-                  />
-                );
-              }}
-            />
-            <Scatter data={chartData} isAnimationActive={false}>
-              <LabelList
-                dataKey="조회수최고"
-                position="top"
-                fill={adminDashboardFocusPalette.primary}
-                fontSize={10}
-                fontWeight={900}
-              />
-              <LabelList
-                dataKey="조회수최저"
-                position="bottom"
-                fill={adminDashboardFocusPalette.mutedStrong}
-                fontSize={10}
-                fontWeight={900}
-              />
-              {chartData.map((entry, index) => (
-                <Cell key={entry.title} fill={colors[index % colors.length]} />
-              ))}
-            </Scatter>
-          </ScatterChart>
-        </ResponsiveContainer>
+        <SemioticScatterplot
+          data={chartData.map((row, index) => ({ ...row, rank: String(Math.min(index, colors.length - 1)) }))}
+          xAccessor="조회수" yAccessor="참여" sizeBy="규모" sizeRange={[6, 20]}
+          colorBy="rank" colorScheme={Object.fromEntries(colors.map((color, index) => [String(index), color]))}
+          width={400} height={280} responsiveWidth responsiveHeight maxDevicePixelRatio={2}
+          margin={{ top: 16, right: 20, bottom: 32, left: 48 }}
+          xExtent={[Math.max(0, Math.min(...chartData.map(row => row.조회수)) * 0.92), Math.max(1, Math.max(...chartData.map(row => row.조회수)) * 1.08)]}
+          yExtent={[Math.max(0, Math.min(...chartData.map(row => row.참여)) * 0.9), Math.max(1, Math.max(...chartData.map(row => row.참여)) * 1.12)]}
+          xFormat={value => formatCompactNumber(Number(value))} yFormat={value => formatCompactNumber(Number(value))}
+          pointOpacity={0.85} showGrid showLegend={false} accessibleTable={false} animate={false}
+          frameProps={{ accessibleTable: false }}
+          className="[&_text]:!text-[13px] [&_text]:fill-muted-foreground"
+          tooltip={row => <AdminDashboardTooltipPanel
+            title={<span className="line-clamp-2 leading-5">{String(row.title ?? "영상")}</span>}
+            rows={[
+              { label: "조회수", value: formatNumber(Number(row.조회수)), note: "오른쪽일수록 큼", color: adminDashboardFocusPalette.primary },
+              { label: "참여", value: formatNumber(Number(row.참여)), note: "좋아요+댓글", color: adminDashboardFocusPalette.muted },
+            ]}
+            footer="계산식: 참여 = 좋아요 + 댓글 · 원 크기 = 참여"
+            dataAttribute="bubble-video"
+          />}
+        />
       </div>
     </div>
   );
@@ -5161,45 +3845,39 @@ function AdminDashboardGroupedBarChart({
                 </span>
               </div>
               <div
-                className={cn(
-                  "flex min-w-0 overflow-x-auto overflow-y-visible rounded-xl bg-muted [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-                  isFullscreen ? "h-12 sm:h-14" : "h-9",
-                )}
+                className={cn("relative min-w-0 rounded-xl bg-muted", isFullscreen ? "h-12 sm:h-14" : "h-9")}
+                data-admin-dashboard-top-content-stacks="semiotic"
               >
-                {visibleRows.map((row, index) => {
-                  const value = row[metric.key];
-                  const percent = total > 0 ? (value / total) * 100 : 0;
-
-                  return (
-                    <AdminDashboardInlineTooltip
-                      key={`${metric.key}-${row.label}`}
+                <SemioticStackedBarChart
+                  data={visibleRows.map((row, index) => ({
+                    category: metric.label, rank: String(index + 1), title: row.label,
+                    value: row[metric.key], percent: total > 0 ? row[metric.key] / total * 100 : 0,
+                    benchmark: row.viewBenchmark,
+                  }))}
+                  categoryAccessor="category" valueAccessor="percent" stackBy="rank" colorBy="rank"
+                  colorScheme={{ "1": "#14b8a6", "2": "#4ec8ba", "3": "#80d8ce", "4": "#a1a1aa", "5": "#d4d4d8" }}
+                  orientation="horizontal" mode="sparkline" valueExtent={[0, 100]}
+                  width={500} height={36} responsiveWidth responsiveHeight maxDevicePixelRatio={2}
+                  margin={0} barPadding={0} showLegend={false} showGrid={false} showCategoryTicks={false}
+                  accessibleTable={false} frameProps={{ accessibleTable: false, showAxes: false }} animate={false}
+                  tooltip={point => <AdminDashboardTooltipLinesPanel
+                    lines={metric.key === "viewCount" ? [String(point.title), `막대 비중: ${formatDashboardPercent(Number(point.percent))}`, `성과 기여: ${String(point.benchmark)}`]
+                      : [String(point.title), `${metric.label}: ${formatNumber(Number(point.value))}`, `막대 비중: ${formatDashboardPercent(Number(point.percent))}`, formatDashboardAverageComparison(Number(point.value), average)]}
+                    dataAttribute="top-content-share"
+                  />}
+                />
+                <div className="absolute inset-0 flex">
+                  {visibleRows.map((row, index) => {
+                    const percent = total > 0 ? row[metric.key] / total * 100 : 0;
+                    if (percent <= 0) return null;
+                    return <AdminDashboardInlineTooltip key={index} rankSegment={index + 1}
                       label={`${row.label} ${metric.label} 비중`}
-                      lines={
-                        metric.key === "viewCount"
-                          ? [
-                              `${row.label}`,
-                              `막대 비중: ${formatDashboardPercent(percent)}`,
-                              `성과 기여: ${row.viewBenchmark}`,
-                            ]
-                          : [
-                              `${row.label}`,
-                              `${metric.label}: ${formatNumber(value)}`,
-                              `막대 비중: ${formatDashboardPercent(percent)}`,
-                              formatDashboardAverageComparison(value, average),
-                            ]
-                      }
-                      className={cn(
-                        "flex min-w-[8%] items-center justify-center px-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                        rankColors[index]?.barClass ??
-                          "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
-                      )}
-                      rankSegment={index + 1}
-                      style={{ width: `${Math.max(8, percent)}%` }}
-                    >
-                      {percent.toFixed(0)}%
-                    </AdminDashboardInlineTooltip>
-                  );
-                })}
+                      lines={metric.key === "viewCount" ? [row.label, `막대 비중: ${formatDashboardPercent(percent)}`, `성과 기여: ${row.viewBenchmark}`]
+                        : [row.label, `${metric.label}: ${formatNumber(row[metric.key])}`, `막대 비중: ${formatDashboardPercent(percent)}`, formatDashboardAverageComparison(row[metric.key], average)]}
+                      className="flex min-w-0 items-center justify-center overflow-hidden text-[13px] font-black tabular-nums text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      style={{ width: `${percent}%` }}>{percent >= 8 ? `${percent.toFixed(0)}%` : ""}</AdminDashboardInlineTooltip>;
+                  })}
+                </div>
               </div>
             </div>
           );
@@ -5265,13 +3943,7 @@ function AdminDashboardDiagnosisBoard({
   isFullscreen?: boolean;
 }) {
   const modeLabel =
-    metricMode === "delta" ? "기간 순증 평균 대비" : "기간 영상 현재 평균 대비";
-  const signalBarClass = {
-    primary: "bg-teal-500",
-    warning: "bg-amber-500",
-    risk: "bg-rose-500",
-  } satisfies Record<AdminDashboardContentInsight["tone"], string>;
-
+    metricMode === "delta" ? "기간 변화 근거" : "누적 통계 근거";
   const visibleInsights = insights.slice(
     0,
     ADMIN_DASHBOARD_CONTENT_INSIGHT_TARGET_COUNT,
@@ -5299,17 +3971,17 @@ function AdminDashboardDiagnosisBoard({
       data-admin-dashboard-diagnosis-board="actionable-insights"
     >
       <p className="sr-only">
-        {periodLabel} 기준으로 조회 성장, 참여율, 초반 반응, 롱테일 후보를 채널
-        기여도와 참여율로 우선 점검할 영상을 표시합니다.
+        {periodLabel} 기준으로 조회 집중도, 충분한 조회 표본의 참여율,
+        영상당 중앙값과 최신 업로드 포함 여부를 확인합니다.
       </p>
       <div className="grid min-h-0 grid-cols-1 gap-2 sm:h-full sm:grid-cols-2 sm:grid-rows-2 sm:gap-1">
         {visibleInsights.map((insight) => {
           const tooltipLines = [
             `${insight.label}: ${insight.title}`,
             insight.description,
-            `신호 강도: ${insight.scoreLabel}`,
+            `해석: ${insight.scoreLabel}`,
             ...insight.qualityBadges.map((badge) => badge.description),
-            "계산식: 신호 강도 = 카드별 규칙 점수를 0~100으로 표시합니다.",
+            "참고: 관측된 통계의 비교이며 구독자 증가의 원인이나 미래 성과를 추정하지 않습니다.",
           ];
 
           return (
@@ -5349,28 +4021,9 @@ function AdminDashboardDiagnosisBoard({
                   <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
                     {insight.description}
                   </p>
-                  <div
-                    className="mt-1.5 grid gap-1"
-                    data-admin-dashboard-diagnosis-visual="signal-bar"
-                  >
-                    <div className="h-1.5 overflow-hidden rounded-full bg-background/80">
-                      <div
-                        className={cn(
-                          "h-full rounded-full",
-                          signalBarClass[insight.tone],
-                        )}
-                        style={{
-                          width: `${Math.max(8, Math.min(100, insight.score))}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
-                      <span>신호 강도</span>
-                      <span className="min-w-0 truncate text-foreground">
-                        {insight.scoreLabel}
-                      </span>
-                    </div>
-                  </div>
+                  <p className="mt-2 border-t border-border/60 pt-1.5 text-[11px] leading-4 text-muted-foreground" data-admin-dashboard-diagnosis-visual="evidence">
+                    {insight.scoreLabel}
+                  </p>
                 </div>
                 <UiTooltipContent
                   side="top"
@@ -5433,103 +4086,37 @@ function AdminDashboardAreaChart({
       )}
       role="img"
       aria-label="참여율 상세 알림: 영상별 참여율 추이"
-      data-admin-dashboard-area-chart="recharts"
+      data-admin-dashboard-area-chart="semiotic"
     >
       <p className="sr-only">
         최근 참여율 지표는{" "}
         {latestPoint ? formatDashboardPercent(latestPoint.참여율) : "—"}입니다.
       </p>
-      <ResponsiveContainer width="100%" height="100%" minHeight={160}>
-        <AreaChart data={chartData} margin={adminDashboardChartMargin}>
-          <defs>
-            <linearGradient
-              id="adminDashboardEngagementArea"
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="5%"
-                stopColor={adminDashboardFocusPalette.warning}
-                stopOpacity={0.42}
-              />
-              <stop
-                offset="95%"
-                stopColor={adminDashboardFocusPalette.warning}
-                stopOpacity={0.08}
-              />
-            </linearGradient>
-          </defs>
-          <CartesianGrid stroke={adminDashboardGridColor} vertical={false} />
-          <XAxis
-            dataKey="label"
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            height={18}
-            tickMargin={2}
-            minTickGap={12}
-          />
-          <YAxis
-            tickFormatter={(value) => `${Number(value).toFixed(1)}%`}
-            tick={{ fill: adminDashboardAxisColor, fontSize: 11 }}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={2}
-            width={42}
-          />
-          <RechartsTooltip
-            content={({ active, label, payload }) => {
-              const value = payload?.[0]?.value;
-              if (!active || value == null) return null;
-
-              return (
-                <AdminDashboardTooltipPanel
-                  title={String(label ?? "날짜 없음")}
-                  rows={[
-                    {
-                      label: "참여율",
-                      value: `${Number(value).toFixed(2)}%`,
-                      note: "조회수 대비 참여 비율",
-                      color: adminDashboardFocusPalette.warning,
-                    },
-                  ]}
-                  footer="계산식: 참여율 = 참여 / 조회수 × 100."
-                  dataAttribute="engagement-area"
-                />
-              );
-            }}
-            wrapperStyle={adminDashboardTooltipWrapperStyle}
-            cursor={{ stroke: adminDashboardGridColor }}
-          />
-          <Area
-            type="monotone"
-            dataKey="참여율"
-            stroke={adminDashboardFocusPalette.warning}
-            strokeWidth={2.6}
-            fill="url(#adminDashboardEngagementArea)"
-            dot={{ r: 2.4 }}
-            activeDot={{ r: 4.2 }}
-            isAnimationActive={false}
-          >
-            <LabelList
-              dataKey="참여율최고"
-              position="top"
-              fill={adminDashboardFocusPalette.warning}
-              fontSize={10}
-              fontWeight={900}
-            />
-            <LabelList
-              dataKey="참여율최저"
-              position="bottom"
-              fill={adminDashboardFocusPalette.warning}
-              fontSize={10}
-              fontWeight={900}
-            />
-          </Area>
-        </AreaChart>
-      </ResponsiveContainer>
+      <SemioticAreaChart
+        data={chartData.map((row, index) => ({ ...row, x: index }))}
+        xAccessor="x" yAccessor="참여율"
+        color={adminDashboardFocusPalette.warning} stroke={adminDashboardFocusPalette.warning}
+        width={600} height={220} responsiveWidth responsiveHeight maxDevicePixelRatio={2}
+        margin={{ top: 20, right: 16, bottom: 30, left: 48 }}
+        curve="monotoneX" lineWidth={2.6} areaOpacity={0.25} gradientFill
+        showPoints pointRadius={2.4} showGrid showLegend={false} accessibleTable={false} animate={false}
+        xFormat={value => chartData[Math.round(Number(value))]?.label ?? ""}
+        yFormat={value => `${Number(value).toFixed(1)}%`}
+        className="[&_text]:!text-[13px] [&_text]:fill-muted-foreground"
+        annotations={chartData.flatMap((row, index) => ["참여율최고", "참여율최저"].flatMap(key => {
+          const label = row[key as "참여율최고" | "참여율최저"];
+          return label ? [{ type: "widget", x: index, 참여율: row.참여율,
+            dy: key === "참여율최고" ? -16 : 16,
+            content: <span className="whitespace-nowrap text-[13px] font-extrabold text-foreground">{label}</span>,
+          }] : [];
+        }))}
+        tooltip={row => <AdminDashboardTooltipPanel
+          title={String(row.label ?? "날짜 없음")}
+          rows={[{ label: "참여율", value: `${Number(row.참여율).toFixed(2)}%`, note: "조회수 대비 참여 비율", color: adminDashboardFocusPalette.warning }]}
+          footer="계산식: 참여율 = 참여 / 조회수 × 100."
+          dataAttribute="engagement-area"
+        />}
+      />
     </div>
   );
 }
@@ -5767,10 +4354,7 @@ function AdminDashboardCollectionLogPopover({
 
         <div className="max-h-[70vh] space-y-2.5 overflow-y-auto p-3">
           {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-20 rounded-2xl" />
-              <Skeleton className="h-16 rounded-2xl" />
-            </div>
+            <AdminDataPending label="수집 로그 확인 중" />
           ) : null}
 
           {!isLoading ? (
@@ -5946,9 +4530,7 @@ function AdminDashboardManagementPanel({
 }) {
   const { toast } = useToast();
   const hasShownDashboardDataErrorToastRef = useRef(false);
-  const [period, setPeriod] = useState<AdminDashboardPeriod>("1M");
-  const [pendingSkeletonPeriod, setPendingSkeletonPeriod] =
-    useState<AdminDashboardPeriod | null>(null);
+  const [period, setPeriod] = useState<AdminDashboardPeriod>("ALL");
   const [dashboardCardViews, setDashboardCardViews] = useState(
     DEFAULT_ADMIN_DASHBOARD_CARD_VIEWS,
   );
@@ -5998,30 +4580,23 @@ function AdminDashboardManagementPanel({
     null,
   );
   const hasPersistedDraggedDashboardWidgetRef = useRef(false);
+  // The period measures changes across the collected catalog, not only new uploads.
   const insightQuery = useQuery({
-    queryKey: ["admin-dashboard-management", "insights", "cohort", period],
-    queryFn: () => fetchAdminDashboardInsightSummary(period, "cohort"),
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: false,
-  });
-  const growthInsightQuery = useQuery({
-    queryKey: [
-      "admin-dashboard-management",
-      "insights",
-      "channel-growth",
-      period,
-    ],
+    queryKey: ["admin-dashboard-management", "insights", "channel-growth", period],
     queryFn: () => fetchAdminDashboardInsightSummary(period, "channel-growth"),
+    enabled: isAdmin,
+    placeholderData: () => undefined,
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
   });
+  const growthInsightQuery = insightQuery;
   const youtubeChannelQuery = useQuery({
     queryKey: ["admin-dashboard-management", "youtube-channel", period],
     queryFn: () => fetchAdminYouTubeChannelStats(period),
+    enabled: isAdmin,
+    placeholderData: () => undefined,
     staleTime: 60 * 1000,
     refetchInterval: 60 * 1000,
     refetchIntervalInBackground: false,
@@ -6033,7 +4608,7 @@ function AdminDashboardManagementPanel({
     queryKey: ["admin-dashboard-management", "youtube-kpi-collection-logs"],
     queryFn: fetchAdminYouTubeKpiCollectionLogs,
     staleTime: 60 * 1000,
-    enabled: isCollectionLogsOpen,
+    enabled: isAdmin && isCollectionLogsOpen,
     refetchInterval: isCollectionLogsOpen ? 60 * 1000 : false,
     refetchIntervalInBackground: false,
     retry: 1,
@@ -6052,29 +4627,6 @@ function AdminDashboardManagementPanel({
       mediaQuery.removeEventListener("change", updateIsMobileViewport);
     };
   }, []);
-
-  useEffect(() => {
-    if (
-      pendingSkeletonPeriod === period &&
-      !insightQuery.isFetching &&
-      !insightQuery.isLoading &&
-      !growthInsightQuery.isFetching &&
-      !growthInsightQuery.isLoading &&
-      !youtubeChannelQuery.isFetching &&
-      !youtubeChannelQuery.isLoading
-    ) {
-      setPendingSkeletonPeriod(null);
-    }
-  }, [
-    growthInsightQuery.isFetching,
-    growthInsightQuery.isLoading,
-    insightQuery.isFetching,
-    insightQuery.isLoading,
-    pendingSkeletonPeriod,
-    period,
-    youtubeChannelQuery.isFetching,
-    youtubeChannelQuery.isLoading,
-  ]);
 
   useEffect(() => {
     latestDashboardWidgetOrderRef.current = orderedDashboardWidgetIds;
@@ -6546,8 +5098,8 @@ function AdminDashboardManagementPanel({
     (video) => video.previousCommentCount,
   );
   const trendPoints = useMemo(
-    () => buildAdminDashboardTrendPoints(videosByPublishedAt),
-    [videosByPublishedAt],
+    () => buildAdminDashboardTrendPoints(videosByPublishedAt, topContentMetricMode),
+    [videosByPublishedAt, topContentMetricMode],
   );
   const viewSparklinePoints = useMemo(
     () =>
@@ -6624,9 +5176,7 @@ function AdminDashboardManagementPanel({
     [videosByPublishedAt],
   );
   const isInsightDynamicLoading =
-    insightQuery.isLoading ||
-    growthInsightQuery.isLoading ||
-    pendingSkeletonPeriod === period;
+    !isAdmin || (insightQuery.isPending && !insightQuery.data);
   const isChartLoading = isInsightDynamicLoading;
   const chartHasError =
     hasError || insightQuery.isError || growthInsightQuery.isError;
@@ -6703,16 +5253,16 @@ function AdminDashboardManagementPanel({
       : impactDisplayedVideoCount < dashboardUploadVideoBasisCount
         ? `${dashboardViewMetricLabel} · 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개`
         : `${dashboardViewMetricLabel} · 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개`;
-  const trendMetricLabel = `${dashboardViewMetricLabel} · 전체 ${formatNumber(trendDisplayedPointCount)}개`;
+  const trendMetricLabel = `${formatNumber(trendDisplayedPointCount)}개월 · 영상당 평균`;
   const selectedPeriodLabel =
     ADMIN_DASHBOARD_PERIOD_OPTIONS.find((option) => option.value === period)
       ?.label ?? "선택 기간";
   const periodMetricCaption =
     period === "ALL"
-      ? "전체 · 현재 합계"
+      ? "수집 영상 기준"
       : hasPeriodGrowthComparison
         ? `${selectedPeriodLabel} · 기간 순증`
-        : `${selectedPeriodLabel} · 기간 영상 현재`;
+        : `누적 기준 · 비교 이력 없음`;
   const periodRatioCaptionPrefix = hasPeriodGrowthComparison
     ? "조회 증가 대비"
     : "조회수 대비";
@@ -6726,27 +5276,20 @@ function AdminDashboardManagementPanel({
     [channelStats?.previousSubscriberCount, channelStats?.subscriberCount],
   );
   const isSubscriberLoading =
-    youtubeChannelQuery.isLoading || pendingSkeletonPeriod === period;
+    !isAdmin || (youtubeChannelQuery.isPending && !youtubeChannelQuery.data);
   const hasSubscriberCount = channelStats?.subscriberCount != null;
   const cumulativeVideoTotal = channelStats?.videoCount ?? stats.totalVideos;
-  const hasSnapshotVideoCountComparison =
-    period !== "ALL" &&
-    typeof channelStats?.videoCount === "number" &&
-    (typeof channelStats.previousVideoCount === "number" ||
-      typeof channelStats.videoDelta === "number");
-  const periodUploadVideoValue = hasSnapshotVideoCountComparison
-    ? Math.max(0, channelStats?.videoDelta ?? 0)
-    : visibleVideoTotal;
+  const periodUploadVideoValue = period === "ALL"
+    ? visibleVideoTotal
+    : countDashboardPublishedVideosInWindow(
+        growthVideos,
+        Date.now() - (getAdminDashboardPeriodDurationMs(period) ?? 0),
+        Date.now(),
+      );
   const periodVideoCaption =
     period === "ALL"
-      ? `전체 영상 · 현재 ${formatNumber(cumulativeVideoTotal)}`
-      : hasSnapshotVideoCountComparison
-        ? `${selectedPeriodLabel} · 채널 videoCount 순증 · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)} · 현재 ${formatNumber(cumulativeVideoTotal)}`
-        : `${selectedPeriodLabel} 신규 업로드 · 현재 ${formatNumber(cumulativeVideoTotal)}`;
-  const periodUploadVideoProgress =
-    typeof periodUploadVideoValue === "number" && periodUploadVideoValue > 0
-      ? Math.min(100, Math.max(12, periodUploadVideoValue * 6))
-      : 0;
+      ? `수집 기준 · 채널 전체 ${formatNumber(cumulativeVideoTotal)}개`
+      : `수집 영상 · 최근 ${selectedPeriodLabel}`;
   const barRows = useMemo(
     () =>
       buildAdminDashboardBarRows(
@@ -6769,15 +5312,7 @@ function AdminDashboardManagementPanel({
     growthVideos,
     period,
   );
-  const videoCountChange =
-    period !== "ALL" &&
-    typeof channelStats?.videoCount === "number" &&
-    typeof channelStats.previousVideoCount === "number"
-      ? calculateDashboardChange(
-          channelStats.videoCount,
-          channelStats.previousVideoCount,
-        )
-      : uploadCountCohortChange;
+  const videoCountChange = uploadCountCohortChange;
   const subscriberDelta =
     period !== "ALL" &&
     typeof channelStats?.subscriberDelta === "number" &&
@@ -6802,18 +5337,18 @@ function AdminDashboardManagementPanel({
     : !hasSubscriberCount
       ? "채널 통계 확인 필요"
       : subscriberDelta == null
-        ? `현재 구독자 · YouTube Data API · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`
-        : `현재 구독자 · ${selectedPeriodLabel} 기간 순증 ${formatSignedNumber(subscriberDelta)} · ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}`;
+        ? "채널 현재값"
+        : `${selectedPeriodLabel} 순증 ${formatSignedNumber(subscriberDelta)}`;
   const subscriberCardTitle = "현재 구독자";
   const viewCardTitle = hasPeriodGrowthComparison
     ? "기간 조회 증가"
-    : "기간 조회 합계";
+    : "누적 조회수";
   const likeCardTitle = hasPeriodGrowthComparison
     ? "기간 좋아요 증가"
-    : "기간 좋아요 합계";
+    : "누적 좋아요";
   const commentCardTitle = hasPeriodGrowthComparison
     ? "기간 댓글 증가"
-    : "기간 댓글 합계";
+    : "누적 댓글";
   const pendingTotal = stats.pendingTotal;
   const missingCoordinates =
     typeof stats.totalRestaurants === "number" &&
@@ -6822,24 +5357,24 @@ function AdminDashboardManagementPanel({
       : null;
   const operationalAssets = [
     {
-      label: "영상 수",
-      value: formatNumber(visibleVideoTotal),
-      rawValue: visibleVideoTotal ?? 0,
+      label: "통계 수집",
+      value: isChartLoading ? "—" : formatNumber(growthVideos.length),
+      rawValue: isChartLoading ? null : growthVideos.length,
     },
     {
       label: "맛집 데이터",
       value: formatNumber(stats.totalRestaurants),
-      rawValue: stats.totalRestaurants ?? 0,
+      rawValue: stats.totalRestaurants,
     },
     {
       label: "좌표 완료",
       value: formatNumber(stats.withCoordinates),
-      rawValue: stats.withCoordinates ?? 0,
+      rawValue: stats.withCoordinates,
     },
     {
       label: "영상 연결",
       value: formatNumber(stats.totalVideos),
-      rawValue: stats.totalVideos ?? 0,
+      rawValue: stats.totalVideos,
     },
   ];
   const operationalLiabilities = [
@@ -6936,43 +5471,10 @@ function AdminDashboardManagementPanel({
       })),
     [barRows],
   );
-  const dashboardProgressiveInitialRows = isDashboardMobileViewport
-    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_INITIAL_ROWS
-    : ADMIN_DASHBOARD_PROGRESSIVE_INITIAL_ROWS;
-  const dashboardProgressiveBatchRows = isDashboardMobileViewport
-    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_BATCH_ROWS
-    : ADMIN_DASHBOARD_PROGRESSIVE_BATCH_ROWS;
-  const dashboardProgressiveDelayMs = isDashboardMobileViewport
-    ? ADMIN_DASHBOARD_MOBILE_PROGRESSIVE_DELAY_MS
-    : ADMIN_DASHBOARD_PROGRESSIVE_DELAY_MS;
   const shouldDeferDashboardHeavyBodies =
     isDashboardMobileViewport &&
     !isDashboardOrderEditorOpen &&
     fullscreenWidgetId == null;
-  const progressiveImpactTableRows = useAdminDashboardProgressiveItems(
-    impactTableRows,
-    dashboardProgressiveInitialRows,
-    dashboardProgressiveBatchRows,
-    dashboardProgressiveDelayMs,
-  );
-  const progressiveTrendPoints = useAdminDashboardProgressiveItems(
-    trendPoints,
-    dashboardProgressiveInitialRows,
-    dashboardProgressiveBatchRows,
-    dashboardProgressiveDelayMs,
-  );
-  const progressiveTrendTableRows = useAdminDashboardProgressiveItems(
-    trendTableRows,
-    dashboardProgressiveInitialRows,
-    dashboardProgressiveBatchRows,
-    dashboardProgressiveDelayMs,
-  );
-  const progressiveTopContentTableRows = useAdminDashboardProgressiveItems(
-    topContentTableRows,
-    dashboardProgressiveInitialRows,
-    dashboardProgressiveBatchRows,
-    dashboardProgressiveDelayMs,
-  );
   const trendTableColumns = useMemo(() => {
     const columns: Array<
       AdminDashboardTableColumn<(typeof trendTableRows)[number]>
@@ -7148,17 +5650,17 @@ function AdminDashboardManagementPanel({
       {
         label: viewCardTitle,
         value: isChartLoading ? "—" : formatNumber(periodViewDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`,
+        caption: periodMetricCaption,
       },
       {
         label: likeCardTitle,
         value: isChartLoading ? "—" : formatNumber(periodLikeDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`,
+        caption: periodMetricCaption,
       },
       {
         label: commentCardTitle,
         value: isChartLoading ? "—" : formatNumber(periodCommentDisplayValue),
-        caption: `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`,
+        caption: periodMetricCaption,
       },
       {
         label: "업로드 영상 수",
@@ -7191,9 +5693,6 @@ function AdminDashboardManagementPanel({
     };
   }, [
     commentCardTitle,
-    cumulativeCommentValue,
-    cumulativeLikeValue,
-    cumulativeViewValue,
     dashboardViewMetricLabel,
     isChartLoading,
     likeCardTitle,
@@ -7228,8 +5727,6 @@ function AdminDashboardManagementPanel({
       );
     }
   }, [pdfReportData]);
-  const shouldShowMobileDashboardLoadingPrompt =
-    isDashboardMobileViewport && (isLoading || isSubscriberLoading || isChartLoading);
 
   return (
     <section
@@ -7314,22 +5811,12 @@ function AdminDashboardManagementPanel({
             value={period}
             onChange={(nextPeriod) => {
               if (nextPeriod !== period) {
-                setPendingSkeletonPeriod(nextPeriod);
                 setPeriod(nextPeriod);
               }
             }}
           />
         </div>
       </div>
-      {shouldShowMobileDashboardLoadingPrompt ? (
-        <p
-          className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
-          data-admin-dashboard-mobile-loading-prompt="live"
-        >
-          KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
-        </p>
-      ) : null}
-
       {isDashboardOrderEditorOpen ? (
         <p
           className="mb-2 shrink-0 text-[11px] font-semibold text-muted-foreground"
@@ -7367,19 +5854,18 @@ function AdminDashboardManagementPanel({
           reorderProps={getDashboardCardReorderProps("subscribers")}
           value={subscriberValue}
           caption={subscriberCaption}
-          progress={hasSubscriberCount ? 100 : 0}
           tone="teal"
           emphasis="supporting"
           sparklineData={subscriberSparklinePoints}
           delta={formatDashboardChangeLabel(subscriberChange)}
-          deltaLabel="기간 대비"
+          deltaLabel={period === "ALL" ? "누적 현황" : hasPeriodGrowthComparison ? "기간 대비" : "비교 대기"}
           isLoading={isSubscriberLoading}
           infoLines={[
             "설명: 채널 구독자 수를 보여주는 카드입니다.",
             "읽는 법: 큰 숫자는 현재 전체 구독자 수입니다. 기간 동안 늘어난 구독자는 우상단의 기간 대비 값과 설명 문구에서 확인합니다.",
-            "계산식: 기간 구독자 증가 = API가 제공한 delta를 우선 사용하고, 없을 때만 현재 구독자 - 이전 구독자로 계산합니다.",
+            "계산식: 같은 채널의 현재 구독자 - 기간 기준 시점의 구독자. 비교 이력이 없으면 변화율을 표시하지 않습니다.",
             `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
-            "주의: 제목 옆 변화율은 이전 스냅샷 대비 증가 또는 감소 비율입니다.",
+            "주의: YouTube 공개 구독자 수는 반올림된 값이며 특정 영상의 구독자 기여를 뜻하지 않습니다.",
           ]}
         />
         <AdminDashboardKpiCard
@@ -7392,19 +5878,20 @@ function AdminDashboardManagementPanel({
           style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
           value={isChartLoading ? "—" : formatNumber(periodViewDisplayValue)}
-          caption={`${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`}
+          caption={periodMetricCaption}
           delta={formatDashboardChangeLabel(viewChange)}
-          deltaLabel="기간 대비"
-          progress={getDashboardChangeProgress(viewChange)}
+          deltaLabel={period === "ALL" ? "누적 현황" : hasPeriodGrowthComparison ? "기간 대비" : "비교 대기"}
           tone="sky"
           emphasis="primary"
           sparklineData={viewSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 조회수 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 선택 기간 영상의 현재 조회수 합계입니다.",
+            "설명: 수집 영상들의 조회수 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 조회수, 없으면 수집 영상의 현재 조회수 합계입니다.",
             "계산식: 기간 조회 증가 = 각 영상의 (현재 조회수 - 이전 조회수) 합계.",
             "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `수집 시각: ${formatDashboardObservationLabel(insightQuery.data?.asOf)}.`,
+            `실제 비교 기준: ${formatDashboardObservationLabel(insightQuery.data?.meta?.comparisonBucketStartedAt)}.`,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 제목 옆 기간 대비는 이전 스냅샷 대비 증감률입니다.",
             "주의: 아래 작은 선은 영상 게시일 순서에 따른 조회수 흐름입니다.",
@@ -7422,21 +5909,22 @@ function AdminDashboardManagementPanel({
           value={isChartLoading ? "—" : formatNumber(periodLikeDisplayValue)}
           caption={
             likeRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)} · 현재 전체 누적 ${formatNumber(cumulativeLikeValue)}`
+              ? periodMetricCaption
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(likeRate)}`
           }
           delta={formatDashboardChangeLabel(likeChange)}
-          deltaLabel="기간 대비"
-          progress={getDashboardChangeProgress(likeChange)}
+          deltaLabel={period === "ALL" ? "누적 현황" : hasPeriodGrowthComparison ? "기간 대비" : "비교 대기"}
           tone="rose"
           emphasis="supporting"
           sparklineData={likeSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 좋아요 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 선택 기간 영상의 현재 좋아요 합계입니다.",
+            "설명: 수집 영상들의 좋아요 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 좋아요 수, 없으면 수집 영상의 현재 좋아요 합계입니다.",
             "계산식: 기간 좋아요 증가 = 각 영상의 (현재 좋아요 - 이전 좋아요) 합계.",
             "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `수집 시각: ${formatDashboardObservationLabel(insightQuery.data?.asOf)}.`,
+            `실제 비교 기준: ${formatDashboardObservationLabel(insightQuery.data?.meta?.comparisonBucketStartedAt)}.`,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 좋아요 비율은 조회수 중 좋아요로 반응한 비중입니다.",
             "주의: 조회 대비 비율은 조회수 중 좋아요로 반응한 비중을 뜻합니다.",
@@ -7454,21 +5942,22 @@ function AdminDashboardManagementPanel({
           value={isChartLoading ? "—" : formatNumber(periodCommentDisplayValue)}
           caption={
             commentRate == null
-              ? `${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
-              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)} · 현재 전체 누적 ${formatNumber(cumulativeCommentValue)}`
+              ? periodMetricCaption
+              : `${periodRatioCaptionPrefix} ${formatDashboardPercent(commentRate)}`
           }
           delta={formatDashboardChangeLabel(commentChange)}
-          deltaLabel="기간 대비"
-          progress={getDashboardChangeProgress(commentChange)}
+          deltaLabel={period === "ALL" ? "누적 현황" : hasPeriodGrowthComparison ? "기간 대비" : "비교 대기"}
           tone="amber"
           emphasis="supporting"
           sparklineData={commentSparklineDisplayPoints}
           isLoading={isChartLoading}
           infoLines={[
-            "설명: 선택 기간 영상들의 댓글 합계를 보여주는 카드입니다.",
-            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 선택 기간 영상의 현재 댓글 합계입니다.",
+            "설명: 수집 영상들의 댓글 합계를 보여주는 카드입니다.",
+            "읽는 법: 비교 스냅샷이 있으면 기간 동안 늘어난 댓글 수, 없으면 수집 영상의 현재 댓글 합계입니다.",
             "계산식: 기간 댓글 증가 = 각 영상의 (현재 댓글 - 이전 댓글) 합계.",
             "처리: 비교 버킷 이후 신규 영상은 이전값 0으로 보고, 비교 버킷 이전 영상인데 이전값이 없으면 비교 불가로 분리합니다.",
+            `수집 시각: ${formatDashboardObservationLabel(insightQuery.data?.asOf)}.`,
+            `실제 비교 기준: ${formatDashboardObservationLabel(insightQuery.data?.meta?.comparisonBucketStartedAt)}.`,
             `비교 커버리지: ${getAdminDashboardCoverageLabel(insightQuery.data?.meta?.comparisonCoverage)}.`,
             "참고: 댓글 비율은 조회수 중 댓글로 반응한 비중입니다.",
             "주의: 조회 대비 댓글 비율은 조회수 중 댓글로 반응한 비중을 뜻합니다.",
@@ -7476,7 +5965,7 @@ function AdminDashboardManagementPanel({
         />
         <AdminDashboardKpiCard
           widgetId="videos"
-          title="업로드 영상 수"
+          title={period === "ALL" ? "분석 영상 수" : "기간 내 업로드"}
           className={cn(
             "lg:col-span-2",
             getDashboardReorderCardClassName("videos"),
@@ -7486,16 +5975,15 @@ function AdminDashboardManagementPanel({
           value={isChartLoading ? "—" : formatNumber(periodUploadVideoValue)}
           caption={periodVideoCaption}
           delta={formatDashboardChangeLabel(videoCountChange)}
-          deltaLabel="기간 대비"
-          progress={periodUploadVideoProgress}
+          deltaLabel={period === "ALL" ? "누적 현황" : hasPeriodGrowthComparison ? "기간 대비" : "비교 대기"}
           tone="teal"
           emphasis="supporting"
           sparklineData={videoCountSparklinePoints}
           isLoading={isChartLoading}
           infoLines={[
             "설명: 선택 기간에 새로 올라온 영상 수를 보여주는 카드입니다.",
-            "읽는 법: 채널 스냅샷이 있으면 videoCount 차이, 없으면 선택 기간 영상 목록 개수를 사용합니다.",
-            "계산식: 업로드 영상 수 = API가 제공한 videoDelta를 우선 사용하고, 없을 때만 현재 channel videoCount - 이전 channel videoCount로 계산합니다.",
+            "읽는 법: 전체는 통계가 수집된 영상 수, 기간 선택 시에는 그 기간에 게시된 수집 영상 수입니다.",
+            "계산식: 업로드 영상 수 = 실제 게시일이 선택 기간 안에 있는 수집 영상의 개수. 채널의 공개 영상 수는 설명에 따로 표시합니다.",
             `참고: 채널 delta 원천은 ${getAdminDashboardDeltaSourceLabel(channelStats?.deltaSource)}입니다.`,
             "주의: 업로드 수는 조회수·좋아요·댓글 카드와 함께 봐야 성과를 판단할 수 있습니다.",
           ]}
@@ -7518,11 +6006,11 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="상위 영상 영향도"
-            metric={impactMetricLabel}
+            metric={isChartLoading ? "데이터 확인 중" : impactMetricLabel}
             infoLines={[
               hasPeriodGrowthComparison
-                ? "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
-                : "설명: 선택 기간 업로드 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
+                ? "설명: 분석 대상 영상 안에서 오른쪽으로 갈수록 조회 증가가 크고, 위로 갈수록 좋아요와 댓글 증가가 큽니다."
+                : "설명: 분석 대상 영상 안에서 오른쪽으로 갈수록 조회수가 크고, 위로 갈수록 좋아요와 댓글 합계가 큽니다.",
               impactDisplayedVideoCount < dashboardUploadVideoBasisCount
                 ? `표시: 그래프는 상위 ${formatNumber(impactDisplayedVideoCount)}/${formatNumber(dashboardUploadVideoBasisCount)}개, 표는 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`
                 : `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
@@ -7555,7 +6043,7 @@ function AdminDashboardManagementPanel({
             }
           >
             {isChartLoading ? (
-              <AdminDashboardPanelBodySkeleton
+              <AdminDashboardPanelPending
                 variant={
                   getDashboardCardView("impact") === "table"
                     ? "table"
@@ -7564,7 +6052,7 @@ function AdminDashboardManagementPanel({
               />
             ) : getDashboardCardView("impact") === "table" ? (
               <AdminDashboardScrollTable
-                rows={progressiveImpactTableRows}
+                rows={impactTableRows}
                 totalRows={impactTableRows.length}
                 emptyText="표시할 영상 영향도 데이터가 없습니다."
                 getRowKey={(row) => row.id}
@@ -7639,14 +6127,14 @@ function AdminDashboardManagementPanel({
           {...getDashboardCardReorderProps("trend")}
         >
           <AdminDashboardCardTitle
-            title="영상별 성과 분포"
-            metric={trendMetricLabel}
+            title="업로드 월별 성과"
+            metric={isChartLoading ? "데이터 확인 중" : trendMetricLabel}
             infoLines={[
-              "설명: 선택 기간 업로드 영상을 게시일 순서로 놓고 조회수, 참여, 참여율을 비교합니다.",
-              `표시: 그래프와 표 모두 전체 ${formatNumber(dashboardUploadVideoBasisCount)}개.`,
+              "설명: 영상을 업로드한 월별로 묶고 영상당 평균 조회수와 참여를 비교합니다. 과거 월의 실제 유입량을 뜻하지 않습니다.",
+              `표시: 그래프는 ${formatNumber(trendDisplayedPointCount)}개월, 표는 개별 영상 ${formatNumber(dashboardUploadVideoBasisCount)}개입니다.`,
               "읽는 법: 조회·반응(좋아요+댓글)·반응률을 각각 100점 기준으로 맞춰 같은 눈금에서 비교합니다.",
               "참고: 참여는 좋아요와 댓글을 더한 값이고, 참여율은 조회수 대비 참여 비중입니다.",
-              "계산식: 정규화 점수 = 해당 값 / 해당 지표 최고값 × 100.",
+              "계산식: 월별 영상당 평균 = 해당 월 업로드 영상의 지표 합계 / 영상 수. 상대지수 = 월 평균 / 가장 큰 월 평균의 절댓값 × 100.",
               hasPeriodGrowthComparison
                 ? "비교 스냅샷이 있으면 조회 증감률을 제목에 함께 표시합니다."
                 : "비교 스냅샷이 없어서 제목에는 현재값 기준이라고 표시합니다.",
@@ -7694,14 +6182,14 @@ function AdminDashboardManagementPanel({
             }
           >
             {isChartLoading ? (
-              <AdminDashboardPanelBodySkeleton
+              <AdminDashboardPanelPending
                 variant={
                   getDashboardCardView("trend") === "table" ? "table" : "line"
                 }
               />
             ) : getDashboardCardView("trend") === "table" ? (
               <AdminDashboardScrollTable
-                rows={progressiveTrendTableRows}
+                rows={trendTableRows}
                 totalRows={trendTableRows.length}
                 emptyText="표시할 영상별 성과 분포 데이터가 없습니다."
                 getRowKey={(row, index) => `${row.label}-${index}`}
@@ -7710,7 +6198,7 @@ function AdminDashboardManagementPanel({
             ) : (
               <AdminDashboardMultiLineChart
                 key={`trend-${period}`}
-                points={progressiveTrendPoints}
+                points={trendPoints}
                 totalPointCount={trendPoints.length}
                 seriesVisibility={trendSeriesVisibility}
               />
@@ -7724,11 +6212,7 @@ function AdminDashboardManagementPanel({
               title: "운영 자산",
               rows: operationalAssets,
               totalLabel: "합계",
-              totalValue: formatNumber(
-                (stats.totalRestaurants ?? 0) +
-                  (stats.totalVideos ?? 0) +
-                  (stats.activeBanners ?? 0),
-              ),
+              totalValue: "항목별 현황",
             },
             {
               title: "검수 리스크",
@@ -7767,26 +6251,26 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="콘텐츠 성과 TOP 5"
-            metric={topContentCardMetric}
+            metric={isChartLoading ? "데이터 확인 중" : topContentCardMetric}
             infoLines={[
-              "설명: 그래프는 선택 기간 업로드 영상 중 상위 5개를 요약하고, 표는 전체 영상을 보여줍니다.",
+              "설명: 그래프는 분석 대상 영상 중 상위 5개를 요약하고, 표는 전체 영상을 보여줍니다.",
               hasPeriodGrowthComparison
-                ? "읽는 법: 막대는 선택 기간 업로드 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다."
+                ? "읽는 법: 막대는 분석 대상 영상의 조회·좋아요·댓글 증가량을 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다."
                 : "읽는 법: 막대는 조회·좋아요·댓글 수를 보여주고, 기여도는 세 지표를 가중 합산한 성과 기여입니다.",
               "막대 기준: 각 색 조각은 그래프에 표시된 상위 5개 안에서 해당 영상이 차지하는 비중입니다.",
               topContentContributionFormula,
               hasPeriodGrowthComparison
-                ? "용어: 조회·좋아요·댓글 증가 기여는 각각 선택 기간 업로드 영상 전체 증가 합계 중 이 영상이 차지한 비율입니다."
-                : "용어: 조회·좋아요·댓글 기여는 각각 선택 기간 영상 전체 합계 중 이 영상이 차지한 비율입니다.",
+                ? "용어: 조회·좋아요·댓글 증가 기여는 각각 분석 대상 영상 전체 증가 합계 중 이 영상이 차지한 비율입니다."
+                : "용어: 조회·좋아요·댓글 기여는 각각 수집 영상 전체 합계 중 이 영상이 차지한 비율입니다.",
               hasPeriodGrowthComparison
                 ? "비교 대상: 선택 기간에 새로 올라온 업로드 영상입니다."
                 : "예시: 조회 기여 10%, 좋아요 기여 6%, 댓글 기여 4%라면 가중치를 적용해 하나의 성과 기여로 봅니다.",
               hasPeriodGrowthComparison
-                ? "처리: 이전 스냅샷이 없으면 현재 조회·좋아요·댓글을 증가분으로 봅니다."
-                : "처리: 선택 기간 영상의 현재 조회·좋아요·댓글을 그대로 사용합니다.",
+                ? "처리: 기준 시점 이후 신규 영상만 이전값을 0으로 봅니다. 기존 영상의 이력이 누락되면 증가 비교에서 제외합니다."
+                : "처리: 수집 영상의 현재 조회·좋아요·댓글을 그대로 사용합니다.",
               hasPeriodGrowthComparison
-                ? "전체값: 선택 기간 업로드 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다."
-                : "전체값: 선택 기간 영상의 조회·좋아요·댓글 합계를 각각 분모로 사용합니다.",
+                ? "전체값: 분석 대상 영상의 조회·좋아요·댓글 증가 합계를 각각 분모로 사용합니다."
+                : "전체값: 수집 영상의 조회·좋아요·댓글 합계를 각각 분모로 사용합니다.",
               "참고: 감소분은 성과 기여 계산에서 0으로 분리해 과대평가를 막습니다.",
               "주의: 그래프는 빠른 요약이고, 표 보기는 선택 기간 전체 영상을 확인하는 용도입니다.",
             ]}
@@ -7833,7 +6317,7 @@ function AdminDashboardManagementPanel({
             }
           >
             {isChartLoading ? (
-              <AdminDashboardPanelBodySkeleton
+              <AdminDashboardPanelPending
                 variant={
                   getDashboardCardView("topContent") === "table"
                     ? "table"
@@ -7842,7 +6326,7 @@ function AdminDashboardManagementPanel({
               />
             ) : getDashboardCardView("topContent") === "table" ? (
               <AdminDashboardScrollTable
-                rows={progressiveTopContentTableRows}
+                rows={topContentTableRows}
                 totalRows={topContentTableRows.length}
                 emptyText="표시할 콘텐츠 성과 데이터가 없습니다."
                 getRowKey={(row, index) => `${row.title}-${index}`}
@@ -7869,14 +6353,14 @@ function AdminDashboardManagementPanel({
         >
           <AdminDashboardCardTitle
             title="성과 진단"
-            metric={`진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
+            metric={isChartLoading ? "데이터 확인 중" : `진단 신호 ${formatNumber(topContentInsights.length)}개 · ${topContentCardMetric}`}
             infoLines={[
               "설명: 지금 확인할 만한 영상 성과 신호를 요약한 카드입니다.",
-              "읽는 법: 성과 기여, 참여율, 초반 반응, 재상승 후보를 작은 카드로 분류합니다.",
-              "참고: 성과 기여는 TOP 5와 같은 기준으로 조회·좋아요·댓글 기여를 함께 봅니다.",
+              "읽는 법: 조회 집중도, 충분한 조회 표본의 참여율, 일반적인 영상 성과, 최신 영상 포함 여부를 확인합니다.",
+              "참고: 조회 집중도는 조회수 상위 5개의 합계를 전체 영상 조회수로 나눈 값입니다.",
               "참고: 참여율은 조회수 대비 좋아요와 댓글 반응 비중입니다.",
-              "계산식: 신호 강도 = 카드별 규칙 점수를 0~100 범위로 표시한 값입니다.",
-              "주의: 조회수만 보지 말고 기여도와 참여율을 함께 확인하세요.",
+              "계산식: 중앙값은 영상별 조회수를 정렬한 중간값입니다. 참여율 후보는 조회수가 중앙값 이상인 영상만 비교합니다.",
+              "주의: 누적값은 공개 후 경과일의 영향을 받습니다. 특정 영상의 구독자 기여나 미래 성과를 뜻하지 않습니다.",
             ]}
             action={
               <div className="ml-auto flex min-w-fit shrink-0 flex-nowrap items-center gap-2">
@@ -7904,7 +6388,7 @@ function AdminDashboardManagementPanel({
             }
           >
             {isChartLoading ? (
-              <AdminDashboardPanelBodySkeleton
+              <AdminDashboardPanelPending
                 variant={
                   getDashboardCardView("engagementRate") === "table"
                     ? "table"
@@ -9118,11 +7602,7 @@ function AuditPlaceholder() {
         </Link>
 
         {auditEventsQuery.isLoading ? (
-          <div className="space-y-2" aria-label="감사 로그 로딩 중">
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-            <Skeleton className="h-16 rounded-2xl" />
-          </div>
+          <AdminDataPending label="감사 로그 확인 중" className="min-h-48" />
         ) : null}
 
         {!auditEventsQuery.isLoading && (unavailable || auditEventsQuery.isError) ? (
@@ -9483,957 +7963,21 @@ function InlineModulePanel({
   );
 }
 
-type AdminConsoleCanvasSkeletonVariant =
-  | "split-list-detail"
-  | "evaluation-table"
-  | "submission-queue"
-  | "refresh-history"
-  | "banner-editor"
-  | "overlay-workspace"
-  | "user-table"
-  | "insights-grid"
-  | "route-map"
-  | "llm-workspace"
-  | "audit-log"
-  | "pipeline-ops";
-
-type AdminConsoleCanvasSkeletonModuleId = AdminModuleId | "generic";
-
-type AdminConsoleCanvasSkeletonConfig = {
-  moduleId: AdminConsoleCanvasSkeletonModuleId;
-  title: string;
-  description: string;
-  icon: typeof Store;
-  variant: AdminConsoleCanvasSkeletonVariant;
-};
-
-const ADMIN_CONSOLE_CANVAS_SKELETON_ROWS = [0, 1, 2, 3, 4, 5] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_CARDS = [
-  "primary",
-  "secondary",
-  "tertiary",
-  "quaternary",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_METRICS = [
-  "metric-a",
-  "metric-b",
-  "metric-c",
-  "metric-d",
-] as const;
-const ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE = [
-  "queued",
-  "checking",
-  "applying",
-  "readback",
-] as const;
-
-function getAdminConsoleModuleLoadingSkeleton(
-  moduleId: AdminModuleId,
-  title?: string,
-) {
-  if (moduleId === "overview") {
-    return <AdminDashboardManagementSkeleton />;
-  }
-
-  if (moduleId === "storyboard") {
-    return <AdminStoryboardModuleLoadingSkeleton />;
-  }
-
-  if (moduleId === "youtube-thumbnail-generator") {
-    return <AdminYoutubeThumbnailModuleLoadingSkeleton />;
-  }
-
-  return <AdminConsoleCanvasSkeleton moduleId={moduleId} title={title} />;
-}
-
-function getAdminConsoleCanvasSkeletonConfig({
-  moduleId,
-  title,
-}: {
-  moduleId: AdminConsoleCanvasSkeletonModuleId;
-  title?: string;
-}): AdminConsoleCanvasSkeletonConfig {
-  switch (moduleId) {
-    case "restaurants":
-      return {
-        moduleId,
-        title: title ?? "맛집 관리",
-        description: "검수 테이블과 세부 액션 영역을 뷰포트 안에서 준비합니다.",
-        icon: Store,
-        variant: "evaluation-table",
-      };
-    case "submissions":
-      return {
-        moduleId,
-        title: title ?? "제보 관리",
-        description: "제보·수정 요청 목록과 판정 패널을 함께 준비합니다.",
-        icon: ClipboardList,
-        variant: "submission-queue",
-      };
-    case "reviews":
-      return {
-        moduleId,
-        title: title ?? "리뷰 관리",
-        description: "리뷰 검수 큐와 증빙 확인 패널을 함께 준비합니다.",
-        icon: MessageSquareText,
-        variant: "submission-queue",
-      };
-    case "restaurant-refresh-history":
-      return {
-        moduleId,
-        title: title ?? "맛집 최신화",
-        description: "최신화 후보 목록과 변경 이력 패널을 먼저 배치합니다.",
-        icon: RefreshCw,
-        variant: "refresh-history",
-      };
-    case "map-overlays":
-      return {
-        moduleId,
-        title: title ?? "지도 오버레이",
-        description: "수동 오버레이, 트렌드 제안, 트렌드 실행 탭을 준비합니다.",
-        icon: Layers3,
-        variant: "overlay-workspace",
-      };
-    case "banners":
-      return {
-        moduleId,
-        title: title ?? "배너 관리",
-        description: "배너 목록, 미디어 미리보기, 편집 폼을 한 화면에 준비합니다.",
-        icon: ImageIcon,
-        variant: "banner-editor",
-      };
-    case "users":
-      return {
-        moduleId,
-        title: title ?? "사용자 관리",
-        description: "계정 요약 카드와 사용자 표 구조를 먼저 고정합니다.",
-        icon: UsersRound,
-        variant: "user-table",
-      };
-    case "insights":
-      return {
-        moduleId,
-        title: title ?? "핵심 인사이트",
-        description: "지표 카드, 트리맵, 추세 차트를 뷰포트에 맞춰 준비합니다.",
-        icon: BarChart2,
-        variant: "insights-grid",
-      };
-    case "pipeline":
-      return {
-        moduleId,
-        title: title ?? "크롤러 파이프라인",
-        description: "control-plane 대상 상태와 환경 칩을 준비합니다.",
-        icon: Workflow,
-        variant: "pipeline-ops",
-      };
-    case "routes":
-      return {
-        moduleId,
-        title: title ?? "맛집 동선 추천",
-        description: "지도, 후보 목록, 동선 준비도 패널을 먼저 배치합니다.",
-        icon: Route,
-        variant: "route-map",
-      };
-    case "llm":
-      return {
-        moduleId,
-        title: title ?? "운영 보조",
-        description: "읽기 전용 요약 카드와 위험 액션 체크리스트를 준비합니다.",
-        icon: Bot,
-        variant: "llm-workspace",
-      };
-    case "audit":
-      return {
-        moduleId,
-        title: title ?? "감사 로그",
-        description: "결정 기록과 상태 재확인 타임라인 구조를 준비합니다.",
-        icon: ScrollText,
-        variant: "audit-log",
-      };
-    default:
-      return {
-        moduleId: "generic",
-        title: title ?? "관리자 작업 화면",
-        description: "사이드바 메뉴 화면의 구조를 먼저 준비합니다.",
-        icon: Store,
-        variant: "split-list-detail",
-      };
-  }
-}
-
-function AdminConsoleCanvasSkeleton({
-  title,
-  moduleId = "generic",
-}: {
-  title?: string;
-  moduleId?: AdminConsoleCanvasSkeletonModuleId;
-} = {}) {
-  const config = getAdminConsoleCanvasSkeletonConfig({ moduleId, title });
-  const HeaderIcon = config.icon;
-
+function getAdminConsoleModulePending(moduleId: AdminModuleId, title?: string) {
+  const selectedModule = consoleModules.find(item => item.id === moduleId);
   return (
-    <section
-      className="flex h-full min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm md:min-h-0"
-      data-admin-console-content-loading="true"
-      data-admin-sidebar-module-loading="page-shell"
-      data-admin-sidebar-module-loading-viewport="true"
-      data-admin-sidebar-module-loading-module={config.moduleId}
-      data-admin-sidebar-module-loading-title={config.title}
-      data-admin-sidebar-module-loading-variant={config.variant}
-      role="status"
-      aria-busy="true"
-      aria-label={`${config.title} 화면 로딩 중`}
+    <AdminEmbeddedModuleShell
+      moduleId={moduleId}
+      titleId={`admin-${moduleId}-module-title`}
+      title={title ?? selectedModule?.title ?? "관리자 작업 화면"}
+      icon={selectedModule?.icon ?? (moduleId === "routes" ? Route : Bot)}
+      summary={selectedModule?.description ?? "작업 화면"}
+      contentClassName="overflow-auto"
     >
-      <span className="sr-only">
-        {config.title} 화면의 뷰포트 기준 레이아웃을 먼저 준비하고 내부 데이터를
-        불러오는 중입니다.
-      </span>
-      <header
-        className="flex shrink-0 flex-col gap-2 border-b border-border bg-card/95 px-3 py-2 lg:flex-row lg:items-center lg:justify-between"
-        data-admin-sidebar-module-loading-header="true"
-      >
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-            <HeaderIcon className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div className="min-w-0 space-y-1">
-            <p className="truncate text-sm font-bold text-foreground">
-              {config.title}
-            </p>
-            <p className="truncate text-xs font-semibold text-muted-foreground">
-              {config.description}
-            </p>
-          </div>
-        </div>
-        <div
-          className="flex flex-wrap items-center gap-1.5"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-toolbar="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-7 w-20 rounded-full motion-reduce:animate-none"
-            />
-          ))}
-        </div>
-      </header>
-
-      <AdminConsoleCanvasSkeletonBody variant={config.variant} />
-    </section>
-  );
-}
-
-function AdminConsoleSkeletonMetricStrip({
-  className,
-}: {
-  className?: string;
-}) {
-  return (
-    <div className={cn("grid shrink-0 gap-2 sm:grid-cols-2 xl:grid-cols-4", className)}>
-      {ADMIN_CONSOLE_CANVAS_SKELETON_METRICS.map((metric) => (
-        <div
-          key={metric}
-          className="min-h-20 rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-        >
-          <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-6 w-24 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="mt-3 h-2 w-full rounded-full motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminConsoleSkeletonRows({
-  count = ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.length,
-  withMedia = false,
-}: {
-  count?: number;
-  withMedia?: boolean;
-}) {
-  return (
-    <div className="divide-y divide-border">
-      {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, count).map((row) => (
-        <div
-          key={row}
-          className={cn(
-            "grid items-center gap-2 px-3 py-3",
-            withMedia
-              ? "sm:grid-cols-[56px_minmax(0,1fr)_90px]"
-              : "sm:grid-cols-[minmax(0,1fr)_80px]",
-          )}
-        >
-          {withMedia ? (
-            <Skeleton className="h-10 w-14 rounded-md motion-reduce:animate-none" />
-          ) : null}
-          <div className="min-w-0 space-y-1.5">
-            <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-3/5 rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-7 rounded-lg motion-reduce:animate-none" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminConsoleCanvasSkeletonBody({
-  variant,
-}: {
-  variant: AdminConsoleCanvasSkeletonVariant;
-}) {
-  if (variant === "evaluation-table" || variant === "submission-queue") {
-    return (
-      <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-evaluation="viewport-table"
-      >
-        <AdminConsoleSkeletonMetricStrip className="xl:grid-cols-5" />
-        <section
-          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(5,78px)_112px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-20 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} withMedia />
-        </section>
+      <div className="flex h-full min-h-64 flex-col" data-admin-module-initial-frame={moduleId} aria-busy="true">
+        <AdminDataPending label="작업 화면 준비 중" className="flex-1" />
       </div>
-    );
-  }
-
-  if (variant === "refresh-history") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-refresh-history="viewport-split"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 md:grid-cols-2"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-full min-h-28 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "banner-editor") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.28fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-banners="viewport-editor"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={5} withMedia />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(300px,0.8fr)]"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <div className="space-y-2">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_ROWS.slice(0, 5).map((row) => (
-              <Skeleton
-                key={row}
-                className="h-10 rounded-lg motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "user-table") {
-    return (
-      <div
-        className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-users="viewport-table"
-      >
-        <AdminConsoleSkeletonMetricStrip />
-        <section
-          className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="grid border-b border-border bg-muted/30 px-3 py-2 md:grid-cols-[minmax(0,1.2fr)_120px_120px_96px]">
-            {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((cell) => (
-              <Skeleton
-                key={cell}
-                className="h-3 w-24 rounded-full motion-reduce:animate-none"
-              />
-            ))}
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "insights-grid") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-insights="viewport-charts"
-      >
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <AdminConsoleSkeletonMetricStrip />
-          <Skeleton className="min-h-72 flex-1 rounded-2xl motion-reduce:animate-none" />
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <Skeleton className="min-h-48 rounded-2xl motion-reduce:animate-none" />
-          <AdminConsoleSkeletonRows count={4} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "route-map") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-routes="viewport-map"
-      >
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="h-full min-h-96 rounded-2xl motion-reduce:animate-none" />
-        </section>
-        <section
-          className="min-h-0 overflow-hidden rounded-xl border border-border bg-card/95"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          <div className="border-b border-border bg-muted/30 px-3 py-2">
-            <Skeleton className="h-4 w-36 rounded-full motion-reduce:animate-none" />
-          </div>
-          <AdminConsoleSkeletonRows count={6} />
-        </section>
-      </div>
-    );
-  }
-
-  if (variant === "llm-workspace" || variant === "audit-log") {
-    return (
-      <div
-        className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]"
-        data-admin-sidebar-module-loading-grid="true"
-        data-admin-sidebar-module-loading-ops="viewport-cards"
-      >
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-list="true"
-        >
-          {ADMIN_CONSOLE_CANVAS_SKELETON_TIMELINE.map((item) => (
-            <div key={item} className="rounded-xl border border-border/70 p-3">
-              <Skeleton className="h-4 w-32 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-3 h-3 w-full rounded-full motion-reduce:animate-none" />
-              <Skeleton className="mt-2 h-3 w-4/5 rounded-full motion-reduce:animate-none" />
-            </div>
-          ))}
-        </section>
-        <section
-          className="grid min-h-0 gap-2 overflow-hidden rounded-xl border border-border bg-card/95 p-3"
-          aria-hidden="true"
-          data-admin-sidebar-module-loading-detail="true"
-        >
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-          <Skeleton className="min-h-32 rounded-2xl motion-reduce:animate-none" />
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-hidden p-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]"
-      data-admin-sidebar-module-loading-grid="true"
-    >
-      <section
-        className="min-h-[300px] overflow-hidden rounded-xl border border-border bg-card/95 lg:min-h-0"
-        aria-hidden="true"
-        data-admin-sidebar-module-loading-list="true"
-      >
-        <div className="border-b border-border bg-muted/30 px-3 py-2">
-          <Skeleton className="h-4 w-28 rounded-full motion-reduce:animate-none" />
-        </div>
-        <AdminConsoleSkeletonRows count={5} />
-      </section>
-
-      <section
-        className="min-h-[360px] overflow-hidden rounded-xl border border-border bg-card/95 p-3 lg:min-h-0"
-        aria-hidden="true"
-        data-admin-sidebar-module-loading-detail="true"
-      >
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <Skeleton className="h-5 w-36 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-56 max-w-full rounded-full motion-reduce:animate-none" />
-          </div>
-          <Skeleton className="h-8 w-20 rounded-lg motion-reduce:animate-none" />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {ADMIN_CONSOLE_CANVAS_SKELETON_CARDS.map((card) => (
-            <Skeleton
-              key={card}
-              className="h-24 rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-          <Skeleton className="h-32 rounded-xl motion-reduce:animate-none sm:col-span-2" />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AdminStoryboardModuleLoadingSkeleton() {
-  return (
-    <section
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2"
-      data-admin-console-content-loading="true"
-      data-admin-storyboard-generator-loading="true"
-      data-storyboard-module-loading="true"
-      data-storyboard-module-loading-layout="page-shell"
-      data-storyboard-viewport-fit="bounded"
-      style={{
-        height: "calc(var(--full-height, 100vh) - 2rem)",
-        maxHeight: "100%",
-        minHeight: 0,
-      }}
-      role="status"
-      aria-busy="true"
-      aria-label="스토리보드 생성 화면 로딩 중"
-    >
-      <div
-        className="grid h-full min-h-0 gap-3 overflow-hidden"
-        data-storyboard-desktop-split-layout="inline-grid"
-        data-storyboard-module-loading-grid="true"
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "var(--storyboard-split-columns, minmax(0, 1fr) minmax(320px, 400px))",
-          gridTemplateRows: "var(--storyboard-split-rows, minmax(0, 1fr))",
-        }}
-      >
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card/80 shadow-sm"
-          aria-label="스토리보드 도우미 준비 영역"
-          data-storyboard-module-loading-chat-shell="static"
-          style={{
-            gridColumn: "var(--storyboard-input-panel-column, 2)",
-            gridRow: "var(--storyboard-input-panel-row, 1)",
-            minWidth: 0,
-          }}
-        >
-          <CardHeader className="shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <div className="h-4 w-32 rounded-full bg-muted/80" />
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <div className="h-4 w-4 rounded-full bg-muted/80" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-                <div className="h-8 w-8 rounded-full bg-muted/70" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-background"
-              data-storyboard-module-loading-chat="true"
-            >
-              <div className="min-h-0 flex-1 space-y-3 overflow-hidden p-3">
-                <div className="max-w-[88%] space-y-2">
-                  <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-40 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="mt-2 flex gap-2">
-                    <div className="h-7 w-20 rounded-full border border-border/60 bg-background" />
-                    <div className="h-7 w-20 rounded-full bg-primary/75" />
-                  </div>
-                </div>
-                <div className="max-w-[92%] space-y-2">
-                  <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/14" />
-                  <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/12" />
-                  <div className="h-3 w-52 max-w-full rounded-full bg-muted-foreground/12" />
-                </div>
-              </div>
-              <div
-                className="shrink-0 border-t border-border/70 bg-background/80 p-2.5"
-                data-storyboard-module-loading-composer="true"
-              >
-                <div className="flex h-11 items-center gap-2 rounded-full border border-border/70 bg-background px-3">
-                  <div className="h-5 w-5 shrink-0 rounded-full bg-muted/80" />
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              스토리보드 도우미 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="flex min-h-0 flex-col overflow-hidden border-0 bg-card/80 shadow-none"
-          aria-label="스토리보드 캔버스 준비 영역"
-          data-storyboard-module-loading-canvas="true"
-          style={{
-            gridColumn: "var(--storyboard-result-panel-column, 1)",
-            gridRow: "var(--storyboard-result-panel-row, 1)",
-            minWidth: 0,
-          }}
-        >
-          <CardHeader className="flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="h-4 w-12 shrink-0 rounded-full bg-muted/80" />
-              <div className="h-6 w-20 shrink-0 rounded-full border border-border/70 bg-background" />
-              <div className="h-3 w-48 max-w-[32vw] rounded-full bg-muted/70" />
-            </div>
-            <div
-              className="ml-auto flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden px-1 py-1"
-              data-storyboard-module-loading-toolbar="true"
-            >
-              <div className="h-8 w-16 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-32 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-border/70 bg-background" />
-              <div className="h-8 w-28 shrink-0 rounded-md bg-muted/70" />
-            </div>
-          </CardHeader>
-          <CardContent className="min-h-0 flex-1 p-2 pt-1">
-            <div
-              className="h-full min-h-0"
-              data-storyboard-module-loading-frame-grid="true"
-              aria-hidden="true"
-            >
-              {STORYBOARD_MODULE_LOADING_CUT_NOS.map((cutNo) => (
-                <div
-                  key={`storyboard-loading-cut-${cutNo}`}
-                  className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/80"
-                  data-storyboard-module-loading-cut={String(cutNo)}
-                >
-                  <div className="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52">
-                    <span className="absolute left-3 top-3 z-10 h-5 w-14 rounded-full bg-slate-700/70" />
-                    <span className="absolute right-3 top-3 z-10 h-6 w-12 rounded-full bg-white/80" />
-                    <span
-                      className="absolute inset-0 bg-gradient-to-br from-white/58 via-slate-200/28 to-slate-500/24"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-glass="true"
-                    />
-                    <span
-                      className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                      aria-hidden="true"
-                      data-storyboard-module-loading-shimmer="true"
-                    />
-                  </div>
-                  <div className="shrink-0 space-y-1 border-t border-border/45 bg-background/90 px-2.5 py-1.5">
-                    <div className="grid items-center gap-2 rounded-lg bg-muted/15 px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-muted/65" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-rose-100/70" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div className="grid items-center gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5" style={{ gridTemplateColumns: "58px minmax(0, 1fr)" }}>
-                      <div className="h-4 rounded-full bg-amber-100/75" />
-                      <div className="h-3 rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <span className="sr-only">
-              스토리보드 캔버스 영역을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-  );
-}
-
-function AdminYoutubeThumbnailModuleLoadingSkeleton() {
-  return (
-    <section
-      className="relative flex h-full min-h-[640px] min-w-0 flex-col overflow-hidden bg-background p-3 md:min-h-0"
-      data-thumbnail-module-loading="true"
-      data-thumbnail-module-loading-layout="page-shell"
-      data-thumbnail-module-loading-parity="storyboard-shell"
-      role="status"
-      aria-busy="true"
-      aria-label="유튜브 썸네일 생성 화면 로딩 중"
-    >
-      <span
-        className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-background via-slate-50/72 to-slate-200/48 dark:via-slate-900/54 dark:to-slate-700/32"
-        aria-hidden="true"
-        data-thumbnail-module-loading-glass-shell="true"
-      />
-      <span
-        className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/3 z-0 w-1/3 bg-gradient-to-r from-transparent via-white/62 to-transparent dark:via-white/22"
-        aria-hidden="true"
-        data-thumbnail-module-loading-page-shimmer="true"
-      />
-      <div className="relative z-10 grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
-        <Card
-          className="relative order-2 flex min-h-0 flex-col overflow-hidden border border-border/70 bg-background/86 shadow-none"
-          aria-label="유튜브 썸네일 도우미 준비 영역"
-          data-thumbnail-module-loading-chat-shell="static"
-          data-thumbnail-module-loading-card-glass="chat"
-        >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/36 via-slate-100/14 to-slate-300/18 dark:from-slate-800/22 dark:via-slate-700/12 dark:to-slate-500/14"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/52 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-chat-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 shrink-0 space-y-1 p-3 pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                  <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 truncate">
-                  유튜브 썸네일 생성 도우미
-                </span>
-              </CardTitle>
-              <Badge
-                variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
-              >
-                준비 중
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col p-3 pt-0">
-            <div
-              className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-b from-background/92 to-muted/32 shadow-sm"
-              data-thumbnail-module-loading-chat="true"
-              data-thumbnail-module-loading-chat-tone="neutral-storyboard"
-            >
-              <span
-                className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/42 via-slate-100/16 to-slate-300/18 dark:from-slate-800/26 dark:via-slate-700/14 dark:to-slate-600/16"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-glass="true"
-              />
-              <span
-                className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/56 to-transparent dark:via-white/18"
-                aria-hidden="true"
-                data-thumbnail-module-loading-chat-shimmer="true"
-              />
-              <div
-                className="relative z-10 min-h-0 flex-1 space-y-3 overflow-hidden p-3"
-                data-thumbnail-module-loading-chat-log="true"
-                aria-hidden="true"
-              >
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted/80">
-                    <div className="h-3.5 w-3.5 rounded-full bg-muted-foreground/20" />
-                  </div>
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-14 rounded-full bg-muted-foreground/18" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md bg-background px-3 py-2 shadow-sm ring-1 ring-border/60"
-                      data-thumbnail-module-loading-chat-bubble="guide"
-                    >
-                      <div className="h-3 w-44 max-w-full rounded-full bg-muted-foreground/14" />
-                      <div className="h-3 w-64 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                    <div
-                      className="flex flex-wrap gap-1.5 pl-1"
-                      data-thumbnail-module-loading-chat-actions="outside-bubble"
-                    >
-                      <div className="h-7 w-20 rounded-full border border-border/70 bg-background/80" />
-                      <div className="h-7 w-20 rounded-full bg-muted/80" />
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className="flex justify-end gap-2"
-                  data-thumbnail-module-loading-chat-message="user"
-                >
-                  <div className="max-w-[78%] space-y-1 text-right">
-                    <div className="ml-auto h-2.5 w-5 rounded-full bg-muted-foreground/16" />
-                    <div className="rounded-2xl rounded-br-md bg-muted/70 px-3 py-2">
-                      <div className="h-3 w-56 max-w-full rounded-full bg-muted-foreground/16" />
-                    </div>
-                  </div>
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                </div>
-
-                <div
-                  className="flex gap-2"
-                  data-thumbnail-module-loading-chat-message="assistant"
-                >
-                  <div className="mt-5 h-7 w-7 shrink-0 rounded-full bg-muted/80" />
-                  <div className="max-w-[86%] space-y-1 text-left">
-                    <div className="h-2.5 w-16 rounded-full bg-muted-foreground/16" />
-                    <div
-                      className="space-y-2 rounded-2xl rounded-bl-md border border-border/60 bg-muted/55 px-3 py-2"
-                      data-thumbnail-module-loading-chat-bubble="assistant"
-                    >
-                      <div className="h-3 w-48 max-w-full rounded-full bg-muted-foreground/16" />
-                      <div className="h-3 w-32 max-w-full rounded-full bg-muted-foreground/12" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div
-                className="relative z-10 shrink-0 border-t border-border/70 bg-background/74 p-2.5"
-                data-thumbnail-module-loading-composer="true"
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2">
-                  <div className="h-3 flex-1 rounded-full bg-muted-foreground/12" />
-                  <div className="h-9 w-9 shrink-0 rounded-full bg-muted/80" />
-                </div>
-              </div>
-            </div>
-            <span className="sr-only">
-              도우미 영역의 말풍선과 입력창을 준비하고 있습니다.
-            </span>
-          </CardContent>
-        </Card>
-
-        <Card
-          className="relative order-1 flex min-h-0 flex-col overflow-hidden border-0 bg-card/72 shadow-none"
-          aria-label="유튜브 썸네일 캔버스 로딩"
-          data-thumbnail-module-loading-canvas="true"
-          data-thumbnail-module-loading-card-glass="canvas"
-        >
-          <span
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/34 via-slate-100/14 to-slate-300/20 dark:from-slate-800/24 dark:via-slate-700/14 dark:to-slate-600/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-glass="true"
-          />
-          <span
-            className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/50 to-transparent dark:via-white/18"
-            aria-hidden="true"
-            data-thumbnail-module-loading-canvas-shell-shimmer="true"
-          />
-          <CardHeader className="relative z-10 flex shrink-0 flex-row items-center gap-2 p-2 pb-1">
-            <CardTitle className="flex min-w-0 items-center gap-2 text-sm">
-              <span className="shrink-0 whitespace-nowrap font-semibold">
-                캔버스 편집 / PNG 내보내기
-              </span>
-            </CardTitle>
-            <div className="ml-auto hidden min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pb-1 sm:flex">
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-20 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md border border-input bg-background" />
-              <div className="h-8 w-24 shrink-0 rounded-md bg-muted/80" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 pt-0">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-              <div
-                className="relative aspect-video w-full max-w-full overflow-hidden rounded-2xl border border-slate-300/80 bg-gradient-to-br from-slate-100 via-slate-200 to-slate-400/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-slate-700/70 dark:from-slate-800/72 dark:via-slate-700/58 dark:to-slate-600/52"
-                data-thumbnail-module-loading-canvas-frame="true"
-                data-thumbnail-module-loading-canvas-aspect="16:9"
-              >
-                <span
-                  className="absolute inset-0 bg-gradient-to-br from-white/42 via-slate-200/22 to-slate-500/18"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-canvas-glass="true"
-                />
-                <span
-                  className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                  aria-hidden="true"
-                  data-thumbnail-module-loading-shimmer="true"
-                />
-              </div>
-            </div>
-            <div
-              className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6"
-              data-thumbnail-module-loading-toolbar="true"
-            >
-              {THUMBNAIL_MODULE_LOADING_TOOL_IDS.map((toolId) => (
-                <div
-                  key={`thumbnail-module-loading-tool-${toolId}`}
-                  className="relative h-8 overflow-hidden rounded-lg border border-border/60 bg-gradient-to-br from-background/88 via-slate-50/68 to-slate-200/54 dark:via-slate-800/44 dark:to-slate-700/34"
-                >
-                  <span
-                    className="absolute inset-0 bg-gradient-to-br from-white/28 via-transparent to-slate-400/14"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-glass="true"
-                  />
-                  <span
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/54 to-transparent dark:via-white/16"
-                    aria-hidden="true"
-                    data-thumbnail-module-loading-tool-shimmer="true"
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <span className="sr-only">
-        유튜브 썸네일 페이지 구조와 캔버스, 채팅 도우미를 함께 준비하고
-        있습니다.
-      </span>
-    </section>
+    </AdminEmbeddedModuleShell>
   );
 }
 
@@ -10457,13 +8001,10 @@ export function AdminConsoleOverview({
     isShellBootstrapping || Boolean(user) || hasE2EAdminShellBypass;
   const canLoadAdminConsoleData =
     (Boolean(user) || hasE2EAdminShellBypass) && !isShellBootstrapping;
-  const {
-    stats,
-    isLoading: statsLoading,
-    hasError: statsHasError,
-  } = useAdminOverviewStats(canLoadAdminConsoleData);
   const [activeModuleId, setActiveModuleId] =
     useState<AdminModuleId>(requestedModuleId);
+  const { stats, isLoading: statsLoading, hasError: statsHasError } =
+    useAdminOverviewStats(canLoadAdminConsoleData, activeModuleId === "overview");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [showSidebarLabels, setShowSidebarLabels] = useState(false);
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
@@ -11021,7 +8562,7 @@ export function AdminConsoleOverview({
                 ? "overflow-y-auto md:overflow-hidden"
                 : "overflow-y-auto",
           )}
-          style={{ paddingBottom: isAdminMobileViewport ? "calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+env(safe-area-inset-bottom)+0.5rem)" : "1rem" }}
+          style={{ paddingBottom: isAdminMobileViewport ? "calc(var(--mobile-bottom-nav-effective-height, var(--mobile-bottom-nav-height, 60px)) + env(safe-area-inset-bottom) + var(--admin-page-gutter, 12px))" : "var(--admin-page-gutter, 16px)" }}
           data-admin-console-content="true"
           data-admin-console-active-module={activeModuleId}
           data-scroll-owner="admin-canvas"
@@ -11033,9 +8574,7 @@ export function AdminConsoleOverview({
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
           </p>
-          {isAdminCanvasBootstrapping ? (
-            getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
-          ) : activeModuleId === "overview" ? (
+          {activeModuleId === "overview" ? (
             <AdminEmbeddedModuleShell
               moduleId="overview"
               titleId="admin-overview-module-title"
@@ -11051,6 +8590,8 @@ export function AdminConsoleOverview({
                 isAdmin={canLoadAdminConsoleData}
               />
             </AdminEmbeddedModuleShell>
+          ) : isAdminCanvasBootstrapping ? (
+            getAdminConsoleModulePending(activeModuleId, activeModuleLabel)
           ) : activeModuleId === "routes" ? (
             <AdminEmbeddedModuleShell
               moduleId="routes"
@@ -11060,12 +8601,7 @@ export function AdminConsoleOverview({
               summary="지도 맛집과 실제 도로 동선을 함께 확인합니다."
               contentClassName="overflow-hidden"
             >
-              <AdminRouteRecommendationModule
-                stats={stats}
-                isLoading={statsLoading}
-                hasError={statsHasError}
-                onSelectModule={selectModule}
-              />
+              <AdminRouteRecommendationModule onSelectModule={selectModule} />
             </AdminEmbeddedModuleShell>
           ) : activeModuleId === "llm" ? (
             <LlmSessionWorkspace />

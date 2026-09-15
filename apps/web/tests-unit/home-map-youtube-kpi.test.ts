@@ -62,3 +62,31 @@ describe('home map youtube KPI enrichment', () => {
         }));
     });
 });
+
+test('enrichment requests every video beyond the first 120 in bounded batches', async () => {
+    const { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } = await import('../lib/home-map-youtube-kpi');
+    const originalFetch = globalThis.fetch;
+    const batches: string[][] = [];
+    globalThis.fetch = (async (_url, init) => {
+        const ids = JSON.parse(String(init?.body)).videoIds as string[];
+        batches.push(ids);
+        return Response.json({ metrics: ids.map(videoId => ({ videoId, viewCount: 123, likeCount: 1, commentCount: 2, duration: 60, title: null, publishedAt: null })) });
+    }) as typeof fetch;
+    try {
+        const rows = Array.from({ length: 241 }, (_, i) => restaurant(String(i), { youtube_link: `https://youtu.be/${String(i).padStart(11, '0')}` }));
+        const result = await enrichRestaurantsWithHomeMapYoutubeKpiMetrics(rows, 'hot-view');
+        expect(batches.map(batch => batch.length)).toEqual([120, 120, 1]);
+        expect(result.at(-1)?.youtube_meta).toMatchObject({ viewCount: 123 });
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});
+
+test('a newer snapshot replaces stale merged metrics instead of keeping both', () => {
+    const oldRow = restaurant('a', { youtube_link: 'https://youtu.be/abcdefghijk', youtube_meta: { viewCount: 9999, commentCount: 999 } });
+    const result = mergeHomeMapYoutubeKpiMetrics([{ ...oldRow, mergedRestaurants: [oldRow], mergedYoutubeMetas: [{ viewCount: 9999 }] }], new Map([
+        ['abcdefghijk', { videoId: 'abcdefghijk', viewCount: 1000, likeCount: 10, commentCount: 3, duration: 60, title: null, publishedAt: null }],
+    ]));
+    expect(result[0].mergedRestaurants?.[0].youtube_meta).toMatchObject({ viewCount: 1000 });
+    expect(result[0].mergedYoutubeMetas?.map(meta => meta.viewCount)).toEqual([1000]);
+});

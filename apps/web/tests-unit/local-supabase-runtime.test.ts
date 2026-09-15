@@ -35,7 +35,7 @@ describe('local Supabase runtime source contract', () => {
       calls += 1;
       expect(command).toBe('python3');
       expect(args).toContain('/fixture/repository');
-      expect(args.join(' ')).toContain('module._validate_ledger_snapshot(json.load(sys.stdin))');
+      expect(args.join(' ')).toContain('module._validate_ledger_snapshot(rows)');
       expect(args.join(' ')).not.toContain('fixture-94');
       expect(JSON.parse(options.input)).toEqual(rows);
       expect(options.env.DATABASE_URL).toBeUndefined();
@@ -82,7 +82,7 @@ describe('local Supabase runtime source contract', () => {
     }
   });
 
-  test('validates current 96-source fixture snapshots through the real offline authority', () => {
+  test('validates current 97-source fixture snapshots through the real offline authority', () => {
     const root = path.resolve(import.meta.dir, '../../..');
     const generated = spawnSync('python3', ['-B', '-c', [
       'import importlib.util, json, pathlib, sys',
@@ -96,7 +96,7 @@ describe('local Supabase runtime source contract', () => {
     ].join('\n'), root], { encoding: 'utf8', timeout: 30_000 });
     expect(generated.status).toBe(0);
     const rows = JSON.parse(generated.stdout);
-    expect(rows).toHaveLength(96);
+    expect(rows).toHaveLength(97);
     expect(rows.filter((row: { replayProof: unknown }) => row.replayProof !== null)).toHaveLength(3);
     const validate = (snapshot: unknown) => __localSupabaseRuntimeForTests.validateLedgerSnapshot(
       { repositoryRoot: root }, snapshot,

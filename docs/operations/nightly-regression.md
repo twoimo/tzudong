@@ -356,8 +356,11 @@ set +a
 
 For ordinary development and generated schema types, do not source the file.
 The wrappers validate owner-only provenance, current service readiness, and the
-96-unit source ledger before exposing only mapped loopback values to the
-child process:
+97-unit source ledger before exposing only mapped loopback values to the
+child process. The preserved working catalog may instead use its frozen 96-unit
+ledger plus the exact verified working-schema extension; see
+[Local working catalog](../../backend/supabase/docs/local-working-catalog.md).
+The deterministic nightly lane requires the complete 97-unit replay:
 
 ```sh
 cd apps/web

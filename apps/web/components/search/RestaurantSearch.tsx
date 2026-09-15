@@ -9,6 +9,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
+import { getPopularityDescription } from "@/lib/restaurant-popularity";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import {
   fetchPopularRestaurants,
@@ -168,7 +169,7 @@ const RestaurantSearch = ({
     [isKoreanOnly, popularRestaurantLimit, selectedRegion],
   );
 
-  // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 N개) - [OPTIMIZATION] 병합/필터링 로직 공유
+  // 영상 반응과 주간 검색을 함께 반영한 인기 맛집 쿼리 - [OPTIMIZATION] 병합/필터링 로직 공유
   const { data: popularRestaurants = [], isLoading: isPopularRestaurantsLoading } = useQuery({
     queryKey: popularRestaurantsQueryKey,
     queryFn: async () => {
@@ -665,8 +666,9 @@ const RestaurantSearch = ({
                 <div>
                   <div className="flex items-center gap-2 p-3 pb-2 text-sm font-medium">
                     <TrendingUp className="h-4 w-4" aria-hidden="true" />
-                    인기 검색 맛집
+                    인기 맛집
                   </div>
+                  <p className="px-3 pb-2 text-xs text-muted-foreground">영상 조회·좋아요·댓글과 주간 검색 기준</p>
                   {popularRestaurants
                     .slice(0, effectivePopularMaxItems)
                     .map((restaurant, index) => (
@@ -687,6 +689,7 @@ const RestaurantSearch = ({
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
                           <span className="font-medium">{restaurant.name}</span>
+                          <span className="text-xs text-muted-foreground">{getPopularityDescription(restaurant.popularity)}</span>
                           <span className="text-sm text-muted-foreground truncate">
                             {restaurant.road_address ||
                               restaurant.jibun_address ||

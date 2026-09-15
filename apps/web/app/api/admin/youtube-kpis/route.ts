@@ -343,37 +343,8 @@ export async function GET(request: NextRequest) {
       filterByPublishedPeriod: !isChannelGrowthScope,
     });
     if (snapshotPayload) {
-      const snapshotComparisonAvailable =
-        snapshotPayload.meta?.comparisonCoverage?.comparisonAvailable === true;
-      const shouldUseHistoryComparisonFallback =
-        isChannelGrowthScope && period !== "ALL" && !snapshotComparisonAvailable;
-
-      if (shouldUseHistoryComparisonFallback) {
-        const historyComparisonPayload = await getInsightTreemapData(period, {
-          filterByPeriod: false,
-          metricMode: "views",
-        });
-
-        if (
-          historyComparisonPayload.meta?.comparisonCoverage
-            ?.comparisonAvailable === true
-        ) {
-          return NextResponse.json(
-            withYouTubeKpiQualityMeta(historyComparisonPayload, {
-              dataSource: "supabase-treemap",
-              fallbackSource: "supabase-treemap",
-              fallbackReasonCode: "snapshot-comparison-unavailable",
-            }),
-            {
-              headers: {
-                "Cache-Control":
-                  "private, max-age=60, stale-while-revalidate=180",
-              },
-            },
-          );
-        }
-      }
-
+      // Keep the newest observed dataset even when history is incomplete.
+      // Replacing it with restaurant-history rows changes both scope and freshness.
       return NextResponse.json(withYouTubeKpiQualityMeta(snapshotPayload, {}), {
         headers: {
           "Cache-Control": "private, max-age=60, stale-while-revalidate=180",

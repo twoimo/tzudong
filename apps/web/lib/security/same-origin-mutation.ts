@@ -1,3 +1,5 @@
+import { isBoundLocalDevelopmentRequest } from './local-development-boundary';
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const INTERNAL_CAPABILITY_ROUTES = new Map([
@@ -28,6 +30,7 @@ function parseCanonicalOrigin(value: string, production: boolean) {
 function expectedOrigin(request: Request, env: NodeJS.ProcessEnv) {
   const production = env.NODE_ENV === 'production';
   const configured = env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (isBoundLocalDevelopmentRequest(request, env)) return new URL(request.url).origin;
   if (configured) return parseCanonicalOrigin(configured, production);
   if (production) return null;
   return parseCanonicalOrigin(new URL(request.url).origin, false);

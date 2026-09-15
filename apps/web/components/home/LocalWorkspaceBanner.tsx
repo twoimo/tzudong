@@ -2,6 +2,7 @@ export const LOCAL_WORKSPACE_BANNER_HEIGHT_CSS = '1.75rem';
 
 export function LocalWorkspaceBanner() {
   if (process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME !== '1') return null;
+  const offlineMap = process.env.NEXT_PUBLIC_NAVER_MAPS_SCRIPT_URL === '/__local/naver-maps.js';
 
   return (
     <p
@@ -9,7 +10,8 @@ export function LocalWorkspaceBanner() {
       data-local-workspace-banner="true"
       role="status"
     >
-      로컬 작업장입니다. 이 DB는 nightly 픽스처 2곳과 로컬 pending만 있습니다. backend/data/recovery 에는 크롤 재조정 매니페스트만 있고 프로덕션 restaurants 덤프는 없습니다. 공개 지도는 approved만, 프로덕션 추가는 Preview→Confirm→Apply입니다.
+      로컬 작업장 · 지도에는 승인된 맛집이 표시됩니다. 로컬 변경은 검토 후 운영에 반영합니다.
+      {offlineMap ? ' 테스트 지도 사용 중 · 실제 도로와 지명은 표시되지 않습니다.' : null}
     </p>
   );
 }

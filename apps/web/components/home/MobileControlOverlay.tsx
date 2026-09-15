@@ -1,5 +1,6 @@
 'use client';
 
+import { DataPending } from '@/components/ui/data-pending';
 import { memo, useState, useCallback, useMemo, useRef, useEffect, type ComponentType, type KeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -142,23 +143,10 @@ const loadRestaurantSearch = async () => {
 };
 
 
-// [OPTIMIZATION] 로딩 스켈레톤
-const SheetLoading = () => (
-    <div
-        className="flex items-center justify-center py-8"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-    >
-        <div
-            className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin motion-reduce:animate-none"
-            aria-hidden="true"
-        />
-        <span className="sr-only">목록을 불러오는 중입니다</span>
-    </div>
-);
+const SheetLoading = () => <DataPending label="목록을 불러오는 중입니다." variant="list" />;
 
 interface MobileControlOverlayProps {
+    isActive?: boolean;
     mapMode: 'domestic' | 'overseas';
     selectedRegion: Region | null;
     selectedCountry: string | null;
@@ -215,6 +203,7 @@ const getMobileSearchFocusableElements = (container: HTMLElement | null) => {
  * [OPTIMIZATION] 직접 버튼 그리드 UI로 구현하여 빠른 선택 가능
  */
 function MobileControlOverlayComponent({
+    isActive = true,
     mapMode,
     selectedRegion,
     selectedCountry,
@@ -251,6 +240,7 @@ function MobileControlOverlayComponent({
 
     // 클라이언트 마운트 및 수화(Hydration) 완료 감지용 글로벌 플래그 설정 및 이벤트 발행
     useEffect(() => {
+        if (!isActive) return;
         if (typeof window !== 'undefined') {
             (window as any).__tzudong_mobile_overlay_ready = true;
             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
@@ -260,7 +250,7 @@ function MobileControlOverlayComponent({
                 (window as any).__tzudong_mobile_overlay_ready = false;
             }
         };
-    }, []);
+    }, [isActive]);
 
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     useEffect(() => {
@@ -296,18 +286,18 @@ function MobileControlOverlayComponent({
     const handleNotificationMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'notification' : null), []);
     const handleUserMenuOpenChange = useCallback((open: boolean) => setOpenTopDropdown(open ? 'user' : null), []);
     const DeferredMobileBookmarkMenuButton = useDeferredComponent<MobileBookmarkMenuButtonProps>(
-        !isPublicRestrictedMode && Boolean(user),
+        isActive && !isPublicRestrictedMode && Boolean(user),
         loadMobileBookmarkMenuButton
     );
     const DeferredMobileNotificationMenuButton = useDeferredComponent<MobileNotificationMenuButtonProps>(
-        !isPublicRestrictedMode && Boolean(user),
+        isActive && !isPublicRestrictedMode && Boolean(user),
         loadMobileNotificationMenuButton
     );
     const DeferredRestaurantSearch = useDeferredComponent<RestaurantSearchComponentProps>(
-        activeSheet === 'search',
+        isActive && activeSheet === 'search',
         loadRestaurantSearch
     );
-    const countryCounts = useOverseasCountryCounts(mapMode);
+    const { counts: countryCounts, isError: countryCountsError, isPending: countryCountsPending } = useOverseasCountryCounts(mapMode, isActive && activeSheet === 'region');
     const deviceLocationButtonLabel = resolveDeviceLocationButtonLabel({
         hasLocation: Boolean(deviceLocation),
         isHeadingMode: isDeviceHeadingMode,
@@ -431,7 +421,7 @@ function MobileControlOverlayComponent({
                 return [];
             }
         },
-        enabled: activeSheet === 'region' || activeSheet === 'category',
+        enabled: isActive && (activeSheet === 'region' || activeSheet === 'category'),
         staleTime: 1000 * 60 * 5, // 5분간 fresh
         gcTime: 1000 * 60 * 15, // 15분간 캐시 유지
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 방지
@@ -1442,7 +1432,7 @@ function MobileControlOverlayComponent({
                                                 handleClose();
                                             }}
                                         >
-                                            <span className="font-medium">대한민국</span>
+                                            <span className="font-medium">전체 맛집</span>
                                             <span className="text-sm opacity-75">({restaurants.length}개)</span>
                                         </Button>
 
@@ -1484,7 +1474,7 @@ function MobileControlOverlayComponent({
                                                     }}
                                                 >
                                                     <span className="font-medium">{country}</span>
-                                                    <span className="text-xs opacity-75">({count})</span>
+                                                    <span className="text-xs opacity-75">({countryCountsError ? '조회 실패' : countryCountsPending ? '조회 중' : count})</span>
                                                 </Button>
                                             );
                                         })}

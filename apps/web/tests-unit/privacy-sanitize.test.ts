@@ -11,6 +11,12 @@ const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('privacy sanitizer', () => {
+  test('redacts labeled local phone prose while preserving business address numbers', () => {
+    const result = sanitizePrivacyValue({ evidence: '간판 전화번호(123-4567) 확인', address: '종로구 예시길 124-16' }, { locationClass: 'business' });
+    expect(result.value).toEqual({ evidence: '[REDACTED:phone]', address: '종로구 예시길 124-16' });
+    expect(result.findings[0].kind).toBe('phone');
+    expect(() => assertPrivacySafe({ evidence: 'Tel: 1234-5678' })).toThrow(PrivacyUnsafeValueError);
+  });
   test('redacts nested sensitive values without retaining their raw matches', () => {
     const rrn = '900101-1234567';
     const email = 'person@example.com';

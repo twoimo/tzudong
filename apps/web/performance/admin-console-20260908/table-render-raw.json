@@ -1,0 +1,430 @@
+{
+  "scope": "local-SSR-dashboard-table-first-page",
+  "syntheticInputRows": 490,
+  "inputSha256": "9252b7e550ebde1306ecdf0bfd89cf97efb3aca91a4b052d2cebce27691adfef",
+  "baselineSha256": "a47692af421f551162ff16b0c09ecbc4c243f88ee6d817427f7cac82604718ad",
+  "candidateSha256": "abaccae59749095a33891e842cd2ee82e0486d215b02be6e241d074d64dbb0da",
+  "runtime": "v26.3.0",
+  "samples": [
+    {
+      "pair": 0,
+      "variant": "baseline",
+      "elapsedMs": 28.455375000000004,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 0,
+      "variant": "candidate",
+      "elapsedMs": 3.0712919999999713,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 1,
+      "variant": "candidate",
+      "elapsedMs": 2.995334000000014,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 1,
+      "variant": "baseline",
+      "elapsedMs": 28.545209,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 2,
+      "variant": "baseline",
+      "elapsedMs": 26.749459,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 2,
+      "variant": "candidate",
+      "elapsedMs": 3.024833000000058,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 3,
+      "variant": "candidate",
+      "elapsedMs": 3.8622080000000096,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 3,
+      "variant": "baseline",
+      "elapsedMs": 34.25491699999998,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 4,
+      "variant": "baseline",
+      "elapsedMs": 26.50270899999998,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 4,
+      "variant": "candidate",
+      "elapsedMs": 2.852333999999928,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 5,
+      "variant": "candidate",
+      "elapsedMs": 3.169667000000004,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 5,
+      "variant": "baseline",
+      "elapsedMs": 29.730000000000018,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 6,
+      "variant": "baseline",
+      "elapsedMs": 28.871541999999977,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 6,
+      "variant": "candidate",
+      "elapsedMs": 5.0815000000000055,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 7,
+      "variant": "candidate",
+      "elapsedMs": 2.835374999999999,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 7,
+      "variant": "baseline",
+      "elapsedMs": 28.281582999999955,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 8,
+      "variant": "baseline",
+      "elapsedMs": 33.815292,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 8,
+      "variant": "candidate",
+      "elapsedMs": 3.9130409999999074,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 9,
+      "variant": "candidate",
+      "elapsedMs": 3.5259999999999536,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 9,
+      "variant": "baseline",
+      "elapsedMs": 26.481916999999953,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 10,
+      "variant": "baseline",
+      "elapsedMs": 40.98645799999997,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 10,
+      "variant": "candidate",
+      "elapsedMs": 3.819417000000044,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 11,
+      "variant": "candidate",
+      "elapsedMs": 3.392834000000107,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 11,
+      "variant": "baseline",
+      "elapsedMs": 26.91937500000006,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 12,
+      "variant": "baseline",
+      "elapsedMs": 37.45508300000006,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 12,
+      "variant": "candidate",
+      "elapsedMs": 6.317000000000007,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 13,
+      "variant": "candidate",
+      "elapsedMs": 3.36912499999994,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 13,
+      "variant": "baseline",
+      "elapsedMs": 25.217457999999965,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 14,
+      "variant": "baseline",
+      "elapsedMs": 29.66704100000004,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 14,
+      "variant": "candidate",
+      "elapsedMs": 2.9552079999999705,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 15,
+      "variant": "candidate",
+      "elapsedMs": 3.2749580000000833,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 15,
+      "variant": "baseline",
+      "elapsedMs": 37.481583,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 16,
+      "variant": "baseline",
+      "elapsedMs": 28.489749999999958,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 16,
+      "variant": "candidate",
+      "elapsedMs": 4.074500000000057,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 17,
+      "variant": "candidate",
+      "elapsedMs": 4.341167000000041,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 17,
+      "variant": "baseline",
+      "elapsedMs": 50.59483300000011,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 18,
+      "variant": "baseline",
+      "elapsedMs": 31.874666999999818,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 18,
+      "variant": "candidate",
+      "elapsedMs": 3.319500000000062,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 19,
+      "variant": "candidate",
+      "elapsedMs": 3.4544579999999314,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 19,
+      "variant": "baseline",
+      "elapsedMs": 28.13666699999999,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 20,
+      "variant": "baseline",
+      "elapsedMs": 27.674749999999904,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 20,
+      "variant": "candidate",
+      "elapsedMs": 3.0090829999999187,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 21,
+      "variant": "candidate",
+      "elapsedMs": 2.7681250000000546,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 21,
+      "variant": "baseline",
+      "elapsedMs": 25.45920799999999,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 22,
+      "variant": "baseline",
+      "elapsedMs": 28.164833999999928,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 22,
+      "variant": "candidate",
+      "elapsedMs": 3.790666000000101,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 23,
+      "variant": "candidate",
+      "elapsedMs": 2.860290999999961,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 23,
+      "variant": "baseline",
+      "elapsedMs": 25.579291999999896,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 24,
+      "variant": "baseline",
+      "elapsedMs": 23.884917000000087,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 24,
+      "variant": "candidate",
+      "elapsedMs": 2.8597919999999704,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 25,
+      "variant": "candidate",
+      "elapsedMs": 2.878500000000031,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 25,
+      "variant": "baseline",
+      "elapsedMs": 24.394917000000078,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 26,
+      "variant": "baseline",
+      "elapsedMs": 30.912000000000035,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 26,
+      "variant": "candidate",
+      "elapsedMs": 9.85333300000002,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 27,
+      "variant": "candidate",
+      "elapsedMs": 3.4802089999998316,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 27,
+      "variant": "baseline",
+      "elapsedMs": 28.90516700000012,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 28,
+      "variant": "baseline",
+      "elapsedMs": 27.188041999999996,
+      "renderedRows": 490,
+      "bytes": 278114
+    },
+    {
+      "pair": 28,
+      "variant": "candidate",
+      "elapsedMs": 3.5272500000000946,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 29,
+      "variant": "candidate",
+      "elapsedMs": 3.0987089999998716,
+      "renderedRows": 50,
+      "bytes": 28315
+    },
+    {
+      "pair": 29,
+      "variant": "baseline",
+      "elapsedMs": 25.578125,
+      "renderedRows": 490,
+      "bytes": 278114
+    }
+  ]
+}

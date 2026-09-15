@@ -109,7 +109,7 @@ test.describe('QA Integration Tests', () => {
         await expect(dropdown).toBeVisible();
 
         // Check for "인기 검색 맛집" header
-        await expect(page.getByText('인기 검색 맛집')).toBeVisible();
+        await expect(page.getByText('인기 맛집', { exact: true })).toBeVisible();
 
         // In the popular searches section, we expect buttons.
         // Structure: Header (div) + Items (button)

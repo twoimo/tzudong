@@ -10,7 +10,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ResetPasswordProgressiveSkeleton } from '@/components/auth/ResetPasswordProgressiveSkeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/lib/no-toast';
@@ -153,6 +152,7 @@ export default function ResetPasswordPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isCheckingSession || !isValidSession || isLoading) return;
 
         if (!newPassword || !confirmPassword) {
             toast.error('모든 필드를 입력해주세요');
@@ -190,11 +190,7 @@ export default function ResetPasswordPage() {
         router.push('/');
     };
 
-    if (isCheckingSession) {
-        return <ResetPasswordProgressiveSkeleton />;
-    }
-
-    if (!isValidSession) {
+    if (!isCheckingSession && !isValidSession) {
         return (
             <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-muted/30 px-4 py-10">
                 <div className="w-full max-w-md rounded-2xl border bg-background p-6 text-center shadow-sm">
@@ -235,11 +231,13 @@ export default function ResetPasswordPage() {
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                <form onSubmit={handleSubmit} className="space-y-4 mt-2" aria-busy={isCheckingSession}>
+                    {isCheckingSession && <p role="status" className="text-sm text-muted-foreground">재설정 링크를 확인하는 중입니다.</p>}
                     <div className="space-y-2">
                         <Label htmlFor="new-password" className="text-sm">새 비밀번호</Label>
                         <Input
                             id="new-password"
+                            disabled={isCheckingSession || !isValidSession || isLoading}
                             type="password"
                             placeholder="••••••••"
                             value={newPassword}
@@ -256,6 +254,7 @@ export default function ResetPasswordPage() {
                         <Label htmlFor="confirm-new-password" className="text-sm">새 비밀번호 확인</Label>
                         <Input
                             id="confirm-new-password"
+                            disabled={isCheckingSession || !isValidSession || isLoading}
                             type="password"
                             placeholder="••••••••"
                             value={confirmPassword}
@@ -268,7 +267,7 @@ export default function ResetPasswordPage() {
                     <Button
                         type="submit"
                         className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
-                        disabled={isLoading}
+                        disabled={isCheckingSession || !isValidSession || isLoading}
                     >
                         {isLoading ? '변경 중...' : '비밀번호 변경'}
                     </Button>

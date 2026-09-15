@@ -64,15 +64,16 @@ describe('home root runtime boundary', () => {
         expect(publicEligibilitySource).toContain("'/'");
         expect(publicEligibilitySource).toContain("'/home-frame'");
 
-        expect(homeClientSource.indexOf('<HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('{isViewportResolved && !(isMobileOrTablet && isMapFullscreen)'));
-        expect(homeClientSource).toContain('loading: () => null');
+        expect(homeClientSource.indexOf('<HomeMapContainer')).toBeLessThan(homeClientSource.indexOf('{!(isMobileOrTablet && isMapFullscreen)'));
+        expect(homeClientSource).toContain("import HomeControlPanel from '@/components/home/home-control-panel'");
+        expect(source('app/home-client-loader.tsx')).not.toContain('ssr: false');
         expect(homeClientSource).toContain('tzudong:home-initial-intent');
         expect(homeClientSource).toContain('initialIntent={initialMobileOverlayIntent}');
         expect(homeClientSource).not.toContain('home-map-activate-button');
 
         expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-        expect(homeRuntimeShellSource).toContain('function MobileHomeLayout');
-        expect(homeRuntimeShellSource).toContain('function HomeRuntimePendingShell');
+        expect(homeRuntimeShellSource).toContain('function HomeLayout');
+        expect(homeRuntimeShellSource).not.toContain('function HomeRuntimePendingShell');
         expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeProgressiveShell');
         expect(homeRuntimeShellSource).not.toContain('function HomeRuntimeLoadingSpinner');
         expect(homeRuntimeShellSource).not.toContain('<HomeRuntimeProgressiveShell />');
@@ -96,13 +97,13 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('쯔동여지도 검색하기');
         expect(homeRuntimeShellSource).not.toContain('bg-[radial-gradient');
         expect(homeRuntimeShellSource).not.toContain('bg-[linear-gradient');
-        expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
-        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
+        expect(homeRuntimeShellSource).not.toContain('const OverlayLayout = lazy(');
+        expect(homeRuntimeShellSource).toContain('<HomeLayout>{children}</HomeLayout>');
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
         expect(homeRuntimeShellSource).not.toContain('setHasMounted');
-        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
-        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+        expect(homeRuntimeShellSource).not.toContain("if (viewportMode === 'pending')");
+        expect(homeRuntimeShellSource).toContain("viewportMode === 'desktop'");
         expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
         expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
         expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
@@ -178,17 +179,13 @@ describe('home root runtime boundary', () => {
         expect(source('app/app-runtime-shell.tsx')).toContain("import './app-globals.css'");
         expect(source('app/app-runtime-shell.tsx')).toContain('MainLayout');
     });
-    test('bypasses the desktop overlay in public demo mode', () => {
+    test('keeps restricted home chrome gated without changing the map frame', () => {
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
-        const desktopBranch = homeRuntimeShellSource.slice(
-            homeRuntimeShellSource.indexOf("if (viewportMode === 'desktop')"),
-            homeRuntimeShellSource.indexOf("function HomeRuntimePendingShell"),
-        );
-
-        expect(desktopBranch).toContain('if (isPublicRestrictedMode)');
-        expect(desktopBranch).toContain(
-            'return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;',
-        );
-        expect(desktopBranch).toContain('<OverlayLayout>{children}</OverlayLayout>');
+        expect(homeRuntimeShellSource).toContain('<HomeLayout>{children}</HomeLayout>');
+        expect(homeRuntimeShellSource).not.toContain('<OverlayLayout>{children}</OverlayLayout>');
+        expect(homeRuntimeShellSource).toContain("!isPublicRestrictedMode && !suppressHomePopups && viewportMode === 'desktop'");
+        expect(homeRuntimeShellSource).toContain('!isPublicRestrictedMode && isAuthModalOpen');
+        expect(homeRuntimeShellSource).toContain('!isPublicRestrictedMode && isProfileModalOpen');
+        expect(homeRuntimeShellSource).toContain('!isPublicRestrictedMode && needsNicknameSetup');
     });
 });

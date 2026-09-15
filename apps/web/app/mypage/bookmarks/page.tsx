@@ -12,10 +12,9 @@ import {
   extractCanonicalYouTubeVideoId,
   normalizeCanonicalYouTubeWatchUrl,
 } from "@/lib/youtube-url";
-import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { MyPageDataRegion } from "@/app/mypage/my-page-data-region";
 import {
   MyPageEmptyState,
-  MyPageErrorState,
   MyPageSectionFrame,
   myPageCardTitleClass,
   myPageFooterMetaClass,
@@ -28,7 +27,8 @@ import {
 const PAGE_SIZE = 15;
 
 export default function BookmarksPage() {
-  const { data: bookmarks = [], isLoading, isError } = useBookmarks();
+  const { data: bookmarksData, isLoading, isFetching, isError } = useBookmarks();
+  const bookmarks = useMemo(() => bookmarksData ?? [], [bookmarksData]);
   const { toggleBookmark, isLoading: isToggling } = useToggleBookmark();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -79,18 +79,6 @@ export default function BookmarksPage() {
   }, []);
 
   // 로딩 상태
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="북마크를 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        title="북마크를 불러오지 못했습니다"
-        description="저장한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
@@ -98,9 +86,10 @@ export default function BookmarksPage() {
       eyebrow="내 활동"
       title="나의 북마크 내역"
       description="저장한 맛집을 한눈에 확인하고 지도 탐색으로 자연스럽게 이어갑니다."
-      countLabel={`총 ${bookmarks.length}개`}
+      countLabel={bookmarksData !== undefined ? `총 ${bookmarks.length}개` : isError ? "확인 필요" : "불러오는 중"}
       data-section="bookmarks"
     >
+      <MyPageDataRegion pending={isFetching || isLoading} hasData={bookmarksData !== undefined} error={isError} label="북마크를 불러오는 중…" errorTitle="북마크를 불러오지 못했습니다" errorDescription="저장한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요.">
       {visibleBookmarks.length === 0 ? (
         <MyPageEmptyState
           icon={Bookmark}
@@ -243,6 +232,7 @@ export default function BookmarksPage() {
           )}
         </div>
       )}
+      </MyPageDataRegion>
     </MyPageSectionFrame>
   );
 }

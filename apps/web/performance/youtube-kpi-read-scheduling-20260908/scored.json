@@ -1,0 +1,131 @@
+{
+  "schemaVersion": "youtube-kpi-scheduling-controlled-score.v1",
+  "rawSha256": "6ed44cf0de0f96e0ad9d50e513a4126dd36a4b957f5c1598b36a02615629c7d1",
+  "budgets": {
+    "absoluteImprovementFloorMs": 5,
+    "relativeImprovementFloorPercent": 5,
+    "pairedDifferenceMadNoiseBudgetMs": 2,
+    "productBudgetReference": "../performance-budgets.v1.json",
+    "productBudgetEvaluated": false
+  },
+  "scenarios": [
+    {
+      "id": "empty-publication-cohort",
+      "pairs": 30,
+      "baselineMedianMs": 33.18187450000005,
+      "candidateMedianMs": 22.161062499999986,
+      "baselineP75Ms": 33.293083000000024,
+      "candidateP75Ms": 22.268249999999966,
+      "pairedMedianImprovementMs": 10.990103499999975,
+      "relativeImprovementPercent": 33.120803648389305,
+      "pairedDifferenceMadMs": 0.754188000000056,
+      "controlledBudgetPass": true,
+      "queryCounts": {
+        "baseline": [
+          5
+        ],
+        "candidate": [
+          5
+        ]
+      },
+      "peakConcurrentReads": {
+        "baseline": [
+          2
+        ],
+        "candidate": [
+          3
+        ]
+      },
+      "clientFactoryCalls": {
+        "baseline": [
+          5
+        ],
+        "candidate": [
+          5
+        ]
+      }
+    },
+    {
+      "id": "single-page-100",
+      "pairs": 30,
+      "baselineMedianMs": 44.26316699999984,
+      "candidateMedianMs": 33.370291499999894,
+      "baselineP75Ms": 44.53791700000011,
+      "candidateP75Ms": 33.53983299999982,
+      "pairedMedianImprovementMs": 10.91999950000013,
+      "relativeImprovementPercent": 24.67062399760092,
+      "pairedDifferenceMadMs": 0.77081249999992,
+      "controlledBudgetPass": true,
+      "queryCounts": {
+        "baseline": [
+          6
+        ],
+        "candidate": [
+          6
+        ]
+      },
+      "peakConcurrentReads": {
+        "baseline": [
+          2
+        ],
+        "candidate": [
+          3
+        ]
+      },
+      "clientFactoryCalls": {
+        "baseline": [
+          6
+        ],
+        "candidate": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "two-pages-1200",
+      "pairs": 30,
+      "baselineMedianMs": 114.13258300000007,
+      "candidateMedianMs": 103.47764600000028,
+      "baselineP75Ms": 116.00425000000087,
+      "candidateP75Ms": 105.11616700000013,
+      "pairedMedianImprovementMs": 10.748583499998858,
+      "relativeImprovementPercent": 9.417629232135097,
+      "pairedDifferenceMadMs": 1.78558399999838,
+      "controlledBudgetPass": true,
+      "queryCounts": {
+        "baseline": [
+          12
+        ],
+        "candidate": [
+          12
+        ]
+      },
+      "peakConcurrentReads": {
+        "baseline": [
+          2
+        ],
+        "candidate": [
+          3
+        ]
+      },
+      "clientFactoryCalls": {
+        "baseline": [
+          6
+        ],
+        "candidate": [
+          6
+        ]
+      }
+    }
+  ],
+  "admittedSlices": 0,
+  "g003MeasuredImprovementEstablished": false,
+  "admissionReason": "Synthetic fixed-delay transport and a frozen helper dependency set are not retained production route or full frozen-tree evidence. No canonical G003 slice is admitted.",
+  "limitations": [
+    "No database or network request executed.",
+    "Concurrency per combined request increases from two to three temporarily; production pool contention is unmeasured.",
+    "Query count and cached service-role factory calls are unchanged. No client construction speedup is claimed.",
+    "Pagination and 200-ID map batches remain sequential. No cross-request result cache or auth change.",
+    "Failure paths may launch a baseline read that the formerly serial row failure would have skipped."
+  ]
+}

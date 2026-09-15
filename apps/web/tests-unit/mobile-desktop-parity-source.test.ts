@@ -87,7 +87,7 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(consoleSource).toContain('data-admin-console-content="true"');
     expect(consoleSource).toContain(
-      'data-admin-console-content-loading="true"',
+      'data-admin-module-initial-frame={moduleId}',
     );
     expect(consoleSource).toContain("shouldRenderAdminShell");
     expect(consoleSource).toContain("관리자 콘솔");
@@ -139,7 +139,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(consoleSource).toContain('href: "/admin?module=insights"');
     expect(consoleSource).not.toContain('href: "/admin/banners"');
     expect(consoleSource).not.toContain('href: "/insights"');
-    expect(insightsClientSource).toContain("embedded || (!isAuthLoading && !!user)");
+    expect(insightsClientSource).toContain("enabled: !isAuthLoading && !!user");
     expect(consoleSource).not.toContain("AdminAnnouncementModule");
     expect(consoleSource).not.toContain('id: "announcements"');
     expect(consoleSource).not.toContain("/admin?module=announcements");
@@ -403,7 +403,7 @@ describe("mobile and desktop parity source contracts", () => {
     expect(mobileOverlaySource).toContain('`[data-mobile-map-sheet-trigger="${trigger}"]`');
     expect(mobileOverlaySource).toContain('role="dialog"');
     expect(mobileOverlaySource).toContain(
-      '<span className="font-medium">대한민국</span>',
+      '<span className="font-medium">전체 맛집</span>',
     );
     expect(mobileOverlaySource).not.toContain(
       '<span className="font-medium">전국</span>',
@@ -1089,7 +1089,7 @@ describe("mobile and desktop parity source contracts", () => {
       "오른쪽 지도에서 맛집 마커를 클릭하면 상세 패널이 왼쪽에",
     );
     expect(source("app/home-client.tsx")).toContain(
-      "renderDesktopDetailPanel={!isDesktop}",
+      "renderDesktopDetailPanel={isMobileOrTablet}",
     );
     expect(source("app/home-client.tsx")).toContain(
       "isPanelCollapsed={isPanelCollapsed}",

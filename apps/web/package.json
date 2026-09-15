@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "node scripts/run-local-dev.mjs --port 8080",
     "dev:local": "node scripts/run-local-dev.mjs --port 8080",
+    "catalog:stats": "node ../../backend/supabase/scripts/refresh-local-youtube-kpis.mjs",
+    "catalog:review": "python3 -B ../../backend/supabase/scripts/local_catalog_workspace.py review",
     "dev:hosted": "node scripts/dev-prewarm.mjs --port 8080 --hosted",
     "dev:clean": "node scripts/run-local-dev.mjs --port 8080 --clean",
     "dev:playwright": "node scripts/run-local-dev.mjs --port 8080",
@@ -116,6 +118,7 @@
     "react-resizable-panels": "^4.12.3",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
+    "semiotic": "3.9.2",
     "sharp": "^0.35.3",
     "supercluster": "^9.0.0",
     "swr": "^2.5.1",

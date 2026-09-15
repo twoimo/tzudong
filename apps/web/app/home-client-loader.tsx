@@ -1,13 +1,9 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-const HomeClient = dynamic(() => import('./home-client'), {
-    ssr: false,
-    loading: () => (
-        <div role="status" aria-live="polite" aria-label="쯔동여지도 홈 준비 중" className="sr-only" />
-    ),
-});
+import HomeClient from './home-client';
 
+// Compatibility entry point: keep the same SSR frame as the direct home route.
+// Browser-only SDKs remain deferred inside HomeClient's map data region.
 export default function HomeClientLoader() {
     return <HomeClient />;
 }

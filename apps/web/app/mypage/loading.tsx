@@ -1,10 +1,13 @@
-/**
- * 마이페이지 라우트 로딩 경계.
- *
- * App Router fallback에서는 별도 뷰포트 스켈레톤을 그리지 않습니다.
- * 정적 레이아웃은 `MyPageLayoutContent`가 즉시 유지하고, 인증/데이터처럼
- * 실제 동적 영역만 해당 위치에서 한 번 스켈레톤을 표시합니다.
- */
+"use client";
+
+import { usePathname } from 'next/navigation';
+import { MyPageSectionFrame } from '@/components/mypage/MyPageSectionFrame';
+import { DataPending } from '@/components/ui/data-pending';
+import { resolveMobileRouteHeader } from './route-presentation';
+
 export default function MyPageLoading() {
-    return null;
+  const header = resolveMobileRouteHeader(usePathname());
+  return <MyPageSectionFrame icon={header.icon} eyebrow="마이페이지" title={header.title} description={header.description}>
+    <DataPending label="페이지 내용을 불러오는 중입니다." variant="list" className="min-h-48" />
+  </MyPageSectionFrame>;
 }

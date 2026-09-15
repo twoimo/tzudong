@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "youtube-kpi-scheduling-artifacts.v1",
+  "files": {
+    "README.md": "f4ef55e84fe4c8a687d4ba2496aca7bcd1fa831a8ed9db5f878e9121a0ad6f47",
+    "baseline.source": "a641d31702daff0370258dbee5bc5f0b2f55e835fe75588a2f8ee028c01eb1c9",
+    "candidate.source": "aaf0a0390db14e86212aabf0eb16d599128a1fb254a1491d2022423a2fbaf764",
+    "freeze.json": "7d6e53b1cff98e25485ca023d6d700ce780f0f970f7774056cc12851eaf0db65",
+    "measure.mjs": "b89b1045430ae349d3a5d61c249576568a8314885115c91808c7b2f020c94141",
+    "raw.json": "6ed44cf0de0f96e0ad9d50e513a4126dd36a4b957f5c1598b36a02615629c7d1",
+    "runtime-tests.source": "041c22d365591cc3d9f129a7792fed12e224be88ffc4a5d75ade043df05f81f4",
+    "score.mjs": "338a4297d14b68311dddc975d3c3f82fd0105510661232de2d5f42c6b57afb65",
+    "scored.json": "71efc21984ff3a21df8f40dfe21ddca3ea532c967cbb3df0c5d6f28e233fcfad",
+    "treemap.source": "21cc004f998a2d4bd3846ea22b9a07097c66f0c36eb29a86bbbc2d0a4aec0d21",
+    "verification.json": "3a5ebd53e07b99991fc86a7f31f52fabc853a006b6b849a13f4af0c4eb61e2aa"
+  }
+}

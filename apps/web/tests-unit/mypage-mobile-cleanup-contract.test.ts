@@ -88,9 +88,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(layoutSource).toContain(
       "shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4 md:hidden",
     );
-    expect(layoutSource).toContain("쯔동여지도 마이페이지");
+    expect(source("app/mypage/route-presentation.ts")).toContain("쯔동여지도 마이페이지");
     expect(layoutSource).toContain("flex min-w-0 flex-wrap items-center");
-    expect(layoutSource).toContain(
+    expect(source("app/mypage/route-presentation.ts")).toContain(
       "내 활동과 계정 정보를 관리하세요.",
     );
     expect(layoutSource).toContain(
@@ -338,36 +338,19 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("const joinedDateLabel");
   });
 
-  test("mobile loading keeps static mypage chrome and uses borderless dynamic skeletons", () => {
+  test("mypage loading retains real route headings and sidebar navigation", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
     const routeLoadingSource = source("app/mypage/loading.tsx");
-    const sectionSkeletonSource = source(
-      "components/mypage/MyPageSectionSkeleton.tsx",
-    );
-
     expect(layoutSource).toContain('data-mypage-mobile-route-header="true"');
-    expect(layoutSource).toContain(
-      'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
-    );
-    expect(layoutSource).toContain(
-      'data-mypage-content-hero-skeleton="borderless-mobile"',
-    );
-    expect(layoutSource).toContain(
-      "space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5",
-    );
-    expect(layoutSource).not.toContain(
-      "rounded-3xl border border-border bg-card p-4",
-    );
-    expect(layoutSource).toContain("STAT_SKELETON_WIDTHS.map");
-    expect(layoutSource).toContain("ACTION_SKELETON_WIDTHS.map");
-    expect(routeLoadingSource).toContain("return null;");
-    expect(routeLoadingSource).not.toContain("animate-pulse");
-    expect(sectionSkeletonSource).toContain(
-      'data-mypage-section-skeleton-card="borderless-mobile"',
-    );
-    expect(sectionSkeletonSource).not.toContain(
-      "rounded-2xl border border-border bg-card p-4",
-    );
+    expect(layoutSource).toContain('<MyPageSectionFrame');
+    expect(layoutSource).toContain('<DataPending');
+    expect(layoutSource).not.toContain('STAT_SKELETON_WIDTHS');
+    expect(layoutSource).not.toContain('ACTION_SKELETON_WIDTHS');
+    expect(routeLoadingSource).toContain('resolveMobileRouteHeader(usePathname())');
+    expect(routeLoadingSource).toContain('<MyPageSectionFrame');
+    expect(routeLoadingSource).toContain('<DataPending');
+    expect(routeLoadingSource).not.toContain('return null;');
+    expect(routeLoadingSource).not.toContain('animate-pulse');
   });
 
   test("mypage sections share a calm responsive frame across desktop and mobile", () => {
@@ -424,7 +407,8 @@ describe("mypage mobile cleanup source contracts", () => {
     for (const sectionSource of sectionSources) {
       expect(sectionSource).toContain("<MyPageSectionFrame");
       expect(sectionSource).toContain("<MyPageEmptyState");
-      expect(sectionSource).toContain("<MyPageErrorState");
+      expect(sectionSource).toContain("<MyPageDataRegion");
+      expect(source("app/mypage/my-page-data-region.tsx")).toContain("<MyPageErrorState");
       expect(sectionSource).toContain("myPageListCardClass");
       expect(sectionSource).toContain("myPageResponsiveListClass");
       expect(sectionSource).toContain("myPageCardTitleClass");

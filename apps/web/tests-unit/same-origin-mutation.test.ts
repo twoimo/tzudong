@@ -18,6 +18,25 @@ function mutation(headers: HeadersInit = {}, url = 'https://www.tzudong.app/api/
 }
 
 describe('same-origin mutation authorization', () => {
+  test('admits both local dev aliases only when Origin matches the actual bound request', () => {
+    const localEnv: NodeJS.ProcessEnv = {
+      NODE_ENV: 'development', NEXT_PUBLIC_SITE_URL: 'http://127.0.0.1:8080',
+      TZUDONG_LOCAL_SUPABASE_DEV: '1', LOCAL_SUPABASE_STATE_ROOT: '/fixture',
+      SUPABASE_URL: 'http://127.0.0.1:20000', NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:20000',
+    };
+    for (const host of ['localhost', '127.0.0.1']) {
+      const origin = `http://${host}:8080`;
+      expect(isTrustedSameOriginMutation(mutation({ origin, 'sec-fetch-site': 'same-origin' }, `${origin}/api/admin/example`), localEnv)).toBe(true);
+    }
+    for (const origin of ['http://127.0.0.1:8080', 'http://localhost:3000', 'https://attacker.example']) {
+      expect(isTrustedSameOriginMutation(mutation({ origin, 'sec-fetch-site': 'same-origin' }, 'http://localhost:8080/api/admin/example'), localEnv)).toBe(false);
+    }
+    const req = mutation({ origin: 'http://localhost:8080' }, 'http://localhost:8080/api/admin/example');
+    expect(isTrustedSameOriginMutation(req, { ...localEnv, TZUDONG_LOCAL_SUPABASE_DEV: '0' })).toBe(false);
+    expect(isTrustedSameOriginMutation(req, { ...localEnv, NODE_ENV: 'production' })).toBe(false);
+    expect(isTrustedSameOriginMutation(req, { ...localEnv, SUPABASE_URL: 'https://example.supabase.co' })).toBe(false);
+  });
+
   test('allows exact same-origin browser mutations and safe methods', () => {
     expect(isTrustedSameOriginMutation(mutation({
       cookie: 'sb-test-auth-token=value',

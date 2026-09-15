@@ -2,6 +2,10 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
+import { Workflow } from "lucide-react";
+import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 
 import {
   PIPELINE_CONTROL_CONFIRMATION_TEXT,
@@ -62,11 +66,20 @@ async function postPipeline(body: Record<string, unknown>) {
 }
 
 export function AdminPipelineDashboard() {
+  const { user, isLoading } = useAuth();
+  const accountId = !isLoading ? user?.id ?? null : null;
+  return <PipelineDashboardForAccount key={accountId ?? "signed-out"} accountId={accountId} />;
+}
+
+function PipelineDashboardForAccount({ accountId }: { accountId: string | null }) {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryKey: ["admin-pipeline-status"],
-    queryFn: async () => {
+    queryKey: ["admin-pipeline-status", accountId],
+    enabled: !!accountId,
+    gcTime: 0,
+    queryFn: async ({ signal }) => {
       const response = await fetch("/api/admin/pipeline", {
+        signal,
         headers: { Accept: "application/json" },
         cache: "no-store",
       });
@@ -185,16 +198,19 @@ export function AdminPipelineDashboard() {
   const gauges = query.data?.gauges ?? {};
   const frames = query.data?.failureFrames ?? [];
   return (
+    <AdminEmbeddedModuleShell
+      moduleId="pipeline"
+      titleId="admin-pipeline-title"
+      title="크롤러 파이프라인"
+      icon={Workflow}
+      summary="로컬 control-plane이 없으면 GitHub Actions 크롤러 최근 실행을 보여 줍니다. enqueue는 로컬 API가 있을 때만 동작합니다."
+      contentClassName="overflow-y-auto"
+    >
     <section
       data-admin-pipeline-dashboard="true"
       className="flex min-h-[220px] flex-col gap-3 border border-border bg-card p-4"
     >
-      <header>
-        <h2 className="text-sm font-semibold">크롤러 파이프라인</h2>
-        <p className="text-xs text-muted-foreground">
-          로컬 control-plane이 없으면 GitHub Actions 크롤러 최근 실행을 보여 줍니다. enqueue는 로컬 API가 있을 때만 동작합니다.
-        </p>
-      </header>
+      {query.isPending || query.isFetching ? <AdminDataPending label="파이프라인 상태를 확인하는 중입니다." /> : null}
       <div className="flex flex-wrap gap-2 text-[11px]">
         <span data-admin-pipeline-hardware={query.data?.hardware ?? "unknown"}>
           hardware: {query.data?.hardware ?? "unknown"}
@@ -378,7 +394,7 @@ export function AdminPipelineDashboard() {
       </div>
       {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
       <div data-admin-pipeline-failures="true" className="text-xs">
-        {query.isError
+        {query.isPending ? null : query.isError
           ? "상태를 불러올 수 없음"
           : frames.length === 0 && (query.data?.failures ?? []).length === 0
             ? "최근 실패 없음"
@@ -398,5 +414,6 @@ export function AdminPipelineDashboard() {
         />
       ) : null}
     </section>
+    </AdminEmbeddedModuleShell>
   );
 }

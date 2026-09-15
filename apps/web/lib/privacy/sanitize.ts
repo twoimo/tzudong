@@ -43,6 +43,8 @@ const RRN_LIKE_PATTERN = /\b\d{6}[-\s]?[1-8]\d{6}\b/g;
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const KOREAN_PHONE_PATTERN =
   /(?:^|[^\d])(?:(?:\+?82[-.\s]?)?(?:0?1[016789]|0?2|0?[3-6][1-5])|(?:\+?82[-.\s]?70|070))[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)/gm;
+const LABELED_LOCAL_PHONE_PATTERN =
+  /(?:전화(?:번호)?|연락처|\btel(?:ephone)?\b|\bphone\b)\s*[:：(]?\s*\d{3,4}[-.\s]\d{4}(?!\d)/gi;
 const PRECISE_LOCATION_TEXT_PATTERN =
   /(?:\b(?:lat|latitude|lng|lon|longitude)\b|(?:위도|경도))\s*[:=]\s*-?\d{1,3}\.\d{4,}/gim;
 const PRECISE_LOCATION_QUERY_PATTERN =
@@ -70,7 +72,7 @@ const OUTPUT_TRUNCATION_RESERVE_BYTES = 512;
 const MAX_PROPERTY_KEY_LENGTH = 128;
 const MAX_PATH_LENGTH = 512;
 const MAX_FINDINGS = 2_048;
-const STRING_PATTERN_WORK_MULTIPLIER = 12;
+const STRING_PATTERN_WORK_MULTIPLIER = 13;
 const FINDING_OUTPUT_OVERHEAD_BYTES = 48;
 const PRIMITIVE_OUTPUT_BYTES = 64;
 const COORDINATE_CONTAINER_KEYS = new Set([
@@ -365,7 +367,7 @@ const sensitiveKindForString = (
   const emails = countMatches(value, EMAIL_PATTERN);
   if (emails > 0) return { kind: "email", count: emails };
 
-  const phones = countMatches(value, KOREAN_PHONE_PATTERN);
+  const phones = countMatches(value, KOREAN_PHONE_PATTERN) + countMatches(value, LABELED_LOCAL_PHONE_PATTERN);
   if (phones > 0) return { kind: "phone", count: phones };
   const preciseLocationText = countMatches(value, PRECISE_LOCATION_TEXT_PATTERN)
     + countMatches(value, PRECISE_LOCATION_QUERY_PATTERN)

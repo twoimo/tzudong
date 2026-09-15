@@ -2,7 +2,8 @@
 // Keep the home Tailwind entry separate from the full app stylesheet loaded by AppRuntimeShell.
 
 import './home-app-globals.css';
-import { Suspense, lazy, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, type ComponentType, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers';
 import { LayoutProvider } from '@/contexts/LayoutContext';
@@ -28,7 +29,7 @@ import {
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import { AppToaster } from '@/components/ui/app-toaster';
 
-const OverlayLayout = lazy(() => import('@/components/layout/OverlayLayout'));
+
 
 type AuthModalProps = {
     isOpen: boolean;
@@ -138,7 +139,19 @@ function DeferredUserDataPrefetcher({ enabled }: { enabled: boolean }) {
     return <UserDataPrefetcher />;
 }
 
-function MobileHomeLayout({ children }: { children: ReactNode }) {
+const loadHomePopups = async () => {
+    const mod = await import('@/components/layout/CombinedPopup');
+    return mod.default as ComponentType<Record<string, never>>;
+};
+
+function HomeLayout({ children }: { children: ReactNode }) {
+    const viewportMode = useHomeViewportMode();
+    const searchParams = useSearchParams();
+    const suppressHomePopups = ['feed', 'stamp', 'leaderboard'].includes(searchParams?.get('panel') ?? '');
+    const HomePopups = useDeferredComponent<Record<string, never>>(
+        !isPublicRestrictedMode && !suppressHomePopups && viewportMode === 'desktop',
+        loadHomePopups,
+    );
     const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -248,8 +261,8 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 </main>
             </div>
 
-            {!isPublicRestrictedMode && (
-                <div className={cn('min-[1600px]:hidden transition-transform duration-300')}>
+            {!isPublicRestrictedMode && viewportMode !== 'desktop' && (
+                <div className={cn('min-[1280px]:hidden transition-transform duration-300')}>
                     <MobileBottomNav
                         className="transition-transform duration-300"
                         style={{
@@ -259,6 +272,8 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                     />
                 </div>
             )}
+
+            {!isPublicRestrictedMode && !suppressHomePopups && viewportMode === 'desktop' && HomePopups ? <HomePopups /> : null}
 
             {!isPublicRestrictedMode && isAuthModalOpen && (
                 <Suspense fallback={null}>
@@ -296,45 +311,12 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
     );
 }
 
-function HomeLayoutContent({ children }: { children: ReactNode }) {
-    const viewportMode = useHomeViewportMode();
-
-    if (viewportMode === 'pending') {
-        return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
-    }
-
-    if (viewportMode === 'desktop') {
-        if (isPublicRestrictedMode) {
-            return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
-        }
-        return (
-            <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
-                <OverlayLayout>{children}</OverlayLayout>
-            </Suspense>
-        );
-    }
-
-    return <MobileHomeLayout>{children}</MobileHomeLayout>;
-}
-
-function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
-    return (
-        <div className="flex flex-col bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
-            <a href="#main-content" className="skip-link">
-                본문 바로가기
-            </a>
-            <main id="main-content" className="h-full min-h-0 w-full flex-1 bg-background" aria-label="쯔동여지도 지도 본문">
-                {children}
-            </main>
-        </div>
-    );
-}
 export function HomeRuntimeShell({ children }: { children: ReactNode }) {
     return (
         <QueryProvider>
             <HomeSessionProviders>
                 <LayoutProvider>
-                    <HomeLayoutContent>{children}</HomeLayoutContent>
+                    <HomeLayout>{children}</HomeLayout>
                     <AppToaster />
                 </LayoutProvider>
             </HomeSessionProviders>

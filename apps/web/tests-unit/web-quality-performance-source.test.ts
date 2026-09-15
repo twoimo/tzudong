@@ -456,13 +456,13 @@ describe("web quality performance source contracts", () => {
     expect(regionSelectorSource).toContain("contentSide?:");
     expect(regionSelectorSource).toContain("z-[180]");
     expect(regionSelectorSource).toContain(
-      '<span className="whitespace-nowrap">대한민국</span>',
+      '<span className="whitespace-nowrap">전체 맛집</span>',
     );
     expect(regionSelectorSource).not.toContain("<span>전국</span>");
     expect(categoryFilterSource).toContain("contentSide?:");
-    expect(categoryFilterSource).toContain("카테고리 검색…");
+    expect(categoryFilterSource).toContain("DropdownMenuCheckboxItem");
     expect(categoryFilterSource).toContain("z-[180]");
-    expect(categoryFilterSource).toContain("rounded-2xl border-border bg-card");
+    expect(categoryFilterSource).toContain("rounded-2xl border-border shadow-2xl");
   });
 
   test("home map runtime renders directly while supporting queries stay intent-gated", () => {
@@ -595,7 +595,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeClientSource.indexOf("<HomeMapContainer")).toBeLessThan(
       homeClientSource.indexOf(
-        "{isViewportResolved && !(isMobileOrTablet && isMapFullscreen)",
+        "{!(isMobileOrTablet && isMapFullscreen)",
       ),
     );
     expect(source("components/home/home-map-container.tsx")).not.toContain(
@@ -664,10 +664,12 @@ describe("web quality performance source contracts", () => {
       "function HomeControlPanelLoadingShell()",
     );
     expect(homeClientSource).not.toContain("쯔동여지도 검색하기");
-    expect(homeClientSource).toContain("loading: () => null");
+    expect(homeClientSource).toContain("loading: () => <HomeMapUserMenuPendingShell />");
+    expect(homeClientSource).toContain("import HomeControlPanel from '@/components/home/home-control-panel'");
+    expect(homeClientSource).toContain("import HomeMapContainer from '@/components/home/home-map-container'");
     expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-    expect(homeRuntimeShellSource).toContain("function MobileHomeLayout");
-    expect(homeRuntimeShellSource).toContain(
+    expect(homeRuntimeShellSource).toContain("function HomeLayout");
+    expect(homeRuntimeShellSource).not.toContain(
       "function HomeRuntimePendingShell",
     );
     expect(homeRuntimeShellSource).not.toContain(
@@ -733,18 +735,18 @@ describe("web quality performance source contracts", () => {
       "function MobileTopControlPendingShell",
     );
     expect(homeRuntimeShellSource).not.toContain("shouldLoadMobileBottomNav");
-    expect(homeRuntimeShellSource).toContain("const OverlayLayout = lazy(");
+    expect(homeRuntimeShellSource).not.toContain("const OverlayLayout = lazy(");
     expect(homeRuntimeShellSource).toContain("<QueryProvider>");
     expect(homeRuntimeShellSource).toContain(
-      "fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}",
+      "<HomeLayout>{children}</HomeLayout>",
     );
     expect(homeRuntimeShellSource).not.toContain(
       'fallback={<div className="h-full w-full">{children}</div>}',
     );
     expect(homeRuntimeShellSource).not.toContain("if (!hasMounted)");
     expect(homeRuntimeShellSource).not.toContain("setHasMounted");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+    expect(homeRuntimeShellSource).not.toContain("if (viewportMode === 'pending')");
+    expect(homeRuntimeShellSource).toContain("viewportMode === 'desktop' && HomePopups");
     expect(homeRuntimeShellSource).not.toContain(
       "from '@/hooks/useDeviceType'",
     );
@@ -755,7 +757,7 @@ describe("web quality performance source contracts", () => {
       'const isViewportResolved = viewportMode !== "pending"',
     );
     expect(homeClientSource).toContain(
-      "isViewportResolved && !(isMobileOrTablet && isMapFullscreen)",
+      "!(isMobileOrTablet && isMapFullscreen)",
     );
     expect(homeClientSource).toContain(
       "isViewportResolved && shouldRenderSidePanels",
@@ -883,81 +885,23 @@ describe("web quality performance source contracts", () => {
     expect(restaurantSearchSource).toContain(
       "enabled: isFocused || isInlineView",
     );
-    expect(homeControlPanelSource).toContain(
-      "const loadHomeDesktopControlPanel = async () =>",
-    );
-    expect(homeControlPanelSource).toContain(
-      "import('@/components/home/home-desktop-control-panel')",
-    );
-    expect(homeControlPanelSource).toContain(
-      "const loadMobileControlOverlay = async () =>",
-    );
-    expect(homeControlPanelSource).toContain(
-      "import('@/components/home/MobileControlOverlay')",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "function MobileControlOverlayLoadingShell",
-    );
-    expect(homeControlPanelSource).toContain(
-      "type MobileControlOverlayIntent = 'search' | 'bookmark' | 'notification' | 'user'",
-    );
-    expect(homeControlPanelSource).toContain("pendingMobileOverlayIntent");
-    expect(homeControlPanelSource).not.toContain(
-      "onClick={() => onActivate('search')}",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "onClick={() => onActivate('bookmark')}",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "onClick={() => onActivate('notification')}",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "onClick={() => onActivate('user')}",
-    );
-    expect(homeControlPanelSource).toContain(
-      "Boolean(initialIntent) || (typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax)",
-    );
-    expect(homeControlPanelSource).toContain(
-      "setPendingMobileOverlayIntent(initialIntent)",
-    );
-    expect(homeControlPanelSource).toContain(
-      "initialIntent={pendingMobileOverlayIntent}",
-    );
-    expect(homeControlPanelSource).toContain("initialIntent={initialIntent}");
-    expect(homeControlPanelSource).not.toContain(
-      "MOBILE_CONTROL_OVERLAY_IDLE_DELAY_MS",
-    );
-    expect(homeControlPanelSource).toContain(
-      "useDeferredComponent<MobileControlOverlayProps>",
-    );
-    expect(homeControlPanelSource).toContain(
-      "shouldRenderMobile && shouldLoadMobileOverlay",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "window.addEventListener('pointerdown', requestMobileOverlay",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "window.addEventListener('touchstart', requestMobileOverlay",
-    );
-    expect(homeControlPanelSource).toContain("return null;");
-    expect(homeControlPanelSource).toContain("shouldLoadDesktopPanel");
-    expect(homeControlPanelSource).not.toContain(
-      "function DesktopControlPanelLoadingShell()",
-    );
-    expect(homeControlPanelSource).toContain(
-      "setShouldLoadDesktopPanel(window.innerWidth > BREAKPOINTS.tabletMax)",
-    );
-    expect(homeControlPanelSource).toContain("window.requestAnimationFrame");
-    expect(homeControlPanelSource).not.toContain(
-      "return <DesktopControlPanelLoadingShell />;",
-    );
-    expect(homeControlPanelSource).not.toContain(
-      "import MobileControlOverlay from '@/components/home/MobileControlOverlay'",
-    );
+    expect(homeControlPanelSource).toContain("import HomeDesktopControlPanel from './home-desktop-control-panel'");
+    expect(homeControlPanelSource).toContain("import MobileControlOverlay from './MobileControlOverlay'");
+    expect(homeControlPanelSource).toContain("viewportMode !== 'desktop'");
+    expect(homeControlPanelSource).toContain("viewportMode !== 'mobileOrTablet'");
+    expect(homeControlPanelSource).toContain('className="min-[1280px]:hidden"');
+    expect(homeControlPanelSource).toContain('className="hidden min-[1280px]:contents"');
+    expect(homeControlPanelSource).toContain("isActive={viewportMode === 'mobileOrTablet'}");
+    expect(homeControlPanelSource).toContain("isActive={viewportMode === 'desktop'}");
+    expect(homeControlPanelSource).not.toContain("useDeferredComponent");
     expect(homeControlPanelSource).not.toContain("useOverseasCountryCounts");
-    expect(homeControlPanelSource).not.toContain(
-      "const HomeDesktopControlPanel = lazy(",
-    );
+    expect(homeControlPanelSource).not.toContain("window.addEventListener('pointerdown'");
+    expect(homeControlPanelSource).not.toContain("window.addEventListener('touchstart'");
+    const mobileControls = source("components/home/MobileControlOverlay.tsx");
+    expect(mobileControls).toContain("enabled: isActive && (activeSheet === 'region' || activeSheet === 'category')");
+    expect(mobileControls).toContain("useOverseasCountryCounts(mapMode, isActive && activeSheet === 'region')");
+    expect(homeDesktopControlPanelSource).toContain("enabled={isActive && !isPanelCollapsed}");
+    expect(homeDesktopControlPanelSource).toContain("isActive && shouldShowDesktopSearchResults");
     expect(homeControlPanelSource).not.toContain(
       "components/search/RestaurantSearch",
     );
@@ -1039,7 +983,7 @@ describe("web quality performance source contracts", () => {
     expect(desktopLeftPanelMapHomeSource).toContain(
       "POPULAR_RESTAURANT_QUERY_LIMIT = 60",
     );
-    expect(desktopLeftPanelMapHomeSource).toContain("맛집 5곳");
+    expect(desktopLeftPanelMapHomeSource).toContain("영상 조회·좋아요·댓글과 주간 검색을 함께 반영");
     expect(desktopLeftPanelMapHomeSource).toContain("TOP 5");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchPopularRestaurants");
     expect(desktopLeftPanelMapHomeSource).toContain("fetchLatestRestaurantPage");
@@ -1160,7 +1104,7 @@ describe("web quality performance source contracts", () => {
       "restaurant.status === 'approved'",
     );
     expect(popularRestaurantsSource).toContain(".filter(isApprovedRestaurant)");
-    expect(popularRestaurantsSource).toContain(".gt('weekly_search_count', 0)");
+    expect(popularRestaurantsSource).not.toContain(".gt('weekly_search_count', 0)");
     expect(popularRestaurantsSource).toContain(
       ".order('created_at', { ascending: false })",
     );
@@ -1341,7 +1285,7 @@ describe("web quality performance source contracts", () => {
       "components/filters/CategoryFilter",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "useOverseasCountryCounts(mapMode)",
+      "useOverseasCountryCounts(mapMode, isActive)",
     );
     expect(homeDesktopControlPanelSource).toContain(
       'data-desktop-left-map-panel="true"',
@@ -1880,7 +1824,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).not.toContain(
       "setShouldLoadSearch(true)",
     );
-    expect(mobileControlSource).toContain("useOverseasCountryCounts(mapMode)");
+    expect(mobileControlSource).toContain("useOverseasCountryCounts(mapMode, isActive && activeSheet === 'region')");
     expect(mobileControlSource).toContain(
       "initialIntent?: 'search' | 'bookmark' | 'notification' | 'user' | null",
     );
@@ -1898,7 +1842,7 @@ describe("web quality performance source contracts", () => {
       "<DropdownMenu open={isNotificationMenuOpen} onOpenChange={handleNotificationMenuOpenChange}>",
     );
     expect(mobileControlSource).toContain(
-      "enabled: activeSheet === 'region' || activeSheet === 'category'",
+      "enabled: isActive && (activeSheet === 'region' || activeSheet === 'category')",
     );
     expect(mobileControlSource).toContain('role="dialog"');
     expect(mobileControlSource).not.toContain("transition-all");
@@ -1918,7 +1862,8 @@ describe("web quality performance source contracts", () => {
     expect(mobileControlSource).toContain("aria-label={`${theme.ariaLabel}${isSelected ? ' 선택됨' : ''}`}");
     expect(mobileControlSource).toContain("카테고리 필터 열기");
     expect(mobileControlSource).toContain("min-h-11");
-    expect(mobileControlSource).toContain('role="status"');
+    expect(mobileControlSource).toContain('const SheetLoading = () => <DataPending label="목록을 불러오는 중입니다." variant="list" />');
+    expect(source("components/ui/data-pending.tsx")).toContain('role="status"');
     expect(mobileControlSource).toContain("목록을 불러오는 중입니다");
     expect(mobileControlSource).toContain(
       "useDeferredComponent<MobileNotificationMenuButtonProps>",
@@ -2468,8 +2413,10 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2",
     );
-    expect(stampLoadingSource).toContain('import { StampPageSkeleton }');
-    expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
+    expect(stampLoadingSource).toContain("쯔동여지도 도장");
+    expect(stampLoadingSource).toContain('aria-label="도장 필터 준비 중"');
+    expect(stampLoadingSource).toContain('<DataPending');
+    expect(stampLoadingSource).not.toContain("<StampPageSkeleton");
     expect(stampPageSource).toContain(
       'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
     );
@@ -2567,16 +2514,12 @@ describe("web quality performance source contracts", () => {
     expect(userProfilePanelSource).not.toContain(
       '<ScrollArea className="h-full">',
     );
-    expect(userProfileProgressiveSkeletonSource).toContain(
-      "data-user-profile-panel-skeleton",
-    );
-    expect(userProfileProgressiveSkeletonSource).toContain("data-user-profile-tab-skeleton");
-    expect(userProfilePanelSource).toContain(
-      "UserProfileProgressiveSkeleton, UserProfileTabSkeleton",
-    );
-    expect(userProfileProgressiveSkeletonSource).toContain(
-      'import { Skeleton } from "@/components/ui/skeleton"',
-    );
+    expect(userProfileProgressiveSkeletonSource).toContain('<h1 className="text-xl font-bold">사용자 프로필</h1>');
+    expect(userProfileProgressiveSkeletonSource).toContain("<DataPending");
+    expect(userProfileProgressiveSkeletonSource).toContain("export function UserProfileTabSkeleton");
+    expect(userProfilePanelSource).toContain("import { UserProfileTabSkeleton }");
+    expect(userProfilePanelSource).not.toContain("<UserProfileProgressiveSkeleton");
+    expect(userProfilePanelSource).toContain("<DataPending");
     expect(userProfilePanelSource).not.toContain(
       'import { GlobalLoader } from "@/components/ui/global-loader"',
     );
@@ -2926,8 +2869,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(leaderboardPageSource).toContain("basis-[min(11rem,100%)]");
     expect(leaderboardLoadingSource).not.toContain("compactLeftPanel");
-    expect(leaderboardLoadingSource).toContain("return null");
-    expect(leaderboardLoadingSource).toContain("한 번만");
+    expect(leaderboardLoadingSource).toContain('role="tablist" aria-label="랭킹 기간"');
+    expect(leaderboardLoadingSource).toContain('<DataPending');
     expect(leaderboardPageSource).toContain('className="px-4"');
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel?: boolean");
     expect(leaderboardSkeletonSource).toContain("compactLeftPanel = false");
@@ -3360,9 +3303,6 @@ describe("web quality performance source contracts", () => {
     const returnToMapButtonSource = source(
       "components/layout/ReturnToMapButton.tsx",
     );
-    const myPageSectionSkeletonSource = source(
-      "components/mypage/MyPageSectionSkeleton.tsx",
-    );
     const myPageProfileSource = source("app/mypage/profile/page.tsx").replace(/\r\n/g, "\n");
     const myPageSectionSources = [
       source("app/mypage/bookmarks/page.tsx"),
@@ -3462,50 +3402,21 @@ describe("web quality performance source contracts", () => {
     expect(myPageLayoutContentSource).toContain(
       "if (!shouldShowSidebarFrame) return null;",
     );
-    expect(myPageLayoutContentSource).toContain(
-      "function MyPageContentLoadingState()",
-    );
-    expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-loading="true"',
-    );
-    expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-actions-skeleton="true"',
-    );
-    expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
-    );
-    expect(myPageLayoutContentSource).toContain(
-      'data-mypage-content-hero-skeleton="borderless-mobile"',
-    );
-    expect(myPageLayoutContentSource).toContain(
-      "space-y-5 md:rounded-3xl md:border md:border-border md:bg-card md:p-5",
-    );
-    expect(myPageLayoutContentSource).not.toContain(
-      "rounded-3xl border border-border bg-card p-4",
-    );
-    expect(myPageLayoutContentSource).toContain("STAT_SKELETON_WIDTHS.map");
-    expect(myPageLayoutContentSource).toContain("ACTION_SKELETON_WIDTHS.map");
-    expect(myPageLayoutContentSource).toContain("<Skeleton");
-    expect(myPageLayoutContentSource).not.toContain("<GlobalLoader");
-    expect(myPageSectionSkeletonSource).toContain(
-      'data-mypage-section-loading="true"',
-    );
-    expect(myPageSectionSkeletonSource).toContain(
-      'data-mypage-section-skeleton-card="borderless-mobile"',
-    );
-    expect(myPageSectionSkeletonSource).toContain(
-      "rounded-2xl bg-muted/30 p-4 md:border md:border-border md:bg-card",
-    );
-    expect(myPageSectionSkeletonSource).not.toContain(
-      "rounded-2xl border border-border bg-card p-4",
-    );
-    expect(myPageSectionSkeletonSource).toContain("<Skeleton");
-    expect(myPageLoadingSource).toContain("return null;");
-    expect(myPageLoadingSource).toContain("동적 영역만 해당 위치에서 한 번");
-    expect(myPageLoadingSource).not.toContain("<MyPageSectionSkeleton />");
-    expect(myPageLoadingSource).not.toContain("animate-pulse");
+    expect(myPageLayoutContentSource).toContain("function MyPageContentLoadingState({ header }");
+    expect(myPageLayoutContentSource).toContain('<MyPageSectionFrame icon={header.icon} eyebrow="마이페이지" title={header.title}');
+    expect(myPageLayoutContentSource).toContain('<DataPending label="로그인 상태를 확인하는 중입니다."');
+    expect(myPageLayoutContentSource).toContain('aria-label="마이페이지 메뉴"');
+    expect(myPageLayoutContentSource).toContain("MOBILE_ROUTE_HEADERS.map");
+    expect(myPageLayoutContentSource).toContain("aria-current={pathname?.startsWith(href) ? 'page' : undefined}");
+    expect(myPageLayoutContentSource).not.toContain("STAT_SKELETON_WIDTHS.map");
+    expect(myPageLayoutContentSource).not.toContain("ACTION_SKELETON_WIDTHS.map");
+    expect(myPageLoadingSource).toContain("resolveMobileRouteHeader(usePathname())");
+    expect(myPageLoadingSource).toContain("<MyPageSectionFrame");
+    expect(myPageLoadingSource).toContain("<DataPending");
+    expect(myPageLoadingSource).not.toContain("<MyPageSectionSkeleton");
     for (const sectionSource of myPageSectionSources) {
-      expect(sectionSource).toContain("<MyPageSectionSkeleton");
+      expect(sectionSource).toContain("<MyPageSectionFrame");
+      expect(sectionSource).not.toContain("<MyPageSectionSkeleton");
       expect(sectionSource).not.toContain("GlobalLoader");
       expect(sectionSource).not.toContain("fullScreen");
     }
@@ -3872,263 +3783,90 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).not.toContain("sm:h-18 sm:w-18");
   });
 
-  test("page-level loaders keep route fallbacks single-owner while map fallbacks stay embedded", () => {
-    const globalLoaderSource = source("components/ui/global-loader.tsx");
-    const mapSkeletonSource = source("components/skeletons/MapSkeleton.tsx");
-    const globalMapLoadingSource = source("app/global-map/loading.tsx");
-    const globalMapPageSource = source("app/global-map/page.tsx");
-    const resetPasswordLoadingSource = source(
-      "app/auth/reset-password/loading.tsx",
-    );
-    const resetPasswordPageSource = source("app/auth/reset-password/page.tsx");
-    const userProfileLoadingSource = source("app/user/[userId]/loading.tsx");
-    const userProfileSkeletonSource = source(
-      "components/profile/UserProfileProgressiveSkeleton.tsx",
-    );
-    const leaderboardLoadingSource = source("app/leaderboard/loading.tsx");
-
-    expect(globalLoaderSource).toContain("h-[var(--full-height,100vh)]");
-    expect(mapSkeletonSource).toContain('variant?: "embedded" | "fullscreen"');
-    expect(mapSkeletonSource).toContain('decorative?: boolean');
-    expect(mapSkeletonSource).toContain('variant = "embedded"');
-    expect(mapSkeletonSource).toContain(
-      "fixed inset-0 z-50 h-[var(--full-height,100vh)]",
-    );
-    expect(mapSkeletonSource).toContain("relative h-full min-h-[320px]");
-    expect(mapSkeletonSource).toContain(
-      'message = "지도 화면을 준비하고 있어요"',
-    );
-    expect(mapSkeletonSource).toContain('className="sr-only"');
-    expect(mapSkeletonSource).not.toContain("bg-[radial-gradient");
-    expect(mapSkeletonSource).not.toContain("bg-[linear-gradient");
-    expect(mapSkeletonSource).not.toContain("rgba(239,68,68");
-    expect(mapSkeletonSource).not.toContain("left-[18%]");
-    expect(mapSkeletonSource).not.toContain("rounded-2xl bg-background/90");
-    expect(mapSkeletonSource).not.toContain("GlobalLoader");
-    expect(mapSkeletonSource).not.toContain("맛있는 발견을 준비하고 있습니다");
-    expect(resetPasswordLoadingSource).toContain("return null");
-    expect(resetPasswordLoadingSource).toContain("한 번만");
-    expect(resetPasswordLoadingSource).not.toContain(
-      "<ResetPasswordProgressiveSkeleton />",
-    );
-    expect(resetPasswordLoadingSource).not.toContain("GlobalLoader");
-    expect(resetPasswordPageSource).toContain(
-      "<ResetPasswordProgressiveSkeleton />",
-    );
-    expect(resetPasswordPageSource).not.toContain("animate-spin");
-    expect(source("components/auth/ResetPasswordProgressiveSkeleton.tsx")).toContain(
-      'data-reset-password-progressive-skeleton="true"',
-    );
-    expect(source("components/auth/ResetPasswordProgressiveSkeleton.tsx")).toContain(
-      'role="status"',
-    );
-    expect(globalMapLoadingSource).toContain("return null");
-    expect(globalMapLoadingSource).toContain("한 번만");
-    expect(globalMapLoadingSource).not.toContain("<MapSkeleton");
-    expect(globalMapLoadingSource).not.toContain("GlobalLoader");
-    expect(globalMapPageSource).toContain("function GlobalMapSearchSkeleton()");
-    expect(globalMapPageSource).toContain(
-      'data-global-map-search-skeleton="true"',
-    );
-    expect(globalMapPageSource).toContain("loading: () => null");
-    expect(globalMapPageSource).toContain("<Suspense fallback={null}>");
-    expect(globalMapPageSource).not.toContain(
-      'message="글로벌 지도 모듈을 준비하고 있어요"',
-    );
-    expect(globalMapPageSource).not.toContain(
-      'message={`${country} 지도 캔버스를 준비하고 있어요`}',
-    );
-    expect(globalMapPageSource).not.toContain('variant="fullscreen"');
-    expect(source("components/home/home-map-container.tsx")).toContain(
-      "<Suspense fallback={null}>",
-    );
-    expect(source("components/home/home-map-container.tsx")).not.toContain(
-      "<Suspense fallback={<MapSkeleton />}>",
-    );
-    expect(userProfileLoadingSource).toContain("return null");
-    expect(userProfileLoadingSource).toContain("한 번만");
-    expect(userProfileLoadingSource).not.toContain(
-      "<UserProfileProgressiveSkeleton />",
-    );
-    expect(userProfileLoadingSource).not.toContain("GlobalLoader");
-    expect(userProfileSkeletonSource).toContain(
-      'data-user-profile-route-skeleton="true"',
-    );
-    expect(userProfileSkeletonSource).toContain(
-      'data-user-profile-panel-skeleton="true"',
-    );
-    expect(userProfileSkeletonSource).toContain(
-      "export function UserProfileTabSkeleton",
-    );
-    expect(userProfileSkeletonSource).toContain('live={false}');
-    expect(userProfileSkeletonSource).toContain('role={live ? "status" : undefined}');
-    expect(source("components/profile/UserProfilePanel.tsx")).toContain(
-      "<UserProfileProgressiveSkeleton",
-    );
-    expect(source("components/profile/UserProfilePanel.tsx")).not.toContain(
-      "function UserProfileHeaderSkeleton",
-    );
-    expect(leaderboardLoadingSource).toContain("return null");
-    expect(leaderboardLoadingSource).not.toContain("<LeaderboardSkeleton");
-    expect(source("app/leaderboard/page.tsx")).toContain(
-      "<LeaderboardSkeleton",
-    );
-    expect(source("app/loading.tsx")).toContain("return null");
-    expect(
-      countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
-    ).toBe(1);
-    expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
-    expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
-    expect(source("app/home-client-loader.tsx")).toContain(
-      'className="sr-only"',
-    );
-    expect(source("app/feed/page.tsx")).toContain("<GlobalLoader");
-
-    const appLoaderTags = sourceFilesUnder("app").flatMap((relativePath) => {
-      const contents = source(relativePath);
-      return (contents.match(/<GlobalLoader[\s\S]*?(?:\/>|>)/g) ?? []).map(
-        (tag) => ({ relativePath, tag }),
-      );
-    });
-
-    expect(appLoaderTags.length).toBeGreaterThan(0);
-    for (const { relativePath, tag } of appLoaderTags) {
-      expect(`${relativePath}: ${tag}`).toContain("fullScreen");
-    }
+  test("public loading frames keep headings and real controls while only data slots load", () => {
+    const resetForm = source("components/auth/ResetPasswordProgressiveSkeleton.tsx");
+    expect(resetForm).toContain('<form aria-busy="true">');
+    expect(resetForm).toContain("<fieldset disabled");
+    expect(resetForm).toContain('htmlFor="pending-new-password"');
+    expect(resetForm).toContain('id="pending-new-password" type="password" autoComplete="new-password"');
+    expect(resetForm).toContain('htmlFor="pending-confirm-password"');
+    expect(resetForm).toContain('id="pending-confirm-password" type="password" autoComplete="new-password"');
+    expect(resetForm).toContain('role="status"');
+    expect(resetForm).not.toContain("<Skeleton");
+    expect(source("app/auth/reset-password/loading.tsx")).toContain("<ResetPasswordProgressiveSkeleton />");
+    const resetPage = source("app/auth/reset-password/page.tsx");
+    expect(resetPage).toContain('aria-busy={isCheckingSession}');
+    expect(resetPage).toContain('isCheckingSession && <p role="status"');
+    expect(resetPage).toContain('disabled={isCheckingSession || !isValidSession || isLoading}');
+    expect(resetPage).toContain('if (isCheckingSession || !isValidSession || isLoading) return;');
+    expect(resetPage).toContain('if (!isCheckingSession && !isValidSession)');
+    expect(resetPage).not.toContain("<ResetPasswordProgressiveSkeleton");
+    const profile = source("components/profile/UserProfilePanel.tsx");
+    expect(profile).not.toContain("<UserProfileProgressiveSkeleton");
+    expect(profile).toContain("<DataPending");
+    expect(profile).toContain("<UserProfileTabSkeleton");
+    expect(profile).toContain("!profileLoading && !profile");
+    expect(profile).toContain("activeTab === 'stamps'");
+    expect(profile).toContain("activeTab === 'reviews'");
+    expect(profile).toContain("activeTab === 'likers'");
+    const profilePending = source("components/profile/UserProfileProgressiveSkeleton.tsx");
+    expect(profilePending).toContain('aria-label="프로필 패널 닫기"');
+    expect(profilePending).toContain("showCloseButton && onBack");
+    expect(profilePending).toContain("export function UserProfileTabSkeleton");
+    expect(profilePending).toContain('aria-hidden="true"');
+    const globalMap = source("app/global-map/page.tsx");
+    expect(globalMap).toContain('loading: () => <DataPending label="지도를 준비하는 중입니다."');
+    expect(globalMap).toContain("<Suspense fallback={<DataPending");
+    expect(globalMap).not.toContain('variant="fullscreen"');
+    expect(globalMap).not.toContain("<GlobalMapSearchSkeleton");
+    expect(globalMap).toContain('enabled: countryMenuOpen || googleMapsFallbackState === "error"');
+    expect(source("components/home/home-map-container.tsx")).not.toContain("<Suspense fallback={<MapSkeleton />}");
+    expect(source("app/home-client-loader.tsx")).toContain("return <HomeClient />");
+    const appLoaderPaths = sourceFilesUnder("app").filter((path) => /<GlobalLoader\b/.test(source(path)));
+    expect(appLoaderPaths).toEqual([]);
   });
 
-  test("route loading boundaries keep skeleton ownership single-pass", () => {
-    const loadingFiles = sourceFilesUnder("app")
-      .filter((relativePath) => relativePath.endsWith("/loading.tsx"))
-      .sort();
-    const routeOwnedSkeletonPages = [
-      "app/admin/loading.tsx",
-      "app/loading.tsx",
-      "app/auth/reset-password/loading.tsx",
-      "app/global-map/loading.tsx",
-      "app/insights/loading.tsx",
-      "app/leaderboard/loading.tsx",
-      "app/mypage/loading.tsx",
-      "app/user/[userId]/loading.tsx",
-    ];
-
+  test("route loading boundaries preserve real route frames and bounded data placeholders", () => {
+    const loadingFiles = sourceFilesUnder("app").filter((path) => path.endsWith("/loading.tsx")).sort();
     expect(loadingFiles).toEqual([
-      "app/admin/loading.tsx",
-      "app/auth/reset-password/loading.tsx",
-      "app/global-map/loading.tsx",
-      "app/insights/loading.tsx",
-      "app/leaderboard/loading.tsx",
-      "app/loading.tsx",
-      "app/mypage/loading.tsx",
-      "app/stamp/loading.tsx",
-      "app/user/[userId]/loading.tsx",
+      "app/admin/loading.tsx", "app/auth/reset-password/loading.tsx", "app/feed/loading.tsx",
+      "app/global-map/loading.tsx", "app/insights/loading.tsx", "app/leaderboard/loading.tsx",
+      "app/loading.tsx", "app/mypage/loading.tsx", "app/stamp/loading.tsx", "app/user/[userId]/loading.tsx",
     ]);
-
-    for (const relativePath of routeOwnedSkeletonPages) {
-      const loadingSource = source(relativePath);
-      expect(loadingSource).toContain("return null");
-      expect(loadingSource).not.toContain("<Skeleton");
-      expect(loadingSource).not.toContain("<MapSkeleton");
-      expect(loadingSource).not.toContain("<LeaderboardSkeleton");
-      expect(loadingSource).not.toContain("<StampPageSkeleton");
-      expect(loadingSource).not.toContain("<UserProfileProgressiveSkeleton");
-      expect(loadingSource).not.toContain("<ResetPasswordProgressiveSkeleton");
-      expect(loadingSource).not.toContain("<GlobalLoader");
+    for (const path of ["app/admin/loading.tsx", "app/insights/loading.tsx", "app/loading.tsx"]) {
+      expect(source(path)).toContain("return null");
     }
-
-    expect(source("app/stamp/loading.tsx")).toContain("return <StampPageSkeleton />");
-    expect(source("app/stamp/loading.tsx")).not.toContain("return null");
-
-    const skeletonOwnerContracts = [
-      {
-        route: "app/auth/reset-password/loading.tsx",
-        owner: "app/auth/reset-password/page.tsx",
-        marker: "<ResetPasswordProgressiveSkeleton />",
-      },
-      {
-        route: "app/global-map/loading.tsx",
-        owner: "app/global-map/page.tsx",
-        marker: "loading: () => null",
-      },
-      {
-        route: "app/leaderboard/loading.tsx",
-        owner: "app/leaderboard/page.tsx",
-        marker: "<LeaderboardSkeleton",
-      },
-      {
-        route: "app/mypage/loading.tsx",
-        owner: "app/mypage/mypage-layout-content.tsx",
-        marker:
-          'data-mypage-content-loading-behavior="static-shell-dynamic-skeleton"',
-      },
-      {
-        route: "app/stamp/loading.tsx",
-        owner: "app/stamp/page.tsx",
-        marker: "<StampPageSkeleton />",
-      },
-      {
-        route: "app/user/[userId]/loading.tsx",
-        owner: "components/profile/UserProfilePanel.tsx",
-        marker: "<UserProfileProgressiveSkeleton",
-      },
-    ];
-
-    for (const { route, owner, marker } of skeletonOwnerContracts) {
-      expect(source(route)).toContain(route === "app/stamp/loading.tsx" ? marker : "return null");
-      expect(source(owner)).toContain(
-        route === "app/stamp/loading.tsx"
-          ? 'data-stamp-loading-behavior="static-shell-dynamic-skeleton"'
-          : marker,
-      );
+    for (const [path, title] of [
+      ["app/feed/loading.tsx", "쯔동여지도 리뷰"],
+      ["app/leaderboard/loading.tsx", "쯔동여지도 랭킹"],
+      ["app/stamp/loading.tsx", "쯔동여지도 도장"],
+      ["app/global-map/loading.tsx", "해외 맛집 지도"],
+      ["app/user/[userId]/loading.tsx", "사용자 프로필"],
+    ]) {
+      const frame = source(path);
+      expect(frame).toMatch(/<h1\b/);
+      expect(frame).toContain(title);
+      expect(frame).toContain("<DataPending");
+      expect(frame.indexOf("<h1")).toBeLessThan(frame.indexOf("<DataPending"));
     }
-
-    expect(source("app/loading.tsx")).toContain("return null");
-    expect(
-      countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
-    ).toBe(1);
-    expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
-    expect(
-      countSourceMatches(
-        source("app/auth/reset-password/page.tsx"),
-        /<ResetPasswordProgressiveSkeleton\s*\/>/g,
-      ),
-    ).toBe(1);
-    expect(
-      countSourceMatches(
-        source("app/auth/reset-password/loading.tsx"),
-        /<ResetPasswordProgressiveSkeleton\b/g,
-      ),
-    ).toBe(0);
-    expect(
-      countSourceMatches(
-        source("app/leaderboard/page.tsx"),
-        /<LeaderboardSkeleton\b/g,
-      ),
-    ).toBe(1);
-    expect(
-      countSourceMatches(
-        source("app/leaderboard/loading.tsx"),
-        /<LeaderboardSkeleton\b/g,
-      ),
-    ).toBe(0);
-    expect(
-      countSourceMatches(
-        source("components/profile/UserProfilePanel.tsx"),
-        /<UserProfileProgressiveSkeleton\b/g,
-      ),
-    ).toBe(1);
-    expect(
-      countSourceMatches(
-        source("app/user/[userId]/loading.tsx"),
-        /<UserProfileProgressiveSkeleton\b/g,
-      ),
-    ).toBe(0);
-    expect(
-      countSourceMatches(
-        source("app/global-map/page.tsx"),
-        /<GlobalMapSearchSkeleton\s*\/>/g,
-      ),
-    ).toBe(1);
+    const ranking = source("app/leaderboard/loading.tsx");
+    expect(ranking).toContain('role="tablist" aria-label="랭킹 기간"');
+    expect(ranking).toContain('role="tab" aria-selected="true" disabled');
+    const globalMap = source("app/global-map/loading.tsx");
+    expect(globalMap).toContain('aria-label="국가 선택 준비 중"');
+    expect(globalMap).toContain('aria-label="카테고리 선택 준비 중"');
+    expect(globalMap).toContain('<Input disabled aria-label="맛집 검색 준비 중"');
+    for (const path of loadingFiles) {
+      expect(source(path)).not.toMatch(/<(?:GlobalLoader|MapSkeleton|LeaderboardSkeleton|StampPageSkeleton|UserProfileProgressiveSkeleton)\b/);
+    }
+    const dataPending = source("components/ui/data-pending.tsx");
+    expect(dataPending).toContain('role="status"');
+    expect(dataPending).toContain('aria-live="polite"');
+    expect(dataPending).toContain('aria-busy="true"');
+    expect(dataPending).toContain('<span className="sr-only">{label}</span>');
+    expect(dataPending).toContain('aria-hidden="true"');
+    expect(dataPending).not.toMatch(/fixed\s+inset-0|h-screen|min-h-screen|<h1|<Button/);
+    expect(source("app/mypage/loading.tsx")).toContain("<MyPageSectionFrame");
   });
 
   test("intent-loaded mobile modal shells do not render desktop dialog on the first client paint", () => {
@@ -4538,8 +4276,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(toastSource).toContain("opacity-100");
     expect(homeRuntimeShellSource).toContain("import './home-app-globals.css'");
-    expect(homeRuntimeShellSource).toContain("function MobileHomeLayout");
-    expect(homeRuntimeShellSource).toContain(
+    expect(homeRuntimeShellSource).toContain("function HomeLayout");
+    expect(homeRuntimeShellSource).not.toContain(
       "function HomeRuntimePendingShell",
     );
     expect(homeRuntimeShellSource).not.toContain(
@@ -4551,10 +4289,10 @@ describe("web quality performance source contracts", () => {
     expect(homeRuntimeShellSource).not.toContain(
       "<HomeRuntimeProgressiveShell />",
     );
-    expect(homeRuntimeShellSource).toContain("const OverlayLayout = lazy(");
+    expect(homeRuntimeShellSource).not.toContain("const OverlayLayout = lazy(");
     expect(homeRuntimeShellSource).toContain("<QueryProvider>");
     expect(homeRuntimeShellSource).toContain(
-      "fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}",
+      "<HomeLayout>{children}</HomeLayout>",
     );
     expect(homeRuntimeShellSource).not.toContain(
       "<MainLayout>{children}</MainLayout>",
@@ -4713,12 +4451,12 @@ describe("web quality performance source contracts", () => {
     expect(source("components/layout/HeaderBookmarkMenuButton.tsx")).toContain(
       "useBookmarks",
     );
-    expect(mainLayoutSource).toContain("if (!hasMounted)");
+    expect(mainLayoutSource).not.toContain("if (!hasMounted)");
     expect(mainLayoutSource).toContain("{children}");
     expect(mainLayoutSource).not.toContain(
       'min-h-screen bg-background" aria-hidden="true"',
     );
-    expect(mainLayoutSource).toContain("NONCRITICAL_CHROME_DELAY_MS = 0");
+    expect(mainLayoutSource).toContain("setCanMountNoncriticalChrome(hasMounted && !shouldSuppressNoncriticalChrome)");
     expect(mainLayoutSource).toContain(
       "canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome",
     );

@@ -52,7 +52,7 @@ test.describe('home map contextual visible-marker discovery', () => {
 
   test('desktop category filter commits immediately without apply action', async ({ page }) => {
     await page.getByLabel('카테고리 필터').click();
-    await expect(page.getByText('카테고리 필터')).toBeVisible();
+    await expect(page.getByRole('menu', { name: '카테고리 필터' })).toBeVisible();
     await expect(page.getByRole('button', { name: '적용하기' })).toHaveCount(0);
     const categoryResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
@@ -62,8 +62,8 @@ test.describe('home map contextual visible-marker discovery', () => {
     });
 
 
-    await page.getByRole('option', { name: /한식\s*1개/ }).click();
-    await expect(page.getByLabel('카테고리 필터')).toContainText('1개 선택됨');
+    await page.getByRole('menuitemcheckbox', { name: /한식\s*\(1개\)/ }).click();
+    await expect(page.getByLabel('카테고리 필터')).toContainText('한식');
     const filteredRows = await categoryResponse.then((response) => response.json());
     expect(filteredRows).toHaveLength(1);
     expect(filteredRows[0].approved_name).toBe('명동칼국수');

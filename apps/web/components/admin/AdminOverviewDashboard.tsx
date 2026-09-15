@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Image as ImageIcon, Layers3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { getNaverIndividualMarkerVisual } from "@/lib/naver-map-marker-visuals";
@@ -42,7 +42,6 @@ import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import type {
   DashboardRestaurantItem,
   DashboardRestaurantsResponse,
-  DashboardSummaryResponse,
 } from "@/types/dashboard";
 import type { AdminProviderReadiness } from "@/types/admin-system-status";
 
@@ -83,18 +82,6 @@ const ADMIN_ROUTE_PLANNER_PRESETS: Array<{
 ];
 
 type AdminOverviewModuleId = "restaurants" | "submissions" | "reviews";
-
-type AdminOverviewStats = {
-  pendingSubmissions: number | null;
-  pendingReviews: number | null;
-  totalRestaurants: number | null;
-  totalVideos: number | null;
-  withCoordinates: number | null;
-  activeBanners: number | null;
-  inactiveBanners: number | null;
-  latestRestaurantUpdate: string | null;
-  dashboardVideos: DashboardSummaryResponse["videos"] | null;
-};
 
 type AdminMapRestaurant = {
   id: string;
@@ -471,25 +458,6 @@ function AdminYoutubeThumbnailImage({
       className="object-contain transition-opacity duration-200 group-hover:opacity-90 motion-reduce:transition-none"
       onError={() => setQuality("hqdefault")}
     />
-  );
-}
-
-function AdminMapLoadingSkeleton() {
-  return (
-    <div
-      className="pointer-events-none absolute inset-0 bg-card/35 backdrop-blur-[1px]"
-      data-admin-map-loading-skeleton="true"
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      aria-label="관리자 네이버 지도 로딩"
-    >
-      <span className="sr-only">네이버 지도를 준비하고 있습니다.</span>
-      <div className="absolute left-3 top-3 space-y-1.5" aria-hidden="true">
-        <Skeleton className="h-7 w-24 rounded-full motion-reduce:animate-none" />
-        <Skeleton className="h-2 w-16 rounded-full motion-reduce:animate-none" />
-      </div>
-    </div>
   );
 }
 
@@ -877,14 +845,14 @@ function AdminNaverMapSurface({
   const isMapPreparing = isLoading || isNaverLoading;
 
   return (
-    <div className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25">
+    <div className="relative h-full min-h-[360px] overflow-hidden rounded-[24px] bg-muted/25" aria-busy={isMapPreparing}>
       <div
         ref={mapContainerRef}
         className="h-full min-h-[360px] w-full"
         aria-label="네이버 지도 맛집 마커와 클러스터"
       />
 
-      {isMapPreparing && <AdminMapLoadingSkeleton />}
+      {isMapPreparing && <AdminDataPending label="네이버 지도를 준비하고 있습니다." className="pointer-events-none absolute left-3 top-3 rounded-lg bg-card px-3 py-2" />}
 
       {loadError && !isMapPreparing && (
         <div className="absolute inset-0 grid place-items-center bg-card/85 p-4 text-center backdrop-blur-sm">
@@ -1013,7 +981,7 @@ function AdminMapOverviewCanvas({
                 </p>
                 <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
                   {hasError
-                    ? "요약 API가 실패하면 임의 수치를 만들지 않습니다. 네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요."
+                    ? "지도 맛집 조회가 실패하면 임의 수치를 만들지 않습니다. 네이버 지도 프레임은 유지한 채 맛집 관리에서 좌표 상태를 확인하세요."
                     : "운영 콘솔에서는 빈 실데이터 상태를 목업으로 대체하지 않습니다. 지도는 기본 위치로 유지하고 좌표가 있는 맛집만 표시합니다."}
                 </p>
                 <Button
@@ -1030,47 +998,6 @@ function AdminMapOverviewCanvas({
         </div>
       </div>
     </section>
-  );
-}
-
-function AdminMapInfoPanelSkeleton() {
-  return (
-    <aside
-      className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden"
-      data-admin-map-info-skeleton="true"
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      aria-label="관리자 지도 동선 추천 로딩"
-    >
-      <section className="shrink-0 rounded-xl bg-card/80 p-2 shadow-sm">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="rounded-xl bg-background/70 p-2">
-            <Skeleton className="h-3 w-20 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-2 h-6 w-40 rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-3 h-4 w-full rounded-full motion-reduce:animate-none" />
-            <Skeleton className="mt-2 h-4 w-4/5 rounded-full motion-reduce:animate-none" />
-          </div>
-          <div className="rounded-xl bg-background/70 p-2">
-            <Skeleton className="aspect-video w-full rounded-lg motion-reduce:animate-none" />
-          </div>
-        </div>
-      </section>
-      <section className="rounded-xl bg-card/80 p-2.5 shadow-sm lg:min-h-0 lg:flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <Skeleton className="h-5 w-28 rounded-full motion-reduce:animate-none" />
-          <Skeleton className="h-5 w-20 rounded-full motion-reduce:animate-none" />
-        </div>
-        <div className="mt-3 space-y-1.5">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="h-[4.75rem] rounded-xl motion-reduce:animate-none"
-            />
-          ))}
-        </div>
-      </section>
-    </aside>
   );
 }
 
@@ -1126,7 +1053,7 @@ function AdminMapInfoPanel({
     (option) => option.id === routeMode,
   );
   const routeStatusLabel =
-    directionsStatus === "ready"
+    hasError ? "후보 확인 필요" : directionsStatus === "ready"
       ? "실제 도로 경로"
       : directionsStatus === "loading"
         ? "경로 계산 중"
@@ -1174,15 +1101,12 @@ function AdminMapInfoPanel({
     [routeExportPackage],
   );
 
-  if (isLoading && !selectedRestaurant) {
-    return <AdminMapInfoPanelSkeleton />;
-  }
-
   return (
-    <aside className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden">
+    <aside className="flex min-h-0 min-w-0 flex-col gap-2 lg:h-full lg:overflow-hidden" data-admin-section-gap="flex">
       <section
         className="shrink-0 rounded-lg bg-card/80 p-2 shadow-sm md:rounded-xl"
         aria-labelledby="admin-map-selected-title"
+        data-admin-panel-padding="true"
       >
         {selectedRestaurant ? (
           <div className="overflow-hidden rounded-lg bg-background/70 md:rounded-xl">
@@ -1290,7 +1214,7 @@ function AdminMapInfoPanel({
                   : "border-emerald-700/20 text-emerald-800",
               )}
             >
-              {hasError ? "확인 필요" : "대기"}
+              {hasError ? "확인 필요" : isLoading ? "불러오는 중" : "대기"}
             </Badge>
           </div>
         )}
@@ -1302,6 +1226,7 @@ function AdminMapInfoPanel({
         data-layout-primitives="panel-layout list-detail step-nav cluster frame"
         data-scroll-owner="route-control-pane"
         data-admin-route-planner="true"
+        data-admin-panel-padding="true"
         data-admin-route-recommendation-panel="enhanced"
         data-admin-route-candidate-readback="server-readback"
         data-admin-route-export="tzudong-json-v1"
@@ -1311,10 +1236,7 @@ function AdminMapInfoPanel({
             촬영 동선
           </p>
           {isLoading ? (
-            <Skeleton
-              className="h-5 w-20 rounded-full motion-reduce:animate-none"
-              aria-hidden="true"
-            />
+            <AdminDataPending label="동선 데이터를 불러오는 중입니다." />
           ) : (
             <Badge
               variant="outline"
@@ -1583,13 +1505,8 @@ function AdminMapInfoPanel({
 }
 
 export function AdminOverviewDashboard({
-  isLoading,
-  hasError,
   onSelectModule,
 }: {
-  stats: AdminOverviewStats;
-  isLoading: boolean;
-  hasError: boolean;
   onSelectModule: (moduleId: AdminOverviewModuleId) => void;
 }) {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<
@@ -1744,8 +1661,10 @@ export function AdminOverviewDashboard({
         .join("|"),
     [routeRequestPoints],
   );
-  const isMapLoading = isLoading || mapRestaurantsQuery.isLoading;
-  const hasMapError = hasError || mapRestaurantsQuery.isError;
+  const isMapLoading = mapRestaurantsQuery.isLoading;
+  const hasMapError = mapRestaurantsQuery.isError;
+  const isRouteLoading = isMapLoading || routeCandidatesQuery.isLoading;
+  const hasRouteError = hasMapError || routeCandidatesQuery.isError;
 
   useEffect(() => {
     if (routeMode !== "driving" || routeRequestPoints.length < 2) {
@@ -1860,8 +1779,8 @@ export function AdminOverviewDashboard({
           routeCandidateReadback={routeCandidateReadback}
           directionsFallbackMessage={directionsFallbackMessage}
             directionsStatus={directionsStatus}
-            isLoading={isMapLoading}
-            hasError={hasMapError}
+            isLoading={isRouteLoading}
+            hasError={hasRouteError}
             coordinateRestaurantCount={realRestaurants.length}
             routeStopLimit={routeStopLimit}
             onRouteModeChange={setRouteMode}

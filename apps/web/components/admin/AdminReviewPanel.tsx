@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -635,14 +636,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                     </section>
                 )}
                 {isLoading ? (
-                    <div className="space-y-2">
-                        {[1, 2, 3].map(i => (
-                            <Card key={i} className="p-3">
-                                <div className="h-4 bg-muted rounded animate-pulse w-32 mb-2" />
-                                <div className="h-3 bg-muted rounded animate-pulse w-48" />
-                            </Card>
-                        ))}
-                    </div>
+                    <AdminDataPending label="리뷰 목록 확인 중" className="min-h-48" />
                 ) : pendingReviews.length === 0 ? (
                     <Card className="p-6 text-center">
                         <p className="text-sm text-muted-foreground">대기 중인 리뷰가 없습니다</p>

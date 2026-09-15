@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataPending } from "@/components/ui/data-pending";
 import {
     Table,
     TableBody,
@@ -28,7 +29,7 @@ import { Slider } from "@/components/ui/slider";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import type { Restaurant } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
@@ -320,14 +321,14 @@ export default function StampPage() {
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
-    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading } = useRestaurants({
+    const { data: allMergedRestaurants = [], isLoading: isRestaurantsLoading, isFetching: isRestaurantsFetching, isError: isRestaurantsError } = useRestaurants({
         enabled: true,
         includeVerifiedReviewCounts: false,
     });
     const totalRestaurantCount = allMergedRestaurants.length;
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
-    const { data: allRestaurants = [] } = useQuery({
+    const { data: allRestaurants = [], isLoading: isStampSearchLoading, isFetching: isStampSearchFetching, isError: isStampSearchError } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
@@ -353,11 +354,12 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
-                console.error('맛집 검색 중 오류:');
-                return [];
+                throw new Error('stamp-search-unavailable');
             }
         },
         enabled: !!searchQuery.trim(),
+        staleTime: 60_000,
+        placeholderData: keepPreviousData,
     });
 
     const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as Restaurant[]), [allRestaurants]);
@@ -826,20 +828,20 @@ export default function StampPage() {
 
     // 검색어 동기화 (Sync search query)
     useEffect(() => {
-        setSearchQuery(filters.searchQuery);
+        const timer = window.setTimeout(() => setSearchQuery(filters.searchQuery), 250);
+        return () => window.clearTimeout(timer);
     }, [filters.searchQuery]);
 
 
 
     // [Check before render]
-    const isStampDynamicLoading =
-        !isMounted ||
-        (isRestaurantsLoading && !searchQuery);
+    const isStampDynamicLoading = searchQuery.trim() ? isStampSearchLoading : isRestaurantsLoading;
+    const isStampDataError = searchQuery.trim() ? isStampSearchError : isRestaurantsError;
+    const isStampDataFetching = filters.searchQuery !== searchQuery || (searchQuery.trim() ? isStampSearchFetching : isRestaurantsFetching);
     const shouldShowStampFilterToggle = !isMounted || isMobileOrTablet;
     const shouldShowStampViewToggle = isMounted && !isMobileOrTablet;
     const shouldShowStampFilters = isMounted && (!isMobileOrTablet || isFilterExpanded);
 
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     return (
         <>
@@ -1088,8 +1090,11 @@ export default function StampPage() {
                         <div
                             className="flex-1 min-h-0 px-4 sm:px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1.5rem)] md:pb-6 bg-background"
                             data-stamp-loading-behavior="static-shell-dynamic-skeleton"
+                            aria-busy={isStampDataFetching}
                         >
-                            {isStampDynamicLoading ? (
+                            {isStampDataError && filteredAndSortedRestaurants.length === 0 ? (
+                                <p role="alert" className="p-4 text-sm text-muted-foreground">맛집을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+                            ) : isStampDynamicLoading && viewMode === 'grid' ? (
                                 <div className="space-y-3">
                                     {showStampGuide && (
                                         <div
@@ -1206,6 +1211,7 @@ export default function StampPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
+                                            {isStampDynamicLoading && <TableRow><TableCell colSpan={4}><DataPending variant="list" label="도장 맛집을 불러오는 중입니다." /></TableCell></TableRow>}
                                             {displayedRestaurants.map((restaurant) => (
                                                 <RestaurantRow
                                                     key={restaurant.id}

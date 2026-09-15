@@ -29,10 +29,9 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
-import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { MyPageDataRegion } from "@/app/mypage/my-page-data-region";
 import {
   MyPageEmptyState,
-  MyPageErrorState,
   MyPageSectionFrame,
   myPageCardTitleClass,
   myPageFooterMetaClass,
@@ -153,6 +152,7 @@ export default function RecommendSubmissionsPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isFetching,
     isError,
   } = useInfiniteQuery({
     queryKey: ["myRecommendRequests", user?.id],
@@ -437,18 +437,6 @@ export default function RecommendSubmissionsPage() {
     );
   };
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="쯔양 맛집 제보 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        title="쯔양 맛집 제보를 불러오지 못했습니다"
-        description="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
@@ -456,9 +444,10 @@ export default function RecommendSubmissionsPage() {
       eyebrow="제보 관리"
       title="쯔양 맛집 제보"
       description="쯔양에게 추천한 맛집과 위치 확인 상태를 차분하게 확인합니다."
-      countLabel={`총 ${requests.length}건`}
+      countLabel={requestsData !== undefined ? `총 ${requests.length}건` : isError ? "확인 필요" : "불러오는 중"}
       data-section="submissions-recommend"
     >
+      <MyPageDataRegion pending={isFetching || isLoading} hasData={requestsData !== undefined} error={isError} label="쯔양 맛집 제보 내역을 불러오는 중…" errorTitle="쯔양 맛집 제보를 불러오지 못했습니다" errorDescription="추천한 맛집 목록을 다시 불러오려면 잠시 후 재시도해주세요.">
       {requests.length === 0 ? (
         <MyPageEmptyState
           icon={Heart}
@@ -484,6 +473,7 @@ export default function RecommendSubmissionsPage() {
           </div>
         </div>
       )}
+      </MyPageDataRegion>
     </MyPageSectionFrame>
   );
 }

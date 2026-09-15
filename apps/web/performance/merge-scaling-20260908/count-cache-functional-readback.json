@@ -1,0 +1,42 @@
+{
+  "schema": "local-count-cache-functional-readback-v1",
+  "observed_at": "2026-09-08T10:04:09.592390+00:00",
+  "scope": "Single local Aside browser transition; request-count functional verification, not a latency benchmark",
+  "before": {
+    "mode": "domestic",
+    "full_catalog_count_requests": 1,
+    "resource_entries": 174
+  },
+  "after": {
+    "mode": "overseas",
+    "full_catalog_count_requests": 1,
+    "resource_entries": 203,
+    "country": "헝가리(부다페스트)",
+    "country_count": 4,
+    "category_count": 4,
+    "map_markers": 4
+  },
+  "matching_rule": {
+    "pathname": "/rest/v1/restaurants",
+    "select": "id, name:approved_name, approved_name, road_address, jibun_address, english_address, categories, status, review_count",
+    "exclude_or_filter": true
+  },
+  "additional_full_catalog_count_requests": 0,
+  "budgets": {
+    "absolute": "0 additional full-catalog count requests during this transition",
+    "relative": "after/before count = 1; no before-change comparator",
+    "noise": "Deterministic request count in one session; no timing/noise sample"
+  },
+  "g003_admitted_slices": 0,
+  "limitations": [
+    "No before-change run",
+    "No latency or memory improvement claim",
+    "Cache expiry and invalidation may legitimately fetch again"
+  ],
+  "source_sha256": {
+    "apps/web/components/home/use-overseas-country-counts.ts": "b4e60b2b74856566a3868392499c2f13a5512f297289a92f77cdaf157515df48",
+    "apps/web/components/region/RegionSelector.tsx": "d39f41f0777f0ef86cdb6891e75eba7deda26bc0537980fb4a016abe153ce4a7",
+    "apps/web/components/filters/CategoryFilter.tsx": "1b66de5879adaf1fe23d050270cb88b12746ff1f7eae85d18cbfe634af35dd3a",
+    "apps/web/lib/restaurant-discovery-cache.ts": "aa1738a56a8ba8412f9b20209f2bae92d580e03deee4bf5ba98a0b1c6110376e"
+  }
+}

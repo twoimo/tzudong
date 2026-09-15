@@ -408,7 +408,13 @@ function validateLedgerSnapshot(local, ledger, execute = spawnSync) {
     'module = importlib.util.module_from_spec(spec)',
     'sys.modules[spec.name] = module',
     'spec.loader.exec_module(module)',
-    'module._validate_ledger_snapshot(json.load(sys.stdin))',
+    'rows = json.load(sys.stdin)',
+    'if len(rows) == 96 and len(module.verify_manifest()["source"]["files"]) == 97:',
+    '    sys.path.insert(0, str(root / "backend/supabase/scripts"))',
+    '    from local_working_schema import verify_working_snapshot',
+    '    verify_working_snapshot(module, rows)',
+    'else:',
+    '    module._validate_ledger_snapshot(rows)',
     'print("ledger-snapshot-ok")',
   ].join('\n');
   const result = execute('python3', ['-B', '-c', verifier, local.repositoryRoot], {
@@ -467,7 +473,7 @@ function readCurrentMigrationLedger(local, databaseContainer) {
     || result.status !== 0
     || !Array.isArray(expected)
     || !Array.isArray(ledger)
-    || ledger.length !== expected.length
+    || (ledger.length !== expected.length && !(ledger.length === 96 && expected.length === 97))
   ) {
     fail('migration_ledger');
   }
@@ -557,6 +563,13 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
     fail('database_container');
   }
   const schema = readCurrentMigrationLedger(local, containers[0]);
+  // Optional local features have a separate immutable receipt from the replay ledger.
+  // The installer status command is read-only and rejects partial installs or drift.
+  const catalogEditor = runJson('python3', [
+    '-B', path.join(local.repositoryRoot, 'backend', 'supabase', 'scripts', 'local_catalog_edit_install.py'),
+    'status',
+  ], { cwd: local.repositoryRoot, code: 'catalog_editor_integrity', timeout: 120_000 });
+  if (typeof catalogEditor?.installed !== 'boolean') fail('catalog_editor_integrity');
   let migrationReceipt;
   if (requireDeterministicReceipt) {
     const binding = [
@@ -586,7 +599,7 @@ export function assertLocalSupabaseReady(local, { requireDeterministicReceipt = 
       fail('migration_receipt');
     }
   }
-  return { migrationReceipt, schema, databaseContainer: containers[0] };
+  return { migrationReceipt, schema, catalogEditor, databaseContainer: containers[0] };
 }
 
 export function buildLocalWebEnvironment(local, inherited = process.env) {

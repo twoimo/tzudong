@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { toast } from '@/lib/no-toast';
 import {
     CheckCircle2,
@@ -252,7 +252,13 @@ interface SubmissionListViewProps {
     onDeleteReview?: (review: Review) => void;
     reviewsLoading?: boolean;
     // 초기 탭 설정
+    submissionsReady?: boolean;
+    recommendationsReady?: boolean;
+    reviewsReady?: boolean;
+    loadError?: boolean;
+    reviewsError?: boolean;
     initialTab?: SubmissionAdminTab;
+    onTabChange?: (tab: SubmissionAdminTab) => void;
 }
 
 export function SubmissionListView({
@@ -270,10 +276,19 @@ export function SubmissionListView({
     onRejectReview,
     onDeleteReview,
     reviewsLoading = false,
+    submissionsReady = true,
+    recommendationsReady = true,
+    reviewsReady = true,
+    loadError = false,
+    reviewsError = false,
     initialTab = 'new',
+    onTabChange,
 }: SubmissionListViewProps) {
     // 탭 상태 (초기 탭 지정 가능)
     const [activeTab, setActiveTab] = useState<SubmissionAdminTab>(initialTab);
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
     const isMobile = useIsMobile();
     const SUBMISSION_LIST_PAGE_SIZE = 10;
 
@@ -402,9 +417,10 @@ export function SubmissionListView({
 
     const setActiveTabWithReset = useCallback((tab: SubmissionAdminTab) => {
         setActiveTab(tab);
+        onTabChange?.(tab);
         resetVisibleCountByTab(tab);
         setQueueReasonFilter('all');
-    }, [resetVisibleCountByTab]);
+    }, [resetVisibleCountByTab, onTabChange]);
     const handleQueueReasonFilterChange = useCallback((filter: AdminSubmissionQueueReasonFilter) => {
         setQueueReasonFilter(filter);
         resetVisibleCountByTab(activeTab);
@@ -912,7 +928,6 @@ export function SubmissionListView({
         });
     }, [activeTab, submissions, submissionQueueSafetyById]);
 
-    const hasSubmissionQueueFilters = searchQuery.trim().length > 0 || queueReasonFilter !== 'all';
 
     // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
@@ -1098,25 +1113,6 @@ export function SubmissionListView({
             count > 0 ? "bg-yellow-100 text-yellow-700" : "border-border bg-muted text-muted-foreground",
             isMobile && "ml-0 min-w-[18px] px-1"
         );
-    const renderListSkeletonCards = (label: string) => (
-        <div className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
-            <Skeleton className="h-8 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            {Array.from({ length: 4 }).map((_, index) => (
-                <Card key={index} className="rounded-lg border p-2">
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px] sm:items-center">
-                        <div className="min-w-0 space-y-1.5">
-                            <Skeleton className="h-3.5 w-3/4 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                            <Skeleton className="h-2.5 w-5/6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                        </div>
-                        <Skeleton className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                        <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                    </div>
-                </Card>
-            ))}
-            <div className="h-4" />
-        </div>
-    );
-
     const orderedReviews = useMemo(
         () => [...pendingReviews, ...approvedReviews, ...rejectedReviews],
         [pendingReviews, approvedReviews, rejectedReviews]
@@ -2506,9 +2502,9 @@ export function SubmissionListView({
 
     return (
         <TooltipProvider>
-            <div className="flex h-full min-h-0 flex-col">
+            <div className="flex h-full min-h-0 flex-col" data-admin-submission-workspace="true">
                 {/* 탭 헤더 */}
-                <div className="mx-2 mb-3 shrink-0 border-b pb-3 sm:mx-4">
+                <div className="mx-2 mb-3 shrink-0 border-b pb-3 sm:mx-4" data-admin-submission-toolbar="true">
                     <div className="mt-2 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                         {/* 왼쪽: 현재 탭 상태 카운트 */}
                         <div className={cn("flex flex-wrap items-center gap-1.5", isMobile && "gap-1")}>
@@ -2603,7 +2599,7 @@ export function SubmissionListView({
                                         variant={getTabCountBadgeVariant(newCount)}
                                         className={getTabCountBadgeClassName(newCount)}
                                     >
-                                        {newCount}
+                                        {submissionsReady ? newCount : "—"}
                                     </Badge>
                                 </Button>
                                 <Button
@@ -2618,7 +2614,7 @@ export function SubmissionListView({
                                         variant={getTabCountBadgeVariant(editCount)}
                                         className={getTabCountBadgeClassName(editCount)}
                                     >
-                                        {editCount}
+                                        {submissionsReady ? editCount : "—"}
                                     </Badge>
                                 </Button>
                                 <Button
@@ -2633,7 +2629,7 @@ export function SubmissionListView({
                                         variant={getTabCountBadgeVariant(recommendCount)}
                                         className={getTabCountBadgeClassName(recommendCount)}
                                     >
-                                        {recommendCount}
+                                        {recommendationsReady ? recommendCount : "—"}
                                     </Badge>
                                 </Button>
                                 <Button
@@ -2648,7 +2644,7 @@ export function SubmissionListView({
                                         variant={getTabCountBadgeVariant(reviewPendingCount)}
                                         className={getTabCountBadgeClassName(reviewPendingCount)}
                                     >
-                                        {reviewPendingCount}
+                                        {reviewsReady ? reviewPendingCount : "—"}
                                     </Badge>
                                 </Button>
                             </div>
@@ -2688,11 +2684,12 @@ export function SubmissionListView({
                 </div>
 
                 {/* 테이블 또는 리뷰 목록 */}
-                <div className="mx-2 grid min-h-0 flex-1 gap-2 pb-2 sm:mx-4 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden">
+                <div className="mx-2 grid min-h-0 flex-1 gap-2 pb-2 sm:mx-4 xl:grid-cols-[minmax(330px,0.95fr)_minmax(420px,1.05fr)] xl:overflow-hidden" data-admin-submission-panels="true">
                     <div className="min-h-0 overflow-hidden">
                 {activeTab === 'reviews' ? (
                     <div
                         className={listContainerClassName}
+                        aria-busy={reviewsLoading}
                         style={isMobile ? { touchAction: 'pan-y' } : undefined}
                         onPointerDown={isMobile ? handleSubmissionTabPointerDown : undefined}
                         onPointerMove={isMobile ? handleSubmissionTabPointerMove : undefined}
@@ -2703,15 +2700,8 @@ export function SubmissionListView({
                         onTouchEnd={isMobile ? handleSubmissionTabSwipeEnd : undefined}
                         onTouchCancel={isMobile ? handleSubmissionTabTouchCancel : undefined}
                     >
-                        {reviewsLoading ? (
-                            renderListSkeletonCards('리뷰')
-                        ) : filteredReviews.length === 0 && !reviewSearchQuery ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                                <MessageSquare className="w-10 h-10 mb-3" />
-                                <p>검수할 리뷰가 없습니다.</p>
-                            </div>
-                        ) : (
-                            <div className={listBodyClassName}>
+                        {(
+                            <div data-admin-panel-padding="scroll-list" data-admin-section-gap="stack" className={listBodyClassName}>
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -2733,7 +2723,11 @@ export function SubmissionListView({
                                     )}
                                 </div>
 
-                                {orderedReviews.length === 0 ? (
+                                {reviewsError && reviews.length === 0 ? (
+                                    <p role="alert" className="p-4 text-sm text-muted-foreground">리뷰를 불러오지 못했습니다. 다시 시도해주세요.</p>
+                                ) : reviewsLoading && reviews.length === 0 ? (
+                                    <AdminDataPending label="리뷰를 불러오는 중입니다." />
+                                ) : orderedReviews.length === 0 ? (
                                     <div className="flex h-24 items-center justify-center rounded-md border text-sm text-muted-foreground">
                                         검색 결과가 없습니다
                                     </div>
@@ -2834,16 +2828,9 @@ export function SubmissionListView({
                         )}
                     </div>
                 ) : (
-                    <div className={listContainerClassName}>
-                        {loading && filteredSubmissions.length === 0 ? (
-                            renderListSkeletonCards(activeTab === 'new' ? '신규 제보' : activeTab === 'recommend' ? '쯔양 제보' : '수정 제보')
-                        ) : filteredSubmissions.length === 0 && !hasSubmissionQueueFilters ? (
-                            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                                <AlertCircle className="w-10 h-10 mb-3" />
-                                <p>{activeTab === 'new' ? '신규 제보가 없습니다.' : activeTab === 'recommend' ? '쯔양 제보가 없습니다.' : '수정 요청이 없습니다.'}</p>
-                            </div>
-                        ) : (
-                            <div className={listBodyClassName}>
+                    <div className={listContainerClassName} aria-busy={loading}>
+                        {(
+                            <div data-admin-panel-padding="scroll-list" data-admin-section-gap="stack" className={listBodyClassName}>
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -2890,7 +2877,7 @@ export function SubmissionListView({
                                                     "ml-1 rounded-full px-1.5 py-0 text-[10px] leading-4 tabular-nums",
                                                     isSelected ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-muted-foreground"
                                                 )}>
-                                                    {option.count}
+                                                    {loading && filteredSubmissions.length === 0 ? "—" : option.count}
                                                 </span>
                                             </Button>
                                         );
@@ -2898,7 +2885,11 @@ export function SubmissionListView({
                                 </div>
 
 
-                                {filteredSubmissions.length === 0 ? (
+                                {loadError && filteredSubmissions.length === 0 ? (
+                                    <p role="alert" className="p-4 text-sm text-muted-foreground">제보를 불러오지 못했습니다. 다시 시도해주세요.</p>
+                                ) : loading && filteredSubmissions.length === 0 ? (
+                                    <AdminDataPending label="제보를 불러오는 중입니다." />
+                                ) : filteredSubmissions.length === 0 ? (
                                     <div className="flex h-24 items-center justify-center rounded-md border px-3 text-center text-sm text-muted-foreground">
                                         {queueReasonFilter !== 'all' ? '선택한 검수 사유에 맞는 제보가 없습니다' : '검색 결과가 없습니다'}
                                     </div>

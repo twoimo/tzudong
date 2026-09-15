@@ -1,6 +1,7 @@
 'use client';
 
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
+import { localizeAnnouncementContent } from '@/lib/announcement-localization';
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from '@/hooks/use-restaurants';
 import type { Announcement } from '@/types/announcement';
 import type { Restaurant } from '@/types/restaurant';
@@ -68,7 +69,7 @@ export async function fetchHomeAnnouncementById(announcementId: string) {
         return null;
     }
 
-    return toAnnouncement(announcementRow);
+    return toAnnouncement(localizeAnnouncementContent(announcementRow));
 }
 
 export async function resolveHomeRestaurantDeepLink(restaurantId: string) {

@@ -123,8 +123,14 @@ async function readInitialStoryboardResult(): Promise<StoryboardInitialResult | 
   return null;
 }
 
-export default async function AdminPage() {
-  const initialStoryboardResult = await readInitialStoryboardResult();
+export default async function AdminPage({ searchParams }: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  // Heavy local storyboard history is unrelated to other administrator modules.
+  const initialStoryboardResult = params.module === "storyboard"
+    ? await readInitialStoryboardResult()
+    : null;
 
   return <AdminConsoleOverview initialStoryboardResult={initialStoryboardResult} />;
 }

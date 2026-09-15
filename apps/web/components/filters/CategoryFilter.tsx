@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, ChefHat } from "lucide-react";
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, ChefHat } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ const CategoryFilter = ({
         ? ['restaurants-categories', selectedRegion, selectedCountry]
         : ['restaurants-count'];
 
-    const { data: restaurants = [] } = useQuery({
+    const { data: restaurants = [], isError, isPending } = useQuery({
         queryKey: categoryQueryKey,
         queryFn: async () => {
             const params: Array<[string, string]> = [
@@ -82,12 +82,12 @@ const CategoryFilter = ({
                 const data = await fetchSupabaseRows<Restaurant>('restaurants', params);
                 // 병합 로직 적용하여 중복 제거
                 return mergeRestaurants(data || []);
-            } catch (error) {
-                console.error('카테고리 데이터 조회 실패:');
-                return [];
+            } catch {
+                throw new Error('RESTAURANT_COUNTS_UNAVAILABLE');
             }
         },
         enabled: true,
+        retry: 1,
         staleTime: 10 * 60 * 1000,
         gcTime: 30 * 60 * 1000,
         refetchOnWindowFocus: false,
@@ -109,6 +109,7 @@ const CategoryFilter = ({
 
     // 전체 맛집 수 (병합된 데이터 기준)
     const totalCount = restaurants.length;
+    const totalLabel = isError ? '조회 실패' : isPending ? '조회 중' : `${totalCount}개`;
 
     const handleCategoryToggle = (category: string) => {
         const newCategories = selectedCategories.includes(category)
@@ -121,112 +122,64 @@ const CategoryFilter = ({
         onCategoryChange([]);
     };
 
+    const selectedLabel = selectedCategories.length === 0 ? "전체 카테고리"
+        : selectedCategories.length === 1 ? selectedCategories[0]
+            : `${selectedCategories[0]} 외 ${selectedCategories.length - 1}개`;
+
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isOpen}
+        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+            <DropdownMenuTrigger asChild>
+                <button
+                    type="button"
                     aria-label="카테고리 필터"
-                    className={cn("justify-between", className)}
+                    className={cn(
+                        "flex h-10 w-full min-w-0 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 sm:w-[200px]",
+                        className,
+                    )}
                 >
-                    <div className="flex min-w-max flex-1 items-center gap-2 whitespace-nowrap">
-                        <ChefHat className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <div className="flex min-w-max flex-1 items-center justify-between whitespace-nowrap">
-                            <span className={selectedCategories.length > 0 ? "truncate" : ""}>
-                                {selectedCategories.length > 0
-                                    ? `${selectedCategories.length}개 선택됨`
-                                    : "카테고리"
-                                }
-                            </span>
-                            {selectedCategories.length === 0 && (
-                                <span className="ml-2 shrink-0 whitespace-nowrap text-xs text-muted-foreground">({totalCount}개)</span>
-                            )}
-                        </div>
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent
+                    <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                        <ChefHat className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <span className="truncate">{selectedLabel}</span>
+                        {selectedCategories.length === 0 && (
+                            <span className="text-xs text-muted-foreground">({totalLabel})</span>
+                        )}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" aria-hidden="true" />
+                </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+                aria-label="카테고리 선택 · 여러 개 선택 가능"
                 className={cn(
-                    "z-[180] w-[min(21rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border-border bg-card p-0 shadow-2xl",
-                    contentClassName
+                    "z-[180] max-h-[min(24rem,calc(100dvh-8rem))] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto overscroll-contain rounded-2xl border-border shadow-2xl",
+                    contentClassName,
                 )}
                 align={contentAlign}
                 side={contentSide}
-                sideOffset={8}
+                sideOffset={4}
             >
-                <Command className="rounded-2xl bg-card">
-                    <div className="border-b border-border/70 bg-muted/30 px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                                <p className="text-sm font-semibold text-foreground">카테고리 필터</p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                    {selectedCategories.length > 0
-                                        ? `${selectedCategories.length}개 선택됨`
-                                        : `전체 ${totalCount}개`}
-                                </p>
-                            </div>
-                            {selectedCategories.length > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleClearAll}
-                                    className="h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:text-foreground"
-                                >
-                                    초기화
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                    <CommandInput
-                        placeholder="카테고리 검색…"
-                        className="h-11 text-sm"
-                    />
-                    <CommandList className="max-h-[min(21rem,calc(100dvh-9rem))] overscroll-contain p-1.5">
-                        <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
-                            카테고리를 찾을 수 없습니다.
-                        </CommandEmpty>
-                        <CommandGroup className="p-0">
-                            <div className="flex items-center justify-between px-2 py-2">
-                                <span className="text-xs font-medium text-muted-foreground">전체 {totalCount}개</span>
-                                {selectedCategories.length > 0 && (
-                                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                                        {selectedCategories.length}개 선택
-                                    </span>
-                                )}
-                            </div>
-                            {CATEGORIES.map((category) => {
-                                const isSelected = selectedCategories.includes(category);
-                                const count = categoryCounts[category] || 0;
-                                return (
-                                    <CommandItem
-                                        key={category}
-                                        onSelect={() => handleCategoryToggle(category)}
-                                        className="min-h-10 rounded-xl px-2.5 py-2 data-[selected='true']:bg-accent"
-                                    >
-                                        <div className="flex min-w-0 flex-1 items-center gap-2">
-                                            <Check
-                                                className={cn(
-                                                    "h-4 w-4 shrink-0 text-primary",
-                                                    isSelected ? "opacity-100" : "opacity-0"
-                                                )}
-                                                aria-hidden="true"
-                                            />
-                                            <span className="truncate text-sm font-medium">{category}</span>
-                                        </div>
-                                        <span className="ml-3 shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
-                                            {count}개
-                                        </span>
-                                    </CommandItem>
-                                );
-                            })}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
+                <DropdownMenuCheckboxItem checked={selectedCategories.length === 0} onCheckedChange={handleClearAll}>
+                    <span className="flex w-full items-center justify-between whitespace-nowrap">
+                        <span>전체 카테고리</span>
+                        <span className="ml-2 text-xs text-muted-foreground">({totalLabel})</span>
+                    </span>
+                </DropdownMenuCheckboxItem>
+                {CATEGORIES.map(category => (
+                    <DropdownMenuCheckboxItem
+                        key={category}
+                        checked={selectedCategories.includes(category)}
+                        onCheckedChange={() => handleCategoryToggle(category)}
+                        onSelect={event => event.preventDefault()}
+                    >
+                        <span className="flex w-full items-center justify-between whitespace-nowrap">
+                            <span>{category}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                                {isError ? '조회 실패' : isPending ? '조회 중' : `(${categoryCounts[category] || 0}개)`}
+                            </span>
+                        </span>
+                    </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 };
 

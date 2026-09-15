@@ -7,6 +7,7 @@ import {
     HOME_RESTORE_SNAPSHOT_TTL_MS,
     buildHomeDetailState,
     buildHomeDetailUrl,
+    buildHomeListUrl,
     buildHomeListState,
     dispatchHomeRestoreEvent,
     isHomeDetailHistoryState,
@@ -82,6 +83,14 @@ const makeSnapshot = (createdAt = 1_000): HomeRestoreSnapshotV1 => ({
 });
 
 describe('home detail route state contracts', () => {
+    test('direct-detail return removes detail params while preserving unrelated navigation', () => {
+        const url = new URL('http://localhost:8080/?restaurant=abc&mapMode=overseas&restore=saved&z=15&panel=search#map');
+        expect(buildHomeListUrl(url)).toBe('/?panel=search#map');
+        expect(url.searchParams.get('restaurant')).toBe('abc');
+        expect(buildHomeListUrl(new URL('http://localhost:8080/?r=abc&mode=domestic'))).toBe('/');
+        expect(buildHomeListUrl(new URL('http://localhost:8080/?lat=37&lng=127&z=15'))).toBe('/?lat=37&lng=127&z=15');
+        expect(buildHomeListUrl(new URL('http://localhost:8080/other?restaurant=abc'))).toBe('/other?restaurant=abc');
+    });
     test('locks snapshot TTL and max size to the approved contract', () => {
         expect(HOME_RESTORE_SNAPSHOT_TTL_MS).toBe(30 * 60 * 1000);
         expect(HOME_RESTORE_SNAPSHOT_MAX_BYTES).toBe(8 * 1024);

@@ -198,6 +198,7 @@ def pending_insert_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         _deny("missing_video_id")
     return {
         "trace_id": row.get("trace_id"),
+        "is_ingestion_candidate": True,
         "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
         "status": "pending",
         "origin_name": row.get("origin_name"),

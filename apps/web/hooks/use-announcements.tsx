@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Announcement, AnnouncementFormData, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 import { toast } from '@/lib/no-toast';
 
+import { localizeAnnouncementContent } from '@/lib/announcement-localization';
+
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
 const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
 
@@ -30,10 +32,11 @@ const sortAnnouncements = (announcements: Announcement[]): Announcement[] => {
 };
 
 const mapAnnouncementRow = (row: AnnouncementRow): Announcement => {
+    const localized = localizeAnnouncementContent(row);
     return {
         id: row.id,
-        title: row.title,
-        content: row.content,
+        title: localized.title,
+        content: localized.content,
         isActive: row.is_active,
         showOnBanner: row.show_on_banner,
         priority: row.priority,

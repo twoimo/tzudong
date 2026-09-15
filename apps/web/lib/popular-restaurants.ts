@@ -1,6 +1,8 @@
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { supabase } from '@/integrations/supabase/client';
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
+import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from './home-map-youtube-kpi';
+import { rankPopularRestaurants, type RestaurantPopularity } from './restaurant-popularity';
 import type { Restaurant } from '@/types/restaurant';
 
 export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
@@ -84,6 +86,7 @@ export type PopularRankTrend = {
 
 export type PopularRestaurantWithTrend = Restaurant & {
   popularRankTrend?: PopularRankTrend;
+  popularity?: RestaurantPopularity;
 };
 export function excludeRestaurantsAlreadyShown<T extends { id: string }>(
   restaurants: readonly T[],
@@ -431,103 +434,56 @@ export const attachPopularRankTrends = (
     };
   });
 
-async function fetchRegionalPopularBackfillRestaurants({
-  fetchLimit,
-  selectedRegion,
-  isKoreanOnly = false,
-}: Pick<
-  RestaurantListArgs,
-  'fetchLimit' | 'selectedRegion' | 'isKoreanOnly'
->): Promise<Restaurant[]> {
-  if (!selectedRegion) return [];
-
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved');
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
-  );
-  const { data, error } = await regionScopedQuery
-    .order('review_count', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(fetchLimit ?? 20)
-    .overrideTypes<Restaurant[], { merge: false }>();
-
-  if (error) throw error;
-
-  return mergeRestaurants(data ?? [])
-    .filter(isApprovedRestaurant)
-    .filter((restaurant) =>
-      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-    )
-    .sort((a, b) => {
-      const reviewDelta = (b.review_count ?? 0) - (a.review_count ?? 0);
-      if (reviewDelta !== 0) return reviewDelta;
-
-      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
-      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
-      return bTime - aTime;
-    });
-}
+// Fetch all lightweight ranking candidates before taking the top N. Limiting by
+// weekly searches first would hide videos with high engagement and zero searches.
+const POPULAR_CANDIDATE_SELECT =
+  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, youtube_link, youtube_meta, status, weekly_search_count, review_count';
 
 export async function fetchPopularRestaurants({
   limit,
-  fetchLimit = Math.max(limit * 4, 12),
   selectedRegion,
   isKoreanOnly = false,
 }: RestaurantListArgs): Promise<PopularRestaurantWithTrend[]> {
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved')
-    .gt('weekly_search_count', 0);
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
-  );
-  const { data, error } = await regionScopedQuery
-    .order('weekly_search_count', { ascending: false })
-    .limit(fetchLimit)
-    .overrideTypes<Restaurant[], { merge: false }>();
-
-  if (error) throw error;
-
-  const restaurants = mergeRestaurants(data ?? [])
-    .filter(isApprovedRestaurant)
-    .filter((restaurant) =>
-      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-    )
-    .sort(
-      (a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0),
-    )
-    .slice(0, limit);
-
-  if (selectedRegion && restaurants.length < limit) {
-    const existingIds = new Set(restaurants.map((restaurant) => restaurant.id));
-    const backfillRestaurants = await fetchRegionalPopularBackfillRestaurants({
-      fetchLimit,
-      selectedRegion,
-      isKoreanOnly,
-    });
-
-    restaurants.push(
-      ...backfillRestaurants
-        .filter((restaurant) => !existingIds.has(restaurant.id))
-        .slice(0, limit - restaurants.length),
-    );
+  if (limit <= 0) return [];
+  const candidates: Restaurant[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const query = supabase.from('restaurants').select(POPULAR_CANDIDATE_SELECT).eq('status', 'approved');
+    const { data, error } = await applyRestaurantRegionAddressFilter(query, selectedRegion)
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1)
+      .overrideTypes<Restaurant[], { merge: false }>();
+    if (error) throw error;
+    candidates.push(...(data ?? []));
+    if ((data?.length ?? 0) < pageSize) break;
+    if (candidates.length >= 10_000) throw new Error('POPULAR_CANDIDATE_LIMIT');
   }
+  const merged = mergeRestaurants(candidates)
+    .filter(isApprovedRestaurant)
+    .filter(restaurant => matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly));
+  const enriched = await enrichRestaurantsWithHomeMapYoutubeKpiMetrics(merged, 'hot-view');
+  const ranked = rankPopularRestaurants(enriched)
+    .slice(0, limit);
+  if (!ranked.length) return [];
 
+  // Hydrate only selected places, including each appearance for correct details.
+  const ids = [...new Set(ranked.flatMap(r => (r.mergedRestaurants ?? [r]).map(row => row.id)))];
+  const { data, error } = await supabase.from('restaurants').select(POPULAR_RESTAURANT_SELECT)
+    .eq('status', 'approved').in('id', ids).overrideTypes<Restaurant[], { merge: false }>();
+  if (error) throw error;
+  const details = new Map(mergeRestaurants(data ?? []).map(r => [r.id, r]));
+  const restaurants: PopularRestaurantWithTrend[] = ranked.flatMap(r => {
+    const detail = details.get(r.id);
+    return detail ? [{ ...detail, popularity: r.popularity }] : [];
+  });
+
+  // Historical snapshots contain search-only ranks. Never compare a composite
+  // video recommendation against them or invent an up/down badge.
+  if (restaurants.some(r => r.popularity?.basis !== 'search')) return restaurants;
   try {
-    const { snapshots, hasSnapshotPeriod } = await fetchPopularRankSnapshots({
-      limit,
-      selectedRegion,
-      isKoreanOnly,
-    });
-
+    const { snapshots, hasSnapshotPeriod } = await fetchPopularRankSnapshots({ limit, selectedRegion, isKoreanOnly });
     return attachPopularRankTrends(restaurants, snapshots, hasSnapshotPeriod);
-  } catch (error) {
+  } catch {
     console.warn('인기 맛집 순위 스냅샷 조회 실패:');
     return attachPopularRankTrends(restaurants, new Map(), false);
   }

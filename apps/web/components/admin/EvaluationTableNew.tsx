@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,7 @@ import {
 import { getYoutubeThumbnailCandidates, shouldTryNextYoutubeThumbnailCandidate } from '@/lib/youtube-thumbnail';
 
 interface EvaluationTableProps {
+  loadError?: boolean;
   records: EvaluationRecord[];
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
@@ -575,6 +576,7 @@ export function EvaluationTable({
   onResolveConflict,
   onEdit,
   loading,
+  loadError = false,
   isDeletedFilterActive = false,
   searchQuery = '',
   onSearchChange,
@@ -1060,53 +1062,10 @@ export function EvaluationTable({
   );
 
   const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
-  const mobileLoadingCards = (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="rounded-lg border bg-card p-2">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+  const mobilePending = <AdminDataPending label="검수 항목을 불러오는 중입니다." className="lg:hidden" />;
+  const desktopPending = (
+    <TableRow><TableCell colSpan={11}><AdminDataPending label="검수 항목을 불러오는 중입니다." /></TableCell></TableRow>
   );
-  const desktopLoadingRows = Array.from({ length: 6 }).map((_, index) => (
-    <TableRow key={`evaluation-loading-${index}`} aria-hidden="true">
-      <TableCell className="sticky left-0 z-10 bg-background/95 px-2 sm:px-4">
-        <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-      <TableCell className="lg:sticky lg:left-12 lg:z-10 lg:bg-background">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-            <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-          </div>
-        </div>
-      </TableCell>
-      {Array.from({ length: 7 }).map((__, cellIndex) => (
-        <TableCell key={cellIndex} className={cn("text-center", cellIndex === 1 || cellIndex === 2 || cellIndex === 4 || cellIndex === 5 ? "hidden lg:table-cell" : undefined)}>
-          <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-        </TableCell>
-      ))}
-      <TableCell className="sticky right-[120px] z-10 bg-background text-center lg:right-[160px]">
-        <Skeleton className="mx-auto h-6 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-      <TableCell className="sticky right-0 z-10 bg-background text-center">
-        <Skeleton className="mx-auto h-7 w-20 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-      </TableCell>
-    </TableRow>
-  ));
 
   const mobileCards = (
     <>
@@ -1152,6 +1111,7 @@ export function EvaluationTable({
               aria-labelledby={titleId}
               data-layout-primitives="stack frame"
               data-admin-evaluation-mobile-card="true"
+              data-admin-panel-padding="true"
               className={cn(
                 "rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm",
                 getMobileCardTone(record.status),
@@ -1439,6 +1399,7 @@ export function EvaluationTable({
     <TooltipProvider>
       <div
         ref={tableScrollContainerRef}
+        aria-busy={loading || isLoadingMore}
         className={cn(
           shouldRenderMobile
             ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
@@ -1449,12 +1410,12 @@ export function EvaluationTable({
           <>
             {mobileControls}
             {loading && records.length === 0 ? (
-              mobileLoadingCards
+              mobilePending
             ) : records.length > 0 ? (
               mobileCards
             ) : (
               <div className="rounded-lg border bg-card text-center text-sm text-muted-foreground lg:hidden flex min-h-0 flex-1 items-center justify-center p-6">
-                표시할 데이터가 없습니다
+                {loadError ? "검수 데이터를 불러오지 못했습니다. 다시 시도해주세요." : "표시할 데이터가 없습니다"}
               </div>
             )}
           </>
@@ -1635,13 +1596,13 @@ export function EvaluationTable({
               <TableHead className="sticky right-0 z-10 min-w-[120px] bg-background text-center lg:min-w-[160px]">액션</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody aria-busy={loading || isLoadingMore}>
             {loading && records.length === 0 ? (
-              desktopLoadingRows
+              desktopPending
             ) : records.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
-                  표시할 데이터가 없습니다
+                  {loadError ? "검수 데이터를 불러오지 못했습니다. 다시 시도해주세요." : "표시할 데이터가 없습니다"}
                 </TableCell>
               </TableRow>
             ) : (

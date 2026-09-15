@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPopularityDescription } from '@/lib/restaurant-popularity';
 import { incrementSearchCount } from '@/lib/search-count';
 import {
   excludeRestaurantsAlreadyShown,
@@ -35,6 +36,7 @@ import {
 } from '@/lib/home-map-contextual-restaurants';
 
 type DesktopLeftPanelMapHomeProps = {
+  enabled?: boolean;
   onRestaurantOpen: (restaurant: Restaurant) => void;
   selectedRegion?: string | null;
   isKoreanOnly?: boolean;
@@ -96,6 +98,7 @@ function DesktopRestaurantCardSkeleton() {
 }
 
 export default function DesktopLeftPanelMapHome({
+  enabled = true,
   onRestaurantOpen,
   selectedRegion,
   isKoreanOnly = true,
@@ -130,7 +133,8 @@ export default function DesktopLeftPanelMapHome({
       }),
     [isKoreanOnly, latestRestaurantSort, selectedRegion],
   );
-  const { data: popularRestaurants = [], isLoading } = useQuery({
+  const { data: popularRestaurants = [], isPending: isLoading } = useQuery({
+    enabled,
     queryKey: desktopLeftPanelHomePopularQueryKey,
     queryFn: async () => {
       try {
@@ -152,8 +156,9 @@ export default function DesktopLeftPanelMapHome({
     fetchNextPage: fetchNextLatestRestaurantPage,
     hasNextPage: hasNextLatestRestaurantPage,
     isFetchingNextPage: isFetchingNextLatestRestaurantPage,
-    isLoading: isLatestLoading,
+    isPending: isLatestLoading,
   } = useInfiniteQuery({
+    enabled,
     queryKey: desktopLeftPanelHomeLatestQueryKey,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -373,10 +378,10 @@ export default function DesktopLeftPanelMapHome({
             <div className="min-w-0">
               <h2 className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                 <TrendingUp className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span>인기 검색 맛집</span>
+                <span>인기 맛집</span>
               </h2>
               <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                처음 방문해도 바로 눌러볼 만한 맛집 5곳
+                영상 조회·좋아요·댓글과 주간 검색을 함께 반영
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
@@ -405,7 +410,7 @@ export default function DesktopLeftPanelMapHome({
               </div>
             ) : popularRestaurants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
-                인기 검색 데이터가 쌓이면 여기에서 바로 보여드릴게요.
+                이 지역에서 추천할 맛집을 아직 찾지 못했어요.
               </div>
             ) : (
               popularRestaurants.map((restaurant, index) => {
@@ -441,6 +446,9 @@ export default function DesktopLeftPanelMapHome({
                             {trendBadge.label}
                           </span>
                         ) : null}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                        {getPopularityDescription(restaurant.popularity)}
                       </span>
                       <span className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />

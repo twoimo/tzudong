@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import {
   useCallback,
   useEffect,
@@ -2601,6 +2602,12 @@ function drawNoWrapFittedText(
   return metrics;
 }
 
+async function readThumbnailHistory(signal?: AbortSignal): Promise<ThumbnailHistoryPayload | null> {
+  const response = await fetch(THUMBNAIL_HISTORY_API_URL, { cache: "no-store", signal });
+  if (!response.ok) throw new Error("history_api_failed");
+  return response.json().catch(() => null) as Promise<ThumbnailHistoryPayload | null>;
+}
+
 export function AdminYoutubeThumbnailGenerator() {
   const canvasViewportRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -3328,7 +3335,7 @@ export function AdminYoutubeThumbnailGenerator() {
   }, [applyPromotedReleaseCandidate]);
 
   const loadThumbnailHistory = useCallback(async (
-    options: { replaceInitialPreview?: boolean; silent?: boolean; actualOnlyPreview?: boolean } = {},
+    options: { replaceInitialPreview?: boolean; silent?: boolean; actualOnlyPreview?: boolean; readHistory?: () => Promise<ThumbnailHistoryPayload | null> } = {},
   ) => {
     if (isGenerating) return;
 
@@ -3340,9 +3347,7 @@ export function AdminYoutubeThumbnailGenerator() {
     }
 
     try {
-      const response = await fetch(THUMBNAIL_HISTORY_API_URL, { cache: "no-store" });
-      if (!response.ok) throw new Error("history_api_failed");
-      const payload = await response.json().catch(() => null) as ThumbnailHistoryPayload | null;
+      const payload = await (options.readHistory ?? readThumbnailHistory)();
       if (thumbnailHistoryRequestIdRef.current !== requestId) return;
 
       const runs = Array.isArray(payload?.runs)
@@ -3409,13 +3414,18 @@ export function AdminYoutubeThumbnailGenerator() {
   }, [isGenerating]);
 
   useEffect(() => {
+    if (isGenerating || userCanvasResultLockedRef.current) return;
     let isCancelled = false;
+    const controller = new AbortController();
+    // Reuse this mount's read for fallback selection without persisting private history.
+    let historyRead: Promise<ThumbnailHistoryPayload | null> | undefined;
+    const readHistory = () => historyRead ??= readThumbnailHistory(controller.signal);
     void (async () => {
       // A freshly generated exact gpt-image-2 image is what the operator expects
       // to see on revisit. Load actual generated history before the public
       // release fallback so another browser on the same dev server does not
       // jump back to an older bundled/candidate thumbnail.
-      await loadThumbnailHistory({ replaceInitialPreview: true, silent: true, actualOnlyPreview: true });
+      await loadThumbnailHistory({ replaceInitialPreview: true, silent: true, actualOnlyPreview: true, readHistory });
       if (isCancelled || latestHistoryRunKeyRef.current) return;
       const durableStatus = await loadDurableRelease({ replaceInitialPreview: true, silent: true });
       if (isCancelled) return;
@@ -3424,12 +3434,14 @@ export function AdminYoutubeThumbnailGenerator() {
         ? await loadReleaseCandidates({ replaceInitialPreview: true, silent: true })
         : "empty";
       if (isCancelled) return;
-      await loadThumbnailHistory({ replaceInitialPreview: canUseFallbackPreview && candidateStatus !== "applied", silent: true });
+      await loadThumbnailHistory({ replaceInitialPreview: canUseFallbackPreview && candidateStatus !== "applied", silent: true, readHistory });
     })();
     return () => {
       isCancelled = true;
+      thumbnailHistoryRequestIdRef.current += 1;
+      controller.abort();
     };
-  }, [loadDurableRelease, loadReleaseCandidates, loadThumbnailHistory]);
+  }, [isGenerating, loadDurableRelease, loadReleaseCandidates, loadThumbnailHistory]);
 
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -6368,7 +6380,7 @@ export function AdminYoutubeThumbnailGenerator() {
               aria-label="생성 히스토리 새로고침"
               data-thumbnail-history-refresh="true"
             >
-              {historyStatus === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+              <RotateCcw className="h-3.5 w-3.5" />
             </Button>
             <Button
               type="button"
@@ -6384,6 +6396,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </div>
         </div>
 
+        {historyStatus === "loading" ? <AdminDataPending label="생성 기록을 불러오는 중입니다." /> : null}
         {historyStatus === "error" ? (
           <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive" data-thumbnail-history-error="true">
             히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
@@ -6587,6 +6600,8 @@ export function AdminYoutubeThumbnailGenerator() {
                 className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3"
                 data-thumbnail-chat-log="true"
                 data-thumbnail-chat-transcript="true"
+                data-admin-panel-padding="true"
+                data-admin-section-gap="stack"
                 aria-live="polite"
               >
                 {chatMessages.map((message) => {
@@ -7017,28 +7032,8 @@ export function AdminYoutubeThumbnailGenerator() {
                 </div>
               ) : null}
               {isGenerating ? (
-                <div
-                  className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-2xl border border-slate-300/70 bg-gradient-to-br from-slate-50/86 via-slate-100/76 to-slate-200/68 shadow-sm dark:border-slate-600/60 dark:from-slate-800/62 dark:via-slate-700/50 dark:to-slate-600/44"
-                  role="status"
-                  aria-live="polite"
-                  aria-busy="true"
-                  aria-label="썸네일 생성 중"
-                  data-thumbnail-generation-skeleton="true"
-                  data-thumbnail-generation-skeleton-variant="neutral-gray"
-                  data-thumbnail-generation-skeleton-effect="glass-shimmer"
-                  data-thumbnail-unified-generation-skeleton="true"
-                  data-thumbnail-generation-skeleton-glass-surface="true"
-                >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-90 [background:linear-gradient(135deg,rgba(255,255,255,0.54),rgba(203,213,225,0.28)_46%,rgba(100,116,139,0.20))]"
-                    aria-hidden="true"
-                  />
-                  <div
-                    className="admin-module-loading-shimmer pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/70 to-transparent"
-                    aria-hidden="true"
-                    data-thumbnail-generation-skeleton-shimmer="true"
-                  />
-                  <span className="sr-only">썸네일 생성 중</span>
+                <div className="pointer-events-none absolute bottom-3 left-3 z-20 rounded-lg border bg-background/95" data-thumbnail-generation-pending="true">
+                  <AdminDataPending label="썸네일을 생성하는 중입니다." className="min-h-0 px-2 py-1.5" />
                 </div>
               ) : null}
               {editingLayer ? (

@@ -34,7 +34,7 @@ const RegionSelector = ({
   const [isOpen, setIsOpen] = useState(false);
 
   // 모든 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
-  const { data: restaurants = [] } = useQuery({
+  const { data: restaurants = [], isError, isPending } = useQuery({
     queryKey: ['restaurants-count'],
     queryFn: async () => {
       try {
@@ -46,10 +46,11 @@ const RegionSelector = ({
         // 병합 로직 적용하여 중복 제거
         return mergeRestaurants(data || []);
       } catch {
-        return [];
+        throw new Error('RESTAURANT_COUNTS_UNAVAILABLE');
       }
     },
     enabled: true,
+    retry: 1,
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -127,8 +128,8 @@ const RegionSelector = ({
       >
         <SelectItem value="all">
           <div className="flex w-full items-center justify-between whitespace-nowrap">
-            <span className="whitespace-nowrap">대한민국</span>
-            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({totalCount}개)</span>
+            <span className="whitespace-nowrap">전체 맛집</span>
+            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">{isError ? '조회 실패' : isPending ? '조회 중' : `(${totalCount}개)`}</span>
           </div>
         </SelectItem>
         {REGIONS.map((region) => {
@@ -137,7 +138,7 @@ const RegionSelector = ({
             <SelectItem key={region} value={region}>
               <div className="flex w-full items-center justify-between whitespace-nowrap">
                 <span className="whitespace-nowrap">{region}</span>
-                <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
+                <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">{isError ? '조회 실패' : isPending ? '조회 중' : `(${count}개)`}</span>
               </div>
             </SelectItem>
           );

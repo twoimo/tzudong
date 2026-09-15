@@ -1,0 +1,23 @@
+{
+  "scope": "local isolated recovery candidate",
+  "unitTests": {
+    "pass": 75,
+    "fail": 0
+  },
+  "eslint": "passed",
+  "compilerParity": {
+    "status": "passed",
+    "diagnostics": 0,
+    "logicalInputs": 2371,
+    "logicalInputNamesSha256": "3d7e43aaac87f1c5713810ce6ce4732ec1e18da902001671e99fc1a4d309e5c2",
+    "nonLibraryContentSha256": "15700989db541e39f36692fb8c90ab4c2a9471717dd946f8b8835984869baff2",
+    "standardLibraryContentSha256": {
+      "native": "d328ef5dcbac7d4c183cd37a26eb383e8e6921ab2147b20e5d73f3c149223a64",
+      "compat": "82afdd90154e9b315a83eb66f2d4ee59972c492094bbf66d7f0791f584e41eb0"
+    }
+  },
+  "layoutObservations": 30,
+  "modules": 15,
+  "productionDeployment": false,
+  "canonicalG003AdmittedSlices": 0
+}

@@ -117,8 +117,8 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
     const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants(restaurantsOptions);
 
     const restaurantsToShow = useMemo(() => {
-        return mergeOverseasRestaurants(restaurants, searchedRestaurant);
-    }, [restaurants, searchedRestaurant]);
+        return mergeOverseasRestaurants(mergeOverseasRestaurants(restaurants, searchedRestaurant), selectedRestaurant);
+    }, [restaurants, searchedRestaurant, selectedRestaurant]);
 
     useEffect(() => {
         if (!onVisibleRestaurantsChange) return;
@@ -375,7 +375,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 markerElement: el,
             });
         });
-    }, [selectedRestaurant, searchedRestaurant, isMapLoaded]);
+    }, [selectedRestaurant, searchedRestaurant, isMapLoaded, restaurantsToShow]);
 
     // Re-center if mapPadding changes (e.g. panel opens) while a restaurant is selected
     useEffect(() => {
@@ -405,4 +405,3 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 };
 
 export default OverseasMap;
-

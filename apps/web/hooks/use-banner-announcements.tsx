@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchSupabaseRows } from '@/lib/supabase-rest-client';
 import type { Announcement } from '@/types/announcement';
 
+import { localizeAnnouncementContent } from '@/lib/announcement-localization';
+
 const ANNOUNCEMENTS_QUERY_KEY = ['announcements'];
 const ANNOUNCEMENT_SELECT = 'id,title,content,is_active,show_on_banner,priority,created_at,updated_at';
 const ACTIVE_ANNOUNCEMENTS_STALE_TIME_MS = 5 * 60 * 1000;
@@ -30,16 +32,19 @@ const sortAnnouncements = (announcements: Announcement[]): Announcement[] => {
     });
 };
 
-const mapAnnouncementRow = (row: AnnouncementRow): Announcement => ({
+const mapAnnouncementRow = (row: AnnouncementRow): Announcement => {
+    const localized = localizeAnnouncementContent(row);
+    return ({
     id: row.id,
-    title: row.title,
-    content: row.content,
+    title: localized.title,
+    content: localized.content,
     isActive: row.is_active,
     showOnBanner: row.show_on_banner,
     priority: row.priority,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-});
+    });
+};
 
 const parseAnnouncements = (rows: AnnouncementRow[] | null | undefined): Announcement[] => {
     return sortAnnouncements((rows || []).map(mapAnnouncementRow));

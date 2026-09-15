@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataPending } from "@/components/ui/data-pending";
 
 type UserProfileProgressiveSkeletonProps = {
     label?: string;
@@ -8,80 +8,36 @@ type UserProfileProgressiveSkeletonProps = {
     onBack?: () => void;
 };
 
+/** Route compatibility frame. Only unresolved identity, counts and activity load. */
 export function UserProfileProgressiveSkeleton({
     label = "사용자 프로필을 불러오는 중",
     showCloseButton = false,
     onBack,
 }: UserProfileProgressiveSkeletonProps) {
     return (
-        <div
-            role="status"
-            aria-live="polite"
-            aria-busy="true"
-            aria-label={label}
-            className="flex h-full min-h-[calc(100vh-4rem)] flex-col bg-background"
-            data-user-profile-panel-skeleton="true"
-            data-user-profile-route-skeleton="true"
-        >
-            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4">
+        <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col bg-background">
+            <header className="border-b border-border/70 p-4">
                 <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-                        <div className="min-w-0 space-y-2">
-                            <Skeleton className="h-5 w-32 rounded-full" />
-                            <Skeleton className="h-3 w-44 max-w-full rounded-full" />
-                        </div>
+                    <div>
+                        <h1 className="text-xl font-bold">사용자 프로필</h1>
+                        <p className="mt-1 text-xs text-muted-foreground">방문 도장과 리뷰 활동</p>
                     </div>
-                    {showCloseButton && onBack && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onBack}
-                            className="h-10 w-10 shrink-0 rounded-full"
-                            aria-label="프로필 패널 닫기"
-                        >
-                            <X className="h-5 w-5" aria-hidden="true" />
-                        </Button>
-                    )}
+                    {showCloseButton && onBack && <Button variant="ghost" size="icon" onClick={onBack} aria-label="프로필 패널 닫기"><X className="h-5 w-5" aria-hidden="true" /></Button>}
                 </div>
-                <div className="mt-4 grid w-full grid-cols-3 gap-2">
-                    {[0, 1, 2].map((item) => (
-                        <div key={item} className="rounded-xl border border-border/60 bg-card/80 px-2.5 py-2.5">
-                            <Skeleton className="h-3 w-12 rounded-full" />
-                            <Skeleton className="mt-2 h-5 w-10 rounded-full" />
-                        </div>
-                    ))}
+                <DataPending label={label} className="max-w-48" />
+                <div className="grid grid-cols-3 gap-2">
+                    {["도장", "좋아요", "랭킹"].map((title) => <div key={title} className="rounded-xl border p-2.5"><span className="text-xs">{title}</span><DataPending label={`${title} 확인 중`} className="min-h-5 p-0" /></div>)}
                 </div>
+            </header>
+            <div role="tablist" aria-label="사용자 프로필 콘텐츠" className="grid grid-cols-3 gap-1 border-b p-3">
+                {["도장", "리뷰", "좋아요"].map((title, index) => <button key={title} type="button" role="tab" aria-selected={index === 0} disabled className="rounded-lg border px-2 py-2.5 text-sm">{title}</button>)}
             </div>
-            <div className="border-b border-border/70 bg-background px-3 py-2">
-                <div className="grid w-full grid-cols-3 gap-1 rounded-xl bg-muted/60 p-1">
-                    {[0, 1, 2].map((item) => (
-                        <Skeleton key={item} className="h-10 rounded-lg" />
-                    ))}
-                </div>
-            </div>
-            <UserProfileTabSkeleton label="프로필 활동 로딩 중" live={false} />
+            <div className="px-4 pt-4"><h2 className="text-sm font-semibold">방문 도장</h2><p className="text-xs text-muted-foreground">리뷰로 인증한 맛집을 모았어요.</p></div>
+            <UserProfileTabSkeleton label="도장 목록 로딩 중" />
         </div>
     );
 }
 
 export function UserProfileTabSkeleton({ label, live = true }: { label: string; live?: boolean }) {
-    return (
-        <div
-            role={live ? "status" : undefined}
-            aria-live={live ? "polite" : undefined}
-            aria-label={live ? label : undefined}
-            aria-hidden={live ? undefined : true}
-            className="space-y-3 p-4"
-            data-user-profile-tab-skeleton="true"
-        >
-            {[0, 1, 2].map((item) => (
-                <div key={item} className="rounded-xl border border-border bg-card/80 p-3 shadow-sm">
-                    <Skeleton className="h-4 w-2/3 rounded" />
-                    <Skeleton className="mt-2 h-3 w-full rounded" />
-                    <Skeleton className="mt-2 h-3 w-1/2 rounded" />
-                </div>
-            ))}
-        </div>
-    );
+    return live ? <DataPending label={label} variant="list" className="p-4" /> : <div aria-hidden="true"><DataPending label={label} variant="list" className="p-4" /></div>;
 }

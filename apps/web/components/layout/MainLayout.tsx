@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
+import OverlayLayout from "@/components/layout/OverlayLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
@@ -48,14 +49,6 @@ const CombinedPopup = dynamic(
   { ssr: false },
 );
 
-const NONCRITICAL_CHROME_DELAY_MS = 0;
-const NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = [
-  "pointerdown",
-  "keydown",
-  "wheel",
-  "touchstart",
-];
-
 // [PERF] Lazy load components
 const UserDataPrefetcher = dynamic(
   () => import("@/components/layout/UserDataPrefetcher"),
@@ -78,17 +71,11 @@ const NavigationPrefetcher = dynamic(
   },
 );
 
-const OverlayLayout = dynamic(
-  () => import("@/components/layout/OverlayLayout"),
-  {
-    ssr: false,
-  },
-);
-
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const isAdminConsolePath = pathname === "/admin" || pathname?.startsWith("/admin/") === true;
   const { isDesktop } = useDeviceType();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -144,42 +131,8 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     setHasMounted(true);
   }, []);
   useEffect(() => {
-    if (!hasMounted) return;
-
-    if (shouldSuppressNoncriticalChrome) {
-      setCanMountNoncriticalChrome(false);
-      return;
-    }
-
-    if (pathname !== "/") {
-      setCanMountNoncriticalChrome(true);
-      return;
-    }
-
-    let timer = 0;
-    const mountNoncriticalChrome = () => {
-      window.clearTimeout(timer);
-      setCanMountNoncriticalChrome(true);
-    };
-
-    timer = window.setTimeout(
-      mountNoncriticalChrome,
-      NONCRITICAL_CHROME_DELAY_MS,
-    );
-    for (const eventName of NONCRITICAL_CHROME_EVENTS) {
-      window.addEventListener(eventName, mountNoncriticalChrome, {
-        once: true,
-        passive: true,
-      });
-    }
-
-    return () => {
-      window.clearTimeout(timer);
-      for (const eventName of NONCRITICAL_CHROME_EVENTS) {
-        window.removeEventListener(eventName, mountNoncriticalChrome);
-      }
-    };
-  }, [hasMounted, pathname, shouldSuppressNoncriticalChrome]);
+    setCanMountNoncriticalChrome(hasMounted && !shouldSuppressNoncriticalChrome);
+  }, [hasMounted, shouldSuppressNoncriticalChrome]);
 
   useEffect(() => {
     setHeaderlessLayoutVars();
@@ -220,19 +173,6 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     setHeaderlessLayoutVars,
   ]);
 
-  if (!hasMounted) {
-    return (
-      <div className="min-h-[var(--full-height,100vh)] min-w-0 bg-background">
-        <a href="#main-content" className="skip-link">
-          본문 바로가기
-        </a>
-        <main id="main-content" tabIndex={-1} className="h-full min-h-0 min-w-0 w-full">
-          {children}
-        </main>
-      </div>
-    );
-  }
-
   // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
   if (isDesktop) {
     return (
@@ -255,7 +195,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
       <NavigationPrefetcher />
 
       {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
-      {user && <UserDataPrefetcher />}
+      {user && !isAdminConsolePath && <UserDataPrefetcher />}
 
       {/* 사이드바 제거됨 */}
 

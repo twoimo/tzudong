@@ -1,0 +1,23 @@
+{
+  "runtimeTests": {
+    "passed": 23,
+    "failed": 0
+  },
+  "existingContractTests": {
+    "passed": 10,
+    "failed": 0
+  },
+  "targetedEslint": "passed",
+  "diffCheck": "passed",
+  "typecheckParity": {
+    "status": "passed",
+    "node": "24.20.0",
+    "diagnostics": 0,
+    "logicalInputs": 2355,
+    "logicalInputNamesSha256": "90fb0824c8ff6ca4632bccc11fc1e29e32cb45886321e75b2b99f54f50d96500",
+    "nonLibraryContentSha256": "fdc1641cde4781dbbcd14d4ca951069fcdb53d0bf24ba48e6367f309eb131fe5"
+  },
+  "runtimeTestSourceSha256": "041c22d365591cc3d9f129a7792fed12e224be88ffc4a5d75ade043df05f81f4",
+  "liveDatabaseEvidence": false,
+  "g003AdmittedSlices": 0
+}

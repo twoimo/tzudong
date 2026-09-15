@@ -1,0 +1,32 @@
+{
+  "scope": "local-SSR-dashboard-table-first-page",
+  "baseline": {
+    "samples": 30,
+    "medianMs": 28.281582999999955,
+    "p75Ms": 30.912000000000035,
+    "madMs": 1.7788739999999734,
+    "renderedRows": 490,
+    "bytes": 278114
+  },
+  "candidate": {
+    "samples": 30,
+    "medianMs": 3.319500000000062,
+    "p75Ms": 3.819417000000044,
+    "madMs": 0.3642920000000913,
+    "renderedRows": 50,
+    "bytes": 28315
+  },
+  "budgets": {
+    "absoluteCandidateP75Ms": 50,
+    "maximumRelativeP75Ratio": 0.8,
+    "absoluteNoiseFloorMs": 1,
+    "maximumNoiseMultiple": 2,
+    "maximumRenderedRows": 50
+  },
+  "absoluteGainP75Ms": 27.09258299999999,
+  "relativeP75Ratio": 0.12355774456521867,
+  "admittedSlices": 1,
+  "browserLatencyEstablished": false,
+  "productionLatencyEstablished": false,
+  "canonicalG003AdmissionEstablished": false
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "local-functional-artifact-map-v1",
+  "artifacts": {
+    "apps/web/performance/merge-scaling-20260908/count-cache-functional-readback.json": "860756733771cd014fded725a684f58838717e3abb7f95ee760ff4ad1300c434"
+  },
+  "performance_admission": false
+}

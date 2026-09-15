@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import { getAdminEvaluationDisplayName } from '@/lib/admin-evaluation-name';
 import { decodeBasicHtmlEntities, stripUnsafeMarkup } from '@/lib/html-escape';
-import {
-  canAutoSoftDeleteDuplicateSource,
-  findActiveRestaurantIdentityConflict,
-  formatActiveRestaurantIdentityConflictMessage,
-  isActiveRestaurantIdentityConflictError,
-} from '@/lib/admin-restaurant-update-conflict';
+import { LocalCatalogEditSession, pendingCatalogEdit, catalogEditMessage, catalogEditFields, type CatalogEditPatch, type CatalogEditOutcome, type CatalogEditValues } from '@/lib/admin/local-catalog-edit-client';
 import {
   fetchSameVideoDuplicateWarningCandidates,
   formatSameVideoDuplicateWarning,
@@ -59,6 +54,7 @@ interface EditRestaurantModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (recordId: string, updates: Partial<EvaluationRecord>) => void;
+  onCatalogSaved: (recordId: string, values: CatalogEditValues) => void;
 }
 
 interface FormData {
@@ -69,6 +65,14 @@ interface FormData {
   categories: string[]; // 카테고리 배열로 변경
   youtube_link: string; // 유튜브 링크 추가
 }
+
+const catalogFieldLabels: Record<typeof catalogEditFields[number], string> = {
+  approved_name: '맛집 이름', categories: '카테고리', lat: '위도', lng: '경도',
+  road_address: '도로명 주소', jibun_address: '지번 주소', english_address: '영문 주소',
+  youtube_link: 'YouTube 링크', tzuyang_review: '쯔양의 리뷰',
+};
+const catalogDisplayValue = (value: unknown) => value == null || value === ''
+  ? '없음' : Array.isArray(value) ? value.join(', ') || '없음' : String(value);
 
 interface NaverGeocodingResponse {
   addresses?: Array<{
@@ -85,6 +89,7 @@ interface NaverGeocodingResponse {
 type NaverGeocodingAddress = NonNullable<NaverGeocodingResponse['addresses']>[number];
 
 interface GeocodingResult {
+  fromExistingRecord?: boolean;
   road_address: string;
   jibun_address: string;
   english_address: string;
@@ -106,10 +111,7 @@ interface NaverLocalSearchResponse {
   items?: NaverLocalSearchItem[];
 }
 
-const getErrorMessage = (error: unknown, fallback: string) => {
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-};
+const getErrorMessage = (_error: unknown, fallback: string) => fallback;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -175,7 +177,7 @@ const findBestNaverPlaceMatch = (items: NaverLocalSearchItem[], geocodingResult:
   return matchedByAddress || (items.length === 1 ? items[0] : null);
 };
 
-export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
+export function EditRestaurantModal({ record, open, onOpenChange, onSuccess, onCatalogSaved }: EditRestaurantModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const requireAdminUserId = () => {
@@ -186,6 +188,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     return user.id;
   };
   const [loading, setLoading] = useState(false);
+  const [catalogEdit, setCatalogEdit] = useState<LocalCatalogEditSession | null>(null);
+  const [catalogOutcome, setCatalogOutcome] = useState<CatalogEditOutcome | null>(null);
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const catalogBusyRef = useRef(false);
+  const [catalogConfirmation, setCatalogConfirmation] = useState('');
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogRecoveryBlocked, setCatalogRecoveryBlocked] = useState(false);
+
   const [geocodingNaver, setGeocodingNaver] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -416,7 +426,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
 
   const handleApprove = async () => {
-    if (!record) return;
+    if (!record || catalogBusyRef.current || catalogEdit || catalogRecoveryBlocked || rejectPhoneChange()) return;
 
     // 주소가 변경되었는데 재지오코딩하지 않은 경우 경고
     if (addressChanged) {
@@ -559,7 +569,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     } catch (error) {
       console.error('승인 실패:');
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage = '승인 처리에 실패했습니다. 관리자 권한과 입력 내용을 확인해주세요.';
       toast({
         variant: 'destructive',
         title: '승인 실패',
@@ -575,7 +585,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     if (!record) return;
 
     const trimmedName = formData.name.trim();
-    const trimmedPhone = formData.phone.trim();
     const trimmedTzuyangReview = formData.tzuyang_review.trim();
     const selectedCategories = formData.categories; // 선택된 카테고리 배열
     const selectedResult = geocodingResults[selectedGeocodingIndex!];
@@ -592,7 +601,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       address_elements: selectedResult.address_elements,
       lat: parseFloat(selectedResult.y),
       lng: parseFloat(selectedResult.x),
-      phone: trimmedPhone || null,
       categories: selectedCategories, // 선택된 카테고리 배열
       youtube_link: formData.youtube_link.trim() || record.youtube_link || null,
       tzuyang_review: trimmedTzuyangReview || null,
@@ -616,12 +624,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
 
     if (updateError) {
-      console.error('❌ DB 업데이트 에러 상세:', {
-        message: updateError.message,
-        details: updateError.details,
-        hint: updateError.hint,
-        code: updateError.code,
-      });
       throw updateError;
     }
 
@@ -643,7 +645,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       address_elements: getEvaluationAddressElements(selectedResult.address_elements, record.address_elements),
       lat: parseFloat(selectedResult.y),
       lng: parseFloat(selectedResult.x),
-      phone: trimmedPhone || null,
       geocoding_success: true,
       geocoding_false_stage: null,
       db_error_message: null,
@@ -653,8 +654,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       restaurant_info: record.restaurant_info ? {
         ...record.restaurant_info,
         name: trimmedName,
-        phone: trimmedPhone || null,
-        category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
+          category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
         tzuyang_review: trimmedTzuyangReview,
         naver_address_info: {
           road_address: selectedResult.road_address,
@@ -674,231 +674,112 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     resetForm();
   };
 
-  // 저장만 하는 함수 (승인하지 않고 수정 사항만 저장)
+  // Catalog edits use only the local API. Approval remains a separate action.
+  const phoneChanged = formData.phone.trim() !== (record?.restaurant_info?.phone || '').trim();
+  const catalogUnresolved = !!catalogEdit?.readbackOnly && catalogOutcome?.kind !== 'verified';
+  const catalogFieldsLocked = catalogBusy || catalogUnresolved || catalogOutcome?.kind === 'verified';
+
+  const rejectPhoneChange = () => {
+    if (!phoneChanged) return false;
+    toast({ variant: 'destructive', title: '전화번호 변경은 지원하지 않습니다',
+      description: '전화번호는 저장하지 않습니다. 기존 값으로 되돌린 후 진행해주세요.' });
+    return true;
+  };
+
   const handleSave = async () => {
-    if (!record) return;
-
+    if (!record || catalogBusyRef.current || loading || geocodingNaver || catalogRecoveryBlocked || catalogUnresolved) return;
+    if (rejectPhoneChange()) return;
+    if (addressChanged || (geocodingResults.length > 0 && selectedGeocodingIndex === null)) {
+      toast({ variant: 'destructive', title: '주소 저장 전 재지오코딩 필요',
+        description: '주소와 지도 좌표를 함께 저장하려면 재지오코딩 후 주소를 선택해주세요.' });
+      return;
+    }
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast({ variant: 'destructive', title: '음식점명을 입력해주세요' });
+      return;
+    }
+    catalogBusyRef.current = true;
+    setCatalogBusy(true);
+    setCatalogError(null);
+    setCatalogOutcome(null);
+    setCatalogConfirmation('');
+    setCatalogEdit(null);
     try {
-      setLoading(true);
-      const adminUserId = requireAdminUserId();
-      const updatedAt = new Date().toISOString();
-      notifySameVideoDuplicateWarning('수정 저장');
-
-      const trimmedName = formData.name.trim();
-      const trimmedPhone = formData.phone.trim();
-      const trimmedAddress = formData.address.trim();
-      const trimmedTzuyangReview = formData.tzuyang_review.trim();
-      const selectedCategories = formData.categories; // 선택된 카테고리 배열
-
-      if (!trimmedName) {
-        toast({
-          variant: 'destructive',
-          title: '음식점명을 입력해주세요',
-        });
+      const pending = pendingCatalogEdit(record.id);
+      if (pending) {
+        setCatalogEdit(LocalCatalogEditSession.restore(record.id, pending));
+        setCatalogOutcome({ kind: 'pending', code: 'CATALOG_EDIT_READBACK_ONLY' });
         return;
       }
-
-      if (addressChanged) {
-        toast({
-          variant: 'destructive',
-          title: '주소 저장 전 재지오코딩 필요',
-          description: '주소가 변경되었습니다. 재지오코딩 후 저장해야 지도 좌표와 주소가 같이 반영됩니다.',
-        });
-        return;
-      }
-
       const trimmedYoutubeLink = formData.youtube_link.trim();
-
-      const identityConflict = await findActiveRestaurantIdentityConflict({
-        restaurantId: record.id,
-        restaurantName: trimmedName,
-        youtubeLink: trimmedYoutubeLink || record.youtube_link || null,
-      });
-
-      if (identityConflict) {
-        const conflictMessage = formatActiveRestaurantIdentityConflictMessage({
-          restaurantName: trimmedName,
-          conflict: identityConflict,
-        });
-        const errorDetails = {
-          error_type: 'duplicate' as const,
-          conflicting_restaurant: {
-            id: identityConflict.id,
-            name: identityConflict.name,
-            jibun_address: identityConflict.jibun_address || '',
-            road_address: identityConflict.road_address || undefined,
-          },
-          similarity_score: 1,
-          detected_at: updatedAt,
-        };
-
-        if (canAutoSoftDeleteDuplicateSource(record)) {
-          await supabase
-            .from('restaurants')
-            .update({
-              status: 'deleted',
-              db_error_message: conflictMessage,
-              db_error_details: encodeJson(errorDetails),
-              updated_by_admin_id: adminUserId,
-              updated_at: updatedAt,
-            })
-            .eq('id', record.id);
-
-          onSuccess(record.id, {
-            status: 'deleted',
-            db_error_message: conflictMessage,
-            db_error_details: errorDetails,
-            updated_by_admin_id: adminUserId,
-            updated_at: updatedAt,
-          });
-
-          toast({
-            title: '중복 레코드 정리 완료',
-            description: `이미 승인된 "${identityConflict.name}" 레코드가 있어 현재 pending 중복 레코드를 삭제 처리했습니다.`,
-          });
-          onOpenChange(false);
-          resetForm();
-          return;
-        }
-
-        await supabase
-          .from('restaurants')
-          .update({
-            db_error_message: conflictMessage,
-            db_error_details: encodeJson(errorDetails),
-            updated_at: updatedAt,
-          })
-          .eq('id', record.id);
-
-        onSuccess(record.id, {
-          db_error_message: conflictMessage,
-          db_error_details: errorDetails,
-          updated_at: updatedAt,
-        });
-
-        toast({
-          variant: 'destructive',
-          title: '중복 레코드 충돌',
-          description: conflictMessage,
-        });
-        return;
-      }
-
-      // 수정 사항만 업데이트 (status는 변경하지 않음)
-      const updateData: TablesUpdate<'restaurants'> = {
-        approved_name: trimmedName,
-        phone: trimmedPhone || null,
+      const trimmedTzuyangReview = formData.tzuyang_review.trim();
+      const patch: CatalogEditPatch = {
+        approved_name: trimmedName, categories: [...formData.categories],
         youtube_link: trimmedYoutubeLink || null,
         tzuyang_review: trimmedTzuyangReview || null,
-        updated_by_admin_id: adminUserId,
-        updated_at: updatedAt,
       };
-
-      // 카테고리 업데이트 (비어있어도 업데이트하여 삭제 가능하도록 함)
-      updateData.categories = selectedCategories;
-
-      // 지오코딩 결과가 있고 선택된 경우에만 주소 정보 업데이트
-      if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
-        const selectedResult = geocodingResults[selectedGeocodingIndex];
-        updateData.road_address = selectedResult.road_address;
-        updateData.jibun_address = selectedResult.jibun_address;
-        updateData.english_address = selectedResult.english_address;
-        updateData.address_elements = selectedResult.address_elements;
-        updateData.lat = parseFloat(selectedResult.y);
-        updateData.lng = parseFloat(selectedResult.x);
-        updateData.geocoding_success = true;
-        updateData.geocoding_false_stage = null;
-      }
-
-
-      const { error: updateError } = await supabase
-        .from('restaurants')
-        .update(updateData)
-        .eq('id', record.id);
-
-      if (updateError) {
-        console.error('❌ DB 업데이트 에러:');
-        if (isActiveRestaurantIdentityConflictError(updateError)) {
-          throw new Error(formatActiveRestaurantIdentityConflictMessage({ restaurantName: trimmedName }));
-        }
-        throw updateError;
-      }
-
-      toast({
-        title: '저장 완료',
-        description: `${formData.name} 레스토랑 정보가 저장되었습니다.`,
-      });
-
-      // 업데이트된 정보를 부모 컴포넌트에 전달
-      const updates: Partial<EvaluationRecord> = {
-        name: trimmedName,
-        approved_name: trimmedName,
-        phone: trimmedPhone || null,
-        updated_by_admin_id: adminUserId,
-        updated_at: updatedAt,
-        restaurant_name: trimmedName, // 별칭도 업데이트
-        categories: selectedCategories, // 카테고리 업데이트 추가
-        // 주소는 재지오코딩 결과가 없으면 기존 DB 주소를 유지
-        road_address: record.road_address || trimmedAddress || null,
-        jibun_address: record.jibun_address || null,
-        youtube_link: trimmedYoutubeLink || undefined, // 유튜브 링크 추가
-      };
-
-      // restaurant_info 객체도 업데이트
-      if (record.restaurant_info) {
-        updates.restaurant_info = {
-          ...record.restaurant_info,
-          name: trimmedName,
-          phone: trimmedPhone || null,
-          category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
-          tzuyang_review: trimmedTzuyangReview,
-        };
-      }
-
-      if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
-        const selectedResult = geocodingResults[selectedGeocodingIndex];
-        updates.road_address = selectedResult.road_address;
-        updates.jibun_address = selectedResult.jibun_address;
-        updates.english_address = selectedResult.english_address;
-        updates.address_elements = getEvaluationAddressElements(selectedResult.address_elements, record.address_elements);
-        updates.lat = parseFloat(selectedResult.y);
-        updates.lng = parseFloat(selectedResult.x);
-        updates.geocoding_success = true;
-        updates.geocoding_false_stage = null;
-
-        // restaurant_info의 naver_address_info도 업데이트
-        if (record.restaurant_info) {
-          updates.restaurant_info = {
-            ...updates.restaurant_info!,
-            naver_address_info: {
-              road_address: selectedResult.road_address,
-              jibun_address: selectedResult.jibun_address,
-              english_address: selectedResult.english_address,
-              address_elements: getEvaluationAddressElements(
-                selectedResult.address_elements,
-                record.restaurant_info.naver_address_info?.address_elements ?? record.address_elements,
-              ),
-              x: selectedResult.x,
-              y: selectedResult.y,
-            },
-          };
+      if (selectedGeocodingIndex !== null && geocodingResults[selectedGeocodingIndex]) {
+        const selected = geocodingResults[selectedGeocodingIndex];
+        // Loaded location values are display context, not a requested edit.
+        if (!selected.fromExistingRecord) {
+          const lat = Number(selected.y);
+          const lng = Number(selected.x);
+          if (typeof selected.y !== 'string' || !selected.y.trim()
+            || typeof selected.x !== 'string' || !selected.x.trim()
+            || !Number.isFinite(lat) || lat < -90 || lat > 90
+            || !Number.isFinite(lng) || lng < -180 || lng > 180) {
+            throw new Error('CATALOG_EDIT_LOCATION_INVALID');
+          }
+        Object.assign(patch, {
+          lat, lng,
+          road_address: selected.road_address || null,
+          jibun_address: selected.jibun_address || null,
+          english_address: selected.english_address || null,
+        });
         }
       }
-
-      onSuccess(record.id, updates);
-      onOpenChange(false);
-      resetForm();
-
+      setCatalogEdit(await LocalCatalogEditSession.prepare(record.id, patch));
     } catch (error) {
-      console.error('💥 저장 실패:');
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-      toast({
-        variant: 'destructive',
-        title: '저장 실패',
-        description: errorMessage,
-      });
+      setCatalogError(catalogEditMessage(error instanceof Error ? error.message : 'CATALOG_EDIT_UNAVAILABLE'));
     } finally {
-      setLoading(false);
+      catalogBusyRef.current = false;
+      setCatalogBusy(false);
+    }
+  };
+
+  const handleCatalogAction = async (phase: 'apply' | 'readback') => {
+    const operation = catalogEdit;
+    if (!operation || catalogBusyRef.current || loading) return;
+    if (phase === 'apply' && (catalogConfirmation !== '변경 적용' || rejectPhoneChange())) return;
+    catalogBusyRef.current = true;
+    setCatalogBusy(true);
+    setCatalogError(null);
+    try {
+      const result = phase === 'apply'
+        ? await operation.apply(catalogConfirmation)
+        : await operation.readback();
+      setCatalogOutcome(result);
+      setCatalogConfirmation('');
+      if (result.kind === 'rejected') {
+        setCatalogEdit(null);
+        setCatalogError(catalogEditMessage(result.code));
+      }
+      if (result.kind !== 'verified') {
+        // Recover an existing ID rather than ever overwriting/retrying it.
+        const pending = pendingCatalogEdit(operation.restaurantId);
+        if (pending && (pending !== operation.operationId || result.kind === 'rejected')) {
+          setCatalogEdit(LocalCatalogEditSession.restore(operation.restaurantId, pending));
+          setCatalogOutcome({ kind: 'pending', code: 'CATALOG_EDIT_READBACK_ONLY' });
+        }
+      }
+      // Do not invoke approval's onSuccess callback here: its parent can write
+      // linked submissions. Verified catalog changes are refreshed explicitly.
+    } catch {
+      setCatalogOutcome({ kind: 'pending', code: 'CATALOG_EDIT_OUTCOME_UNKNOWN' });
+    } finally {
+      catalogBusyRef.current = false;
+      setCatalogBusy(false);
     }
   };
 
@@ -951,11 +832,31 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   };
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (loading || catalogBusyRef.current) return;
     if (!newOpen) {
+      setCatalogEdit(null);
+      setCatalogConfirmation('');
       resetForm();
     }
     onOpenChange(newOpen);
   };
+
+  const catalogRestaurantId = record?.id;
+  useEffect(() => {
+    if (!open || !catalogRestaurantId) return;
+    setCatalogError(null);
+    setCatalogOutcome(null);
+    setCatalogConfirmation('');
+    setCatalogRecoveryBlocked(false);
+    try {
+      const pending = pendingCatalogEdit(catalogRestaurantId);
+      setCatalogEdit(pending ? LocalCatalogEditSession.restore(catalogRestaurantId, pending) : null);
+      if (pending) setCatalogOutcome({ kind: 'pending', code: 'CATALOG_EDIT_READBACK_ONLY' });
+    } catch {
+      setCatalogRecoveryBlocked(true);
+      setCatalogError(catalogEditMessage('CATALOG_EDIT_RECOVERY_UNAVAILABLE'));
+    }
+  }, [open, catalogRestaurantId]);
 
   // Modal이 열릴 때 초기화
   useEffect(() => {
@@ -1015,6 +916,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       if (record.restaurant_info.naver_address_info) {
         try {
           const existingResult: GeocodingResult = {
+            fromExistingRecord: true,
             road_address: record.restaurant_info.naver_address_info.road_address || '',
             jibun_address: record.restaurant_info.naver_address_info.jibun_address,
             english_address: record.restaurant_info.naver_address_info.english_address || '',
@@ -1107,6 +1009,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4 pr-1">
+          <fieldset disabled={loading || catalogFieldsLocked} className="min-w-0 space-y-4">
           {/* 유튜브 링크 편집 */}
           <div className="space-y-2">
             <Label htmlFor="edit-youtube-link">YouTube 링크</Label>
@@ -1250,7 +1153,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                         ...prev,
                         address: result.jibun_address,
                         ...(result.place_name ? { name: result.place_name } : {}),
-                        ...(result.place_phone ? { phone: result.place_phone } : {}),
                       }));
                       setInitialAddress(result.jibun_address);
                       setAddressChanged(false);
@@ -1326,7 +1228,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               value={formData.phone}
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="예: 02-1234-5678"
+              aria-describedby="edit-phone-unsupported"
             />
+            <p id="edit-phone-unsupported" className="text-sm text-muted-foreground">
+              전화번호 변경은 지원하지 않으며 저장하지 않습니다.
+              {phoneChanged && ' 기존 값으로 되돌린 후 진행해주세요.'}
+            </p>
           </div>
 
           {/* 카테고리 비교 및 수정 */}
@@ -1481,6 +1388,72 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               className="leading-relaxed resize-none"
             />
           </div>
+          </fieldset>
+
+          {catalogError && <p role="alert" className="rounded-md border p-3 text-sm text-destructive">{catalogError}</p>}
+          {catalogEdit && (
+            <section aria-label="로컬 변경 미리보기" className="space-y-3 rounded-lg border bg-muted/30 p-3">
+              <h3 className="font-semibold">로컬 맛집 정보 변경</h3>
+              <p className="text-sm text-muted-foreground">승인 상태와 전화번호는 변경하지 않습니다.</p>
+              <p className="break-all text-xs text-muted-foreground">작업 번호: {catalogEdit.operationId}</p>
+              {catalogEdit.preview && (
+                <>
+                  <p className="text-sm">아래 미리보기에 표시된 내용만 적용됩니다. 입력란을 다시 수정했다면 미리보기를 취소하고 새로 확인해주세요.</p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-fixed text-left text-sm">
+                      <caption className="sr-only">로컬 맛집 정보 변경 전후 비교</caption>
+                      <thead><tr><th scope="col" className="w-1/5 p-2">항목</th><th scope="col" className="p-2">변경 전</th><th scope="col" className="p-2">변경 후</th></tr></thead>
+                      <tbody>{catalogEditFields.filter(key => Object.hasOwn(catalogEdit.preview!.after, key)).map(key => (
+                        <tr key={key} className="border-t align-top">
+                          <th scope="row" className="break-words p-2 font-medium">{catalogFieldLabels[key]}</th>
+                          <td className="whitespace-pre-wrap break-words p-2">{catalogDisplayValue(catalogEdit.preview!.before[key])}</td>
+                          <td className="whitespace-pre-wrap break-words p-2">{catalogDisplayValue(catalogEdit.preview!.after[key])}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              {!catalogEdit.readbackOnly && (
+                <>
+                  <Label htmlFor="catalog-edit-confirmation">확인 문구: 변경 적용</Label>
+                  <Input id="catalog-edit-confirmation" autoComplete="off" value={catalogConfirmation}
+                    onChange={event => setCatalogConfirmation(event.target.value)} disabled={catalogBusy}
+                    placeholder="변경 적용" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" disabled={catalogBusy} onClick={() => {
+                      setCatalogEdit(null); setCatalogConfirmation(''); setCatalogOutcome(null);
+                    }}>미리보기 취소</Button>
+                    <Button type="button" disabled={catalogBusy || catalogConfirmation !== '변경 적용' || phoneChanged}
+                      onClick={() => void handleCatalogAction('apply')}>
+                      {catalogBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}변경 적용
+                    </Button>
+                  </div>
+                </>
+              )}
+              {catalogOutcome?.kind === 'verified' ? (
+                <div role="status" className="space-y-2 text-sm">
+                  <p className="font-medium">저장 결과 확인 완료</p>
+                  <dl>{catalogEditFields.filter(key => Object.hasOwn(catalogOutcome.values, key)).map(key => (
+                    <div key={key} className="py-1"><dt className="font-medium">{catalogFieldLabels[key]}</dt>
+                      <dd className="whitespace-pre-wrap break-words">{catalogDisplayValue(catalogOutcome.values[key])}</dd></div>
+                  ))}</dl>
+                  <Button type="button" onClick={() => {
+                    onCatalogSaved(catalogEdit.restaurantId, catalogOutcome.values);
+                    onOpenChange(false);
+                  }}>완료 · 목록에 반영</Button>
+                </div>
+              ) : catalogEdit.readbackOnly && (
+                <div className="space-y-2">
+                  <p role="status" className="text-sm">{catalogEditMessage(catalogOutcome?.kind === 'pending' ? catalogOutcome.code : 'CATALOG_EDIT_OUTCOME_UNKNOWN')}</p>
+                  <p className="text-xs text-muted-foreground">작업 번호를 보관했습니다. 이 창을 다시 열어도 재적용 없이 같은 작업의 결과만 확인합니다.</p>
+                  <Button type="button" variant="outline" disabled={catalogBusy} onClick={() => void handleCatalogAction('readback')}>
+                    {catalogBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}결과 확인
+                  </Button>
+                </div>
+              )}
+            </section>
+          )}
         </div>
 
         <DialogFooter className={`${ADMIN_MODAL_FOOTER_DIVIDER} shrink-0 bg-background`}>
@@ -1488,24 +1461,24 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={loading}
+            disabled={loading || catalogBusy}
             className={ADMIN_MODAL_ACTION}
           >
-            취소
+            닫기
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || catalogBusy || geocodingNaver || catalogEdit !== null || catalogRecoveryBlocked}
             className={ADMIN_MODAL_ACTION}
           >
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            저장
+            {catalogBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            변경 미리보기
           </Button>
           <Button
             onClick={handleApprove}
-            disabled={loading || geocodingResults.length === 0 || selectedGeocodingIndex === null}
+            disabled={loading || catalogBusy || catalogEdit !== null || catalogRecoveryBlocked || phoneChanged || geocodingResults.length === 0 || selectedGeocodingIndex === null}
             className={ADMIN_MODAL_ACTION}
             title={
               geocodingResults.length === 0 || selectedGeocodingIndex === null
@@ -1549,7 +1522,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   toast({
                     variant: 'destructive',
                     title: '승인 실패',
-                    description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+                    description: '승인 처리에 실패했습니다. 관리자 권한과 입력 내용을 확인해주세요.',
                   });
                 } finally {
                   setLoading(false);

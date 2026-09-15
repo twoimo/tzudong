@@ -74,6 +74,16 @@ export function resolveHomeDetailMapModeParam(searchParams: URLSearchParams): Ho
   return resolveHomeMapModeParam(searchParams.get('mapMode')) ?? resolveHomeMapModeParam(searchParams.get('mode'));
 }
 
+export function buildHomeListUrl(currentUrl: URL): string {
+  const url = new URL(currentUrl);
+  if (url.pathname === '/' && resolveHomeDetailRestaurantParam(url.searchParams)) {
+    for (const key of ['restaurant', 'r', 'mapMode', 'mode', 'restore', 'z']) {
+      url.searchParams.delete(key);
+    }
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function buildHomeDetailUrl(input: {
   restaurantId: string;
   mapMode: HomeMapMode;

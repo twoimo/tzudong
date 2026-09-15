@@ -145,7 +145,7 @@ describe('map query helpers', () => {
             categories: [],
             featuredTheme: 'hot-view' as never,
             minReviews: 0,
-        })).toBe('선택한 테마에 맞는 맛집이 없습니다');
+        })).toBe('조건에 맞는 영상 통계가 없습니다. 조회수·댓글 통계가 수집되면 표시됩니다.');
 
         expect(resolveNaverRestaurantEmptyStateMessage({
             categories: ['분식'],

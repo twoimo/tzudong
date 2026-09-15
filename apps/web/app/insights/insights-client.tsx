@@ -8,7 +8,7 @@ import { Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AdminEmbeddedModuleShell } from '@/components/admin/AdminEmbeddedModuleShell';
 import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AdminDataPending } from '@/components/admin/AdminDataPending';
 import { useAuth } from '@/contexts/AuthContext';
 import type { InsightTreemapPeriod, InsightTreemapResponse, InsightTreemapVideoRow } from '@/lib/public-insights/treemap';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -723,46 +723,13 @@ const TreemapTiles = memo(function TreemapTiles({
     );
 });
 
-function InsightsClientLoadingSkeleton() {
-    return (
-        <div
-            className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
-            data-insights-client-loading="true"
-            role="status"
-            aria-busy="true"
-            aria-label="핵심 인사이트 화면 로딩 중"
-        >
-            <span className="sr-only">핵심 인사이트 필터와 트리맵 영역을 불러오는 중입니다.</span>
-            <div className="min-h-0 flex-1 overflow-hidden p-2 md:p-4">
-                <Card className="flex h-full min-h-0 flex-col overflow-hidden border border-border">
-                    <div className="border-b border-border p-2 md:p-3">
-                        <div className="flex flex-wrap items-center gap-2 md:gap-3" aria-hidden="true">
-                            <Skeleton className="h-4 w-20 rounded-full motion-reduce:animate-none" />
-                            {Array.from({ length: 4 }).map((_, groupIndex) => (
-                                <div key={groupIndex} className="flex items-center gap-1.5">
-                                    <Skeleton className="h-3 w-10 rounded-full motion-reduce:animate-none" />
-                                    <Skeleton className="h-8 w-28 rounded-lg motion-reduce:animate-none" />
-                                </div>
-                            ))}
-                            <Skeleton className="ml-auto h-6 w-44 rounded-md motion-reduce:animate-none" />
-                        </div>
-                    </div>
-                    <CardContent className="min-h-0 flex-1 overflow-hidden p-2">
-                        <div className="grid h-full min-h-[360px] grid-cols-2 gap-2 md:grid-cols-4 md:grid-rows-3">
-                            <Skeleton className="col-span-2 row-span-2 rounded-xl motion-reduce:animate-none" />
-                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
-                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
-                            <Skeleton className="rounded-xl motion-reduce:animate-none" />
-                            <Skeleton className="rounded-xl motion-reduce:animate-none md:col-span-2" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    );
+export default function InsightsClient({ embedded = false }: { embedded?: boolean } = {}) {
+    const { user, isLoading } = useAuth();
+    const accountId = !isLoading ? user?.id ?? null : null;
+    return <InsightsForAccount key={accountId ?? 'signed-out'} embedded={embedded} />;
 }
 
-export default function InsightsClient({ embedded = false }: { embedded?: boolean } = {}) {
+function InsightsForAccount({ embedded }: { embedded: boolean }) {
     const router = useRouter();
     const { isLoading: isAuthLoading, user } = useAuth();
     const { isMobile, isTablet } = useDeviceType();
@@ -791,14 +758,14 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const layoutRafRef = useRef<number | null>(null);
     const chartAreaRef = useRef<HTMLDivElement>(null);
     const treemapQuery = useQuery({
-        queryKey: ['insight-treemap', viewMode, period, metricMode],
+        queryKey: ['insight-treemap', user?.id ?? null, viewMode, period, metricMode],
         queryFn: ({ signal }) => fetchTreemapData(viewMode, period, metricMode, signal),
-        enabled: embedded || (!isAuthLoading && !!user),
+        enabled: !isAuthLoading && !!user,
         staleTime: 1000 * 60 * 5,
-        gcTime: 1000 * 60 * 20,
+        gcTime: 0,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
-        placeholderData: (previousData) => previousData,
+        placeholderData: (previousData, previousQuery) => !isAuthLoading && user && previousQuery?.queryKey[1] === user.id ? previousData : undefined,
         retry: 1,
     });
 
@@ -821,7 +788,8 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         }
     }, [periodOptionsForView, period]);
 
-    const rawRows = useMemo(() => treemapQuery.data?.videos ?? [], [treemapQuery.data?.videos]);
+    const visibleData = !isAuthLoading && user ? treemapQuery.data : undefined;
+    const rawRows = useMemo(() => visibleData?.videos ?? [], [visibleData?.videos]);
     const renderWidth = useMemo(() => Math.max(1, chartWidth), [chartWidth]);
 
     const { leafRows, leafTotalMetric, leafMetricValuesSorted } = useMemo<LeafRowsData>(() => {
@@ -1199,7 +1167,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         return buildTreemapLayout(treeData, renderWidth, chartHeight);
     }, [treeData, renderWidth, chartHeight]);
 
-    const selectedCount = treemapQuery.data?.totalVideos ?? 0;
+    const selectedCount = visibleData?.totalVideos ?? 0;
     const metricLabel = getMetricLabel(metricMode);
     const periodLabel = period === 'ALL' ? '전체 기간' : getPeriodLabel(period);
     const modeLabel = viewMode === 'change' ? '증감률' : '비율';
@@ -1214,8 +1182,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
     const treemapSmallCellGuidance = '작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고, 마우스를 올리면 제목과 상세 지표를 확인할 수 있습니다.';
 
-    const isLoading = (!embedded && isAuthLoading) || treemapQuery.isLoading;
-    const canRender = Boolean(treemapQuery.data);
+    const isLoading = isAuthLoading || !user || treemapQuery.isPending;
 
     const handleCellEnter = useCallback(
         (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {
@@ -1237,6 +1204,11 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
     const handleSetViewMode = useCallback((nextViewMode: ViewMode) => {
         startTransition(() => {
             setViewMode(nextViewMode);
+            setPeriod((current) => {
+                if (nextViewMode === 'change' && current === 'ALL') return '1D';
+                if (nextViewMode === 'all' && (current === '1D' || current === '1W')) return 'ALL';
+                return current;
+            });
         });
     }, [startTransition]);
 
@@ -1276,57 +1248,9 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         </AdminEmbeddedModuleShell>
     );
 
-    if (isLoading && !canRender) {
-        if (embedded) {
-            return renderEmbeddedShell(
-                <InsightsClientLoadingSkeleton />,
-                '데이터를 불러오는 중입니다.',
-            );
-        }
-
-        return <InsightsClientLoadingSkeleton />;
-    }
-    if (treemapQuery.isError || !treemapQuery.data) {
-        const errorContent = (
-            <div className="flex min-h-0 items-center justify-center p-6 h-full">
-                <div className="text-center max-w-md w-full px-4">
-                    <div className="text-4xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-bold text-foreground mb-2">문제가 발생했습니다</h2>
-                    <p className="text-sm text-muted-foreground mb-6">일시적인 오류가 발생했습니다. 다시 시도해 주세요.</p>
-                    <div className="flex gap-3 justify-center flex-wrap">
-                        <Button
-                            onClick={handleRetry}
-                            className="h-10 px-4 py-2"
-                        >
-                            다시 시도
-                        </Button>
-                        {!embedded ? (
-                            <Button
-                                variant="outline"
-                                className="h-10 px-4 py-2"
-                                onClick={() => {
-                                    router.replace('/');
-                                }}
-                            >
-                                홈으로 이동
-                            </Button>
-                        ) : null}
-                    </div>
-                </div>
-            </div>
-        );
-
-        if (embedded) {
-            return renderEmbeddedShell(errorContent, '데이터를 불러오지 못했습니다.');
-        }
-
-        return errorContent;
-    }
-
-
     const insightsContent = (
                 <Card className="overflow-hidden border border-border h-full flex flex-col min-h-0">
-                    <div className="border-b border-border p-2 md:p-3">
+                    <div className="border-b border-border p-2 md:p-3" data-admin-panel-padding="true">
                         <div className={cn(embedded ? "pb-2" : "overflow-x-auto pb-2")}>
                             <div className={cn("flex w-full flex-wrap items-start md:items-center gap-2 md:gap-3", embedded ? "min-w-0" : "min-w-max")}>
                                 <p className="text-xs md:text-sm text-muted-foreground whitespace-nowrap self-center">전체 {selectedCount.toLocaleString()}개</p>
@@ -1465,8 +1389,16 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                         </div>
                     </div>
 
+                    {isLoading || treemapQuery.isFetching ? <AdminDataPending label={isAuthLoading || !user ? "로그인 상태를 확인하는 중입니다." : "인사이트 데이터를 불러오는 중입니다."} /> : null}
+                    {treemapQuery.isError && user && !isAuthLoading ? (
+                        <div role="alert" className="flex items-center gap-2 p-3 text-sm">
+                            <p>인사이트를 불러오지 못했습니다.</p>
+                            <Button onClick={handleRetry} size="sm" variant="outline">다시 시도</Button>
+                        </div>
+                    ) : null}
                     <CardContent
                         ref={chartAreaRef}
+                        data-admin-card-padding="none"
                         className="p-0 flex-1 min-h-0 overflow-hidden"
                         style={{ minHeight: 0, minWidth: 0 }}
                     >
@@ -1478,7 +1410,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                             aria-describedby="insights-treemap-context insights-treemap-small-cell-guidance"
                         >
                             {treeData.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">대상 데이터가 없습니다.</div>
+                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">{!isLoading && !treemapQuery.isError ? "대상 데이터가 없습니다." : null}</div>
                             ) : (
                                 <TreemapTiles
                                     cells={treemapCells}
@@ -1489,7 +1421,7 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
                                     onCellLeave={handleCellLeave}
                                 />
                             )}
-                            {tooltip ? (
+                            {tooltip && visibleData ? (
                                 <div
                                     className="pointer-events-none fixed z-20 rounded-md border border-border bg-card p-2 text-xs text-card-foreground shadow-lg"
                                     style={{ left: tooltip.x, top: tooltip.y }}

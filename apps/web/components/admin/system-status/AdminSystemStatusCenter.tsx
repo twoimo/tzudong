@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, HelpCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { AdminDataPending } from '@/components/admin/AdminDataPending';
 import { cn } from '@/lib/utils';
 import { useAdminStatusCenter } from '@/hooks/use-admin-status-center';
 import type { AdminStatusCenterState } from '@/lib/admin/system-status/view-model';
@@ -71,10 +71,7 @@ export function AdminSystemStatusCenter({
       <CardContent className="flex flex-1 flex-col gap-3">
         {isLoading ? (
           <div data-admin-system-status-loading="true" className="space-y-2">
-            <Skeleton className="h-5 w-28" />
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
-            <Skeleton className="h-14 w-full" />
+            <AdminDataPending label="운영 상태 확인 중" className="min-h-48" />
           </div>
         ) : (
           <>

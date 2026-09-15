@@ -1,0 +1,11 @@
+{
+  "scope": "snapshot helper and quality dependency only; dirty candidate is not a frozen full repository",
+  "head": "74d617111e6038375cddded6cb350eb4b45cd663",
+  "headTree": "05c25311cc72b239058b45d37c2e2f117538ea75",
+  "node": "Node 24 release toolchain; controlled benchmark uses Bun",
+  "inputs": {
+    "baseline.source": "a641d31702daff0370258dbee5bc5f0b2f55e835fe75588a2f8ee028c01eb1c9",
+    "candidate.source": "aaf0a0390db14e86212aabf0eb16d599128a1fb254a1491d2022423a2fbaf764",
+    "treemap.source": "21cc004f998a2d4bd3846ea22b9a07097c66f0c36eb29a86bbbc2d0a4aec0d21"
+  }
+}

@@ -1,5 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+import { DataPending } from '@/components/ui/data-pending';
 import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { Restaurant, Region } from '@/types/restaurant';
@@ -27,9 +29,23 @@ import {
     EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS,
     type HomeMapContextualRestaurantsPayload,
 } from '@/lib/home-map-contextual-restaurants';
-// [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
-const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
-const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
+function HomeMapDataPending() {
+    return (
+        <div className="absolute inset-0 bg-muted/20" data-home-map-data-pending="true">
+            <DataPending label="지도 데이터를 준비하는 중입니다." className="absolute bottom-4 left-1/2 w-56 -translate-x-1/2 rounded-xl border bg-background/95" />
+        </div>
+    );
+}
+
+// The SDKs need a browser; the enclosing map region does not.
+const NaverMapView = dynamic(() => import("@/components/map/NaverMapView"), {
+    ssr: false,
+    loading: HomeMapDataPending,
+});
+const OverseasMap = dynamic(() => import("@/components/map/OverseasMap"), {
+    ssr: false,
+    loading: HomeMapDataPending,
+});
 const RestaurantDetailPanel = lazy(() =>
     import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({
         default: mod.RestaurantDetailPanel,
@@ -1501,7 +1517,7 @@ function HomeMapContainerComponent({
 
     return (
         <div
-            className="relative h-full min-h-0 min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
+            className="relative h-full min-h-0 min-w-0 w-full max-[1279px]:!ml-0 max-[1279px]:!mr-0 max-[1279px]:!w-full overflow-hidden transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
             data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
             data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
             data-home-map-panel-side={desktopPanelSide}
@@ -1512,7 +1528,7 @@ function HomeMapContainerComponent({
             style={desktopMapLayoutStyle}
         >
             {mapMode === 'domestic' ? (
-                <Suspense fallback={null}>
+                <Suspense fallback={<HomeMapDataPending />}>
                     <NaverMapView
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}
@@ -1541,7 +1557,7 @@ function HomeMapContainerComponent({
                     />
                 </Suspense>
             ) : (
-                <Suspense fallback={null}>
+                <Suspense fallback={<HomeMapDataPending />}>
                     <OverseasMap
                         mapFocusZoom={mapFocusZoom} // [New] 줌 레벨 전달
                         filters={filters}

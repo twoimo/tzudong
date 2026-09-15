@@ -77,7 +77,7 @@ export default function NavigationPrefetcher() {
     }, [isAdmin, pathname, user?.id]);
 
     useEffect(() => {
-        if (!canPrefetchRoutes()) {
+        if (pathname === "/admin" || pathname?.startsWith("/admin/") || !canPrefetchRoutes()) {
             return;
         }
 

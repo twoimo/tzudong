@@ -1,3 +1,4 @@
+import { extractVideoIdFromYoutubeLink } from './dashboard/helpers';
 import type { Restaurant, YoutubeMeta } from '@/types/restaurant';
 
 export type HomeMapThemeFilterId =
@@ -154,7 +155,8 @@ function getMergedVideoCount(restaurant: Restaurant): number {
     const addLink = (value: unknown) => {
         if (typeof value !== 'string') return;
         const normalized = value.trim();
-        if (normalized.length > 0) links.add(normalized);
+        const videoId = extractVideoIdFromYoutubeLink(normalized);
+        if (videoId) links.add(videoId);
     };
 
     restaurant.mergedYoutubeLinks?.forEach(addLink);
@@ -188,7 +190,7 @@ function filterByTopYoutubeMetric(
     restaurants.forEach((restaurant) => {
         const values = collectMergedYoutubeMetas(restaurant)
             .map((meta) => getYoutubeMetric(meta, metricKey))
-            .filter((value): value is number => value !== null);
+            .filter((value): value is number => value !== null && value > 0);
         if (values.length === 0) return;
         metricByRestaurant.set(restaurant, Math.max(...values));
     });
@@ -224,34 +226,32 @@ function filterByFreshVideo(restaurants: Restaurant[]): Restaurant[] {
 }
 
 function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
-    const maxViewByRestaurant = new Map<Restaurant, number>();
-    const maxRatioByRestaurant = new Map<Restaurant, number>();
-
-    restaurants.forEach((restaurant) => {
+    const videosByRestaurant = new Map<Restaurant, { views: number; ratio: number }[]>();
+    const maxViews: number[] = [];
+    for (const restaurant of restaurants) {
+        const videos: { views: number; ratio: number }[] = [];
+        let maxView = 0;
         for (const meta of collectMergedYoutubeMetas(restaurant)) {
-            const viewCount = getYoutubeMetric(meta, 'viewCount');
-            if (viewCount === null || viewCount <= 0) continue;
-            maxViewByRestaurant.set(restaurant, Math.max(maxViewByRestaurant.get(restaurant) ?? 0, viewCount));
-
-            const commentCount = getYoutubeMetric(meta, 'commentCount');
-            if (commentCount === null || commentCount <= 0) continue;
-            maxRatioByRestaurant.set(restaurant, Math.max(maxRatioByRestaurant.get(restaurant) ?? 0, commentCount / viewCount));
+            const views = getYoutubeMetric(meta, 'viewCount');
+            if (views === null || views <= 0) continue;
+            maxView = Math.max(maxView, views);
+            const comments = getYoutubeMetric(meta, 'commentCount');
+            if (comments !== null && comments > 0) videos.push({ views, ratio: comments / views });
         }
-    });
-
-    const medianViewCount = getMedian([...maxViewByRestaurant.values()]);
-    if (medianViewCount === null) return [];
-
-    const eligibleRatios = [...maxRatioByRestaurant.entries()]
-        .filter(([restaurant]) => (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount)
-        .map(([, ratio]) => ratio);
-    const threshold = getTopBandThreshold(eligibleRatios);
+        if (maxView > 0) maxViews.push(maxView);
+        videosByRestaurant.set(restaurant, videos);
+    }
+    const medianViews = getMedian(maxViews);
+    if (medianViews === null) return [];
+    const ratios = new Map<Restaurant, number>();
+    for (const [restaurant, videos] of videosByRestaurant) {
+        // The same video must meet both the view baseline and engagement ratio.
+        const eligible = videos.filter(video => video.views >= medianViews);
+        if (eligible.length) ratios.set(restaurant, Math.max(...eligible.map(video => video.ratio)));
+    }
+    const threshold = getTopBandThreshold([...ratios.values()]);
     if (threshold === null) return [];
-
-    return restaurants.filter((restaurant) => {
-        const ratio = maxRatioByRestaurant.get(restaurant);
-        return ratio !== undefined && (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount && ratio >= threshold;
-    });
+    return restaurants.filter(restaurant => (ratios.get(restaurant) ?? -1) >= threshold);
 }
 
 export function applyHomeMapThemeFilter(

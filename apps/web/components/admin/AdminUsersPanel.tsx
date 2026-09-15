@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -125,77 +125,8 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
     >
       <p className="truncate text-[11px] font-medium leading-4 text-muted-foreground sm:text-xs">{label}</p>
       <p className="mt-0.5 text-lg font-bold leading-6 tracking-[-0.04em] text-foreground sm:text-xl">
-        {isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12" aria-hidden="true" /> : value}
+        {isLoading ? <span aria-label="아직 확인되지 않음">—</span> : value}
       </p>
-    </div>
-  );
-}
-
-function UserTableSkeleton() {
-  return (
-    <div role="status" aria-busy="true" aria-label="사용자 목록 로딩 중" data-admin-users-loading-list>
-      <span className="sr-only">사용자 목록을 불러오는 중입니다.</span>
-      <div className="grid gap-2 md:hidden" aria-hidden="true">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div key={index} className="rounded-2xl border border-border/70 bg-background/80 p-3 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <Skeleton className={cn("h-4 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-28" : "w-20")} />
-                <Skeleton className="h-3.5 w-44 max-w-full rounded-full motion-reduce:animate-none" />
-              </div>
-              <Skeleton className="h-8 w-14 shrink-0 rounded-full motion-reduce:animate-none" />
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Skeleton className="h-6 w-16 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-6 w-20 rounded-full motion-reduce:animate-none" />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
-        <table className="w-full text-left text-sm">
-          <caption className="sr-only">관리자 사용자 목록 로딩</caption>
-          <thead className="bg-muted/35 text-xs text-muted-foreground">
-            <tr>
-              <th scope="col" className="px-3 py-2 font-semibold">사용자</th>
-              <th scope="col" className="px-3 py-2 font-semibold">권한</th>
-              <th scope="col" className="hidden px-3 py-2 font-semibold md:table-cell">상태</th>
-              <th scope="col" className="px-3 py-2 font-semibold">작업</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50 bg-background/70">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <tr key={index}>
-                <td className="min-w-0 px-3 py-3 align-top">
-                  <button type="button" tabIndex={-1} className="block min-w-0 text-left" aria-hidden="true">
-                    <span className="block truncate font-semibold text-foreground">
-                      <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-28" : "w-20")} aria-hidden="true" />
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      <Skeleton className="h-4 w-40 max-w-full rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    </span>
-                  </button>
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <Badge variant="secondary" className="border-transparent bg-muted text-muted-foreground">
-                    <Skeleton className="h-4 w-14 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </Badge>
-                </td>
-                <td className="hidden px-3 py-3 align-top md:table-cell">
-                  <Badge variant="secondary" className="border-transparent bg-emerald-50 text-emerald-800">
-                    <Skeleton className="h-4 w-8 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </Badge>
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <span className="inline-flex h-9 items-center justify-center rounded-md bg-muted/60 px-3 text-sm font-medium" aria-hidden="true">
-                    <Skeleton className="h-5 w-6 rounded-full motion-reduce:animate-none" />
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
@@ -221,6 +152,12 @@ function RoleBadge({ isAdmin }: { isAdmin: boolean }) {
 }
 
 export default function AdminUsersPanel() {
+  const { user, isLoading } = useAuth();
+  const accountId = !isLoading ? user?.id ?? null : null;
+  return <AdminUsersPanelForAccount key={accountId ?? "signed-out"} accountId={accountId} />;
+}
+
+function AdminUsersPanelForAccount({ accountId }: { accountId: string | null }) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);
@@ -232,6 +169,8 @@ export default function AdminUsersPanel() {
   const [riskConfirmation, setRiskConfirmation] = useState("");
   const [mutationResult, setMutationResult] = useState<AdminUserMutationResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const usersRequestRef = useRef<AbortController | null>(null);
   const [isMutating, setIsMutating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -245,7 +184,12 @@ export default function AdminUsersPanel() {
   const canDisableAction = riskConfirmation === "비활성화";
   const canReactivateAction = riskConfirmation === "재활성화";
 
-  const loadUsers = useCallback(async (signal?: AbortSignal) => {
+  const loadUsers = useCallback(async () => {
+    if (!accountId) return;
+    usersRequestRef.current?.abort();
+    const controller = new AbortController();
+    usersRequestRef.current = controller;
+    const signal = controller.signal;
     setIsLoading(true);
     setErrorMessage("");
 
@@ -259,12 +203,20 @@ export default function AdminUsersPanel() {
       });
       const payload = await response.json().catch(() => null) as AdminUsersResponse | { error?: string } | null;
 
+      if (signal.aborted) return;
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setUsers([]);
+          setSummary(DEFAULT_SUMMARY);
+          setHasLoaded(false);
+          setSelectedUserId(null);
+        }
         throw new Error(payload && "error" in payload ? payload.error : "사용자 목록을 불러오지 못했습니다.");
       }
 
       const nextUsers = "users" in (payload ?? {}) ? (payload as AdminUsersResponse).users : [];
       const nextSummary = "summary" in (payload ?? {}) ? (payload as AdminUsersResponse).summary : DEFAULT_SUMMARY;
+      setHasLoaded(true);
       setUsers(nextUsers);
       setSummary(nextSummary);
       setSelectedUserId((current) => {
@@ -280,12 +232,11 @@ export default function AdminUsersPanel() {
         setIsLoading(false);
       }
     }
-  }, [searchQuery]);
+  }, [accountId, searchQuery]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void loadUsers(controller.signal);
-    return () => controller.abort();
+    void loadUsers();
+    return () => usersRequestRef.current?.abort();
   }, [loadUsers]);
 
   useEffect(() => {
@@ -390,10 +341,10 @@ export default function AdminUsersPanel() {
         </div>
 
         <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-2 xl:grid-cols-4" data-admin-users-summary data-admin-module-summary="true">
-          <SummaryMetric label="불러온 사용자" value={summary.loadedUsers} tone="primary" isLoading={isLoading} />
-          <SummaryMetric label="관리자" value={summary.adminUsers} isLoading={isLoading} />
-          <SummaryMetric label="비활성 계정" value={summary.disabledUsers} tone={summary.disabledUsers > 0 ? 'danger' : 'default'} isLoading={isLoading} />
-          <SummaryMetric label="이메일 미확인" value={summary.unconfirmedUsers} isLoading={isLoading} />
+          <SummaryMetric label="불러온 사용자" value={summary.loadedUsers} tone="primary" isLoading={!hasLoaded} />
+          <SummaryMetric label="관리자" value={summary.adminUsers} isLoading={!hasLoaded} />
+          <SummaryMetric label="비활성 계정" value={summary.disabledUsers} tone={summary.disabledUsers > 0 ? 'danger' : 'default'} isLoading={!hasLoaded} />
+          <SummaryMetric label="이메일 미확인" value={summary.unconfirmedUsers} isLoading={!hasLoaded} />
         </div>
       </div>
 
@@ -403,7 +354,7 @@ export default function AdminUsersPanel() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">사용자 목록</CardTitle>
               <Button type="button" variant="outline" size="sm" className="h-9 w-full rounded-full sm:w-auto sm:rounded-lg" onClick={() => void loadUsers()} disabled={isLoading || isMutating} data-admin-users-refresh>
-                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} aria-hidden="true" />
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 새로고침
               </Button>
             </div>
@@ -434,14 +385,8 @@ export default function AdminUsersPanel() {
             )}
           </CardHeader>
           <CardContent className="min-h-0 flex-1 space-y-2 p-2 pt-0 xl:overflow-y-auto">
-            {isLoading ? (
-              <UserTableSkeleton />
-            ) : users.length === 0 ? (
-              <div className="rounded-lg bg-muted/25 p-4 text-center text-sm text-muted-foreground">
-                조건에 맞는 사용자가 없습니다. 필터를 줄이거나 전체 보기로 돌아가세요.
-              </div>
-            ) : (
-              <div data-admin-users-list>
+            {isLoading ? <AdminDataPending label="사용자 목록을 불러오는 중입니다." /> : null}
+              <div data-admin-users-list aria-busy={isLoading}>
                 <div className="grid gap-2 md:hidden">
                   {users.map((managedUser) => {
                     const isSelected = managedUser.id === selectedUser?.id;
@@ -453,6 +398,7 @@ export default function AdminUsersPanel() {
                           isSelected && "border-primary/40 bg-primary/5",
                         )}
                         data-admin-users-mobile-card
+                        data-admin-panel-padding="true"
                         data-admin-users-selected={isSelected ? "true" : "false"}
                       >
                         <button
@@ -475,7 +421,7 @@ export default function AdminUsersPanel() {
                     );
                   })}
                 </div>
-                <div className="hidden overflow-hidden rounded-lg md:block">
+                <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
                   <table className="w-full text-left text-sm">
                     <caption className="sr-only">관리자 사용자 목록</caption>
                     <thead className="bg-muted/35 text-xs text-muted-foreground">
@@ -487,6 +433,9 @@ export default function AdminUsersPanel() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50 bg-background/70">
+                      {!isLoading && !errorMessage && users.length === 0 ? (
+                        <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">조건에 맞는 사용자가 없습니다. 필터를 줄이거나 전체 보기로 돌아가세요.</td></tr>
+                      ) : null}
                       {users.map((managedUser) => {
                         const isSelected = managedUser.id === selectedUser?.id;
                         return (
@@ -516,11 +465,11 @@ export default function AdminUsersPanel() {
                   </table>
                 </div>
               </div>
-            )}
+              {!isLoading && !errorMessage && users.length === 0 ? <p className="p-3 text-sm text-muted-foreground md:hidden">조건에 맞는 사용자가 없습니다.</p> : null}
           </CardContent>
         </Card>
 
-        <div className="min-h-0 space-y-2 xl:overflow-y-auto">
+        <div className="min-h-0 space-y-2 xl:overflow-y-auto" data-admin-section-gap="stack">
           <Card className="border-border bg-card shadow-sm">
             <CardHeader className="p-2 pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -555,7 +504,7 @@ export default function AdminUsersPanel() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-lg bg-muted/25 p-3">
+                  <div className="rounded-lg bg-muted/25 p-3" data-admin-panel-padding="true">
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-lg font-bold text-foreground">{selectedUser.nickname}</p>
@@ -598,7 +547,7 @@ export default function AdminUsersPanel() {
 
                   <Separator />
 
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3" data-admin-panel-padding="true">
                     <h3 className="flex items-center gap-2 text-sm font-bold text-amber-950">
                       <Crown className="h-4 w-4" aria-hidden="true" />
                       권한 변경 전 확인
@@ -617,7 +566,7 @@ export default function AdminUsersPanel() {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+                  <div className="rounded-lg border border-destructive/25 bg-destructive/10 p-3" data-admin-panel-padding="true">
                     <h3 className="flex items-center gap-2 text-sm font-bold text-destructive">
                       <Ban className="h-4 w-4" aria-hidden="true" />
                       계정 처리 전 확인

@@ -30,10 +30,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
-import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { MyPageDataRegion } from "@/app/mypage/my-page-data-region";
 import {
   MyPageEmptyState,
-  MyPageErrorState,
   MyPageSectionFrame,
   myPageCardTitleClass,
   myPageFooterMetaClass,
@@ -155,11 +154,12 @@ export default function ReviewsPage() {
     fetchNextPage,
     hasNextPage,
     isLoading,
+    isFetching,
     isFetchingNextPage,
     isError,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["my-reviews", user?.id, filterStatus],
+    queryKey: ["my-reviews", user?.id],
     queryFn: async ({ pageParam = 0 }) => {
       if (!user?.id) return { reviews: [], nextCursor: null };
 
@@ -174,8 +174,7 @@ export default function ReviewsPage() {
           .returns<ReviewData[]>();
 
         if (reviewsError) {
-          console.error("리뷰 조회 실패:");
-          return { reviews: [], nextCursor: null };
+          throw new Error("my-reviews-unavailable");
         }
 
         if (!reviewsData || reviewsData.length === 0) {
@@ -259,8 +258,7 @@ export default function ReviewsPage() {
           reviewsData.length === PAGE_SIZE ? pageParam + PAGE_SIZE : null;
         return { reviews, nextCursor };
       } catch (error) {
-        console.error("리뷰 데이터 조회 중 오류:");
-        return { reviews: [], nextCursor: null };
+        throw new Error("my-reviews-unavailable");
       }
     },
     getNextPageParam: (lastPage) => lastPage?.nextCursor,
@@ -389,18 +387,6 @@ export default function ReviewsPage() {
   };
 
   // 로딩 상태
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="리뷰를 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        title="리뷰를 불러오지 못했습니다"
-        description="작성한 리뷰 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
@@ -408,7 +394,7 @@ export default function ReviewsPage() {
       eyebrow="내 활동"
       title="나의 리뷰 내역"
       description="작성한 리뷰와 검수 상태를 차분한 카드 흐름으로 확인합니다."
-      countLabel={`총 ${filteredReviews.length}개`}
+      countLabel={reviewsPages !== undefined ? `총 ${filteredReviews.length}개` : isError ? "확인 필요" : "불러오는 중"}
       action={
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger
@@ -427,6 +413,7 @@ export default function ReviewsPage() {
       }
       data-section="reviews"
     >
+      <MyPageDataRegion pending={isFetching || isLoading} hasData={reviewsPages !== undefined} error={isError} label="리뷰를 불러오는 중…" errorTitle="리뷰를 불러오지 못했습니다" errorDescription="작성한 리뷰 목록을 다시 불러오려면 잠시 후 재시도해주세요.">
       {filteredReviews.length === 0 ? (
         <MyPageEmptyState
           icon={MessageSquare}
@@ -669,6 +656,7 @@ export default function ReviewsPage() {
           queryClient.invalidateQueries({ queryKey: ["user-reviews"] });
         }}
       />
+      </MyPageDataRegion>
     </MyPageSectionFrame>
   );
 }

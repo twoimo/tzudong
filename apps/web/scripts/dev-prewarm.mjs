@@ -32,12 +32,12 @@ let stopTimer;
 const signalExitCode = (signal) => 128 + (osConstants.signals[signal] ?? 0);
 
 const child = spawn(
-  'node',
+  process.execPath,
   [
     'scripts/clean-next.mjs',
     ...(hasFlag('--clean') ? [] : ['--skip-clean']),
     '--',
-    'node',
+    process.execPath,
     'node_modules/next/dist/bin/next',
     'dev',
     ...(shouldUseWebpackDev ? ['--webpack'] : []),

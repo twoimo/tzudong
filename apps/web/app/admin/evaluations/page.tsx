@@ -10,7 +10,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
 import { extractVideoIdFromYoutubeLink } from '../../../lib/dashboard/helpers';
 import { getLocationMatchFalseMessage, hasLaajMetrics, hasRuleMetrics, toNotSelectionReason } from '../../../lib/dashboard/classifiers';
-import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
@@ -28,7 +27,7 @@ import {
 } from '@/contexts/NotificationContext';
 import { ClipboardCheck, Loader2, LayoutList, MonitorPlay, RotateCcw, Search, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from "@/components/ui/skeleton";
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
@@ -66,6 +65,7 @@ import {
   hasBlockingRestaurantIdentityWarning,
 } from '@/lib/admin-restaurant-identity-warning';
 import { invalidateRestaurantDiscoveryQueries } from '@/lib/restaurant-discovery-cache';
+import { applyCatalogReadback } from '@/lib/admin/local-catalog-evaluation-readback';
 import {
   assertLegacyBrowserAdminMutationEnabled,
   isLegacyBrowserAdminMutationEnabled,
@@ -1322,7 +1322,7 @@ function AdminEvaluationPageWrapper({
   initialSubmissionTab,
 }: AdminEvaluationPageWrapperProps = {}) {
   return (
-    <Suspense fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}>
+    <Suspense fallback={embedded ? null : <AdminEvaluationRoutePending />}>
       <AdminEvaluationPage
         embedded={embedded}
         initialView={initialView}
@@ -1401,96 +1401,33 @@ function AdminEvaluationStaticMobileLoadingControls() {
   );
 }
 
-function AdminEvaluationStaticCardSkeleton() {
+function EvaluationSummaryStats({ stats, showStats, children }: { stats: CategoryStats | null; showStats: boolean; children: React.ReactNode }) {
+  const categories = [
+    ['전체', stats?.total], ['미처리', stats?.pending], ['승인됨', stats?.approved], ['삭제됨', stats?.deleted],
+    ['승인 대기', stats?.ready_for_approval], ['미확정 좌표', stats?.unconfirmed_map], ['Missing', stats?.missing], ['평가 미대상', stats?.not_selected],
+  ] as const;
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" />
-              <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" />
-              <div className="grid grid-cols-3 gap-1.5">
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-                <Skeleton className="h-5 rounded-full motion-reduce:animate-none" />
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="flex w-full items-center justify-end gap-1.5 lg:ml-auto lg:w-auto lg:gap-2">
+      <div className="flex w-full justify-end overflow-x-auto py-0.5 scrollbar-hide lg:w-auto lg:flex-none lg:overflow-visible lg:py-0">{children}</div>
+      {showStats && <div className="hidden lg:flex lg:items-center lg:justify-end lg:gap-2 lg:overflow-x-auto">
+        {categories.map(([label, count]) => <div key={label} className="inline-flex shrink-0 items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-3 py-1 text-sm whitespace-nowrap">
+          <span className="font-medium text-muted-foreground">{label}</span><span className="font-semibold">{count ?? '—'}</span>
+        </div>)}
+      </div>}
     </div>
   );
 }
-function AdminEvaluationRouteSkeleton() {
+
+function AdminEvaluationRoutePending() {
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      aria-label="관리자 데이터 검수 화면 로딩 중"
-      className="flex h-full min-h-0 flex-col overflow-hidden"
-    >
-      <span className="sr-only">관리자 데이터 검수 화면의 필터, 테이블 행, 액션 영역을 불러오는 중입니다.</span>
-      <div className="border-b border-border bg-card px-3 py-2.5">
-        <div className="flex min-h-10 items-start justify-between gap-2.5 lg:items-center">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <AdminEvaluationTitleIcon embedded />
-              <h1 className="truncate bg-gradient-primary bg-clip-text text-lg font-bold text-transparent">관리자 데이터 검수</h1>
-            </div>
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center justify-end gap-1.5" data-admin-evaluation-view-actions="top-right">
-            <Button type="button" variant="secondary" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="리스트 뷰" aria-pressed="true">
-              <LayoutList className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">리스트</span>
-            </Button>
-            <Button type="button" variant="ghost" size="sm" disabled className="h-8 w-8 p-0 disabled:opacity-100" aria-label="슬라이드 뷰" aria-pressed="false">
-              <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">슬라이드</span>
-            </Button>
-          </div>
-        </div>
+    <section className="flex h-full min-h-0 flex-col gap-3 p-3">
+      <h1 className="text-lg font-bold">관리자 데이터 검수</h1>
+      <AdminEvaluationStaticMobileLoadingControls />
+      <div className="rounded-lg border">
+        <div className="flex gap-6 border-b p-3 text-sm"><span>맛집</span><span>검수 항목</span><span>상태</span><span>액션</span></div>
+        <AdminDataPending label="검수 화면을 준비하고 있습니다." />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
-        <AdminEvaluationStaticMobileLoadingControls />
-        <AdminEvaluationStaticCardSkeleton />
-        <div className="hidden min-h-0 overflow-hidden rounded-lg border bg-background lg:block">
-          <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
-            {Array.from({ length: 9 }).map((_, index) => (
-              <div key={index} className="px-2 py-2">
-                <Skeleton className={index === 1 ? "h-3 w-24 rounded-full motion-reduce:animate-none" : "mx-auto h-3 w-12 rounded-full motion-reduce:animate-none"} />
-              </div>
-            ))}
-          </div>
-          <div className="divide-y divide-border">
-            {Array.from({ length: 6 }).map((_, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
-              >
-                <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                <div className="flex min-w-0 items-center gap-2">
-                  <Skeleton className="h-10 w-14 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-4/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                    <Skeleton className="h-2.5 w-3/5 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                  </div>
-                </div>
-                {Array.from({ length: 6 }).map((__, cellIndex) => (
-                  <Skeleton key={cellIndex} className="h-6 rounded-full motion-reduce:animate-none" aria-hidden="true" />
-                ))}
-                <Skeleton className="h-7 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -1522,6 +1459,7 @@ function AdminEvaluationPage({
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
+  const [evaluationLoadError, setEvaluationLoadError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<CategoryStats>({
@@ -1598,8 +1536,11 @@ function AdminEvaluationPage({
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
-  const [showSubmissionView, setShowSubmissionView] = useState(false);
-  const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'recommend' | 'reviews'>('new');
+  const [showSubmissionView, setShowSubmissionView] = useState(initialView === 'submissions' || (!embedded && searchParams.get('view') === 'submissions'));
+  const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'recommend' | 'reviews'>(() => {
+    const tab = initialSubmissionTab ?? (!embedded ? searchParams.get('tab') : null);
+    return tab === 'edit' || tab === 'recommend' || tab === 'reviews' ? tab : 'new';
+  });
 
   // Deep-link 필터 (운영지표/이슈보드 -> 검수 화면 이동)
   const deepLinkInitializedRef = useRef(false);
@@ -2035,6 +1976,7 @@ function AdminEvaluationPage({
 
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
+    setEvaluationLoadError(false);
     try {
       setLoading(true);
 
@@ -2125,25 +2067,11 @@ function AdminEvaluationPage({
       setStats(newStats);
 
     } catch {
+      setEvaluationLoadError(true);
       toast({
         variant: 'destructive',
         title: '데이터 로드 실패',
         description: '검수 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.',
-      });
-      // 에러 발생 시에도 빈 배열로 설정하여 UI가 렌더링되도록
-      setAllRecords([]);
-      setDisplayedRecords([]);
-      setStats({
-        total: 0,
-        pending: 0,
-        approved: 0,
-        hold: 0,
-        missing: 0,
-        db_conflict: 0,
-        ready_for_approval: 0,
-        unconfirmed_map: 0,
-        not_selected: 0,
-        deleted: 0,
       });
     } finally {
       setLoading(false);
@@ -2153,7 +2081,7 @@ function AdminEvaluationPage({
   // 초기 데이터 로드
   useEffect(() => {
     // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
-    if (hasLoadedData.current) {
+    if (showSubmissionView || hasLoadedData.current) {
       return;
     }
 
@@ -2161,7 +2089,7 @@ function AdminEvaluationPage({
       hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords]);
+  }, [user, isAdmin, authLoading, hasE2EAdminShellBypass, loadAllRecords, showSubmissionView]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
@@ -2506,7 +2434,7 @@ function AdminEvaluationPage({
   };
 
   // 사용자 제보 데이터 쿼리 (새 테이블 구조)
-  const { data: submissionsData = [], isLoading: submissionsLoading } = useQuery({
+  const { data: submissionsData = [], isLoading: submissionsLoading, isSuccess: submissionsReady, isError: submissionsError } = useQuery({
     queryKey: ['admin-submissions-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2634,12 +2562,12 @@ function AdminEvaluationPage({
       });
 
     },
-    enabled: !!user && isAdmin,
+    enabled: !!user && isAdmin && showSubmissionView && (submissionInitialTab === 'new' || submissionInitialTab === 'edit'),
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
 
-  const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading } = useQuery({
+  const { data: recommendationRequestsData = [], isLoading: recommendationRequestsLoading, isSuccess: recommendationRequestsReady, isError: recommendationRequestsError } = useQuery({
     queryKey: ['admin-restaurant-requests-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2707,7 +2635,7 @@ function AdminEvaluationPage({
         original_restaurant_data: null,
       }));
     },
-    enabled: !!user && isAdmin,
+    enabled: !!user && isAdmin && showSubmissionView && submissionInitialTab === 'recommend',
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
@@ -2728,7 +2656,7 @@ function AdminEvaluationPage({
   }, [isAdmin, queryClient, user?.id]);
 
   // 리뷰 데이터 쿼리
-  const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
+  const { data: reviewsData = [], isLoading: reviewsLoading, isSuccess: reviewsReady, isError: reviewsError } = useQuery({
     queryKey: ['admin-reviews-inline', user?.id, isAdmin],
     queryFn: async () => {
       if (!user || !isAdmin) return [];
@@ -2768,7 +2696,7 @@ function AdminEvaluationPage({
         restaurants: restaurantsMap.get(review.restaurant_id) || { name: '삭제된 맛집', address: '' }
       }));
     },
-    enabled: !!user && isAdmin,
+    enabled: !!user && isAdmin && showSubmissionView && submissionInitialTab === 'reviews',
     refetchInterval: 30000,
   });
 
@@ -2815,7 +2743,11 @@ function AdminEvaluationPage({
     ? `제보/리뷰 대기: 제보 ${pendingRestaurantSubmissionCount}건 | 추천 ${pendingRecommendationCount}건 | 리뷰 ${pendingReviewCount}건 | 전체 ${totalPendingCount}건`
     : `필터링: ${filteredRecords.length}개 | 현 ${stats.total}개 레코드 | 삭제한 레코드 ${stats.deleted}개`;
   const isInitialEvaluationDataLoading = !showSubmissionView && loading && allRecords.length === 0;
-  const pendingQueueSummaryContent = showSubmissionView || !isInitialEvaluationDataLoading
+  const pendingQueueSummaryContent = !showSubmissionView && evaluationLoadError && allRecords.length === 0
+    ? '검수 데이터를 불러오지 못했습니다.'
+    : showSubmissionView && !canonicalPendingCounts
+    ? '제보/리뷰 대기 건수를 집계 중입니다.'
+    : showSubmissionView || !isInitialEvaluationDataLoading
     ? pendingQueueSummaryText
     : '필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중';
 
@@ -3481,7 +3413,7 @@ function AdminEvaluationPage({
 
   // 인증 게이트는 전체 화면으로 막되, 데이터 로딩은 아래 실제 화면 요소별 스켈레톤으로 처리합니다.
   if (!embedded && authLoading) {
-    return <AdminEvaluationRouteSkeleton />;
+    return <AdminEvaluationRoutePending />;
   }
 
   // 로그인하지 않았거나 관리자가 아닌 경우 (리다이렉트 전 화면 방지)
@@ -3562,10 +3494,9 @@ function AdminEvaluationPage({
 
           {/* 우측: 카테고리 필터 */}
           <div className="w-auto shrink-0 lg:flex lg:flex-1 lg:justify-end">
-            <CategorySidebar
-              stats={stats}
-              selectedStatuses={selectedStatuses}
-              onSelectStatuses={setSelectedStatuses}
+            <EvaluationSummaryStats
+              stats={allRecords.length === 0 && (loading || evaluationLoadError) ? null : stats}
+              showStats={!showSubmissionView}
             >
               <div className="ml-auto flex items-center justify-end gap-1.5 lg:gap-1" data-admin-evaluation-view-actions="top-right" data-admin-module-actions={embedded ? "top-right" : undefined}>
                 {canSwitchEvaluationView && (
@@ -3635,7 +3566,7 @@ function AdminEvaluationPage({
 
               {/* 구분선 */}
               <div className="hidden h-6 w-px bg-border sm:block" />
-            </CategorySidebar>
+            </EvaluationSummaryStats>
           </div>
         </div>
       </div>
@@ -3728,13 +3659,19 @@ function AdminEvaluationPage({
               queryClient.invalidateQueries({ queryKey: ['admin-restaurant-requests-inline'] });
               invalidateAdminPendingCounts();
             }}
-            loading={submissionsLoading || recommendationRequestsLoading || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
+            loading={(submissionInitialTab === 'recommend' ? recommendationRequestsLoading : submissionsLoading) || approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
             reviews={reviewsData}
             onApproveReview={handleApproveReview}
             onRejectReview={handleRejectReview}
             onDeleteReview={handleDeleteReview}
             reviewsLoading={reviewsLoading}
             initialTab={submissionInitialTab}
+            onTabChange={setSubmissionInitialTab}
+            submissionsReady={submissionsReady}
+            recommendationsReady={recommendationRequestsReady}
+            reviewsReady={reviewsReady}
+            reviewsError={reviewsError}
+            loadError={submissionInitialTab === 'recommend' ? recommendationRequestsError : submissionsError}
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
@@ -3751,8 +3688,9 @@ function AdminEvaluationPage({
           />
         ) : (
           /* 테이블 영역 (무한 스크롤) */
-          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2">
+          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-2" data-admin-evaluation-table-inset="true">
             <EvaluationTable
+              loadError={evaluationLoadError}
               records={visibleDisplayedRecords}
               onApprove={handleApprove}
               onDelete={handleDelete}
@@ -3821,6 +3759,11 @@ function AdminEvaluationPage({
         record={selectedEditRecord}
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
+        onCatalogSaved={(recordId, values) => {
+          setAllRecords(current => current.map(record => record.id === recordId ? applyCatalogReadback(record, values) : record));
+          setSelectedEditRecord(current => current?.id === recordId ? applyCatalogReadback(current, values) : current);
+          void invalidateRestaurantDiscoveryQueries(queryClient);
+        }}
         onSuccess={(recordId, updates) => {
           updateRecordInState(recordId, updates);
 

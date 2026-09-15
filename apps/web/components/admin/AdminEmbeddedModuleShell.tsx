@@ -43,6 +43,7 @@ export function AdminEmbeddedModuleShell({
         className,
       )}
       data-admin-embedded-module-shell="true"
+      data-admin-module-spacing="shared"
       data-admin-embedded-module-id={moduleId}
       data-layout-primitives="stack"
     >

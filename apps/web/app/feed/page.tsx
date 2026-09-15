@@ -8,7 +8,7 @@ import { BREAKPOINTS } from '@/hooks/useDeviceType';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import type { Restaurant } from '@/types/restaurant';
 import { buildEditRestaurantInitialFormData } from '@/lib/edit-restaurant-request-form';
-import { GlobalLoader } from '@/components/ui/global-loader';
+import FeedLoading from './loading';
 
 const AuthModal = dynamic(() => import('@/components/auth/AuthModal'), { ssr: false });
 const RestaurantDetailPanel = dynamic(
@@ -28,7 +28,6 @@ const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 function FeedPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
-    const [isMounted, setIsMounted] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRestaurantSheetOpen, setIsRestaurantSheetOpen] = useState(false);
@@ -37,8 +36,6 @@ function FeedPageContent() {
     const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
 
     useEffect(() => {
-        setIsMounted(true);
-
         const redirectIfDesktop = () => {
             if (window.innerWidth > BREAKPOINTS.tabletMax) {
                 const reviewId = searchParams.get('review');
@@ -55,9 +52,6 @@ function FeedPageContent() {
         };
     }, [router, searchParams]);
 
-    // Mount 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
-    if (!isMounted) return null;
-    if (typeof window !== 'undefined' && window.innerWidth > BREAKPOINTS.tabletMax) return null;
 
     const handleOpenRestaurantDetail = (restaurant: FeedRestaurantRecord) => {
         setRestaurantSheetHeightRequestKey(0);
@@ -147,13 +141,7 @@ function FeedPageContent() {
 
 export default function FeedPage() {
     return (
-        <Suspense fallback={(
-            <GlobalLoader
-                message="피드를 불러오는 중..."
-                subMessage="리뷰와 맛집 정보를 준비하고 있습니다"
-                fullScreen
-            />
-        )}>
+        <Suspense fallback={<FeedLoading />}>
             <FeedPageContent />
         </Suspense>
     );

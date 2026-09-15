@@ -231,6 +231,7 @@ const loadAdminReviewPanel = async () => {
 };
 
 interface HomeDesktopControlPanelProps {
+  isActive?: boolean;
   mapMode: "domestic" | "overseas";
   selectedRegion: Region | null;
   selectedCountry: string | null;
@@ -788,6 +789,7 @@ function buildOptimisticDetailRestaurant(
 }
 
 export default function HomeDesktopControlPanel({
+  isActive = true,
   mapMode,
   selectedRegion,
   selectedCountry,
@@ -824,7 +826,7 @@ export default function HomeDesktopControlPanel({
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
   const initialRoutePanel = searchParams.get("panel");
-  const countryCounts = useOverseasCountryCounts(mapMode);
+  const { counts: countryCounts, isError: countryCountsError, isPending: countryCountsPending } = useOverseasCountryCounts(mapMode, isActive);
   const desktopSearchShellRef = useRef<HTMLDivElement>(null);
   const desktopSearchInputRef = useRef<HTMLInputElement>(null);
   const [activeLeftPanelView, setActiveLeftPanelView] =
@@ -868,45 +870,45 @@ export default function HomeDesktopControlPanel({
     !shouldShowDesktopSearchResults;
   const DeferredRestaurantSearch =
     useDeferredComponent<RestaurantSearchComponentProps>(
-      shouldShowDesktopSearchResults,
+      isActive && shouldShowDesktopSearchResults,
       loadDesktopRestaurantSearch,
     );
   const DeferredFeedOverlay = useDeferredComponent<FeedOverlayComponentProps>(
-    activeLeftPanelView === "feed",
+    isActive && activeLeftPanelView === "feed",
     loadFeedOverlay,
   );
   const DeferredStampOverlay = useDeferredComponent<StampOverlayComponentProps>(
-    activeLeftPanelView === "stamp",
+    isActive && activeLeftPanelView === "stamp",
     loadStampOverlay,
   );
   const DeferredLeaderboardOverlay =
     useDeferredComponent<LeaderboardOverlayComponentProps>(
-      activeLeftPanelView === "leaderboard",
+      isActive && activeLeftPanelView === "leaderboard",
       loadLeaderboardOverlay,
     );
   const DeferredUserProfilePanel =
     useDeferredComponent<UserProfilePanelComponentProps>(
-      activeLeftPanelView === "profile" && Boolean(activeProfileUserId),
+      isActive && activeLeftPanelView === "profile" && Boolean(activeProfileUserId),
       loadUserProfilePanel,
     );
   const DeferredDesktopLeftPanelBookmarks =
     useDeferredComponent<DesktopLeftPanelBookmarksComponentProps>(
-      activeLeftPanelView === "bookmarks" && Boolean(user),
+      isActive && activeLeftPanelView === "bookmarks" && Boolean(user),
       loadDesktopLeftPanelBookmarks,
     );
   const DeferredDesktopLeftPanelNotifications =
     useDeferredComponent<DesktopLeftPanelNotificationsComponentProps>(
-      activeLeftPanelView === "notifications" && Boolean(user),
+      isActive && activeLeftPanelView === "notifications" && Boolean(user),
       loadDesktopLeftPanelNotifications,
     );
   const DeferredAnnouncementPanel =
     useDeferredComponent<AnnouncementPanelComponentProps>(
-      activeLeftPanelView === "announcement" && !isPublicRestrictedMode,
+      isActive && activeLeftPanelView === "announcement" && !isPublicRestrictedMode,
       loadAnnouncementPanel,
     );
   const DeferredAdminReviewPanel =
     useDeferredComponent<AdminReviewPanelComponentProps>(
-      activeLeftPanelView === "adminReviews" && isAdmin,
+      isActive && activeLeftPanelView === "adminReviews" && isAdmin,
       loadAdminReviewPanel,
     );
   useEffect(() => {
@@ -1579,6 +1581,7 @@ export default function HomeDesktopControlPanel({
               </div>
             )}
             {mapMode === "domestic" ? (
+              isActive ? (
               <RegionSelector
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
@@ -1587,6 +1590,9 @@ export default function HomeDesktopControlPanel({
                 contentSide="top"
                 contentAlign="start"
               />
+              ) : (
+                <Button disabled type="button" className="h-9 w-full min-w-max rounded-full border border-border bg-background/95 px-3 text-xs font-medium text-foreground shadow-lg" aria-label="지역 선택 준비 중">{selectedRegion || '전체 맛집'}</Button>
+              )
             ) : (
               <Select
                 value={selectedCountry || undefined}
@@ -1602,13 +1608,14 @@ export default function HomeDesktopControlPanel({
                 >
                   {OVERSEAS_REGION_LIST.map((region) => (
                     <SelectItem key={region} value={region}>
-                      {region} ({countryCounts[region] || 0}개)
+                      {region} ({countryCountsError ? '조회 실패' : countryCountsPending ? '조회 중' : `${countryCounts[region] || 0}개`})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
 
+            {isActive ? (
             <CategoryFilter
               selectedCategories={selectedCategories}
               onCategoryChange={onCategoryChange}
@@ -1618,6 +1625,9 @@ export default function HomeDesktopControlPanel({
               contentSide="top"
               contentAlign="start"
             />
+            ) : (
+              <Button disabled type="button" className="h-9 w-full min-w-max rounded-full border border-border bg-background/95 px-3 text-xs font-medium text-foreground shadow-lg" aria-label="카테고리 선택 준비 중">카테고리</Button>
+            )}
           </div>
         </>
       )}
@@ -1998,6 +2008,7 @@ export default function HomeDesktopControlPanel({
                   </div>
                 ) : shouldShowDesktopMapHome ? (
                   <DesktopLeftPanelMapHome
+                    enabled={isActive && !isPanelCollapsed}
                     onRestaurantOpen={
                       handleInlinePanelRestaurantOpen as (
                         restaurant: Restaurant,

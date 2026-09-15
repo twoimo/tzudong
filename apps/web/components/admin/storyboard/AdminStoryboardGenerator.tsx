@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDataPending } from "@/components/admin/AdminDataPending";
 import {
   useCallback,
   useEffect,
@@ -3170,9 +3171,10 @@ function extractStoryboardHistoryRuns(payload: unknown): unknown[] {
   return Array.isArray(candidate.runs) ? candidate.runs : [];
 }
 
-async function getStoryboardHistoryResults(): Promise<StoryboardHistoryCase[]> {
+async function getStoryboardHistoryResults(signal?: AbortSignal): Promise<StoryboardHistoryCase[]> {
   const response = await fetch(STORYBOARD_HISTORY_INDEX_URL, {
     cache: "no-store",
+    signal,
     headers: { Accept: "application/json" },
   });
 
@@ -3191,6 +3193,7 @@ async function getStoryboardHistoryResults(): Promise<StoryboardHistoryCase[]> {
       if (!runUrl) return null;
       const runResponse = await fetch(runUrl, {
         cache: "no-store",
+        signal,
         headers: { Accept: "application/json" },
       });
       if (!runResponse.ok) return null;
@@ -4258,62 +4261,10 @@ function StoryboardEmptyCanvasState({
   );
 }
 
-function StoryboardCutImageSkeleton({
-  sceneNo,
-  hasExistingImage,
-  isActive,
-  fullFrame = false,
-}: {
-  sceneNo: number;
-  hasExistingImage: boolean;
-  isActive: boolean;
-  fullFrame?: boolean;
-}) {
-  const paddedSceneNo = String(sceneNo).padStart(2, "0");
-
+function StoryboardCutImagePending({ sceneNo, isActive }: { sceneNo: number; isActive: boolean }) {
   return (
-    <div
-      className={cn(
-        "pointer-events-none absolute inset-0 z-20 overflow-hidden bg-gradient-to-br from-slate-100 via-slate-200/85 to-slate-400/70",
-        fullFrame ? "rounded-2xl" : "rounded-t-2xl",
-        hasExistingImage ? "bg-slate-950/25 opacity-85" : "opacity-100",
-      )}
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label={
-        isActive
-          ? `CUT ${paddedSceneNo} 이미지 생성 중`
-          : `CUT ${paddedSceneNo} 이미지 생성 대기 중`
-      }
-      data-storyboard-cut-image-skeleton="true"
-      data-storyboard-cut-image-skeleton-active={isActive ? "true" : "false"}
-      data-storyboard-cut-image-skeleton-variant="legacy-glass"
-      data-storyboard-cut-image-skeleton-effect="glass-shimmer"
-      data-storyboard-cut-image-skeleton-scene={String(sceneNo)}
-      data-storyboard-glass-skeleton="true"
-      data-storyboard-glass-skeleton-frame={String(sceneNo)}
-      data-storyboard-realtime-skeleton="true"
-      data-storyboard-unified-generation-skeleton="true"
-      data-storyboard-unified-skeleton="true"
-    >
-      <span
-        className="pointer-events-none absolute inset-0 opacity-85 [background:linear-gradient(135deg,rgba(255,255,255,0.58),rgba(148,163,184,0.28)_48%,rgba(71,85,105,0.26))]"
-        aria-hidden="true"
-        data-storyboard-cut-image-glass-surface="true"
-        data-storyboard-glass-surface="true"
-      />
-      <span
-        className="storyboard-cut-image-shimmer pointer-events-none absolute"
-        aria-hidden="true"
-        data-storyboard-cut-image-shimmer="true"
-        data-storyboard-cut-image-shimmer-effect="glass-sweep"
-        data-storyboard-glass-shimmer="true"
-      />
-      <span className="sr-only">
-        CUT {paddedSceneNo} 이미지를 {isActive ? "만드는" : "기다리는"}{" "}
-        중입니다.
-      </span>
+    <div className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[calc(100%-1.5rem)] rounded-lg border bg-background/95" data-storyboard-cut-image-pending={sceneNo}>
+      <AdminDataPending label={`CUT ${String(sceneNo).padStart(2, "0")} 이미지 ${isActive ? "생성 중" : "생성 대기 중"}`} className="min-h-0 px-2 py-1.5" />
     </div>
   );
 }
@@ -5022,10 +4973,12 @@ export function AdminStoryboardGenerator({
   }, [trustedInitialStoryboardResult]);
 
   useEffect(() => {
+    if (!isStoryboardHistoryPanelOpen) return;
     let cancelled = false;
+    const controller = new AbortController();
     setStoryboardHistoryStatus("loading");
 
-    getStoryboardHistoryResults()
+    getStoryboardHistoryResults(controller.signal)
       .then((historyCases) => {
         if (cancelled) return;
         setStoryboardHistoryCases((current) =>
@@ -5046,8 +4999,9 @@ export function AdminStoryboardGenerator({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, []);
+  }, [isStoryboardHistoryPanelOpen]);
 
   useEffect(() => {
     if (!acceptedStoryboardJob || !acceptedStoryboardJobRequest) return;
@@ -6871,13 +6825,6 @@ export function AdminStoryboardGenerator({
 
   function handleStoryboardHistoryDropdownOpenChange(nextOpen: boolean) {
     setIsStoryboardHistoryPanelOpen(nextOpen);
-    if (
-      nextOpen &&
-      storyboardHistoryCases.length === 0 &&
-      storyboardHistoryStatus !== "loading"
-    ) {
-      void refreshStoryboardHistoryResults();
-    }
   }
 
   async function applyStoryboardHistoryResult(
@@ -9072,6 +9019,8 @@ export function AdminStoryboardGenerator({
                 className="scrollbar-hide flex min-h-0 min-w-0 flex-1 scroll-pb-24 flex-col gap-3 overflow-y-auto overscroll-contain px-3 pb-5 pt-3 max-[1099px]:!overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 data-storyboard-chat-log="true"
                 data-storyboard-chat-transcript="true"
+                data-admin-panel-padding="true"
+                data-admin-section-gap="flex"
                 data-scroll-owner="storyboard-chat"
                 data-storyboard-scroll-mode="desktop-chat-transcript narrow-parent"
                 aria-live="polite"
@@ -10021,9 +9970,8 @@ export function AdminStoryboardGenerator({
                             />
                           ) : null}
                           {isSceneImageGenerating ? (
-                            <StoryboardCutImageSkeleton
+                            <StoryboardCutImagePending
                               sceneNo={scene.sceneNo}
-                              hasExistingImage={Boolean(trustedGeneratedImage)}
                               isActive={isSceneImageActivelyGenerating}
                             />
                           ) : null}

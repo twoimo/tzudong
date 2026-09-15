@@ -19,6 +19,51 @@ const ADMIN_DASHBOARD_WIDGET_IDS = [
     'topContent',
     'engagementRate',
 ];
+// Whole-page replacements and invented chart shapes are forbidden. Necessary
+// skeletons inside real value/data slots remain part of the loading contract.
+const LEGACY_DASHBOARD_TEMPLATE_SELECTOR = [
+    '[data-admin-dashboard-management-skeleton]',
+    ...['chart', 'bubble', 'line', 'stacked', 'diagnosis', 'table'].map(
+        (variant) => `[data-admin-dashboard-dynamic-skeleton="${variant}"]`,
+    ),
+].join(', ');
+const DASHBOARD_TITLE_SELECTOR = '[data-admin-dashboard-kpi-title-row], [data-admin-dashboard-card-title-row]';
+
+async function expectActualDashboardFrame(page: Page) {
+    const dashboard = page.locator('[data-admin-dashboard-management="true"]');
+    await expect(dashboard).toBeVisible();
+    for (const widgetId of ADMIN_DASHBOARD_WIDGET_IDS) {
+        const card = dashboard.locator(`[data-admin-dashboard-widget-card="${widgetId}"]`);
+        await expect(card).toBeVisible();
+        const title = card.locator(DASHBOARD_TITLE_SELECTOR).first().locator('p').first();
+        await expect(title).toBeVisible();
+        await expect(title).toContainText(/\S/);
+    }
+    await expect(page.getByRole('button', { name: '전체', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: '3개월', exact: true })).toBeEnabled();
+    await expect(dashboard.locator('[data-admin-dashboard-widget-card="impact"] [data-admin-dashboard-card-view-toggle="true"]')).toBeVisible();
+    await expect(page.locator(LEGACY_DASHBOARD_TEMPLATE_SELECTOR)).toHaveCount(0);
+}
+
+async function expectLocalizedDashboardSkeletons(page: Page) {
+    const dashboard = page.locator('[data-admin-dashboard-management="true"]');
+    const pending = dashboard.locator('[data-admin-dashboard-data-pending]').first();
+    await expect(pending).toBeVisible();
+    await expect(pending).toHaveAttribute('aria-busy', 'true');
+    const status = pending.getByRole('status');
+    await expect(status).toHaveAttribute('aria-live', 'polite');
+    await expect(status).toHaveAttribute('aria-busy', 'true');
+    await expect(status.locator('[aria-hidden="true"] [data-slot="skeleton"]').first()).toBeVisible();
+    for (const widgetId of ['subscribers', 'views', 'likes', 'comments', 'videos']) {
+        const value = dashboard.locator(`[data-admin-dashboard-widget-card="${widgetId}"] p[data-admin-dashboard-kpi-value-size="bounded"]`);
+        await expect(value).toBeVisible();
+        await expect(value.locator('span[data-slot="skeleton"]')).toBeVisible();
+        await expect(value).toContainText('값 확인 중');
+    }
+    // Headers and actions remain usable; only unresolved data receives shapes.
+    await expect(dashboard.locator(DASHBOARD_TITLE_SELECTOR).locator('[data-slot="skeleton"]')).toHaveCount(0);
+}
+
 const RUNTIME_GUARD_LOCK_DIR = resolve(
     process.cwd(),
     'test-results',
@@ -145,8 +190,8 @@ function isInitialKpiResponse(responseUrl: string) {
     const url = new URL(responseUrl);
     return (
         url.pathname === '/api/admin/youtube-kpis' &&
-        (url.searchParams.get('period') ?? '1M') === '1M' &&
-        !url.searchParams.has('scope')
+        url.searchParams.get('period') === 'ALL' &&
+        url.searchParams.get('scope') === 'channel-growth'
     );
 }
 
@@ -362,6 +407,17 @@ test.describe('Admin KPI dashboard runtime guard', () => {
 
         await page.setViewportSize({ width: 1920, height: 1080 });
         await installE2EAdminShellBypass(page);
+        // Hold genuine data requests so frame assertions cannot race a fast response.
+        // No payloads or authentication behavior are replaced.
+        let releaseInitialData!: () => void;
+        const initialDataGate = new Promise<void>((resolveGate) => {
+            releaseInitialData = resolveGate;
+        });
+        const initialDataPattern = /\/api\/(?:admin\/youtube-(?:kpis|channel)|dashboard\/summary)(?:\?|$)/;
+        await page.route(initialDataPattern, async (route) => {
+            await initialDataGate;
+            await route.continue();
+        });
         const firstKpiResponsePromise = page.waitForResponse(
             (response) =>
                 isInitialKpiResponse(response.url()) &&
@@ -389,16 +445,26 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             [E2E_ADMIN_ROUTE_BYPASS_HEADER]: '1',
             [E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER]: bypassToken,
         });
-        await gotoAndHidePopup(page, '/admin');
-
-        await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({
-            timeout: 20000,
-        });
+        const dashboard = page.locator('[data-admin-dashboard-management="true"]');
+        try {
+            await gotoAndHidePopup(page, '/admin');
+            await expect(dashboard).toBeVisible({ timeout: 20000 });
+            await expectActualDashboardFrame(page);
+            await expectLocalizedDashboardSkeletons(page);
+            // A marker on the real node proves it survives the data transition.
+            await dashboard.evaluate((element) => element.setAttribute('data-runtime-frame-retained', 'true'));
+        } finally {
+            releaseInitialData();
+        }
 
         const firstKpiPayload = (await (await firstKpiResponsePromise).json()) as KpiApiPayload;
         const operationalVideoTitle = expectOperationalKpiPayload(firstKpiPayload);
         await expect(channelResponsePromise).resolves.toBeTruthy();
         await expect(summaryResponsePromise).resolves.toBeTruthy();
+        await page.unroute(initialDataPattern);
+        await expect(dashboard).toHaveAttribute('data-runtime-frame-retained', 'true');
+        await expectActualDashboardFrame(page);
+        await expect(dashboard.locator('[data-admin-dashboard-data-pending]')).toHaveCount(0);
         const confidenceRail = page.locator('[data-admin-dashboard-data-confidence="true"]');
         await expect(confidenceRail).toHaveCount(0);
         expect(operationalVideoTitle).not.toBe('');
@@ -407,7 +473,9 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         });
         await expect(page.locator('body')).not.toContainText('KPI 회귀 테스트 영상');
         await expect(page.locator('body')).not.toContainText('회귀 테스트 영상');
-        await expect(page.locator('body')).not.toContainText('집중도');
+        await expect(page.locator('[data-admin-dashboard-diagnosis-visual="signal-bar"]')).toHaveCount(0);
+        await expect(page.locator('body')).not.toContainText('구독자 기여 후보');
+        await expect(page.getByRole('button', { name: '전체', exact: true })).toHaveAttribute('aria-pressed', 'true');
         const dashboardBox = await page
             .locator('[data-admin-dashboard-management="true"]')
             .boundingBox();
@@ -422,7 +490,7 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         ]);
         await expect(reportPage.locator('body')).not.toContainText('데이터 신뢰도');
         await expect(reportPage.locator('body')).not.toContainText('단일 지배');
-        await expect(reportPage.locator('body')).not.toContainText('집중도');
+        await expect(reportPage.locator('body')).not.toContainText('구독자 기여 후보');
         await expect(reportPage.getByLabel('핵심 KPI')).toBeVisible();
         await reportPage.close();
 
@@ -432,9 +500,33 @@ test.describe('Admin KPI dashboard runtime guard', () => {
             });
         }
 
-        await page.getByRole('button', { name: '3개월' }).click();
-        await expect(page.getByRole('button', { name: '3개월' })).toHaveAttribute('aria-pressed', 'true');
-        await expect(confidenceRail).toHaveCount(0);
+        let releasePeriodData!: () => void;
+        const periodDataGate = new Promise<void>((resolveGate) => {
+            releasePeriodData = resolveGate;
+        });
+        const periodPattern = /\/api\/admin\/youtube-(?:kpis|channel)\?/;
+        await page.route(periodPattern, async (route) => {
+            if (new URL(route.request().url()).searchParams.get('period') === '3M') {
+                await periodDataGate;
+            }
+            await route.continue();
+        });
+        try {
+            await page.getByRole('button', { name: '3개월' }).click();
+            await expect(page.getByRole('button', { name: '3개월' })).toHaveAttribute('aria-pressed', 'true');
+            await expect(dashboard).toHaveAttribute('data-runtime-frame-retained', 'true');
+            await expectLocalizedDashboardSkeletons(page);
+            await expectActualDashboardFrame(page);
+            await expect(confidenceRail).toHaveCount(0);
+            // Returning to a fresh cached period must not impose another loading phase.
+            await page.getByRole('button', { name: '전체', exact: true }).click();
+            await expect(page.getByRole('button', { name: '전체', exact: true })).toHaveAttribute('aria-pressed', 'true');
+            await expect(dashboard.locator('[data-admin-dashboard-data-pending]')).toHaveCount(0);
+            await expect(dashboard).toHaveAttribute('data-runtime-frame-retained', 'true');
+        } finally {
+            releasePeriodData();
+            await page.unroute(periodPattern);
+        }
 
         await page.getByRole('button', { name: '6시간' }).click();
         await expect(page.getByRole('button', { name: '6시간' })).toHaveAttribute('aria-pressed', 'true');
@@ -459,6 +551,42 @@ test.describe('Admin KPI dashboard runtime guard', () => {
         await impactTableButton.click();
         await expect(impactTableButton).toHaveAttribute('aria-pressed', 'true');
         await expect(impactCard.locator('[data-admin-dashboard-table-view="true"]').first()).toBeVisible();
+        const boundedTable = impactCard.locator('[data-admin-dashboard-table-pagination="bounded"]');
+        await expect(boundedTable).toBeVisible();
+        const table = boundedTable.getByRole('table', { name: '대시보드 데이터 표' });
+        const totalRows = Number(await table.getAttribute('aria-rowcount')) - 1;
+        expect(Number.isSafeInteger(totalRows)).toBe(true);
+        expect(totalRows).toBeGreaterThan(0);
+        expect(totalRows).toBeLessThanOrEqual(10000);
+        const pageSize = 50;
+        const pageCount = Math.ceil(totalRows / pageSize);
+        const previousPage = boundedTable.getByRole('button', { name: '표 이전 페이지' });
+        const nextPage = boundedTable.getByRole('button', { name: '표 다음 페이지' });
+        const visibleRows = table.locator('tbody tr');
+        // Check every page by absolute row indices, without retaining row content.
+        for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+            const start = pageIndex * pageSize;
+            const count = Math.min(pageSize, totalRows - start);
+            await expect(visibleRows).toHaveCount(count);
+            await expect(visibleRows.first()).toHaveAttribute('aria-rowindex', String(start + 2));
+            await expect(visibleRows.last()).toHaveAttribute('aria-rowindex', String(start + count + 1));
+            if (pageCount > 1) {
+                if (pageIndex === 0) await expect(previousPage).toBeDisabled();
+                else await expect(previousPage).toBeEnabled();
+                if (pageIndex + 1 < pageCount) {
+                    await expect(nextPage).toBeEnabled();
+                    await nextPage.click();
+                } else await expect(nextPage).toBeDisabled();
+            }
+        }
+        if (pageCount > 1) {
+            await previousPage.click();
+            await expect(visibleRows.first()).toHaveAttribute('aria-rowindex', String((pageCount - 2) * pageSize + 2));
+        } else {
+            await expect(previousPage).toHaveCount(0);
+            await expect(nextPage).toHaveCount(0);
+        }
+
 
         await gotoAndHidePopup(page, '/admin/?module=overview');
         await expect(page.locator('[data-admin-dashboard-management="true"]')).toBeVisible({

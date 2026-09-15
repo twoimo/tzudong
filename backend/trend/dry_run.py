@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .scoring import score_trend_candidate
+from .momentum import Observation, rank_momentum
 from .web_provider import (
     collect_google_cse_fixture_observations,
     load_google_cse_fixture,
@@ -24,6 +25,8 @@ def run_trend_dry_run(
     candidates: Sequence[Mapping[str, Any]],
     fixture_path: str | Path | None = None,
     env: Mapping[str, str] | None = None,
+    momentum_observations: Sequence[Observation] = (),
+    keyword_aliases: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Return dry-run artifacts without mutating Supabase or approved overlays."""
 
@@ -88,6 +91,7 @@ def run_trend_dry_run(
         "proposals": proposals,
         "skippedCandidates": skipped,
         "approvedOverlayWrites": [],
+        "momentumAnalysis": rank_momentum(momentum_observations, aliases=keyword_aliases),
         "summary": {
             "candidateCount": len(candidates),
             "proposalCount": len(proposals),

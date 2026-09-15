@@ -30,10 +30,9 @@ import {
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { toast } from "@/hooks/use-toast";
 import { normalizeCanonicalYouTubeWatchUrl } from "@/lib/youtube-url";
-import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { MyPageDataRegion } from "@/app/mypage/my-page-data-region";
 import {
   MyPageEmptyState,
-  MyPageErrorState,
   MyPageSectionFrame,
   myPageCardTitleClass,
   myPageFooterMetaClass,
@@ -221,6 +220,7 @@ export default function EditSubmissionsPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isFetching,
     isError,
   } = useInfiniteQuery({
     queryKey: ["myEditSubmissions", user?.id],
@@ -670,18 +670,6 @@ export default function EditSubmissionsPage() {
     </Card>
   );
 
-  if (isLoading) {
-    return <MyPageSectionSkeleton label="맛집 수정 요청 내역을 불러오는 중…" />;
-  }
-
-  if (isError) {
-    return (
-      <MyPageErrorState
-        title="맛집 수정 요청을 불러오지 못했습니다"
-        description="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요."
-      />
-    );
-  }
 
   return (
     <MyPageSectionFrame
@@ -689,9 +677,10 @@ export default function EditSubmissionsPage() {
       eyebrow="제보 관리"
       title="맛집 수정 요청"
       description="기존 맛집 정보 수정 요청의 검토 흐름을 확인합니다."
-      countLabel={`총 ${submissions.length}건`}
+      countLabel={submissionsData !== undefined ? `총 ${submissions.length}건` : isError ? "확인 필요" : "불러오는 중"}
       data-section="submissions-edit"
     >
+      <MyPageDataRegion pending={isFetching || isLoading} hasData={submissionsData !== undefined} error={isError} label="맛집 수정 요청 내역을 불러오는 중…" errorTitle="맛집 수정 요청을 불러오지 못했습니다" errorDescription="수정 요청 목록을 다시 불러오려면 잠시 후 재시도해주세요.">
       {submissions.length === 0 ? (
         <MyPageEmptyState
           icon={Edit3}
@@ -717,6 +706,7 @@ export default function EditSubmissionsPage() {
           </div>
         </div>
       )}
+      </MyPageDataRegion>
     </MyPageSectionFrame>
   );
 }

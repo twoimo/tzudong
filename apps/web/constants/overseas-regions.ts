@@ -20,7 +20,7 @@ export const OVERSEAS_REGIONS: Record<string, OverseasRegionConfig> = {
     "태국(방콕)": {
         label: "태국(방콕)",
         country: "태국",
-        keywords: ["Bangkok", "방콕"],
+        keywords: ["Bangkok", "방콕", "Krung Thep Maha Nakhon"],
         center: { lat: 13.7563, lng: 100.5018, zoom: 11 }
     },
     "일본(나고야)": {
@@ -80,7 +80,7 @@ export const OVERSEAS_REGIONS: Record<string, OverseasRegionConfig> = {
     "튀르키예(이스탄불)": {
         label: "튀르키예(이스탄불)",
         country: "튀르키예",
-        keywords: ["Istanbul", "이스탄불"],
+        keywords: ["Istanbul", "İstanbul", "이스탄불"],
         center: { lat: 41.0082, lng: 28.9784, zoom: 11 }
     }
 };

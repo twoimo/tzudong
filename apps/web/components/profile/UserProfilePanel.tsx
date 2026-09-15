@@ -25,7 +25,8 @@ import {
 } from "@/hooks/useUserProfile";
 import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
-import { UserProfileProgressiveSkeleton, UserProfileTabSkeleton } from "@/components/profile/UserProfileProgressiveSkeleton";
+import { UserProfileTabSkeleton } from "@/components/profile/UserProfileProgressiveSkeleton";
+import { DataPending } from "@/components/ui/data-pending";
 import { StampCard } from "@/components/stamp/StampCard";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -88,7 +89,7 @@ const LikerItem = memo(function LikerItem({ liker, onUserClick }: LikerItemProps
 interface StatCardProps {
     icon?: React.ReactNode;
     label: string;
-    value: string | number;
+    value: React.ReactNode;
     valueClassName?: string;
     tone?: 'neutral' | 'primary' | 'danger';
 }
@@ -107,7 +108,7 @@ const StatCard = memo(function StatCard({ icon, label, value, valueClassName, to
             </div>
             <div className="min-w-0 flex-1">
                 <span className="block truncate text-[11px] font-medium leading-none text-muted-foreground">{label}</span>
-                <span className={cn("mt-1 block max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</span>
+                <div className={cn("mt-1 block max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</div>
             </div>
         </div>
     );
@@ -116,7 +117,7 @@ const StatCard = memo(function StatCard({ icon, label, value, valueClassName, to
 interface ProfileSectionHeaderProps {
     title: string;
     description: string;
-    count: number;
+    count: number | undefined;
 }
 
 const ProfileSectionHeader = memo(function ProfileSectionHeader({ title, description, count }: ProfileSectionHeaderProps) {
@@ -130,7 +131,7 @@ const ProfileSectionHeader = memo(function ProfileSectionHeader({ title, descrip
                 variant="secondary"
                 className="shrink-0 rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-sm"
             >
-                {count}개
+                {count === undefined ? "확인 중" : `${count}개`}
             </Badge>
         </div>
     );
@@ -181,7 +182,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
     const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
-    const { data: leaderboard = [] } = useLeaderboard();
+    const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard();
     const profileAvatarUrl = useMemo(
         () => resolveProfileAvatarUrl(profile?.avatarUrl, profile?.userId),
         [profile?.avatarUrl, profile?.userId],
@@ -225,6 +226,8 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         reviews: reviews.length,
         likers: likers.length,
     }), [likers.length, reviews.length, stamps.length]);
+
+    const tabLoading = { stamps: stampsLoading, reviews: reviewsLoading, likers: likersLoading };
 
     useEffect(() => {
         setVisibleStampCount(USER_PROFILE_PAGE_SIZE);
@@ -347,16 +350,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     }, [activeTab, likers.length, visibleLikerCount]);
 
 
-    if (profileLoading) {
-        return (
-            <UserProfileProgressiveSkeleton
-                showCloseButton={showBackButton && Boolean(onClose)}
-                onBack={handleBack}
-            />
-        );
-    }
-
-    if (!profile) {
+    if (!profileLoading && !profile) {
         return (
             <div className="flex flex-col h-full bg-background">
                 <div className="p-4 border-b">
@@ -396,7 +390,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         {/* 프로필 아바타 */}
                         <Avatar className="h-12 w-12 ring-2 ring-primary/10 shadow-sm flex-shrink-0">
                             {profileAvatarUrl && (
-                                <AvatarImage src={profileAvatarUrl} alt={profile.nickname} className="object-cover" />
+                                <AvatarImage src={profileAvatarUrl} alt={profile?.nickname ?? ""} className="object-cover" />
                             )}
                             <AvatarFallback className="bg-primary/10">
                                 <User className="h-6 w-6 text-primary" />
@@ -405,9 +399,9 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <h1 className="text-xl font-bold truncate">
-                                    {profile.nickname}
+                                    {profile ? profile.nickname : "사용자 프로필"}
                                 </h1>
-                                <Badge
+                                {profile ? <Badge
                                     variant="outline"
                                     className={cn(
                                         "text-[10px] px-1.5 h-5 whitespace-nowrap flex-shrink-0",
@@ -417,7 +411,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                     )}
                                 >
                                     {profile.tier.name}
-                                </Badge>
+                                </Badge> : <DataPending className="min-h-5 w-16 p-0" label="프로필 정보 로딩 중" />}
                             </div>
                             <p className="mt-1 truncate text-xs text-muted-foreground">
                                 방문 도장과 리뷰 활동
@@ -446,7 +440,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         key="stat-stamps"
                         icon={<Stamp className="h-3.5 w-3.5" />}
                         label="도장"
-                        value={profile.verifiedReviewCount}
+                        value={profile ? profile.verifiedReviewCount : <DataPending className="min-h-4 w-10 p-0" label="도장 수 로딩 중" />}
                         valueClassName="text-foreground text-base"
                         tone="primary"
                     />
@@ -454,7 +448,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         key="stat-likes"
                         icon={<Heart className="h-3.5 w-3.5" />}
                         label="좋아요"
-                        value={profile.totalLikes}
+                        value={profile ? profile.totalLikes : <DataPending className="min-h-4 w-10 p-0" label="좋아요 수 로딩 중" />}
                         valueClassName="text-red-600 text-base"
                         tone="danger"
                     />
@@ -462,7 +456,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         key="stat-rank"
                         icon={<Trophy className="h-3.5 w-3.5" />}
                         label="랭킹"
-                        value={userRank > 0 ? `#${userRank}` : '-'}
+                        value={leaderboardLoading ? <DataPending className="min-h-4 w-10 p-0" label="랭킹 로딩 중" /> : userRank > 0 ? `#${userRank}` : '-'}
                         valueClassName="text-primary text-base"
                         tone="primary"
                     />
@@ -500,7 +494,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 >
                                     <Icon className="h-3.5 w-3.5 shrink-0" />
                                     <span className="min-w-0 truncate">{tab.label}</span>
-                                    <span className="shrink-0">({tabCounts[tab.value]})</span>
+                                    {!tabLoading[tab.value] && <span className="shrink-0">({tabCounts[tab.value]})</span>}
                                 </button>
                             );
                         })}
@@ -517,6 +511,13 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden"
                     >
                         <div ref={stampTabRef} className="h-full overflow-y-auto">
+                        <div className="px-4 pt-4">
+                            <ProfileSectionHeader
+                                title="방문 도장"
+                                description="리뷰로 인증한 맛집을 모았어요."
+                                count={stampsLoading ? undefined : stamps.length}
+                            />
+                        </div>
                         {stampsLoading ? (
                             <UserProfileTabSkeleton label="도장 목록 로딩 중" />
                         ) : stamps.length === 0 ? (
@@ -526,11 +527,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             />
                         ) : (
                             <div className="p-4 pb-20">
-                                <ProfileSectionHeader
-                                    title="방문 도장"
-                                    description="리뷰로 인증한 맛집을 모았어요."
-                                    count={stamps.length}
-                                />
+
                                 <div className="flex flex-col gap-3">
                                     {stamps.slice(0, visibleStampCount).map((stamp, index) => (
                                         <StampCard
@@ -562,20 +559,23 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         className="h-full overflow-y-auto [&::-webkit-scrollbar]:hidden"
                     >
                         <div ref={reviewTabRef} className="h-full overflow-y-auto">
-                        {reviewsLoading ? (
+                        <div className="px-4 pt-4">
+                            <ProfileSectionHeader
+                                title="작성 리뷰"
+                                description="방문 후 남긴 맛집 리뷰예요."
+                                count={reviewsLoading ? undefined : reviews.length}
+                            />
+                        </div>
+                        {reviewsLoading || profileLoading ? (
                             <UserProfileTabSkeleton label="리뷰 목록 로딩 중" />
-                        ) : reviews.length === 0 ? (
+                        ) : !profile || reviews.length === 0 ? (
                             <EmptyState
                                 icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
                                 message="작성한 리뷰가 없습니다"
                             />
                         ) : (
                             <div className="p-4 pb-20">
-                                <ProfileSectionHeader
-                                    title="작성 리뷰"
-                                    description="방문 후 남긴 맛집 리뷰예요."
-                                    count={reviews.length}
-                                />
+
                                 <div className="space-y-4">
                                     {reviews.slice(0, visibleReviewCount).map((review, index) => (
                                         <ReviewCard
@@ -625,6 +625,13 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                         className="h-full"
                     >
                         <div ref={likerTabRef} className="h-full overflow-y-auto">
+                        <div className="px-4 pt-4">
+                            <ProfileSectionHeader
+                                title="좋아요를 보낸 사용자"
+                                description="내 리뷰에 반응한 사용자들이에요."
+                                count={likersLoading ? undefined : likers.length}
+                            />
+                        </div>
                         {likersLoading ? (
                             <UserProfileTabSkeleton label="좋아요 목록 로딩 중" />
                         ) : likers.length === 0 ? (
@@ -634,11 +641,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             />
                         ) : (
                                 <div className="p-4 pb-20">
-                                    <ProfileSectionHeader
-                                        title="좋아요를 보낸 사용자"
-                                        description="내 리뷰에 반응한 사용자들이에요."
-                                        count={likers.length}
-                                    />
+
                                     <div className="overflow-hidden rounded-xl border bg-card/70 shadow-sm divide-y divide-border">
                                         {likers.slice(0, visibleLikerCount).map((liker, index) => (
                                             <LikerItem

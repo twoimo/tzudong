@@ -1,11 +1,14 @@
-/**
- * 글로벌 맵 라우트 로딩 경계.
- *
- * App Router fallback은 비워둡니다. 지도 캔버스와 검색 컨트롤 스켈레톤은
- * `app/global-map/page.tsx`의 dynamic/Suspense 경계가 한 번만 소유합니다.
- * route fallback에서도 MapSkeleton을 그리면 페이지 내부 MapView fallback과
- * 같은 지도 스켈레톤이 순차적으로 2번 보일 수 있습니다.
- */
+import { DataPending } from '@/components/ui/data-pending';
+import { Input } from '@/components/ui/input';
+
 export default function GlobalMapLoading() {
-    return null;
+  return <section className="relative h-full min-h-[360px] bg-background">
+    <h1 className="sr-only">해외 맛집 지도</h1>
+    <DataPending label="해외 맛집 지도를 준비하는 중입니다." className="h-full min-h-[360px]" />
+    <div className="absolute bottom-4 left-1/2 grid w-[min(calc(100vw-1rem),72rem)] -translate-x-1/2 gap-2 rounded-lg border bg-background p-3 sm:grid-cols-3">
+      <select disabled aria-label="국가 선택 준비 중" className="h-10 rounded-md border px-3 text-sm"><option>튀르키예</option></select>
+      <select disabled aria-label="카테고리 선택 준비 중" className="h-10 rounded-md border px-3 text-sm"><option>전체 카테고리</option></select>
+      <Input disabled aria-label="맛집 검색 준비 중" placeholder="맛집 검색..." />
+    </div>
+  </section>;
 }

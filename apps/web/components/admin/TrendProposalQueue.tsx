@@ -216,6 +216,8 @@ export function TrendProposalQueue() {
       data-layout-primitives="list-detail card-grid cluster stack"
       data-scroll-owner="trend-proposal-queue"
       data-admin-trend-proposal-queue="true"
+      data-admin-panel-padding="true"
+      data-admin-section-gap="stack"
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
@@ -227,7 +229,7 @@ export function TrendProposalQueue() {
         </Badge>
       </div>
 
-      <div className="mt-2 grid min-w-0 gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <div className="mt-2 grid min-w-0 gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]" data-admin-section-gap="grid">
         <div className="min-w-0 space-y-1.5">
           {proposalsQuery.isLoading ? (
             <p className="rounded-xl bg-muted/30 p-2 text-xs text-muted-foreground">제안 목록을 불러오는 중입니다.</p>
@@ -264,6 +266,7 @@ export function TrendProposalQueue() {
 
         <div
           className="min-w-0 rounded-xl bg-background/75 p-2"
+          data-admin-panel-padding="true"
           data-admin-trend-proposal-readback="true"
         >
           {selectedProposal ? (
@@ -292,6 +295,7 @@ export function TrendProposalQueue() {
               <div
                 className="rounded-xl border border-primary/15 bg-primary/5 p-2"
                 data-trend-proposal-preview="true"
+                data-admin-panel-padding="true"
               >
                 <p className="text-xs font-bold text-primary">미리보기 해시</p>
                 {previewQuery.isFetching ? (

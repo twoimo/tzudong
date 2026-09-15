@@ -3,12 +3,22 @@ import type { Restaurant } from '@/types/restaurant';
 
 const ADDRESS_FIELDS = ['road_address', 'jibun_address', 'english_address'] as const;
 
+export function findOverseasRegionForRestaurant(restaurant: Pick<Restaurant, 'road_address' | 'jibun_address' | 'english_address'>) {
+    const address = ADDRESS_FIELDS.map((field) => restaurant[field] ?? '').join(' ').toLowerCase();
+    return Object.entries(OVERSEAS_REGIONS).find(([, config]) =>
+        config.keywords.some((keyword) => address.includes(keyword.toLowerCase()))
+    )?.[0] ?? null;
+}
+
 function uniqueTerms(terms: string[]) {
     return Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)));
 }
 
 export function getOverseasSearchTermsForCountry(country: string | null | undefined) {
     if (!country) return [];
+
+    const selectedRegion = OVERSEAS_REGIONS[country];
+    if (selectedRegion) return uniqueTerms([selectedRegion.label, ...selectedRegion.keywords]);
 
     const configs = Object.values(OVERSEAS_REGIONS).filter((config) => {
         return config.country === country || config.label === country || config.label.startsWith(`${country}(`);
@@ -40,6 +50,10 @@ export function buildOverseasCountryAddressOrFilter(country: string | null | und
     if (terms.length === 0) return null;
 
     return terms
-        .flatMap((term) => ADDRESS_FIELDS.map((field) => `${field}.ilike.${wildcard}${term}${wildcard}`))
+        .flatMap((term) => {
+            // Parentheses in region labels are PostgREST grammar, even after URL encoding.
+            const pattern = `${wildcard}${term}${wildcard}`.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            return ADDRESS_FIELDS.map((field) => `${field}.ilike."${pattern}"`);
+        })
         .join(',');
 }

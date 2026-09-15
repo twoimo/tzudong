@@ -1,0 +1,84 @@
+{
+  "scope": "authenticated-local-browser",
+  "tables": [
+    {
+      "id": "impact",
+      "range": "1–50 / 490개이전1/10다음",
+      "rows": 50
+    },
+    {
+      "id": "trend",
+      "range": "1–50 / 490개이전1/10다음",
+      "rows": 50
+    },
+    {
+      "id": "ops",
+      "range": "1–9 / 9개",
+      "rows": 9
+    },
+    {
+      "id": "topContent",
+      "range": "1–50 / 490개이전1/10다음",
+      "rows": 50
+    },
+    {
+      "id": "engagementRate",
+      "range": "1–4 / 4개",
+      "rows": 4
+    }
+  ],
+  "paging": {
+    "first": [
+      1,
+      50
+    ],
+    "second": [
+      51,
+      100
+    ],
+    "last": [
+      451,
+      490
+    ],
+    "lastNextDisabled": true
+  },
+  "month": {
+    "bannerCount": 0,
+    "cards": [
+      {
+        "id": "subscribers",
+        "text": "현재 구독자비교 대기 —13,400,000채널 현재값 · 비교 이력 없음"
+      },
+      {
+        "id": "views",
+        "text": "누적 조회수비교 대기 —1,960,928,7731개월 비교 이력 없음 · 수집 영상 누적 · 현재 전체 누적 1,960,928,773"
+      },
+      {
+        "id": "likes",
+        "text": "누적 좋아요비교 대기 —35,990,591조회수 대비 1.8% · 현재 전체 누적 35,990,591"
+      },
+      {
+        "id": "comments",
+        "text": "누적 댓글비교 대기 —853,089조회수 대비 0.04% · 현재 전체 누적 853,089"
+      },
+      {
+        "id": "videos",
+        "text": "기간 내 업로드비교 대기 —0수집 영상 중 1개월 내 업로드 · 채널 전체 1,129개"
+      }
+    ]
+  },
+  "monthlyTooltip": {
+    "keyboardVerified": true,
+    "rawValues": true,
+    "relativeIndex": true,
+    "cohortDisclosure": true
+  },
+  "thirtyMinute": {
+    "observedAt": "2026-09-08T11:31:13.244Z",
+    "views": 13795,
+    "likes": 87,
+    "comments": -1,
+    "subscribers": 0
+  },
+  "productionVerified": false
+}

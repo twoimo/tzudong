@@ -76,8 +76,8 @@ describe("YouTube KPI snapshot collector contract", () => {
     const route = readRepoFile("app/api/admin/youtube-kpis/route.ts");
 
     expect(route).toContain("getYouTubeKpiSnapshotData(period, {");
-    expect(route).toContain("shouldUseHistoryComparisonFallback");
-    expect(route).toContain('fallbackReasonCode: "snapshot-comparison-unavailable"');
+    expect(route.includes("historyComparisonPayload")).toBe(false);
+    expect(route).toContain("withYouTubeKpiQualityMeta(snapshotPayload, {})");
     expect(route).toContain("getInsightTreemapData(period");
     expect(route).toContain('filterByPeriod: !isChannelGrowthScope && period !== "ALL"');
     expect(route).toContain("return process.env.YOUTUBE_API_KEY || null");
@@ -558,7 +558,8 @@ describe("YouTube KPI snapshot collector contract", () => {
       "createInsightTreemapQualityFlag('delta_conflict'",
     );
     expect(dashboard).toContain("channelStats?.subscriberDelta");
-    expect(dashboard).toContain("channelStats?.videoDelta");
+    expect(dashboard).toContain("countDashboardPublishedVideosInWindow(");
+    expect(dashboard.includes("Math.max(0, channelStats?.videoDelta ?? 0)")).toBe(false);
     expect(dashboard).toContain("getAdminDashboardDeltaSourceLabel");
   });
 

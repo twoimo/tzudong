@@ -213,6 +213,7 @@ class HostedDataPlaneTests(unittest.TestCase):
         )
         self.assertEqual(payload["status"], "pending")
         self.assertIn("newvideo111", payload["youtube_link"])
+        self.assertIs(payload["is_ingestion_candidate"], True)
 
     def test_apply_pending_candidates_posts_only_preview_ids(self) -> None:
         preview = build_apply_preview(

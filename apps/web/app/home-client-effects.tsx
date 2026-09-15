@@ -74,14 +74,6 @@ export default function HomeClientEffects({
     }, []);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            window.dispatchEvent(new Event('mapLoadingComplete'));
-        }, 200);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
         const isAnnouncementUrlActive = searchParams.get('panel') === 'announcement';
         if (
             !isAnnouncementUrlActive &&
@@ -103,6 +95,8 @@ export default function HomeClientEffects({
         const restaurantId = resolveHomeDetailRestaurantParam(searchParams);
         const timers: number[] = [];
         let isCancelled = false;
+        let registeredRestaurantRequestKey: string | null = null;
+        let restaurantResolutionCompleted = false;
 
         const schedule = (callback: () => void, delay: number) => {
             const timer = window.setTimeout(() => {
@@ -207,6 +201,7 @@ export default function HomeClientEffects({
 
             if (lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) {
                 lastRestaurantDeepLinkRequestKeyRef.current = restaurantKey;
+                registeredRestaurantRequestKey = restaurantKey;
 
                 runRestaurantDeepLinkResolution(() => {
                     let request = pendingRestaurantDeepLinkRequestRef.current;
@@ -219,17 +214,15 @@ export default function HomeClientEffects({
                             });
                         request = { key: restaurantKey, promise };
                         pendingRestaurantDeepLinkRequestRef.current = request;
-                        void promise.finally(() => {
-                            if (pendingRestaurantDeepLinkRequestRef.current === request) {
-                                pendingRestaurantDeepLinkRequestRef.current = null;
-                            }
-                        });
+                        // Keep one result across effect cleanup/restart (including
+                        // StrictMode and map-mode changes). A new key replaces it.
                     }
 
                     void request.promise.then((result) => {
                         if (isCancelled || lastRestaurantDeepLinkRequestKeyRef.current !== restaurantKey) return;
                         if (userDetailOpenGenerationRef.current !== requestGeneration) return;
                         if (!result) {
+                            restaurantResolutionCompleted = true;
                             toast.error('맛집 정보를 불러오지 못했어요');
                             return;
                         }
@@ -242,13 +235,18 @@ export default function HomeClientEffects({
                         ) return;
 
                         const zoomParam = searchParams.get('z');
-                        const focusZoom = zoomParam ? parseFloat(zoomParam) : undefined;
+                        // A restaurant-only link has no saved viewport. Match
+                        // search selection instead of retaining the national zoom.
+                        const focusZoom = zoomParam ? parseFloat(zoomParam) : 15;
                         const targetMode: 'domestic' | 'overseas' | null =
                             requestedMode ?? result.inferredMode;
                         const restoreKey = searchParams.get('restore');
 
-                        if (targetMode) {
+                        if (targetMode && targetMode !== mapMode) {
                             setMapMode(targetMode);
+                            // Resume this cached result after the mode-reset effect
+                            // has committed, so it cannot clear the restored detail.
+                            return;
                         }
 
                         schedule(() => {
@@ -259,6 +257,7 @@ export default function HomeClientEffects({
                                 isHomeDetailHistoryState(window.history.state) &&
                                 window.history.state.restaurantId !== restaurantId
                             ) return;
+                            restaurantResolutionCompleted = true;
                             openDetailPanelRef.current(
                                 result.restaurant,
                                 !isNaN(Number(focusZoom)) ? Number(focusZoom) : undefined,
@@ -309,9 +308,7 @@ export default function HomeClientEffects({
                         return;
                     }
 
-                    schedule(() => {
-                        openDetailPanelRef.current(restaurant, undefined, { source: 'url', mapMode });
-                    }, 500);
+                    openDetailPanelRef.current(restaurant, undefined, { source: 'url', mapMode });
                 });
             } else if (isNaN(lat) || isNaN(lng)) {
                 toast.error('지도 좌표 링크가 올바르지 않아요');
@@ -336,6 +333,13 @@ export default function HomeClientEffects({
 
         return () => {
             isCancelled = true;
+            if (
+                registeredRestaurantRequestKey !== null &&
+                !restaurantResolutionCompleted &&
+                lastRestaurantDeepLinkRequestKeyRef.current === registeredRestaurantRequestKey
+            ) {
+                lastRestaurantDeepLinkRequestKeyRef.current = null;
+            }
             clearRegisteredRequestKeys();
             timers.forEach((timer) => window.clearTimeout(timer));
         };

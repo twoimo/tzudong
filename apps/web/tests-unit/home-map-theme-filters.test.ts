@@ -144,16 +144,16 @@ describe('home map theme filters', () => {
 
     test('counts repeat-video from merged links without metadata and dedupes duplicate links', () => {
         const restaurants = [
-            restaurant('merged-links', { mergedYoutubeLinks: ['https://youtu.be/a', 'https://youtu.be/b'] }),
+            restaurant('merged-links', { mergedYoutubeLinks: ['https://youtu.be/aaaaaaaaaaa', 'https://youtu.be/bbbbbbbbbbb'] }),
             restaurant('deduped', {
-                youtube_link: 'https://youtu.be/a',
-                mergedYoutubeLinks: ['https://youtu.be/a'],
-                mergedRestaurants: [{ youtube_link: 'https://youtu.be/a' } as Restaurant],
+                youtube_link: 'https://youtu.be/aaaaaaaaaaa',
+                mergedYoutubeLinks: ['https://youtu.be/aaaaaaaaaaa'],
+                mergedRestaurants: [{ youtube_link: 'https://youtu.be/aaaaaaaaaaa' } as Restaurant],
             }),
             restaurant('merged-records', {
                 mergedRestaurants: [
-                    { youtube_link: 'https://youtu.be/c' } as Restaurant,
-                    { youtube_link: 'https://youtu.be/d' } as Restaurant,
+                    { youtube_link: 'https://youtu.be/ccccccccccc' } as Restaurant,
+                    { youtube_link: 'https://youtu.be/ddddddddddd' } as Restaurant,
                 ],
             }),
         ];
@@ -184,4 +184,24 @@ describe('home map theme filters', () => {
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'fan-signal'))).toEqual(['baseline-winner']);
     });
+});
+
+test('zero reactions do not qualify as hot videos', () => {
+    const rows = [restaurant('zero', { youtube_meta: { viewCount: 0, commentCount: 0 } })];
+    expect(applyHomeMapThemeFilter(rows, 'hot-view')).toEqual([]);
+    expect(applyHomeMapThemeFilter(rows, 'comment-hot')).toEqual([]);
+});
+
+test('a small high-ratio video cannot borrow another videos view baseline', () => {
+    const rows = [
+        restaurant('mixed', { mergedYoutubeMetas: [{ viewCount: 10000, commentCount: 1 }, { viewCount: 10, commentCount: 9 }] }),
+        restaurant('actual', { mergedYoutubeMetas: [{ viewCount: 10000, commentCount: 1000 }] }),
+        restaurant('baseline', { mergedYoutubeMetas: [{ viewCount: 10000, commentCount: 1 }] }),
+    ];
+    expect(ids(applyHomeMapThemeFilter(rows, 'fan-signal'))).toEqual(['actual']);
+});
+
+test('different URL forms of one video do not count as a repeat appearance', () => {
+    const rows = [restaurant('one', { mergedYoutubeLinks: ['https://youtu.be/abcdefghijk', 'https://www.youtube.com/watch?v=abcdefghijk'] })];
+    expect(applyHomeMapThemeFilter(rows, 'repeat-video')).toEqual([]);
 });

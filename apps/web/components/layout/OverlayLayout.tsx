@@ -61,18 +61,7 @@ const UserDataPrefetcher = dynamic(
   },
 );
 
-const OVERLAY_NONCRITICAL_CHROME_DELAY_MS = 0;
-const OVERLAY_NONCRITICAL_CHROME_EVENTS: Array<keyof WindowEventMap> = [
-  "pointerdown",
-  "keydown",
-  "wheel",
-  "touchstart",
-];
-const DIRECT_OVERLAY_PANELS: Array<Exclude<OverlayPanelType, null>> = [
-  "feed",
-  "stamp",
-  "leaderboard",
-];
+const DIRECT_OVERLAY_PANELS: Array<Exclude<OverlayPanelType, null>> = ["feed", "stamp", "leaderboard"];
 const HOME_OVERLAY_PANEL_OPENED_EVENT = "homeOverlayPanelOpened";
 const EMPTY_SEARCH_PARAMS = new URLSearchParams();
 
@@ -116,6 +105,7 @@ export default function OverlayLayout({
   const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const isAdminConsolePath = pathname === "/admin" || pathname?.startsWith("/admin/") === true;
   const router = useRouter();
   const searchParams = useSearchParams() ?? EMPTY_SEARCH_PARAMS;
 
@@ -240,34 +230,7 @@ export default function OverlayLayout({
   }, [authLoginRequested]);
 
   useEffect(() => {
-    if (shouldSuppressNoncriticalChrome) {
-      setCanMountNoncriticalChrome(false);
-      return;
-    }
-
-    let timer = 0;
-    const mountNoncriticalChrome = () => {
-      window.clearTimeout(timer);
-      setCanMountNoncriticalChrome(true);
-    };
-
-    timer = window.setTimeout(
-      mountNoncriticalChrome,
-      OVERLAY_NONCRITICAL_CHROME_DELAY_MS,
-    );
-    for (const eventName of OVERLAY_NONCRITICAL_CHROME_EVENTS) {
-      window.addEventListener(eventName, mountNoncriticalChrome, {
-        once: true,
-        passive: true,
-      });
-    }
-
-    return () => {
-      window.clearTimeout(timer);
-      for (const eventName of OVERLAY_NONCRITICAL_CHROME_EVENTS) {
-        window.removeEventListener(eventName, mountNoncriticalChrome);
-      }
-    };
+    setCanMountNoncriticalChrome(!shouldSuppressNoncriticalChrome);
   }, [shouldSuppressNoncriticalChrome]);
 
   // 오버레이 패널 변경 핸들러
@@ -328,7 +291,7 @@ export default function OverlayLayout({
       </a>
 
       {/* Supabase 사용자 데이터 프리페처 */}
-      {user && <UserDataPrefetcher />}
+      {user && !isAdminConsolePath && <UserDataPrefetcher />}
       {/* 메인 콘텐츠 - 지도 100% 너비 */}
       <main
         id="tzudong-map-main"
