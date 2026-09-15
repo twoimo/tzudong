@@ -20,7 +20,7 @@ export const OVERSEAS_REGIONS: Record<string, OverseasRegionConfig> = {
     "태국(방콕)": {
         label: "태국(방콕)",
         country: "태국",
-        keywords: ["Bangkok", "방콕"],
+        keywords: ["Bangkok", "방콕", "태국", "Krung Thep"],
         center: { lat: 13.7563, lng: 100.5018, zoom: 11 }
     },
     "일본(나고야)": {
@@ -80,8 +80,20 @@ export const OVERSEAS_REGIONS: Record<string, OverseasRegionConfig> = {
     "튀르키예(이스탄불)": {
         label: "튀르키예(이스탄불)",
         country: "튀르키예",
-        keywords: ["Istanbul", "이스탄불"],
+        keywords: ["Istanbul", "이스탄불", "튀르키예"],
         center: { lat: 41.0082, lng: 28.9784, zoom: 11 }
+    },
+    "스페인(바르셀로나)": {
+        label: "스페인(바르셀로나)",
+        country: "스페인",
+        keywords: ["Barcelona", "바르셀로나", "Spain", "Eixample"],
+        center: { lat: 41.3874, lng: 2.1686, zoom: 13 }
+    },
+    "홍콩(침사추이)": {
+        label: "홍콩(침사추이)",
+        country: "홍콩",
+        keywords: ["Hong Kong", "홍콩", "Kowloon", "Nathan Road"],
+        center: { lat: 22.2970, lng: 114.1730, zoom: 13 }
     }
 };
 

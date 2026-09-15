@@ -115,7 +115,9 @@ export const GLOBAL_REGIONS = [
     "인도네시아(발리)",
     "튀르키예(이스탄불)",
     "헝가리(부다페스트)",
-    "호주(시드니)"
+    "호주(시드니)",
+    "스페인(바르셀로나)",
+    "홍콩(침사추이)"
 ] as const;
 
 export type Region = typeof REGIONS[number] | typeof GLOBAL_REGIONS[number];

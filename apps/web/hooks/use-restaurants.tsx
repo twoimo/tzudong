@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
-import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
+import { buildOverseasCountryAddressOrFilter, buildOverseasRegionAddressOrFilter } from "@/lib/overseas-region-matching";
 import { perfMonitor } from "@/lib/performance-monitor";
 import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import type { Tables } from "@/integrations/supabase/types";
@@ -663,16 +663,11 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
                     query.push(['or', '(road_address.ilike.*욕지*,jibun_address.ilike.*욕지*)']);
                 } else if (normalizedRegion in OVERSEAS_REGIONS) {
-                    const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
-                    const conditions: string[] = [];
-                    config.keywords.forEach((keyword: string) => {
-                        conditions.push(`road_address.ilike.*${keyword}*`);
-                        conditions.push(`jibun_address.ilike.*${keyword}*`);
-                        conditions.push(`english_address.ilike.*${keyword}*`);
-                    });
-
-                    if (conditions.length > 0) {
-                        query.push(['or', `(${conditions.join(',')})`]);
+                    // PostgREST는 예약 문자가 포함된 ilike 피연산자를 인용된 형태로만
+                    // 정확히 해석합니다. 마커 필터와 개수 집계가 동일 헬퍼를 사용합니다.
+                    const regionFilter = buildOverseasRegionAddressOrFilter(normalizedRegion, '*');
+                    if (regionFilter) {
+                        query.push(['or', `(${regionFilter})`]);
                     }
                 } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
                     query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
