@@ -16,6 +16,9 @@
 @source "../components/filters";
 @source "../components/region";
 @source "../components/skeletons";
+@source "../components/auth";
+@source "../components/legal";
+@source "../components/profile";
 @source "../components/ui";
 @source "../lib/naver-map-overlay-position-helpers.ts";
 @source "../lib/naver-map-overlay-timings.ts";
