@@ -8188,16 +8188,16 @@ function AdminSidebar({
         data-admin-console-menu-item-mode={isDropdown ? "mobile-dropdown" : "desktop-sidebar"}
         data-admin-console-menu-item-state={isActive ? "active" : "inactive"}
         className={cn(
-          "group relative flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+          "group relative flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
           isDropdown
-            ? "min-h-9 w-full rounded-lg px-2 py-1.5 text-[13px]"
-            : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
+            ? "min-h-9 w-full rounded-lg px-2.5 py-1.5 text-[13px]"
+            : "min-h-9 w-full rounded-lg px-2.5 py-1.5 text-sm",
           !isDropdown &&
             isCollapsed &&
             "md:mx-auto md:h-8 md:min-h-8 md:w-8 md:justify-center md:gap-0 md:px-0",
           isActive
             ? "border-primary/20 bg-primary text-primary-foreground shadow-primary"
-            : "border-transparent text-muted-foreground hover:border-primary/15 hover:bg-background/80 hover:text-foreground",
+            : "border-transparent text-muted-foreground hover:border-primary/10 hover:bg-muted/60 hover:text-foreground",
         )}
         onClick={() =>
           isDropdown ? handleMenuNavigation(item.id) : onSelectModule(item.id)
@@ -8205,31 +8205,31 @@ function AdminSidebar({
       >
         <span
           className={cn(
-            "flex shrink-0 items-center justify-center border transition-colors motion-reduce:transition-none",
-            isDropdown ? "h-6 w-6 rounded-md" : "h-6 w-6 rounded-md",
+            "flex shrink-0 items-center justify-center rounded-md transition-colors motion-reduce:transition-none",
+            isDropdown ? "h-6 w-6" : "h-6 w-6",
             isActive
-              ? "border-primary-foreground/20 bg-primary-foreground/15 text-primary-foreground"
-              : "border-border bg-background/80 text-muted-foreground group-hover:border-primary/20 group-hover:text-primary",
+              ? "bg-primary-foreground/15 text-primary-foreground"
+              : "text-muted-foreground group-hover:text-foreground",
           )}
           aria-hidden="true"
         >
-          <Icon className={cn(isDropdown ? "h-3.5 w-3.5" : "h-3.5 w-3.5")} />
+          <Icon className={cn(isDropdown ? "h-4 w-4" : "h-4 w-4")} />
         </span>
         <span
           className={cn(
-            "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
+            "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none flex items-center justify-between gap-1.5",
             !isDropdown &&
               (!showLabels || isCollapsed) &&
               "md:hidden md:w-0 md:flex-none md:opacity-0",
           )}
         >
-          <span className="block truncate font-semibold leading-5">
+          <span className="block truncate font-medium text-sm leading-5">
             {item.title}
           </span>
           {item.badge && (
             <span
               className={cn(
-                "mt-0.5 block truncate text-[11px] font-semibold leading-4",
+                "hidden truncate text-[10px] font-medium leading-none px-1.5 py-0.5 rounded opacity-75 xl:inline-block",
                 getSidebarBadgeClassName(section.label, isActive),
               )}
               data-admin-sidebar-badge-tone={section.label}
