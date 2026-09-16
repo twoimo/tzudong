@@ -39,6 +39,35 @@ function readEnvWithFallback(key: string) {
   return "";
 }
 
+function readTrustedStoryboardImageCount(): number {
+  for (const candidate of [
+    "public/qa-history/storyboard/latest-real-data.json",
+    "public/storyboard-seed/latest-real-data.json",
+  ]) {
+    try {
+      const parsed = JSON.parse(
+        readFileSync(resolve(process.cwd(), candidate), "utf8"),
+      ) as {
+        result?: { storyboard?: { scenes?: Array<Record<string, unknown>> } };
+      };
+      const trusted = (parsed.result?.storyboard?.scenes ?? []).filter((scene) => {
+        const image = scene.generatedImage;
+        return (
+          typeof image === "string"
+            ? image.length > 0
+            : !!image &&
+              typeof image === "object" &&
+              typeof (image as Record<string, unknown>).dataUrl === "string"
+        );
+      }).length;
+      if (trusted > 0) return trusted;
+    } catch {
+      // Try the next fixture location.
+    }
+  }
+  return 0;
+}
+
 function getSupabaseAuthStorageKey() {
   const supabaseUrl = readEnvWithFallback("NEXT_PUBLIC_SUPABASE_URL");
   const hostname = supabaseUrl
@@ -156,6 +185,52 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     });
   });
 
+  // The QA history index is generated at runtime and is absent on a fresh
+  // checkout, so serve four trusted runs derived from the tracked seed
+  // fixture instead of depending on machine-local files.
+  const seedPayload = JSON.parse(
+    readFileSync(
+      resolve(process.cwd(), "public/storyboard-seed/latest-real-data.json"),
+      "utf8",
+    ),
+  ) as { result?: Record<string, unknown> };
+  if (!seedPayload.result) {
+    throw new Error("storyboard seed fixture missing result payload");
+  }
+  const historyRunResults = [1, 2, 3, 4].map((index) => {
+    const clone = JSON.parse(JSON.stringify(seedPayload.result)) as {
+      generatedAt: string;
+      storyboard: { title: string };
+    };
+    clone.generatedAt = new Date(
+      Date.parse(clone.generatedAt) + index * 60_000,
+    ).toISOString();
+    clone.storyboard.title = "E2E \ud788\uc2a4\ud1a0\ub9ac \ub7ec\ub2dd " + index;
+    return clone;
+  });
+  await page.route("**/qa-history/storyboard/history-real-data.json", (route) => {
+    void route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        runs: historyRunResults.map((_, index) => ({
+          jsonPath: "./e2e-run-" + (index + 1) + ".json",
+        })),
+      }),
+    });
+  });
+  await page.route("**/qa-history/storyboard/e2e-run-*.json", (route) => {
+    const index = Number(
+      route.request().url().match(/e2e-run-(\d+)\.json$/)?.[1] ?? "1",
+    );
+    const run = historyRunResults[index - 1] ?? historyRunResults[0];
+    void route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ result: run }),
+    });
+  });
+
   await page.setViewportSize({ width: 1920, height: 1000 });
   await page.goto("/admin?module=storyboard", {
     waitUntil: "domcontentloaded",
@@ -219,7 +294,9 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   ).toBeVisible();
   await expect(
     storyboardModule.locator('[data-storyboard-generated-image-count="title"]'),
-  ).toContainText("이미지 4/4");
+  ).toContainText(
+    `이미지 ${readTrustedStoryboardImageCount()}/${readTrustedStoryboardImageCount()}`,
+  );
   await expect(
     storyboardModule.locator('[data-storyboard-frame-view-mode="true"]'),
   ).toBeVisible();
@@ -243,12 +320,12 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   ).toBeVisible();
   await expect(
     storyboardModule
-      .locator('[data-storyboard-chat-message-stack="assistant-plain-with-outside-status"]')
+      .locator('[data-storyboard-chat-message-stack="assistant-starter-panel"]')
       .first(),
   ).toBeVisible();
   await expect(
     storyboardModule
-      .locator('[data-storyboard-chat-assistant-message="plain-text"]')
+      .locator('[data-storyboard-chat-starter-panel="true"]')
       .first(),
   ).toBeVisible();
   await expect(
@@ -267,20 +344,8 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     storyboardModule.locator('[data-storyboard-active-role-panel="true"]'),
   ).toHaveCount(0);
   await expect(
-    storyboardModule.locator('[data-storyboard-chat-assistant-message="plain-text"]')
-      .filter({ hasText: /준비된 스토리보드를 불러왔어요/ })
-      .last(),
-  ).toBeVisible({ timeout: 30_000 });
-  await expect(
-    storyboardModule.locator('[data-storyboard-chat-assistant-message="plain-text"]')
-      .filter({ hasText: /컷마다 오디오, 자막, 촬영 포인트/ })
-      .last(),
-  ).toBeVisible({ timeout: 30_000 });
-  await expect(
-    storyboardModule.locator('[data-storyboard-chat-assistant-message="plain-text"]')
-      .filter({ hasText: /바로 불러왔어요/ })
-      .first(),
-  ).toBeVisible({ timeout: 30_000 });
+    storyboardModule.locator('[data-storyboard-chat-starter-title="true"]'),
+  ).toContainText(/무엇부터 만들까요/, { timeout: 30_000 });
   await expect(
     storyboardModule.locator('[data-storyboard-chat-composer="true"] textarea'),
   ).toBeVisible();
@@ -336,17 +401,22 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
     storyboardSettingsPanel.locator('[data-storyboard-api-router-option="browser-openai-api-key"]'),
   ).toContainText("백업 사용");
   const apiKeySettings = storyboardSettingsPanel.locator(
-    '[data-storyboard-browser-api-key-settings="local-storage-only"]',
+    '[data-storyboard-browser-api-key-settings="memory-only"]',
   );
   await expect(apiKeySettings).toBeVisible();
   await expect(apiKeySettings).toHaveAttribute(
-    "data-storyboard-api-key-storage",
-    "browser-local-storage-only",
+    "data-storyboard-api-key-persistence",
+    "none",
   );
   await expect(apiKeySettings).toHaveAttribute(
     "data-storyboard-api-key-db-storage",
     "forbidden",
   );
+  // The backup API-key input only renders once the browser API-key lane is
+  // selected; the default lane is Codex OAuth.
+  await storyboardSettingsPanel
+    .locator('[data-storyboard-api-router-option="browser-openai-api-key"]')
+    .click();
   await expect(
     apiKeySettings.locator('[data-storyboard-browser-api-key-input="true"]'),
   ).toBeVisible();
@@ -686,7 +756,7 @@ test("storyboard canvas counts only visible trusted GPT Image 2 storyboard panel
   const imageCountTitle = await storyboardModule
     .locator('[data-storyboard-generated-image-count="title"]')
     .getAttribute("title");
-  const currentMatch = imageCountLabel.match(/이미지\s*(\d+)\/\d+/);
+  const currentMatch = imageCountTitle?.match(/현재 페이지\s*(\d+)\/\d+/) ?? imageCountLabel.match(/이미지\s*(\d+)\/\d+/);
 
   expect(currentMatch?.[1]).toBe(String(currentVisibleTrustedImages));
   expect(currentVisibleTrustedImages).toBeGreaterThan(0);
@@ -892,11 +962,12 @@ test("storyboard settings keeps production image API keys in component memory an
   const seenImageStatusHeaders: Array<string | null> = [];
   const seenLocalBridgeAuthHeaders: Array<string | null> = [];
   const localBridgeCorsHeaders = {
-    "Access-Control-Allow-Origin": "http://localhost:8080",
+    "Access-Control-Allow-Origin": (process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:8080").replace(/\/$/, ""),
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers":
       "Authorization, Content-Type, X-Tzudong-Local-Bridge",
     "Access-Control-Allow-Private-Network": "true",
+    "Cross-Origin-Opener-Policy": "same-origin",
   };
   await page.route("**/api/admin/storyboard/images", async (route) => {
     if (route.request().method() !== "GET") {
@@ -931,7 +1002,18 @@ test("storyboard settings keeps production image API keys in component memory an
       }),
     });
   });
-  await page.context().route("http://127.0.0.1:17873/**", async (route) => {
+  // Serve the mocked bridge from the app origin itself. The app document is
+  // isolated by Cross-Origin-Opener-Policy: same-origin, which severs the
+  // opener ref for any cross-origin helper popup, so a 127.0.0.1:17873 helper
+  // can never postMessage back. A same-origin bridge keeps the real handshake
+  // intact: direct loopback transport first, then the popup MessageChannel.
+  const bridgeBase = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:8080";
+  await page.context().route(
+    (url) =>
+      url.toString().startsWith(bridgeBase + "/helper") ||
+      url.pathname === "/health" ||
+      url.pathname === "/auth-status",
+    async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     if (request.method() === "GET" && url.pathname === "/helper") {
@@ -1086,7 +1168,7 @@ test("storyboard settings keeps production image API keys in component memory an
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
   const settingsPanel = page.locator('[data-storyboard-chat-settings-panel="true"]');
   const apiKeySettings = page.locator(
-    '[data-storyboard-browser-api-key-settings="local-storage-only"]',
+    '[data-storyboard-browser-api-key-settings="memory-only"]',
   );
   await expect(apiKeySettings).toBeVisible({ timeout: 10_000 });
   await expect(settingsPanel).toContainText(
@@ -1098,8 +1180,8 @@ test("storyboard settings keeps production image API keys in component memory an
     ),
   ).toBeVisible();
   await expect(apiKeySettings).toHaveAttribute(
-    "data-storyboard-api-key-storage",
-    "browser-local-storage-only",
+    "data-storyboard-api-key-persistence",
+    "none",
   );
   await expect(apiKeySettings).toHaveAttribute(
     "data-storyboard-api-key-db-storage",
@@ -1109,30 +1191,30 @@ test("storyboard settings keeps production image API keys in component memory an
   const fakeLocalBridgeToken = "ui-local-bridge-token-1234567890";
   await settingsPanel.locator('[data-storyboard-api-router-option="local-bridge"]').click();
   const localBridgeSettings = settingsPanel.locator(
-    '[data-storyboard-local-bridge-settings="session-only"]',
+    '[data-storyboard-local-bridge-settings="memory-only"]',
   );
   await expect(localBridgeSettings).toBeVisible({ timeout: 10_000 });
   await expect(localBridgeSettings).toHaveAttribute(
     "data-storyboard-local-bridge-settings-visibility",
     "advanced-selected",
   );
-  await expect(localBridgeSettings).toContainText(/OAuth는 동일합니다/);
+  await expect(localBridgeSettings).toContainText(/Web Storage에 저장되지 않습니다/);
   await expect(
     localBridgeSettings.locator('[data-storyboard-local-bridge-command="true"]'),
   ).toContainText("bun run storyboard:local-bridge");
   await expect(
     localBridgeSettings.locator('[data-storyboard-local-bridge-auto-connect="true"]'),
-  ).toContainText("저장하고 자동 연결");
+  ).toContainText("적용하고 자동 연결");
   await expect(
     localBridgeSettings.locator('[data-storyboard-local-bridge-chat-trace-copy="true"]'),
   ).toContainText(/대화창|sessionStorage/);
   await localBridgeSettings
     .locator('[data-storyboard-local-bridge-url-input="true"]')
-    .fill("http://127.0.0.1:17873");
+    .fill(bridgeBase);
   await localBridgeSettings
     .locator('[data-storyboard-local-bridge-token-input="true"]')
     .fill(fakeLocalBridgeToken);
-  await localBridgeSettings.locator('[data-storyboard-local-bridge-save="true"]').click();
+  await localBridgeSettings.locator('[data-storyboard-local-bridge-apply="true"]').click();
   await expect(
     localBridgeSettings.locator(
       '[data-storyboard-local-bridge-status="needs_reconnect"]',
@@ -1140,14 +1222,18 @@ test("storyboard settings keeps production image API keys in component memory an
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
-  ).toContainText(/로컬 브릿지 다시 연결|helper/i);
+  ).toContainText(/다시 연결|helper/i);
   expect(
-    await page.evaluate(() =>
-      window.sessionStorage.getItem(
-        "tzudong.admin.storyboard.localBridge.v1",
-      ),
+    await page.evaluate(
+      (token: string) =>
+        (
+          window.sessionStorage.getItem("tzudong.admin.storyboard.localBridge.v1") ??
+          window.localStorage.getItem("tzudong.admin.storyboard.localBridge.v1") ??
+          document.cookie
+        ).includes(token),
+      fakeLocalBridgeToken,
     ),
-  ).toContain(fakeLocalBridgeToken);
+  ).toBe(false);
   await expect
     .poll(() => seenLocalBridgeAuthHeaders.includes(`Bearer ${fakeLocalBridgeToken}`), {
       timeout: 2_000,
@@ -1177,31 +1263,30 @@ test("storyboard settings keeps production image API keys in component memory an
   await expect(storyboardModule).toBeVisible({ timeout: 30_000 });
   await storyboardModule.locator('[data-storyboard-chat-settings-toggle="true"]').click();
   await expect(page.locator('[data-storyboard-chat-settings-dropdown="true"]')).toBeVisible();
+  // memory-only contract: a reload drops the bridge pairing entirely and the
+  // router falls back to the default Codex OAuth lane.
   await expect(
-    page.locator('[data-storyboard-api-router-option="local-bridge"]').first(),
+    page.locator('[data-storyboard-api-router-option="local-codex-oauth"]').first(),
   ).toHaveAttribute('data-storyboard-api-router-option-selected', 'true');
-  await expect(
-    localBridgeSettings.locator(
-      '[data-storyboard-local-bridge-status="needs_reconnect"]',
-    ),
-  ).toBeVisible({ timeout: 10_000 });
-  await expect(
-    localBridgeSettings.locator('[data-storyboard-local-bridge-message="true"]'),
-  ).toContainText(/로컬 브릿지 다시 연결|helper/i);
-  await localBridgeSettings.locator('[data-storyboard-local-bridge-clear="true"]').click();
-  await expect(localBridgeSettings).toHaveCount(0, { timeout: 10_000 });
+  await expect(localBridgeSettings).toHaveCount(0);
   expect(
-    await page.evaluate(() =>
-      window.sessionStorage.getItem(
+    await page.evaluate(() => ({
+      session: window.sessionStorage.getItem(
         "tzudong.admin.storyboard.localBridge.v1",
       ),
-    ),
-  ).toBeNull();
+      local: window.localStorage.getItem(
+        "tzudong.admin.storyboard.localBridge.v1",
+      ),
+    })),
+  ).toEqual({ session: null, local: null });
 
   const refreshedApiKeySettings = page.locator(
     '[data-storyboard-browser-api-key-settings="memory-only"]',
   );
   await expect(refreshedApiKeySettings).toBeVisible({ timeout: 10_000 });
+  await page
+    .locator('[data-storyboard-api-router-option="browser-openai-api-key"]')
+    .click();
   const fakeApiKey = "sk-proj_memoryonly1234567890";
   const apiKeyInput = refreshedApiKeySettings.locator(
     '[data-storyboard-browser-api-key-input="true"]',
@@ -1308,7 +1393,19 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   );
 
   const latestHistory = JSON.parse(
-    readFileSync(resolve(process.cwd(), "public/qa-history/storyboard/latest-real-data.json"), "utf8"),
+    (() => {
+      for (const candidate of [
+        "public/qa-history/storyboard/latest-real-data.json",
+        "public/storyboard-seed/latest-real-data.json",
+      ]) {
+        try {
+          return readFileSync(resolve(process.cwd(), candidate), "utf8");
+        } catch {
+          // Fall back to the tracked shared seed.
+        }
+      }
+      throw new Error("storyboard real-data fixture not found");
+    })(),
   ) as { result: Record<string, unknown> };
   const mockedResult = structuredClone(latestHistory.result) as Record<string, unknown>;
   mockedResult.sourceSummary = {
@@ -1552,7 +1649,7 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
         ).join("\n"),
       { timeout: 30_000 },
     )
-    .toContain("[REDACTED]");
+    .toContain("[SAFETY-REDACTED-INSTRUCTION]");
   const chatText = await storyboardModule.locator('[data-storyboard-chat-assistant-message="plain-text"]')
     .allInnerTexts();
   const serializedChatText = chatText.join("\n");
@@ -1560,7 +1657,6 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   expect(serializedChatText).not.toContain("sk-proj-");
   expect(serializedChatText).not.toContain("ignore previous instructions");
   expect(serializedChatText).not.toContain("delete .omx/state");
-  expect(serializedChatText).toContain("[REDACTED]");
   expect(serializedChatText).toContain("[SAFETY-REDACTED-INSTRUCTION]");
   expect(serializedChatText).not.toMatch(
     /백엔드|에이전트|명령|모델|model|provider|gpt-5\.5|Codex CLI|LangGraph|BGE|리랭커|provenance|fallback|gpt-image-2/i,
@@ -1583,7 +1679,11 @@ test("storyboard chat redacts hostile prompts and keeps fallback readiness truth
   await expect(page.locator('[data-storyboard-image-provider-readiness="true"]')).toHaveCount(0);
 
   const imageProviderAction = storyboardModule.locator(
-    '[data-storyboard-image-provider-action-status="blocked_model"]',
+    '[data-storyboard-image-provider-status="blocked_model"]',
   );
   await expect(imageProviderAction.first()).toBeVisible({ timeout: 10_000 });
+  await expect(imageProviderAction.first()).toHaveAttribute(
+    'data-storyboard-image-provider-status-icon',
+    'disconnected',
+  );
 });

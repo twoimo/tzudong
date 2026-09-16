@@ -8675,12 +8675,28 @@ export function AdminStoryboardGenerator({
                         data-storyboard-browser-api-key-secret-storage="uncontrolled-ref"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <Label
-                            htmlFor="storyboard-browser-openai-api-key"
-                            className="text-[11px] font-semibold"
-                          >
-                            API Key 백업
-                          </Label>
+                          <div className="flex items-center gap-1.5">
+                            <Label
+                              htmlFor="storyboard-browser-openai-api-key"
+                              className="text-[11px] font-semibold"
+                            >
+                              API Key 백업
+                            </Label>
+                            {storyboardImageRouteChoice !== "browser-openai-api-key" ? (
+                              <span
+                                className="text-[10px] text-muted-foreground"
+                                data-storyboard-browser-api-key-status={
+                                  isStoryboardBrowserOpenAIApiKeyApplied
+                                    ? "memory-active"
+                                    : "empty"
+                                }
+                              >
+                                {isStoryboardBrowserOpenAIApiKeyApplied
+                                  ? `이 탭 사용 중 · ${maskedStoryboardBrowserOpenAIApiKey}`
+                                  : "적용된 키 없음"}
+                              </span>
+                            ) : null}
+                          </div>
                           <button
                             type="button"
                             className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition motion-reduce:transition-none ${

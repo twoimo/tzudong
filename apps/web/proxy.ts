@@ -112,7 +112,7 @@ function isE2EAdminThumbnailApiBypassRequest(request: NextRequest) {
     const requestToken = request.headers.get(E2E_ADMIN_ROUTE_BYPASS_TOKEN_HEADER)?.trim()
 
     return (
-        normalizedPathname.startsWith('/api/admin/youtube-thumbnail-generator') &&
+        DEV_ADMIN_BYPASS_API_PREFIXES.some((prefix) => normalizedPathname.startsWith(prefix)) &&
         isLocalPlaywrightRequestUrlHost(hostname) &&
         isLocalPlaywrightHostHeader(request.headers.get('host'), { required: true }) &&
         isLocalPlaywrightHostHeader(request.headers.get('x-forwarded-host')) &&
