@@ -659,7 +659,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
   return (
     <>
-      {isMobileOrTablet && (
+      {isMobileOrTablet && !isAdminRedirect && (
         <BottomSheet
           isOpen={isOpen}
           onClose={onClose}
@@ -907,7 +907,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         </BottomSheet>
       )}
 
-      {!isMobileOrTablet && (
+      {(!isMobileOrTablet || isAdminRedirect) && (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
           <DialogHeader className="space-y-2">

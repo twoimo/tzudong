@@ -1201,12 +1201,43 @@ function hasLocalE2EAdminShellBypass() {
   if (!isLocalE2EAdminShellBypassHost(window.location.hostname)) return false;
 
   try {
-    return (
+    if (
+      typeof window.localStorage !== "undefined" &&
       window.localStorage.getItem(E2E_ADMIN_SHELL_BYPASS_STORAGE_KEY) === "1"
-    );
+    ) {
+      return true;
+    }
   } catch {
-    return false;
+    // Continue to cookie and query param fallbacks
   }
+
+  try {
+    if (
+      typeof document !== "undefined" &&
+      (document.cookie.includes("tzudong-dev-admin-bypass") ||
+       document.cookie.includes("tzudong_admin_shell=1"))
+    ) {
+      return true;
+    }
+  } catch {
+    // Continue
+  }
+
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("bypass") === "1" || params.get("e2e") === "1") {
+      try {
+        document.cookie = "tzudong_admin_shell=1; path=/; max-age=86400";
+      } catch {
+        // Ignore
+      }
+      return true;
+    }
+  } catch {
+    // Continue
+  }
+
+  return false;
 }
 
 const adminNumberFormatter = new Intl.NumberFormat("ko-KR");
