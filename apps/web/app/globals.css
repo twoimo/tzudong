@@ -2,6 +2,8 @@
 
 @import "../styles/light-root-tokens.css";
 
+@layer theme, base, app-defaults, components, utilities;
+
 :root {
   --vh: 1vh;
   --full-height: 100vh;
@@ -39,7 +41,20 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  border-color: hsl(var(--border));
+}
+
+/* Universal border-color default. Kept in a layer that sits above preflight
+   (base) but below components/utilities, so bare border/border-t pick up the
+   theme color while explicit border-primary / border-transparent utilities
+   still win (6 Pro review, 2026-09-17). */
+@layer app-defaults {
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
 }
 
 html {
