@@ -240,7 +240,6 @@ export function getRestaurantRegionAddressKeywords(
   const overseasRegion = OVERSEAS_REGIONS[normalizedRegion];
   if (overseasRegion) {
     return uniqueAddressKeywords([
-      overseasRegion.country,
       ...overseasRegion.keywords,
     ]);
   }

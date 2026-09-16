@@ -8,7 +8,11 @@ import { fetchSupabaseRows } from "@/lib/supabase-rest-client";
 import { cn } from "@/lib/utils";
 import { Region, Restaurant } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
-import { buildOverseasCountryAddressOrFilter } from "@/lib/overseas-region-matching";
+import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import {
+    buildOverseasCountryAddressOrFilter,
+    buildOverseasRegionAddressOrFilter,
+} from "@/lib/overseas-region-matching";
 import { buildRestaurantRegionAddressOrFilter } from "@/lib/popular-restaurants";
 
 interface CategoryFilterProps {
@@ -72,7 +76,12 @@ const CategoryFilter = ({
                     params.push(['or', `(${regionFilter})`]);
                 }
             } else if (selectedCountry) {
-                const overseasFilter = buildOverseasCountryAddressOrFilter(selectedCountry, '%');
+                // Region labels like "일본(오사카)" must count only that city's
+                // restaurants, matching the OverseasMap markers and the region
+                // dropdown counts. Country-level selections keep the country filter.
+                const overseasFilter = (selectedCountry in OVERSEAS_REGIONS)
+                    ? buildOverseasRegionAddressOrFilter(selectedCountry, '%')
+                    : buildOverseasCountryAddressOrFilter(selectedCountry, '%');
                 if (overseasFilter) {
                     params.push(['or', `(${overseasFilter})`]);
                 }
