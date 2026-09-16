@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { YouTubeThumbnail } from "@/components/ui/youtube-thumbnail";
+import { extractYouTubeVideoId } from "@/components/stamp/stamp-utils";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,12 +38,6 @@ export function DailyRecommendationPopup() {
     const isHomePage = pathname === '/';
     const shouldShowPopup = isHomePage;
 
-    // YouTube 썸네일 URL 추출 함수
-    const extractYouTubeVideoId = (url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
 
     // 랜덤 음식점 선택 (국내만)
     const selectRandomRestaurant = useCallback(() => {

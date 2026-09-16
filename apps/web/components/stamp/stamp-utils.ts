@@ -72,11 +72,12 @@ export const parseCategory = (categoryData: unknown): string | null => {
     return categories[0] || null;
 };
 
-/** YouTube 비디오 ID 추출 */
+/** YouTube 비디오 ID 추출 (유튜브 호스트 + 11자 ID만 허용) */
 export const extractYouTubeVideoId = (url: string): string | null => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    if (!url) return null;
+    const regExp = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:[^#&]*&)*v=|embed\/|v\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?:[&#?]|$)/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    return match ? match[1] : null;
 };
 
 /** YouTube thumbnail quality ladder: highest-res original first. */
