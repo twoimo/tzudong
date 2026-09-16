@@ -1224,8 +1224,8 @@ function hasLocalE2EAdminShellBypass() {
   }
 
   try {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("bypass") === "1" || params.get("e2e") === "1") {
+    const search = typeof location === "undefined" ? "" : location.search;
+    if (search.includes("bypass=1") || search.includes("e2e=1")) {
       try {
         document.cookie = "tzudong_admin_shell=1; path=/; max-age=86400";
       } catch {

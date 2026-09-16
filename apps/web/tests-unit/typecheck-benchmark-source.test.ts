@@ -14,7 +14,7 @@ const verify = read("scripts/verify-typescript-toolchain.mjs");
 const measure = read("scripts/measure-typecheck.mjs");
 const reportVerifier = read("scripts/verify-typecheck-benchmark-report.mjs");
 const sampler = `${read("scripts/process-tree-rss-sampler.mjs")}\n${read("scripts/process-tree-rss-core.mjs")}`;
-const repositoryGuidance = readFileSync(resolve(root, "..", "..", "AGENTS.md"), "utf8");
+const repositoryGuidance = readFileSync(resolve(root, "..", "..", "docs", "agents", "verification.md"), "utf8");
 
 test("benchmark admits only the declared installer versions and rejects ambiguous versions", () => {
   expect(benchmarkInstallerMatches("bun", "bun/1.4.0 npm/? node/v24.20.0 linux x64")).toBe(true);
