@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
-import Image from "next/image";
+
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
@@ -38,7 +38,8 @@ import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-h
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { REGIONS, extractRegion, parseCategory, getYouTubeFallbackThumbnailUrl, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
+import { REGIONS, extractRegion, parseCategory, extractYouTubeVideoId, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
+import { YouTubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import { StampCard } from "@/components/stamp/StampCard";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import {
@@ -125,8 +126,7 @@ interface RestaurantRowProps {
 
 const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || restaurant.categories);
-    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
-    const fallbackThumbnailUrl = restaurant.youtube_link ? getYouTubeFallbackThumbnailUrl(restaurant.youtube_link) : null;
+    const currentVideoId = restaurant.youtube_link ? extractYouTubeVideoId(restaurant.youtube_link) : null;
     const reviewCount = (restaurant as RestaurantWithVerifiedCount).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
@@ -148,19 +148,14 @@ const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowPr
         >
             <TableCell>
                 <div className="flex items-center gap-3">
-                    {thumbnailUrl && (
+                    {currentVideoId && (
                         <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 relative">
-                            <Image
-                                src={thumbnailUrl}
+                            <YouTubeThumbnail
+                                videoId={currentVideoId}
                                 alt={`${restaurant.name} 썸네일`}
-                                fill
                                 sizes="96px"
                                 className="object-cover"
                                 style={{ objectFit: 'cover' }}
-                                onError={(event) => {
-                                    if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
-                                    event.currentTarget.src = fallbackThumbnailUrl;
-                                }}
                             />
                         </div>
                     )}

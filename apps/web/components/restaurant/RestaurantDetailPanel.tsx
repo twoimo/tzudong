@@ -49,6 +49,7 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
+import { YouTubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
@@ -240,7 +241,7 @@ export function RestaurantDetailPanel({
             if (!videoId || !watchUrl) return [];
 
             return [{
-                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                videoId,
                 watchUrl,
             }];
         }),
@@ -1179,10 +1180,9 @@ export function RestaurantDetailPanel({
                                                 onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
                                                 aria-label={youtubeCopy.openAriaLabel(1)}
                                             >
-                                                <Image
-                                                    src={youtubeVideos[0].thumbnailUrl}
+                                                <YouTubeThumbnail
+                                                    videoId={youtubeVideos[0].videoId}
                                                     alt=""
-                                                    fill
                                                     className="object-cover"
                                                     sizes="(max-width: 400px) 100vw, 400px"
                                                     priority
@@ -1213,10 +1213,9 @@ export function RestaurantDetailPanel({
                                                             onClick={() => openExternalUrl(video.watchUrl)}
                                                             aria-label={youtubeCopy.openAriaLabel(index + 2)}
                                                         >
-                                                            <Image
-                                                                src={video.thumbnailUrl}
+                                                            <YouTubeThumbnail
+                                                                videoId={video.videoId}
                                                                 alt=""
-                                                                fill
                                                                 className="object-cover"
                                                                 sizes="(max-width: 400px) 100vw, 400px"
                                                             />

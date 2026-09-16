@@ -79,14 +79,30 @@ export const extractYouTubeVideoId = (url: string): string | null => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
-/** YouTube 썸네일 URL 생성: 16:9 이미지를 사용해 hqdefault 내장 letterbox를 피합니다. */
-export const getYouTubeThumbnailUrl = (url: string): string | null => {
+/** YouTube thumbnail quality ladder: highest-res original first. */
+export const YOUTUBE_THUMBNAIL_QUALITIES = [
+    "maxresdefault.jpg", // 1280x720 (only some videos)
+    "sddefault.jpg",     // 640x480
+    "hqdefault.jpg",     // 480x360 (always present)
+    "mqdefault.jpg",     // 320x180 (16:9, always present)
+] as const;
+
+const buildYouTubeThumbnailUrl = (url: string, quality: string): string | null => {
     const videoId = extractYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+    return videoId ? `https://img.youtube.com/vi/${videoId}/${quality}` : null;
 };
 
-/** mqdefault가 없는 예외 영상용 fallback */
-export const getYouTubeFallbackThumbnailUrl = (url: string): string | null => {
-    const videoId = extractYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-};
+/** Thumbnail URL starting from the high-res original (maxresdefault). */
+export const getYouTubeThumbnailUrl = (url: string): string | null =>
+    buildYouTubeThumbnailUrl(url, YOUTUBE_THUMBNAIL_QUALITIES[0]);
+
+/** Candidate ladder used when the high-res original is missing. */
+export const getYouTubeThumbnailCandidates = (url: string): string[] =>
+    YOUTUBE_THUMBNAIL_QUALITIES
+        .map((quality) => buildYouTubeThumbnailUrl(url, quality))
+        .filter((u): u is string => Boolean(u));
+
+/** Fallback for videos where every candidate fails (hqdefault). */
+export const getYouTubeFallbackThumbnailUrl = (url: string): string | null =>
+    buildYouTubeThumbnailUrl(url, "hqdefault.jpg");
+

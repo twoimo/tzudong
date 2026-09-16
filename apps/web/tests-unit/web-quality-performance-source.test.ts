@@ -2405,7 +2405,7 @@ describe("web quality performance source contracts", () => {
       'isStampMobile ? "overflow-visible" : "overflow-hidden"',
     );
     expect(stampCardSource).toContain("<img");
-    expect(stampCardSource).toContain('src="/images/stamp-clear.png"');
+    expect(stampCardSource).toContain('src="/images/stamp-clear.webp"');
     expect(stampCardSource).toContain(
       "stampSize?: 'default' | 'compact' | 'mobile'",
     );
@@ -2430,7 +2430,8 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("focus-visible:ring-primary");
     expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
     expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampCardSource).toContain("getYouTubeFallbackThumbnailUrl");
+    expect(stampCardSource).toContain("YouTubeThumbnail");
+    expect(stampCardSource).toContain("extractYouTubeVideoId");
     expect(stampPageSource).toContain("style={{ objectFit: 'cover' }}");
     expect(stampUtilsSource).toContain("mqdefault.jpg");
     expect(stampUtilsSource).toContain("hqdefault.jpg");
