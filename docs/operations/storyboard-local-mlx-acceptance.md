@@ -302,6 +302,16 @@ made no cloud call; once the listener returned, `/health` reported
 `state: ready`, and the port remained loopback-only. The worker loop was running
 from `apps/web` throughout and was not pointed at a different origin.
 
+It then shut down gracefully a second time and stayed down, so it was restored with
+the project's own ops script (`~/.mlx-serve/ops/mlx-serve-ops.sh start --force --wait
+300`): `health OK after 36s (pid 38868)`, model resident, port loopback-only. No
+model was unloaded or swapped.
+
+CI run `35342661258` for the docs-only head `5702f057` completed with **Admin
+passed** and Install passed, and the four npm/Bun jobs again reporting `2090 pass /
+1 fail` (`Ran 2092 tests across 289 files`) with the same single pre-existing
+`typecheck-benchmark-source` failure.
+
 Local: `npm run test:unit` 2090 pass / 1 skip / 1 fail across 289 files, the single
 failure being the pre-existing `typecheck-benchmark-source` case; the Playwright
 storyboard UI contract suite 23 passed; `frontend-unused-route-compatibility`
