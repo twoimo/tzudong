@@ -145,6 +145,15 @@ stayed at one. The swap growth is measured and reported, not explained away.
 
 ### Independent review (D02)
 
+The `codex-chatgpt-web` sub-agent requested for this pass could **not** be used: two
+spawn attempts (`chatgpt-web/high`, then `chatgpt-web/medium`) both returned
+`rate limit exceeded: ChatGPT rate limit: too many requests … ChatGPT remained
+unavailable after several attempts`. That is recorded as an unavailable tool, and the
+local implementation and verification continued without an extra review round. The
+review below is the earlier, separate one and still stands for the commit it names;
+it does not cover `eb5943ed`, whose changes are covered by the tests listed in the
+third-pass section instead.
+
 An independent review was obtained through the Aside browser agent against
 chatgpt.com. The goal's preferred model could not be used: GPT-6 Pro was
 unavailable (`aria-disabled`, reset 2026-09-22), and the reviewer actually used
