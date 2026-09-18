@@ -14,7 +14,13 @@ const verify = read("scripts/verify-typescript-toolchain.mjs");
 const measure = read("scripts/measure-typecheck.mjs");
 const reportVerifier = read("scripts/verify-typecheck-benchmark-report.mjs");
 const sampler = `${read("scripts/process-tree-rss-sampler.mjs")}\n${read("scripts/process-tree-rss-core.mjs")}`;
-const repositoryGuidance = readFileSync(resolve(root, "..", "..", "AGENTS.md"), "utf8");
+// AGENTS.md routes toolchain, release-package and performance work to the verification
+// guide, and that guide owns the benchmark evidence-budget contract that this case pins.
+// Read both so the contract stays enforced wherever the guidance keeps it.
+const repositoryGuidance = [
+  readFileSync(resolve(root, "..", "..", "AGENTS.md"), "utf8"),
+  readFileSync(resolve(root, "..", "..", "docs", "agents", "verification.md"), "utf8"),
+].join("\n");
 
 test("benchmark admits only the declared installer versions and rejects ambiguous versions", () => {
   expect(benchmarkInstallerMatches("bun", "bun/1.4.0 npm/? node/v24.20.0 linux x64")).toBe(true);
