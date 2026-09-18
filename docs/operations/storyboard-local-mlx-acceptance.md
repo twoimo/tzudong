@@ -561,3 +561,25 @@ the geolocation flow itself is missing; it cannot be exercised locally without t
 suite on the same code line is 2090 pass / 1 skip / 1 fail, the single failure being the
 pre-existing `typecheck-benchmark-source` case.
 
+
+### Correction: the production join failure is a hosted migration gap
+
+Earlier notes treated the `탈퇴한 사용자` production failure as something a code deployment would
+fix. Inspecting the deployed commit shows otherwise: `5af1e1f6` (the sha production serves)
+already contains
+`backend/supabase/migrations/20260812000600_local_profile_read_boundary_convergence.sql`, which
+was added by `5af64a05` and is an ancestor of `origin/main`. The deployed client calls
+`read_public_profile_summaries` (2 occurrences) and falls back to `탈퇴한 사용자` (5
+occurrences), while the hosted PostgREST answers 404 `PGRST202` for that function.
+
+So the join defect is a hosted-database migration gap: the repository-side fix is already on the
+deployed line, and the missing piece is applying the reviewed migration to the hosted database and
+reading the RPC back. That is a hosted write with its own approval and evidence requirements under
+`docs/agents/release.md`, and it is the one defect in this list that a production code deployment
+would not resolve on its own.
+
+The remaining UI/UX defects (play badge utilities, cluster marker rendering, filter wiring, button
+clipping, review photos, eyebrow size, review-card border) need the branch promotion described
+above, because the deployed bundles contain none of the marker utilities and no `.bg-black/55` or
+`.ring-1`.
+
