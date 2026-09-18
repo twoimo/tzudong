@@ -379,6 +379,33 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     expect(posts).toBe(1);
   });
 
+  test("surfaces the server's own 409 reason instead of reporting a revision conflict", async ({ page }) => {
+    const current = saved();
+    const posts: Record<string, unknown>[] = [];
+    await page.route(`**${API}/${ID}`, async (route) => {
+      if (route.request().method() === "POST") {
+        posts.push(route.request().postDataJSON());
+        return fulfill(route, { ok: false, error: "nothing_to_retry" }, 409);
+      }
+      await fulfill(route, current);
+    });
+    await open(page, ID);
+    await page.getByRole("button", { name: "재시도", exact: true }).click();
+    await expect(page.getByText("다시 생성할 장면이 없습니다. 모든 장면의 이미지가 이미 저장되어 있습니다.")).toBeVisible();
+    await expect(page.getByText("다른 편집 또는 생성으로 장면이 변경되었습니다.", { exact: false })).toHaveCount(0);
+    expect(posts).toHaveLength(1);
+  });
+
+  test("disables retry once every stored scene already has an image", async ({ page }) => {
+    const current = saved();
+    current.project.status = "cancelled";
+    current.project.document.scenes = current.project.document.scenes.map((scene, index) => ({
+      ...scene, image: { ...asset(), id: `10000000-0000-4000-8000-00000000001${index}` } }));
+    await page.route(`**${API}/${ID}`, (route) => fulfill(route, current));
+    await open(page, ID);
+    await expect(page.getByRole("button", { name: "재시도", exact: true })).toBeDisabled();
+  });
+
   test("sends retry, cancel, and per-scene regeneration with server revisions and explicit UUIDs", async ({ page }) => {
     const current = saved(); current.project.status = "failed";
     const posts: Record<string, unknown>[] = [];

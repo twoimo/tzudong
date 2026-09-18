@@ -20,9 +20,10 @@ import {
   type StoryboardProductionDocument,
   type StoryboardProvider,
 } from "@/lib/admin/storyboard/production-contract";
+import { ADMIN_STORYBOARD_PROJECT_QUERY } from "@/lib/admin/admin-module-routing";
 
 const API = "/api/admin/storyboard/production";
-const PROJECT_QUERY = "storyboardProject";
+const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
 const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
@@ -110,7 +111,7 @@ async function response(url: string, signal: AbortSignal, init?: RequestInit): P
     const body = record(await result.json().catch(() => null));
     const code = body.errorCode ?? body.code ?? (typeof body.error === "string" ? body.error : record(body.error).code);
     if (result.status === 401 || result.status === 403) throw new UiError("unauthorized");
-    if (result.status === 409) throw new UiError("revision_conflict");
+    if (result.status === 409) throw new UiError(typeof code === "string" && Object.hasOwn(STORYBOARD_PRODUCTION_MESSAGES, code) ? code : "revision_conflict");
     if (result.status === 404) throw new UiError("unavailable");
     throw new UiError(typeof code === "string" ? code : "request_failed");
   }
@@ -425,6 +426,9 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const locked = busy || active || needsReadback || !!readError;
   const providers = view ? [view.project.request.providers.text, view.project.request.providers.image] : [];
   const generationBlocked = providers.some((provider) => isOfficial(provider.id) || (!externalAI && !isLocal(provider.id)));
+  // The server refuses a retry once every scene has a stored image (nothing_to_retry).
+  const scenesComplete = !!view?.project.document
+    && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
 
   useEffect(() => {
     const pending = editReturnFocus.current;
@@ -549,7 +553,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
           <button type="button" className={buttonClass} disabled={busy || !view.job || !active || needsReadback || !!readError}
             onClick={() => { if (view.job) void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id }); }}>작업 취소</button>
           <button type="button" className={buttonClass}
-            disabled={locked || generationBlocked || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
+            disabled={locked || generationBlocked || scenesComplete
+              || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
             onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>
           <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>파일 포함 JSON 내보내기</button>
         </div>
