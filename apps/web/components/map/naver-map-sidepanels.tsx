@@ -22,12 +22,17 @@ type ReviewModalProps = {
 };
 
 const loadRestaurantDetailPanel = async () => {
-    const mod = await import('@/components/restaurant/RestaurantDetailPanel');
+    // Route the lazy import through the deferred-panel barrel so the panel's
+    // dedicated Tailwind entry (app/home-detail-globals.css) is loaded with it.
+    // Importing @/components/restaurant/RestaurantDetailPanel directly drops that
+    // stylesheet on the home route, which silently removes restaurant/review-only
+    // utilities (top-2, bg-black/70, ring-1, ...) and blanks the video play badge.
+    const mod = await import('@/components/map/map-view-deferred-panels');
     return mod.RestaurantDetailPanel as ComponentType<RestaurantDetailPanelProps>;
 };
 
 const loadReviewModal = async () => {
-    const mod = await import('@/components/reviews/ReviewModal');
+    const mod = await import('@/components/map/map-view-deferred-panels');
     return mod.ReviewModal as ComponentType<ReviewModalProps>;
 };
 

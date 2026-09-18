@@ -31,7 +31,9 @@ import {
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
 const OverseasMap = lazy(() => import("@/components/map/OverseasMap"));
 const RestaurantDetailPanel = lazy(() =>
-    import("@/components/restaurant/RestaurantDetailPanel").then((mod) => ({
+    // Load through the deferred-panel barrel so app/home-detail-globals.css
+    // (the Tailwind entry that owns restaurant/review utilities) ships with it.
+    import("@/components/map/map-view-deferred-panels").then((mod) => ({
         default: mod.RestaurantDetailPanel,
     }))
 );

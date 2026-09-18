@@ -236,12 +236,14 @@ BEGIN
       'avatars',
       'profile-avatars',
       'review-photos',
+      'storyboard-private',
       'youtube-thumbnail-releases'
     ]::text[])
-  ) OR (SELECT count(*) FROM storage.buckets) NOT IN (4, 5)
+  ) OR (SELECT count(*) FROM storage.buckets) NOT IN (4, 5, 6)
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'ad-banner-images')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'profile-avatars')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'review-photos')
+     OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'storyboard-private')
      OR NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'youtube-thumbnail-releases') THEN
     RAISE EXCEPTION 'local_seed_unexpected_storage_bucket';
   END IF;

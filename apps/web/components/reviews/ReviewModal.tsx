@@ -10,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
+import {
+    buildReviewPhotoObjectPath,
+    normalizeReviewPhotoFilename,
+} from "@/lib/review-photo-url";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { MOBILE_FULL_FORM_SHEET, mobileSheetStyles } from "@/components/ui/mobile-sheet-frame";
 import { useImmediateMobileOrTablet } from "@/hooks/useDeviceType";
@@ -1280,8 +1284,20 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 ...foodPhotos.map((photo: File) => compressFoodImage(photo))  // 스토리지 최적화 WebP
             ]);
 
-            // 2. 인증 사진 업로드
-            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${preparedVerificationPhoto.name}`;
+            // 2. 사진 객체 키는 소유자·리뷰·용도에 결합된 canonical 레이아웃만 사용한다.
+            //    리뷰 id를 먼저 확정해 업로드 경로와 저장 행이 같은 값을 쓰도록 한다.
+            const reviewId = crypto.randomUUID();
+            const uploadTimestamp = Date.now();
+            const verificationPhotoPath = buildReviewPhotoObjectPath(
+                { ownerId: user.id, reviewId, purpose: 'verification' },
+                `${uploadTimestamp}_verification_${
+                    normalizeReviewPhotoFilename(preparedVerificationPhoto.name, '.jpg') ?? 'receipt.jpg'
+                }`,
+            );
+            if (!verificationPhotoPath) {
+                throw new Error('REVIEW_VERIFICATION_UPLOAD_FAILED');
+            }
+
             const { error: verificationUploadError } = await supabase.storage
                 .from('review-photos')
                 .upload(verificationPhotoPath, preparedVerificationPhoto, {
@@ -1294,9 +1310,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
 
             // 3. 음식 사진 병렬 업로드 (성능 최적화)
-            const uploadTimestamp = Date.now();
             const foodPhotoUploadPromises = compressedFoodPhotos.map(async (compressedPhoto, i) => {
-                const photoPath = `${user.id}/${uploadTimestamp}_food_${i}_${compressedPhoto.name}`;
+                const photoPath = buildReviewPhotoObjectPath(
+                    { ownerId: user.id, reviewId, purpose: 'food' },
+                    `${uploadTimestamp}_food_${i}_${
+                        normalizeReviewPhotoFilename(compressedPhoto.name) ?? 'food.webp'
+                    }`,
+                );
+                if (!photoPath) {
+                    throw new Error('REVIEW_PHOTO_UPLOAD_FAILED');
+                }
+
                 const { error: foodUploadError } = await supabase.storage
                     .from('review-photos')
                     .upload(photoPath, compressedPhoto, {
@@ -1343,6 +1367,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             const { error: insertError } = await supabase
                 .from('reviews')
                 .insert({
+                    id: reviewId,
                     user_id: user.id,
                     restaurant_id: targetRestaurant.id,
                     title: `${targetRestaurant.name} 방문 후기`,
