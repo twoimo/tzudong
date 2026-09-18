@@ -614,3 +614,33 @@ errors. That confirms the defect is live on the deployed commit and that the cli
 (`readPublicProfileSummaries(supabase, userIds).catch(() => [])`) silently degrades every reviewer
 to the deleted-account label.
 
+
+### Hosted migration boundary: everything after 2026-08-01 needs a new closure
+
+`.github/g034-hosted-migration-closure.v1.json` is the authoritative record of what hosted has
+received. It lists 29 migrations (first `20260627080000_storyboard_custom_gpt_rag_documents`, last
+`20260801000300_g016_onboarding_allowlist_freshness`) with
+`closureTerminalVersion = 20260801000300`, `ledgerTerminalVersion = 20260531084516`,
+`requiredLaterPromotionGate = 20260713002500_g014_catalog_contract.sql`, and nine deliberately
+`excludedVersions`.
+
+So hosted's applied ledger effectively ends at **2026-08-01**. Every migration dated after that is
+outside the closure and therefore absent from production, including:
+
+- `20260804000100..0500` (g041 privacy/audit/auth boundary repairs)
+- `20260812000100..000700` (the `*_local_*` convergence set, containing
+  `read_public_profile_summaries` and `read_public_profile_leaderboard`)
+- `20260918021531_storyboard_mlx_worker.sql` from this branch
+
+That explains the production join defect mechanically (the RPC was never in the hosted ledger), and
+it also means the local MLX storyboard worker migration from this branch cannot reach hosted by
+merging the branch alone. Landing either one requires a **new hosted migration closure/promotion
+package** of the kind `g034`/`g038` produced — pinned source hashes, predecessor ledger root,
+terminal-state readback, clone/backup recovery evidence and a promotion gate — not a routine file
+change. `apps/web/scripts/apply-supabase-migration.mjs` only accepts the three ids bound to the
+SHA-pinned manifest, and rejects anything else with `MIGRATION_MANIFEST_DIGEST_INVALID`.
+
+The release-manifest change therefore is not a one-line edit; it is the deliverable that the
+remaining production work depends on, and it needs the hosted readback and recovery evidence that
+only the credentialed release path can produce.
+
