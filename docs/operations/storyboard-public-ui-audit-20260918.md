@@ -93,4 +93,17 @@ The `탈퇴한 사용자` join defect has a confirmed root cause. The deployed b
 
 No commit was pushed, no pull request was opened, no deployment was triggered, no hosted migration was applied and no production data was written in this pass.
 
+### Form-control font size follow-up (local)
+
+The global-CSS `@layer` fix removed the unlayered `font: inherit` reset, but the
+shared Input still carried `text-base … md:text-sm`, so a 768 px class device
+rendered the search field at **14 px** and mobile Safari would zoom on focus.
+Measured with `probe-form-font.mjs` before → after the `lg:text-sm` change:
+mobile 390 16 px → 16 px, tablet 768 14 px → 16 px, laptop 1024 14 px → 14 px,
+desktop 1440 14 px → 14 px (`form-font-after-report.json`). The shared Input is
+the only input on the probed public routes; `/feed`, `/submissions`,
+`/mypage/reviews`, `/stamp`, `/leaderboard` and `/privacy` expose none. One
+further `text-base … md:text-sm` pair remains at
+`apps/web/app/mypage/reviews/page.tsx:415` and was left unchanged.
+
 Continuation is still in progress: remaining safe navigation/visual checks, evidence-link validation and browser cleanup will be recorded before final delivery.

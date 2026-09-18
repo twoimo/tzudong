@@ -82,10 +82,82 @@ Passing unit tests are not hosted proof.
 | D01 | Passed (local) | `storyboard-tests.log` 277 pass / 8 skip / 0 fail across 24 storyboard unit files; `affected.log` 58 pass / 0 fail across 9 files; `lint-typecheck.log` ESLint exit 0 and typecheck parity passed. The backend Supabase suite runs 1496 tests with zero regressions against baseline `67df460d`. |
 | D03 | Partially passed (local) | Feature-sized commits on `codex/storyboard-local-mlx-20260918`, each preceded by its relevant tests. Nothing is deployed; production still serves `5af1e1f6`. |
 
-Still unverified this pass: L01 and L05 contract probes, L10's full browser run at
-all three viewports, Q03/Q04 outbound worker and offline-worker scenarios,
-P01–P03 provider boundaries, U01–U05 public UI coverage, and the hosted
-requirement behind D03. None of these may be reported as complete.
+Still unverified this pass: L10's full browser run at all three viewports,
+Q03/Q04 outbound worker and offline-worker scenarios, P01–P03 provider
+boundaries, U01–U05 public UI coverage, and the hosted requirement behind D03.
+None of these may be reported as complete. L01's server version, health and
+models contracts and L05's dependency-failure path are covered in the second
+pass below; L05 still leaves local retrieval quality unverified while the BGE
+dependency is absent.
+
+## Second pass — local-only egress proof and delegated-route contracts (2026-09-18)
+
+Branch head at this pass: `9a10de87633c575e52e4038a70eede42c69c2db2`, pushed to
+`origin/codex/storyboard-local-mlx-20260918`. PR #2909 targets `main` and is
+still `mergeStateStatus: BLOCKED`. Nothing in this pass is deployed.
+
+### Fresh local-only end-to-end run with process-tree egress sampling
+
+`egress-proof3-run.log` and `run3-project.json` record one complete storyboard
+built by the local models while `egress-sampler.py` watched the MLX server, the
+outbound worker and the Next dev server **and their full child trees**. The
+sampler seeds the PID listening on 11234 via `lsof`, the worker and the dev
+server, then walks `ps -axo pid=,ppid=,comm=` so a model helper process cannot
+hide traffic.
+
+| Stage | Evidence |
+| --- | --- |
+| create | project `9a1ba913-7d8f-4feb-9b4c-8e8fe64d87c5`, `sceneCount: 5`, `externalAI: false`, text `local-mlx` / `ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit`, image `local-mlx` / `ddalcu/Krea-2-Turbo-MLX-Serve-mixed-4-8`, `retrieval: none` |
+| text | claimed 10:18:26Z, `claimed/images` 10:19:20Z → 54 s for the structured document |
+| images | five scenes at ~21 s each, `ready` / `succeeded` / `complete` at 10:21:11Z, revision 6, `attempts: 1` |
+| document | every scene carries `title`, `description`, `visualDirection`, `narration`, `caption`, `productionNotes`, `imagePrompt` and `revision: 1` |
+| provenance | per scene `providerId: local-mlx`, `model: ddalcu/Krea-2-Turbo-MLX-Serve-mixed-4-8`, `verification: local-worker`, `generatedAt`, `requestId`, `modelEvidence: installed-catalog-and-request`; `responseId` and `responseModel` stay `null` instead of being invented |
+| assets | 1024×576 PNG originals (756 KB–1.17 MB), each with three WebP derivatives at 480/960/1024 and per-file SHA-256 |
+
+`egress-proof3-verdict.txt`: 145 samples, 673 endpoint lines, 64 distinct pairs,
+every remote host `127.0.0.1`, `non_loopback=0`, `VERDICT=PASS`. The window
+19:18:20–19:21:20 KST covers the entire text and image phases.
+
+Two earlier sampled runs are kept as the honest failures. `egress-proof1.log`
+used the same sampler and also reported `non_loopback=0`, but the job failed
+with `model_timeout` because the 300 s MLX request timeout elapsed while the host
+was loaded. `egress-proof2-run.log` failed with `local_model_unavailable`
+because the MLX listener was down at that moment. Both are host-state symptoms,
+not contract changes.
+
+Memory measured during the successful pass: both models resident —
+75,303,252,216 B for the text model and 15,817,951,221 B for
+`ddalcu/Krea-2-Turbo-MLX-Serve-mixed-4-8`, ≈ 91.1 GB together. `vm.swapusage`
+moved from the 1277.81 MiB baseline to 4465.06 MiB used. Image concurrency
+stayed at one. The swap growth is measured and reported, not explained away.
+
+### New tests and contract repairs in this pass
+
+| Item | Result |
+| --- | --- |
+| `apps/web/tests-unit/storyboard-local-egress.test.ts` (new) | 5 pass / 0 fail: loopback literal with every proxy variable set upper and lower case, zero proxy connections, a `globalThis.fetch` spy that must never run, `external_ai_disabled` before any socket for `openai-api`/`xai-api`/`chatgpt-manual`/`grok-manual`, consent that cannot convert the local adapter into a cloud client, and `bge_dependency_unavailable` with zero requests |
+| `backend/supabase/tests/storyboard_mlx_worker_integration.py` | 12 tests OK against the network-less `supabase/postgres:15.8.1.085` container (`dbtest3.log`): fresh install declares the storyboard catalog exactly once, the `storyboard-private` bucket is private with **zero** `storage.objects` policies and service_role-only reads, and a blind re-apply fails closed without schema drift |
+| `apps/web/tests-unit/admin-route-auth-contract.test.ts` | accepts the five production routes that delegate to `lib/admin/storyboard/production-api.ts` and asserts each delegated member is declared behind `admin(request` |
+| `apps/web/tests-unit/lazy-map-boundaries.test.ts` | asserts the deferred barrel `components/map/map-view-deferred-panels.tsx`, its `app/home-detail-globals.css` import and that neither panel is imported statically |
+| `local-supabase-runtime.test.ts`, `nightly-regression-workflow.test.ts` | align the local ledger and nightly publication expectations with the 97-unit migration |
+| `apps/web/components/ui/input.tsx` | the shared Input shrinks at `lg` instead of `md`, so a 768 px class device keeps 16 px |
+| affected suite + toolchain | 58 pass / 0 fail across 9 files (`affected.log`); ESLint exit 0 and `typecheck:parity` `diagnostics: 0` (`lint3.log`) |
+
+### Independent review (D02)
+
+An independent review was obtained through the Aside browser agent against
+chatgpt.com. The goal's preferred model could not be used: GPT-6 Pro was
+unavailable (`aria-disabled`, reset 2026-09-22), and the reviewer actually used
+was **GPT-5.6 Sol, slug `gpt-5-6-thinking`** — never reported as Pro or 6 Pro.
+Verbatim transcript: `external-review-1.md`. Verdict: local conditional PASS,
+production deployment HOLD. Its asks — process-tree egress proof including model
+helper processes, blocked-attempt logging, proxy-environment check,
+provider-adapter spy, admin and worker authorization evidence,
+`storyboard-private` **policy** rather than bucket verification, and
+fresh-install/upgrade/idempotency/reset contracts — are addressed by the new unit
+tests, the database integration test and the sampled run above. Its form-control
+font-size ask is measured in the public UI audit, which also records the one
+remaining `md:text-sm` occurrence.
 
 ## Initial runtime observations
 
