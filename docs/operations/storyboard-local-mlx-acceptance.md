@@ -187,3 +187,126 @@ public UI defects; it does not close the whole objective. Production still serve
 `5af1e1f6ac81a483e1e8aed2b05237ca0f62ce6a`, which predates every commit on this
 branch, and the production release remains blocked by the external evidence
 listed in [release.md](../agents/release.md).
+
+## Third pass — browser-driven local run, export, worker-offline and public UI (2026-09-18)
+
+Branch head at this pass: `eb5943ed` (`fix(web): surface server 409 reasons, guard
+retry, and keep the selected storyboard project`), pushed to
+`origin/codex/storyboard-local-mlx-20260918`. Local rendered behaviour only; no
+deployment, no hosted migration, no production write. Evidence root:
+`/tmp/tz-e2e/browser-e2e/` (`*.log`, `*-report.json`, `*.png`) beside
+`export-fresh.json`; the earlier artifacts remain under
+[storyboard-local-mlx-20260918](../../apps/web/.omx/artifacts/storyboard-local-mlx-20260918/).
+
+### Complete local browser run on the real models (project `a4e99052-bfec-4129-a382-a5b97dafd714`)
+
+Driven through the admin UI with a real admin cookie (`storageState`), the real
+outbound worker and the live MLX server on `127.0.0.1:11234`; external AI off.
+
+| Step | Result |
+| --- | --- |
+| Fresh generation | five scenes / five images ready in **176.2 s**; text provenance `로컬 워커 · ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit`; providers line `텍스트: 로컬 MLX · 이미지: 로컬 MLX`; 0 broken images |
+| Scene edit | scene 1 edited through the UI, saved and persisted |
+| Single-scene regeneration | **119.6 s**; scene-2 asset `3e96a69d-316` → `0483d2cd-275`, the other four assets byte-identical; revision 11 → 13; 5/5 images loaded |
+| Cancel | job `cancelled`/`generation_cancelled`, project revision 11, message "생성이 취소되었습니다. 저장된 장면은 유지됩니다." |
+| Reload restore | after the fix below, the URL keeps `storyboardProject=…` and the same 5 scenes, 5 images and identical asset ids are restored (`after reload … "scenes":"저장된 장면 5개 · 이미지 5개"`) |
+| Export | UI `파일 포함 JSON 내보내기` download `storyboard-a4e99052-….json`, 7,020,395 B, **SHA-256 identical to the server export endpoint**; schema `storyboard-export-v1`; 20 files, every base64 payload matching its recorded SHA-256; MIME set `image/png` + `image/webp`; exported document deep-equal to the stored document; no scene original path missing from `files` |
+| Viewport sweep | workspace at 390×844, 768×1024 and 1440×900 (light and dark) with `scrollW == clientW` and no broken images |
+| Browser egress | `nonLoopback = 0` for every browser step; no page errors |
+
+### Defects found by the browser pass and fixed
+
+1. **Every 409 collapsed to `revision_conflict`.** Live `POST
+   …/production/<id> {"action":"retry"}` at a `cancelled` revision answered
+   `409 {"ok":false,"error":"nothing_to_retry"}` (the migration guard at
+   `backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql`), while
+   the UI reported "다른 편집 또는 생성으로 장면이 변경되었습니다." The client now
+   surfaces the server's own code when it has a Korean message, adds
+   `nothing_to_retry`/`project_busy`/`request_conflict` messages, and disables the
+   retry button once every stored scene already has an image. The migration guard
+   itself is unchanged.
+2. **Reload dropped the selected project.** `storyboardProject` was absent from
+   `buildCanonicalAdminHrefFromSearchParams`'s `preserveKeys`, so a reload
+   collapsed the URL to `/admin?module=storyboard` and the workspace asked for a
+   project. The key is now shared as `ADMIN_STORYBOARD_PROJECT_QUERY` and
+   preserved.
+
+Both fixes are covered by new tests: `tests/local-storyboard-workspace-ui.spec.ts`
+("surfaces the server's own 409 reason…", "disables retry once every stored scene
+already has an image") and two assertions in
+`tests-unit/frontend-unused-route-compatibility.test.ts`.
+
+### Worker-offline behaviour (Q04) and worker exposure (Q03)
+
+With the Mac worker stopped and past the 120 s heartbeat window, the real admin
+UI reported one `· 오프라인` worker row and zero online rows, still listed the
+installed models from the last heartbeat, kept `외부 AI 사용 허용` unchecked, and
+offered only 로컬 MLX and 수동 가져오기 (the OpenAI/xAI API entries stay disabled as
+"설정 전 사용 불가"). Creating a request then showed `로컬 워커 대기` with `텍스트:
+로컬 MLX · 이미지: 로컬 MLX`, `재시도` disabled and `작업 취소` enabled; cancelling moved
+it to `취소됨` with "서버에 변경 사항을 저장했습니다." No non-loopback browser
+request occurred. The worker was restarted immediately afterwards.
+
+`lsof` confirms the inference port is loopback-only: `mlx-serve … TCP
+127.0.0.1:11234 (LISTEN)`, and the dev server likewise `TCP 127.0.0.1:8080`.
+
+### Public UI pass (U01–U05) and one non-reproduced observation
+
+26 route/viewport combinations (`/`, `/global-map`, `/feed`, `/stamp`,
+`/leaderboard`, `/privacy`, `/data-deletion`, `/auth/required` at 390×844,
+768×1024, 1440×900, plus light and dark home) all returned HTTP 200 with
+`scrollW == clientW`, 0 broken images, 0 dialogs and no page errors.
+`/stamp` redirects to `/?panel=stamp` on desktop and stays at `/stamp` on mobile,
+matching the recorded inventory. One hydration-mismatch console error appeared on
+that desktop redirect in the sweep and did **not** reproduce in four dedicated
+re-runs (desktop light, desktop dark, mobile, direct `/?panel=stamp`), so it is
+recorded as transient and unexplained rather than as a confirmed defect. The
+sweep's search-field probe used DOM selectors that do not match the canvas-rendered
+map, so its "no markers" counts are not evidence about search results and are
+discarded.
+
+### Provider boundary (P01) and remaining unverified items
+
+xAI primary source `https://docs.x.ai/docs/quickstart` (page footer "Last updated:
+August 18, 2026") fetches at HTTP 200 and documents the official path: an account
+at `console.x.ai` loaded with credits plus an API key; the page never presents a
+subscription OAuth as an API credential. `platform.openai.com/docs` and the
+OpenAI help article answer HTTP 403 ("Just a moment…") to both curl and a real
+Chromium context, and the delegated search tool was rate limited, so the OpenAI
+boundary is not freshly re-verified this pass. Details:
+`p01-provider-boundary-20260918.md`.
+
+Still unverified: the hosted requirement behind D03 (the `탈퇴한 사용자` join fix is a
+hosted migration), production browser acceptance at the three viewports, P01's
+OpenAI half, P02/P03 browser round trips beyond their existing contract tests,
+U03's authenticated account flows, and L05's local retrieval quality while the BGE
+dependency is absent.
+
+### Toolchain and CI at `eb5943ed`
+
+Local: `npm run test:unit` 2090 pass / 1 skip / 1 fail across 289 files, the single
+failure being the pre-existing `typecheck-benchmark-source` case; the Playwright
+storyboard UI contract suite 23 passed; `frontend-unused-route-compatibility`
+7 passed; ESLint exit 0 and `typecheck:parity` `diagnostics: 0`.
+
+CI run `35340032045` (workflow "Storyboard local MLX production worker + home
+map/review fixes", head `eb5943ed`): **Admin passed**, Install passed, and the
+Ubuntu/Windows npm and Bun jobs each report `2090 pass / 1 fail` with only the same
+pre-existing `typecheck-benchmark-source` case. The 20
+`admin-storyboard-local-bridge` `ConnectionRefused` failures seen earlier are gone.
+Pre-existing, not introduced here: `generate` in the Catalog workflow (Docker no
+longer accepts `docker image inspect --platform`), `orchestration-readiness` and the
+two `npm-audit` jobs in Security (`apps/web` sharp/libheif and backend `js-yaml`;
+no package or lock file changes in this branch), `Promotion Path`
+(`PROMOTION_SERIAL_PATH_REQUIRED`, because the branch is based on `main`), and the
+dynamic Code-scanning AI findings check. The Release workflow passed.
+
+### Search, long and adversarial input (U02)
+
+On the desktop home search field locally, an empty or whitespace-only query returns
+the 인기 검색 맛집 list (two fixture entries), and `한추`, a 60-character query,
+`ㅁㄴㅇㄹ`, `@#$%^&*()`, `<img src=x onerror=alert(1)>` and `<script>alert(1)</script>`
+all render the `검색 결과가 없습니다.` empty state with no horizontal overflow, no dialog
+and no injected markup. No positive search hit is verifiable locally because this
+local database holds only two nightly fixtures; the earlier read-only production
+audit verified a real `한추` search hit on `5af1e1f6`.

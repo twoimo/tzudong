@@ -122,3 +122,76 @@ keep the compact 14 px. One further `text-base … md:text-sm` pair remains at
 redirects anonymous visitors to the login gate.
 
 Continuation is still in progress: remaining safe navigation/visual checks, evidence-link validation and browser cleanup will be recorded before final delivery.
+
+## Browser pass continuation (local, branch head `eb5943ed`)
+
+A later pass re-ran the public routes and the admin storyboard workspace with
+local Playwright/Chromium at the three target viewports. Evidence:
+`/tmp/tz-e2e/browser-e2e/public/` (screenshots plus `public-report.json`),
+`location-report.json`, `worker-offline-final.json` and `export-report.json`.
+This is local rendered behaviour and is still **not** production acceptance.
+
+### Route sweep
+
+26 route/viewport combinations returned HTTP 200 with `scrollW == clientW`, 0
+broken images, 0 `role="dialog"` elements and no page errors: `/`, `/global-map`,
+`/feed`, `/stamp`, `/leaderboard`, `/privacy`, `/data-deletion` and
+`/auth/required` at 390×844, 768×1024 and 1440×900, plus light and dark home.
+`/stamp` reaches `/?panel=stamp` on desktop and stays at `/stamp` on mobile,
+matching the recorded inventory. One hydration-mismatch console error appeared on
+the desktop `/stamp` → `/?panel=stamp` transition and did not reproduce in four
+dedicated re-runs (desktop light, desktop dark, mobile, direct `/?panel=stamp`),
+so it is recorded as a transient observation, not a confirmed defect.
+
+The sweep's search probe relied on DOM marker selectors; the map renders through the
+provider canvas, so its zero-marker counts are not evidence about search results and
+are discarded instead of being reported as a search finding.
+
+### Location floating button is fail-closed, not broken
+
+The `현재 위치 보기` button renders and is interactive at 390 and 1440 (one match per
+viewport). With browser geolocation permission already granted to the context, the
+first and second taps do not start a watcher: `GET /api/privacy/location-readiness`
+answers `{"status":"unavailable","reasonCode":"DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED"}`
+and the UI shows "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요."
+The gate is `apps/web/lib/privacy/location-readiness.ts`, which is unchanged from
+`main` (added by `f32e1b19`) and requires `DEVICE_LOCATION_RELEASE_DECISION=approved`
+with a verified external status and four SHA-256 evidence references. Supplying that
+evidence is an operator/legal decision, so the button stays blocked locally and in
+production; no gate value was invented.
+
+### Export reopened without loss
+
+The admin storyboard download equals the server export byte for byte
+(7,020,395 B, SHA-256 `ae6a8894…c093e8cd2e`), carries schema
+`storyboard-export-v1`, 20 files whose base64 payloads all match their recorded
+SHA-256, both `image/png` originals and `image/webp` derivatives, and a document
+deep-equal to the stored document. No scene original path is missing from `files`.
+
+### Two admin workspace defects found and fixed
+
+Both were found by the browser pass and fixed with tests; they are in
+`eb5943ed`, not deployed.
+
+1. Every `409` from the storyboard production endpoint was mapped to
+   `revision_conflict`, so the server's `nothing_to_retry` refusal (a retry when
+   every scene already has a stored image) was reported as a revision conflict. The
+   client now surfaces the server's own reason, the three missing Korean messages
+   were added, and retry is disabled once every stored scene has an image. The
+   underlying migration guard was deliberately left unchanged.
+2. Reloading the admin console dropped the selected project because
+   `storyboardProject` was missing from the canonical-href `preserveKeys`; the URL
+   collapsed to `/admin?module=storyboard` and the workspace rendered
+   "프로젝트 불러오기". The key is now preserved and a reload restores the same five
+   scenes, five images and identical asset ids.
+
+### Worker-offline admin state (Q04)
+
+With the Mac worker stopped past its 120 s heartbeat window the workspace showed one
+`· 오프라인` worker, zero online workers, the last-reported model catalog, and only
+로컬 MLX / 수동 가져오기 as selectable providers while external AI stayed off. A
+created request showed `로컬 워커 대기` with `텍스트: 로컬 MLX · 이미지: 로컬 MLX`,
+`재시도` disabled and `작업 취소` enabled; cancelling produced `취소됨` and
+"서버에 변경 사항을 저장했습니다." No non-loopback browser request occurred, and
+`lsof` shows the inference port is loopback-only (`127.0.0.1:11234`), as is the
+dev server (`127.0.0.1:8080`).
