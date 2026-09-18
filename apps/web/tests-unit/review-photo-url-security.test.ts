@@ -27,6 +27,8 @@ const {
   buildReviewPhotoObjectPath,
   cleanupCanonicalReviewPhotoObjects,
   getCanonicalReviewPhotoObjectPath,
+  getLegacyReviewPhotoObjectPath,
+  normalizeReviewPhotoFilename,
   resolveReviewPhotoUrl,
 } = await import('../lib/review-photo-url.ts?security-contract');
 
@@ -104,6 +106,65 @@ describe('review photo URL trust boundary', () => {
     expect(resolveReviewPhotoUrl(VALID_PATH, '2026-07-13T00:00:00.000Z')).toBeNull();
     expect(resolveReviewPhotoUrl(VALID_PATH, OWNER, 'not-a-date')).toBe(
       `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${VALID_PATH}`,
+    );
+  });
+
+  test('resolves the historical composer layout for the owning user only', () => {
+    const legacyFood = 'owner-123/1789717467000_food_0_1789717467001_k3j9x2m.webp';
+    const legacyVerification = 'owner-123/1789717467000_verification_1789717467001_abc123.jpg';
+
+    expect(getLegacyReviewPhotoObjectPath(legacyFood, OWNER)).toBe(legacyFood);
+    expect(resolveReviewPhotoUrl(legacyFood, OWNER)).toBe(
+      `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${legacyFood}`,
+    );
+    expect(getLegacyReviewPhotoObjectPath(legacyVerification, { ...OWNER, purpose: 'verification' }))
+      .toBe(legacyVerification);
+
+    for (const value of [
+      legacyVerification,
+      'other-owner/1789717467000_food_0_1789717467001_k3j9x2m.webp',
+      'owner-123/review-456/1789717467000_food_0_x.webp',
+      'owner-123/1789717467000_food_0_../x.webp',
+      'owner-123/1789717467000_food_0_x.svg',
+      'owner-123/1789717467000_verification_x.jpg',
+      'owner-123/1789717467000_food_0_%2e%2e.webp',
+      `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${legacyFood}`,
+    ]) {
+      expect(getLegacyReviewPhotoObjectPath(value, OWNER)).toBeNull();
+      expect(resolveReviewPhotoUrl(value, OWNER)).toBeNull();
+    }
+  });
+
+  test('resolves the configured loopback origin instead of requiring https', () => {
+    const previousRuntime = process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME;
+    process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = '1';
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+
+    try {
+      expect(resolveReviewPhotoUrl(VALID_PATH, OWNER)).toBe(
+        `http://127.0.0.1:54321/storage/v1/object/public/review-photos/${VALID_PATH}`,
+      );
+    } finally {
+      delete process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_ORIGIN;
+      if (previousRuntime !== undefined) process.env.NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME = previousRuntime;
+    }
+  });
+
+  test('normalizes browser filenames into the canonical filename grammar', () => {
+    expect(normalizeReviewPhotoFilename('1789717467000_abc123.webp')).toBe('1789717467000_abc123.webp');
+    expect(normalizeReviewPhotoFilename('맛집 사진.jpg')).toBe('photo.jpg');
+    expect(normalizeReviewPhotoFilename('사진')).toBe('photo.webp');
+    expect(normalizeReviewPhotoFilename('capture.HEIC', '.png')).toBe('capture.png');
+    expect(normalizeReviewPhotoFilename('a/b\\c.webp')).toBe('a_b_c.webp');
+    expect(normalizeReviewPhotoFilename('  spaced.webp  ')).toBeNull();
+    expect(normalizeReviewPhotoFilename('', '.webp')).toBeNull();
+    expect(normalizeReviewPhotoFilename('photo.webp', 'not-an-extension')).toBeNull();
+
+    const normalized = normalizeReviewPhotoFilename('맛집 사진.jpg');
+    expect(normalized).not.toBeNull();
+    expect(buildReviewPhotoObjectPath(OWNER, normalized!)).toBe(
+      `${OWNER.ownerId}/reviews/${OWNER.reviewId}/${OWNER.purpose}/${normalized}`,
     );
   });
   test('rejects an arbitrary tracker origin even when the storage client generates that origin', () => {

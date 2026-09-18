@@ -216,7 +216,7 @@ class LocalRuntimeSchemaConvergenceTests(unittest.TestCase):
 
     def test_readback_fails_closed_over_storage_and_realtime_catalogs(self) -> None:
         self.assertIn("policy_count <> 12", self.readback)
-        self.assertIn("bucket_count <> 5", self.readback)
+        self.assertIn("bucket_count <> 6", self.readback)
         self.assertIn("realtime_membership_count <> 4", self.readback)
         self.assertIn("publication_count <> 2", self.readback)
         self.assertIn("publication_row.pubname = 'supabase_realtime'", self.readback)

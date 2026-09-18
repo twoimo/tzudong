@@ -9,6 +9,13 @@ const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const SAFE_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/;
 const SAFE_IMAGE_EXTENSION_PATTERN = /\.(?:avif|jpe?g|png|webp)$/i;
+const MAX_FILENAME_LENGTH = 240;
+// Object keys written by the review composer before this module enforced the
+// canonical layout: "<owner>/<epoch>_food_<index>_<name>.<ext>" and
+// "<owner>/<epoch>_verification_<name>.<ext>". They stay owner- and
+// purpose-bound, but carry no review binding.
+const LEGACY_REVIEW_PHOTO_FILENAME_PATTERN =
+    /^\d{10,16}_(food_\d{1,3}|verification)_[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.(?:avif|jpe?g|png|webp)$/;
 
 export type ReviewPhotoPurpose = 'food' | 'verification';
 
@@ -106,6 +113,71 @@ export function getCanonicalReviewPhotoObjectPaths(
     return [...paths];
 }
 
+/**
+ * Resolves the historical composer layout for display only. The stored value
+ * must still address the requesting owner and the requested purpose, so a
+ * legacy key can never expose another user's object. Cleanup and writes keep
+ * using the canonical layout exclusively.
+ */
+export function getLegacyReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+): string | null {
+    if (
+        typeof value !== 'string' ||
+        !isSafeObjectKey(value) ||
+        !isCanonicalReviewPhotoOwnership(ownership)
+    ) {
+        return null;
+    }
+
+    const segments = value.split('/');
+    if (segments.length !== 2) return null;
+
+    const [ownerId, filename] = segments;
+    const match = LEGACY_REVIEW_PHOTO_FILENAME_PATTERN.exec(filename);
+    if (!match || ownerId !== ownership.ownerId || !isCanonicalIdentifier(ownerId)) {
+        return null;
+    }
+
+    const legacyPurpose = match[1].startsWith('food_') ? 'food' : 'verification';
+    return legacyPurpose === ownership.purpose ? value : null;
+}
+
+/**
+ * Normalizes an uploaded filename into the canonical filename grammar. Uploads
+ * from browsers can carry Korean or otherwise unsafe names, so the extension is
+ * replaced with a known image extension when the original cannot be admitted.
+ */
+export function normalizeReviewPhotoFilename(
+    value: string,
+    fallbackExtension = '.webp',
+): string | null {
+    if (typeof value !== 'string' || value !== value.trim() || !value) return null;
+    if (!/^\.[A-Za-z0-9]{1,8}$/.test(fallbackExtension)) return null;
+
+    const withSafeCharacters = value
+        .normalize('NFKD')
+        .replace(/[^A-Za-z0-9._-]/g, '_')
+        .replace(/_{2,}/g, '_');
+    const separatorIndex = withSafeCharacters.lastIndexOf('.');
+    const stem = (separatorIndex > 0
+        ? withSafeCharacters.slice(0, separatorIndex)
+        : withSafeCharacters
+    ).replace(/^[^A-Za-z0-9]+/, '').slice(0, MAX_FILENAME_LENGTH - fallbackExtension.length);
+    const candidateExtension = separatorIndex > 0
+        ? withSafeCharacters.slice(separatorIndex)
+        : fallbackExtension;
+    const extension = SAFE_IMAGE_EXTENSION_PATTERN.test(candidateExtension)
+        ? candidateExtension.toLowerCase()
+        : fallbackExtension;
+
+    const filename = `${stem || 'photo'}${extension}`;
+    return SAFE_FILENAME_PATTERN.test(filename) && filename.length <= MAX_FILENAME_LENGTH
+        ? filename
+        : null;
+}
+
 export interface ReviewPhotoStorage {
     remove(paths: string[]): Promise<{ error: unknown | null }>;
     list(
@@ -177,7 +249,8 @@ export function resolveReviewPhotoUrl(
     ownership: ReviewPhotoOwnership | string | null | undefined,
     cacheBuster?: string | null,
 ): string | null {
-    const objectPath = getCanonicalReviewPhotoObjectPath(value, ownership);
+    const objectPath = getCanonicalReviewPhotoObjectPath(value, ownership)
+        ?? getLegacyReviewPhotoObjectPath(value, ownership);
     const configuredOrigin = resolveConfiguredSupabaseOrigin();
     if (!objectPath || !configuredOrigin) return null;
 
@@ -192,12 +265,14 @@ export function resolveReviewPhotoUrl(
             .map(encodeURIComponent)
             .join('/')}`;
 
+        // The configured origin is already constrained by
+        // resolveConfiguredSupabaseOrigin (hosted https origin or an explicitly
+        // enabled loopback origin), so it is the authority here instead of a
+        // hard-coded scheme or port.
         if (
-            url.protocol !== 'https:' ||
             url.origin !== configuredOrigin ||
             url.username ||
             url.password ||
-            url.port ||
             url.pathname !== expectedPath ||
             url.search ||
             url.hash

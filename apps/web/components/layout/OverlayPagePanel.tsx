@@ -22,11 +22,13 @@ const LeaderboardContent = dynamic(() => import('@/components/overlay-pages/Lead
     loading: () => null,
 });
 const ReviewModal = dynamic(() =>
-    import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
+    // Via the deferred-panel barrel so app/home-detail-globals.css (owner of the
+    // restaurant/review Tailwind utilities) loads with the panel it styles.
+    import('@/components/map/map-view-deferred-panels').then((mod) => ({ default: mod.ReviewModal })),
     { ssr: false, loading: () => null },
 );
 const RestaurantDetailPanel = dynamic(() =>
-    import('@/components/restaurant/RestaurantDetailPanel').then((mod) => ({ default: mod.RestaurantDetailPanel })),
+    import('@/components/map/map-view-deferred-panels').then((mod) => ({ default: mod.RestaurantDetailPanel })),
     { ssr: false, loading: () => null },
 );
 const UserProfilePanel = dynamic(() =>

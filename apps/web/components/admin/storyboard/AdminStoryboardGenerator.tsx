@@ -10,6 +10,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import NextImage from "next/image";
+import { LocalStoryboardWorkspace } from "@/components/admin/storyboard/LocalStoryboardWorkspace";
 import {
   ArrowUp,
   ChevronLeft,
@@ -4322,7 +4323,26 @@ type AdminStoryboardGeneratorProps = {
   initialStoryboardResult?: StoryboardInitialResult | null;
 };
 
-export function AdminStoryboardGenerator({
+export function AdminStoryboardGenerator(props: AdminStoryboardGeneratorProps = {}) {
+  const [legacy, setLegacy] = useState(false);
+  return (
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" data-admin-storyboard-workspace="true">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-background px-3 py-2 text-foreground">
+        <span className="text-sm font-medium">{legacy ? "기존 스토리보드 UI" : "로컬 우선 작업 공간"}</span>
+        <button type="button" aria-pressed={legacy} aria-controls="admin-storyboard-selected-workspace"
+          className="min-h-11 rounded-lg border border-border px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          onClick={() => setLegacy((value) => !value)}>
+          {legacy ? "로컬 작업 공간으로 돌아가기" : "기존 스토리보드 UI 열기 (레거시)"}
+        </button>
+      </div>
+      <div id="admin-storyboard-selected-workspace" className="min-h-0 min-w-0 flex-1 overflow-auto">
+        {legacy ? <LegacyAdminStoryboardGenerator {...props} /> : <LocalStoryboardWorkspace />}
+      </div>
+    </div>
+  );
+}
+
+function LegacyAdminStoryboardGenerator({
   initialStoryboardResult = null,
 }: AdminStoryboardGeneratorProps = {}) {
   const trustedInitialStoryboardResult = useMemo(

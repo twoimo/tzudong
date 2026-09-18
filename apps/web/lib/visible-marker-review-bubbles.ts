@@ -1,4 +1,5 @@
 import type { Restaurant } from '@/types/restaurant';
+import { resolveReviewPhotoUrl } from '@/lib/review-photo-url';
 
 export const VISIBLE_MARKER_REVIEW_BUBBLE_MOBILE_LIMIT = 3;
 export const VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT = 5;
@@ -17,6 +18,36 @@ export type VisibleMarkerReviewBubble = {
   content: string;
   photoUrl: string | null;
 };
+
+export type VisibleMarkerReviewPhotoSource = {
+  id: string;
+  user_id: string | null | undefined;
+  food_photos?: readonly unknown[] | null;
+};
+
+/**
+ * Resolves the bubble thumbnail for one review. `food_photos` stores storage
+ * object paths, so the raw value must go through the same owner/review-bound
+ * resolver the review cards use; a bare key as an `img src` renders broken.
+ */
+export function resolveVisibleMarkerReviewBubblePhotoUrl(
+  review: VisibleMarkerReviewPhotoSource,
+): string | null {
+  const photoPath = Array.isArray(review.food_photos)
+    ? review.food_photos.find(
+        (photo): photo is string => typeof photo === 'string' && photo.trim().length > 0,
+      ) ?? null
+    : null;
+  if (!photoPath || typeof review.user_id !== 'string' || review.user_id.length === 0) {
+    return null;
+  }
+
+  return resolveReviewPhotoUrl(photoPath, {
+    ownerId: review.user_id,
+    reviewId: review.id,
+    purpose: 'food',
+  });
+}
 
 type RestaurantWithVerifiedCount = Restaurant & {
   verified_review_count?: number | null;

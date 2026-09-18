@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import nextConfig, {
   buildImageRemotePatterns,
   getValidatedSupabaseImageOrigin,
+  shouldAllowLoopbackImageUpstreams,
 } from '../next.config.mjs';
 import { resolveConfiguredSupabaseOrigin } from '../lib/profile-avatar-url.ts';
 
@@ -68,5 +69,35 @@ describe('Next image optimizer trust boundary', () => {
   test('disables SVG and local-IP optimizer exceptions', () => {
     expect(nextConfig.images?.dangerouslyAllowSVG).toBe(false);
     expect(nextConfig.images).not.toHaveProperty('dangerouslyAllowLocalIP');
+  });
+
+  test('enables the loopback optimizer exception only for the gated local stacks', () => {
+    expect(
+      shouldAllowLoopbackImageUpstreams({
+        NODE_ENV: 'development',
+        TZUDONG_LOCAL_SUPABASE_DEV: '1',
+      }),
+    ).toBe(true);
+    expect(
+      shouldAllowLoopbackImageUpstreams({
+        NODE_ENV: 'test',
+        NIGHTLY_LOCAL_ENV_ONLY: '1',
+      }),
+    ).toBe(true);
+
+    for (const env of [
+      { NODE_ENV: 'production', TZUDONG_LOCAL_SUPABASE_DEV: '1' },
+      { NODE_ENV: 'production', NIGHTLY_LOCAL_ENV_ONLY: '1' },
+      { NODE_ENV: 'development' },
+      { NODE_ENV: 'test' },
+      { NODE_ENV: 'test', TZUDONG_LOCAL_SUPABASE_DEV: '1' },
+      { NODE_ENV: 'development', NIGHTLY_LOCAL_ENV_ONLY: '1' },
+      {},
+    ]) {
+      expect(
+        shouldAllowLoopbackImageUpstreams(env),
+        JSON.stringify(env),
+      ).toBe(false);
+    }
   });
 });

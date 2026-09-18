@@ -271,7 +271,7 @@ export const ReviewCard = React.memo(function ReviewCard({
         <div
             id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
             className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500 
-                ${review.isPinned ? "border-primary border-2" : ""}
+                ${review.isPinned ? "border-primary border-2" : "border-border"}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
             {...cardInteractionProps}

@@ -128,6 +128,10 @@ describe('frontend unused route compatibility', () => {
         expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=reviews&view=submissions&tab=reviews'))).toBe('/admin?module=reviews');
         expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=unknown&view=submissions'))).toBe('/admin?module=submissions');
         expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('view=legacy&tab=reviews'))).toBe('/admin');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams('module=storyboard'))).toBe('/admin?module=storyboard');
+        expect(buildCanonicalAdminHrefFromSearchParams(new URLSearchParams(
+            'module=storyboard&storyboardProject=10000000-0000-4000-8000-000000000001',
+        ))).toBe('/admin?module=storyboard&storyboardProject=10000000-0000-4000-8000-000000000001');
     });
 
     test('keeps the unified admin console as the canonical embedded module hub', () => {

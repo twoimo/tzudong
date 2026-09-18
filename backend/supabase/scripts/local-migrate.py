@@ -116,7 +116,7 @@ MIGRATION_ORDER_OVERRIDES = {
 }
 SEED_SOURCE = Path("backend/supabase/scripts/local-seed.sql")
 READBACK_SOURCE = Path("backend/supabase/scripts/local_catalog_readback.sql")
-EXPECTED_LEDGER_UNITS = 96
+EXPECTED_LEDGER_UNITS = 97
 EXPECTED_SERVICES = (
     "analytics", "auth", "db", "functions", "imgproxy", "kong", "mail",
     "meta", "realtime", "rest", "storage", "studio", "supavisor", "vector",
@@ -2998,6 +2998,7 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         ["seed_buckets", "avatars", "avatars", True],
         ["seed_buckets", "profile-avatars", "profile-avatars", True],
         ["seed_buckets", "review-photos", "review-photos", True],
+        ["seed_buckets", "storyboard-private", "storyboard-private", False],
         ["seed_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False],
     ]
     buckets = [row for row in records if row[0] == "seed_buckets"]
@@ -3009,6 +3010,7 @@ def _validate_seed_invariants(records: list[list[Any]]) -> None:
         ("avatars", "avatars", True),
         ("profile-avatars", "profile-avatars", True),
         ("review-photos", "review-photos", True),
+        ("storyboard-private", "storyboard-private", False),
         ("youtube-thumbnail-releases", "youtube-thumbnail-releases", False),
     ]:
         _receipt_error("receipt_bucket_fixture")

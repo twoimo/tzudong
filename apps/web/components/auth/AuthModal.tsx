@@ -477,7 +477,9 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       toast.error("닉네임은 2-20자 사이여야 합니다");
       return;
     }
-    if (password.length < 8 || password.length > 12) {
+    // 기존 계정의 개인정보 처리 확인에서는 이미 설정된 비밀번호를 다시 입력하는 것이므로
+    // 신규 가입 비밀번호 규칙을 적용하지 않는다. 실제 검증은 서버 로그인이 담당한다.
+    if (!isExistingAccountRecovery && (password.length < 8 || password.length > 12)) {
       toast.error("비밀번호는 8자 이상 12자 이하여야 합니다");
       return;
     }

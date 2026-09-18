@@ -206,7 +206,7 @@ BEGIN
   END IF;
 
   SELECT count(*) INTO bucket_count FROM storage.buckets;
-  IF bucket_count <> 5 OR NOT EXISTS (
+  IF bucket_count <> 6 OR NOT EXISTS (
     SELECT 1 FROM storage.buckets
      WHERE id = 'avatars' AND name = 'avatars' AND public = true
        AND file_size_limit = 52428800
@@ -232,6 +232,12 @@ BEGIN
        AND name = 'youtube-thumbnail-releases' AND public = false
        AND file_size_limit = 10485760
        AND allowed_mime_types = ARRAY['image/png']::text[]
+  ) OR NOT EXISTS (
+    SELECT 1 FROM storage.buckets
+     WHERE id = 'storyboard-private'
+       AND name = 'storyboard-private' AND public = false
+       AND file_size_limit = 12582912
+       AND allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/webp']::text[]
   ) THEN
     RAISE EXCEPTION 'receipt_unexpected_storage_bucket';
   END IF;

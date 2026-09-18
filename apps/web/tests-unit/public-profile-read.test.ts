@@ -84,11 +84,45 @@ describe("public profile summary RPC boundary", () => {
         { user_id: USER_A, nickname: "첫째", avatar_url: null },
         { user_id: USER_A, nickname: "첫째", avatar_url: null },
       ],
-      [{ user_id: USER_A, nickname: "탈퇴한 사용자", avatar_url: null }],
       [{ user_id: USER_A, nickname: "첫째", avatar_url: null, email: "hidden@example.com" }],
     ];
 
     for (const data of invalidRows) {
+      await expect(
+        readPublicProfileSummaries(
+          { rpc: async () => ({ data, error: null }) },
+          [USER_A, USER_B],
+        ),
+      ).rejects.toMatchObject({
+        code: PUBLIC_PROFILE_READ_ERROR_CODE.invalidResponse,
+      });
+    }
+  });
+
+  test("drops only the deleted-account row instead of blanking the whole batch", async () => {
+    const client = {
+      rpc: async () => ({
+        data: [
+          { user_id: USER_A, nickname: "탈퇴한 사용자", avatar_url: null },
+          { user_id: USER_B, nickname: "둘째", avatar_url: null },
+        ],
+        error: null,
+      }),
+    };
+
+    await expect(readPublicProfileSummaries(client, [USER_A, USER_B])).resolves.toEqual([
+      { user_id: USER_B, nickname: "둘째", avatar_url: null },
+    ]);
+  });
+
+  test("still rejects an empty nickname and a reordered deleted-account row", async () => {
+    for (const data of [
+      [{ user_id: USER_A, nickname: "", avatar_url: null }],
+      [
+        { user_id: USER_B, nickname: "탈퇴한 사용자", avatar_url: null },
+        { user_id: USER_A, nickname: "첫째", avatar_url: null },
+      ],
+    ]) {
       await expect(
         readPublicProfileSummaries(
           { rpc: async () => ({ data, error: null }) },
