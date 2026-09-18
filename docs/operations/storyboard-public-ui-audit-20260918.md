@@ -195,3 +195,63 @@ created request showed `로컬 워커 대기` with `텍스트: 로컬 MLX · 이
 "서버에 변경 사항을 저장했습니다." No non-loopback browser request occurred, and
 `lsof` shows the inference port is loopback-only (`127.0.0.1:11234`), as is the
 dev server (`127.0.0.1:8080`).
+
+## Continuation: route boundaries, auth gates and two console observations (2026-09-18)
+
+This section extends the audit with a signed-in pass over the real admin session and a
+full anonymous route sweep. Everything below ran against the local dev server on
+`127.0.0.1:8080` (loopback only); the machine-readable results are in
+`apps/web/.omx/artifacts/storyboard-local-mlx-20260918/third-pass/sweep-report.json`,
+`auth{,2,3}-report.json`, `member{,2}-report.json` and `hydration-report.json`, with
+screenshots under `/tmp/tz-e2e/browser-e2e/sweep/`.
+
+### Anonymous route sweep
+
+Every listed route answered 200 with no horizontal overflow and no broken images:
+`/auth/reset-password` (비밀번호 재설정 링크를 확인해주세요), `/home-frame`,
+`/user/b15dcf64-a56f-44fa-9684-f94334c6135f` (먹보쯔양팬, 방문 도장), `/s/abcdef` and
+`/s/ab` (both render the 404 page), and `/leaderboard` (redirects to
+`/?panel=leaderboard`).
+
+Gated routes redirect to the sign-in surface instead of rendering data:
+
+| route | redirect |
+| --- | --- |
+| `/privacy/onboarding` | `/?auth=login&reason=privacy_onboarding` (개인정보 확인) |
+| `/insights` | `/` |
+| `/submissions` | `/auth/required?reason=mypage&next=%2Fmypage` |
+| `/mypage/submissions/{new,edit,recommend}` | `/auth/required?reason=mypage` |
+| `/admin?module=storyboard` | `/?auth=login&reason=admin&next=…` |
+
+### Authenticated surface at 390, 768 and 1440
+
+With the repository's real admin session (`apps/web/tests/.auth/admin.json`, whose
+session is privacy-eligible; no dev bypass header or cookie was used) the sweep ran at
+390, 768 and 1440 with zero overflow, zero broken images and no page errors. The home
+user menu carries the account label plus 마이페이지 / 환경설정 / 관리자 콘솔 / 로그아웃,
+and Escape closes it and returns focus; the tablet and mobile menus expose 마이페이지 /
+관리자 콘솔 / 로그아웃. Dark mode on `/`, `/feed`, `/global-map`, `/mypage/profile`
+and `/leaderboard` also had no overflow and no broken images.
+
+A member (non-admin) session exists but cannot reach an authenticated surface locally.
+The two nightly accounts have no consent record, and every
+`privacy_retention.privacy_retention_classes` row is `disabled` with no
+`approved_evidence_ref` or `activated_at`, so `create_privacy_onboarding_challenge`
+raises `privacy_audit_retention_policy_required`, the onboarding route answers 409 and
+the middleware then signs the session out and redirects to `/auth/required?reason=privacy`
+on every route. That is fail-closed behaviour. Activating a retention class requires
+operator and legal evidence that `docs/agents/privacy.md` forbids inventing, so it was
+left disabled; the member flow is blocked, not verified.
+
+### Two console observations, recorded but not fixed
+
+1. `/s/<code>` renders the 404 page but logs
+   `TypeError: Failed to execute 'measure' on 'Performance': 'ShortUrlRedirectPage'
+   cannot have a negative time stamp.` twice per visit.
+2. A signed-in session on `/mypage/*` at 390 and 768 intermittently logs a Next.js
+   hydration mismatch (mobile `/mypage/bookmarks` twice; tablet `/mypage/bookmarks` and
+   `/mypage/submissions/new` once each; never at 1440) while still rendering correctly.
+
+Neither path is touched by the storyboard branch, so both are recorded here rather than
+fixed in this change.
+

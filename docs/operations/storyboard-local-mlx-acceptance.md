@@ -379,3 +379,88 @@ all render the `검색 결과가 없습니다.` empty state with no horizontal o
 and no injected markup. No positive search hit is verifiable locally because this
 local database holds only two nightly fixtures; the earlier read-only production
 audit verified a real `한추` search hit on `5af1e1f6`.
+
+## Fourth pass — local auth boundary and authenticated surface (2026-09-18)
+
+### The privacy gate blocks account onboarding locally
+
+The local accounts were created through the Supabase admin API, so they carry no
+consent record. `POST /api/privacy/onboarding` therefore cannot issue an onboarding
+challenge: `create_privacy_onboarding_challenge` raises
+`privacy_audit_retention_policy_required`, the route answers 409, and the modal shows
+"가입 정보를 확인할 수 없습니다. 다시 시도해주세요." The cause is the local retention
+catalogue: all twelve rows of `privacy_retention.privacy_retention_classes` are
+`disabled` with no `approved_evidence_ref` and no `activated_at`. Supplying that
+evidence is an operator and legal decision, and `docs/agents/privacy.md` forbids
+inventing retention periods or legal bases, so no row was activated for this pass.
+
+Readback of `get_current_privacy_eligibility` with each account's own access token:
+
+| account | result |
+| --- | --- |
+| `nightly-ci@local.invalid` (admin) | `{"eligible":true,"reasonCode":"PRIVACY_ELIGIBLE"}` |
+| `reviewer1@local.invalid` (member) | `{"eligible":false,"reasonCode":"PRIVACY_AGE_ATTESTATION_REQUIRED"}` |
+
+Consequence for the member path, verified at 390, 768 and 1440 with the real login
+form: a correct password signs in, the modal switches to the existing-account
+recovery tab with "현재 개인정보 처리방침과 연령 확인을 완료해주세요.", completing it
+stops at the 409 above, and the next navigation is signed out by the middleware.
+`apps/web/lib/supabase/middleware.ts` signs a session out and redirects to
+`/auth/required?reason=privacy` whenever an authenticated session has no live
+privacy receipt, on every route including `/`, so a member session cannot reach an
+authenticated surface locally. That is fail-closed behaviour, not a defect; the
+password rule below was the defect.
+
+### Defect fixed: re-attestation rejected an existing password
+
+`apps/web/components/auth/AuthModal.tsx` applied the new-signup password rule
+(8–12 characters) to the existing-account re-attestation form, whose field is the
+account's current password (`handleSignup` verifies it with
+`supabase.auth.signInWithPassword`). The server bound for new signups is 8–72, so an
+account whose password does not satisfy the stricter client rule could never
+re-attest and therefore never log in: the form stopped at "비밀번호는 8자 이상 12자
+이하여야 합니다" before sending any request. Reproduced with `reviewer1@local.invalid`
+(password created through the admin API, 18 characters); with the rule gated to new
+signups the request is issued. Fixed in `788f815e`.
+
+### Authenticated surface verified with the privacy-eligible admin session
+
+The repository's real admin session (`apps/web/tests/.auth/admin.json`, whose session
+is privacy-eligible; no dev bypass header or cookie was used) rendered these routes
+with no redirect at 390, 768 and 1440: `/mypage/profile` (쯔동여지도 마이페이지,
+일반/야간 마케팅 수신), `/mypage/bookmarks` (나의 북마크 내역), `/mypage/reviews`
+(나의 리뷰 내역), `/mypage/submissions/new` (신규 맛집 제보), `/insights` (treemap
+with 조회수/좋아요/댓글수/영상길이, 2W–1Y periods and the explicit empty state
+"대상 데이터가 없습니다.") and `/admin?module=storyboard`. All had zero horizontal
+overflow, zero broken images and no page errors. The home user menu showed the account
+label plus 마이페이지 / 환경설정 / 관리자 콘솔 / 로그아웃, closed on Escape and
+returned focus (desktop); tablet and mobile expose 마이페이지 / 관리자 콘솔 / 로그아웃.
+
+Still blocked locally: signup with a nickname, the member (non-admin) authenticated
+surface, sign-out, and Google login. The local Supabase has no Google provider
+configured — `/auth/v1/authorize?provider=google` is requested on the local host and
+returns without a redirect and without a toast — so only the request attempt is
+observable.
+
+### Sub-agent review channel unavailable (five attempts)
+
+The objective asks for an independent review through the `codex-chatgpt-web`
+sub-agent. Five `multi_agent_v1__spawn_agent` attempts failed on the service side, not
+on the task: `chatgpt-web/high` answered `rate limit exceeded: ChatGPT rate limit: too
+many requests`, then `chatgpt-web/medium` answered the same once and
+`stream disconnected before completion: ChatGPT stopped responding after the task
+started. Check the ChatGPT tab before continuing.` twice, the last for a deliberately
+minimal one-file question. Recorded as blocked. The independent review on file
+(GPT-5.6 Sol, `external-review-1.md`) predates `eb5943ed` and `788f815e`.
+### Full unit suite for `788f815e`
+
+`npm run test:unit` was run in full on this head: **2090 pass, 1 skip, 1 fail**, 73590
+`expect()` calls across 289 files in 96.55 s. The single failure is the pre-existing
+`tests-unit/typecheck-benchmark-source.test.ts` case (it expects the phrase "treat zero
+admitted slices as a valid result" in the agent guidance, which the current guidance
+does not contain); it also fails on the untouched base and is unrelated to the
+storyboard or auth changes. The targeted suites for this change all pass: 80 assertions
+across `privacy-onboarding`, `auth-admin-login-redirect`, `privacy-policy-contract` and
+`profile-mutation-boundary`, plus ESLint exit 0 on `AuthModal.tsx` and
+`typecheck:parity` with `diagnostics: 0`.
+
