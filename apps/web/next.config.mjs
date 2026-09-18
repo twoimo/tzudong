@@ -106,6 +106,20 @@ export function buildImageRemotePatterns(configuredSupabaseUrl = process.env.NEX
     ];
 }
 
+/**
+ * A local Supabase stack is reached over loopback, which Next.js's image
+ * optimizer rejects as a private-IP upstream. The allowance needs the same
+ * gating as `getValidatedSupabaseImageOrigin` so production builds, hosted
+ * nightlies and every other environment keep the fail-closed default.
+ */
+export function shouldAllowLoopbackImageUpstreams(
+    env = process.env,
+) {
+    const localNightly = env.NIGHTLY_LOCAL_ENV_ONLY === '1' && env.NODE_ENV === 'test';
+    const localDevelopment = env.TZUDONG_LOCAL_SUPABASE_DEV === '1' && env.NODE_ENV === 'development';
+    return localNightly || localDevelopment;
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
@@ -122,6 +136,7 @@ const nextConfig = {
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
         minimumCacheTTL: 2678400, // [PERF] 31일 캐시 (이미지가 자주 변경되지 않음)
         dangerouslyAllowSVG: false,
+        dangerouslyAllowLocalIP: shouldAllowLoopbackImageUpstreams(),
         remotePatterns: buildImageRemotePatterns(),
     },
     env: {

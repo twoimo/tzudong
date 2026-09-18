@@ -29,6 +29,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { fetchSupabaseRows, postgrestIn, supabaseRestRpcClient } from "@/lib/supabase-rest-client";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { resolveReviewPhotoUrl } from "@/lib/review-photo-url";
 import {
     buildDeviceLocationMarkerHtml,
     resolveDeviceLocationMapRenderPlan,
@@ -897,9 +898,17 @@ const NaverMapView = memo(({
                 const restaurantId = relatedRestaurantIdToTargetId.get(review.restaurant_id);
                 if (!restaurantId || nextBubbles[restaurantId]) continue;
 
-                const photoUrl = Array.isArray(review.food_photos)
+                // food_photos holds storage object paths, not URLs. Resolve them the
+                // same way ReviewCard does, otherwise the bubble <img src> points at a
+                // bare object key and every review photo renders broken.
+                const photoPath = Array.isArray(review.food_photos)
                     ? review.food_photos.find((photo): photo is string => typeof photo === 'string' && photo.trim().length > 0) ?? null
                     : null;
+                const photoUrl = resolveReviewPhotoUrl(photoPath, {
+                    ownerId: review.user_id,
+                    reviewId: review.id,
+                    purpose: 'food',
+                });
                 const content = truncateVisibleMarkerReviewBubbleText(
                     review.content || '사진 리뷰를 남겼어요',
                     80,

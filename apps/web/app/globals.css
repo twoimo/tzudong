@@ -1,5 +1,10 @@
 /* Minimal home-first root CSS. Full Tailwind utilities load only with AppRuntimeShell. */
 
+/* Declare the cascade-layer order up front so the element reset below can never
+   outrank Tailwind utilities (e.g. `text-xs` on a <button>). Keep it identical to
+   the order Tailwind v4 emits from `@import "tailwindcss"`. */
+@layer theme, base, components, utilities;
+
 @import "../styles/light-root-tokens.css";
 
 :root {
@@ -82,15 +87,17 @@ html[data-local-workspace="true"] [data-local-workspace-app="true"] {
   transform: translateZ(0);
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
 
-button {
-  cursor: pointer;
+  button {
+    cursor: pointer;
+  }
 }
 
 :focus-visible {
