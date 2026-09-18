@@ -22,6 +22,7 @@ import {
     Check,
     ChevronUp,
     ChevronRight,
+    Play,
     ChevronLeft
 } from "lucide-react";
 import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
@@ -1192,8 +1193,10 @@ export function RestaurantDetailPanel({
                                                         {youtubeCopy.itemBadge(1)}
                                                     </span>
                                                 )}
-                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                    <YouTubeIcon className="h-12 w-12 text-white" />
+                                                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
+                                                        <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                    </span>
                                                 </div>
                                             </button>
 
@@ -1223,8 +1226,10 @@ export function RestaurantDetailPanel({
                                                             <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
                                                                 {youtubeCopy.itemBadge(index + 2)}
                                                             </span>
-                                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                                <YouTubeIcon className="h-12 w-12 text-white" />
+                                                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
+                                                                    <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                                </span>
                                                             </div>
                                                         </button>
                                                     ))}
@@ -1518,19 +1523,19 @@ export function RestaurantDetailPanel({
                                         onClick={handleRequestEditRestaurant}
                                         variant="outline"
                                         size="sm"
-                                        className="h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold"
+                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
                                     >
                                         <Edit className="h-4 w-4 shrink-0" aria-hidden="true" />
-                                        <span className="truncate">수정 요청</span>
+                                        <span>수정 요청</span>
                                     </Button>
 
                                     {mapDestinationUrls ? (
                                         <Button
                                             onClick={handleGetDirections}
-                                            className="h-12 min-w-0 items-center justify-center gap-2 rounded-xl bg-gradient-primary px-3 text-sm font-bold shadow-sm hover:opacity-90"
+                                            className="h-14 min-w-0 flex-col gap-1 rounded-xl bg-gradient-primary px-1.5 text-xs font-bold leading-tight shadow-sm hover:opacity-90"
                                         >
                                             <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
-                                            <span className="truncate">길찾기</span>
+                                            <span>길찾기</span>
                                         </Button>
                                     ) : null}
 
@@ -1538,10 +1543,10 @@ export function RestaurantDetailPanel({
                                         onClick={handleWriteReview}
                                         variant="outline"
                                         size="sm"
-                                        className="h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold"
+                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
                                     >
                                         <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
-                                        <span className="truncate">리뷰 작성</span>
+                                        <span>리뷰 작성</span>
                                     </Button>
                                 </div>
                             </div>

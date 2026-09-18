@@ -225,6 +225,7 @@ import {
     buildVisibleMarkerReviewBubbleHtml,
     buildVisibleMarkerReviewBubbleMapSignature,
     buildVisibleMarkerReviewBubbleTargetSignature,
+    resolveVisibleMarkerReviewBubblePhotoUrl,
     selectVisibleMarkerReviewBubbleTargets,
     truncateVisibleMarkerReviewBubbleText,
     VISIBLE_MARKER_REVIEW_BUBBLE_DESKTOP_LIMIT,
@@ -897,9 +898,7 @@ const NaverMapView = memo(({
                 const restaurantId = relatedRestaurantIdToTargetId.get(review.restaurant_id);
                 if (!restaurantId || nextBubbles[restaurantId]) continue;
 
-                const photoUrl = Array.isArray(review.food_photos)
-                    ? review.food_photos.find((photo): photo is string => typeof photo === 'string' && photo.trim().length > 0) ?? null
-                    : null;
+                const photoUrl = resolveVisibleMarkerReviewBubblePhotoUrl(review);
                 const content = truncateVisibleMarkerReviewBubbleText(
                     review.content || '사진 리뷰를 남겼어요',
                     80,

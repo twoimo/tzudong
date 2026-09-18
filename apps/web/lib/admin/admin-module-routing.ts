@@ -18,6 +18,9 @@ export const ADMIN_CONSOLE_MODULE_IDS = [
 
 export type AdminConsoleRouteModuleId = (typeof ADMIN_CONSOLE_MODULE_IDS)[number];
 
+/** Selected project for the local storyboard workspace; survives a browser reload. */
+export const ADMIN_STORYBOARD_PROJECT_QUERY = 'storyboardProject';
+
 export function isAdminConsoleRouteModuleId(
   value: string | null,
 ): value is AdminConsoleRouteModuleId {
@@ -71,7 +74,7 @@ export function buildCanonicalAdminHrefFromSearchParams(
   },
 ): string {
   const defaultModule = options?.defaultModule ?? 'overview';
-  const preserveKeys = options?.preserveKeys ?? ['video_id', 'issue', 'reason'];
+  const preserveKeys = options?.preserveKeys ?? ['video_id', 'issue', 'reason', ADMIN_STORYBOARD_PROJECT_QUERY];
   const moduleId = resolveAdminModuleId(searchParams, defaultModule);
   const params = new URLSearchParams();
   if (moduleId !== 'overview') {

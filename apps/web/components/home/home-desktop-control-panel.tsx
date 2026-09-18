@@ -40,7 +40,10 @@ import { useOverseasCountryCounts } from "@/components/home/use-overseas-country
 import { useDeferredComponent } from "@/hooks/use-deferred-component";
 import AnnouncementPanelLoadingFallback from "@/components/announcement/AnnouncementPanelLoadingFallback";
 import HydratedDetailRestaurant from "@/components/home/HydratedDetailRestaurant";
-import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
+// Import through the deferred-panel barrel: it carries the
+// app/home-detail-globals.css Tailwind entry, without which restaurant/review
+// utilities (top-2, bg-black/70, ring-1, ...) never reach the home route CSS.
+import { RestaurantDetailPanel } from "@/components/map/map-view-deferred-panels";
 import { cn } from "@/lib/utils";
 import { requestAuthUi } from "@/lib/auth-ui-events";
 import { toast } from "@/lib/no-toast";
