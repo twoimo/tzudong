@@ -12,6 +12,20 @@ const storyboardRagRoutePaths = new Set([
 
 const acceptedAuthHelperPath = 'lib/admin/storyboard/rag-actions-auth.ts';
 
+/**
+ * Storyboard production routes delegate their HTTP methods to a server-only API
+ * object instead of inlining the admin gate. The gate lives in that module, so
+ * the accepted delegation is asserted here together with the fail-closed check.
+ */
+const delegatedProductionApiModule = 'lib/admin/storyboard/production-api.ts';
+const delegatedProductionApiRoutes: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['app/api/admin/storyboard/production/route.ts', ['GET', 'POST']],
+  ['app/api/admin/storyboard/production/[id]/route.ts', ['GET', 'POST']],
+  ['app/api/admin/storyboard/production/[id]/export/route.ts', ['GET']],
+  ['app/api/admin/storyboard/production/[id]/images/route.ts', ['POST']],
+  ['app/api/admin/storyboard/production/[id]/assets/[assetId]/route.ts', ['GET']],
+];
+
 const publicHomeMapSources = [
   'app/home-client.tsx',
   'components/home/home-map-container.tsx',
@@ -205,6 +219,23 @@ describe('admin route auth source contract', () => {
     for (const file of listAdminRouteFiles()) {
       const source = routeSource(file);
       const isStoryboardRagRoute = storyboardRagRoutePaths.has(file);
+
+      const delegated = delegatedProductionApiRoutes.find(([path]) => path === file);
+      if (delegated !== undefined) {
+        const moduleSource = appSource(delegatedProductionApiModule);
+        for (const method of delegated[1]) {
+          const member = new RegExp(`export const ${method} = storyboardProductionApi\\.([A-Za-z]+);`).exec(source);
+          expect(member, `${file} must delegate ${method} to the accepted production API`).not.toBeNull();
+          const declaration = new RegExp(`^\\s+${member![1]}: \\(request`, 'm').exec(moduleSource);
+          expect(declaration, `${delegatedProductionApiModule} must declare ${member![1]}`).not.toBeNull();
+          expect(
+            moduleSource.slice(declaration!.index).split('\n')[0],
+            `${delegatedProductionApiModule} ${member![1]} must run behind the admin gate`,
+          ).toContain('admin(request');
+        }
+        continue;
+      }
+
       const handlerBodies = exportedHandlerBodies(source);
 
       expect(handlerBodies.length, `${file} must export at least one HTTP handler`).toBeGreaterThan(0);
