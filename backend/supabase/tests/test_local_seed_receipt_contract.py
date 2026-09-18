@@ -85,6 +85,7 @@ def _receipt_rows(include_order_drift: bool = False):
         ["storage_buckets", "avatars", "avatars", True, 52428800, ["image/*"]],
         ["storage_buckets", "profile-avatars", "profile-avatars", True, 2097152, ["image/*"]],
         ["storage_buckets", "review-photos", "review-photos", True, 5242880, ["image/*"]],
+        ["storage_buckets", "storyboard-private", "storyboard-private", False, 12582912, ["image/png", "image/jpeg", "image/webp"]],
         ["storage_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False, 10485760, ["image/png"]],
         ["storage_policies", "storage", "objects", "local_nightly_avatar_insert", "INSERT", ["authenticated"], None, "(bucket_id = 'avatars'::text)"],
         [
@@ -228,6 +229,7 @@ def _receipt_rows(include_order_drift: bool = False):
         ["seed_buckets", "avatars", "avatars", True],
         ["seed_buckets", "profile-avatars", "profile-avatars", True],
         ["seed_buckets", "review-photos", "review-photos", True],
+        ["seed_buckets", "storyboard-private", "storyboard-private", False],
         ["seed_buckets", "youtube-thumbnail-releases", "youtube-thumbnail-releases", False],
         ["seed_realtime", "supabase_realtime", "public", "notifications"],
         ["seed_realtime", "supabase_realtime", "public", "profiles"],
@@ -466,17 +468,17 @@ class LocalSeedReceiptContractTests(unittest.TestCase):
                     local_migrate.parse_readback(_receipt_ndjson(rows))
                 self.assertEqual(error.exception.code, expected_code)
 
-    def test_manifest_contains_exactly_eighty_eight_immutable_units(self) -> None:
+    def test_manifest_contains_exactly_ninety_seven_immutable_units(self) -> None:
         manifest = local_migrate.build_manifest()
-        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 96)
-        self.assertEqual(len(manifest["source"]["files"]), 96)
+        self.assertEqual(local_migrate.EXPECTED_LEDGER_UNITS, 97)
+        self.assertEqual(len(manifest["source"]["files"]), 97)
         self.assertEqual(
             manifest["source"]["files"][-1]["path"],
-            "backend/supabase/migrations/20260906064252_g014_pg17_workflow_owner_contract.sql",
+            "backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql",
         )
         self.assertEqual(
             manifest["source"]["files"][-1]["transaction"]["class"],
-            "transactional",
+            "self_committing",
         )
 
     def test_two_reset_comparator_compares_ordered_ledger_and_digests(self) -> None:
