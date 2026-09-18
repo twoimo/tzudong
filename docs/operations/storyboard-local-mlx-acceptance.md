@@ -312,6 +312,26 @@ So P02 is now covered by a browser round trip rather than only contract tests. P
 remains covered by contract tests plus the migration's `provider_not_configured`
 raise, and no paid API call was made.
 
+### BGE dependency failure with the real worker (L05)
+
+`mlx-client.ts` throws `bge_dependency_unavailable` when `request.retrieval !== 'none'`
+before any model call, and the objective forbids substituting fake embeddings, so the
+dependency-failure path was exercised end to end instead of being described. A request
+was created through the admin API with `retrieval: 'bge-local'` on
+`da051537-0e97-4fe3-96a8-54ed03cdf0e5`; the real outbound worker claimed it and failed
+it in one attempt:
+
+| Check | Result |
+| --- | --- |
+| Create | HTTP 200, `waiting_worker`, `retrieval = bge-local` |
+| Worker job | `status: failed`, `stage: failed`, `errorCode: bge_dependency_unavailable`, `attempts: 1` |
+| Project readback (SQL) | `status = failed`, `revision = 0`, `document IS NULL` — no seeded document and no fabricated embeddings |
+| UI | "생성 실패" with "BGE M3 임베딩과 reranker 준비가 확인되지 않았습니다. 검색 인덱스는 변경하지 않았습니다." |
+| Browser egress | `nonLoopback = []` |
+
+Evidence: `bge-report.json`. Retrieval *quality* remains unverified because the BGE
+dependency is absent; only the fail-closed contract is proven.
+
 ### Toolchain and CI at `eb5943ed`
 
 Environment note: the MLX server on `127.0.0.1:11234` was restarted externally during
