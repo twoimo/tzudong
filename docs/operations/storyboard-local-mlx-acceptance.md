@@ -583,3 +583,34 @@ clipping, review photos, eyebrow size, review-card border) need the branch promo
 above, because the deployed bundles contain none of the marker utilities and no `.bg-black/55` or
 `.ring-1`.
 
+
+### The join fix is outside the governed migration path (verified)
+
+Applying `20260812000600_local_profile_read_boundary_convergence.sql` to hosted is not available
+through the repository's own release machinery. `.github/supabase-migration-release-manifest.v1.json`
+is SHA-256 pinned by the `Migrations` workflow (`RELEASE_MIGRATION_MANIFEST_SHA256 =
+515743d094b4b431a29df772a363837bdad8f7541aa3acf4a923efb79f460c0d`, which matches the committed file)
+and contains exactly three entries: `restaurant_refresh_history`,
+`g016_privacy_audit_owner_policy`, `g016_onboarding_confirmation_freshness`. The
+`*_local_*` profile-read convergence migrations are not entries, and
+`node apps/web/scripts/apply-supabase-migration.mjs --migration-id local_profile_read_boundary
+--dry-run --json` fails with `MIGRATION_MANIFEST_DIGEST_INVALID`. So hosted has no approved path
+to receive these RPCs; only `secrets.SUPABASE_DB_URL` inside the workflow could reach the database,
+and that path is bound to manifest entries.
+
+A client-side fallback is also unavailable: `FEED_REVIEW_SELECT` (`components/feed/FeedContent.tsx`)
+does not carry an author nickname, `profiles` refuses direct anon/authenticated reads (401 `42501`),
+and the only remaining profile read is the hosted-absent RPC. Every reader of that map — /feed,
+/stamp, the restaurant panel — therefore cannot recover the nickname on its own. The fix needs a
+reviewed release-manifest change plus a hosted apply, or an equivalent approved server-side read
+boundary; both are release decisions rather than implementation details.
+
+### Production reproduction on the deployed commit
+
+Driving https://www.tzudong.app/feed in a real browser at 1440 produced one
+`/rest/v1/rpc/read_public_profile_summaries` response with status 404, 8 `탈퇴한 사용자`
+mentions in the rendered text, "쯔동여지도 리뷰 (2개)", 118 images with 0 broken, and no page
+errors. That confirms the defect is live on the deployed commit and that the client-side catch
+(`readPublicProfileSummaries(supabase, userIds).catch(() => [])`) silently degrades every reviewer
+to the deleted-account label.
+
