@@ -281,3 +281,55 @@ the paths belong to the mypage area this branch does not touch, the page still r
 and the failure is not deterministic enough to attribute to a specific component without
 a dedicated investigation.
 
+
+## Production baseline on the deployed commit `5af1e1f6` (2026-09-18, 5th pass)
+
+Read-only browser inspection of https://www.tzudong.app at 1440x900 and 390x844, with the
+per-defect screenshot pair stored under
+`apps/web/.omx/artifacts/storyboard-local-mlx-20260918/fourth-pass/prod-defects/` and the
+machine-readable digest in `prod-defect-baseline.json` and `prod-filter-report.json`. No
+production data was created, edited or deleted.
+
+### Defects that reproduce on production
+
+| defect | production `5af1e1f6` | local head `5b424d73` |
+| --- | --- | --- |
+| 리뷰 작성자 조인 | every card shows `탈퇴한 사용자`; `read_public_profile_summaries` answers 404 | author nickname renders (먹보쯔양팬) |
+| 수정 요청 / 리뷰 작성 버튼 | text is ellipsis-truncated to `수정 …` / `리뷰 …` at both widths | full `수정 요청` / `리뷰 작성`, 98x56 / 206x56, no truncation |
+| 유튜브 재생 배지 | inside `div.relative.aspect-video` (365x205) the badge renders as a pale, empty circle below centre; 0 play icons matched | dark translucent centred circle with a white play triangle |
+| 테마 필터 | 최근 영상 and 재등장 맛집 filter (16 clusters -> 7); 조회수 폭발, 댓글 폭주, 반응 찐함 leave the map unchanged (16 clusters, top cluster still `379`) | all five change the map: 4 / 4 / 1 / 1 / 2 |
+| 닉네임 하단 맛집명 | 16px / 24px | 12px / 16px |
+| 최근 리뷰 카드 테두리 | thick dark border around each card | `border-border` (rgb(214,211,209)) |
+| 리뷰 사진 | renders, 118 images / 0 broken | renders, 0 broken |
+
+### The truncation is ellipsis, not scroll overflow
+
+Measuring `scrollWidth` vs `clientWidth` reports `overflowX: false` on production even though the
+labels are visibly cut: the cards use `text-overflow: ellipsis` with `overflow: hidden`, so the
+scroll metric cannot see the loss. Only the screenshot shows `수정 …` and `리뷰 …`. This is why the
+objective's instruction to look at the rendered screen rather than trust DOM checks matters here.
+
+### Cluster click did not reproduce
+
+Clicking the largest cluster (`379`) on production moved the map and left 380 individually visible
+markers at both widths, so the reported marker evaporation did not reproduce in this scenario on
+either the deployed build or the local head. The remaining filter sub-case (a marker selected while
+a filter is active) did reproduce and is covered in the fourth-pass section above, where the detail
+panel opens with the correct restaurant, address and review data at all three widths.
+
+### Filter toggle evidence
+
+Each chip is a `<button aria-pressed>`; toggling it on production produced:
+
+| filter | pressed | clusters on | clusters off |
+| --- | --- | --- | --- |
+| 조회수 폭발 | false -> true | 16 | 16 |
+| 댓글 폭주 | false -> true | 16 | 16 |
+| 최근 영상 | false -> true | 7 | 16 |
+| 재등장 맛집 | false -> true | 7 | 16 |
+| 반응 찐함 | false -> true | 16 | 16 |
+
+Identical at 1440 and 390, so the three inert filters fail consistently rather than intermittently.
+The earlier `getByRole('button', { name })` sweep reported the chips as missing; that was a selector
+error, not an absent control, and is corrected here.
+
