@@ -644,3 +644,107 @@ The release-manifest change therefore is not a one-line edit; it is the delivera
 remaining production work depends on, and it needs the hosted readback and recovery evidence that
 only the credentialed release path can produce.
 
+## Sixth pass — serialized promotion, release gate and U05 accessibility (2026-09-18)
+
+### Promotion chain completed
+
+| Step | PR | Base | Merge commit | Required checks |
+| --- | --- | --- | --- | --- |
+| feature -> develop | #2909 | develop | `ce22e122` | Release, Promotion Path |
+| develop -> data | #2910 | data | `e1315bbb` | Release, Promotion Path |
+| data -> main | #2911 | main | `7554ee3b` | Release, Promotion Path |
+
+`origin/main` is now `7554ee3b`; nothing was force-pushed and no branch protection was bypassed.
+The first merge was blocked by an unresolved security conversation rather than by a required check:
+code-scanning alert 77 (`js/bad-code-sanitization`) pointed at
+`tests/local-storyboard-workspace-ui.spec.ts:108`, where the harness interpolated a shim path into
+generated JavaScript and then executed it. Commit `7f213391` moved the entry module, the next/image
+shim, the bundle script and the Tailwind entry into committed files under
+`tests/fixtures/local-storyboard-ui/`; the next analysis marked the alert instance `fixed`, the
+GitHub Advanced Security thread resolved itself, and the 23 UI contracts still pass on chromium.
+
+### Production still serves the previous commit
+
+After the `main` merge, `https://www.tzudong.app/api/health` kept returning
+`gitSha 5af1e1f6ac81a483e1e8aed2b05237ca0f62ce6a`,
+`releaseId 5445fa71104b2408962c1c5d369babf3bb778838`,
+`deploymentId dpl_CpqD2F8weF6vDLUG2AgSfrruMbZa` over a five-minute poll. That is by design:
+`apps/web/scripts/vercel-ignore-build.mjs` skips a production build unless
+`TZUDONG_APPROVED_PRODUCTION_SHA` equals the pushed commit ("production commit lacks matching
+release authorization"). Merge and release are separate steps, and the release still needs the
+external evidence listed in [release.md](../agents/release.md).
+
+### The hosted apply is held by the G037 write freeze
+
+`.github/workflows/supabase-migration-apply.yml:111` only lets the two `g016_*` ids through while
+`vars.G037_WRITE_FREEZE == "active"`. The variable has been `active` since 2026-07-17, and
+`backend/supabase/docs/g037-hosted-closure-runbook.md` states the procedure "must not set or change
+`G037_WRITE_FREEZE` or any GitHub repository or environment variable" and that operators "must keep
+the freeze active through G038". The profile-read RPC migration therefore cannot be applied from
+this work, and no release-manifest entry was authored for it: the manifest's `expectedPriorState`
+and `terminalReadback` are hosted assertions, and writing them without a credentialed readback
+would be fabricating release evidence.
+
+### The g034 preflight cannot validate its own bound closure (pre-existing)
+
+```sh
+python3 backend/supabase/scripts/preflight_g034_hosted_migration_closure.py --validate-only
+# exit 1; artifact blockers: ['clone-backup-recovery-required', 'manifest-invalid']
+python3 -m unittest backend.supabase.tests.test_preflight_g034_hosted_migration_closure
+# FAILED (failures=2, errors=2)
+```
+
+`EXPECTED_MANIFEST_SHA256` in the script is `1f568404...500a8e1` (set 2026-07-17, `4a47fb77`) while
+the committed `.github/g034-hosted-migration-closure.v1.json` hashes to `bba79f26...fccf8ab95`;
+`EXPECTED_SEMANTICS.closureTerminalVersion` is `20260713002400` against the manifest's
+`20260801000300`, and the script expects 28 entries with nine exclusions against the manifest's 29
+entries with three. The manifest last changed 2026-08-03 (`279a8191`). Both files are identical to
+`origin/main`, so the hosted-closure preflight has been non-functional on `main` since that date;
+it only runs on manual dispatch, so no automatic CI job catches it.
+
+### U05 — keyboard, focus, Escape, names and contrast at 390/768/1440 (light and dark)
+
+Probes: `probe-u05-keyboard-focus-contrast.mjs` and `probe-u05-modal.mjs`, run against the local dev
+server with the real components. Raw output and screenshots:
+[u05-accessibility](../../apps/web/.omx/artifacts/storyboard-local-mlx-20260918/u05-accessibility/)
+(`probe.json`, `modal.json`, `modal-after.json`, `shots/*.png`, `lint.log`, `typecheck.log`,
+`unit.log`).
+
+| Check | 390x844 | 768x1024 | 1440x900 |
+| --- | --- | --- | --- |
+| Horizontal overflow | 0 px | 0 px | 0 px |
+| Tab stops sampled / without a visible indicator | 10 / 0 | 10 / 0 | 10 / 0 |
+| Contrast pairs measured below AA | 0 of 12 | 0 of 12 | 0 of 31 |
+| Login dialog announces a name (`aria-labelledby` resolves) | yes | yes | yes |
+| Focus stays inside the open dialog after 6 tabs | yes | yes | yes |
+| Escape closes the dialog | yes | yes | yes |
+| Focus returns to the invoking control after Escape | no | no | no |
+
+Both preferences rendered identically because the public app is light-only: there is no color-theme
+control (`HOME_MAP_THEME_FILTERS` are content filters, not palettes), so the `prefers-color-scheme:
+dark` captures in `shots/` are the light appearance and no dark-theme claim is made. Contrast was
+measured only where an opaque background ancestor exists; text over video thumbnails, the map canvas
+and gradients was counted as indeterminate (5 of 17 candidates on mobile, 1 of 32 on desktop) rather
+than as a pass.
+
+**Defect fixed (this pass): the desktop login dialog never declared modality.** The mobile and
+tablet login sheet reported `aria-modal="true"`, while the desktop Radix dialog reported `null` and
+exposed no `aria-modal` on any ancestor, even though it dims the page, traps focus and hides 45
+background nodes with `aria-hidden`. `apps/web/components/ui/dialog.tsx` now sets
+`aria-modal="true"` on `DialogPrimitive.Content` (every dialog in this app renders with the backdrop
+overlay; callers can override). Before: `modal.json` — 1440 `ariaModal: null`. After:
+`modal-after.json` — 1440 `ariaModal: "true"` with the mobile and tablet sheets unchanged. This also
+matches the project's own release-visual contract, which uses
+`[role="dialog"][aria-modal="true"]` as the modal selector
+(`tests/release-visual-cells.template.json`).
+
+**Measured gap left open:** after Escape, focus lands on `<body>` at all three viewports instead of
+returning to the control that opened the login surface. The opener lives inside the user-menu
+popover, which unmounts as the dialog opens, so the restore target no longer exists; fixing it
+means keeping a stable focus owner across the two surfaces. It is recorded here as a measured
+limitation rather than silently reported as a pass.
+
+Checks for this pass: `npm run lint` exit 0, `npm run typecheck:native` exit 0, and `npm run
+test:unit` 2090 pass / 1 skip / 1 fail with the same pre-existing `TypeScript 7 dual-toolchain`
+failure seen before the change (2092 tests across 289 files, 101 s).
+
