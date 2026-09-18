@@ -284,6 +284,15 @@ dependency is absent.
 
 ### Toolchain and CI at `eb5943ed`
 
+Environment note: the MLX server on `127.0.0.1:11234` was restarted externally during
+this pass (the user's `MLX Core.app` / `mlx-serve-ops.sh ensure`), after all
+storyboard evidence above had been captured. While it was down the worker's own
+log recorded `{"event":"worker_stopped","code":"local_model_unavailable"}` and it
+made no cloud call; once the listener returned, `/health` reported
+`{"status":"ok"}`, `/v1/models` again listed the text model as `loaded: true`,
+`state: ready`, and the port remained loopback-only. The worker loop was running
+from `apps/web` throughout and was not pointed at a different origin.
+
 Local: `npm run test:unit` 2090 pass / 1 skip / 1 fail across 289 files, the single
 failure being the pre-existing `typecheck-benchmark-source` case; the Playwright
 storyboard UI contract suite 23 passed; `frontend-unused-route-compatibility`
