@@ -464,3 +464,17 @@ across `privacy-onboarding`, `auth-admin-login-redirect`, `privacy-policy-contra
 `profile-mutation-boundary`, plus ESLint exit 0 on `AuthModal.tsx` and
 `typecheck:parity` with `diagnostics: 0`.
 
+
+### Sub-agent review: sixth attempt also failed
+
+One more `codex-chatgpt-web` attempt was made after a real wait. `chatgpt-web/extra-high`
+(the configured default; `chatgpt-web/high` rejects the inherited `xhigh` reasoning
+effort) spawned agent `01a0b4ab-0cf1-7fe1-a614-d19d276509c5`, which then errored with
+`stream disconnected before completion: page.goto: Timeout 60000ms exceeded` while
+navigating to `https://chatgpt.com/?temporary-chat=true`, and never produced a review.
+That is a transport failure in the harness, not a task failure. Six attempts have now
+failed (rate limit, silent stall, and this navigation timeout), so the channel stays
+recorded as blocked; it needs the ChatGPT browser tab itself to be healthy before it can
+work. The independent review on file (GPT-5.6 Sol, `external-review-1.md`) still predates
+`eb5943ed`, `788f815e` and `1153e6fc`.
+

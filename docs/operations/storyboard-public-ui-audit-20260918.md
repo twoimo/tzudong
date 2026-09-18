@@ -255,3 +255,29 @@ left disabled; the member flow is blocked, not verified.
 Neither path is touched by the storyboard branch, so both are recorded here rather than
 fixed in this change.
 
+### Continuation sweep: remaining mypage routes, stamp and feed photos
+
+A second sweep (`third-pass/sweep2-report.json`, `hydration2-report.json`) covered the
+routes left out of the first pass at all three widths, all with no overflow and no broken
+images:
+
+| route | rendered |
+| --- | --- |
+| `/mypage/submissions/edit` | 맛집 수정 요청 |
+| `/mypage/submissions/recommend` | 쯔양 맛집 제보 |
+| `/stamp` | 쯔동여지도 도장 (redirects to `/?panel=stamp` at 1440 in this run) |
+| `/feed` | 쯔동여지도 리뷰 (2개), 2–4 images |
+
+`/feed` rendered a real review photo from local storage
+(`…/review-photos/b15dcf64-…/reviews/1111…/food/1758000000000_food_1_plate.png`) and the
+legacy `.png` fixture (`1758000000001_food_1_legacy.png`) through `next/image` at 828/640 px
+widths, confirming the PNG compatibility path still resolves locally.
+
+The hydration mismatch is intermittent rather than route-bound. Visiting each route once
+per viewport across all three widths produced one hit on `/mypage/submissions/new`
+(desktop) and one on `/mypage/submissions/edit` (mobile) and none on the other routes,
+whereas the mixed sweep hit one per viewport; the error text names a Suspense boundary. It is logged, not fixed:
+the paths belong to the mypage area this branch does not touch, the page still renders,
+and the failure is not deterministic enough to attribute to a specific component without
+a dedicated investigation.
+
