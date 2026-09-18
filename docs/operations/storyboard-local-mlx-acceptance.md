@@ -546,3 +546,18 @@ Production promotion needs the `develop -> data -> main` PR chain and the extern
 readback, location filing, legal review). Those receipts are still missing, so the promotion chain has
 not been opened and the fixes remain undeployed.
 
+
+### Geolocation wiring and lint on the current head
+
+The 위치 button is wired to the browser Geolocation API in `app/home-client.tsx`: the click
+path checks `navigator.geolocation`, shows the disclosure prompt, then calls `watchPosition`
+and stores the watch id for `clearWatch` on teardown, so the permission request and the
+floating-button behaviour are implemented. The remaining gate is the privacy readiness check
+(`DEVICE_LOCATION_NETWORK_SINK`), which returns
+"위치 서비스(GPS) 기능을 켜주세요." while the operator release decision is absent. Nothing about
+the geolocation flow itself is missing; it cannot be exercised locally without that decision.
+
+`npm run lint` on `247de07e` exits 0 with `--max-warnings=0` (log `lint-final.log`). The full unit
+suite on the same code line is 2090 pass / 1 skip / 1 fail, the single failure being the
+pre-existing `typecheck-benchmark-source` case.
+
