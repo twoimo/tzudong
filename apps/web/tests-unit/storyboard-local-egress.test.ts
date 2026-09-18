@@ -1,6 +1,8 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
 import { MlxTransport, type MlxDestinationReceipt } from '../lib/admin/storyboard/mlx-transport';
 import { MlxStoryboardClient } from '../lib/admin/storyboard/mlx-client';
 import {
@@ -12,11 +14,27 @@ import {
  * adapter off the network: literal loopback sockets that ignore proxy
  * environment variables, external providers blocked before a socket is opened,
  * and a retrieval requirement that fails closed instead of calling a provider.
+ *
+ * The proxy and global-fetch cases run in a throwaway child process
+ * (storyboard-local-egress-child.ts). bun memoizes the proxy configuration
+ * inside fetch for the lifetime of a process, so setting the proxy variables and
+ * then restoring them here would leave every later fetch in this shared bun test
+ * process dialing the proxy; that already broke admin-storyboard-local-bridge
+ * on CI. The child keeps the side effect contained.
  */
 
+type EgressChildReport = {
+  proxyStatus?: string;
+  proxyConnections?: number;
+  proxyReceipts?: { host: string; remoteAddress?: string }[];
+  fetchCalls?: string[];
+  draftTitle?: string;
+  imageBytes?: number;
+  imageProvenance?: Record<string, unknown>;
+};
+
 const servers: Server[] = [];
-const savedEnv: Record<string, string | undefined> = {};
-const PROXY_KEYS = ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'NO_PROXY', 'no_proxy'] as const;
+let egressChild: EgressChildReport | undefined;
 
 function request(text = 'local-mlx', image = 'local-mlx', externalAI = false, retrieval: 'none' | 'bge-local' = 'none') {
   return storyboardProductionRequestSchema.parse({
@@ -38,78 +56,35 @@ async function listen(server: Server) {
   return { origin: `http://127.0.0.1:${address.port}`, port: address.port };
 }
 
-afterAll(() => {
-  for (const server of servers) { server.closeAllConnections(); server.close(); }
-  for (const [key, value] of Object.entries(savedEnv)) {
-    if (value === undefined) delete process.env[key]; else process.env[key] = value;
-  }
+beforeAll(() => {
+  const child = spawnSync(process.execPath, [join(import.meta.dir, 'storyboard-local-egress-child.ts')], {
+    encoding: 'utf8', timeout: 60_000,
+  });
+  const line = (child.stdout ?? '').trim().split('\n').at(-1) ?? '';
+  if (!line.startsWith('{')) throw new Error(`egress child report missing: ${child.error?.message ?? child.stderr ?? child.stdout ?? ''}`);
+  egressChild = JSON.parse(line) as EgressChildReport;
 });
 
-function setProxyEnv(value: string) {
-  for (const key of PROXY_KEYS) {
-    savedEnv[key] = process.env[key];
-    process.env[key] = value;
-  }
-}
+afterAll(() => {
+  for (const server of servers) { server.closeAllConnections(); server.close(); }
+});
 
 describe('local-only egress boundary', () => {
-  test('connects to literal loopback even when every proxy variable points elsewhere', async () => {
-    let proxyConnections = 0;
-    const proxy = createServer((_req, res) => { proxyConnections++; res.end('{}'); });
-    proxy.on('connection', () => { proxyConnections++; });
-    const { port: proxyPort } = await listen(proxy);
-
-    const receipts: MlxDestinationReceipt[] = [];
-    const model = createServer((_req, res) => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end('{"status":"ok"}');
-    });
-    const { origin } = await listen(model);
-
-    setProxyEnv(`http://127.0.0.1:${proxyPort}`);
-    try {
-      // A proxy-aware client would dial the proxy port and never answer here.
-      expect((await new MlxTransport({ origin, onDestination: (receipt) => receipts.push(receipt) }).request('/health')).status).toBe('ok');
-    } finally {
-      for (const key of PROXY_KEYS) { if (savedEnv[key] === undefined) delete process.env[key]; else process.env[key] = savedEnv[key]!; }
-    }
-
-    expect(proxyConnections).toBe(0);
-    expect(receipts).toHaveLength(1);
-    expect(receipts[0].host).toBe('127.0.0.1');
-    expect(['127.0.0.1', '::1', '::ffff:127.0.0.1']).toContain(receipts[0].remoteAddress);
+  test('connects to literal loopback even when every proxy variable points elsewhere', () => {
+    expect(egressChild?.proxyStatus).toBe('ok');
+    expect(egressChild?.proxyConnections).toBe(0);
+    expect(egressChild?.proxyReceipts).toHaveLength(1);
+    expect(egressChild?.proxyReceipts?.[0].host).toBe('127.0.0.1');
+    expect(['127.0.0.1', '::1', '::ffff:127.0.0.1']).toContain(egressChild?.proxyReceipts?.[0].remoteAddress ?? '');
   });
 
-  test('never routes a model call through the global fetch stack', async () => {
-    const calls: string[] = [];
-    const originalFetch = globalThis.fetch;
-    const model = createServer((req, res) => {
-      req.resume();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      if (req.url === '/health') return res.end('{"status":"ok"}');
-      if (req.url === '/v1/models') return res.end(JSON.stringify({ data: [
-        { id: 'installed-text', owned_by: 'mlx-serve', capabilities: ['chat'], bytes_on_disk: 100 },
-        { id: 'installed-image', owned_by: 'mlx-serve', capabilities: ['image'], bytes_on_disk: 100 },
-      ] }));
-      if (req.url === '/v1/chat/completions') return res.end(JSON.stringify({ id: 'r1', model: 'installed-text',
-        choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ title: 't', logline: 'l', scenes: Array.from({ length: 5 }, (_, index) => ({
-          sceneNo: index + 1, title: `s${index + 1}`, durationSec: 10, description: 'd', visualDirection: 'v', narration: '',
-          caption: '', productionNotes: ['n'], imagePrompt: 'p', sourceIds: [],
-        })) }) } }] }));
-      return res.end(JSON.stringify({ id: 'r2', model: 'installed-image', data: [{ b64_json: 'A'.repeat(24) }] }));
+  test('never routes a model call through the global fetch stack', () => {
+    expect(egressChild?.fetchCalls).toEqual([]);
+    expect(egressChild?.draftTitle).toBe('t');
+    expect(egressChild?.imageBytes).toBe(18);
+    expect(egressChild?.imageProvenance).toMatchObject({
+      providerId: 'local-mlx', model: 'installed-image', verification: 'local-worker',
     });
-    const { origin } = await listen(model);
-    globalThis.fetch = (async (input: unknown) => { calls.push(String(input)); throw new Error('fetch_must_not_be_used'); }) as typeof globalThis.fetch;
-    try {
-      const client = new MlxStoryboardClient(new MlxTransport({ origin }));
-      await client.draft(request());
-      const generated = await client.image(request(), 'a wooden table');
-      expect(generated.bytes).toHaveLength(18);
-      expect(generated.provenance).toMatchObject({ providerId: 'local-mlx', model: 'installed-image', verification: 'local-worker' });
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-    expect(calls).toEqual([]);
   });
 
   test('rejects an external provider before any socket is opened', async () => {
