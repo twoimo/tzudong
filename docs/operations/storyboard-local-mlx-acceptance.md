@@ -489,3 +489,60 @@ mode outright if a single non-loopback inference request appears; the UI inspect
 (390/768/1440, light and dark) and the per-boundary error reporting carry the next
 shares. No weight was changed and no test was removed to reach a score.
 
+
+## Fourth pass — map, filter and review defect re-verification (2026-09-18)
+
+All source fixes for the reported defect list were already committed on this branch
+(`7863e913`, `ee855005`, `e2a29a03`, `eb5943ed`, `788f815e`). This pass re-ran the defective
+interactions against the current head `d22cfc7b` on the local stack to confirm the fixes
+still hold, and re-read production read-only to pin what is actually deployed.
+
+### Cluster click
+
+Clicking the `17` cluster at 1440 and at 390 moved the map to the cluster centre and left the
+cluster container at zero with 17 individually visible markers and 2 review-bubble anchors,
+so markers no longer evaporate after the move. Before the click: 1 container, 17 text,
+0 visible markers.
+
+### Five theme filters and reset
+
+Each filter was toggled on and off with the resulting marker population recorded: 조회수 폭발
+4, 댓글 폭주 4, 최근 영상 1, 재등장 맛집 1, 반응 찐함 2, and 17 after reset. No horizontal
+overflow at 1440 or 390.
+
+### Bottom sheet with a filter applied
+
+With 조회수 폭발 active, clicking a marker navigated to
+`/?restaurant=…&mapMode=domestic&restore=…` and the detail panel opened with the restaurant
+name, 도로명/지번/영어 주소, the YouTube 영상 block and 최근 리뷰 (1) carrying the author's
+nickname (먹보쯔양팬) rather than the deleted-account fallback. Verified at 390, 768 and 1440.
+
+### Button and typography fixes
+
+`수정 요청` and `리뷰 작성` measure 98x56 at 390 and 206x56 at 768 with `overflowX=false` and
+`white-space: nowrap`, so no clipping or wrapping; 길찾기 measures 147x56. The restaurant name
+button under the nickname renders at 12px / 16px (down from 16px / 24px). `/feed` renders the
+canonical and legacy review photos with 0 broken images and 0 horizontal overflow at all three
+widths.
+
+### Production state tied to the deployed commit
+
+Read-only fetch of `https://www.tzudong.app/feed` and all 33 `_next/static` chunks (with a
+browser user agent) still shows `5af1e1f6` behaviour: `read_public_profile_summaries` 2,
+`read_public_profile_leaderboard` 2, `탈퇴한 사용자` 5, `bg-black/70` 0, `bg-black/55` 0,
+`top-2` 0, and `cluster-marker-container` 0. The deployed CSS therefore still lacks the
+utilities the play badge and marker utilities need, and the deployed client still has no
+fallback when the two profile RPCs are missing from the hosted schema cache. None of the
+fixes in this branch are live.
+
+### Still blocked, not a code defect
+
+The 로컬 위치 button remains gated by `apps/web/lib/privacy/location-readiness.ts`, which requires
+`DEVICE_LOCATION_RELEASE_DECISION=approved` plus a verified external status and four SHA-256
+evidence references. That is an operator and legal decision and was not invented.
+
+Production promotion needs the `develop -> data -> main` PR chain and the external evidence in
+`docs/agents/release.md` (published policy tuple, retention approvals, hosted migration/RLS
+readback, location filing, legal review). Those receipts are still missing, so the promotion chain has
+not been opened and the fixes remain undeployed.
+
