@@ -380,3 +380,71 @@ stacking defect.
 
 `/s/[code]` with a real code (no share link exists to follow), screen-reader conformance,
 focus-restore after a modal closes, and any dark-theme acceptance.
+
+## Search and filter verification (2026-09-19, local)
+
+Local rendered behaviour only, and explicitly not production acceptance. Harness: Next dev server on
+`127.0.0.1:8080` against the local Supabase stack (`LOCAL_STACK_PORT_BASE=30000`) holding 17 approved
+fixtures, Node 24, Playwright imported by absolute path, one fresh anonymous context per viewport.
+Probes `probe-filter-search{2,3,4}.mjs`, `probe-region-filter.mjs` and `probe-region-mobile.mjs`
+sit beside the raw JSON (`filter-search2.json`, `filter-search3.json`, `filter-search4.json`,
+`region-filter.json`, `region-filter-mobile.json`) and the screenshots in
+`route-continuation/filter-search-shots/` under the artifacts root above.
+
+### Search
+
+The first pass reported zero result rows for every query. That was a probe artifact: the search
+dropdown carries no `listbox`/`option` roles, so an ARIA-based row count reads 0 even when rows are
+rendered. Re-measured from the rendered DOM, the path works end to end at 390, 768 and 1440:
+
+| input | measured |
+| --- | --- |
+| `정원분식` | 1 row `정원분식 서울특별시 중구 세종대로 110`; request `approved_name=ilike.%정원분식%` |
+| `칼국수` | 1 row `명동칼국수 서울특별시 중구 을지로 30` |
+| click the `정원분식` row | detail opens at `/?restaurant=00000000-0000-4000-8000-000000000101&mapMode=domestic&restore=…`, panel reads `정원분식`, `매장 정보`, `쯔양 유튜브 영상 2개`, `최근 리뷰 (1)` |
+| `zzzqqq없는맛집이름`, 120×`가`, `<script>alert(1)</script>`, `'; DROP TABLE restaurants; --`, `%%%&&&`, `🍜🍱맛집` | dropdown shows only `검색 결과가 없습니다.`; 0 px horizontal overflow; 0 console errors |
+| one character | no request at all (`MIN_SEARCH_QUERY_LENGTH = 2`) |
+
+Every query reaches Supabase as a URL-encoded PostgREST parameter, so the SQL text stays inert, and
+the dropdown renders the input as text. Measured network amplification: at 150 ms/char each keystroke
+issues one `rest/v1/restaurants` request (9 characters → 8 requests; 120 characters at 12 ms/char →
+119). `useDeferredValue` defers rendering, it does not debounce. Recorded as an observation with the
+measurement above; the code was not changed in this pass.
+
+### The five theme filters are single-select by contract
+
+`selectedTheme === theme.id`, and clicking the pressed chip clears it
+(`home-desktop-control-panel.tsx:1521`, `MobileControlOverlay.tsx:1039`). Measured cluster badge with
+the marker in view at 390, 768 and 1440: baseline `17` → `최근 영상` `1` → `조회수 폭발` `4` →
+`반응 찐함` `2` → clicking `반응 찐함` again `17`, with exactly one chip at `aria-pressed="true"` in
+each step. The earlier "filters do not compose" note was measuring a designed single-select rather
+than a defect; composition is verified across filter kinds instead.
+
+### Category and region filters apply, and both reset
+
+- Category (multi-select): `한식` + `분식` → trigger `2개 선택됨`, cluster badge `16`, and `초기화`
+  returns it to `17`. On the mobile and tablet sheet the `초기화 (2개 선택됨)` button disappears and
+  the check icons drop `2 → 0`.
+- Region, desktop combobox `지역 필터`: `서울특별시 (17개)` → badge `16` plus one individual marker
+  (`00000000-0000-4000-8000-000000000103`), i.e. all 17 restaurants remain on the map with 16
+  clustered; `부산광역시 (0개)` → the painted map holds no markers and shows
+  `이 지역에 등록된 맛집이 없습니다`; `대한민국` → badge `17`. 0 px overflow and 0 console errors
+  throughout.
+- Region, mobile and tablet sheet (`지역 선택 열기`): the same three states, with trigger text
+  `전체` → `서울특별시` → `부산광역시` → `전체`.
+
+One measurement caveat is recorded so the next pass does not repeat it: a `.cluster-marker-container`
+node survives the zero-result region switch at rect `(-4992, -8427)` inside an `overflow: hidden`
+container. It is never painted, so a visibility test that only compares rectangle size to zero reads a
+stale badge of `16` for `부산광역시`. The screenshots at 390 and 1440 show the empty map and the empty
+message, which is the state this section reports.
+
+### Still blocked or not claimed after this pass
+
+The `현재 위치 보기` button remains fail-closed by design: `apps/web/lib/privacy/location-readiness.ts`
+requires an operator `DEVICE_LOCATION_RELEASE_DECISION=approved` with a verified external status and
+four SHA-256 hashes before browser geolocation is offered, so "GPS 권한 연동" cannot be completed
+without that external evidence and was not fabricated here. Focus-restore after the user-menu dialog
+closes still lands on `<body>`, `/s/[code]` with a real share code is unverified, no
+screen-reader/contrast pass is claimed, and the production deployment remains blocked by
+[release.md](../agents/release.md).
