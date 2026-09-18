@@ -101,14 +101,25 @@ class StoryboardSqlIntegration(unittest.TestCase):
           CREATE ROLE anon NOLOGIN;
           CREATE ROLE authenticated NOLOGIN;
           CREATE ROLE service_role NOLOGIN BYPASSRLS;
+          CREATE ROLE privacy_workflow_owner NOLOGIN NOINHERIT;
           CREATE SCHEMA auth;
           CREATE SCHEMA storage;
+          CREATE SCHEMA privacy_retention;
+          CREATE TABLE privacy_retention.g014_public_rpc_allowlist(
+            function_schema text NOT NULL, function_name text NOT NULL, identity_arguments text NOT NULL,
+            grantee name NOT NULL, source_signature text NOT NULL, UNIQUE (source_signature, grantee));
           CREATE TABLE auth.users(id uuid PRIMARY KEY);
           CREATE TABLE public.user_roles(user_id uuid PRIMARY KEY REFERENCES auth.users(id), role text NOT NULL);
           CREATE TABLE public.user_account_status(user_id uuid PRIMARY KEY REFERENCES auth.users(id), account_status text NOT NULL);
           CREATE TABLE storage.buckets(id text PRIMARY KEY, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+          CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), bucket_id text NOT NULL, name text NOT NULL);
+          ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated, service_role;
           CREATE TABLE public.admin_storyboard_jobs(id integer PRIMARY KEY, marker text);
           INSERT INTO public.admin_storyboard_jobs VALUES (1, 'legacy-unchanged');
+          INSERT INTO storage.objects(bucket_id, name) VALUES ('storyboard-private', 'probe.png');
+          GRANT USAGE ON SCHEMA public, storage, privacy_retention TO anon, authenticated, service_role, privacy_workflow_owner;
+          GRANT SELECT ON public.user_roles, public.user_account_status TO privacy_workflow_owner, service_role;
         """)
         cls.sql(MIGRATION.read_text())
         print(f"Isolated database: {image}; network=none; no shared volumes", flush=True)
@@ -190,6 +201,62 @@ class StoryboardSqlIntegration(unittest.TestCase):
                 self.sql("SELECT public.storyboard_production_auth_worker('" + "a" * 64 + "')", role)
             self.assertEqual(self.sql("SELECT count(*) FROM pg_proc WHERE proname LIKE 'storyboard_production_%' "
                                      f"AND has_function_privilege('{role}',oid,'execute')"), "0")
+
+    def test_fresh_install_declares_the_storyboard_catalog_exactly_once(self):
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_tables WHERE schemaname='public' "
+                                  "AND tablename LIKE 'admin_storyboard_production_%'"), "5")
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace "
+                                  "WHERE n.nspname='public' AND p.proname LIKE 'storyboard_production_%'"), "10")
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_policies WHERE schemaname='public' "
+                                  "AND policyname='storyboard_production_owner_access'"), "5")
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+                                  "WHERE n.nspname='public' AND c.relname LIKE 'admin_storyboard_production_%' "
+                                  "AND c.relkind='r' AND c.relrowsecurity"), "5")
+        self.assertEqual(self.sql("SELECT count(*) FROM storage.buckets WHERE id='storyboard-private'"), "1")
+
+    def test_storyboard_bucket_is_private_and_grants_no_browser_object_policy(self):
+        """The bucket is reached only through the service-role/worker path."""
+        self.assertEqual(self.sql("SELECT public::text FROM storage.buckets WHERE id='storyboard-private'"), "false")
+        self.assertEqual(self.sql("SELECT array_to_string(allowed_mime_types,',') FROM storage.buckets "
+                                  "WHERE id='storyboard-private'"), "image/png,image/jpeg,image/webp")
+        # The fixture models a real Supabase storage.objects table: RLS enabled,
+        # table grants to anon/authenticated, one row for this private bucket.
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+                                  "WHERE n.nspname='storage' AND c.relname='objects' AND c.relrowsecurity"), "1")
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_policies WHERE schemaname='storage' AND tablename='objects'"), "0")
+        self.assertEqual(self.sql("SELECT count(*) FROM pg_policies WHERE coalesce(qual,'') LIKE '%storyboard-private%' "
+                                  "OR coalesce(with_check,'') LIKE '%storyboard-private%'"), "0")
+        for role in ("anon", "authenticated"):
+            self.assertEqual(self.sql("SELECT count(*) FROM storage.objects", role), "0")
+        self.assertEqual(self.sql("SELECT count(*) FROM storage.objects", "service_role"), "1")
+
+    def catalog_snapshot(self):
+        return self.sql("""
+          SELECT string_agg(line, chr(10) ORDER BY line) FROM (
+            SELECT 'table '||schemaname||'.'||tablename AS line FROM pg_tables WHERE schemaname IN ('public','storage')
+            UNION ALL
+            SELECT 'function '||p.oid::regprocedure::text FROM pg_proc p
+              JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'
+            UNION ALL
+            SELECT 'policy '||schemaname||'.'||tablename||'.'||policyname FROM pg_policies
+              WHERE schemaname IN ('public','storage')
+            UNION ALL
+            SELECT 'bucket '||id||':'||public::text||':'||coalesce(file_size_limit::text,'-')
+              ||':'||coalesce(array_to_string(allowed_mime_types,','),'-') FROM storage.buckets
+            UNION ALL
+            SELECT 'grant '||table_schema||'.'||table_name||':'||grantee||':'||privilege_type
+              FROM information_schema.role_table_grants WHERE table_schema IN ('public','storage')
+          ) lines
+        """)
+
+    def test_reapplying_the_unit_fails_closed_without_schema_drift(self):
+        """The ledger, not the SQL, provides idempotency: a blind re-apply must abort with zero drift."""
+        before = self.catalog_snapshot()
+        self.assertNotEqual(before, "")
+        with self.assertRaisesRegex(SqlFailure, "already exists"):
+            self.sql(MIGRATION.read_text())
+        self.assertEqual(self.catalog_snapshot(), before)
+        self.assertEqual(self.sql("SELECT count(*) FROM storage.buckets WHERE id='storyboard-private'"), "1")
 
     def test_owner_scope_credentials_revocation_and_inactive_owner(self):
         owner = self.owner()
