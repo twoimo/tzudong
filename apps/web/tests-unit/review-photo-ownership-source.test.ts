@@ -41,4 +41,16 @@ describe('review photo ownership source contracts', () => {
     expect(modalSource).toContain('image/avif,image/jpeg,image/png,image/webp');
     expect(modalSource).not.toContain('accept="image/*"');
   });
+
+  test('the review composer uploads and persists one canonical review id', () => {
+    const composerSource = source('components/reviews/ReviewModal.tsx');
+
+    expect(composerSource).toContain('buildReviewPhotoObjectPath');
+    expect(composerSource).toContain('normalizeReviewPhotoFilename');
+    expect(composerSource).toContain('const reviewId = crypto.randomUUID();');
+    expect(composerSource).toContain("purpose: 'verification'");
+    expect(composerSource).toContain("purpose: 'food'");
+    expect(composerSource).toContain('id: reviewId,');
+    expect(composerSource).toContain('REVIEW_VERIFICATION_UPLOAD_FAILED');
+  });
 });

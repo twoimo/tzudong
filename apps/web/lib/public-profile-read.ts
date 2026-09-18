@@ -64,6 +64,13 @@ const MAX_PROFILE_ROWS = 100;
 export const PUBLIC_PROFILE_LEADERBOARD_PAGE_SIZE = MAX_PROFILE_ROWS;
 const MAX_NICKNAME_LENGTH = 100;
 const MAX_AVATAR_REFERENCE_BYTES = 4_096;
+/**
+ * Anonymized nickname retained by the account-deletion workflow. The read RPC
+ * already excludes these rows, but the value is accepted (and dropped) instead
+ * of failing the batch so one deleted account can never blank out every other
+ * reviewer's nickname.
+ */
+export const DELETED_ACCOUNT_NICKNAME = "탈퇴한 사용자";
 
 function fail(code: PublicProfileReadErrorCode): never {
   throw new PublicProfileReadError(code);
@@ -122,6 +129,14 @@ function isBoundedNickname(value: unknown): value is string {
     value.length > 0 &&
     value.length <= MAX_NICKNAME_LENGTH &&
     value !== "탈퇴한 사용자"
+  );
+}
+
+function isBoundedProfileSummaryNickname(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_NICKNAME_LENGTH
   );
 }
 
@@ -257,12 +272,14 @@ export async function readPublicProfileSummaries(
   const seenIds = new Set<string>();
   let previousOrdinal = -1;
 
-  return data.map((value) => {
+  const summaries: PublicProfileSummary[] = [];
+
+  for (const value of data) {
     if (
       !isPlainRecord(value) ||
       !hasExactKeys(value, ["user_id", "nickname", "avatar_url"]) ||
       !isUuid(value.user_id) ||
-      !isBoundedNickname(value.nickname) ||
+      !isBoundedProfileSummaryNickname(value.nickname) ||
       !isBoundedAvatarUrl(value.avatar_url)
     ) {
       fail(PUBLIC_PROFILE_READ_ERROR_CODE.invalidResponse);
@@ -280,12 +297,19 @@ export async function readPublicProfileSummaries(
     previousOrdinal = ordinal;
     seenIds.add(userId);
 
-    return {
+    // The deleted account still consumes its requested ordinal, but it has no
+    // public profile: the caller renders its own deleted-account fallback for
+    // that one reviewer while every other nickname in the batch survives.
+    if (value.nickname === DELETED_ACCOUNT_NICKNAME) continue;
+
+    summaries.push({
       user_id: userId,
       nickname: value.nickname,
       avatar_url: value.avatar_url,
-    };
-  });
+    });
+  }
+
+  return summaries;
 }
 
 export async function readPublicProfileLeaderboard(
