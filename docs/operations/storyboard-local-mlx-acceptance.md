@@ -748,3 +748,46 @@ Checks for this pass: `npm run lint` exit 0, `npm run typecheck:native` exit 0, 
 test:unit` 2090 pass / 1 skip / 1 fail with the same pre-existing `TypeScript 7 dual-toolchain`
 failure seen before the change (2092 tests across 289 files, 101 s).
 
+## Seventh pass — CI recovery and the second promotion chain (2026-09-19)
+
+Branch head at this pass: `f2c8bdf5` on `codex/storyboard-local-mlx-20260918`, promoted through
+four PRs. This section was written after those merges, so it is deliberately unpromoted: it
+records the tree it describes rather than travelling with it.
+
+| PR | Base | Head | Merge commit |
+| --- | --- | --- | --- |
+| #2912 | develop | `codex/storyboard-local-mlx-20260918` | `838757d6` |
+| #2914 | develop | `codex/sync-develop-main-20260919` | `3a5f7b88` |
+| #2913 | data | develop | `6e98d17d` |
+| #2915 | main | data | `8a8439d0` |
+
+All four carried `Release` and `Promotion Path`; nothing was force-pushed and branch protection
+was not bypassed. `origin/main` is `8a8439d0`, `origin/data` is `6e98d17d`, `origin/develop` is
+`3a5f7b88`.
+
+The direct `develop -> data` promotion first reported `BEHIND`: `data` carried the #2910 merge
+commit that `develop` never received, and GitHub refuses a server-side branch update on a
+protected branch (`422 protected branch 'develop' check failed: Changes must be made through a
+pull request`). #2914 merged `main`, which already contained `data`, back into `develop`; that
+restored `develop ⊇ main ⊇ data` and let #2913 and #2915 merge normally. The desktop dialog
+modality fix (`f3516043`) is on `main` as part of this chain.
+
+### CI on `main` is green again
+
+`web-admin-ci` had failed on `main` at `7554ee3b` and `67df460d`, and on `develop` at `ce22e122`,
+always on the same case: `TypeScript 7 dual-toolchain and benchmark contract > treats bounded
+aggregate noise as zero admitted slices without hiding an observed regression`. That case pinned
+two sentences in `AGENTS.md` which the 2026-09-08 guidance rewrite moved into
+`docs/agents/verification.md`, the guide `AGENTS.md` routes toolchain and performance work to.
+`26836cc6` resolves the guidance from both files; the assertions themselves are unchanged.
+
+Readback: CI on `develop` @ `3a5f7b88` success, CI on `main` @ `8a8439d0` success — the first
+green `CI · main` since `535ff5e2` (2026-09-06).
+
+### The release is still held
+
+After the promotion the production readback is unchanged
+(`5af1e1f6ac81a483e1e8aed2b05237ca0f62ce6a`, `dpl_CpqD2F8weF6vDLUG2AgSfrruMbZa`) and
+`TZUDONG_APPROVED_PRODUCTION_SHA` is still unset, so no production build was authorized. The
+concrete release action, the rollback target and the two still-unmet prerequisites are recorded
+in [production-release-readiness-20260918.md](production-release-readiness-20260918.md).
