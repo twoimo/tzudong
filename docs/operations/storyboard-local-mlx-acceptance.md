@@ -478,3 +478,14 @@ recorded as blocked; it needs the ChatGPT browser tab itself to be healthy befor
 work. The independent review on file (GPT-5.6 Sol, `external-review-1.md`) still predates
 `eb5943ed`, `788f815e` and `1153e6fc`.
 
+
+### Frozen grading criteria (unchanged this pass)
+
+The weights and thresholds fixed at the start of the goal still apply: the local
+storyboard end-to-end path with real MLX models (5 scenes, 5 images, edit, single-scene
+regeneration, cancel, reload restore, export) is worth the largest share; the zero
+external-egress check under disabled external AI is a hard gate that fails the local
+mode outright if a single non-loopback inference request appears; the UI inspection
+(390/768/1440, light and dark) and the per-boundary error reporting carry the next
+shares. No weight was changed and no test was removed to reach a score.
+
