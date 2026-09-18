@@ -18,22 +18,22 @@ The [source inventory](../../apps/web/.omx/artifacts/storyboard-public-ui-202609
 | --- | --- |
 | `/` | Domestic map shows 723 restaurants. Search `한추`, open its result and restaurant detail; review action opens login. Desktop recommendations have loaded video thumbnails. Home overseas round trip and filter checks are pending continuation. |
 | `/global-map` | Country selector renders; Turkey has two restaurants and Japan a five-restaurant option. This is separate from the home overseas toggle. |
-| `/home-frame` | Alternate home shell exists in source; live check pending. |
+| `/home-frame` | Live 2026-09-19: 200 at all three viewports. Desktop renders the home shell (인기 검색 맛집 TOP 5, 최근 추가된 맛집 video cards, cluster markers, all five theme filters); mobile renders the map-first shell. Dev-only local banner sits above it in these captures. |
 | `/feed` | Two distinct public reviews render repeatedly in the feed. Mobile/tablet retain `/feed`; desktop redirects to `/?panel=feed`. No review-photo elements exist in the inspected anonymous feed, so photo-carousel behavior is untested. |
 | `/stamp` | Public restaurant collection renders. Tablet screenshot shows a two-column grid, loaded video thumbnails and a clearly marked guide card. Desktop redirects to `/?panel=stamp`. Stamp accrual requires an authorized test account. |
-| `/leaderboard` | Mobile/tablet page and desktop `/?panel=leaderboard` render an explicit empty ranking state. Period switching pending. |
-| `/insights` | Source route present; live check pending. |
-| `/mypage` | Source redirects to `/mypage/submissions/new`; direct live check pending. |
+| `/leaderboard` | Mobile/tablet page and desktop `/?panel=leaderboard` render an explicit empty ranking state. Period switching verified 2026-09-19: clicking 전체/월간 moves the selected state at all three viewports; no ranking rows exist locally (2 fixtures). |
+| `/insights` | Live 2026-09-19: 200 then a client redirect to `/` at all three viewports. Source `insights-client.tsx:770` sends anonymous visitors home instead of to `/auth/required`. |
+| `/mypage` | Live 2026-09-19: 307 to `/auth/required?reason=mypage&next=%2Fmypage` at all three viewports, so the anonymous gate runs before the source redirect to `/mypage/submissions/new`. |
 | `/mypage/profile`, `/mypage/bookmarks`, `/mypage/reviews` | All three direct anonymous visits redirect to `/auth/required?reason=mypage` (safe recorded query excludes the return path). Private account contents remain blocked. |
-| `/mypage/submissions/new`, `/mypage/submissions/edit`, `/mypage/submissions/recommend` | Source routes present. Verify anonymous gate without filling or submitting; live checks pending. |
-| `/submissions` | Source redirects to `/mypage`; live check pending. |
-| `/auth/required` | Reached by the three MY routes above. Direct entry and login/home link checks pending. |
-| `/auth/reset-password` | Source inspected; no recovery proof or request supplied. Live entry check pending. |
-| `/privacy/onboarding` | Source redirects into the home onboarding state. No consent or challenge submission authorized; live entry pending. |
+| `/mypage/submissions/new`, `/mypage/submissions/edit`, `/mypage/submissions/recommend` | Live 2026-09-19: each 307s to `/auth/required?reason=mypage&next=…` at all three viewports with no inputs rendered. Nothing was filled or submitted. |
+| `/submissions` | Live 2026-09-19: `/submissions` 307 → `/mypage` 307 → `/auth/required?reason=mypage&next=%2Fmypage` at all three viewports. |
+| `/auth/required` | Live 2026-09-19 direct entry: 200 at all three viewports with heading 로그인이 필요합니다, no `reason` and no login/home link in the card. The card shows `요청 경로: /` when no return path was requested. |
+| `/auth/reset-password` | Live 2026-09-19 direct entry: 200 at all three viewports showing 비밀번호 재설정 링크를 확인해주세요 with one 홈으로 돌아가기 button and no input, because the page only handles an emailed recovery link. The request path is the login modal's 비밀번호를 잊으셨나요? entry (verified: a second dialog titled 비밀번호 찾기 with a single email field); nothing was requested or submitted. |
+| `/privacy/onboarding` | Live 2026-09-19: 200 then a client navigation to `/?reason=privacy_onboarding` with the 개인정보 확인 sheet open (age band, required policy consent, optional marketing consents, disabled complete button) at all three viewports. Geometry check: the sheet starts below the dev-only banner with no clipping and no internal scroll. No consent was submitted. |
 | `/privacy` | HTTP 200 at all three target viewports. Mobile first screen visually reviewed; raw policy metadata and implementation terminology dominate the opening content. Cross-link navigation pending. |
 | `/data-deletion` | HTTP 200 at all three target viewports. Read-only information page; deletion must not be initiated. Visual review and cross-links pending. |
-| `/user/[userId]` | Existing public profile links are present in the feed. Follow only an observed link; do not invent identifiers or retain identity data. Pending. |
-| `/s/[code]` | Source route present. Requires an already-existing public share link; do not generate a share record. Blocked until one is observed. |
+| `/user/[userId]` | Live 2026-09-19: followed an observed `/user/…` link from the anonymous feed at all three viewports. 200 with the profile header, 도장/좋아요/랭킹 counters, tab set and a 방문 도장 card with a loaded 4K thumbnail; the nickname and avatar were redacted in the captures. |
+| `/s/[code]` | Source route present. An invalid code renders the 404 page (observed earlier). A real code still requires an already-existing public share link, and generating one is out of scope, so the success path stays blocked. |
 | Login/signup, anonymous bookmarks | Mobile MY opens login; switching to signup exposes labeled fields, age/consent controls and disabled blank submit. Review action also opens login. `/?panel=bookmarks` reaches an anonymous login gate. No credentials, OAuth, account creation or consent submitted. |
 
 ## Responsive and visual coverage
@@ -333,3 +333,118 @@ Identical at 1440 and 390, so the three inert filters fail consistently rather t
 The earlier `getByRole('button', { name })` sweep reported the chips as missing; that was a selector
 error, not an absent control, and is corrected here.
 
+## Route continuation — direct entry checks (2026-09-19)
+
+Probe scripts: `probe-public-routes.mjs`, `probe-leaderboard-auth.mjs`, `probe-lb-recovery3.mjs`,
+`probe-lb-desktop4.mjs` and `probe-onboarding-stack.mjs` under
+`apps/web/.omx/artifacts/storyboard-local-mlx-20260918/`, run with Node 24 against the local dev
+server on `127.0.0.1:8080` in a fresh anonymous context per viewport. Raw output:
+[route-continuation.json](../../apps/web/.omx/artifacts/storyboard-public-ui-20260918/route-continuation/route-continuation.json),
+[lb-recovery3.json](../../apps/web/.omx/artifacts/storyboard-public-ui-20260918/route-continuation/lb-recovery3.json),
+[lb-desktop4.json](../../apps/web/.omx/artifacts/storyboard-public-ui-20260918/route-continuation/lb-desktop4.json),
+with 52 screenshots under `route-continuation/shots/`. No credentials, no account creation and no
+submission: the only form interaction was an empty 로그인 click, which produced the client-side
+"이메일과 비밀번호를 입력해주세요" toast and no auth request.
+
+| route | 390x844 | 768x1024 | 1440x900 |
+| --- | --- | --- | --- |
+| `/home-frame` | 200, map-first shell | 200 | 200, home shell with panel |
+| `/insights` | 200 → `/` | 200 → `/` | 200 → `/` |
+| `/mypage` | 307 → `/auth/required?reason=mypage` | same | same |
+| `/mypage/submissions/new`, `edit`, `recommend` | 307 → gate | 307 → gate | 307 → gate |
+| `/submissions` | 307 → `/mypage` → gate | same | same |
+| `/auth/required` | 200, 로그인이 필요합니다 | 200 | 200 |
+| `/auth/reset-password` | 200, link-only notice | 200 | 200 |
+| `/privacy/onboarding` | 200 → `/?reason=privacy_onboarding` + sheet | same | same |
+| `/user/<observed id>` | 200, profile (nickname redacted) | 200 | 200 |
+| `/leaderboard` | 200, 전체/월간 switch | 200, switch | 200 via `/?panel=leaderboard`, switch |
+
+All 30 route/viewport combinations reported 0 px horizontal overflow, 0 broken images, 0 console
+errors and a `main` landmark. The password-recovery entry opens a second dialog titled 비밀번호 찾기
+with a single email field, and both stacked dialogs report `aria-modal="true"`. The dev-only
+workspace banner renders only when `NEXT_PUBLIC_TZUDONG_LOCAL_RUNTIME === '1'`
+(`components/home/LocalWorkspaceBanner.tsx`); the onboarding sheet starts below it with no clipping
+and no internal scroll (`probe-onboarding-stack.mjs`), so this capture establishes no production
+stacking defect.
+
+### Observations recorded this pass (not defects)
+
+- `/insights` sends anonymous visitors to `/` silently while the mypage routes explain the login
+  requirement. Both are source behaviour (`insights-client.tsx:770`); the inconsistency is recorded
+  for the operator rather than changed here.
+- Direct `/auth/required` shows `요청 경로: /` although no return path was requested.
+- The local ranking is empty because the local database holds two fixtures; the empty state renders
+  correctly, so no design conclusion follows from it.
+
+### Still blocked or not claimed
+
+`/s/[code]` with a real code (no share link exists to follow), screen-reader conformance,
+focus-restore after a modal closes, and any dark-theme acceptance.
+
+## Search and filter verification (2026-09-19, local)
+
+Local rendered behaviour only, and explicitly not production acceptance. Harness: Next dev server on
+`127.0.0.1:8080` against the local Supabase stack (`LOCAL_STACK_PORT_BASE=30000`) holding 17 approved
+fixtures, Node 24, Playwright imported by absolute path, one fresh anonymous context per viewport.
+Probes `probe-filter-search{2,3,4}.mjs`, `probe-region-filter.mjs` and `probe-region-mobile.mjs`
+sit beside the raw JSON (`filter-search2.json`, `filter-search3.json`, `filter-search4.json`,
+`region-filter.json`, `region-filter-mobile.json`) and the screenshots in
+`route-continuation/filter-search-shots/` under the artifacts root above.
+
+### Search
+
+The first pass reported zero result rows for every query. That was a probe artifact: the search
+dropdown carries no `listbox`/`option` roles, so an ARIA-based row count reads 0 even when rows are
+rendered. Re-measured from the rendered DOM, the path works end to end at 390, 768 and 1440:
+
+| input | measured |
+| --- | --- |
+| `정원분식` | 1 row `정원분식 서울특별시 중구 세종대로 110`; request `approved_name=ilike.%정원분식%` |
+| `칼국수` | 1 row `명동칼국수 서울특별시 중구 을지로 30` |
+| click the `정원분식` row | detail opens at `/?restaurant=00000000-0000-4000-8000-000000000101&mapMode=domestic&restore=…`, panel reads `정원분식`, `매장 정보`, `쯔양 유튜브 영상 2개`, `최근 리뷰 (1)` |
+| `zzzqqq없는맛집이름`, 120×`가`, `<script>alert(1)</script>`, `'; DROP TABLE restaurants; --`, `%%%&&&`, `🍜🍱맛집` | dropdown shows only `검색 결과가 없습니다.`; 0 px horizontal overflow; 0 console errors |
+| one character | no request at all (`MIN_SEARCH_QUERY_LENGTH = 2`) |
+
+Every query reaches Supabase as a URL-encoded PostgREST parameter, so the SQL text stays inert, and
+the dropdown renders the input as text. Measured network amplification: at 150 ms/char each keystroke
+issues one `rest/v1/restaurants` request (9 characters → 8 requests; 120 characters at 12 ms/char →
+119). `useDeferredValue` defers rendering, it does not debounce. Recorded as an observation with the
+measurement above; the code was not changed in this pass.
+
+### The five theme filters are single-select by contract
+
+`selectedTheme === theme.id`, and clicking the pressed chip clears it
+(`home-desktop-control-panel.tsx:1521`, `MobileControlOverlay.tsx:1039`). Measured cluster badge with
+the marker in view at 390, 768 and 1440: baseline `17` → `최근 영상` `1` → `조회수 폭발` `4` →
+`반응 찐함` `2` → clicking `반응 찐함` again `17`, with exactly one chip at `aria-pressed="true"` in
+each step. The earlier "filters do not compose" note was measuring a designed single-select rather
+than a defect; composition is verified across filter kinds instead.
+
+### Category and region filters apply, and both reset
+
+- Category (multi-select): `한식` + `분식` → trigger `2개 선택됨`, cluster badge `16`, and `초기화`
+  returns it to `17`. On the mobile and tablet sheet the `초기화 (2개 선택됨)` button disappears and
+  the check icons drop `2 → 0`.
+- Region, desktop combobox `지역 필터`: `서울특별시 (17개)` → badge `16` plus one individual marker
+  (`00000000-0000-4000-8000-000000000103`), i.e. all 17 restaurants remain on the map with 16
+  clustered; `부산광역시 (0개)` → the painted map holds no markers and shows
+  `이 지역에 등록된 맛집이 없습니다`; `대한민국` → badge `17`. 0 px overflow and 0 console errors
+  throughout.
+- Region, mobile and tablet sheet (`지역 선택 열기`): the same three states, with trigger text
+  `전체` → `서울특별시` → `부산광역시` → `전체`.
+
+One measurement caveat is recorded so the next pass does not repeat it: a `.cluster-marker-container`
+node survives the zero-result region switch at rect `(-4992, -8427)` inside an `overflow: hidden`
+container. It is never painted, so a visibility test that only compares rectangle size to zero reads a
+stale badge of `16` for `부산광역시`. The screenshots at 390 and 1440 show the empty map and the empty
+message, which is the state this section reports.
+
+### Still blocked or not claimed after this pass
+
+The `현재 위치 보기` button remains fail-closed by design: `apps/web/lib/privacy/location-readiness.ts`
+requires an operator `DEVICE_LOCATION_RELEASE_DECISION=approved` with a verified external status and
+four SHA-256 hashes before browser geolocation is offered, so "GPS 권한 연동" cannot be completed
+without that external evidence and was not fabricated here. Focus-restore after the user-menu dialog
+closes still lands on `<body>`, `/s/[code]` with a real share code is unverified, no
+screen-reader/contrast pass is claimed, and the production deployment remains blocked by
+[release.md](../agents/release.md).
