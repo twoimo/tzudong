@@ -120,6 +120,8 @@ export function shouldAllowLoopbackImageUpstreams(
     return localNightly || localDevelopment;
 }
 
+const allowLoopbackImageUpstreams = shouldAllowLoopbackImageUpstreams();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     ...(configuredNextDistDir ? { distDir: configuredNextDistDir } : {}),
@@ -136,7 +138,10 @@ const nextConfig = {
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
         minimumCacheTTL: 2678400, // [PERF] 31일 캐시 (이미지가 자주 변경되지 않음)
         dangerouslyAllowSVG: false,
-        dangerouslyAllowLocalIP: shouldAllowLoopbackImageUpstreams(),
+        // Only present when the loopback allowance is actually enabled: the key
+        // staying absent keeps the fail-closed default auditable in every other
+        // environment (see tests-unit/next-image-config-security.test.ts).
+        ...(allowLoopbackImageUpstreams ? { dangerouslyAllowLocalIP: true } : {}),
         remotePatterns: buildImageRemotePatterns(),
     },
     env: {

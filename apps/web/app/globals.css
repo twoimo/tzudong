@@ -1,8 +1,8 @@
 /* Minimal home-first root CSS. Full Tailwind utilities load only with AppRuntimeShell. */
 
 /* Declare the cascade-layer order up front so the element reset below can never
-   outrank Tailwind utilities (e.g. `text-xs` on a <button>). Keep it identical to
-   the order Tailwind v4 emits from `@import "tailwindcss"`. */
+   outrank Tailwind utilities (e.g. `text-xs` on a <button>). Keep this identical
+   to the order the Tailwind v4 entrypoint declares. */
 @layer theme, base, components, utilities;
 
 @import "../styles/light-root-tokens.css";
