@@ -56,8 +56,41 @@ Visually reviewed so far in this continuation: mobile feed (`20`), tablet stamp 
 
 Earlier evidence covers map-menu opening, restaurant search/detail, anonymous review gating, mobile MY, signup switching, the separate global-country selector and Escape dismissal. All **16 consecutive Tab checks stayed inside the desktop login dialog**. No overall keyboard, screen-reader or contrast pass is claimed.
 
-The [public health check](../../apps/web/.omx/artifacts/storyboard-public-ui-20260918/public-health.json) returned **HTTP 403**. **The deployed commit is unknown.** The inventory's explicitly labeled local SHA is not deployment evidence. No Vercel control-plane inspection was performed.
+The [public health check](../../apps/web/.omx/artifacts/storyboard-public-ui-20260918/public-health.json) returned **HTTP 403**. A later read-only probe of `https://www.tzudong.app/api/health` resolved the deployed commit: **`5af1e1f6ac81a483e1e8aed2b05237ca0f62ce6a`**, release `5445fa71104b2408962c1c5d369babf3bb778838`, deployment `dpl_CpqD2F8weF6vDLUG2AgSfrruMbZa`, project `prj_sau35J5uUtShIQ9OKofRtOVVnTSl`. Every production statement below is scoped to that commit. The inventory's explicitly labeled local SHA is not deployment evidence, and no Vercel control-plane inspection was performed.
 
 Authenticated login/OAuth, account-bound bookmarks/MY/reviews, stamp accrual and recovery completion remain blocked by the absence of an authorized test account/recovery proof. Review-photo interaction and share-route checks require existing suitable public content. All source/test results remain distinct from hosted acceptance.
+
+## Defect closure pass (local, 2026-09-18)
+
+A separate local pass traced the named map, filter, UI and review defects to code and measured before → after in a local Next.js dev server with Playwright at 390×844, 768×1024 and 1440×900. Evidence root: [defect-closure-observations.json](../../apps/web/.omx/artifacts/storyboard-local-mlx-20260918/defect-closure-observations.json) with raw logs, JSON reports and screenshots beside it (`.omx/` is gitignored). This is local rendered behaviour and is **not** production acceptance.
+
+### Root causes
+
+1. `app/globals.css` carried an **unlayered** `button, input, textarea, select { font: inherit }` reset, so it outranked every layer-ordered Tailwind utility. Every `<button>` computed 16px/24px regardless of `text-xs`/`text-[11px]`/`text-sm`, `ReviewCard`'s `border-border` computed `rgb(28,25,23)` instead of the theme token, and the restaurant name under a nickname inherited the 16px base. Fixed by declaring `@layer theme, base, components, utilities;` and moving the reset into `@layer base`.
+2. The home route never loaded `app/home-detail-globals.css`, because `components/home/home-desktop-control-panel.tsx`, `components/home/home-map-container.tsx`, `components/map/naver-map-sidepanels.tsx` and `components/layout/OverlayPagePanel.tsx` imported `RestaurantDetailPanel`/`ReviewModal` directly instead of the deferred-panel barrel. `.top-2`, `.bg-black/55`, `.bg-black/70`, `.ring-1` and `.backdrop-blur-[1px]` were absent from the home CSS, which is why the video play badge and the `영상 N` chip rendered unstyled.
+
+### Measured before → after (local)
+
+| Defect | Before | After |
+| --- | --- | --- |
+| `수정 요청` / `리뷰 작성` / `길찾기` text clipped or wrapped | 16px inherited on every button | `수정 요청` 11px/13.75px in 98×56, `리뷰 작성` 11px/13.75px in 98×56, `길찾기` 12px/15px in 147×56, all `overflowX: false` |
+| Restaurant name under the nickname oversized | 16px/24px | 12px/16px |
+| Recent-review card harsh black border | `rgb(28,25,23)` | `rgb(214,211,209)` 1px, radius 8px |
+| Cluster click lost the individual markers | 1 cluster container (`17`), 0 individual markers | cluster 0, 17 visible 32×32 individual markers with 2 review bubbles, and a marker click opens the detail panel |
+| Five theme filters | not working | `조회수 폭발` 4, `댓글 폭주` 4, `최근 영상` 1, `재등장 맛집` 1, `반응 찐함` 2, each resetting to 17 |
+| Bottom sheet while a filter is applied | could not open | `댓글 폭주` → 4 individual markers → click → desktop `panelPresent: true`, mobile and tablet `sheetPresent: true`, panel text `분식 | 정원분식 | 매장 정보 | … | 수정 요청 | 길찾기 | 리뷰 작성`; `scrollW == clientW` at all three sizes |
+| YouTube thumbnail centre play button | unaligned/unstyled | centred circular translucent badge with the play triangle; `영상 1/2` chip at (8,8) 56×20 |
+| Review images broken | — | `/feed` renders canonical and legacy review photos with 0 broken images, and map bubbles load `review-photos/…/reviews/1111…/food/1` and `…/1758000000001_food_1_legacy.png` at 320×240 |
+| Horizontal overflow | — | `scrollW == clientW` at 390, 768 and 1440 on `/`, `/feed` and `/stamp` |
+
+The location floating button is **not** a code defect. `apps/web/lib/privacy/location-readiness.ts` fails closed until an operator supplies `DEVICE_LOCATION_RELEASE_DECISION=approved` with a verified external status and four SHA-256 hashes; fabricating that evidence is out of scope and was not done.
+
+### Production state at `5af1e1f6` (read-only)
+
+Production predates every commit that carries these fixes, so the defects are present there. Measured read-only: the production home CSS lacks `.bg-black/70`, `.bg-black/55`, `.top-2` and `.ring-1` (play badge and chip unstyled); `/feed` shows **8 × `탈퇴한 사용자`** in visible text with 0 broken images out of 118.
+
+The `탈퇴한 사용자` join defect has a confirmed root cause. The deployed bundle calls `read_public_profile_summaries` and `read_public_profile_leaderboard` (two chunks each; five chunks carry the `탈퇴한 사용자` fallback string), but both RPCs answer **HTTP 404 `PGRST202`** from the deployed PostgREST schema cache, and a direct `profiles` select answers **HTTP 401 `42501 permission denied for table profiles`**. No client-side fallback can resolve the join, so every reviewer falls back to the deleted-account label. The fix is a hosted migration that creates the bounded read RPCs, which exist only in the local `*_local_*` convergence migrations. That is a hosted database mutation, so it was **not** performed; see [release.md](../agents/release.md).
+
+No commit was pushed, no pull request was opened, no deployment was triggered, no hosted migration was applied and no production data was written in this pass.
 
 Continuation is still in progress: remaining safe navigation/visual checks, evidence-link validation and browser cleanup will be recorded before final delivery.

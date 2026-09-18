@@ -54,6 +54,41 @@ completion regardless of how many other requirements pass.
 
 ## Initial runtime observations
 
+## Updated status with retained evidence (later pass, 2026-09-18)
+
+Evidence root: [defect-closure-observations.json](../../apps/web/.omx/artifacts/storyboard-local-mlx-20260918/defect-closure-observations.json)
+plus the raw logs, DB readbacks, screenshots and helper scripts beside it in the
+same local directory. `.omx/` is gitignored, so these are local artifacts and not
+repository evidence. Hosted claims are separate and must cite a deployed commit.
+Passing unit tests are not hosted proof.
+
+| ID | Status | Evidence |
+| --- | --- | --- |
+| L02 | Passed (local) | `readback-c67c5f17-…json` / `projectC-full.json`: five structured scenes with title, description, imagePrompt and productionNotes; text provider `local-mlx`, model `ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit`, `modelEvidence: "response"`. `storyboard-mlx-provider.test.ts` covers one bounded repair of a malformed draft and the small-image no-upscale path. |
+| L03 | Passed (local) | `cycle3.log` SCENES: five distinct `assetId`, `generatedAt` and `sha256` values, 1024×576 PNG with three WebP derivatives each, `modelEvidence: "installed-catalog-and-request"`. Scene edits landed at revisions 6 and 9 (`edit-patch.json`, `edit3.json`) and two single-scene regenerates were requested (`regen-patch.json`, `regen3.json`). |
+| L04 | Passed (local) | Request-bound `providers.text` and `providers.image` are independently selected with `externalAI: false`; `egress-socket-sample.log` shows only `127.0.0.1:11234` and `127.0.0.1:8080` and zero non-loopback destinations. |
+| L06 | Not re-measured this pass | Measured wall clock this pass: text stage 08:21:56→08:22:49 and five images 08:22:49→08:24:31 (~20 s each) at image concurrency 1 (`cycle.log`). Memory and swap sampling was not repeated. |
+| L07 | Passed (local) | The project persisted and re-read at revision 6 (`readback-c67c5f17-…json`), and `export.json` was reopened without loss. Lease/claim restart-recovery behaviour is covered by unit tests, not re-run this pass. |
+| L08 | Passed (local) | `cycle3.log`: CANCEL accepted at revision 4, status held `cancelled` unchanged for 30 s, RETRY returned revision 5 `queued`, then ran to `ready` revision 8 at 5/5 images. |
+| L09 | Passed (local) | `export.json` is `storyboard-export-v1` with 20 files; every base64 payload SHA-256 matches its recorded hash, 5,525,023 bytes decode, and 5/5 scenes carry images. |
+| L10 | Partially passed (local) | A five-scene storyboard was generated, edited, one scene regenerated, cancelled, retried, re-read and exported against the real local models. A full browser-driven admin run at all three viewports was not repeated this pass. |
+| Q01 | Partially passed (local) | Atomic claim, lease, heartbeat, late-result and restart-recovery behaviour is covered by `storyboard-outbound-worker.test.ts` and `storyboard-production-api.test.ts` (lease recheck, unreferenced-variant removal after cancellation). The isolated database concurrency run was not repeated this pass. |
+| Q02 | Passed (local) | Queue and the private `storyboard-private` bucket read back through `local_catalog_readback.sql` (now six buckets); the receipt-v1 round trip passes at 97 ledger units. Images are stored as bucket objects and the API returns metadata only. |
+| S01 | Partially passed (local) | `storyboard-production-api.test.ts`: every admin endpoint authenticates before params, body, storage or DB work; cross-origin mutations are rejected; synthetic dev/e2e identities cannot become UUID owners; worker lookups must return a single UUID owner. |
+| S02 | Partially passed (local) | Same file: manual imports are always recorded as unverified user provenance and projectId mismatch or forged provenance metadata is rejected; the fixed error response never includes exception text or DB diagnostics. |
+| S03 | Passed (local) | Decoded originals are preserved as PNG with WebP derivatives at 480/960/1024 and per-file SHA-256, MIME and dimensions; `storyboard-mlx-provider.test.ts` preserves the decoded original, produces verified WebP derivatives, accepts static PNG/JPEG/WebP, and rejects corrupt pixels, non-images and image URLs. |
+| S04 | Partially passed (local) | Bounded JSON despite a false content-length, bounded chunked multipart bytes before parsing, unknown/duplicate multipart field rejection, plus `review-photo-url-security.test.ts` and the `next-image-config-security.test.ts` loopback upstream gating matrix. |
+| S05 | Partially passed (local) | ESLint exit 0 and `typecheck:parity` with `diagnostics: 0`; the retained evidence directory excludes the worker token and the admin session cookie. A dedicated repository-wide secret scan was not run. |
+| D01 | Passed (local) | `storyboard-tests.log` 277 pass / 8 skip / 0 fail across 24 storyboard unit files; `affected.log` 58 pass / 0 fail across 9 files; `lint-typecheck.log` ESLint exit 0 and typecheck parity passed. The backend Supabase suite runs 1496 tests with zero regressions against baseline `67df460d`. |
+| D03 | Partially passed (local) | Feature-sized commits on `codex/storyboard-local-mlx-20260918`, each preceded by its relevant tests. Nothing is deployed; production still serves `5af1e1f6`. |
+
+Still unverified this pass: L01 and L05 contract probes, L10's full browser run at
+all three viewports, Q03/Q04 outbound worker and offline-worker scenarios,
+P01–P03 provider boundaries, U01–U05 public UI coverage, and the hosted
+requirement behind D03. None of these may be reported as complete.
+
+## Initial runtime observations
+
 - `/Applications/MLX Core.app` reports version `26.9.3`.
 - `http://127.0.0.1:11234/health` returned `{"status":"ok"}`.
 - `/v1/models` reports a loaded `ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit`
@@ -74,3 +109,9 @@ completion regardless of how many other requirements pass.
 Update this ledger with concrete evidence paths and statuses as work completes.
 Do not replace the complete objective with this turn's completed subset. Keep
 production read-only until an authorized test-data or deployment scope is known.
+
+The later pass above closes the local storyboard generation path and the named
+public UI defects; it does not close the whole objective. Production still serves
+`5af1e1f6ac81a483e1e8aed2b05237ca0f62ce6a`, which predates every commit on this
+branch, and the production release remains blocked by the external evidence
+listed in [release.md](../agents/release.md).
