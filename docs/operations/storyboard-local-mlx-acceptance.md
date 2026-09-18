@@ -140,7 +140,7 @@ stayed at one. The swap growth is measured and reported, not explained away.
 | `apps/web/tests-unit/admin-route-auth-contract.test.ts` | accepts the five production routes that delegate to `lib/admin/storyboard/production-api.ts` and asserts each delegated member is declared behind `admin(request` |
 | `apps/web/tests-unit/lazy-map-boundaries.test.ts` | asserts the deferred barrel `components/map/map-view-deferred-panels.tsx`, its `app/home-detail-globals.css` import and that neither panel is imported statically |
 | `local-supabase-runtime.test.ts`, `nightly-regression-workflow.test.ts` | align the local ledger and nightly publication expectations with the 97-unit migration |
-| `apps/web/components/ui/input.tsx` | the shared Input shrinks at `lg` instead of `md`, so a 768 px class device keeps 16 px |
+| `apps/web/components/ui/input.tsx` | the shared Input shrinks at `lg` instead of `md` and carries `pointer-coarse:text-base`, so every touch device keeps 16 px at any width while fine-pointer desktops stay at 14 px (measured in the public UI audit) |
 | affected suite + toolchain | 58 pass / 0 fail across 9 files (`affected.log`); ESLint exit 0 and `typecheck:parity` `diagnostics: 0` (`lint3.log`) |
 
 ### Independent review (D02)

@@ -97,13 +97,28 @@ No commit was pushed, no pull request was opened, no deployment was triggered, n
 
 The global-CSS `@layer` fix removed the unlayered `font: inherit` reset, but the
 shared Input still carried `text-base … md:text-sm`, so a 768 px class device
-rendered the search field at **14 px** and mobile Safari would zoom on focus.
-Measured with `probe-form-font.mjs` before → after the `lg:text-sm` change:
-mobile 390 16 px → 16 px, tablet 768 14 px → 16 px, laptop 1024 14 px → 14 px,
-desktop 1440 14 px → 14 px (`form-font-after-report.json`). The shared Input is
-the only input on the probed public routes; `/feed`, `/submissions`,
-`/mypage/reviews`, `/stamp`, `/leaderboard` and `/privacy` expose none. One
-further `text-base … md:text-sm` pair remains at
-`apps/web/app/mypage/reviews/page.tsx:415` and was left unchanged.
+rendered the search field at **14 px** and mobile Safari would zoom on focus. The
+first repair moved the shrink step to `lg:text-sm`; the second added
+`pointer-coarse:text-base` after a measurement showed the width-only rule still
+left every coarse-pointer device at 14 px from 1024 px up.
+
+`probe-form-font2.mjs` on `/global-map` (the only probed public route with
+inputs — two of them; `/feed`, `/submissions`, `/mypage/reviews`, `/stamp`,
+`/leaderboard` and `/privacy` expose none):
+
+| Profile | `pointer: coarse` | `md:text-sm` | `lg:text-sm` | `lg:text-sm pointer-coarse:text-base` |
+| --- | --- | --- | --- | --- |
+| mobile 390 touch | true | 14 px | 16 px | 16 px |
+| tablet 768 touch | true | 14 px | 16 px | 16 px |
+| iPad landscape 1024 touch | true | 14 px | 14 px | 16 px |
+| iPad Pro landscape 1366 touch | true | 14 px | 14 px | 16 px |
+| laptop 1024 fine pointer | false | 14 px | 14 px | 14 px |
+| desktop 1440 fine pointer | false | 14 px | 14 px | 14 px |
+
+Reports: `form-font2-before.json` and `form-font2-after.json`. On a coarse
+pointer the 16 px minimum now holds at every width, and fine-pointer desktops
+keep the compact 14 px. One further `text-base … md:text-sm` pair remains at
+`apps/web/app/mypage/reviews/page.tsx:415`; it is unchanged, and that route
+redirects anonymous visitors to the login gate.
 
 Continuation is still in progress: remaining safe navigation/visual checks, evidence-link validation and browser cleanup will be recorded before final delivery.
