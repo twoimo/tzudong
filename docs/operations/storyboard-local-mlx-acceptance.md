@@ -291,6 +291,27 @@ OpenAI half, P02/P03 browser round trips beyond their existing contract tests,
 U03's authenticated account flows, and L05's local retrieval quality while the BGE
 dependency is absent.
 
+### Manual import and prompt copy, browser round trip (P02)
+
+A project created with 수동 가져오기 for both text and image opens as `가져오기 대기`
+(`awaiting_import`). All of the following was driven through the real admin UI on
+`98f904de-c5fd-4add-97b2-f7015776621f`; evidence `manual-import-report.json` and
+`manual-image-report.json`.
+
+| Check | Result |
+| --- | --- |
+| Prompt copy | `현재 텍스트 프롬프트 복사` yields 2,406 characters containing the model prompt, the literal `storyboard-mlx-v1`, this project's id and the envelope JSON Schema |
+| Stale envelope rejected | body with `revision: 999` → "현재 프로젝트의 schema, projectId, revision과 장면 형식을 확인하세요.", nothing saved |
+| Valid envelope | five scenes stored, revision 0 → 1, and provenance recorded as `providerId: manual`, `verification: user-import`, `modelEvidence: unverified`, `responseId: null` — shown in the UI as "사용자 가져오기 · 모델 정보 없음 · 모델 미검증", never as a verified provider result |
+| Non-image rejected | a 28-byte text file sent as `image/png` → "PNG, JPEG, WebP 정지 이미지만 가져올 수 있습니다.", revision unchanged |
+| Real image import | 320×180 PNG stored as `image/png` with one WebP derivative at the same 320 px width (no upscale), provenance `user-import`/`unverified`, revision 1 → 2, 0 broken images |
+| Reload | the same scene line ("저장된 장면 5개 · 이미지 1개") and the same asset id render again |
+| Browser egress | `nonLoopback = []` in both probes |
+
+So P02 is now covered by a browser round trip rather than only contract tests. P03
+remains covered by contract tests plus the migration's `provider_not_configured`
+raise, and no paid API call was made.
+
 ### Toolchain and CI at `eb5943ed`
 
 Environment note: the MLX server on `127.0.0.1:11234` was restarted externally during
