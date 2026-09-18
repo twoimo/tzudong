@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ import {
 // No backend, authentication session, external provider, or model success is claimed.
 // The isolated harness also catches accidental server-only imports in the client bundle.
 const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const HARNESS_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "fixtures/local-storyboard-ui");
 type HarnessWindow = Window & {
   copiedPrompt?: string;
   opened?: string[][];
@@ -85,35 +86,16 @@ let temporary: string;
 
 test.beforeAll(async () => {
   temporary = mkdtempSync(join(tmpdir(), "tzudong-local-storyboard-ui-"));
-  const entry = join(temporary, "entry.ts");
   const js = join(temporary, "bundle.js");
-  const buildScript = join(temporary, "build.mjs");
-  const nextImageEntry = join(temporary, "next-image.mjs");
-  const cssInput = join(temporary, "input.css");
   const cssOutput = join(temporary, "bundle.css");
-  writeFileSync(entry, [
-    `import { createElement } from ${JSON.stringify(join(WEB_ROOT, "node_modules/react/index.js"))};`,
-    `import { createRoot } from ${JSON.stringify(join(WEB_ROOT, "node_modules/react-dom/client.js"))};`,
-    `import { AdminStoryboardGenerator } from ${JSON.stringify(join(WEB_ROOT, "components/admin/storyboard/AdminStoryboardGenerator.tsx"))};`,
-    "const root = createRoot(document.getElementById('root'));",
-    "root.render(createElement(AdminStoryboardGenerator));",
-  ].join("\n"));
-  // Use the real Next image component through its named export: the CJS default
-  // entry relies on Next's bundler interop, which this isolated Bun harness lacks.
-  writeFileSync(nextImageEntry, `export { Image as default } from ${JSON.stringify(join(WEB_ROOT, "node_modules/next/dist/client/image-component.js"))};`);
-  writeFileSync(buildScript, [
-    "const result = await Bun.build({",
-    `entrypoints: [${JSON.stringify(entry)}], target: 'browser',`,
-    `define: { 'process.env.NODE_ENV': '"development"' },`,
-    `plugins: [{ name: 'next-image-entry', setup(build) { build.onResolve({ filter: /^next\\/image$/ }, () => ({ path: ${JSON.stringify(nextImageEntry)} })); } }],`,
-    "});",
-    "if (!result.success) throw new AggregateError(result.logs, 'UI bundle failed');",
-    "if (result.outputs.length !== 1) throw new Error('Expected one browser bundle');",
-    `await Bun.write(${JSON.stringify(js)}, result.outputs[0]);`,
-  ].join("\n"));
-  execFileSync("bun", [buildScript], { cwd: WEB_ROOT, stdio: "pipe" });
-  writeFileSync(cssInput, `@import ${JSON.stringify(join(WEB_ROOT, "app/globals.css"))};\n@import ${JSON.stringify(join(WEB_ROOT, "app/app-globals.css"))};`);
-  execFileSync("bun", [join(WEB_ROOT, "node_modules/@tailwindcss/cli/dist/index.mjs"), "-i", cssInput, "-o", cssOutput], { cwd: WEB_ROOT, stdio: "pipe" });
+  // The entry module, the next/image shim, the bundle script, and the CSS entry
+  // are committed static files under tests/fixtures.
+  execFileSync("bun", [join(HARNESS_ROOT, "build.mjs"), js], { cwd: WEB_ROOT, stdio: "pipe" });
+  execFileSync("bun", [
+    join(WEB_ROOT, "node_modules/@tailwindcss/cli/dist/index.mjs"),
+    "-i", join(HARNESS_ROOT, "input.css"),
+    "-o", cssOutput,
+  ], { cwd: WEB_ROOT, stdio: "pipe" });
   const javascript = readFileSync(js);
   const css = readFileSync(cssOutput);
   server = createServer((request, response) => {
