@@ -7,6 +7,10 @@ import {
     getRestaurantsWithRenderableCoordinates,
     getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
+    nextEmptyIdentityArray,
+    resolveEmptyClusterMarkerCleanupPlan,
+    resolveSkippedEmptyThemeMarkerPlan,
+    shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
 } from '../lib/naver-map-render-plan';
 
@@ -155,5 +159,70 @@ describe('naver map render plan helpers', () => {
             activeMarkerCount: 100,
             isDevelopment: false,
         })).toBe(false);
+    });
+
+    test('clears empty cluster state when clustering is off or display is empty', () => {
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: false,
+            displayRestaurantCount: 4,
+        })).toBe(true);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 0,
+        })).toBe(true);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 2,
+        })).toBe(false);
+    });
+
+    test('reuses the previous empty array identity when clearing cluster collections', () => {
+        const emptyPrevious: string[] = [];
+        const nonEmptyPrevious = ['cluster-a'];
+
+        expect(nextEmptyIdentityArray(emptyPrevious)).toBe(emptyPrevious);
+        expect(nextEmptyIdentityArray(nonEmptyPrevious)).toEqual([]);
+        expect(nextEmptyIdentityArray(nonEmptyPrevious)).not.toBe(nonEmptyPrevious);
+    });
+
+    test('continues skipped marker updates only when an empty theme still has leftover DOM', () => {
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 0,
+            hasRenderedMarkerDom: true,
+        })).toBe('continue');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 0,
+            hasRenderedMarkerDom: false,
+        })).toBe('skip');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 2,
+            hasRenderedMarkerDom: true,
+        })).toBe('skip');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 2,
+            hasRenderedMarkerDom: false,
+        })).toBe('retry');
+    });
+
+    test('releases leftover cluster markers when the empty theme display is empty', () => {
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 2,
+        })).toBe('release');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 3,
+            clusterCount: 0,
+        })).toBe('retry');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 3,
+            clusterCount: 1,
+        })).toBe('render');
     });
 });

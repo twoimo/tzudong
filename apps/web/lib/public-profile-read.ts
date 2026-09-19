@@ -71,6 +71,8 @@ const MAX_AVATAR_REFERENCE_BYTES = 4_096;
  * reviewer's nickname.
  */
 export const DELETED_ACCOUNT_NICKNAME = "탈퇴한 사용자";
+export const UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME = "닉네임을 불러올 수 없음";
+export const ANONYMOUS_PUBLIC_REVIEWER_NICKNAME = "익명 사용자";
 
 function fail(code: PublicProfileReadErrorCode): never {
   throw new PublicProfileReadError(code);
@@ -310,6 +312,46 @@ export async function readPublicProfileSummaries(
   }
 
   return summaries;
+}
+
+export async function readPublicProfileSummariesLookup(
+  client: unknown,
+  userIds: readonly string[],
+): Promise<{ ok: boolean; summaries: PublicProfileSummary[] }> {
+  try {
+    return { ok: true, summaries: await readPublicProfileSummaries(client, userIds) };
+  } catch {
+    return { ok: false, summaries: [] };
+  }
+}
+
+export function resolvePublicReviewerDisplay(
+  userId: string,
+  summaries: readonly PublicProfileSummary[] | ReadonlyMap<string, PublicProfileSummary>,
+  lookupOk: boolean,
+  options?: Readonly<{
+    unavailableNickname?: string;
+    missingNickname?: string;
+  }>,
+): { nickname: string; avatarUrl: string | null } {
+  const unavailableNickname =
+    options?.unavailableNickname ?? UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME;
+  const missingNickname = options?.missingNickname ?? DELETED_ACCOUNT_NICKNAME;
+  if (!lookupOk) {
+    return { nickname: unavailableNickname, avatarUrl: null };
+  }
+
+  const summary = summaries instanceof Map
+    ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
+    : summaries.find((row) => row.user_id === userId.toLowerCase() || row.user_id === userId);
+  if (!summary) {
+    return { nickname: missingNickname, avatarUrl: null };
+  }
+
+  return {
+    nickname: summary.nickname,
+    avatarUrl: summary.avatar_url,
+  };
 }
 
 export async function readPublicProfileLeaderboard(

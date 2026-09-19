@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "쯔동 로컬 MLX 스토리보드 생성",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "admin", "label": "관리자 화면" },
+    { "id": "api", "label": "Production API / 큐" },
+    { "id": "worker", "label": "Mac outbound worker" },
+    { "id": "local", "label": "로컬 추론과 저장", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "request", "label": "요청", "fromCol": 0, "toCol": 1 },
+    { "id": "claim", "label": "등록과 claim", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "generate", "label": "생성과 복원", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "queue_group", "label": "영구 작업 큐", "lane": "api", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "fail_closed", "label": "외부 AI 차단", "lane": "local", "fromCol": 2, "toCol": 3, "variant": "security" },
+    { "id": "infer_group", "label": "로컬 추론", "lane": "local", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["operator", "workspace", "create", "queue", "claim", "text", "images", "ready"],
+  "nodes": [
+    { "id": "operator", "lane": "admin", "col": 0, "type": "external", "label": "관리자", "sublabel": "생성 요청", "width": 132 },
+    { "id": "workspace", "lane": "admin", "col": 1, "type": "frontend", "label": "스토리보드 작업공간", "sublabel": "/admin?module=storyboard", "width": 156 },
+    { "id": "ready", "lane": "admin", "col": 5, "type": "frontend", "label": "화면 복원", "sublabel": "편집 / 재생성 / 내보내기", "width": 156 },
+    { "id": "create", "lane": "api", "col": 2, "type": "backend", "label": "생성 API", "sublabel": "requireAdmin + policy", "tag": "externalAI false", "width": 148 },
+    { "id": "queue", "lane": "api", "col": 3, "type": "database", "label": "작업 큐", "sublabel": "waiting_worker", "width": 140 },
+    { "id": "claim", "lane": "worker", "col": 3, "type": "backend", "label": "원자적 claim", "sublabel": "lease + heartbeat", "width": 140 },
+    { "id": "offline", "lane": "worker", "col": 2, "type": "messagebus", "label": "워커 대기", "sublabel": "클라우드 전환 없음", "width": 140 },
+    { "id": "blocked", "lane": "local", "col": 2, "type": "security", "label": "외부 호출 거부", "sublabel": "openai / xai / grok", "tag": "fail-closed", "width": 148 },
+    { "id": "text", "lane": "local", "col": 4, "type": "backend", "label": "MLX 텍스트", "sublabel": "127.0.0.1:11234", "width": 148 },
+    { "id": "images", "lane": "local", "col": 5, "type": "backend", "label": "MLX 이미지", "sublabel": "동시성 1", "width": 148 },
+    { "id": "fail", "lane": "worker", "col": 5, "type": "security", "label": "실패 상태", "sublabel": "허위 성공 없음", "width": 140 }
+  ],
+  "edges": [
+    { "id": "ask", "from": "operator", "to": "workspace" },
+    { "id": "submit", "from": "workspace", "to": "create", "label": "POST production" },
+    { "id": "policy-ok", "from": "create", "to": "queue", "label": "등록만으로는 성공 아님" },
+    { "id": "policy-deny", "from": "create", "to": "blocked", "label": "external_ai_disabled", "variant": "security", "role": "error" },
+    { "id": "no-worker", "from": "queue", "to": "offline", "label": "heartbeat 없음", "variant": "dashed", "role": "branch" },
+    { "id": "claim-job", "from": "queue", "to": "claim", "label": "인증된 outbound" },
+    { "id": "draft", "from": "claim", "to": "text", "label": "structured draft" },
+    { "id": "scene-images", "from": "text", "to": "images", "label": "장면별 PNG+WebP" },
+    { "id": "readback", "from": "images", "to": "ready", "label": "revision readback", "variant": "emphasis", "role": "return" },
+    { "id": "partial-fail", "from": "images", "to": "fail", "label": "장면 실패 격리", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "완료 조건",
+      "items": [
+        "워커가 mlx-serve로 텍스트와 이미지를 만들고 영구 저장한 뒤 화면이 다시 읽어야 성공",
+        "외부 AI는 기본 꺼짐이며 실패해도 클라우드로 넘어가지 않음"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "경쟁 상태",
+      "items": [
+        "원자적 claim과 lease로 이중 처리를 막고, 늦은 결과는 최신 장면을 덮지 않음",
+        "취소·재시도·특정 장면 재생성은 프로젝트 revision으로 가드"
+      ]
+    }
+  ]
+}

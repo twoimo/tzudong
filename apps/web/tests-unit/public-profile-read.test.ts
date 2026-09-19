@@ -12,6 +12,11 @@ import {
   readPublicProfileLeaderboard,
   readPublicProfileLeaderboardPage,
   readPublicProfileSummaries,
+  ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+  DELETED_ACCOUNT_NICKNAME,
+  UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+  readPublicProfileSummariesLookup,
+  resolvePublicReviewerDisplay,
 } from "../lib/public-profile-read";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
@@ -403,6 +408,53 @@ describe("public profile leaderboard page RPC boundary", () => {
   });
 });
 
+describe("public reviewer display labels", () => {
+  test("labels lookup failure separately from a missing deleted-account row", () => {
+    expect(resolvePublicReviewerDisplay(USER_A, [], false)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [
+      { user_id: USER_B, nickname: "둘째", avatar_url: null },
+    ], false)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [], true)).toEqual({
+      nickname: DELETED_ACCOUNT_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [], true, {
+      missingNickname: ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+    })).toEqual({
+      nickname: ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+  });
+
+  test("lookup wrapper swallows RPC failures without inventing deleted-account labels", async () => {
+    const failed = await readPublicProfileSummariesLookup({
+      rpc: async () => {
+        throw new PublicProfileReadError(PUBLIC_PROFILE_READ_ERROR_CODE.unavailable);
+      },
+    }, [USER_A]);
+    expect(failed).toEqual({ ok: false, summaries: [] });
+    expect(resolvePublicReviewerDisplay(USER_A, failed.summaries, failed.ok)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+
+    const missing = await readPublicProfileSummariesLookup({
+      rpc: async () => ({ data: [], error: null }),
+    }, [USER_A]);
+    expect(missing).toEqual({ ok: true, summaries: [] });
+    expect(resolvePublicReviewerDisplay(USER_A, missing.summaries, missing.ok)).toEqual({
+      nickname: DELETED_ACCOUNT_NICKNAME,
+      avatarUrl: null,
+    });
+  });
+});
+
 describe("public profile caller convergence", () => {
   test("routes public and self reads through the bounded RPC helper", () => {
     const callers = [
@@ -419,7 +471,7 @@ describe("public profile caller convergence", () => {
 
     for (const caller of callers) {
       const callerSource = source(caller);
-      expect(callerSource, caller).toContain("readPublicProfileSummaries");
+      expect(/readPublicProfileSummaries(?:Lookup)?/.test(callerSource), caller).toBe(true);
       expect(callerSource, caller).not.toMatch(
         /\.from\(['"]profiles['"]\)\s*\.select\(/,
       );

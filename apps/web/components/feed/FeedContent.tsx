@@ -17,7 +17,7 @@ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
 import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
-import { readPublicProfileSummaries } from '@/lib/public-profile-read';
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from '@/lib/public-profile-read';
 
 const ReviewModal = dynamic(
     () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
@@ -265,8 +265,8 @@ export default function FeedContent({
             const userIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
             const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
-            const [profilesData, restaurantsResult, userLikesResult] = await Promise.all([
-                readPublicProfileSummaries(supabase, userIds).catch(() => []),
+            const [profilesLookup, restaurantsResult, userLikesResult] = await Promise.all([
+                readPublicProfileSummariesLookup(supabase, userIds),
                 supabase
                     .from('restaurants')
                     .select(FEED_RESTAURANT_SELECT)
@@ -279,10 +279,6 @@ export default function FeedContent({
                         .eq('user_id', user.id)
                     : Promise.resolve({ data: [] }),
             ]);
-
-            const profilesMap = new Map(profilesData.map((profileRow) =>
-                [profileRow.user_id, { nickname: profileRow.nickname, avatarUrl: profileRow.avatar_url }]
-            ));
 
             const restaurantsData = (restaurantsResult.data ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
@@ -329,7 +325,11 @@ export default function FeedContent({
             }
 
             const reviews: FeedReview[] = typedReviewsData.map((reviewRow) => {
-                const profileInfo = (profilesMap.get(reviewRow.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
+                const profileInfo = resolvePublicReviewerDisplay(
+                    reviewRow.user_id,
+                    profilesLookup.summaries,
+                    profilesLookup.ok,
+                );
                 const restaurant = resolveFeedRestaurant(reviewRow);
                 return {
                     id: reviewRow.id,
@@ -337,8 +337,8 @@ export default function FeedContent({
                     restaurantId: restaurant?.id ?? reviewRow.restaurant_id,
                     restaurantName: getFeedRestaurantDisplayName(restaurant),
                     restaurant,
-                    userName: profileInfo.nickname || '탈퇴한 사용자',
-                    userAvatarUrl: profileInfo.avatarUrl,
+                    userName: profileInfo.nickname,
+                    userAvatarUrl: profileInfo.avatarUrl ?? undefined,
                     visitedAt: reviewRow.visited_at,
                     createdAt: reviewRow.created_at,
                     content: reviewRow.content,

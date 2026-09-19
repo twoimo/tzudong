@@ -50,7 +50,7 @@ import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRest
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Tables } from "@/integrations/supabase/types";
-import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
 type SortColumn = StampRestaurantSortColumn;
 
@@ -526,8 +526,8 @@ export default function StampPage() {
                 // 사용자 프로필 정보 조회
                 const userIds = [...new Set(typedReviewsData.map((review) => review.user_id))];
                 const reviewIds = typedReviewsData.map((review) => review.id);
-                const [profiles, userLikesResult] = await Promise.all([
-                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
+                const [profilesLookup, userLikesResult] = await Promise.all([
+                    readPublicProfileSummariesLookup(supabase, userIds),
                     user
                         ? supabase
                             .from('review_likes')
@@ -536,25 +536,24 @@ export default function StampPage() {
                             .eq('user_id', user.id)
                         : Promise.resolve({ data: [] }),
                 ]);
-                const profilesMap = new Map(
-                    profiles.map((profile) => [
-                        profile.user_id,
-                        { nickname: profile.nickname, avatarUrl: profile.avatar_url },
-                    ])
-                );
 
                 const userLikesMap = new Map(
                     ((userLikesResult.data ?? []) as ReviewLikeRow[]).map((likeRow) => [likeRow.review_id, true])
                 );
 
                 const reviews = typedReviewsData.map((review) => {
+                    const userProfile = resolvePublicReviewerDisplay(
+                        review.user_id,
+                        profilesLookup.summaries,
+                        profilesLookup.ok,
+                    );
                     return {
                         id: review.id,
                         userId: review.user_id,
                         restaurantName: selectedRestaurant.name || '알 수 없음',
                         restaurantCategories: Array.isArray(selectedRestaurant.category) ? selectedRestaurant.category : [selectedRestaurant.category || '기타'],
-                        userName: profilesMap.get(review.user_id)?.nickname || '탈퇴한 사용자',
-                        userAvatarUrl: profilesMap.get(review.user_id)?.avatarUrl,
+                        userName: userProfile.nickname,
+                        userAvatarUrl: userProfile.avatarUrl ?? undefined,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,

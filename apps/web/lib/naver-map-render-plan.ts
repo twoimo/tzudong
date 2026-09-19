@@ -189,3 +189,49 @@ export function shouldReportNaverMarkerRenderPerformance({
 }) {
     return isDevelopment && activeMarkerCount > 50;
 }
+
+export function shouldClearEmptyClusterState({
+    clusteringEnabled,
+    displayRestaurantCount,
+}: {
+    clusteringEnabled: boolean;
+    displayRestaurantCount: number;
+}) {
+    return !clusteringEnabled || displayRestaurantCount === 0;
+}
+
+export function nextEmptyIdentityArray<T>(previous: readonly T[]): T[] {
+    return previous.length === 0 ? (previous as T[]) : [];
+}
+
+export function resolveSkippedEmptyThemeMarkerPlan({
+    displayRestaurantCount,
+    hasRenderedMarkerDom,
+}: {
+    displayRestaurantCount: number;
+    hasRenderedMarkerDom: boolean;
+}): 'skip' | 'continue' | 'retry' {
+    if (displayRestaurantCount === 0) {
+        return hasRenderedMarkerDom ? 'continue' : 'skip';
+    }
+
+    return hasRenderedMarkerDom ? 'skip' : 'retry';
+}
+
+export function resolveEmptyClusterMarkerCleanupPlan({
+    displayRestaurantCount,
+    clusterCount,
+}: {
+    displayRestaurantCount: number;
+    clusterCount: number;
+}): 'render' | 'release' | 'retry' {
+    if (displayRestaurantCount === 0) {
+        return 'release';
+    }
+
+    if (clusterCount === 0) {
+        return 'retry';
+    }
+
+    return 'render';
+}

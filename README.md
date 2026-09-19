@@ -73,6 +73,14 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
   </tr>
 </table>
 
+## Local architecture
+
+Interactive diagram: [storyboard-local-mlx.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html)
+
+Source: [storyboard-local-mlx.workflow.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json)
+
+External AI is off by default. Text and image providers are independent (`local-mlx`, `chatgpt-manual`, `grok-manual`; plus `manual`, `openai-api`, and `xai-api` only when explicitly enabled). Queueing a job is not success: a worker must atomically claim the job, call loopback `mlx-serve`, persist PNG originals plus WebP derivatives, and the admin UI must re-read the result. Guards are atomic claim, lease/heartbeat expiry, and revision/version conflict. Restore in the current schema is edit then regenerate (`edit` | `regenerate` | `retry` | `cancel` | `import-text`); there is no `restore` action. The diagram describes the intended pipeline. Hosted apply and a live operator session are separate evidence.
+
 ## Privacy
 
 Source safeguards stay fail-closed: challenge-bound account creation, no under-14 registration until a verified guardian path exists, purpose/channel marketing consent with a separate night grant, shared redaction, memory-only device location, and Preview → Confirm → Apply → Readback → Audit for deletion/retention/incidents.

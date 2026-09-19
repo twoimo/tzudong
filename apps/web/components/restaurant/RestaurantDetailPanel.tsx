@@ -51,7 +51,7 @@ import {
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
-import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
 type ReviewRow = Tables<'reviews'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
@@ -420,8 +420,8 @@ export function RestaurantDetailPanel({
                 const reviewIds = typedReviewsPageData.map((review) => review.id);
 
                 // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
-                const [typedProfilesData, userLikesResult] = await Promise.all([
-                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
+                const [profilesLookup, userLikesResult] = await Promise.all([
+                    readPublicProfileSummariesLookup(supabase, userIds),
                     user
                         ? supabase
                             .from('review_likes')
@@ -430,10 +430,6 @@ export function RestaurantDetailPanel({
                             .eq('user_id', user.id)
                         : Promise.resolve({ data: [] }),
                 ]);
-                // 4. Map으로 변환
-                const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
-                    typedProfilesData.map((profile) => [profile.user_id, { nickname: profile.nickname, avatarUrl: profile.avatar_url }])
-                );
 
                 const userLikesMap = new Map(
                     ((userLikesResult.data || []) as ReviewLikeRow[]).map((like) => [like.review_id, true])
@@ -441,7 +437,11 @@ export function RestaurantDetailPanel({
 
                 // 7. 리뷰 데이터 매핑
                 const reviews = typedReviewsPageData.map((review) => {
-                    const userProfile = profilesMap.get(review.user_id);
+                    const userProfile = resolvePublicReviewerDisplay(
+                        review.user_id,
+                        profilesLookup.summaries,
+                        profilesLookup.ok,
+                    );
 
                     return {
                         restaurantId: review.restaurant_id ?? restaurant.id,
@@ -449,8 +449,8 @@ export function RestaurantDetailPanel({
                         userId: review.user_id,
                         restaurantName: restaurant.name,
                         restaurantCategories: categories,
-                        userName: userProfile?.nickname || '탈퇴한 사용자',
-                        userAvatarUrl: userProfile?.avatarUrl,
+                        userName: userProfile.nickname,
+                        userAvatarUrl: userProfile.avatarUrl ?? undefined,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,

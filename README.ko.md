@@ -73,6 +73,14 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자�
   </tr>
 </table>
 
+## 로컬 아키텍처
+
+대화형 다이어그램: [storyboard-local-mlx.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html)
+
+소스: [storyboard-local-mlx.workflow.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json)
+
+외부 인공지능은 기본 비활성화입니다. 텍스트와 이미지 공급자는 서로 독립입니다(`local-mlx`, `chatgpt-manual`, `grok-manual`; `manual`, `openai-api`, `xai-api`는 명시적으로 켠 경우에만). 큐에 넣은 것만으로 성공이 아닙니다. 워커가 작업을 원자적으로 claim하고, 루프백 `mlx-serve`를 호출하고, PNG 원본과 WebP 파생본을 저장한 뒤 관리자 UI가 결과를 다시 읽어야 합니다. 가드는 원자적 claim, lease/heartbeat 만료, revision/version 충돌입니다. 현재 스키마에서 복원은 편집 후 재생성입니다(`edit` | `regenerate` | `retry` | `cancel` | `import-text`). `restore` 액션은 없습니다. 다이어그램은 의도된 파이프라인을 설명합니다. 호스티드 apply와 실제 운영 세션은 별도 증거입니다.
+
 ## 개인정보
 
 소스 보호는 fail-closed입니다. 회원 생성은 게시된 방침 확인에 묶이고, 검증된 보호자 경로가 있기 전까지 만 14세 미만 가입은 막히며, 광고 동의는 목적/채널/야간을 분리하고, 공용 필터와 메모리 전용 기기 위치, 삭제·보존·사고의 Preview → Confirm → Apply → Readback → Audit을 유지합니다.
