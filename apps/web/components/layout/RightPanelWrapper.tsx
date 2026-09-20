@@ -19,7 +19,7 @@ export default function RightPanelWrapper({ isOpen, isCollapsed, children }: Rig
 
     return (
         <div
-            className={`fixed right-0 z-50 shadow-xl bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[min(400px,calc(100vw-1rem))]'}`}
+            className={`fixed right-0 z-50 shadow-sm bg-background transition-all duration-300 ease-in-out ${isCollapsed ? 'w-0' : 'w-[min(400px,calc(100vw-1rem))]'}`}
             style={{
                 top: `var(${APP_HEADER_HEIGHT_VAR}, 56px)`,
                 height: `calc(100vh - var(${APP_HEADER_HEIGHT_VAR}, 56px))`,
