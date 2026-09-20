@@ -116,7 +116,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     "rounded-full shadow-sm",
                     "bg-red-800 hover:bg-red-900 text-white",
                     "transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none",
-                    "hover:scale-110 active:scale-95",
+                    "active:scale-95",
                     "flex items-center justify-center",
                     "border border-border/20"
                 )}

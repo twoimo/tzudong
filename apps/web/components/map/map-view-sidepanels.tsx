@@ -33,7 +33,7 @@ export function MapViewAdminAddButton({ onClick }: { onClick: () => void }) {
     return (
         <button
             onClick={onClick}
-            className="absolute bottom-8 right-8 bg-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors font-semibold flex items-center gap-2 z-10"
+            className="absolute bottom-8 right-8 bg-primary text-primary-foreground px-6 py-3 rounded-full shadow-sm hover:bg-primary/90 transition-colors font-semibold flex items-center gap-2 z-10"
         >
             <span className="text-xl">+</span>
             맛집 등록

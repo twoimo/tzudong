@@ -1197,7 +1197,7 @@ export function RestaurantDetailPanel({
                                                     </span>
                                                 )}
                                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
+                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
                                                         <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                     </span>
                                                 </div>
@@ -1230,7 +1230,7 @@ export function RestaurantDetailPanel({
                                                                 {youtubeCopy.itemBadge(index + 2)}
                                                             </span>
                                                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
+                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
                                                                     <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                                 </span>
                                                             </div>

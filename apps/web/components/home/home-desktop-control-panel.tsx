@@ -1522,7 +1522,7 @@ export default function HomeDesktopControlPanel({
                     aria-label={`${theme.ariaLabel}${isSelected ? " 선택됨" : ""}`}
                     title={`${theme.label}: ${theme.description}`}
                     className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-lg backdrop-blur-sm transition-colors motion-reduce:transition-none",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 home-map-floating-control-text text-xs font-semibold shadow-sm backdrop-blur-sm transition-colors motion-reduce:transition-none",
                       "focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground"
@@ -1546,7 +1546,7 @@ export default function HomeDesktopControlPanel({
           >
             {onModeChange && (
               <div
-                className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-lg backdrop-blur-sm"
+                className="flex w-[var(--desktop-map-floating-filter-width)] items-center gap-0.5 rounded-full border border-border bg-background/95 p-0.5 shadow-sm backdrop-blur-sm"
                 data-desktop-map-mode-toggle="true"
               >
                 <Button
@@ -1586,7 +1586,7 @@ export default function HomeDesktopControlPanel({
                 selectedRegion={selectedRegion}
                 onRegionChange={onRegionChange}
                 onRegionSelect={onSearchExecute}
-                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+                className="!h-9 !w-full !min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80"
                 contentSide="top"
                 contentAlign="start"
               />
@@ -1595,7 +1595,7 @@ export default function HomeDesktopControlPanel({
                 value={selectedCountry || undefined}
                 onValueChange={onCountryChange}
               >
-                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80">
+                <SelectTrigger className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80">
                   <SelectValue placeholder="해외 지역" />
                 </SelectTrigger>
                 <SelectContent
@@ -1617,7 +1617,7 @@ export default function HomeDesktopControlPanel({
               onCategoryChange={onCategoryChange}
               selectedRegion={mapMode === "domestic" ? selectedRegion : null}
               selectedCountry={mapMode === "overseas" ? selectedCountry : null}
-              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-sm hover:bg-secondary/80"
+              className="h-9 w-full min-w-max rounded-full border-border bg-background/95 px-3 home-map-floating-control-text text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur-sm hover:bg-secondary/80"
               contentSide="top"
               contentAlign="start"
             />
@@ -1698,7 +1698,7 @@ export default function HomeDesktopControlPanel({
           >
             <div
               className={cn(
-                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5",
+                "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
               )}
               data-desktop-left-panel-search-bar="true"
               onClick={activateDesktopSearch}
