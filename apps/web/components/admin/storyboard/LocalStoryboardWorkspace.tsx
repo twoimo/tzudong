@@ -9,6 +9,8 @@ import {
   STORYBOARD_WORKFLOW,
   assertStoryboardProviderPolicy,
   buildStoryboardDraftPrompt,
+  isStoryboardLoopbackProviderId,
+  isStoryboardOfficialApiProviderId,
   parseStoryboardDraft,
   storyboardDraftSceneSchema,
   storyboardDraftSchema,
@@ -142,8 +144,8 @@ function isActive(view: View | null): boolean {
   return !!view && (view.job?.status === "queued" || view.job?.status === "claimed"
     || view.project.status === "waiting_worker" || view.project.status === "generating");
 }
-function isLocal(id: ProviderId) { return id === "local-mlx" || id === "manual"; }
-function isOfficial(id: ProviderId) { return id === "openai-api" || id === "xai-api"; }
+function isLocal(id: ProviderId) { return isStoryboardLoopbackProviderId(id); }
+function isOfficial(id: ProviderId) { return isStoryboardOfficialApiProviderId(id); }
 function when(value: string | null | undefined): string {
   const date = value ? new Date(value) : null;
   return date && Number.isFinite(date.getTime()) ? date.toLocaleString("ko-KR") : "시각 정보 없음";
@@ -339,9 +341,9 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
                     if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
                   }
                 }} />
-              외부 AI 사용 허용 · ChatGPT / Grok
+              외부 공식 API 사용 허용
             </label>
-            <p id="local-external-help" className="text-xs text-muted-foreground">켜면 아래에서 ChatGPT·Grok을 선택할 수 있습니다. 해당 웹에서 만든 결과를 직접 가져옵니다.</p>
+            <p id="local-external-help" className="text-xs text-muted-foreground">ChatGPT·Grok 웹 결과는 외부 AI를 켜지 않고 수동 가져오기로 고를 수 있습니다. 이 옵션은 OpenAI·xAI 공식 API용이며 현재는 설정 전 사용할 수 없습니다.</p>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />

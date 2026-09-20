@@ -111,9 +111,24 @@ export class StoryboardProductionError extends Error {
   }
 }
 
+export const STORYBOARD_USER_IMPORT_PROVIDER_IDS = ['manual', 'chatgpt-manual', 'grok-manual'] as const;
+export const STORYBOARD_OFFICIAL_API_PROVIDER_IDS = ['openai-api', 'xai-api'] as const;
+
+export function isStoryboardUserImportProviderId(id: string): boolean {
+  return (STORYBOARD_USER_IMPORT_PROVIDER_IDS as readonly string[]).includes(id);
+}
+
+export function isStoryboardOfficialApiProviderId(id: string): boolean {
+  return (STORYBOARD_OFFICIAL_API_PROVIDER_IDS as readonly string[]).includes(id);
+}
+
+export function isStoryboardLoopbackProviderId(id: string): boolean {
+  return id === 'local-mlx' || isStoryboardUserImportProviderId(id);
+}
+
 export function assertStoryboardProviderPolicy(policy: StoryboardProviderPolicy): void {
   for (const provider of [policy.text, policy.image]) {
-    if (!policy.externalAI && !['local-mlx', 'manual'].includes(provider.id)) {
+    if (!policy.externalAI && isStoryboardOfficialApiProviderId(provider.id)) {
       throw new StoryboardProductionError('external_ai_disabled');
     }
     if (['local-mlx', 'openai-api', 'xai-api'].includes(provider.id) && !provider.model) {

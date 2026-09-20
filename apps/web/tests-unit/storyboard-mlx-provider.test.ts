@@ -35,8 +35,10 @@ describe('local storyboard contracts', () => {
   test('external providers require explicit consent independently of the other modality', () => {
     const policy = request().providers;
     for (const key of ['text', 'image'] as const) {
-      expect(() => assertStoryboardProviderPolicy({ ...policy, [key]: { id: 'chatgpt-manual', model: '' } })).toThrow('external_ai_disabled');
-      expect(() => assertStoryboardProviderPolicy({ ...policy, externalAI: true, [key]: { id: 'grok-manual', model: '' } })).not.toThrow();
+      expect(() => assertStoryboardProviderPolicy({ ...policy, [key]: { id: 'chatgpt-manual', model: '' } })).not.toThrow();
+      expect(() => assertStoryboardProviderPolicy({ ...policy, [key]: { id: 'grok-manual', model: '' } })).not.toThrow();
+      expect(() => assertStoryboardProviderPolicy({ ...policy, [key]: { id: 'openai-api', model: 'selected' } })).toThrow('external_ai_disabled');
+      expect(() => assertStoryboardProviderPolicy({ ...policy, externalAI: true, [key]: { id: 'openai-api', model: 'selected' } })).not.toThrow();
     }
     expect(storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW, requestId: randomUUID(), prompt: '요청', sceneCount: 5 }).providers.externalAI).toBe(false);
   });

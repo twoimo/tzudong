@@ -262,7 +262,7 @@ describe('admin/API contracts and bounded failures', () => {
   });
   test('external providers need consent and configured official APIs never dispatch', async () => {
     for (const modality of ['text', 'image'] as const) {
-      const request = req(); request.providers[modality] = { id: 'chatgpt-manual', model: '' };
+      const request = req(); request.providers[modality] = { id: 'openai-api', model: 'selected' };
       expect(await (await api().listPOST(jsonRequest(request))).json()).toEqual({ ok: false, error: 'external_ai_disabled' });
       request.providers.externalAI = true; request.providers[modality] = { id: 'openai-api', model: 'selected' };
       const response = await api().listPOST(jsonRequest(request));

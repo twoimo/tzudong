@@ -93,9 +93,13 @@ describe('local-only egress boundary', () => {
     const { origin } = await listen(model);
     const client = new MlxStoryboardClient(new MlxTransport({ origin, onDestination: (receipt) => receipts.push(receipt) }));
 
-    for (const id of ['openai-api', 'xai-api', 'chatgpt-manual', 'grok-manual'] as const) {
+    for (const id of ['openai-api', 'xai-api'] as const) {
       await expect(client.draft(request(id, id))).rejects.toThrow('external_ai_disabled');
       await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('external_ai_disabled');
+    }
+    for (const id of ['chatgpt-manual', 'grok-manual'] as const) {
+      await expect(client.draft(request(id, id))).rejects.toThrow('provider_not_configured');
+      await expect(client.image(request(id, id), 'prompt')).rejects.toThrow('provider_not_configured');
     }
     expect(receipts).toEqual([]);
   });

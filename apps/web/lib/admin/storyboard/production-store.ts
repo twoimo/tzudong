@@ -4,7 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES, STORYBOARD_WORKFLOW,
-  StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
+  StoryboardProductionError, assertStoryboardProviderPolicy, isStoryboardUserImportProviderId, parseStoryboardDraft,
   storyboardDraftSceneSchema, storyboardDraftSchema, storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema, storyboardProvenanceSchema,
   type StoryboardProductionAsset, type StoryboardProductionDocument, type StoryboardProductionProvenance,
@@ -153,7 +153,7 @@ export function assertProductionDocumentSize(value: unknown): void {
   }
 }
 export function isManualStoryboardProvider(provider: StoryboardProvider): boolean {
-  return ['manual', 'chatgpt-manual', 'grok-manual'].includes(provider.id);
+  return isStoryboardUserImportProviderId(provider.id);
 }
 export function manualStoryboardProvenance(provider: StoryboardProvider): StoryboardProductionProvenance {
   if (!isManualStoryboardProvider(provider)) throw new StoryboardProductionError('invalid_request');
