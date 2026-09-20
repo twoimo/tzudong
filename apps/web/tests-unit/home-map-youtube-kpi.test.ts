@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+    chunkHomeMapYoutubeVideoIds,
     collectHomeMapYoutubeVideoIds,
+    HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE,
     mergeHomeMapYoutubeKpiMetrics,
 } from '../lib/home-map-youtube-kpi';
 import type { Restaurant } from '../types/restaurant';
@@ -32,6 +34,17 @@ describe('home map youtube KPI enrichment', () => {
         ])).toEqual(['abcdefghijk', 'lmnopqrstuv', 'wxyzABCDE12']);
     });
 
+
+    test('chunks video ids so home KPI requests stay under the bounded POST limit', () => {
+        const videoIds = Array.from({ length: 250 }, (_, index) => `id${String(index).padStart(4, '0')}`);
+        const chunks = chunkHomeMapYoutubeVideoIds(videoIds);
+        expect(HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE).toBe(100);
+        expect(chunks).toHaveLength(3);
+        expect(chunks[0]).toHaveLength(100);
+        expect(chunks[1]).toHaveLength(100);
+        expect(chunks[2]).toHaveLength(50);
+        expect(JSON.stringify({ videoIds: chunks[0] }).length).toBeLessThan(8 * 1024);
+    });
     test('merges latest KPI metrics into metadata used by theme filters', () => {
         const merged = mergeHomeMapYoutubeKpiMetrics([
             restaurant('a', {

@@ -40,6 +40,20 @@ export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string
     return [...videoIds];
 }
 
+export const HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE = 100;
+
+export function chunkHomeMapYoutubeVideoIds(
+    videoIds: string[],
+    chunkSize = HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE,
+): string[][] {
+    const size = Number.isFinite(chunkSize) && chunkSize > 0 ? Math.floor(chunkSize) : HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE;
+    const chunks: string[][] = [];
+    for (let index = 0; index < videoIds.length; index += size) {
+        chunks.push(videoIds.slice(index, index + size));
+    }
+    return chunks;
+}
+
 function buildMetricMeta(metric: HomeMapYouTubeKpiMetric): YoutubeMeta {
     return {
         ...(metric.title ? { title: metric.title } : {}),
@@ -54,18 +68,30 @@ function buildMetricMeta(metric: HomeMapYouTubeKpiMetric): YoutubeMeta {
 async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<string, HomeMapYouTubeKpiMetric>> {
     if (videoIds.length === 0) return new Map();
 
-    const response = await fetch('/api/home/youtube-kpi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds }),
-    });
+    const metricsByVideoId = new Map<string, HomeMapYouTubeKpiMetric>();
+    const chunkResults = await Promise.all(
+        chunkHomeMapYoutubeVideoIds(videoIds).map(async (chunk) => {
+            const response = await fetch('/api/home/youtube-kpi', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoIds: chunk }),
+            });
 
-    if (!response.ok) {
-        throw new Error(`home-youtube-kpi:${response.status}`);
+            if (!response.ok) {
+                throw new Error(`home-youtube-kpi:${response.status}`);
+            }
+
+            return (await response.json()) as HomeMapYouTubeKpiResponse;
+        }),
+    );
+
+    for (const payload of chunkResults) {
+        for (const metric of payload.metrics ?? []) {
+            metricsByVideoId.set(metric.videoId, metric);
+        }
     }
 
-    const payload = (await response.json()) as HomeMapYouTubeKpiResponse;
-    return new Map((payload.metrics ?? []).map((metric) => [metric.videoId, metric]));
+    return metricsByVideoId;
 }
 
 export function mergeHomeMapYoutubeKpiMetrics(
