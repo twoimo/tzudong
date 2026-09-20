@@ -8,6 +8,7 @@ export const BOUNDED_JSON_REQUEST_ERROR = {
 export const BOUNDED_JSON_REQUEST_READ_TIMEOUT_MS = 1_000;
 
 const CANCELLATION_TIMEOUT_MS = 25;
+const MAX_JSON_NESTING = 64;
 
 type BoundedJsonRequestErrorCode =
   typeof BOUNDED_JSON_REQUEST_ERROR[keyof typeof BOUNDED_JSON_REQUEST_ERROR];
@@ -260,6 +261,7 @@ function parseJsonLiteral(cursor: JsonCursor, literal: 'true' | 'false' | 'null'
 }
 
 function parseJsonArray(cursor: JsonCursor, nesting: number) {
+  if (nesting > MAX_JSON_NESTING) invalidJson();
   cursor.index += 1;
   skipJsonWhitespace(cursor);
   if (cursor.source[cursor.index] === ']') {
@@ -280,6 +282,7 @@ function parseJsonArray(cursor: JsonCursor, nesting: number) {
 }
 
 function parseJsonObject(cursor: JsonCursor, nesting: number) {
+  if (nesting > MAX_JSON_NESTING) invalidJson();
   cursor.index += 1;
   skipJsonWhitespace(cursor);
   if (cursor.source[cursor.index] === '}') {
