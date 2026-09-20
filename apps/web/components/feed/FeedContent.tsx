@@ -541,21 +541,24 @@ export default function FeedContent({
                 {/* 헤더 */}
                 {showHeader && (
                     <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                                <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                                    <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                    <span className="min-w-0 truncate">쯔동여지도 리뷰</span>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                                <h1 className={cn(
+                                    "flex min-w-0 items-center gap-1.5 font-semibold leading-tight",
+                                    isOverlay ? "text-base text-foreground" : "text-[1.0625rem] text-primary xs:text-xl sm:text-2xl"
+                                )}>
+                                    {!isOverlay && <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />}
+                                    <span className="min-w-0 truncate">{isOverlay ? "리뷰" : "쯔동여지도 리뷰"}</span>
                                     <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
                                         ({allReviews.length}개)
                                     </span>
                                 </h1>
-                                <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                                {!isOverlay && <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                     {isLoggedIn
                                         ? "맛집 방문 후기를 공유해보세요!"
                                         : "로그인하여 리뷰를 작성해보세요!"
                                     }
-                                </p>
+                                </p>}
                             </div>
                             <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                                 {isLoggedIn && (

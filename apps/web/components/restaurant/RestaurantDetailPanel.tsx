@@ -912,7 +912,8 @@ export function RestaurantDetailPanel({
                 data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
                 className={cn(
-                    "h-full w-full max-w-full flex flex-col bg-background border-l border-border relative",
+                    "h-full w-full max-w-full flex flex-col bg-background relative",
+                    isMobile ? "border-0" : "border-l border-border",
                     className
                 )}
             >
@@ -1526,7 +1527,10 @@ export function RestaurantDetailPanel({
                                         onClick={handleRequestEditRestaurant}
                                         variant="outline"
                                         size="sm"
-                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
+                                        className={cn(
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            isMobile ? "rounded-lg" : "rounded-xl"
+                                        )}
                                     >
                                         <Edit className="h-4 w-4 shrink-0" aria-hidden="true" />
                                         <span>수정 요청</span>
@@ -1535,7 +1539,10 @@ export function RestaurantDetailPanel({
                                     {mapDestinationUrls ? (
                                         <Button
                                             onClick={handleGetDirections}
-                                            className="h-14 min-w-0 flex-col gap-1 rounded-xl bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90"
+                                            className={cn(
+                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
+                                                isMobile ? "rounded-lg" : "rounded-xl"
+                                            )}
                                         >
                                             <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
                                             <span>길찾기</span>
@@ -1546,7 +1553,10 @@ export function RestaurantDetailPanel({
                                         onClick={handleWriteReview}
                                         variant="outline"
                                         size="sm"
-                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
+                                        className={cn(
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            isMobile ? "rounded-lg" : "rounded-xl"
+                                        )}
                                     >
                                         <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                                         <span>리뷰 작성</span>

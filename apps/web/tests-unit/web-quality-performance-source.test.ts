@@ -2781,10 +2781,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
     expect(feedContentSource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
+      "flex items-center justify-between gap-2",
     );
-    expect(feedContentSource).toContain("basis-[min(11rem,100%)]");
-    expect(feedContentSource).toContain("text-balance");
+    expect(feedContentSource).not.toContain("basis-[min(11rem,100%)]");
+    expect(feedContentSource).toContain('isOverlay ? "리뷰" : "쯔동여지도 리뷰"');
     expect(feedContentSource).toContain("text-pretty");
     expect(feedContentSource).toContain(
       'placeholder="맛집명, 작성자, 내용 검색…"',

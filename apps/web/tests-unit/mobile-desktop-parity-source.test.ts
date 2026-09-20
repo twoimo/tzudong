@@ -392,7 +392,7 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
-    expect(mobileOverlaySource).toContain("flex w-full max-w-full flex-wrap snap-x gap-2 overflow-x-auto px-0.5");
+    expect(mobileOverlaySource).toContain("flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5");
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
     expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");

@@ -1034,7 +1034,7 @@ function MobileControlOverlayComponent({
                     data-layout-primitives="reel cluster"
                     data-allow-horizontal-scroll="true"
                     data-horizontal-scroll-owner="mobile-theme-filter-reel"
-                    className="pointer-events-auto mt-2 flex w-full max-w-full flex-wrap snap-x gap-2 overflow-x-auto px-0.5 pr-3 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="pointer-events-auto mt-2 flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5 pr-3 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {HOME_MAP_THEME_FILTERS.map((theme) => {
                         const isSelected = selectedTheme === theme.id;
