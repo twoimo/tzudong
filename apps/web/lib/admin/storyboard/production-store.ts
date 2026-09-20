@@ -30,6 +30,7 @@ export const PRODUCTION_FAILURE_STATUSES: Readonly<Record<string, number>> = {
   model_not_installed: 409, model_capability_mismatch: 409, model_identity_mismatch: 409,
   invalid_structured_response: 400, invalid_image: 400, image_too_large: 413,
   provider_failed: 502,
+  version_not_found: 404, restore_asset_missing: 409,
 };
 const knownErrors = new Set([...Object.keys(PRODUCTION_FAILURE_STATUSES), ...workerFailureSchema.options]);
 const timestamp = z.iso.datetime({ offset: true });
@@ -48,7 +49,7 @@ export const productionJobSchema = z.object({
 const snapshotSchema = z.object({ ok: z.literal(true), project: productionProjectSchema, job: productionJobSchema.nullable() }).strict();
 const eventSchema = z.object({
   id: z.string().regex(/^\d{1,20}$/), jobId: productionUuid.nullable(),
-  operation: z.enum(['created', 'queued', 'claimed', 'edited', 'draft_saved', 'image_saved', 'scene_failed', 'cancelled', 'lease_expired', 'finished']),
+  operation: z.enum(['created', 'queued', 'claimed', 'edited', 'draft_saved', 'image_saved', 'scene_failed', 'cancelled', 'lease_expired', 'finished', 'restored']),
   revision: z.number().int().nonnegative(), sceneNo: z.number().int().min(1).max(12).nullable(),
   errorCode: workerFailureSchema.nullable(), createdAt: timestamp,
 }).strict();
@@ -66,6 +67,16 @@ const claimSchema = z.object({ ok: z.literal(true), job: z.object({
 }).strict().nullable() }).strict();
 const okSchema = z.object({ ok: z.literal(true) }).strict();
 const heartbeatSchema = okSchema.extend({ leaseValid: z.boolean() });
+const versionsSchema = z.object({
+  ok: z.literal(true),
+  versions: z.array(z.object({
+    revision: z.number().int().nonnegative(),
+    createdAt: timestamp,
+    title: z.string().max(200),
+    sceneCount: z.number().int().min(0).max(12),
+  }).strict()).max(200),
+  preview: storyboardProductionDocumentSchema.nullable(),
+}).strict();
 
 export const productionActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('edit'), revision: z.number().int().nonnegative(),
@@ -76,6 +87,9 @@ export const productionActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel'), revision: z.number().int().nonnegative(), jobId: productionUuid }).strict(),
   z.object({ action: z.literal('import-text'), revision: z.number().int().nonnegative(), projectId: productionUuid,
     schema: z.literal(STORYBOARD_WORKFLOW), draft: storyboardDraftSchema }).strict(),
+  z.object({ action: z.literal('restore'), revision: z.number().int().nonnegative(),
+    targetRevision: z.number().int().nonnegative(), requestId: productionUuid,
+    sceneNo: z.number().int().min(1).max(12).optional() }).strict(),
 ]);
 export type ProductionSnapshot = z.infer<typeof snapshotSchema>;
 export type ProductionProject = ProductionSnapshot['project'];
@@ -226,6 +240,10 @@ export class StoryboardProductionStore {
   async get(ownerId: string, projectId: string) {
     return decode(readSchema, await this.admin(ownerId, 'read', projectId));
   }
+  async versions(ownerId: string, projectId: string, targetRevision?: number) {
+    return decode(versionsSchema, await this.admin(ownerId, 'versions', projectId, null,
+      targetRevision === undefined ? {} : { targetRevision }));
+  }
   async create(ownerId: string, value: unknown) {
     const request = input(storyboardProductionRequestSchema, value);
     assertStoryboardProviderPolicy(request.providers);
@@ -237,6 +255,30 @@ export class StoryboardProductionStore {
   }
   async apply(ownerId: string, projectId: string, value: unknown) {
     const change = input(productionActionSchema, value);
+    // Restore CAS, busy checks and request replay are serialized together by the DB.
+    // A pre-read revision check would reject a successful request retried after a lost response.
+    if (change.action === 'restore') {
+      const before = await this.get(ownerId, projectId);
+      if (before.project.revision === change.revision && !['queued', 'claimed'].includes(before.job?.status ?? '')) {
+        const { preview } = await this.versions(ownerId, projectId, change.targetRevision);
+        if (!preview) throw new StoryboardProductionError('version_not_found');
+        for (const scene of preview.scenes) {
+          if ((change.sceneNo !== undefined && change.sceneNo !== scene.sceneNo) || !scene.image) continue;
+          try {
+            const row = await this.assetRow(ownerId, projectId, scene.image.id);
+            if (!row || row.scene_no !== scene.sceneNo || JSON.stringify(row.asset) !== JSON.stringify(scene.image)) {
+              throw new StoryboardProductionError('restore_asset_missing');
+            }
+            await this.verifiedBytes(row.asset.original);
+          } catch (error) {
+            if (error instanceof StoryboardProductionError && ['asset_not_found', 'invalid_asset', 'storage_unavailable', 'restore_asset_missing'].includes(error.code)) {
+              throw new StoryboardProductionError('restore_asset_missing');
+            }
+            throw error;
+          }
+        }
+      }
+    }
     if (change.action === 'edit' || change.action === 'import-text') {
       const before = await this.get(ownerId, projectId);
       assertEditable(before, change.revision);

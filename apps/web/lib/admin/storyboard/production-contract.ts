@@ -176,6 +176,8 @@ export const STORYBOARD_PRODUCTION_MESSAGES: Record<string, string> = {
   project_busy: '이미 실행 중인 작업이 있습니다. 완료되거나 취소된 뒤 다시 시도하세요.',
   request_conflict: '같은 요청이 다른 내용으로 이미 저장되어 있습니다. 새로고침하여 최신 상태를 확인하세요.',
   worker_lease_lost: '작업 소유권이 만료되거나 취소되어 늦은 결과를 반영하지 않았습니다.',
+  version_not_found: '선택한 버전을 찾을 수 없습니다. 현재 프로젝트의 저장된 이력만 복원할 수 있습니다.',
+  restore_asset_missing: '복원할 장면 이미지가 더 이상 없습니다. 원본 파일이 없는 버전은 되돌리지 않습니다.',
 };
 
 export function storyboardProductionErrorCode(error: unknown): string {

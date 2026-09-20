@@ -155,6 +155,71 @@ describe('worker authentication and proof boundary', () => {
 });
 
 describe('admin/API contracts and bounded failures', () => {
+  test('historical restore validates its strict envelope', () => {
+    const value = { action: 'restore', revision: 12, targetRevision: 10, requestId: randomUUID() };
+    expect(productionActionSchema.safeParse(value).success).toBe(true);
+    expect(productionActionSchema.safeParse({ ...value, sceneNo: 2 }).success).toBe(true);
+    expect(productionActionSchema.safeParse({ ...value, targetRevision: undefined }).success).toBe(false);
+    expect(productionActionSchema.safeParse({ ...value, provider: 'local-mlx' }).success).toBe(false);
+  });
+  test('restore goes through the atomic admin RPC without worker or model calls', async () => {
+    const p = project(); p.status = 'ready'; p.revision = 13;
+    p.document!.revision = 13;
+    const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+    const store = new StoryboardProductionStore({ database: { ...unusedDb, async rpc(name, args) {
+      calls.push({ name, args });
+      return { data: args.p_action === 'read' ? read(p) : { ok: true, project: p, job: null }, error: null };
+    } } });
+    const restore = { action: 'restore', revision: 12, targetRevision: 10, requestId: randomUUID() };
+    await store.apply(ownerId, p.id, restore);
+    await store.apply(ownerId, p.id, restore);
+    expect(calls).toHaveLength(4);
+    expect(calls.every((call) => call.name === 'storyboard_production_admin')).toBe(true);
+    for (const call of calls.filter((call) => call.args.p_action !== 'read')) expect(call).toEqual({ name: 'storyboard_production_admin', args: {
+      p_owner_id: ownerId, p_action: 'restore', p_project_id: p.id, p_revision: 12,
+      p_payload: { targetRevision: 10, requestId: restore.requestId },
+    } });
+  });
+  test('restore refuses missing or corrupt original bytes before any mutation', async () => {
+    const fixture = await exportFixture();
+    fixture.p.revision = 2; fixture.p.document!.revision = 2;
+    const preview = structuredClone(fixture.p.document!); preview.revision = 1;
+    const actions: unknown[] = [];
+    const store = new StoryboardProductionStore({ storage: fixture.storage, database: {
+      ...fixture.database, async rpc(_name, args) {
+        actions.push(args.p_action);
+        return { data: args.p_action === 'versions' ? { ok: true, versions: [], preview } : read(fixture.p), error: null };
+      },
+    } });
+    const original = fixture.prepared.asset.original;
+    fixture.storage.files.delete(original.path);
+    await expect(store.apply(ownerId, fixture.p.id, { action: 'restore', revision: 2, targetRevision: 1, requestId: randomUUID() })).rejects.toThrow('restore_asset_missing');
+    fixture.storage.files.set(original.path, { bytes: Buffer.alloc(original.bytes), mime: original.mime });
+    await expect(store.apply(ownerId, fixture.p.id, { action: 'restore', revision: 2, targetRevision: 1, requestId: randomUUID() })).rejects.toThrow('restore_asset_missing');
+    expect(actions).toEqual(['read', 'versions', 'read', 'versions']);
+  });
+  test('versions and preview use the authenticated existing project GET handler', async () => {
+    const id = randomUUID();
+    const calls: Record<string, unknown>[] = [];
+    const store = new StoryboardProductionStore({ database: { ...unusedDb, async rpc(name, args) {
+      expect(name).toBe('storyboard_production_admin'); calls.push(args);
+      return { data: { ok: true, versions: [], preview: null }, error: null };
+    } } });
+    const result = await api(store).projectGET(new Request(`${site}?versions=1&targetRevision=12`), { params: Promise.resolve({ id }) });
+    expect(result.status).toBe(200);
+    expect(calls).toEqual([{ p_owner_id: ownerId, p_action: 'versions', p_project_id: id, p_revision: null, p_payload: { targetRevision: 12 } }]);
+  });
+  test('restore DB failures have bounded HTTP codes', async () => {
+    for (const [code, status] of [['version_not_found', 404], ['restore_asset_missing', 409], ['revision_conflict', 409], ['project_busy', 409]] as const) {
+      const store = new StoryboardProductionStore({ database: { ...unusedDb, async rpc() {
+        return { data: null, error: { message: code } };
+      } } });
+      const result = await api(store).projectPOST(jsonRequest({ action: 'restore', revision: 12, targetRevision: 10, requestId: randomUUID() }),
+        { params: Promise.resolve({ id: randomUUID() }) });
+      expect(result.status).toBe(status);
+      expect(await result.json()).toEqual({ ok: false, error: code });
+    }
+  });
   test('all admin endpoints require auth before params, body, storage or DB work', async () => {
     let authCalls = 0;
     const handlers = createStoryboardProductionApi({ store: new StoryboardProductionStore({ database: unusedDb }),

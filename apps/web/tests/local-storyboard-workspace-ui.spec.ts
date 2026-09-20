@@ -137,12 +137,50 @@ test.afterEach(async ({ page }) => {
 });
 async function open(page: Page, id?: string) {
   await page.goto(`${origin}/admin?module=storyboard${id ? `&storyboardProject=${id}` : ""}#workspace`);
-  await expect(page.getByRole("heading", { name: "로컬 스토리보드", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "목록 새로고침", exact: true })).toBeEnabled();
+  await expect(page.getByRole("heading", { name: "스토리보드", exact: true })).toBeVisible();
+  if (!id) await expect(page.locator('#local-text-model option[value="installed-text"]')).toHaveCount(1);
   if (id) await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeVisible();
 }
 
 test.describe("Local storyboard UI contracts (mock HTTP, no real model success)", () => {
+  test("opens saved work on the scene editor and restores a previewed scene with explicit confirmation", async ({ page }) => {
+    const current = saved();
+    const historical = structuredClone(DOCUMENT); historical.revision = 3;
+    historical.scenes[0].title = "이전 장면 제목";
+    const mutations: Record<string, unknown>[] = [];
+    await page.route(`**${API}/${ID}*`, async (route) => {
+      const url = new URL(route.request().url());
+      if (url.searchParams.get("versions") === "1") return fulfill(route, { ok: true,
+        versions: [{ revision: 3, title: historical.title, sceneCount: 5, createdAt: NOW }],
+        preview: url.searchParams.has("targetRevision") ? historical : null });
+      if (route.request().method() === "POST") {
+        mutations.push(route.request().postDataJSON());
+        current.project.revision = 5; current.project.document.revision = 5;
+        current.project.document.scenes[0] = { ...historical.scenes[0], revision: 5 };
+      }
+      await fulfill(route, current);
+    });
+    await open(page, ID);
+    await expect(page.getByRole("form", { name: "새 제작 요청" })).toHaveCount(0);
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await page.getByRole("button", { name: "장면 2 선택", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "2. 촬영 장면 2", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "버전 이력", exact: true }).click();
+    await page.getByRole("combobox", { name: "저장된 버전", exact: true }).selectOption("3");
+    await page.getByRole("combobox", { name: "복원 범위", exact: true }).selectOption("1");
+    const restore = page.getByRole("button", { name: "장면 1 복원", exact: true });
+    await expect(restore).toBeDisabled();
+    await page.getByRole("checkbox", { name: /모델을 호출하지 않고/ }).check();
+    await restore.click();
+    await expect.poll(() => mutations.length).toBe(1);
+    expect(mutations[0]).toMatchObject({ action: "restore", revision: 4, targetRevision: 3, sceneNo: 1 });
+    expect(mutations[0].requestId).toMatch(/^[a-f0-9-]{36}$/);
+    await page.getByRole("button", { name: "장면 편집", exact: true }).click();
+    await page.getByRole("button", { name: "장면 1 선택", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "1. 이전 장면 제목", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "1. 이전 장면 제목", exact: true })).toBeVisible();
+  });
   test("defaults to local, filters model capabilities, and mounts legacy only after a keyboard click", async ({ page }) => {
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
@@ -161,7 +199,10 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.clock.fastForward(20_000);
     expect(requests.filter((url) => url.includes("/api/") || url.includes("/qa-history/"))).toEqual([`${origin}${API}`]);
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
-    const legacy = page.getByRole("button", { name: "기존 스토리보드 UI 열기 (레거시)", exact: true });
+    await expect(page.getByRole("region", { name: "로컬 워커", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "연결 설정", exact: true }).click();
+    await expect(page.getByRole("region", { name: "로컬 워커", exact: true })).toBeVisible();
+    const legacy = page.getByRole("button", { name: "이전 작업 공간 열기", exact: true });
     await legacy.focus(); await page.keyboard.press("Enter");
     await expect(page.locator('[data-local-storyboard-workspace="true"]')).toHaveCount(0);
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toBeVisible();
@@ -222,7 +263,9 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await open(page, ID);
     await expect(page.getByRole("button", { name: "ChatGPT 웹 직접 열기" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "장면 1 재생성", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "연결 설정", exact: true }).click();
     await page.getByLabel("외부 AI 사용 허용", { exact: false }).check();
+    await page.getByRole("button", { name: "결과 가져오기", exact: true }).click();
     expect(await page.evaluate(() => (window as HarnessWindow).opened)).toEqual([]);
     await page.getByRole("button", { name: "ChatGPT 웹 직접 열기" }).click();
     await page.getByRole("button", { name: "Grok 웹 직접 열기" }).click();
@@ -261,9 +304,9 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     });
     await page.route(`**${API}/${ID}`, async (route) => { pending = route; });
     await open(page);
-    await page.getByRole("button", { name: /^UI 계약용 프로젝트/ }).click();
+    await page.getByRole("combobox", { name: "프로젝트 선택", exact: true }).selectOption(ID);
     await expect.poll(() => pending !== null).toBe(true);
-    await page.getByRole("button", { name: /^다른 프로젝트/ }).click();
+    await page.getByRole("combobox", { name: "프로젝트 선택", exact: true }).selectOption(OTHER_ID);
     await expect(page).toHaveURL(new RegExp(`storyboardProject=${OTHER_ID}`));
     await expect.poll(() => aborted).toContain(`${API}/${ID}`);
     await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeVisible();
@@ -291,7 +334,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await expect(page.getByRole("alert")).toContainText("요청 상태를 확인하지 못했습니다");
     await page.clock.fastForward(30_000); expect(reads).toBe(2);
     await expect(page.getByText("sensitive-provider-response", { exact: false })).toHaveCount(0);
-    await page.getByRole("button", { name: "프로젝트 새로고침", exact: true }).click();
+    await page.getByRole("button", { name: "새로고침", exact: true }).click();
     await expect.poll(() => reads).toBe(3);
     await expect(page.getByRole("button", { name: "장면 1 편집", exact: true })).toBeEnabled();
   });
@@ -327,7 +370,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
       // Keep the readback pending for two frames so an early focus attempt cannot pass by timing luck.
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       await expect(page.getByRole("heading", { name: "UI 계약용 프로젝트", exact: true })).toBeFocused();
-      const exportButton = page.getByRole("button", { name: "파일 포함 JSON 내보내기", exact: true });
+      const exportButton = page.getByRole("button", { name: "내보내기", exact: true });
       if (navigateDuringReadback) {
         await page.keyboard.press("Tab");
         await expect(exportButton).toBeFocused();
@@ -385,7 +428,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
       ...scene, image: { ...asset(), id: `10000000-0000-4000-8000-00000000001${index}` } }));
     await page.route(`**${API}/${ID}`, (route) => fulfill(route, current));
     await open(page, ID);
-    await expect(page.getByRole("button", { name: "재시도", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "재시도", exact: true })).toHaveCount(0);
   });
 
   test("sends retry, cancel, and per-scene regeneration with server revisions and explicit UUIDs", async ({ page }) => {
@@ -420,6 +463,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
       await fulfill(route, saved());
     });
     await open(page, ID);
+    await page.getByRole("button", { name: "결과 가져오기", exact: true }).click();
     await page.getByRole("button", { name: "현재 텍스트 프롬프트 복사", exact: true }).click();
     const copied = await page.evaluate(() => (window as HarnessWindow).copiedPrompt);
     expect(copied).toContain(buildStoryboardDraftPrompt(REQUEST));
@@ -437,6 +481,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.getByRole("button", { name: "텍스트 가져오기", exact: true }).click();
     await expect(input).toHaveValue("");
     expect(posts).toEqual([{ action: "import-text", ...envelope }]);
+    await page.getByText("제작 요청과 모델 정보", { exact: true }).click();
     await expect(page.getByText("모델 미검증", { exact: false })).toBeVisible();
   });
 
@@ -451,6 +496,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
       await fulfill(route, current);
     });
     await open(page, ID);
+    await page.getByText("이미지 파일 가져오기", { exact: true }).click();
     const input = page.getByLabel("장면 1 이미지 파일", { exact: false });
     const apply = page.getByRole("button", { name: "장면 1 이미지 가져오기 적용", exact: true });
     await input.setInputFiles({ name: "blocked.svg", mimeType: "image/svg+xml", buffer: Buffer.from("<svg/>") });
@@ -475,7 +521,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await page.route(`**${API}/${ID}/export`, (route) => fulfill(route, exported));
     await open(page, ID);
     const received = page.waitForEvent("download");
-    await page.getByRole("button", { name: "파일 포함 JSON 내보내기", exact: true }).click();
+    await page.getByRole("button", { name: "내보내기", exact: true }).click();
     const download = await received;
     expect(download.suggestedFilename()).toBe(`storyboard-${ID}.json`);
     const path = await download.path();
@@ -485,7 +531,7 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
   test("rejects mismatched project responses instead of showing fake success", async ({ page }) => {
     await page.route(`**${API}/${ID}`, (route) => fulfill(route, saved(OTHER_ID)));
     await open(page);
-    await page.getByRole("button", { name: /^UI 계약용 프로젝트/ }).click();
+    await page.getByRole("combobox", { name: "프로젝트 선택", exact: true }).selectOption(ID);
     await expect(page.getByRole("alert")).toContainText("서버 응답 형식을 확인할 수 없습니다");
     await expect(page.getByRole("heading", { name: "저장된 장면", exact: false })).toHaveCount(0);
   });
