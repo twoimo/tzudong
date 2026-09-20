@@ -89,6 +89,12 @@ Live browser captures: [workflow](docs/operations/evidence/storyboard-restore-20
 
 Map discovery source: [map-discovery.workflow.json](docs/architecture/map-discovery/map-discovery.workflow.json)
 
+Evidence pipeline: [interactive data pipeline](docs/architecture/data-pipeline/tzudong-data-pipeline.html) · [dataflow source](docs/architecture/data-pipeline/tzudong-data-pipeline.dataflow.json)
+
+Worker flow: [interactive worker boosting flow](docs/architecture/data-pipeline/worker-boosting.html) · [workflow source](docs/architecture/data-pipeline/worker-boosting.workflow.json)
+
+The worker keeps image concurrency at `c=1`. A future bounded boost must pass memory admission and observed queue/run/RSS evidence before changing that cap; dynamic concurrency increase is not claimed as implemented. Queue claim and lease ownership, heartbeat freshness, revision checks, conditional save/readback, and late-write rejection define the persistence boundary. Operator observations are bounded and non-authoritative, with secrets and raw payloads excluded.
+
 The local workspace separates **new project creation**, **scene editing**, **version history**, and **manual result import**. Saved projects open directly on the scene editor; connection diagnostics are under Settings. Text and image providers remain independent: local MLX, ChatGPT manual import, and Grok manual import are selectable with external AI off. OpenAI/xAI official APIs stay gated and currently unconfigured. There is no automatic cloud fallback.
 
 Storyboard provider policy keeps `local-mlx`, `chatgpt-manual`, and `grok-manual` independently selectable for text and image without requiring an official external API; the manual choices return through user import. The `externalAI` consent gate applies only to the official API provider IDs `openai-api` and `xai-api`.
