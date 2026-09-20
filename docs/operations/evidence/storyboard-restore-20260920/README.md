@@ -88,6 +88,8 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 공개 바텀시트 shadow-xl을 shadow-sm으로 낮췄다. 로컬 스토리보드 UI 계약 Playwright chromium 24건 통과. 수동 ChatGPT/Grok 프로젝트는 워커 재생성 버튼이 비활성이다.
 - 관리자 `/admin?module=storyboard`에서 외부 AI 동의 없이 텍스트/이미지 공급자에 로컬 MLX, ChatGPT 수동, Grok 수동이 활성화되어 있고 OpenAI/xAI 공식 API는 disabled다. [화면](admin-storyboard-providers.png).
 - 스토리보드 프로젝트 acd96811 revision 25 ready 재확인. export `storyboard-export-v1` HTTP 200, 7,963,672 bytes, 파일 20개(PNG 5 · WebP 15). 공급자는 local-mlx 텍스트/이미지, externalAI false.
+- 같은 export 20개 파일을 Pillow로 모두 디코딩했다. SHA-256이 일치하고 원본 PNG는 1024×576, WebP 파생은 960×540과 480×270이다.
+
 
 
 
