@@ -121,3 +121,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 라이프사이클 다이어그램 제목은 `쯔동 스토리보드 상태 전이`다. [lifecycle](archify-storyboard-lifecycle-desktop.png)
 - 로컬 이그레스 계약 재실행: storyboard-local-egress + mlx-provider + image-provider 33건 통과. 루프백만 연결하고 프록시/DNS/리다이렉트/클라우드 fetch는 거부하며, mixed MLX+수동 ChatGPT/Grok은 externalAI 없이 허용한다. WebP 파생과 원본 PNG 보존 테스트 포함.
 - 워커/큐/이력 계약 재실행: outbound-worker + async-jobs + history 42건 통과. 원자적 claim·리다이렉트 거부·실패 시 기존 이미지 유지. 라이브 versions 읽기는 복원 RPC 없이 수행했다.
+- 로컬 스토리보드 UI Playwright chromium 24/24 재통과. 생성·편집·재생성·내보내기·반응형 계약이며 실제 모델 성공은 주장하지 않는다.
