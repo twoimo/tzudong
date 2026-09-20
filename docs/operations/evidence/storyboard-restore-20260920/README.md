@@ -112,3 +112,5 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 모바일 `/feed`에서 로그인·맛집 상세·리뷰 시트가 열리면 리뷰 작성 FAB를 숨긴다. 320px 로그인 시트에서 FAB가 안내 문구를 가리지 않았고, 설명은 `break-keep`이다. 커밋 `1986b54b`.
 - 공개 오버레이·지도 상세 패널의 `shadow-2xl`을 `shadow-sm`으로 낮췄다. 드롭다운 메뉴의 shadow-2xl 계약은 유지했다.
 - 조회수 폭발 필터를 켠 뒤 서울 클러스터가 358에서 65로 줄고, 클릭 시 개별 마커가 남으며 왼쪽 목록이 66곳으로 열렸다. GPS와 동일 세션에서 확인했다.
+- 관리자 스토리보드 생성 화면 재확인: 외부 AI 동의 없이 텍스트는 ChatGPT 수동, 이미지는 Grok 수동이 선택되어 있고 공식 OpenAI/xAI API는 설정 전 사용 불가로 안내된다. [providers](admin-storyboard-providers-recheck-desktop.png)
+- 프로젝트 revision 25 재확인: 텍스트/이미지 로컬 MLX, 장면 5·이미지 5, 장면 편집·버전 이력·결과 가져오기·내보내기가 보인다. 복원 RPC와 장면 재생성은 누르지 않았다. [rev25](admin-storyboard-rev25-recheck-desktop.png)
