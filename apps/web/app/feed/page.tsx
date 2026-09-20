@@ -83,6 +83,7 @@ function FeedPageContent() {
         <div className="h-full w-full bg-background overflow-hidden" data-testid="feed-page-container">
             <FeedContent
                 variant="page"
+                hideFloatingButton={isAuthModalOpen || isRestaurantSheetOpen || isReviewModalOpen || !!restaurantToEdit}
                 onOpenAuth={() => setIsAuthModalOpen(true)}
                 onOpenRestaurantDetail={handleOpenRestaurantDetail}
             />

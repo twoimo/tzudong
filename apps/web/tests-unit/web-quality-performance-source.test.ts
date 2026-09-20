@@ -3285,6 +3285,11 @@ describe("web quality performance source contracts", () => {
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
     const feedPageSource = source("app/feed/page.tsx");
     const feedContentSource = source("components/feed/FeedContent.tsx");
+    const authModalSource = source("components/auth/AuthModal.tsx");
+    expect(feedPageSource).toContain(
+      "hideFloatingButton={isAuthModalOpen || isRestaurantSheetOpen || isReviewModalOpen || !!restaurantToEdit}",
+    );
+    expect(authModalSource).toContain('className="break-keep"');
     const homeSidePanelsSource = source("app/home-client-sidepanels.tsx");
     const reviewModalSource = source("components/reviews/ReviewModal.tsx");
 

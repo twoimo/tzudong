@@ -673,6 +673,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         >
           <div className={mobileSheetStyles.frame}>
           <MobileSheetHeader
+            className="break-keep"
             title={isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
             description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
             titleId="auth-sheet-title"
