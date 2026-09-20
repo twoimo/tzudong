@@ -2003,7 +2003,10 @@ const NaverMapView = memo(({
         });
         return lookup;
     }, [unfilteredDisplayRestaurants]);
-    const displayRestaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
+    const displayRestaurantLookup = useMemo(
+        () => showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants),
+        [displayRestaurants, restaurantLookup, showUserSubmittedMarkers],
+    );
     const { idSet: displayRestaurantIds, mergedRestaurantIds } = displayRestaurantLookup;
     const restaurantById = useMemo(() => {
         const next = new Map(restaurantLookup.byId);

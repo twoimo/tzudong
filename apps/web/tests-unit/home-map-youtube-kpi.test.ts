@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     chunkHomeMapYoutubeVideoIds,
     collectHomeMapYoutubeVideoIds,
+    enrichRestaurantsWithHomeMapYoutubeKpiMetrics,
     HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE,
     mergeHomeMapYoutubeKpiMetrics,
 } from '../lib/home-map-youtube-kpi';
@@ -73,5 +74,41 @@ describe('home map youtube KPI enrichment', () => {
             viewCount: 1234,
             commentCount: 78,
         }));
+    });
+
+    test('returns the original restaurants when the KPI request fails', async () => {
+        const restaurants = [restaurant('request-failure', {
+            youtube_link: 'https://www.youtube.com/watch?v=abcdefghijk',
+        })];
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async () => new Response(null, { status: 503 })) as typeof fetch;
+
+        try {
+            await expect(enrichRestaurantsWithHomeMapYoutubeKpiMetrics(restaurants, 'hot-view'))
+                .resolves.toBe(restaurants);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+    });
+
+    test('returns the original restaurants when the KPI response is invalid JSON', async () => {
+        const restaurants = [restaurant('invalid-response', {
+            youtube_link: 'https://www.youtube.com/watch?v=abcdefghijk',
+        })];
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (async () => ({
+            ok: true,
+            status: 200,
+            json: async () => {
+                throw new SyntaxError('invalid JSON');
+            },
+        })) as typeof fetch;
+
+        try {
+            await expect(enrichRestaurantsWithHomeMapYoutubeKpiMetrics(restaurants, 'hot-view'))
+                .resolves.toBe(restaurants);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
     });
 });

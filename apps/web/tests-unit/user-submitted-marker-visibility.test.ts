@@ -55,6 +55,8 @@ describe('user-submitted marker visibility contract', () => {
     expect(homeClient).toContain('isAdmin={isAdmin}');
 
     expect(naverMapView).toContain('return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));');
+    expect(naverMapView).toContain('showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants)');
+    expect(naverMapView).toContain('[displayRestaurants, restaurantLookup, showUserSubmittedMarkers]');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(selectedRestaurant)');
     expect(naverMapView).toContain('showUserSubmittedMarkers,');

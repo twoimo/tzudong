@@ -44,6 +44,42 @@ test.describe('QA Integration Tests', () => {
         await expect(page.getByText('리뷰 데이터를 불러오는 중...')).toBeVisible();
     });
 
+    test('FEED-01: a confirmed empty response shows the empty state', async ({ page }) => {
+        await page.setViewportSize({ width: 1068, height: 964 });
+        await gotoAndHidePopup(page, '/feed');
+
+        await expect(page.getByRole('heading', { name: '쯔동여지도 리뷰 (0개)' })).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText('아직 승인된 리뷰가 없습니다.')).toBeVisible();
+        await expect(page.getByText('리뷰 데이터를 불러오지 못했습니다.')).toHaveCount(0);
+    });
+
+    test('FEED-02: a REST failure stays distinct from an empty feed', async ({ page }) => {
+        test.setTimeout(60000);
+        await page.setViewportSize({ width: 1068, height: 964 });
+        await page.route('**/rest/v1/reviews*', async (route) => {
+            if (route.request().method() !== 'GET') {
+                await route.continue();
+                return;
+            }
+
+            const origin = route.request().headers().origin ?? '*';
+            await route.fulfill({
+                status: 503,
+                headers: {
+                    'access-control-allow-origin': origin,
+                    'access-control-allow-headers': 'apikey, authorization, content-type, x-client-info, x-supabase-api-version',
+                    'content-type': 'application/json; charset=utf-8',
+                },
+                body: JSON.stringify({ code: 'FEED_REVIEWS_UNAVAILABLE' }),
+            });
+        });
+
+        await gotoAndHidePopup(page, '/feed');
+
+        await expect(page.getByText('리뷰 데이터를 불러오지 못했습니다.')).toBeVisible({ timeout: 45000 });
+        await expect(page.getByText('아직 승인된 리뷰가 없습니다.')).toHaveCount(0);
+    });
+
     test('SCH-01: Search Results should be limited to ~4 items', async ({ page }) => {
         test.setTimeout(60000); // Increase test timeout
         await gotoAndHidePopup(page, '/');

@@ -96,7 +96,7 @@ export function resolveNaverRestaurantEmptyStateMessage(
     if (
         isYoutubeMetadataBackedHomeMapThemeFilterId(filters.featuredTheme)
         && filters.featuredTheme !== 'fresh-video'
-        && !homeMapThemeFilterHasUsableMetrics([...restaurants], filters.featuredTheme)
+        && !homeMapThemeFilterHasUsableMetrics(restaurants, filters.featuredTheme)
     ) {
         return '이 테마는 조회수·댓글 지표가 있는 맛집만 보여줍니다';
     }

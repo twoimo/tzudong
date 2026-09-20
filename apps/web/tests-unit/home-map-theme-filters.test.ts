@@ -117,6 +117,28 @@ describe('home map theme filters', () => {
         expect(ids(applyHomeMapThemeFilter(restaurants, 'comment-hot'))).toEqual(['valid']);
     });
 
+    test('keeps missing, invalid, and duplicate metadata from changing metric selection', () => {
+        const sharedValidMeta = meta({ title: 'shared', viewCount: '1000' });
+        const restaurants = [
+            restaurant('mixed', {
+                youtube_meta: sharedValidMeta as Restaurant['youtube_meta'],
+                mergedYoutubeMetas: [
+                    meta({ title: 'missing' }),
+                    meta({ viewCount: 'invalid' }),
+                    sharedValidMeta,
+                    sharedValidMeta,
+                ],
+                mergedRestaurants: [
+                    { youtube_meta: sharedValidMeta } as Restaurant,
+                ],
+            }),
+            restaurant('lower', { mergedYoutubeMetas: [meta({ viewCount: 1 })] }),
+        ];
+
+        expect(homeMapThemeFilterHasUsableMetrics(restaurants, 'hot-view')).toBe(true);
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['mixed']);
+    });
+
     test('keeps the single restaurant with a valid metric when valid data exists', () => {
         const restaurants = [
             restaurant('missing', { mergedYoutubeMetas: [meta({ title: 'no metric' })] }),

@@ -131,23 +131,29 @@ function getYoutubeMetaDedupeKey(meta: YoutubeMeta): string {
         .join('\u0000');
 }
 
-function collectMergedYoutubeMetas(restaurant: Restaurant): YoutubeMeta[] {
-    const metas: YoutubeMeta[] = [];
+function visitMergedYoutubeMetas(
+    restaurant: Restaurant,
+    visitor: (meta: YoutubeMeta) => boolean | void,
+): boolean {
     const seen = new Set<string>();
 
-    const addMeta = (value: unknown) => {
-        if (!isYoutubeMeta(value)) return;
+    const visitMeta = (value: unknown): boolean => {
+        if (!isYoutubeMeta(value)) return false;
         const key = getYoutubeMetaDedupeKey(value);
-        if (seen.has(key)) return;
+        if (seen.has(key)) return false;
         seen.add(key);
-        metas.push(value);
+        return visitor(value) === true;
     };
 
-    restaurant.mergedYoutubeMetas?.forEach(addMeta);
-    addMeta(restaurant.youtube_meta);
-    restaurant.mergedRestaurants?.forEach((mergedRestaurant) => addMeta(mergedRestaurant.youtube_meta));
+    for (const meta of restaurant.mergedYoutubeMetas ?? []) {
+        if (visitMeta(meta)) return true;
+    }
+    if (visitMeta(restaurant.youtube_meta)) return true;
+    for (const mergedRestaurant of restaurant.mergedRestaurants ?? []) {
+        if (visitMeta(mergedRestaurant.youtube_meta)) return true;
+    }
 
-    return metas;
+    return false;
 }
 
 function getMergedVideoCount(restaurant: Restaurant): number {
@@ -188,11 +194,14 @@ function filterByTopYoutubeMetric(
     const metricByRestaurant = new Map<Restaurant, number>();
 
     restaurants.forEach((restaurant) => {
-        const values = collectMergedYoutubeMetas(restaurant)
-            .map((meta) => getYoutubeMetric(meta, metricKey))
-            .filter((value): value is number => value !== null);
-        if (values.length === 0) return;
-        metricByRestaurant.set(restaurant, Math.max(...values));
+        let maxMetric: number | null = null;
+        visitMergedYoutubeMetas(restaurant, (meta) => {
+            const metric = getYoutubeMetric(meta, metricKey);
+            if (metric !== null && (maxMetric === null || metric > maxMetric)) {
+                maxMetric = metric;
+            }
+        });
+        if (maxMetric !== null) metricByRestaurant.set(restaurant, maxMetric);
     });
 
     const threshold = getTopBandThreshold([...metricByRestaurant.values()]);
@@ -205,24 +214,29 @@ function filterByTopYoutubeMetric(
 }
 
 function filterByFreshVideo(restaurants: Restaurant[]): Restaurant[] {
-    const publishedAtByRestaurant = new Map<Restaurant, number[]>();
+    const latestPublishedAtByRestaurant = new Map<Restaurant, number>();
     let latestPublishedAt: number | null = null;
 
     restaurants.forEach((restaurant) => {
-        const publishedAtValues = collectMergedYoutubeMetas(restaurant)
-            .map(getYoutubePublishedAt)
-            .filter((value): value is number => value !== null);
-        if (publishedAtValues.length === 0) return;
-        publishedAtByRestaurant.set(restaurant, publishedAtValues);
-        for (const publishedAt of publishedAtValues) {
-            latestPublishedAt = latestPublishedAt === null ? publishedAt : Math.max(latestPublishedAt, publishedAt);
-        }
+        let restaurantLatestPublishedAt: number | null = null;
+        visitMergedYoutubeMetas(restaurant, (meta) => {
+            const publishedAt = getYoutubePublishedAt(meta);
+            if (publishedAt === null) return;
+            if (restaurantLatestPublishedAt === null || publishedAt > restaurantLatestPublishedAt) {
+                restaurantLatestPublishedAt = publishedAt;
+            }
+        });
+        if (restaurantLatestPublishedAt === null) return;
+        latestPublishedAtByRestaurant.set(restaurant, restaurantLatestPublishedAt);
+        latestPublishedAt = latestPublishedAt === null
+            ? restaurantLatestPublishedAt
+            : Math.max(latestPublishedAt, restaurantLatestPublishedAt);
     });
 
     if (latestPublishedAt === null) return [];
 
     const threshold = latestPublishedAt - FRESH_VIDEO_DAYS * 24 * 60 * 60 * 1000;
-    return restaurants.filter((restaurant) => publishedAtByRestaurant.get(restaurant)?.some((publishedAt) => publishedAt >= threshold));
+    return restaurants.filter((restaurant) => (latestPublishedAtByRestaurant.get(restaurant) ?? -Infinity) >= threshold);
 }
 
 function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
@@ -230,17 +244,17 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
     const ratioCandidatesByRestaurant = new Map<Restaurant, Array<{ viewCount: number; ratio: number }>>();
 
     restaurants.forEach((restaurant) => {
-        for (const meta of collectMergedYoutubeMetas(restaurant)) {
+        visitMergedYoutubeMetas(restaurant, (meta) => {
             const viewCount = getYoutubeMetric(meta, 'viewCount');
-            if (viewCount === null || viewCount <= 0) continue;
+            if (viewCount === null || viewCount <= 0) return;
             maxViewByRestaurant.set(restaurant, Math.max(maxViewByRestaurant.get(restaurant) ?? 0, viewCount));
 
             const commentCount = getYoutubeMetric(meta, 'commentCount');
-            if (commentCount === null || commentCount <= 0) continue;
+            if (commentCount === null || commentCount <= 0) return;
             const ratioCandidates = ratioCandidatesByRestaurant.get(restaurant) ?? [];
             ratioCandidates.push({ viewCount, ratio: commentCount / viewCount });
             ratioCandidatesByRestaurant.set(restaurant, ratioCandidates);
-        }
+        });
     });
 
     const medianViewCount = getMedian([...maxViewByRestaurant.values()]);
@@ -266,7 +280,7 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
 }
 
 export function homeMapThemeFilterHasUsableMetrics(
-    restaurants: Restaurant[],
+    restaurants: readonly Restaurant[],
     themeId: HomeMapThemeFilterId | null | undefined,
 ): boolean {
     if (!themeId) return true;
@@ -274,28 +288,32 @@ export function homeMapThemeFilterHasUsableMetrics(
         return restaurants.some((restaurant) => getMergedVideoCount(restaurant) > 0);
     }
     if (themeId === 'fresh-video') {
-        return restaurants.some((restaurant) =>
-            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubePublishedAt(meta) !== null),
-        );
+        return restaurants.some((restaurant) => visitMergedYoutubeMetas(
+            restaurant,
+            (meta) => getYoutubePublishedAt(meta) !== null,
+        ));
     }
     if (themeId === 'hot-view') {
-        return restaurants.some((restaurant) =>
-            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubeMetric(meta, 'viewCount') !== null),
-        );
+        return restaurants.some((restaurant) => visitMergedYoutubeMetas(
+            restaurant,
+            (meta) => getYoutubeMetric(meta, 'viewCount') !== null,
+        ));
     }
     if (themeId === 'comment-hot') {
-        return restaurants.some((restaurant) =>
-            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubeMetric(meta, 'commentCount') !== null),
-        );
+        return restaurants.some((restaurant) => visitMergedYoutubeMetas(
+            restaurant,
+            (meta) => getYoutubeMetric(meta, 'commentCount') !== null,
+        ));
     }
     if (themeId === 'fan-signal') {
-        return restaurants.some((restaurant) =>
-            collectMergedYoutubeMetas(restaurant).some((meta) => {
+        return restaurants.some((restaurant) => visitMergedYoutubeMetas(
+            restaurant,
+            (meta) => {
                 const viewCount = getYoutubeMetric(meta, 'viewCount');
                 const commentCount = getYoutubeMetric(meta, 'commentCount');
                 return viewCount !== null && viewCount > 0 && commentCount !== null && commentCount > 0;
-            }),
-        );
+            },
+        ));
     }
     return true;
 }

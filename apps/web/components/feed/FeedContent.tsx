@@ -242,6 +242,7 @@ export default function FeedContent({
         data: feedPages,
         fetchNextPage,
         hasNextPage,
+        isError,
         isLoading,
         isFetchingNextPage,
     } = useInfiniteQuery({
@@ -637,6 +638,11 @@ export default function FeedContent({
                 )}>
                     {isLoading ? (
                         <FeedSkeleton count={4} />
+                    ) : isError && allReviews.length === 0 ? (
+                        <div className="flex h-64 flex-col items-center justify-center text-muted-foreground" role="alert">
+                            <p>리뷰 데이터를 불러오지 못했습니다.</p>
+                            <p className="mt-1 text-sm">잠시 후 다시 시도해 주세요.</p>
+                        </div>
                     ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>

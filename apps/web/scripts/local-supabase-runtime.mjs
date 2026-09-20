@@ -200,6 +200,7 @@ function localStackJwt(secret, role) {
 }
 
 function parseGeneratedEnvironment(raw) {
+  /** @type {Record<string, string>} */
   const values = {};
   let source;
   try {
