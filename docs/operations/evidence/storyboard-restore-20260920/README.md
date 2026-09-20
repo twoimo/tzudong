@@ -67,3 +67,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 이 워크트리에서 로컬 워커를 다시 띄운 뒤 프로젝트 acd96811 장면 1 재생성을 큐에 넣었다. revision 19→20, job claimed 후 워커가 image_started heartbeat를 유지한다. 이미지 저장 완료는 이 기록 시점에 아직 없다.
 - 워커 MLX 타임아웃을 300s에서 600s로 올린 뒤 장면 1 재생성이 41.3초에 성공했다(revision 22 queued → 23 ready, image_saved). 이어 장면 1을 revision 19로 복원해 24 ready가 되었고 restored 이벤트는 새 큐 job 없이 기록됐다. export API는 200, 7,963,658 bytes JSON.
 - export `storyboard-export-v1` 파일 20개(PNG 원본 5, WebP 15)를 Pillow로 모두 디코딩했다. 원본은 1024×576. [export-decode-rev24.json](export-decode-rev24.json).
+- 관리자 스토리보드 화면에서 프로젝트 revision 24, 장면 1 제목 `(복원)`, 저장 장면 5개·이미지 5개, 로컬 워커 Krea를 확인했다. [화면](admin-storyboard-rev24.png).
