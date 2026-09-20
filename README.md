@@ -75,6 +75,10 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
 
 ## Local architecture
 
+System map: [interactive system architecture](docs/architecture/tzudong-system-architecture.html) · [Archify source](docs/architecture/tzudong-system-architecture.archify.json)
+
+Worker admission flow: [interactive worker boosting flow](docs/architecture/tzudong-worker-boosting.workflow.html) · [Archify source](docs/architecture/tzudong-worker-boosting.workflow.archify.json)
+
 Interactive workflow: [storyboard-local-mlx.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html)
 
 Workflow source: [storyboard-local-mlx.workflow.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json)
