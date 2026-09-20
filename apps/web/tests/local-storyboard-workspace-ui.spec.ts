@@ -189,8 +189,8 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("local-mlx");
     await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("local-mlx");
     await expect(page.getByLabel("외부 AI 사용 허용", { exact: false })).not.toBeChecked();
-    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(0);
-    await expect(page.locator('option[value="grok-manual"]')).toHaveCount(0);
+    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(2);
+    await expect(page.locator('option[value="grok-manual"]')).toHaveCount(2);
     await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
     await expect(page.locator('#local-image-provider option[value="xai-api"]')).toBeDisabled();
     await expect(page.locator('#local-text-model option[value="installed-image"]')).toHaveCount(0);
@@ -210,17 +210,20 @@ test.describe("Local storyboard UI contracts (mock HTTP, no real model success)"
     await expect(page.locator('[data-admin-storyboard-generator="true"]')).toHaveCount(0);
   });
 
-  test("keeps text/image selections independent and clears web providers when consent is withdrawn", async ({ page }) => {
+  test("keeps text/image selections independent without cloud AI consent", async ({ page }) => {
     await open(page);
     await page.getByLabel("텍스트 생성 방식", { exact: true }).selectOption("manual");
     await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("local-mlx");
-    await page.getByLabel("외부 AI 사용 허용", { exact: false }).check();
     await page.getByLabel("텍스트 생성 방식", { exact: true }).selectOption("chatgpt-manual");
     await page.getByLabel("이미지 생성 방식", { exact: true }).selectOption("grok-manual");
+    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("chatgpt-manual");
+    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("grok-manual");
+    await page.getByLabel("외부 AI 사용 허용", { exact: false }).check();
     await page.getByLabel("외부 AI 사용 허용", { exact: false }).uncheck();
-    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("manual");
-    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("manual");
-    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(0);
+    await expect(page.getByLabel("텍스트 생성 방식", { exact: true })).toHaveValue("chatgpt-manual");
+    await expect(page.getByLabel("이미지 생성 방식", { exact: true })).toHaveValue("grok-manual");
+    await expect(page.locator('option[value="chatgpt-manual"]')).toHaveCount(2);
+    await expect(page.locator('#local-text-provider option[value="openai-api"]')).toBeDisabled();
   });
 
   test("creates the schema request without cloud calls and reuses the UUID after an uncertain identical create", async ({ page }) => {

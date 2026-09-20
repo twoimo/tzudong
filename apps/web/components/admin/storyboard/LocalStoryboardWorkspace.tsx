@@ -341,7 +341,7 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
                     if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
                   }
                 }} />
-              외부 공식 API 사용 허용
+              외부 AI 사용 허용 · 공식 API
             </label>
             <p id="local-external-help" className="text-xs text-muted-foreground">ChatGPT·Grok 웹 결과는 외부 AI를 켜지 않고 수동 가져오기로 고를 수 있습니다. 이 옵션은 OpenAI·xAI 공식 API용이며 현재는 설정 전 사용할 수 없습니다.</p>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
