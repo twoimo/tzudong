@@ -86,6 +86,8 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 390px에서 테마 칩 5개(조회수 폭발·댓글 폭주·최근 영상·재등장 맛집·반응 찐함)와 국내/해외/카테고리 라벨이 잘리지 않는다. 보물섬 상세 유튜브 16:9 썸네일의 재생 버튼은 중앙이다.
 - 공개 지도/피드의 남은 shadow-lg와 hover:scale을 shadow-sm/무스케일로 낮췄다. 재생 버튼 광학 정렬(translate-x-[1px])은 유지했다.
 - 공개 바텀시트 shadow-xl을 shadow-sm으로 낮췄다. 로컬 스토리보드 UI 계약 Playwright chromium 24건 통과. 수동 ChatGPT/Grok 프로젝트는 워커 재생성 버튼이 비활성이다.
+- 관리자 `/admin?module=storyboard`에서 외부 AI 동의 없이 텍스트/이미지 공급자에 로컬 MLX, ChatGPT 수동, Grok 수동이 활성화되어 있고 OpenAI/xAI 공식 API는 disabled다. [화면](admin-storyboard-providers.png).
+
 
 
 

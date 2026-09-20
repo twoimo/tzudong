@@ -87,7 +87,9 @@ Interactive map discovery: [map-discovery.html](docs/architecture/map-discovery/
 
 Map discovery source: [map-discovery.workflow.json](docs/architecture/map-discovery/map-discovery.workflow.json)
 
-The local workspace separates **new project creation**, **scene editing**, **version history**, and **manual result import**. Saved projects open directly on the scene editor; connection diagnostics are under Settings. Text and image providers remain independent, and external AI is off by default with no automatic cloud fallback.
+The local workspace separates **new project creation**, **scene editing**, **version history**, and **manual result import**. Saved projects open directly on the scene editor; connection diagnostics are under Settings. Text and image providers remain independent: local MLX, ChatGPT manual import, and Grok manual import are selectable with external AI off. OpenAI/xAI official APIs stay gated and currently unconfigured. There is no automatic cloud fallback.
+
+Storyboard provider policy keeps `local-mlx`, `chatgpt-manual`, and `grok-manual` independently selectable for text and image without requiring an official external API; the manual choices return through user import. The `externalAI` consent gate applies only to the official API provider IDs `openai-api` and `xai-api`.
 
 Historical restoration now uses immutable DB snapshots. Version preview and a confirmed whole-project or single-scene restore preserve the historical text, scene order, asset references, provenance and original image bytes. Restoration writes a new revision without calling a model or queueing a job; current provider settings and consent are retained. Applied projects start history from the state captured by the migration, not from invented earlier versions. Owner/admin checks, current revision, busy-project rejection and idempotent request IDs protect the operation.
 
@@ -95,7 +97,7 @@ The memory admission model is `used + additional_peak_estimate + reserve <= phys
 
 **Local evidence (2026-09-20):** real-model project v12 → edit v13 → scene restore v14 → full undo v15 → full restore v16. All 20 exported PNG/WebP files matched their original hashes and decoded successfully; these three restores created zero jobs. See the [verification report and responsive screenshots](docs/operations/evidence/storyboard-restore-20260920/README.md). Local migration and UI verification do not establish hosted migration, external Web review or production deployment.
 
-**Map evidence (2026-09-20):** Seoul cluster expand kept 357 individual markers. Filtered list still opened restaurant detail. YouTube play control stayed centered. GPS button remains blocked with `DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED` until operator evidence hashes exist. Local DB has 0 reviews, so reviewer-join and review-image rendering were not live-verified. View/comment theme chips stay empty because `youtube_meta.viewCount`/`commentCount` and `youtube_video_kpi_snapshots` are all null/empty locally; recent-video and repeat-visit chips do filter. Hosted apply is still separate.
+**Map evidence (2026-09-20, updated):** Seoul cluster expand kept individual markers and opened the restaurant list (66 places after the hot-view filter). YouTube play control stayed centered on 16:9 `sddefault`. GPS remains fail-closed with `DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED`. Local feed shows `쯔동마스터` and `먹보쯔양팬`. Theme chips: hot-view 125, comment-hot 125, fan-signal 63, recent-video 32, repeat 20, using hosted-read YouTube KPI snapshots copied locally (not invented). Hosted apply is still separate.
 
 ## Privacy
 
