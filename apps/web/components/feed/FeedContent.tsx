@@ -362,8 +362,16 @@ export default function FeedContent({
         initialPageParam: 0,
     });
 
+    // Keep photo inputs stable across filtering, optimistic likes and loop appends.
+    const feedReviews = useMemo(() => (
+        feedPages?.pages.flatMap(page => page.reviews.map(review => ({
+            ...review,
+            cardPhotos: review.photos.map(url => ({ url, type: 'image' })),
+        }))) || []
+    ), [feedPages?.pages]);
+
     const allReviews = useMemo(() => {
-        let reviews = feedPages?.pages.flatMap(page => page.reviews) || [];
+        let reviews = feedReviews;
         if (showMyReviewsOnly && user?.id) {
             reviews = reviews.filter(review => review.userId === user.id);
         }
@@ -376,7 +384,7 @@ export default function FeedContent({
             );
         }
         return reviews;
-    }, [feedPages, showMyReviewsOnly, user?.id, debouncedQuery]);
+    }, [feedReviews, showMyReviewsOnly, user?.id, debouncedQuery]);
 
     const isLoopRepeatMode = !hasNextPage && allReviews.length > 0;
     const effectiveLoopItemCount = useMemo(() => {
@@ -668,7 +676,7 @@ export default function FeedContent({
                                             restaurantId: review.restaurantId,
                                             restaurantName: review.restaurantName,
                                             content: review.content,
-                                            photos: review.photos.map(p => ({ url: p, type: 'image' })),
+                                            photos: review.cardPhotos,
                                             visitedAt: review.visitedAt,
                                             submittedAt: review.createdAt,
                                             isVerified: true,
