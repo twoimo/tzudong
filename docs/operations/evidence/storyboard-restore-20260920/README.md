@@ -119,3 +119,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 5종 테마 필터 라이브 재확인: 댓글 폭주 125곳(서울 클러스터 65), 최근 영상 32곳(서울 17), 반응 찐함 63곳(서울 32). 조회수 폭발·재등장은 앞에서 확인했다.
 - Archify 다이어그램을 브라우저에서 열었다. 스토리보드 워크플로는 한글 제목 `쯔동 로컬 생성과 이력 복원`과 claim/restore 노드가 보인다. [workflow](archify-storyboard-workflow-desktop.png) [map](archify-map-discovery-desktop.png). 스토리보드 export는 7,963,672 bytes `storyboard-export-v1` HTTP 200.
 - 라이프사이클 다이어그램 제목은 `쯔동 스토리보드 상태 전이`다. [lifecycle](archify-storyboard-lifecycle-desktop.png)
+- 로컬 이그레스 계약 재실행: storyboard-local-egress + mlx-provider + image-provider 33건 통과. 루프백만 연결하고 프록시/DNS/리다이렉트/클라우드 fetch는 거부하며, mixed MLX+수동 ChatGPT/Grok은 externalAI 없이 허용한다. WebP 파생과 원본 PNG 보존 테스트 포함.
