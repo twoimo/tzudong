@@ -293,15 +293,15 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
         <h2 id="local-storyboard-title" className="text-xl font-semibold tracking-tight">스토리보드</h2>
         <p className="mt-1 hidden text-sm text-muted-foreground sm:block">장면을 만들고, 흐름을 다듬고, 영상으로 준비하세요.</p>
       </div>
-      <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 sm:w-auto">
+      <div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
         <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
         <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-56`} value={projectId ?? ""}
           onChange={(event) => selectProject(event.target.value || null)}>
-          <option value="">새 프로젝트</option>
+          <option value="">저장된 프로젝트 선택</option>
           {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
         <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
-        <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>
+        {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
       </div>
     </header>
     <div className={`grid min-w-0 items-start gap-6 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
@@ -339,9 +339,9 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
                     if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
                   }
                 }} />
-              외부 AI 사용 허용 (웹은 직접 열고 결과 가져오기)
+              외부 AI 사용 허용 · ChatGPT / Grok
             </label>
-            <p id="local-external-help" className="text-xs text-muted-foreground">기본은 로컬 생성입니다. 외부 웹 결과는 직접 가져오며, 공식 API는 아직 사용할 수 없습니다.</p>
+            <p id="local-external-help" className="text-xs text-muted-foreground">켜면 아래에서 ChatGPT·Grok을 선택할 수 있습니다. 해당 웹에서 만든 결과를 직접 가져옵니다.</p>
             <div className="grid min-w-0 gap-4 md:grid-cols-2">
               <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
               <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
