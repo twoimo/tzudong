@@ -310,11 +310,11 @@ export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () =
       {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "mx-auto w-full max-w-4xl" : ""}`} aria-label="프로젝트 설정과 기록">
         {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
           <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
-          <p className="mb-5 mt-1 text-sm text-muted-foreground">영상의 주제와 분위기를 알려주세요. 생성 후 장면별로 편집할 수 있습니다.</p>
+          <p className="mb-5 mt-1 break-keep text-sm text-muted-foreground">영상의 주제와 분위기를 알려주세요. 생성 후 장면별로 편집할 수 있습니다.</p>
           <fieldset disabled={creating} className="min-w-0 space-y-4">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
-              <textarea id="local-storyboard-prompt" className={inputClass} rows={4} required maxLength={8000}
+              <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
                 placeholder="예: 매운 짜장라면 맛집 탐방. 가게 소개부터 첫 입, 맛 평가까지 생동감 있는 먹방 영상으로 구성해 주세요."
                 value={prompt} onChange={(event) => setPrompt(event.target.value)} />
             </div>

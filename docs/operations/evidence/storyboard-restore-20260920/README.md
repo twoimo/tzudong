@@ -114,3 +114,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 조회수 폭발 필터를 켠 뒤 서울 클러스터가 358에서 65로 줄고, 클릭 시 개별 마커가 남으며 왼쪽 목록이 66곳으로 열렸다. GPS와 동일 세션에서 확인했다.
 - 관리자 스토리보드 생성 화면 재확인: 외부 AI 동의 없이 텍스트는 ChatGPT 수동, 이미지는 Grok 수동이 선택되어 있고 공식 OpenAI/xAI API는 설정 전 사용 불가로 안내된다. [providers](admin-storyboard-providers-recheck-desktop.png)
 - 프로젝트 revision 25 재확인: 텍스트/이미지 로컬 MLX, 장면 5·이미지 5, 장면 편집·버전 이력·결과 가져오기·내보내기가 보인다. 복원 RPC와 장면 재생성은 누르지 않았다. [rev25](admin-storyboard-rev25-recheck-desktop.png)
+- 390px 관리자 스토리보드 재확인: 외부 AI 꺼진 채 로컬 MLX와 ChatGPT/Grok 수동이 선택 가능하고 공식 API는 disabled다. [providers-390](admin-storyboard-providers-recheck-390.png) revision 25 준비됨·장면 5. [rev25-390](admin-storyboard-rev25-recheck-390.png). 생성 안내/placeholder에 break-keep을 넣어 한글 한 글자 줄바꿈을 막았다.
