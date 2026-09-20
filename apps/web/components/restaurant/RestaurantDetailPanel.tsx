@@ -1478,7 +1478,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleKakaoMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400",
+                                        "w-full h-auto border hover:bg-yellow-50 hover:border-yellow-400",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="카카오맵으로 길찾기 열기"
@@ -1497,7 +1497,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleGoogleMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border-2 hover:bg-blue-50 hover:border-blue-400",
+                                        "w-full h-auto border hover:bg-blue-50 hover:border-blue-400",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="구글 지도로 길찾기 열기"
@@ -1535,7 +1535,7 @@ export function RestaurantDetailPanel({
                                     {mapDestinationUrls ? (
                                         <Button
                                             onClick={handleGetDirections}
-                                            className="h-14 min-w-0 flex-col gap-1 rounded-xl bg-gradient-primary px-1.5 text-xs font-bold leading-tight shadow-sm hover:opacity-90"
+                                            className="h-14 min-w-0 flex-col gap-1 rounded-xl bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90"
                                         >
                                             <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
                                             <span>길찾기</span>
@@ -1561,7 +1561,7 @@ export function RestaurantDetailPanel({
                     <div className="p-4 border-t border-border">
                         <Button
                             onClick={handleWriteReview}
-                            className="w-full bg-gradient-primary hover:opacity-90 gap-2"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
                         >
                             <MessageSquare className="h-4 w-4" />
                             리뷰 작성하기
