@@ -63,7 +63,9 @@ function fixture(value: ClaimedStoryboardJob | null = job()) {
     async draft() { drafts++; return { draft: draft(), provenance: proof('text') }; },
     async image(_request, prompt) { generated.push(prompt); return { bytes: await fixturePixels, provenance: proof('image') }; },
   };
-  return { api, mlx, calls, generated, draftCalls: () => drafts };
+  // Lifecycle tests exercise claim/lease/provider behavior. Keep admission
+  // deterministic here; memory admission has its own host-wide test suite.
+  return { api, mlx, calls, generated, draftCalls: () => drafts, admitMemory: () => true };
 }
 async function listen(server: Server) {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -469,7 +471,7 @@ describe('worker credentials and actual HTTP boundaries', () => {
     try {
       const api = new StoryboardWorkerTransport({ origin: await listen(appServer), token, onDestination: (r) => destinations.push(r) });
       const mlx = new MlxStoryboardClient(new MlxTransport({ origin: await listen(mlxServer) }));
-      expect(await new OutboundStoryboardWorker({ api, mlx }).runOnce()).toBe('completed');
+      expect(await new OutboundStoryboardWorker({ api, mlx, admitMemory: () => true }).runOnce()).toBe('completed');
       expect(uploads).toBe(5); expect(authorizationLeak).toBe(false);
       expect(paths.every((p) => ['/api/storyboard-worker', '/api/storyboard-worker/images'].includes(p))).toBe(true);
       expect(destinations.length).toBe(paths.length); expect(destinations.every((d) => d.host === '127.0.0.1' && d.connected)).toBe(true);

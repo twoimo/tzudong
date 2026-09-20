@@ -188,14 +188,38 @@ export function storyboardWorkerErrorCode(error: unknown): string {
 
 export function admitStoryboardWorkerMemory(
   models: ReadonlyArray<{ bytes_resident?: number }>,
-  env: { physicalBytes: number; usedBytes: number } = {
+  env: { physicalBytes: number; availableBytes?: number; usedBytes?: number } = {
     physicalBytes: os.totalmem(),
-    usedBytes: process.memoryUsage().rss,
+    availableBytes: os.freemem(),
   },
 ): boolean {
   const resident = models.reduce((sum, model) => sum + (Number(model.bytes_resident) || 0), 0);
+  if (!Number.isFinite(env.physicalBytes) || env.physicalBytes < 0) {
+    throw new RangeError('physicalBytes must be a finite number >= 0');
+  }
+
+  let usedBytes: number;
+  if (env.availableBytes !== undefined) {
+    if (!Number.isFinite(env.availableBytes) || env.availableBytes < 0 || env.availableBytes > env.physicalBytes) {
+      throw new RangeError('availableBytes must be a finite number between 0 and physicalBytes');
+    }
+    // os.freemem() is host-wide and already includes the resident MLX process.
+    // Adding the model catalog estimate here would double-count that process.
+    usedBytes = env.physicalBytes - env.availableBytes;
+  } else if (env.usedBytes !== undefined) {
+    if (!Number.isFinite(env.usedBytes) || env.usedBytes < 0) {
+      throw new RangeError('usedBytes must be a finite number >= 0');
+    }
+    // Keep the explicit deterministic fallback for callers that cannot provide
+    // a host-wide availability sample; in that mode model residency is external
+    // to the supplied worker RSS and must be included once.
+    usedBytes = env.usedBytes + resident;
+  } else {
+    throw new RangeError('availableBytes or usedBytes is required');
+  }
+
   return canAdmitStoryboardMemory({
-    usedBytes: env.usedBytes + resident,
+    usedBytes,
     additionalPeakEstimateBytes: MAX_STORYBOARD_IMAGE_BYTES * 4,
     physicalBytes: env.physicalBytes,
   });
