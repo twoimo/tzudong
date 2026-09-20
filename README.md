@@ -75,9 +75,15 @@ Tzudong Map turns mukbang video evidence into a usable restaurant map: users dis
 
 ## Local architecture
 
-Interactive diagram: [storyboard-local-mlx.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html)
+Interactive workflow: [storyboard-local-mlx.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html)
 
-Source: [storyboard-local-mlx.workflow.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json)
+Workflow source: [storyboard-local-mlx.workflow.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json)
+
+Interactive lifecycle: [storyboard-local-mlx.lifecycle.html](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.html)
+
+Lifecycle source: [storyboard-local-mlx.lifecycle.json](docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.json)
+
+The lifecycle first screen models three bounds. Memory: unified RAM (M=128\,\mathrm{GiB}), image concurrency (c=1), resident (\sum r_i \le M_{\mathrm{headroom}}) (disk presence is not residency; PNG originals and WebP derivatives stay off the model budget). Queue wait: (W=t_{\mathrm{claim}}-t_{\mathrm{enqueue}}) if a live heartbeat exists, else (W=\infty) with no cloud failover (stale leaseToken → 409 `worker_lease_lost`). FSM invariants: `revision_conflict` / `project_busy` / exclusive claim / `lease_lost` no durable write / restore ≡ edit then regenerate(scene) / fail-closed / serial scenes / no stale overwrite. Viewer chrome falls back to English because `meta.locale` is omitted.
 
 External AI is off by default. Text and image providers are independent (`local-mlx`, `chatgpt-manual`, `grok-manual`; plus `manual`, `openai-api`, and `xai-api` only when explicitly enabled). Queueing a job is not success: a worker must atomically claim the job, call loopback `mlx-serve`, persist PNG originals plus WebP derivatives, and the admin UI must re-read the result. Guards are atomic claim, lease/heartbeat expiry, and revision/version conflict. Restore in the current schema is edit then regenerate (`edit` | `regenerate` | `retry` | `cancel` | `import-text`); there is no `restore` action. The diagram describes the intended pipeline. Hosted apply and a live operator session are separate evidence.
 

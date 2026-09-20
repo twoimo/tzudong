@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "쯔동 스토리보드 상태 전이",
+    "output": "docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.html",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "main-rail",
+        "label": "생성 레일",
+        "focus": [
+          "waiting_worker",
+          "queued",
+          "generating",
+          "partial",
+          "ready"
+        ],
+        "note": "claim 후 직렬 이미지. 큐 등록만으로는 성공이 아니다."
+      },
+      {
+        "id": "lease-wait",
+        "label": "lease와 대기",
+        "focus": [
+          "generating",
+          "awaiting_import",
+          "partial",
+          "lease_expired"
+        ],
+        "note": "heartbeat 없으면 W=∞. 클라우드 전환 없음."
+      },
+      {
+        "id": "restore-exits",
+        "label": "복원과 종료",
+        "focus": [
+          "ready",
+          "awaiting_import",
+          "failed",
+          "cancelled"
+        ],
+        "note": "restore ≡ edit; regenerate(scene). failed/cancelled는 종단."
+      }
+    ],
+    "viewBox": [
+      1030,
+      630
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "프로젝트 단계"
+    },
+    {
+      "id": "waiting",
+      "label": "lease / 가져오기 대기"
+    },
+    {
+      "id": "terminal",
+      "label": "종단 상태"
+    }
+  ],
+  "states": [
+    {
+      "id": "waiting_worker",
+      "type": "start",
+      "label": "waiting_worker",
+      "sublabel": "heartbeat 없으면 W=∞",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "entry"
+    },
+    {
+      "id": "queued",
+      "type": "active",
+      "label": "queued",
+      "sublabel": "J=queued, 미편집",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "job"
+    },
+    {
+      "id": "generating",
+      "type": "active",
+      "label": "generating",
+      "sublabel": "claim + c=1",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "lease"
+    },
+    {
+      "id": "partial",
+      "type": "decision",
+      "label": "partial",
+      "sublabel": "장면 일부만 저장",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "check"
+    },
+    {
+      "id": "ready",
+      "type": "success",
+      "label": "ready",
+      "sublabel": "edit; regen; export",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "tag": "done"
+    },
+    {
+      "id": "awaiting_import",
+      "type": "waiting",
+      "label": "awaiting_import",
+      "sublabel": "수동 가져오기",
+      "lane": "waiting",
+      "col": 0,
+      "tag": "pause"
+    },
+    {
+      "id": "lease_expired",
+      "type": "waiting",
+      "label": "lease_expired",
+      "sublabel": "재claim 가능",
+      "lane": "waiting",
+      "col": 1,
+      "tag": "wait"
+    },
+    {
+      "id": "failed",
+      "type": "failure",
+      "label": "failed",
+      "sublabel": "허위 성공 없음",
+      "lane": "terminal",
+      "col": 0,
+      "tag": "terminal"
+    },
+    {
+      "id": "cancelled",
+      "type": "failure",
+      "label": "cancelled",
+      "sublabel": "늦은 결과 폐기",
+      "lane": "terminal",
+      "col": 1,
+      "tag": "terminal"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "need-import",
+      "from": "generating",
+      "to": "awaiting_import",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight"
+    },
+    {
+      "id": "lease-lost",
+      "from": "partial",
+      "to": "lease_expired",
+      "route": "drop"
+    },
+    {
+      "id": "import-failed",
+      "from": "awaiting_import",
+      "to": "failed",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight"
+    },
+    {
+      "id": "lease-cancel",
+      "from": "lease_expired",
+      "to": "cancelled",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Memory bound",
+      "items": [
+        "M=128GiB; c=1; Σ r_i ≤ M_headroom; disk ≠ resident; PNG/WebP off-budget"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Queue wait",
+      "items": [
+        "W=t_claim-t_enq iff hb else ∞; h∈[1,30s]; stale 409; Δt=265122ms is gen"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "FSM invariants",
+      "items": [
+        "409 rev/busy; exclusive; lease_lost no write; restore≡edit;regen; fail-closed; no stale"
+      ]
+    }
+  ]
+}
