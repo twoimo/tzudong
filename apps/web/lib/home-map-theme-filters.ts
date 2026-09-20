@@ -81,7 +81,6 @@ const YOUTUBE_METRIC_ALIASES: Record<YoutubeMetricKey, readonly [YoutubeMetricKe
     commentCount: ['commentCount', 'comment_count'],
 };
 
-
 function parseYoutubeMetric(value: unknown): number | null {
     const numericValue = typeof value === 'string' && value.trim().length > 0 ? Number(value) : value;
     if (typeof numericValue !== 'number') return null;
@@ -174,17 +173,17 @@ function getMergedVideoCount(restaurant: Restaurant): number {
 
 function getTopBandThreshold(values: number[]): number | null {
     if (values.length === 0) return null;
-    const sortedValues = [...values].sort((a, b) => b - a);
-    const thresholdIndex = Math.max(0, Math.ceil(sortedValues.length * TOP_BAND_RATIO) - 1);
-    return sortedValues[thresholdIndex];
+    values.sort((a, b) => b - a);
+    const thresholdIndex = Math.max(0, Math.ceil(values.length * TOP_BAND_RATIO) - 1);
+    return values[thresholdIndex];
 }
 
 function getMedian(values: number[]): number | null {
     if (values.length === 0) return null;
-    const sortedValues = [...values].sort((a, b) => a - b);
-    const middle = Math.floor(sortedValues.length / 2);
-    if (sortedValues.length % 2 === 1) return sortedValues[middle];
-    return (sortedValues[middle - 1] + sortedValues[middle]) / 2;
+    values.sort((a, b) => a - b);
+    const middle = Math.floor(values.length / 2);
+    if (values.length % 2 === 1) return values[middle];
+    return (values[middle - 1] + values[middle]) / 2;
 }
 
 function filterByTopYoutubeMetric(
@@ -262,12 +261,14 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
 
     const maxEligibleRatioByRestaurant = new Map<Restaurant, number>();
     ratioCandidatesByRestaurant.forEach((candidates, restaurant) => {
-        const eligibleRatios = candidates
-            .filter((candidate) => candidate.viewCount >= medianViewCount)
-            .map((candidate) => candidate.ratio);
-        if (eligibleRatios.length > 0) {
-            maxEligibleRatioByRestaurant.set(restaurant, Math.max(...eligibleRatios));
+        let maxEligibleRatio: number | null = null;
+        for (const candidate of candidates) {
+            if (candidate.viewCount < medianViewCount) continue;
+            if (maxEligibleRatio === null || candidate.ratio > maxEligibleRatio) {
+                maxEligibleRatio = candidate.ratio;
+            }
         }
+        if (maxEligibleRatio !== null) maxEligibleRatioByRestaurant.set(restaurant, maxEligibleRatio);
     });
 
     const threshold = getTopBandThreshold([...maxEligibleRatioByRestaurant.values()]);

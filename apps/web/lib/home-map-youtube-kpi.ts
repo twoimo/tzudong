@@ -41,6 +41,7 @@ export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string
 }
 
 export const HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE = 100;
+export const HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY = 4;
 
 export function chunkHomeMapYoutubeVideoIds(
     videoIds: string[],
@@ -69,8 +70,16 @@ async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<st
     if (videoIds.length === 0) return new Map();
 
     const metricsByVideoId = new Map<string, HomeMapYouTubeKpiMetric>();
-    const chunkResults = await Promise.all(
-        chunkHomeMapYoutubeVideoIds(videoIds).map(async (chunk) => {
+    const chunks = chunkHomeMapYoutubeVideoIds(videoIds);
+    const chunkResults = Array<HomeMapYouTubeKpiResponse>(chunks.length);
+    let nextChunkIndex = 0;
+
+    const fetchNextChunk = async () => {
+        while (true) {
+            const chunkIndex = nextChunkIndex++;
+            const chunk = chunks[chunkIndex];
+            if (!chunk) return;
+
             const response = await fetch('/api/home/youtube-kpi', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -81,8 +90,15 @@ async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<st
                 throw new Error(`home-youtube-kpi:${response.status}`);
             }
 
-            return (await response.json()) as HomeMapYouTubeKpiResponse;
-        }),
+            chunkResults[chunkIndex] = (await response.json()) as HomeMapYouTubeKpiResponse;
+        }
+    };
+
+    await Promise.all(
+        Array.from(
+            { length: Math.min(HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY, chunks.length) },
+            () => fetchNextChunk(),
+        ),
     );
 
     for (const payload of chunkResults) {

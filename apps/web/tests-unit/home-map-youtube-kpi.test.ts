@@ -5,6 +5,7 @@ import {
     collectHomeMapYoutubeVideoIds,
     enrichRestaurantsWithHomeMapYoutubeKpiMetrics,
     HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE,
+    HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY,
     mergeHomeMapYoutubeKpiMetrics,
 } from '../lib/home-map-youtube-kpi';
 import type { Restaurant } from '../types/restaurant';
@@ -46,6 +47,41 @@ describe('home map youtube KPI enrichment', () => {
         expect(chunks[2]).toHaveLength(50);
         expect(JSON.stringify({ videoIds: chunks[0] }).length).toBeLessThan(8 * 1024);
     });
+
+    test('caps concurrent KPI chunk requests while preserving all chunks', async () => {
+        const restaurants = Array.from({ length: 601 }, (_, index) => {
+            const videoId = `id${String(index).padStart(9, '0')}`;
+            return restaurant(videoId, {
+                youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+            });
+        });
+        const originalFetch = globalThis.fetch;
+        let inFlight = 0;
+        let maximumInFlight = 0;
+        let requestCount = 0;
+        globalThis.fetch = (async () => {
+            inFlight += 1;
+            requestCount += 1;
+            maximumInFlight = Math.max(maximumInFlight, inFlight);
+            await Promise.resolve();
+            inFlight -= 1;
+            return new Response(JSON.stringify({ metrics: [] }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+            });
+        }) as typeof fetch;
+
+        try {
+            await expect(enrichRestaurantsWithHomeMapYoutubeKpiMetrics(restaurants, 'hot-view'))
+                .resolves.toBe(restaurants);
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+
+        expect(requestCount).toBe(7);
+        expect(maximumInFlight).toBeLessThanOrEqual(HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY);
+    });
+
     test('merges latest KPI metrics into metadata used by theme filters', () => {
         const merged = mergeHomeMapYoutubeKpiMetrics([
             restaurant('a', {

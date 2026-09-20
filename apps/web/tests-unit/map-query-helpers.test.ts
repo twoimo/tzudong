@@ -117,6 +117,23 @@ describe('map query helpers', () => {
             enabled: true,
         });
     });
+
+    test('reuses the readonly category input instead of cloning it for query options', () => {
+        const categories = ['카페'];
+        const options = buildNaverRestaurantsQueryOptions({
+            filters: {
+                categories,
+                minRating: 1,
+                minReviews: 0,
+                minUserVisits: 0,
+                minJjyangVisits: 0,
+            },
+            selectedRegion: '서울',
+        });
+
+        expect(options.category).toBe(categories);
+    });
+
     test('forwards metadata-backed compact naver featured theme', () => {
         const options = buildNaverRestaurantsQueryOptions({
             compact: true,

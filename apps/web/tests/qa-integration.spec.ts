@@ -3,13 +3,19 @@ import { gotoAndHidePopup } from './helpers';
 
 test.describe('QA Integration Tests', () => {
 
-    test('UI-01, UI-02, UI-03, UI-04: Loading Indicator should be centered', async ({ page }) => {
-        // We simulate a slow network to catch the loading state visually if needed,
-        // but primarily we verify the CSS class structure which guarantees centering.
+    test('FEED-LOADING: the feed skeleton is exposed while the first review request is pending', async ({ page }) => {
+        let releaseReviewRequest: () => void = () => undefined;
+        const reviewRequestGate = new Promise<void>((resolve) => {
+            releaseReviewRequest = resolve;
+        });
 
-        // Review Page (GlobalLoader used directly)
-        await page.route('**/rest/v1/**', async route => {
-            await new Promise(f => setTimeout(f, 500)); // Delay to keep loader visible
+        await page.route('**/rest/v1/reviews*', async (route) => {
+            if (route.request().method() !== 'GET') {
+                await route.continue();
+                return;
+            }
+
+            await reviewRequestGate;
             if (process.env.NIGHTLY_OFFLINE === '1') {
                 await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
             } else {
@@ -17,31 +23,23 @@ test.describe('QA Integration Tests', () => {
             }
         });
 
-        await gotoAndHidePopup(page, '/feed');
+        const reviewRequest = page.waitForRequest(
+            (request) => request.method() === 'GET' && request.url().includes('/rest/v1/reviews'),
+        );
 
-        // Find by text first, then check the container
-        const loaderText = page.getByText('리뷰 데이터를 불러오는 중...');
-        await expect(loaderText).toBeVisible({ timeout: 10000 }); // Increase timeout
+        try {
+            await gotoAndHidePopup(page, '/feed');
+            await reviewRequest;
 
-        // The container is the grand-grand-parent or similar.
-        // Structure: div(container) > div > div(relative) | div(space-y-3) > h2(text)
-        // Let's use a locator that finds the container by class partial match or just check the attribute of a known parent.
-        // Better: Use the 'container' locator that wraps the text.
-        // We can look for the specific class on the page directly, but escape it carefully.
-        // Or finding the element that HAS that class.
-        // This might be the h2 or the container. 
-        // Let's locate the specific div that should have the class.
-        // It is the top-level div of GlobalLoader.
+            const feedSkeleton = page.getByTestId('feed-skeleton');
+            await expect(feedSkeleton).toBeVisible({ timeout: 10000 });
+            await expect(feedSkeleton).toHaveAttribute('aria-busy', 'true');
+            await expect(feedSkeleton).toHaveAttribute('aria-label', '리뷰 피드를 불러오는 중');
+        } finally {
+            releaseReviewRequest();
+        }
 
-        // Try selecting by the unique combination of classes
-        const loaderContainer = page.locator('div.flex.items-center.justify-center.bg-background');
-        await expect(loaderContainer).toBeVisible();
-        // The container might use min-h-[...] OR h-full depending on parent context/overrides.
-        // We verify it has flex centering classes.
-        await expect(loaderContainer).toHaveClass(/flex items-center justify-center/);
-
-        // Also verify message
-        await expect(page.getByText('리뷰 데이터를 불러오는 중...')).toBeVisible();
+        await expect(page.getByText('아직 승인된 리뷰가 없습니다.')).toBeVisible({ timeout: 15000 });
     });
 
     test('FEED-01: a confirmed empty response shows the empty state', async ({ page }) => {
@@ -80,49 +78,74 @@ test.describe('QA Integration Tests', () => {
         await expect(page.getByText('아직 승인된 리뷰가 없습니다.')).toHaveCount(0);
     });
 
-    test('SCH-01: Search Results should be limited to ~4 items', async ({ page }) => {
-        test.setTimeout(60000); // Increase test timeout
-        await gotoAndHidePopup(page, '/');
+    test('SCH-01: the inline search panel keeps the 10-item result cap', async ({ page }) => {
+        test.setTimeout(60000);
 
-        // Mock Search API to return many results
-        await page.route('**/rpc/search_restaurants_by_name', async route => {
-            const json = Array(10).fill(null).map((_, i) => ({
-                id: `test-${i}`,
-                name: `테스트 맛집 ${i}`,
-                road_address: `서울시 강남구 ${i}`,
-                weekly_search_count: 100 - i
-            }));
-            await route.fulfill({ json });
+        await page.route('**/rest/v1/restaurants*', async (route) => {
+            const url = route.request().url();
+            if (route.request().method() !== 'GET') {
+                await route.continue();
+                return;
+            }
+
+            if (url.includes('approved_name')) {
+                const json = Array.from({ length: 10 }, (_, i) => ({
+                    id: `test-${i}`,
+                    name: `테스트 맛집 ${i}`,
+                    approved_name: `테스트 맛집 ${i}`,
+                    status: 'approved',
+                    road_address: `서울특별시 강남구 ${i}`,
+                    categories: ['한식'],
+                    weekly_search_count: 100 - i,
+                }));
+                await route.fulfill({ json });
+                return;
+            }
+
+            if (process.env.NIGHTLY_OFFLINE === '1') {
+                await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+                return;
+            }
+            await route.continue();
         });
 
-        const searchInput = page.getByPlaceholder('맛집 이름 검색...');
+        await gotoAndHidePopup(page, '/');
+
+        const searchInput = page.locator('input[name="desktop-left-panel-restaurant-search"]');
         await searchInput.click();
         await searchInput.fill('테스트');
 
-        // Dropdown should appear
-        const dropdown = page.locator('.max-h-\\[19rem\\]'); // The class we added
-        await expect(dropdown).toBeVisible();
+        const resultsPanel = page.locator('[data-desktop-left-panel-search-results="true"]');
+        await expect(resultsPanel).toBeVisible();
+        await expect(resultsPanel).toHaveClass(/h-full/);
 
-        // Verify it has scroll by checking computed style or just presence of class is enough for structural test
-        await expect(dropdown).toHaveClass(/max-h-\[19rem\]/);
-
-        // Optional: Check number of items (should be 10 in DOM, but container height limits visibility)
-        const items = dropdown.getByRole('button');
+        const items = resultsPanel.getByRole('button');
         await expect(items).toHaveCount(10);
     });
 
-    test('SCH-02: Desktop Popular Searches should be limited to 3 items', async ({ page, isMobile }) => {
+    test('SCH-02: desktop popular searches respect the configured 10-item cap', async ({ page, isMobile }) => {
         test.setTimeout(60000);
         if (isMobile) test.skip();
 
-        await gotoAndHidePopup(page, '/');
+        await page.route('**/rest/v1/restaurant_popular_rank_snapshots*', async (route) => {
+            if (route.request().method() === 'GET') {
+                await route.fulfill({ json: [] });
+                return;
+            }
+            await route.continue();
+        });
 
-        // Mock Popular Searches API
         await page.route('**/rest/v1/restaurants*', async route => {
+            if (route.request().method() !== 'GET') {
+                await route.continue();
+                return;
+            }
+
             if (route.request().url().includes('weekly_search_count')) {
                 const json = Array(10).fill(null).map((_, i) => ({
                     id: `pop-${i}`,
                     name: `인기 맛집 ${i}`,
+                    approved_name: `인기 맛집 ${i}`,
                     status: 'approved',
                     weekly_search_count: 100 - i,
                     road_address: `서울시 ${i}`
@@ -135,28 +158,17 @@ test.describe('QA Integration Tests', () => {
             }
         });
 
-        const searchInput = page.getByPlaceholder('맛집 이름 검색...');
+        await gotoAndHidePopup(page, '/');
+
+        const searchInput = page.locator('input[name="desktop-left-panel-restaurant-search"]');
         await searchInput.click();
-        // Do not type anything, popular searches should appear
 
-        // The dropdown might have a different class or same?
-        // It shares the same container logic in RestaurantSearch.tsx.
-        const dropdown = page.locator('.max-h-\\[19rem\\]');
-        await expect(dropdown).toBeVisible();
+        const resultsPanel = page.locator('[data-desktop-left-panel-search-results="true"]');
+        await expect(resultsPanel).toBeVisible();
+        await expect(resultsPanel.getByText('인기 검색 맛집')).toBeVisible();
 
-        // Check for "인기 검색 맛집" header
-        await expect(page.getByText('인기 검색 맛집')).toBeVisible();
-
-        // In the popular searches section, we expect buttons.
-        // Structure: Header (div) + Items (button)
-        // We can filter buttons that are not the "Total Delete" or headers.
-        // Actually, the component renders buttons for items.
-        // We mocked 10 items, but passed maxItems={3} prop.
-        // So we expect only 3 item buttons + maybe "Recent Search" stuff if history exists (cleared in incognito usually).
-
-        // Let's count buttons that contain "인기 맛집"
-        const popularItems = page.getByRole('button').filter({ hasText: /인기 맛집/ });
-        await expect(popularItems).toHaveCount(3);
+        const popularItems = resultsPanel.getByRole('button').filter({ hasText: /인기 맛집/ });
+        await expect(popularItems).toHaveCount(10);
     });
 
     test('STP-01, STP-02: Stamp Image should be custom and rotated', async ({ page }) => {
