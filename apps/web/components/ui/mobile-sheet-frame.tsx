@@ -30,7 +30,7 @@ export const mobileSheetStyles = {
     frame: 'flex min-h-[100dvh] flex-col bg-background',
     header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
     compactHeader: 'border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
-    title: 'text-2xl font-bold leading-tight tracking-tight bg-gradient-primary bg-clip-text text-transparent',
+    title: 'text-xl font-semibold leading-tight tracking-tight text-foreground',
     compactTitle: 'text-lg font-semibold leading-tight tracking-tight text-foreground',
     description: 'mt-1 text-sm leading-relaxed text-muted-foreground',
     content: 'flex-1 space-y-4 px-4 py-4',
@@ -39,7 +39,7 @@ export const mobileSheetStyles = {
     mutedSection: 'rounded-xl border border-border/70 bg-muted/70 p-4 shadow-sm',
     footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur',
     actionRow: 'flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center',
-    primaryAction: 'bg-gradient-primary hover:opacity-90',
+    primaryAction: 'bg-primary text-primary-foreground hover:bg-primary/90',
     meta: 'text-[10px] leading-none text-muted-foreground',
 } as const;
 
@@ -82,7 +82,7 @@ export function MobileSheetHeader({
             {children}
             <div className="flex items-start gap-3">
                 {icon ? (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-primary text-primary-foreground shadow-[var(--shadow-primary)]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                         {icon}
                     </div>
                 ) : null}

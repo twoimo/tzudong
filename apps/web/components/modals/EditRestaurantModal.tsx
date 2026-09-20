@@ -788,7 +788,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                         <p className="text-xs font-medium text-red-700 dark:text-red-300">
                             {currentStep} / {EDIT_RESTAURANT_REQUEST_STEPS.length} · {EDIT_RESTAURANT_REQUEST_STEPS[currentStep - 1].title}
                         </p>
-                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
                             맛집 수정 요청
                         </h2>
                     </div>
@@ -925,7 +925,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
                         <div className="flex items-start justify-between gap-2 pt-3">
                             <div className="flex-1">
-                                <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                <DialogTitle className="text-xl font-semibold text-foreground">
                                     맛집 수정 요청
                                 </DialogTitle>
                                 <DialogDescription>
@@ -1113,7 +1113,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                 <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
                                     취소
                                 </Button>
-                                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90" disabled={isSubmitting}>
+                                <Button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90" disabled={isSubmitting}>
                                     {isSubmitting ? '제출 중...' : '수정 요청 제출'}
                                 </Button>
                             </div>
