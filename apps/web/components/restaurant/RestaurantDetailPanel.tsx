@@ -951,7 +951,7 @@ export function RestaurantDetailPanel({
                                     </Button>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-lg font-semibold tracking-tight truncate">
+                                            <h3 className="text-lg font-semibold truncate">
                                                 {restaurant.name}
                                             </h3>
                                         </div>
@@ -1023,7 +1023,7 @@ export function RestaurantDetailPanel({
                                                 />
                                             </div>
                                             <h2
-                                                className="text-lg font-semibold tracking-tight truncate"
+                                                className="text-lg font-semibold truncate"
                                                 title={restaurant.name}
                                             >
                                                 {restaurant.name}
