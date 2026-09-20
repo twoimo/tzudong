@@ -64,3 +64,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 모바일 국내/해외/카테고리 버튼 너비를 늘려 라벨 잘림을 줄였고, 상세 유튜브 썸네일은 16:9 `sddefault`와 재생 버튼 광학 정렬을 적용했다.
 - 클러스터 클릭 후 개별 마커가 유지되고 바텀 시트에 맛집 목록이 열렸다. 로컬 리뷰 1건의 작성자는 `Nightly CI`로 표시되며 `탈퇴한 사용자`가 아니다. 동일 오리진 공개 스토리지 URL은 객체 키로 되돌린다. 지도 발견 다이어그램은 [map-discovery.html](../../../architecture/map-discovery/map-discovery.html).
 - 로컬 리뷰 사진을 storage에 올린 뒤 피드에서 593×445로 디코딩됐다. 작성자는 Nightly CI. 재등장 맛집 필터는 20개의 맛집 발견.
+- 이 워크트리에서 로컬 워커를 다시 띄운 뒤 프로젝트 acd96811 장면 1 재생성을 큐에 넣었다. revision 19→20, job claimed 후 워커가 image_started heartbeat를 유지한다. 이미지 저장 완료는 이 기록 시점에 아직 없다.
