@@ -258,6 +258,9 @@ export function useUserProfile(userId: string) {
 
             const typedProfile = profiles[0];
             if (!typedProfile) return null;
+            if (reviewsResult.error) {
+                throw new Error('USER_PROFILE_REVIEWS_UNAVAILABLE');
+            }
             const reviews = (reviewsResult.data ?? []) as ReviewRow[];
 
             // 전체 리뷰 수 = 조회된 모든 리뷰의 수

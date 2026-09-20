@@ -1454,9 +1454,9 @@ export function RestaurantDetailPanel({
                                 {/* 네이버 지도 - 추천 */}
                                 <Button
                                     onClick={handleNaverMap}
-                                    variant="ghost"
+                                    variant="outline"
                                     className={cn(
-                                        "w-full h-auto !bg-gradient-to-r !from-[#03C75A] !to-[#00B050] hover:!from-[#02B351] hover:!to-[#029E49] !text-white shadow-sm",
+                                        "w-full h-auto border-primary/30 bg-primary/5 hover:bg-primary/10",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="네이버 지도로 길찾기 열기"
@@ -1465,10 +1465,10 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="naver" />
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-sm font-bold">네이버 지도</span>
-                                                <Badge className="bg-yellow-400 text-green-900 text-[9px] px-1 py-0 h-3.5 border-0">추천</Badge>
+                                                <span className="text-sm font-semibold">네이버 지도</span>
+                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[10px] px-1.5 py-0 border-0">추천</Badge>
                                             </div>
-                                            <p className="text-[11px] text-green-50 opacity-90">국내 상세한 길안내 · 실시간 교통정보</p>
+                                            <p className="text-[11px] text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1478,7 +1478,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleKakaoMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border hover:bg-yellow-50 hover:border-yellow-400",
+                                        "w-full h-auto",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="카카오맵으로 길찾기 열기"
@@ -1486,7 +1486,7 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <MapProviderLogo provider="kakao" />
                                         <div className="flex-1 text-left">
-                                            <div className="text-sm font-bold text-foreground mb-0.5">카카오맵</div>
+                                            <div className="text-sm font-semibold text-foreground mb-0.5">카카오맵</div>
                                             <p className="text-[11px] text-muted-foreground">대중교통 · 주차 정보</p>
                                         </div>
                                     </div>
@@ -1497,7 +1497,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleGoogleMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border hover:bg-blue-50 hover:border-blue-400",
+                                        "w-full h-auto",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="구글 지도로 길찾기 열기"
@@ -1505,7 +1505,7 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <MapProviderLogo provider="google" />
                                         <div className="flex-1 text-left">
-                                            <div className="text-sm font-bold text-foreground mb-0.5">구글 지도</div>
+                                            <div className="text-sm font-semibold text-foreground mb-0.5">구글 지도</div>
                                             <p className="text-[11px] text-muted-foreground">글로벌 지도 · 위성 뷰</p>
                                         </div>
                                     </div>

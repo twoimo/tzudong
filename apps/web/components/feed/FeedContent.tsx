@@ -258,7 +258,10 @@ export default function FeedContent({
 
             const typedReviewsData = (reviewsData ?? []) as FeedReviewRow[];
 
-            if (reviewsError || typedReviewsData.length === 0) {
+            if (reviewsError) {
+                throw new Error('FEED_REVIEWS_UNAVAILABLE');
+            }
+            if (typedReviewsData.length === 0) {
                 return { reviews: [], nextCursor: null };
             }
 
