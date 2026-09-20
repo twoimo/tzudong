@@ -225,7 +225,7 @@ function filterByFreshVideo(restaurants: Restaurant[]): Restaurant[] {
 
 function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
     const maxViewByRestaurant = new Map<Restaurant, number>();
-    const maxRatioByRestaurant = new Map<Restaurant, number>();
+    const ratioCandidatesByRestaurant = new Map<Restaurant, Array<{ viewCount: number; ratio: number }>>();
 
     restaurants.forEach((restaurant) => {
         for (const meta of collectMergedYoutubeMetas(restaurant)) {
@@ -235,22 +235,31 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
 
             const commentCount = getYoutubeMetric(meta, 'commentCount');
             if (commentCount === null || commentCount <= 0) continue;
-            maxRatioByRestaurant.set(restaurant, Math.max(maxRatioByRestaurant.get(restaurant) ?? 0, commentCount / viewCount));
+            const ratioCandidates = ratioCandidatesByRestaurant.get(restaurant) ?? [];
+            ratioCandidates.push({ viewCount, ratio: commentCount / viewCount });
+            ratioCandidatesByRestaurant.set(restaurant, ratioCandidates);
         }
     });
 
     const medianViewCount = getMedian([...maxViewByRestaurant.values()]);
     if (medianViewCount === null) return [];
 
-    const eligibleRatios = [...maxRatioByRestaurant.entries()]
-        .filter(([restaurant]) => (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount)
-        .map(([, ratio]) => ratio);
-    const threshold = getTopBandThreshold(eligibleRatios);
+    const maxEligibleRatioByRestaurant = new Map<Restaurant, number>();
+    ratioCandidatesByRestaurant.forEach((candidates, restaurant) => {
+        const eligibleRatios = candidates
+            .filter((candidate) => candidate.viewCount >= medianViewCount)
+            .map((candidate) => candidate.ratio);
+        if (eligibleRatios.length > 0) {
+            maxEligibleRatioByRestaurant.set(restaurant, Math.max(...eligibleRatios));
+        }
+    });
+
+    const threshold = getTopBandThreshold([...maxEligibleRatioByRestaurant.values()]);
     if (threshold === null) return [];
 
     return restaurants.filter((restaurant) => {
-        const ratio = maxRatioByRestaurant.get(restaurant);
-        return ratio !== undefined && (maxViewByRestaurant.get(restaurant) ?? 0) >= medianViewCount && ratio >= threshold;
+        const ratio = maxEligibleRatioByRestaurant.get(restaurant);
+        return ratio !== undefined && ratio >= threshold;
     });
 }
 

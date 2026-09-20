@@ -7,7 +7,7 @@ Scope: current source at 985966de plus the uncommitted memory-admission fix and 
 - Storyboard project: revision 25, ready.
 - Jobs: succeeded 5, failed 1; no queued or claimed jobs.
 - Worker: enabled, not revoked, heartbeat age 0 seconds at query time. Do not restart an active worker based on an old handoff.
-- Local feed: browser readback now shows the imported Daily Fix and Sushirin reviews. Live hosted connection remains under implementation review in continuation task 01a0bec9-7163-7ec0-b81b-2050c7c7e117.
+- Local feed: explicit hosted development readback shows two verified hosted reviews for Daily Fix and Sushirin under `쯔동마스터`; the default local command remains isolated. See [hosted feed readback](feed-local-readback-20260921.md).
 
 ## Memory admission update
 
@@ -17,7 +17,7 @@ Scope: current source at 985966de plus the uncommitted memory-admission fix and 
 
 ## Remaining completion evidence
 
-- Direct hosted public-feed reads with genuine hosted author resolution and photo readback.
+- Hosted photo readback, hosted writes, deployment and production readiness.
 - Runtime memory-pressure behavior and a defensible peak inference estimate.
 - GPS operator evidence and real permission/location flow.
 - Requested model execution path for pending implementation and integration review.

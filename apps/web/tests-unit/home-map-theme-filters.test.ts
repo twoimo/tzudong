@@ -196,4 +196,23 @@ describe('home map theme filters', () => {
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'fan-signal'))).toEqual(['baseline-winner']);
     });
+
+    test('fan-signal applies the view baseline to the same video as the comment ratio', () => {
+        const restaurants = [
+            restaurant('mixed-video-signal', {
+                mergedYoutubeMetas: [
+                    meta({ viewCount: 1000, commentCount: 1 }),
+                    meta({ viewCount: 10, commentCount: 9 }),
+                ],
+            }),
+            restaurant('genuine-signal', {
+                mergedYoutubeMetas: [meta({ viewCount: 900, commentCount: 180 })],
+            }),
+            restaurant('below-baseline', {
+                mergedYoutubeMetas: [meta({ viewCount: 800, commentCount: 80 })],
+            }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'fan-signal'))).toEqual(['genuine-signal']);
+    });
 });

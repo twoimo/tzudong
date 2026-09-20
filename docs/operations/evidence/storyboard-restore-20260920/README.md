@@ -96,6 +96,14 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - revision 24 미리보기는 장면 5개, 장면 1 제목 `가게 앞 인트로 (복원)` revision 14, original PNG + WebP 3개를 반환한다. 복원 RPC는 호출하지 않았다.
 - 현재 revision 25 장면 1 캡션은 `매운 짜장라면 맛집 탐방 (편집 검수)`이고, 24/19/16 미리보기는 `(복원)`이다. 장면 revision은 15→14→11→9로 다르고 원본 PNG 경로는 같다. 복원은 호출하지 않았다.
 
+## 2026-09-21 명시적 호스티드 로컬 개발 읽기
+
+- 저장소 루트의 hosted 개발 환경변수를 명시적으로 주입한 Next 서버에서 `/feed`를 다시 읽었다. 기본 로컬 개발 명령은 계속 loopback Supabase를 사용한다.
+- 호스티드 `reviews` REST는 8행을 반환했고, 공개 피드 조건인 `is_verified = true` 행은 2개였다. 프로필은 직접 `profiles` SELECT가 아니라 `read_public_profile_summaries` RPC에서 읽었고, 결과 작성자는 `쯔동마스터`였다.
+- 브라우저에는 `리뷰 (2개)`, `데일리픽스 강남본점`, `스시린 불당본점`, `쯔동마스터`, `인증`이 표시됐고 `Nightly CI` 작성자는 표시되지 않았다. 상세 행과 한계는 [호스티드 피드 읽기](feed-local-readback-20260921.md)에 기록했다.
+- 호스티드 적용 migration과 RPC ACL readback은 완료했지만, 이 기록은 읽기 검증이며 호스티드 쓰기·배포·보호 브랜치 승격을 의미하지 않는다.
+- 전체 영역의 파일·계약 테스트·로컬 runtime readback·미검증 경계는 [아키텍처와 목표 감사](architecture-goal-audit-20260921.md)에 모았다.
+
 
 
 
