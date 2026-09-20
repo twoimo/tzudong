@@ -173,6 +173,21 @@ describe('home map theme filters', () => {
         expect(ids(applyHomeMapThemeFilter(restaurants, 'repeat-video'))).toEqual(['merged-links', 'merged-records']);
     });
 
+    test('does not count alternate canonical URLs for the same video as repeat appearances', () => {
+        const restaurants = [
+            restaurant('same-video', {
+                youtube_link: 'https://youtu.be/abcdefghijk',
+                mergedYoutubeLinks: ['https://www.youtube.com/watch?v=abcdefghijk'],
+            }),
+            restaurant('two-videos', {
+                youtube_link: 'https://youtu.be/abcdefghijk',
+                mergedYoutubeLinks: ['https://www.youtube.com/watch?v=lmnopqrstuv'],
+            }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'repeat-video'))).toEqual(['two-videos']);
+    });
+
     test('uses merged metadata sources and dedupes conservatively', () => {
         const sharedMeta = meta({ title: 'same', publishedAt: '2024-01-01', viewCount: 1000, commentCount: 10 });
         const restaurants = [

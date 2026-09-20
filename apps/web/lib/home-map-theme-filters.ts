@@ -1,4 +1,5 @@
 import type { Restaurant, YoutubeMeta } from '@/types/restaurant';
+import { extractCanonicalYouTubeVideoId } from '@/lib/youtube-url';
 
 export type HomeMapThemeFilterId =
     | 'hot-view'
@@ -154,7 +155,8 @@ function getMergedVideoCount(restaurant: Restaurant): number {
     const addLink = (value: unknown) => {
         if (typeof value !== 'string') return;
         const normalized = value.trim();
-        if (normalized.length > 0) links.add(normalized);
+        if (normalized.length === 0) return;
+        links.add(extractCanonicalYouTubeVideoId(normalized) ?? normalized);
     };
 
     restaurant.mergedYoutubeLinks?.forEach(addLink);
