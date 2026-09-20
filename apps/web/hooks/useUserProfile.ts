@@ -221,8 +221,7 @@ export function useUserProfileIdentity(userId: string) {
         queryFn: async (): Promise<UserProfileIdentity | null> => {
             if (!userId) return null;
 
-            const [typedProfile] = await readPublicProfileSummaries(supabase, [userId])
-                .catch(() => []);
+            const [typedProfile] = await readPublicProfileSummaries(supabase, [userId]);
             if (!typedProfile) return null;
 
             return {
@@ -249,7 +248,7 @@ export function useUserProfile(userId: string) {
 
             // 병렬 쿼리: 프로필 + 리뷰 동시 조회
             const [profiles, reviewsResult] = await Promise.all([
-                readPublicProfileSummaries(supabase, [userId]).catch(() => []),
+                readPublicProfileSummaries(supabase, [userId]),
                 supabase
                     .from('reviews')
                     .select('id, is_verified, like_count')

@@ -64,6 +64,7 @@ export const ReviewCard = React.memo(function ReviewCard({
 }: ReviewCardProps) {
     const router = useRouter();
     const isOwnReview = currentUserId && review.userId === currentUserId;
+    const photoItemKeyPrefix = idPrefix ?? review.id;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
@@ -405,7 +406,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                         <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: photoUrls.length > 1 }}>
                             <CarouselContent>
                                 {photoUrls.map((url, index) => (
-                                    <CarouselItem key={`${review.id}-photo-${index}`}>
+                                    <CarouselItem key={`${photoItemKeyPrefix}-photo-${index}`}>
                                         <div className="relative w-full aspect-square">
                                             <Image
                                                 src={url}
@@ -434,7 +435,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                                 {photoUrls.map((url, index) => (
                                     <div
-                                        key={`${review.id}-dot-${index}`}
+                                        key={`${photoItemKeyPrefix}-dot-${index}`}
                                         className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
                                     ></div>
                                 ))}

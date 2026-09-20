@@ -538,6 +538,7 @@ describe("public profile caller convergence", () => {
     expect(userProfileSource).toContain("Math.ceil(likerIds.length / 100)");
     expect(userProfileSource).toContain("likerIds.slice(batchIndex * 100, (batchIndex + 1) * 100)");
     expect(userProfileSource).not.toContain("readPublicProfileSummaries(supabase, likerIds)");
+    expect(userProfileSource).not.toContain(".catch(() => [])");
 
     const mobileFixtureSource = source("tests/mobile-home-map-helpers.ts");
     expect(mobileFixtureSource).toContain("Object.keys(payload).length !== 1");

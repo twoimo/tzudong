@@ -45,6 +45,12 @@ const DesktopAuthModal = dynamic(() => import("@/components/auth/AuthModal"), {
   loading: () => null,
 });
 
+const REJECTED_AUTH_DISPLAY_NAMES = new Set([
+  "nightly ci",
+  "nightly-ci",
+  "nightly",
+]);
+
 const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
   if (!user) return "사용자";
 
@@ -53,11 +59,12 @@ const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
     metadata.nickname,
     metadata.name,
     metadata.full_name,
-    user.email?.split("@")[0],
   ];
   const displayName = candidates.find(
     (candidate): candidate is string =>
-      typeof candidate === "string" && candidate.trim().length > 0,
+      typeof candidate === "string"
+      && candidate.trim().length > 0
+      && !REJECTED_AUTH_DISPLAY_NAMES.has(candidate.trim().toLowerCase()),
   );
 
   return displayName?.trim() ?? "사용자";
