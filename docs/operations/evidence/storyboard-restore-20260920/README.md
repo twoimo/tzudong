@@ -117,3 +117,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 390px 관리자 스토리보드 재확인: 외부 AI 꺼진 채 로컬 MLX와 ChatGPT/Grok 수동이 선택 가능하고 공식 API는 disabled다. [providers-390](admin-storyboard-providers-recheck-390.png) revision 25 준비됨·장면 5. [rev25-390](admin-storyboard-rev25-recheck-390.png). 생성 안내/placeholder에 break-keep을 넣어 한글 한 글자 줄바꿈을 막았다.
 - 재등장 맛집 필터를 켠 뒤 서울 클러스터가 12로 줄고 클릭 시 개별 마커(2·3회 방문 뱃지)와 목록 13곳이 열렸다. 정원분식 상세에서 쯔동마스터/먹보쯔양팬 리뷰와 16:9 재생 버튼 중앙, 길찾기 세 버튼 잘림 없음을 확인했다.
 - 5종 테마 필터 라이브 재확인: 댓글 폭주 125곳(서울 클러스터 65), 최근 영상 32곳(서울 17), 반응 찐함 63곳(서울 32). 조회수 폭발·재등장은 앞에서 확인했다.
+- Archify 다이어그램을 브라우저에서 열었다. 스토리보드 워크플로는 한글 제목 `쯔동 로컬 생성과 이력 복원`과 claim/restore 노드가 보인다. [workflow](archify-storyboard-workflow-desktop.png) [map](archify-map-discovery-desktop.png). 스토리보드 export는 7,963,672 bytes `storyboard-export-v1` HTTP 200.
