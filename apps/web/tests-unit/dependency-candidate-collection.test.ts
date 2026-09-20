@@ -5,9 +5,9 @@ import { buildPreflightReceipt, buildRunReceipt } from '../scripts/verify-depend
 
 const pr = { number: 42, user: { login: 'dependabot[bot]' },
   base: { ref: 'develop' }, head: { sha: 'a'.repeat(40) } };
-const file = (name = 'next', version = '16.3.0') => ({
+const file = (name = 'next', version = '16.3.0', fromVersion = '16.2.0') => ({
   filename: 'apps/web/package.json', status: 'modified',
-  patch: `-    "${name}": "16.2.0",\n+    "${name}": "${version}",`,
+  patch: `-    "${name}": "${fromVersion}",\n+    "${name}": "${version}",`,
 });
 describe('real dependency candidate ingestion', () => {
   test('PR preflight isolates other holds, missing metadata and aggregate limits', async () => {
@@ -68,12 +68,12 @@ describe('real dependency candidate ingestion', () => {
   });
 
   test('lockfile metadata cannot bypass holds or admit unbound and incomplete blobs', async () => {
-    const lock = (version: string) => ({ lockfileVersion: 3, packages: { 'node_modules/next': { version } } });
+    const lock = (version: string) => ({ lockfileVersion: 3, packages: { 'node_modules/typescript-eslint': { version } } });
     const file = { filename: 'apps/web/package-lock.json', status: 'modified' };
-    const candidate = descriptor(pr, [file], { [file.filename]: { before: lock('16.2.1'), after: lock('16.3.0') } });
+    const candidate = descriptor(pr, [file], { [file.filename]: { before: lock('8.63.0'), after: lock('8.64.0') } });
     expect(buildRunReceipt({ candidates: [candidate] }).candidates[0].code).toBe('dependency_hold_violation');
     expect(descriptor(pr, [file]).metadataIncomplete).toBe(true);
-    expect(lockfileChanges(lock('16.2.1'), { lockfileVersion: 3, packages: {} }).incomplete).toBe(true);
+    expect(lockfileChanges(lock('8.63.0'), { lockfileVersion: 3, packages: {} }).incomplete).toBe(true);
     await expect(collectCandidates(async (path: string) => {
       if (path.includes('/compare/')) return { base_commit: { sha: 'b'.repeat(40) }, merge_base_commit: { sha: 'c'.repeat(40) } };
       if (path.includes('/contents/')) return { encoding: 'base64', content: 'e30=', size: 2, sha: '0'.repeat(40) };
@@ -96,13 +96,13 @@ describe('real dependency candidate ingestion', () => {
     const calls: string[] = [];
     const candidates = await collectCandidates(async (path: string) => {
       calls.push(path);
-      return path.includes('/files') ? [file()] : [pr, { ...pr, user: { login: 'human' } }];
+      return path.includes('/files') ? [file('typescript-eslint', '8.64.0', '8.63.0')] : [pr, { ...pr, user: { login: 'human' } }];
     });
     expect(calls).toHaveLength(2);
     const receipt = buildRunReceipt({ candidates });
     expect(receipt.units[0].candidateCount).toBe(1);
     expect(receipt.candidates[0].code).toBe('dependency_hold_violation');
-    expect(buildRunReceipt({ candidates: [descriptor({ ...pr, base: { ref: 'main' } }, [file()])] })
+    expect(buildRunReceipt({ candidates: [descriptor({ ...pr, base: { ref: 'main' } }, [file('typescript-eslint', '8.64.0', '8.63.0')])] })
       .candidates[0].code).toBe('target_branch_violation');
   });
   test('rejects pin changes, truncated metadata and excess open candidates', () => {
@@ -114,8 +114,8 @@ describe('real dependency candidate ingestion', () => {
     expect(buildRunReceipt({ candidates }).candidates.every((c: {code: string}) => c.code === 'dependency_check_failed')).toBe(true);
   });
   test('real manifest version ranges cannot bypass held versions', () => {
-    for (const version of ['^16.3.0', '~16.3.0', '>=16.3.0']) {
-      expect(buildRunReceipt({ candidates: [descriptor(pr, [file('next', version)])] })
+    for (const version of ['^8.64.0', '~8.64.0', '>=8.64.0']) {
+      expect(buildRunReceipt({ candidates: [descriptor(pr, [file('typescript-eslint', version, '8.63.0')])] })
         .candidates[0].code).toBe('dependency_hold_violation');
     }
     const changed = { ...file(), patch: '-"eslint": "^9.0.0",\n+"eslint": "^10.0.0",' };
