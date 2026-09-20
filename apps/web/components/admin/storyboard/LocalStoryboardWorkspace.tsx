@@ -432,7 +432,7 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   const active = isActive(view);
   const locked = busy || active || needsReadback || !!readError;
   const providers = view ? [view.project.request.providers.text, view.project.request.providers.image] : [];
-  const generationBlocked = providers.some((provider) => isOfficial(provider.id) || (!externalAI && !isLocal(provider.id)));
+  const generationBlocked = providers.some((provider) => provider.id !== "local-mlx");
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);

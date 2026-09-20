@@ -1353,7 +1353,7 @@ function BottomSheetComponent({
                 ref={sheetRef}
                 className={cn(
                     'fixed bottom-0 left-0 right-0 z-[95]',
-                    'bg-background shadow-xl',
+                    'bg-background shadow-sm',
                     isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
                     // 드래그 중에는 트랜지션 제거
