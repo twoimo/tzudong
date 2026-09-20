@@ -4,10 +4,14 @@ import { isCluster, type ClusterProperties, type RegionalCluster, type SeoulDist
 import { getPrimaryCategory, isRestaurantInViewport, type ExtendedBounds } from '@/lib/naver-map-view-helpers';
 import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
 
-const formatCoordForSignature = (value: number | null | undefined): string =>
-    typeof value === 'number' && Number.isFinite(value)
-        ? value.toFixed(6)
-        : (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value).toFixed(6) : 'na');
+const formatCoordForSignature = (value: number | string | null | undefined): string => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value.toFixed(6);
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed).toFixed(6);
+    }
+    return 'na';
+};
 
 const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
     `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
@@ -18,7 +22,9 @@ function hasRenderableCoordinates(restaurant: Restaurant): restaurant is Restaur
     return hasNaverMarkerCoordinates(restaurant);
 }
 
-export function hasNaverMarkerCoordinates(restaurant: { lat?: unknown; lng?: unknown } | null | undefined) {
+export function hasNaverMarkerCoordinates<T extends { lat?: unknown; lng?: unknown }>(
+    restaurant: T | null | undefined,
+): restaurant is T & { lat: number; lng: number } {
     if (!restaurant) return false;
     return isFiniteCoordinate(restaurant.lat) && isFiniteCoordinate(restaurant.lng);
 }
