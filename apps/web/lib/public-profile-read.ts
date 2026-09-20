@@ -341,7 +341,7 @@ export function resolvePublicReviewerDisplay(
     return { nickname: unavailableNickname, avatarUrl: null };
   }
 
-  const summary = summaries instanceof Map
+  const summary = 'get' in summaries
     ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
     : summaries.find((row) => row.user_id === userId.toLowerCase() || row.user_id === userId);
   if (!summary) {

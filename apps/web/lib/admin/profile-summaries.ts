@@ -184,7 +184,7 @@ export function resolveAdminReviewerDisplay(
     return { nickname: unavailableNickname };
   }
 
-  const summary = summaries instanceof Map
+  const summary = 'get' in summaries
     ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
     : summaries.find((row) => row.userId === userId.toLowerCase() || row.userId === userId);
   if (!summary || !summary.nickname) {
