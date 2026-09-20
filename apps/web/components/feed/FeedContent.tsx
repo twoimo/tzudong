@@ -584,6 +584,18 @@ export default function FeedContent({
                                 >
                                     <Filter className="h-4 w-4" aria-hidden="true" />
                                 </Button>
+                                {isOverlay && !hideFloatingButton && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleWriteReview}
+                                        className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                        title="리뷰 작성"
+                                        aria-label="리뷰 작성"
+                                    >
+                                        <Plus className="h-5 w-5" aria-hidden="true" />
+                                    </Button>
+                                )}
                                 {isOverlay && onClose && (
                                     <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="리뷰 패널 닫기">
                                         <X className="h-5 w-5" aria-hidden="true" />
@@ -614,7 +626,10 @@ export default function FeedContent({
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
                 <div className={cn(
-                    "flex-1 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+2rem)] md:pb-8",
+                    "flex-1",
+                    !hideFloatingButton && !isOverlay
+                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] md:pb-28"
+                        : "pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
                     {isLoading ? (
@@ -677,15 +692,13 @@ export default function FeedContent({
                 </div>
 
                 {/* 플로팅 리뷰 작성 버튼 */}
-                {!hideFloatingButton && (() => {
+                {!hideFloatingButton && !isOverlay && (() => {
                     const FloatingButton = (
                         <Button
                             onClick={handleWriteReview}
                             className={cn(
                                 "h-14 w-14 rounded-full shadow-sm bg-primary text-primary-foreground hover:bg-primary/90",
-                                isOverlay
-                                    ? "absolute right-8 bottom-8 z-[100]"
-                                    : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
+                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
                             )}
                             size="icon"
                             aria-label="리뷰 작성"
@@ -693,10 +706,7 @@ export default function FeedContent({
                             <Plus className="h-6 w-6" />
                         </Button>
                     );
-
-                    return isOverlay
-                        ? FloatingButton
-                        : (typeof document !== 'undefined' && createPortal(FloatingButton, document.body));
+                    return typeof document !== 'undefined' && createPortal(FloatingButton, document.body);
                 })()}
 
                 {/* 리뷰 작성 모달 */}
