@@ -311,6 +311,19 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
     await expect(worker.runOnce()).rejects.toThrow('worker_busy');
     expect(await first).toBe('idle');
   });
+  test('memory admission failure defers before claim', async () => {
+    const f = fixture();
+    const events: string[] = [];
+    expect(await new OutboundStoryboardWorker({
+      ...f,
+      admitMemory: () => false,
+      onEvent: (event) => events.push(event.event),
+    }).runOnce()).toBe('idle');
+    expect(events).toEqual(['memory_deferred']);
+    expect(f.calls.filter((call) => call.action === 'claim')).toEqual([]);
+    expect(f.draftCalls()).toBe(0);
+    expect(f.generated).toEqual([]);
+  });
 });
 
 describe('worker credentials and actual HTTP boundaries', () => {

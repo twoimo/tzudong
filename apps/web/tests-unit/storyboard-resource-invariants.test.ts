@@ -6,6 +6,7 @@ import {
   nextStoryboardQueueWait,
   storyboardMemoryReserveBytes,
 } from "../lib/admin/storyboard/resource-invariants";
+import { admitStoryboardWorkerMemory } from "../lib/admin/storyboard/outbound-worker";
 
 const GIB = 1024 ** 3;
 
@@ -30,6 +31,18 @@ describe("storyboard resource invariants", () => {
       physicalBytes,
     })).toBe(false);
     expect(80 * GIB + 32 * GIB + reserve).toBe(physicalBytes);
+  });
+
+  test("worker admission adds resident model bytes before claim", () => {
+    const physicalBytes = 128 * GIB;
+    expect(admitStoryboardWorkerMemory(
+      [{ bytes_resident: 1 * GIB }],
+      { physicalBytes, usedBytes: 80 * GIB },
+    )).toBe(true);
+    expect(admitStoryboardWorkerMemory(
+      [{ bytes_resident: 10 * GIB }],
+      { physicalBytes, usedBytes: 110 * GIB },
+    )).toBe(false);
   });
 
   test("queue wait follows W[i+1] = max(0, W[i] + S[i] - A[i])", () => {

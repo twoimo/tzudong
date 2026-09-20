@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
@@ -12,6 +13,7 @@ import {
   StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
   type StoryboardDraft, type StoryboardProductionProvenance,
 } from './production-contract.ts';
+import { canAdmitStoryboardMemory } from './resource-invariants.ts';
 import {
   claimedStoryboardJobSchema, validateStoryboardWorkerOrigin,
   type ClaimedStoryboardJob, type WorkerDestination, type WorkerEvent, type WorkerResult,
@@ -184,15 +186,32 @@ export function storyboardWorkerErrorCode(error: unknown): string {
   return 'provider_failed';
 }
 
+export function admitStoryboardWorkerMemory(
+  models: ReadonlyArray<{ bytes_resident?: number }>,
+  env: { physicalBytes: number; usedBytes: number } = {
+    physicalBytes: os.totalmem(),
+    usedBytes: process.memoryUsage().rss,
+  },
+): boolean {
+  const resident = models.reduce((sum, model) => sum + (Number(model.bytes_resident) || 0), 0);
+  return canAdmitStoryboardMemory({
+    usedBytes: env.usedBytes + resident,
+    additionalPeakEstimateBytes: MAX_STORYBOARD_IMAGE_BYTES * 4,
+    physicalBytes: env.physicalBytes,
+  });
+}
+
 /** One claimed project and one image at a time. SQL owns durable progress and retry leases. */
 export class OutboundStoryboardWorker {
   private readonly api: StoryboardWorkerApi;
   private readonly mlx: Models;
   private readonly heartbeatMs: number;
   private readonly onEvent: (event: WorkerEvent) => void;
+  private readonly admitMemory: (models: MlxModel[]) => boolean;
   private running = false;
   constructor(options: {
     api: StoryboardWorkerApi; mlx?: Models; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
+    admitMemory?: (models: MlxModel[]) => boolean;
   }) {
     this.api = options.api; this.mlx = options.mlx ?? new MlxStoryboardClient();
     this.heartbeatMs = options.heartbeatMs ?? 15_000;
@@ -200,6 +219,7 @@ export class OutboundStoryboardWorker {
       throw new StoryboardWorkerApiError('invalid_worker_timeout');
     }
     this.onEvent = options.onEvent ?? (() => undefined);
+    this.admitMemory = options.admitMemory ?? ((models) => admitStoryboardWorkerMemory(models));
   }
 
   private async heartbeat(models: MlxModel[], signal?: AbortSignal, lease?: Lease): Promise<void> {
@@ -236,6 +256,10 @@ export class OutboundStoryboardWorker {
       }
       if (signal?.aborted) throw new StoryboardWorkerApiError('worker_stopped');
       await this.heartbeat(models, signal);
+      if (!this.admitMemory(models)) {
+        this.onEvent({ event: 'memory_deferred' });
+        return 'idle';
+      }
       const claim = claimSchema.safeParse(await workerApiCall(() => this.api.operation({ action: 'claim' }, signal)));
       if (!claim.success) throw new StoryboardWorkerApiError('invalid_worker_response');
       if (!claim.data.job) return 'idle';
