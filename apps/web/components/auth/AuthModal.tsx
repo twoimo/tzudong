@@ -35,6 +35,7 @@ import {
   privacyEligibilityGuidance,
   signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
+import { cn } from "@/lib/utils";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -693,16 +694,26 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           )}
           {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full flex-1 px-4 py-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b bg-transparent p-0">
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b border-border bg-transparent p-0">
               <TabsTrigger
                 value="login"
-                className="rounded-none border-b-2 border-transparent px-2 py-2.5 text-sm font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "login"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
               >
                 로그인
               </TabsTrigger>
               <TabsTrigger
                 value="signup"
-                className="rounded-none border-b-2 border-transparent px-2 py-2.5 text-sm font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "signup"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
               >
                 회원가입
               </TabsTrigger>
@@ -940,9 +951,29 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           {isPrivacyOnboarding && privacyOnboardingContent}
           {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b border-border bg-transparent p-0">
+              <TabsTrigger
+                value="login"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "login"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                로그인
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "signup"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                회원가입
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
