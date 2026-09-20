@@ -50,6 +50,7 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
+import { getYoutubeThumbnailUrl } from "@/lib/youtube-thumbnail";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
@@ -240,8 +241,10 @@ export function RestaurantDetailPanel({
             const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
             if (!videoId || !watchUrl) return [];
 
+            const thumbnailUrl = getYoutubeThumbnailUrl(videoId, 'sddefault') ?? getYoutubeThumbnailUrl(videoId);
+            if (!thumbnailUrl) return [];
             return [{
-                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                thumbnailUrl,
                 watchUrl,
             }];
         }),
@@ -947,7 +950,7 @@ export function RestaurantDetailPanel({
                                     </Button>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-xl font-bold truncate">
+                                            <h3 className="text-lg font-semibold tracking-tight truncate">
                                                 {restaurant.name}
                                             </h3>
                                         </div>
@@ -1019,7 +1022,7 @@ export function RestaurantDetailPanel({
                                                 />
                                             </div>
                                             <h2
-                                                className="text-xl font-bold truncate"
+                                                className="text-lg font-semibold tracking-tight truncate"
                                                 title={restaurant.name}
                                             >
                                                 {restaurant.name}
@@ -1195,7 +1198,7 @@ export function RestaurantDetailPanel({
                                                 )}
                                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                                     <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
-                                                        <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                        <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                     </span>
                                                 </div>
                                             </button>
@@ -1228,7 +1231,7 @@ export function RestaurantDetailPanel({
                                                             </span>
                                                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                                                                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
-                                                                    <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                                    <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                                 </span>
                                                             </div>
                                                         </button>

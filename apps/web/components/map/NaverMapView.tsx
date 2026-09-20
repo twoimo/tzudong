@@ -1861,18 +1861,16 @@ const NaverMapView = memo(({
         filters,
         selectedRegion,
     }), [filters, restaurantQueryBounds, selectedRegion]);
-    const restaurantEmptyStateMessage = useMemo(
-        () => resolveNaverRestaurantEmptyStateMessage(filters),
-        [filters],
-    );
-
-
     const {
         data: restaurants = [],
         isFetching: isFetchingRestaurants,
         isLoading: isLoadingRestaurants,
         refetch,
     } = useRestaurants(restaurantQueryOptions);
+    const restaurantEmptyStateMessage = useMemo(
+        () => resolveNaverRestaurantEmptyStateMessage(filters, restaurants),
+        [filters, restaurants],
+    );
 
     const handleReviewSuccess = useMemo(
         () => buildNaverMapReviewSuccessHandler({ refetch, showMapToast }),

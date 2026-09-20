@@ -1556,7 +1556,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "domestic"}
                   aria-label="국내 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none",
                     mapMode === "domestic"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",
@@ -1571,7 +1571,7 @@ export default function HomeDesktopControlPanel({
                   aria-pressed={mapMode === "overseas"}
                   aria-label="해외 맛집 지도 보기"
                   className={cn(
-                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none",
+                    "h-9 flex-1 rounded-full px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none",
                     mapMode === "overseas"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-transparent hover:text-foreground",

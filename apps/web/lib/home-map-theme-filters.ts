@@ -254,6 +254,41 @@ function filterByFanSignal(restaurants: Restaurant[]): Restaurant[] {
     });
 }
 
+export function homeMapThemeFilterHasUsableMetrics(
+    restaurants: Restaurant[],
+    themeId: HomeMapThemeFilterId | null | undefined,
+): boolean {
+    if (!themeId) return true;
+    if (themeId === 'repeat-video') {
+        return restaurants.some((restaurant) => getMergedVideoCount(restaurant) > 0);
+    }
+    if (themeId === 'fresh-video') {
+        return restaurants.some((restaurant) =>
+            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubePublishedAt(meta) !== null),
+        );
+    }
+    if (themeId === 'hot-view') {
+        return restaurants.some((restaurant) =>
+            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubeMetric(meta, 'viewCount') !== null),
+        );
+    }
+    if (themeId === 'comment-hot') {
+        return restaurants.some((restaurant) =>
+            collectMergedYoutubeMetas(restaurant).some((meta) => getYoutubeMetric(meta, 'commentCount') !== null),
+        );
+    }
+    if (themeId === 'fan-signal') {
+        return restaurants.some((restaurant) =>
+            collectMergedYoutubeMetas(restaurant).some((meta) => {
+                const viewCount = getYoutubeMetric(meta, 'viewCount');
+                const commentCount = getYoutubeMetric(meta, 'commentCount');
+                return viewCount !== null && viewCount > 0 && commentCount !== null && commentCount > 0;
+            }),
+        );
+    }
+    return true;
+}
+
 export function applyHomeMapThemeFilter(
     restaurants: Restaurant[],
     themeId: HomeMapThemeFilterId | null | undefined,

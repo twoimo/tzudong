@@ -2136,7 +2136,7 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
-    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
+    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters, restaurants)");
     expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",

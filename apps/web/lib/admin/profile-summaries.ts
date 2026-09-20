@@ -168,6 +168,15 @@ export async function fetchAdminProfileSummariesLookup(
   }
 }
 
+function isAdminProfileSummaryMap(
+  summaries: readonly AdminProfileSummary[] | ReadonlyMap<string, AdminProfileSummary>,
+): summaries is ReadonlyMap<string, AdminProfileSummary> {
+  return (
+    !Array.isArray(summaries)
+    && typeof (summaries as ReadonlyMap<string, AdminProfileSummary>).get === 'function'
+  );
+}
+
 export function resolveAdminReviewerDisplay(
   userId: string,
   summaries: readonly AdminProfileSummary[] | ReadonlyMap<string, AdminProfileSummary>,
@@ -184,7 +193,7 @@ export function resolveAdminReviewerDisplay(
     return { nickname: unavailableNickname };
   }
 
-  const summary = 'get' in summaries
+  const summary = isAdminProfileSummaryMap(summaries)
     ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
     : summaries.find((row) => row.userId === userId.toLowerCase() || row.userId === userId);
   if (!summary || !summary.nickname) {

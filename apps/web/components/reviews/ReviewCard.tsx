@@ -270,14 +270,14 @@ export const ReviewCard = React.memo(function ReviewCard({
     return (
         <div
             id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
-            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500
-                ${review.isPinned ? "border-primary/70" : "border-border/70"}
+            className={`w-full rounded-xl border bg-card text-card-foreground overflow-hidden mb-4 max-w-full transition-all duration-500
+                ${review.isPinned ? "border-primary/50" : "border-border/40"}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
             {...cardInteractionProps}
         >
             {/* 헤더 영역 */}
-            <div className="flex items-center justify-between p-3 border-b border-border/50">
+            <div className="flex items-center justify-between p-3 border-b border-border/30">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 bg-primary/10">
                         {profileAvatarUrl && (

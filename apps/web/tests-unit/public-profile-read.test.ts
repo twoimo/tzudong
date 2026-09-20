@@ -453,6 +453,58 @@ describe("public reviewer display labels", () => {
       avatarUrl: null,
     });
   });
+
+  test("reads array summaries even when Array.prototype.get exists", () => {
+    const summaries = [
+      { user_id: USER_A, nickname: "첫째", avatar_url: null },
+    ];
+    const proto = Array.prototype as unknown as { get?: (key: string) => unknown };
+    const previous = proto.get;
+    proto.get = () => undefined;
+    try {
+      expect(resolvePublicReviewerDisplay(USER_A, summaries, true)).toEqual({
+        nickname: "첫째",
+        avatarUrl: null,
+      });
+    } finally {
+      if (previous) proto.get = previous;
+      else delete proto.get;
+    }
+  });
+
+  test("reads map summaries by lowercase user id", () => {
+    const summaries = new Map([
+      [USER_A, { user_id: USER_A, nickname: "첫째", avatar_url: "https://cdn.example/a.png" }],
+    ]);
+    expect(resolvePublicReviewerDisplay(USER_A.toUpperCase(), summaries, true)).toEqual({
+      nickname: "첫째",
+      avatarUrl: "https://cdn.example/a.png",
+    });
+  });
+
+  test("lookup wrapper batches more than 100 ids instead of failing the whole page", async () => {
+    const ids = Array.from({ length: 101 }, (_, index) =>
+      `11111111-1111-4111-8111-${String(index).padStart(12, "0")}`,
+    );
+    const batchSizes: number[] = [];
+    const result = await readPublicProfileSummariesLookup({
+      rpc: async (_name: string, args: { p_user_ids: string[] }) => {
+        batchSizes.push(args.p_user_ids.length);
+        return {
+          data: args.p_user_ids.map((userId) => ({
+            user_id: userId,
+            nickname: `u${userId.slice(-2)}`,
+            avatar_url: null,
+          })),
+          error: null,
+        };
+      },
+    }, ids);
+    expect(batchSizes).toEqual([100, 1]);
+    expect(result.ok).toBe(true);
+    expect(result.summaries).toHaveLength(101);
+    expect(resolvePublicReviewerDisplay(ids[100], result.summaries, result.ok).nickname).toBe("u00");
+  });
 });
 
 describe("public profile caller convergence", () => {

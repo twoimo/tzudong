@@ -4,6 +4,7 @@ import {
     applyHomeMapThemeFilter,
     HOME_MAP_THEME_FILTER_IDS,
     HOME_MAP_THEME_FILTERS,
+    homeMapThemeFilterHasUsableMetrics,
     isHomeMapThemeFilterId,
     isYoutubeMetadataBackedHomeMapThemeFilterId,
 } from '../lib/home-map-theme-filters';
@@ -91,6 +92,17 @@ describe('home map theme filters', () => {
         ];
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['top', 'tie-a', 'tie-b']);
+    });
+
+    test('reports whether the current result set has usable theme metrics', () => {
+        const missing = [restaurant('missing', { mergedYoutubeMetas: [meta({ title: 'no metric' })] })];
+        const withViews = [restaurant('valid', { mergedYoutubeMetas: [meta({ viewCount: 12 })] })];
+        expect(homeMapThemeFilterHasUsableMetrics(missing, 'hot-view')).toBe(false);
+        expect(homeMapThemeFilterHasUsableMetrics(withViews, 'hot-view')).toBe(true);
+        expect(homeMapThemeFilterHasUsableMetrics(missing, 'repeat-video')).toBe(false);
+        expect(homeMapThemeFilterHasUsableMetrics([
+            restaurant('repeat', { youtube_link: 'https://youtu.be/aaaaaaaaaaa' }),
+        ], 'repeat-video')).toBe(true);
     });
 
     test('ignores invalid and missing metrics instead of treating them as zero', () => {

@@ -1076,14 +1076,14 @@ function MobileControlOverlayComponent({
                 >
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(118px,34vw,148px)]">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1096,7 +1096,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1114,7 +1114,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     data-mobile-map-sheet-trigger="region"
-                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1132,7 +1132,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     data-mobile-map-sheet-trigger="category"
-                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">

@@ -314,12 +314,35 @@ export async function readPublicProfileSummaries(
   return summaries;
 }
 
+function isPublicProfileSummaryMap(
+  summaries: readonly PublicProfileSummary[] | ReadonlyMap<string, PublicProfileSummary>,
+): summaries is ReadonlyMap<string, PublicProfileSummary> {
+  return (
+    !Array.isArray(summaries)
+    && typeof (summaries as ReadonlyMap<string, PublicProfileSummary>).get === "function"
+  );
+}
+
 export async function readPublicProfileSummariesLookup(
   client: unknown,
   userIds: readonly string[],
 ): Promise<{ ok: boolean; summaries: PublicProfileSummary[] }> {
   try {
-    return { ok: true, summaries: await readPublicProfileSummaries(client, userIds) };
+    if (!Array.isArray(userIds)) {
+      fail(PUBLIC_PROFILE_READ_ERROR_CODE.invalidInput);
+    }
+    if (userIds.length === 0) return { ok: true, summaries: [] };
+
+    const summaries: PublicProfileSummary[] = [];
+    for (let offset = 0; offset < userIds.length; offset += MAX_PROFILE_ROWS) {
+      summaries.push(
+        ...await readPublicProfileSummaries(
+          client,
+          userIds.slice(offset, offset + MAX_PROFILE_ROWS),
+        ),
+      );
+    }
+    return { ok: true, summaries };
   } catch {
     return { ok: false, summaries: [] };
   }
@@ -341,7 +364,7 @@ export function resolvePublicReviewerDisplay(
     return { nickname: unavailableNickname, avatarUrl: null };
   }
 
-  const summary = 'get' in summaries
+  const summary = isPublicProfileSummaryMap(summaries)
     ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
     : summaries.find((row) => row.user_id === userId.toLowerCase() || row.user_id === userId);
   if (!summary) {

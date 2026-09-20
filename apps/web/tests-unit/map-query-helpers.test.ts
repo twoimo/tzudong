@@ -149,6 +149,12 @@ describe('map query helpers', () => {
 
         expect(resolveNaverRestaurantEmptyStateMessage({
             categories: [],
+            featuredTheme: 'hot-view' as never,
+            minReviews: 0,
+        }, [{ youtube_meta: { viewCount: 1200 } } as never])).toBe('선택한 테마에 맞는 맛집이 없습니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
             featuredTheme: 'fresh-video' as never,
             minReviews: 0,
         })).toBe('선택한 테마에 맞는 맛집이 없습니다');
