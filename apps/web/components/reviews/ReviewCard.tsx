@@ -81,11 +81,15 @@ export const ReviewCard = React.memo(function ReviewCard({
             purpose: 'food' as const,
         };
 
-        return review.photos.reduce<string[]>((urls, photo) => {
+        const urls: string[] = [];
+        const seen = new Set<string>();
+        for (const photo of review.photos) {
             const url = resolveReviewPhotoUrl(photo.url, ownership);
-            if (url) urls.push(url);
-            return urls;
-        }, []);
+            if (!url || seen.has(url)) continue;
+            seen.add(url);
+            urls.push(url);
+        }
+        return urls;
     }, [review.id, review.photos, review.userId]);
     const profileAvatarUrl = useMemo(
         () => resolveProfileAvatarUrl(review.userAvatarUrl, review.userId),
@@ -398,10 +402,10 @@ export const ReviewCard = React.memo(function ReviewCard({
             {
                 photoUrls.length > 0 && (
                     <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
-                        <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: true }}>
+                        <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: photoUrls.length > 1 }}>
                             <CarouselContent>
                                 {photoUrls.map((url, index) => (
-                                    <CarouselItem key={url}>
+                                    <CarouselItem key={`${review.id}-photo-${index}`}>
                                         <div className="relative w-full aspect-square">
                                             <Image
                                                 src={url}
@@ -430,7 +434,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                                 {photoUrls.map((url, index) => (
                                     <div
-                                        key={url}
+                                        key={`${review.id}-dot-${index}`}
                                         className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
                                     ></div>
                                 ))}
