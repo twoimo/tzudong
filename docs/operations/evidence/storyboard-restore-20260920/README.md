@@ -89,6 +89,8 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 관리자 `/admin?module=storyboard`에서 외부 AI 동의 없이 텍스트/이미지 공급자에 로컬 MLX, ChatGPT 수동, Grok 수동이 활성화되어 있고 OpenAI/xAI 공식 API는 disabled다. [화면](admin-storyboard-providers.png).
 - 스토리보드 프로젝트 acd96811 revision 25 ready 재확인. export `storyboard-export-v1` HTTP 200, 7,963,672 bytes, 파일 20개(PNG 5 · WebP 15). 공급자는 local-mlx 텍스트/이미지, externalAI false.
 - 같은 export 20개 파일을 Pillow로 모두 디코딩했다. SHA-256이 일치하고 원본 PNG는 1024×576, WebP 파생은 960×540과 480×270이다.
+- 버전 이력 API는 revision 12–25 목록을 반환한다(preview 없음). 로컬 피드 작성자는 여전히 `쯔동마스터`, `먹보쯔양팬`이며 GPS readiness는 `DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED`다.
+
 
 
 
