@@ -270,8 +270,8 @@ export const ReviewCard = React.memo(function ReviewCard({
     return (
         <div
             id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
-            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500 
-                ${review.isPinned ? "border-primary border-2" : "border-border"}
+            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500
+                ${review.isPinned ? "border-primary/70" : "border-border/70"}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
             {...cardInteractionProps}
@@ -319,7 +319,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             aria-label={`${review.restaurantName} 맛집 상세 보기`}
                         >
                             <MapPin className="w-3 h-3" />
-                            {review.restaurantName}
+                            <span className="text-[11px] leading-tight">{review.restaurantName}</span>
                         </button>
                     </div>
                 </div>

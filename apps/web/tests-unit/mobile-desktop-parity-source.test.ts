@@ -1104,6 +1104,9 @@ describe("mobile and desktop parity source contracts", () => {
       'const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";',
     );
     expect(source("app/home-client.tsx")).toContain(
+      "toast.error(describeDeviceLocationFailure(error));",
+    );
+    expect(source("app/home-client.tsx")).toContain(
       "toast.error(DEVICE_LOCATION_ENABLE_TOAST);",
     );
     expect(source("app/home-client.tsx")).toContain(

@@ -5,7 +5,9 @@ import { getPrimaryCategory, isRestaurantInViewport, type ExtendedBounds } from 
 import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
 
 const formatCoordForSignature = (value: number | null | undefined): string =>
-    typeof value === 'number' && Number.isFinite(value) ? value.toFixed(6) : 'na';
+    typeof value === 'number' && Number.isFinite(value)
+        ? value.toFixed(6)
+        : (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value).toFixed(6) : 'na');
 
 const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
     `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
@@ -13,10 +15,20 @@ const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'):
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
 function hasRenderableCoordinates(restaurant: Restaurant): restaurant is RestaurantWithRenderableCoordinates {
-    return typeof restaurant.lat === 'number'
-        && Number.isFinite(restaurant.lat)
-        && typeof restaurant.lng === 'number'
-        && Number.isFinite(restaurant.lng);
+    return hasNaverMarkerCoordinates(restaurant);
+}
+
+export function hasNaverMarkerCoordinates(restaurant: { lat?: unknown; lng?: unknown } | null | undefined) {
+    if (!restaurant) return false;
+    return isFiniteCoordinate(restaurant.lat) && isFiniteCoordinate(restaurant.lng);
+}
+
+function isFiniteCoordinate(value: unknown) {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    return Number.isFinite(Number(trimmed));
 }
 
 export function deriveClusterRenderPlan(
@@ -193,10 +205,16 @@ export function shouldReportNaverMarkerRenderPerformance({
 export function shouldClearEmptyClusterState({
     clusteringEnabled,
     displayRestaurantCount,
+    expandedRestaurantCount = 0,
 }: {
     clusteringEnabled: boolean;
     displayRestaurantCount: number;
+    expandedRestaurantCount?: number;
 }) {
+    if (expandedRestaurantCount > 0) {
+        return false;
+    }
+
     return !clusteringEnabled || displayRestaurantCount === 0;
 }
 
@@ -221,10 +239,16 @@ export function resolveSkippedEmptyThemeMarkerPlan({
 export function resolveEmptyClusterMarkerCleanupPlan({
     displayRestaurantCount,
     clusterCount,
+    expandedRestaurantCount = 0,
 }: {
     displayRestaurantCount: number;
     clusterCount: number;
+    expandedRestaurantCount?: number;
 }): 'render' | 'release' | 'retry' {
+    if (expandedRestaurantCount > 0) {
+        return 'render';
+    }
+
     if (displayRestaurantCount === 0) {
         return 'release';
     }

@@ -127,6 +127,7 @@ import {
     getVisibleRestaurantsForRender,
     nextEmptyIdentityArray,
     resolveEmptyClusterMarkerCleanupPlan,
+    hasNaverMarkerCoordinates,
     resolveSkippedEmptyThemeMarkerPlan,
     shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
@@ -448,7 +449,7 @@ function filterVisibleMarkerReviewBubbleViewportCandidates(
     const maxX = rect.width - bubbleHalfWidth - 16;
 
     const scoredRestaurants = restaurants.flatMap((restaurant) => {
-        if (typeof restaurant.lat !== 'number' || typeof restaurant.lng !== 'number') return [];
+        if (!hasNaverMarkerCoordinates(restaurant)) return [];
 
         try {
             const point = projection.fromCoordToOffset(
@@ -1991,8 +1992,43 @@ const NaverMapView = memo(({
         [displayRestaurants],
     );
 
-    const restaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
-    const { byId: restaurantById, idSet: displayRestaurantIds, mergedRestaurantIds, mergedRestaurantById } = restaurantLookup;
+    const expandedClusterRestaurantSnapshotRef = useRef(new Map<string, (typeof unfilteredDisplayRestaurants)[number]>());
+    const restaurantLookup = useMemo(() => {
+        const lookup = buildRestaurantLookup(unfilteredDisplayRestaurants);
+        lookup.byId.forEach((restaurant, id) => {
+            expandedClusterRestaurantSnapshotRef.current.set(id, restaurant);
+        });
+        lookup.mergedRestaurantById.forEach((restaurant, id) => {
+            if (!expandedClusterRestaurantSnapshotRef.current.has(id)) {
+                expandedClusterRestaurantSnapshotRef.current.set(id, restaurant);
+            }
+        });
+        return lookup;
+    }, [unfilteredDisplayRestaurants]);
+    const displayRestaurantLookup = useMemo(() => buildRestaurantLookup(displayRestaurants), [displayRestaurants]);
+    const { idSet: displayRestaurantIds, mergedRestaurantIds } = displayRestaurantLookup;
+    const restaurantById = useMemo(() => {
+        const next = new Map(restaurantLookup.byId);
+        if (expandedClusterRestaurantIds.length > 0) {
+            expandedClusterRestaurantSnapshotRef.current.forEach((restaurant, id) => {
+                if (!next.has(id)) {
+                    next.set(id, restaurant);
+                }
+            });
+        }
+        return next;
+    }, [restaurantLookup, expandedClusterRestaurantIds]);
+    const mergedRestaurantById = useMemo(() => {
+        const next = new Map(restaurantLookup.mergedRestaurantById);
+        if (expandedClusterRestaurantIds.length > 0) {
+            expandedClusterRestaurantSnapshotRef.current.forEach((restaurant, id) => {
+                if (!next.has(id)) {
+                    next.set(id, restaurant);
+                }
+            });
+        }
+        return next;
+    }, [restaurantLookup, expandedClusterRestaurantIds]);
     const markerVisibleActiveSearchedRestaurant =
         showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)
             ? activeSearchedRestaurant
@@ -2069,6 +2105,7 @@ const NaverMapView = memo(({
         if (shouldClearEmptyClusterState({
             clusteringEnabled: ENABLE_CLUSTERING,
             displayRestaurantCount: displayRestaurants.length,
+            expandedRestaurantCount: expandedClusterRestaurantIds.length,
         })) {
             setClusters((previous) => nextEmptyIdentityArray(previous));
             setRegionalClusters((previous) => nextEmptyIdentityArray(previous));
@@ -2166,7 +2203,7 @@ const NaverMapView = memo(({
             cancelled = true;
             cancelIdleWork(idleHandle);
         };
-    }, [displayRestaurants, selectedRegion, isMapInitialized, mapOptimization]);
+    }, [displayRestaurants, expandedClusterRestaurantIds.length, selectedRegion, isMapInitialized, mapOptimization]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {
@@ -2274,7 +2311,7 @@ const NaverMapView = memo(({
             if (visibleRestaurantIds.has(restaurantId)) return;
 
             const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
-            if (!restaurant?.lat || !restaurant?.lng) return;
+            if (!hasNaverMarkerCoordinates(restaurant)) return;
 
             visibleRestaurantIds.add(restaurantId);
             restaurantsForMarkerRender.push(restaurant);
@@ -2462,7 +2499,7 @@ const NaverMapView = memo(({
             if (expandedClusterRestaurantIds.length === 0) return;
             expandedClusterRestaurantIds.forEach((restaurantId) => {
                 const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
-                if (!restaurant || typeof restaurant.lat !== 'number' || typeof restaurant.lng !== 'number') return;
+                if (!hasNaverMarkerCoordinates(restaurant)) return;
 
                 activeIds.add(restaurant.id);
                 const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -2487,6 +2524,7 @@ const NaverMapView = memo(({
         const emptyClusterCleanupPlan = resolveEmptyClusterMarkerCleanupPlan({
             displayRestaurantCount: displayRestaurants.length,
             clusterCount: shouldUseRegionalCluster ? regionalClusters.length : 1,
+            expandedRestaurantCount: expandedClusterRestaurantIds.length,
         });
         if (emptyClusterCleanupPlan === 'release') {
             markerPool.releaseExcept(new Set());
@@ -2540,7 +2578,9 @@ const NaverMapView = memo(({
             });
 
             // 사용하지 않는 마커 반환
-            markerPool.releaseExcept(activeIds);
+            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0) {
+                markerPool.releaseExcept(activeIds);
+            }
             if (activeIds.size === 0 && displayRestaurants.length > 0) {
                 markerRenderSignatureRef.current = null;
                 scheduleMarkerRenderRetry();
@@ -2707,7 +2747,7 @@ const NaverMapView = memo(({
                                 bubble,
                                 isMobileOrTablet,
                             );
-                            const position = typeof restaurant?.lat === 'number' && typeof restaurant?.lng === 'number'
+                            const position = hasNaverMarkerCoordinates(restaurant)
                                 ? createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng)
                                 : new naver.maps.LatLng(lat, lng);
 
@@ -2762,7 +2802,9 @@ const NaverMapView = memo(({
             }
 
             // Cleanup
-            markerPool.releaseExcept(activeIds);
+            if (expandedClusterRestaurantIds.length === 0 || activeIds.size > 0) {
+                markerPool.releaseExcept(activeIds);
+            }
             if (activeIds.size === 0 && displayRestaurants.length > 0) {
                 markerRenderSignatureRef.current = null;
                 scheduleMarkerRenderRetry();

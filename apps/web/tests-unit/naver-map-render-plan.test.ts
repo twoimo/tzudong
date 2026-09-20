@@ -5,6 +5,7 @@ import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
     getRestaurantsWithRenderableCoordinates,
+    hasNaverMarkerCoordinates,
     getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
     nextEmptyIdentityArray,
@@ -64,6 +65,15 @@ describe('naver map render plan helpers', () => {
         ]);
 
         expect(result.map((restaurant) => restaurant.id)).toEqual(['valid', 'zero-lat']);
+    });
+
+    test('treats numeric coordinate strings as renderable marker coordinates', () => {
+        expect(hasNaverMarkerCoordinates({ lat: '37.5', lng: '127.0' })).toBe(true);
+        expect(hasNaverMarkerCoordinates({ lat: null, lng: 127.0 })).toBe(false);
+        const result = getRestaurantsWithRenderableCoordinates([
+            makeRestaurant({ id: 'string-coords', lat: '37.5' as any, lng: '127.0' as any }),
+        ]);
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['string-coords']);
     });
 
     test('filters Seoul individual marker candidates by id and coordinates', () => {
@@ -176,6 +186,18 @@ describe('naver map render plan helpers', () => {
             clusteringEnabled: true,
             displayRestaurantCount: 2,
         })).toBe(false);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 0,
+            expandedRestaurantCount: 3,
+        })).toBe(false);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: false,
+            displayRestaurantCount: 0,
+            expandedRestaurantCount: 2,
+        })).toBe(false);
     });
 
     test('reuses the previous empty array identity when clearing cluster collections', () => {
@@ -223,6 +245,18 @@ describe('naver map render plan helpers', () => {
         expect(resolveEmptyClusterMarkerCleanupPlan({
             displayRestaurantCount: 3,
             clusterCount: 1,
+        })).toBe('render');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 1,
+            expandedRestaurantCount: 4,
+        })).toBe('render');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 0,
+            expandedRestaurantCount: 2,
         })).toBe('render');
     });
 });
