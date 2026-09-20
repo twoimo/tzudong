@@ -85,6 +85,8 @@ Lifecycle source: [storyboard-local-mlx.lifecycle.json](docs/architecture/storyb
 
 Interactive map discovery: [map-discovery.html](docs/architecture/map-discovery/map-discovery.html)
 
+Live browser captures: [workflow](docs/operations/evidence/storyboard-restore-20260920/archify-storyboard-workflow-desktop.png) · [lifecycle](docs/operations/evidence/storyboard-restore-20260920/archify-storyboard-lifecycle-desktop.png) · [map discovery](docs/operations/evidence/storyboard-restore-20260920/archify-map-discovery-desktop.png)
+
 Map discovery source: [map-discovery.workflow.json](docs/architecture/map-discovery/map-discovery.workflow.json)
 
 The local workspace separates **new project creation**, **scene editing**, **version history**, and **manual result import**. Saved projects open directly on the scene editor; connection diagnostics are under Settings. Text and image providers remain independent: local MLX, ChatGPT manual import, and Grok manual import are selectable with external AI off. OpenAI/xAI official APIs stay gated and currently unconfigured. There is no automatic cloud fallback.
