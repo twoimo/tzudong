@@ -87,6 +87,8 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 공개 지도/피드의 남은 shadow-lg와 hover:scale을 shadow-sm/무스케일로 낮췄다. 재생 버튼 광학 정렬(translate-x-[1px])은 유지했다.
 - 공개 바텀시트 shadow-xl을 shadow-sm으로 낮췄다. 로컬 스토리보드 UI 계약 Playwright chromium 24건 통과. 수동 ChatGPT/Grok 프로젝트는 워커 재생성 버튼이 비활성이다.
 - 관리자 `/admin?module=storyboard`에서 외부 AI 동의 없이 텍스트/이미지 공급자에 로컬 MLX, ChatGPT 수동, Grok 수동이 활성화되어 있고 OpenAI/xAI 공식 API는 disabled다. [화면](admin-storyboard-providers.png).
+- 스토리보드 프로젝트 acd96811 revision 25 ready 재확인. export `storyboard-export-v1` HTTP 200, 7,963,672 bytes, 파일 20개(PNG 5 · WebP 15). 공급자는 local-mlx 텍스트/이미지, externalAI false.
+
 
 
 
