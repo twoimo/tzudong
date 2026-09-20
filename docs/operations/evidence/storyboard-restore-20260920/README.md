@@ -69,3 +69,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - export `storyboard-export-v1` 파일 20개(PNG 원본 5, WebP 15)를 Pillow로 모두 디코딩했다. 원본은 1024×576. [export-decode-rev24.json](export-decode-rev24.json).
 - 관리자 스토리보드 화면에서 프로젝트 revision 24, 장면 1 제목 `(복원)`, 저장 장면 5개·이미지 5개, 로컬 워커 Krea를 확인했다. [화면](admin-storyboard-rev24.png).
 - 장면 1 자막을 편집해 revision 25 ready가 되었다. 새 큐 job은 없었고 다른 네 장면 제목은 그대로였다.
+- 로컬 MLX 전송 계약 테스트 46개가 통과했다. DNS·원격 IP·리다이렉트·클라우드 호스트 호출 거절과 외부 공급자 명시 동의, PNG/WebP 파생 검증을 포함한다.
