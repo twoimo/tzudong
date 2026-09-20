@@ -110,3 +110,4 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 공개 시트·로그인·지도 플로팅 버튼의 그라데이션 타이틀과 두꺼운 테두리를 토큰 보더/solid primary로 줄였다. 프로덕션 배포와 GPS 실사용, 조회수 KPI 수집은 포함하지 않는다.
 - 공개 알림/북마크/프로필 헤더의 `from-background via-background to-muted` 그라데이션을 평평한 `bg-background`로 낮췄다. 커밋 `3f937664`.
 - 모바일 `/feed`에서 로그인·맛집 상세·리뷰 시트가 열리면 리뷰 작성 FAB를 숨긴다. 320px 로그인 시트에서 FAB가 안내 문구를 가리지 않았고, 설명은 `break-keep`이다. 커밋 `1986b54b`.
+- 공개 오버레이·지도 상세 패널의 `shadow-2xl`을 `shadow-sm`으로 낮췄다. 드롭다운 메뉴의 shadow-2xl 계약은 유지했다.

@@ -2387,7 +2387,7 @@ describe("web quality performance source contracts", () => {
     ).toBeGreaterThan(0);
     expect(
       overlayPanelSource.lastIndexOf(
-        '"rounded-2xl border border-border shadow-2xl overflow-hidden"',
+        '"rounded-2xl border border-border shadow-sm overflow-hidden"',
         userProfilePanelIndex,
       ),
     ).toBeGreaterThan(0);

@@ -1578,7 +1578,7 @@ function HomeMapContainerComponent({
                             <div
                                 className={cn(
                                     "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
-                                    "bg-background border-l border-border shadow-2xl",
+                                    "bg-background border-l border-border shadow-sm",
                                     "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
                                 )}
