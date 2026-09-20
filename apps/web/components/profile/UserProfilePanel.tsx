@@ -380,7 +380,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4 flex flex-col gap-4">
+            <div className="border-b border-border/70 bg-background p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
                         {showBackButton && !onClose && (

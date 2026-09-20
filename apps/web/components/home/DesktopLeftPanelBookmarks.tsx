@@ -40,7 +40,7 @@ export default function DesktopLeftPanelBookmarks({
       className="flex h-full min-h-0 flex-col bg-background"
       data-desktop-left-panel-view="bookmarks"
     >
-      <div className="border-b border-border bg-gradient-to-br from-background via-background to-muted/35 px-3 py-3 sm:px-4">
+      <div className="border-b border-border bg-background px-3 py-3 sm:px-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 flex-1 basis-[min(10rem,100%)]">
             <h2 className="flex min-w-0 items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
