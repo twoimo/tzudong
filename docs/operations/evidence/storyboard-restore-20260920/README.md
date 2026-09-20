@@ -91,6 +91,8 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 같은 export 20개 파일을 Pillow로 모두 디코딩했다. SHA-256이 일치하고 원본 PNG는 1024×576, WebP 파생은 960×540과 480×270이다.
 - 버전 이력 API는 revision 12–25 목록을 반환한다(preview 없음). 로컬 피드 작성자는 여전히 `쯔동마스터`, `먹보쯔양팬`이며 GPS readiness는 `DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED`다.
 - revision 24 미리보기는 장면 5개, 장면 1 제목 `가게 앞 인트로 (복원)` revision 14, original PNG + WebP 3개를 반환한다. 복원 RPC는 호출하지 않았다.
+- 현재 revision 25 장면 1 캡션은 `매운 짜장라면 맛집 탐방 (편집 검수)`이고, 24/19/16 미리보기는 `(복원)`이다. 장면 revision은 15→14→11→9로 다르고 원본 PNG 경로는 같다. 복원은 호출하지 않았다.
+
 
 
 
