@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "supplementary-cua-browser",
+  "recordedAt": "2026-09-20T10:00:31.153395+00:00",
+  "diagramType": "workflow",
+  "artifact": {
+    "path": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html",
+    "sha256": "d512105bd7c62b29f305cd197b57e5a73c87329aa066c7432f57d72048292f5f",
+    "bytes": 815220
+  },
+  "specification": {
+    "path": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json",
+    "sha256": "3cc9755906f8bee5d40f262ddb6e4bd56920d5d25d5814a6d8aaf5c40fe390ec",
+    "bytes": 5139
+  },
+  "automatedVisualCheck": {
+    "status": "not_run",
+    "exitCode": null,
+    "reason": "The active browser tool requires browser interaction exclusively through CUA; packaged visual-check launches a separate DevTools-pipe browser. This record is not its receipt."
+  },
+  "browser": "CUA Codex In-app Browser",
+  "state": {
+    "view": "READ",
+    "motion": "Still",
+    "preset": "classic"
+  },
+  "containment": [
+    {
+      "theme": "light",
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "scrollHeight": 900,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "width": 1600,
+      "height": 1000,
+      "scrollWidth": 1600,
+      "scrollHeight": 1000,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "height": 1080,
+      "scrollWidth": 1920,
+      "scrollHeight": 1080,
+      "pass": true
+    },
+    {
+      "theme": "light",
+      "width": 2048,
+      "height": 1320,
+      "scrollWidth": 2048,
+      "scrollHeight": 1320,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "width": 1440,
+      "height": 900,
+      "scrollWidth": 1440,
+      "scrollHeight": 900,
+      "pass": true
+    },
+    {
+      "theme": "dark",
+      "width": 2048,
+      "height": 1320,
+      "scrollWidth": 2048,
+      "scrollHeight": 1320,
+      "pass": true
+    }
+  ],
+  "perceptualReview": {
+    "status": "passed",
+    "scope": "Light and dark at 1440x900 and 2048x1320; readable nodes/cards and separate routes; no clipping or page overflow. Screenshots inspected in the task tool outputs, not persisted as new PNG files."
+  },
+  "correction_rounds": 0,
+  "interactions": [
+    "Theme toggle preserved Classic; default READ view reviewed."
+  ],
+  "limitations": [
+    "Packaged visual-check was not run; no automated-browser pass is claimed.",
+    "Fixed Viewer UI and html lang fall back to English; authored diagram copy is Korean.",
+    "Existing visual-check PNG/contact sheets bind older HTML and are historical, not current evidence."
+  ]
+}

@@ -4,44 +4,7 @@
   "meta": {
     "title": "쯔동 스토리보드 상태 전이",
     "output": "docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.html",
-    "animation": "trace",
     "quality_profile": "showcase",
-    "views": [
-      {
-        "id": "main-rail",
-        "label": "생성 레일",
-        "focus": [
-          "waiting_worker",
-          "queued",
-          "generating",
-          "partial",
-          "ready"
-        ],
-        "note": "claim 후 직렬 이미지. 큐 등록만으로는 성공이 아니다."
-      },
-      {
-        "id": "lease-wait",
-        "label": "lease와 대기",
-        "focus": [
-          "generating",
-          "awaiting_import",
-          "partial",
-          "lease_expired"
-        ],
-        "note": "heartbeat 없으면 W=∞. 클라우드 전환 없음."
-      },
-      {
-        "id": "restore-exits",
-        "label": "복원과 종료",
-        "focus": [
-          "ready",
-          "awaiting_import",
-          "failed",
-          "cancelled"
-        ],
-        "note": "restore ≡ edit; regenerate(scene). failed/cancelled는 종단."
-      }
-    ],
     "viewBox": [
       1030,
       630
@@ -58,7 +21,7 @@
     },
     {
       "id": "terminal",
-      "label": "종단 상태"
+      "label": "명시적 재시도 가능"
     }
   ],
   "states": [
@@ -66,7 +29,7 @@
       "id": "waiting_worker",
       "type": "start",
       "label": "waiting_worker",
-      "sublabel": "heartbeat 없으면 W=∞",
+      "sublabel": "워커 부재: 대기 미정",
       "lane": "main",
       "col": 0,
       "step": "01",
@@ -76,7 +39,7 @@
       "id": "queued",
       "type": "active",
       "label": "queued",
-      "sublabel": "J=queued, 미편집",
+      "sublabel": "job 상태 · claim 전",
       "lane": "main",
       "col": 1,
       "step": "02",
@@ -106,7 +69,7 @@
       "id": "ready",
       "type": "success",
       "label": "ready",
-      "sublabel": "edit; regen; export",
+      "sublabel": "편집 · 이력 복원 · 내보내기",
       "lane": "main",
       "col": 4,
       "step": "05",
@@ -134,19 +97,19 @@
       "id": "failed",
       "type": "failure",
       "label": "failed",
-      "sublabel": "허위 성공 없음",
+      "sublabel": "명시적 retry 가능",
       "lane": "terminal",
       "col": 0,
-      "tag": "terminal"
+      "tag": "retry"
     },
     {
       "id": "cancelled",
       "type": "failure",
       "label": "cancelled",
-      "sublabel": "늦은 결과 폐기",
+      "sublabel": "명시적 retry 가능",
       "lane": "terminal",
       "col": 1,
-      "tag": "terminal"
+      "tag": "retry"
     }
   ],
   "transitions": [
@@ -154,56 +117,150 @@
       "id": "need-import",
       "from": "generating",
       "to": "awaiting_import",
-      "variant": "security",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "route": "straight"
+      "label": "수동 이미지",
+      "labelAt": [
+        402,
+        202
+      ]
     },
     {
       "id": "lease-lost",
       "from": "partial",
       "to": "lease_expired",
-      "route": "drop"
+      "label": "lease 만료",
+      "labelAt": [
+        556,
+        202
+      ]
     },
     {
-      "id": "import-failed",
-      "from": "awaiting_import",
+      "id": "generation-failed",
+      "from": "generating",
       "to": "failed",
       "variant": "security",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "route": "straight"
+      "label": "실패",
+      "via": [
+        [
+          320,
+          157
+        ],
+        [
+          320,
+          479
+        ]
+      ],
+      "fromSide": "left",
+      "toSide": "left"
     },
     {
-      "id": "lease-cancel",
-      "from": "lease_expired",
+      "id": "cancel-job",
+      "from": "generating",
       "to": "cancelled",
       "variant": "security",
+      "label": "취소"
+    },
+    {
+      "id": "retry-failed",
+      "from": "failed",
+      "to": "queued",
+      "variant": "emphasis",
+      "label": "명시적 retry",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          402,
+          524
+        ],
+        [
+          248,
+          524
+        ]
+      ],
+      "labelAt": [
+        325,
+        522
+      ]
+    },
+    {
+      "id": "retry-cancelled",
+      "from": "cancelled",
+      "to": "waiting_worker",
+      "variant": "emphasis",
+      "label": "명시적 retry",
       "fromSide": "bottom",
       "toSide": "top",
-      "route": "straight"
+      "via": [
+        [
+          556,
+          548
+        ],
+        [
+          170,
+          548
+        ],
+        [
+          170,
+          86
+        ],
+        [
+          94,
+          86
+        ]
+      ],
+      "labelSegment": 2
+    },
+    {
+      "id": "lease-reclaim",
+      "from": "lease_expired",
+      "to": "generating",
+      "variant": "dashed",
+      "label": "유효 lease로 재claim",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          632,
+          307
+        ],
+        [
+          632,
+          72
+        ],
+        [
+          402,
+          72
+        ]
+      ],
+      "labelAt": [
+        632,
+        240
+      ]
     }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Memory bound",
+      "title": "메모리 · 추정치",
       "items": [
-        "M=128GiB; c=1; Σ r_i ≤ M_headroom; disk ≠ resident; PNG/WebP off-budget"
+        "used + additionalPeakEstimate + reserve ≤ physical",
+        "reserve = max(16 GiB, physical × 12.5%). 추론·PNG/WebP·업로드 버퍼 포함; 디스크 용량 ≠ 상주량. 통과는 보장 아님"
       ]
     },
     {
       "dot": "amber",
-      "title": "Queue wait",
+      "title": "큐 · Lindley 추정",
       "items": [
-        "W=t_claim-t_enq iff hb else ∞; h∈[1,30s]; stale 409; Δt=265122ms is gen"
+        "W[n+1] = max(0, W[n] + S[n] − A[n])",
+        "단일 워커·c=1 근사: S는 처리시간, A는 도착 간격. 활성 워커 부재는 미정. 대기와 생성시간 구분"
       ]
     },
     {
       "dot": "rose",
-      "title": "FSM invariants",
+      "title": "이력 복원 · 새 revision",
       "items": [
-        "409 rev/busy; exclusive; lease_lost no write; restore≡edit;regen; fail-closed; no stale"
+        "불변 스냅샷 → 원본 metadata/bytes 검사 → owner·replay·CAS·busy RPC → 새 revision",
+        "복원 장면 = max(현재, 이력) + 1. 모델·job 없음; providers·동의 유지. 실패·취소 뒤 retry는 조건 충족 시 새 job"
       ]
     }
   ]

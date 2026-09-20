@@ -544,5 +544,8 @@
   "sidecars": {
     "receipt": "storyboard-local-mlx.visual-check.json",
     "contactSheet": "storyboard-local-mlx.visual-check.html"
-  }
+  },
+  "currentArtifact": false,
+  "supersededBy": "storyboard-local-mlx.cua-visual-check.json",
+  "notice": "Historical automated-browser evidence for the artifact hash above; not a pass for the current delivered HTML. Current supplementary CUA evidence is separate."
 }
