@@ -91,7 +91,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                         "rounded-full shadow-xl",
                         "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
-                        "border-2",
+                        "border",
                         showUserSubmittedMarkers
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent"
                             : "bg-background hover:bg-secondary text-foreground border-border/70"
@@ -118,7 +118,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     "transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none",
                     "hover:scale-110 active:scale-95",
                     "flex items-center justify-center",
-                    "border-2 border-border/20"
+                    "border border-border/20"
                 )}
                 title="맛집 제보하기"
             >
@@ -136,7 +136,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                         "rounded-full shadow-xl",
                         "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
-                        "border-2",
+                        "border",
                         isDeviceHeadingMode
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
                             : deviceLocation

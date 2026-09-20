@@ -1171,7 +1171,7 @@ function MobileControlOverlayComponent({
                             'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
                             'transition-colors duration-150 ease-out motion-reduce:transition-none',
                             'flex items-center justify-center',
-                            'border-2'
+                            'border'
                         )}
                     >
                         <List className="h-5 w-5" aria-hidden="true" />
@@ -1191,7 +1191,7 @@ function MobileControlOverlayComponent({
                             'h-12 w-12 rounded-full shadow-lg',
                             'transition-colors duration-150 ease-out motion-reduce:transition-none',
                             'flex items-center justify-center',
-                            'border-2',
+                            'border',
                             showUserSubmittedMarkers
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
                                 : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
@@ -1220,7 +1220,7 @@ function MobileControlOverlayComponent({
                                 'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
                                 'hover:scale-110 active:scale-95',
                                 'flex items-center justify-center',
-                                'border-2 border-border/20'
+                                'border border-border/20'
                             )}
                             title="맛집 제보하기"
                             aria-label="맛집 제보하기"
@@ -1247,7 +1247,7 @@ function MobileControlOverlayComponent({
                                 'h-12 w-12 rounded-full shadow-lg',
                                 'transition-colors duration-150 ease-out motion-reduce:transition-none',
                                 'flex items-center justify-center',
-                                'border-2',
+                                'border',
                                 isDeviceHeadingMode
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
                                     : deviceLocation

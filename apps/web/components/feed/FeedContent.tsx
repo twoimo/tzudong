@@ -679,7 +679,7 @@ export default function FeedContent({
                         <Button
                             onClick={handleWriteReview}
                             className={cn(
-                                "h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90",
+                                "h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90",
                                 isOverlay
                                     ? "absolute right-8 bottom-8 z-[100]"
                                     : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
