@@ -71,7 +71,7 @@ export function getVisibleRestaurantsForRender(
 
     return restaurantsForSwipe.filter(
         (restaurant) =>
-            restaurant.id === selectedRestaurantId ||
+            (selectedRestaurantId != null && restaurant.id === selectedRestaurantId) ||
             isRestaurantInViewport(restaurant, extendedBounds)
     );
 }

@@ -86,6 +86,9 @@ export function buildNaverRestaurantsQueryOptions({
     };
 }
 export function resolveNaverRestaurantEmptyStateMessage(filters: Pick<FilterState, 'categories' | 'featuredTheme' | 'minReviews'>): string {
+    if (filters.featuredTheme === 'hot-view' || filters.featuredTheme === 'comment-hot' || filters.featuredTheme === 'fan-signal') {
+        return '이 테마는 조회수·댓글 지표가 있는 맛집만 보여줍니다';
+    }
     if (filters.featuredTheme) return '선택한 테마에 맞는 맛집이 없습니다';
     if (filters.categories.length > 0 || (filters.minReviews ?? 0) > 0) return '선택한 조건에 맞는 맛집이 없습니다';
 

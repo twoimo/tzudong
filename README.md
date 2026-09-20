@@ -91,6 +91,8 @@ The memory admission model is `used + additional_peak_estimate + reserve <= phys
 
 **Local evidence (2026-09-20):** real-model project v12 → edit v13 → scene restore v14 → full undo v15 → full restore v16. All 20 exported PNG/WebP files matched their original hashes and decoded successfully; these three restores created zero jobs. See the [verification report and responsive screenshots](docs/operations/evidence/storyboard-restore-20260920/README.md). Local migration and UI verification do not establish hosted migration, external Web review or production deployment.
 
+**Map evidence (2026-09-20):** Seoul cluster expand kept 357 individual markers. Filtered list still opened restaurant detail. YouTube play control stayed centered. GPS button remains blocked with `DEVICE_LOCATION_OPERATOR_EVIDENCE_REQUIRED` until operator evidence hashes exist. Local DB has 0 reviews, so reviewer-join and review-image rendering were not live-verified. View/comment theme chips stay empty because `youtube_meta.viewCount`/`commentCount` and `youtube_video_kpi_snapshots` are all null/empty locally; recent-video and repeat-visit chips do filter. Hosted apply is still separate.
+
 ## Privacy
 
 Source safeguards stay fail-closed: challenge-bound account creation, no under-14 registration until a verified guardian path exists, purpose/channel marketing consent with a separate night grant, shared redaction, memory-only device location, and Preview → Confirm → Apply → Readback → Audit for deletion/retention/incidents.

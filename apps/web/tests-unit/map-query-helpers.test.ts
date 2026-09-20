@@ -145,6 +145,12 @@ describe('map query helpers', () => {
             categories: [],
             featuredTheme: 'hot-view' as never,
             minReviews: 0,
+        })).toBe('이 테마는 조회수·댓글 지표가 있는 맛집만 보여줍니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
+            featuredTheme: 'fresh-video' as never,
+            minReviews: 0,
         })).toBe('선택한 테마에 맞는 맛집이 없습니다');
 
         expect(resolveNaverRestaurantEmptyStateMessage({
