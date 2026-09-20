@@ -68,7 +68,7 @@ export function MapViewDetailPanelShell({
 }) {
     return (
         <div
-            className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+            className={`h-full relative shadow-sm bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
             style={{ overflow: 'visible' }}
             onMouseDownCapture={onMouseDownCapture}
             onFocusCapture={onFocusCapture}

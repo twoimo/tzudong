@@ -1625,7 +1625,7 @@ function HomeMapContainerComponent({
                                 ref={sheetContainerRef}
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-[80] pointer-events-auto',
-                                    'bg-background shadow-xl',
+                                    'bg-background shadow-sm',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'min-h-0 min-w-0 overflow-hidden flex flex-col',
                                     isDragging ? '' : 'transition-[height,border-radius]',
