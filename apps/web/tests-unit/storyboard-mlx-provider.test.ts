@@ -42,6 +42,24 @@ describe('local storyboard contracts', () => {
     }
     expect(storyboardProductionRequestSchema.parse({ workflow: STORYBOARD_WORKFLOW, requestId: randomUUID(), prompt: '요청', sceneCount: 5 }).providers.externalAI).toBe(false);
   });
+  test('allows mixed local MLX and manual ChatGPT/Grok providers without cloud AI', () => {
+    const policy = request().providers;
+    expect(() => assertStoryboardProviderPolicy({
+      ...policy,
+      text: { id: 'chatgpt-manual', model: '' },
+      image: { id: 'local-mlx', model: 'installed-image' },
+    })).not.toThrow();
+    expect(() => assertStoryboardProviderPolicy({
+      ...policy,
+      text: { id: 'local-mlx', model: 'installed-text' },
+      image: { id: 'grok-manual', model: '' },
+    })).not.toThrow();
+    expect(() => assertStoryboardProviderPolicy({
+      ...policy,
+      text: { id: 'openai-api', model: 'selected' },
+      image: { id: 'local-mlx', model: 'installed-image' },
+    })).toThrow('external_ai_disabled');
+  });
   test('rejects missing models and scene count bounds', () => {
     expect(() => assertStoryboardProviderPolicy({ ...request().providers, image: { id: 'local-mlx', model: '' } })).toThrow('model_not_selected');
     for (const sceneCount of [0, 4, 13, 5.5]) expect(storyboardProductionRequestSchema.safeParse({ ...request(), sceneCount }).success).toBe(false);
