@@ -1,0 +1,17 @@
+{
+  "schema": "storyboard-export-v1",
+  "projectId": "acd96811-9c82-4164-a825-876187055321",
+  "revision": 24,
+  "exportBytes": 7963658,
+  "files": 20,
+  "decoded": 20,
+  "kinds": {
+    "image/png": 5,
+    "image/webp": 15
+  },
+  "originalSize": [
+    1024,
+    576
+  ],
+  "note": "Local export after scene-1 regenerate then restore to revision 19. All 20 payloads decoded with Pillow. Not a production export receipt."
+}
