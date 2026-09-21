@@ -766,7 +766,7 @@ def main():
                     tid = data.get("trace_id")
                     if tid:
                         existing_trace_ids.add(tid)
-                except:
+                except (json.JSONDecodeError, AttributeError):
                     pass
 
     print(f"기존 trace_id: {len(existing_trace_ids)}개")
