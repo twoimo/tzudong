@@ -123,16 +123,21 @@ describe('home map contextual visible-marker restaurants', () => {
     const homeClientSource = source('app/home-client.tsx');
     const containerSource = source('components/home/home-map-container.tsx');
     const controlPanelSource = source('components/home/home-control-panel.tsx');
+    const swipeRestaurantSource = source('lib/home-map-swipe-restaurants.ts');
 
     expect(homeClientSource).toContain('const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =');
     expect(homeClientSource).toContain('onContextualRestaurantsChange={setContextualRestaurantsPayload}');
     expect(homeClientSource).toContain('contextualRestaurantsPayload={contextualRestaurantsPayload}');
 
-    expect(containerSource).toContain('const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) =>');
+    expect(containerSource).toContain("from '@/lib/home-map-swipe-restaurants'");
+    expect(containerSource).toContain('const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);');
     expect(containerSource).toContain('onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload | null) => void;');
     expect(containerSource).toContain('clearContextualRestaurants(EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS);');
     expect(containerSource).toContain('clearContextualRestaurants(EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS);');
-    expect(containerSource).toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
+    expect(swipeRestaurantSource).toContain('const hasSameSwipeCoordinates = (a: Restaurant, b: Restaurant) =>');
+    expect(swipeRestaurantSource).toContain('const claimedIds = new Set<string>();');
+    expect(swipeRestaurantSource).toContain('keptByName.get(restaurant.name)?.some((existing) => hasSameSwipeCoordinates(existing, restaurant))');
+    expect(swipeRestaurantSource).not.toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
     expect(containerSource).toContain('onContextualRestaurantsChange={handleContextualRestaurantsChange}');
     expect(containerSource).toContain('buildSwipeableRestaurantsSignature(uniqueRestaurants)');
     expect(containerSource).toContain('lastSwipeableRestaurantsSignatureByModeRef.current[targetMode]');
