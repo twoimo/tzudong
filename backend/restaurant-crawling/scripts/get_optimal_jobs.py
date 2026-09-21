@@ -8,7 +8,7 @@ def get_optimal_jobs():
         cores = os.cpu_count()
         if cores is None:
             cores = 2
-    except:
+    except Exception:
         cores = 2
 
     # 최소 2개, 최대 8개로 제한 (너무 많은 API 동시 호출 시 Rate Limit/Quota Error 방지)
