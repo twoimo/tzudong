@@ -6,7 +6,33 @@
 
 import os
 import json
-from typing import Set, List, Dict, Any, Callable
+from typing import Any, Callable, Dict, Iterator, List, Set, Tuple
+
+
+def _iter_jsonl_objects(file_path: str) -> Iterator[Tuple[int, Dict[str, Any]]]:
+    """
+    JSONL 파일에서 JSON 객체(dict)만 (라인 번호, 객체) 쌍으로 순회
+
+    깨진 JSON과, 파싱은 되었지만 객체가 아닌 값(숫자/문자열/배열/null)은
+    경고만 남기고 건너뛴다. 손상된 줄 하나가 장시간 실행 전체를 중단시키지 않는다.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            try:
+                data = json.loads(stripped)
+            except json.JSONDecodeError as e:
+                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
+                continue
+
+            if not isinstance(data, dict):
+                print(f"[WARN]  JSON 객체가 아님 (라인 {line_num}): {type(data).__name__}")
+                continue
+
+            yield line_num, data
 
 
 def load_processed_urls(file_path: str) -> Set[str]:
@@ -28,19 +54,9 @@ def load_processed_urls(file_path: str) -> Set[str]:
     if not os.path.exists(file_path):
         return urls
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
-                continue
-            
-            try:
-                data = json.loads(line)
-                if 'youtube_link' in data:
-                    urls.add(data['youtube_link'])
-            except json.JSONDecodeError as e:
-                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
-                continue
+    for _, data in _iter_jsonl_objects(file_path):
+        if 'youtube_link' in data:
+            urls.add(data['youtube_link'])
     
     return urls
 
@@ -70,27 +86,19 @@ def load_processed_restaurants(
     if not os.path.exists(file_path):
         return restaurants
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
+    for line_num, data in _iter_jsonl_objects(file_path):
+        # nested_key가 있는 경우 (예: {'restaurants': [...]})
+        if nested_key and nested_key in data:
+            nested = data[nested_key]
+            if not isinstance(nested, (list, tuple)):
+                print(f"[WARN]  {nested_key} 값이 배열이 아님 (라인 {line_num}): {type(nested).__name__}")
                 continue
-            
-            try:
-                data = json.loads(line)
-                
-                # nested_key가 있는 경우 (예: {'restaurants': [...]})
-                if nested_key and nested_key in data:
-                    for restaurant in data[nested_key]:
-                        if key in restaurant and restaurant[key]:
-                            restaurants.add(restaurant[key])
-                # nested_key가 없는 경우 (예: 각 라인이 restaurant)
-                elif not nested_key and key in data and data[key]:
-                    restaurants.add(data[key])
-                    
-            except json.JSONDecodeError as e:
-                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
-                continue
+            for restaurant in nested:
+                if isinstance(restaurant, dict) and key in restaurant and restaurant[key]:
+                    restaurants.add(restaurant[key])
+        # nested_key가 없는 경우 (예: 각 라인이 restaurant)
+        elif not nested_key and key in data and data[key]:
+            restaurants.add(data[key])
     
     return restaurants
 
@@ -115,19 +123,9 @@ def load_processed_unique_ids(file_path: str) -> Set[str]:
     if not os.path.exists(file_path):
         return ids
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
-                continue
-            
-            try:
-                data = json.loads(line)
-                if 'unique_id' in data and data['unique_id']:
-                    ids.add(data['unique_id'])
-            except json.JSONDecodeError as e:
-                print(f"[WARN]  JSON 파싱 오류 (라인 {line_num}): {e}")
-                continue
+    for _, data in _iter_jsonl_objects(file_path):
+        if 'unique_id' in data and data['unique_id']:
+            ids.add(data['unique_id'])
     
     return ids
 
