@@ -6,7 +6,10 @@ import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
-import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import {
+    filterHomeMapRestaurantsByMode,
+    getOverseasCountryKeywords,
+} from '@/lib/home-map-mode-filter';
 import {
     APP_HEADER_HEIGHT_VAR,
     resetMobileSheetLayoutState,
@@ -119,16 +122,6 @@ const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
-const KOREA_BOUNDS = {
-    minLat: 33,
-    maxLat: 39,
-    minLng: 124,
-    maxLng: 132,
-} as const;
-const OVERSEAS_KEYWORDS = Object.values(OVERSEAS_REGIONS).flatMap(config =>
-    config.keywords.map((keyword) => keyword.toLowerCase())
-);
-
 type SheetSnapTransition = {
     duration: number;
     easing: string;
@@ -261,54 +254,16 @@ function HomeMapContainerComponent({
         () => (mapMode === 'domestic' ? swipeableRestaurantsByMode.domestic : swipeableRestaurantsByMode.overseas),
         [mapMode, swipeableRestaurantsByMode]
     );
-    const getRestaurantAddressText = useCallback((restaurant: Restaurant) => {
-        return `${restaurant.road_address || ''} ${restaurant.jibun_address || ''} ${restaurant.english_address || ''}`.toLowerCase();
-    }, []);
+    const getSelectedCountryKeywords = useMemo(
+        () => getOverseasCountryKeywords(selectedCountry),
+        [selectedCountry],
+    );
 
-    const isOverseasByCoordinate = useCallback((restaurant: Restaurant) => {
-        const lat = Number(restaurant.lat);
-        const lng = Number(restaurant.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            return false;
-        }
-
-        return (
-            lat < KOREA_BOUNDS.minLat ||
-            lat > KOREA_BOUNDS.maxLat ||
-            lng < KOREA_BOUNDS.minLng ||
-            lng > KOREA_BOUNDS.maxLng
-        );
-    }, []);
-
-    const getSelectedCountryKeywords = useMemo(() => {
-        if (!selectedCountry || !(selectedCountry in OVERSEAS_REGIONS)) {
-            return null;
-        }
-
-        return OVERSEAS_REGIONS[selectedCountry as keyof typeof OVERSEAS_REGIONS]
-            .keywords
-            .map((keyword) => keyword.toLowerCase());
-    }, [selectedCountry]);
-
-    const getRestaurantListByMode = useCallback((restaurants: Restaurant[]) => {
-        if (!restaurants.length) return [];
-
-        return restaurants.filter((restaurant) => {
-            const addressText = getRestaurantAddressText(restaurant);
-            const hasOverseasKeyword = OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
-            const isOverseasCoord = isOverseasByCoordinate(restaurant);
-
-            if (mapMode === 'domestic') {
-                return !hasOverseasKeyword && !isOverseasCoord;
-            }
-
-            if (getSelectedCountryKeywords?.length) {
-                return getSelectedCountryKeywords.some((keyword) => addressText.includes(keyword));
-            }
-
-            return hasOverseasKeyword || isOverseasCoord;
-        });
-    }, [getRestaurantAddressText, getSelectedCountryKeywords, isOverseasByCoordinate, mapMode]);
+    // 모드 분류는 lib/home-map-mode-filter 로 옮겼습니다. 이전에는 호출마다
+    // 식당별 주소 문자열을 다시 만들고 키워드 35개를 각각 includes 로 훑었습니다.
+    const getRestaurantListByMode = useCallback((restaurants: Restaurant[]) =>
+        filterHomeMapRestaurantsByMode(restaurants, mapMode, getSelectedCountryKeywords),
+    [getSelectedCountryKeywords, mapMode]);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;

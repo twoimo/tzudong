@@ -5,6 +5,12 @@ import { join } from "node:path";
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
+// The single page-level surface class string, used to guard against
+// viewport-clamped rows that previously clipped the password form.
+const profilePageSurfaceClass = (profileSource: string) =>
+  profileSource.match(/className="grid min-w-0 gap-3 rounded-2xl[^"]*"/)?.[0] ??
+  "";
+
 describe("mypage mobile cleanup source contracts", () => {
   test("layout fills the viewport without duplicate return chrome", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
@@ -201,9 +207,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("lg:text-xs");
     expect(profileSource).not.toContain("lg:text-base");
     expect(profileSource).toContain('data-mypage-profile-density="dashboard-matrix"');
-    expect(profileSource).toContain('data-mypage-profile-viewport-fit="true"');
-    expect(profileSource).toContain('data-mypage-profile-matrix="equal-2x2"');
-    expect(profileSource).toContain('data-mypage-profile-matrix-size="equal-track-fill"');
+    expect(profileSource).toContain('data-mypage-profile-viewport-fit="content"');
+    expect(profileSource).toContain('data-mypage-profile-matrix="content-2x2"');
+    expect(profileSource).toContain('data-mypage-profile-matrix-size="content-track"');
     expect(profileSource).toContain("md:min-h-0");
     expect(profileSource).toContain("md:content-stretch md:items-stretch");
     expect(profileSource).not.toContain(
@@ -237,7 +243,15 @@ describe("mypage mobile cleanup source contracts", () => {
       'variant="ghost"\n          className="h-9 w-full rounded-xl text-xs"',
     );
     expect(profileSource).toContain("md:h-full");
-    expect(profileSource).toContain("md:grid-rows-2");
+    // The page surface must stay content-sized: pinning two viewport rows
+    // clipped the password form inside its card.
+    expect(profilePageSurfaceClass(profileSource)).toContain(
+      "rounded-2xl border border-border/70",
+    );
+    expect(profilePageSurfaceClass(profileSource)).not.toContain(
+      "md:grid-rows-2",
+    );
+    expect(profilePageSurfaceClass(profileSource)).not.toContain("md:h-full");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
     expect(profileSource).toContain(
       "md:grid-cols-2",
@@ -387,7 +401,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const profileSource = source("app/mypage/profile/page.tsx");
 
     expect(profileSource).toContain(
-      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"',
+      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"',
     );
     expect(profileSource).toContain('data-mypage-profile-page="true"');
 
@@ -606,7 +620,7 @@ describe("mypage mobile cleanup source contracts", () => {
       "aria-label={`${bookmark.restaurant.name} 북마크 삭제`}",
     );
     expect(bookmarksSource).toContain(
-      "h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive",
+      "h-11 w-11 shrink-0 touch-manipulation text-muted-foreground hover:text-destructive",
     );
     expect(reviewsSource).toContain(
       "aria-label={`${review.restaurantName} 리뷰 수정`}",
@@ -624,5 +638,37 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(reviewsSource).toContain(
       "h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive",
     );
+  });
+
+  test("mypage list cards avoid cramped md columns and clipped card content", () => {
+    const sectionFrameSource = source("components/mypage/MyPageSectionFrame.tsx");
+    const bookmarksSource = source("app/mypage/bookmarks/page.tsx");
+    const reviewsSource = source("app/mypage/reviews/page.tsx");
+
+    // md columns stay single-track: the sidebar leaves ~465px there, so a
+    // two-up grid produced ~227px cards that clipped their own header rows.
+    expect(sectionFrameSource).toContain(
+      '"grid gap-3 lg:grid-cols-2 2xl:grid-cols-3"',
+    );
+    expect(sectionFrameSource).not.toContain("md:grid-cols-2");
+
+    // Load-more rows must span the same track count as the list grid.
+    expect(bookmarksSource).toContain("lg:col-span-2 2xl:col-span-3");
+    expect(reviewsSource).toContain("lg:col-span-2 2xl:col-span-3");
+
+    // Cards that mix a thumbnail with text must let the text column shrink
+    // and keep the action button fixed instead of overflowing the card.
+    expect(bookmarksSource).toContain(
+      '<div className="flex min-w-0 flex-col gap-3 sm:flex-row md:gap-4">',
+    );
+    expect(bookmarksSource).toContain(
+      '<div className="relative aspect-video w-full shrink-0 overflow-hidden rounded bg-muted sm:w-32">',
+    );
+    expect(bookmarksSource).toContain('<div className="min-w-0 flex-1">');
+    expect(bookmarksSource).toContain(
+      'sizes="(max-width: 640px) 100vw, 128px"',
+    );
+    expect(reviewsSource).toContain('<div className="min-w-0 flex-1">');
+    expect(reviewsSource).toContain('<div className="flex shrink-0 gap-1">');
   });
 });

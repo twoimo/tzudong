@@ -984,12 +984,12 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"
+      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
-      data-mypage-profile-viewport-fit="true"
-      data-mypage-profile-matrix="equal-2x2"
-      data-mypage-profile-matrix-size="equal-track-fill"
+      data-mypage-profile-viewport-fit="content"
+      data-mypage-profile-matrix="content-2x2"
+      data-mypage-profile-matrix-size="content-track"
       data-mypage-profile-mobile-flow="stack"
       data-mypage-profile-desktop-flow="matrix-2x2"
     >

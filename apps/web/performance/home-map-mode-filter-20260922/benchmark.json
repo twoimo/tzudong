@@ -1,0 +1,266 @@
+{
+  "generatedAt": "2026-09-21T15:15:59.141Z",
+  "baselineSource": {
+    "file": "apps/web/performance/home-map-mode-filter-20260922/benchmark-home-map-mode-filter.mjs",
+    "note": "이전 경로는 근사가 아니라 추출 직전 구현(getRestaurantListByMode)을 이 스크립트 안에 동결한 사본입니다."
+  },
+  "workload": {
+    "sizes": [
+      300,
+      1000,
+      2000,
+      4000
+    ],
+    "profiles": [
+      "domestic",
+      "overseas-plain",
+      "overseas-country"
+    ],
+    "overseasRatioTarget": 0.16,
+    "repetitions": 21,
+    "measurementTargetMs": 12,
+    "iterationRule": "구현마다 반복 횟수를 보정해 표본을 약 12ms 창에 넣고, 표본을 반복 횟수로 나눠 호출 1회 시간을 비교합니다."
+  },
+  "equivalence": "identical",
+  "mismatches": 0,
+  "budgets": {
+    "absolute": {
+      "listP95MsMax": 16,
+      "rule": "목록 1회 필터 p95는 한 프레임(16ms) 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 2,
+      "rule": "중앙값 기준 2배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 구현의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "measurements": [
+    {
+      "size": 300,
+      "profile": "domestic",
+      "keptCount": 251,
+      "beforeIterations": 61,
+      "afterIterations": 696,
+      "beforeMedianMs": 0.196,
+      "beforeP95Ms": 0.209,
+      "beforeMadRelative": 0.0345,
+      "afterMedianMs": 0.014,
+      "afterP95Ms": 0.015,
+      "afterMadRelative": 0.0325,
+      "speedupByMedian": 13.64,
+      "speedupByP95": 13.64
+    },
+    {
+      "size": 300,
+      "profile": "overseas-plain",
+      "keptCount": 49,
+      "beforeIterations": 60,
+      "afterIterations": 874,
+      "beforeMedianMs": 0.186,
+      "beforeP95Ms": 0.201,
+      "beforeMadRelative": 0.0207,
+      "afterMedianMs": 0.013,
+      "afterP95Ms": 0.014,
+      "afterMadRelative": 0.0338,
+      "speedupByMedian": 14.5,
+      "speedupByP95": 14.36
+    },
+    {
+      "size": 300,
+      "profile": "overseas-country",
+      "keptCount": 9,
+      "beforeIterations": 56,
+      "afterIterations": 765,
+      "beforeMedianMs": 0.202,
+      "beforeP95Ms": 0.212,
+      "beforeMadRelative": 0.0343,
+      "afterMedianMs": 0.014,
+      "afterP95Ms": 0.016,
+      "afterMadRelative": 0.0268,
+      "speedupByMedian": 14.04,
+      "speedupByP95": 12.95
+    },
+    {
+      "size": 1000,
+      "profile": "domestic",
+      "keptCount": 839,
+      "beforeIterations": 18,
+      "afterIterations": 196,
+      "beforeMedianMs": 0.656,
+      "beforeP95Ms": 0.677,
+      "beforeMadRelative": 0.0138,
+      "afterMedianMs": 0.053,
+      "afterP95Ms": 0.06,
+      "afterMadRelative": 0.0592,
+      "speedupByMedian": 12.48,
+      "speedupByP95": 11.28
+    },
+    {
+      "size": 1000,
+      "profile": "overseas-plain",
+      "keptCount": 161,
+      "beforeIterations": 19,
+      "afterIterations": 236,
+      "beforeMedianMs": 0.65,
+      "beforeP95Ms": 0.69,
+      "beforeMadRelative": 0.0108,
+      "afterMedianMs": 0.048,
+      "afterP95Ms": 0.05,
+      "afterMadRelative": 0.0292,
+      "speedupByMedian": 13.64,
+      "speedupByP95": 13.75
+    },
+    {
+      "size": 1000,
+      "profile": "overseas-country",
+      "keptCount": 30,
+      "beforeIterations": 18,
+      "afterIterations": 235,
+      "beforeMedianMs": 0.668,
+      "beforeP95Ms": 0.705,
+      "beforeMadRelative": 0.0214,
+      "afterMedianMs": 0.051,
+      "afterP95Ms": 0.053,
+      "afterMadRelative": 0.0175,
+      "speedupByMedian": 13.08,
+      "speedupByP95": 13.3
+    },
+    {
+      "size": 2000,
+      "profile": "domestic",
+      "keptCount": 1678,
+      "beforeIterations": 10,
+      "afterIterations": 107,
+      "beforeMedianMs": 1.27,
+      "beforeP95Ms": 1.309,
+      "beforeMadRelative": 0.0227,
+      "afterMedianMs": 0.107,
+      "afterP95Ms": 0.117,
+      "afterMadRelative": 0.0326,
+      "speedupByMedian": 11.86,
+      "speedupByP95": 11.19
+    },
+    {
+      "size": 2000,
+      "profile": "overseas-plain",
+      "keptCount": 322,
+      "beforeIterations": 10,
+      "afterIterations": 114,
+      "beforeMedianMs": 1.233,
+      "beforeP95Ms": 1.286,
+      "beforeMadRelative": 0.032,
+      "afterMedianMs": 0.104,
+      "afterP95Ms": 0.11,
+      "afterMadRelative": 0.0284,
+      "speedupByMedian": 11.83,
+      "speedupByP95": 11.66
+    },
+    {
+      "size": 2000,
+      "profile": "overseas-country",
+      "keptCount": 63,
+      "beforeIterations": 9,
+      "afterIterations": 96,
+      "beforeMedianMs": 1.333,
+      "beforeP95Ms": 1.407,
+      "beforeMadRelative": 0.0223,
+      "afterMedianMs": 0.119,
+      "afterP95Ms": 0.129,
+      "afterMadRelative": 0.0348,
+      "speedupByMedian": 11.19,
+      "speedupByP95": 10.91
+    },
+    {
+      "size": 4000,
+      "profile": "domestic",
+      "keptCount": 3361,
+      "beforeIterations": 5,
+      "afterIterations": 51,
+      "beforeMedianMs": 2.449,
+      "beforeP95Ms": 2.65,
+      "beforeMadRelative": 0.0303,
+      "afterMedianMs": 0.22,
+      "afterP95Ms": 0.233,
+      "afterMadRelative": 0.0302,
+      "speedupByMedian": 11.11,
+      "speedupByP95": 11.38
+    },
+    {
+      "size": 4000,
+      "profile": "overseas-plain",
+      "keptCount": 639,
+      "beforeIterations": 5,
+      "afterIterations": 60,
+      "beforeMedianMs": 2.174,
+      "beforeP95Ms": 2.492,
+      "beforeMadRelative": 0.0772,
+      "afterMedianMs": 0.168,
+      "afterP95Ms": 0.193,
+      "afterMadRelative": 0.0761,
+      "speedupByMedian": 12.94,
+      "speedupByP95": 12.91
+    },
+    {
+      "size": 4000,
+      "profile": "overseas-country",
+      "keptCount": 126,
+      "beforeIterations": 5,
+      "afterIterations": 49,
+      "beforeMedianMs": 2.639,
+      "beforeP95Ms": 2.955,
+      "beforeMadRelative": 0.0632,
+      "afterMedianMs": 0.253,
+      "afterP95Ms": 0.295,
+      "afterMadRelative": 0.0274,
+      "speedupByMedian": 10.43,
+      "speedupByP95": 10.03
+    }
+  ],
+  "acceptance": {
+    "absoluteBudgetMet": true,
+    "relativeBudgetMet": true,
+    "noiseWithinBudget": true,
+    "combinedRelativeNoise": 0.1533,
+    "worstSpeedupByMedian": 10.43,
+    "deltaExceedsNoise": true,
+    "accepted": true
+  },
+  "ratio": {
+    "worstProfile": {
+      "size": 4000,
+      "profile": "overseas-country",
+      "keptCount": 126,
+      "beforeIterations": 5,
+      "afterIterations": 49,
+      "beforeMedianMs": 2.639,
+      "beforeP95Ms": 2.955,
+      "beforeMadRelative": 0.0632,
+      "afterMedianMs": 0.253,
+      "afterP95Ms": 0.295,
+      "afterMadRelative": 0.0274,
+      "speedupByMedian": 10.43,
+      "speedupByP95": 10.03
+    },
+    "largestSizeSpeedups": [
+      {
+        "profile": "domestic",
+        "speedupByMedian": 11.11,
+        "speedupByP95": 11.38
+      },
+      {
+        "profile": "overseas-plain",
+        "speedupByMedian": 12.94,
+        "speedupByP95": 12.91
+      },
+      {
+        "profile": "overseas-country",
+        "speedupByMedian": 10.43,
+        "speedupByP95": 10.03
+      }
+    ]
+  }
+}
