@@ -966,7 +966,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="true"
@@ -980,7 +980,7 @@ export default function ProfilePage() {
         data-mypage-profile-main-column="true"
       >
         <Card
-          className="overflow-hidden shadow-none md:hidden"
+          className="overflow-hidden border-0 bg-transparent shadow-none md:hidden"
           data-mypage-profile-hero="mobile-only"
         >
           <div
@@ -1177,7 +1177,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1310,7 +1310,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
@@ -1350,7 +1350,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1487,13 +1487,11 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="min-w-0 border-border/70 md:order-5 md:col-span-2 md:row-start-3 md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          aria-label="선택 마케팅 수신 설정"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 md:col-span-2 md:row-start-3"
           data-privacy-consent-settings="true"
         >
-          <CardHeader className="pb-3 lg:p-4 lg:pb-2">
-            <CardTitle className="text-base">선택 마케팅 수신 설정</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 lg:p-4 lg:pt-1">
+          <CardContent className="space-y-4 p-4 lg:p-4">
             {consentLoading && !consentSettings && (
               <p className="text-sm text-muted-foreground" role="status">
                 수신 동의 설정을 확인하는 중입니다.
@@ -1641,7 +1639,7 @@ export default function ProfilePage() {
 
         <Card
           id="account-deletion"
-          className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
           data-mypage-danger-zone="true"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
