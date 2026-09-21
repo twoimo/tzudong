@@ -9,6 +9,8 @@ const isolated = new Set([
   'admin-storyboard-caption-provenance.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
   'auth-callback-session.test.ts',
+  'account-deletion-reauth-validation.test.ts',
+  'db-conflict-checker.test.ts',
   'require-admin-fail-closed.test.ts',
   'shorten-target-allowlist.test.ts',
 ]);
