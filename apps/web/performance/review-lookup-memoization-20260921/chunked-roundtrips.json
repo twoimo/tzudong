@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-09-21T06:23:02.898Z",
+  "note": "analytic round-trip count, concurrency=4, chunk=80 (supabase .in() limit)",
+  "rows": [
+    {
+      "names": 160,
+      "sequentialRoundTrips": 2,
+      "concurrentRoundTrips": 1,
+      "concurrency": 4
+    },
+    {
+      "names": 320,
+      "sequentialRoundTrips": 4,
+      "concurrentRoundTrips": 1,
+      "concurrency": 4
+    },
+    {
+      "names": 640,
+      "sequentialRoundTrips": 8,
+      "concurrentRoundTrips": 2,
+      "concurrency": 4
+    },
+    {
+      "names": 1280,
+      "sequentialRoundTrips": 16,
+      "concurrentRoundTrips": 4,
+      "concurrency": 4
+    },
+    {
+      "names": 2560,
+      "sequentialRoundTrips": 32,
+      "concurrentRoundTrips": 8,
+      "concurrency": 4
+    }
+  ]
+}

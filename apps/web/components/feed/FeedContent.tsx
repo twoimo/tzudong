@@ -289,13 +289,19 @@ export default function FeedContent({
                 return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
             }));
 
-            const reviewedRestaurantNames = [
-                ...new Set(
-                    [...restaurantsMap.values()]
-                        .map((restaurant) => String(restaurant.approved_name || restaurant.name || '').trim())
-                        .filter(Boolean)
-                ),
-            ];
+            // 리뷰가 붙은 식당이 모두 approved면 canonical 대체 조회 결과를 쓰지 않으므로 조회를 건너뜁니다.
+            const needsApprovedRestaurantLookup = restaurantIds.some(
+                (restaurantId) => restaurantsMap.get(restaurantId)?.status !== 'approved'
+            );
+            const reviewedRestaurantNames = needsApprovedRestaurantLookup
+                ? [
+                    ...new Set(
+                        [...restaurantsMap.values()]
+                            .map((restaurant) => String(restaurant.approved_name || restaurant.name || '').trim())
+                            .filter(Boolean)
+                    ),
+                ]
+                : [];
             const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
@@ -508,7 +514,7 @@ export default function FeedContent({
             }
             queryClient.invalidateQueries({ queryKey: [queryKey] });
         } catch (error) {
-            console.error('좋아요 토글 실패:');
+            console.error('좋아요 토글 실패:', error);
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }

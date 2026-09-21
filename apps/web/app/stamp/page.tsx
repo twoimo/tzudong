@@ -349,7 +349,7 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
-                console.error('맛집 검색 중 오류:');
+                console.error('맛집 검색 중 오류:', error);
                 return [];
             }
         },
@@ -602,7 +602,7 @@ export default function StampPage() {
                 const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
-                console.error('리뷰 데이터 조회 중 오류:');
+                console.error('리뷰 데이터 조회 중 오류:', error);
                 return { reviews: [], nextCursor: null };
             }
         },
@@ -765,7 +765,7 @@ export default function StampPage() {
             }
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
-            console.error('좋아요 토글 실패:');
+            console.error('좋아요 토글 실패:', error);
             throw error;
         }
     }, [user, queryClient, selectedRestaurant]);
