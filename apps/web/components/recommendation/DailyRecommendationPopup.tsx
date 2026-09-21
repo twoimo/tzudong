@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Sparkles } from "lucide-react";
 import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
 import { extractCanonicalYouTubeVideoId } from "@/lib/youtube-url";
+import { readBrowserStorageString, removeBrowserStorageItem, writeBrowserStorageString } from "@/lib/browser-storage";
 import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 
 const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
@@ -72,7 +73,7 @@ export function DailyRecommendationPopup() {
         if (typeof window === 'undefined' || window.hasShownDailyPopup) return;
 
         // localStorage에서 숨김 설정 확인
-        const hideUntilStr = localStorage.getItem(POPUP_STORAGE_KEY);
+        const hideUntilStr = readBrowserStorageString('local', POPUP_STORAGE_KEY);
         if (hideUntilStr) {
             const hideUntil = new Date(hideUntilStr);
             const now = new Date();
@@ -81,7 +82,7 @@ export function DailyRecommendationPopup() {
                 return;
             } else {
                 // 기간 만료, localStorage 제거
-                localStorage.removeItem(POPUP_STORAGE_KEY);
+                removeBrowserStorageItem('local', POPUP_STORAGE_KEY);
             }
         }
 
@@ -117,7 +118,7 @@ export function DailyRecommendationPopup() {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(0, 0, 0, 0);
-            localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
+            writeBrowserStorageString('local', POPUP_STORAGE_KEY, tomorrow.toISOString());
         }
         setIsVisible(false);
         window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
@@ -170,9 +171,9 @@ export function DailyRecommendationPopup() {
         const selectedRegion = !isGlobal ? getRestaurantRegion(selectedRestaurant) : null;
 
         // Next.js는 state 전달을 지원하지 않으므로 sessionStorage 사용
-        sessionStorage.setItem('selectedRestaurant', JSON.stringify(selectedRestaurant));
+        writeBrowserStorageString('session', 'selectedRestaurant', JSON.stringify(selectedRestaurant));
         if (selectedRegion) {
-            sessionStorage.setItem('selectedRegion', selectedRegion);
+            writeBrowserStorageString('session', 'selectedRegion', selectedRegion);
         }
 
         // 커스텀 이벤트 발생 (같은 페이지에 있을 경우를 위해)

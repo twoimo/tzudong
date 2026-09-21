@@ -109,6 +109,7 @@ import {
   type AdminPendingCountsResponse,
 } from "@/lib/admin/pending-counts";
 import { cn } from "@/lib/utils";
+import { readBrowserStorageString, writeBrowserStorageString } from "@/lib/browser-storage";
 import { resolveGitHubActionsRunUrl } from "@/lib/open-external-url";
 import { buildScopedBrowserTitle } from "@/lib/seo";
 import type { DashboardSummaryResponse } from "@/types/dashboard";
@@ -8115,7 +8116,7 @@ function AdminSidebar({
 
   useEffect(() => {
     const initialTheme = normalizeAdminThemePreference(
-      window.localStorage.getItem(ADMIN_THEME_STORAGE_KEY),
+      readBrowserStorageString("local", ADMIN_THEME_STORAGE_KEY),
     );
     setThemePreference(initialTheme);
     applyAdminThemePreference(initialTheme);
@@ -8137,7 +8138,7 @@ function AdminSidebar({
   const updateThemePreference = useCallback(
     (nextTheme: AdminThemePreference) => {
       setThemePreference(nextTheme);
-      window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY, nextTheme);
+      writeBrowserStorageString("local", ADMIN_THEME_STORAGE_KEY, nextTheme);
       applyAdminThemePreference(nextTheme);
     },
     [],
