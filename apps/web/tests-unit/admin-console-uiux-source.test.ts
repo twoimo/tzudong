@@ -8282,7 +8282,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       'document.documentElement.classList.toggle("dark"',
     );
     expect(consoleSource).toContain(
-      "window.localStorage.setItem(ADMIN_THEME_STORAGE_KEY",
+      'writeBrowserStorageString("local", ADMIN_THEME_STORAGE_KEY',
     );
     expect(consoleSource).toContain("const controlLabel = `${currentThemeLabel} 사용 중 · 클릭하면 ${getAdminThemeChangeLabel(nextThemeLabel)}`");
     expect(consoleSource).toContain("function getAdminThemeChangeLabel");

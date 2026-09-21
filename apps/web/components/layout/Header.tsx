@@ -21,6 +21,7 @@ import { useNotifications } from "@/contexts/NotificationContextBase";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { readBrowserStorageString } from "@/lib/browser-storage";
 import { usePathname, useRouter } from "next/navigation";
 import { Announcement } from "@/types/announcement";
 import type { Notification } from "@/types/notification";
@@ -130,7 +131,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   }, [isLoggedIn, router]);
 
   useEffect(() => {
-    const dismissed = sessionStorage.getItem('announcementBannerDismissed');
+    const dismissed = readBrowserStorageString('session', 'announcementBannerDismissed');
     if (dismissed) {
       setIsBannerDismissed(true);
     }

@@ -53,13 +53,13 @@ describe('G002 popup and insights hardening contracts', () => {
     const combinedDismissBody = combinedPopupSource.match(/const handleDismissToday = useCallback\([\s\S]*?\}, \[\]\);/)?.[0] ?? '';
     expect(combinedCloseBody).toContain('setIsVisible(false)');
     expect(combinedCloseBody).not.toContain('localStorage.setItem');
-    expect(combinedDismissBody).toContain('localStorage.setItem(DISMISSED_DATE_KEY, getTodayString())');
+    expect(combinedDismissBody).toContain("writeBrowserStorageString('local', DISMISSED_DATE_KEY, getTodayString())");
 
     const dailyCloseBody = dailyPopupSource.match(/const handleClose = \(\) => \{[\s\S]*?\n    \};/)?.[0] ?? '';
     const dailyDismissBody = dailyPopupSource.match(/const handleDismissToday = \(\) => \{[\s\S]*?\n    \};/)?.[0] ?? '';
     expect(dailyCloseBody).toContain('setIsVisible(false)');
     expect(dailyCloseBody).not.toContain('localStorage.setItem');
-    expect(dailyDismissBody).toContain('localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString())');
+    expect(dailyDismissBody).toContain("writeBrowserStorageString('local', POPUP_STORAGE_KEY, tomorrow.toISOString())");
     expect(dailyPopupSource).toContain('const shouldShowPopup = isHomePage;');
   });
 
