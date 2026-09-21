@@ -109,7 +109,9 @@ describe("mypage mobile cleanup source contracts", () => {
       'className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"',
     );
     expect(profileSource).toContain('data-mypage-profile-hero="mobile-only"');
-    expect(profileSource).toContain('className="overflow-hidden shadow-none md:hidden"');
+    expect(profileSource).toContain(
+      'className="overflow-hidden border-0 bg-transparent shadow-none md:hidden"',
+    );
     expect(profileSource).toContain(
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
@@ -180,7 +182,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain(
@@ -285,10 +287,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
-      'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
     );
     expect(profileSource).toContain(
-      'className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
@@ -379,6 +381,31 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("{user.email}");
     expect(profileSource).not.toContain("가입일 {joinedDateLabel}");
     expect(profileSource).not.toContain("const joinedDateLabel");
+  });
+
+  test("profile dashboard keeps exactly one border around the whole surface", () => {
+    const profileSource = source("app/mypage/profile/page.tsx");
+
+    expect(profileSource).toContain(
+      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"',
+    );
+    expect(profileSource).toContain('data-mypage-profile-page="true"');
+
+    // The old per-section frame drew a second border inside the page frame.
+    expect(profileSource).not.toContain("md:bg-background/85");
+    expect(profileSource).not.toContain("md:backdrop-blur-sm");
+    expect(profileSource).not.toContain("md:border md:border-border/70");
+    expect(profileSource).not.toContain('className="min-w-0 border-border/70');
+
+    // The five inner sections are toned panels; the mobile hero stays flat.
+    expect(profileSource.match(/rounded-2xl border-0/g)?.length ?? 0).toBe(5);
+    expect(profileSource.match(/shadow-none/g)?.length ?? 0).toBe(6);
+
+    // The duplicate card title repeated the two consent group headings.
+    expect(profileSource).not.toContain("선택 마케팅 수신 설정</CardTitle>");
+    expect(profileSource).toContain('aria-label="선택 마케팅 수신 설정"');
+    expect(profileSource).toContain('data-privacy-consent-group="ordinary"');
+    expect(profileSource).toContain('data-privacy-consent-group="night"');
   });
 
   test("mobile loading keeps static mypage chrome and uses borderless dynamic skeletons", () => {
@@ -534,7 +561,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
     );
     expect(profileSource).not.toContain("계정 위험 작업");
     expect(profileSource).not.toContain(
