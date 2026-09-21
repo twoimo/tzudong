@@ -19,6 +19,10 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { buildPostSearchSwipeCandidates } from '@/lib/mobile-home-search-selection';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
+import {
+    dedupeHomeMapRestaurants,
+    isSameRestaurantForSwipe,
+} from '@/lib/home-map-swipe-restaurants';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 
@@ -130,32 +134,6 @@ type SheetSnapTransition = {
     easing: string;
 };
 
-const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
-    if (a.id === b.id) return true;
-
-    if (a.mergedRestaurants?.some((restaurant) => restaurant.id === b.id)) return true;
-    if (b.mergedRestaurants?.some((restaurant) => restaurant.id === a.id)) return true;
-
-    if (a.name === b.name && a.lat && a.lng && b.lat && b.lng) {
-        const aLat = Number(a.lat);
-        const aLng = Number(a.lng);
-        const bLat = Number(b.lat);
-        const bLng = Number(b.lng);
-
-        if (
-            Number.isFinite(aLat) &&
-            Number.isFinite(aLng) &&
-            Number.isFinite(bLat) &&
-            Number.isFinite(bLng) &&
-            Math.abs(aLat - bLat) < 0.0001 &&
-            Math.abs(aLng - bLng) < 0.0001
-        ) {
-            return true;
-        }
-    }
-
-    return false;
-};
 const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) =>
     restaurants.map((restaurant) => restaurant.id).join('|');
 
@@ -171,20 +149,6 @@ const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestauran
         payload.totalVisibleCount,
         payload.restaurants.map((restaurant) => restaurant.id).join('|'),
     ].join('::');
-};
-
-const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) => {
-    const uniqueRestaurants: Restaurant[] = [];
-
-    for (const restaurant of restaurants) {
-        if (!restaurant) continue;
-        if (uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))) {
-            continue;
-        }
-        uniqueRestaurants.push(restaurant);
-    }
-
-    return uniqueRestaurants;
 };
 
 const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
