@@ -18,7 +18,7 @@ import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/componen
 import { StampCard } from "@/components/stamp/StampCard";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
-import { compareStampRestaurants } from "@/lib/stamp-restaurant-order";
+import { compareStampRestaurants, createVisitedLookup } from "@/lib/stamp-restaurant-order";
 import { cn } from "@/lib/utils";
 
 const STAMP_PAGE_SIZE = 5;
@@ -160,6 +160,9 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
     const filteredRestaurants = useMemo(() => {
         let result = allMergedRestaurants;
 
+        // 정렬 비교자가 비교마다 방문 여부를 다시 묻지 않도록 맛집당 한 번만 계산합니다.
+        const isVisitedForList = createVisitedLookup(isVisited);
+
         if (deferredSearchQuery.trim()) {
             const query = deferredSearchQuery.trim().toLowerCase();
             result = result.filter(r =>
@@ -183,7 +186,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         }
 
         if (filters.showUnvisitedOnly && user) {
-            result = result.filter(r => !isVisited(r));
+            result = result.filter(r => !isVisitedForList(r));
         }
 
         if ((filters.fanVisitsMin ?? 0) > 0) {
@@ -191,7 +194,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         }
 
         result = [...result].sort((a, b) => compareStampRestaurants(a, b, {
-            isVisited,
+            isVisited: isVisitedForList,
             sortColumn: "fanVisits",
             sortDirection: "desc",
         }));
