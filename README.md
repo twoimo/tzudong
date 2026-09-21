@@ -121,6 +121,14 @@ Chunked `restaurants` and `reviews` lookups in `apps/web/hooks/use-restaurants.t
 
 Public `/feed` skips the approved-canonical `restaurants` lookup for a page when every reviewed restaurant on that page is already `approved`, which drops one database round trip per feed page in the common case. The lookup still runs whenever a review points at a non-approved or missing restaurant, so canonical substitution behavior is unchanged.
 
+### Deployment and release path (verified 2026-09-21)
+
+`apps/web/scripts/vercel-ignore-build.mjs` is the build gate: preview builds run only for `develop`, every other branch preview is skipped, and a `main` production build additionally requires `TZUDONG_APPROVED_PRODUCTION_SHA` to equal the commit being deployed. Branch-specific preview URLs therefore do not appear for feature branches by design; a CLI deployment of the branch head (`vercel deploy` from `apps/web`, project `tzudong`) is what produces a reviewable preview.
+
+On the Hobby team, commits must be authored by the team owner. Commits authored with a placeholder address are refused before the build starts with `readyState: BLOCKED`, `alwaysRefuseToBuild: true`, and `seatBlock.blockCode: TEAM_ACCESS_REQUIRED` (Vercel: "the commit author doesn't have permission to create deployments for this project"). The repository now commits with the owner's GitHub-linked address, and the same CLI deployment that was refused before this change reaches `BUILDING`/`READY` afterwards.
+
+`develop`, `data`, and `main` are protected: the `Release` and `Promotion Path` checks are required, force pushes are disabled, administrators are enforced, and conversation resolution is required, so promotion is serialized through pull requests in the order `develop -> data -> main`. Preview deployments carry Vercel Authentication, so an unauthenticated request to a preview URL answers `302` to the Vercel login flow rather than the application.
+
 ## Privacy
 
 Source safeguards stay fail-closed: challenge-bound account creation, no under-14 registration until a verified guardian path exists, purpose/channel marketing consent with a separate night grant, shared redaction, memory-only device location, and Preview → Confirm → Apply → Readback → Audit for deletion/retention/incidents.
