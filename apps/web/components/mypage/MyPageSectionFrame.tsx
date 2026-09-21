@@ -24,7 +24,7 @@ export const myPageItemGroupClass = "rounded-xl bg-muted/45 p-3";
 export const myPageFooterMetaClass =
   "flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-xs text-muted-foreground";
 export const myPageInlineLinkClass =
-  "inline-flex min-w-0 items-center gap-1 truncate text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex -my-1 min-h-8 min-w-0 items-center gap-1 truncate py-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 interface MyPageSectionFrameProps {
   icon: LucideIcon;

@@ -1264,7 +1264,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="space-y-2"
+              className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"
               data-mypage-desktop-tier-progress="true"
             >
               <div className="flex items-center justify-between gap-3">
