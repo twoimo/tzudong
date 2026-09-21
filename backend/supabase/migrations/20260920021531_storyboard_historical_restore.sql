@@ -30,7 +30,11 @@ ALTER TABLE public.admin_storyboard_production_revisions ENABLE ROW LEVEL SECURI
 ALTER TABLE public.admin_storyboard_production_restores ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.admin_storyboard_production_revisions, public.admin_storyboard_production_restores
   FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, DELETE ON public.admin_storyboard_production_revisions, public.admin_storyboard_production_restores TO service_role;
+-- Revision snapshots and restore receipts are immutable history. service_role bypasses RLS, so a
+-- direct DELETE grant would let any service-role caller erase a restorable version or delete a
+-- restore receipt and then reuse its request_id. Appending and reading stay allowed; removal
+-- happens only through the owning project's ON DELETE CASCADE.
+GRANT SELECT, INSERT ON public.admin_storyboard_production_revisions, public.admin_storyboard_production_restores TO service_role;
 
 DO $$
 DECLARE r record;

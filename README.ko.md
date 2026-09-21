@@ -87,9 +87,9 @@ Tzudong Map은 먹방 영상의 장소 근거를 사용자용 지도, 운영자�
 
 지도 발견 소스: [map-discovery.workflow.json](docs/architecture/map-discovery/map-discovery.workflow.json)
 
-라이프사이클 첫 화면은 세 가지 경계를 모델합니다. 메모리: 통합 RAM (M=128 GiB), 이미지 동시성 (c=1), 상주 (sum r_i <= M_headroom) (디스크 존재는 상주가 아닙니다. PNG 원본과 WebP 파생본은 모델 예산 밖입니다). 큐 대기: (W=t_claim-t_enqueue) if a live heartbeat exists, else (W=inf) with no cloud failover (stale leaseToken -> 409 worker_lease_lost). FSM 불변식: revision_conflict / project_busy / exclusive claim / lease_lost no durable write / restore = edit then regenerate(scene) / fail-closed / serial scenes / no stale overwrite. Viewer UI는 meta.locale이 생략되어 영어로 떨어집니다.
+라이프사이클 첫 화면은 세 가지 경계를 모델합니다. 메모리: 통합 RAM (M=128 GiB), 이미지 동시성 (c=1), 상주 (sum r_i <= M_headroom) (디스크 존재는 상주가 아닙니다. PNG 원본과 WebP 파생본은 모델 예산 밖입니다). 큐 대기: (W=t_claim-t_enqueue) if a live heartbeat exists, else (W=inf) with no cloud failover (stale leaseToken -> 409 worker_lease_lost). FSM 불변식: revision_conflict / project_busy / exclusive claim / lease_lost no durable write / restore = 불변 스냅샷에서 새 리비전(모델 호출 없음) / fail-closed / serial scenes / no stale overwrite. Viewer UI는 meta.locale이 생략되어 영어로 떨어집니다.
 
-외부 인공지능은 기본 비활성화입니다. 텍스트와 이미지 공급자는 서로 독립입니다(`local-mlx`, `chatgpt-manual`, `grok-manual`; `manual`, `openai-api`, `xai-api`는 명시적으로 켠 경우에만). 큐에 넣은 것만으로 성공이 아닙니다. 워커가 작업을 원자적으로 claim하고, 루프백 `mlx-serve`를 호출하고, PNG 원본과 WebP 파생본을 저장한 뒤 관리자 UI가 결과를 다시 읽어야 합니다. 가드는 원자적 claim, lease/heartbeat 만료, revision/version 충돌입니다. 현재 스키마에서 복원은 편집 후 재생성입니다(`edit` | `regenerate` | `retry` | `cancel` | `import-text`). `restore` 액션은 없습니다. 다이어그램은 의도된 파이프라인을 설명합니다. 호스티드 apply와 실제 운영 세션은 별도 증거입니다.
+외부 인공지능은 기본 비활성화입니다. 텍스트와 이미지 공급자는 서로 독립입니다(`local-mlx`, `chatgpt-manual`, `grok-manual`; `manual`, `openai-api`, `xai-api`는 명시적으로 켠 경우에만). 큐에 넣은 것만으로 성공이 아닙니다. 워커가 작업을 원자적으로 claim하고, 루프백 `mlx-serve`를 호출하고, PNG 원본과 WebP 파생본을 저장한 뒤 관리자 UI가 결과를 다시 읽어야 합니다. 가드는 원자적 claim, lease/heartbeat 만료, revision/version 충돌입니다. 복원은 이제 불변 DB 스냅샷을 사용합니다. 버전 미리보기와 확인된 프로젝트 전체/단일 장면 복원이 과거 텍스트, 장면 순서, 에셋 참조, 출처, 원본 이미지 바이트를 보존합니다. 복원은 모델 호출이나 작업 큐잉 없이 새 리비전을 쓰고, 현재 공급자 설정과 동의는 그대로 유지합니다. 적용된 프로젝트의 이력은 마이그레이션이 캡처한 상태에서 시작하며 지어낸 이전 버전을 만들지 않습니다. 소유자/관리자 확인, 현재 리비전, 사용 중 프로젝트 거부, 멱등 요청 ID가 이 작업을 보호합니다. 다이어그램은 의도된 파이프라인을 설명합니다. 호스티드 apply와 실제 운영 세션은 별도 증거입니다.
 
 ## 개인정보
 
