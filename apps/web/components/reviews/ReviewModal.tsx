@@ -1836,7 +1836,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     )}
                     <div className="flex items-start justify-between gap-2 pt-3">
                         <div className="flex-1">
-                            <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
+                            <h2 className="text-xl font-semibold text-foreground flex items-center gap-3">
                                 쯔동여지도 리뷰 작성
                             </h2>
                             <p className="text-sm text-muted-foreground">
@@ -2282,7 +2282,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
                             취소
                         </Button>
-                        <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting} className="bg-gradient-primary flex-1 sm:flex-none">
+                        <Button onClick={handleSubmit} disabled={!isFormValid || isSubmitting} className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none">
                             {isSubmitting ? "등록 중..." : "리뷰 등록"}
                         </Button>
                     </div>
@@ -2320,7 +2320,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         <p className="text-xs font-medium text-red-700 dark:text-red-300">
                                             {currentStep} / {REVIEW_FORM_STEPS.length} · {REVIEW_FORM_STEPS[currentStep - 1].label}
                                         </p>
-                                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                        <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
                                             쯔동여지도 리뷰 작성
                                         </h2>
                                     </div>
@@ -2935,7 +2935,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     <p className="text-xs font-medium text-red-700 dark:text-red-300">
                                         영수증 인증 · 방문 정보 · 리뷰
                                     </p>
-                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                    <DialogTitle className="text-xl font-semibold text-foreground">
                                         쯔동여지도 리뷰 작성
                                     </DialogTitle>
                                     <DialogDescription>
@@ -3415,7 +3415,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={!isFormValid || isSubmitting}
-                                    className="bg-gradient-primary flex-1 sm:flex-none"
+                                    className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-none"
                                 >
                                     {isSubmitting ? "등록 중..." : "리뷰 등록"}
                                 </Button>

@@ -43,6 +43,24 @@
       "vcsTracked": true
     },
     {
+      "path": ".agents",
+      "depth": 1,
+      "ownership": "저장소 에이전트 스킬 정의 소유 경계",
+      "allowedContents": ["프로젝트 전용 에이전트 스킬 정의"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": ".agents/skills",
+      "depth": 2,
+      "ownership": "저장소 범위 에이전트 스킬",
+      "allowedContents": ["저장소 전용 스킬 지침(SKILL.md)"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
       "path": "apps",
       "depth": 1,
       "ownership": "모노레포 애플리케이션 컨테이너",
@@ -276,6 +294,24 @@
       "depth": 1,
       "ownership": "제품·운영 문서 소유 경계",
       "allowedContents": ["제품 문서", "운영 문서", "보관 문서"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/agents",
+      "depth": 2,
+      "ownership": "에이전트 작업 지침 문서",
+      "allowedContents": ["검증·개인정보·릴리스 작업 지침"],
+      "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
+      "classification": "source",
+      "vcsTracked": true
+    },
+    {
+      "path": "docs/architecture",
+      "depth": 2,
+      "ownership": "아키텍처 다이어그램 산출물",
+      "allowedContents": ["아키텍처 다이어그램 JSON·HTML", "렌더링 시각 검수 캡처"],
       "forbiddenContents": ["실행 소스", "시크릿 값 리터럴"],
       "classification": "source",
       "vcsTracked": true

@@ -22,23 +22,18 @@ function GlobalLoaderComponent({
                 : "w-full h-full flex-1",
             className
         )}>
-            <div className="text-center space-y-6">
-                <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
-                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
-                </div>
-                <div className="space-y-3">
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <div role="status" aria-live="polite" aria-atomic="true" className="min-w-0 max-w-sm space-y-4 px-4 text-center">
+                <div
+                    className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-primary/20 border-t-primary motion-reduce:animate-none"
+                    aria-hidden="true"
+                />
+                <div className="space-y-2 break-keep">
+                    <h2 className="text-base font-semibold text-foreground">
                         {message}
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         {subMessage}
                     </p>
-                    <div className="flex justify-center space-x-1">
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
                 </div>
             </div>
         </div>

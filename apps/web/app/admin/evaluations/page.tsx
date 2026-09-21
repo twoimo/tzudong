@@ -37,7 +37,7 @@ import { getAddressConsistencyStatus, hasUnconfirmedPublicMapLocation } from '@/
 import { needsEvaluationRerun } from '@/lib/admin-evaluation-completeness';
 import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } from '@/lib/admin/admin-module-routing';
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
-import { fetchAdminProfileSummaries } from '@/lib/admin/profile-summaries';
+import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from '@/lib/admin/profile-summaries';
 import {
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
@@ -2527,19 +2527,18 @@ function AdminEvaluationPage({
       const userIds = [...new Set(typedSubmissions.map(s => s.user_id))];
 
       // 2. items / profile summaries 병렬 조회
-      const [{ data: itemsData }, profileSummaries] = await Promise.all([
+      const [{ data: itemsData }, profilesLookup] = await Promise.all([
         supabase
           .from('restaurant_submission_items')
           .select(ADMIN_SUBMISSION_ITEM_SELECT)
           .in('submission_id', submissionIds)
           .order('created_at', { ascending: true })
           .overrideTypes<Record<string, unknown>[], { merge: false }>(),
-        fetchAdminProfileSummaries(userIds),
+        fetchAdminProfileSummariesLookup(userIds),
       ]);
 
       const typedItemsData = parseValidatedRows(itemsData ?? [], isSubmissionItem);
 
-      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
       const itemsMap = new Map<string, SubmissionItem[]>();
       typedItemsData.forEach((item) => {
         if (!itemsMap.has(item.submission_id)) {
@@ -2628,7 +2627,7 @@ function AdminEvaluationPage({
           created_at: s.created_at,
           updated_at: s.updated_at,
           items: items,
-          profiles: { nickname: profilesMap.get(s.user_id) || '알 수 없음' },
+          profiles: { nickname: resolveAdminReviewerDisplay(s.user_id, profilesLookup.summaries, profilesLookup.ok, { missingNickname: '알 수 없음' }).nickname },
           original_restaurant_data: originalRestaurantData,
         };
       });
@@ -2671,8 +2670,7 @@ function AdminEvaluationPage({
       const typedRequests = rawRequests;
       const userIds = [...new Set(typedRequests.map((request) => request.user_id).filter(Boolean))];
 
-      const profileSummaries = await fetchAdminProfileSummaries(userIds);
-      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
+      const profilesLookup = await fetchAdminProfileSummariesLookup(userIds);
 
       return typedRequests.map((request): SubmissionRecord => ({
         id: request.id,
@@ -2699,7 +2697,7 @@ function AdminEvaluationPage({
           rejection_reason: request.rejection_reason ?? null,
           created_at: request.created_at,
         }],
-        profiles: { nickname: profilesMap.get(request.user_id) || '알 수 없음' },
+        profiles: { nickname: resolveAdminReviewerDisplay(request.user_id, profilesLookup.summaries, profilesLookup.ok, { missingNickname: '알 수 없음' }).nickname },
         recommendation_reason: request.recommendation_reason ?? null,
         recommendation_status: request.status || 'pending',
         recommendation_admin_note: request.admin_note ?? null,
@@ -2748,8 +2746,8 @@ function AdminEvaluationPage({
       const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
       const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-      const [profileSummaries, { data: restaurantsData }] = await Promise.all([
-        fetchAdminProfileSummaries(userIds),
+      const [profilesLookup, { data: restaurantsData }] = await Promise.all([
+        fetchAdminProfileSummariesLookup(userIds),
         supabase
           .from('restaurants')
           .select('id, approved_name, road_address, jibun_address')
@@ -2759,12 +2757,11 @@ function AdminEvaluationPage({
 
       const typedRestaurantsData = parseValidatedRows(restaurantsData ?? [], isReviewRestaurantRow);
 
-      const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
       const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.approved_name || '이름 없음', address: r.road_address || r.jibun_address || '' }]));
 
       return typedReviewsData.map((review): Review => ({
         ...review,
-        profiles: { nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자' },
+        profiles: { nickname: resolveAdminReviewerDisplay(review.user_id, profilesLookup.summaries, profilesLookup.ok).nickname },
         restaurants: restaurantsMap.get(review.restaurant_id) || { name: '삭제된 맛집', address: '' }
       }));
     },

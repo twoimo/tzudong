@@ -18,6 +18,18 @@ const proxySource = readFileSync(
   resolve(import.meta.dir, '..', 'proxy.ts'),
   'utf8',
 );
+const globalStylesSource = readFileSync(
+  resolve(import.meta.dir, '..', 'app', 'globals.css'),
+  'utf8',
+);
+const homeGlobalStylesSource = readFileSync(
+  resolve(import.meta.dir, '..', 'app', 'home-app-globals.css'),
+  'utf8',
+);
+const localWorkspaceBannerSource = readFileSync(
+  resolve(import.meta.dir, '..', 'components', 'home', 'LocalWorkspaceBanner.tsx'),
+  'utf8',
+);
 
 describe('root layout local runtime and CSP nonce contract', () => {
   test('binds the native parser viewport bootstrap to the proxy request nonce', () => {
@@ -39,6 +51,15 @@ describe('root layout local runtime and CSP nonce contract', () => {
     expect(layoutSource).toContain('<LocalWorkspaceBanner />');
     expect(layoutSource).toContain('<div data-local-workspace-app="true">');
     expect(layoutSource.indexOf('<LocalWorkspaceBanner />')).toBeLessThan(layoutSource.indexOf('data-local-workspace-app'));
+  });
+
+  test('does not reserve viewport height for the removed local workspace banner', () => {
+    expect(localWorkspaceBannerSource).toContain("LOCAL_WORKSPACE_BANNER_HEIGHT_CSS = '0px'");
+    for (const styles of [globalStylesSource, homeGlobalStylesSource]) {
+      expect(styles).toMatch(
+        /html\[data-local-workspace="true"\]\s*\{\s*--local-workspace-banner-height: 0px;/,
+      );
+    }
   });
 
   test('inlines only the hash-pinned source-controlled viewport bootstrap', () => {

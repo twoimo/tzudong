@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -210,6 +209,7 @@ function createConsentRequestIds() {
 }
 const ACCOUNT_DELETION_POLL_BACKOFF_MS = [500, 1_000, 2_000, 4_000, 8_000] as const;
 const ACCOUNT_DELETION_POLL_DEADLINE_MS = 30_000;
+const CONSENT_SETTINGS_TIMEOUT_MS = 15_000;
 type AccountDeletionPollResult =
   | Readonly<{ kind: "applied"; receipt: AccountDeletionReceipt }>
   | Readonly<{ kind: "in_progress" }>
@@ -368,6 +368,7 @@ async function pollAccountDeletionReadback(
 
 export default function ProfilePage() {
   const { user, profileNickname } = useAuth();
+  const userId = user?.id ?? null;
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: bookmarks = [] } = useBookmarks();
@@ -402,6 +403,7 @@ export default function ProfilePage() {
   const [showDeletionPassword, setShowDeletionPassword] = useState(false);
 
   const [consentSettings, setConsentSettings] = useState<ConsentSettings | null>(null);
+  const consentSettingsRequestRef = useRef<AbortController | null>(null);
   const [consentLoading, setConsentLoading] = useState(false);
   const [consentSaving, setConsentSaving] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -409,10 +411,10 @@ export default function ProfilePage() {
   const [failedConsentRequest, setFailedConsentRequest] = useState<ConsentRequest | null>(null);
 
   const loadProfile = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     try {
-      const data = await readPublicProfileSummaries(supabase, [user.id]);
+      const data = await readPublicProfileSummaries(supabase, [userId]);
 
       if (data && data.length > 0) {
         setProfile(data[0]);
@@ -422,45 +424,58 @@ export default function ProfilePage() {
     } catch {
       toast.error("프로필 정보를 불러오는데 실패했습니다");
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       loadProfile();
     }
-  }, [user, loadProfile]);
+  }, [userId, loadProfile]);
 
   const loadConsentSettings = useCallback(async () => {
-    if (!user) {
+    consentSettingsRequestRef.current?.abort();
+    if (!userId) {
+      consentSettingsRequestRef.current = null;
       setConsentSettings(null);
+      setConsentLoading(false);
       return;
     }
 
+    const controller = new AbortController();
+    consentSettingsRequestRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), CONSENT_SETTINGS_TIMEOUT_MS);
     setConsentLoading(true);
     try {
       const response = await fetch("/api/privacy/consents", {
         headers: { Accept: "application/json" },
         cache: "no-store",
+        signal: controller.signal,
       });
       const payload: unknown = await response.json().catch(() => null);
       const parsed = parseConsentSettings(payload);
       if (!response.ok || !parsed) throw new Error("consent_settings_unavailable");
+      if (consentSettingsRequestRef.current !== controller) return;
 
       setConsentSettings(parsed);
       setConsentError(null);
       setFailedConsentAction(null);
       setFailedConsentRequest(null);
     } catch {
+      if (consentSettingsRequestRef.current !== controller) return;
       setConsentSettings(null);
       setConsentError("수신 동의 설정을 불러오지 못했습니다.");
     } finally {
-      setConsentLoading(false);
+      window.clearTimeout(timeout);
+      if (consentSettingsRequestRef.current === controller) {
+        consentSettingsRequestRef.current = null;
+        setConsentLoading(false);
+      }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) void loadConsentSettings();
-  }, [user, loadConsentSettings]);
+    if (userId) void loadConsentSettings();
+  }, [userId, loadConsentSettings]);
 
   const displayName =
     profile?.nickname || userProfile?.nickname || profileNickname || "사용자";
@@ -475,6 +490,8 @@ export default function ProfilePage() {
   }, [displayName, isMobileNicknameEditing]);
   useEffect(() => () => {
     accountDeletionPollController.current?.abort();
+    consentSettingsRequestRef.current?.abort();
+    consentSettingsRequestRef.current = null;
     setDeletionSession(null);
   }, []);
 
@@ -903,17 +920,13 @@ export default function ProfilePage() {
       href: "/mypage/bookmarks",
       icon: Bookmark,
       title: "나의 북마크 내역",
-      description: `${bookmarks.length}개 저장됨`,
       accent: "bg-primary/10 text-primary",
-      desktopAccent: "md:bg-primary/10 md:text-primary",
     },
     {
       href: "/mypage/reviews",
       icon: MessageSquare,
       title: "나의 리뷰 내역",
-      description: "작성한 리뷰 관리",
       accent: "bg-sky-500/10 text-sky-600",
-      desktopAccent: "md:bg-sky-500/10 md:text-sky-600",
     },
   ];
   const reportActions = [
@@ -921,38 +934,30 @@ export default function ProfilePage() {
       href: "/mypage/submissions/new",
       icon: MapPin,
       title: "신규 맛집 제보",
-      description: "새 맛집 등록",
       accent: "bg-emerald-500/10 text-emerald-600",
-      desktopAccent: "md:bg-emerald-500/10 md:text-emerald-600",
     },
     {
       href: "/mypage/submissions/edit",
       icon: Edit,
       title: "수정 요청",
-      description: "주소·정보 바로잡기",
       accent: "bg-amber-500/10 text-amber-600",
-      desktopAccent: "md:bg-amber-500/10 md:text-amber-600",
     },
     {
       href: "/mypage/submissions/recommend",
       icon: YouTubeIcon,
       title: "쯔양 제보",
-      description: "영상 속 맛집 알려주기",
       accent: "bg-red-500/10 text-red-600",
-      desktopAccent: "md:bg-red-500/10 md:text-red-600",
     },
   ];
   const quickActionSections = [
     {
       id: "activity" as const,
       title: "내 활동",
-      helper: "저장하고 작성한 기록",
       actions: activityActions,
     },
     {
       id: "report" as const,
       title: "제보하기",
-      helper: "새 맛집과 정보 수정",
       actions: reportActions,
     },
   ];
@@ -961,36 +966,30 @@ export default function ProfilePage() {
       icon: Bookmark,
       label: "저장한 맛집",
       value: `${bookmarks.length}개`,
-      helper: "북마크에 담아둔 곳",
-      impact: "취향 신호",
       accent: "bg-primary/10 text-primary",
     },
     {
       icon: MessageSquare,
       label: "작성한 리뷰",
       value: `${userProfile?.reviewCount ?? 0}개`,
-      helper: "내가 남긴 리뷰 기록",
-      impact: "등급 핵심",
       accent: "bg-sky-500/10 text-sky-600",
     },
     {
       icon: Heart,
       label: "받은 좋아요",
       value: `${userProfile?.totalLikes ?? 0}개`,
-      helper: "리뷰에 쌓인 반응",
-      impact: "신뢰도 반영",
       accent: "bg-red-500/10 text-red-600",
     },
   ];
 
   return (
     <div
-      className="grid min-w-0 gap-3 sm:gap-5 md:h-full md:min-h-0 md:grid-cols-2 md:grid-rows-2 md:auto-rows-auto md:content-stretch md:items-stretch lg:gap-3"
+      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
-      data-mypage-profile-viewport-fit="true"
-      data-mypage-profile-matrix="equal-2x2"
-      data-mypage-profile-matrix-size="equal-track-fill"
+      data-mypage-profile-viewport-fit="content"
+      data-mypage-profile-matrix="content-2x2"
+      data-mypage-profile-matrix-size="content-track"
       data-mypage-profile-mobile-flow="stack"
       data-mypage-profile-desktop-flow="matrix-2x2"
     >
@@ -999,7 +998,7 @@ export default function ProfilePage() {
         data-mypage-profile-main-column="true"
       >
         <Card
-          className="overflow-hidden shadow-none md:hidden"
+          className="overflow-hidden border-0 bg-transparent shadow-none md:hidden"
           data-mypage-profile-hero="mobile-only"
         >
           <div
@@ -1196,7 +1195,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1210,12 +1209,7 @@ export default function ProfilePage() {
                 className="space-y-2"
                 data-mypage-mobile-action-section={section.id}
               >
-                <div className="flex items-end justify-between gap-2 px-1">
-                  <h4 className="text-sm font-semibold">{section.title}</h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    {section.helper}
-                  </p>
-                </div>
+                <h4 className="px-1 text-sm font-semibold">{section.title}</h4>
                 <div
                   className="grid gap-2"
                   data-mypage-mobile-action-grid={section.id}
@@ -1226,7 +1220,7 @@ export default function ProfilePage() {
                       <Link
                         key={action.href}
                         href={action.href}
-                        className="group flex min-h-14 min-w-0 touch-manipulation items-center gap-3 rounded-2xl border border-border bg-background px-3 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        className="group flex min-h-14 min-w-0 touch-manipulation items-center gap-3 rounded-2xl bg-muted/40 px-3 py-3 transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         data-mypage-mobile-action-row="true"
                         data-mypage-action-group={section.id}
                       >
@@ -1235,13 +1229,8 @@ export default function ProfilePage() {
                         >
                           <Icon className="h-4 w-4" aria-hidden="true" />
                         </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold">
-                            {action.title}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {action.description}
-                          </span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {action.title}
                         </span>
                         <ChevronRight
                           className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
@@ -1259,12 +1248,7 @@ export default function ProfilePage() {
             data-mypage-desktop-tier-dashboard="true"
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold">등급 대시보드</h4>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  현재 등급과 다음 목표를 한눈에 확인합니다
-                </p>
-              </div>
+              <h4 className="text-sm font-semibold">등급 대시보드</h4>
               {userProfile?.tier && (
                 <Badge
                   variant="outline"
@@ -1280,32 +1264,24 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="rounded-2xl border border-border/70 bg-card px-3 py-3"
+              className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"
               data-mypage-desktop-tier-progress="true"
             >
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">다음 목표</p>
-                  <p className="mt-0.5 truncate text-xl font-bold tracking-tight">
-                    {tierProgress.nextTier
-                      ? `${nextTierName}까지 인증 리뷰 ${tierVerifiedReviewsNeeded}개`
-                      : "최고 등급 유지 중"}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-[11px] text-muted-foreground">
-                    품질 점수
-                  </p>
-                  <p className="text-lg font-bold tracking-tight">
-                    {(userProfile?.qualityScore ?? 0).toFixed(1)}
-                    <span className="ml-1 text-xs font-semibold text-muted-foreground">
-                      점
-                    </span>
-                  </p>
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="min-w-0 truncate text-sm font-bold tracking-tight">
+                  {tierProgress.nextTier
+                    ? `${nextTierName}까지 인증 리뷰 ${tierVerifiedReviewsNeeded}개`
+                    : "최고 등급 유지 중"}
+                </p>
+                <p className="shrink-0 text-sm font-bold tabular-nums">
+                  {(userProfile?.qualityScore ?? 0).toFixed(1)}
+                  <span className="ml-0.5 text-[11px] font-semibold text-muted-foreground">
+                    점
+                  </span>
+                </p>
               </div>
               <div
-                className="mt-3 h-2 overflow-hidden rounded-full bg-muted"
+                className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
                 role="progressbar"
                 aria-label="다음 등급 진행률"
                 aria-valuenow={tierProgress.progressPercent}
@@ -1318,140 +1294,62 @@ export default function ProfilePage() {
                   aria-hidden="true"
                 />
               </div>
+              <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                <span className="min-w-0 truncate">
+                  현재 {currentTierName} · 남은 점수 {tierRemainingLabel}
+                </span>
+                <span className="shrink-0 tabular-nums">{tierProgressLabel}</span>
+              </div>
             </div>
 
-            <div
-              className="grid min-h-0 flex-1 grid-cols-2 gap-2"
+            <dl
+              className="grid shrink-0 grid-cols-2 gap-3"
               data-mypage-desktop-tier-metrics="true"
-            >
-              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
-                <span className="block text-[11px] text-muted-foreground">
-                  현재 등급
-                </span>
-                <span className="block truncate text-sm font-bold">
-                  {currentTierName}
-                </span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                  공개 프로필 배지
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
-                <span className="block text-[11px] text-muted-foreground">
-                  다음 목표
-                </span>
-                <span className="block truncate text-sm font-bold">
-                  {nextTierName}
-                </span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                  인증 활동 기준
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
-                <span className="block text-[11px] text-muted-foreground">
-                  남은 점수
-                </span>
-                <span className="block truncate text-sm font-bold">
-                  {tierRemainingLabel}
-                </span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                  리뷰·좋아요로 채우기
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col justify-center rounded-2xl bg-muted/40 px-3 py-2">
-                <span className="block text-[11px] text-muted-foreground">
-                  진행률
-                </span>
-                <span className="block truncate text-sm font-bold">
-                  {tierProgressLabel}
-                </span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                  다음 등급까지
-                </span>
-              </div>
-            </div>
-
-            <div
-              className="shrink-0 rounded-2xl border border-border/70 bg-card px-3 py-2.5"
               data-mypage-desktop-tier-action-guide="true"
             >
-              {tierProgress.nextTier ? (
-                <>
-                  <p className="text-xs font-semibold text-foreground">
-                    등급 올리는 법
-                  </p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <div className="rounded-xl bg-muted/35 px-3 py-1.5">
-                      <span className="block text-[11px] text-muted-foreground">
-                        인증 리뷰
-                      </span>
-                      <span className="mt-0.5 block text-xs font-semibold text-foreground">
-                        {tierVerifiedReviewsNeeded}개 더 필요
-                      </span>
-                      <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
-                        인증 도장 1개는 품질 점수 약 1점으로 반영돼요.
-                      </span>
-                    </div>
-                    <div className="rounded-xl bg-muted/35 px-3 py-1.5">
-                      <span className="block text-[11px] text-muted-foreground">
-                        받은 좋아요
-                      </span>
-                      <span className="mt-0.5 block text-xs font-semibold text-foreground">
-                        {hasVerifiedReviews && tierLikesNeeded !== null
-                          ? `약 ${tierLikesNeeded}개 더 필요`
-                          : "인증 리뷰 후 반영"}
-                      </span>
-                      <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
-                        좋아요 10개는 품질 점수 약 1점으로 반영돼요.
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  이미 최고 등급입니다. 인증 리뷰와 좋아요를 꾸준히 유지해
-                  랭킹 경쟁력을 지켜보세요.
-                </p>
-              )}
-            </div>
+              <div className="min-w-0">
+                <dt className="text-[11px] text-muted-foreground">인증 리뷰</dt>
+                <dd className="truncate text-xs font-semibold">
+                  {tierProgress.nextTier ? `${tierVerifiedReviewsNeeded}개 더 필요` : "목표 달성"}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-[11px] text-muted-foreground">받은 좋아요</dt>
+                <dd className="truncate text-xs font-semibold">
+                  {tierProgress.nextTier
+                    ? hasVerifiedReviews && tierLikesNeeded !== null
+                      ? `약 ${tierLikesNeeded}개 더 필요`
+                      : "인증 리뷰 후 반영"
+                    : "목표 달성"}
+                </dd>
+              </div>
+            </dl>
           </CardContent>
         </Card>
 
         <Card
-          className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
             <CardTitle className="text-base">최근 활동</CardTitle>
-            <CardDescription className="lg:hidden">
-              저장·리뷰·반응 기록을 간단히 확인합니다
-            </CardDescription>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 gap-2 md:grid-rows-3 lg:p-3 lg:pt-0">
+          <CardContent className="grid min-h-0 flex-1 md:grid-rows-3 lg:p-3 lg:pt-0">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="flex min-h-0 min-w-0 items-center gap-3 rounded-2xl border border-border/70 bg-background px-3 py-2.5"
+                  className="flex min-h-0 min-w-0 items-center gap-3 py-2.5"
                   data-mypage-desktop-recent-activity-row="true"
                 >
                   <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${item.accent}`}
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${item.accent}`}
                   >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="block truncate text-sm font-semibold">
-                        {item.label}
-                      </span>
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        {item.impact}
-                      </span>
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {item.helper}
-                    </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {item.label}
                   </span>
                   <span className="shrink-0 text-sm font-bold tabular-nums">
                     {item.value}
@@ -1470,7 +1368,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1478,9 +1376,6 @@ export default function ProfilePage() {
               <Lock className="h-5 w-5" aria-hidden="true" />
               비밀번호 변경
             </CardTitle>
-            <CardDescription className="lg:hidden">
-              계정 보안을 위해 정기적으로 비밀번호를 변경해주세요
-            </CardDescription>
           </CardHeader>
           <CardContent className="min-h-0 md:flex md:flex-1 md:flex-col lg:p-3 lg:pt-0">
             <form
@@ -1589,37 +1484,12 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div
-                className="hidden rounded-2xl border border-border/70 bg-muted/25 px-3 py-3 md:block"
-                data-mypage-password-guidance="true"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold text-foreground">
-                    안전한 비밀번호 기준
-                  </p>
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    변경 전 확인
-                  </span>
-                </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    8-12자
-                  </span>
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    현재 비밀번호
-                  </span>
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    재입력 일치
-                  </span>
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 disabled={
                   loading || !currentPassword || !newPassword || !confirmPassword
                 }
-                className="w-full border border-transparent md:mt-auto lg:h-9 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                className="w-full md:mt-auto lg:h-9 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               >
                 {loading ? (
                   <>
@@ -1635,24 +1505,19 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="min-w-0 border-border/70 md:order-5 md:col-span-2 md:row-start-3 md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          aria-label="선택 마케팅 수신 설정"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 lg:col-span-2 lg:row-start-3 2xl:col-span-1 2xl:col-start-3 2xl:row-span-2 2xl:row-start-1"
           data-privacy-consent-settings="true"
         >
-          <CardHeader className="pb-3 lg:p-4 lg:pb-2">
-            <CardTitle className="text-base">선택 마케팅 수신 설정</CardTitle>
-            <CardDescription>
-              일반 수신과 야간 수신은 채널별 선택 항목입니다. 연락처는 이 화면에서 입력하거나 변경하지 않습니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 lg:p-4 lg:pt-1">
-            {consentLoading && !consentSettings && (
+          <CardContent className="space-y-4 p-4 lg:p-4">
+            {consentLoading && (
               <p className="text-sm text-muted-foreground" role="status">
                 수신 동의 설정을 확인하는 중입니다.
               </p>
             )}
             {consentError && (
               <div
-                className="flex flex-col gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-xl bg-destructive/5 px-3 py-2.5 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
                 role="alert"
                 data-privacy-consent-retry="true"
               >
@@ -1677,22 +1542,19 @@ export default function ProfilePage() {
             )}
 
             <section
-              className="rounded-2xl border border-border/70 bg-muted/20 p-3"
+              className="space-y-1"
               aria-labelledby="ordinary-marketing-consent-title"
               data-privacy-consent-group="ordinary"
             >
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
-                    일반 마케팅 수신
-                  </h2>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    새 소식과 혜택 안내를 받을 채널을 선택합니다.
-                  </p>
-                </div>
-                <Badge variant="secondary">선택</Badge>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
+                  일반 마케팅 수신
+                </h2>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  선택
+                </span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="space-y-1">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.ordinary[channel.id] === true;
                   const action: ConsentAction = {
@@ -1705,20 +1567,20 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-h-24 flex-col justify-between rounded-xl border border-border/70 bg-background p-3"
+                      className="flex min-w-0 items-center gap-3 py-1.5"
                       data-privacy-consent-row={`ordinary-${channel.id}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{channel.label}</span>
-                        <Badge variant={enabled ? "default" : "secondary"}>
-                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                        </Badge>
-                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {channel.label}
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                        {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                      </span>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
                         size="sm"
-                        className="mt-3 w-full"
+                        className="shrink-0"
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1736,22 +1598,19 @@ export default function ProfilePage() {
             </section>
 
             <section
-              className="rounded-2xl border border-amber-500/60 bg-amber-50/60 p-3 dark:bg-amber-950/20"
+              className="space-y-1 pt-2"
               aria-labelledby="night-marketing-consent-title"
               data-privacy-consent-group="night"
             >
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <div>
-                  <h2 id="night-marketing-consent-title" className="text-sm font-semibold text-amber-950 dark:text-amber-100">
-                    야간 마케팅 수신
-                  </h2>
-                  <p className="mt-1 text-xs leading-5 text-amber-900/80 dark:text-amber-100/80">
-                    일반 수신과 별도로, 야간 안내를 받을 채널을 직접 선택합니다.
-                  </p>
-                </div>
-                <Badge className="bg-amber-600 text-white hover:bg-amber-600">별도 선택</Badge>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="night-marketing-consent-title" className="text-sm font-semibold">
+                  야간 마케팅 수신
+                </h2>
+                <span className="text-[11px] font-semibold text-amber-600">
+                  별도 선택
+                </span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="space-y-1">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.night[channel.id] === true;
                   const action: ConsentAction = {
@@ -1764,20 +1623,20 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-h-24 flex-col justify-between rounded-xl border border-amber-500/40 bg-background/90 p-3"
+                      className="flex min-w-0 items-center gap-3 py-1.5"
                       data-privacy-consent-row={`night-${channel.id}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{channel.label}</span>
-                        <Badge variant={enabled ? "default" : "secondary"}>
-                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                        </Badge>
-                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {channel.label}
+                      </span>
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                        {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                      </span>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
                         size="sm"
-                        className="mt-3 w-full"
+                        className="shrink-0"
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1798,7 +1657,7 @@ export default function ProfilePage() {
 
         <Card
           id="account-deletion"
-          className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-danger-zone="true"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
@@ -1819,11 +1678,11 @@ export default function ProfilePage() {
                   className="text-xs leading-5 text-muted-foreground"
                   data-mypage-danger-zone-guidance="compact"
                 >
-                  완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.
+                  완전 삭제는 복구할 수 없습니다.
                 </p>
                 {deletionProgressMessage && (
                   <p
-                    className="rounded-md border border-amber-500/40 bg-amber-50/60 p-3 text-xs leading-5 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
+                    className="rounded-md bg-amber-50/60 p-3 text-xs leading-5 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
                     data-account-deletion-status="recoverable"
                     role="status"
                   >

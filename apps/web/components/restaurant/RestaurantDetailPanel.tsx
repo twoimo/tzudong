@@ -50,8 +50,9 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
-import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
 type ReviewRow = Tables<'reviews'>;
 type ReviewLikeRow = Pick<Tables<'review_likes'>, 'review_id'>;
@@ -241,7 +242,7 @@ export function RestaurantDetailPanel({
             if (!videoId || !watchUrl) return [];
 
             return [{
-                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+                videoId,
                 watchUrl,
             }];
         }),
@@ -420,8 +421,8 @@ export function RestaurantDetailPanel({
                 const reviewIds = typedReviewsPageData.map((review) => review.id);
 
                 // 3. Profiles / 사용자 좋아요 여부를 병렬 조회
-                const [typedProfilesData, userLikesResult] = await Promise.all([
-                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
+                const [profilesLookup, userLikesResult] = await Promise.all([
+                    readPublicProfileSummariesLookup(supabase, userIds),
                     user
                         ? supabase
                             .from('review_likes')
@@ -430,10 +431,6 @@ export function RestaurantDetailPanel({
                             .eq('user_id', user.id)
                         : Promise.resolve({ data: [] }),
                 ]);
-                // 4. Map으로 변환
-                const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
-                    typedProfilesData.map((profile) => [profile.user_id, { nickname: profile.nickname, avatarUrl: profile.avatar_url }])
-                );
 
                 const userLikesMap = new Map(
                     ((userLikesResult.data || []) as ReviewLikeRow[]).map((like) => [like.review_id, true])
@@ -441,7 +438,11 @@ export function RestaurantDetailPanel({
 
                 // 7. 리뷰 데이터 매핑
                 const reviews = typedReviewsPageData.map((review) => {
-                    const userProfile = profilesMap.get(review.user_id);
+                    const userProfile = resolvePublicReviewerDisplay(
+                        review.user_id,
+                        profilesLookup.summaries,
+                        profilesLookup.ok,
+                    );
 
                     return {
                         restaurantId: review.restaurant_id ?? restaurant.id,
@@ -449,8 +450,8 @@ export function RestaurantDetailPanel({
                         userId: review.user_id,
                         restaurantName: restaurant.name,
                         restaurantCategories: categories,
-                        userName: userProfile?.nickname || '탈퇴한 사용자',
-                        userAvatarUrl: userProfile?.avatarUrl,
+                        userName: userProfile.nickname,
+                        userAvatarUrl: userProfile.avatarUrl ?? undefined,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
@@ -909,7 +910,8 @@ export function RestaurantDetailPanel({
                 data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
                 className={cn(
-                    "h-full w-full max-w-full flex flex-col bg-background border-l border-border relative",
+                    "h-full w-full max-w-full flex flex-col bg-background relative",
+                    isMobile ? "border-0" : "border-l border-border",
                     className
                 )}
             >
@@ -947,7 +949,7 @@ export function RestaurantDetailPanel({
                                     </Button>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-xl font-bold truncate">
+                                            <h3 className="text-lg font-semibold truncate">
                                                 {restaurant.name}
                                             </h3>
                                         </div>
@@ -1019,7 +1021,7 @@ export function RestaurantDetailPanel({
                                                 />
                                             </div>
                                             <h2
-                                                className="text-xl font-bold truncate"
+                                                className="text-lg font-semibold truncate"
                                                 title={restaurant.name}
                                             >
                                                 {restaurant.name}
@@ -1180,10 +1182,9 @@ export function RestaurantDetailPanel({
                                                 onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
                                                 aria-label={youtubeCopy.openAriaLabel(1)}
                                             >
-                                                <Image
-                                                    src={youtubeVideos[0].thumbnailUrl}
+                                                <YoutubeThumbnail
+                                                    videoId={youtubeVideos[0].videoId}
                                                     alt=""
-                                                    fill
                                                     className="object-cover"
                                                     sizes="(max-width: 400px) 100vw, 400px"
                                                     priority
@@ -1194,8 +1195,8 @@ export function RestaurantDetailPanel({
                                                     </span>
                                                 )}
                                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
-                                                        <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
+                                                        <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                     </span>
                                                 </div>
                                             </button>
@@ -1216,10 +1217,9 @@ export function RestaurantDetailPanel({
                                                             onClick={() => openExternalUrl(video.watchUrl)}
                                                             aria-label={youtubeCopy.openAriaLabel(index + 2)}
                                                         >
-                                                            <Image
-                                                                src={video.thumbnailUrl}
+                                                            <YoutubeThumbnail
+                                                                videoId={video.videoId}
                                                                 alt=""
-                                                                fill
                                                                 className="object-cover"
                                                                 sizes="(max-width: 400px) 100vw, 400px"
                                                             />
@@ -1227,8 +1227,8 @@ export function RestaurantDetailPanel({
                                                                 {youtubeCopy.itemBadge(index + 2)}
                                                             </span>
                                                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:scale-105 group-hover:bg-red-600">
-                                                                    <Play className="ml-0.5 h-5 w-5 fill-current" aria-hidden="true" />
+                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
+                                                                    <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                                 </span>
                                                             </div>
                                                         </button>
@@ -1451,9 +1451,9 @@ export function RestaurantDetailPanel({
                                 {/* 네이버 지도 - 추천 */}
                                 <Button
                                     onClick={handleNaverMap}
-                                    variant="ghost"
+                                    variant="outline"
                                     className={cn(
-                                        "w-full h-auto !bg-gradient-to-r !from-[#03C75A] !to-[#00B050] hover:!from-[#02B351] hover:!to-[#029E49] !text-white shadow-sm",
+                                        "w-full h-auto border-primary/30 bg-primary/5 hover:bg-primary/10",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="네이버 지도로 길찾기 열기"
@@ -1462,10 +1462,10 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="naver" />
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-sm font-bold">네이버 지도</span>
-                                                <Badge className="bg-yellow-400 text-green-900 text-[9px] px-1 py-0 h-3.5 border-0">추천</Badge>
+                                                <span className="text-sm font-semibold">네이버 지도</span>
+                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[10px] px-1.5 py-0 border-0">추천</Badge>
                                             </div>
-                                            <p className="text-[11px] text-green-50 opacity-90">국내 상세한 길안내 · 실시간 교통정보</p>
+                                            <p className="text-[11px] text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1475,7 +1475,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleKakaoMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400",
+                                        "w-full h-auto",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="카카오맵으로 길찾기 열기"
@@ -1483,7 +1483,7 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <MapProviderLogo provider="kakao" />
                                         <div className="flex-1 text-left">
-                                            <div className="text-sm font-bold text-foreground mb-0.5">카카오맵</div>
+                                            <div className="text-sm font-semibold text-foreground mb-0.5">카카오맵</div>
                                             <p className="text-[11px] text-muted-foreground">대중교통 · 주차 정보</p>
                                         </div>
                                     </div>
@@ -1494,7 +1494,7 @@ export function RestaurantDetailPanel({
                                     onClick={handleGoogleMap}
                                     variant="outline"
                                     className={cn(
-                                        "w-full h-auto border-2 hover:bg-blue-50 hover:border-blue-400",
+                                        "w-full h-auto",
                                         isMobile ? "min-h-[56px]" : "min-h-[64px]"
                                     )}
                                     aria-label="구글 지도로 길찾기 열기"
@@ -1502,7 +1502,7 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <MapProviderLogo provider="google" />
                                         <div className="flex-1 text-left">
-                                            <div className="text-sm font-bold text-foreground mb-0.5">구글 지도</div>
+                                            <div className="text-sm font-semibold text-foreground mb-0.5">구글 지도</div>
                                             <p className="text-[11px] text-muted-foreground">글로벌 지도 · 위성 뷰</p>
                                         </div>
                                     </div>
@@ -1523,7 +1523,10 @@ export function RestaurantDetailPanel({
                                         onClick={handleRequestEditRestaurant}
                                         variant="outline"
                                         size="sm"
-                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
+                                        className={cn(
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            isMobile ? "rounded-lg" : "rounded-xl"
+                                        )}
                                     >
                                         <Edit className="h-4 w-4 shrink-0" aria-hidden="true" />
                                         <span>수정 요청</span>
@@ -1532,7 +1535,10 @@ export function RestaurantDetailPanel({
                                     {mapDestinationUrls ? (
                                         <Button
                                             onClick={handleGetDirections}
-                                            className="h-14 min-w-0 flex-col gap-1 rounded-xl bg-gradient-primary px-1.5 text-xs font-bold leading-tight shadow-sm hover:opacity-90"
+                                            className={cn(
+                                                "h-14 min-w-0 flex-col gap-1 bg-primary px-1.5 text-xs font-semibold leading-tight text-primary-foreground shadow-sm hover:bg-primary/90",
+                                                isMobile ? "rounded-lg" : "rounded-xl"
+                                            )}
                                         >
                                             <Navigation className="h-4 w-4 shrink-0" aria-hidden="true" />
                                             <span>길찾기</span>
@@ -1543,7 +1549,10 @@ export function RestaurantDetailPanel({
                                         onClick={handleWriteReview}
                                         variant="outline"
                                         size="sm"
-                                        className="h-14 min-w-0 flex-col gap-1 rounded-xl px-1.5 text-[11px] font-semibold leading-tight"
+                                        className={cn(
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            isMobile ? "rounded-lg" : "rounded-xl"
+                                        )}
                                     >
                                         <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                                         <span>리뷰 작성</span>
@@ -1558,7 +1567,7 @@ export function RestaurantDetailPanel({
                     <div className="p-4 border-t border-border">
                         <Button
                             onClick={handleWriteReview}
-                            className="w-full bg-gradient-primary hover:opacity-90 gap-2"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
                         >
                             <MessageSquare className="h-4 w-4" />
                             리뷰 작성하기

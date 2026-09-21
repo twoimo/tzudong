@@ -21,7 +21,6 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const isLocalNightlyMode = process.env.NIGHTLY_MODE === 'local'
     || process.env.NIGHTLY_LOCAL_ENV_ONLY === '1';
 const LOCAL_SUPABASE_ORIGIN = (() => {
-    if (!isLocalNightlyMode) return undefined;
     try {
         const value = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '');
         return LOOPBACK_HOSTS.has(value.hostname) ? value.origin : undefined;
@@ -433,7 +432,8 @@ function isLoopbackWebSocketUrl(url: URL): boolean {
         && LOOPBACK_PORTS.has(url.port);
 }
 function isNextDevWebSocketUrl(url: URL): boolean {
-    return isLoopbackWebSocketUrl(url) && url.pathname === '/_next/webpack-hmr';
+    return isLoopbackWebSocketUrl(url)
+        && (url.pathname === '/_next/hmr' || url.pathname === '/_next/webpack-hmr');
 }
 
 function isSupabaseUrl(url: URL): boolean {
@@ -494,7 +494,8 @@ function isAllowedSupabaseFixturePath(url: URL): boolean {
     return LOCAL_SUPABASE_FIXTURE_PATHS.has(url.pathname);
 }
 function isAllowedApplicationUrl(url: URL): boolean {
-    const appPort = process.env.APP_PORT?.trim() || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL);
+    const appPort = process.env.APP_PORT?.trim()
+        || configuredUrlPort(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
     if (!isLoopbackUrl(url) || !appPort || url.port !== appPort) return false;
     return LOCAL_APP_PATHS.has(url.pathname)
         || url.pathname.startsWith('/_next/')

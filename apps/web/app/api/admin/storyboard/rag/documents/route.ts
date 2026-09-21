@@ -18,6 +18,7 @@ import {
   embedStoryboardRagTexts,
   serializePgVector,
 } from '@/lib/admin/storyboard/rag-worker-client';
+import type { StoryboardRagDocumentsClient } from '@/lib/admin/storyboard/rag-service-role-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       sparse_lexical_weights: embeddings.items[index].sparse,
     }));
 
-    const supabase = createSupabaseServiceRoleClient() as any;
+    const supabase = createSupabaseServiceRoleClient() as unknown as StoryboardRagDocumentsClient;
     const { data, error } = await supabase
       .from('documents')
       .upsert(rows, { onConflict: 'user_id,external_id' })
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       return failClosedCode('storyboard_rag_documents_upsert_failed', traceId, telemetry, 'supabase_search');
     }
 
-    const payload = { ids: (data ?? []).map((row: { id: string }) => row.id), traceId };
+    const payload = { ids: (data ?? []).map((row) => row.id), traceId };
     return NextResponse.json(
       payload,
       { headers: buildStoryboardRouteHeaders(telemetry, STORYBOARD_ROUTE_NO_STORE_HEADERS, payload) },

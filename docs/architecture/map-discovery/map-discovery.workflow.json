@@ -1,0 +1,223 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "쯔동 지도 발견과 리뷰 표시",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "map",
+      "label": "지도 화면"
+    },
+    {
+      "id": "data",
+      "label": "조회와 필터"
+    },
+    {
+      "id": "privacy",
+      "label": "위치 · 프로필 경계"
+    }
+  ],
+  "phases": [
+    {
+      "id": "load",
+      "label": "불러오기",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "choose",
+      "label": "고르기",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "open",
+      "label": "열기",
+      "fromCol": 4,
+      "toCol": 4
+    }
+  ],
+  "mainPath": [
+    "home",
+    "query",
+    "theme",
+    "markers",
+    "detail"
+  ],
+  "nodes": [
+    {
+      "id": "home",
+      "lane": "map",
+      "col": 0,
+      "type": "frontend",
+      "label": "홈 지도",
+      "sublabel": "검색",
+      "width": 166
+    },
+    {
+      "id": "sheet",
+      "lane": "map",
+      "col": 4,
+      "type": "frontend",
+      "label": "맛집 바텀 시트",
+      "sublabel": "필터된 목록",
+      "width": 166
+    },
+    {
+      "id": "detail",
+      "lane": "data",
+      "col": 4,
+      "type": "frontend",
+      "label": "맛집 상세",
+      "sublabel": "영상 리뷰",
+      "width": 166
+    },
+    {
+      "id": "query",
+      "lane": "data",
+      "col": 1,
+      "type": "database",
+      "label": "승인 맛집 조회",
+      "sublabel": "승인 맛집",
+      "width": 166
+    },
+    {
+      "id": "theme",
+      "lane": "data",
+      "col": 2,
+      "type": "backend",
+      "label": "5종 테마 필터",
+      "sublabel": "현재 결과",
+      "width": 166
+    },
+    {
+      "id": "metrics",
+      "lane": "data",
+      "col": 3,
+      "type": "database",
+      "label": "조회수·댓글 지표",
+      "sublabel": "지표 구분",
+      "width": 166
+    },
+    {
+      "id": "markers",
+      "lane": "map",
+      "col": 3,
+      "type": "frontend",
+      "label": "클러스터 마커",
+      "sublabel": "펼쳐도 유지",
+      "width": 166
+    },
+    {
+      "id": "gps",
+      "lane": "privacy",
+      "col": 1,
+      "type": "security",
+      "label": "GPS 플로팅 버튼",
+      "sublabel": "메모리만",
+      "width": 166
+    },
+    {
+      "id": "evidence",
+      "lane": "privacy",
+      "col": 2,
+      "type": "security",
+      "label": "운영자 위치 증빙",
+      "sublabel": "없으면 차단",
+      "width": 166
+    },
+    {
+      "id": "profiles",
+      "lane": "privacy",
+      "col": 4,
+      "type": "backend",
+      "label": "공개 프로필 RPC",
+      "sublabel": "user_id 배치",
+      "width": 166
+    }
+  ],
+  "edges": [
+    {
+      "id": "load-query",
+      "from": "home",
+      "to": "query",
+      "label": "지도 범위"
+    },
+    {
+      "id": "apply-theme",
+      "from": "query",
+      "to": "theme",
+      "label": "테마 선택"
+    },
+    {
+      "id": "need-metrics",
+      "from": "theme",
+      "to": "metrics",
+      "label": "조회수·댓글 테마"
+    },
+    {
+      "id": "draw-markers",
+      "from": "theme",
+      "to": "markers",
+      "label": "필터된 맛집"
+    },
+    {
+      "id": "expand-cluster",
+      "from": "markers",
+      "to": "sheet",
+      "label": "클러스터 · 목록"
+    },
+    {
+      "id": "open-detail",
+      "from": "sheet",
+      "to": "detail",
+      "label": "맛집 선택"
+    },
+    {
+      "id": "tap-gps",
+      "from": "home",
+      "to": "gps",
+      "label": "현재 위치"
+    },
+    {
+      "id": "gps-gate",
+      "from": "gps",
+      "to": "evidence",
+      "label": "readiness"
+    },
+    {
+      "id": "review-join",
+      "from": "detail",
+      "to": "profiles",
+      "role": "return",
+      "label": "작성자 닉네임"
+    },
+    {
+      "id": "open-from-marker",
+      "from": "markers",
+      "to": "detail",
+      "label": "맛집 선택"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "필터와 빈 상태",
+      "items": [
+        "최근 영상·재등장은 링크와 공개일만으로 동작한다",
+        "조회수·댓글 지표가 없으면 조건 없음과 다른 안내를 보여준다"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "위치와 프로필",
+      "items": [
+        "운영자 위치 증빙이 없으면 GPS는 토스트만 띄우고 좌표를 요청하지 않는다",
+        "공개 프로필은 profiles.user_id로 읽고, 배열/맵을 혼동하지 않으며 100건을 넘으면 나눈다"
+      ]
+    }
+  ]
+}

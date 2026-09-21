@@ -64,6 +64,7 @@ export const ReviewCard = React.memo(function ReviewCard({
 }: ReviewCardProps) {
     const router = useRouter();
     const isOwnReview = currentUserId && review.userId === currentUserId;
+    const photoItemKeyPrefix = idPrefix ?? review.id;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
@@ -81,11 +82,15 @@ export const ReviewCard = React.memo(function ReviewCard({
             purpose: 'food' as const,
         };
 
-        return review.photos.reduce<string[]>((urls, photo) => {
+        const urls: string[] = [];
+        const seen = new Set<string>();
+        for (const photo of review.photos) {
             const url = resolveReviewPhotoUrl(photo.url, ownership);
-            if (url) urls.push(url);
-            return urls;
-        }, []);
+            if (!url || seen.has(url)) continue;
+            seen.add(url);
+            urls.push(url);
+        }
+        return urls;
     }, [review.id, review.photos, review.userId]);
     const profileAvatarUrl = useMemo(
         () => resolveProfileAvatarUrl(review.userAvatarUrl, review.userId),
@@ -270,14 +275,14 @@ export const ReviewCard = React.memo(function ReviewCard({
     return (
         <div
             id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
-            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500 
-                ${review.isPinned ? "border-primary border-2" : "border-border"}
+            className={`w-full rounded-xl border bg-card text-card-foreground overflow-hidden mb-4 max-w-full transition-all duration-500
+                ${review.isPinned ? "border-primary/50" : "border-border/40"}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
             {...cardInteractionProps}
         >
             {/* 헤더 영역 */}
-            <div className="flex items-center justify-between p-3 border-b border-border/50">
+            <div className="flex items-center justify-between p-3 border-b border-border/30">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 bg-primary/10">
                         {profileAvatarUrl && (
@@ -319,7 +324,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             aria-label={`${review.restaurantName} 맛집 상세 보기`}
                         >
                             <MapPin className="w-3 h-3" />
-                            {review.restaurantName}
+                            <span className="text-[11px] leading-tight">{review.restaurantName}</span>
                         </button>
                     </div>
                 </div>
@@ -398,10 +403,10 @@ export const ReviewCard = React.memo(function ReviewCard({
             {
                 photoUrls.length > 0 && (
                     <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
-                        <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: true }}>
+                        <Carousel setApi={setApi} className="w-full h-full" opts={{ loop: photoUrls.length > 1 }}>
                             <CarouselContent>
                                 {photoUrls.map((url, index) => (
-                                    <CarouselItem key={url}>
+                                    <CarouselItem key={`${photoItemKeyPrefix}-photo-${index}`}>
                                         <div className="relative w-full aspect-square">
                                             <Image
                                                 src={url}
@@ -430,7 +435,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                                 {photoUrls.map((url, index) => (
                                     <div
-                                        key={url}
+                                        key={`${photoItemKeyPrefix}-dot-${index}`}
                                         className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
                                     ></div>
                                 ))}

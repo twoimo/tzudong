@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import {
   normalizeCanonicalYouTubeWatchUrl,
 } from "@/lib/youtube-url";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import {
   MyPageEmptyState,
   MyPageErrorState,
@@ -22,7 +22,7 @@ import {
   myPageInlineLinkClass,
   myPageListCardClass,
   myPageListContentClass,
-  myPageResponsiveListClass,
+  myPageResponsiveMediaListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 const PAGE_SIZE = 15;
@@ -116,7 +116,7 @@ export default function BookmarksPage() {
         />
       ) : (
         <div
-          className={myPageResponsiveListClass}
+          className={myPageResponsiveMediaListClass}
           data-mypage-responsive-list="bookmarks"
         >
           {visibleBookmarks.map((bookmark) => {
@@ -138,11 +138,11 @@ export default function BookmarksPage() {
             const canonicalYouTubeWatchUrl = normalizeCanonicalYouTubeWatchUrl(
               bookmark.restaurant.youtube_link,
             );
-            let thumbnailUrl = null;
+            let thumbnailVideoId: string | null = null;
             for (const link of youtubeLinks) {
               const videoId = extractCanonicalYouTubeVideoId(link);
               if (videoId) {
-                thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                thumbnailVideoId = videoId;
                 break;
               }
             }
@@ -150,15 +150,14 @@ export default function BookmarksPage() {
             return (
               <Card key={bookmark.id} className={myPageListCardClass}>
                 <CardContent className={myPageListContentClass}>
-                  <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row md:gap-4">
                     {/* 썸네일 */}
-                    <div className="relative w-full sm:w-32 md:w-40 aspect-video bg-muted rounded overflow-hidden shrink-0">
-                      {thumbnailUrl ? (
-                        <Image
-                          src={thumbnailUrl}
+                    <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded bg-muted sm:w-32">
+                      {thumbnailVideoId ? (
+                        <YoutubeThumbnail
+                          videoId={thumbnailVideoId}
                           alt={bookmark.restaurant.name}
-                          fill
-                          sizes="(max-width: 640px) 100vw, 160px"
+                          sizes="(max-width: 640px) 100vw, 128px"
                           className="object-cover"
                         />
                       ) : (
@@ -172,7 +171,7 @@ export default function BookmarksPage() {
                     <div className="flex-1 min-w-0">
                       {/* 헤더: 맛집명 + 카테고리 */}
                       <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className={myPageCardTitleClass}>
                               {bookmark.restaurant.name}
@@ -193,7 +192,7 @@ export default function BookmarksPage() {
                             toggleBookmark(bookmark.restaurant.id, true)
                           }
                           disabled={isToggling}
-                          className="h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive"
+                          className="h-11 w-11 shrink-0 touch-manipulation text-muted-foreground hover:text-destructive"
                           aria-label={`${bookmark.restaurant.name} 북마크 삭제`}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -236,7 +235,7 @@ export default function BookmarksPage() {
           {hasMore && (
             <div
               ref={loadMoreRef}
-              className="py-6 text-center text-sm text-muted-foreground md:col-span-2 xl:col-span-3"
+              className="py-6 text-center text-sm text-muted-foreground xl:col-span-2"
             >
               계속 불러오는 중…
             </div>

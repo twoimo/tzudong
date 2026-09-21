@@ -1,0 +1,41 @@
+{
+  "baselineRevision": 16,
+  "regeneratedRevision": 18,
+  "restoredRevision": 19,
+  "sceneNo": 1,
+  "provider": "local-mlx",
+  "model": "ddalcu/Krea-2-Turbo-MLX-Serve-mixed-4-8",
+  "externalAI": false,
+  "newAssetRecorded": true,
+  "differentImageBytes": false,
+  "originalAssetAndProvenanceRestored": true,
+  "otherScenesUnchanged": true,
+  "exportFilesDecodedAndVerified": 20,
+  "events": [
+    {
+      "operation": "queued",
+      "revision": 17,
+      "createdAt": "2026-09-20T09:53:42.313016+00:00"
+    },
+    {
+      "operation": "claimed",
+      "revision": 17,
+      "createdAt": "2026-09-20T09:53:44.165529+00:00"
+    },
+    {
+      "operation": "image_saved",
+      "revision": 18,
+      "createdAt": "2026-09-20T09:57:07.837879+00:00"
+    },
+    {
+      "operation": "finished",
+      "revision": 18,
+      "createdAt": "2026-09-20T09:57:07.855931+00:00"
+    },
+    {
+      "operation": "restored",
+      "revision": 19,
+      "createdAt": "2026-09-20T09:58:16.144845+00:00"
+    }
+  ]
+}

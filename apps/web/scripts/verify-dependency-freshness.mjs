@@ -70,17 +70,9 @@ export const UNITS = Object.freeze([
 ]);
 
 /**
- * Requirement 4.5 + 4.11: the four preserved `.github/dependabot.yml` holds.
- * The `next >=16.3.0` hold is one decision covering three aligned packages.
+ * Requirement 4.5 + 4.11: the three preserved `.github/dependabot.yml` holds.
  */
 export const HOLD_LIST = Object.freeze([
-  Object.freeze({
-    id: 'next-16-3',
-    packages: Object.freeze(['next', '@next/bundle-analyzer', 'eslint-config-next']),
-    kind: 'version-range',
-    operator: '>=',
-    threshold: '16.3.0',
-  }),
   Object.freeze({ id: 'eslint-major', packages: Object.freeze(['eslint']), kind: 'semver-major' }),
   Object.freeze({ id: 'types-node-major', packages: Object.freeze(['@types/node']), kind: 'semver-major' }),
   Object.freeze({
@@ -331,7 +323,7 @@ export function bindVerificationToCommit(candidates, results, checkedCommit) {
 /** Fails closed if the governance constants ever drift from the contract. */
 export const assertGovernanceInvariants = () => {
   if (UNITS.length !== 7) throw Object.assign(new Error('unit_count_invalid'), { code: 'unit_count_invalid' });
-  if (HOLD_LIST.length !== 4) throw Object.assign(new Error('hold_count_invalid'), { code: 'hold_count_invalid' });
+  if (HOLD_LIST.length !== 3) throw Object.assign(new Error('hold_count_invalid'), { code: 'hold_count_invalid' });
   if (VERIFICATION_COMMANDS.length !== 4) {
     throw Object.assign(new Error('command_count_invalid'), { code: 'command_count_invalid' });
   }

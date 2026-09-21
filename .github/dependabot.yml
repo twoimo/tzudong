@@ -36,18 +36,6 @@ updates:
       - dependency-name: "eslint"
         update-types:
           - "version-update:semver-major"
-      # Next 16.3.x currently rejects the repository's exact TypeScript 6 npm
-      # alias during install. Keep the aligned runtime/plugin family on 16.2.x
-      # until a dedicated toolchain migration updates and verifies all three.
-      - dependency-name: "next"
-        versions:
-          - ">=16.3.0"
-      - dependency-name: "@next/bundle-analyzer"
-        versions:
-          - ">=16.3.0"
-      - dependency-name: "eslint-config-next"
-        versions:
-          - ">=16.3.0"
       # The verification manifest intentionally pins this package exactly;
       # lift the hold only in the same change that updates that contract.
       - dependency-name: "typescript-eslint"

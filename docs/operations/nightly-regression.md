@@ -378,6 +378,24 @@ The default `dev`/`dev:local` wrapper deliberately checks schema state rather th
 receipt, so application writes do not make the local development database
 inadmissible. The nightly lane still requires the exact seed/catalog receipt.
 
+For a developer-only local clone that contains restored application rows, the
+clone still leaves hosted Auth credentials and identity payloads out of the
+database. To make one restored account usable in the local browser, explicitly
+re-provision it through loopback GoTrue with a new local password:
+
+```sh
+python3 backend/supabase/scripts/local-auth-reprovision.py \
+  --allow-local \
+  --env-file "${STATE}/stack.env" \
+  --user-id "<restored-user-uuid>"
+```
+
+The command performs a readback before and after the update, creates an email
+identity for that local account, and verifies a local password login. It never
+reads or copies a hosted password verifier, session, refresh token, or OAuth
+identity. It is not part of the synthetic nightly seed and must not be added to
+the hosted fallback or publication lane.
+
 Run a no-start contract check, one lane, or the full curated run as follows:
 The local browser runner also requires an explicit `APP_PORT` that is not the
 existing development listener (`8080`) and does not overlap any generated

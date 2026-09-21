@@ -34,6 +34,24 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(naverMapSource).toContain('const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;');
     expect(naverMapSource).toContain('const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0');
     expect(naverMapSource).toContain('const contextualIneligibilityReason = hasExpandedClusterRestaurants');
+    expect(naverMapSource).toContain('const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {');
+    expect(naverMapSource).toContain("filters.featuredTheme ?? '',");
+    const compositeMarkerRenderSource = naverMapSource.slice(
+      naverMapSource.indexOf('// ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 ====='),
+    );
+    expect(compositeMarkerRenderSource).toContain('renderExpandedClusterIndividuals(activeIds);');
+    expectSourceOrder(
+      compositeMarkerRenderSource,
+      'renderExpandedClusterIndividuals(activeIds);',
+      'if (seoulClustersToRender.length > 0) {',
+    );
+    expectSourceOrder(
+      compositeMarkerRenderSource,
+      'if (isCluster(feature)) {',
+      'if (shouldSkipExpandedClusterMarker(clusterRestaurantIds)) {',
+    );
+    expect(naverMapSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker');
+    expect(compositeMarkerRenderSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0) {');
     expect(naverMapSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
     expect(naverMapSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
 
@@ -105,16 +123,21 @@ describe('home map contextual visible-marker restaurants', () => {
     const homeClientSource = source('app/home-client.tsx');
     const containerSource = source('components/home/home-map-container.tsx');
     const controlPanelSource = source('components/home/home-control-panel.tsx');
+    const swipeRestaurantSource = source('lib/home-map-swipe-restaurants.ts');
 
     expect(homeClientSource).toContain('const [contextualRestaurantsPayload, setContextualRestaurantsPayload] =');
     expect(homeClientSource).toContain('onContextualRestaurantsChange={setContextualRestaurantsPayload}');
     expect(homeClientSource).toContain('contextualRestaurantsPayload={contextualRestaurantsPayload}');
 
-    expect(containerSource).toContain('const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) =>');
+    expect(containerSource).toContain("from '@/lib/home-map-swipe-restaurants'");
+    expect(containerSource).toContain('const uniqueRestaurants = dedupeHomeMapRestaurants(filteredRestaurants);');
     expect(containerSource).toContain('onContextualRestaurantsChange?: (payload: HomeMapContextualRestaurantsPayload | null) => void;');
     expect(containerSource).toContain('clearContextualRestaurants(EMPTY_OVERSEAS_CONTEXTUAL_RESTAURANTS);');
     expect(containerSource).toContain('clearContextualRestaurants(EMPTY_DOMESTIC_CONTEXTUAL_RESTAURANTS);');
-    expect(containerSource).toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
+    expect(swipeRestaurantSource).toContain('const hasSameSwipeCoordinates = (a: Restaurant, b: Restaurant) =>');
+    expect(swipeRestaurantSource).toContain('const claimedIds = new Set<string>();');
+    expect(swipeRestaurantSource).toContain('keptByName.get(restaurant.name)?.some((existing) => hasSameSwipeCoordinates(existing, restaurant))');
+    expect(swipeRestaurantSource).not.toContain('uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))');
     expect(containerSource).toContain('onContextualRestaurantsChange={handleContextualRestaurantsChange}');
     expect(containerSource).toContain('buildSwipeableRestaurantsSignature(uniqueRestaurants)');
     expect(containerSource).toContain('lastSwipeableRestaurantsSignatureByModeRef.current[targetMode]');
@@ -160,7 +183,7 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetRestore}');
     expect(mobileOverlaySource).toContain('aria-label="맛집 목록 다시 열기"');
     expect(mobileOverlaySource).toContain('title="맛집 목록 다시 열기"');
-    expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-lg');
+    expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-sm');
     expect(mobileOverlaySource).toContain('bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm');
     expect(mobileOverlaySource).toContain('<List className="h-5 w-5" aria-hidden="true" />');
     expect(mobileOverlaySource).not.toContain('목록 보기 ·');

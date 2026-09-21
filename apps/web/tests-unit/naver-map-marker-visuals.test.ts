@@ -7,6 +7,7 @@ describe('naver map marker visuals', () => {
         const visual = getNaverIndividualMarkerVisual({ categories: ['한식'], category: [] }, true);
         expect(visual.anchor).toEqual({ x: 18, y: 18 });
         expect(visual.zIndex).toBe(100);
+        expect(visual.content).toContain('data-restaurant-marker-kind="category"');
         expect(visual.content).toContain('/images/maker-images/webp/korean.webp');
         expect(visual.content).toContain('/images/maker-images/korean.png');
         expect(visual.content).toContain('type="image/webp"');

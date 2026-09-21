@@ -134,6 +134,7 @@ const nextConfig = {
     images: {
         // [OPTIMIZATION] 이미지 최적화 설정 (예상 LCP 개선: ~300ms)
         formats: ['image/avif', 'image/webp'], // AVIF 우선, WebP fallback
+        qualities: [75, 85], // 공개 썸네일은 고화질 변환을 허용하되 기존 기본값도 유지
         deviceSizes: [640, 750, 828, 1080, 1200, 1920], // 반응형 이미지 크기
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
         minimumCacheTTL: 2678400, // [PERF] 31일 캐시 (이미지가 자주 변경되지 않음)

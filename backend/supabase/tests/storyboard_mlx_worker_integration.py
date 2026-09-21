@@ -19,6 +19,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[3]
 MIGRATION = ROOT / "backend/supabase/migrations/20260918021531_storyboard_mlx_worker.sql"
+RESTORE_MIGRATION = ROOT / "backend/supabase/migrations/20260920021531_storyboard_historical_restore.sql"
 
 
 def sql_value(value):
@@ -122,6 +123,7 @@ class StoryboardSqlIntegration(unittest.TestCase):
           GRANT SELECT ON public.user_roles, public.user_account_status TO privacy_workflow_owner, service_role;
         """)
         cls.sql(MIGRATION.read_text())
+        cls.sql(RESTORE_MIGRATION.read_text())
         print(f"Isolated database: {image}; network=none; no shared volumes", flush=True)
 
     @classmethod
@@ -204,14 +206,14 @@ class StoryboardSqlIntegration(unittest.TestCase):
 
     def test_fresh_install_declares_the_storyboard_catalog_exactly_once(self):
         self.assertEqual(self.sql("SELECT count(*) FROM pg_tables WHERE schemaname='public' "
-                                  "AND tablename LIKE 'admin_storyboard_production_%'"), "5")
+                                  "AND tablename LIKE 'admin_storyboard_production_%'"), "7")
         self.assertEqual(self.sql("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace "
                                   "WHERE n.nspname='public' AND p.proname LIKE 'storyboard_production_%'"), "10")
         self.assertEqual(self.sql("SELECT count(*) FROM pg_policies WHERE schemaname='public' "
-                                  "AND policyname='storyboard_production_owner_access'"), "5")
+                                  "AND policyname='storyboard_production_owner_access'"), "7")
         self.assertEqual(self.sql("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
                                   "WHERE n.nspname='public' AND c.relname LIKE 'admin_storyboard_production_%' "
-                                  "AND c.relkind='r' AND c.relrowsecurity"), "5")
+                                  "AND c.relkind='r' AND c.relrowsecurity"), "7")
         self.assertEqual(self.sql("SELECT count(*) FROM storage.buckets WHERE id='storyboard-private'"), "1")
 
     def test_storyboard_bucket_is_private_and_grants_no_browser_object_policy(self):
@@ -351,6 +353,75 @@ class StoryboardSqlIntegration(unittest.TestCase):
         self.assertEqual(after["project"]["document"]["scenes"][1:], original_scenes[1:])
         self.assertEqual(after["project"]["document"]["scenes"][0]["imageError"], "model_timeout")
         self.assertTrue(all("prompt" not in event and "payload" not in event for event in after["events"]))
+
+    def test_restore_migration_reapply_fails_without_drift(self):
+        before = self.catalog_snapshot()
+        with self.assertRaisesRegex(SqlFailure, "already exists"):
+            self.sql(RESTORE_MIGRATION.read_text())
+        self.assertEqual(self.catalog_snapshot(), before)
+
+    def test_parallel_duplicate_restore_commits_one_immutable_revision(self):
+        owner = self.owner()
+        project = self.admin(owner, "create", payload=request(text="manual", image="manual"))["project"]["id"]
+        original = self.admin(owner, "import-text", project, 0,
+                              {"projectId": project, "schema": "storyboard-mlx-v1", "draft": draft()})["project"]
+        edited = self.admin(owner, "edit", project, original["revision"],
+                            {"sceneNo": 1, "scene": {**draft()["scenes"][0], "title": "Changed"}})["project"]
+        operation = {"targetRevision": original["revision"], "requestId": new_id()}
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: self.admin(owner, "restore", project, edited["revision"], operation), range(2)))
+        self.assertEqual(results[0], results[1])
+        self.assertEqual(results[0]["project"]["revision"], edited["revision"] + 1)
+        self.assertEqual(self.sql(f"SELECT count(*) FROM public.admin_storyboard_production_restores WHERE project_id='{project}'"), "1")
+        for role in ("service_role", "privacy_workflow_owner"):
+            with self.assertRaisesRegex(SqlFailure, "permission denied"):
+                self.sql(f"UPDATE public.admin_storyboard_production_revisions SET document=document WHERE project_id='{project}'", role)
+
+    def test_historical_restore_idempotency_busy_and_asset_guard(self):
+        owner, worker, project, job = self.claimed()
+        self.save_draft(worker, job)
+        for scene in range(1, 6):
+            self.save_image(worker, project, job, scene)
+        self.worker(worker, "finish", job["id"], job["leaseToken"])
+        initial = self.admin(owner, "read", project)["project"]
+        target = initial["revision"]
+        versions = self.admin(owner, "versions", project, payload={"targetRevision": target})
+        self.assertEqual(versions["preview"], initial["document"])
+        edited_scene = {**draft()["scenes"][0], "title": "Edited title"}
+        edited = self.admin(owner, "edit", project, target, {"sceneNo": 1, "scene": edited_scene})["project"]
+        jobs_before = self.sql(f"SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE project_id='{project}'")
+        operation = {"targetRevision": target, "sceneNo": 1, "requestId": new_id()}
+        restored = self.admin(owner, "restore", project, edited["revision"], operation)
+        current = restored["project"]
+        self.assertEqual(current["document"]["scenes"][0]["title"], initial["document"]["scenes"][0]["title"])
+        self.assertEqual(current["document"]["scenes"][0]["image"], initial["document"]["scenes"][0]["image"])
+        self.assertGreater(current["document"]["scenes"][0]["revision"], edited["document"]["scenes"][0]["revision"])
+        self.assertEqual(current["document"]["scenes"][1:], edited["document"]["scenes"][1:])
+        self.assertEqual(current["request"]["providers"], initial["request"]["providers"])
+        self.assertEqual(self.sql(f"SELECT count(*) FROM public.admin_storyboard_production_jobs WHERE project_id='{project}'"), jobs_before)
+        self.assertEqual(self.admin(owner, "restore", project, edited["revision"], operation), restored)
+        with self.assertRaisesRegex(SqlFailure, "request_conflict"):
+            self.admin(owner, "restore", project, edited["revision"], {**operation, "sceneNo": 2})
+        with self.assertRaisesRegex(SqlFailure, "revision_conflict"):
+            self.admin(owner, "restore", project, edited["revision"], {**operation, "requestId": new_id()})
+        self.assertEqual(self.admin(owner, "read", project)["events"][-1]["operation"], "restored")
+        undo = self.admin(owner, "restore", project, current["revision"], {"targetRevision": edited["revision"], "requestId": new_id()})["project"]
+        self.assertEqual(undo["document"]["scenes"][0]["title"], "Edited title")
+        self.assertEqual([s["image"] for s in undo["document"]["scenes"]], [s["image"] for s in edited["document"]["scenes"]])
+        with self.assertRaisesRegex(SqlFailure, "version_not_found"):
+            self.admin(owner, "restore", project, undo["revision"], {"targetRevision": 0, "requestId": new_id()})
+        with self.assertRaisesRegex(SqlFailure, "project_not_found"):
+            self.admin(self.owner(), "restore", project, undo["revision"], {"targetRevision": target, "requestId": new_id()})
+        queued = self.admin(owner, "regenerate", project, undo["revision"], {"sceneNo": 1, "requestId": new_id()})
+        claimed = self.worker(worker, "claim")["job"]
+        with self.assertRaisesRegex(SqlFailure, "project_busy"):
+            self.admin(owner, "restore", project, queued["project"]["revision"], {"targetRevision": target, "requestId": new_id()})
+        cancelled = self.admin(owner, "cancel", project, queued["project"]["revision"], {"jobId": claimed["id"]})
+        image_id = initial["document"]["scenes"][0]["image"]["id"]
+        self.sql(f"UPDATE public.admin_storyboard_production_assets SET metadata=jsonb_set(metadata,'{{original,sha256}}','\"{'b' * 64}\"') WHERE id='{image_id}'")
+        with self.assertRaisesRegex(SqlFailure, "restore_asset_missing"):
+            self.admin(owner, "restore", project, cancelled["project"]["revision"], {"targetRevision": target, "requestId": new_id()})
+        self.assertEqual(self.admin(owner, "read", project)["project"]["revision"], cancelled["project"]["revision"])
 
     def test_all_required_images_for_ready_and_manual_mixed_modes(self):
         owner, worker, project, job = self.claimed()

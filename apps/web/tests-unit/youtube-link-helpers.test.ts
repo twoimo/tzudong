@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import {
@@ -6,6 +8,9 @@ import {
   getYoutubeThumbnailUrl,
   shouldTryNextYoutubeThumbnailCandidate,
 } from '@/lib/youtube-thumbnail';
+
+const source = (relativePath: string) =>
+  readFileSync(resolve(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('YouTube link helpers', () => {
   test('extracts a video id from supported YouTube URLs', () => {
@@ -30,6 +35,9 @@ describe('YouTube link helpers', () => {
   });
 
   test('builds high-quality thumbnail candidates before low-quality fallbacks', () => {
+    expect(getYoutubeThumbnailUrl('abc123DEF45')).toBe(
+      'https://img.youtube.com/vi/abc123DEF45/maxresdefault.jpg',
+    );
     expect(getYoutubeThumbnailUrl('abc123DEF45', 'hqdefault')).toBe(
       'https://img.youtube.com/vi/abc123DEF45/hqdefault.jpg',
     );
@@ -68,5 +76,17 @@ describe('YouTube link helpers', () => {
         totalCandidates: 5,
       }),
     ).toBe(false);
+  });
+
+  test('checks original dimensions before rendering candidates through Next Image', () => {
+    const thumbnailSource = source('components/ui/youtube-thumbnail.tsx');
+    const detailSource = source('components/restaurant/RestaurantDetailPanel.tsx');
+
+    expect(thumbnailSource).toContain('const probe = new window.Image()');
+    expect(thumbnailSource).toContain('naturalWidth: probe.naturalWidth');
+    expect(thumbnailSource).toContain('width={candidateDimensions.width}');
+    expect(thumbnailSource).toContain('height={candidateDimensions.height}');
+    expect(detailSource.match(/<YoutubeThumbnail/g)).toHaveLength(2);
+    expect(detailSource).not.toContain("getYoutubeThumbnailUrl(videoId, 'sddefault')");
   });
 });

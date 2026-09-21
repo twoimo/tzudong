@@ -4,6 +4,7 @@ import {
     applyHomeMapThemeFilter,
     HOME_MAP_THEME_FILTER_IDS,
     HOME_MAP_THEME_FILTERS,
+    homeMapThemeFilterHasUsableMetrics,
     isHomeMapThemeFilterId,
     isYoutubeMetadataBackedHomeMapThemeFilterId,
 } from '../lib/home-map-theme-filters';
@@ -93,6 +94,17 @@ describe('home map theme filters', () => {
         expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['top', 'tie-a', 'tie-b']);
     });
 
+    test('reports whether the current result set has usable theme metrics', () => {
+        const missing = [restaurant('missing', { mergedYoutubeMetas: [meta({ title: 'no metric' })] })];
+        const withViews = [restaurant('valid', { mergedYoutubeMetas: [meta({ viewCount: 12 })] })];
+        expect(homeMapThemeFilterHasUsableMetrics(missing, 'hot-view')).toBe(false);
+        expect(homeMapThemeFilterHasUsableMetrics(withViews, 'hot-view')).toBe(true);
+        expect(homeMapThemeFilterHasUsableMetrics(missing, 'repeat-video')).toBe(false);
+        expect(homeMapThemeFilterHasUsableMetrics([
+            restaurant('repeat', { youtube_link: 'https://youtu.be/aaaaaaaaaaa' }),
+        ], 'repeat-video')).toBe(true);
+    });
+
     test('ignores invalid and missing metrics instead of treating them as zero', () => {
         const restaurants = [
             restaurant('valid', { mergedYoutubeMetas: [meta({ commentCount: '3' })] }),
@@ -103,6 +115,28 @@ describe('home map theme filters', () => {
         ];
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'comment-hot'))).toEqual(['valid']);
+    });
+
+    test('keeps missing, invalid, and duplicate metadata from changing metric selection', () => {
+        const sharedValidMeta = meta({ title: 'shared', viewCount: '1000' });
+        const restaurants = [
+            restaurant('mixed', {
+                youtube_meta: sharedValidMeta as Restaurant['youtube_meta'],
+                mergedYoutubeMetas: [
+                    meta({ title: 'missing' }),
+                    meta({ viewCount: 'invalid' }),
+                    sharedValidMeta,
+                    sharedValidMeta,
+                ],
+                mergedRestaurants: [
+                    { youtube_meta: sharedValidMeta } as Restaurant,
+                ],
+            }),
+            restaurant('lower', { mergedYoutubeMetas: [meta({ viewCount: 1 })] }),
+        ];
+
+        expect(homeMapThemeFilterHasUsableMetrics(restaurants, 'hot-view')).toBe(true);
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'hot-view'))).toEqual(['mixed']);
     });
 
     test('keeps the single restaurant with a valid metric when valid data exists', () => {
@@ -161,6 +195,21 @@ describe('home map theme filters', () => {
         expect(ids(applyHomeMapThemeFilter(restaurants, 'repeat-video'))).toEqual(['merged-links', 'merged-records']);
     });
 
+    test('does not count alternate canonical URLs for the same video as repeat appearances', () => {
+        const restaurants = [
+            restaurant('same-video', {
+                youtube_link: 'https://youtu.be/abcdefghijk',
+                mergedYoutubeLinks: ['https://www.youtube.com/watch?v=abcdefghijk'],
+            }),
+            restaurant('two-videos', {
+                youtube_link: 'https://youtu.be/abcdefghijk',
+                mergedYoutubeLinks: ['https://www.youtube.com/watch?v=lmnopqrstuv'],
+            }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'repeat-video'))).toEqual(['two-videos']);
+    });
+
     test('uses merged metadata sources and dedupes conservatively', () => {
         const sharedMeta = meta({ title: 'same', publishedAt: '2024-01-01', viewCount: 1000, commentCount: 10 });
         const restaurants = [
@@ -183,5 +232,24 @@ describe('home map theme filters', () => {
         ];
 
         expect(ids(applyHomeMapThemeFilter(restaurants, 'fan-signal'))).toEqual(['baseline-winner']);
+    });
+
+    test('fan-signal applies the view baseline to the same video as the comment ratio', () => {
+        const restaurants = [
+            restaurant('mixed-video-signal', {
+                mergedYoutubeMetas: [
+                    meta({ viewCount: 1000, commentCount: 1 }),
+                    meta({ viewCount: 10, commentCount: 9 }),
+                ],
+            }),
+            restaurant('genuine-signal', {
+                mergedYoutubeMetas: [meta({ viewCount: 900, commentCount: 180 })],
+            }),
+            restaurant('below-baseline', {
+                mergedYoutubeMetas: [meta({ viewCount: 800, commentCount: 80 })],
+            }),
+        ];
+
+        expect(ids(applyHomeMapThemeFilter(restaurants, 'fan-signal'))).toEqual(['genuine-signal']);
     });
 });

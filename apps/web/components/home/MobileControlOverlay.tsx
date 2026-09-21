@@ -62,6 +62,13 @@ import {
 } from '@/lib/home-map-theme-filters';
 import { HomeMapThemeFilterIcon } from '@/components/home/home-map-theme-filter-icons';
 
+declare global {
+    interface Window {
+        /** Set while the mobile control overlay is mounted; read by hydration checks. */
+        __tzudong_mobile_overlay_ready?: boolean;
+    }
+}
+
 // 카테고리 상수
 const CATEGORIES = [
     "한식", "중식", "양식", "분식", "치킨", "피자", "고기",
@@ -252,12 +259,12 @@ function MobileControlOverlayComponent({
     // 클라이언트 마운트 및 수화(Hydration) 완료 감지용 글로벌 플래그 설정 및 이벤트 발행
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            (window as any).__tzudong_mobile_overlay_ready = true;
+            window.__tzudong_mobile_overlay_ready = true;
             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
         }
         return () => {
             if (typeof window !== 'undefined') {
-                (window as any).__tzudong_mobile_overlay_ready = false;
+                window.__tzudong_mobile_overlay_ready = false;
             }
         };
     }, []);
@@ -994,7 +1001,7 @@ function MobileControlOverlayComponent({
             >
                 <div
                     className={cn(
-                        'pointer-events-auto flex h-12 w-full min-w-0 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-lg backdrop-blur-sm',
+                        'pointer-events-auto flex h-12 w-full min-w-0 items-center gap-2 rounded-full border border-border bg-background/95 px-2 shadow-sm backdrop-blur-sm',
                         activeSheet === 'search' && 'ring-2 ring-primary'
                     )}
                 >
@@ -1034,7 +1041,7 @@ function MobileControlOverlayComponent({
                     data-layout-primitives="reel cluster"
                     data-allow-horizontal-scroll="true"
                     data-horizontal-scroll-owner="mobile-theme-filter-reel"
-                    className="pointer-events-auto mt-2 flex w-full max-w-full snap-x gap-2 overflow-x-auto px-0.5 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="pointer-events-auto mt-2 flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5 pr-3 py-0.5 scrollbar-hide [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 >
                     {HOME_MAP_THEME_FILTERS.map((theme) => {
                         const isSelected = selectedTheme === theme.id;
@@ -1050,7 +1057,7 @@ function MobileControlOverlayComponent({
                                 title={`${theme.label}: ${theme.description}`}
                                 className={cn(
                                     'pointer-events-auto inline-flex h-9 snap-start shrink-0 items-center gap-1 rounded-full shadow-sm border border-border bg-background/95 backdrop-blur-sm',
-                                    'px-2.5 home-map-floating-control-text text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
+                                    'whitespace-nowrap px-2.5 home-map-floating-control-text text-xs font-semibold transition-colors motion-reduce:transition-none hover:bg-secondary/80',
                                     'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                                     isSelected
                                         ? 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
@@ -1076,14 +1083,14 @@ function MobileControlOverlayComponent({
                 >
                 {/* 국내/해외 토글 버튼 - 모든 사용자에게 표시 */}
                 {onModeChange && (
-                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,28vw,105px)]">
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-sm border border-border w-[clamp(118px,34vw,148px)]">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => onModeChange('domestic')}
                             aria-pressed={mapMode === 'domestic'}
                             aria-label="국내 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1096,7 +1103,7 @@ function MobileControlOverlayComponent({
                             onClick={() => onModeChange('overseas')}
                             aria-pressed={mapMode === 'overseas'}
                             aria-label="해외 맛집 지도 보기"
-                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                            className={`rounded-full h-9 px-2 home-map-floating-control-text text-xs font-medium whitespace-nowrap transition-colors motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                                 }`}
@@ -1114,7 +1121,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`${mapMode === 'domestic' ? '지역' : '국가'} 선택 열기: ${regionLabel}`}
                     data-mobile-map-sheet-trigger="region"
-                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1132,7 +1139,7 @@ function MobileControlOverlayComponent({
                     aria-expanded={false}
                     aria-label={`카테고리 필터 열기${selectedCategories.length > 0 ? `: ${selectedCategories.length}개 선택됨` : ''}`}
                     data-mobile-map-sheet-trigger="category"
-                    className="rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(84px,28vw,105px)] h-9 px-2 home-map-floating-control-text"
+                    className="rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border hover:bg-secondary/80 w-[clamp(118px,34vw,148px)] h-9 px-2 home-map-floating-control-text"
                 >
                     <div className="flex items-center w-full gap-1">
                         <div className="flex items-center justify-center w-4 shrink-0">
@@ -1167,11 +1174,11 @@ function MobileControlOverlayComponent({
                         title="맛집 목록 다시 열기"
                         data-mobile-visible-marker-restaurants-restore="true"
                         className={cn(
-                            'h-12 w-12 rounded-full shadow-lg',
+                            'h-12 w-12 rounded-full shadow-sm',
                             'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm',
                             'transition-colors duration-150 ease-out motion-reduce:transition-none',
                             'flex items-center justify-center',
-                            'border-2'
+                            'border'
                         )}
                     >
                         <List className="h-5 w-5" aria-hidden="true" />
@@ -1188,10 +1195,10 @@ function MobileControlOverlayComponent({
                         }}
                         aria-pressed={showUserSubmittedMarkers}
                         className={cn(
-                            'h-12 w-12 rounded-full shadow-lg',
+                            'h-12 w-12 rounded-full shadow-sm',
                             'transition-colors duration-150 ease-out motion-reduce:transition-none',
                             'flex items-center justify-center',
-                            'border-2',
+                            'border',
                             showUserSubmittedMarkers
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white border-transparent'
                                 : 'bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm'
@@ -1215,12 +1222,12 @@ function MobileControlOverlayComponent({
                                 onSubmissionClick?.();
                             }}
                             className={cn(
-                                'h-12 w-12 rounded-full shadow-lg',
+                                'h-12 w-12 rounded-full shadow-sm',
                                 'bg-red-800 hover:bg-red-900 text-white',
                                 'transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none',
-                                'hover:scale-110 active:scale-95',
+                                'active:scale-95',
                                 'flex items-center justify-center',
-                                'border-2 border-border/20'
+                                'border border-border/20'
                             )}
                             title="맛집 제보하기"
                             aria-label="맛집 제보하기"
@@ -1244,10 +1251,10 @@ function MobileControlOverlayComponent({
                             disabled={isDeviceLocationPending}
                             aria-label={deviceLocationButtonLabel}
                             className={cn(
-                                'h-12 w-12 rounded-full shadow-lg',
+                                'h-12 w-12 rounded-full shadow-sm',
                                 'transition-colors duration-150 ease-out motion-reduce:transition-none',
                                 'flex items-center justify-center',
-                                'border-2',
+                                'border',
                                 isDeviceHeadingMode
                                     ? 'bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70'
                                     : deviceLocation
@@ -1289,7 +1296,7 @@ function MobileControlOverlayComponent({
                     >
                         <div className="px-3 pb-3">
                             <h2 id="mobile-map-search-title" className="sr-only">쯔동여지도 검색</h2>
-                            <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5">
+                            <div className="flex min-w-0 items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5">
                                 <div className="min-w-0 flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40">
                                     <Image
                                         src="/logo.webp"

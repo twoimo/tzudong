@@ -208,7 +208,9 @@ export async function cleanupCanonicalReviewPhotoObjects(
         const { error: removeError } = await storage.remove(paths);
         if (removeError) return { paths, success: false };
 
-        for (const path of paths) {
+        // 경로마다 순차로 왕복하던 읽기 검증을 한 번의 왕복으로 모읍니다.
+        // 판정 결과는 이전 구현과 같습니다(하나라도 실패하면 success: false).
+        const readbacks = await Promise.all(paths.map(async (path) => {
             const separatorIndex = path.lastIndexOf('/');
             const directory = path.slice(0, separatorIndex);
             const filename = path.slice(separatorIndex + 1);
@@ -217,13 +219,11 @@ export async function cleanupCanonicalReviewPhotoObjects(
                 search: filename,
             });
 
-            if (
-                readbackError ||
-                !data ||
-                data.some((entry) => entry.name === filename)
-            ) {
-                return { paths, success: false };
-            }
+            return !readbackError && data !== null && !data.some((entry) => entry.name === filename);
+        }));
+
+        if (readbacks.some((isAbsent) => !isAbsent)) {
+            return { paths, success: false };
         }
 
         return { paths, success: true };
@@ -244,14 +244,65 @@ export function buildReviewPhotoObjectPath(
     );
 }
 
+function extractSameOriginPublicReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    configuredOrigin: string | null,
+): string | null {
+    if (typeof value !== 'string' || !configuredOrigin) return null;
+
+    try {
+        const url = new URL(value);
+        if (
+            url.origin !== configuredOrigin
+            || url.username
+            || url.password
+            || url.hash
+            || !url.pathname.startsWith(REVIEW_PHOTO_PUBLIC_PATH)
+        ) {
+            return null;
+        }
+
+        const encodedKey = url.pathname.slice(REVIEW_PHOTO_PUBLIC_PATH.length);
+        if (!encodedKey) return null;
+
+        const segments: string[] = [];
+        for (const segment of encodedKey.split('/')) {
+            if (!segment) return null;
+            try {
+                const decoded = decodeURIComponent(segment);
+                if (decoded !== segment && /[\/?#]/.test(decoded)) return null;
+                segments.push(decoded);
+            } catch {
+                return null;
+            }
+        }
+
+        const objectPath = segments.join('/');
+        return getCanonicalReviewPhotoObjectPath(objectPath, ownership)
+            ?? getLegacyReviewPhotoObjectPath(objectPath, ownership);
+    } catch {
+        return null;
+    }
+}
+
+function getOwnedReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    configuredOrigin: string | null,
+): string | null {
+    return getCanonicalReviewPhotoObjectPath(value, ownership)
+        ?? getLegacyReviewPhotoObjectPath(value, ownership)
+        ?? extractSameOriginPublicReviewPhotoObjectPath(value, ownership, configuredOrigin);
+}
+
 export function resolveReviewPhotoUrl(
     value: string | null | undefined,
     ownership: ReviewPhotoOwnership | string | null | undefined,
     cacheBuster?: string | null,
 ): string | null {
-    const objectPath = getCanonicalReviewPhotoObjectPath(value, ownership)
-        ?? getLegacyReviewPhotoObjectPath(value, ownership);
     const configuredOrigin = resolveConfiguredSupabaseOrigin();
+    const objectPath = getOwnedReviewPhotoObjectPath(value, ownership, configuredOrigin);
     if (!objectPath || !configuredOrigin) return null;
 
     try {

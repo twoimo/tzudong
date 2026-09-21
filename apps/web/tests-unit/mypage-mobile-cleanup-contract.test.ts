@@ -5,6 +5,12 @@ import { join } from "node:path";
 const source = (relativePath: string) =>
   readFileSync(join(import.meta.dir, "..", relativePath), "utf8");
 
+// The single page-level surface class string, used to guard against
+// viewport-clamped rows that previously clipped the password form.
+const profilePageSurfaceClass = (profileSource: string) =>
+  profileSource.match(/className="grid min-w-0 gap-3 rounded-2xl[^"]*"/)?.[0] ??
+  "";
+
 describe("mypage mobile cleanup source contracts", () => {
   test("layout fills the viewport without duplicate return chrome", () => {
     const layoutSource = source("app/mypage/mypage-layout-content.tsx");
@@ -14,7 +20,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const topActionsSource = source("components/mypage/MyPageTopActions.tsx");
     const mapUserMenuSource = source("components/home/HomeMapUserMenu.tsx");
     const mapUserButtonClass =
-      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
     const mapMenuItemClass =
       "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
     const mapMenuContentClass =
@@ -47,7 +53,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(topActionsSource).toContain('data-mypage-fullscreen-toggle="true"');
     expect(topActionsSource).toContain('data-mypage-user-menu="true"');
     expect(mapUserMenuSource).toContain(mapUserButtonClass);
-    expect(topActionsSource).toContain(mapUserButtonClass);
+    expect(topActionsSource).toContain(
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+    );
     expect(mapUserMenuSource).toContain(mapMenuItemClass);
     expect(topActionsSource).toContain(mapMenuItemClass);
     expect(mapUserMenuSource).toContain(mapMenuContentClass);
@@ -107,7 +115,9 @@ describe("mypage mobile cleanup source contracts", () => {
       'className="rounded-3xl border border-border/80 bg-card/95 p-4 shadow-sm md:hidden"',
     );
     expect(profileSource).toContain('data-mypage-profile-hero="mobile-only"');
-    expect(profileSource).toContain('className="overflow-hidden shadow-none md:hidden"');
+    expect(profileSource).toContain(
+      'className="overflow-hidden border-0 bg-transparent shadow-none md:hidden"',
+    );
     expect(profileSource).toContain(
       'data-mypage-profile-hero-layout="sidebar-match"',
     );
@@ -178,7 +188,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0 md:rounded-3xl md:border md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain(
@@ -197,11 +207,11 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("lg:text-xs");
     expect(profileSource).not.toContain("lg:text-base");
     expect(profileSource).toContain('data-mypage-profile-density="dashboard-matrix"');
-    expect(profileSource).toContain('data-mypage-profile-viewport-fit="true"');
-    expect(profileSource).toContain('data-mypage-profile-matrix="equal-2x2"');
-    expect(profileSource).toContain('data-mypage-profile-matrix-size="equal-track-fill"');
-    expect(profileSource).toContain("md:min-h-0");
-    expect(profileSource).toContain("md:content-stretch md:items-stretch");
+    expect(profileSource).toContain('data-mypage-profile-viewport-fit="content"');
+    expect(profileSource).toContain('data-mypage-profile-matrix="content-2x2"');
+    expect(profileSource).toContain('data-mypage-profile-matrix-size="content-track"');
+    expect(profileSource).toContain("lg:min-h-0");
+    expect(profileSource).toContain("lg:content-stretch lg:items-stretch");
     expect(profileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
     );
@@ -223,12 +233,30 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(profileSource).toContain("md:h-full");
-    expect(profileSource).toContain("md:grid-rows-2");
-    expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
-    expect(profileSource).toContain(
-      "md:grid-cols-2",
+    expect(sidebarSource).toContain(
+      "hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex",
     );
+    expect(sidebarSource.match(/border-r border-border/g)?.length ?? 0).toBe(1);
+    expect(sidebarSource).not.toContain("border-b border-border");
+    expect(sidebarSource).not.toContain("border-t border-border");
+    expect(sidebarSource).toContain(
+      'variant="ghost"\n          className="h-9 w-full rounded-xl text-xs"',
+    );
+    expect(profileSource).toContain("lg:h-full");
+    // The page surface must stay content-sized: pinning two viewport rows
+    // clipped the password form inside its card. The matrix breakpoint is lg
+    // because md leaves ~431px, where two tracks squeezed the tier headline.
+    expect(profilePageSurfaceClass(profileSource)).toContain(
+      "rounded-2xl border border-border/70",
+    );
+    expect(profilePageSurfaceClass(profileSource)).not.toContain(
+      "md:grid-rows-2",
+    );
+    expect(profilePageSurfaceClass(profileSource)).not.toContain("md:h-full");
+    expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
+    expect(profileSource).toContain("lg:grid-cols-2");
+    expect(profileSource).toContain("2xl:grid-cols-3");
+    expect(profileSource).not.toContain("md:grid-cols-2");
     expect(profileSource).toContain(
       "lg:gap-3",
     );
@@ -259,42 +287,74 @@ describe("mypage mobile cleanup source contracts", () => {
       "내 활동과 제보 메뉴를 한곳에서 확인합니다",
     );
     expect(profileSource).toContain('className="space-y-3 p-4 md:hidden"');
-    expect(profileSource).toContain("저장하고 작성한 기록");
-    expect(profileSource).toContain("새 맛집과 정보 수정");
+    expect(profileSource).toContain(
+      '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
+    );
     expect(profileSource).toContain('data-mypage-desktop-tier-dashboard="true"');
     expect(profileSource).toContain(
       "data-mypage-desktop-tier-progress",
     );
     expect(profileSource).toContain('data-mypage-desktop-tier-metrics="true"');
     expect(profileSource).toContain('data-mypage-desktop-recent-activity="true"');
-    expect(profileSource).toContain('data-mypage-password-guidance="true"');
     expect(profileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
-    expect(profileSource).toContain(
-      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
-    );
+    expect(profileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
-      'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).toContain(
-      'className="hidden min-w-0 md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
-    expect(profileSource).toContain("취향 신호");
-    expect(profileSource).toContain("등급 핵심");
-    expect(profileSource).toContain("신뢰도 반영");
+    expect(profileSource).toContain(
+      "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
+    );
     expect(profileSource).toContain(
       'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"',
     );
     expect(profileSource).toContain(
       'data-mypage-desktop-tier-action-guide="true"',
     );
-    expect(profileSource).toContain(
-      'className="shrink-0 rounded-2xl border border-border/70 bg-card px-3 py-2.5"',
+    for (const nestedPanelClass of [
+      "rounded-2xl border border-border/70 bg-card px-3 py-2.5",
+      "rounded-2xl border border-border/70 bg-card px-3 py-3",
+      "rounded-2xl border border-border/70 bg-muted/20 p-3",
+      "rounded-2xl border border-amber-500/60 bg-amber-50/60 p-3",
+      "rounded-xl border border-border/70 bg-background p-3",
+      "rounded-xl border border-amber-500/40 bg-background/90 p-3",
+    ]) {
+      expect(profileSource).not.toContain(nestedPanelClass);
+    }
+    for (const nestedBorderClass of [
+      "border-t border-border/60",
+      "divide-y divide-border/60",
+      "rounded-xl border border-destructive/40 bg-destructive/5 p-3",
+      "rounded-md border border-amber-500/40 bg-amber-50/60 p-3",
+      "border border-transparent md:mt-auto",
+    ]) {
+      expect(profileSource).not.toContain(nestedBorderClass);
+    }
+    expect(profileSource).not.toContain(
+      'data-mypage-password-guidance="true"',
     );
+    expect(profileSource).not.toContain("안전한 비밀번호 기준");
+    expect(profileSource).not.toContain("bg-amber-600 text-white");
+    expect(profileSource).toContain("space-y-1 pt-2");
+    expect(profileSource).toContain('text-[11px] font-semibold text-amber-600');
+    for (const tonalPanelClass of [
+      "rounded-2xl bg-muted/40 px-3 py-2.5",
+      "rounded-xl bg-muted/40 px-2.5 py-1.5",
+      "hidden rounded-2xl bg-muted/40 px-3 py-3 md:block",
+      "rounded-xl bg-background px-2 py-2",
+      "flex min-h-24 flex-col justify-between",
+      "rounded-2xl bg-amber-50/70 p-3",
+      "rounded-2xl bg-muted/40 p-3",
+    ]) {
+      expect(profileSource).not.toContain(tonalPanelClass);
+    }
     expect(profileSource).toContain("data-mypage-action-group={section.id}");
     expect(profileSource).not.toContain("바로 할 수 있는 일");
     expect(profileSource).not.toContain(
@@ -336,6 +396,31 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("{user.email}");
     expect(profileSource).not.toContain("가입일 {joinedDateLabel}");
     expect(profileSource).not.toContain("const joinedDateLabel");
+  });
+
+  test("profile dashboard keeps exactly one border around the whole surface", () => {
+    const profileSource = source("app/mypage/profile/page.tsx");
+
+    expect(profileSource).toContain(
+      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"',
+    );
+    expect(profileSource).toContain('data-mypage-profile-page="true"');
+
+    // The old per-section frame drew a second border inside the page frame.
+    expect(profileSource).not.toContain("md:bg-background/85");
+    expect(profileSource).not.toContain("md:backdrop-blur-sm");
+    expect(profileSource).not.toContain("md:border md:border-border/70");
+    expect(profileSource).not.toContain('className="min-w-0 border-border/70');
+
+    // The five inner sections are toned panels; the mobile hero stays flat.
+    expect(profileSource.match(/rounded-2xl border-0/g)?.length ?? 0).toBe(5);
+    expect(profileSource.match(/shadow-none/g)?.length ?? 0).toBe(6);
+
+    // The duplicate card title repeated the two consent group headings.
+    expect(profileSource).not.toContain("선택 마케팅 수신 설정</CardTitle>");
+    expect(profileSource).toContain('aria-label="선택 마케팅 수신 설정"');
+    expect(profileSource).toContain('data-privacy-consent-group="ordinary"');
+    expect(profileSource).toContain('data-privacy-consent-group="night"');
   });
 
   test("mobile loading keeps static mypage chrome and uses borderless dynamic skeletons", () => {
@@ -415,18 +500,26 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).toContain("myPageResponsiveListClass");
     expect(sectionFrameSource).toContain("myPageCardTitleClass");
     expect(sectionFrameSource).toContain("myPageInfoPanelClass");
+    expect(sectionFrameSource).toContain("myPageItemGroupClass");
     expect(sectionFrameSource).toContain("myPageFooterMetaClass");
     expect(sectionFrameSource).toContain("myPageInlineLinkClass");
     expect(sectionFrameSource).toContain("MyPageEmptyState");
     expect(sectionFrameSource).toContain("MyPageErrorState");
     expect(sectionFrameSource).not.toContain("myPageSoftPanelClass");
+    expect(sectionFrameSource).not.toContain("myPageNestedCardClass");
+    for (const nestedItemPanelClass of [
+      "rounded-xl border border-border/70 bg-background/70 p-3",
+      "border border-border/70 bg-background/70",
+    ]) {
+      expect(sectionFrameSource).not.toContain(nestedItemPanelClass);
+    }
 
     for (const sectionSource of sectionSources) {
       expect(sectionSource).toContain("<MyPageSectionFrame");
       expect(sectionSource).toContain("<MyPageEmptyState");
       expect(sectionSource).toContain("<MyPageErrorState");
       expect(sectionSource).toContain("myPageListCardClass");
-      expect(sectionSource).toContain("myPageResponsiveListClass");
+      expect(sectionSource).toMatch(/myPageResponsive(?:Media)?ListClass/);
       expect(sectionSource).toContain("myPageCardTitleClass");
       expect(sectionSource).toContain("data-mypage-responsive-list");
       expect(sectionSource).not.toContain('className="space-y-6"');
@@ -434,6 +527,10 @@ describe("mypage mobile cleanup source contracts", () => {
       expect(sectionSource).not.toContain("더 불러오는 중...");
       expect(sectionSource).not.toContain("bg-gradient");
       expect(sectionSource).not.toContain("shadow-2xl");
+      expect(sectionSource).not.toContain("myPageNestedCardClass");
+      expect(sectionSource).not.toContain(
+        "border border-border/70 bg-background/70",
+      );
     }
   });
 
@@ -479,7 +576,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).not.toContain("계정 위험 작업");
     expect(profileSource).not.toContain(
@@ -524,7 +621,7 @@ describe("mypage mobile cleanup source contracts", () => {
       "aria-label={`${bookmark.restaurant.name} 북마크 삭제`}",
     );
     expect(bookmarksSource).toContain(
-      "h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive",
+      "h-11 w-11 shrink-0 touch-manipulation text-muted-foreground hover:text-destructive",
     );
     expect(reviewsSource).toContain(
       "aria-label={`${review.restaurantName} 리뷰 수정`}",
@@ -541,6 +638,88 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(reviewsSource).toContain(
       "h-11 w-11 touch-manipulation text-muted-foreground hover:text-destructive",
+    );
+  });
+
+  test("mypage list cards avoid cramped md columns and clipped card content", () => {
+    const sectionFrameSource = source("components/mypage/MyPageSectionFrame.tsx");
+    const bookmarksSource = source("app/mypage/bookmarks/page.tsx");
+    const reviewsSource = source("app/mypage/reviews/page.tsx");
+
+    // md columns stay single-track: the sidebar leaves ~465px there, so a
+    // two-up grid produced ~227px cards that clipped their own header rows.
+    expect(sectionFrameSource).toContain(
+      '"grid gap-3 lg:grid-cols-2 2xl:grid-cols-3"',
+    );
+    // A card that pairs a 128px thumbnail with text needs a wider track: at lg
+    // the text column fell to ~180px and ellipsized the title and address, so
+    // the media list waits for xl and never adds a third track.
+    expect(sectionFrameSource).toContain('"grid gap-3 xl:grid-cols-2"');
+    expect(sectionFrameSource).not.toContain("md:grid-cols-2");
+
+    // Load-more rows must span the same track count as the list grid.
+    expect(bookmarksSource).toContain("myPageResponsiveMediaListClass");
+    expect(bookmarksSource).toContain("xl:col-span-2");
+    expect(bookmarksSource).not.toContain("2xl:col-span-3");
+    expect(reviewsSource).toContain("myPageResponsiveListClass");
+    expect(reviewsSource).toContain("lg:col-span-2 2xl:col-span-3");
+    for (const submissionsPath of [
+      "app/mypage/submissions/new/page.tsx",
+      "app/mypage/submissions/edit/page.tsx",
+      "app/mypage/submissions/recommend/page.tsx",
+    ]) {
+      // md:col-span-* inside a grid without explicit md columns created two
+      // implicit tracks, halving every submission card on tablet.
+      const submissionsSource = source(submissionsPath);
+      expect(submissionsSource).toContain("lg:col-span-2 2xl:col-span-3");
+      expect(submissionsSource).not.toContain("md:col-span-2");
+    }
+
+    // Cards that mix a thumbnail with text must let the text column shrink
+    // and keep the action button fixed instead of overflowing the card.
+    expect(bookmarksSource).toContain(
+      '<div className="flex min-w-0 flex-col gap-3 sm:flex-row md:gap-4">',
+    );
+    expect(bookmarksSource).toContain(
+      '<div className="relative aspect-video w-full shrink-0 overflow-hidden rounded bg-muted sm:w-32">',
+    );
+    expect(bookmarksSource).toContain('<div className="min-w-0 flex-1">');
+    expect(bookmarksSource).toContain(
+      'sizes="(max-width: 640px) 100vw, 128px"',
+    );
+    expect(reviewsSource).toContain('<div className="min-w-0 flex-1">');
+    expect(reviewsSource).toContain('<div className="flex shrink-0 gap-1">');
+  });
+
+  test("mypage desktop cards fill stretched rows and keep touch targets", () => {
+    const sectionFrameSource = source("components/mypage/MyPageSectionFrame.tsx");
+    const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
+    const profileSource = source("app/mypage/profile/page.tsx");
+
+    // The lg matrix stretches the tier card to the password card's height
+    // (306px) while its own content is ~180px, which left ~139px of empty
+    // panel below the metrics. The progress block grows into that space.
+    expect(profileSource).toContain(
+      'className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"',
+    );
+    expect(profileSource).toContain(
+      'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3',
+    );
+
+    // Inline video links measured 68x20, under the 24px target floor. The
+    // shared class grows the hit box to 32px and pulls the row back with
+    // -my-1 so the metadata line keeps its original rhythm.
+    expect(sectionFrameSource).toContain(
+      '"inline-flex -my-1 min-h-8 min-w-0 items-center gap-1 truncate py-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
+
+    // The sidebar nickname edit control was the smallest button on desktop at
+    // 35x28; it now matches the 32px touch rhythm used elsewhere.
+    expect(sidebarSource).toContain(
+      'className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"',
+    );
+    expect(sidebarSource).not.toContain(
+      'className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"',
     );
   });
 });

@@ -4,7 +4,7 @@ import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { createSupabaseStorageServerClient } from '@/lib/supabase/storage-server';
 import {
   MAX_STORYBOARD_DOCUMENT_BYTES, MAX_STORYBOARD_IMAGE_BYTES, STORYBOARD_WORKFLOW,
-  StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
+  StoryboardProductionError, assertStoryboardProviderPolicy, isStoryboardUserImportProviderId, parseStoryboardDraft,
   storyboardDraftSceneSchema, storyboardDraftSchema, storyboardProductionDocumentSchema,
   storyboardProductionRequestSchema, storyboardProvenanceSchema,
   type StoryboardProductionAsset, type StoryboardProductionDocument, type StoryboardProductionProvenance,
@@ -19,6 +19,9 @@ import {
 if (typeof window !== 'undefined') throw new Error('Storyboard persistence is server-only.');
 
 export const MAX_STORYBOARD_EXPORT_BYTES = 96 * 1024 * 1024;
+/** A restore re-hashes at most one maximum-size original inline. Every other referenced object is
+ * still proven by existence, size and MIME, so a full restore never streams the whole document. */
+export const MAX_STORYBOARD_RESTORE_VERIFY_BYTES = MAX_STORYBOARD_IMAGE_BYTES;
 export const PRODUCTION_FAILURE_STATUSES: Readonly<Record<string, number>> = {
   invalid_request: 400, request_too_large: 413, document_too_large: 413, export_too_large: 413,
   invalid_scene: 400, invalid_asset: 502, invalid_asset_variant: 400, invalid_provenance: 400,
@@ -30,6 +33,7 @@ export const PRODUCTION_FAILURE_STATUSES: Readonly<Record<string, number>> = {
   model_not_installed: 409, model_capability_mismatch: 409, model_identity_mismatch: 409,
   invalid_structured_response: 400, invalid_image: 400, image_too_large: 413,
   provider_failed: 502,
+  version_not_found: 404, restore_asset_missing: 409,
 };
 const knownErrors = new Set([...Object.keys(PRODUCTION_FAILURE_STATUSES), ...workerFailureSchema.options]);
 const timestamp = z.iso.datetime({ offset: true });
@@ -48,7 +52,7 @@ export const productionJobSchema = z.object({
 const snapshotSchema = z.object({ ok: z.literal(true), project: productionProjectSchema, job: productionJobSchema.nullable() }).strict();
 const eventSchema = z.object({
   id: z.string().regex(/^\d{1,20}$/), jobId: productionUuid.nullable(),
-  operation: z.enum(['created', 'queued', 'claimed', 'edited', 'draft_saved', 'image_saved', 'scene_failed', 'cancelled', 'lease_expired', 'finished']),
+  operation: z.enum(['created', 'queued', 'claimed', 'edited', 'draft_saved', 'image_saved', 'scene_failed', 'cancelled', 'lease_expired', 'finished', 'restored']),
   revision: z.number().int().nonnegative(), sceneNo: z.number().int().min(1).max(12).nullable(),
   errorCode: workerFailureSchema.nullable(), createdAt: timestamp,
 }).strict();
@@ -66,6 +70,16 @@ const claimSchema = z.object({ ok: z.literal(true), job: z.object({
 }).strict().nullable() }).strict();
 const okSchema = z.object({ ok: z.literal(true) }).strict();
 const heartbeatSchema = okSchema.extend({ leaseValid: z.boolean() });
+const versionsSchema = z.object({
+  ok: z.literal(true),
+  versions: z.array(z.object({
+    revision: z.number().int().nonnegative(),
+    createdAt: timestamp,
+    title: z.string().max(200),
+    sceneCount: z.number().int().min(0).max(12),
+  }).strict()).max(200),
+  preview: storyboardProductionDocumentSchema.nullable(),
+}).strict();
 
 export const productionActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('edit'), revision: z.number().int().nonnegative(),
@@ -76,6 +90,9 @@ export const productionActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('cancel'), revision: z.number().int().nonnegative(), jobId: productionUuid }).strict(),
   z.object({ action: z.literal('import-text'), revision: z.number().int().nonnegative(), projectId: productionUuid,
     schema: z.literal(STORYBOARD_WORKFLOW), draft: storyboardDraftSchema }).strict(),
+  z.object({ action: z.literal('restore'), revision: z.number().int().nonnegative(),
+    targetRevision: z.number().int().nonnegative(), requestId: productionUuid,
+    sceneNo: z.number().int().min(1).max(12).optional() }).strict(),
 ]);
 export type ProductionSnapshot = z.infer<typeof snapshotSchema>;
 export type ProductionProject = ProductionSnapshot['project'];
@@ -89,8 +106,12 @@ export interface ProductionDatabase {
 export interface ProductionStorage {
   upload(path: string, bytes: Buffer, mime: string): Promise<void>;
   download(path: string): Promise<Blob>;
+  list(prefix: string): Promise<StoryboardStoredObject[]>;
   remove(paths: string[]): Promise<void>;
 }
+
+/** Storage listing entry used to prove a referenced object still exists without downloading it. */
+export type StoryboardStoredObject = { name: string; size: number; mime: string };
 
 /** Generated Database types are intentionally unchanged in this parallel slice. */
 const serverDatabase: ProductionDatabase = {
@@ -116,6 +137,16 @@ const serverStorage: ProductionStorage = {
     if (error || !data) throw new StoryboardProductionError('storage_unavailable');
     return data;
   },
+  async list(prefix) {
+    const { data, error } = await createSupabaseStorageServerClient().from(STORYBOARD_ASSET_BUCKET)
+      .list(prefix, { limit: 32 });
+    if (error || !data) throw new StoryboardProductionError('storage_unavailable');
+    return data.filter((entry) => entry.id !== null).map((entry) => ({
+      name: entry.name,
+      size: typeof entry.metadata?.size === 'number' ? entry.metadata.size : -1,
+      mime: typeof entry.metadata?.mimetype === 'string' ? entry.metadata.mimetype : '',
+    }));
+  },
   async remove(paths) {
     const { error } = await createSupabaseStorageServerClient().from(STORYBOARD_ASSET_BUCKET).remove(paths);
     if (error) throw new StoryboardProductionError('storage_unavailable');
@@ -139,7 +170,7 @@ export function assertProductionDocumentSize(value: unknown): void {
   }
 }
 export function isManualStoryboardProvider(provider: StoryboardProvider): boolean {
-  return ['manual', 'chatgpt-manual', 'grok-manual'].includes(provider.id);
+  return isStoryboardUserImportProviderId(provider.id);
 }
 export function manualStoryboardProvenance(provider: StoryboardProvider): StoryboardProductionProvenance {
   if (!isManualStoryboardProvider(provider)) throw new StoryboardProductionError('invalid_request');
@@ -226,6 +257,10 @@ export class StoryboardProductionStore {
   async get(ownerId: string, projectId: string) {
     return decode(readSchema, await this.admin(ownerId, 'read', projectId));
   }
+  async versions(ownerId: string, projectId: string, targetRevision?: number) {
+    return decode(versionsSchema, await this.admin(ownerId, 'versions', projectId, null,
+      targetRevision === undefined ? {} : { targetRevision }));
+  }
   async create(ownerId: string, value: unknown) {
     const request = input(storyboardProductionRequestSchema, value);
     assertStoryboardProviderPolicy(request.providers);
@@ -237,6 +272,39 @@ export class StoryboardProductionStore {
   }
   async apply(ownerId: string, projectId: string, value: unknown) {
     const change = input(productionActionSchema, value);
+    // Restore CAS, busy checks and request replay are serialized together by the DB.
+    // A pre-read revision check would reject a successful request retried after a lost response.
+    if (change.action === 'restore') {
+      const before = await this.get(ownerId, projectId);
+      if (before.project.revision === change.revision && !['queued', 'claimed'].includes(before.job?.status ?? '')) {
+        const { preview } = await this.versions(ownerId, projectId, change.targetRevision);
+        if (!preview) throw new StoryboardProductionError('version_not_found');
+        const listings = new Map<string, StoryboardStoredObject[]>();
+        let verifyBudget = MAX_STORYBOARD_RESTORE_VERIFY_BYTES;
+        for (const scene of preview.scenes) {
+          if ((change.sceneNo !== undefined && change.sceneNo !== scene.sceneNo) || !scene.image) continue;
+          try {
+            const row = await this.assetRow(ownerId, projectId, scene.image.id);
+            if (!row || row.scene_no !== scene.sceneNo || JSON.stringify(row.asset) !== JSON.stringify(scene.image)) {
+              throw new StoryboardProductionError('restore_asset_missing');
+            }
+            // Prove every referenced object is still present without downloading it; byte re-hashing
+            // stays inside MAX_STORYBOARD_RESTORE_VERIFY_BYTES so a full restore never streams every
+            // asset inside one request (a targeted single-scene restore is always re-hashed).
+            for (const variant of [row.asset.original, ...row.asset.web]) await this.verifiedObjectPresence(variant, listings);
+            if (verifyBudget >= row.asset.original.bytes) {
+              await this.verifiedBytes(row.asset.original);
+              verifyBudget -= row.asset.original.bytes;
+            }
+          } catch (error) {
+            if (error instanceof StoryboardProductionError && ['asset_not_found', 'invalid_asset', 'restore_asset_missing'].includes(error.code)) {
+              throw new StoryboardProductionError('restore_asset_missing');
+            }
+            throw error;
+          }
+        }
+      }
+    }
     if (change.action === 'edit' || change.action === 'import-text') {
       const before = await this.get(ownerId, projectId);
       assertEditable(before, change.revision);
@@ -358,6 +426,22 @@ export class StoryboardProductionStore {
     const bytes = Buffer.from(await blob.arrayBuffer());
     if (storyboardHash(bytes) !== variant.sha256) throw new StoryboardProductionError('invalid_asset');
     return bytes;
+  }
+  /** Cheapest sufficient restore proof: the object exists in Storage with the recorded size and MIME. */
+  private async verifiedObjectPresence(variant: StoryboardProductionAsset['original'],
+    listings: Map<string, StoryboardStoredObject[]>): Promise<void> {
+    const separator = variant.path.lastIndexOf('/');
+    if (separator <= 0 || separator === variant.path.length - 1) throw new StoryboardProductionError('invalid_asset');
+    const folder = variant.path.slice(0, separator);
+    const name = variant.path.slice(separator + 1);
+    let entries = listings.get(folder);
+    if (!entries) {
+      entries = await this.storage.list(folder);
+      listings.set(folder, entries);
+    }
+    const entry = entries.find((candidate) => candidate.name === name);
+    if (!entry) throw new StoryboardProductionError('asset_not_found');
+    if (entry.size !== variant.bytes || entry.mime !== variant.mime) throw new StoryboardProductionError('invalid_asset');
   }
   async downloadAsset(ownerId: string, projectId: string, assetId: string, basename: string) {
     await this.get(ownerId, projectId);

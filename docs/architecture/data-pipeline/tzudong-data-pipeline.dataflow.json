@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "쯔동 데이터 파이프라인 흐름",
+    "output": "docs/architecture/data-pipeline/tzudong-data-pipeline.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      500
+    ],
+    "views": [
+      {
+        "id": "catalog-path",
+        "label": "카탈로그 반영 경로",
+        "focus": [
+          "crawler",
+          "queue",
+          "normalize",
+          "evaluation",
+          "catalog",
+          "web"
+        ],
+        "note": "수집된 근거가 검증을 거쳐 카탈로그와 공개 웹으로 흐르는 경로입니다."
+      },
+      {
+        "id": "worker-path",
+        "label": "워커 처리 경로",
+        "focus": [
+          "queue",
+          "normalize",
+          "evaluation",
+          "catalog",
+          "outbox"
+        ],
+        "note": "큐 claim, 단계 처리, 조건부 저장과 이벤트 발행의 경계를 확인합니다."
+      },
+      {
+        "id": "failure-path",
+        "label": "실패와 관측 경로",
+        "focus": [
+          "evaluation",
+          "quality",
+          "outbox",
+          "ops",
+          "observability"
+        ],
+        "note": "검증 실패는 안전하게 멈추고 제한된 운영 관측으로 남습니다."
+      }
+    ]
+  },
+  "stages": [
+    {
+      "label": "수집"
+    },
+    {
+      "label": "큐잉"
+    },
+    {
+      "label": "정규화 · 평가"
+    },
+    {
+      "label": "저장 · 이벤트"
+    },
+    {
+      "label": "소비 · 관측"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "crawler",
+      "type": "backend",
+      "label": "restaurant-crawling",
+      "sublabel": "영상 · 장소",
+      "stage": 0,
+      "row": 0,
+      "tag": "source evidence"
+    },
+    {
+      "id": "evaluation",
+      "type": "backend",
+      "label": "evaluation",
+      "sublabel": "Rule / LLM-as-a-Judge",
+      "stage": 0,
+      "row": 2,
+      "tag": "candidate review"
+    },
+    {
+      "id": "queue",
+      "type": "messagebus",
+      "label": "control queue",
+      "sublabel": "enqueue · claim · lease",
+      "stage": 1,
+      "row": 1,
+      "tag": "fail-closed"
+    },
+    {
+      "id": "normalize",
+      "type": "backend",
+      "label": "normalize + payload",
+      "sublabel": "contract-shaped records",
+      "stage": 2,
+      "row": 0,
+      "tag": "bounded batch"
+    },
+    {
+      "id": "quality",
+      "type": "security",
+      "label": "quality gates",
+      "sublabel": "allowlist · privacy",
+      "stage": 2,
+      "row": 2,
+      "tag": "reject safely"
+    },
+    {
+      "id": "catalog",
+      "type": "database",
+      "label": "Supabase catalog",
+      "sublabel": "rows + readback",
+      "stage": 3,
+      "row": 0,
+      "tag": "conditional write"
+    },
+    {
+      "id": "outbox",
+      "type": "messagebus",
+      "label": "event outbox",
+      "sublabel": "Kafka opt-in",
+      "stage": 3,
+      "row": 2,
+      "tag": "no data loss"
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "apps/web",
+      "sublabel": "map · feed · admin reads",
+      "stage": 4,
+      "row": 0,
+      "tag": "read boundary"
+    },
+    {
+      "id": "ops",
+      "type": "backend",
+      "label": "operator status",
+      "sublabel": "bounded status",
+      "stage": 4,
+      "row": 1,
+      "tag": "no secrets"
+    },
+    {
+      "id": "observability",
+      "type": "database",
+      "label": "metrics / logs",
+      "sublabel": "OTel · ES overlay",
+      "stage": 4,
+      "row": 2,
+      "tag": "non-authoritative"
+    }
+  ],
+  "flows": [
+    {
+      "id": "crawl-queue",
+      "from": "crawler",
+      "to": "queue",
+      "label": "raw evidence + run",
+      "classification": "local pipeline input",
+      "variant": "emphasis",
+      "route": "vertical-channel",
+      "labelDy": 53,
+      "labelDx": -90
+    },
+    {
+      "id": "review-queue",
+      "from": "evaluation",
+      "to": "queue",
+      "label": "candidate decision",
+      "classification": "reviewed input",
+      "variant": "default",
+      "route": "vertical-channel"
+    },
+    {
+      "id": "queue-normalize",
+      "from": "queue",
+      "to": "normalize",
+      "label": "claimed batch",
+      "classification": "lease protected",
+      "variant": "emphasis",
+      "route": "vertical-channel"
+    },
+    {
+      "id": "normalize-quality",
+      "from": "normalize",
+      "to": "quality",
+      "label": "normalized payload",
+      "classification": "schema contract",
+      "variant": "emphasis",
+      "route": "straight",
+      "labelDy": 24
+    },
+    {
+      "id": "quality-catalog",
+      "from": "quality",
+      "to": "catalog",
+      "label": "approved rows",
+      "classification": "CAS / readback",
+      "variant": "emphasis",
+      "route": "vertical-channel",
+      "labelDx": 10
+    },
+    {
+      "id": "quality-outbox",
+      "from": "quality",
+      "to": "outbox",
+      "label": "record.upserted",
+      "classification": "post-write event",
+      "variant": "default",
+      "route": "vertical-channel",
+      "labelDy": 53
+    },
+    {
+      "id": "catalog-web",
+      "from": "catalog",
+      "to": "web",
+      "label": "verified",
+      "classification": "public + admin",
+      "variant": "emphasis",
+      "route": "vertical-channel",
+      "labelDx": 100,
+      "labelDy": 53
+    },
+    {
+      "id": "outbox-observability",
+      "from": "outbox",
+      "to": "observability",
+      "label": "logs · counters",
+      "classification": "optional overlay",
+      "variant": "dashed",
+      "route": "vertical-channel",
+      "labelDy": -23,
+      "labelDx": -20
+    },
+    {
+      "id": "catalog-ops",
+      "from": "catalog",
+      "to": "ops",
+      "label": "status readback",
+      "classification": "bounded summary",
+      "variant": "default",
+      "route": "vertical-channel",
+      "labelDy": -12
+    },
+    {
+      "id": "quality-ops",
+      "from": "quality",
+      "to": "ops",
+      "label": "failure evidence",
+      "classification": "sanitized audit",
+      "variant": "security",
+      "route": "top-channel"
+    }
+  ],
+  "cards": []
+}

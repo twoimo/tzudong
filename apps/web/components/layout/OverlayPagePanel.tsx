@@ -188,7 +188,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {/* 메인 패널 (피드/도장/랭킹 등) */}
                 <div
                     className={cn(
-                        "min-w-0 flex-1 bg-background shadow-2xl",
+                        "min-w-0 flex-1 bg-background shadow-sm",
                         "flex flex-col overflow-hidden",
                         "w-full",
                         maxWidth,
@@ -228,7 +228,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {showInlineReviewPanel && (
                     <div
                         className={cn(
-                            "min-w-0 flex-1 basis-[560px] bg-background shadow-2xl",
+                            "min-w-0 flex-1 basis-[560px] bg-background shadow-sm",
                             "flex flex-col overflow-hidden",
                             "max-w-[calc(100vw-4rem)]",
                             "rounded-2xl border border-border"
@@ -249,7 +249,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                     <div className={cn(
                         "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
                         "w-[min(400px,calc(100vw-1rem))]",
-                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
+                        "rounded-2xl border border-border shadow-sm overflow-hidden"
                     )}>
                         <UserProfilePanel
                             userId={selectedUserId!}
@@ -266,7 +266,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                     <div className={cn(
                         "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
                         "w-[min(400px,calc(100vw-1rem))]",
-                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
+                        "rounded-2xl border border-border shadow-sm overflow-hidden"
                     )}>
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant!}

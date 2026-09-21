@@ -6,7 +6,10 @@ import type { Restaurant, Region } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
-import { OVERSEAS_REGIONS } from "@/constants/overseas-regions";
+import {
+    filterHomeMapRestaurantsByMode,
+    getOverseasCountryKeywords,
+} from '@/lib/home-map-mode-filter';
 import {
     APP_HEADER_HEIGHT_VAR,
     resetMobileSheetLayoutState,
@@ -19,6 +22,10 @@ import {
 import { shouldDismissSheetFromPeek } from '@/lib/mobile-sheet-dismiss-gesture';
 import { buildPostSearchSwipeCandidates } from '@/lib/mobile-home-search-selection';
 import { resolveMobileMapBlankTapAction } from '@/lib/mobile-map-fullscreen-toggle';
+import {
+    dedupeHomeMapRestaurants,
+    isSameRestaurantForSwipe,
+} from '@/lib/home-map-swipe-restaurants';
 import type { DeviceMapLocation } from '@/lib/device-location-map';
 import type { HomeMapLayoutMode, HomeMapPanelSide } from '@/lib/home-map-user-preferences';
 
@@ -115,47 +122,11 @@ const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
 const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
-const KOREA_BOUNDS = {
-    minLat: 33,
-    maxLat: 39,
-    minLng: 124,
-    maxLng: 132,
-} as const;
-const OVERSEAS_KEYWORDS = Object.values(OVERSEAS_REGIONS).flatMap(config =>
-    config.keywords.map((keyword) => keyword.toLowerCase())
-);
-
 type SheetSnapTransition = {
     duration: number;
     easing: string;
 };
 
-const isSameRestaurantForSwipe = (a: Restaurant, b: Restaurant) => {
-    if (a.id === b.id) return true;
-
-    if (a.mergedRestaurants?.some((restaurant) => restaurant.id === b.id)) return true;
-    if (b.mergedRestaurants?.some((restaurant) => restaurant.id === a.id)) return true;
-
-    if (a.name === b.name && a.lat && a.lng && b.lat && b.lng) {
-        const aLat = Number(a.lat);
-        const aLng = Number(a.lng);
-        const bLat = Number(b.lat);
-        const bLng = Number(b.lng);
-
-        if (
-            Number.isFinite(aLat) &&
-            Number.isFinite(aLng) &&
-            Number.isFinite(bLat) &&
-            Number.isFinite(bLng) &&
-            Math.abs(aLat - bLat) < 0.0001 &&
-            Math.abs(aLng - bLng) < 0.0001
-        ) {
-            return true;
-        }
-    }
-
-    return false;
-};
 const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) =>
     restaurants.map((restaurant) => restaurant.id).join('|');
 
@@ -171,20 +142,6 @@ const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestauran
         payload.totalVisibleCount,
         payload.restaurants.map((restaurant) => restaurant.id).join('|'),
     ].join('::');
-};
-
-const dedupeHomeMapRestaurants = (restaurants: Restaurant[]) => {
-    const uniqueRestaurants: Restaurant[] = [];
-
-    for (const restaurant of restaurants) {
-        if (!restaurant) continue;
-        if (uniqueRestaurants.some((existing) => isSameRestaurantForSwipe(existing, restaurant))) {
-            continue;
-        }
-        uniqueRestaurants.push(restaurant);
-    }
-
-    return uniqueRestaurants;
 };
 
 const RESTAURANT_CONTENT_SCROLL_SELECTOR = "[data-restaurant-detail-swipe-area='content']";
@@ -297,54 +254,16 @@ function HomeMapContainerComponent({
         () => (mapMode === 'domestic' ? swipeableRestaurantsByMode.domestic : swipeableRestaurantsByMode.overseas),
         [mapMode, swipeableRestaurantsByMode]
     );
-    const getRestaurantAddressText = useCallback((restaurant: Restaurant) => {
-        return `${restaurant.road_address || ''} ${restaurant.jibun_address || ''} ${restaurant.english_address || ''}`.toLowerCase();
-    }, []);
+    const getSelectedCountryKeywords = useMemo(
+        () => getOverseasCountryKeywords(selectedCountry),
+        [selectedCountry],
+    );
 
-    const isOverseasByCoordinate = useCallback((restaurant: Restaurant) => {
-        const lat = Number(restaurant.lat);
-        const lng = Number(restaurant.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            return false;
-        }
-
-        return (
-            lat < KOREA_BOUNDS.minLat ||
-            lat > KOREA_BOUNDS.maxLat ||
-            lng < KOREA_BOUNDS.minLng ||
-            lng > KOREA_BOUNDS.maxLng
-        );
-    }, []);
-
-    const getSelectedCountryKeywords = useMemo(() => {
-        if (!selectedCountry || !(selectedCountry in OVERSEAS_REGIONS)) {
-            return null;
-        }
-
-        return OVERSEAS_REGIONS[selectedCountry as keyof typeof OVERSEAS_REGIONS]
-            .keywords
-            .map((keyword) => keyword.toLowerCase());
-    }, [selectedCountry]);
-
-    const getRestaurantListByMode = useCallback((restaurants: Restaurant[]) => {
-        if (!restaurants.length) return [];
-
-        return restaurants.filter((restaurant) => {
-            const addressText = getRestaurantAddressText(restaurant);
-            const hasOverseasKeyword = OVERSEAS_KEYWORDS.some((keyword) => addressText.includes(keyword));
-            const isOverseasCoord = isOverseasByCoordinate(restaurant);
-
-            if (mapMode === 'domestic') {
-                return !hasOverseasKeyword && !isOverseasCoord;
-            }
-
-            if (getSelectedCountryKeywords?.length) {
-                return getSelectedCountryKeywords.some((keyword) => addressText.includes(keyword));
-            }
-
-            return hasOverseasKeyword || isOverseasCoord;
-        });
-    }, [getRestaurantAddressText, getSelectedCountryKeywords, isOverseasByCoordinate, mapMode]);
+    // 모드 분류는 lib/home-map-mode-filter 로 옮겼습니다. 이전에는 호출마다
+    // 식당별 주소 문자열을 다시 만들고 키워드 35개를 각각 includes 로 훑었습니다.
+    const getRestaurantListByMode = useCallback((restaurants: Restaurant[]) =>
+        filterHomeMapRestaurantsByMode(restaurants, mapMode, getSelectedCountryKeywords),
+    [getSelectedCountryKeywords, mapMode]);
 
     const getCurrentMaxHeight = useCallback((vh: number = viewportHeightRef.current) => {
         return ((vh - HEADER_OFFSET) / vh) * 100;
@@ -1578,7 +1497,7 @@ function HomeMapContainerComponent({
                             <div
                                 className={cn(
                                     "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
-                                    "bg-background border-l border-border shadow-2xl",
+                                    "bg-background border-l border-border shadow-sm",
                                     "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
                                 )}
@@ -1625,7 +1544,7 @@ function HomeMapContainerComponent({
                                 ref={sheetContainerRef}
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-[80] pointer-events-auto',
-                                    'bg-background shadow-xl',
+                                    'bg-background shadow-sm',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'min-h-0 min-w-0 overflow-hidden flex flex-col',
                                     isDragging ? '' : 'transition-[height,border-radius]',

@@ -177,23 +177,27 @@ class LocalReplayContractTests(unittest.TestCase):
             self.assertNotIn(b'INSERT INTO _tzudong_local', sql)
             self.assertNotIn(b'GRANT privacy_workflow_owner', sql)
 
-    def test_full_snapshot_requires_all_97_exact_sources_and_distinct_terminal_states(self):
+    def test_full_snapshot_requires_all_99_exact_sources_and_distinct_terminal_states(self):
         from backend.supabase.tests.test_local_migration_contract import local_migrate
         rows = [local_migrate._expected_snapshot_row(item) for item in local_migrate.build_manifest()['source']['files']]
-        self.assertEqual(len(rows), 97)
-        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 94)
+        self.assertEqual(len(rows), 99)
+        self.assertEqual(sum(row['status'] == 'applied' for row in rows), 96)
         self.assertEqual(sum(row['status'] == 'verified-existing' for row in rows), 2)
         self.assertEqual(sum(row['status'] == 'legacy-contract-preserved' for row in rows), 1)
         local_migrate._validate_ledger_snapshot(rows)
+        recovery_index = next(
+            index for index, row in enumerate(rows)
+            if row['status'] == 'verified-existing'
+        )
         for mutation in ('applied', 'missing-proof', 'missing-row', 'foreign-proof'):
             changed = copy.deepcopy(rows)
             if mutation == 'applied':
-                changed[-2]['status'] = 'applied'
+                changed[recovery_index]['status'] = 'applied'
             elif mutation == 'missing-proof':
-                changed[-2]['replayProof'] = None
+                changed[recovery_index]['replayProof'] = None
             elif mutation == 'missing-row':
                 changed.pop()
             else:
-                changed[-2]['replayProof'] = changed[-3]['replayProof']
+                changed[recovery_index]['replayProof'] = changed[recovery_index + 1]['replayProof']
             with self.subTest(mutation=mutation), self.assertRaises(local_migrate.LocalMigrationError):
                 local_migrate._validate_ledger_snapshot(changed)

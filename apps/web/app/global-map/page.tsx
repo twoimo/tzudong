@@ -1005,7 +1005,7 @@ export default function GlobalMapPage() {
                                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
                                     취소
                                 </Button>
-                                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
+                                <Button type="submit" className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
                                     수정 요청 제출
                                 </Button>
                             </div>

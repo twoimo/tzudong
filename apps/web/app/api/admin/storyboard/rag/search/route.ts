@@ -19,6 +19,7 @@ import {
   rerankStoryboardRagCandidates,
   serializePgVector,
 } from '@/lib/admin/storyboard/rag-worker-client';
+import type { StoryboardRagRpcClient } from '@/lib/admin/storyboard/rag-service-role-client';
 import { createSupabaseServiceRoleClient } from '@/lib/supabase/service-role';
 import { isTrustedSameOriginMutation } from '@/lib/security/same-origin-mutation';
 
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     const queryEmbedding = await embedStoryboardRagTexts([parsed.data.query]);
     const query = queryEmbedding.items[0];
-    const supabase = createSupabaseServiceRoleClient() as any;
+    const supabase = createSupabaseServiceRoleClient() as unknown as StoryboardRagRpcClient<HybridRpcRow>;
     const rpcName = resolveStoryboardRagSearchRpcName();
     const { data, error } = await supabase.rpc(rpcName, {
       p_user_id: auth.userId,
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       return failClosedCode('storyboard_rag_search_rpc_failed', traceId, telemetry, 'supabase_search');
     }
 
-    const candidates = ((data ?? []) as HybridRpcRow[]).map((row) => ({
+    const candidates = (data ?? []).map((row) => ({
       id: row.id,
       content: `${row.title}\n\n${row.content}`,
       metadata: row.metadata ?? {},

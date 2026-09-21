@@ -36,6 +36,7 @@ interface BottomSheetProps {
     ariaDescribedBy?: string;
     focusTrapAllowSelectors?: string[];
     keyboardBehavior?: 'lift' | 'stable';
+    presentation?: 'sheet' | 'centered';
     heightRequest?: {
         key: number;
         height: number;
@@ -273,10 +274,13 @@ function BottomSheetComponent({
     ariaDescribedBy,
     focusTrapAllowSelectors = DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS,
     keyboardBehavior = 'lift',
+    presentation = 'sheet',
     heightRequest,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     const isModal = modal ?? showBackdrop;
+    const isCentered = presentation === 'centered';
+    const dragEnabled = !isCentered;
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
@@ -845,20 +849,21 @@ function BottomSheetComponent({
     ]);
 
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        if (!isMobileOrTablet) return;
+        if (!dragEnabled || !isMobileOrTablet) return;
         handleTouchStartXRef.current = e.touches[0].clientX;
         startYRef.current = e.touches[0].clientY;
         handleSwipeDirectionRef.current = null;
-    }, [isMobileOrTablet]);
+    }, [dragEnabled, isMobileOrTablet]);
 
     // 마우스 드래그 시작
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        if (!isMobileOrTablet) return;
+        if (!dragEnabled || !isMobileOrTablet) return;
         e.preventDefault();
         handleDragStartCore(e.clientY);
-    }, [handleDragStartCore, isMobileOrTablet]);
+    }, [dragEnabled, handleDragStartCore, isMobileOrTablet]);
 
     const handleSwipeTouchMove = useCallback((e: React.TouchEvent, isFromHandle = false) => {
+        if (!dragEnabled) return;
         // [Fix] 캐러셀 내부 터치는 스와이프 처리 건너뛰기
         if (isCarouselTouchRef.current) return;
         const currentY = e.touches[0].clientY;
@@ -919,6 +924,7 @@ function BottomSheetComponent({
         handleDragMoveCore(currentY);
     }, [
         canContentDragFromTouch,
+        dragEnabled,
         getCurrentMaxHeight,
         handleDragMoveCore,
         handleDragStartCore,
@@ -928,6 +934,7 @@ function BottomSheetComponent({
     ]);
 
     const handleSwipeTouchEnd = useCallback((e: React.TouchEvent, isFromHandle = false) => {
+        if (!dragEnabled) return;
         // [Fix] 캐러셀 내부 터치는 스와이프 처리 건너뛰기
         if (isCarouselTouchRef.current) {
             isCarouselTouchRef.current = false;
@@ -991,6 +998,7 @@ function BottomSheetComponent({
         }
         unlockContentScrollDuringDrag();
     }, [
+        dragEnabled,
         handleDragEnd,
         onSwipeLeft,
         onSwipeRight,
@@ -1039,6 +1047,7 @@ function BottomSheetComponent({
     }, [focusTrapAllowSelectors, isModal, onClose]);
 
     const handleSheetTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+        if (!dragEnabled) return;
         const touch = e.touches[0];
         if (!touch) return;
         const target = e.target;
@@ -1085,6 +1094,7 @@ function BottomSheetComponent({
         }
         unlockContentScrollDuringDrag();
     }, [
+        dragEnabled,
         getCurrentMaxHeight,
         handleTouchStart,
         lockContentScrollDuringDrag,
@@ -1228,7 +1238,7 @@ function BottomSheetComponent({
     // 드래그 핸들 Pull-to-Refresh 방지 (Passive: false)
     useEffect(() => {
         const handle = handleRef.current;
-        if (!handle || !isOpen) return;
+        if (!dragEnabled || !handle || !isOpen) return;
 
         const preventPullToRefresh = (e: TouchEvent) => {
             if (e.cancelable) {
@@ -1238,12 +1248,12 @@ function BottomSheetComponent({
 
         handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
         return () => handle.removeEventListener('touchmove', preventPullToRefresh);
-    }, [isOpen]);
+    }, [dragEnabled, isOpen]);
 
     // 콘텐츠 영역: 드래그 중 터치 스크롤 방지 (non-passive 리스너)
     useEffect(() => {
         const content = contentRef.current;
-        if (!content || !isOpen) return;
+        if (!dragEnabled || !content || !isOpen) return;
 
         const preventContentScrollWhileDragging = (e: TouchEvent) => {
             if (isDraggingRef.current || isContentDraggingSheetRef.current) {
@@ -1255,7 +1265,7 @@ function BottomSheetComponent({
 
         content.addEventListener('touchmove', preventContentScrollWhileDragging, { passive: false });
         return () => content.removeEventListener('touchmove', preventContentScrollWhileDragging);
-    }, [isOpen]);
+    }, [dragEnabled, isOpen]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -1303,7 +1313,20 @@ function BottomSheetComponent({
     const contentKeyboardPadding = useStableKeyboardLayout ? viewportFrame.bottomOffset : 0;
 
     // 동적 높이 스타일
-    const heightStyle = useStableKeyboardLayout
+    const heightStyle = isCentered
+        ? {
+            top: '50%',
+            bottom: 'auto',
+            left: '50%',
+            right: 'auto',
+            width: 'min(calc(100vw - 2rem), 28rem)',
+            height: 'auto',
+            maxHeight: 'calc(100dvh - 2rem)',
+            transform: 'translate(-50%, -50%)',
+            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
+            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
+        }
+        : useStableKeyboardLayout
         ? {
             top: 0,
             bottom: 0,
@@ -1352,9 +1375,11 @@ function BottomSheetComponent({
             <div
                 ref={sheetRef}
                 className={cn(
-                    'fixed bottom-0 left-0 right-0 z-[95]',
-                    'bg-background shadow-xl',
-                    isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
+                    isCentered
+                        ? 'fixed left-1/2 top-1/2 z-[95] w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-2xl border border-border/70 shadow-2xl'
+                        : 'fixed bottom-0 left-0 right-0 z-[95]',
+                    'bg-background shadow-sm',
+                    isCentered ? 'rounded-2xl' : isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
                     // 드래그 중에는 트랜지션 제거
                     isDragging || isViewportResizing ? '' : 'transition-[height,border-radius]',
@@ -1362,6 +1387,7 @@ function BottomSheetComponent({
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}
                 data-bottom-sheet-layout-source={layoutSource}
+                data-bottom-sheet-presentation={presentation}
                 role={isModal ? 'dialog' : undefined}
                 aria-modal={isModal ? true : undefined}
                 aria-label={isModal && !ariaLabelledBy ? ariaLabel : undefined}
@@ -1370,10 +1396,10 @@ function BottomSheetComponent({
                 tabIndex={isModal ? -1 : undefined}
                 style={{ ...heightStyle, touchAction: 'auto' }}
                 onKeyDownCapture={handleDialogKeyDown}
-                onTouchStartCapture={handleSheetTouchStart}
-                onTouchMoveCapture={handleSheetTouchMove}
-                onTouchEndCapture={handleSheetTouchEnd}
-                onTouchCancelCapture={handleSheetTouchEnd}
+                onTouchStartCapture={dragEnabled ? handleSheetTouchStart : undefined}
+                onTouchMoveCapture={dragEnabled ? handleSheetTouchMove : undefined}
+                onTouchEndCapture={dragEnabled ? handleSheetTouchEnd : undefined}
+                onTouchCancelCapture={dragEnabled ? handleSheetTouchEnd : undefined}
             >
                 {/* 핸들 바 */}
                 {showHandle && (!hideHandleWhenFull || !isAtFullHeight) && (
@@ -1390,7 +1416,7 @@ function BottomSheetComponent({
                             WebkitTapHighlightColor: 'transparent',
                             backgroundColor: 'transparent',
                         }}
-                        onMouseDown={handleMouseDown}
+                        onMouseDown={dragEnabled ? handleMouseDown : undefined}
                         aria-label="바텀시트 높이 조절"
                     >
                         <div className="w-8 h-1 bg-muted-foreground/40 rounded-full" />
@@ -1406,7 +1432,9 @@ function BottomSheetComponent({
                         contentClassName
                     )}
                     style={{
-                        touchAction: isDragging
+                        touchAction: isCentered
+                            ? 'pan-y'
+                            : isDragging
                             ? 'none'
                             : (
                                 enablePeek

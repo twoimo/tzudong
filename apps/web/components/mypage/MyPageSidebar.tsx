@@ -260,7 +260,7 @@ export function MyPageSidebar() {
       className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex"
       data-mypage-left-panel-expanded="true"
     >
-      <div className="flex flex-col items-center space-y-4 border-b border-border p-6 text-center">
+      <div className="flex flex-col items-center space-y-4 p-6 text-center">
         <div className="group relative h-20 w-20 shrink-0 rounded-full">
           <label
             htmlFor="mypage-sidebar-avatar-upload"
@@ -405,7 +405,7 @@ export function MyPageSidebar() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"
+                className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"
                 onClick={() => {
                   setNicknameInput(displayName);
                   setIsNicknameEditing(true);
@@ -445,7 +445,7 @@ export function MyPageSidebar() {
 
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           className="h-9 w-full rounded-xl text-xs"
           onClick={handleLogout}
           data-mypage-sidebar-session-action="logout"
@@ -461,7 +461,8 @@ export function MyPageSidebar() {
             return (
               <div
                 key={index}
-                className="mx-2 my-2 border-t border-border/50"
+                className="h-2"
+                aria-hidden="true"
               />
             );
           }

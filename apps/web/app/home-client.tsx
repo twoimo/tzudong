@@ -149,12 +149,25 @@ const PUBLIC_DEMO_BLOCKED_PANEL_PARAMS = new Set([
   "announcement",
 ]);
 const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";
+const DEVICE_LOCATION_PERMISSION_DENIED_TOAST = "위치 권한이 거부됐어요. 브라우저 설정에서 허용하면 현재 위치를 표시할 수 있어요.";
+const DEVICE_LOCATION_TIMEOUT_TOAST = "현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.";
+const DEVICE_LOCATION_UNAVAILABLE_TOAST = "현재 위치를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.";
 const DEVICE_LOCATION_READINESS_BLOCKED =
   "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.";
 const DEVICE_LOCATION_DISCLOSURE =
   "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
 const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
   "위치 권한을 요청하지 않았어요. 지도는 계속 이용할 수 있어요.";
+
+function describeDeviceLocationFailure(error: unknown) {
+  const code = typeof error === "object" && error !== null && "code" in error
+    ? Number((error as { code?: unknown }).code)
+    : NaN;
+  if (code === 1) return DEVICE_LOCATION_PERMISSION_DENIED_TOAST;
+  if (code === 3) return DEVICE_LOCATION_TIMEOUT_TOAST;
+  if (code === 2) return DEVICE_LOCATION_UNAVAILABLE_TOAST;
+  return DEVICE_LOCATION_ENABLE_TOAST;
+}
 
 function clearAnnouncementPanelUrl() {
   if (typeof window === "undefined") return;
@@ -1139,9 +1152,9 @@ export default function HomeClient() {
       }
 
       applyDevicePosition(position, nextMode, { shouldFocus: true });
-    } catch {
+    } catch (error) {
       clearDeviceLocationState();
-      toast.error(DEVICE_LOCATION_ENABLE_TOAST);
+      toast.error(describeDeviceLocationFailure(error));
     } finally {
       if (deviceLocationMountedRef.current) {
         setIsDeviceLocationPending(false);

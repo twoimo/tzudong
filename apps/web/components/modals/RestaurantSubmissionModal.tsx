@@ -861,7 +861,7 @@ export default function RestaurantSubmissionModal({
                         <p className="text-xs font-medium text-red-700 dark:text-red-300">
                             {currentStep} / {RESTAURANT_SUBMISSION_STEPS.length} · {RESTAURANT_SUBMISSION_STEPS[currentStep - 1].title}
                         </p>
-                        <h2 id={mobileTitleId} className="truncate text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        <h2 id={mobileTitleId} className="truncate text-xl font-semibold text-foreground">
                             {title}
                         </h2>
                     </div>
@@ -957,7 +957,7 @@ export default function RestaurantSubmissionModal({
                     <div className="absolute -top-1 left-0">{draftStatus}</div>
                     <div className="flex items-start justify-between gap-2 pt-3">
                         <div className="flex-1">
-                            <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                            <DialogTitle className="text-xl font-semibold text-foreground">
                                 {title}
                             </DialogTitle>
                             <DialogDescription>{description}</DialogDescription>

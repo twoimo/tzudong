@@ -49,7 +49,7 @@ export function CenteredErrorState({
         >
           <Icon className="h-5 w-5" />
         </div>
-        <h2 id="centered-error-title" className="text-lg font-semibold tracking-tight text-foreground">
+        <h2 id="centered-error-title" className="text-lg font-semibold text-foreground">
           {title}
         </h2>
         <p id="centered-error-description" className="mt-2 text-sm leading-6 text-muted-foreground">

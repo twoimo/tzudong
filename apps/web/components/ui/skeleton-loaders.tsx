@@ -8,7 +8,14 @@ const CONTAIN_STYLE = { contain: 'content' } as const;
 // ========== 리뷰 피드 스켈레톤 ==========
 function FeedSkeletonComponent({ count = 3, className }: { count?: number; className?: string }) {
     return (
-        <div className={cn("w-full max-w-2xl mx-auto p-4 space-y-4", className)} style={CONTAIN_STYLE}>
+        <div
+            className={cn("w-full max-w-2xl mx-auto p-4 space-y-4", className)}
+            style={CONTAIN_STYLE}
+            data-testid="feed-skeleton"
+            role="status"
+            aria-busy="true"
+            aria-label="리뷰 피드를 불러오는 중"
+        >
             {Array.from({ length: count }, (_, i) => (
                 <div key={i} className="space-y-3 p-4 rounded-lg border border-border/50">
                     <div className="flex items-center gap-3">

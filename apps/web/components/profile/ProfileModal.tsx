@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +36,7 @@ interface Profile {
 
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
+    const router = useRouter();
     const queryClient = useQueryClient();
     const isMobileOrTablet = useImmediateMobileOrTablet();
     const [profile, setProfile] = useState<Profile | null>(null);
@@ -150,7 +152,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
     const openSafeAccountDeletion = () => {
         onClose();
-        window.location.assign('/mypage/profile#account-deletion');
+        router.push('/mypage/profile#account-deletion');
     };
 
     if (!user) return null;

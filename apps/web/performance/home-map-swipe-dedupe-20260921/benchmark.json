@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-09-21T11:32:49.519Z",
+  "baselineSource": {
+    "file": "apps/web/performance/home-map-swipe-dedupe-20260921/benchmark-home-map-swipe-dedupe.mjs",
+    "note": "이전 경로는 근사가 아니라 추출 직전 구현을 이 스크립트 안에 동결한 사본입니다."
+  },
+  "workload": {
+    "sizes": [
+      300,
+      1000,
+      2000,
+      4000
+    ],
+    "duplicateRatio": 0.4,
+    "sameNameClusterRatio": 0.25,
+    "mergedEveryNth": 5,
+    "repetitions": 21,
+    "measurementTargetMs": 4,
+    "iterationRule": "구현마다 반복 횟수를 보정해 표본을 약 4ms 창에 넣고, 표본을 반복 횟수로 나눠 호출 1회 시간을 비교합니다."
+  },
+  "equivalence": "identical",
+  "mismatches": 0,
+  "budgets": {
+    "absolute": {
+      "sweepP95MsMax": 250,
+      "rule": "한 번의 중복 제거 호출 p95는 250ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 2,
+      "rule": "중앙값 기준 2배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 구현의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "measurements": [
+    {
+      "size": 300,
+      "keptCount": 147,
+      "beforeIterations": 19,
+      "afterIterations": 130,
+      "beforeMedianMs": 0.239,
+      "beforeP95Ms": 0.286,
+      "beforeMadRelative": 0.054,
+      "afterMedianMs": 0.013,
+      "afterP95Ms": 0.019,
+      "afterMadRelative": 0.0939,
+      "speedupByMedian": 18.69,
+      "speedupByP95": 15.44
+    },
+    {
+      "size": 1000,
+      "keptCount": 492,
+      "beforeIterations": 1,
+      "afterIterations": 65,
+      "beforeMedianMs": 3.624,
+      "beforeP95Ms": 4.351,
+      "beforeMadRelative": 0.0828,
+      "afterMedianMs": 0.065,
+      "afterP95Ms": 0.08,
+      "afterMadRelative": 0.0478,
+      "speedupByMedian": 55.68,
+      "speedupByP95": 54.63
+    },
+    {
+      "size": 2000,
+      "keptCount": 921,
+      "beforeIterations": 1,
+      "afterIterations": 25,
+      "beforeMedianMs": 10.141,
+      "beforeP95Ms": 12.171,
+      "beforeMadRelative": 0.0806,
+      "afterMedianMs": 0.113,
+      "afterP95Ms": 0.124,
+      "afterMadRelative": 0.0742,
+      "speedupByMedian": 90.09,
+      "speedupByP95": 97.9
+    },
+    {
+      "size": 4000,
+      "keptCount": 1884,
+      "beforeIterations": 1,
+      "afterIterations": 19,
+      "beforeMedianMs": 37.564,
+      "beforeP95Ms": 41.007,
+      "beforeMadRelative": 0.0311,
+      "afterMedianMs": 0.236,
+      "afterP95Ms": 0.258,
+      "afterMadRelative": 0.0477,
+      "speedupByMedian": 158.95,
+      "speedupByP95": 159.13
+    }
+  ],
+  "acceptance": {
+    "absoluteBudgetMet": true,
+    "relativeBudgetMet": true,
+    "noiseWithinBudget": true,
+    "combinedRelativeNoise": 0.0788,
+    "relativeImprovement": 157.95,
+    "deltaExceedsNoise": true,
+    "accepted": true
+  },
+  "ratio": {
+    "largestSize": 4000,
+    "speedupByMedian": 158.95,
+    "speedupByP95": 159.13
+  }
+}

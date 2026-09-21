@@ -40,6 +40,21 @@ export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string
     return [...videoIds];
 }
 
+export const HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE = 100;
+export const HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY = 4;
+
+export function chunkHomeMapYoutubeVideoIds(
+    videoIds: string[],
+    chunkSize = HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE,
+): string[][] {
+    const size = Number.isFinite(chunkSize) && chunkSize > 0 ? Math.floor(chunkSize) : HOME_MAP_YOUTUBE_KPI_REQUEST_CHUNK_SIZE;
+    const chunks: string[][] = [];
+    for (let index = 0; index < videoIds.length; index += size) {
+        chunks.push(videoIds.slice(index, index + size));
+    }
+    return chunks;
+}
+
 function buildMetricMeta(metric: HomeMapYouTubeKpiMetric): YoutubeMeta {
     return {
         ...(metric.title ? { title: metric.title } : {}),
@@ -54,18 +69,52 @@ function buildMetricMeta(metric: HomeMapYouTubeKpiMetric): YoutubeMeta {
 async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<string, HomeMapYouTubeKpiMetric>> {
     if (videoIds.length === 0) return new Map();
 
-    const response = await fetch('/api/home/youtube-kpi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds }),
-    });
+    const metricsByVideoId = new Map<string, HomeMapYouTubeKpiMetric>();
+    const chunks = chunkHomeMapYoutubeVideoIds(videoIds);
+    const chunkResults = Array<HomeMapYouTubeKpiResponse>(chunks.length);
+    let nextChunkIndex = 0;
 
-    if (!response.ok) {
-        throw new Error(`home-youtube-kpi:${response.status}`);
+    const fetchNextChunk = async () => {
+        while (true) {
+            const chunkIndex = nextChunkIndex++;
+            const chunk = chunks[chunkIndex];
+            if (!chunk) return;
+
+            try {
+                const response = await fetch('/api/home/youtube-kpi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoIds: chunk }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`home-youtube-kpi:${response.status}`);
+                }
+
+                chunkResults[chunkIndex] = (await response.json()) as HomeMapYouTubeKpiResponse;
+            } catch (error) {
+                const failureCode = error instanceof Error && /^home-youtube-kpi:\d{3}$/.test(error.message)
+                    ? error.message
+                    : (error instanceof SyntaxError ? 'invalid-response' : 'request-failed');
+                console.warn(`[home-map-youtube-kpi] metric chunk failed (${failureCode})`);
+            }
+        }
+    };
+
+    await Promise.all(
+        Array.from(
+            { length: Math.min(HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY, chunks.length) },
+            () => fetchNextChunk(),
+        ),
+    );
+
+    for (const payload of chunkResults) {
+        for (const metric of payload?.metrics ?? []) {
+            metricsByVideoId.set(metric.videoId, metric);
+        }
     }
 
-    const payload = (await response.json()) as HomeMapYouTubeKpiResponse;
-    return new Map((payload.metrics ?? []).map((metric) => [metric.videoId, metric]));
+    return metricsByVideoId;
 }
 
 export function mergeHomeMapYoutubeKpiMetrics(
@@ -118,8 +167,11 @@ export async function enrichRestaurantsWithHomeMapYoutubeKpiMetrics(
             restaurants,
             await fetchHomeMapYoutubeKpiMetrics(videoIds),
         );
-    } catch {
-        console.warn('[home-map-youtube-kpi] metric enrichment failed:');
+    } catch (error) {
+        const failureCode = error instanceof Error && /^home-youtube-kpi:\d{3}$/.test(error.message)
+            ? error.message
+            : (error instanceof SyntaxError ? 'invalid-response' : 'request-failed');
+        console.warn(`[home-map-youtube-kpi] metric enrichment failed (${failureCode})`);
         return restaurants;
     }
 }

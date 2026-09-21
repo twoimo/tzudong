@@ -67,6 +67,17 @@ describe('privacy-safe CLI logging', () => {
     }
   });
 
+  test('keeps canonical UUID identifiers readable while redacting real phone numbers', () => {
+    // '23529451' leads with an unprefixed Seoul-shaped digit run that used to be redacted as
+    // a phone number, which mangled the identifier CLI logs correlate on.
+    const traceId = '23529451-e146-4f55-89a3-1cd9f2d252de';
+
+    expect(redactCliText(traceId)).toBe(traceId);
+    expect(redactCliText('job ' + traceId + ' failed')).toBe('job ' + traceId + ' failed');
+    expect(redactCliText(traceId + ' 010-1234-5678')).toBe(traceId + ' [REDACTED:phone]');
+    expect(redactCliText('phone=010-1234-5678')).toBe('phone=[REDACTED:phone]');
+  });
+
   test('bounds text without coercing arbitrary values', () => {
     let coercions = 0;
     const malicious = {

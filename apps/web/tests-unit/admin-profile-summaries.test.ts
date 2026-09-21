@@ -7,8 +7,11 @@ import {
   ADMIN_PROFILE_SUMMARY_BATCH_SIZE,
   ADMIN_PROFILE_SUMMARY_MAX_CONCURRENCY,
   fetchAdminProfileSummaries,
+  fetchAdminProfileSummariesLookup,
   mapAdminProfileSummaryRpcRows,
   parseAdminProfileSummaryRequest,
+  resolveAdminReviewerDisplay,
+  UNAVAILABLE_ADMIN_REVIEWER_NICKNAME,
 } from '../lib/admin/profile-summaries';
 
 const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
@@ -290,11 +293,40 @@ describe('admin profile summary boundary', () => {
     expect(helperSource).toContain('.slice(offset, offset + ADMIN_PROFILE_SUMMARY_MAX_CONCURRENCY)');
 
     for (const callerSource of [reviewPanelSource, evaluationsSource]) {
-      expect(callerSource).toContain('fetchAdminProfileSummaries');
+      expect(callerSource).toContain('fetchAdminProfileSummariesLookup');
+      expect(callerSource).toContain('resolveAdminReviewerDisplay');
       expect(callerSource).not.toMatch(/\.from\(['"]profiles['"]\)/);
       expect(callerSource).not.toContain('/api/admin/profile-summaries?');
     }
-    expect(reviewPanelSource.match(/fetchAdminProfileSummaries\(/g)).toHaveLength(1);
-    expect(evaluationsSource.match(/fetchAdminProfileSummaries\(/g)).toHaveLength(3);
+    const lookupCalls = (value: string) => value.match(/fetchAdminProfileSummariesLookup\(/g) ?? [];
+    const leftoverRawCalls = (value: string) => (
+      value.replace(/fetchAdminProfileSummariesLookup\(/g, '').match(/fetchAdminProfileSummaries\(/g) ?? []
+    );
+    expect(lookupCalls(reviewPanelSource)).toHaveLength(1);
+    expect(leftoverRawCalls(reviewPanelSource)).toHaveLength(0);
+    expect(lookupCalls(evaluationsSource)).toHaveLength(3);
+    expect(leftoverRawCalls(evaluationsSource)).toHaveLength(0);
+    const submissionSource = source('components/admin/SubmissionDetailView.tsx');
+    expect(submissionSource).toContain("nickname || '닉네임을 불러올 수 없음'");
+    expect(submissionSource).not.toContain("nickname || '탈퇴한 사용자'");
+  });
+
+  test('labels lookup failure separately from a missing deleted-account row', () => {
+    const user = userId(1);
+    expect(resolveAdminReviewerDisplay(user, [], false)).toEqual({
+      nickname: UNAVAILABLE_ADMIN_REVIEWER_NICKNAME,
+    });
+    expect(resolveAdminReviewerDisplay(user, [], true)).toEqual({
+      nickname: '탈퇴한 사용자',
+    });
+    expect(resolveAdminReviewerDisplay(user, [{ userId: user, nickname: null }], true)).toEqual({
+      nickname: '탈퇴한 사용자',
+    });
+    expect(resolveAdminReviewerDisplay(user, [{ userId: user, nickname: '운영자' }], true)).toEqual({
+      nickname: '운영자',
+    });
+    expect(resolveAdminReviewerDisplay(user, [], true, { missingNickname: '알 수 없음' })).toEqual({
+      nickname: '알 수 없음',
+    });
   });
 });
