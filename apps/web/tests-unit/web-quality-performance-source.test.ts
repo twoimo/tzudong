@@ -3682,9 +3682,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
-    expect(myPageProfileSource).toContain(
-      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
-    );
+    expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
       'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
@@ -3697,8 +3695,19 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain("최근 활동");
     expect(myPageProfileSource).toContain(
-      "flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5",
+      "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
     );
+    for (const tonalPanelClass of [
+      "rounded-2xl bg-muted/40 px-3 py-2.5",
+      "rounded-xl bg-muted/40 px-2.5 py-1.5",
+      "hidden rounded-2xl bg-muted/40 px-3 py-3 md:block",
+      "rounded-xl bg-background px-2 py-2",
+      "flex min-h-24 flex-col justify-between",
+      "rounded-2xl bg-amber-50/70 p-3",
+      "rounded-2xl bg-muted/40 p-3",
+    ]) {
+      expect(myPageProfileSource).not.toContain(tonalPanelClass);
+    }
     expect(myPageProfileSource).toContain(
       '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
     );

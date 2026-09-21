@@ -1246,7 +1246,7 @@ export default function ProfilePage() {
             </div>
 
             <div
-              className="rounded-2xl bg-muted/40 px-3 py-2.5"
+              className="space-y-2"
               data-mypage-desktop-tier-progress="true"
             >
               <div className="flex items-center justify-between gap-3">
@@ -1284,32 +1284,28 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div
-              className="grid shrink-0 grid-cols-2 gap-1.5"
+            <dl
+              className="grid shrink-0 grid-cols-2 gap-3 border-t border-border/60 pt-3"
               data-mypage-desktop-tier-metrics="true"
               data-mypage-desktop-tier-action-guide="true"
             >
-              <div className="min-w-0 rounded-xl bg-muted/40 px-2.5 py-1.5">
-                <span className="block text-[11px] text-muted-foreground">
-                  인증 리뷰
-                </span>
-                <span className="block truncate text-xs font-semibold">
+              <div className="min-w-0">
+                <dt className="text-[11px] text-muted-foreground">인증 리뷰</dt>
+                <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier ? `${tierVerifiedReviewsNeeded}개 더 필요` : "목표 달성"}
-                </span>
+                </dd>
               </div>
-              <div className="min-w-0 rounded-xl bg-muted/40 px-2.5 py-1.5">
-                <span className="block text-[11px] text-muted-foreground">
-                  받은 좋아요
-                </span>
-                <span className="block truncate text-xs font-semibold">
+              <div className="min-w-0">
+                <dt className="text-[11px] text-muted-foreground">받은 좋아요</dt>
+                <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier
                     ? hasVerifiedReviews && tierLikesNeeded !== null
                       ? `약 ${tierLikesNeeded}개 더 필요`
                       : "인증 리뷰 후 반영"
                     : "목표 달성"}
-                </span>
+                </dd>
               </div>
-            </div>
+            </dl>
           </CardContent>
         </Card>
 
@@ -1320,13 +1316,13 @@ export default function ProfilePage() {
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
             <CardTitle className="text-base">최근 활동</CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 gap-2 md:grid-rows-3 lg:p-3 lg:pt-0">
+          <CardContent className="grid min-h-0 flex-1 divide-y divide-border/60 md:grid-rows-3 lg:p-3 lg:pt-0">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.label}
-                  className="flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5"
+                  className="flex min-h-0 min-w-0 items-center gap-3 py-2.5"
                   data-mypage-desktop-recent-activity-row="true"
                 >
                   <span
@@ -1471,7 +1467,7 @@ export default function ProfilePage() {
               </div>
 
               <div
-                className="hidden rounded-2xl bg-muted/40 px-3 py-3 md:block"
+                className="hidden space-y-2 border-t border-border/60 pt-3 md:block"
                 data-mypage-password-guidance="true"
               >
                 <div className="flex items-center justify-between gap-3">
@@ -1482,16 +1478,10 @@ export default function ProfilePage() {
                     변경 전 확인
                   </span>
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    8-12자
-                  </span>
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    현재 비밀번호
-                  </span>
-                  <span className="rounded-xl bg-background px-2 py-2">
-                    재입력 일치
-                  </span>
+                <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
+                  <span className="truncate">8-12자</span>
+                  <span className="truncate">현재 비밀번호</span>
+                  <span className="truncate">재입력 일치</span>
                 </div>
               </div>
 
@@ -1555,17 +1545,17 @@ export default function ProfilePage() {
             )}
 
             <section
-              className="rounded-2xl bg-muted/40 p-3"
+              className="space-y-1"
               aria-labelledby="ordinary-marketing-consent-title"
               data-privacy-consent-group="ordinary"
             >
-              <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3">
                 <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
                   일반 마케팅 수신
                 </h2>
                 <Badge variant="secondary">선택</Badge>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="divide-y divide-border/60">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.ordinary[channel.id] === true;
                   const action: ConsentAction = {
@@ -1578,20 +1568,20 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-h-24 flex-col justify-between rounded-xl bg-background p-3"
+                      className="flex min-w-0 items-center gap-2 py-2"
                       data-privacy-consent-row={`ordinary-${channel.id}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{channel.label}</span>
-                        <Badge variant={enabled ? "default" : "secondary"}>
-                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                        </Badge>
-                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {channel.label}
+                      </span>
+                      <Badge variant={enabled ? "default" : "secondary"} className="shrink-0">
+                        {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                      </Badge>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
                         size="sm"
-                        className="mt-3 w-full"
+                        className="shrink-0"
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1609,17 +1599,17 @@ export default function ProfilePage() {
             </section>
 
             <section
-              className="rounded-2xl bg-amber-50/70 p-3 dark:bg-amber-950/25"
+              className="space-y-1 border-t border-border/60 pt-4"
               aria-labelledby="night-marketing-consent-title"
               data-privacy-consent-group="night"
             >
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <h2 id="night-marketing-consent-title" className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="night-marketing-consent-title" className="text-sm font-semibold">
                   야간 마케팅 수신
                 </h2>
                 <Badge className="bg-amber-600 text-white hover:bg-amber-600">별도 선택</Badge>
               </div>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="divide-y divide-border/60">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.night[channel.id] === true;
                   const action: ConsentAction = {
@@ -1632,20 +1622,20 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-h-24 flex-col justify-between rounded-xl bg-background/90 p-3"
+                      className="flex min-w-0 items-center gap-2 py-2"
                       data-privacy-consent-row={`night-${channel.id}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{channel.label}</span>
-                        <Badge variant={enabled ? "default" : "secondary"}>
-                          {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                        </Badge>
-                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {channel.label}
+                      </span>
+                      <Badge variant={enabled ? "default" : "secondary"} className="shrink-0">
+                        {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
+                      </Badge>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
                         size="sm"
-                        className="mt-3 w-full"
+                        className="shrink-0"
                         aria-pressed={enabled}
                         onClick={() => void handleConsentChange(action)}
                         disabled={unknown || consentLoading || consentSaving !== null}
@@ -1687,7 +1677,7 @@ export default function ProfilePage() {
                   className="text-xs leading-5 text-muted-foreground"
                   data-mypage-danger-zone-guidance="compact"
                 >
-                  완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.
+                  완전 삭제는 복구할 수 없습니다.
                 </p>
                 {deletionProgressMessage && (
                   <p

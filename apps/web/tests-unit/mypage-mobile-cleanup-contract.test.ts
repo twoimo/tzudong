@@ -274,9 +274,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
-    expect(profileSource).toContain(
-      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
-    );
+    expect(profileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
       'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
@@ -287,7 +285,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
     expect(profileSource).toContain(
-      "flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5",
+      "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
     );
     expect(profileSource).toContain(
       'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"',
@@ -304,6 +302,17 @@ describe("mypage mobile cleanup source contracts", () => {
       "rounded-xl border border-amber-500/40 bg-background/90 p-3",
     ]) {
       expect(profileSource).not.toContain(nestedPanelClass);
+    }
+    for (const tonalPanelClass of [
+      "rounded-2xl bg-muted/40 px-3 py-2.5",
+      "rounded-xl bg-muted/40 px-2.5 py-1.5",
+      "hidden rounded-2xl bg-muted/40 px-3 py-3 md:block",
+      "rounded-xl bg-background px-2 py-2",
+      "flex min-h-24 flex-col justify-between",
+      "rounded-2xl bg-amber-50/70 p-3",
+      "rounded-2xl bg-muted/40 p-3",
+    ]) {
+      expect(profileSource).not.toContain(tonalPanelClass);
     }
     expect(profileSource).toContain("data-mypage-action-group={section.id}");
     expect(profileSource).not.toContain("바로 할 수 있는 일");
