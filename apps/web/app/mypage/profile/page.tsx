@@ -209,6 +209,7 @@ function createConsentRequestIds() {
 }
 const ACCOUNT_DELETION_POLL_BACKOFF_MS = [500, 1_000, 2_000, 4_000, 8_000] as const;
 const ACCOUNT_DELETION_POLL_DEADLINE_MS = 30_000;
+const CONSENT_SETTINGS_TIMEOUT_MS = 15_000;
 type AccountDeletionPollResult =
   | Readonly<{ kind: "applied"; receipt: AccountDeletionReceipt }>
   | Readonly<{ kind: "in_progress" }>
@@ -367,6 +368,7 @@ async function pollAccountDeletionReadback(
 
 export default function ProfilePage() {
   const { user, profileNickname } = useAuth();
+  const userId = user?.id ?? null;
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: bookmarks = [] } = useBookmarks();
@@ -401,6 +403,7 @@ export default function ProfilePage() {
   const [showDeletionPassword, setShowDeletionPassword] = useState(false);
 
   const [consentSettings, setConsentSettings] = useState<ConsentSettings | null>(null);
+  const consentSettingsRequestRef = useRef<AbortController | null>(null);
   const [consentLoading, setConsentLoading] = useState(false);
   const [consentSaving, setConsentSaving] = useState<string | null>(null);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -408,10 +411,10 @@ export default function ProfilePage() {
   const [failedConsentRequest, setFailedConsentRequest] = useState<ConsentRequest | null>(null);
 
   const loadProfile = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     try {
-      const data = await readPublicProfileSummaries(supabase, [user.id]);
+      const data = await readPublicProfileSummaries(supabase, [userId]);
 
       if (data && data.length > 0) {
         setProfile(data[0]);
@@ -421,45 +424,58 @@ export default function ProfilePage() {
     } catch {
       toast.error("프로필 정보를 불러오는데 실패했습니다");
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       loadProfile();
     }
-  }, [user, loadProfile]);
+  }, [userId, loadProfile]);
 
   const loadConsentSettings = useCallback(async () => {
-    if (!user) {
+    consentSettingsRequestRef.current?.abort();
+    if (!userId) {
+      consentSettingsRequestRef.current = null;
       setConsentSettings(null);
+      setConsentLoading(false);
       return;
     }
 
+    const controller = new AbortController();
+    consentSettingsRequestRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), CONSENT_SETTINGS_TIMEOUT_MS);
     setConsentLoading(true);
     try {
       const response = await fetch("/api/privacy/consents", {
         headers: { Accept: "application/json" },
         cache: "no-store",
+        signal: controller.signal,
       });
       const payload: unknown = await response.json().catch(() => null);
       const parsed = parseConsentSettings(payload);
       if (!response.ok || !parsed) throw new Error("consent_settings_unavailable");
+      if (consentSettingsRequestRef.current !== controller) return;
 
       setConsentSettings(parsed);
       setConsentError(null);
       setFailedConsentAction(null);
       setFailedConsentRequest(null);
     } catch {
+      if (consentSettingsRequestRef.current !== controller) return;
       setConsentSettings(null);
       setConsentError("수신 동의 설정을 불러오지 못했습니다.");
     } finally {
-      setConsentLoading(false);
+      window.clearTimeout(timeout);
+      if (consentSettingsRequestRef.current === controller) {
+        consentSettingsRequestRef.current = null;
+        setConsentLoading(false);
+      }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user) void loadConsentSettings();
-  }, [user, loadConsentSettings]);
+    if (userId) void loadConsentSettings();
+  }, [userId, loadConsentSettings]);
 
   const displayName =
     profile?.nickname || userProfile?.nickname || profileNickname || "사용자";
@@ -474,6 +490,8 @@ export default function ProfilePage() {
   }, [displayName, isMobileNicknameEditing]);
   useEffect(() => () => {
     accountDeletionPollController.current?.abort();
+    consentSettingsRequestRef.current?.abort();
+    consentSettingsRequestRef.current = null;
     setDeletionSession(null);
   }, []);
 
@@ -1492,7 +1510,7 @@ export default function ProfilePage() {
           data-privacy-consent-settings="true"
         >
           <CardContent className="space-y-4 p-4 lg:p-4">
-            {consentLoading && !consentSettings && (
+            {consentLoading && (
               <p className="text-sm text-muted-foreground" role="status">
                 수신 동의 설정을 확인하는 중입니다.
               </p>
