@@ -62,6 +62,13 @@ import {
 } from '@/lib/home-map-theme-filters';
 import { HomeMapThemeFilterIcon } from '@/components/home/home-map-theme-filter-icons';
 
+declare global {
+    interface Window {
+        /** Set while the mobile control overlay is mounted; read by hydration checks. */
+        __tzudong_mobile_overlay_ready?: boolean;
+    }
+}
+
 // 카테고리 상수
 const CATEGORIES = [
     "한식", "중식", "양식", "분식", "치킨", "피자", "고기",
@@ -252,12 +259,12 @@ function MobileControlOverlayComponent({
     // 클라이언트 마운트 및 수화(Hydration) 완료 감지용 글로벌 플래그 설정 및 이벤트 발행
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            (window as any).__tzudong_mobile_overlay_ready = true;
+            window.__tzudong_mobile_overlay_ready = true;
             window.dispatchEvent(new CustomEvent('tzudong_mobile_overlay_ready'));
         }
         return () => {
             if (typeof window !== 'undefined') {
-                (window as any).__tzudong_mobile_overlay_ready = false;
+                window.__tzudong_mobile_overlay_ready = false;
             }
         };
     }, []);
