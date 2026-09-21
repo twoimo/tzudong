@@ -22,7 +22,7 @@ import {
   myPageInlineLinkClass,
   myPageListCardClass,
   myPageListContentClass,
-  myPageResponsiveListClass,
+  myPageResponsiveMediaListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
 const PAGE_SIZE = 15;
@@ -116,7 +116,7 @@ export default function BookmarksPage() {
         />
       ) : (
         <div
-          className={myPageResponsiveListClass}
+          className={myPageResponsiveMediaListClass}
           data-mypage-responsive-list="bookmarks"
         >
           {visibleBookmarks.map((bookmark) => {
@@ -235,7 +235,7 @@ export default function BookmarksPage() {
           {hasMore && (
             <div
               ref={loadMoreRef}
-              className="py-6 text-center text-sm text-muted-foreground lg:col-span-2 2xl:col-span-3"
+              className="py-6 text-center text-sm text-muted-foreground xl:col-span-2"
             >
               계속 불러오는 중…
             </div>
