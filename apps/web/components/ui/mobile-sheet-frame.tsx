@@ -28,6 +28,7 @@ export const MOBILE_COMPACT_FORM_SHEET: BottomSheetPreset = {
 
 export const mobileSheetStyles = {
     frame: 'flex min-h-[100dvh] flex-col bg-background',
+    centeredFrame: 'flex min-h-0 max-h-[calc(100dvh-2rem)] flex-col bg-background',
     header: 'sticky top-0 z-10 border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur',
     compactHeader: 'border-b bg-background/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]',
     title: 'text-xl font-semibold leading-tight text-foreground',

@@ -1,6 +1,7 @@
 // 도장 관련 공통 유틸리티 함수 및 상수
 // stamp/page.tsx와 StampOverlay.tsx에서 공유
 import { parseCategoryList } from '@/lib/category-utils';
+import { getYoutubeThumbnailUrl as getYoutubeThumbnailById } from '@/lib/youtube-thumbnail';
 
 // ========== Constants ==========
 
@@ -79,14 +80,14 @@ export const extractYouTubeVideoId = (url: string): string | null => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
-/** YouTube 썸네일 URL 생성: 16:9 이미지를 사용해 hqdefault 내장 letterbox를 피합니다. */
+/** YouTube 썸네일 URL 생성: 고화질 maxresdefault를 우선 사용합니다. */
 export const getYouTubeThumbnailUrl = (url: string): string | null => {
     const videoId = extractYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+    return videoId ? getYoutubeThumbnailById(videoId, 'maxresdefault') : null;
 };
 
-/** mqdefault가 없는 예외 영상용 fallback */
+/** maxresdefault가 없는 예외 영상용 fallback */
 export const getYouTubeFallbackThumbnailUrl = (url: string): string | null => {
     const videoId = extractYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+    return videoId ? getYoutubeThumbnailById(videoId, 'hqdefault') : null;
 };

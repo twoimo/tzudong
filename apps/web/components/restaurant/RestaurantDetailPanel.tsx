@@ -50,7 +50,7 @@ import {
     buildCanonicalYouTubeWatchUrl,
     extractCanonicalYouTubeVideoId,
 } from "@/lib/youtube-url";
-import { getYoutubeThumbnailUrl } from "@/lib/youtube-thumbnail";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import { buildRestaurantMapDestinationUrls } from "@/lib/restaurant-outbound-url";
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
@@ -241,10 +241,8 @@ export function RestaurantDetailPanel({
             const watchUrl = buildCanonicalYouTubeWatchUrl(videoId);
             if (!videoId || !watchUrl) return [];
 
-            const thumbnailUrl = getYoutubeThumbnailUrl(videoId, 'sddefault') ?? getYoutubeThumbnailUrl(videoId);
-            if (!thumbnailUrl) return [];
             return [{
-                thumbnailUrl,
+                videoId,
                 watchUrl,
             }];
         }),
@@ -1184,10 +1182,9 @@ export function RestaurantDetailPanel({
                                                 onClick={() => openExternalUrl(youtubeVideos[0].watchUrl)}
                                                 aria-label={youtubeCopy.openAriaLabel(1)}
                                             >
-                                                <Image
-                                                    src={youtubeVideos[0].thumbnailUrl}
+                                                <YoutubeThumbnail
+                                                    videoId={youtubeVideos[0].videoId}
                                                     alt=""
-                                                    fill
                                                     className="object-cover"
                                                     sizes="(max-width: 400px) 100vw, 400px"
                                                     priority
@@ -1220,10 +1217,9 @@ export function RestaurantDetailPanel({
                                                             onClick={() => openExternalUrl(video.watchUrl)}
                                                             aria-label={youtubeCopy.openAriaLabel(index + 2)}
                                                         >
-                                                            <Image
-                                                                src={video.thumbnailUrl}
+                                                            <YoutubeThumbnail
+                                                                videoId={video.videoId}
                                                                 alt=""
-                                                                fill
                                                                 className="object-cover"
                                                                 sizes="(max-width: 400px) 100vw, 400px"
                                                             />

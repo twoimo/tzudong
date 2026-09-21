@@ -36,6 +36,7 @@ interface BottomSheetProps {
     ariaDescribedBy?: string;
     focusTrapAllowSelectors?: string[];
     keyboardBehavior?: 'lift' | 'stable';
+    presentation?: 'sheet' | 'centered';
     heightRequest?: {
         key: number;
         height: number;
@@ -273,10 +274,12 @@ function BottomSheetComponent({
     ariaDescribedBy,
     focusTrapAllowSelectors = DEFAULT_FOCUS_TRAP_ALLOW_SELECTORS,
     keyboardBehavior = 'lift',
+    presentation = 'sheet',
     heightRequest,
 }: BottomSheetProps) {
     const isMobileOrTablet = useIsMobile();
     const isModal = modal ?? showBackdrop;
+    const isCentered = presentation === 'centered';
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
@@ -1303,7 +1306,20 @@ function BottomSheetComponent({
     const contentKeyboardPadding = useStableKeyboardLayout ? viewportFrame.bottomOffset : 0;
 
     // 동적 높이 스타일
-    const heightStyle = useStableKeyboardLayout
+    const heightStyle = isCentered
+        ? {
+            top: '50%',
+            bottom: 'auto',
+            left: '50%',
+            right: 'auto',
+            width: 'min(calc(100vw - 2rem), 28rem)',
+            height: 'auto',
+            maxHeight: 'calc(100dvh - 2rem)',
+            transform: 'translate(-50%, -50%)',
+            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
+            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
+        }
+        : useStableKeyboardLayout
         ? {
             top: 0,
             bottom: 0,
@@ -1352,9 +1368,11 @@ function BottomSheetComponent({
             <div
                 ref={sheetRef}
                 className={cn(
-                    'fixed bottom-0 left-0 right-0 z-[95]',
+                    isCentered
+                        ? 'fixed left-1/2 top-1/2 z-[95] w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-2xl border border-border/70 shadow-2xl'
+                        : 'fixed bottom-0 left-0 right-0 z-[95]',
                     'bg-background shadow-sm',
-                    isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
+                    isCentered ? 'rounded-2xl' : isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
                     // 드래그 중에는 트랜지션 제거
                     isDragging || isViewportResizing ? '' : 'transition-[height,border-radius]',
@@ -1362,6 +1380,7 @@ function BottomSheetComponent({
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}
                 data-bottom-sheet-layout-source={layoutSource}
+                data-bottom-sheet-presentation={presentation}
                 role={isModal ? 'dialog' : undefined}
                 aria-modal={isModal ? true : undefined}
                 aria-label={isModal && !ariaLabelledBy ? ariaLabel : undefined}

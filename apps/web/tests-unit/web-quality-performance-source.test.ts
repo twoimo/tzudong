@@ -2430,10 +2430,11 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("focus-visible:ring-primary");
     expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
     expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampCardSource).toContain("getYouTubeFallbackThumbnailUrl");
+    expect(stampCardSource).toContain("<YoutubeThumbnail");
+    expect(stampPageSource).toContain("<YoutubeThumbnail");
     expect(stampPageSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampUtilsSource).toContain("mqdefault.jpg");
-    expect(stampUtilsSource).toContain("hqdefault.jpg");
+    expect(stampUtilsSource).toContain("maxresdefault");
+    expect(stampUtilsSource).toContain("getYoutubeThumbnailById(videoId, 'hqdefault')");
     expect(stampUtilsSource).not.toContain("/hq720.jpg");
     expect(stampCardSource).toContain("const category = useMemo(");
     expect(stampCardSource).not.toContain("transition-all");

@@ -667,12 +667,13 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           isOpen={isOpen}
           onClose={onClose}
           {...MOBILE_FULL_FORM_SHEET}
+          presentation="centered"
           layoutSource="auth-modal"
           className="z-[110]"
           ariaLabelledBy="auth-sheet-title"
           ariaDescribedBy="auth-sheet-description"
         >
-          <div className={mobileSheetStyles.frame}>
+          <div className={mobileSheetStyles.centeredFrame}>
           <MobileSheetHeader
             className="break-keep"
             title={isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}

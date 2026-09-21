@@ -22,7 +22,12 @@ export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
     const LEADERBOARD_PAGE_SIZE = 15;
     const [period, setPeriod] = useState<'all' | 'monthly'>('all');
-    const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
+    const {
+        data: leaderboardData = [],
+        isError,
+        isLoading,
+        refetch,
+    } = useLeaderboard(period);
     const scrollRef = useRef<HTMLDivElement>(null);
     const userItemRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -179,6 +184,8 @@ export default function LeaderboardPage() {
                                 currentUserId={currentUser?.id}
                                 userItemRef={userItemRef}
                                 mobilePanel
+                                isError={isError}
+                                onRetry={() => { void refetch(); }}
                             />
                         )}
                     </div>

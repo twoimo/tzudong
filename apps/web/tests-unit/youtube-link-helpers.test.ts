@@ -30,6 +30,9 @@ describe('YouTube link helpers', () => {
   });
 
   test('builds high-quality thumbnail candidates before low-quality fallbacks', () => {
+    expect(getYoutubeThumbnailUrl('abc123DEF45')).toBe(
+      'https://img.youtube.com/vi/abc123DEF45/maxresdefault.jpg',
+    );
     expect(getYoutubeThumbnailUrl('abc123DEF45', 'hqdefault')).toBe(
       'https://img.youtube.com/vi/abc123DEF45/hqdefault.jpg',
     );

@@ -10,7 +10,7 @@ export type YoutubeThumbnailQuality = typeof YOUTUBE_THUMBNAIL_QUALITY_CANDIDATE
 
 export function getYoutubeThumbnailUrl(
   videoId: string | null | undefined,
-  quality: YoutubeThumbnailQuality = 'hqdefault',
+  quality: YoutubeThumbnailQuality = 'maxresdefault',
 ) {
   if (!videoId) return null;
 

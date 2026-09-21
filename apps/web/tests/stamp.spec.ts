@@ -71,4 +71,31 @@ test.describe('Phase 3: Stamp Page Features', () => {
             await page.waitForTimeout(300);
         }
     });
+
+    test('STAMP-06: 내부 스크롤 끝에서 다음 도장 카드 로딩', async ({ page, browserName }) => {
+        test.skip(browserName !== 'chromium', 'Chromium에서 모바일 라우트의 내부 스크롤 회귀를 검증합니다.');
+
+        await page.setViewportSize({ width: 560, height: 964 });
+        await page.goto('/stamp');
+        await hidePopupOverlay(page);
+
+        const scrollContainer = page.locator('[data-stamp-scroll-container="true"]');
+        await expect(scrollContainer).toBeVisible({ timeout: 15000 });
+
+        const cards = page.locator('[aria-label*="도장 카드 열기"]');
+        await expect(cards.first()).toBeVisible({ timeout: 15000 });
+        const loadMoreStatus = page
+            .locator('[data-stamp-load-more-sentinel="true"]')
+            .getByRole('status');
+        await expect(loadMoreStatus).toBeVisible({ timeout: 15000 });
+        const initialCardCount = await cards.count();
+        expect(initialCardCount).toBeGreaterThan(0);
+
+        await scrollContainer.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+            element.dispatchEvent(new Event('scroll', { bubbles: true }));
+        });
+
+        await expect.poll(() => cards.count(), { timeout: 10000 }).toBeGreaterThan(initialCardCount);
+    });
 });

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Sparkles } from "lucide-react";
 import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
+import { extractCanonicalYouTubeVideoId } from "@/lib/youtube-url";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 
 const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
 
@@ -36,18 +37,6 @@ export function DailyRecommendationPopup() {
     // 홈 페이지에서만 팝업 표시
     const isHomePage = pathname === '/';
     const shouldShowPopup = isHomePage;
-
-    // YouTube 썸네일 URL 추출 함수
-    const extractYouTubeVideoId = (url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
-
-    const getYouTubeThumbnailUrl = (url: string) => {
-        const videoId = extractYouTubeVideoId(url);
-        return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-    };
 
     // 랜덤 음식점 선택 (국내만)
     const selectRandomRestaurant = useCallback(() => {
@@ -197,8 +186,8 @@ export function DailyRecommendationPopup() {
 
     if (!shouldShowPopup || !selectedRestaurant || !isVisible) return null;
 
-    const thumbnailUrl = selectedRestaurant.youtube_link
-        ? getYouTubeThumbnailUrl(selectedRestaurant.youtube_link)
+    const thumbnailVideoId = selectedRestaurant.youtube_link
+        ? extractCanonicalYouTubeVideoId(selectedRestaurant.youtube_link)
         : null;
 
     const address = selectedRestaurant.road_address || selectedRestaurant.jibun_address || '주소 정보 없음';
@@ -244,13 +233,11 @@ export function DailyRecommendationPopup() {
                         aria-label={`${selectedRestaurant.name} 상세 페이지로 이동`}
                     >
                         {/* YouTube 썸네일 */}
-                        {thumbnailUrl && (
+                        {thumbnailVideoId && (
                             <div className="aspect-video relative group">
-                                <Image
-                                    src={thumbnailUrl}
+                                <YoutubeThumbnail
+                                    videoId={thumbnailVideoId}
                                     alt={`${selectedRestaurant.name} 썸네일`}
-                                    fill
-                                    unoptimized
                                     sizes="(max-width: 640px) 100vw, 320px"
                                     className="object-cover transition-all group-hover:brightness-110"
                                 />

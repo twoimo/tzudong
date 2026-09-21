@@ -20,6 +20,8 @@ interface LeaderboardListProps {
     userItemRef?: React.RefObject<HTMLDivElement | null>;
     compactLeftPanel?: boolean;
     mobilePanel?: boolean;
+    isError?: boolean;
+    onRetry?: () => void;
 }
 
 export function LeaderboardList({
@@ -28,7 +30,9 @@ export function LeaderboardList({
     onOpenUserProfile,
     userItemRef,
     compactLeftPanel = false,
-    mobilePanel = false
+    mobilePanel = false,
+    isError = false,
+    onRetry,
 }: LeaderboardListProps) {
     return (
         <div className="divide-y divide-border">
@@ -144,10 +148,28 @@ export function LeaderboardList({
 
             {/* Empty State */}
             {users.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
+                <div className="text-center py-12 text-muted-foreground" role={isError ? 'alert' : undefined}>
                     <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
-                    <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
+                    {isError ? (
+                        <>
+                            <p className="text-sm mb-2">랭킹 데이터를 불러오지 못했습니다</p>
+                            <p className="text-xs">잠시 후 다시 시도해 주세요.</p>
+                            {onRetry && (
+                                <button
+                                    type="button"
+                                    onClick={onRetry}
+                                    className="mt-4 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                    다시 시도
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
+                            <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
+                        </>
+                    )}
                 </div>
             )}
         </div>
