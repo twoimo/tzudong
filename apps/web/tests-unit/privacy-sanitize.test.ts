@@ -714,6 +714,25 @@ describe('privacy sanitizer', () => {
       expect(() => assertPrivacySafe(identifier)).not.toThrow();
     }
   });
+
+  test('keeps canonical UUID identifiers instead of reading hex runs as phone numbers', () => {
+    // '23529451' leads with an unprefixed Seoul-shaped digit run that used to match the
+    // Korean phone pattern, so the whole trace identifier was redacted as `phone` and
+    // correlated log lines could no longer be found by their trace id.
+    const traceId = '23529451-e146-4f55-89a3-1cd9f2d252de';
+
+    const nested = sanitizePrivacyValue({ traceId });
+    expect(nested.findings).toEqual([]);
+    expect(JSON.stringify(nested.value)).toContain(traceId);
+    expect(() => assertPrivacySafe({ traceId })).not.toThrow();
+
+    expect(sanitizePrivacyValue('storyboard job ' + traceId + ' failed').findings).toEqual([]);
+
+    const mixed = traceId + ' 010-1234-5678';
+    const mixedResult = sanitizePrivacyValue(mixed);
+    expect(mixedResult.findings).toEqual([{ kind: 'phone', path: '$', count: 1 }]);
+    expect(JSON.stringify(mixedResult.value)).not.toContain('010-1234-5678');
+  });
   test('rejects precise coordinates embedded in labeled text and URLs', () => {
     for (const value of [
       'lat=37.56650 lng=126.97800',
