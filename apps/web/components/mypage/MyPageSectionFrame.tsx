@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const myPageListCardClass =
   "overflow-hidden border-border/80 bg-card/95 shadow-sm transition-colors hover:bg-secondary/20";
 export const myPageResponsiveListClass =
-  "grid gap-3 md:grid-cols-2 xl:grid-cols-3";
+  "grid gap-3 lg:grid-cols-2 2xl:grid-cols-3";
 export const myPageListContentClass = "p-4";
 export const myPageCardTitleClass =
   "truncate text-base font-semibold tracking-tight sm:text-lg";

@@ -1,0 +1,64 @@
+{
+  "generatedAt": "2026-09-22",
+  "target": "/mypage/profile, /mypage/bookmarks, /mypage/reviews, /mypage/submissions/new, /mypage/submissions/edit, /mypage/submissions/recommend",
+  "method": {
+    "session": "local dev server http://127.0.0.1:3000 (next-server), signed in as twoimo@dgu.ac.kr",
+    "viewport": "Chrome DevTools Protocol Emulation.setDeviceMetricsOverride at 390, 640, 768, 1024, 1280, 1440 (plus 1536/1600 for the list grid)",
+    "probe": "for every element: flag when overflow-x is hidden|clip and scrollWidth > clientWidth + 2, or overflow-y is hidden|clip and scrollHeight > clientHeight + 2; skip elements whose own class list contains sr-only, truncate or line-clamp (those clamp by design); compare documentElement.scrollWidth with clientWidth"
+  },
+  "before": {
+    "bookmarksCard": [
+      { "width": 768, "clientWidth": 225, "scrollWidth": 308, "note": "card has overflow-hidden, so the header row was cut off inside the card" },
+      { "width": 1024, "clientWidth": 356, "scrollWidth": 478 },
+      { "width": 1280, "clientWidth": 318, "scrollWidth": 478 },
+      { "width": 1440, "clientWidth": 371, "scrollWidth": 478 }
+    ],
+    "bookmarksAddress": [{ "width": 768, "clientWidth": 17, "note": "text column collapsed to 17px next to the 160px thumbnail" }],
+    "reviewsCard": [{ "width": 768, "clientWidth": 225, "scrollWidth": 248 }],
+    "profilePasswordCard": {
+      "width": 1024,
+      "clientHeight": 203,
+      "scrollHeight": 348,
+      "note": "measured in this worktree before the change: md:h-full md:min-h-0 md:grid-rows-2 capped row 1 at the viewport share while the form needed 348px"
+    }
+  },
+  "after": {
+    "clippedContainers": 0,
+    "routesChecked": 6,
+    "widthsChecked": 6,
+    "documentOverflow": "documentElement.scrollWidth == clientWidth at every route and width",
+    "bookmarksGridColumns": {
+      "390": "366px",
+      "768": "465px",
+      "1024": "358px 358px",
+      "1280": "486px 486px",
+      "1440": "566px 566px",
+      "1536": "405px 405px 405px",
+      "1600": "427px 427px 427px"
+    },
+    "reviewsGridColumns": {
+      "1024": "350.5px 350.5px",
+      "1280": "478.5px 478.5px",
+      "1440": "558.5px 558.5px",
+      "1536": "400px 400px 400px",
+      "1600": "422px 422px 422px"
+    },
+    "profilePasswordCard": { "width": 1024, "clientHeight": 306, "scrollHeight": 306, "note": "row follows content; the grid box equals its scroll height (958 vs 956)" }
+  },
+  "changes": [
+    "app/mypage/profile/page.tsx: drop md:h-full md:min-h-0 md:grid-rows-2 from the page surface so rows follow card content",
+    "components/mypage/MyPageSectionFrame.tsx: myPageResponsiveListClass goes two-up at lg and three-up at 2xl instead of md and xl",
+    "app/mypage/bookmarks/page.tsx: min-w-0 text column, shrink-0 delete button, thumbnail resized to sm:w-32, load-more row spans lg:col-span-2 2xl:col-span-3",
+    "app/mypage/reviews/page.tsx: min-w-0 text column, shrink-0 action group, load-more row spans lg:col-span-2 2xl:col-span-3"
+  ],
+  "checks": {
+    "unit": "npm run test:unit (exit 0): 2314 tests / 318 files and 158 tests / 9 files, 0 fail",
+    "contracts": "bun test tests-unit/mypage-mobile-cleanup-contract.test.ts tests-unit/web-quality-performance-source.test.ts (41 pass, 0 fail)",
+    "lint": "npm run lint (exit 0, --max-warnings=0)",
+    "typecheck": "npm run typecheck:parity (0 diagnostics)"
+  },
+  "limits": [
+    "Measurements come from the local dev server and a signed-in local session; they do not establish hosted or production rendering.",
+    "The audit records container clipping and document overflow, not visual review of every card."
+  ]
+}
