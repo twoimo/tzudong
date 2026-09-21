@@ -448,7 +448,7 @@ export default function ReviewsPage() {
               <CardContent className={myPageListContentClass}>
                 {/* 헤더: 맛집명 + 상태 */}
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className={myPageCardTitleClass}>
                         {review.restaurantName}
@@ -480,7 +480,7 @@ export default function ReviewsPage() {
                   </div>
 
                   {/* 수정/삭제 버튼 */}
-                  <div className="flex gap-1">
+                  <div className="flex shrink-0 gap-1">
                     {/* 수정 또는 재제출 버튼 */}
                     {review.adminNote?.includes("거부") ? (
                       <Button
@@ -644,7 +644,7 @@ export default function ReviewsPage() {
 
           {/* 추가 로딩 표시 */}
           {isFetchingNextPage && (
-            <div className="py-4 text-center md:col-span-2 xl:col-span-3">
+            <div className="py-4 text-center lg:col-span-2 2xl:col-span-3">
               <div className="flex items-center justify-center gap-2">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 <span className="text-sm text-muted-foreground">

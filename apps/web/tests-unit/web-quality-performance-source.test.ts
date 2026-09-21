@@ -3615,7 +3615,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-profile-density="dashboard-matrix"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-profile-viewport-fit="true"',
+      'data-mypage-profile-viewport-fit="content"',
     );
     expect(myPageProfileSource).toContain("md:min-h-0");
     expect(myPageProfileSource).toContain(
@@ -3644,7 +3644,8 @@ describe("web quality performance source contracts", () => {
       'data-mypage-sidebar-session-action="logout"',
     );
     expect(myPageProfileSource).toContain("md:h-full");
-    expect(myPageProfileSource).toContain("md:grid-rows-2");
+    // Rows stay content-sized so the password form is never clipped.
+    expect(myPageProfileSource).not.toContain("md:grid-rows-2");
     expect(myPageProfileSource).not.toContain(
       "lg:max-h-[calc(100dvh-6.25rem)]",
     );
