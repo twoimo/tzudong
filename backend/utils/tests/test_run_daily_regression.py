@@ -782,14 +782,11 @@ class GDriveUploadContractTests(unittest.TestCase):
             dependabot.count('          - "version-update:semver-major"'),
             2,
         )
-        for dependency in (
-            "next",
-            "@next/bundle-analyzer",
-            "eslint-config-next",
-            "typescript-eslint",
-        ):
+        for dependency in ("typescript-eslint",):
             self.assertIn(f'dependency-name: "{dependency}"', dependabot)
-        self.assertEqual(dependabot.count('          - ">=16.3.0"'), 3)
+        for dependency in ("next", "@next/bundle-analyzer", "eslint-config-next"):
+            self.assertNotIn(f'dependency-name: "{dependency}"', dependabot)
+        self.assertEqual(dependabot.count('          - ">=16.3.0"'), 0)
         self.assertEqual(dependabot.count('          - ">8.63.0"'), 1)
         self.assertNotIn("git+https://github.com/yt-dlp/yt-dlp.git@master", crawling_requirements)
         self.assertIn("yt-dlp[default]==", crawling_requirements)

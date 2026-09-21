@@ -155,3 +155,50 @@ export async function fetchAdminProfileSummaries(userIds: readonly string[]): Pr
   }
   return rowsByBatch.flat();
 }
+
+export const UNAVAILABLE_ADMIN_REVIEWER_NICKNAME = '닉네임을 불러올 수 없음';
+
+export async function fetchAdminProfileSummariesLookup(
+  userIds: readonly string[],
+): Promise<{ ok: boolean; summaries: AdminProfileSummary[] }> {
+  try {
+    return { ok: true, summaries: await fetchAdminProfileSummaries(userIds) };
+  } catch {
+    return { ok: false, summaries: [] };
+  }
+}
+
+function isAdminProfileSummaryMap(
+  summaries: readonly AdminProfileSummary[] | ReadonlyMap<string, AdminProfileSummary>,
+): summaries is ReadonlyMap<string, AdminProfileSummary> {
+  return (
+    !Array.isArray(summaries)
+    && typeof (summaries as ReadonlyMap<string, AdminProfileSummary>).get === 'function'
+  );
+}
+
+export function resolveAdminReviewerDisplay(
+  userId: string,
+  summaries: readonly AdminProfileSummary[] | ReadonlyMap<string, AdminProfileSummary>,
+  lookupOk: boolean,
+  options?: Readonly<{
+    unavailableNickname?: string;
+    missingNickname?: string;
+  }>,
+): { nickname: string } {
+  const unavailableNickname =
+    options?.unavailableNickname ?? UNAVAILABLE_ADMIN_REVIEWER_NICKNAME;
+  const missingNickname = options?.missingNickname ?? '탈퇴한 사용자';
+  if (!lookupOk) {
+    return { nickname: unavailableNickname };
+  }
+
+  const summary = isAdminProfileSummaryMap(summaries)
+    ? summaries.get(userId.toLowerCase()) ?? summaries.get(userId)
+    : summaries.find((row) => row.userId === userId.toLowerCase() || row.userId === userId);
+  if (!summary || !summary.nickname) {
+    return { nickname: missingNickname };
+  }
+
+  return { nickname: summary.nickname };
+}

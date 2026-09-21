@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.workflow.json",
+  "output": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.html",
+  "specification": {
+    "sha256": "3cc9755906f8bee5d40f262ddb6e4bd56920d5d25d5814a6d8aaf5c40fe390ec",
+    "bytes": 5139
+  },
+  "artifact": {
+    "sha256": "d512105bd7c62b29f305cd197b57e5a73c87329aa066c7432f57d72048292f5f",
+    "bytes": 815220
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

@@ -88,10 +88,10 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     aria-label={showUserSubmittedMarkers ? "사용자 제보 맛집 마커 숨기기" : "사용자 제보 맛집 마커 보이기"}
                     className={cn(
                         isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
-                        "rounded-full shadow-xl",
+                        "rounded-full shadow-sm",
                         "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
-                        "border-2",
+                        "border",
                         showUserSubmittedMarkers
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-transparent"
                             : "bg-background hover:bg-secondary text-foreground border-border/70"
@@ -113,12 +113,12 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 className={cn(
                     // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
                     isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
-                    "rounded-full shadow-xl",
+                    "rounded-full shadow-sm",
                     "bg-red-800 hover:bg-red-900 text-white",
                     "transition-[background-color,color,border-color,box-shadow,transform] duration-300 ease-in-out motion-reduce:transition-none",
-                    "hover:scale-110 active:scale-95",
+                    "active:scale-95",
                     "flex items-center justify-center",
-                    "border-2 border-border/20"
+                    "border border-border/20"
                 )}
                 title="맛집 제보하기"
             >
@@ -133,10 +133,10 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                     aria-label={deviceLocationButtonLabel}
                     className={cn(
                         isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
-                        "rounded-full shadow-xl",
+                        "rounded-full shadow-sm",
                         "transition-colors duration-150 ease-out motion-reduce:transition-none",
                         "flex items-center justify-center",
-                        "border-2",
+                        "border",
                         isDeviceHeadingMode
                             ? "bg-blue-600 hover:bg-blue-700 text-white border-white/70 ring-2 ring-blue-200/70"
                             : deviceLocation

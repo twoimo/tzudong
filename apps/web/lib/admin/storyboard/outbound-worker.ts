@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
@@ -12,6 +13,7 @@ import {
   StoryboardProductionError, assertStoryboardProviderPolicy, parseStoryboardDraft,
   type StoryboardDraft, type StoryboardProductionProvenance,
 } from './production-contract.ts';
+import { canAdmitStoryboardMemory } from './resource-invariants.ts';
 import {
   claimedStoryboardJobSchema, validateStoryboardWorkerOrigin,
   type ClaimedStoryboardJob, type WorkerDestination, type WorkerEvent, type WorkerResult,
@@ -24,6 +26,9 @@ const claimSchema = okSchema.extend({ job: claimedStoryboardJobSchema.nullable()
 const PATHS = ['/api/storyboard-worker', '/api/storyboard-worker/images'] as const;
 type WorkerPath = typeof PATHS[number];
 type Lease = { jobId: string; leaseToken: string };
+const STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV = 'STORYBOARD_MLX_INFERENCE_PEAK_BYTES';
+export const DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES = 8 * 1024 ** 3;
+const STORYBOARD_IMAGE_UPLOAD_PEAK_BYTES = MAX_STORYBOARD_IMAGE_BYTES * 4;
 
 export class StoryboardWorkerApiError extends Error {
   readonly code: string;
@@ -184,15 +189,65 @@ export function storyboardWorkerErrorCode(error: unknown): string {
   return 'provider_failed';
 }
 
+export function admitStoryboardWorkerMemory(
+  models: ReadonlyArray<{ bytes_resident?: number }>,
+  env: { physicalBytes: number; availableBytes?: number; usedBytes?: number } = {
+    physicalBytes: os.totalmem(),
+    availableBytes: os.freemem(),
+  },
+): boolean {
+  const resident = models.reduce((sum, model) => sum + (Number(model.bytes_resident) || 0), 0);
+  const configuredInferencePeak = process.env[STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV];
+  const inferencePeakBytes = configuredInferencePeak === undefined
+    ? DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES
+    : Number(configuredInferencePeak);
+  // Default reserves 8 GiB for MLX inference, plus the existing encoded/decoded/upload buffers.
+  // Operators may replace the inference allowance with a measured byte value for their models.
+  if (!Number.isSafeInteger(inferencePeakBytes) || inferencePeakBytes <= 0) {
+    throw new RangeError(`${STORYBOARD_MLX_INFERENCE_PEAK_BYTES_ENV} must be a positive safe integer`);
+  }
+  if (!Number.isFinite(env.physicalBytes) || env.physicalBytes < 0) {
+    throw new RangeError('physicalBytes must be a finite number >= 0');
+  }
+
+  let usedBytes: number;
+  if (env.availableBytes !== undefined) {
+    if (!Number.isFinite(env.availableBytes) || env.availableBytes < 0 || env.availableBytes > env.physicalBytes) {
+      throw new RangeError('availableBytes must be a finite number between 0 and physicalBytes');
+    }
+    // os.freemem() is host-wide and already includes the resident MLX process.
+    // Adding the model catalog estimate here would double-count that process.
+    usedBytes = env.physicalBytes - env.availableBytes;
+  } else if (env.usedBytes !== undefined) {
+    if (!Number.isFinite(env.usedBytes) || env.usedBytes < 0) {
+      throw new RangeError('usedBytes must be a finite number >= 0');
+    }
+    // Keep the explicit deterministic fallback for callers that cannot provide
+    // a host-wide availability sample; in that mode model residency is external
+    // to the supplied worker RSS and must be included once.
+    usedBytes = env.usedBytes + resident;
+  } else {
+    throw new RangeError('availableBytes or usedBytes is required');
+  }
+
+  return canAdmitStoryboardMemory({
+    usedBytes,
+    additionalPeakEstimateBytes: inferencePeakBytes + STORYBOARD_IMAGE_UPLOAD_PEAK_BYTES,
+    physicalBytes: env.physicalBytes,
+  });
+}
+
 /** One claimed project and one image at a time. SQL owns durable progress and retry leases. */
 export class OutboundStoryboardWorker {
   private readonly api: StoryboardWorkerApi;
   private readonly mlx: Models;
   private readonly heartbeatMs: number;
   private readonly onEvent: (event: WorkerEvent) => void;
+  private readonly admitMemory: (models: MlxModel[]) => boolean;
   private running = false;
   constructor(options: {
     api: StoryboardWorkerApi; mlx?: Models; heartbeatMs?: number; onEvent?: (event: WorkerEvent) => void;
+    admitMemory?: (models: MlxModel[]) => boolean;
   }) {
     this.api = options.api; this.mlx = options.mlx ?? new MlxStoryboardClient();
     this.heartbeatMs = options.heartbeatMs ?? 15_000;
@@ -200,6 +255,7 @@ export class OutboundStoryboardWorker {
       throw new StoryboardWorkerApiError('invalid_worker_timeout');
     }
     this.onEvent = options.onEvent ?? (() => undefined);
+    this.admitMemory = options.admitMemory ?? ((models) => admitStoryboardWorkerMemory(models));
   }
 
   private async heartbeat(models: MlxModel[], signal?: AbortSignal, lease?: Lease): Promise<void> {
@@ -235,6 +291,10 @@ export class OutboundStoryboardWorker {
         throw error;
       }
       if (signal?.aborted) throw new StoryboardWorkerApiError('worker_stopped');
+      if (!this.admitMemory(models)) {
+        this.onEvent({ event: 'memory_deferred' });
+        return 'idle';
+      }
       await this.heartbeat(models, signal);
       const claim = claimSchema.safeParse(await workerApiCall(() => this.api.operation({ action: 'claim' }, signal)));
       if (!claim.success) throw new StoryboardWorkerApiError('invalid_worker_response');

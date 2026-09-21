@@ -69,10 +69,15 @@ describe('review photo URL trust boundary', () => {
     )).toBeNull();
   });
 
-  test('rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments', () => {
+  test('resolves same-origin public review-photo URLs back to the owned object', () => {
     const publicUrl = `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${VALID_PATH}`;
+    expect(getCanonicalReviewPhotoObjectPath(publicUrl, OWNER)).toBeNull();
+    expect(resolveReviewPhotoUrl(publicUrl, OWNER)).toBe(publicUrl);
+    expect(resolveReviewPhotoUrl(`${publicUrl}?t=1`, OWNER)).toBe(publicUrl);
+  });
+
+  test('rejects absolute URLs, buckets, traversal, encoded separators, queries, and fragments', () => {
     for (const value of [
-      publicUrl,
       `${SUPABASE_ORIGIN}/storage/v1/object/public/other-bucket/${VALID_PATH}`,
       'https://evil.example/storage/v1/object/public/review-photos/owner-123/reviews/review-456/food/food-1.webp',
       'owner-123/reviews/review-456/food/../food-1.webp',
@@ -128,11 +133,14 @@ describe('review photo URL trust boundary', () => {
       'owner-123/1789717467000_food_0_x.svg',
       'owner-123/1789717467000_verification_x.jpg',
       'owner-123/1789717467000_food_0_%2e%2e.webp',
-      `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${legacyFood}`,
     ]) {
       expect(getLegacyReviewPhotoObjectPath(value, OWNER)).toBeNull();
       expect(resolveReviewPhotoUrl(value, OWNER)).toBeNull();
     }
+
+    const legacyPublicUrl = `${SUPABASE_ORIGIN}/storage/v1/object/public/review-photos/${legacyFood}`;
+    expect(getLegacyReviewPhotoObjectPath(legacyPublicUrl, OWNER)).toBeNull();
+    expect(resolveReviewPhotoUrl(legacyPublicUrl, OWNER)).toBe(legacyPublicUrl);
   });
 
   test('resolves the configured loopback origin instead of requiring https', () => {

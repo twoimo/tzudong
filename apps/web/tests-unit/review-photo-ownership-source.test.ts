@@ -10,6 +10,8 @@ describe('review photo ownership source contracts', () => {
 
     expect(reviewCardSource).toContain("import { resolveReviewPhotoUrl } from '@/lib/review-photo-url'");
     expect(reviewCardSource).toContain('resolveReviewPhotoUrl(photo.url, ownership)');
+    expect(reviewCardSource).toContain('const photoItemKeyPrefix = idPrefix ?? review.id');
+    expect(reviewCardSource).toContain('key={`${photoItemKeyPrefix}-photo-${index}`}');
     expect(reviewCardSource).toContain("purpose: 'food' as const");
     expect(reviewCardSource).not.toContain("from('review-photos').getPublicUrl");
   });

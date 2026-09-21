@@ -35,6 +35,7 @@ import {
   privacyEligibilityGuidance,
   signOutRejectedPrivacySession,
 } from "@/lib/privacy/eligibility";
+import { cn } from "@/lib/utils";
 
 // 쯔양 테마 랜덤 닉네임 생성
 const generateRandomNickname = (): string => {
@@ -643,7 +644,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
       />
       <Button
         type="button"
-        className="h-11 w-full bg-gradient-primary text-sm hover:opacity-90 sm:text-base"
+        className="h-11 w-full bg-primary text-primary-foreground text-sm hover:bg-primary/90 sm:text-base"
         onClick={handleGoogleSignup}
         disabled={isGoogleLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
       >
@@ -666,13 +667,15 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           isOpen={isOpen}
           onClose={onClose}
           {...MOBILE_FULL_FORM_SHEET}
+          presentation="centered"
           layoutSource="auth-modal"
           className="z-[110]"
           ariaLabelledBy="auth-sheet-title"
           ariaDescribedBy="auth-sheet-description"
         >
-          <div className={mobileSheetStyles.frame}>
+          <div className={mobileSheetStyles.centeredFrame}>
           <MobileSheetHeader
+            className="break-keep"
             title={isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
             description={isPrivacyOnboarding ? "Google 로그인 후 필수 정보를 확인해주세요" : "쯔양의 맛집을 리뷰하고 공유하세요"}
             titleId="auth-sheet-title"
@@ -692,9 +695,29 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           )}
           {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full flex-1 px-4 py-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b border-border bg-transparent p-0">
+              <TabsTrigger
+                value="login"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "login"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                로그인
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "signup"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                회원가입
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -730,7 +753,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "로그인 중..." : "로그인"}
@@ -861,7 +884,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
@@ -914,10 +937,10 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
         <DialogContent className={AUTH_MODAL_DESKTOP_CONTENT_CLASS_NAME} style={AUTH_MODAL_DESKTOP_CONTENT_STYLE}>
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-xl sm:text-2xl">🔥</span>
               </div>
-              <DialogTitle className="text-xl sm:text-2xl bg-gradient-primary bg-clip-text text-transparent">
+              <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
                 {isPrivacyOnboarding ? "개인정보 확인" : "쯔동여지도"}
               </DialogTitle>
             </div>
@@ -929,9 +952,29 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
           {isPrivacyOnboarding && privacyOnboardingContent}
           {!isPrivacyOnboarding && (
           <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "signup")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-none border-b border-border bg-transparent p-0">
+              <TabsTrigger
+                value="login"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "login"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                로그인
+              </TabsTrigger>
+              <TabsTrigger
+                value="signup"
+                className={cn(
+                  "rounded-none bg-transparent px-2 py-2.5 text-sm font-medium shadow-none",
+                  authTab === "signup"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground"
+                )}
+              >
+                회원가입
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -964,7 +1007,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "로그인 중..." : "로그인"}
@@ -1092,7 +1135,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
 
                 <Button
                   type="submit"
-                  className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                  className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                   disabled={isLoading || !privacyAgreed || !ageBand || !policyVersion || !policyContentSha256}
                 >
                   {isLoading ? "가입 중..." : "회원가입"}
@@ -1199,7 +1242,7 @@ const AuthModal = memo(({ isOpen, onClose, onAuthSuccess, redirectTo, reason, in
               </Button>
               <Button
                 type="submit"
-                className="flex-1 h-10 sm:h-11 bg-gradient-primary hover:opacity-90"
+                className="flex-1 h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={isSendingReset}
               >
                 {isSendingReset ? "발송 중..." : "재설정 링크 발송"}

@@ -22,7 +22,7 @@ try {
     if (process.env.CI || !values.origin || !values['token-file']) throw new Error('explicit_worker_configuration_required');
     const token = await readStoryboardWorkerToken(values['token-file']);
     const api = new StoryboardWorkerTransport({ origin: values.origin, token });
-    const mlx = new MlxStoryboardClient(new MlxTransport({ origin: values['mlx-origin'], timeoutMs: 300_000 }));
+    const mlx = new MlxStoryboardClient(new MlxTransport({ origin: values['mlx-origin'], timeoutMs: 600_000 }));
     const worker = new OutboundStoryboardWorker({ api, mlx, onEvent: (event) => console.log(JSON.stringify(event)) });
     console.log(JSON.stringify({ event: 'worker_started' }));
     const result = await worker.run({ signal: stop.signal, once: values.once });

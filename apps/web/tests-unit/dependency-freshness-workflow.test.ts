@@ -117,24 +117,20 @@ describe('Dependency_Freshness_Workflow governance contract', () => {
     expect(workflow).toContain('timeout "${COMMAND_TIMEOUT_SECONDS}"');
   });
 
-  test('preserves the four dependabot holds and treats hold release as separate', () => {
-    expect(HOLD_LIST).toHaveLength(4);
+  test('preserves the three dependabot holds and treats hold release as separate', () => {
+    expect(HOLD_LIST).toHaveLength(3);
     const holdIds = HOLD_LIST.map((hold) => hold.id).sort();
     expect(holdIds).toEqual([
       'eslint-major',
-      'next-16-3',
       'types-node-major',
       'typescript-eslint-8-63',
     ]);
     // The preserved holds remain declared in dependabot.yml.
-    expect(dependabot).toContain('dependency-name: "next"');
-    expect(dependabot).toContain('">=16.3.0"');
-    expect(dependabot).toContain('dependency-name: "@next/bundle-analyzer"');
-    expect(dependabot).toContain('dependency-name: "eslint-config-next"');
     expect(dependabot).toContain('dependency-name: "eslint"');
     expect(dependabot).toContain('dependency-name: "@types/node"');
     expect(dependabot).toContain('dependency-name: "typescript-eslint"');
     expect(dependabot).toContain('">8.63.0"');
+    expect(dependabot).not.toContain('dependency-name: "next"');
     // The workflow reasserts hold preservation.
     expect(workflow).toContain('Preserve dependabot holds');
   });
@@ -200,8 +196,7 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
   });
 
   test('rejects hold-range bumps but admits bumps below the threshold', () => {
-    expect(isHoldRangeBump('next', '16.3.0', 'minor')).toBe(true);
-    expect(isHoldRangeBump('next', '16.2.9', 'patch')).toBe(false);
+    expect(isHoldRangeBump('next', '16.3.5', 'minor')).toBe(false);
     expect(isHoldRangeBump('eslint', '10.0.0', 'major')).toBe(true);
     expect(isHoldRangeBump('eslint', '9.20.1', 'minor')).toBe(false);
     expect(isHoldRangeBump('@types/node', '25.0.0', 'major')).toBe(true);
@@ -210,7 +205,7 @@ describe('Dependency_Freshness_Workflow enforcement logic', () => {
 
     const held = {
       targetBranch: 'develop',
-      packages: [{ name: 'next', fromVersion: '16.2.0', toVersion: '16.3.0' }],
+      packages: [{ name: 'typescript-eslint', fromVersion: '8.63.0', toVersion: '8.64.0' }],
     };
     expect(classifyCandidate(held).code).toBe(FIXED_CODES.DEPENDENCY_HOLD_VIOLATION);
   });

@@ -9,6 +9,8 @@ import {
   STORYBOARD_WORKFLOW,
   assertStoryboardProviderPolicy,
   buildStoryboardDraftPrompt,
+  isStoryboardLoopbackProviderId,
+  isStoryboardOfficialApiProviderId,
   parseStoryboardDraft,
   storyboardDraftSceneSchema,
   storyboardDraftSchema,
@@ -27,7 +29,7 @@ const PROJECT_QUERY = ADMIN_STORYBOARD_PROJECT_QUERY;
 const POLL_MS = 2500;
 const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50";
 const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50";
-const panelClass = "min-w-0 rounded-xl border border-border bg-card p-4 text-card-foreground";
+const panelClass = "min-w-0 rounded-xl bg-card p-4 text-card-foreground sm:p-5";
 
 const statusSchema = z.enum(["waiting_worker", "generating", "awaiting_import", "partial", "ready", "failed", "cancelled"]);
 // These are frontend HTTP views, deliberately independent of the server-only store.
@@ -112,7 +114,7 @@ async function response(url: string, signal: AbortSignal, init?: RequestInit): P
     const code = body.errorCode ?? body.code ?? (typeof body.error === "string" ? body.error : record(body.error).code);
     if (result.status === 401 || result.status === 403) throw new UiError("unauthorized");
     if (result.status === 409) throw new UiError(typeof code === "string" && Object.hasOwn(STORYBOARD_PRODUCTION_MESSAGES, code) ? code : "revision_conflict");
-    if (result.status === 404) throw new UiError("unavailable");
+    if (result.status === 404) throw new UiError(typeof code === "string" && Object.hasOwn(STORYBOARD_PRODUCTION_MESSAGES, code) ? code : "unavailable");
     throw new UiError(typeof code === "string" ? code : "request_failed");
   }
   return result;
@@ -142,8 +144,8 @@ function isActive(view: View | null): boolean {
   return !!view && (view.job?.status === "queued" || view.job?.status === "claimed"
     || view.project.status === "waiting_worker" || view.project.status === "generating");
 }
-function isLocal(id: ProviderId) { return id === "local-mlx" || id === "manual"; }
-function isOfficial(id: ProviderId) { return id === "openai-api" || id === "xai-api"; }
+function isLocal(id: ProviderId) { return isStoryboardLoopbackProviderId(id); }
+function isOfficial(id: ProviderId) { return isStoryboardOfficialApiProviderId(id); }
 function when(value: string | null | undefined): string {
   const date = value ? new Date(value) : null;
   return date && Number.isFinite(date.getTime()) ? date.toLocaleString("ko-KR") : "시각 정보 없음";
@@ -188,7 +190,8 @@ function ProviderField({ kind, value, externalAI, models, onChange }: {
   </fieldset>;
 }
 
-export function LocalStoryboardWorkspace() {
+export function LocalStoryboardWorkspace({ onOpenLegacy }: { onOpenLegacy?: () => void } = {}) {
+  const [showSetup, setShowSetup] = useState(false);
   const [catalog, setCatalog] = useState<Catalog>({ ok: true, projects: [], workers: [] });
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(true);
@@ -234,7 +237,7 @@ export function LocalStoryboardWorkspace() {
     const url = new URL(window.location.href);
     if (id) url.searchParams.set(PROJECT_QUERY, id); else url.searchParams.delete(PROJECT_QUERY);
     window.history.pushState(window.history.state, "", url);
-    setProjectId(id);
+    setProjectId(id); setShowSetup(false);
   }, []);
   const updateSummary = useCallback((project: Project) => {
     const item = { id: project.id, revision: project.revision, status: project.status,
@@ -286,22 +289,33 @@ export function LocalStoryboardWorkspace() {
   }
 
   return <section aria-labelledby="local-storyboard-title" data-local-storyboard-workspace="true"
-    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-3 text-foreground sm:p-5">
+    className="h-full min-h-0 min-w-0 overflow-y-auto bg-background p-4 pb-24 text-foreground sm:p-6 sm:pb-8">
     <header className="mb-4 flex min-w-0 flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 id="local-storyboard-title" className="text-xl font-semibold">로컬 스토리보드</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Mac의 설치된 모델과 수동 가져오기로 제작합니다. 저장된 실제 결과만 표시합니다.</p>
+        <h2 id="local-storyboard-title" className="text-xl font-semibold tracking-tight">스토리보드</h2>
+        <p className="mt-1 hidden text-sm text-muted-foreground sm:block">장면을 만들고, 흐름을 다듬고, 영상으로 준비하세요.</p>
       </div>
-      <button type="button" className={buttonClass} onClick={() => selectProject(null)}>새 프로젝트</button>
+      <div className={`grid w-full min-w-0 items-center gap-2 sm:w-auto ${projectId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
+        <label className="sr-only" htmlFor="local-project-select">프로젝트 선택</label>
+        <select id="local-project-select" className={`${inputClass} !mt-0 sm:max-w-56`} value={projectId ?? ""}
+          onChange={(event) => selectProject(event.target.value || null)}>
+          <option value="">저장된 프로젝트 선택</option>
+          {catalog.projects.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </select>
+        <button type="button" className={buttonClass} aria-expanded={showSetup} onClick={() => setShowSetup((value) => !value)}>연결 설정</button>
+        {projectId && <button type="button" className={`${buttonClass} !border-primary !bg-primary !text-primary-foreground`} onClick={() => selectProject(null)}>새 프로젝트</button>}
+      </div>
     </header>
-    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-      <aside className="min-w-0 space-y-4" aria-label="프로젝트 설정과 기록">
-        <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
-          <h3 id="local-request-title" className="mb-3 font-semibold">새 제작 요청</h3>
+    <div className={`grid min-w-0 items-start gap-6 ${projectId && showSetup ? "lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]" : ""}`}>
+      {(!projectId || showSetup) && <aside className={`min-w-0 space-y-4 ${!projectId ? "mx-auto w-full max-w-4xl" : ""}`} aria-label="프로젝트 설정과 기록">
+        {!projectId && <form className={panelClass} onSubmit={create} aria-labelledby="local-request-title">
+          <h3 id="local-request-title" className="font-semibold">새 제작 요청</h3>
+          <p className="mb-5 mt-1 break-keep text-sm text-muted-foreground">영상의 주제와 분위기를 알려주세요. 생성 후 장면별로 편집할 수 있습니다.</p>
           <fieldset disabled={creating} className="min-w-0 space-y-4">
             <div className="text-sm">
               <label className="block" htmlFor="local-storyboard-prompt">제작 요청</label>
-              <textarea id="local-storyboard-prompt" className={inputClass} rows={4} required maxLength={8000}
+              <textarea id="local-storyboard-prompt" className={`${inputClass} break-keep`} rows={4} required maxLength={8000}
+                placeholder="예: 매운 짜장라면 맛집 탐방. 가게 소개부터 첫 입, 맛 평가까지 생동감 있는 먹방 영상으로 구성해 주세요."
                 value={prompt} onChange={(event) => setPrompt(event.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -327,18 +341,24 @@ export function LocalStoryboardWorkspace() {
                     if (!isLocal(imageProvider.id)) setImageProvider({ id: "manual", model: "" });
                   }
                 }} />
-              외부 AI 사용 허용 (웹은 직접 열고 결과 가져오기)
+              외부 AI 사용 허용 · 공식 API
             </label>
-            <p id="local-external-help" className="text-xs text-muted-foreground">웹 로그인이나 자동 전송은 하지 않습니다. 공식 API는 서버의 설정 확인이 제공되기 전까지 사용할 수 없습니다.</p>
-            <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
-            <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
-            <button className={`${buttonClass} w-full`} type="submit" disabled={creating}>
+            <p id="local-external-help" className="text-xs text-muted-foreground">ChatGPT·Grok 웹 결과는 외부 AI를 켜지 않고 수동 가져오기로 고를 수 있습니다. 이 옵션은 OpenAI·xAI 공식 API용이며 현재는 설정 전 사용할 수 없습니다.</p>
+            <div className="grid min-w-0 gap-4 md:grid-cols-2">
+              <ProviderField kind="text" value={textProvider} externalAI={externalAI} models={textModels} onChange={setTextProvider} />
+              <ProviderField kind="image" value={imageProvider} externalAI={externalAI} models={imageModels} onChange={setImageProvider} />
+            </div>
+            <button className={`${buttonClass} w-full !border-primary !bg-primary !text-primary-foreground sm:w-auto sm:min-w-48`} type="submit" disabled={creating}>
               {creating ? "저장 요청 중…" : "프로젝트 만들기"}
             </button>
           </fieldset>
           {createError && <p role="alert" className="mt-3 text-sm text-destructive">{createError}</p>}
-        </form>
-        <section className={panelClass} aria-labelledby="local-workers-title">
+        </form>}
+        {projectId && <label className="flex min-h-11 items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1" checked={externalAI} onChange={(event) => setExternalAI(event.target.checked)} />
+          외부 AI 사용 허용 (수동 결과 가져오기)
+        </label>}
+        {showSetup && <section className={panelClass} aria-labelledby="local-workers-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="local-workers-title" className="font-semibold">로컬 워커</h3>
             <button type="button" className={buttonClass} disabled={catalogBusy} onClick={() => setCatalogTick((value) => value + 1)}>목록 새로고침</button>
@@ -347,31 +367,16 @@ export function LocalStoryboardWorkspace() {
           {catalogError && <p role="alert" className="mt-2 text-sm text-destructive">{catalogError}</p>}
           {!catalogBusy && !catalogError && catalog.workers.length === 0 && <p className="mt-2 text-sm text-muted-foreground">보고된 로컬 워커가 없습니다. 수동 가져오기는 사용할 수 있습니다.</p>}
           {catalog.workers.map((worker) => <div key={worker.id} className="mt-3 break-words text-sm [overflow-wrap:anywhere]">
-            <p className="font-medium">{worker.id} · {worker.online ? "온라인" : "오프라인"}</p>
+            <p className="font-medium">{worker.online ? "Mac 워커 연결됨" : "Mac 워커 연결 끊김"}</p>
             <p className="text-xs text-muted-foreground">마지막 연결: {when(worker.lastHeartbeat)}</p>
             {worker.models.map((model) => <p key={model.id} className="mt-1 text-xs text-muted-foreground">
               {model.id} · 디스크 {size(model.bytes_on_disk)} · 메모리 {size(model.bytes_resident)} · {model.loaded ? "로드됨" : "미로드"}
             </p>)}
           </div>)}
-        </section>
-        <nav className={panelClass} aria-labelledby="local-history-title">
-          <h3 id="local-history-title" className="mb-2 font-semibold">프로젝트 기록</h3>
-          {catalog.projects.length === 0 && <p className="text-sm text-muted-foreground">확인된 프로젝트가 없습니다.</p>}
-          <ul className="space-y-2">{catalog.projects.map((item) => <li key={item.id}>
-            <button type="button" className={`${buttonClass} w-full min-w-0 flex-col items-start text-left`}
-              aria-current={projectId === item.id ? "page" : undefined} onClick={() => selectProject(item.id)}>
-              <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">{item.title}</span>
-              <span className="text-xs text-muted-foreground">v{item.revision} · {STATUSES[item.status]} · {when(item.updatedAt)}</span>
-            </button>
-          </li>)}</ul>
-        </nav>
-      </aside>
-      {projectId ? <SavedProjectWorkspace key={projectId} projectId={projectId} externalAI={externalAI} onProject={updateSummary} />
-        : <div className={`${panelClass} flex min-h-64 flex-col justify-center`}>
-          <h3 className="text-lg font-semibold">제작 요청을 저장해 시작하세요</h3>
-          <p className="mt-2 text-sm text-muted-foreground">텍스트와 이미지 공급자를 각각 선택하세요. 워커가 없거나 결과를 가져오지 않은 상태를 완료로 표시하지 않습니다.</p>
-          <p className="mt-2 text-sm text-muted-foreground">저장 후 장면 편집, 이미지 가져오기, 재생성, 파일을 포함한 JSON 내보내기를 사용할 수 있습니다.</p>
-        </div>}
+        </section>}
+        {showSetup && onOpenLegacy && <button type="button" className="min-h-11 text-sm text-muted-foreground underline underline-offset-4" onClick={onOpenLegacy}>이전 작업 공간 열기</button>}
+      </aside>}
+      {projectId && <SavedProjectWorkspace key={projectId} projectId={projectId} externalAI={externalAI} onProject={updateSummary} />}
     </div>
   </section>;
 }
@@ -380,6 +385,8 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
   projectId: string; externalAI: boolean; onProject: (project: Project) => void;
 }) {
   const [view, setView] = useState<View | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<"scenes" | "history" | "import">("scenes");
+  const [selectedScene, setSelectedScene] = useState(1);
   const [readTick, setReadTick] = useState(0);
   const [readError, setReadError] = useState<string | null>(null);
   const [writeError, setWriteError] = useState<string | null>(null);
@@ -424,8 +431,11 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
 
   const active = isActive(view);
   const locked = busy || active || needsReadback || !!readError;
-  const providers = view ? [view.project.request.providers.text, view.project.request.providers.image] : [];
-  const generationBlocked = providers.some((provider) => isOfficial(provider.id) || (!externalAI && !isLocal(provider.id)));
+  const retryProvider = view?.project.document
+    ? view.project.request.providers.image
+    : view?.project.request.providers.text;
+  const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";
+  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
@@ -527,14 +537,17 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
 
   return <section className="min-w-0 space-y-4" aria-label="저장된 스토리보드">
     <div className={panelClass}>
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-col items-start justify-between gap-3 sm:flex-row">
         <div className="min-w-0 flex-1">
           <h3 ref={heading} tabIndex={-1} className="break-words text-lg font-semibold [overflow-wrap:anywhere]">
             {view?.project.document?.title ?? (view ? "저장된 제작 요청" : "프로젝트 불러오기")}
           </h3>
-          <p className="mt-1 break-all text-xs text-muted-foreground">{projectId}{view && ` · v${view.project.revision}`}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{view && `버전 ${view.project.revision} · ${when(view.project.updatedAt)} 저장`}</p>
         </div>
-        <button type="button" className={buttonClass} disabled={busy || loading} onClick={() => setReadTick((value) => value + 1)}>프로젝트 새로고침</button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={buttonClass} disabled={busy || loading} onClick={() => setReadTick((value) => value + 1)}>새로고침</button>
+          {view && <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>내보내기</button>}
+        </div>
       </div>
       <div aria-live="polite" role="status" className="mt-3 text-sm">
         {loading && !view ? "저장된 결과 확인 중…" : view ? STATUSES[view.project.status] : "아직 저장 결과를 확인하지 못했습니다."}
@@ -544,26 +557,35 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
       {writeError && <p role="alert" className="mt-2 text-sm text-destructive">{writeError}</p>}
       {view?.job?.errorCode && <p role="alert" className="mt-2 text-sm text-destructive">{message(view.job.errorCode)}</p>}
       {view && <>
-        <p className="mt-2 whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
+        <details className="mt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">제작 요청과 모델 정보</summary><p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{view.project.request.prompt}</p>
         <p className="mt-2 text-xs text-muted-foreground">텍스트: {PROVIDERS[view.project.request.providers.text.id]} · 이미지: {PROVIDERS[view.project.request.providers.image.id]}</p>
         {view.job && <p className="mt-2 text-xs text-muted-foreground">
           {JOB_STATUSES[view.job.status]} · 시도 {view.job.attempts}회{view.job.sceneNo !== null && ` · 장면 ${view.job.sceneNo}`} · 마지막 연결 {when(view.job.lastHeartbeat)}
         </p>}
+        {view.project.document && <p className="mt-2 text-xs text-muted-foreground">텍스트 출처: <Provenance value={view.project.document.textProvenance} /></p>}
+        </details>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" className={buttonClass} disabled={busy || !view.job || !active || needsReadback || !!readError}
-            onClick={() => { if (view.job) void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id }); }}>작업 취소</button>
-          <button type="button" className={buttonClass}
-            disabled={locked || generationBlocked || scenesComplete
+          {active && <button type="button" className={buttonClass} disabled={busy || !view.job || !active || needsReadback || !!readError}
+            onClick={() => { if (view.job) void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id }); }}>작업 취소</button>}
+          {!scenesComplete && <button type="button" className={buttonClass}
+            disabled={locked || retryBlocked || scenesComplete
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
-            onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>
-          <button type="button" className={buttonClass} disabled={busy || !view.project.document} onClick={() => { void download(); }}>파일 포함 JSON 내보내기</button>
+            onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>}
         </div>
-        {generationBlocked && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
+        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
     {view && <>
-      <section className={panelClass} aria-labelledby="local-import-title">
+      <nav aria-label="스토리보드 작업" className="flex gap-1 border-b border-border/60">
+        {([["scenes", "장면 편집"], ["history", "버전 이력"], ["import", "결과 가져오기"]] as const).map(([id, label]) =>
+          <button key={id} type="button" disabled={!!editing || busy} aria-current={workspaceView === id ? "page" : undefined}
+            className={`min-h-11 px-3 py-2 text-sm ${workspaceView === id ? "border-b-2 border-primary font-semibold text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={() => setWorkspaceView(id)}>{label}</button>)}
+      </nav>
+      {workspaceView === "history" && <VersionHistory key={`${projectId}:${view.project.revision}`} projectId={projectId}
+        revision={view.project.revision} disabled={locked || !!editing || !view.project.document} onRestore={mutate} />}
+      {workspaceView === "import" && <section className={panelClass} aria-labelledby="local-import-title">
         <h3 id="local-import-title" className="font-semibold">수동 결과 가져오기</h3>
         <p className="mt-1 text-sm text-muted-foreground">현재 프로젝트와 버전에 맞는 JSON을 가져옵니다. 웹 구독의 결과는 사용자 가져오기로 표시하며 모델 실행을 검증한 것으로 표시하지 않습니다.</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -584,32 +606,45 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
             value={importText} onChange={(event) => setImportText(event.target.value)} maxLength={MAX_STORYBOARD_DOCUMENT_BYTES} spellCheck={false} />
           <button type="submit" className={`${buttonClass} mt-2`} disabled={locked || !importText.trim()}>텍스트 가져오기</button>
         </form>
-      </section>
-      {view.project.document ? <section aria-labelledby="local-scenes-title" className="min-w-0 space-y-3">
+      </section>}
+      {workspaceView === "scenes" && (view.project.document ? <section aria-labelledby="local-scenes-title" className="min-w-0 space-y-3">
         <div className="px-1">
           <h3 id="local-scenes-title" className="font-semibold">저장된 장면 {view.project.document.scenes.length}개 · 이미지 {view.project.document.scenes.filter((scene) => scene.image).length}개</h3>
-          <p className="mt-1 break-words text-sm [overflow-wrap:anywhere]">{view.project.document.logline}</p>
-          <p className="mt-1 text-xs text-muted-foreground">텍스트 출처: <Provenance value={view.project.document.textProvenance} /></p>
+          <details className="mt-1 text-sm text-muted-foreground"><summary className="cursor-pointer">전체 줄거리</summary><p className="mt-2 break-words [overflow-wrap:anywhere]">{view.project.document.logline}</p></details>
         </div>
-        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
-          {view.project.document.scenes.map((scene) => <article className={panelClass} key={scene.sceneNo} aria-labelledby={`local-scene-${scene.sceneNo}`}>
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,180px)_minmax(0,1fr)]">
+          <nav aria-label="장면 선택" className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible">
+            {view.project.document.scenes.map((scene) => <button key={scene.sceneNo} type="button"
+              className={`w-36 shrink-0 rounded-lg p-2 text-left transition-colors lg:w-full ${selectedScene === scene.sceneNo ? "bg-muted ring-1 ring-primary/60" : "hover:bg-muted/60"}`}
+              aria-label={`장면 ${scene.sceneNo} 선택`} aria-current={selectedScene === scene.sceneNo ? "step" : undefined}
+              disabled={!!editing} onClick={() => setSelectedScene(scene.sceneNo)}>
+              {scene.image && <SceneThumbnail asset={scene.image} projectId={projectId} />}
+              <span className="mt-2 block truncate text-sm font-medium">{String(scene.sceneNo).padStart(2, "0")} · {scene.title}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{scene.durationSec}초 · {scene.imageError ? "이미지 오류" : scene.image ? "이미지 저장됨" : "이미지 대기"}</span>
+            </button>)}
+          </nav>
+          {view.project.document.scenes.filter((scene) => scene.sceneNo === selectedScene).map((scene) => <article className={panelClass} key={scene.sceneNo} aria-labelledby={`local-scene-${scene.sceneNo}`}>
             <h4 id={`local-scene-${scene.sceneNo}`} className="break-words font-semibold [overflow-wrap:anywhere]">{scene.sceneNo}. {scene.title}</h4>
             <p className="mb-3 text-xs text-muted-foreground">{scene.durationSec}초 · 장면 v{scene.revision}</p>
-            {scene.image ? <AssetImage key={`${scene.image.id}-${scene.image.original.sha256}`} asset={scene.image} projectId={projectId} title={scene.title} />
-              : <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">저장된 이미지 없음</div>}
-            {scene.imageError && <p role="alert" className="mt-2 text-sm text-destructive">{message(scene.imageError)}</p>}
-            <dl className="mt-3 space-y-2 break-words text-sm [overflow-wrap:anywhere]">
-              {[["장면 설명", scene.description], ["촬영 방향", scene.visualDirection], ["내레이션", scene.narration], ["자막", scene.caption], ["제작 메모", scene.productionNotes.join("\n")]].map(([label, value]) =>
-                <div key={label}><dt className="font-medium">{label}</dt><dd className="whitespace-pre-wrap text-muted-foreground">{value || "없음"}</dd></div>)}
-            </dl>
             <div className="mt-3 flex flex-wrap gap-2">
               <button id={`local-edit-${scene.sceneNo}`} type="button" className={buttonClass} disabled={locked || !!editing}
                 onClick={() => setEditing({ draft: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
-              <button type="button" className={buttonClass} disabled={locked || generationBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
+              <button type="button" className={buttonClass} disabled={locked || regenerateBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
                 onClick={() => { void mutate({ action: "regenerate", revision: view.project.revision, sceneNo: scene.sceneNo, requestId: crypto.randomUUID() }); }}>장면 재생성</button>
               <button type="button" className={buttonClass} aria-label={`장면 ${scene.sceneNo} 이미지 프롬프트 복사`}
                 onClick={() => { void copy(`${JSON.stringify({ schema: STORYBOARD_WORKFLOW, projectId, revision: view.project.revision, sceneNo: scene.sceneNo })}\n${scene.imagePrompt}`); }}>이미지 프롬프트 복사</button>
             </div>
+            <div className="mt-4 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+            <div className="min-w-0">
+            {scene.image ? <AssetImage key={`${scene.image.id}-${scene.image.original.sha256}`} asset={scene.image} projectId={projectId} title={scene.title} />
+              : <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed border-border bg-muted p-4 text-sm text-muted-foreground">저장된 이미지 없음</div>}
+            {scene.imageError && <p role="alert" className="mt-2 text-sm text-destructive">{message(scene.imageError)}</p>}
+            </div>
+            <div className="min-w-0">
+            {!editing && <dl className="grid gap-4 break-words text-sm [overflow-wrap:anywhere]">
+              {[["장면 설명", scene.description], ["촬영 방향", scene.visualDirection], ["내레이션", scene.narration], ["자막", scene.caption], ["제작 메모", scene.productionNotes.join("\n")]].map(([label, value]) =>
+                <div key={label}><dt className="font-medium">{label}</dt><dd className="whitespace-pre-wrap text-muted-foreground">{value || "없음"}</dd></div>)}
+            </dl>}
             {editing?.draft.sceneNo === scene.sceneNo && <form onSubmit={saveEdit} className="mt-3" aria-label={`장면 ${scene.sceneNo} 편집 양식`}
               onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.preventDefault(); finishEdit(); } }}>
               <fieldset disabled={locked} className="space-y-2">
@@ -633,26 +668,122 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
               </fieldset>
               <button type="button" className={`${buttonClass} mt-2`} disabled={busy} onClick={finishEdit}>편집 닫기</button>
             </form>}
-            <ImageImport sceneNo={scene.sceneNo} disabled={locked || !!editing} onImport={importImage} />
+            <details className="mt-4 border-t border-border/50 pt-3">
+              <summary className="cursor-pointer text-sm text-muted-foreground">이미지 파일 가져오기</summary>
+              <ImageImport sceneNo={scene.sceneNo} disabled={locked || !!editing} onImport={importImage} />
+            </details>
+            </div>
+            </div>
           </article>)}
         </div>
-      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">저장된 장면이 아직 없습니다. 워커 결과를 기다리거나 현재 버전의 초안을 가져오세요.</p></div>}
-      <section className={panelClass} aria-labelledby="local-events-title">
+      </section> : <div className={panelClass}><p className="text-sm text-muted-foreground">저장된 장면이 아직 없습니다. 워커 결과를 기다리거나 현재 버전의 초안을 가져오세요.</p></div>)}
+      {workspaceView === "history" && <section className={panelClass} aria-labelledby="local-events-title">
         <h3 id="local-events-title" className="font-semibold">프로젝트 변경 이력</h3>
         {view.events.length === 0 && <p className="mt-2 text-sm text-muted-foreground">서버에서 제공한 이력이 없습니다.</p>}
         <ol className="mt-2 space-y-2">{view.events.map((raw, index) => {
           const event = record(raw);
-          const labels: Record<string, string> = { create: "프로젝트 생성", created: "프로젝트 생성", edit: "장면 편집", regenerate: "장면 재생성 요청", retry: "재시도 요청", cancel: "취소 요청", "import-text": "텍스트 가져오기", "import-image": "이미지 가져오기", failed: "작업 실패", succeeded: "작업 종료" };
-          const kind = String(event.action ?? event.type ?? "");
+          const labels: Record<string, string> = { create: "프로젝트 생성", created: "프로젝트 생성", edit: "장면 편집", edited: "장면 편집", regenerate: "장면 재생성 요청", retry: "재시도 요청", cancel: "취소 요청", "import-text": "텍스트 가져오기", "import-image": "이미지 가져오기", failed: "작업 실패", succeeded: "작업 종료", restored: "과거 버전 복원", queued: "작업 대기", claimed: "작업 점유", draft_saved: "초안 저장", image_saved: "이미지 저장", scene_failed: "장면 실패", cancelled: "작업 취소", lease_expired: "작업 소유권 만료", finished: "작업 종료" };
+          const kind = String(event.operation ?? event.action ?? event.type ?? "");
           return <li key={index} className="text-sm">
             {Object.hasOwn(labels, kind) ? labels[kind] : "프로젝트 업데이트"}
             {typeof event.revision === "number" && Number.isSafeInteger(event.revision) && ` · v${event.revision}`}
             <span className="ml-2 text-xs text-muted-foreground">{when(typeof event.createdAt === "string" ? event.createdAt : null)}</span>
           </li>;
         })}</ol>
-      </section>
+      </section>}
     </>}
   </section>;
+}
+
+const versionsSchema = z.object({
+  ok: z.literal(true),
+  versions: z.array(z.object({ revision: z.number().int().nonnegative(), createdAt: z.string(),
+    title: z.string(), sceneCount: z.number().int().min(0).max(12) })).max(200),
+  preview: storyboardProductionDocumentSchema.nullable(),
+});
+
+function VersionHistory({ projectId, revision, disabled, onRestore }: {
+  projectId: string; revision: number; disabled: boolean;
+  onRestore: (body: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [history, setHistory] = useState<z.infer<typeof versionsSchema> | null>(null);
+  const [target, setTarget] = useState("");
+  const [sceneNo, setSceneNo] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true); setError(null); setHistory(null); setConfirmed(false);
+      try {
+        const query = target ? `&targetRevision=${encodeURIComponent(target)}` : "";
+        const parsed = versionsSchema.safeParse(await json(`${API}/${projectId}?versions=1${query}`, controller.signal));
+        if (!parsed.success || (target && (!parsed.data.preview || parsed.data.preview.projectId !== projectId
+          || parsed.data.preview.revision !== Number(target)))) throw new UiError("invalid_response");
+        if (!controller.signal.aborted) setHistory(parsed.data);
+      } catch (cause) { if (!controller.signal.aborted) setError(failure(cause)); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
+    }
+    void load();
+    return () => controller.abort();
+  }, [projectId, target, refresh]);
+  const preview = history?.preview;
+  return <section className={panelClass} aria-labelledby="local-version-title">
+    <h3 id="local-version-title" className="font-semibold">과거 버전 복원</h3>
+    <p className="mt-1 text-sm text-muted-foreground">저장된 이력부터 복원할 수 있습니다. 복원 전 상태도 새 이력으로 남습니다.</p>
+    {loading && <p role="status" className="mt-2 text-sm">버전 불러오는 중…</p>}
+    {error && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
+    <button type="button" className={`${buttonClass} mt-2`} disabled={loading} onClick={() => setRefresh((value) => value + 1)}>버전 목록 새로고침</button>
+    {history && <>
+      <label htmlFor="local-history-version" className="mt-3 block text-sm">저장된 버전</label>
+      <select id="local-history-version" className={inputClass} value={target} disabled={disabled || loading}
+        onChange={(event) => { setTarget(event.target.value); setSceneNo(""); setConfirmed(false); setHistory(null); }}>
+        <option value="">복원할 버전 선택</option>
+        {history.versions.map((version) => <option key={version.revision} value={version.revision} disabled={version.revision >= revision}>
+          v{version.revision} · {version.title} · {version.sceneCount}장면 · {when(version.createdAt)}
+        </option>)}
+      </select>
+      {!history.versions.some((version) => version.revision < revision) && <p className="mt-2 text-sm text-muted-foreground">아직 이전에 저장된 버전이 없습니다.</p>}
+    </>}
+    {preview && <>
+      <h4 className="mt-3 font-medium">v{target} 미리보기 · {preview.title}</h4>
+      <label htmlFor="local-history-scene" className="mt-2 block text-sm">복원 범위</label>
+      <select id="local-history-scene" className={inputClass} value={sceneNo} disabled={disabled}
+        onChange={(event) => { setSceneNo(event.target.value); setConfirmed(false); }}>
+        <option value="">프로젝트 전체</option>
+        {preview.scenes.map((scene) => <option key={scene.sceneNo} value={scene.sceneNo}>장면 {scene.sceneNo} · {scene.title}</option>)}
+      </select>
+      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+        {preview.scenes.filter((scene) => !sceneNo || scene.sceneNo === Number(sceneNo)).map((scene) => <article key={scene.sceneNo} className="min-w-0">
+          <h5 className="break-words text-sm font-medium">장면 {scene.sceneNo} · {scene.title}</h5>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm">{scene.description}</p>
+          {scene.image && <AssetImage key={scene.image.id} asset={scene.image} projectId={projectId} title={scene.title} />}
+        </article>)}
+      </div>
+      <label className="mt-3 flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-1" checked={confirmed} disabled={disabled}
+          onChange={(event) => setConfirmed(event.target.checked)} />
+        모델을 호출하지 않고 선택한 버전의 텍스트와 원본 이미지를 새 버전으로 저장합니다. 현재 공급자 설정은 유지합니다.
+      </label>
+      <button type="button" className={`${buttonClass} mt-3`} disabled={disabled || loading || !confirmed}
+        onClick={() => { setConfirmed(false); void onRestore({ action: "restore", revision, targetRevision: Number(target),
+          requestId: crypto.randomUUID(), ...(sceneNo ? { sceneNo: Number(sceneNo) } : {}) }); }}>
+        {sceneNo ? `장면 ${sceneNo} 복원` : "프로젝트 전체 복원"}
+      </button>
+    </>}
+  </section>;
+}
+
+function SceneThumbnail({ asset, projectId }: { asset: StoryboardProductionAsset; projectId: string }) {
+  const variant = asset.web[0] ?? asset.original;
+  const url = privateAssetUrl(projectId, asset.id, variant.path);
+  return url ? (
+    // Authenticated private thumbnails bypass the public image optimizer.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" width={variant.width} height={variant.height} className="aspect-video w-full rounded-md object-cover" loading="lazy" />
+  ) : null;
 }
 
 function Provenance({ value }: { value: StoryboardProductionAsset["provenance"] }) {
@@ -671,9 +802,9 @@ function AssetImage({ asset, projectId, title }: { asset: StoryboardProductionAs
       // Authenticated private variants must bypass Next's public image optimizer.
       // eslint-disable-next-line @next/next/no-img-element
       <img src={source} srcSet={variants.map((variant) => `${variant.url} ${variant.width}w`).join(", ") || undefined}
-        sizes="(min-width: 1280px) calc((100vw - 420px) / 2), (min-width: 1024px) calc(100vw - 400px), calc(100vw - 64px)"
+        sizes="(min-width: 1024px) calc(100vw - 400px), calc(100vw - 64px)"
         width={asset.original.width} height={asset.original.height} alt={title} loading="lazy" decoding="async"
-        className="h-auto w-full rounded-lg bg-muted object-contain" onError={() => setFailed(true)} />
+        className="max-h-[440px] w-full rounded-lg bg-muted object-contain" onError={() => setFailed(true)} />
     ) : <p role="alert" className="rounded-lg border border-dashed border-border p-4 text-sm">저장된 이미지를 불러오지 못했습니다. 프로젝트를 새로고침하세요.</p>}
     <figcaption className="mt-1 text-xs text-muted-foreground"><Provenance value={asset.provenance} /></figcaption>
   </figure>;

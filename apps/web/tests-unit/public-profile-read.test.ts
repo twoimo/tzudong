@@ -12,6 +12,11 @@ import {
   readPublicProfileLeaderboard,
   readPublicProfileLeaderboardPage,
   readPublicProfileSummaries,
+  ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+  DELETED_ACCOUNT_NICKNAME,
+  UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+  readPublicProfileSummariesLookup,
+  resolvePublicReviewerDisplay,
 } from "../lib/public-profile-read";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
@@ -403,6 +408,105 @@ describe("public profile leaderboard page RPC boundary", () => {
   });
 });
 
+describe("public reviewer display labels", () => {
+  test("labels lookup failure separately from a missing deleted-account row", () => {
+    expect(resolvePublicReviewerDisplay(USER_A, [], false)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [
+      { user_id: USER_B, nickname: "둘째", avatar_url: null },
+    ], false)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [], true)).toEqual({
+      nickname: DELETED_ACCOUNT_NICKNAME,
+      avatarUrl: null,
+    });
+    expect(resolvePublicReviewerDisplay(USER_A, [], true, {
+      missingNickname: ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+    })).toEqual({
+      nickname: ANONYMOUS_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+  });
+
+  test("lookup wrapper swallows RPC failures without inventing deleted-account labels", async () => {
+    const failed = await readPublicProfileSummariesLookup({
+      rpc: async () => {
+        throw new PublicProfileReadError(PUBLIC_PROFILE_READ_ERROR_CODE.unavailable);
+      },
+    }, [USER_A]);
+    expect(failed).toEqual({ ok: false, summaries: [] });
+    expect(resolvePublicReviewerDisplay(USER_A, failed.summaries, failed.ok)).toEqual({
+      nickname: UNAVAILABLE_PUBLIC_REVIEWER_NICKNAME,
+      avatarUrl: null,
+    });
+
+    const missing = await readPublicProfileSummariesLookup({
+      rpc: async () => ({ data: [], error: null }),
+    }, [USER_A]);
+    expect(missing).toEqual({ ok: true, summaries: [] });
+    expect(resolvePublicReviewerDisplay(USER_A, missing.summaries, missing.ok)).toEqual({
+      nickname: DELETED_ACCOUNT_NICKNAME,
+      avatarUrl: null,
+    });
+  });
+
+  test("reads array summaries even when Array.prototype.get exists", () => {
+    const summaries = [
+      { user_id: USER_A, nickname: "첫째", avatar_url: null },
+    ];
+    const proto = Array.prototype as unknown as { get?: (key: string) => unknown };
+    const previous = proto.get;
+    proto.get = () => undefined;
+    try {
+      expect(resolvePublicReviewerDisplay(USER_A, summaries, true)).toEqual({
+        nickname: "첫째",
+        avatarUrl: null,
+      });
+    } finally {
+      if (previous) proto.get = previous;
+      else delete proto.get;
+    }
+  });
+
+  test("reads map summaries by lowercase user id", () => {
+    const summaries = new Map([
+      [USER_A, { user_id: USER_A, nickname: "첫째", avatar_url: "https://cdn.example/a.png" }],
+    ]);
+    expect(resolvePublicReviewerDisplay(USER_A.toUpperCase(), summaries, true)).toEqual({
+      nickname: "첫째",
+      avatarUrl: "https://cdn.example/a.png",
+    });
+  });
+
+  test("lookup wrapper batches more than 100 ids instead of failing the whole page", async () => {
+    const ids = Array.from({ length: 101 }, (_, index) =>
+      `11111111-1111-4111-8111-${String(index).padStart(12, "0")}`,
+    );
+    const batchSizes: number[] = [];
+    const result = await readPublicProfileSummariesLookup({
+      rpc: async (_name: string, args: { p_user_ids: string[] }) => {
+        batchSizes.push(args.p_user_ids.length);
+        return {
+          data: args.p_user_ids.map((userId) => ({
+            user_id: userId,
+            nickname: `u${userId.slice(-2)}`,
+            avatar_url: null,
+          })),
+          error: null,
+        };
+      },
+    }, ids);
+    expect(batchSizes).toEqual([100, 1]);
+    expect(result.ok).toBe(true);
+    expect(result.summaries).toHaveLength(101);
+    expect(resolvePublicReviewerDisplay(ids[100], result.summaries, result.ok).nickname).toBe("u00");
+  });
+});
+
 describe("public profile caller convergence", () => {
   test("routes public and self reads through the bounded RPC helper", () => {
     const callers = [
@@ -419,7 +523,7 @@ describe("public profile caller convergence", () => {
 
     for (const caller of callers) {
       const callerSource = source(caller);
-      expect(callerSource, caller).toContain("readPublicProfileSummaries");
+      expect(/readPublicProfileSummaries(?:Lookup)?/.test(callerSource), caller).toBe(true);
       expect(callerSource, caller).not.toMatch(
         /\.from\(['"]profiles['"]\)\s*\.select\(/,
       );
@@ -431,9 +535,17 @@ describe("public profile caller convergence", () => {
     expect(leaderboardSource).not.toContain(".from('reviews')");
 
     const userProfileSource = source("hooks/useUserProfile.ts");
+    const userProfilePanelSource = source("components/profile/UserProfilePanel.tsx");
     expect(userProfileSource).toContain("Math.ceil(likerIds.length / 100)");
     expect(userProfileSource).toContain("likerIds.slice(batchIndex * 100, (batchIndex + 1) * 100)");
     expect(userProfileSource).not.toContain("readPublicProfileSummaries(supabase, likerIds)");
+    expect(userProfileSource).not.toContain(".catch(() => [])");
+    expect(userProfilePanelSource).toContain("isError: profileError");
+    expect(userProfilePanelSource).toContain("refetch: refetchProfile");
+    expect(userProfilePanelSource).toContain("프로필을 불러올 수 없습니다");
+    expect(userProfilePanelSource.indexOf("if (profileError)")).toBeLessThan(
+      userProfilePanelSource.indexOf("if (!profile)"),
+    );
 
     const mobileFixtureSource = source("tests/mobile-home-map-helpers.ts");
     expect(mobileFixtureSource).toContain("Object.keys(payload).length !== 1");

@@ -5,6 +5,7 @@ import {
     E2E_ADMIN_ROUTE_BYPASS_ENV_KEYS,
     E2E_ADMIN_ROUTE_BYPASS_RUNTIME,
 } from './lib/e2e-admin-route-bypass';
+import { loadLocalSupabaseEnvironment } from './scripts/local-supabase-runtime.mjs';
 
 const RESPONSIVE_SPEC = /responsive-overflow\.spec\.ts/;
 const ADMIN_SETUP_SPEC = /tests[\\/]setup[\\/]admin\.setup\.ts/;
@@ -33,6 +34,18 @@ const PLAYWRIGHT_WEB_SERVER_URL =
 const PLAYWRIGHT_NIGHTLY_MODE = process.env.NIGHTLY_MODE?.trim();
 const isNightlyRegressionRun =
     PLAYWRIGHT_NIGHTLY_MODE === 'local' || PLAYWRIGHT_NIGHTLY_MODE === 'hosted';
+const usesDefaultLocalDevServer =
+    !isNightlyRegressionRun
+    && /(?:^|\s)bun run dev:playwright(?:[:\s]|$)/.test(PLAYWRIGHT_WEB_SERVER_COMMAND);
+if (usesDefaultLocalDevServer && !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()) {
+    try {
+        const local = loadLocalSupabaseEnvironment();
+        process.env.NEXT_PUBLIC_SUPABASE_URL = local.supabaseOrigin;
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = local.values.ANON_KEY;
+    } catch {
+        // The local web server reports the authoritative admission failure.
+    }
+}
 const NIGHTLY_WEB_SERVER_ENVIRONMENT_KEYS = [
     'PATH',
     'HOME',

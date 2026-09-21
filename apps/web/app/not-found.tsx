@@ -20,7 +20,7 @@ export default function NotFound() {
                         <path d="M12 17h.01" />
                     </svg>
                 </div>
-                <h1 id="not-found-title" className="text-lg font-semibold tracking-tight text-foreground">
+                <h1 id="not-found-title" className="text-lg font-semibold text-foreground">
                     페이지를 찾을 수 없습니다
                 </h1>
                 <p id="not-found-description" className="mt-2 text-sm leading-6 text-muted-foreground">

@@ -1,0 +1,24 @@
+{
+  "projectId": "acd96811-9c82-4164-a825-876187055321",
+  "targetRevision": 12,
+  "editedRevision": 13,
+  "restoredRevision": 14,
+  "sceneNo": 1,
+  "textMatchesTarget": true,
+  "otherScenesUnchanged": true,
+  "providersUnchanged": true,
+  "allExportBytesVerified": true,
+  "exportFiles": 20,
+  "originalSha256": [
+    "c155cc173d5493955461b6a7b996dd693a11787d24cec48156781c8bdb7311a5",
+    "76d27d507dcac59f8e62b579678b4f472477c6d78681a1eb53a3ed37ea83158f",
+    "c19a3ead337fa62491550e3d190f652e73778eeb446068716cad51eef2b4a9ed",
+    "cfea44b48f940f291bcec12b4527083a61ee57fd16d54d88a2bb1c13b848f5ab",
+    "49d00ac02a4fdf0bb426ad983173a7098cfc30b8c3d0e9b1d7f5893140e64aae"
+  ],
+  "finalRevision": 16,
+  "fullRestoreMatchesTarget": true,
+  "fullRestoreFilesVerified": 20,
+  "restoreOperations": 3,
+  "jobsAfterMigration": 0
+}

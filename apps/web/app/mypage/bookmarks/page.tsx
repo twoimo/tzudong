@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import {
   normalizeCanonicalYouTubeWatchUrl,
 } from "@/lib/youtube-url";
 import { MyPageSectionSkeleton } from "@/components/mypage/MyPageSectionSkeleton";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import {
   MyPageEmptyState,
   MyPageErrorState,
@@ -138,11 +138,11 @@ export default function BookmarksPage() {
             const canonicalYouTubeWatchUrl = normalizeCanonicalYouTubeWatchUrl(
               bookmark.restaurant.youtube_link,
             );
-            let thumbnailUrl = null;
+            let thumbnailVideoId: string | null = null;
             for (const link of youtubeLinks) {
               const videoId = extractCanonicalYouTubeVideoId(link);
               if (videoId) {
-                thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                thumbnailVideoId = videoId;
                 break;
               }
             }
@@ -153,11 +153,10 @@ export default function BookmarksPage() {
                   <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                     {/* 썸네일 */}
                     <div className="relative w-full sm:w-32 md:w-40 aspect-video bg-muted rounded overflow-hidden shrink-0">
-                      {thumbnailUrl ? (
-                        <Image
-                          src={thumbnailUrl}
+                      {thumbnailVideoId ? (
+                        <YoutubeThumbnail
+                          videoId={thumbnailVideoId}
                           alt={bookmark.restaurant.name}
-                          fill
                           sizes="(max-width: 640px) 100vw, 160px"
                           className="object-cover"
                         />

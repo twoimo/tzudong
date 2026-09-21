@@ -11,8 +11,7 @@
 //     minor/patch bumps for a unit stay grouped in a single non-standalone
 //     candidate. (Requirement 4.7)
 //   - 보류 범위 거부: a candidate raising a version inside a preserved
-//     .github/dependabot.yml hold range (next/@next/bundle-analyzer/
-//     eslint-config-next >=16.3.0, eslint major, @types/node major,
+//     .github/dependabot.yml hold range (eslint major, @types/node major,
 //     typescript-eslint >8.63.0) is classified dependency_hold_violation, and a
 //     bump below/outside every hold is admitted (code null). (Requirement 4.11)
 //
@@ -125,18 +124,6 @@ function buildSplitCases(): { packages: SplitPkg[]; targetBranch: string }[] {
 
 // --- Hold-classification case set (Requirement 4.11). ---
 
-// next-family hold is a version-range hold at >=16.3.0 (bump size irrelevant).
-const NEXT_FAMILY = ["next", "@next/bundle-analyzer", "eslint-config-next"] as const;
-
-function genNextFamily(rng: () => number): HoldPkg {
-  const name = pick(rng, NEXT_FAMILY);
-  const inside = rng() < 0.5;
-  const to = inside
-    ? pick(rng, ["16.3.0", "16.4.2", "16.9.0", "17.0.0", "18.2.1"])
-    : pick(rng, ["16.2.9", "16.0.0", "15.9.9", "14.1.0"]);
-  return { name, fromVersion: "0.0.0", toVersion: to, intendedHold: inside };
-}
-
 // eslint / @types/node holds are semver-major holds (major bump => held).
 const MAJOR_HOLD_NAMES = ["eslint", "@types/node"] as const;
 
@@ -180,7 +167,7 @@ function genArbitrary(rng: () => number): HoldPkg {
   return { name: pick(rng, ARBITRARY_NAMES), fromVersion: from, toVersion: to, intendedHold: false };
 }
 
-const HOLD_GENERATORS = [genNextFamily, genMajorHold, genTsEslint, genArbitrary] as const;
+const HOLD_GENERATORS = [genMajorHold, genTsEslint, genArbitrary] as const;
 
 function buildHoldCases(): { packages: HoldPkg[]; expectedCode: string | null }[] {
   const rng = makeRng(0x9e3779b9);

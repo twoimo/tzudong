@@ -74,13 +74,30 @@ def _json(handler: BaseHTTPRequestHandler, status: int, body: dict[str, Any]) ->
 
 
 def _read_json(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
-    length = int(handler.headers.get("Content-Length") or "0")
-    if length <= 0 or length > 16_384:
+    lengths = handler.headers.get_all("Content-Length", [])
+    # Reject ambiguous framing before reading or mutating. Unread bytes must
+    # never become another request on this HTTP/1.1 connection.
+    if handler.headers.get("Transfer-Encoding") is not None or len(lengths) > 1:
+        handler.close_connection = True
+        raise ControlPlaneError("invalid_content_length", 400)
+    raw_length = lengths[0] if lengths else "0"
+    if re.fullmatch(r"[0-9]+", raw_length) is None:
+        handler.close_connection = True
+        raise ControlPlaneError("invalid_content_length", 400)
+    normalized_length = raw_length.lstrip("0") or "0"
+    if len(normalized_length) > 5 or int(normalized_length) > 16_384:
+        handler.close_connection = True
+        raise ControlPlaneError("request_body_too_large", 413)
+    length = int(normalized_length)
+    if length == 0:
         return {}
     raw = handler.rfile.read(length)
+    if len(raw) != length:
+        handler.close_connection = True
+        raise ControlPlaneError("invalid_json", 400)
     try:
         parsed = json.loads(raw.decode("utf-8"))
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise ControlPlaneError("invalid_json", 400) from exc
     if not isinstance(parsed, dict):
         raise ControlPlaneError("invalid_json", 400)
@@ -128,7 +145,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 run = store.get(run_id)
                 return _json(self, 200, store.public_run(run))
             return _json(self, 404, {"error": "not_found"})
-        except (ControlPlaneError, DsnGuardError, PersistError, ValueError) as exc:
+        except (ControlPlaneError, DsnGuardError, PersistError, ValueError, OSError) as exc:
             return self._error(exc)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -149,8 +166,11 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                 profile = str(body.get("profile") or "heavy_local")
                 if profile not in {"heavy_local", "lite_gha"}:
                     raise ControlPlaneError("profile_invalid", 400)
+                dry_run = body.get("dryRun", True)
+                if not isinstance(dry_run, bool):
+                    raise ControlPlaneError("dry_run_invalid", 400)
                 key = self.headers.get("Idempotency-Key") or body.get("idempotencyKey")
-                if not key or not (8 <= len(str(key)) <= 128):
+                if not isinstance(key, str) or not (8 <= len(key) <= 128):
                     raise ControlPlaneError("idempotency_key_invalid", 400)
                 store = current_store()
                 run, created = store.create_run(
@@ -160,7 +180,7 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                     payload=body,
                     actor=actor,
                     request_id=request_id,
-                    dry_run=bool(body.get("dryRun", True)),
+                    dry_run=dry_run,
                 )
                 if created:
                     enqueue(
@@ -175,14 +195,14 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
                         }
                     )
                 return _json(self, 202 if created else 202, store.public_run(run))
-            if path.endswith("/pause") or path.endswith("/resume") or path.endswith("/cancel"):
-                action = path.rsplit("/", 1)[-1]
-                run_id = path.split("/")[3]
+            control_match = re.fullmatch(r"/v1/runs/([^/]+)/(pause|resume|cancel)", path)
+            if control_match is not None:
+                run_id, action = control_match.groups()
                 store = current_store()
                 run = store.control(run_id, action, actor=actor, request_id=request_id)
                 return _json(self, 200, store.public_run(run))
             return _json(self, 404, {"error": "not_found"})
-        except (ControlPlaneError, DsnGuardError, PersistError, ValueError) as exc:
+        except (ControlPlaneError, DsnGuardError, PersistError, ValueError, OSError) as exc:
             return self._error(exc)
 
     def _error(self, exc: Exception) -> None:
@@ -192,8 +212,12 @@ class PipelineApiHandler(BaseHTTPRequestHandler):
             return _json(self, 403, {"error": exc.code})
         if isinstance(exc, PersistError):
             return _json(self, 503, {"error": exc.code})
+        if isinstance(exc, OSError):
+            return _json(self, 503, {"error": "control_plane_io_failed"})
         if isinstance(exc, ValueError):
-            return _json(self, 400, {"error": str(exc)})
+            if str(exc) in {"target_not_admitted", "target_schema_invalid"}:
+                return _json(self, 400, {"error": str(exc)})
+            return _json(self, 500, {"error": "control_plane_invalid_state"})
         return _json(self, 500, {"error": safe_error_name(exc)})
 
 

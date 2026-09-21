@@ -226,7 +226,7 @@ export default function ResetPasswordPage() {
                                 <path d="M12 2 15 8l6 .5-4.5 4 1.5 6L12 16l-6 2.5 1.5-6L3 8.5 9 8z" />
                             </svg>
                         </div>
-                        <DialogTitle className="text-xl sm:text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                        <DialogTitle className="text-xl sm:text-2xl font-semibold text-foreground">
                             쯔동여지도
                         </DialogTitle>
                     </div>
@@ -267,7 +267,7 @@ export default function ResetPasswordPage() {
                     </div>
                     <Button
                         type="submit"
-                        className="w-full h-10 sm:h-11 bg-gradient-primary hover:opacity-90 text-sm sm:text-base"
+                        className="w-full h-10 sm:h-11 bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
                         disabled={isLoading}
                     >
                         {isLoading ? '변경 중...' : '비밀번호 변경'}

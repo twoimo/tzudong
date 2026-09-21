@@ -14,7 +14,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const topActionsSource = source("components/mypage/MyPageTopActions.tsx");
     const mapUserMenuSource = source("components/home/HomeMapUserMenu.tsx");
     const mapUserButtonClass =
-      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
     const mapMenuItemClass =
       "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
     const mapMenuContentClass =
@@ -47,7 +47,9 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(topActionsSource).toContain('data-mypage-fullscreen-toggle="true"');
     expect(topActionsSource).toContain('data-mypage-user-menu="true"');
     expect(mapUserMenuSource).toContain(mapUserButtonClass);
-    expect(topActionsSource).toContain(mapUserButtonClass);
+    expect(topActionsSource).toContain(
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+    );
     expect(mapUserMenuSource).toContain(mapMenuItemClass);
     expect(topActionsSource).toContain(mapMenuItemClass);
     expect(mapUserMenuSource).toContain(mapMenuContentClass);

@@ -1381,7 +1381,7 @@ describe("web quality performance source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5",
+      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0",
@@ -2136,7 +2136,7 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
-    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
+    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters, restaurants)");
     expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
@@ -2387,7 +2387,7 @@ describe("web quality performance source contracts", () => {
     ).toBeGreaterThan(0);
     expect(
       overlayPanelSource.lastIndexOf(
-        '"rounded-2xl border border-border shadow-2xl overflow-hidden"',
+        '"rounded-2xl border border-border shadow-sm overflow-hidden"',
         userProfilePanelIndex,
       ),
     ).toBeGreaterThan(0);
@@ -2430,10 +2430,11 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("focus-visible:ring-primary");
     expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
     expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampCardSource).toContain("getYouTubeFallbackThumbnailUrl");
+    expect(stampCardSource).toContain("<YoutubeThumbnail");
+    expect(stampPageSource).toContain("<YoutubeThumbnail");
     expect(stampPageSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampUtilsSource).toContain("mqdefault.jpg");
-    expect(stampUtilsSource).toContain("hqdefault.jpg");
+    expect(stampUtilsSource).toContain("maxresdefault");
+    expect(stampUtilsSource).toContain("getYoutubeThumbnailById(videoId, 'hqdefault')");
     expect(stampUtilsSource).not.toContain("/hq720.jpg");
     expect(stampCardSource).toContain("const category = useMemo(");
     expect(stampCardSource).not.toContain("transition-all");
@@ -2781,10 +2782,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
     expect(feedContentSource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
+      "flex items-center justify-between gap-2",
     );
-    expect(feedContentSource).toContain("basis-[min(11rem,100%)]");
-    expect(feedContentSource).toContain("text-balance");
+    expect(feedContentSource).not.toContain("basis-[min(11rem,100%)]");
+    expect(feedContentSource).toContain('isOverlay ? "리뷰" : "쯔동여지도 리뷰"');
     expect(feedContentSource).toContain("text-pretty");
     expect(feedContentSource).toContain(
       'placeholder="맛집명, 작성자, 내용 검색…"',
@@ -3285,6 +3286,11 @@ describe("web quality performance source contracts", () => {
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
     const feedPageSource = source("app/feed/page.tsx");
     const feedContentSource = source("components/feed/FeedContent.tsx");
+    const authModalSource = source("components/auth/AuthModal.tsx");
+    expect(feedPageSource).toContain(
+      "hideFloatingButton={isAuthModalOpen || isRestaurantSheetOpen || isReviewModalOpen || !!restaurantToEdit}",
+    );
+    expect(authModalSource).toContain('className="break-keep"');
     const homeSidePanelsSource = source("app/home-client-sidepanels.tsx");
     const reviewModalSource = source("components/reviews/ReviewModal.tsx");
 

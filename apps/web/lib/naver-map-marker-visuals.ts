@@ -137,7 +137,7 @@ export function getNaverIndividualMarkerVisual(
     return {
         content: markerKind !== 'category'
             ? wrapSpecialMarkerContent(content, isSelected, markerKind)
-            : content,
+            : `<div data-restaurant-marker-kind="category" data-restaurant-marker-asset-version="${RESTAURANT_MARKER_ASSET_VERSION}">${content}</div>`,
         anchor: isSelected ? { x: 18, y: 18 } : { x: 14, y: 14 },
         zIndex: isSelected ? 100 : 1,
     };

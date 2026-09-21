@@ -720,23 +720,30 @@ def _caption_frames(request: CaptionRequest) -> CaptionResponse:
     except Exception:  # noqa: BLE001
         raise RagWorkerError("required_llava_runtime_dependencies_missing") from None
 
-    frames = [Image.open(frame_path).convert("RGB") for frame_path in frame_paths]
+    frames = []
+    try:
+        for frame_path in frame_paths:
+            with Image.open(frame_path) as image:
+                frames.append(image.convert("RGB"))
 
-    prompt = f"USER: <video>\n{request.prompt.strip()}\nASSISTANT:"
-    model.eval()
-    inputs = processor(text=prompt, videos=[frames], return_tensors="pt")
-    model_device = getattr(model, "device", None)
-    if model_device is not None and hasattr(inputs, "to"):
-        inputs = inputs.to(model_device)
+        prompt = f"USER: <video>\n{request.prompt.strip()}\nASSISTANT:"
+        model.eval()
+        inputs = processor(text=prompt, videos=[frames], return_tensors="pt")
+        model_device = getattr(model, "device", None)
+        if model_device is not None and hasattr(inputs, "to"):
+            inputs = inputs.to(model_device)
 
-    with torch.no_grad():
-        generated_ids = model.generate(**inputs, max_new_tokens=160, do_sample=False)
+        with torch.no_grad():
+            generated_ids = model.generate(**inputs, max_new_tokens=160, do_sample=False)
 
-    decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-    caption = decoded.split("ASSISTANT:", 1)[-1].strip() if "ASSISTANT:" in decoded else decoded
-    if not caption:
-        raise RagWorkerError("required_llava_caption_empty")
-    return CaptionResponse(model=LLAVA_MODEL_ID, caption=caption, frameCount=len(frames))
+        decoded = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+        caption = decoded.split("ASSISTANT:", 1)[-1].strip() if "ASSISTANT:" in decoded else decoded
+        if not caption:
+            raise RagWorkerError("required_llava_caption_empty")
+        return CaptionResponse(model=LLAVA_MODEL_ID, caption=caption, frameCount=len(frames))
+    finally:
+        for frame in frames:
+            frame.close()
 
 
 def _ollama_models() -> set[str]:
@@ -824,8 +831,10 @@ def _provider_readiness(load_required_models: bool) -> ProviderReadinessResponse
 
     gemini_oauth = os.environ.get("GEMINI_OAUTH_FILE", "~/.gemini/oauth_creds.json")
     openai_oauth = os.environ.get("OPENAI_CODEX_AUTH_FILE", "~/.codex/auth.json")
-    add_provider("gemini-cli-oauth", _oauth_file_exists(gemini_oauth), "required_gemini_oauth_missing" if not _oauth_file_exists(gemini_oauth) else None)
-    add_provider("openai-codex-oauth", _oauth_file_exists(openai_oauth), "required_openai_oauth_missing" if not _oauth_file_exists(openai_oauth) else None)
+    gemini_oauth_ready = _oauth_file_exists(gemini_oauth)
+    openai_oauth_ready = _oauth_file_exists(openai_oauth)
+    add_provider("gemini-cli-oauth", gemini_oauth_ready, None if gemini_oauth_ready else "required_gemini_oauth_missing")
+    add_provider("openai-codex-oauth", openai_oauth_ready, None if openai_oauth_ready else "required_openai_oauth_missing")
 
     return ProviderReadinessResponse(
         ready=all(provider.ready for provider in providers),

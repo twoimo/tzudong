@@ -5,8 +5,13 @@ import {
     buildRenderTargetIdsForSignature,
     deriveClusterRenderPlan,
     getRestaurantsWithRenderableCoordinates,
+    hasNaverMarkerCoordinates,
     getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
+    nextEmptyIdentityArray,
+    resolveEmptyClusterMarkerCleanupPlan,
+    resolveSkippedEmptyThemeMarkerPlan,
+    shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
 } from '../lib/naver-map-render-plan';
 
@@ -62,17 +67,33 @@ describe('naver map render plan helpers', () => {
         expect(result.map((restaurant) => restaurant.id)).toEqual(['valid', 'zero-lat']);
     });
 
+    test('treats numeric coordinate strings as renderable marker coordinates', () => {
+        expect(hasNaverMarkerCoordinates({ lat: '37.5', lng: '127.0' })).toBe(false);
+        expect(hasNaverMarkerCoordinates({ lat: null, lng: 127.0 })).toBe(false);
+        const result = getRestaurantsWithRenderableCoordinates([
+            makeRestaurant({ id: 'string-coords', lat: '37.5' as any, lng: '127.0' as any }),
+        ]);
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['string-coords']);
+        expect(result[0]?.lat).toBe(37.5);
+        expect(result[0]?.lng).toBe(127);
+        expect(typeof result[0]?.lat).toBe('number');
+        expect(typeof result[0]?.lng).toBe('number');
+    });
+
     test('filters Seoul individual marker candidates by id and coordinates', () => {
         const result = getSeoulIndividualRestaurantsForRender({
             displayRestaurants: [
                 makeRestaurant({ id: 'renderable', lat: 37.5, lng: 127.0 }),
                 makeRestaurant({ id: 'not-requested', lat: 37.6, lng: 127.1 }),
+                makeRestaurant({ id: 'string-coordinates', lat: '37.7' as any, lng: '127.2' as any }),
                 makeRestaurant({ id: 'missing-coordinate', lat: null as any, lng: 127.2 }),
             ],
-            seoulIndividualIds: ['renderable', 'missing-coordinate', 'missing-from-data'],
+            seoulIndividualIds: ['renderable', 'string-coordinates', 'missing-coordinate', 'missing-from-data'],
         });
 
-        expect(result.map((restaurant) => restaurant.id)).toEqual(['renderable']);
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['renderable', 'string-coordinates']);
+        expect(result[1]?.lat).toBe(37.7);
+        expect(result[1]?.lng).toBe(127.2);
     });
 
     test('builds stable render target ids for restaurants and regional clusters', () => {
@@ -155,5 +176,94 @@ describe('naver map render plan helpers', () => {
             activeMarkerCount: 100,
             isDevelopment: false,
         })).toBe(false);
+    });
+
+    test('clears empty cluster state when clustering is off or display is empty', () => {
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: false,
+            displayRestaurantCount: 4,
+        })).toBe(true);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 0,
+        })).toBe(true);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 2,
+        })).toBe(false);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: true,
+            displayRestaurantCount: 0,
+            expandedRestaurantCount: 3,
+        })).toBe(false);
+
+        expect(shouldClearEmptyClusterState({
+            clusteringEnabled: false,
+            displayRestaurantCount: 0,
+            expandedRestaurantCount: 2,
+        })).toBe(false);
+    });
+
+    test('reuses the previous empty array identity when clearing cluster collections', () => {
+        const emptyPrevious: string[] = [];
+        const nonEmptyPrevious = ['cluster-a'];
+
+        expect(nextEmptyIdentityArray(emptyPrevious)).toBe(emptyPrevious);
+        expect(nextEmptyIdentityArray(nonEmptyPrevious)).toEqual([]);
+        expect(nextEmptyIdentityArray(nonEmptyPrevious)).not.toBe(nonEmptyPrevious);
+    });
+
+    test('continues skipped marker updates only when an empty theme still has leftover DOM', () => {
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 0,
+            hasRenderedMarkerDom: true,
+        })).toBe('continue');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 0,
+            hasRenderedMarkerDom: false,
+        })).toBe('skip');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 2,
+            hasRenderedMarkerDom: true,
+        })).toBe('skip');
+
+        expect(resolveSkippedEmptyThemeMarkerPlan({
+            displayRestaurantCount: 2,
+            hasRenderedMarkerDom: false,
+        })).toBe('retry');
+    });
+
+    test('releases leftover cluster markers when the empty theme display is empty', () => {
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 2,
+        })).toBe('release');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 3,
+            clusterCount: 0,
+        })).toBe('retry');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 3,
+            clusterCount: 1,
+        })).toBe('render');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 1,
+            expandedRestaurantCount: 4,
+        })).toBe('render');
+
+        expect(resolveEmptyClusterMarkerCleanupPlan({
+            displayRestaurantCount: 0,
+            clusterCount: 0,
+            expandedRestaurantCount: 2,
+        })).toBe('render');
     });
 });

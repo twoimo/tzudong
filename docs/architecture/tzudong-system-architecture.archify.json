@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "쯔동여지도 시스템 아키텍처 맵",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/twoimo/tzudong",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "7ac9eb3889678c823be4545c82d55df07247996f"
+    },
+    "viewBox": [
+      1380,
+      760
+    ]
+  },
+  "layout": {
+    "mode": "grid"
+  },
+  "components": [
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "apps/web",
+      "sublabel": "Next.js public/admin UI",
+      "tag": "frontend",
+      "pos": [
+        60,
+        290
+      ],
+      "size": [
+        180,
+        76
+      ],
+      "sources": [
+        {
+          "path": "apps/web/app/feed/page.tsx"
+        },
+        {
+          "path": "apps/web/components/feed/FeedContent.tsx"
+        }
+      ]
+    },
+    {
+      "id": "control",
+      "type": "backend",
+      "label": "pipeline-api",
+      "sublabel": "bounded control plane",
+      "tag": "control",
+      "pos": [
+        300,
+        180
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "backend/pipeline_control/api.py"
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "backend",
+      "label": "pipeline-worker",
+      "sublabel": "long-running batch",
+      "tag": "worker",
+      "pos": [
+        560,
+        290
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "backend/pipeline_control/worker.py"
+        }
+      ]
+    },
+    {
+      "id": "transforms",
+      "type": "backend",
+      "label": "crawler/evaluation",
+      "sublabel": "Python transforms and validation",
+      "tag": "pipeline",
+      "pos": [
+        810,
+        180
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "backend/restaurant-evaluation/scripts/12-transform.py"
+        }
+      ]
+    },
+    {
+      "id": "supabase",
+      "type": "database",
+      "label": "Supabase",
+      "sublabel": "RLS, RPC, persistence contracts",
+      "tag": "data",
+      "pos": [
+        1090,
+        290
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "apps/web/lib/supabase/server.ts"
+        },
+        {
+          "path": "backend/supabase/migrations/20260817020000_pipeline_control.sql"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "External providers",
+      "sublabel": "YouTube, Naver, GDrive",
+      "tag": "provider",
+      "pos": [
+        810,
+        520
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "backend/restaurant-crawling/scripts/01-collect-urls.py"
+        }
+      ]
+    },
+    {
+      "id": "ops",
+      "type": "cloud",
+      "label": "CI / cron / operator",
+      "sublabel": "launch, health, receipts",
+      "tag": "ops",
+      "pos": [
+        300,
+        520
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": ".github/workflows/nightly-regression.yml"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Application",
+      "pad": 28,
+      "wraps": [
+        "web",
+        "control",
+        "worker",
+        "transforms"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Persistence",
+      "pad": 28,
+      "wraps": [
+        "supabase"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "web-control",
+      "from": "web",
+      "to": "control",
+      "label": "authenticated bounded trigger/status",
+      "labelDy": 16
+    },
+    {
+      "id": "control-worker",
+      "from": "control",
+      "to": "worker",
+      "label": "202 + durable claim",
+      "labelDy": 20
+    },
+    {
+      "id": "ops-worker",
+      "from": "ops",
+      "to": "worker",
+      "label": "scheduled / one-shot launch",
+      "route": "orthogonal-h",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          400,
+          430
+        ],
+        [
+          520,
+          430
+        ],
+        [
+          520,
+          328
+        ]
+      ],
+      "labelAt": [
+        460,
+        430
+      ]
+    },
+    {
+      "id": "worker-transforms",
+      "from": "worker",
+      "to": "transforms",
+      "label": "batch orchestration",
+      "labelDy": 20
+    },
+    {
+      "id": "transforms-supabase",
+      "from": "transforms",
+      "to": "supabase",
+      "label": "validated persistence",
+      "labelAt": [
+        1055,
+        160
+      ]
+    },
+    {
+      "id": "transforms-providers",
+      "from": "transforms",
+      "to": "providers",
+      "label": "bounded provider reads",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        760,
+        390
+      ]
+    },
+    {
+      "id": "worker-supabase",
+      "from": "worker",
+      "to": "supabase",
+      "label": "queue / lease / readback",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          655,
+          120
+        ],
+        [
+          1195,
+          120
+        ]
+      ],
+      "labelAt": [
+        925,
+        120
+      ]
+    },
+    {
+      "id": "worker-ops",
+      "from": "worker",
+      "to": "ops",
+      "label": "sanitized receipts / health",
+      "route": "orthogonal-h",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "via": [
+        [
+          655,
+          430
+        ],
+        [
+          680,
+          430
+        ],
+        [
+          680,
+          470
+        ],
+        [
+          540,
+          470
+        ],
+        [
+          540,
+          558
+        ]
+      ],
+      "labelAt": [
+        760,
+        470
+      ]
+    }
+  ]
+}

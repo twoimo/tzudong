@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-09-21T06:23:07.434Z",
+  "workload": {
+    "restaurantLookups": 400,
+    "candidatesPerLookup": 1200,
+    "candidateVisits": 480000,
+    "repetitions": 5
+  },
+  "equivalence": "identical",
+  "resultCount": 1020,
+  "old": {
+    "label": "before",
+    "replaceCallsPerSweep": 1936000,
+    "medianMs": 309.74
+  },
+  "new": {
+    "label": "after-cold-cache",
+    "replaceCallsPerSweep": 22400,
+    "medianMs": 135.08
+  },
+  "newWarm": {
+    "label": "after-warm-cache",
+    "replaceCallsPerSweep": 0,
+    "medianMs": 134.06
+  },
+  "ratio": {
+    "replaceCallsReducedBy": 86.4,
+    "coldSpeedupByMedian": 2.29,
+    "warmSpeedupByMedian": 2.31
+  }
+}

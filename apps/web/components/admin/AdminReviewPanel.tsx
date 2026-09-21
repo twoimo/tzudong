@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/no-toast";
 import { assertLegacyBrowserAdminMutationEnabled } from "@/lib/admin/guarded-mutation-contract";
-import { fetchAdminProfileSummaries } from "@/lib/admin/profile-summaries";
+import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from "@/lib/admin/profile-summaries";
 import {
     CheckCircle2,
     XCircle,
@@ -223,8 +223,8 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
             const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
-            const [profileSummaries, { data: restaurantsData }] = await Promise.all([
-                fetchAdminProfileSummaries(userIds),
+            const [profilesLookup, { data: restaurantsData }] = await Promise.all([
+                fetchAdminProfileSummariesLookup(userIds),
                 supabase
                     .from('restaurants')
                     .select('id, name:approved_name, road_address, jibun_address')
@@ -236,7 +236,6 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 ? requireRows(restaurantsData, isRestaurantSummaryRow, '레스토랑 데이터 형식이 올바르지 않습니다.')
                 : [];
 
-            const profilesMap = new Map(profileSummaries.map((profile) => [profile.userId, profile.nickname]));
             const restaurantsMap = new Map(
                 typedRestaurantsData.map(r => [
                     r.id,
@@ -263,7 +262,13 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 is_edited_by_admin: review.is_edited_by_admin,
                 created_at: review.created_at,
                 updated_at: review.updated_at,
-                profiles: { nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자' },
+                profiles: {
+                    nickname: resolveAdminReviewerDisplay(
+                        review.user_id,
+                        profilesLookup.summaries,
+                        profilesLookup.ok,
+                    ).nickname,
+                },
                 restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' },
             }));
 

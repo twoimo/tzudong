@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "쯔동 스토리보드 상태 전이",
+    "output": "docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1030,
+      630
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "프로젝트 단계"
+    },
+    {
+      "id": "waiting",
+      "label": "lease / 가져오기 대기"
+    },
+    {
+      "id": "terminal",
+      "label": "명시적 재시도 가능"
+    }
+  ],
+  "states": [
+    {
+      "id": "waiting_worker",
+      "type": "start",
+      "label": "waiting_worker",
+      "sublabel": "워커 부재: 대기 미정",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "entry"
+    },
+    {
+      "id": "queued",
+      "type": "active",
+      "label": "queued",
+      "sublabel": "job 상태 · claim 전",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "job"
+    },
+    {
+      "id": "generating",
+      "type": "active",
+      "label": "generating",
+      "sublabel": "claim + c=1",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "lease"
+    },
+    {
+      "id": "partial",
+      "type": "decision",
+      "label": "partial",
+      "sublabel": "장면 일부만 저장",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "check"
+    },
+    {
+      "id": "ready",
+      "type": "success",
+      "label": "ready",
+      "sublabel": "편집 · 이력 복원 · 내보내기",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "tag": "done"
+    },
+    {
+      "id": "awaiting_import",
+      "type": "waiting",
+      "label": "awaiting_import",
+      "sublabel": "수동 가져오기",
+      "lane": "waiting",
+      "col": 0,
+      "tag": "pause"
+    },
+    {
+      "id": "lease_expired",
+      "type": "waiting",
+      "label": "lease_expired",
+      "sublabel": "재claim 가능",
+      "lane": "waiting",
+      "col": 1,
+      "tag": "wait"
+    },
+    {
+      "id": "failed",
+      "type": "failure",
+      "label": "failed",
+      "sublabel": "명시적 retry 가능",
+      "lane": "terminal",
+      "col": 0,
+      "tag": "retry"
+    },
+    {
+      "id": "cancelled",
+      "type": "failure",
+      "label": "cancelled",
+      "sublabel": "명시적 retry 가능",
+      "lane": "terminal",
+      "col": 1,
+      "tag": "retry"
+    }
+  ],
+  "transitions": [
+    {
+      "id": "need-import",
+      "from": "generating",
+      "to": "awaiting_import",
+      "label": "수동 이미지",
+      "labelAt": [
+        402,
+        202
+      ]
+    },
+    {
+      "id": "lease-lost",
+      "from": "partial",
+      "to": "lease_expired",
+      "label": "lease 만료",
+      "labelAt": [
+        556,
+        202
+      ]
+    },
+    {
+      "id": "generation-failed",
+      "from": "generating",
+      "to": "failed",
+      "variant": "security",
+      "label": "실패",
+      "via": [
+        [
+          320,
+          157
+        ],
+        [
+          320,
+          479
+        ]
+      ],
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "id": "cancel-job",
+      "from": "generating",
+      "to": "cancelled",
+      "variant": "security",
+      "label": "취소"
+    },
+    {
+      "id": "retry-failed",
+      "from": "failed",
+      "to": "queued",
+      "variant": "emphasis",
+      "label": "명시적 retry",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          402,
+          524
+        ],
+        [
+          248,
+          524
+        ]
+      ],
+      "labelAt": [
+        325,
+        522
+      ]
+    },
+    {
+      "id": "retry-cancelled",
+      "from": "cancelled",
+      "to": "waiting_worker",
+      "variant": "emphasis",
+      "label": "명시적 retry",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          556,
+          548
+        ],
+        [
+          170,
+          548
+        ],
+        [
+          170,
+          86
+        ],
+        [
+          94,
+          86
+        ]
+      ],
+      "labelSegment": 2
+    },
+    {
+      "id": "lease-reclaim",
+      "from": "lease_expired",
+      "to": "generating",
+      "variant": "dashed",
+      "label": "유효 lease로 재claim",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          632,
+          307
+        ],
+        [
+          632,
+          72
+        ],
+        [
+          402,
+          72
+        ]
+      ],
+      "labelAt": [
+        632,
+        240
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "메모리 · 추정치",
+      "items": [
+        "used + additionalPeakEstimate + reserve ≤ physical",
+        "reserve = max(16 GiB, physical × 12.5%). 추론·PNG/WebP·업로드 버퍼 포함; 디스크 용량 ≠ 상주량. 통과는 보장 아님"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "큐 · Lindley 추정",
+      "items": [
+        "W[n+1] = max(0, W[n] + S[n] − A[n])",
+        "단일 워커·c=1 근사: S는 처리시간, A는 도착 간격. 활성 워커 부재는 미정. 대기와 생성시간 구분"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "이력 복원 · 새 revision",
+      "items": [
+        "불변 스냅샷 → 원본 metadata/bytes 검사 → owner·replay·CAS·busy RPC → 새 revision",
+        "복원 장면 = max(현재, 이력) + 1. 모델·job 없음; providers·동의 유지. 실패·취소 뒤 retry는 조건 충족 시 새 job"
+      ]
+    }
+  ]
+}

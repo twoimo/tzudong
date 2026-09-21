@@ -1,5 +1,9 @@
 import type { FilterState } from '@/components/filters/filter-state';
-import type { Region } from '@/types/restaurant';
+import {
+    homeMapThemeFilterHasUsableMetrics,
+    isYoutubeMetadataBackedHomeMapThemeFilterId,
+} from '@/lib/home-map-theme-filters';
+import type { Region, Restaurant } from '@/types/restaurant';
 
 type RestaurantQueryBounds = {
     south: number;
@@ -85,7 +89,17 @@ export function buildNaverRestaurantsQueryOptions({
         enabled: true,
     };
 }
-export function resolveNaverRestaurantEmptyStateMessage(filters: Pick<FilterState, 'categories' | 'featuredTheme' | 'minReviews'>): string {
+export function resolveNaverRestaurantEmptyStateMessage(
+    filters: Pick<FilterState, 'categories' | 'featuredTheme' | 'minReviews'>,
+    restaurants: readonly Restaurant[] = [],
+): string {
+    if (
+        isYoutubeMetadataBackedHomeMapThemeFilterId(filters.featuredTheme)
+        && filters.featuredTheme !== 'fresh-video'
+        && !homeMapThemeFilterHasUsableMetrics(restaurants, filters.featuredTheme)
+    ) {
+        return '이 테마는 조회수·댓글 지표가 있는 맛집만 보여줍니다';
+    }
     if (filters.featuredTheme) return '선택한 테마에 맞는 맛집이 없습니다';
     if (filters.categories.length > 0 || (filters.minReviews ?? 0) > 0) return '선택한 조건에 맞는 맛집이 없습니다';
 

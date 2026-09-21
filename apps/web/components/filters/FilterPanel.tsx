@@ -204,7 +204,7 @@ export function FilterPanel({ filters, onFilterChange, onClose }: FilterPanelPro
             <div className="p-4 border-t border-border space-y-2">
                 <Button
                     onClick={handleApply}
-                    className="w-full bg-gradient-primary hover:opacity-90"
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                     필터 적용
                 </Button>

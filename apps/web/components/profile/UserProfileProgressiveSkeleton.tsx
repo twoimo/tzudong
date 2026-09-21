@@ -23,7 +23,7 @@ export function UserProfileProgressiveSkeleton({
             data-user-profile-panel-skeleton="true"
             data-user-profile-route-skeleton="true"
         >
-            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4">
+            <div className="border-b border-border/70 bg-background p-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <Skeleton className="h-12 w-12 shrink-0 rounded-full" />

@@ -36,4 +36,23 @@ test.describe('Phase 2: Auth Features', () => {
         await expect(googleBtn).toBeVisible();
     });
 
+    test('AUTH-04: 모바일 로그인 모달은 뷰포트 중앙에 표시된다', async ({ page }) => {
+        await page.setViewportSize({ width: 560, height: 964 });
+        await page.goto('/');
+        await hidePopupOverlay(page);
+
+        await page.getByTestId('bottom-nav-my').click();
+
+        const authSheet = page.locator('[data-bottom-sheet-layout-source="auth-modal"]');
+        await expect(authSheet).toHaveAttribute('data-bottom-sheet-presentation', 'centered');
+        await expect(page.getByText(/Google로 계속하기/i)).toBeVisible();
+
+        const box = await authSheet.boundingBox();
+        expect(box).not.toBeNull();
+        if (!box) return;
+
+        expect(Math.abs(box.x + box.width / 2 - 280)).toBeLessThan(8);
+        expect(Math.abs(box.y + box.height / 2 - 482)).toBeLessThan(12);
+    });
+
 });

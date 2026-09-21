@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { MARKER_IMAGE_FALLBACK } from '../lib/html-escape';
 import {
@@ -7,6 +9,8 @@ import {
     getMapViewMarkerSize,
     isMapViewMarkerSelected,
 } from '../lib/map-view-marker-helpers';
+
+const source = (relativePath: string) => readFileSync(join(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('map view marker helpers', () => {
     test('detects selected marker from selected or searched id', () => {
@@ -129,5 +133,30 @@ describe('map view marker helpers', () => {
         expect(applyMapViewMarkerSelectedState({ isSelected: false, markerElement })).toBe(true);
         expect([...classNames].sort()).toEqual(['h-8', 'w-8']);
         expect('style' in innerDiv).toBe(false);
+    });
+
+    test('treats empty marker content as a safe no-op', () => {
+        const markerElement = {
+            querySelector: () => null,
+        } as unknown as HTMLElement;
+
+        expect(applyMapViewMarkerSelectedState({ isSelected: true, markerElement })).toBe(false);
+        expect(applyMapViewMarkerSelectedState({ isSelected: false, markerElement })).toBe(false);
+    });
+
+    test('updates selection in place without rebuilding every Google marker', () => {
+        const mapViewSource = source('components/map/MapView.tsx');
+
+        expect(mapViewSource).toContain(
+            '}, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow]);',
+        );
+        expect(mapViewSource).not.toContain(
+            'restaurantsToShow, searchedRestaurant?.id, selectedRestaurant?.id]);',
+        );
+        expect(mapViewSource).toContain(
+            '}, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById, isLoaded]);',
+        );
+        expect(mapViewSource).toContain('if (!markerElement) return;');
+        expect(mapViewSource).toContain("markerElement.classList.toggle('selected-marker', isSelected);");
     });
 });

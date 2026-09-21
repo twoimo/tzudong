@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import '@/styles/maplibre-gl.css';
 import type { Restaurant } from '@/types/restaurant';
 import type { FilterState } from '@/components/filters/filter-state';
@@ -209,7 +209,7 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 setIsMapLoaded(true);
             });
 
-            mapInstance.on('error', (e) => {
+            mapInstance.on('error', (e: maplibregl.ErrorEvent) => {
                 const msg = e.error?.message || '';
                 if (msg.includes('Expected value') || msg.includes('null')) return;
                 console.error("Map Error");
@@ -405,4 +405,3 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 };
 
 export default OverseasMap;
-

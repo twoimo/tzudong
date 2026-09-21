@@ -244,14 +244,65 @@ export function buildReviewPhotoObjectPath(
     );
 }
 
+function extractSameOriginPublicReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    configuredOrigin: string | null,
+): string | null {
+    if (typeof value !== 'string' || !configuredOrigin) return null;
+
+    try {
+        const url = new URL(value);
+        if (
+            url.origin !== configuredOrigin
+            || url.username
+            || url.password
+            || url.hash
+            || !url.pathname.startsWith(REVIEW_PHOTO_PUBLIC_PATH)
+        ) {
+            return null;
+        }
+
+        const encodedKey = url.pathname.slice(REVIEW_PHOTO_PUBLIC_PATH.length);
+        if (!encodedKey) return null;
+
+        const segments: string[] = [];
+        for (const segment of encodedKey.split('/')) {
+            if (!segment) return null;
+            try {
+                const decoded = decodeURIComponent(segment);
+                if (decoded !== segment && /[\/?#]/.test(decoded)) return null;
+                segments.push(decoded);
+            } catch {
+                return null;
+            }
+        }
+
+        const objectPath = segments.join('/');
+        return getCanonicalReviewPhotoObjectPath(objectPath, ownership)
+            ?? getLegacyReviewPhotoObjectPath(objectPath, ownership);
+    } catch {
+        return null;
+    }
+}
+
+function getOwnedReviewPhotoObjectPath(
+    value: string | null | undefined,
+    ownership: ReviewPhotoOwnership | string | null | undefined,
+    configuredOrigin: string | null,
+): string | null {
+    return getCanonicalReviewPhotoObjectPath(value, ownership)
+        ?? getLegacyReviewPhotoObjectPath(value, ownership)
+        ?? extractSameOriginPublicReviewPhotoObjectPath(value, ownership, configuredOrigin);
+}
+
 export function resolveReviewPhotoUrl(
     value: string | null | undefined,
     ownership: ReviewPhotoOwnership | string | null | undefined,
     cacheBuster?: string | null,
 ): string | null {
-    const objectPath = getCanonicalReviewPhotoObjectPath(value, ownership)
-        ?? getLegacyReviewPhotoObjectPath(value, ownership);
     const configuredOrigin = resolveConfiguredSupabaseOrigin();
+    const objectPath = getOwnedReviewPhotoObjectPath(value, ownership, configuredOrigin);
     if (!objectPath || !configuredOrigin) return null;
 
     try {
