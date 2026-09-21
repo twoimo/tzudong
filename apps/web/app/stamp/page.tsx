@@ -47,7 +47,7 @@ import {
     getRestaurantReviewLookupName,
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
-import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
+import { compareStampRestaurants, createVisitedLookup, type StampRestaurantSortColumn, type StampRestaurantSortDirection } from "@/lib/stamp-restaurant-order";
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Tables } from "@/integrations/supabase/types";
@@ -368,6 +368,9 @@ export default function StampPage() {
 
         let result = [...sourceData];
 
+        // 정렬 비교자가 비교마다 방문 여부를 다시 묻지 않도록 맛집당 한 번만 계산합니다.
+        const isVisitedForList = createVisitedLookup(isVisited);
+
         // 카테고리 필터
         if (filters.categories.length > 0) {
             result = result.filter(r => {
@@ -403,7 +406,7 @@ export default function StampPage() {
 
         // 방문 여부 필터
         if (filters.showUnvisitedOnly) {
-            result = result.filter(r => !isVisited(r));
+            result = result.filter(r => !isVisitedForList(r));
         }
 
         // 리뷰 수 필터
@@ -413,7 +416,7 @@ export default function StampPage() {
 
         // 정렬: 도장이 찍힌 맛집을 먼저 보여준 뒤 선택한 정렬을 적용합니다.
         result.sort((a, b) => compareStampRestaurants(a, b, {
-            isVisited,
+            isVisited: isVisitedForList,
             sortColumn,
             sortDirection,
         }));
