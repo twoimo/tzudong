@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.json",
+  "output": "/Users/twoimo/.codex/worktrees/9994/tzudong/docs/architecture/storyboard-local-mlx/storyboard-local-mlx.lifecycle.html",
+  "specification": {
+    "sha256": "13e49725bbf057f4c8b852474ebaa94551a597bfffe5209abf004470dc259afc",
+    "bytes": 5551
+  },
+  "artifact": {
+    "sha256": "2077c6cab219c5dd465254561ac609a35463f2b36f2944a276e0c5d071653716",
+    "bytes": 812267
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

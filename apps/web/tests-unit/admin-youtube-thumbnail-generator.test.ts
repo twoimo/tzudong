@@ -2827,7 +2827,7 @@ process.stdin.on("end", () => {
     }
     async function waitForProcessExit(pid: number) {
       expect(Number.isSafeInteger(pid)).toBe(true);
-      for (let attempt = 0; attempt < 100; attempt += 1) {
+      for (let attempt = 0; attempt < 200; attempt += 1) {
         try {
           process.kill(pid, 0);
         } catch {
@@ -2836,6 +2836,18 @@ process.stdin.on("end", () => {
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
       throw new Error(`Process ${pid} survived backend-agent cleanup.`);
+    }
+    // A partial or not-yet-written marker parses as 0, and `process.kill(0, 0)` probes the whole
+    // process group instead of one child, so wait for a real positive pid before probing it.
+    async function waitForPid(markerPath: string) {
+      for (let attempt = 0; attempt < 200; attempt += 1) {
+        try {
+          const pid = Number(readFileSync(markerPath, "utf8").trim());
+          if (Number.isSafeInteger(pid) && pid > 0) return pid;
+        } catch { /* The child publishes its pid only after the command starts. */ }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      throw new Error(`Process marker ${markerPath} never published a live pid.`);
     }
 
     test("terminates and awaits the full process tree when combined stdout and stderr exceed the hard cap", async () => {
@@ -2867,8 +2879,8 @@ process.stdin.on("end", () => {
           "provider_unavailable",
           503,
         );
-        const childPid = Number(readFileSync(startedPath, "utf8"));
-        const grandchildPid = Number(readFileSync(grandchildPath, "utf8"));
+        const childPid = await waitForPid(startedPath);
+        const grandchildPid = await waitForPid(grandchildPath);
         await waitForProcessExit(childPid);
         await waitForProcessExit(grandchildPid);
         if (process.platform !== "win32") {
@@ -2988,7 +3000,7 @@ process.stdin.on("end", () => {
           signal: controller.signal,
         });
 
-        const childPid = Number(await waitForMarker(startedPath));
+        const childPid = await waitForPid(startedPath);
         const grandchildPid = Number(await waitForMarker(grandchildPath));
         controller.abort();
         await expectThumbnailErrorAsync(() => promise, "thumbnail_chat_aborted", 499);

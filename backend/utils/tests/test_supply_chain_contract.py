@@ -166,15 +166,18 @@ class SupplyChainContractTests(unittest.TestCase):
         self.assertTrue(cargo_manifests)
         self.assertIn(("cargo", "/backend/rust"), actual)
 
-    def test_next_family_matches_the_declared_dependabot_hold(self) -> None:
+    def test_next_family_matches_the_current_manifest_after_hold_release(self) -> None:
         manifest = json.loads((WEB / "package.json").read_text(encoding="utf-8"))
         lock = json.loads((WEB / "package-lock.json").read_text(encoding="utf-8"))
         for package in ("next", "@next/bundle-analyzer", "eslint-config-next"):
             declared = manifest.get("dependencies", {}).get(package) or manifest["devDependencies"][package]
-            self.assertIn("16.2.12", declared)
-            self.assertEqual(lock["packages"][f"node_modules/{package}"]["version"], "16.2.12")
+            self.assertIn("16.3.5", declared)
+            self.assertEqual(lock["packages"][f"node_modules/{package}"]["version"], "16.3.5")
         dependabot = (ROOT / ".github/dependabot.yml").read_text(encoding="utf-8")
-        self.assertEqual(dependabot.count('          - ">=16.3.0"'), 3)
+        self.assertNotIn('dependency-name: "next"', dependabot)
+        self.assertNotIn('dependency-name: "@next/bundle-analyzer"', dependabot)
+        self.assertNotIn('dependency-name: "eslint-config-next"', dependabot)
+        self.assertEqual(dependabot.count('          - ">=16.3.0"'), 0)
 
     def test_owned_container_references_are_versioned_or_digest_pinned(self) -> None:
         for relative in PINNED_CONTAINER_SOURCES:

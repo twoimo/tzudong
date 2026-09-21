@@ -21,6 +21,24 @@ the fixture into any hosted environment. Local readback proves only that this
 disposable fixture has the exact source-bound shape expected by the regression
 stack.
 
+Hosted-to-local recovery keeps Auth credentials, sessions, tokens, and hosted
+identity payloads out of the clone. When a developer needs one restored account
+to sign in locally, run the explicit loopback-only re-provisioning command after
+the clone has completed:
+
+```sh
+python3 backend/supabase/scripts/local-auth-reprovision.py \
+  --allow-local \
+  --env-file "${STATE}/stack.env" \
+  --user-id "<restored-user-uuid>"
+```
+
+The command asks for a local email and a newly chosen password without placing
+the password in shell history, argv, an environment file, or a receipt. It
+updates the existing local placeholder through GoTrue, creates only a local
+email identity, and verifies password login without printing tokens. It rejects
+cloud URLs and never accepts a hosted password hash or OAuth identity as input.
+
 The seed also includes one deterministic YouTube channel KPI snapshot whose
 title and `source` are marked `LOCAL_TEST_ONLY:NOT_PRODUCTION`. It exists only
 to exercise the local no-provider-key fallback; it is not a successful YouTube

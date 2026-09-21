@@ -1578,7 +1578,7 @@ function HomeMapContainerComponent({
                             <div
                                 className={cn(
                                     "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
-                                    "bg-background border-l border-border shadow-2xl",
+                                    "bg-background border-l border-border shadow-sm",
                                     "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
                                 )}
@@ -1625,7 +1625,7 @@ function HomeMapContainerComponent({
                                 ref={sheetContainerRef}
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-[80] pointer-events-auto',
-                                    'bg-background shadow-xl',
+                                    'bg-background shadow-sm',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'min-h-0 min-w-0 overflow-hidden flex flex-col',
                                     isDragging ? '' : 'transition-[height,border-radius]',

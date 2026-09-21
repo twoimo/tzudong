@@ -22,6 +22,7 @@ import { compareStampRestaurants } from "@/lib/stamp-restaurant-order";
 import { cn } from "@/lib/utils";
 
 const STAMP_PAGE_SIZE = 5;
+const STAMP_LOAD_MORE_ROOT_MARGIN = "0px 0px 240px 0px";
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-overlay-demo",
     name: "명동 얼큰수제비",
@@ -218,19 +219,32 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         ((filters.fanVisitsMin ?? 0) > 0 ? 1 : 0);
 
     // 무한 스크롤
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
     }, [hasMoreToDisplay]);
 
     useEffect(() => {
+        const scrollRoot = scrollContainerRef.current;
+        const target = loadMoreRef.current;
+
+        if (!scrollRoot || !target || !hasMoreToDisplay) return;
+
         const observer = new IntersectionObserver(
-            (entries) => { if (entries[0].isIntersecting) loadMoreRestaurants(); },
-            { threshold: 0.1 }
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) loadMoreRestaurants();
+            },
+            {
+                root: scrollRoot,
+                rootMargin: STAMP_LOAD_MORE_ROOT_MARGIN,
+                threshold: 0.1,
+            }
         );
-        if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+
+        observer.observe(target);
         return () => observer.disconnect();
-    }, [loadMoreRestaurants]);
+    }, [hasMoreToDisplay, loadMoreRestaurants]);
 
     useEffect(() => {
         setDisplayLimit(STAMP_PAGE_SIZE);
@@ -268,7 +282,9 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
 
     return (
         <div
+            ref={scrollContainerRef}
             className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+            data-stamp-scroll-container="true"
             data-desktop-left-panel-stamp-mobile-parity="true"
         >
             {/* 헤더 */}
@@ -548,7 +564,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                     </div>
                 )}
 
-                <div ref={loadMoreRef} className="h-10 flex items-center justify-center mt-4">
+                <div ref={loadMoreRef} data-stamp-load-more-sentinel="true" className="h-10 flex items-center justify-center mt-4">
                     {hasMoreToDisplay && <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />}
                 </div>
             </div>

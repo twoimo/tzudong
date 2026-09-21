@@ -392,7 +392,7 @@ describe("mobile and desktop parity source contracts", () => {
       "w-[clamp(84px,28vw,105px)] h-11 min-h-11 px-2",
     );
     expect(mobileOverlaySource).toContain("data-mobile-topic-slider");
-    expect(mobileOverlaySource).toContain("flex w-full max-w-full snap-x gap-2 overflow-x-auto px-0.5");
+    expect(mobileOverlaySource).toContain("flex w-full max-w-full flex-nowrap snap-x gap-2 overflow-x-auto px-0.5");
     expect(mobileOverlaySource).not.toContain("mt-2 -mx-3 flex snap-x");
     expect(mobileOverlaySource).toContain("<HomeMapThemeFilterIcon themeId={theme.id} />");
     expect(mobileOverlaySource).toContain("카테고리 필터 열기");
@@ -460,7 +460,7 @@ describe("mobile and desktop parity source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5",
+      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0",
@@ -1102,6 +1102,9 @@ describe("mobile and desktop parity source contracts", () => {
     );
     expect(source("app/home-client.tsx")).toContain(
       'const DEVICE_LOCATION_ENABLE_TOAST = "위치 서비스(GPS) 기능을 켜주세요.";',
+    );
+    expect(source("app/home-client.tsx")).toContain(
+      "toast.error(describeDeviceLocationFailure(error));",
     );
     expect(source("app/home-client.tsx")).toContain(
       "toast.error(DEVICE_LOCATION_ENABLE_TOAST);",

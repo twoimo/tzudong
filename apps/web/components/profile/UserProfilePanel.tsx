@@ -177,7 +177,13 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
-    const { data: profile, isLoading: profileLoading } = useUserProfile(userId);
+    const {
+        data: profile,
+        isLoading: profileLoading,
+        isError: profileError,
+        isFetching: profileFetching,
+        refetch: refetchProfile,
+    } = useUserProfile(userId);
     const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
     const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId, user?.id);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
@@ -356,6 +362,36 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
         );
     }
 
+    if (profileError) {
+        return (
+            <div className="flex flex-col h-full bg-background">
+                <div className="p-4 border-b">
+                    {showBackButton && (
+                        <Button variant="ghost" size="sm" onClick={handleBack}>
+                            {onClose ? <X className="h-4 w-4 mr-1" /> : <ChevronLeft className="h-4 w-4 mr-1" />}
+                            {onClose ? "닫기" : "뒤로"}
+                        </Button>
+                    )}
+                </div>
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-center text-muted-foreground" aria-live="polite">
+                        <p className="text-lg mb-2">프로필을 불러올 수 없습니다</p>
+                        <p className="text-sm mb-4">잠시 후 다시 시도해주세요</p>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void refetchProfile()}
+                            disabled={profileFetching}
+                        >
+                            {profileFetching ? "다시 불러오는 중..." : "다시 시도"}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!profile) {
         return (
             <div className="flex flex-col h-full bg-background">
@@ -380,7 +416,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border/70 bg-gradient-to-br from-background via-background to-muted/35 p-4 flex flex-col gap-4">
+            <div className="border-b border-border/70 bg-background p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
                         {showBackButton && !onClose && (

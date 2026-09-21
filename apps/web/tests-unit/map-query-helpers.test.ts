@@ -117,6 +117,23 @@ describe('map query helpers', () => {
             enabled: true,
         });
     });
+
+    test('reuses the readonly category input instead of cloning it for query options', () => {
+        const categories = ['카페'];
+        const options = buildNaverRestaurantsQueryOptions({
+            filters: {
+                categories,
+                minRating: 1,
+                minReviews: 0,
+                minUserVisits: 0,
+                minJjyangVisits: 0,
+            },
+            selectedRegion: '서울',
+        });
+
+        expect(options.category).toBe(categories);
+    });
+
     test('forwards metadata-backed compact naver featured theme', () => {
         const options = buildNaverRestaurantsQueryOptions({
             compact: true,
@@ -144,6 +161,18 @@ describe('map query helpers', () => {
         expect(resolveNaverRestaurantEmptyStateMessage({
             categories: [],
             featuredTheme: 'hot-view' as never,
+            minReviews: 0,
+        })).toBe('이 테마는 조회수·댓글 지표가 있는 맛집만 보여줍니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
+            featuredTheme: 'hot-view' as never,
+            minReviews: 0,
+        }, [{ youtube_meta: { viewCount: 1200 } } as never])).toBe('선택한 테마에 맞는 맛집이 없습니다');
+
+        expect(resolveNaverRestaurantEmptyStateMessage({
+            categories: [],
+            featuredTheme: 'fresh-video' as never,
             minReviews: 0,
         })).toBe('선택한 테마에 맞는 맛집이 없습니다');
 

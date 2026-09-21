@@ -4,19 +4,46 @@ import { isCluster, type ClusterProperties, type RegionalCluster, type SeoulDist
 import { getPrimaryCategory, isRestaurantInViewport, type ExtendedBounds } from '@/lib/naver-map-view-helpers';
 import { getTzuyangVisitCount } from '@/lib/restaurant-visit-count';
 
-const formatCoordForSignature = (value: number | null | undefined): string =>
-    typeof value === 'number' && Number.isFinite(value) ? value.toFixed(6) : 'na';
+const formatCoordForSignature = (value: number | string | null | undefined): string => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value.toFixed(6);
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed).toFixed(6);
+    }
+    return 'na';
+};
 
 const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'): string =>
     `${prefix}-${restaurant.id}:${formatCoordForSignature(restaurant.lat)}:${formatCoordForSignature(restaurant.lng)}:${getPrimaryCategory(restaurant)}:${getTzuyangVisitCount(restaurant)}`;
 
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
-function hasRenderableCoordinates(restaurant: Restaurant): restaurant is RestaurantWithRenderableCoordinates {
-    return typeof restaurant.lat === 'number'
-        && Number.isFinite(restaurant.lat)
-        && typeof restaurant.lng === 'number'
-        && Number.isFinite(restaurant.lng);
+export function hasNaverMarkerCoordinates<T extends { lat?: unknown; lng?: unknown }>(
+    restaurant: T | null | undefined,
+): restaurant is T & { lat: number; lng: number } {
+    if (!restaurant) return false;
+    return typeof restaurant.lat === 'number' && Number.isFinite(restaurant.lat)
+        && typeof restaurant.lng === 'number' && Number.isFinite(restaurant.lng);
+}
+
+function normalizeFiniteCoordinate(value: unknown) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const normalized = Number(trimmed);
+    return Number.isFinite(normalized) ? normalized : null;
+}
+
+export function normalizeNaverMarkerCoordinates<T extends { lat?: unknown; lng?: unknown }>(
+    restaurant: T | null | undefined,
+): (T & { lat: number; lng: number }) | null {
+    if (!restaurant) return null;
+    const lat = normalizeFiniteCoordinate(restaurant.lat);
+    const lng = normalizeFiniteCoordinate(restaurant.lng);
+    if (lat === null || lng === null) return null;
+    if (hasNaverMarkerCoordinates(restaurant)) return restaurant;
+    return { ...restaurant, lat, lng };
 }
 
 export function deriveClusterRenderPlan(
@@ -59,13 +86,16 @@ export function getVisibleRestaurantsForRender(
 
     return restaurantsForSwipe.filter(
         (restaurant) =>
-            restaurant.id === selectedRestaurantId ||
+            (selectedRestaurantId != null && restaurant.id === selectedRestaurantId) ||
             isRestaurantInViewport(restaurant, extendedBounds)
     );
 }
 
 export function getRestaurantsWithRenderableCoordinates(restaurants: Restaurant[]) {
-    return restaurants.filter(hasRenderableCoordinates);
+    return restaurants.flatMap((restaurant) => {
+        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+        return normalizedRestaurant ? [normalizedRestaurant] : [];
+    });
 }
 
 export function getSeoulIndividualRestaurantsForRender({
@@ -81,9 +111,11 @@ export function getSeoulIndividualRestaurantsForRender({
 
     const seoulIndividualSet = new Set(seoulIndividualIds);
 
-    return displayRestaurants.filter((restaurant): restaurant is RestaurantWithRenderableCoordinates =>
-        seoulIndividualSet.has(restaurant.id) && hasRenderableCoordinates(restaurant)
-    );
+    return displayRestaurants.flatMap((restaurant): RestaurantWithRenderableCoordinates[] => {
+        if (!seoulIndividualSet.has(restaurant.id)) return [];
+        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+        return normalizedRestaurant ? [normalizedRestaurant] : [];
+    });
 }
 
 export function buildRenderTargetIdsForSignature({
@@ -188,4 +220,62 @@ export function shouldReportNaverMarkerRenderPerformance({
     isDevelopment: boolean;
 }) {
     return isDevelopment && activeMarkerCount > 50;
+}
+
+export function shouldClearEmptyClusterState({
+    clusteringEnabled,
+    displayRestaurantCount,
+    expandedRestaurantCount = 0,
+}: {
+    clusteringEnabled: boolean;
+    displayRestaurantCount: number;
+    expandedRestaurantCount?: number;
+}) {
+    if (expandedRestaurantCount > 0) {
+        return false;
+    }
+
+    return !clusteringEnabled || displayRestaurantCount === 0;
+}
+
+export function nextEmptyIdentityArray<T>(previous: readonly T[]): T[] {
+    return previous.length === 0 ? (previous as T[]) : [];
+}
+
+export function resolveSkippedEmptyThemeMarkerPlan({
+    displayRestaurantCount,
+    hasRenderedMarkerDom,
+}: {
+    displayRestaurantCount: number;
+    hasRenderedMarkerDom: boolean;
+}): 'skip' | 'continue' | 'retry' {
+    if (displayRestaurantCount === 0) {
+        return hasRenderedMarkerDom ? 'continue' : 'skip';
+    }
+
+    return hasRenderedMarkerDom ? 'skip' : 'retry';
+}
+
+export function resolveEmptyClusterMarkerCleanupPlan({
+    displayRestaurantCount,
+    clusterCount,
+    expandedRestaurantCount = 0,
+}: {
+    displayRestaurantCount: number;
+    clusterCount: number;
+    expandedRestaurantCount?: number;
+}): 'render' | 'release' | 'retry' {
+    if (expandedRestaurantCount > 0) {
+        return 'render';
+    }
+
+    if (displayRestaurantCount === 0) {
+        return 'release';
+    }
+
+    if (clusterCount === 0) {
+        return 'retry';
+    }
+
+    return 'render';
 }

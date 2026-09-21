@@ -45,6 +45,12 @@ const DesktopAuthModal = dynamic(() => import("@/components/auth/AuthModal"), {
   loading: () => null,
 });
 
+const REJECTED_AUTH_DISPLAY_NAMES = new Set([
+  "nightly ci",
+  "nightly-ci",
+  "nightly",
+]);
+
 const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
   if (!user) return "사용자";
 
@@ -53,11 +59,12 @@ const getDisplayName = (user: ReturnType<typeof useAuth>["user"]) => {
     metadata.nickname,
     metadata.name,
     metadata.full_name,
-    user.email?.split("@")[0],
   ];
   const displayName = candidates.find(
     (candidate): candidate is string =>
-      typeof candidate === "string" && candidate.trim().length > 0,
+      typeof candidate === "string"
+      && candidate.trim().length > 0
+      && !REJECTED_AUTH_DISPLAY_NAMES.has(candidate.trim().toLowerCase()),
   );
 
   return displayName?.trim() ?? "사용자";
@@ -206,7 +213,7 @@ export default function HomeMapUserMenu({
         size="icon"
         data-desktop-map-fullscreen-toggle="true"
         className={cn(
-          "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
           shouldOffsetForRightPanel ? "" : "right-20",
         )}
         style={fullscreenButtonStyle}
@@ -230,7 +237,7 @@ export default function HomeMapUserMenu({
               size="icon"
               data-desktop-map-user-menu="true"
               className={cn(
-                "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 shouldOffsetForRightPanel ? "" : "right-6",
               )}
               style={userButtonStyle}
@@ -337,7 +344,7 @@ export default function HomeMapUserMenu({
           data-desktop-map-user-menu="true"
           data-auth-session-pending="true"
           className={cn(
-            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             shouldOffsetForRightPanel ? "" : "right-6",
           )}
           style={userButtonStyle}
@@ -353,7 +360,7 @@ export default function HomeMapUserMenu({
           size="icon"
           data-desktop-map-user-menu="true"
           className={cn(
-            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             shouldOffsetForRightPanel ? "" : "right-6",
           )}
           style={userButtonStyle}

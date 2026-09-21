@@ -9045,6 +9045,7 @@ function getAdminAuditStatusClassName(status: string) {
 }
 
 function AuditPlaceholder() {
+  const router = useRouter();
   const auditEventsQuery = useQuery({
     queryKey: ["admin-audit-events", "recent"],
     queryFn: fetchAdminAuditEvents,
@@ -9153,7 +9154,7 @@ function AuditPlaceholder() {
                   size="sm"
                   className="h-8 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   onClick={() => {
-                    window.location.assign(adminAuditLoginHref);
+                    router.push(adminAuditLoginHref, { scroll: false });
                   }}
                 >
                   다시 로그인하기

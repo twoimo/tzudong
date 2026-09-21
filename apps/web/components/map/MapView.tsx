@@ -561,7 +561,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markersRef.current.push({ marker, restaurantId: restaurant.id });
     });
-  }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow, searchedRestaurant?.id, selectedRestaurant?.id]);
+  // Selection IDs are applied in place by the dedicated effect below; changing them must not rebuild every marker.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, moveToRestaurant, onMarkerClick, onRestaurantSelect, restaurantsToShow]);
 
   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
   useEffect(() => {
@@ -582,6 +584,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
+      markerElement.classList.toggle('selected-marker', isSelected);
       applyMapViewMarkerSelectedState({ isSelected, markerElement });
     });
   }, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById, isLoaded]);

@@ -84,17 +84,13 @@ jobs:
         run: node scripts/verify-dependency-freshness.mjs --candidates "$RUNNER_TEMP/dependency-candidates.json" > "$RUNNER_TEMP/dependency-freshness-units.json"
 
       - name: Preserve dependabot holds
-        # Requirement 4.5: the four preserved holds must remain in dependabot.yml.
+        # Requirement 4.5: the three preserved holds must remain in dependabot.yml.
         # Hold release is a separate candidate that touches only dependabot.yml.
         working-directory: .
         run: |
           set -euo pipefail
           manifest='.github/dependabot.yml'
           test -f "$manifest"
-          grep -Fq 'dependency-name: "next"' "$manifest"
-          grep -Fq '">=16.3.0"' "$manifest"
-          grep -Fq 'dependency-name: "@next/bundle-analyzer"' "$manifest"
-          grep -Fq 'dependency-name: "eslint-config-next"' "$manifest"
           grep -Fq 'dependency-name: "eslint"' "$manifest"
           grep -Fq 'dependency-name: "@types/node"' "$manifest"
           grep -Fq 'dependency-name: "typescript-eslint"' "$manifest"

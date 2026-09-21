@@ -1,0 +1,379 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "쯔동 워커 부스팅 흐름",
+    "output": "docs/architecture/data-pipeline/worker-boosting.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1200,
+      700
+    ],
+    "views": [
+      {
+        "id": "safe-boost",
+        "label": "안전한 동시성 증가",
+        "focus": [
+          "observe",
+          "queue_depth",
+          "budget",
+          "boost_plan",
+          "claim",
+          "execute",
+          "commit",
+          "measure"
+        ],
+        "note": "대기와 메모리 증거를 확인한 뒤 제한된 동시성만 시도하는 경로입니다."
+      },
+      {
+        "id": "lease-recovery",
+        "label": "lease 회복",
+        "focus": [
+          "claim",
+          "execute",
+          "heartbeat",
+          "lease_lost",
+          "reclaim"
+        ],
+        "note": "heartbeat와 lease 손실을 분리해 오래된 작업의 쓰기를 막습니다."
+      },
+      {
+        "id": "fail-closed",
+        "label": "거부와 대기",
+        "focus": [
+          "budget",
+          "hold",
+          "measure",
+          "observe"
+        ],
+        "note": "예산·입력·권한 증거가 부족하면 부스팅을 멈추고 다음 관측으로 돌아갑니다."
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": "measure",
+      "label": "측정",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "admit",
+      "label": "admission · plan",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "run",
+      "label": "claim · execute · readback",
+      "fromCol": 4,
+      "toCol": 5
+    }
+  ],
+  "lanes": [
+    {
+      "id": "intake",
+      "label": "운영 제어 · 큐"
+    },
+    {
+      "id": "run",
+      "label": "워커 · 저장"
+    },
+    {
+      "id": "observe",
+      "label": "관측"
+    },
+    {
+      "id": "exceptions",
+      "label": "거부 · 회복",
+      "variant": "exception"
+    }
+  ],
+  "groups": [
+    {
+      "id": "admission_group",
+      "label": "부스팅 전 필수 게이트",
+      "lane": "intake",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "recovery_group",
+      "label": "오래된 claim 보호",
+      "lane": "exceptions",
+      "fromCol": 3,
+      "toCol": 5,
+      "variant": "security"
+    }
+  ],
+  "mainPath": [
+    "observe",
+    "queue_depth",
+    "budget",
+    "boost_plan",
+    "claim",
+    "execute",
+    "commit",
+    "measure"
+  ],
+  "semanticChecks": {
+    "allowedRoots": [
+      "observe"
+    ],
+    "allowedTerminals": [
+      "measure",
+      "hold"
+    ],
+    "requiredEdges": [
+      {
+        "from": "budget",
+        "to": "boost_plan"
+      },
+      {
+        "from": "boost_plan",
+        "to": "claim"
+      },
+      {
+        "from": "claim",
+        "to": "execute"
+      },
+      {
+        "from": "execute",
+        "to": "commit"
+      }
+    ],
+    "requiredPaths": [
+      {
+        "from": "lease_lost",
+        "to": "reclaim"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "observe",
+      "lane": "intake",
+      "col": 0,
+      "type": "backend",
+      "label": "관측 시작",
+      "sublabel": "queue · RSS",
+      "tag": "evidence"
+    },
+    {
+      "id": "queue_depth",
+      "lane": "intake",
+      "col": 1,
+      "type": "messagebus",
+      "label": "queue depth",
+      "sublabel": "age · arrivals",
+      "tag": "wait signal"
+    },
+    {
+      "id": "budget",
+      "lane": "intake",
+      "col": 2,
+      "type": "security",
+      "label": "admission",
+      "sublabel": "memory gate",
+      "tag": "fail-closed"
+    },
+    {
+      "id": "boost_plan",
+      "lane": "run",
+      "col": 3,
+      "type": "backend",
+      "label": "bounded boost",
+      "sublabel": "cap · c=1",
+      "tag": "no blind increase"
+    },
+    {
+      "id": "claim",
+      "lane": "intake",
+      "col": 3,
+      "type": "database",
+      "label": "atomic claim",
+      "sublabel": "lease + revision",
+      "tag": "one owner"
+    },
+    {
+      "id": "execute",
+      "lane": "run",
+      "col": 4,
+      "type": "backend",
+      "label": "worker execute",
+      "sublabel": "batch · beat",
+      "tag": "local MLX"
+    },
+    {
+      "id": "heartbeat",
+      "lane": "intake",
+      "col": 5,
+      "type": "messagebus",
+      "label": "heartbeat",
+      "sublabel": "lease freshness",
+      "tag": "no stale writes"
+    },
+    {
+      "id": "commit",
+      "lane": "run",
+      "col": 5,
+      "type": "database",
+      "label": "commit",
+      "sublabel": "CAS · readback",
+      "tag": "persisted"
+    },
+    {
+      "id": "measure",
+      "lane": "observe",
+      "col": 5,
+      "type": "backend",
+      "label": "measure result",
+      "sublabel": "wait · run · RSS",
+      "tag": "next decision"
+    },
+    {
+      "id": "hold",
+      "lane": "exceptions",
+      "col": 3,
+      "type": "security",
+      "label": "hold",
+      "sublabel": "retry later",
+      "tag": "safe default"
+    },
+    {
+      "id": "lease_lost",
+      "lane": "exceptions",
+      "col": 4,
+      "type": "security",
+      "label": "lease lost",
+      "sublabel": "reject late write",
+      "tag": "stale guard"
+    },
+    {
+      "id": "reclaim",
+      "lane": "exceptions",
+      "col": 5,
+      "type": "database",
+      "label": "reclaim",
+      "sublabel": "new valid lease",
+      "tag": "explicit retry"
+    }
+  ],
+  "edges": [
+    {
+      "id": "observe-queue",
+      "from": "observe",
+      "to": "queue_depth",
+      "label": "sample",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "queue-budget",
+      "from": "queue_depth",
+      "to": "budget",
+      "label": "backlog + age",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "budget-boost",
+      "from": "budget",
+      "to": "boost_plan",
+      "label": "admit",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "budget-hold",
+      "from": "budget",
+      "to": "hold",
+      "label": "reject",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "boost-claim",
+      "from": "boost_plan",
+      "to": "claim",
+      "label": "cap applied",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "claim-execute",
+      "from": "claim",
+      "to": "execute",
+      "label": "owned job",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "execute-heartbeat",
+      "from": "execute",
+      "to": "heartbeat",
+      "label": "renew",
+      "variant": "default",
+      "role": "async"
+    },
+    {
+      "id": "execute-commit",
+      "from": "execute",
+      "to": "commit",
+      "label": "result",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "commit-measure",
+      "from": "commit",
+      "to": "measure",
+      "label": "readback",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "execute-lost",
+      "from": "execute",
+      "to": "lease_lost",
+      "label": "expired",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "lost-reclaim",
+      "from": "lease_lost",
+      "to": "reclaim",
+      "label": "reclaim",
+      "variant": "dashed",
+      "role": "return"
+    },
+    {
+      "id": "hold-observe",
+      "from": "hold",
+      "to": "observe",
+      "label": "after cooldown",
+      "variant": "dashed",
+      "role": "return"
+    },
+    {
+      "id": "heartbeat-execute",
+      "from": "heartbeat",
+      "to": "execute",
+      "label": "renewed",
+      "variant": "dashed",
+      "role": "return"
+    },
+    {
+      "id": "reclaim-claim",
+      "from": "reclaim",
+      "to": "claim",
+      "label": "new lease",
+      "variant": "emphasis",
+      "role": "return"
+    }
+  ],
+  "cards": []
+}

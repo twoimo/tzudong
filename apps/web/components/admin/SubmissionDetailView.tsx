@@ -549,7 +549,7 @@ export function SubmissionDetailView({
                 {/* 제보자 정보 */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b">
                     <User className="h-4 w-4" />
-                    <span>{submission.profiles?.nickname || '탈퇴한 사용자'}</span>
+                    <span>{submission.profiles?.nickname || '닉네임을 불러올 수 없음'}</span>
                     <span className="mx-1">•</span>
                     <Calendar className="h-4 w-4" />
                     <span>{new Date(submission.created_at).toLocaleDateString('ko-KR')}</span>

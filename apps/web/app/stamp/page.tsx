@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
@@ -32,14 +31,16 @@ import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-quer
 import { supabase } from "@/integrations/supabase/client";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
+import { describeErrorCodeForLog } from "@/lib/debug-log";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
 
 import { BREAKPOINTS, useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { REGIONS, extractRegion, parseCategory, getYouTubeFallbackThumbnailUrl, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
+import { REGIONS, extractRegion, extractYouTubeVideoId, parseCategory, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
+import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
 import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import {
     collectDirectRestaurantReviewIds,
@@ -50,7 +51,7 @@ import { compareStampRestaurants, type StampRestaurantSortColumn, type StampRest
 import { buildEditRestaurantInitialFormData } from "@/lib/edit-restaurant-request-form";
 import { withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import type { Tables } from "@/integrations/supabase/types";
-import { readPublicProfileSummaries } from "@/lib/public-profile-read";
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from "@/lib/public-profile-read";
 
 type SortColumn = StampRestaurantSortColumn;
 
@@ -91,6 +92,7 @@ const STAMP_GUIDE_DEMO_RESTAURANT = {
 const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 도장이 찍혀요.";
 const STAMP_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 const STAMP_PAGE_SIZE = 5;
+const STAMP_LOAD_MORE_ROOT_MARGIN = "0px 0px 240px 0px";
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -125,8 +127,7 @@ interface RestaurantRowProps {
 
 const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || restaurant.categories);
-    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
-    const fallbackThumbnailUrl = restaurant.youtube_link ? getYouTubeFallbackThumbnailUrl(restaurant.youtube_link) : null;
+    const videoId = restaurant.youtube_link ? extractYouTubeVideoId(restaurant.youtube_link) : null;
     const reviewCount = (restaurant as RestaurantWithVerifiedCount).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
@@ -148,19 +149,14 @@ const RestaurantRow = memo(({ restaurant, isSelected, onClick }: RestaurantRowPr
         >
             <TableCell>
                 <div className="flex items-center gap-3">
-                    {thumbnailUrl && (
+                    {videoId && (
                         <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 relative">
-                            <Image
-                                src={thumbnailUrl}
+                            <YoutubeThumbnail
+                                videoId={videoId}
                                 alt={`${restaurant.name} 썸네일`}
-                                fill
                                 sizes="96px"
                                 className="object-cover"
                                 style={{ objectFit: 'cover' }}
-                                onError={(event) => {
-                                    if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
-                                    event.currentTarget.src = fallbackThumbnailUrl;
-                                }}
                             />
                         </div>
                     )}
@@ -353,7 +349,7 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
-                console.error('맛집 검색 중 오류:');
+                console.error('맛집 검색 중 오류:', describeErrorCodeForLog(error));
                 return [];
             }
         },
@@ -454,6 +450,7 @@ export default function StampPage() {
         source: 'stamp-page-scroll',
         disabled: !isMobileOrTablet,
     });
+    const { onScroll: handleBottomNavScroll } = stampBottomNavAutoHide;
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
@@ -463,19 +460,30 @@ export default function StampPage() {
         }
     }, [hasMoreToDisplay]);
 
+    const handleMainScroll = useCallback(() => {
+        handleBottomNavScroll();
+    }, [handleBottomNavScroll]);
+
     useEffect(() => {
+        const scrollRoot = mainScrollRef.current;
+        const target = viewMode === 'grid' ? loadMoreRef.current : loadMoreTableRef.current;
+
+        if (!scrollRoot || !target || !hasMoreToDisplay) return;
+
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting) loadMoreRestaurants();
+                if (entries.some((entry) => entry.isIntersecting)) loadMoreRestaurants();
             },
-            { threshold: 0.1 }
+            {
+                root: scrollRoot,
+                rootMargin: STAMP_LOAD_MORE_ROOT_MARGIN,
+                threshold: 0.1,
+            }
         );
 
-        if (viewMode === 'grid' && loadMoreRef.current) observer.observe(loadMoreRef.current);
-        if (viewMode === 'list' && loadMoreTableRef.current) observer.observe(loadMoreTableRef.current);
-
+        observer.observe(target);
         return () => observer.disconnect();
-    }, [loadMoreRestaurants, viewMode]);
+    }, [hasMoreToDisplay, loadMoreRestaurants, viewMode]);
 
     // --- 데이터 패칭: 선택된 맛집의 리뷰 ---
     const {
@@ -526,8 +534,8 @@ export default function StampPage() {
                 // 사용자 프로필 정보 조회
                 const userIds = [...new Set(typedReviewsData.map((review) => review.user_id))];
                 const reviewIds = typedReviewsData.map((review) => review.id);
-                const [profiles, userLikesResult] = await Promise.all([
-                    readPublicProfileSummaries(supabase, userIds).catch(() => []),
+                const [profilesLookup, userLikesResult] = await Promise.all([
+                    readPublicProfileSummariesLookup(supabase, userIds),
                     user
                         ? supabase
                             .from('review_likes')
@@ -536,25 +544,24 @@ export default function StampPage() {
                             .eq('user_id', user.id)
                         : Promise.resolve({ data: [] }),
                 ]);
-                const profilesMap = new Map(
-                    profiles.map((profile) => [
-                        profile.user_id,
-                        { nickname: profile.nickname, avatarUrl: profile.avatar_url },
-                    ])
-                );
 
                 const userLikesMap = new Map(
                     ((userLikesResult.data ?? []) as ReviewLikeRow[]).map((likeRow) => [likeRow.review_id, true])
                 );
 
                 const reviews = typedReviewsData.map((review) => {
+                    const userProfile = resolvePublicReviewerDisplay(
+                        review.user_id,
+                        profilesLookup.summaries,
+                        profilesLookup.ok,
+                    );
                     return {
                         id: review.id,
                         userId: review.user_id,
                         restaurantName: selectedRestaurant.name || '알 수 없음',
                         restaurantCategories: Array.isArray(selectedRestaurant.category) ? selectedRestaurant.category : [selectedRestaurant.category || '기타'],
-                        userName: profilesMap.get(review.user_id)?.nickname || '탈퇴한 사용자',
-                        userAvatarUrl: profilesMap.get(review.user_id)?.avatarUrl,
+                        userName: userProfile.nickname,
+                        userAvatarUrl: userProfile.avatarUrl ?? undefined,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
@@ -573,7 +580,7 @@ export default function StampPage() {
                 const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
-                console.error('리뷰 데이터 조회 중 오류:');
+                console.error('리뷰 데이터 조회 중 오류:', describeErrorCodeForLog(error));
                 return { reviews: [], nextCursor: null };
             }
         },
@@ -736,7 +743,7 @@ export default function StampPage() {
             }
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
-            console.error('좋아요 토글 실패:');
+            console.error('좋아요 토글 실패:', describeErrorCodeForLog(error));
             throw error;
         }
     }, [user, queryClient, selectedRestaurant]);
@@ -850,7 +857,8 @@ export default function StampPage() {
                     <div
                         ref={mainScrollRef}
                         className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
-                        onScroll={stampBottomNavAutoHide.onScroll}
+                        data-stamp-scroll-container="true"
+                        onScroll={handleMainScroll}
                         onTouchStart={stampBottomNavAutoHide.onTouchStart}
                         onTouchMove={stampBottomNavAutoHide.onTouchMove}
                     >
@@ -1158,7 +1166,7 @@ export default function StampPage() {
                                         );
                                     })}
                                     {/* 무한 스크롤 트리거 및 로딩 표시 */}
-                                    <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
+                                    <div ref={loadMoreRef} data-stamp-load-more-sentinel="true" className="col-span-full h-10 flex items-center justify-center">
                                         {hasMoreToDisplay && (
                                             <span className="text-sm text-muted-foreground" role="status" aria-live="polite">
                                                 더 불러오는 중… ({displayedCards.length} / {filteredAndSortedRestaurants.length}개)
@@ -1215,7 +1223,7 @@ export default function StampPage() {
                                                 />
                                             ))}
                                             {/* 무한 스크롤 트리거 및 로딩 표시 */}
-                                            <TableRow ref={loadMoreTableRef}>
+                                            <TableRow ref={loadMoreTableRef} data-stamp-load-more-sentinel="true">
                                                 <TableCell colSpan={4} className="h-10 text-center text-sm text-muted-foreground">
                                                     {hasMoreToDisplay && (
                                                         <span role="status" aria-live="polite">

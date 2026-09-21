@@ -40,7 +40,7 @@ bun run dev -- --operator-env-file /absolute/path/to/owner-only.env.local
 
 ### 3. Hosted 환경 변수 설정 (명시적 opt-in)
 
-Hosted Supabase를 의도적으로 디버깅할 때만 `.env.local` 파일을 생성하고 아래
+Hosted Supabase를 의도적으로 디버깅할 때만 저장소 루트의 `.env.local` 파일을 생성하고 아래
 변수를 설정한 뒤 `bun run dev:hosted`를 사용하세요. 이 명령은 `--hosted` 표시가
 있어야 하는 명시적 원격 디버깅 경로입니다. 앱에서 수행한 동작에 따라 해당
 Supabase project를 변경할 수 있으므로 production 자격 증명을 사용하지 마세요.

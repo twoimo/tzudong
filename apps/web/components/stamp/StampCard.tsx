@@ -1,15 +1,15 @@
 'use client';
 
 import { memo, useMemo, type KeyboardEvent } from 'react';
-import Image from 'next/image';
 import { MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
-import { parseCategory, getYouTubeFallbackThumbnailUrl, getYouTubeThumbnailUrl } from './stamp-utils';
+import { extractYouTubeVideoId, parseCategory } from './stamp-utils';
 import { getRestaurantDisplayName } from '@/lib/restaurant-display-name';
+import { YoutubeThumbnail } from '@/components/ui/youtube-thumbnail';
 
 type StampCardRestaurant = Restaurant & {
     verified_review_count?: number | null;
@@ -98,8 +98,7 @@ export const StampCard = memo(function StampCard({
     const youtubeLinks = typedRestaurant.mergedYoutubeLinks ?? (typedRestaurant.youtube_link ? [typedRestaurant.youtube_link] : []);
     const currentIndex = currentThumbnailIndex % (youtubeLinks.length || 1);
     const currentYoutubeLink = youtubeLinks[currentIndex];
-    const thumbnailUrl = currentYoutubeLink ? getYouTubeThumbnailUrl(currentYoutubeLink) : null;
-    const fallbackThumbnailUrl = currentYoutubeLink ? getYouTubeFallbackThumbnailUrl(currentYoutubeLink) : null;
+    const currentVideoId = currentYoutubeLink ? extractYouTubeVideoId(currentYoutubeLink) : null;
     const category = useMemo(
         () => inferRestaurantCategory(typedRestaurant) ?? categoryFallback ?? null,
         [categoryFallback, typedRestaurant],
@@ -204,21 +203,16 @@ export const StampCard = memo(function StampCard({
                 </div>
 
                 <div className="relative h-16 shrink-0 self-center overflow-hidden rounded-lg bg-muted" style={{ width: '5rem', minWidth: '5rem' }}>
-                    {thumbnailUrl ? (
-                        <Image
-                            src={thumbnailUrl}
+                    {currentVideoId ? (
+                        <YoutubeThumbnail
+                            videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
-                            fill
                             sizes="112px"
                             className={cn(
                                 "h-full w-full object-cover transition-[filter,opacity,transform] duration-300",
                                 showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
                             style={{ objectFit: 'cover' }}
-                            onError={(event) => {
-                                if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
-                                event.currentTarget.src = fallbackThumbnailUrl;
-                            }}
                         />
                     ) : (
                         <div className="flex h-full w-full items-center justify-center">
@@ -244,22 +238,17 @@ export const StampCard = memo(function StampCard({
             aria-label={isGuideCard ? undefined : `${restaurantDisplayName} 도장 카드 열기`}
         >
             <div className="relative aspect-video">
-                {thumbnailUrl ? (
+                {currentVideoId ? (
                     <>
-                        <Image
-                            src={thumbnailUrl}
+                        <YoutubeThumbnail
+                            videoId={currentVideoId}
                             alt={`${restaurantDisplayName} 썸네일`}
-                            fill
                             sizes="(max-width: 768px) 100vw, (max-width: 1536px) 25vw, 20vw"
                             className={cn(
                                 "w-full h-full object-cover transition-[filter,opacity,transform] duration-300",
                                 showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
                             style={{ objectFit: 'cover' }}
-                            onError={(event) => {
-                                if (!fallbackThumbnailUrl || event.currentTarget.src.includes('/hqdefault.jpg')) return;
-                                event.currentTarget.src = fallbackThumbnailUrl;
-                            }}
                         />
 
                         {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 */}

@@ -13,6 +13,7 @@ import {
     type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
 import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from "@/lib/home-map-youtube-kpi";
+import { describeErrorCodeForLog } from "@/lib/debug-log";
 
 
 type DBRestaurant = Tables<"restaurants">;
@@ -35,6 +36,7 @@ type ReviewCountCandidateRestaurant = Pick<
 >;
 
 const SUPABASE_IN_CHUNK_SIZE = 80;
+const SUPABASE_IN_CHUNK_CONCURRENCY = 4;
 const REVIEW_COUNT_RELATED_RESTAURANT_SELECT = 'id, name:approved_name, approved_name, road_address, jibun_address, status';
 export const RESTAURANT_MERGE_SELECT = [
     'id',
@@ -316,39 +318,49 @@ function getUniqueRestaurantNames(restaurants: RestaurantWithOptionalName[]): st
         .filter(Boolean))];
 }
 
+// 청크 조회는 결과 순서를 그대로 유지해야 하므로 인덱스로 채우고, 동시 요청 수만 제한합니다.
+async function fetchChunkedInOrder<TItem, TRow>(
+    items: TItem[],
+    fetchChunk: (chunk: TItem[]) => Promise<TRow[]>
+): Promise<TRow[]> {
+    const chunks: TItem[][] = [];
+    for (let index = 0; index < items.length; index += SUPABASE_IN_CHUNK_SIZE) {
+        chunks.push(items.slice(index, index + SUPABASE_IN_CHUNK_SIZE));
+    }
+    if (chunks.length === 0) return [];
+
+    const rowsByChunk: TRow[][] = new Array(chunks.length);
+    let nextChunkIndex = 0;
+    const workerCount = Math.min(SUPABASE_IN_CHUNK_CONCURRENCY, chunks.length);
+
+    await Promise.all(Array.from({ length: workerCount }, async () => {
+        while (nextChunkIndex < chunks.length) {
+            const chunkIndex = nextChunkIndex;
+            nextChunkIndex += 1;
+            rowsByChunk[chunkIndex] = await fetchChunk(chunks[chunkIndex] as TItem[]);
+        }
+    }));
+
+    return rowsByChunk.flat();
+}
+
 async function fetchRelatedRestaurantCandidates(names: string[]): Promise<ReviewCountCandidateRestaurant[]> {
     if (names.length === 0) return [];
 
-    const candidateRows: ReviewCountCandidateRestaurant[] = [];
-    for (let index = 0; index < names.length; index += SUPABASE_IN_CHUNK_SIZE) {
-        const nameChunk = names.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
-        const data = await fetchSupabaseRows<ReviewCountCandidateRestaurant>('restaurants', [
-            ['select', REVIEW_COUNT_RELATED_RESTAURANT_SELECT],
-            ['approved_name', postgrestIn(nameChunk)],
-        ]);
-
-        candidateRows.push(...data);
-    }
-
-    return candidateRows;
+    return fetchChunkedInOrder(names, (nameChunk) => fetchSupabaseRows<ReviewCountCandidateRestaurant>('restaurants', [
+        ['select', REVIEW_COUNT_RELATED_RESTAURANT_SELECT],
+        ['approved_name', postgrestIn(nameChunk)],
+    ]));
 }
 
 async function fetchVerifiedReviewRows(restaurantIds: string[]): Promise<ReviewCountRow[]> {
     if (restaurantIds.length === 0) return [];
 
-    const reviewRows: ReviewCountRow[] = [];
-    for (let index = 0; index < restaurantIds.length; index += SUPABASE_IN_CHUNK_SIZE) {
-        const idChunk = restaurantIds.slice(index, index + SUPABASE_IN_CHUNK_SIZE);
-        const data = await fetchSupabaseRows<ReviewCountRow>('reviews', [
-            ['select', 'restaurant_id'],
-            ['restaurant_id', postgrestIn(idChunk)],
-            ['is_verified', 'eq.true'],
-        ]);
-
-        reviewRows.push(...data);
-    }
-
-    return reviewRows;
+    return fetchChunkedInOrder(restaurantIds, (idChunk) => fetchSupabaseRows<ReviewCountRow>('reviews', [
+        ['select', 'restaurant_id'],
+        ['restaurant_id', postgrestIn(idChunk)],
+        ['is_verified', 'eq.true'],
+    ]));
 }
 
 export async function buildRelatedVerifiedReviewCounts(restaurants: RestaurantWithOptionalName[]): Promise<Map<string, number>> {
@@ -692,7 +704,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             try {
                 data = await fetchSupabaseRows<RestaurantWithOptionalName>('restaurants', query);
             } catch (error) {
-                console.error('레스토랑 데이터 조회 실패:')
+                console.error('레스토랑 데이터 조회 실패:', describeErrorCodeForLog(error));
                 throw error;
             }
 

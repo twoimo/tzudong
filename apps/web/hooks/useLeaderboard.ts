@@ -46,24 +46,22 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
     return useQuery({
         queryKey: ['leaderboard-users', period],
         queryFn: async () => {
-            try {
-                const rows = await readCompletePublicProfileLeaderboard(supabase, period);
-                return rows.map((row, index): LeaderboardUser => ({
-                    id: row.user_id,
-                    rank: index + 1,
-                    username: row.nickname,
-                    reviewCount: row.review_count,
-                    verifiedReviewCount: row.verified_review_count,
-                    totalLikes: row.total_likes,
-                    avgLikesPerReview: row.avg_likes_per_review,
-                    qualityScore: row.quality_score,
-                }));
-            } catch {
-                console.warn('리더보드 데이터 조회 중 오류 발생:');
-                return [];
-            }
+            const rows = await readCompletePublicProfileLeaderboard(supabase, period);
+            return rows.map((row, index): LeaderboardUser => ({
+                id: row.user_id,
+                rank: index + 1,
+                username: row.nickname,
+                reviewCount: row.review_count,
+                verifiedReviewCount: row.verified_review_count,
+                totalLikes: row.total_likes,
+                avgLikesPerReview: row.avg_likes_per_review,
+                qualityScore: row.quality_score,
+            }));
         },
         staleTime: 0, // 실시간 업데이트를 위해 0으로 설정
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
         placeholderData: keepPreviousData,
     });
 };

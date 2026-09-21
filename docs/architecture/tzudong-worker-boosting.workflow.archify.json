@@ -1,0 +1,211 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "쯔동여지도 워커 부스팅 흐름",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "intake",
+      "label": "Trigger and admission"
+    },
+    {
+      "id": "execution",
+      "label": "Worker execution"
+    },
+    {
+      "id": "recovery",
+      "label": "Bounded recovery",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "admission",
+      "label": "Validate and admit",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "boost",
+      "label": "Claim and parallelize",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist",
+      "label": "Persist and read back",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "request",
+    "admit",
+    "claim",
+    "parallel",
+    "persist",
+    "finish"
+  ],
+  "semanticChecks": {
+    "allowedRoots": [
+      "request"
+    ],
+    "allowedTerminals": [
+      "finish"
+    ],
+    "requiredPaths": [
+      {
+        "from": "request",
+        "to": "finish"
+      },
+      {
+        "from": "parallel",
+        "to": "retry"
+      },
+      {
+        "from": "retry",
+        "to": "claim"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "request",
+      "lane": "intake",
+      "col": 0,
+      "type": "external",
+      "label": "Trigger",
+      "sublabel": "bounded input",
+      "tag": "01",
+      "width": 140
+    },
+    {
+      "id": "admit",
+      "lane": "intake",
+      "col": 1,
+      "type": "security",
+      "label": "Validate + admit",
+      "sublabel": "profile + capacity",
+      "tag": "02",
+      "width": 140
+    },
+    {
+      "id": "claim",
+      "lane": "execution",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Claim + lease",
+      "sublabel": "durable ownership",
+      "tag": "03",
+      "width": 140
+    },
+    {
+      "id": "parallel",
+      "lane": "execution",
+      "col": 3,
+      "type": "backend",
+      "label": "Concurrent work",
+      "sublabel": "provider reads",
+      "tag": "04",
+      "width": 140
+    },
+    {
+      "id": "persist",
+      "lane": "execution",
+      "col": 4,
+      "type": "database",
+      "label": "Batch persist",
+      "sublabel": "validate before write",
+      "tag": "05",
+      "width": 140
+    },
+    {
+      "id": "finish",
+      "lane": "execution",
+      "col": 5,
+      "type": "backend",
+      "label": "Readback + finish",
+      "sublabel": "receipt + metrics",
+      "tag": "06",
+      "width": 140
+    },
+    {
+      "id": "retry",
+      "lane": "recovery",
+      "col": 3,
+      "type": "backend",
+      "label": "Retry / backoff",
+      "sublabel": "transient recovery",
+      "tag": "error",
+      "width": 140
+    }
+  ],
+  "edges": [
+    {
+      "id": "request-admit",
+      "from": "request",
+      "to": "admit",
+      "label": "bounded input",
+      "role": "main"
+    },
+    {
+      "id": "admit-claim",
+      "from": "admit",
+      "to": "claim",
+      "label": "capacity admitted",
+      "role": "main"
+    },
+    {
+      "id": "claim-parallel",
+      "from": "claim",
+      "to": "parallel",
+      "label": "lease held",
+      "role": "main"
+    },
+    {
+      "id": "parallel-persist",
+      "from": "parallel",
+      "to": "persist",
+      "label": "validated results",
+      "role": "main"
+    },
+    {
+      "id": "persist-finish",
+      "from": "persist",
+      "to": "finish",
+      "label": "write receipt",
+      "role": "main"
+    },
+    {
+      "id": "parallel-retry",
+      "from": "parallel",
+      "to": "retry",
+      "label": "transient failure",
+      "variant": "security",
+      "role": "error",
+      "route": "auto"
+    },
+    {
+      "id": "retry-claim",
+      "from": "retry",
+      "to": "claim",
+      "label": "backoff then reclaim",
+      "variant": "emphasis",
+      "role": "branch",
+      "route": "auto"
+    },
+    {
+      "id": "retry-finish",
+      "from": "retry",
+      "to": "finish",
+      "label": "retry budget exhausted",
+      "variant": "security",
+      "role": "error",
+      "route": "bottom-channel"
+    }
+  ]
+}

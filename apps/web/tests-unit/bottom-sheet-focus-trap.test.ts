@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
     BOTTOM_SHEET_BACKDROP_ATTRIBUTE,
@@ -9,6 +11,11 @@ import {
     shouldBlockModalOutsidePointerDown,
     shouldHideModalSibling,
 } from '../components/ui/bottom-sheet';
+
+const bottomSheetSource = readFileSync(
+    resolve(import.meta.dir, '..', 'components', 'ui', 'bottom-sheet.tsx'),
+    'utf8',
+);
 
 type FakeNode = { id: string };
 
@@ -211,5 +218,14 @@ describe('bottom sheet height requests', () => {
             minHeight: 25,
             maxHeight: 88,
         })).toBe(88);
+    });
+});
+
+describe('bottom sheet centered presentation', () => {
+    test('does not attach sheet drag handlers to centered dialogs', () => {
+        expect(bottomSheetSource).toContain("const dragEnabled = !isCentered;");
+        expect(bottomSheetSource).toContain('onTouchStartCapture={dragEnabled ? handleSheetTouchStart : undefined}');
+        expect(bottomSheetSource).toContain('onTouchMoveCapture={dragEnabled ? handleSheetTouchMove : undefined}');
+        expect(bottomSheetSource).toContain('onMouseDown={dragEnabled ? handleMouseDown : undefined}');
     });
 });

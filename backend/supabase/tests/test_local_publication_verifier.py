@@ -933,9 +933,9 @@ complete_lifecycle_stage
             self._write_bundle(root)
             verifier.verify(root)
 
-    def test_publication_uses_the_current_97_unit_manifest(self) -> None:
-        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 97)
-        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 97)
+    def test_publication_uses_the_current_99_unit_manifest(self) -> None:
+        self.assertEqual(local_migrate.verify_manifest()["source"]["migrationCount"], 99)
+        self.assertEqual(verifier.EXPECTED_LEDGER_UNITS, 99)
 
     def test_rejects_missing_extra_swapped_or_digest_only_replay_proofs(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

@@ -1381,7 +1381,7 @@ describe("web quality performance source contracts", () => {
       "rounded-full border border-border bg-background/95",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border px-1.5",
+      "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0",
@@ -2136,7 +2136,7 @@ describe("web quality performance source contracts", () => {
     expect(overlayStackSource).toContain("emptyStateMessage?: string");
     expect(overlayStackSource).toContain("<EmptyStateIndicator message={emptyStateMessage} />");
     expect(mapIndicatorsSource).toContain("이 지역에 등록된 맛집이 없습니다");
-    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters)");
+    expect(naverMapSource).toContain("resolveNaverRestaurantEmptyStateMessage(filters, restaurants)");
     expect(naverMapSource).not.toContain("선택한 필터에 맞는 맛집이 없습니다");
     expect(overlayPositionSource).toContain(
       "bottom-[calc(var(--mobile-bottom-nav-effective-height",
@@ -2387,7 +2387,7 @@ describe("web quality performance source contracts", () => {
     ).toBeGreaterThan(0);
     expect(
       overlayPanelSource.lastIndexOf(
-        '"rounded-2xl border border-border shadow-2xl overflow-hidden"',
+        '"rounded-2xl border border-border shadow-sm overflow-hidden"',
         userProfilePanelIndex,
       ),
     ).toBeGreaterThan(0);
@@ -2430,10 +2430,11 @@ describe("web quality performance source contracts", () => {
     expect(stampCardSource).toContain("focus-visible:ring-primary");
     expect(stampCardSource).toContain("transition-[filter,opacity,transform]");
     expect(stampCardSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampCardSource).toContain("getYouTubeFallbackThumbnailUrl");
+    expect(stampCardSource).toContain("<YoutubeThumbnail");
+    expect(stampPageSource).toContain("<YoutubeThumbnail");
     expect(stampPageSource).toContain("style={{ objectFit: 'cover' }}");
-    expect(stampUtilsSource).toContain("mqdefault.jpg");
-    expect(stampUtilsSource).toContain("hqdefault.jpg");
+    expect(stampUtilsSource).toContain("maxresdefault");
+    expect(stampUtilsSource).toContain("getYoutubeThumbnailById(videoId, 'hqdefault')");
     expect(stampUtilsSource).not.toContain("/hq720.jpg");
     expect(stampCardSource).toContain("const category = useMemo(");
     expect(stampCardSource).not.toContain("transition-all");
@@ -2781,10 +2782,10 @@ describe("web quality performance source contracts", () => {
     );
     expect(feedContentSource).toContain('aria-label="리뷰 작성"');
     expect(feedContentSource).toContain(
-      "flex flex-wrap items-start justify-between gap-3",
+      "flex items-center justify-between gap-2",
     );
-    expect(feedContentSource).toContain("basis-[min(11rem,100%)]");
-    expect(feedContentSource).toContain("text-balance");
+    expect(feedContentSource).not.toContain("basis-[min(11rem,100%)]");
+    expect(feedContentSource).toContain('isOverlay ? "리뷰" : "쯔동여지도 리뷰"');
     expect(feedContentSource).toContain("text-pretty");
     expect(feedContentSource).toContain(
       'placeholder="맛집명, 작성자, 내용 검색…"',
@@ -3285,6 +3286,11 @@ describe("web quality performance source contracts", () => {
   test("feed direct route defers heavy modals and detail panels until interaction", () => {
     const feedPageSource = source("app/feed/page.tsx");
     const feedContentSource = source("components/feed/FeedContent.tsx");
+    const authModalSource = source("components/auth/AuthModal.tsx");
+    expect(feedPageSource).toContain(
+      "hideFloatingButton={isAuthModalOpen || isRestaurantSheetOpen || isReviewModalOpen || !!restaurantToEdit}",
+    );
+    expect(authModalSource).toContain('className="break-keep"');
     const homeSidePanelsSource = source("app/home-client-sidepanels.tsx");
     const reviewModalSource = source("components/reviews/ReviewModal.tsx");
 
@@ -3676,9 +3682,7 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
-    expect(myPageProfileSource).toContain(
-      "완전 삭제는 복구할 수 없으며, 서버 미리보기와 읽기검증을 거칩니다.",
-    );
+    expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
       'className="min-w-0 md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:border-border/70 md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
@@ -3690,11 +3694,24 @@ describe("web quality performance source contracts", () => {
       'data-mypage-desktop-recent-activity-row="true"',
     );
     expect(myPageProfileSource).toContain("최근 활동");
-    expect(myPageProfileSource).toContain("취향 신호");
-    expect(myPageProfileSource).toContain("등급 핵심");
-    expect(myPageProfileSource).toContain("신뢰도 반영");
-    expect(myPageProfileSource).toContain("저장하고 작성한 기록");
-    expect(myPageProfileSource).toContain("새 맛집과 정보 수정");
+    expect(myPageProfileSource).toContain(
+      "flex min-h-0 min-w-0 items-center gap-3 py-2.5",
+    );
+    for (const tonalPanelClass of [
+      "rounded-2xl bg-muted/40 px-3 py-2.5",
+      "rounded-xl bg-muted/40 px-2.5 py-1.5",
+      "hidden rounded-2xl bg-muted/40 px-3 py-3 md:block",
+      "rounded-xl bg-background px-2 py-2",
+      "flex min-h-24 flex-col justify-between",
+      "rounded-2xl bg-amber-50/70 p-3",
+      "rounded-2xl bg-muted/40 p-3",
+    ]) {
+      expect(myPageProfileSource).not.toContain(tonalPanelClass);
+    }
+    expect(myPageProfileSource).toContain(
+      '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
+    );
+    expect(myPageProfileSource).toContain("등급 대시보드");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
     expect(myPageProfileSource).not.toContain(
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
@@ -3746,7 +3763,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain("truncate text-lg font-bold");
     expect(myPageProfileSource).toContain(
-      "truncate text-xs text-muted-foreground",
+      "truncate px-2 text-xs text-muted-foreground",
     );
     expect(myPageProfileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
     expect(myPageProfileSource).toContain("useUserProfile");

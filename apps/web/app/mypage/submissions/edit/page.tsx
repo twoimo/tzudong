@@ -39,8 +39,8 @@ import {
   myPageFooterMetaClass,
   myPageInfoPanelClass,
   myPageInlineLinkClass,
+  myPageItemGroupClass,
   myPageListCardClass,
-  myPageNestedCardClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
 
@@ -553,7 +553,7 @@ export default function EditSubmissionsPage() {
                 );
 
                 return (
-                  <div key={item.id} className={myPageNestedCardClass}>
+                  <div key={item.id} className={myPageItemGroupClass}>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <YouTubeIcon className="h-4 w-4 text-red-500 shrink-0" />

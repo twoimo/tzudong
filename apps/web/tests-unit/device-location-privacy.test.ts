@@ -479,6 +479,11 @@ test('home client keeps the capability boundary before disclosure and confines r
   expect(homeClientSource).toContain(
     '현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.',
   );
+  expect(homeClientSource).toContain('function describeDeviceLocationFailure');
+  expect(homeClientSource).toContain('위치 권한이 거부됐어요');
+  expect(homeClientSource).toContain('현재 위치를 찾는 시간이 초과됐어요');
+  expect(homeClientSource).toContain('현재 위치를 확인할 수 없어요');
+  expect(homeClientSource).toContain('toast.error(describeDeviceLocationFailure(error));');
   expect(naverMapSource).toContain(
     '// Renders authorized device coordinates at the approved map-provider boundary.',
   );

@@ -17,7 +17,8 @@ import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
 import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
-import { readPublicProfileSummaries } from '@/lib/public-profile-read';
+import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from '@/lib/public-profile-read';
+import { describeErrorCodeForLog } from '@/lib/debug-log';
 
 const ReviewModal = dynamic(
     () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
@@ -57,6 +58,8 @@ interface FeedReviewLikeRow {
 
 const FEED_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,like_count';
 const FEED_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road_address,jibun_address,english_address,phone,categories,review_count,youtube_link,tzuyang_review,youtube_meta,lat,lng,status,created_at,updated_at';
+const FEED_AUTO_RETRY_LIMIT = 1;
+const FEED_AUTO_RETRY_DELAY_MS = 2000;
 
 function getFeedRestaurantDisplayName(restaurant: FeedRestaurantRecord | null | undefined): string {
     return String(restaurant?.name || restaurant?.approved_name || '알 수 없음');
@@ -134,6 +137,7 @@ export default function FeedContent({
     const feedScrollRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loopAppendLockRef = useRef(false);
+    const autoRetryCountRef = useRef(0);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
@@ -242,6 +246,7 @@ export default function FeedContent({
         data: feedPages,
         fetchNextPage,
         hasNextPage,
+        isError,
         isLoading,
         isFetchingNextPage,
     } = useInfiniteQuery({
@@ -258,15 +263,18 @@ export default function FeedContent({
 
             const typedReviewsData = (reviewsData ?? []) as FeedReviewRow[];
 
-            if (reviewsError || typedReviewsData.length === 0) {
+            if (reviewsError) {
+                throw new Error('FEED_REVIEWS_UNAVAILABLE');
+            }
+            if (typedReviewsData.length === 0) {
                 return { reviews: [], nextCursor: null };
             }
 
             const userIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.user_id))];
             const restaurantIds = [...new Set(typedReviewsData.map((reviewRow) => reviewRow.restaurant_id))];
             const reviewIds = typedReviewsData.map((reviewRow) => reviewRow.id);
-            const [profilesData, restaurantsResult, userLikesResult] = await Promise.all([
-                readPublicProfileSummaries(supabase, userIds).catch(() => []),
+            const [profilesLookup, restaurantsResult, userLikesResult] = await Promise.all([
+                readPublicProfileSummariesLookup(supabase, userIds),
                 supabase
                     .from('restaurants')
                     .select(FEED_RESTAURANT_SELECT)
@@ -280,22 +288,24 @@ export default function FeedContent({
                     : Promise.resolve({ data: [] }),
             ]);
 
-            const profilesMap = new Map(profilesData.map((profileRow) =>
-                [profileRow.user_id, { nickname: profileRow.nickname, avatarUrl: profileRow.avatar_url }]
-            ));
-
             const restaurantsData = (restaurantsResult.data ?? []) as FeedRestaurantRecord[];
             const restaurantsMap = new Map<string, FeedRestaurantRecord>((restaurantsData || []).map((restaurantRow) => {
                 return [restaurantRow.id, normalizeFeedRestaurantRecord(restaurantRow)];
             }));
 
-            const reviewedRestaurantNames = [
-                ...new Set(
-                    [...restaurantsMap.values()]
-                        .map((restaurant) => String(restaurant.approved_name || restaurant.name || '').trim())
-                        .filter(Boolean)
-                ),
-            ];
+            // 리뷰가 붙은 식당이 모두 approved면 canonical 대체 조회 결과를 쓰지 않으므로 조회를 건너뜁니다.
+            const needsApprovedRestaurantLookup = restaurantIds.some(
+                (restaurantId) => restaurantsMap.get(restaurantId)?.status !== 'approved'
+            );
+            const reviewedRestaurantNames = needsApprovedRestaurantLookup
+                ? [
+                    ...new Set(
+                        [...restaurantsMap.values()]
+                            .map((restaurant) => String(restaurant.approved_name || restaurant.name || '').trim())
+                            .filter(Boolean)
+                    ),
+                ]
+                : [];
             const { data: approvedRestaurantRowsRaw } = reviewedRestaurantNames.length > 0
                 ? await supabase
                     .from('restaurants')
@@ -329,7 +339,11 @@ export default function FeedContent({
             }
 
             const reviews: FeedReview[] = typedReviewsData.map((reviewRow) => {
-                const profileInfo = (profilesMap.get(reviewRow.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
+                const profileInfo = resolvePublicReviewerDisplay(
+                    reviewRow.user_id,
+                    profilesLookup.summaries,
+                    profilesLookup.ok,
+                );
                 const restaurant = resolveFeedRestaurant(reviewRow);
                 return {
                     id: reviewRow.id,
@@ -337,8 +351,8 @@ export default function FeedContent({
                     restaurantId: restaurant?.id ?? reviewRow.restaurant_id,
                     restaurantName: getFeedRestaurantDisplayName(restaurant),
                     restaurant,
-                    userName: profileInfo.nickname || '탈퇴한 사용자',
-                    userAvatarUrl: profileInfo.avatarUrl,
+                    userName: profileInfo.nickname,
+                    userAvatarUrl: profileInfo.avatarUrl ?? undefined,
                     visitedAt: reviewRow.visited_at,
                     createdAt: reviewRow.created_at,
                     content: reviewRow.content,
@@ -358,8 +372,16 @@ export default function FeedContent({
         initialPageParam: 0,
     });
 
+    // Keep photo inputs stable across filtering, optimistic likes and loop appends.
+    const feedReviews = useMemo(() => (
+        feedPages?.pages.flatMap(page => page.reviews.map(review => ({
+            ...review,
+            cardPhotos: review.photos.map(url => ({ url, type: 'image' })),
+        }))) || []
+    ), [feedPages?.pages]);
+
     const allReviews = useMemo(() => {
-        let reviews = feedPages?.pages.flatMap(page => page.reviews) || [];
+        let reviews = feedReviews;
         if (showMyReviewsOnly && user?.id) {
             reviews = reviews.filter(review => review.userId === user.id);
         }
@@ -372,7 +394,7 @@ export default function FeedContent({
             );
         }
         return reviews;
-    }, [feedPages, showMyReviewsOnly, user?.id, debouncedQuery]);
+    }, [feedReviews, showMyReviewsOnly, user?.id, debouncedQuery]);
 
     const isLoopRepeatMode = !hasNextPage && allReviews.length > 0;
     const effectiveLoopItemCount = useMemo(() => {
@@ -406,6 +428,11 @@ export default function FeedContent({
 
     // 무한 스크롤
     const loadMore = useCallback(() => {
+        // 다음 페이지 요청이 실패한 상태에서는 관찰자가 즉시 재요청해 재시도 폭주를 만들지 않습니다.
+        if (isError) {
+            return;
+        }
+
         if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
             return;
@@ -421,7 +448,7 @@ export default function FeedContent({
                 loopAppendLockRef.current = false;
             }, 180);
         }
-    }, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage]);
+    }, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage, isError]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -439,6 +466,25 @@ export default function FeedContent({
 
         return () => observer.disconnect();
     }, [loadMore]);
+
+    // 다음 페이지 실패 시 자동 재요청은 오류 구간당 한 번만, 백오프를 두고 수행합니다.
+    // 실패가 계속되면 화면 하단의 명시적 재시도 버튼으로만 다시 요청합니다.
+    useEffect(() => {
+        if (!isError) {
+            autoRetryCountRef.current = 0;
+            return;
+        }
+        if (!hasNextPage || autoRetryCountRef.current >= FEED_AUTO_RETRY_LIMIT) {
+            return;
+        }
+
+        autoRetryCountRef.current += 1;
+        const retryTimer = setTimeout(() => {
+            fetchNextPage();
+        }, FEED_AUTO_RETRY_DELAY_MS);
+
+        return () => clearTimeout(retryTimer);
+    }, [isError, hasNextPage, fetchNextPage]);
 
     // 좋아요 토글
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number) => {
@@ -496,7 +542,7 @@ export default function FeedContent({
             }
             queryClient.invalidateQueries({ queryKey: [queryKey] });
         } catch (error) {
-            console.error('좋아요 토글 실패:');
+            console.error('좋아요 토글 실패:', describeErrorCodeForLog(error));
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
@@ -538,21 +584,24 @@ export default function FeedContent({
                 {/* 헤더 */}
                 {showHeader && (
                     <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                                <h1 className="flex min-w-0 flex-wrap items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                                    <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                    <span className="min-w-0 truncate">쯔동여지도 리뷰</span>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                                <h1 className={cn(
+                                    "flex min-w-0 items-center gap-1.5 font-semibold leading-tight",
+                                    isOverlay ? "text-base text-foreground" : "text-[1.0625rem] text-primary xs:text-xl sm:text-2xl"
+                                )}>
+                                    {!isOverlay && <MessageSquareText className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />}
+                                    <span className="min-w-0 truncate">{isOverlay ? "리뷰" : "쯔동여지도 리뷰"}</span>
                                     <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
                                         ({allReviews.length}개)
                                     </span>
                                 </h1>
-                                <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
+                                {!isOverlay && <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
                                     {isLoggedIn
                                         ? "맛집 방문 후기를 공유해보세요!"
                                         : "로그인하여 리뷰를 작성해보세요!"
                                     }
-                                </p>
+                                </p>}
                             </div>
                             <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                                 {isLoggedIn && (
@@ -581,6 +630,18 @@ export default function FeedContent({
                                 >
                                     <Filter className="h-4 w-4" aria-hidden="true" />
                                 </Button>
+                                {isOverlay && !hideFloatingButton && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleWriteReview}
+                                        className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                        title="리뷰 작성"
+                                        aria-label="리뷰 작성"
+                                    >
+                                        <Plus className="h-5 w-5" aria-hidden="true" />
+                                    </Button>
+                                )}
                                 {isOverlay && onClose && (
                                     <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="리뷰 패널 닫기">
                                         <X className="h-5 w-5" aria-hidden="true" />
@@ -611,11 +672,19 @@ export default function FeedContent({
                 {/* 피드 목록 */}
                 {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
                 <div className={cn(
-                    "flex-1 pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+2rem)] md:pb-8",
+                    "flex-1",
+                    !hideFloatingButton && !isOverlay
+                        ? "pb-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+5.5rem)] md:pb-28"
+                        : "pb-8",
                     isOverlay && "overflow-y-auto"
                 )}>
                     {isLoading ? (
                         <FeedSkeleton count={4} />
+                    ) : isError && allReviews.length === 0 ? (
+                        <div className="flex h-64 flex-col items-center justify-center text-muted-foreground" role="alert">
+                            <p>리뷰 데이터를 불러오지 못했습니다.</p>
+                            <p className="mt-1 text-sm">잠시 후 다시 시도해 주세요.</p>
+                        </div>
                     ) : allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>
@@ -641,7 +710,7 @@ export default function FeedContent({
                                             restaurantId: review.restaurantId,
                                             restaurantName: review.restaurantName,
                                             content: review.content,
-                                            photos: review.photos.map(p => ({ url: p, type: 'image' })),
+                                            photos: review.cardPhotos,
                                             visitedAt: review.visitedAt,
                                             submittedAt: review.createdAt,
                                             isVerified: true,
@@ -658,6 +727,19 @@ export default function FeedContent({
                                     />
                                 );
                             })}
+                            {isError && (
+                                <div className="flex justify-center py-2" role="alert">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => fetchNextPage()}
+                                        disabled={isFetchingNextPage}
+                                    >
+                                        다시 시도
+                                    </Button>
+                                </div>
+                            )}
                             <div ref={loadMoreRef} className={cn(
                                 "flex items-center justify-center",
                                 isFetchingNextPage ? "h-20" : "h-4"
@@ -674,15 +756,13 @@ export default function FeedContent({
                 </div>
 
                 {/* 플로팅 리뷰 작성 버튼 */}
-                {!hideFloatingButton && (() => {
+                {!hideFloatingButton && !isOverlay && (() => {
                     const FloatingButton = (
                         <Button
                             onClick={handleWriteReview}
                             className={cn(
-                                "h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90",
-                                isOverlay
-                                    ? "absolute right-8 bottom-8 z-[100]"
-                                    : "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
+                                "h-14 w-14 rounded-full shadow-sm bg-primary text-primary-foreground hover:bg-primary/90",
+                                "fixed right-4 bottom-[calc(var(--mobile-bottom-nav-effective-height,var(--mobile-bottom-nav-height,60px))+1rem)] z-[80] pointer-events-auto md:right-8 md:bottom-8"
                             )}
                             size="icon"
                             aria-label="리뷰 작성"
@@ -690,10 +770,7 @@ export default function FeedContent({
                             <Plus className="h-6 w-6" />
                         </Button>
                     );
-
-                    return isOverlay
-                        ? FloatingButton
-                        : (typeof document !== 'undefined' && createPortal(FloatingButton, document.body));
+                    return typeof document !== 'undefined' && createPortal(FloatingButton, document.body);
                 })()}
 
                 {/* 리뷰 작성 모달 */}

@@ -48,7 +48,7 @@ describe("G028 account deletion reauthentication UI contract", () => {
   test("removes the modal deletion path and redirects to the canonical profile dialog", () => {
     const modal = profileModal();
 
-    expect(modal).toContain("window.location.assign('/mypage/profile#account-deletion')");
+    expect(modal).toContain("router.push('/mypage/profile#account-deletion')");
     expect(modal).not.toContain("handleAccountDelete");
     expect(modal).not.toMatch(/\.from\(['\"](?:profiles|user_stats)['\"]\)\s*\.delete/);
   });

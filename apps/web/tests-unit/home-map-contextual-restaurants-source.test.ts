@@ -34,6 +34,24 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(naverMapSource).toContain('const hasExpandedClusterRestaurants = expandedClusterRestaurantIds.length > 0 && contextualRestaurants.length > 0;');
     expect(naverMapSource).toContain('const contextualRenderMode: HomeMapRenderMode = expandedClusterRestaurantIds.length > 0');
     expect(naverMapSource).toContain('const contextualIneligibilityReason = hasExpandedClusterRestaurants');
+    expect(naverMapSource).toContain('const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {');
+    expect(naverMapSource).toContain("filters.featuredTheme ?? '',");
+    const compositeMarkerRenderSource = naverMapSource.slice(
+      naverMapSource.indexOf('// ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 ====='),
+    );
+    expect(compositeMarkerRenderSource).toContain('renderExpandedClusterIndividuals(activeIds);');
+    expectSourceOrder(
+      compositeMarkerRenderSource,
+      'renderExpandedClusterIndividuals(activeIds);',
+      'if (seoulClustersToRender.length > 0) {',
+    );
+    expectSourceOrder(
+      compositeMarkerRenderSource,
+      'if (isCluster(feature)) {',
+      'if (shouldSkipExpandedClusterMarker(clusterRestaurantIds)) {',
+    );
+    expect(naverMapSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0 || shouldSkipExpandedClusterMarker');
+    expect(compositeMarkerRenderSource).not.toContain('if (expandedClusterRestaurantIdSet.size > 0) {');
     expect(naverMapSource).toContain("if (renderMode !== 'individual') return 'clustered-render-mode';");
     expect(naverMapSource).toContain('zoom < HOME_MAP_CONTEXTUAL_VISIBLE_RESTAURANTS_MIN_ZOOM');
 
@@ -160,7 +178,7 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('onClick={handleVisibleMarkerSheetRestore}');
     expect(mobileOverlaySource).toContain('aria-label="맛집 목록 다시 열기"');
     expect(mobileOverlaySource).toContain('title="맛집 목록 다시 열기"');
-    expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-lg');
+    expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-sm');
     expect(mobileOverlaySource).toContain('bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm');
     expect(mobileOverlaySource).toContain('<List className="h-5 w-5" aria-hidden="true" />');
     expect(mobileOverlaySource).not.toContain('목록 보기 ·');

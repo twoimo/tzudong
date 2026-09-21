@@ -123,6 +123,9 @@ describe("header action loading source contract", () => {
       "const displayName = profileMenuIdentity?.nickname ?? fallbackDisplayName",
     );
     expect(userMenuSource).not.toContain('.from("profiles")');
+    expect(userMenuSource).not.toContain('user.email?.split("@")[0]');
+    expect(userMenuSource).toContain("REJECTED_AUTH_DISPLAY_NAMES");
+    expect(userMenuSource).toContain("nightly ci");
     expect(userMenuSource).toContain(
       'className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary"',
     );

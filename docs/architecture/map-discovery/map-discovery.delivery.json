@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/Users/twoimo/.codex/worktrees/f825/tzudong/docs/architecture/map-discovery/map-discovery.workflow.json",
+  "output": "/Users/twoimo/.codex/worktrees/f825/tzudong/docs/architecture/map-discovery/map-discovery.html",
+  "specification": {
+    "sha256": "c24dc6ef513defb08227b48d3b4f77a6d20c5b9bb3b3c990c43efbaaec62fb03",
+    "bytes": 4599
+  },
+  "artifact": {
+    "sha256": "a001a94a8441ed7cf74c38bf5fd4e7882df2f929a363e39c37c908edd7eb47b2",
+    "bytes": 813881
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

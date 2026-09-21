@@ -113,7 +113,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 type AssetContext = { params: Promise<{ id: string; assetId: string }> };
 type AdminAuth = () => Promise<{ ok: true; userId: string } | { ok: false; response: Response }>;
 type StoreApi = Pick<StoryboardProductionStore, 'list' | 'get' | 'create' | 'apply' | 'importImage'
-  | 'downloadAsset' | 'exportProject' | 'workerOperation' | 'workerImage'>;
+  | 'downloadAsset' | 'exportProject' | 'workerOperation' | 'workerImage' | 'versions'>;
 
 /** Dependency injection is restricted to tests; route files use the authenticated server defaults. */
 export function createStoryboardProductionApi(options: {
@@ -139,8 +139,16 @@ export function createStoryboardProductionApi(options: {
   return {
     listGET: (request: Request) => admin(request, async (owner) => json(await store.list(owner))),
     listPOST: (request: Request) => admin(request, async (owner) => json(await store.create(owner, await boundedJson(request)))),
-    projectGET: (request: Request, context: RouteContext) => admin(request, async (owner) =>
-      json(await store.get(owner, parse(productionUuid, (await context.params).id)))),
+    projectGET: (request: Request, context: RouteContext) => admin(request, async (owner) => {
+      const id = parse(productionUuid, (await context.params).id);
+      const query = new URL(request.url).searchParams;
+      if (query.get('versions') === '1') {
+        const raw = query.get('targetRevision');
+        const target = raw === null ? undefined : parse(z.number().int().nonnegative(), Number(raw));
+        return json(await store.versions(owner, id, target));
+      }
+      return json(await store.get(owner, id));
+    }),
     projectPOST: (request: Request, context: RouteContext) => admin(request, async (owner) => {
       const id = parse(productionUuid, (await context.params).id);
       return json(await store.apply(owner, id, await boundedJson(request)));
