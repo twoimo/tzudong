@@ -1,0 +1,158 @@
+{
+  "generatedAt": "2026-09-22",
+  "target": "/mypage/profile, /mypage/bookmarks, /mypage/reviews, /mypage/submissions/new, /mypage/submissions/edit, /mypage/submissions/recommend",
+  "method": {
+    "session": "local dev server http://127.0.0.1:3000 (next-server, existing process), signed in as twoimo@dgu.ac.kr (쯔동마스터, 도장 2 / 리뷰 7 / 좋아요 7)",
+    "viewport": "Chrome DevTools Protocol Emulation.setDeviceMetricsOverride at 390/768/1024/1280/1536/1920 in a fresh navigation per route; the in-app browser surface is 882px wide, so >=1024 was read through element geometry (getBoundingClientRect + getComputedStyle) instead of pixels",
+    "probes": [
+      "clipping: any element with overflow-x|y hidden|clip whose scrollWidth/scrollHeight exceeds clientWidth/clientHeight by more than 2px (sr-only/truncate/line-clamp skipped as intentional)",
+      "ellipsis: any element carrying truncate or line-clamp-* whose scrollWidth exceeds clientWidth by more than 1px, i.e. text the reader cannot see",
+      "tracks: getComputedStyle(grid).gridTemplateColumns track count of the list grid and the profile matrix"
+    ]
+  },
+  "before": {
+    "profileMatrix": {
+      "width768": {
+        "tracks": "207.5px 207.5px",
+        "tierHeadline": {
+          "clientWidth": 130,
+          "scrollWidth": 155,
+          "text": "🥉 브론즈까지 인증 리뷰 5개"
+        }
+      },
+      "note": "the 256px sidebar leaves 465px at 768, so md:grid-cols-2 gave each dashboard card ~208px and the tier headline was cut to 브론즈까지 인증…"
+    },
+    "bookmarksCards": {
+      "tracks": {
+        "390": "366px",
+        "768": "465px",
+        "1024": "358px 358px",
+        "1280": "486px 486px",
+        "1440": "566px 566px",
+        "1536": "405px 405px 405px"
+      },
+      "ellipsis": [
+        {
+          "width": 768,
+          "target": "title HÚS-HENTESÁRU SZAKÜZLET",
+          "clientWidth": 243,
+          "scrollWidth": 246
+        },
+        {
+          "width": 1024,
+          "target": "title HÚS-HENTESÁRU SZAKÜZLET",
+          "clientWidth": 136,
+          "scrollWidth": 246
+        },
+        {
+          "width": 1024,
+          "target": "address 경기도 김포시 하성면 마조로54번길 6-19",
+          "clientWidth": 180,
+          "scrollWidth": 246
+        },
+        {
+          "width": 1536,
+          "target": "address 경기도 김포시 하성면 마조로54번길 6-19",
+          "clientWidth": 227,
+          "scrollWidth": 246
+        }
+      ],
+      "note": "two-up at lg leaves a 136px title column and a 180px address column next to the 128px thumbnail; three-up at 2xl still cuts the 246px address"
+    },
+    "submissionsListGrid": {
+      "width768": {
+        "oldSpan": "md:col-span-2 xl:col-span-3",
+        "tracks": "231.25px 228.75px",
+        "cardWidths": [
+          231,
+          229,
+          231,
+          472
+        ]
+      },
+      "note": "the surface grid declares columns only from lg, so grid-column: span 2 created two implicit md tracks and halved every submission card at 768-1023"
+    }
+  },
+  "after": {
+    "profileMatrixTracks": {
+      "390": 1,
+      "768": 1,
+      "1024": 2,
+      "1280": 2,
+      "1536": 3,
+      "1920": 3
+    },
+    "profileCardWidths": {
+      "768": 431,
+      "1024": 334,
+      "1280": 462,
+      "1536": 394,
+      "1920": 522
+    },
+    "profileConsentCard": {
+      "1536": "394x504 (spans rows 1-2 in the third track)",
+      "1920": "522x504"
+    },
+    "profilePageHeight": {
+      "1024": 958,
+      "1280": 958,
+      "1536": 538,
+      "1920": 538
+    },
+    "bookmarkListTracks": {
+      "390": 1,
+      "768": 1,
+      "1024": 1,
+      "1280": 2,
+      "1536": 2,
+      "1920": 2
+    },
+    "bookmarkCardWidths": {
+      "390": 366,
+      "768": 465,
+      "1024": 713,
+      "1280": 486,
+      "1440": 566,
+      "1536": 614,
+      "1760": 726,
+      "1920": 806
+    },
+    "submissionsListTracks": {
+      "768": "472px (1 track)",
+      "1024": "358px 358px",
+      "1536": "405px 405px 405px",
+      "1920": "533px 533px 533px"
+    },
+    "sweep": {
+      "routesChecked": 6,
+      "widthsChecked": 6,
+      "combos": 36,
+      "clippedContainers": 0,
+      "documentOverflow": "documentElement.scrollWidth == clientWidth at every route and width",
+      "ellipsisRemaining": [
+        {
+          "route": "/mypage/bookmarks",
+          "width": 768,
+          "target": "title HÚS-HENTESÁRU SZAKÜZLET",
+          "clientWidth": 243,
+          "scrollWidth": 246,
+          "note": "3px; the title keeps its intentional single-line ellipsis"
+        }
+      ]
+    }
+  },
+  "changes": [
+    "app/mypage/profile/page.tsx: the dashboard matrix (grid-cols-2, auto-rows-auto, content-stretch, items-stretch, col-start/row-start, h-full, min-h-0, overflow-hidden) moved from md to lg; 2xl:grid-cols-3 with the consent card on 2xl:col-start-3 2xl:col-span-1 2xl:row-span-2 2xl:row-start-1",
+    "components/mypage/MyPageSectionFrame.tsx: new myPageResponsiveMediaListClass = \"grid gap-3 xl:grid-cols-2\"",
+    "app/mypage/bookmarks/page.tsx: uses myPageResponsiveMediaListClass and xl:col-span-2 on the load-more row",
+    "app/mypage/submissions/{new,edit,recommend}/page.tsx: load-more row md:col-span-2 xl:col-span-3 -> lg:col-span-2 2xl:col-span-3",
+    "tests-unit/mypage-mobile-cleanup-contract.test.ts, tests-unit/web-quality-performance-source.test.ts, tests-unit/mobile-desktop-parity-source.test.ts: contract assertions updated to the lg matrix, the media list class, and the submission row span"
+  ],
+  "checks": {
+    "unitCore": "npm run test:unit: 2313 pass, 1 skip, 0 fail (2314 tests, 318 files)",
+    "unitSecondary": "150 pass, 8 skip, 0 fail (158 tests, 9 files)",
+    "lint": "npm run lint exit 0",
+    "typecheckParity": "npm run typecheck:parity: 0 diagnostics",
+    "note": "one earlier pass reported a single unrelated failure that did not reproduce on the two following runs; local rendering does not establish hosted or production rendering"
+  }
+}

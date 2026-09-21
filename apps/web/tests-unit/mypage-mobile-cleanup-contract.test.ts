@@ -188,7 +188,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
     expect(profileSource).toContain(
-      'className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0"',
+      'className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"',
     );
     expect(profileSource).toContain('data-mypage-profile-main-column="true"');
     expect(profileSource).toContain(
@@ -210,8 +210,8 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('data-mypage-profile-viewport-fit="content"');
     expect(profileSource).toContain('data-mypage-profile-matrix="content-2x2"');
     expect(profileSource).toContain('data-mypage-profile-matrix-size="content-track"');
-    expect(profileSource).toContain("md:min-h-0");
-    expect(profileSource).toContain("md:content-stretch md:items-stretch");
+    expect(profileSource).toContain("lg:min-h-0");
+    expect(profileSource).toContain("lg:content-stretch lg:items-stretch");
     expect(profileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
     );
@@ -242,9 +242,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain(
       'variant="ghost"\n          className="h-9 w-full rounded-xl text-xs"',
     );
-    expect(profileSource).toContain("md:h-full");
+    expect(profileSource).toContain("lg:h-full");
     // The page surface must stay content-sized: pinning two viewport rows
-    // clipped the password form inside its card.
+    // clipped the password form inside its card. The matrix breakpoint is lg
+    // because md leaves ~431px, where two tracks squeezed the tier headline.
     expect(profilePageSurfaceClass(profileSource)).toContain(
       "rounded-2xl border border-border/70",
     );
@@ -253,9 +254,9 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profilePageSurfaceClass(profileSource)).not.toContain("md:h-full");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
-    expect(profileSource).toContain(
-      "md:grid-cols-2",
-    );
+    expect(profileSource).toContain("lg:grid-cols-2");
+    expect(profileSource).toContain("2xl:grid-cols-3");
+    expect(profileSource).not.toContain("md:grid-cols-2");
     expect(profileSource).toContain(
       "lg:gap-3",
     );
@@ -301,10 +302,10 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(profileSource).not.toContain("진행 전 확인");
     expect(profileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).toContain(
-      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
@@ -401,7 +402,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const profileSource = source("app/mypage/profile/page.tsx");
 
     expect(profileSource).toContain(
-      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"',
+      'className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"',
     );
     expect(profileSource).toContain('data-mypage-profile-page="true"');
 
@@ -518,7 +519,7 @@ describe("mypage mobile cleanup source contracts", () => {
       expect(sectionSource).toContain("<MyPageEmptyState");
       expect(sectionSource).toContain("<MyPageErrorState");
       expect(sectionSource).toContain("myPageListCardClass");
-      expect(sectionSource).toContain("myPageResponsiveListClass");
+      expect(sectionSource).toMatch(/myPageResponsive(?:Media)?ListClass/);
       expect(sectionSource).toContain("myPageCardTitleClass");
       expect(sectionSource).toContain("data-mypage-responsive-list");
       expect(sectionSource).not.toContain('className="space-y-6"');
@@ -575,7 +576,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(profileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(profileSource).not.toContain("계정 위험 작업");
     expect(profileSource).not.toContain(
@@ -650,11 +651,29 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).toContain(
       '"grid gap-3 lg:grid-cols-2 2xl:grid-cols-3"',
     );
+    // A card that pairs a 128px thumbnail with text needs a wider track: at lg
+    // the text column fell to ~180px and ellipsized the title and address, so
+    // the media list waits for xl and never adds a third track.
+    expect(sectionFrameSource).toContain('"grid gap-3 xl:grid-cols-2"');
     expect(sectionFrameSource).not.toContain("md:grid-cols-2");
 
     // Load-more rows must span the same track count as the list grid.
-    expect(bookmarksSource).toContain("lg:col-span-2 2xl:col-span-3");
+    expect(bookmarksSource).toContain("myPageResponsiveMediaListClass");
+    expect(bookmarksSource).toContain("xl:col-span-2");
+    expect(bookmarksSource).not.toContain("2xl:col-span-3");
+    expect(reviewsSource).toContain("myPageResponsiveListClass");
     expect(reviewsSource).toContain("lg:col-span-2 2xl:col-span-3");
+    for (const submissionsPath of [
+      "app/mypage/submissions/new/page.tsx",
+      "app/mypage/submissions/edit/page.tsx",
+      "app/mypage/submissions/recommend/page.tsx",
+    ]) {
+      // md:col-span-* inside a grid without explicit md columns created two
+      // implicit tracks, halving every submission card on tablet.
+      const submissionsSource = source(submissionsPath);
+      expect(submissionsSource).toContain("lg:col-span-2 2xl:col-span-3");
+      expect(submissionsSource).not.toContain("md:col-span-2");
+    }
 
     // Cards that mix a thumbnail with text must let the text column shrink
     // and keep the action button fixed instead of overflowing the card.

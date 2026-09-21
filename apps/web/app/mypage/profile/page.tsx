@@ -984,7 +984,7 @@ export default function ProfilePage() {
 
   return (
     <div
-      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:grid-cols-2 md:auto-rows-auto md:content-stretch md:items-stretch md:rounded-3xl lg:gap-3"
+      className="grid min-w-0 gap-3 rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm sm:gap-4 sm:p-4 md:rounded-3xl lg:grid-cols-2 lg:auto-rows-auto lg:content-stretch lg:items-stretch lg:gap-3 2xl:grid-cols-3"
       data-mypage-profile-page="true"
       data-mypage-profile-density="dashboard-matrix"
       data-mypage-profile-viewport-fit="content"
@@ -1195,7 +1195,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 md:col-start-1 md:row-start-1 md:h-full md:min-h-0"
+          className="overflow-hidden rounded-2xl border-0 bg-muted/35 shadow-none md:order-1 lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0"
           data-mypage-next-actions="true"
           data-mypage-quick-actions="combined"
         >
@@ -1328,7 +1328,7 @@ export default function ProfilePage() {
         </Card>
 
         <Card
-          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
+          className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-desktop-recent-activity="true"
         >
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
@@ -1368,7 +1368,7 @@ export default function ProfilePage() {
       >
         {/* 비밀번호 변경 */}
         <Card
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-password-card="full-width"
         >
           <CardHeader className="shrink-0 lg:p-3 lg:pb-1.5">
@@ -1506,7 +1506,7 @@ export default function ProfilePage() {
 
         <Card
           aria-label="선택 마케팅 수신 설정"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 md:col-span-2 md:row-start-3"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-5 lg:col-span-2 lg:row-start-3 2xl:col-span-1 2xl:col-start-3 2xl:row-span-2 2xl:row-start-1"
           data-privacy-consent-settings="true"
         >
           <CardContent className="space-y-4 p-4 lg:p-4">
@@ -1657,7 +1657,7 @@ export default function ProfilePage() {
 
         <Card
           id="account-deletion"
-          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"
+          className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-danger-zone="true"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >

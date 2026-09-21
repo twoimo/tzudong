@@ -3617,9 +3617,9 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain(
       'data-mypage-profile-viewport-fit="content"',
     );
-    expect(myPageProfileSource).toContain("md:min-h-0");
+    expect(myPageProfileSource).toContain("lg:min-h-0");
     expect(myPageProfileSource).toContain(
-      "md:content-stretch md:items-stretch",
+      "lg:content-stretch lg:items-stretch",
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-profile-account-column="true"',
@@ -3643,13 +3643,13 @@ describe("web quality performance source contracts", () => {
     expect(myPageSidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
-    expect(myPageProfileSource).toContain("md:h-full");
+    expect(myPageProfileSource).toContain("lg:h-full");
     // Rows stay content-sized so the password form is never clipped.
     expect(myPageProfileSource).not.toContain("md:grid-rows-2");
     expect(myPageProfileSource).not.toContain(
       "lg:max-h-[calc(100dvh-6.25rem)]",
     );
-    expect(myPageProfileSource).toContain("md:grid-cols-2");
+    expect(myPageProfileSource).toContain("lg:grid-cols-2");
     expect(myPageProfileSource).toContain("lg:gap-3");
     expect(myPageProfileSource).toContain("md:order-1");
     expect(myPageProfileSource).toContain("md:order-2");
@@ -3683,10 +3683,10 @@ describe("web quality performance source contracts", () => {
     expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");
     expect(myPageProfileSource).not.toContain("진행 전 확인");
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:col-start-2 md:row-start-1 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-2 md:flex md:flex-col lg:col-start-2 lg:row-start-1 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(myPageProfileSource).toContain(
-      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:col-start-1 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="hidden min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-3 md:flex md:flex-col lg:col-start-1 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(myPageProfileSource).toContain(
       'data-mypage-desktop-recent-activity-row="true"',
@@ -3853,7 +3853,7 @@ describe("web quality performance source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(myPageProfileSource).not.toContain("계정 위험 작업");
     expect(myPageProfileSource).not.toContain(

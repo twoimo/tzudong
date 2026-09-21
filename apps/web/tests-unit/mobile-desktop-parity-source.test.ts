@@ -897,7 +897,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
