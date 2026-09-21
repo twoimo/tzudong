@@ -39,6 +39,23 @@ const preparedNameCache = new WeakMap<object, PreparedLookupNames>();
 const preparedRestaurantAddressCache = new WeakMap<object, PreparedLookupAddresses>();
 const preparedCandidateAddressCache = new WeakMap<object, PreparedLookupAddresses>();
 
+// 후보 스캔 비용을 배포 없이 정량 확인하기 위한 진단 카운터입니다(맛집 병합 카운터와 같은 방식).
+const reviewLookupPerfCounters = {
+    candidateVisits: 0,
+    nameGates: 0,
+    addressGates: 0,
+};
+
+export function getReviewLookupPerfCounters() {
+    return { ...reviewLookupPerfCounters };
+}
+
+export function resetReviewLookupPerfCounters() {
+    reviewLookupPerfCounters.candidateVisits = 0;
+    reviewLookupPerfCounters.nameGates = 0;
+    reviewLookupPerfCounters.addressGates = 0;
+}
+
 function getLookupName(restaurant: ReviewLookupNameFields): string {
     return (restaurant.name || restaurant.approved_name || restaurant.naver_name || restaurant.origin_name || restaurant.google_name || '').trim();
 }
@@ -142,6 +159,17 @@ function hasCompatibleLookupName(source: PreparedLookupNames, candidate: Prepare
     )));
 }
 
+// 주소 집합을 배열로 펼치지 않고 교집합 여부만 확인합니다(후보마다 배열 할당을 만들지 않는다).
+function sharesLookupAddress(candidateAddresses: Set<string>, lookupAddresses: Set<string>): boolean {
+    if (candidateAddresses.size === 0) return false;
+
+    for (const address of candidateAddresses) {
+        if (lookupAddresses.has(address)) return true;
+    }
+
+    return false;
+}
+
 
 export function normalizeReviewLookupAddress(address: string | null | undefined): string {
     return (address || '')
@@ -191,28 +219,35 @@ export function selectRelatedRestaurantReviewIds(
 
     const lookupNames = prepareLookupNames(restaurant);
     const lookupAddresses = prepareRestaurantLookupAddresses(restaurant).addresses;
+    const hasLookupNames = lookupNames.names.length > 0;
+    const requiresAddresslessCandidate = lookupAddresses.size === 0;
 
     candidates.forEach((candidate) => {
         if (!candidate || !candidate.id) return;
+        reviewLookupPerfCounters.candidateVisits += 1;
+        if (ids.has(candidate.id)) return;
 
-        const candidateNames = prepareLookupNames(candidate);
-        if (
-            lookupNames.names.length > 0 &&
-            candidateNames.names.length > 0 &&
-            !hasCompatibleLookupName(lookupNames, candidateNames)
-        ) {
+        reviewLookupPerfCounters.addressGates += 1;
+        const candidateAddresses = prepareCandidateLookupAddresses(candidate).addresses;
+        // 주소 게이트가 먼저 실패하면 비싼 이름 호환 검사를 아예 계산하지 않는다.
+        const hasAddressMatch = requiresAddresslessCandidate
+            ? candidateAddresses.size === 0
+            : sharesLookupAddress(candidateAddresses, lookupAddresses);
+        if (!hasAddressMatch) return;
+
+        if (!hasLookupNames) {
+            ids.add(candidate.id);
             return;
         }
 
-        const candidateAddresses = prepareCandidateLookupAddresses(candidate).addresses;
-        const hasAddressMatch =
-            lookupAddresses.size === 0
-                ? candidateAddresses.size === 0
-                : [...candidateAddresses].some((address) => lookupAddresses.has(address));
-
-        if (hasAddressMatch) {
+        const candidateNames = prepareLookupNames(candidate);
+        if (candidateNames.names.length === 0) {
             ids.add(candidate.id);
+            return;
         }
+
+        reviewLookupPerfCounters.nameGates += 1;
+        if (hasCompatibleLookupName(lookupNames, candidateNames)) ids.add(candidate.id);
     });
 
     return [...ids];

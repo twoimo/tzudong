@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2026-09-21T09:48:32.654Z",
+  "workload": {
+    "sourceRestaurants": 400,
+    "candidates": 1200,
+    "candidateVisitsPerSweep": 480000,
+    "repetitions": 5
+  },
+  "equivalence": "identical",
+  "resultCount": 5260,
+  "old": {
+    "label": "before-name-gate-first",
+    "medianMs": 312.78,
+    "p95Ms": 323.35,
+    "candidateVisitsPerSweep": 480000,
+    "nameGatesPerSweep": 480000
+  },
+  "new": {
+    "label": "after-address-gate-first",
+    "medianMs": 31.82,
+    "p95Ms": 36.65,
+    "candidateVisitsPerSweep": 480000,
+    "nameGatesPerSweep": 12852,
+    "allocationFreeAddressGate": true
+  },
+  "newWarm": {
+    "label": "after-warm-cache",
+    "medianMs": 36.17,
+    "p95Ms": 39.96
+  },
+  "ratio": {
+    "candidateVisitsReducedBy": 1,
+    "nameGatesReducedBy": 37.34827264239029,
+    "speedupByMedian": 9.83,
+    "speedupByP95": 8.82
+  }
+}
