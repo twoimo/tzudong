@@ -24,12 +24,23 @@ describe('피드 무한 스크롤 실패 처리', () => {
 });
 
 describe('도장 무한 스크롤 중복 트리거', () => {
-    test('스탬프 페이지와 오버레이는 센티널 observer만 load-more를 호출한다', () => {
-        expect(stampSource.match(/loadMoreRestaurants\(\);/g)).toHaveLength(1);
+    test('스탬프 페이지는 센티널 observer와 스크롤 폴백으로, 오버레이는 observer만 load-more를 호출한다', () => {
+        // 스탬프 페이지는 IntersectionObserver 콜백을 전달하지 않는 임베디드 웹뷰를 위해
+        // 스크롤 컨테이너의 onScroll 핸들러에서도 같은 여유(240px)로 다음 페이지를 요청한다.
+        expect(stampSource.match(/loadMoreRestaurants\(\);/g)).toHaveLength(2);
+        expect(stampSource).toContain('const STAMP_LOAD_MORE_SCROLL_MARGIN = 240;');
+        expect(stampSource).toContain('scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight');
         expect(stampOverlaySource.match(/loadMoreRestaurants\(\);/g)).toHaveLength(1);
         expect(stampSource).not.toContain("addEventListener('scroll', loadMoreIfNearEnd");
         expect(stampOverlaySource).not.toContain("addEventListener('scroll', loadMoreIfNearEnd");
         expect(stampOverlaySource).not.toContain('onScroll={handleScroll}');
+    });
+
+    test('옵저버와 스크롤 폴백이 같은 프레임에 겹쳐도 페이지를 두 번 건너뛰지 않는다', () => {
+        expect(stampSource).toContain('if (!hasMoreToDisplay || loadMorePendingRef.current) return;');
+        expect(stampSource).toContain('loadMorePendingRef.current = true;');
+        expect(stampSource).toContain('loadMorePendingRef.current = false;');
+        expect(stampSource).toContain('}, [displayLimit]);');
     });
 });
 
