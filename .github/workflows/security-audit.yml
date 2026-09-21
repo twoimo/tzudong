@@ -179,6 +179,8 @@ on:
       - 'backend/utils/tests/test_layout_naming_source_recovery.py'
       - 'backend/utils/tests/test_platform_modernization_reconciliation.py'
       - 'backend/utils/tests/test_supply_chain_contract.py'
+      - 'backend/utils/duplicate_checker.py'
+      - 'backend/utils/tests/test_duplicate_checker_jsonl.py'
   schedule:
     - cron: '0 17 * * 1'
   workflow_dispatch:
@@ -319,6 +321,7 @@ jobs:
           python -m unittest
           backend.utils.tests.test_operational_source_recovery
           backend.utils.tests.test_platform_modernization_reconciliation
+          backend.utils.tests.test_duplicate_checker_jsonl
           backend.bin.tests.test_observability_up_unittest
           backend.bin.tests.test_metrics_contract_report_unittest
           backend.bin.tests.test_check_deployment_descriptor_set_unittest
