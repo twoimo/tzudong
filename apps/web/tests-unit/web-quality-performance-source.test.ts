@@ -3677,9 +3677,6 @@ describe("web quality performance source contracts", () => {
       'data-mypage-desktop-recent-activity="true"',
     );
     expect(myPageProfileSource).toContain(
-      'data-mypage-password-guidance="true"',
-    );
-    expect(myPageProfileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
     expect(myPageProfileSource).toContain("완전 삭제는 복구할 수 없습니다.");

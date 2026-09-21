@@ -1285,7 +1285,7 @@ export default function ProfilePage() {
             </div>
 
             <dl
-              className="grid shrink-0 grid-cols-2 gap-3 border-t border-border/60 pt-3"
+              className="grid shrink-0 grid-cols-2 gap-3"
               data-mypage-desktop-tier-metrics="true"
               data-mypage-desktop-tier-action-guide="true"
             >
@@ -1316,7 +1316,7 @@ export default function ProfilePage() {
           <CardHeader className="shrink-0 pb-3 lg:p-3 lg:pb-1.5">
             <CardTitle className="text-base">최근 활동</CardTitle>
           </CardHeader>
-          <CardContent className="grid min-h-0 flex-1 divide-y divide-border/60 md:grid-rows-3 lg:p-3 lg:pt-0">
+          <CardContent className="grid min-h-0 flex-1 md:grid-rows-3 lg:p-3 lg:pt-0">
             {recentActivityItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -1466,31 +1466,12 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div
-                className="hidden space-y-2 border-t border-border/60 pt-3 md:block"
-                data-mypage-password-guidance="true"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-semibold text-foreground">
-                    안전한 비밀번호 기준
-                  </p>
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    변경 전 확인
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-[11px] text-muted-foreground">
-                  <span className="truncate">8-12자</span>
-                  <span className="truncate">현재 비밀번호</span>
-                  <span className="truncate">재입력 일치</span>
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 disabled={
                   loading || !currentPassword || !newPassword || !confirmPassword
                 }
-                className="w-full border border-transparent md:mt-auto lg:h-9 disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+                className="w-full md:mt-auto lg:h-9 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               >
                 {loading ? (
                   <>
@@ -1520,7 +1501,7 @@ export default function ProfilePage() {
             )}
             {consentError && (
               <div
-                className="flex flex-col gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-xl bg-destructive/5 px-3 py-2.5 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between"
                 role="alert"
                 data-privacy-consent-retry="true"
               >
@@ -1553,9 +1534,11 @@ export default function ProfilePage() {
                 <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
                   일반 마케팅 수신
                 </h2>
-                <Badge variant="secondary">선택</Badge>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  선택
+                </span>
               </div>
-              <div className="divide-y divide-border/60">
+              <div className="space-y-1">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.ordinary[channel.id] === true;
                   const action: ConsentAction = {
@@ -1568,15 +1551,15 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-w-0 items-center gap-2 py-2"
+                      className="flex min-w-0 items-center gap-3 py-1.5"
                       data-privacy-consent-row={`ordinary-${channel.id}`}
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
                         {channel.label}
                       </span>
-                      <Badge variant={enabled ? "default" : "secondary"} className="shrink-0">
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
                         {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                      </Badge>
+                      </span>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
@@ -1599,7 +1582,7 @@ export default function ProfilePage() {
             </section>
 
             <section
-              className="space-y-1 border-t border-border/60 pt-4"
+              className="space-y-1 pt-2"
               aria-labelledby="night-marketing-consent-title"
               data-privacy-consent-group="night"
             >
@@ -1607,9 +1590,11 @@ export default function ProfilePage() {
                 <h2 id="night-marketing-consent-title" className="text-sm font-semibold">
                   야간 마케팅 수신
                 </h2>
-                <Badge className="bg-amber-600 text-white hover:bg-amber-600">별도 선택</Badge>
+                <span className="text-[11px] font-semibold text-amber-600">
+                  별도 선택
+                </span>
               </div>
-              <div className="divide-y divide-border/60">
+              <div className="space-y-1">
                 {CONSENT_CHANNEL_OPTIONS.map((channel) => {
                   const enabled = consentSettings?.consents.night[channel.id] === true;
                   const action: ConsentAction = {
@@ -1622,15 +1607,15 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={channel.id}
-                      className="flex min-w-0 items-center gap-2 py-2"
+                      className="flex min-w-0 items-center gap-3 py-1.5"
                       data-privacy-consent-row={`night-${channel.id}`}
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">
                         {channel.label}
                       </span>
-                      <Badge variant={enabled ? "default" : "secondary"} className="shrink-0">
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
                         {unknown ? "확인 전" : enabled ? "동의함" : "동의 안 함"}
-                      </Badge>
+                      </span>
                       <Button
                         type="button"
                         variant={enabled ? "outline" : "default"}
@@ -1681,7 +1666,7 @@ export default function ProfilePage() {
                 </p>
                 {deletionProgressMessage && (
                   <p
-                    className="rounded-md border border-amber-500/40 bg-amber-50/60 p-3 text-xs leading-5 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
+                    className="rounded-md bg-amber-50/60 p-3 text-xs leading-5 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
                     data-account-deletion-status="recoverable"
                     role="status"
                   >
