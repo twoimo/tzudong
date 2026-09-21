@@ -13,6 +13,7 @@ import {
     type HomeMapThemeFilterId,
 } from "@/lib/home-map-theme-filters";
 import { enrichRestaurantsWithHomeMapYoutubeKpiMetrics } from "@/lib/home-map-youtube-kpi";
+import { describeErrorCodeForLog } from "@/lib/debug-log";
 
 
 type DBRestaurant = Tables<"restaurants">;
@@ -703,7 +704,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             try {
                 data = await fetchSupabaseRows<RestaurantWithOptionalName>('restaurants', query);
             } catch (error) {
-                console.error('레스토랑 데이터 조회 실패:', error);
+                console.error('레스토랑 데이터 조회 실패:', describeErrorCodeForLog(error));
                 throw error;
             }
 

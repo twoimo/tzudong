@@ -18,6 +18,7 @@ import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
 import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from '@/lib/public-profile-read';
+import { describeErrorCodeForLog } from '@/lib/debug-log';
 
 const ReviewModal = dynamic(
     () => import('@/components/reviews/ReviewModal').then((mod) => ({ default: mod.ReviewModal })),
@@ -57,6 +58,8 @@ interface FeedReviewLikeRow {
 
 const FEED_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,like_count';
 const FEED_RESTAURANT_SELECT = 'id,name:approved_name,approved_name,road_address,jibun_address,english_address,phone,categories,review_count,youtube_link,tzuyang_review,youtube_meta,lat,lng,status,created_at,updated_at';
+const FEED_AUTO_RETRY_LIMIT = 1;
+const FEED_AUTO_RETRY_DELAY_MS = 2000;
 
 function getFeedRestaurantDisplayName(restaurant: FeedRestaurantRecord | null | undefined): string {
     return String(restaurant?.name || restaurant?.approved_name || '알 수 없음');
@@ -134,6 +137,7 @@ export default function FeedContent({
     const feedScrollRef = useRef<HTMLDivElement>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loopAppendLockRef = useRef(false);
+    const autoRetryCountRef = useRef(0);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
@@ -424,6 +428,11 @@ export default function FeedContent({
 
     // 무한 스크롤
     const loadMore = useCallback(() => {
+        // 다음 페이지 요청이 실패한 상태에서는 관찰자가 즉시 재요청해 재시도 폭주를 만들지 않습니다.
+        if (isError) {
+            return;
+        }
+
         if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
             return;
@@ -439,7 +448,7 @@ export default function FeedContent({
                 loopAppendLockRef.current = false;
             }, 180);
         }
-    }, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage]);
+    }, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage, isError]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -457,6 +466,24 @@ export default function FeedContent({
 
         return () => observer.disconnect();
     }, [loadMore]);
+
+    // 다음 페이지 실패 시 자동 재요청은 오류 구간당 한 번만, 백오프를 두고 수행합니다.
+    useEffect(() => {
+        if (!isError) {
+            autoRetryCountRef.current = 0;
+            return;
+        }
+        if (!hasNextPage || autoRetryCountRef.current >= FEED_AUTO_RETRY_LIMIT) {
+            return;
+        }
+
+        autoRetryCountRef.current += 1;
+        const retryTimer = setTimeout(() => {
+            fetchNextPage();
+        }, FEED_AUTO_RETRY_DELAY_MS);
+
+        return () => clearTimeout(retryTimer);
+    }, [isError, hasNextPage, fetchNextPage]);
 
     // 좋아요 토글
     const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number) => {
@@ -514,7 +541,7 @@ export default function FeedContent({
             }
             queryClient.invalidateQueries({ queryKey: [queryKey] });
         } catch (error) {
-            console.error('좋아요 토글 실패:', error);
+            console.error('좋아요 토글 실패:', describeErrorCodeForLog(error));
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }

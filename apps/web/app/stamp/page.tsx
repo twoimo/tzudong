@@ -31,6 +31,7 @@ import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-quer
 import { supabase } from "@/integrations/supabase/client";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
+import { describeErrorCodeForLog } from "@/lib/debug-log";
 import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { buildRelatedVerifiedReviewCounts, useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useMobileBottomNavAutoHide } from "@/hooks/use-mobile-bottom-nav-auto-hide";
@@ -349,7 +350,7 @@ export default function StampPage() {
                     verified_review_count: verifiedCountMap.get(restaurant.id) || 0
                 }));
             } catch (error) {
-                console.error('맛집 검색 중 오류:', error);
+                console.error('맛집 검색 중 오류:', describeErrorCodeForLog(error));
                 return [];
             }
         },
@@ -602,7 +603,7 @@ export default function StampPage() {
                 const nextCursor = reviewsData.length === REVIEW_PAGE_SIZE ? pageParam + REVIEW_PAGE_SIZE : null;
                 return { reviews, nextCursor };
             } catch (error) {
-                console.error('리뷰 데이터 조회 중 오류:', error);
+                console.error('리뷰 데이터 조회 중 오류:', describeErrorCodeForLog(error));
                 return { reviews: [], nextCursor: null };
             }
         },
@@ -765,7 +766,7 @@ export default function StampPage() {
             }
             queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
         } catch (error) {
-            console.error('좋아요 토글 실패:', error);
+            console.error('좋아요 토글 실패:', describeErrorCodeForLog(error));
             throw error;
         }
     }, [user, queryClient, selectedRestaurant]);

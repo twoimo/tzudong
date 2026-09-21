@@ -72,3 +72,23 @@ export function debugLog(
 
     console.log(safeEvent, safeMetadata);
 }
+
+// PostgREST/Postgres 코드처럼 짧고 고정된 형태만 로그로 내보냅니다.
+const SAFE_ERROR_CODE_PATTERN = /^[A-Z0-9_]{1,16}$/;
+const SAFE_NUMERIC_ERROR_CODE_LIMIT = 1000000;
+
+/**
+ * 오류에서 로그로 내보내도 안전한 짧은 코드만 뽑아냅니다.
+ * message/details/hint/stack처럼 제공자·DB 진단이나 개인정보가 섞일 수 있는 값은 반환하지 않습니다.
+ */
+export function describeErrorCodeForLog(error: unknown): string {
+    if (!error || typeof error !== 'object') return 'UNKNOWN';
+
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' && SAFE_ERROR_CODE_PATTERN.test(code)) return code;
+    if (typeof code === 'number' && Number.isInteger(code) && Math.abs(code) < SAFE_NUMERIC_ERROR_CODE_LIMIT) {
+        return String(code);
+    }
+
+    return 'UNKNOWN';
+}
