@@ -152,6 +152,15 @@ def _validate_password(value: str) -> str:
     return value
 
 
+def _normalize_email(value: str) -> str:
+    """Mirror GoTrue, which stores and returns the address lowercased."""
+    return value.lower()
+
+
+def _emails_match(left: Any, right: str) -> bool:
+    return isinstance(left, str) and _normalize_email(left) == _normalize_email(right)
+
+
 def _json_body(payload: Mapping[str, Any]) -> bytes:
     try:
         return json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
@@ -231,7 +240,7 @@ def _readback_user(base_url: str, service_key: str, user_id: str) -> dict[str, A
 
 
 def _assert_reprovisioned_user(payload: Mapping[str, Any], user_id: str, email: str) -> None:
-    if payload.get("id") != user_id or payload.get("email") != email:
+    if payload.get("id") != user_id or not _emails_match(payload.get("email"), email):
         raise LocalAuthError("auth_readback_mismatch")
     if not payload.get("email_confirmed_at"):
         raise LocalAuthError("auth_readback_mismatch")
@@ -245,7 +254,7 @@ def _assert_reprovisioned_user(payload: Mapping[str, Any], user_id: str, email: 
             identity.get("user_id") == user_id
             and identity.get("provider") == "email"
             and isinstance(identity.get("identity_data"), dict)
-            and identity["identity_data"].get("email") == email
+            and _emails_match(identity["identity_data"].get("email"), email)
         ):
             return
     raise LocalAuthError("auth_identity_missing")
@@ -270,7 +279,7 @@ def _assert_password_login(
     if (
         not isinstance(user, dict)
         or user.get("id") != user_id
-        or user.get("email") != email
+        or not _emails_match(user.get("email"), email)
         or not isinstance(payload.get("access_token"), str)
         or not payload.get("access_token")
         or not isinstance(payload.get("refresh_token"), str)
@@ -296,7 +305,7 @@ def reprovision(
 
     before = _readback_user(base_url, service_key, user_id)
     existing_email = before.get("email")
-    if existing_email not in (None, email):
+    if existing_email is not None and not _emails_match(existing_email, email):
         raise LocalAuthError("auth_email_conflict")
 
     try:

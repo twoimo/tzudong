@@ -80,6 +80,28 @@ class LocalAuthReprovisionTests(unittest.TestCase):
             "identity_data": {"email": self.EMAIL},
         }
 
+    def _reprovision_with(self, responses, *, email=None):
+        opener = _Opener(responses)
+        original = local_auth.build_opener
+        local_auth.build_opener = lambda _handler: opener
+        try:
+            result = local_auth.reprovision(
+                self.ENV,
+                user_id=self.USER_ID,
+                email=email or self.EMAIL,
+                password=self.PASSWORD,
+            )
+        finally:
+            local_auth.build_opener = original
+        return opener, result
+
+    def _login_payload(self, email):
+        return {
+            "user": {"id": self.USER_ID, "email": email},
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+        }
+
     def test_loopback_url_and_user_id_are_fail_closed(self):
         for value in (
             "https://127.0.0.1:8000",
@@ -176,6 +198,73 @@ class LocalAuthReprovisionTests(unittest.TestCase):
             path.chmod(stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)
             with self.assertRaisesRegex(local_auth.LocalAuthError, "local_env_custody"):
                 local_auth._read_local_env(path)
+
+    def test_uppercase_operator_email_matches_gotrue_lowercase_readback(self):
+        operator_email = "Developer@Example.TEST"
+        stored_email = "developer@example.test"
+        updated = self._user(
+            email=stored_email,
+            identities=[
+                {
+                    "user_id": self.USER_ID,
+                    "provider": "email",
+                    "identity_data": {"email": stored_email},
+                }
+            ],
+        )
+        opener, result = self._reprovision_with(
+            [
+                _Response(self._user(email=stored_email)),
+                _Response(updated),
+                _Response(updated),
+                _Response(self._login_payload(stored_email)),
+            ],
+            email=operator_email,
+        )
+
+        self.assertEqual("applied", result["status"])
+        self.assertEqual(
+            ["GET", "PUT", "GET", "POST"],
+            [request.get_method() for request, _ in opener.requests],
+        )
+        update_payload = json.loads(opener.requests[1][0].data.decode("ascii"))
+        self.assertEqual(operator_email, update_payload["email"])
+
+    def test_other_address_in_readback_is_still_a_mismatch(self):
+        other_email = "someone-else@example.test"
+        with self.assertRaisesRegex(local_auth.LocalAuthError, "auth_readback_mismatch"):
+            self._reprovision_with(
+                [
+                    _Response(self._user()),
+                    _Response(self._user()),
+                    _Response(self._user(email=other_email, identities=[self._identity()])),
+                ]
+            )
+
+    def test_identity_for_another_address_is_reported_missing(self):
+        with self.assertRaisesRegex(local_auth.LocalAuthError, "auth_identity_missing"):
+            self._reprovision_with(
+                [
+                    _Response(self._user()),
+                    _Response(self._user()),
+                    _Response(
+                        self._user(
+                            email=self.EMAIL,
+                            identities=[
+                                {
+                                    "user_id": self.USER_ID,
+                                    "provider": "email",
+                                    "identity_data": {"email": "someone-else@example.test"},
+                                }
+                            ],
+                        )
+                    ),
+                ]
+            )
+
+    def test_existing_local_email_for_another_address_is_a_conflict(self):
+        with self.assertRaisesRegex(local_auth.LocalAuthError, "auth_email_conflict"):
+            self._reprovision_with([_Response(self._user(email="other@example.test"))])
 
 
 if __name__ == "__main__":
