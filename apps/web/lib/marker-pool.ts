@@ -52,6 +52,9 @@ export class MarkerPool {
     /** 현재 활성화된 마커 맵 (ID → Marker) */
     private active: Map<string, PooledMarker> = new Map();
 
+    /** 페이드아웃 후 풀 반환을 예약한 타이머 (clear 시 함께 취소) */
+    private pendingReturns: Set<ReturnType<typeof setTimeout>> = new Set();
+
     /** 풀 최대 크기 (메모리 제한) */
     private readonly MAX_POOL_SIZE = 1000;
 
@@ -182,7 +185,9 @@ export class MarkerPool {
         this.active.delete(id);
 
         // CSS Transition 시간(300ms) 후 실제 제거 및 풀 반환
-        setTimeout(() => {
+        const timer = setTimeout(() => {
+            this.pendingReturns.delete(timer);
+
             // 지도에서 제거
             marker.setMap(null);
 
@@ -201,6 +206,7 @@ export class MarkerPool {
 
             this.stats.released++;
         }, 300);
+        this.pendingReturns.add(timer);
     }
 
     /**
@@ -284,6 +290,12 @@ export class MarkerPool {
      * 풀 전체 정리 (컴포넌트 언마운트 시)
      */
     public clear(): void {
+        // 예약된 반환 콜백을 취소해 clear 이후 풀이 다시 채워지지 않게 한다
+        for (const timer of this.pendingReturns) {
+            clearTimeout(timer);
+        }
+        this.pendingReturns.clear();
+
         // 모든 활성 마커 지도에서 제거
         this.active.forEach((marker) => {
             marker.setMap(null);
