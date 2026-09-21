@@ -92,9 +92,12 @@ BEGIN
       OR (p_payload->>'sceneCount')::integer NOT BETWEEN 5 AND 12 THEN RAISE EXCEPTION 'invalid_request'; END IF;
     IF EXISTS (SELECT 1 FROM jsonb_each(p_payload->'providers') x WHERE x.key IN ('text','image')
       AND x.value->>'id' IN ('openai-api','xai-api')) THEN RAISE EXCEPTION 'provider_not_configured'; END IF;
+    -- Keep this allowlist aligned with STORYBOARD_USER_IMPORT_PROVIDER_IDS in
+    -- apps/web/lib/admin/storyboard/production-contract.ts; every loopback provider the
+    -- client advertises with externalAI=false must be admitted here.
     IF NOT coalesce((p_payload#>>'{providers,externalAI}')::boolean, false)
-      AND (p_payload#>>'{providers,text,id}' NOT IN ('local-mlx','manual')
-        OR p_payload#>>'{providers,image,id}' NOT IN ('local-mlx','manual')) THEN RAISE EXCEPTION 'external_ai_disabled'; END IF;
+      AND (p_payload#>>'{providers,text,id}' NOT IN ('local-mlx','manual','chatgpt-manual','grok-manual')
+        OR p_payload#>>'{providers,image,id}' NOT IN ('local-mlx','manual','chatgpt-manual','grok-manual')) THEN RAISE EXCEPTION 'external_ai_disabled'; END IF;
     job_request := (p_payload->>'requestId')::uuid;
     PERFORM pg_advisory_xact_lock(hashtextextended(p_owner_id::text || job_request::text, 0));
     SELECT * INTO p FROM public.admin_storyboard_production_projects WHERE owner_id = p_owner_id AND request_id = job_request;

@@ -19,6 +19,9 @@ import {
 if (typeof window !== 'undefined') throw new Error('Storyboard persistence is server-only.');
 
 export const MAX_STORYBOARD_EXPORT_BYTES = 96 * 1024 * 1024;
+/** A restore re-hashes at most one maximum-size original inline. Every other referenced object is
+ * still proven by existence, size and MIME, so a full restore never streams the whole document. */
+export const MAX_STORYBOARD_RESTORE_VERIFY_BYTES = MAX_STORYBOARD_IMAGE_BYTES;
 export const PRODUCTION_FAILURE_STATUSES: Readonly<Record<string, number>> = {
   invalid_request: 400, request_too_large: 413, document_too_large: 413, export_too_large: 413,
   invalid_scene: 400, invalid_asset: 502, invalid_asset_variant: 400, invalid_provenance: 400,
@@ -103,8 +106,12 @@ export interface ProductionDatabase {
 export interface ProductionStorage {
   upload(path: string, bytes: Buffer, mime: string): Promise<void>;
   download(path: string): Promise<Blob>;
+  list(prefix: string): Promise<StoryboardStoredObject[]>;
   remove(paths: string[]): Promise<void>;
 }
+
+/** Storage listing entry used to prove a referenced object still exists without downloading it. */
+export type StoryboardStoredObject = { name: string; size: number; mime: string };
 
 /** Generated Database types are intentionally unchanged in this parallel slice. */
 const serverDatabase: ProductionDatabase = {
@@ -129,6 +136,16 @@ const serverStorage: ProductionStorage = {
     const { data, error } = await createSupabaseStorageServerClient().from(STORYBOARD_ASSET_BUCKET).download(path);
     if (error || !data) throw new StoryboardProductionError('storage_unavailable');
     return data;
+  },
+  async list(prefix) {
+    const { data, error } = await createSupabaseStorageServerClient().from(STORYBOARD_ASSET_BUCKET)
+      .list(prefix, { limit: 32 });
+    if (error || !data) throw new StoryboardProductionError('storage_unavailable');
+    return data.filter((entry) => entry.id !== null).map((entry) => ({
+      name: entry.name,
+      size: typeof entry.metadata?.size === 'number' ? entry.metadata.size : -1,
+      mime: typeof entry.metadata?.mimetype === 'string' ? entry.metadata.mimetype : '',
+    }));
   },
   async remove(paths) {
     const { error } = await createSupabaseStorageServerClient().from(STORYBOARD_ASSET_BUCKET).remove(paths);
@@ -262,6 +279,8 @@ export class StoryboardProductionStore {
       if (before.project.revision === change.revision && !['queued', 'claimed'].includes(before.job?.status ?? '')) {
         const { preview } = await this.versions(ownerId, projectId, change.targetRevision);
         if (!preview) throw new StoryboardProductionError('version_not_found');
+        const listings = new Map<string, StoryboardStoredObject[]>();
+        let verifyBudget = MAX_STORYBOARD_RESTORE_VERIFY_BYTES;
         for (const scene of preview.scenes) {
           if ((change.sceneNo !== undefined && change.sceneNo !== scene.sceneNo) || !scene.image) continue;
           try {
@@ -269,9 +288,16 @@ export class StoryboardProductionStore {
             if (!row || row.scene_no !== scene.sceneNo || JSON.stringify(row.asset) !== JSON.stringify(scene.image)) {
               throw new StoryboardProductionError('restore_asset_missing');
             }
-            await this.verifiedBytes(row.asset.original);
+            // Prove every referenced object is still present without downloading it; byte re-hashing
+            // stays inside MAX_STORYBOARD_RESTORE_VERIFY_BYTES so a full restore never streams every
+            // asset inside one request (a targeted single-scene restore is always re-hashed).
+            for (const variant of [row.asset.original, ...row.asset.web]) await this.verifiedObjectPresence(variant, listings);
+            if (verifyBudget >= row.asset.original.bytes) {
+              await this.verifiedBytes(row.asset.original);
+              verifyBudget -= row.asset.original.bytes;
+            }
           } catch (error) {
-            if (error instanceof StoryboardProductionError && ['asset_not_found', 'invalid_asset', 'storage_unavailable', 'restore_asset_missing'].includes(error.code)) {
+            if (error instanceof StoryboardProductionError && ['asset_not_found', 'invalid_asset', 'restore_asset_missing'].includes(error.code)) {
               throw new StoryboardProductionError('restore_asset_missing');
             }
             throw error;
@@ -400,6 +426,22 @@ export class StoryboardProductionStore {
     const bytes = Buffer.from(await blob.arrayBuffer());
     if (storyboardHash(bytes) !== variant.sha256) throw new StoryboardProductionError('invalid_asset');
     return bytes;
+  }
+  /** Cheapest sufficient restore proof: the object exists in Storage with the recorded size and MIME. */
+  private async verifiedObjectPresence(variant: StoryboardProductionAsset['original'],
+    listings: Map<string, StoryboardStoredObject[]>): Promise<void> {
+    const separator = variant.path.lastIndexOf('/');
+    if (separator <= 0 || separator === variant.path.length - 1) throw new StoryboardProductionError('invalid_asset');
+    const folder = variant.path.slice(0, separator);
+    const name = variant.path.slice(separator + 1);
+    let entries = listings.get(folder);
+    if (!entries) {
+      entries = await this.storage.list(folder);
+      listings.set(folder, entries);
+    }
+    const entry = entries.find((candidate) => candidate.name === name);
+    if (!entry) throw new StoryboardProductionError('asset_not_found');
+    if (entry.size !== variant.bytes || entry.mime !== variant.mime) throw new StoryboardProductionError('invalid_asset');
   }
   async downloadAsset(ownerId: string, projectId: string, assetId: string, basename: string) {
     await this.get(ownerId, projectId);

@@ -61,8 +61,9 @@ const unusedDb: ProductionDatabase = {
   async asset() { throw new Error('unexpected_asset_access'); },
 };
 class UnitStorage implements ProductionStorage {
-  files = new Map<string, { bytes: Buffer; mime: string }>();
+  files = new Map<string, { bytes: Buffer; mime: string; declaredSize?: number }>();
   downloads: string[] = [];
+  listings: string[] = [];
   removed: string[][] = [];
   async upload(path: string, bytes: Buffer, mime: string) {
     if (this.files.has(path)) throw new Error('unexpected_overwrite');
@@ -73,6 +74,16 @@ class UnitStorage implements ProductionStorage {
     const file = this.files.get(path);
     if (!file) throw new Error('missing_unit_file');
     return new Blob([new Uint8Array(file.bytes)], { type: file.mime });
+  }
+  async list(prefix: string) {
+    this.listings.push(prefix);
+    const entries: Array<{ name: string; size: number; mime: string }> = [];
+    for (const [path, file] of this.files) {
+      const separator = path.lastIndexOf('/');
+      if (separator <= 0 || path.slice(0, separator) !== prefix) continue;
+      entries.push({ name: path.slice(separator + 1), size: file.declaredSize ?? file.bytes.length, mime: file.mime });
+    }
+    return entries;
   }
   async remove(paths: string[]) { this.removed.push(paths); for (const path of paths) this.files.delete(path); }
 }
@@ -197,6 +208,45 @@ describe('admin/API contracts and bounded failures', () => {
     fixture.storage.files.set(original.path, { bytes: Buffer.alloc(original.bytes), mime: original.mime });
     await expect(store.apply(ownerId, fixture.p.id, { action: 'restore', revision: 2, targetRevision: 1, requestId: randomUUID() })).rejects.toThrow('restore_asset_missing');
     expect(actions).toEqual(['read', 'versions', 'read', 'versions']);
+  });
+  test('full restore re-hashes only the bounded original and still proves every asset', async () => {
+    const fixture = await exportFixture();
+    const p = fixture.p;
+    p.revision = 2; p.document!.revision = 2;
+    const preview = structuredClone(p.document!); preview.revision = 1;
+    const largeId = randomUUID();
+    const largeOriginal = `${p.id}/${largeId}/original.png`;
+    const largeWeb = `${p.id}/${largeId}/web-01.webp`;
+    const large: StoryboardProductionAsset = {
+      id: largeId, trustPolicy: 'storyboard-private-asset-v1',
+      original: { path: largeOriginal, sha256: 'a'.repeat(64), mime: 'image/png', width: 1920, height: 1080,
+        bytes: MAX_STORYBOARD_IMAGE_BYTES },
+      web: [{ path: largeWeb, sha256: 'b'.repeat(64), mime: 'image/webp', width: 640, height: 360,
+        bytes: MAX_STORYBOARD_IMAGE_BYTES }],
+      provenance: fixture.prepared.asset.provenance,
+    };
+    p.document!.scenes[1].image = large; p.document!.scenes[1].revision = 1;
+    preview.scenes[1].image = large; preview.scenes[1].revision = 1;
+    fixture.storage.files.set(largeOriginal, { bytes: Buffer.from([1, 2, 3]), mime: 'image/png',
+      declaredSize: MAX_STORYBOARD_IMAGE_BYTES });
+    fixture.storage.files.set(largeWeb, { bytes: Buffer.from([4]), mime: 'image/webp',
+      declaredSize: MAX_STORYBOARD_IMAGE_BYTES });
+    const store = new StoryboardProductionStore({ storage: fixture.storage, database: {
+      async rpc(_name, args) {
+        if (args.p_action === 'versions') return { data: { ok: true, versions: [], preview }, error: null };
+        if (args.p_action === 'read') return { data: read(p), error: null };
+        return { data: { ok: true, project: p, job: null }, error: null };
+      },
+      async asset(owner, id, assetId) {
+        if (owner !== ownerId || id !== p.id) return { data: null, error: null };
+        if (assetId === fixture.prepared.asset.id) return { data: row(p, fixture.prepared.asset), error: null };
+        return { data: assetId === largeId ? row(p, large, 2) : null, error: null };
+      },
+    } });
+    await store.apply(ownerId, p.id, { action: 'restore', revision: 2, targetRevision: 1, requestId: randomUUID() });
+    expect(fixture.storage.downloads).toEqual([fixture.prepared.asset.original.path]);
+    expect([...new Set(fixture.storage.listings)].sort()).toEqual(
+      [`${p.id}/${fixture.prepared.asset.id}`, `${p.id}/${largeId}`].sort());
   });
   test('versions and preview use the authenticated existing project GET handler', async () => {
     const id = randomUUID();
