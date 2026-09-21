@@ -9,6 +9,12 @@ export const myPageListCardClass =
   "overflow-hidden border-border/80 bg-card/95 shadow-sm transition-colors hover:bg-secondary/20";
 export const myPageResponsiveListClass =
   "grid gap-3 lg:grid-cols-2 2xl:grid-cols-3";
+// Cards that pair a 128px thumbnail with text need a wider track than the
+// text-only lists: at lg the sidebar leaves ~753px, so a two-up media grid
+// squeezed the title and address columns to ~180px and clipped them. Two-up
+// waits for xl, and a third track is never used because a ~406px card at 2xl
+// still cuts the 246px address.
+export const myPageResponsiveMediaListClass = "grid gap-3 xl:grid-cols-2";
 export const myPageListContentClass = "p-4";
 export const myPageCardTitleClass =
   "truncate text-base font-semibold tracking-tight sm:text-lg";
