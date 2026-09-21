@@ -1,37 +1,77 @@
 {
-  "generatedAt": "2026-09-21T09:48:32.654Z",
+  "generatedAt": "2026-09-21T10:13:50.170Z",
+  "baselineSource": {
+    "commit": "63c0dd1a",
+    "file": "apps/web/performance/review-lookup-address-gate-20260921/restaurant-review-lookup.pre-address-gate.ts",
+    "note": "이전 경로는 손으로 다시 쓴 근사가 아니라 주소 게이트 적용 직전 구현의 동결 사본입니다."
+  },
   "workload": {
     "sourceRestaurants": 400,
     "candidates": 1200,
     "candidateVisitsPerSweep": 480000,
-    "repetitions": 5
+    "repetitions": 21
   },
   "equivalence": "identical",
-  "resultCount": 5260,
-  "old": {
-    "label": "before-name-gate-first",
-    "medianMs": 312.78,
-    "p95Ms": 323.35,
-    "candidateVisitsPerSweep": 480000,
-    "nameGatesPerSweep": 480000
+  "mismatches": 0,
+  "resultCount": 1052,
+  "budgets": {
+    "absolute": {
+      "sweepP95MsMax": 250,
+      "rule": "한 스윕(400개 조회 x 1,200 후보)의 p95는 250ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 2,
+      "rule": "중앙값 기준 2배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 구현의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
   },
-  "new": {
-    "label": "after-address-gate-first",
-    "medianMs": 31.82,
-    "p95Ms": 36.65,
-    "candidateVisitsPerSweep": 480000,
-    "nameGatesPerSweep": 12852,
-    "allocationFreeAddressGate": true
+  "measurements": {
+    "beforeCold": {
+      "medianMs": 83.28,
+      "p95Ms": 89.9,
+      "madRelative": 0.0743
+    },
+    "afterCold": {
+      "medianMs": 37.89,
+      "p95Ms": 41.38,
+      "madRelative": 0.0388
+    },
+    "beforeWarm": {
+      "medianMs": 81.52,
+      "p95Ms": 93.84,
+      "madRelative": 0.0328
+    },
+    "afterWarm": {
+      "medianMs": 37.7,
+      "p95Ms": 42.25,
+      "madRelative": 0.0431
+    }
   },
-  "newWarm": {
-    "label": "after-warm-cache",
-    "medianMs": 36.17,
-    "p95Ms": 39.96
+  "gates": {
+    "candidateVisitsPerSweep": 480000,
+    "beforeNameGateEvaluationsPerSweep": 480000,
+    "afterNameGateEvaluationsPerSweep": 12852,
+    "afterAddressGateEvaluationsPerSweep": 480000,
+    "beforeRule": "이전 구현은 방문한 모든 후보에서 이름 호환 검사를 평가합니다(이름 목록이 비어 있지 않은 워크로드).",
+    "afterRule": "현재 구현은 주소 게이트를 통과한 후보에서만 이름 호환 검사를 평가합니다(모듈 카운터로 측정).",
+    "nameGateEvaluationsReducedBy": 37.35
+  },
+  "acceptance": {
+    "absoluteBudgetMet": true,
+    "relativeBudgetMet": true,
+    "noiseWithinBudget": true,
+    "combinedRelativeNoise": 0.1131,
+    "relativeImprovement": 1.2,
+    "deltaExceedsNoise": true,
+    "accepted": true
   },
   "ratio": {
-    "candidateVisitsReducedBy": 1,
-    "nameGatesReducedBy": 37.34827264239029,
-    "speedupByMedian": 9.83,
-    "speedupByP95": 8.82
+    "speedupByMedian": 2.2,
+    "speedupByP95": 2.17,
+    "warmSpeedupByMedian": 2.16
   }
 }

@@ -1,10 +1,11 @@
 {
+  "generatedAt": "2026-09-21T10:13:29.705Z",
   "workload": {
     "rows": 1372,
     "reviews": 40,
     "mergedRestaurants": 1200,
     "renders": 40,
-    "repetitions": 15
+    "repetitions": 21
   },
   "equivalence": "identical",
   "equivalenceDetail": [
@@ -39,25 +40,54 @@
       "memoMisses": 2
     }
   ],
+  "budgets": {
+    "absolute": {
+      "rendersTotalMedianMsMax": 100,
+      "rule": "입력이 그대로인 40회 재렌더의 총 시간 중앙값이 100ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 5,
+      "rule": "가장 느린 변형 대비 중앙값 5배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 변형의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
   "measurements": [
     {
       "id": "V0-original",
-      "medianMs": 361.803,
-      "p95Ms": 378.247
+      "medianMs": 279.744,
+      "p95Ms": 309.189,
+      "madRelative": 0.0393
     },
     {
       "id": "V1-memo-merge",
-      "medianMs": 122.988,
-      "p95Ms": 169.699
+      "medianMs": 78.513,
+      "p95Ms": 92.153,
+      "madRelative": 0.0366
     },
     {
       "id": "V2-memo-derived",
-      "medianMs": 6.716,
-      "p95Ms": 8.394
+      "medianMs": 5.115,
+      "p95Ms": 5.431,
+      "madRelative": 0.0392
     }
   ],
-  "speedupByMedian": 53.87,
-  "speedupByP95": 45.06,
-  "mergeCallReduction": 40,
-  "reviewCheckReduction": 80
+  "acceptance": {
+    "absoluteBudgetMet": true,
+    "relativeBudgetMet": true,
+    "noiseWithinBudget": true,
+    "combinedRelativeNoise": 0.0785,
+    "relativeImprovement": 53.69,
+    "deltaExceedsNoise": true,
+    "accepted": true
+  },
+  "ratio": {
+    "speedupByMedian": 54.69,
+    "speedupByP95": 56.93,
+    "mergeCallReduction": 40,
+    "reviewCheckReduction": 80
+  }
 }

@@ -1,101 +1,43 @@
-// 관련 리뷰 조회의 후보 스캔 순서(주소 게이트 우선)와 할당 제거 전후 비교 벤치마크.
+// 관련 리뷰 조회의 후보 스캔 순서(주소 게이트 우선) 전후 비교 벤치마크.
 // 실행: bun apps/web/performance/review-lookup-address-gate-20260921/benchmark-review-lookup-address-gate.mjs
 //
-// 측정 항목
-// - 같은 입력에 대한 처리 시간(중앙값, p95)
-// - 후보 방문 수와 이름 호환 검사 수(알고리즘 연산량의 결정적 대리 지표)
-// - 최적화 이전 구현과 현재 구현의 결과 동등성(전수 비교)
+// 비교 대상
+// - before: 주소 게이트 적용 직전 커밋(63c0dd1a)의 실제 구현 동결 사본(restaurant-review-lookup.pre-address-gate.ts)
+// - after: 현재 apps/web/lib/restaurant-review-lookup.ts
+//
+// 측정 규칙
+// - 결과 동등성(400개 조회 전수 비교)을 먼저 확인한 뒤에만 시간을 측정합니다.
+// - 콜드 측정은 반복마다 새 객체 정체성의 워크로드를 만들어 모듈 WeakMap 캐시가 빈 상태를 보장합니다.
+// - 웜 측정은 같은 객체로 한 번 예열한 뒤 같은 워크로드를 다시 측정합니다.
+// - 보고서는 절대/상대/노이즈 예산을 함께 기록하고, 노이즈(MAD 상대값)가 예산을 넘으면 개선으로 인정하지 않습니다.
 import {
     getReviewLookupPerfCounters,
     resetReviewLookupPerfCounters,
-    selectRelatedRestaurantReviewIds,
+    selectRelatedRestaurantReviewIds as selectAfter,
 } from '../../lib/restaurant-review-lookup';
+import { selectRelatedRestaurantReviewIds as selectBefore } from './restaurant-review-lookup.pre-address-gate';
 
-// ---- 최적화 이전 알고리즘(정규화 캐시 적용 상태의 원본 스캔 순서) ----
-function oldNormalizeReviewLookupName(name) {
-    return (name || '').replace(/\s+/g, '').replace(/[^\w가-힣]/g, '').toLowerCase();
-}
+const SOURCES = 400;
+const CANDIDATES = 1200;
+const REPETITIONS = 21;
+const SEED = 20260921;
 
-function oldNormalizeAddress(address) {
-    return (address || '')
-        .replace(/지하\s*\d+\s*층/g, '')
-        .replace(/지상\s*\d+\s*층/g, '')
-        .replace(/\d+\s*층/g, '')
-        .replace(/\d+\s*호/g, '')
-        .replace(/\s+/g, '')
-        .replace(/[^\w가-힣]/g, '')
-        .toLowerCase();
-}
+export const REVIEW_LOOKUP_ADDRESS_GATE_BUDGETS = Object.freeze({
+    absolute: Object.freeze({
+        sweepP95MsMax: 250,
+        rule: '한 스윕(400개 조회 x 1,200 후보)의 p95는 250ms 이하여야 합니다.',
+    }),
+    relative: Object.freeze({
+        minMedianSpeedup: 2,
+        rule: '중앙값 기준 2배 이상 빨라져야 개선으로 인정합니다.',
+    }),
+    noise: Object.freeze({
+        madRelativeMax: 0.15,
+        repetitions: REPETITIONS,
+        rule: '각 구현의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다.',
+    }),
+});
 
-function oldCollectLookupNames(restaurant) {
-    return [...new Set([
-        restaurant.name,
-        restaurant.approved_name,
-        restaurant.naver_name,
-        restaurant.origin_name,
-        restaurant.google_name,
-    ].map((name) => name?.trim()).filter((name) => Boolean(name)))];
-}
-
-function oldCollectAddresses(restaurants) {
-    const addresses = new Set();
-    restaurants.forEach((restaurant) => {
-        const road = oldNormalizeAddress(restaurant.road_address);
-        const jibun = oldNormalizeAddress(restaurant.jibun_address);
-        if (road) addresses.add(road);
-        if (jibun) addresses.add(jibun);
-    });
-    return addresses;
-}
-
-function oldAreNamesCompatible(sourceName, candidateName) {
-    if (sourceName === candidateName) return true;
-    const normalizedSource = oldNormalizeReviewLookupName(sourceName);
-    const normalizedCandidate = oldNormalizeReviewLookupName(candidateName);
-    if (!normalizedSource || !normalizedCandidate) return false;
-    if (normalizedSource === normalizedCandidate) return true;
-    const shorter = normalizedSource.length <= normalizedCandidate.length ? normalizedSource : normalizedCandidate;
-    const longer = normalizedSource.length > normalizedCandidate.length ? normalizedSource : normalizedCandidate;
-    return shorter.length >= 3 && longer.includes(shorter);
-}
-
-function oldCollectDirectIds(restaurant) {
-    const ids = new Set([restaurant.id]);
-    restaurant.mergedRestaurants?.forEach((merged) => { if (merged.id) ids.add(merged.id); });
-    return [...ids];
-}
-
-// 이름 게이트를 먼저 평가하고 주소 집합을 배열로 펼쳐 검사하던 원본 스캔.
-function selectRelatedRestaurantReviewIdsOld(restaurant, candidates) {
-    if (!restaurant) return [];
-    const ids = new Set(oldCollectDirectIds(restaurant));
-    if (!Array.isArray(candidates) || candidates.length === 0) return [...ids];
-
-    const lookupNames = oldCollectLookupNames(restaurant);
-    const lookupAddresses = oldCollectAddresses([restaurant, ...(restaurant.mergedRestaurants || [])]);
-
-    candidates.forEach((candidate) => {
-        if (!candidate || !candidate.id) return;
-        const candidateNames = oldCollectLookupNames(candidate);
-        counters.oldCandidateVisits += 1;
-        counters.oldNameGates += 1;
-        if (lookupNames.length > 0 && candidateNames.length > 0 &&
-            !lookupNames.some((lookupName) => candidateNames.some((candidateName) => oldAreNamesCompatible(lookupName, candidateName)))) {
-            return;
-        }
-        const candidateAddresses = oldCollectAddresses([candidate]);
-        const hasAddressMatch = lookupAddresses.size === 0
-            ? candidateAddresses.size === 0
-            : [...candidateAddresses].some((address) => lookupAddresses.has(address));
-        if (hasAddressMatch) ids.add(candidate.id);
-    });
-
-    return [...ids];
-}
-
-const counters = { oldCandidateVisits: 0, oldNameGates: 0 };
-
-// ---- 결정적 워크로드 생성 ----
 function createRandom(seed) {
     let state = seed >>> 0;
     return () => {
@@ -154,89 +96,170 @@ function buildWorkload({ sources, candidates, seed }) {
     return { sourceRows, candidateRows };
 }
 
-function measure(workload, run) {
-    const samples = [];
+function sweep(workload, select) {
     let resultCount = 0;
-    for (let repetition = 0; repetition < 5; repetition += 1) {
-        const startedAt = performance.now();
-        workload.sourceRows.forEach((source) => {
-            resultCount += run(source, workload.candidateRows).length;
-        });
-        samples.push(performance.now() - startedAt);
+    for (const source of workload.sourceRows) {
+        resultCount += select(source, workload.candidateRows).length;
     }
-    samples.sort((left, right) => left - right);
+    return resultCount;
+}
+
+// 반복마다 새 객체 정체성의 워크로드를 써서 콜드 캐시를 보장한다.
+// 두 구현을 같은 반복 안에서 번갈아 측정해 시간에 따른 기계 상태 변화를 상쇄한다.
+function measureColdPair() {
+    const beforeSamples = [];
+    const afterSamples = [];
+    let beforeResults = 0;
+    let afterResults = 0;
+    for (let repetition = 0; repetition < REPETITIONS; repetition += 1) {
+        const beforeWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED + repetition });
+        const beforeStartedAt = performance.now();
+        beforeResults += sweep(beforeWorkload, selectBefore);
+        beforeSamples.push(performance.now() - beforeStartedAt);
+
+        const afterWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED + repetition });
+        const afterStartedAt = performance.now();
+        afterResults += sweep(afterWorkload, selectAfter);
+        afterSamples.push(performance.now() - afterStartedAt);
+    }
+    return { beforeSamples, afterSamples, beforeResults, afterResults };
+}
+
+// 같은 객체로 한 번 예열한 뒤 같은 워크로드를 다시 측정한다.
+function measureWarmPair() {
+    const beforeWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED });
+    const afterWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED });
+    sweep(beforeWorkload, selectBefore);
+    sweep(afterWorkload, selectAfter);
+
+    const beforeSamples = [];
+    const afterSamples = [];
+    for (let repetition = 0; repetition < REPETITIONS; repetition += 1) {
+        const beforeStartedAt = performance.now();
+        sweep(beforeWorkload, selectBefore);
+        beforeSamples.push(performance.now() - beforeStartedAt);
+
+        const afterStartedAt = performance.now();
+        sweep(afterWorkload, selectAfter);
+        afterSamples.push(performance.now() - afterStartedAt);
+    }
+    return { beforeSamples, afterSamples };
+}
+
+function medianOf(values) {
+    const sorted = [...values].sort((left, right) => left - right);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+function p95Of(values) {
+    const sorted = [...values].sort((left, right) => left - right);
+    return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)];
+}
+
+function madRelativeOf(values) {
+    const median = medianOf(values);
+    if (median === 0) return 0;
+    const deviations = values.map((value) => Math.abs(value - median));
+    return medianOf(deviations) / median;
+}
+
+function summarize(samples) {
     return {
-        medianMs: Number(samples[Math.floor(samples.length / 2)].toFixed(2)),
-        p95Ms: Number(samples[Math.min(samples.length - 1, Math.ceil(samples.length * 0.95) - 1)].toFixed(2)),
-        resultCount,
+        medianMs: Number(medianOf(samples).toFixed(2)),
+        p95Ms: Number(p95Of(samples).toFixed(2)),
+        madRelative: Number(madRelativeOf(samples).toFixed(4)),
     };
 }
 
-const workload = buildWorkload({ sources: 400, candidates: 1200, seed: 20260921 });
-
-// 결과 동등성 전수 비교(성능 측정 전에 먼저 확인한다).
+const equivalenceWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED });
 let mismatches = 0;
-for (const source of workload.sourceRows) {
-    const before = selectRelatedRestaurantReviewIdsOld(source, workload.candidateRows);
-    const after = selectRelatedRestaurantReviewIds(source, workload.candidateRows);
+for (const source of equivalenceWorkload.sourceRows) {
+    const before = selectBefore(source, equivalenceWorkload.candidateRows);
+    const after = selectAfter(source, equivalenceWorkload.candidateRows);
     if (JSON.stringify(before) !== JSON.stringify(after)) {
         mismatches += 1;
-        if (mismatches <= 3) {
-            console.error('[mismatch]', source.id, before, after);
-        }
+        if (mismatches <= 3) console.error('[mismatch]', source.id, before, after);
     }
 }
 
-counters.oldCandidateVisits = 0;
-counters.oldNameGates = 0;
-const beforeCold = measure(workload, selectRelatedRestaurantReviewIdsOld);
-const oldCounters = { ...counters };
+const coldPair = measureColdPair();
+const warmPair = measureWarmPair();
 
+// 현재 구현의 후보 스캔 카운터는 한 번 계측 스윕으로 측정한다.
+const counterWorkload = buildWorkload({ sources: SOURCES, candidates: CANDIDATES, seed: SEED });
 resetReviewLookupPerfCounters();
-const afterCold = measure(workload, selectRelatedRestaurantReviewIds);
-const newCounters = getReviewLookupPerfCounters();
+let counterResultCount = 0;
+for (const source of counterWorkload.sourceRows) {
+    counterResultCount += selectAfter(source, counterWorkload.candidateRows).length;
+}
+const counters = getReviewLookupPerfCounters();
 
-resetReviewLookupPerfCounters();
-const afterWarm = measure(workload, selectRelatedRestaurantReviewIds);
+// 이전 구현은 이름 목록이 비어 있지 않은 워크로드에서 방문한 모든 후보에 이름 호환 검사를 평가한다.
+const workloadHasNamesEverywhere = counterWorkload.sourceRows.every((source) => Boolean(source.name || source.approved_name))
+    && counterWorkload.candidateRows.every((candidate) => Boolean(candidate.name || candidate.approved_name));
+
+const beforeSummary = summarize(coldPair.beforeSamples);
+const afterSummary = summarize(coldPair.afterSamples);
+const budgets = REVIEW_LOOKUP_ADDRESS_GATE_BUDGETS;
+const medianSpeedup = Number((beforeSummary.medianMs / afterSummary.medianMs).toFixed(2));
+const p95Speedup = Number((beforeSummary.p95Ms / afterSummary.p95Ms).toFixed(2));
+const combinedRelativeNoise = Number((beforeSummary.madRelative + afterSummary.madRelative).toFixed(4));
+const relativeImprovement = Number((medianSpeedup - 1).toFixed(4));
+const noiseWithinBudget = beforeSummary.madRelative <= budgets.noise.madRelativeMax
+    && afterSummary.madRelative <= budgets.noise.madRelativeMax;
+const deltaExceedsNoise = relativeImprovement > combinedRelativeNoise;
 
 const report = {
     generatedAt: new Date().toISOString(),
+    baselineSource: {
+        commit: '63c0dd1a',
+        file: 'apps/web/performance/review-lookup-address-gate-20260921/restaurant-review-lookup.pre-address-gate.ts',
+        note: '이전 경로는 손으로 다시 쓴 근사가 아니라 주소 게이트 적용 직전 구현의 동결 사본입니다.',
+    },
     workload: {
-        sourceRestaurants: workload.sourceRows.length,
-        candidates: workload.candidateRows.length,
-        candidateVisitsPerSweep: workload.sourceRows.length * workload.candidateRows.length,
-        repetitions: 5,
+        sourceRestaurants: SOURCES,
+        candidates: CANDIDATES,
+        candidateVisitsPerSweep: counters.candidateVisits,
+        repetitions: REPETITIONS,
     },
-    equivalence: mismatches === 0 ? 'identical' : `mismatch-${mismatches}`,
-    resultCount: beforeCold.resultCount,
-    old: {
-        label: 'before-name-gate-first',
-        medianMs: beforeCold.medianMs,
-        p95Ms: beforeCold.p95Ms,
-        candidateVisitsPerSweep: Math.round(oldCounters.oldCandidateVisits / 5),
-        nameGatesPerSweep: Math.round(oldCounters.oldNameGates / 5),
+    equivalence: mismatches === 0 ? 'identical' : 'mismatch',
+    mismatches,
+    resultCount: counterResultCount,
+    budgets,
+    measurements: {
+        beforeCold: beforeSummary,
+        afterCold: afterSummary,
+        beforeWarm: summarize(warmPair.beforeSamples),
+        afterWarm: summarize(warmPair.afterSamples),
     },
-    new: {
-        label: 'after-address-gate-first',
-        medianMs: afterCold.medianMs,
-        p95Ms: afterCold.p95Ms,
-        candidateVisitsPerSweep: Math.round(newCounters.candidateVisits / 5),
-        nameGatesPerSweep: Math.round(newCounters.nameGates / 5),
-        allocationFreeAddressGate: true,
+    gates: {
+        candidateVisitsPerSweep: counters.candidateVisits,
+        beforeNameGateEvaluationsPerSweep: workloadHasNamesEverywhere ? counters.candidateVisits : null,
+        afterNameGateEvaluationsPerSweep: counters.nameGates,
+        afterAddressGateEvaluationsPerSweep: counters.addressGates,
+        beforeRule: '이전 구현은 방문한 모든 후보에서 이름 호환 검사를 평가합니다(이름 목록이 비어 있지 않은 워크로드).',
+        afterRule: '현재 구현은 주소 게이트를 통과한 후보에서만 이름 호환 검사를 평가합니다(모듈 카운터로 측정).',
+        nameGateEvaluationsReducedBy: Number((counters.candidateVisits / counters.nameGates).toFixed(2)),
     },
-    newWarm: {
-        label: 'after-warm-cache',
-        medianMs: afterWarm.medianMs,
-        p95Ms: afterWarm.p95Ms,
+    acceptance: {
+        absoluteBudgetMet: afterSummary.p95Ms <= budgets.absolute.sweepP95MsMax,
+        relativeBudgetMet: medianSpeedup >= budgets.relative.minMedianSpeedup,
+        noiseWithinBudget,
+        combinedRelativeNoise,
+        relativeImprovement,
+        deltaExceedsNoise,
+        accepted: mismatches === 0
+            && noiseWithinBudget
+            && deltaExceedsNoise
+            && afterSummary.p95Ms <= budgets.absolute.sweepP95MsMax
+            && medianSpeedup >= budgets.relative.minMedianSpeedup,
     },
-};
-
-report.ratio = {
-    candidateVisitsReducedBy: report.old.candidateVisitsPerSweep / Math.max(1, report.new.candidateVisitsPerSweep),
-    nameGatesReducedBy: report.old.nameGatesPerSweep / Math.max(1, report.new.nameGatesPerSweep),
-    speedupByMedian: Number((report.old.medianMs / Math.max(0.01, report.new.medianMs)).toFixed(2)),
-    speedupByP95: Number((report.old.p95Ms / Math.max(0.01, report.new.p95Ms)).toFixed(2)),
+    ratio: {
+        speedupByMedian: medianSpeedup,
+        speedupByP95: p95Speedup,
+        warmSpeedupByMedian: Number((summarize(warmPair.beforeSamples).medianMs / summarize(warmPair.afterSamples).medianMs).toFixed(2)),
+    },
 };
 
 console.log(JSON.stringify(report, null, 2));
-if (mismatches !== 0) process.exit(1);

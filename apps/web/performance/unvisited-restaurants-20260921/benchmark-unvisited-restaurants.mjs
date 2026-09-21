@@ -17,6 +17,27 @@ const RENDER_COUNT = 40;
 const ROW_COUNT = 1200;
 const DUPLICATE_EVERY = 7;
 const REVIEW_COUNT = 40;
+const REPETITIONS = 21;
+// 표본 하나를 짧게 재면 타이머 분해능 때문에 상대 노이즈가 커진다. 표본마다 같은 작업을 여러 번 돌리고
+// 다시 렌더 세트 하나의 시간으로 나눠 보고한다.
+const SAMPLE_LOOPS = 5;
+
+// 보고서가 스스로 밝히는 절대/상대/노이즈 예산입니다.
+export const UNVISITED_RESTAURANTS_BUDGETS = Object.freeze({
+    absolute: Object.freeze({
+        rendersTotalMedianMsMax: 100,
+        rule: `입력이 그대로인 ${RENDER_COUNT}회 재렌더의 총 시간 중앙값이 100ms 이하여야 합니다.`,
+    }),
+    relative: Object.freeze({
+        minMedianSpeedup: 5,
+        rule: '가장 느린 변형 대비 중앙값 5배 이상 빨라져야 개선으로 인정합니다.',
+    }),
+    noise: Object.freeze({
+        madRelativeMax: 0.15,
+        repetitions: REPETITIONS,
+        rule: '각 변형의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다.',
+    }),
+});
 
 function makeRow(index, overrides = {}) {
     const name = `쯔동분식 ${index}`;
@@ -286,6 +307,12 @@ const variants = [
     { id: 'V2-memo-derived', derive: deriveV2 },
 ];
 
+function madRelative(values) {
+    const center = median(values);
+    if (center === 0) return 0;
+    return median(values.map((value) => Math.abs(value - center))) / center;
+}
+
 const equivalence = [];
 const measurements = [];
 
@@ -305,16 +332,19 @@ for (const variant of variants) {
     });
 
     const samples = [];
-    for (let repetition = 0; repetition < 15; repetition += 1) {
-        const runState = createState(variant.derive);
+    for (let repetition = 0; repetition < REPETITIONS; repetition += 1) {
         const startedAt = performance.now();
-        runVariant(runState, rows, reviews, RENDER_COUNT);
-        samples.push(performance.now() - startedAt);
+        for (let loop = 0; loop < SAMPLE_LOOPS; loop += 1) {
+            const runState = createState(variant.derive);
+            runVariant(runState, rows, reviews, RENDER_COUNT);
+        }
+        samples.push((performance.now() - startedAt) / SAMPLE_LOOPS);
     }
     measurements.push({
         id: variant.id,
         medianMs: Number(median(samples).toFixed(3)),
         p95Ms: Number(p95(samples).toFixed(3)),
+        madRelative: Number(madRelative(samples).toFixed(4)),
     });
 }
 
@@ -325,21 +355,46 @@ const allEqual = equivalence.every((entry) =>
     && entry.unvisitedCount === reference.unvisitedCount);
 
 const baseline = measurements[0];
+const candidate = measurements[2];
+const budgets = UNVISITED_RESTAURANTS_BUDGETS;
+const medianSpeedup = Number((baseline.medianMs / candidate.medianMs).toFixed(2));
+const p95Speedup = Number((baseline.p95Ms / candidate.p95Ms).toFixed(2));
+const combinedRelativeNoise = Number((baseline.madRelative + candidate.madRelative).toFixed(4));
+const relativeImprovement = Number((medianSpeedup - 1).toFixed(4));
+const noiseWithinBudget = measurements.every((entry) => entry.madRelative <= budgets.noise.madRelativeMax);
+
 const report = {
+    generatedAt: new Date().toISOString(),
     workload: {
         rows: rows.length,
         reviews: reviews.length,
         mergedRestaurants: reference.unvisitedCount + reference.visitedCount,
         renders: RENDER_COUNT,
-        repetitions: 15,
+        repetitions: REPETITIONS,
     },
     equivalence: allEqual ? 'identical' : 'mismatch',
     equivalenceDetail: equivalence,
+    budgets,
     measurements,
-    speedupByMedian: Number((baseline.medianMs / measurements[2].medianMs).toFixed(2)),
-    speedupByP95: Number((baseline.p95Ms / measurements[2].p95Ms).toFixed(2)),
-    mergeCallReduction: Number((equivalence[0].mergeCalls / equivalence[2].mergeCalls).toFixed(2)),
-    reviewCheckReduction: Number((equivalence[0].reviewChecks / equivalence[2].reviewChecks).toFixed(2)),
+    acceptance: {
+        absoluteBudgetMet: candidate.medianMs <= budgets.absolute.rendersTotalMedianMsMax,
+        relativeBudgetMet: medianSpeedup >= budgets.relative.minMedianSpeedup,
+        noiseWithinBudget,
+        combinedRelativeNoise,
+        relativeImprovement,
+        deltaExceedsNoise: relativeImprovement > combinedRelativeNoise,
+        accepted: allEqual
+            && noiseWithinBudget
+            && relativeImprovement > combinedRelativeNoise
+            && candidate.medianMs <= budgets.absolute.rendersTotalMedianMsMax
+            && medianSpeedup >= budgets.relative.minMedianSpeedup,
+    },
+    ratio: {
+        speedupByMedian: medianSpeedup,
+        speedupByP95: p95Speedup,
+        mergeCallReduction: Number((equivalence[0].mergeCalls / equivalence[2].mergeCalls).toFixed(2)),
+        reviewCheckReduction: Number((equivalence[0].reviewChecks / equivalence[2].reviewChecks).toFixed(2)),
+    },
 };
 
 console.log(JSON.stringify(report, null, 2));
