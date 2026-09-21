@@ -93,6 +93,9 @@ const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 
 const STAMP_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 const STAMP_PAGE_SIZE = 5;
 const STAMP_LOAD_MORE_ROOT_MARGIN = "0px 0px 240px 0px";
+// 일부 임베디드 웹뷰는 IntersectionObserver 콜백을 렌더링 파이프라인과 함께 지연시키거나
+// 아예 전달하지 않는다. 같은 여유(240px)로 스크롤 위치에서도 다음 페이지를 요청한다.
+const STAMP_LOAD_MORE_SCROLL_MARGIN = 240;
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -454,15 +457,27 @@ export default function StampPage() {
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
+    // 옵저버와 스크롤 폴백이 같은 프레임에 함께 요청해도 페이지를 두 번 건너뛰지 않게 한다.
+    const loadMorePendingRef = useRef(false);
+    useEffect(() => {
+        loadMorePendingRef.current = false;
+    }, [displayLimit]);
+
     const loadMoreRestaurants = useCallback(() => {
-        if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
-        }
+        if (!hasMoreToDisplay || loadMorePendingRef.current) return;
+        loadMorePendingRef.current = true;
+        setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
     }, [hasMoreToDisplay]);
 
     const handleMainScroll = useCallback(() => {
         handleBottomNavScroll();
-    }, [handleBottomNavScroll]);
+
+        // 폴백: 하단 여유 안으로 들어오면 다음 페이지를 요청한다.
+        const scrollRoot = mainScrollRef.current;
+        if (!scrollRoot) return;
+        const remaining = scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight;
+        if (remaining <= STAMP_LOAD_MORE_SCROLL_MARGIN) loadMoreRestaurants();
+    }, [handleBottomNavScroll, loadMoreRestaurants]);
 
     useEffect(() => {
         const scrollRoot = mainScrollRef.current;
