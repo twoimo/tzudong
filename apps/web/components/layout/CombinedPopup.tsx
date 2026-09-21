@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { readBrowserStorageString, writeBrowserStorageString } from '@/lib/browser-storage';
 import { openExternalUrl } from '@/lib/open-external-url';
 import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
@@ -188,7 +189,7 @@ const CombinedPopupComponent = () => {
     // 오늘 이미 닫았는지 확인
     const shouldShowPopup = useCallback(() => {
         if (typeof window === 'undefined') return false;
-        const dismissedDate = localStorage.getItem(DISMISSED_DATE_KEY);
+        const dismissedDate = readBrowserStorageString('local', DISMISSED_DATE_KEY);
         if (dismissedDate === getTodayString()) return false;
         return true;
     }, []);
@@ -297,7 +298,7 @@ const CombinedPopupComponent = () => {
     // 오늘 하루 안 보기
     const handleDismissToday = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
-        localStorage.setItem(DISMISSED_DATE_KEY, getTodayString());
+        writeBrowserStorageString('local', DISMISSED_DATE_KEY, getTodayString());
         setIsVisible(false);
     }, []);
 
