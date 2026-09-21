@@ -3696,11 +3696,13 @@ describe("web quality performance source contracts", () => {
       'data-mypage-desktop-recent-activity-row="true"',
     );
     expect(myPageProfileSource).toContain("최근 활동");
-    expect(myPageProfileSource).toContain("취향 신호");
-    expect(myPageProfileSource).toContain("등급 핵심");
-    expect(myPageProfileSource).toContain("신뢰도 반영");
-    expect(myPageProfileSource).toContain("저장하고 작성한 기록");
-    expect(myPageProfileSource).toContain("새 맛집과 정보 수정");
+    expect(myPageProfileSource).toContain(
+      "flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5",
+    );
+    expect(myPageProfileSource).toContain(
+      '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
+    );
+    expect(myPageProfileSource).toContain("등급 대시보드");
     expect(myPageProfileSource).not.toContain("바로 할 수 있는 일");
     expect(myPageProfileSource).not.toContain(
       "grid grid-cols-2 gap-2 lg:grid-cols-1 xl:grid-cols-2",
@@ -3752,7 +3754,7 @@ describe("web quality performance source contracts", () => {
     );
     expect(myPageProfileSource).toContain("truncate text-lg font-bold");
     expect(myPageProfileSource).toContain(
-      "truncate text-xs text-muted-foreground",
+      "truncate px-2 text-xs text-muted-foreground",
     );
     expect(myPageProfileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
     expect(myPageProfileSource).toContain("useUserProfile");

@@ -261,8 +261,9 @@ describe("mypage mobile cleanup source contracts", () => {
       "내 활동과 제보 메뉴를 한곳에서 확인합니다",
     );
     expect(profileSource).toContain('className="space-y-3 p-4 md:hidden"');
-    expect(profileSource).toContain("저장하고 작성한 기록");
-    expect(profileSource).toContain("새 맛집과 정보 수정");
+    expect(profileSource).toContain(
+      '<h4 className="px-1 text-sm font-semibold">{section.title}</h4>',
+    );
     expect(profileSource).toContain('data-mypage-desktop-tier-dashboard="true"');
     expect(profileSource).toContain(
       "data-mypage-desktop-tier-progress",
@@ -285,18 +286,25 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).toContain('data-mypage-desktop-recent-activity-row="true"');
     expect(profileSource).toContain("최근 활동");
-    expect(profileSource).toContain("취향 신호");
-    expect(profileSource).toContain("등급 핵심");
-    expect(profileSource).toContain("신뢰도 반영");
+    expect(profileSource).toContain(
+      "flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5",
+    );
     expect(profileSource).toContain(
       'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"',
     );
     expect(profileSource).toContain(
       'data-mypage-desktop-tier-action-guide="true"',
     );
-    expect(profileSource).toContain(
-      'className="shrink-0 rounded-2xl border border-border/70 bg-card px-3 py-2.5"',
-    );
+    for (const nestedPanelClass of [
+      "rounded-2xl border border-border/70 bg-card px-3 py-2.5",
+      "rounded-2xl border border-border/70 bg-card px-3 py-3",
+      "rounded-2xl border border-border/70 bg-muted/20 p-3",
+      "rounded-2xl border border-amber-500/60 bg-amber-50/60 p-3",
+      "rounded-xl border border-border/70 bg-background p-3",
+      "rounded-xl border border-amber-500/40 bg-background/90 p-3",
+    ]) {
+      expect(profileSource).not.toContain(nestedPanelClass);
+    }
     expect(profileSource).toContain("data-mypage-action-group={section.id}");
     expect(profileSource).not.toContain("바로 할 수 있는 일");
     expect(profileSource).not.toContain(
@@ -417,11 +425,19 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).toContain("myPageResponsiveListClass");
     expect(sectionFrameSource).toContain("myPageCardTitleClass");
     expect(sectionFrameSource).toContain("myPageInfoPanelClass");
+    expect(sectionFrameSource).toContain("myPageItemGroupClass");
     expect(sectionFrameSource).toContain("myPageFooterMetaClass");
     expect(sectionFrameSource).toContain("myPageInlineLinkClass");
     expect(sectionFrameSource).toContain("MyPageEmptyState");
     expect(sectionFrameSource).toContain("MyPageErrorState");
     expect(sectionFrameSource).not.toContain("myPageSoftPanelClass");
+    expect(sectionFrameSource).not.toContain("myPageNestedCardClass");
+    for (const nestedItemPanelClass of [
+      "rounded-xl border border-border/70 bg-background/70 p-3",
+      "border border-border/70 bg-background/70",
+    ]) {
+      expect(sectionFrameSource).not.toContain(nestedItemPanelClass);
+    }
 
     for (const sectionSource of sectionSources) {
       expect(sectionSource).toContain("<MyPageSectionFrame");
@@ -436,6 +452,10 @@ describe("mypage mobile cleanup source contracts", () => {
       expect(sectionSource).not.toContain("더 불러오는 중...");
       expect(sectionSource).not.toContain("bg-gradient");
       expect(sectionSource).not.toContain("shadow-2xl");
+      expect(sectionSource).not.toContain("myPageNestedCardClass");
+      expect(sectionSource).not.toContain(
+        "border border-border/70 bg-background/70",
+      );
     }
   });
 

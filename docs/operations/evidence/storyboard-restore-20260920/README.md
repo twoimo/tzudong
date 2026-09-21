@@ -133,3 +133,11 @@ ChatGPT Web xhigh 요청에 첨부한 화면 2장에 대한 응답을 받았다.
 - 워커/큐/이력 계약 재실행: outbound-worker + async-jobs + history 42건 통과. 원자적 claim·리다이렉트 거부·실패 시 기존 이미지 유지. 라이브 versions 읽기는 복원 RPC 없이 수행했다.
 - 로컬 스토리보드 UI Playwright chromium 24/24 재통과. 생성·편집·재생성·내보내기·반응형 계약이며 실제 모델 성공은 주장하지 않는다.
 - 메모리 허용식과 큐 대기 `W[i+1]=max(0,W+S-A)`를 `resource-invariants.ts`로 고정하고 단위 테스트 4건을 통과시켰다. 워커 없으면 대기시간 추정은 null이다.
+
+## 2026-09-21 로컬 복제 자격 증명과 로그인 readback
+
+- 로컬 스택(`tzudong-local-ab5bc03b76d9`, GoTrue `http://127.0.0.1:28000`)의 `auth.users`/`auth.identities`가 이전 복제에서 자격 증명과 신원을 비워 둔 상태였다. 검증 계정에는 로컬 재발급 해시 1건만 있었고 호스티드 해시와 달랐다.
+- 호스티드 `auth.users`의 비밀번호 해시 14건과 `auth.identities` 22건(provider `email`, `google`)을 로컬로 복제했다. 복제 뒤 로컬 해시 지문이 호스티드와 일치하고, 해당 계정 신원은 `email`·`google` 2건이다. 변경 전 로컬 행은 `/tmp/tz-auth-backup-20260921.sql`(600)로 백업했다.
+- 이 단계는 저장소의 일반 호스티드→로컬 복제 계약(자격 증명·신원 제외)과 [privacy](../../../agents/privacy.md)의 무기록 원칙을 개발자 로컬 스택에 한해 사용자 지시로 벗어난 것이다. 자격 증명 값과 계정 이메일은 이 기록에 남기지 않았고, 일반 클론 도구는 그대로 둔다.
+- 브라우저 readback: 인앱 브라우저에서 `http://127.0.0.1:3000/mypage/profile`이 `쯔동마스터`·도장 2·리뷰 7로 렌더링된다. 로컬 GoTrue가 발급한 세션을 앱의 `sb-127-auth-token(.0/.1)` 쿠키 형식으로 저장한 상태이며, `/mypage/profile`은 200으로 열리고 쿠키 없는 요청은 307로 `/auth/required`로 돌아간다.
+- 한계: 이 기록은 로컬 개발 스택 readback이며 호스티드 쓰기, 배포, 보호 브랜치 승격, 프로덕션 준비를 뜻하지 않는다.

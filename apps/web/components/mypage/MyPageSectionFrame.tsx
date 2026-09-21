@@ -14,8 +14,7 @@ export const myPageCardTitleClass =
   "truncate text-base font-semibold tracking-tight sm:text-lg";
 export const myPageInfoPanelClass =
   "space-y-2 rounded-2xl bg-muted/45 p-3 text-sm";
-export const myPageNestedCardClass =
-  "rounded-xl border border-border/70 bg-background/70 p-3";
+export const myPageItemGroupClass = "rounded-xl bg-muted/45 p-3";
 export const myPageFooterMetaClass =
   "flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-2 text-xs text-muted-foreground";
 export const myPageInlineLinkClass =
