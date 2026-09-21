@@ -126,8 +126,8 @@ import {
     getSeoulIndividualRestaurantsForRender,
     getVisibleRestaurantsForRender,
     nextEmptyIdentityArray,
+    normalizeNaverMarkerCoordinates,
     resolveEmptyClusterMarkerCleanupPlan,
-    hasNaverMarkerCoordinates,
     resolveSkippedEmptyThemeMarkerPlan,
     shouldClearEmptyClusterState,
     shouldReportNaverMarkerRenderPerformance,
@@ -449,15 +449,16 @@ function filterVisibleMarkerReviewBubbleViewportCandidates(
     const maxX = rect.width - bubbleHalfWidth - 16;
 
     const scoredRestaurants = restaurants.flatMap((restaurant) => {
-        if (!hasNaverMarkerCoordinates(restaurant)) return [];
+        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+        if (!normalizedRestaurant) return [];
 
         try {
             const point = projection.fromCoordToOffset(
-                new window.naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                new window.naver.maps.LatLng(normalizedRestaurant.lat, normalizedRestaurant.lng),
             );
             const targetY = options.isMobile ? rect.height * 0.34 : rect.height * 0.45;
             return [{
-                restaurant,
+                restaurant: normalizedRestaurant,
                 x: point.x,
                 y: point.y,
                 centralityScore: Math.abs(point.x - rect.width / 2) * 1.2 + Math.abs(point.y - targetY),
@@ -1985,6 +1986,12 @@ const NaverMapView = memo(({
         return unfilteredDisplayRestaurants.filter((restaurant) => !isUserSubmittedRestaurant(restaurant));
     }, [showUserSubmittedMarkers, unfilteredDisplayRestaurants]);
 
+    useEffect(() => {
+        if (!showUserSubmittedMarkers) {
+            setExpandedClusterRestaurantIds([]);
+        }
+    }, [showUserSubmittedMarkers]);
+
     const markerKindSignature = useMemo(
         () => buildRestaurantMarkerKindSignature(displayRestaurants),
         [displayRestaurants],
@@ -2311,8 +2318,10 @@ const NaverMapView = memo(({
         expandedClusterRestaurantIds.forEach((restaurantId) => {
             if (visibleRestaurantIds.has(restaurantId)) return;
 
-            const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
-            if (!hasNaverMarkerCoordinates(restaurant)) return;
+            const restaurant = normalizeNaverMarkerCoordinates(
+                restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId),
+            );
+            if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
 
             visibleRestaurantIds.add(restaurantId);
             restaurantsForMarkerRender.push(restaurant);
@@ -2499,8 +2508,10 @@ const NaverMapView = memo(({
         const renderExpandedClusterIndividuals = (activeIds: Set<string>) => {
             if (expandedClusterRestaurantIds.length === 0) return;
             expandedClusterRestaurantIds.forEach((restaurantId) => {
-                const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
-                if (!hasNaverMarkerCoordinates(restaurant)) return;
+                const restaurant = normalizeNaverMarkerCoordinates(
+                    restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId),
+                );
+                if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
 
                 activeIds.add(restaurant.id);
                 const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -2748,8 +2759,9 @@ const NaverMapView = memo(({
                                 bubble,
                                 isMobileOrTablet,
                             );
-                            const position = hasNaverMarkerCoordinates(restaurant)
-                                ? createIndividualMarkerPosition(restaurant, restaurant.lat, restaurant.lng)
+                            const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+                            const position = normalizedRestaurant
+                                ? createIndividualMarkerPosition(normalizedRestaurant, normalizedRestaurant.lat, normalizedRestaurant.lng)
                                 : new naver.maps.LatLng(lat, lng);
 
                             markerPool.acquire(

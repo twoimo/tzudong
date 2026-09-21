@@ -584,6 +584,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
+      markerElement.classList.toggle('selected-marker', isSelected);
       applyMapViewMarkerSelectedState({ isSelected, markerElement });
     });
   }, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById, isLoaded]);

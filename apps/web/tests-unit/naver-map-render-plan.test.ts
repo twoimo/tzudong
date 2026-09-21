@@ -68,12 +68,16 @@ describe('naver map render plan helpers', () => {
     });
 
     test('treats numeric coordinate strings as renderable marker coordinates', () => {
-        expect(hasNaverMarkerCoordinates({ lat: '37.5', lng: '127.0' })).toBe(true);
+        expect(hasNaverMarkerCoordinates({ lat: '37.5', lng: '127.0' })).toBe(false);
         expect(hasNaverMarkerCoordinates({ lat: null, lng: 127.0 })).toBe(false);
         const result = getRestaurantsWithRenderableCoordinates([
             makeRestaurant({ id: 'string-coords', lat: '37.5' as any, lng: '127.0' as any }),
         ]);
         expect(result.map((restaurant) => restaurant.id)).toEqual(['string-coords']);
+        expect(result[0]?.lat).toBe(37.5);
+        expect(result[0]?.lng).toBe(127);
+        expect(typeof result[0]?.lat).toBe('number');
+        expect(typeof result[0]?.lng).toBe('number');
     });
 
     test('filters Seoul individual marker candidates by id and coordinates', () => {
@@ -81,12 +85,15 @@ describe('naver map render plan helpers', () => {
             displayRestaurants: [
                 makeRestaurant({ id: 'renderable', lat: 37.5, lng: 127.0 }),
                 makeRestaurant({ id: 'not-requested', lat: 37.6, lng: 127.1 }),
+                makeRestaurant({ id: 'string-coordinates', lat: '37.7' as any, lng: '127.2' as any }),
                 makeRestaurant({ id: 'missing-coordinate', lat: null as any, lng: 127.2 }),
             ],
-            seoulIndividualIds: ['renderable', 'missing-coordinate', 'missing-from-data'],
+            seoulIndividualIds: ['renderable', 'string-coordinates', 'missing-coordinate', 'missing-from-data'],
         });
 
-        expect(result.map((restaurant) => restaurant.id)).toEqual(['renderable']);
+        expect(result.map((restaurant) => restaurant.id)).toEqual(['renderable', 'string-coordinates']);
+        expect(result[1]?.lat).toBe(37.7);
+        expect(result[1]?.lng).toBe(127.2);
     });
 
     test('builds stable render target ids for restaurants and regional clusters', () => {

@@ -18,23 +18,32 @@ const toRestaurantRenderToken = (restaurant: Restaurant, prefix = 'restaurant'):
 
 type RestaurantWithRenderableCoordinates = Restaurant & { lat: number; lng: number };
 
-function hasRenderableCoordinates(restaurant: Restaurant): restaurant is RestaurantWithRenderableCoordinates {
-    return hasNaverMarkerCoordinates(restaurant);
-}
-
 export function hasNaverMarkerCoordinates<T extends { lat?: unknown; lng?: unknown }>(
     restaurant: T | null | undefined,
 ): restaurant is T & { lat: number; lng: number } {
     if (!restaurant) return false;
-    return isFiniteCoordinate(restaurant.lat) && isFiniteCoordinate(restaurant.lng);
+    return typeof restaurant.lat === 'number' && Number.isFinite(restaurant.lat)
+        && typeof restaurant.lng === 'number' && Number.isFinite(restaurant.lng);
 }
 
-function isFiniteCoordinate(value: unknown) {
-    if (typeof value === 'number') return Number.isFinite(value);
-    if (typeof value !== 'string') return false;
+function normalizeFiniteCoordinate(value: unknown) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string') return null;
     const trimmed = value.trim();
-    if (!trimmed) return false;
-    return Number.isFinite(Number(trimmed));
+    if (!trimmed) return null;
+    const normalized = Number(trimmed);
+    return Number.isFinite(normalized) ? normalized : null;
+}
+
+export function normalizeNaverMarkerCoordinates<T extends { lat?: unknown; lng?: unknown }>(
+    restaurant: T | null | undefined,
+): (T & { lat: number; lng: number }) | null {
+    if (!restaurant) return null;
+    const lat = normalizeFiniteCoordinate(restaurant.lat);
+    const lng = normalizeFiniteCoordinate(restaurant.lng);
+    if (lat === null || lng === null) return null;
+    if (hasNaverMarkerCoordinates(restaurant)) return restaurant;
+    return { ...restaurant, lat, lng };
 }
 
 export function deriveClusterRenderPlan(
@@ -83,7 +92,10 @@ export function getVisibleRestaurantsForRender(
 }
 
 export function getRestaurantsWithRenderableCoordinates(restaurants: Restaurant[]) {
-    return restaurants.filter(hasRenderableCoordinates);
+    return restaurants.flatMap((restaurant) => {
+        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+        return normalizedRestaurant ? [normalizedRestaurant] : [];
+    });
 }
 
 export function getSeoulIndividualRestaurantsForRender({
@@ -99,9 +111,11 @@ export function getSeoulIndividualRestaurantsForRender({
 
     const seoulIndividualSet = new Set(seoulIndividualIds);
 
-    return displayRestaurants.filter((restaurant): restaurant is RestaurantWithRenderableCoordinates =>
-        seoulIndividualSet.has(restaurant.id) && hasRenderableCoordinates(restaurant)
-    );
+    return displayRestaurants.flatMap((restaurant): RestaurantWithRenderableCoordinates[] => {
+        if (!seoulIndividualSet.has(restaurant.id)) return [];
+        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+        return normalizedRestaurant ? [normalizedRestaurant] : [];
+    });
 }
 
 export function buildRenderTargetIdsForSignature({

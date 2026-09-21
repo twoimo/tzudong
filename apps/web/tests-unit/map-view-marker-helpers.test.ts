@@ -157,5 +157,6 @@ describe('map view marker helpers', () => {
             '}, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsById, isLoaded]);',
         );
         expect(mapViewSource).toContain('if (!markerElement) return;');
+        expect(mapViewSource).toContain("markerElement.classList.toggle('selected-marker', isSelected);");
     });
 });

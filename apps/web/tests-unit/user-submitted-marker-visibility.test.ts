@@ -59,6 +59,9 @@ describe('user-submitted marker visibility contract', () => {
     expect(naverMapView).toContain('[displayRestaurants, restaurantLookup, showUserSubmittedMarkers]');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)');
     expect(naverMapView).toContain('showUserSubmittedMarkers || !isUserSubmittedRestaurant(selectedRestaurant)');
+    expect(naverMapView).toContain('if (!showUserSubmittedMarkers) {');
+    expect(naverMapView).toContain('setExpandedClusterRestaurantIds([]);');
+    expect(naverMapView).toContain('!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant)');
     expect(naverMapView).toContain('showUserSubmittedMarkers,');
 
     for (const source of [mobileControls, floatingButton]) {
