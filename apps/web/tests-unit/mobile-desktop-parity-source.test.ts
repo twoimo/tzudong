@@ -879,7 +879,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-profile-hero="mobile-only"',
     );
     expect(myPageProfileSource).toContain(
-      'className="overflow-hidden shadow-none md:hidden"',
+      'className="overflow-hidden border-0 bg-transparent shadow-none md:hidden"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-profile-hero-layout="standard"',
@@ -897,7 +897,7 @@ describe("mobile and desktop parity source contracts", () => {
       'data-mypage-danger-zone-layout="matrix-bottom-right"',
     );
     expect(myPageProfileSource).toContain(
-      'className="min-w-0 border-border/70 md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden md:rounded-3xl md:bg-background/85 md:shadow-sm md:backdrop-blur-sm"',
+      'className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:col-start-2 md:row-start-2 md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden"',
     );
     expect(myPageProfileSource).not.toContain(
       'data-mypage-mobile-secondary-actions="true"',
