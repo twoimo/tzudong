@@ -425,11 +425,19 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sectionFrameSource).toContain("myPageResponsiveListClass");
     expect(sectionFrameSource).toContain("myPageCardTitleClass");
     expect(sectionFrameSource).toContain("myPageInfoPanelClass");
+    expect(sectionFrameSource).toContain("myPageItemGroupClass");
     expect(sectionFrameSource).toContain("myPageFooterMetaClass");
     expect(sectionFrameSource).toContain("myPageInlineLinkClass");
     expect(sectionFrameSource).toContain("MyPageEmptyState");
     expect(sectionFrameSource).toContain("MyPageErrorState");
     expect(sectionFrameSource).not.toContain("myPageSoftPanelClass");
+    expect(sectionFrameSource).not.toContain("myPageNestedCardClass");
+    for (const nestedItemPanelClass of [
+      "rounded-xl border border-border/70 bg-background/70 p-3",
+      "border border-border/70 bg-background/70",
+    ]) {
+      expect(sectionFrameSource).not.toContain(nestedItemPanelClass);
+    }
 
     for (const sectionSource of sectionSources) {
       expect(sectionSource).toContain("<MyPageSectionFrame");
@@ -444,6 +452,10 @@ describe("mypage mobile cleanup source contracts", () => {
       expect(sectionSource).not.toContain("더 불러오는 중...");
       expect(sectionSource).not.toContain("bg-gradient");
       expect(sectionSource).not.toContain("shadow-2xl");
+      expect(sectionSource).not.toContain("myPageNestedCardClass");
+      expect(sectionSource).not.toContain(
+        "border border-border/70 bg-background/70",
+      );
     }
   });
 
