@@ -690,4 +690,36 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(reviewsSource).toContain('<div className="min-w-0 flex-1">');
     expect(reviewsSource).toContain('<div className="flex shrink-0 gap-1">');
   });
+
+  test("mypage desktop cards fill stretched rows and keep touch targets", () => {
+    const sectionFrameSource = source("components/mypage/MyPageSectionFrame.tsx");
+    const sidebarSource = source("components/mypage/MyPageSidebar.tsx");
+    const profileSource = source("app/mypage/profile/page.tsx");
+
+    // The lg matrix stretches the tier card to the password card's height
+    // (306px) while its own content is ~180px, which left ~139px of empty
+    // panel below the metrics. The progress block grows into that space.
+    expect(profileSource).toContain(
+      'className="space-y-2 lg:flex lg:flex-1 lg:flex-col lg:justify-center"',
+    );
+    expect(profileSource).toContain(
+      'className="hidden h-full min-h-0 overflow-y-auto overscroll-contain p-4 md:flex md:flex-col md:gap-3',
+    );
+
+    // Inline video links measured 68x20, under the 24px target floor. The
+    // shared class grows the hit box to 32px and pulls the row back with
+    // -my-1 so the metadata line keeps its original rhythm.
+    expect(sectionFrameSource).toContain(
+      '"inline-flex -my-1 min-h-8 min-w-0 items-center gap-1 truncate py-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
+    );
+
+    // The sidebar nickname edit control was the smallest button on desktop at
+    // 35x28; it now matches the 32px touch rhythm used elsewhere.
+    expect(sidebarSource).toContain(
+      'className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"',
+    );
+    expect(sidebarSource).not.toContain(
+      'className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"',
+    );
+  });
 });

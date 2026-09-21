@@ -405,7 +405,7 @@ export function MyPageSidebar() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"
+                className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"
                 onClick={() => {
                   setNicknameInput(displayName);
                   setIsNicknameEditing(true);

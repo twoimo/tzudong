@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-09-22",
+  "target": "/mypage, /mypage/profile, /mypage/bookmarks, /mypage/reviews, /mypage/submissions/new, /mypage/submissions/edit, /mypage/submissions/recommend",
+  "method": {
+    "session": "local dev server http://127.0.0.1:3000 (next-server, existing process), signed in as twoimo@dgu.ac.kr (쯔동마스터, 도장 2 / 리뷰 7 / 좋아요 7)",
+    "viewport": "Chrome DevTools Protocol Emulation.setDeviceMetricsOverride at 320/390/640/768/1024/1280/1536/1920, fresh navigation per route; the in-app browser surface is 882px wide so >=1024 was read through element geometry (getBoundingClientRect + getComputedStyle), and pixel captures used Page.captureScreenshot with an explicit clip",
+    "probes": [
+      "horizontal overflow: any non-fixed element whose border box leaves the viewport (right > innerWidth + 1.5 or left < -1.5)",
+      "vertical clipping: any element with overflow-y hidden|clip and scrollHeight > clientHeight + 3, excluding line-clamp-* which clamps on purpose",
+      "content cut: any element with overflow-x hidden|clip that is neither clamped nor nowrap and whose scrollWidth exceeds clientWidth by more than 4px",
+      "dead space: card bottom (minus bottom padding and border) minus the lowest visible descendant, i.e. panel the reader sees as empty",
+      "target size: computed height and width of every button, link, summary, select and role=button"
+    ]
+  },
+  "coverage": {
+    "routes": 7,
+    "widths": [320, 390, 640, 768, 1024, 1280, 1536, 1920],
+    "combinations": 56,
+    "documentHorizontalOverflow": 0,
+    "horizontalOverflowElements": 0,
+    "contentCutWithoutClamp": 0,
+    "verticalClipFindings": 1,
+    "verticalClipNote": "the only finding is the app shell div.h-full.min-h-0.bg-background.overflow-hidden whose inner ref=scrollRef panel owns the scrolling; confirmed by scrolling that panel to its end at 390",
+    "remainingSubThirtyTwoTargets": [
+      { "target": "모바일 프로필 hero 닉네임 수정 badge", "size": "35x28", "note": "above the 24px WCAG 2.2 SC 2.5.8 floor; the class string is frozen by tests-unit/mypage-mobile-cleanup-contract.test.ts" },
+      { "target": "모바일 라우트 헤더 로그아웃 icon button", "size": "36x36", "note": "above the 24px floor" },
+      { "target": "리뷰 상태 필터 Select", "size": "104x36", "note": "above the 24px floor" }
+    ]
+  },
+  "fixes": [
+    {
+      "id": "tier-dashboard-fill",
+      "path": "apps/web/app/mypage/profile/page.tsx",
+      "change": "the desktop tier CardContent progress block gained lg:flex lg:flex-1 lg:flex-col lg:justify-center",
+      "before": {
+        "cardHeightPx": 306,
+        "contentHeightPx": 167,
+        "deadSpacePx": 139,
+        "measuredAt": [1024, 1280, 1440, 1536, 1920]
+      },
+      "after": {
+        "cardHeightPx": 306,
+        "progressBlockHeightPx": 198,
+        "deadSpacePx": 0,
+        "measuredAt": [1024, 1280, 1440, 1536, 1920]
+      }
+    },
+    {
+      "id": "inline-video-link-target",
+      "path": "apps/web/components/mypage/MyPageSectionFrame.tsx",
+      "change": "myPageInlineLinkClass gained -my-1 min-h-8 py-1, so the shared 영상 보기 / 영상 #n / 관련 영상 보기 link grows from 20px to 32px tall while -my-1 keeps the metadata row height at 33px",
+      "before": { "widthPx": 68, "heightPx": 20, "measuredAt": [320, 390, 640, 768, 1024, 1536, 1920] },
+      "after": { "widthPx": 68, "heightPx": 32, "footerRowHeightPx": 33 }
+    },
+    {
+      "id": "sidebar-nickname-target",
+      "path": "apps/web/components/mypage/MyPageSidebar.tsx",
+      "change": "the sidebar 닉네임 수정 button moved from h-7 px-2 to h-8 px-2.5",
+      "before": { "widthPx": 35, "heightPx": 28, "measuredAt": [768, 1024, 1280, 1536, 1920] },
+      "after": { "widthPx": 39, "heightPx": 32 }
+    }
+  ],
+  "retainedUnchanged": {
+    "profileMatrixTracks": {
+      "1024": "333.5px 333.5px",
+      "1280": "461.5px 461.5px",
+      "1536": "394px 394px 394px",
+      "1920": "522px 522px 522px"
+    },
+    "bookmarkMediaListTracks": {
+      "1024": "713px",
+      "1280": "486px 486px",
+      "1536": "614px 614px",
+      "1920": "806px 806px"
+    },
+    "bookmarkCardInternalsAt1920": {
+      "cardWidthPx": 806,
+      "thumbnailWidthPx": 128,
+      "addressBoxPx": 628,
+      "addressTextPx": 246
+    },
+    "note": "the 2-up media list at >=1280 and the 3-up text list at >=1536 were re-measured and left as the previous round chose them; both keep every address and title uncut"
+  }
+}
