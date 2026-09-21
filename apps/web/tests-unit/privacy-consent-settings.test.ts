@@ -186,4 +186,20 @@ describe("profile consent controls", () => {
     expect(profile).toContain("계정 완전 삭제");
     expect(profile).toContain("handleAccountPermanentDelete");
   });
+
+  test("reloads consent settings only when the signed-in user changes, not on every auth user object", () => {
+    expect(profile).toContain("const userId = user?.id ?? null;");
+    expect(profile).toContain("}, [userId, loadConsentSettings]);");
+    expect(profile).not.toContain("}, [user, loadConsentSettings]);");
+    expect(profile).not.toContain("if (user) void loadConsentSettings();");
+  });
+
+  test("bounds a stalled consent read so the controls cannot stay disabled without a retryable error", () => {
+    expect(profile).toContain("const CONSENT_SETTINGS_TIMEOUT_MS = 15_000;");
+    expect(profile).toContain("window.setTimeout(() => controller.abort(), CONSENT_SETTINGS_TIMEOUT_MS)");
+    expect(profile).toContain("signal: controller.signal");
+    expect(profile).toContain("consentSettingsRequestRef.current === controller");
+    expect(profile).toContain("if (consentSettingsRequestRef.current !== controller) return;");
+    expect(profile).toContain("consentSettingsRequestRef.current = null;\n    setDeletionSession(null);");
+  });
 });
