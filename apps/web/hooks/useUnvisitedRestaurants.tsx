@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
@@ -83,28 +84,38 @@ export function useUnvisitedRestaurants() {
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
     });
 
-    // 방문한 맛집 ID Set 생성
-    const visitedRestaurantIds = new Set(
-        userReviewData.map(review => review.restaurant_id)
+    // 데이터 병합 로직 (공통 유틸리티 사용) - 입력이 그대로면 다시 병합하지 않는다.
+    const mergedRestaurants = useMemo(
+        () => mergeRestaurants(restaurantsData || []),
+        [restaurantsData]
     );
-    const reviewedRestaurantCandidates = userReviewData
-        .map((review) => review.restaurant)
-        .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
-    // 데이터 병합 로직 (공통 유틸리티 사용)
-    const mergedRestaurants = mergeRestaurants(restaurantsData || []);
+    // 리뷰 기반 방문 판정은 입력(병합 목록, 사용자 리뷰)이 바뀔 때만 다시 계산한다.
+    const { unvisitedRestaurants, visitedCount } = useMemo(() => {
+        const visitedRestaurantIds = new Set(
+            userReviewData.map(review => review.restaurant_id)
+        );
+        const reviewedRestaurantCandidates = userReviewData
+            .map((review) => review.restaurant)
+            .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
-    const isVisited = (restaurant: Restaurant) => hasRelatedVerifiedUserReview({
-        restaurant,
-        reviewedRestaurantIds: visitedRestaurantIds,
-        reviewedRestaurants: reviewedRestaurantCandidates,
-    });
+        // 방문 여부를 한 번만 계산해 미방문 목록과 방문 수를 함께 만든다(같은 목록을 두 번 순회하지 않는다).
+        const unvisited: Restaurant[] = [];
+        let visited = 0;
+        for (const restaurant of mergedRestaurants) {
+            if (hasRelatedVerifiedUserReview({
+                restaurant,
+                reviewedRestaurantIds: visitedRestaurantIds,
+                reviewedRestaurants: reviewedRestaurantCandidates,
+            })) {
+                visited += 1;
+            } else {
+                unvisited.push(restaurant);
+            }
+        }
 
-    // 방문하지 않은 맛집만 필터링
-    const unvisitedRestaurants = mergedRestaurants.filter(restaurant => {
-        return !isVisited(restaurant);
-    });
-    const visitedCount = mergedRestaurants.filter(isVisited).length;
+        return { unvisitedRestaurants: unvisited, visitedCount: visited };
+    }, [mergedRestaurants, userReviewData]);
 
     return {
         unvisitedRestaurants,

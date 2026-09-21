@@ -1,0 +1,63 @@
+{
+  "workload": {
+    "rows": 1372,
+    "reviews": 40,
+    "mergedRestaurants": 1200,
+    "renders": 40,
+    "repetitions": 15
+  },
+  "equivalence": "identical",
+  "equivalenceDetail": [
+    {
+      "id": "V0-original",
+      "visitedCount": 40,
+      "unvisitedCount": 1160,
+      "fingerprint": "2c28929d",
+      "mergeCalls": 40,
+      "reviewChecks": 96000,
+      "memoHits": 0,
+      "memoMisses": 0
+    },
+    {
+      "id": "V1-memo-merge",
+      "visitedCount": 40,
+      "unvisitedCount": 1160,
+      "fingerprint": "2c28929d",
+      "mergeCalls": 1,
+      "reviewChecks": 48000,
+      "memoHits": 39,
+      "memoMisses": 1
+    },
+    {
+      "id": "V2-memo-derived",
+      "visitedCount": 40,
+      "unvisitedCount": 1160,
+      "fingerprint": "2c28929d",
+      "mergeCalls": 1,
+      "reviewChecks": 1200,
+      "memoHits": 78,
+      "memoMisses": 2
+    }
+  ],
+  "measurements": [
+    {
+      "id": "V0-original",
+      "medianMs": 361.803,
+      "p95Ms": 378.247
+    },
+    {
+      "id": "V1-memo-merge",
+      "medianMs": 122.988,
+      "p95Ms": 169.699
+    },
+    {
+      "id": "V2-memo-derived",
+      "medianMs": 6.716,
+      "p95Ms": 8.394
+    }
+  ],
+  "speedupByMedian": 53.87,
+  "speedupByP95": 45.06,
+  "mergeCallReduction": 40,
+  "reviewCheckReduction": 80
+}
