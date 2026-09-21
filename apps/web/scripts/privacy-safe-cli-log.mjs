@@ -8,9 +8,11 @@ const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F-\u009F]/g;
 const RRN_PATTERN = /\b\d{6}[-\s]?[1-8]\d{6}\b/g;
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const KOREAN_PHONE_PATTERN =
-  /(?:^|[^\d])(?:\+?82[-.\s]?)?(?:0?1[016789]|0?2|0?[3-6][1-5])[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)/gm;
+  /(^|[^\d])(?:\+?82[-.\s]?)?(?:0?1[016789]|0?2|0?[3-6][1-5])[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)/gm;
 const PHONE_PATTERN =
   /(^|[^\d])(?:\+\d{1,3}(?:[-.\s]?\(?\d{1,4}\)?){2,4}|\d{2,4}[-.\s]\d{3,4}[-.\s]\d{4})(?!\d)/g;
+const CANONICAL_UUID_TOKEN_PATTERN =
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 const SECRET_URL_PATTERN =
   /\b(?:https?|wss?):\/\/[^\s"'<>]*[?&](?:access[_-]?token|refresh[_-]?token|id[_-]?token|token|jwt|api[_-]?key|key|secret|password|passphrase|credential|authorization|cookie|session(?:[_-]?(?:id|token|key|secret))?|onboarding(?:[_-]?(?:token|session|state|code|value))?|challenge|(?:supabase[_-]?)?service(?:[_-]?(?:role|key))(?:[_-]?key)?)=[^\s"'<>]*/gi;
 const CREDENTIAL_PATTERN =
@@ -76,6 +78,19 @@ const safeCliErrorCode = (error) => {
 const boundedCount = (value) => (
   typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0
 );
+
+// Canonical UUIDs (trace, job and correlation identifiers) are opaque handles. Their hex
+// runs can look like an unprefixed Korean phone number, so phone redaction must not reach
+// inside them or CLI logs would lose the identifier they correlate on.
+const isInsideCanonicalUuid = (text, start, end) => {
+  const pattern = new RegExp(CANONICAL_UUID_TOKEN_PATTERN.source, 'gi');
+  let match;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index <= start && end <= match.index + match[0].length) return true;
+  }
+  return false;
+};
+
 /**
  * Redacts untrusted CLI text without coercing non-text values or retaining
  * unbounded diagnostics.
@@ -91,8 +106,16 @@ export const redactCliText = (value, maxLength = DEFAULT_MAX_CLI_TEXT_LENGTH) =>
     .replace(RAW_OCR_PATTERN, REDACTED('raw_ocr'))
     .replace(RRN_PATTERN, REDACTED('rrn'))
     .replace(EMAIL_PATTERN, REDACTED('email'))
-    .replace(KOREAN_PHONE_PATTERN, (_, prefix = '') => `${prefix}${REDACTED('phone')}`)
-    .replace(PHONE_PATTERN, (_, prefix) => `${prefix}${REDACTED('phone')}`)
+    .replace(KOREAN_PHONE_PATTERN, (match, prefix = '', offset, text) => (
+      isInsideCanonicalUuid(text, offset + prefix.length, offset + match.length)
+        ? match
+        : `${prefix}${REDACTED('phone')}`
+    ))
+    .replace(PHONE_PATTERN, (match, prefix, offset, text) => (
+      isInsideCanonicalUuid(text, offset + prefix.length, offset + match.length)
+        ? match
+        : `${prefix}${REDACTED('phone')}`
+    ))
     .replace(COORDINATE_PATTERN, REDACTED('precise_location'))
     .replace(BEARER_TOKEN_PATTERN, REDACTED('token'))
     .replace(CREDENTIAL_PATTERN, REDACTED('credential'))

@@ -43,6 +43,11 @@ const RRN_LIKE_PATTERN = /\b\d{6}[-\s]?[1-8]\d{6}\b/g;
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const KOREAN_PHONE_PATTERN =
   /(?:^|[^\d])(?:(?:\+?82[-.\s]?)?(?:0?1[016789]|0?2|0?[3-6][1-5])|(?:\+?82[-.\s]?70|070))[-.\s]?\d{3,4}[-.\s]?\d{4}(?!\d)/gm;
+// Canonical UUIDs (trace, job and correlation identifiers) are opaque handles, not
+// personal data. Their hex segments can look like an unprefixed Korean phone number,
+// which used to redact the whole identifier as `phone` and break log correlation.
+const CANONICAL_UUID_TOKEN_PATTERN =
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 const PRECISE_LOCATION_TEXT_PATTERN =
   /(?:\b(?:lat|latitude|lng|lon|longitude)\b|(?:위도|경도))\s*[:=]\s*-?\d{1,3}\.\d{4,}/gim;
 const PRECISE_LOCATION_QUERY_PATTERN =
@@ -365,7 +370,10 @@ const sensitiveKindForString = (
   const emails = countMatches(value, EMAIL_PATTERN);
   if (emails > 0) return { kind: "email", count: emails };
 
-  const phones = countMatches(value, KOREAN_PHONE_PATTERN);
+  const phones = countMatches(
+    value.replace(CANONICAL_UUID_TOKEN_PATTERN, " "),
+    KOREAN_PHONE_PATTERN,
+  );
   if (phones > 0) return { kind: "phone", count: phones };
   const preciseLocationText = countMatches(value, PRECISE_LOCATION_TEXT_PATTERN)
     + countMatches(value, PRECISE_LOCATION_QUERY_PATTERN)
