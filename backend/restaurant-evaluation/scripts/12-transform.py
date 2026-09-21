@@ -799,15 +799,25 @@ def main():
             
             # laaj_results가 존재하면 우선적으로 사용 (parse_laaj_evaluation에서 이미 병합됨)
             laaj_file = laaj_results_dir / f"{video_id}.jsonl"
-            target_file = laaj_file if laaj_file.exists() else f
+            use_laaj = laaj_file.exists()
+            target_file = laaj_file if use_laaj else f
+
+            # [PERF] rule 파일은 파일당 1회만 읽고 파싱한다.
+            # 기존에는 라인마다 f를 다시 열고 파싱해 O(라인수 x 파일크기)였다.
+            # rule 파일이 깨져 있으면 기존과 동일하게 이 파일의 라인을 전부 건너뛴다.
+            rule_data = None
+            if use_laaj:
+                try:
+                    with open(f, "r", encoding="utf-8") as rule_file:
+                        rule_data = json.loads(rule_file.read().strip())
+                except json.JSONDecodeError:
+                    continue
 
             with open(target_file, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
-                        if laaj_file.exists():
-                            with open(f, "r", encoding="utf-8") as rule_file:
-                                rule_data = json.loads(rule_file.read().strip())
+                        if rule_data is not None:
                             data = merge_rule_results_into_laaj(rule_data, data)
                         transformed = transform_json_object(
                             data, "results", channel, meta_cache, video_id
