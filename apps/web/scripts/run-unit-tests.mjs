@@ -8,6 +8,8 @@ const isolated = new Set([
   'admin-storyboard-langgraph.test.ts',
   'admin-storyboard-caption-provenance.test.ts',
   'admin-youtube-thumbnail-readiness-gate.test.ts',
+  'require-admin-fail-closed.test.ts',
+  'shorten-target-allowlist.test.ts',
 ]);
 
 const files = readdirSync(root, { recursive: true, withFileTypes: true })
