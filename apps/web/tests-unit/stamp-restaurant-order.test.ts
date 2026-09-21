@@ -143,4 +143,16 @@ describe('stamp visited lookup memoization', () => {
         expect(pageSource).toContain('result.filter(r => !isVisitedForList(r))');
         expect(comparatorCall?.[0]).toContain('isVisited: isVisitedForList');
     });
+
+    test('wires the memoized lookup into the stamp overlay comparator', () => {
+        const overlaySource = readFileSync(
+            path.join(webRoot, 'components/overlay-pages/StampOverlay.tsx'),
+            'utf8',
+        );
+        const comparatorCall = overlaySource.match(/compareStampRestaurants\(a, b, \{[^}]*\}/);
+
+        expect(overlaySource).toContain('const isVisitedForList = createVisitedLookup(isVisited);');
+        expect(overlaySource).toContain('result.filter(r => !isVisitedForList(r))');
+        expect(comparatorCall?.[0]).toContain('isVisited: isVisitedForList');
+    });
 });
