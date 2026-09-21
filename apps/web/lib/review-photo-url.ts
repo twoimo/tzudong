@@ -208,7 +208,9 @@ export async function cleanupCanonicalReviewPhotoObjects(
         const { error: removeError } = await storage.remove(paths);
         if (removeError) return { paths, success: false };
 
-        for (const path of paths) {
+        // 경로마다 순차로 왕복하던 읽기 검증을 한 번의 왕복으로 모읍니다.
+        // 판정 결과는 이전 구현과 같습니다(하나라도 실패하면 success: false).
+        const readbacks = await Promise.all(paths.map(async (path) => {
             const separatorIndex = path.lastIndexOf('/');
             const directory = path.slice(0, separatorIndex);
             const filename = path.slice(separatorIndex + 1);
@@ -217,13 +219,11 @@ export async function cleanupCanonicalReviewPhotoObjects(
                 search: filename,
             });
 
-            if (
-                readbackError ||
-                !data ||
-                data.some((entry) => entry.name === filename)
-            ) {
-                return { paths, success: false };
-            }
+            return !readbackError && data !== null && !data.some((entry) => entry.name === filename);
+        }));
+
+        if (readbacks.some((isAbsent) => !isAbsent)) {
+            return { paths, success: false };
         }
 
         return { paths, success: true };

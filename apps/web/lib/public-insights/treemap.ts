@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { pruneTimedCache } from './timed-cache';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const HISTORY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -307,6 +308,10 @@ const videoPeriodCache = new Map<string, CacheEntry<VideoDbRow[]>>();
 const historyCache = new Map<string, HistoryCacheEntry>();
 const treemapResponseCache = new Map<string, CacheEntry<InsightTreemapResponse>>();
 const TREEMAP_RESPONSE_CACHE_TTL_MS = 60 * 1000;
+// 비디오별 파싱 결과는 사용자가 본 영상 수만큼 늘어나므로 만료 정리와 함께 상한을 둡니다.
+// 옵션 조합 캐시는 키 공간이 작아 상한이 사실상 안전장치입니다.
+const MAX_HISTORY_CACHE_ENTRIES = 2048;
+const MAX_OPTION_CACHE_ENTRIES = 64;
 
 
 function toMetricRawValue(value: unknown): string | number | null {
@@ -519,6 +524,7 @@ function getCachedMetaHistory(raw: unknown, videoId: string): MetricHistoryPoint
         expiresAt: now + HISTORY_CACHE_TTL_MS,
         value: parsed,
     });
+    pruneTimedCache(historyCache, now, MAX_HISTORY_CACHE_ENTRIES);
 
     return parsed;
 }
@@ -808,6 +814,7 @@ function cacheOrFetchVideos(
             expiresAt: Date.now() + CACHE_TTL_MS,
             value: rows,
         });
+        pruneTimedCache(videoPeriodCache, Date.now(), MAX_OPTION_CACHE_ENTRIES);
 
         return rows;
     });
@@ -1621,6 +1628,7 @@ export async function getInsightTreemapData(
         expiresAt: now + TREEMAP_RESPONSE_CACHE_TTL_MS,
         value: result,
     });
+    pruneTimedCache(treemapResponseCache, now, MAX_OPTION_CACHE_ENTRIES);
 
     return result;
 }
