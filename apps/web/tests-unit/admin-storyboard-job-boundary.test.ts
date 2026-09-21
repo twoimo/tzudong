@@ -125,8 +125,10 @@ describe('storyboard job route boundaries', () => {
         const payload = await response.json();
         expect(payload.error).toBe(route.error);
         expect(payload.traceId).toMatch(/^[a-f0-9-]{36}$/);
-        expect(log).toHaveBeenCalledTimes(1);
-        expect(JSON.stringify(log.mock.calls)).toContain(payload.traceId);
+        // The console spy is process-wide, so another concurrently running file can add calls.
+        // Count only the entries correlated with this request instead of every call in the process.
+        const correlated = log.mock.calls.filter((call) => JSON.stringify(call).includes(payload.traceId));
+        expect(correlated).toHaveLength(1);
         expect(JSON.stringify([payload, log.mock.calls])).not.toContain(diagnostic);
         expect(JSON.stringify([payload, log.mock.calls])).not.toContain('private-provider-token');
       });
@@ -147,7 +149,8 @@ describe('storyboard job route boundaries', () => {
     results.push({ data: null, error: null }, { data: null, error: { message: diagnostic } });
     const failure = await cases[1].invoke();
     expect(failure.status).toBe(502);
-    expect((await failure.json()).error).toBe('storyboard_job_cancel_failed');
-    expect(log).toHaveBeenCalledTimes(1);
+    const failurePayload = await failure.json();
+    expect(failurePayload.error).toBe('storyboard_job_cancel_failed');
+    expect(log.mock.calls.filter((call) => JSON.stringify(call).includes(failurePayload.traceId))).toHaveLength(1);
   });
 });
