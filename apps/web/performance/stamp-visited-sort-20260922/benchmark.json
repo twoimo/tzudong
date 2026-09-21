@@ -1,0 +1,127 @@
+{
+  "generatedAt": "2026-09-21T21:05:58.097Z",
+  "workload": {
+    "rows": 1372,
+    "mergedRestaurants": 1568,
+    "reviews": 40,
+    "repetitions": 21,
+    "sampleLoops": 7
+  },
+  "budgets": {
+    "absolute": {
+      "pipelineMedianMsMax": 40,
+      "rule": "한 번의 파이프라인 실행 중앙값이 40ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 2,
+      "rule": "가장 느린 변형 대비 중앙값 2배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 변형의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "filter+sort",
+      "description": "미방문만 보기 필터 + 도장 우선 정렬",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-previous",
+          "resultCount": 1528,
+          "fingerprint": "344af94b",
+          "visitChecks": 24966,
+          "candidateVisits": 998640
+        },
+        {
+          "id": "S1-createVisitedLookup",
+          "resultCount": 1528,
+          "fingerprint": "344af94b",
+          "visitChecks": 1568,
+          "candidateVisits": 62720
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-previous",
+          "medianMs": 49.747690571428585,
+          "p95Ms": 56.19536314285715,
+          "madRelative": 0.051365870439801974
+        },
+        {
+          "id": "S1-createVisitedLookup",
+          "medianMs": 3.936630857142908,
+          "p95Ms": 4.83908342857142,
+          "madRelative": 0.04955437601174642
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.1009202464515484,
+        "relativeImprovement": 12.637123564980135,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 12.637123564980135,
+        "speedupByP95": 11.612811387185978,
+        "visitCheckReduction": 15.92219387755102,
+        "candidateVisitReduction": 15.92219387755102
+      }
+    },
+    {
+      "id": "sort-only",
+      "description": "필터 없이 도장 우선 정렬만",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-previous",
+          "resultCount": 1568,
+          "fingerprint": "579b1e1c",
+          "visitChecks": 24192,
+          "candidateVisits": 967680
+        },
+        {
+          "id": "S1-createVisitedLookup",
+          "resultCount": 1568,
+          "fingerprint": "579b1e1c",
+          "visitChecks": 1568,
+          "candidateVisits": 62720
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-previous",
+          "medianMs": 52.82681542857141,
+          "p95Ms": 60.89910714285725,
+          "madRelative": 0.09227287782102028
+        },
+        {
+          "id": "S1-createVisitedLookup",
+          "medianMs": 4.327934571428549,
+          "p95Ms": 5.4383272857142275,
+          "madRelative": 0.06009821511030545
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.15237109293132572,
+        "relativeImprovement": 12.20601064011338,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 12.20601064011338,
+        "speedupByP95": 11.198132062193316,
+        "visitCheckReduction": 15.428571428571429,
+        "candidateVisitReduction": 15.428571428571429
+      }
+    }
+  ]
+}
