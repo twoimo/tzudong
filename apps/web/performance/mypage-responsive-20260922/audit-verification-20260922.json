@@ -1,0 +1,155 @@
+{
+  "route": "/mypage/profile",
+  "checkedAt": "2026-09-22",
+  "server": "http://127.0.0.1:3000 (local Supabase stack)",
+  "session": "signed in as twoimo@dgu.ac.kr (쯔동마스터, 도장 2 / 리뷰 7 / 좋아요 7)",
+  "method": "CDP Emulation.setDeviceMetricsOverride + Runtime.evaluate geometry probe (no source change)",
+  "overflowSweep": [
+    {
+      "vw": 320,
+      "docClient": 320,
+      "docScroll": 320,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 390,
+      "docClient": 390,
+      "docScroll": 390,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 414,
+      "docClient": 414,
+      "docScroll": 414,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 640,
+      "docClient": 640,
+      "docScroll": 640,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 768,
+      "docClient": 768,
+      "docScroll": 768,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 1024,
+      "docClient": 1024,
+      "docScroll": 1024,
+      "overflowingElements": 0,
+      "clippedElements": 0
+    },
+    {
+      "vw": 1280,
+      "docClient": 1280,
+      "docScroll": 1280,
+      "overflowingElements": 0,
+      "clippedElements": 1
+    },
+    {
+      "vw": 1536,
+      "docClient": 1536,
+      "docScroll": 1536,
+      "overflowingElements": 0,
+      "clippedElements": 1
+    },
+    {
+      "vw": 1920,
+      "docClient": 1920,
+      "docScroll": 1920,
+      "overflowingElements": 0,
+      "clippedElements": 1
+    }
+  ],
+  "clippedElementDetail": {
+    "selector": "a.sr-only.focus:not-sr-only",
+    "text": "페이지 본문으로 건너뛰기",
+    "clientWidth": 1,
+    "scrollWidth": 160,
+    "intentional": true,
+    "reason": "visually hidden skip link; 1px box is by design until focus"
+  },
+  "dashboardGrid": [
+    {
+      "vw": 768,
+      "tracks": "1",
+      "gridHeight": 1421,
+      "cells": 5,
+      "cellsFilled": 5
+    },
+    {
+      "vw": 1024,
+      "tracks": "333.5px 333.5px",
+      "gridHeight": 958,
+      "rows": "306px 186px 408px",
+      "cells": 6,
+      "cellsFilled": 6,
+      "coveredRatio": 0.887
+    },
+    {
+      "vw": 1280,
+      "tracks": "461.5px 461.5px",
+      "gridHeight": 958,
+      "rows": "306px 186px 408px",
+      "cells": 6,
+      "cellsFilled": 6,
+      "coveredRatio": 0.901
+    },
+    {
+      "vw": 1440,
+      "tracks": "541.5px 541.5px",
+      "gridHeight": 958,
+      "rows": "306px 186px 408px",
+      "cells": 6,
+      "cellsFilled": 6,
+      "coveredRatio": 0.906
+    },
+    {
+      "vw": 1536,
+      "tracks": "394px 394px 394px",
+      "gridHeight": 538,
+      "rows": "306px 186px",
+      "cells": 6,
+      "cellsFilled": 6,
+      "coveredRatio": 0.879
+    },
+    {
+      "vw": 1920,
+      "tracks": "522px 522px 522px",
+      "gridHeight": 538,
+      "rows": "306px 186px",
+      "cells": 6,
+      "cellsFilled": 6,
+      "coveredRatio": 0.889
+    }
+  ],
+  "sidebar": {
+    "widthBelow768": 0,
+    "widthAtOrAbove768": 256
+  },
+  "mobileScroll": {
+    "vw": 390,
+    "innerScrollerClientHeight": 783,
+    "innerScrollerScrollHeight": 1929,
+    "scrollTopMin": 0,
+    "scrollTopMax": 1146,
+    "bottomCardReachable": true
+  },
+  "heightReduction1536Vs1280": {
+    "at1280": 958,
+    "at1536": 538,
+    "deltaPx": -420,
+    "deltaPercent": -43.8
+  },
+  "knownDifferences": [
+    "Below 768px the 등급 대시보드 tier-progress card is replaced by the grouped 내 활동 / 제보하기 quick-action list (data-mypage-mobile-quick-actions), so the 39% tier progress is desktop-only."
+  ]
+}
