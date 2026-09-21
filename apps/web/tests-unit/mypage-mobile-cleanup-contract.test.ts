@@ -225,6 +225,15 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(sidebarSource).toContain(
       'data-mypage-sidebar-session-action="logout"',
     );
+    expect(sidebarSource).toContain(
+      "hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex",
+    );
+    expect(sidebarSource.match(/border-r border-border/g)?.length ?? 0).toBe(1);
+    expect(sidebarSource).not.toContain("border-b border-border");
+    expect(sidebarSource).not.toContain("border-t border-border");
+    expect(sidebarSource).toContain(
+      'variant="ghost"\n          className="h-9 w-full rounded-xl text-xs"',
+    );
     expect(profileSource).toContain("md:h-full");
     expect(profileSource).toContain("md:grid-rows-2");
     expect(profileSource).not.toContain("lg:max-h-[calc(100dvh-6.25rem)]");
@@ -270,7 +279,6 @@ describe("mypage mobile cleanup source contracts", () => {
     );
     expect(profileSource).toContain('data-mypage-desktop-tier-metrics="true"');
     expect(profileSource).toContain('data-mypage-desktop-recent-activity="true"');
-    expect(profileSource).toContain('data-mypage-password-guidance="true"');
     expect(profileSource).toContain(
       'data-mypage-danger-zone-guidance="compact"',
     );
@@ -303,6 +311,22 @@ describe("mypage mobile cleanup source contracts", () => {
     ]) {
       expect(profileSource).not.toContain(nestedPanelClass);
     }
+    for (const nestedBorderClass of [
+      "border-t border-border/60",
+      "divide-y divide-border/60",
+      "rounded-xl border border-destructive/40 bg-destructive/5 p-3",
+      "rounded-md border border-amber-500/40 bg-amber-50/60 p-3",
+      "border border-transparent md:mt-auto",
+    ]) {
+      expect(profileSource).not.toContain(nestedBorderClass);
+    }
+    expect(profileSource).not.toContain(
+      'data-mypage-password-guidance="true"',
+    );
+    expect(profileSource).not.toContain("안전한 비밀번호 기준");
+    expect(profileSource).not.toContain("bg-amber-600 text-white");
+    expect(profileSource).toContain("space-y-1 pt-2");
+    expect(profileSource).toContain('text-[11px] font-semibold text-amber-600');
     for (const tonalPanelClass of [
       "rounded-2xl bg-muted/40 px-3 py-2.5",
       "rounded-xl bg-muted/40 px-2.5 py-1.5",
