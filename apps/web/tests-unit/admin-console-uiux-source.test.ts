@@ -132,6 +132,35 @@ const expectCssDeclaration = (
 };
 
 describe("admin console beginner-friendly UI/UX source contract", () => {
+  test("gates local storyboard generation by the provider for each action stage", () => {
+    const localStoryboardSource = source(
+      "components/admin/storyboard/LocalStoryboardWorkspace.tsx",
+    );
+
+    expect(localStoryboardSource).toContain(
+      "const retryProvider = view?.project.document",
+    );
+    expect(localStoryboardSource).toContain(
+      "? view.project.request.providers.image",
+    );
+    expect(localStoryboardSource).toContain(
+      ": view?.project.request.providers.text;",
+    );
+    expect(localStoryboardSource).toContain(
+      'const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";',
+    );
+    expect(localStoryboardSource).toContain(
+      'const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";',
+    );
+    expect(localStoryboardSource).toContain(
+      "disabled={locked || retryBlocked || scenesComplete",
+    );
+    expect(localStoryboardSource).toContain(
+      "disabled={locked || regenerateBlocked || !!editing}",
+    );
+    expect(localStoryboardSource).not.toContain("generationBlocked");
+  });
+
   test("fails fast on malformed admin/storyboard global CSS", () => {
     const appGlobalsSource = source("app/app-globals.css");
 

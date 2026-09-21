@@ -6,7 +6,10 @@ import {
   nextStoryboardQueueWait,
   storyboardMemoryReserveBytes,
 } from "../lib/admin/storyboard/resource-invariants";
-import { admitStoryboardWorkerMemory } from "../lib/admin/storyboard/outbound-worker";
+import {
+  DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES,
+  admitStoryboardWorkerMemory,
+} from "../lib/admin/storyboard/outbound-worker";
 
 const GIB = 1024 ** 3;
 
@@ -61,6 +64,34 @@ describe("storyboard resource invariants", () => {
       [{ bytes_resident: 10 * GIB }],
       { physicalBytes, availableBytes: 16 * GIB },
     )).toBe(false);
+  });
+
+  test("worker admission reserves a configurable MLX inference peak and fails closed on invalid values", () => {
+    const envName = "STORYBOARD_MLX_INFERENCE_PEAK_BYTES";
+    const previous = process.env[envName];
+    try {
+      delete process.env[envName];
+      expect(DEFAULT_STORYBOARD_MLX_INFERENCE_PEAK_BYTES).toBe(8 * GIB);
+      expect(admitStoryboardWorkerMemory([], {
+        physicalBytes: 64 * GIB,
+        usedBytes: 40 * GIB,
+      })).toBe(false);
+
+      process.env[envName] = String(1 * GIB);
+      expect(admitStoryboardWorkerMemory([], {
+        physicalBytes: 64 * GIB,
+        usedBytes: 40 * GIB,
+      })).toBe(true);
+
+      process.env[envName] = "unknown";
+      expect(() => admitStoryboardWorkerMemory([], {
+        physicalBytes: 64 * GIB,
+        usedBytes: 40 * GIB,
+      })).toThrow(RangeError);
+    } finally {
+      if (previous === undefined) delete process.env[envName];
+      else process.env[envName] = previous;
+    }
   });
 
   test("queue wait follows W[i+1] = max(0, W[i] + S[i] - A[i])", () => {

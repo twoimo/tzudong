@@ -431,8 +431,11 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
 
   const active = isActive(view);
   const locked = busy || active || needsReadback || !!readError;
-  const providers = view ? [view.project.request.providers.text, view.project.request.providers.image] : [];
-  const generationBlocked = providers.some((provider) => provider.id !== "local-mlx");
+  const retryProvider = view?.project.document
+    ? view.project.request.providers.image
+    : view?.project.request.providers.text;
+  const retryBlocked = !!retryProvider && retryProvider.id !== "local-mlx";
+  const regenerateBlocked = !!view && view.project.request.providers.image.id !== "local-mlx";
   // The server refuses a retry once every scene has a stored image (nothing_to_retry).
   const scenesComplete = !!view?.project.document
     && view.project.document.scenes.every((scene) => !!scene.image && !scene.imageError);
@@ -565,11 +568,11 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
           {active && <button type="button" className={buttonClass} disabled={busy || !view.job || !active || needsReadback || !!readError}
             onClick={() => { if (view.job) void mutate({ action: "cancel", revision: view.project.revision, jobId: view.job.id }); }}>작업 취소</button>}
           {!scenesComplete && <button type="button" className={buttonClass}
-            disabled={locked || generationBlocked || scenesComplete
+            disabled={locked || retryBlocked || scenesComplete
               || !["failed", "cancelled", "partial", "waiting_worker"].includes(view.project.status)}
             onClick={() => { void mutate({ action: "retry", revision: view.project.revision, requestId: crypto.randomUUID() }); }}>재시도</button>}
         </div>
-        {generationBlocked && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
+        {(retryBlocked || regenerateBlocked) && <p className="mt-2 text-sm text-muted-foreground">이 프로젝트의 외부 공급자를 사용하려면 외부 AI 사용을 명시적으로 허용해야 합니다. 미설정 공식 API는 사용할 수 없습니다.</p>}
         {active && <p className="mt-2 text-sm text-muted-foreground">작업이 실행되거나 워커를 기다리는 동안 편집과 가져오기를 잠급니다. 이 화면을 닫아도 서버 작업은 취소되지 않습니다.</p>}
       </>}
     </div>
@@ -626,7 +629,7 @@ function SavedProjectWorkspace({ projectId, externalAI, onProject }: {
             <div className="mt-3 flex flex-wrap gap-2">
               <button id={`local-edit-${scene.sceneNo}`} type="button" className={buttonClass} disabled={locked || !!editing}
                 onClick={() => setEditing({ draft: pickDraft(scene), revision: view.project.revision })} aria-label={`장면 ${scene.sceneNo} 편집`}>편집</button>
-              <button type="button" className={buttonClass} disabled={locked || generationBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
+              <button type="button" className={buttonClass} disabled={locked || regenerateBlocked || !!editing} aria-label={`장면 ${scene.sceneNo} 재생성`}
                 onClick={() => { void mutate({ action: "regenerate", revision: view.project.revision, sceneNo: scene.sceneNo, requestId: crypto.randomUUID() }); }}>장면 재생성</button>
               <button type="button" className={buttonClass} aria-label={`장면 ${scene.sceneNo} 이미지 프롬프트 복사`}
                 onClick={() => { void copy(`${JSON.stringify({ schema: STORYBOARD_WORKFLOW, projectId, revision: view.project.revision, sceneNo: scene.sceneNo })}\n${scene.imagePrompt}`); }}>이미지 프롬프트 복사</button>

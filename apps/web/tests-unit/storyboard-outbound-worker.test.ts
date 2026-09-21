@@ -322,6 +322,7 @@ describe('outbound worker lifecycle (fixture models, no live inference)', () => 
       onEvent: (event) => events.push(event.event),
     }).runOnce()).toBe('idle');
     expect(events).toEqual(['memory_deferred']);
+    expect(f.calls.filter((call) => call.action === 'heartbeat')).toEqual([]);
     expect(f.calls.filter((call) => call.action === 'claim')).toEqual([]);
     expect(f.draftCalls()).toBe(0);
     expect(f.generated).toEqual([]);
