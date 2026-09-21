@@ -468,6 +468,7 @@ export default function FeedContent({
     }, [loadMore]);
 
     // 다음 페이지 실패 시 자동 재요청은 오류 구간당 한 번만, 백오프를 두고 수행합니다.
+    // 실패가 계속되면 화면 하단의 명시적 재시도 버튼으로만 다시 요청합니다.
     useEffect(() => {
         if (!isError) {
             autoRetryCountRef.current = 0;
@@ -726,6 +727,19 @@ export default function FeedContent({
                                     />
                                 );
                             })}
+                            {isError && (
+                                <div className="flex justify-center py-2" role="alert">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => fetchNextPage()}
+                                        disabled={isFetchingNextPage}
+                                    >
+                                        다시 시도
+                                    </Button>
+                                </div>
+                            )}
                             <div ref={loadMoreRef} className={cn(
                                 "flex items-center justify-center",
                                 isFetchingNextPage ? "h-20" : "h-4"

@@ -80,17 +80,24 @@ async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<st
             const chunk = chunks[chunkIndex];
             if (!chunk) return;
 
-            const response = await fetch('/api/home/youtube-kpi', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videoIds: chunk }),
-            });
+            try {
+                const response = await fetch('/api/home/youtube-kpi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoIds: chunk }),
+                });
 
-            if (!response.ok) {
-                throw new Error(`home-youtube-kpi:${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`home-youtube-kpi:${response.status}`);
+                }
+
+                chunkResults[chunkIndex] = (await response.json()) as HomeMapYouTubeKpiResponse;
+            } catch (error) {
+                const failureCode = error instanceof Error && /^home-youtube-kpi:\d{3}$/.test(error.message)
+                    ? error.message
+                    : (error instanceof SyntaxError ? 'invalid-response' : 'request-failed');
+                console.warn(`[home-map-youtube-kpi] metric chunk failed (${failureCode})`);
             }
-
-            chunkResults[chunkIndex] = (await response.json()) as HomeMapYouTubeKpiResponse;
         }
     };
 
@@ -102,7 +109,7 @@ async function fetchHomeMapYoutubeKpiMetrics(videoIds: string[]): Promise<Map<st
     );
 
     for (const payload of chunkResults) {
-        for (const metric of payload.metrics ?? []) {
+        for (const metric of payload?.metrics ?? []) {
             metricsByVideoId.set(metric.videoId, metric);
         }
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue, type UIEvent } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
 import { AlertCircle, Search, Trophy, Eye, EyeOff, X, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 
 const STAMP_PAGE_SIZE = 5;
 const STAMP_LOAD_MORE_ROOT_MARGIN = "0px 0px 240px 0px";
-const STAMP_LOAD_MORE_THRESHOLD_PX = 240;
 const STAMP_GUIDE_DEMO_RESTAURANT = {
     id: "guide-stamp-overlay-demo",
     name: "명동 얼큰수제비",
@@ -226,28 +225,12 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         if (hasMoreToDisplay) setDisplayLimit(prev => prev + STAMP_PAGE_SIZE);
     }, [hasMoreToDisplay]);
 
-    const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
-        if (!hasMoreToDisplay) return;
-
-        const scrollRoot = event.currentTarget;
-        const distanceToEnd = scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight;
-        if (distanceToEnd <= STAMP_LOAD_MORE_THRESHOLD_PX) {
-            loadMoreRestaurants();
-        }
-    }, [hasMoreToDisplay, loadMoreRestaurants]);
-
     useEffect(() => {
         const scrollRoot = scrollContainerRef.current;
         const target = loadMoreRef.current;
 
         if (!scrollRoot || !target || !hasMoreToDisplay) return;
 
-        const loadMoreIfNearEnd = () => {
-            const distanceToEnd = scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight;
-            if (distanceToEnd <= STAMP_LOAD_MORE_THRESHOLD_PX) {
-                loadMoreRestaurants();
-            }
-        };
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries.some((entry) => entry.isIntersecting)) loadMoreRestaurants();
@@ -260,13 +243,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
         );
 
         observer.observe(target);
-        scrollRoot.addEventListener('scroll', loadMoreIfNearEnd, { passive: true });
-        loadMoreIfNearEnd();
-
-        return () => {
-            observer.disconnect();
-            scrollRoot.removeEventListener('scroll', loadMoreIfNearEnd);
-        };
+        return () => observer.disconnect();
     }, [hasMoreToDisplay, loadMoreRestaurants]);
 
     useEffect(() => {
@@ -309,7 +286,6 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
             data-stamp-scroll-container="true"
             data-desktop-left-panel-stamp-mobile-parity="true"
-            onScroll={handleScroll}
         >
             {/* 헤더 */}
             <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">

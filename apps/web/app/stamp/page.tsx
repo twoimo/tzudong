@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback, memo, useRef, type UIEvent } from "react";
+import { useState, useMemo, useEffect, useCallback, memo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, List, Grid } from "lucide-react";
@@ -93,7 +93,6 @@ const STAMP_GUIDE_DESCRIPTION = "맛집 카드에 리뷰를 남기면 이렇게 
 const STAMP_REVIEW_SELECT = 'id,user_id,restaurant_id,visited_at,created_at,content,food_photos,categories,is_verified,is_pinned,is_edited_by_admin,admin_note,like_count';
 const STAMP_PAGE_SIZE = 5;
 const STAMP_LOAD_MORE_ROOT_MARGIN = "0px 0px 240px 0px";
-const STAMP_LOAD_MORE_THRESHOLD_PX = 240;
 
 // StampFilterState 및 UserReview는 stamp-utils에서 import
 
@@ -461,19 +460,9 @@ export default function StampPage() {
         }
     }, [hasMoreToDisplay]);
 
-    // 센티널 effect가 연결되기 전의 첫 스크롤도 놓치지 않도록
-    // 스크롤 컨테이너에 직접 연결합니다. IntersectionObserver는 보조 트리거로 유지합니다.
-    const handleMainScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    const handleMainScroll = useCallback(() => {
         handleBottomNavScroll();
-
-        if (!hasMoreToDisplay) return;
-
-        const scrollRoot = event.currentTarget;
-        const distanceToEnd = scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight;
-        if (distanceToEnd <= STAMP_LOAD_MORE_THRESHOLD_PX) {
-            loadMoreRestaurants();
-        }
-    }, [handleBottomNavScroll, hasMoreToDisplay, loadMoreRestaurants]);
+    }, [handleBottomNavScroll]);
 
     useEffect(() => {
         const scrollRoot = mainScrollRef.current;
@@ -481,12 +470,6 @@ export default function StampPage() {
 
         if (!scrollRoot || !target || !hasMoreToDisplay) return;
 
-        const loadMoreIfNearEnd = () => {
-            const distanceToEnd = scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight;
-            if (distanceToEnd <= STAMP_LOAD_MORE_THRESHOLD_PX) {
-                loadMoreRestaurants();
-            }
-        };
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries.some((entry) => entry.isIntersecting)) loadMoreRestaurants();
@@ -499,13 +482,7 @@ export default function StampPage() {
         );
 
         observer.observe(target);
-        scrollRoot.addEventListener('scroll', loadMoreIfNearEnd, { passive: true });
-        loadMoreIfNearEnd();
-
-        return () => {
-            observer.disconnect();
-            scrollRoot.removeEventListener('scroll', loadMoreIfNearEnd);
-        };
+        return () => observer.disconnect();
     }, [hasMoreToDisplay, loadMoreRestaurants, viewMode]);
 
     // --- 데이터 패칭: 선택된 맛집의 리뷰 ---

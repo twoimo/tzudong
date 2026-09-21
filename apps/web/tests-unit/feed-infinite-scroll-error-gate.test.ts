@@ -5,6 +5,7 @@ import { join } from 'node:path';
 const feedSource = readFileSync(join(import.meta.dir, '../components/feed/FeedContent.tsx'), 'utf8');
 const restaurantSource = readFileSync(join(import.meta.dir, '../hooks/use-restaurants.tsx'), 'utf8');
 const stampSource = readFileSync(join(import.meta.dir, '../app/stamp/page.tsx'), 'utf8');
+const stampOverlaySource = readFileSync(join(import.meta.dir, '../components/overlay-pages/StampOverlay.tsx'), 'utf8');
 
 describe('피드 무한 스크롤 실패 처리', () => {
     test('다음 페이지 실패 뒤에는 관찰자가 즉시 재요청하지 않는다', () => {
@@ -12,11 +13,23 @@ describe('피드 무한 스크롤 실패 처리', () => {
         expect(feedSource).toContain('}, [allReviews.length, fetchNextPage, hasNextPage, isFetchingNextPage, isError]);');
     });
 
-    test('자동 재요청은 오류 구간당 한 번, 백오프를 두고 수행한다', () => {
+    test('자동 재요청은 오류 구간당 한 번, 백오프를 두고 수행하고 명시적 재시도도 제공한다', () => {
         expect(feedSource).toContain('const FEED_AUTO_RETRY_LIMIT = 1;');
         expect(feedSource).toContain('const FEED_AUTO_RETRY_DELAY_MS = 2000;');
         expect(feedSource).toContain('autoRetryCountRef.current >= FEED_AUTO_RETRY_LIMIT');
         expect(feedSource).toContain('autoRetryCountRef.current = 0;');
+        expect(feedSource).toContain('onClick={() => fetchNextPage()}');
+        expect(feedSource).toContain('다시 시도');
+    });
+});
+
+describe('도장 무한 스크롤 중복 트리거', () => {
+    test('스탬프 페이지와 오버레이는 센티널 observer만 load-more를 호출한다', () => {
+        expect(stampSource.match(/loadMoreRestaurants\(\);/g)).toHaveLength(1);
+        expect(stampOverlaySource.match(/loadMoreRestaurants\(\);/g)).toHaveLength(1);
+        expect(stampSource).not.toContain("addEventListener('scroll', loadMoreIfNearEnd");
+        expect(stampOverlaySource).not.toContain("addEventListener('scroll', loadMoreIfNearEnd");
+        expect(stampOverlaySource).not.toContain('onScroll={handleScroll}');
     });
 });
 

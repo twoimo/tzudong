@@ -82,6 +82,52 @@ describe('home map youtube KPI enrichment', () => {
         expect(maximumInFlight).toBeLessThanOrEqual(HOME_MAP_YOUTUBE_KPI_MAX_CONCURRENCY);
     });
 
+    test('preserves successful KPI chunks when another chunk fails', async () => {
+        const restaurants = Array.from({ length: 250 }, (_, index) => {
+            const videoId = `id${String(index).padStart(9, '0')}`;
+            return restaurant(videoId, {
+                youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+            });
+        });
+        const originalFetch = globalThis.fetch;
+        let requestCount = 0;
+        globalThis.fetch = (async (_input, init) => {
+            requestCount += 1;
+            const body = JSON.parse(String(init?.body)) as { videoIds: string[] };
+            if (body.videoIds.includes('id000000100')) {
+                return new Response(null, { status: 503 });
+            }
+
+            const videoId = body.videoIds[0];
+            return new Response(JSON.stringify({
+                metrics: [{
+                    videoId,
+                    title: videoId,
+                    publishedAt: '2026-01-01T00:00:00.000Z',
+                    duration: 600,
+                    viewCount: videoId === 'id000000000' ? 1000 : 3000,
+                    likeCount: 10,
+                    commentCount: 20,
+                }],
+            }), {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+            });
+        }) as typeof fetch;
+
+        let enriched: Restaurant[];
+        try {
+            enriched = await enrichRestaurantsWithHomeMapYoutubeKpiMetrics(restaurants, 'hot-view');
+        } finally {
+            globalThis.fetch = originalFetch;
+        }
+
+        expect(requestCount).toBe(3);
+        expect(enriched[0].youtube_meta).toMatchObject({ viewCount: 1000 });
+        expect(enriched[100].youtube_meta).toBeNull();
+        expect(enriched[200].youtube_meta).toMatchObject({ viewCount: 3000 });
+    });
+
     test('merges latest KPI metrics into metadata used by theme filters', () => {
         const merged = mergeHomeMapYoutubeKpiMetrics([
             restaurant('a', {
