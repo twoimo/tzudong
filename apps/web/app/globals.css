@@ -63,7 +63,7 @@ body {
   letter-spacing: 0;
 }
 html[data-local-workspace="true"] {
-  --local-workspace-banner-height: 1.75rem;
+  --local-workspace-banner-height: 0px;
 }
 
 html[data-local-workspace="true"] body {

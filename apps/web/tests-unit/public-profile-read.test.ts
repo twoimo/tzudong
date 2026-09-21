@@ -535,10 +535,17 @@ describe("public profile caller convergence", () => {
     expect(leaderboardSource).not.toContain(".from('reviews')");
 
     const userProfileSource = source("hooks/useUserProfile.ts");
+    const userProfilePanelSource = source("components/profile/UserProfilePanel.tsx");
     expect(userProfileSource).toContain("Math.ceil(likerIds.length / 100)");
     expect(userProfileSource).toContain("likerIds.slice(batchIndex * 100, (batchIndex + 1) * 100)");
     expect(userProfileSource).not.toContain("readPublicProfileSummaries(supabase, likerIds)");
     expect(userProfileSource).not.toContain(".catch(() => [])");
+    expect(userProfilePanelSource).toContain("isError: profileError");
+    expect(userProfilePanelSource).toContain("refetch: refetchProfile");
+    expect(userProfilePanelSource).toContain("프로필을 불러올 수 없습니다");
+    expect(userProfilePanelSource.indexOf("if (profileError)")).toBeLessThan(
+      userProfilePanelSource.indexOf("if (!profile)"),
+    );
 
     const mobileFixtureSource = source("tests/mobile-home-map-helpers.ts");
     expect(mobileFixtureSource).toContain("Object.keys(payload).length !== 1");

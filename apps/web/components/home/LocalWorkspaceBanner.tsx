@@ -1,4 +1,4 @@
-export const LOCAL_WORKSPACE_BANNER_HEIGHT_CSS = '1.75rem';
+export const LOCAL_WORKSPACE_BANNER_HEIGHT_CSS = '0px';
 
 export function LocalWorkspaceBanner() {
   return null;
