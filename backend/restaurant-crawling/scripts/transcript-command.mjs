@@ -89,6 +89,22 @@ function resolveTrustedExecutableFile(candidate, code) {
   }
 }
 
+function venvSitePackages(pythonCommand) {
+  if (typeof pythonCommand !== 'string' || !path.isAbsolute(pythonCommand)) return null;
+  const configPath = path.resolve(path.dirname(pythonCommand), '..', 'pyvenv.cfg');
+  const libDir = path.resolve(path.dirname(pythonCommand), '..', 'lib');
+  try {
+    if (!fs.statSync(configPath).isFile() || !fs.statSync(libDir).isDirectory()) return null;
+    const sitePackages = fs.readdirSync(libDir)
+      .filter((name) => name.startsWith('python'))
+      .map((name) => path.join(libDir, name, 'site-packages'))
+      .filter((candidate) => fs.existsSync(candidate));
+    return sitePackages.length > 0 ? sitePackages[sitePackages.length - 1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveTrustedPythonCommand(value = 'python') {
   if (typeof value !== 'string' || !value.trim() || value !== value.trim()) {
     throw fixedError('TRANSCRIPT_PYTHON_COMMAND_INVALID');
@@ -114,6 +130,7 @@ export function buildTranscriptYtDlpInvocation({
   if (typeof nodePath !== 'string' || !path.isAbsolute(nodePath)) throw fixedError('TRANSCRIPT_NODE_PATH_INVALID');
 
   const executable = resolveTrustedPythonCommand(pythonCommand);
+  const pythonPath = venvSitePackages(pythonCommand);
   const args = [
     '-m', 'yt_dlp',
     '--js-runtimes', `node:${nodePath}`,
@@ -129,7 +146,6 @@ export function buildTranscriptYtDlpInvocation({
     args.push(
       '--no-cache-dir',
       '--user-agent', userAgent,
-      '--extractor-args', 'youtube:player_client=web',
       '--sleep-requests', '1',
     );
   }
@@ -142,13 +158,18 @@ export function buildTranscriptYtDlpInvocation({
     '--output', outputPrefix,
     `https://www.youtube.com/watch?v=${videoId}`,
   );
-  return { executable, args };
+  return { executable, args, ...(pythonPath ? { pythonPath } : {}) };
 }
 
-function buildChildEnvironment(source = process.env) {
+function buildChildEnvironment(source = process.env, extraPythonPath = null) {
   const env = {};
   for (const key of CHILD_ENV_KEYS) {
     if (typeof source[key] === 'string') env[key] = source[key];
+  }
+  if (typeof extraPythonPath === 'string' && extraPythonPath.length > 0) {
+    env.PYTHONPATH = env.PYTHONPATH
+      ? `${extraPythonPath}${path.delimiter}${env.PYTHONPATH}`
+      : extraPythonPath;
   }
   return env;
 }
@@ -470,7 +491,7 @@ function runPosixTranscriptYtDlp(invocation, {
         windowsHide: true,
         detached: true,
         stdio: 'ignore',
-        env: buildChildEnvironment(),
+        env: buildChildEnvironment(process.env, invocation.pythonPath),
       });
     } catch {
       finish(fixedError('TRANSCRIPT_YTDLP_SPAWN_FAILED'));
@@ -511,7 +532,7 @@ function runWindowsTranscriptYtDlp(invocation, {
     const nonce = randomBytes(32).toString('hex');
     const pipeName = `transcript-job-${nonce}`;
     const pipePath = `\\\\.\\pipe\\${pipeName}`;
-    const environment = buildChildEnvironment();
+    const environment = buildChildEnvironment(process.env, invocation.pythonPath);
     const launch = windowsJobSupervisorSpec(invocation, environment, pipeName, nonce, deadline);
     const server = createServer();
     let child;

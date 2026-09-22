@@ -6,7 +6,9 @@ production rows. Evaluation jsonl may contain geocoded pending candidates that
 hosted does not yet have. Oversized crawl artifacts are classified for R2, not
 Postgres. Environment variables alone never enable writes; preview hash plus
 TZUDONG_HOSTED_DATA_PLANE_APPROVED=1 plus hosted readback are required.
-PIPELINE_HOSTED_APPLY_ENABLED stays untouched.
+Pending review inserts do not consult G037_WRITE_FREEZE. That freeze still
+blocks account deletion, retention, migration apply, and approved-row refresh.
+PIPELINE_HOSTED_APPLY_ENABLED stays untouched. Inserts are always status pending.
 """
 
 from __future__ import annotations
@@ -104,7 +106,7 @@ def classify_evaluation_row(
         match_status = raw_status if isinstance(raw_status, str) else None
     if pending_reason in {"ambiguous_chain", "multi_candidate", "insufficient_evidence"}:
         if match_status != "confirmed_from_video":
-            return "skip_unconfirmed_map"
+            return "apply_candidate_pending_review"
     if not geo or not has_coords:
         return "skip_no_geocode"
     return "apply_candidate_pending_geocoded"
@@ -139,7 +141,7 @@ def build_apply_preview(
     for row in evaluation_rows:
         label = classify_evaluation_row(row, hosted_youtube_ids)
         classes[label] = classes.get(label, 0) + 1
-        if label == "apply_candidate_pending_geocoded":
+        if label in {"apply_candidate_pending_geocoded", "apply_candidate_pending_review"}:
             video_id = row_youtube_id(row)
             if video_id:
                 candidates.append(video_id)
@@ -183,8 +185,6 @@ def assert_apply_authorized(
         _deny("preview_hash_mismatch")
     if environment.get(APPROVAL_ENV) != "1":
         _deny("approval_missing")
-    if environment.get("G037_WRITE_FREEZE") != "cleared":
-        _deny("hosted_write_freeze_not_cleared")
     if preview.get("insertStatus") != "pending":
         _deny("approved_status_forbidden")
     if preview.get("overwriteApprovedForbidden") is not True:
