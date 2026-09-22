@@ -249,18 +249,6 @@ export const isCluster = (
 };
 
 /**
- * 클러스터 포인트 개수 가져오기
- * 
- * @param feature 클러스터 Feature
- * @returns 포함된 포인트 개수
- */
-export const getClusterCount = (
-    feature: Supercluster.ClusterFeature<ClusterProperties>
-): number => {
-    return feature.properties.point_count || 0;
-};
-
-/**
  * 18개 지역 중심 좌표 (행정구역 클러스터링용 - 17개 행정구역 + 울릉도)
  */
 export const REGIONAL_CENTERS: Record<string, { lat: number; lng: number }> = {

@@ -820,16 +820,6 @@ function cacheOrFetchVideos(
     });
 }
 
-export function getTreemapMetricValue(
-    row: VideoDbRow,
-    metric: 'views' | 'likes' | 'comments' | 'duration',
-): number {
-    if (metric === 'views') return toNonNegativeNumber(row.view_count);
-    if (metric === 'likes') return toNonNegativeNumber(row.like_count);
-    if (metric === 'comments') return toNonNegativeNumber(row.comment_count);
-    return Math.floor(toNonNegativeNumber(row.duration));
-}
-
 function getInsightTreemapDefaultSeverity(
     reason: InsightTreemapDataQualityReason,
 ): InsightTreemapDataQualitySeverity {

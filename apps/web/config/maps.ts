@@ -1,8 +1,3 @@
-// Google Maps Configuration (글로벌 버전)
-export const GOOGLE_MAPS_CONFIG = {
-    apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-};
-
 // Naver Maps Configuration (한국 버전)
 // 홈 지도 Dynamic용 - 다른 사람의 네이버 지도 API 키
 export const NAVER_MAPS_CONFIG = {

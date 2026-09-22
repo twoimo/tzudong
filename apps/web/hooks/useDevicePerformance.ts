@@ -263,12 +263,3 @@ export function useDevicePerformance(): DevicePerformance {
 
     return performance;
 }
-
-/**
- * 성능 티어만 반환하는 간단한 훅
- */
-export function usePerformanceTier(): PerformanceTier {
-    const { tier } = useDevicePerformance();
-    return tier;
-}
-

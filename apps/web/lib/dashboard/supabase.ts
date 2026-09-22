@@ -218,16 +218,4 @@ export async function getRestaurantRows(
     return rows;
 }
 
-export function clearRestaurantRowsCache(keyRole?: KeyRole) {
-    if (keyRole) {
-        restaurantCacheByRole[keyRole] = null;
-        return;
-    }
-
-    restaurantCacheByRole = {
-        anon: null,
-        service: null,
-    };
-}
-
 export type { DashboardRestaurantRow };

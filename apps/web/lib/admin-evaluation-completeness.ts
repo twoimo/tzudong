@@ -1,6 +1,5 @@
 import type { EvaluationRecord, EvaluationResult } from '@/types/evaluation';
 
-export const EVALUATION_RERUN_NEEDED_LABEL = '평가값 확인';
 export const EVALUATION_BASIS_RERUN_NEEDED_TEXT = '평가 근거 없음';
 
 export type EvaluationMetricKey =

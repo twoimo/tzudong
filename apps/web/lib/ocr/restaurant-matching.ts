@@ -77,16 +77,6 @@ function scoreNormalizedRestaurantNamePair(restaurant: string, receipt: string):
   return 0;
 }
 
-export function normalizeOcrRestaurantAddress(value: string | null | undefined): string {
-  return (value ?? '')
-    .replace(/지하\s*\d+\s*층/g, '')
-    .replace(/지상\s*\d+\s*층/g, '')
-    .replace(/\d+\s*층/g, '')
-    .replace(/\d+\s*호/g, '')
-    .replace(/[^0-9a-zA-Z가-힣]/g, '')
-    .toLowerCase();
-}
-
 function levenshtein(a: string, b: string): number {
   if (a === b) return 0;
   if (!a) return b.length;
