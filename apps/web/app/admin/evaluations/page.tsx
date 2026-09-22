@@ -39,6 +39,7 @@ import { buildCanonicalAdminEvaluationsHref, type AdminConsoleRouteModuleId } fr
 import { assertPrivacySafe } from '@/lib/privacy/sanitize';
 import { fetchAdminProfileSummariesLookup, resolveAdminReviewerDisplay } from '@/lib/admin/profile-summaries';
 import {
+  compareAdminEvaluationsByLatestDesc,
   isAdminEvaluationRecordMissing,
   isAdminEvaluationRecordNotSelected,
   isAdminEvaluationRecordReadyForApproval,
@@ -1911,7 +1912,7 @@ function AdminEvaluationPage({
       ));
     }
 
-    return filtered;
+    return [...filtered].sort(compareAdminEvaluationsByLatestDesc);
   }, [allRecords, searchQuery, evalFilters, deepLinkFilter]);
 
   // filteredRecords가 정의된 후에 useEffect 위치
