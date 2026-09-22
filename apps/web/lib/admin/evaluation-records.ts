@@ -53,6 +53,13 @@ type AdminEvaluationRecordClassifierInput = Pick<
   'status' | 'is_missing' | 'is_not_selected' | 'geocoding_success' | 'evaluation_results'
 >;
 
+export function adminEvaluationGapLabel(message: string | null | undefined): string | null {
+  if (message === 'shorts:is_shorts_le_180' || message === 'shorts:is_shorts_zero_or_promo') return '쇼츠';
+  if (message === 'not_selected:no_named_restaurant_target') return '맛집명 없음';
+  if (message === '맛집 검색 결과 없음으로 관리자 검수 자동 삭제') return '검색 결과 없음';
+  return null;
+}
+
 export function isAdminEvaluationRecordMissing(record: AdminEvaluationRecordClassifierInput): boolean {
   return record.is_missing === true || record.status === 'missing' || record.status === 'geocoding_failed';
 }
@@ -68,6 +75,27 @@ export function isAdminEvaluationRecordUnconfirmedMapLocation(
   const reason = record.evaluation_results?.location_match_TF?.pending_reason;
   if (typeof reason === 'string' && GEO_TRUE_UNCONFIRMED_MAP_REASONS.has(reason)) return true;
   return hasUnconfirmedPublicMapLocation(record);
+}
+
+type AdminEvaluationLatestRecord = Pick<EvaluationRecord, 'id' | 'created_at' | 'youtube_meta'>;
+
+export function adminEvaluationLatestTimestamp(record: Pick<EvaluationRecord, 'created_at' | 'youtube_meta'>): number {
+  const publishedAt = record.youtube_meta?.publishedAt;
+  const raw = typeof publishedAt === 'string' && publishedAt.trim() ? publishedAt : record.created_at;
+  const parsed = Date.parse(raw ?? '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function compareAdminEvaluationsByLatestDesc(
+  left: AdminEvaluationLatestRecord,
+  right: AdminEvaluationLatestRecord,
+): number {
+  const latestDelta = adminEvaluationLatestTimestamp(right) - adminEvaluationLatestTimestamp(left);
+  if (latestDelta !== 0) return latestDelta;
+
+  const createdDelta = Date.parse(right.created_at) - Date.parse(left.created_at);
+  if (Number.isFinite(createdDelta) && createdDelta !== 0) return createdDelta;
+  return right.id.localeCompare(left.id);
 }
 
 export function isAdminEvaluationRecordReadyForApproval(record: AdminEvaluationRecordClassifierInput): boolean {
