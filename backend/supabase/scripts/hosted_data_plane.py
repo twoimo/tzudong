@@ -121,9 +121,40 @@ def classify_blob(path: str, size_bytes: int) -> str:
     return "postgres_ok"
 
 
+APPLY_CANDIDATE_LABELS = frozenset(
+    {"apply_candidate_pending_geocoded", "apply_candidate_pending_review"}
+)
+
+
 def preview_hash(payload: Mapping[str, Any]) -> str:
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode(
+        "utf-8"
+    )
     return hashlib.sha256(canonical).hexdigest()
+
+
+def _preview_body(preview: Mapping[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in preview.items() if key != "previewSha256"}
+
+
+def apply_payload_sha256(
+    rows: Iterable[Mapping[str, Any]],
+    hosted_youtube_ids: Iterable[str],
+) -> str:
+    """Hash only the rows that preview would insert, in a stable order."""
+    payloads = [
+        pending_insert_payload(row)
+        for row in rows
+        if classify_evaluation_row(row, hosted_youtube_ids) in APPLY_CANDIDATE_LABELS
+    ]
+    payloads.sort(
+        key=lambda item: (
+            str(item.get("youtube_link") or ""),
+            str(item.get("trace_id") or ""),
+            str(item.get("origin_name") or ""),
+        )
+    )
+    return preview_hash({"payloads": payloads})
 
 
 def build_apply_preview(
@@ -136,12 +167,13 @@ def build_apply_preview(
     docker_class = classify_local_docker_restaurants(
         local_restaurant_ids, hosted_restaurant_ids
     )
+    rows_list = list(evaluation_rows)
     candidates: list[str] = []
     classes: dict[str, int] = {}
-    for row in evaluation_rows:
+    for row in rows_list:
         label = classify_evaluation_row(row, hosted_youtube_ids)
         classes[label] = classes.get(label, 0) + 1
-        if label in {"apply_candidate_pending_geocoded", "apply_candidate_pending_review"}:
+        if label in APPLY_CANDIDATE_LABELS:
             video_id = row_youtube_id(row)
             if video_id:
                 candidates.append(video_id)
@@ -154,6 +186,7 @@ def build_apply_preview(
         "evaluationClasses": classes,
         "applyCandidateVideoIds": candidates,
         "applyCandidateCount": len(candidates),
+        "applyPayloadSha256": apply_payload_sha256(rows_list, hosted_youtube_ids),
         "insertStatus": "pending",
         "overwriteApprovedForbidden": True,
     }
@@ -181,7 +214,12 @@ def assert_apply_authorized(
         if preview.get("dockerRestaurantApply"):
             _deny("forbidden_local_docker_apply")
     expected = preview.get("previewSha256")
-    if not isinstance(expected, str) or expected != presented_preview_sha256:
+    recomputed = preview_hash(_preview_body(preview))
+    if (
+        not isinstance(expected, str)
+        or expected != recomputed
+        or expected != presented_preview_sha256
+    ):
         _deny("preview_hash_mismatch")
     if environment.get(APPROVAL_ENV) != "1":
         _deny("approval_missing")
@@ -215,6 +253,9 @@ def pending_insert_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         "is_missing": bool(row.get("is_missing")),
         "is_not_selected": bool(row.get("is_notSelected") or row.get("is_not_selected")),
         "youtube_meta": row.get("youtube_meta"),
+        "evaluation_results": row.get("evaluation_results")
+        if isinstance(row.get("evaluation_results"), Mapping)
+        else None,
         "source_type": row.get("source_type"),
         "review_count": 0,
     }
@@ -238,7 +279,7 @@ def _json_request(
     extra_headers: Mapping[str, str] | None = None,
 ) -> tuple[int, Any]:
     from urllib.request import Request, urlopen
-    from urllib.error import HTTPError
+    from urllib.error import HTTPError, URLError
 
     headers = {
         "apikey": key,
@@ -255,15 +296,22 @@ def _json_request(
     try:
         with urlopen(request, timeout=30) as response:
             raw = response.read()
-            parsed = json.loads(raw.decode("utf-8")) if raw else None
+            try:
+                parsed = json.loads(raw.decode("utf-8")) if raw else None
+            except json.JSONDecodeError:
+                _deny("hosted_response_invalid")
             return int(response.status), parsed
+    except HostedDataPlaneError:
+        raise
     except HTTPError as exc:
         raw = exc.read()
         try:
             parsed = json.loads(raw.decode("utf-8")) if raw else None
-        except ValueError:
+        except json.JSONDecodeError:
             parsed = None
         return int(exc.code), parsed
+    except (URLError, TimeoutError, OSError):
+        _deny("hosted_request_failed")
 
 
 def fetch_hosted_restaurant_snapshot(
@@ -307,7 +355,10 @@ def load_evaluation_rows(path: str) -> list[dict[str, Any]]:
     for line in source.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        parsed = json.loads(line)
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            _deny("evaluation_row_invalid")
         if isinstance(parsed, dict):
             rows.append(parsed)
     return rows
@@ -335,6 +386,14 @@ def apply_pending_candidates(
         _deny("candidate_count_mismatch")
     if preview.get("dockerRestaurantApply"):
         _deny("forbidden_local_docker_apply")
+    rows_list = list(evaluation_rows)
+    hosted_for_rows = [
+        video_id
+        for row in rows_list
+        if (video_id := row_youtube_id(row)) and video_id not in allowed
+    ]
+    if apply_payload_sha256(rows_list, hosted_for_rows) != preview.get("applyPayloadSha256"):
+        _deny("apply_payload_mismatch")
     inserted: list[str] = []
     skipped: list[str] = []
     unresolved: list[str] = []
@@ -345,9 +404,11 @@ def apply_pending_candidates(
     _APPLIED, _PRESENT, _UNRESOLVED = 3, 2, 1
     outcome: dict[str, int] = {}
     requester = fetch or _json_request
-    for row in evaluation_rows:
+    for row in rows_list:
         video_id = row_youtube_id(row)
         if video_id is None or video_id not in allowed:
+            continue
+        if classify_evaluation_row(row, hosted_for_rows) not in APPLY_CANDIDATE_LABELS:
             continue
         payload = pending_insert_payload(row)
         if payload["status"] != "pending":
