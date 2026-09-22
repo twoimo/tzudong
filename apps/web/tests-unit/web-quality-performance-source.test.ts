@@ -735,7 +735,8 @@ describe("web quality performance source contracts", () => {
     expect(homeRuntimeShellSource).not.toContain("shouldLoadMobileBottomNav");
     expect(homeRuntimeShellSource).toContain("const OverlayLayout = lazy(");
     expect(homeRuntimeShellSource).toContain("<QueryProvider>");
-    expect(homeRuntimeShellSource).toContain(
+    expect(homeRuntimeShellSource).toContain("<OverlayLayout />");
+    expect(homeRuntimeShellSource).not.toContain(
       "fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}",
     );
     expect(homeRuntimeShellSource).not.toContain(
@@ -743,8 +744,11 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeRuntimeShellSource).not.toContain("if (!hasMounted)");
     expect(homeRuntimeShellSource).not.toContain("setHasMounted");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
-    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+    expect(homeRuntimeShellSource).toContain("if (viewportMode === 'mobileOrTablet')");
+    expect(homeRuntimeShellSource).toContain(
+      "viewportMode === 'desktop' && !isPublicRestrictedMode",
+    );
+    expect(homeRuntimeShellSource).not.toContain("if (viewportMode === 'pending')");
     expect(homeRuntimeShellSource).not.toContain(
       "from '@/hooks/useDeviceType'",
     );
@@ -2469,8 +2473,8 @@ describe("web quality performance source contracts", () => {
     expect(skeletonLoadersSource).toContain(
       "ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2",
     );
-    expect(stampLoadingSource).toContain('import { StampPageSkeleton }');
-    expect(stampLoadingSource).toContain("return <StampPageSkeleton />");
+    expect(stampLoadingSource).toContain("return null");
+    expect(stampLoadingSource).not.toContain("StampPageSkeleton");
     expect(stampPageSource).toContain(
       'data-stamp-loading-behavior="static-shell-dynamic-skeleton"',
     );
@@ -3991,7 +3995,7 @@ describe("web quality performance source contracts", () => {
     expect(source("app/loading.tsx")).toContain("return null");
     expect(
       countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
-    ).toBe(1);
+    ).toBe(0);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
     expect(source("app/home-client-loader.tsx")).not.toContain("<GlobalLoader");
     expect(source("app/home-client-loader.tsx")).toContain(
@@ -4024,6 +4028,7 @@ describe("web quality performance source contracts", () => {
       "app/insights/loading.tsx",
       "app/leaderboard/loading.tsx",
       "app/mypage/loading.tsx",
+      "app/stamp/loading.tsx",
       "app/user/[userId]/loading.tsx",
     ];
 
@@ -4051,8 +4056,8 @@ describe("web quality performance source contracts", () => {
       expect(loadingSource).not.toContain("<GlobalLoader");
     }
 
-    expect(source("app/stamp/loading.tsx")).toContain("return <StampPageSkeleton />");
-    expect(source("app/stamp/loading.tsx")).not.toContain("return null");
+    expect(source("app/stamp/loading.tsx")).toContain("return null");
+    expect(source("app/stamp/loading.tsx")).not.toContain("StampPageSkeleton");
 
     const skeletonOwnerContracts = [
       {
@@ -4089,7 +4094,7 @@ describe("web quality performance source contracts", () => {
     ];
 
     for (const { route, owner, marker } of skeletonOwnerContracts) {
-      expect(source(route)).toContain(route === "app/stamp/loading.tsx" ? marker : "return null");
+      expect(source(route)).toContain("return null");
       expect(source(owner)).toContain(
         route === "app/stamp/loading.tsx"
           ? 'data-stamp-loading-behavior="static-shell-dynamic-skeleton"'
@@ -4100,7 +4105,7 @@ describe("web quality performance source contracts", () => {
     expect(source("app/loading.tsx")).toContain("return null");
     expect(
       countSourceMatches(source("app/stamp/loading.tsx"), /<StampPageSkeleton\s*\/>/g),
-    ).toBe(1);
+    ).toBe(0);
     expect(source("app/loading.tsx")).not.toContain("<MapSkeleton");
     expect(
       countSourceMatches(
@@ -4568,7 +4573,8 @@ describe("web quality performance source contracts", () => {
     );
     expect(homeRuntimeShellSource).toContain("const OverlayLayout = lazy(");
     expect(homeRuntimeShellSource).toContain("<QueryProvider>");
-    expect(homeRuntimeShellSource).toContain(
+    expect(homeRuntimeShellSource).toContain("<OverlayLayout />");
+    expect(homeRuntimeShellSource).not.toContain(
       "fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}",
     );
     expect(homeRuntimeShellSource).not.toContain(

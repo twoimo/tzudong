@@ -1214,8 +1214,11 @@ export default function InsightsClient({ embedded = false }: { embedded?: boolea
         : `색상 범례: 전체 ${metricLabel} 비중이 높을수록 밝은 초록색입니다.`;
     const treemapSmallCellGuidance = '작은 칸 안내: 공간이 좁으면 지표나 …만 표시되고, 마우스를 올리면 제목과 상세 지표를 확인할 수 있습니다.';
 
-    const isLoading = (!embedded && isAuthLoading) || treemapQuery.isLoading;
     const canRender = Boolean(treemapQuery.data);
+    const isWaitingForAuthorizedQuery = !embedded && (
+        isAuthLoading || (!!user && !canRender && !treemapQuery.isError)
+    );
+    const isLoading = isWaitingForAuthorizedQuery || (treemapQuery.isLoading && !canRender);
 
     const handleCellEnter = useCallback(
         (leaf: TreemapLeafNode, event: MouseEvent<HTMLDivElement>) => {

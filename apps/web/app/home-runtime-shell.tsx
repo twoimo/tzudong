@@ -299,22 +299,22 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
 function HomeLayoutContent({ children }: { children: ReactNode }) {
     const viewportMode = useHomeViewportMode();
 
-    if (viewportMode === 'pending') {
-        return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
+    if (viewportMode === 'mobileOrTablet') {
+        return <MobileHomeLayout>{children}</MobileHomeLayout>;
     }
 
-    if (viewportMode === 'desktop') {
-        if (isPublicRestrictedMode) {
-            return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;
-        }
-        return (
-            <Suspense fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}>
-                <OverlayLayout>{children}</OverlayLayout>
-            </Suspense>
-        );
-    }
-
-    return <MobileHomeLayout>{children}</MobileHomeLayout>;
+    // 지도 본문은 pending과 desktop에서 같은 부모에 둔다.
+    // 오버레이 청크가 도착할 때 자식을 다른 부모로 옮기면 인기/최신 스켈레톤이 다시 마운트된다.
+    return (
+        <HomeRuntimePendingShell>
+            {children}
+            {viewportMode === 'desktop' && !isPublicRestrictedMode ? (
+                <Suspense fallback={null}>
+                    <OverlayLayout />
+                </Suspense>
+            ) : null}
+        </HomeRuntimePendingShell>
+    );
 }
 
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
