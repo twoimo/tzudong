@@ -16,7 +16,7 @@ FREEZE_GUARD = "vars.G037_WRITE_FREEZE == 'cleared'"
 class G037BatchWorkflowGuardTests(unittest.TestCase):
     def test_all_scheduled_mutation_guards_deny_missing_or_invalid_clearance(self):
         cases = {
-            "daily-crawler.yml": ["daily-compute", "daily-publish", "hosted-pending-apply"],
+            "daily-crawler.yml": ["daily-compute", "daily-publish"],
             "gdrive-frame-backfill.yml": ["backfill"],
             "youtube-kpi-snapshot.yml": ["capture"],
             "restaurant-refresh-cron.yml": ["refresh"],
@@ -45,7 +45,7 @@ class G037BatchWorkflowGuardTests(unittest.TestCase):
         '''
         result = subprocess.run(["node", "-e", script], input=json.dumps(expressions),
             capture_output=True, text=True, check=True, env={"PATH": os.environ["PATH"]}, timeout=10)
-        self.assertEqual(json.loads(result.stdout), [[False, False, False, False, False, True]] * 8)
+        self.assertEqual(json.loads(result.stdout), [[False, False, False, False, False, True]] * 7)
 
     def _workflow(self, name):
         with (WORKFLOWS / name).open(encoding="utf8") as source:

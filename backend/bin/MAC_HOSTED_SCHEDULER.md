@@ -7,18 +7,16 @@ a bash wrapper under `~/Library/Application Support/tzudong`, puts logs under
 kick-start the job, replay missed dates, or enable hosted publication approval.
 
 `G037_WRITE_FREEZE` defaults to `active` during installation. The generated wrapper
-and plist bind that state. A held unattended run exits with only
-`pipeline=held_write_freeze`, before evaluation or hosted work. The underlying
-hosted apply function independently requires an explicit `cleared` value as well
-as the existing approval flag and matching preview hash. Missing and unknown
-values never open the write path. GitHub Actions forwards the same repository
-variable to the shared runner.
+and plist still record that state. The pending-review pipeline does not stop on
+it. Account deletion, retention, migration apply, data-branch publication, and
+approved-restaurant refresh stay behind the freeze. This runner only evaluates
+new videos and inserts `pending` rows when `TZUDONG_HOSTED_DATA_PLANE_APPROVED=1`
+and the preview hash matches. It never marks a row approved. GitHub Actions uses
+the same runner and the same approval variable. Do not clear `G037_WRITE_FREEZE`
+to resume this catalog path.
 
-The current G037 freeze remains active. Set `G037_WRITE_FREEZE=cleared` for a later
-controlled reinstall only after the successor/recovery receipts permit its exit;
-do not infer clearance from a missing variable, a passing local test, or a new
-calendar registration. An explicit `--dry-run` retains the existing preview path
-and cannot reach hosted apply.
+An explicit `--dry-run` retains the existing preview path and cannot reach hosted
+apply.
 
 After installation, independently read the plist and `launchctl print` top-level
 state: verify the wrapper path, stable repository root, 05:15 calendar, log paths,

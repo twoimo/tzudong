@@ -78,6 +78,35 @@ test('resolveTrustedPythonCommand follows a venv-style symlink to a regular file
   }
 });
 
+test('venv python keeps its site-packages after the symlink is resolved', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'transcript-venv-'));
+  try {
+    const binDir = path.join(root, 'bin');
+    const sitePackages = path.join(root, 'lib', 'python3.14', 'site-packages');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.mkdirSync(sitePackages, { recursive: true });
+    fs.writeFileSync(path.join(root, 'pyvenv.cfg'), 'home = /usr/bin\n');
+    const realPython = path.join(root, 'python3.14');
+    const venvPython = path.join(binDir, 'python');
+    fs.writeFileSync(realPython, '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(realPython, 0o755);
+    fs.symlinkSync(realPython, venvPython);
+    const outputPrefix = path.join(root, 'temp_dQw4w9WgXcQ');
+    const invocation = buildTranscriptYtDlpInvocation({
+      videoId: 'dQw4w9WgXcQ',
+      outputPrefix,
+      mode: 'stealth',
+      userAgent: 'Mozilla/5.0 safe test agent',
+      pythonCommand: venvPython,
+      nodePath: process.execPath,
+    });
+    assert.equal(invocation.executable, fs.realpathSync.native(venvPython));
+    assert.equal(invocation.pythonPath, sitePackages);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 const TREE_TIMEOUT_MS = 12_000;
 
 test('runner preserves exact argv and ignored stdin inside an isolated boundary with a minimal environment', async () => {
