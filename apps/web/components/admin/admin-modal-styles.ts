@@ -17,7 +17,3 @@ export const ADMIN_MODAL_FOOTER_DIVIDER = "!mt-0 !flex !flex-row !flex-wrap item
 export const ADMIN_MODAL_ACTION = "!mt-0 min-h-9 shrink-0 whitespace-nowrap";
 
 export const ADMIN_MODAL_SCROLL_BODY = "pr-1";
-
-export const ADMIN_MODAL_SCROLL_BODY_COMPACT = "pr-1";
-
-export const ADMIN_MODAL_SCROLL_BODY_TALL = "pr-1";

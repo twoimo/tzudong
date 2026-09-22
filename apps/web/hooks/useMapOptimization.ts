@@ -208,12 +208,3 @@ export function useMapOptimization(): MapOptimizationSettings {
 
     return settings;
 }
-
-/**
- * 클러스터 반경만 반환하는 간단한 훅
- */
-export function useClusterRadius(): (zoom: number) => number {
-    const { getClusterRadius } = useMapOptimization();
-    return getClusterRadius;
-}
-

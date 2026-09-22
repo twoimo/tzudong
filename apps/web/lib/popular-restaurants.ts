@@ -199,16 +199,6 @@ export const getPopularRankScopeKey = ({
 }: Pick<RestaurantListArgs, 'selectedRegion' | 'isKoreanOnly'>) =>
   `${isKoreanOnly ? 'domestic' : 'global'}:${selectedRegion ?? 'all'}`;
 
-export const getPopularRankSnapshotsQueryKey = ({
-  limit,
-  selectedRegion,
-  isKoreanOnly = false,
-}: RestaurantListArgs) => [
-  ...POPULAR_RANK_SNAPSHOTS_QUERY_KEY,
-  limit,
-  getPopularRankScopeKey({ selectedRegion, isKoreanOnly }),
-];
-
 export const getLatestRestaurantsQueryKey = ({
   limit,
   selectedRegion,
@@ -531,52 +521,6 @@ export async function fetchPopularRestaurants({
     console.warn('인기 맛집 순위 스냅샷 조회 실패:');
     return attachPopularRankTrends(restaurants, new Map(), false);
   }
-}
-
-export async function fetchLatestRestaurants({
-  limit,
-  fetchLimit = Math.max(limit * 3, 18),
-  selectedRegion,
-  isKoreanOnly = false,
-  sort = 'latest',
-}: RestaurantListArgs): Promise<Restaurant[]> {
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved');
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
-  );
-  const orderedQuery =
-    sort === 'popular'
-      ? regionScopedQuery
-          .order('weekly_search_count', { ascending: false })
-          .order('created_at', { ascending: false })
-      : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
-  const { data, error } = await orderedQuery
-    .limit(fetchLimit)
-    .overrideTypes<Restaurant[], { merge: false }>();
-
-  if (error) throw error;
-
-  return mergeRestaurants(data ?? [])
-    .filter(isApprovedRestaurant)
-    .filter((restaurant) =>
-      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-    )
-    .sort((a, b) => {
-      if (sort === 'popular') {
-        const popularityDelta =
-          (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0);
-        if (popularityDelta !== 0) return popularityDelta;
-      }
-
-      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
-      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
-      return sort === 'oldest' ? aTime - bTime : bTime - aTime;
-    })
-    .slice(0, limit);
 }
 
 export async function fetchLatestRestaurantPage({

@@ -105,18 +105,6 @@ export function hasAdminSession(): boolean {
     return Boolean(getAdminCookieValue());
 }
 
-export function getAdminRequestHeaders(overrides: Record<string, string> = {}): Record<string, string> {
-    const adminCookie = getAdminCookieValue();
-    if (!adminCookie) {
-        return { ...overrides };
-    }
-
-    return {
-        ...overrides,
-        Cookie: adminCookie,
-    };
-}
-
 export function getAdminSessionCookie(): string | null {
     return getAdminCookieValue();
 }
