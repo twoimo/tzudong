@@ -419,6 +419,107 @@ export function createVisitedRestaurantMatcher(
     };
 }
 
+// 리뷰 수 집계는 관련 리뷰 id 집합 전체가 필요하므로, 방문 판정과 달리 색인을 통과한 후보를 모두 모아
+// 합산합니다.
+//
+// selectRelatedRestaurantReviewIds는 맛집마다 후보 전체를 순회하므로 비용이 맛집 수 x 후보 수입니다
+// (병합 맛집 1,372개 x 같은 이름 후보 1,300여 개 = 180만 회 수준). 후보를 주소로 색인해 두면 주소가
+// 겹치지 않는 후보는 주소 게이트에서 이미 탈락한 것과 같아 검사 수가 크게 줄어듭니다.
+//
+// 집계 결과는 selectRelatedRestaurantReviewIds + 합산과 같아야 하며, 두 경로의 동일성은
+// apps/web/tests-unit/restaurant-review-counts-index.test.ts에서 확인합니다.
+export function createRelatedVerifiedReviewCountLookup(
+    candidates: ReviewLookupCandidate[]
+): (restaurant: ReviewLookupRestaurant | null, directCountMap: Map<string, number>) => number {
+    const entries = (Array.isArray(candidates) ? candidates : []).filter(
+        (candidate): candidate is ReviewLookupCandidate => Boolean(candidate && candidate.id)
+    );
+    const addressBuckets = new Map<string, number[]>();
+    const addresslessIndices: number[] = [];
+
+    entries.forEach((candidate, index) => {
+        const addresses = prepareCandidateLookupAddresses(candidate).addresses;
+        if (addresses.size === 0) {
+            addresslessIndices.push(index);
+            return;
+        }
+
+        addresses.forEach((address) => {
+            const bucket = addressBuckets.get(address);
+            if (bucket) bucket.push(index);
+            else addressBuckets.set(address, [index]);
+        });
+    });
+
+    // 맛집마다 합산한 id를 새로 만들지 않도록 집합 하나를 돌려 씁니다(맛집 수만큼 할당하지 않는다).
+    const countedIds = new Set<string>();
+    // 주소가 여러 개인 후보는 여러 버킷에 들어 있으므로, 맛집마다 한 번만 보도록 표시합니다.
+    const seenStamps = new Int32Array(entries.length);
+    let stamp = 0;
+
+    return (restaurant, directCountMap) => {
+        if (!restaurant) return 0;
+
+        countedIds.clear();
+        stamp += 1;
+        let total = 0;
+
+        const addId = (id: string | null | undefined) => {
+            if (!id || countedIds.has(id)) return;
+            countedIds.add(id);
+            total += directCountMap.get(id) ?? 0;
+        };
+
+        // 직접 ID(맛집 자신과 병합 레코드)는 후보 조회 없이도 항상 관련 id입니다.
+        addId(restaurant.id);
+        if (Array.isArray(restaurant.mergedRestaurants)) {
+            for (const mergedRestaurant of restaurant.mergedRestaurants) addId(mergedRestaurant?.id);
+        }
+
+        if (entries.length === 0) return total;
+
+        const lookupAddresses = prepareRestaurantLookupAddresses(restaurant).addresses;
+        const lookupNames = prepareLookupNames(restaurant);
+        const hasLookupNames = lookupNames.names.length > 0;
+
+        const considerCandidate = (index: number) => {
+            if (seenStamps[index] === stamp) return;
+            seenStamps[index] = stamp;
+
+            const candidate = entries[index];
+            reviewLookupPerfCounters.candidateVisits += 1;
+            if (countedIds.has(candidate.id)) return;
+            if (!hasLookupNames) {
+                addId(candidate.id);
+                return;
+            }
+
+            const candidateNames = prepareLookupNames(candidate);
+            if (candidateNames.names.length === 0) {
+                addId(candidate.id);
+                return;
+            }
+
+            reviewLookupPerfCounters.nameGates += 1;
+            if (hasCompatibleLookupName(lookupNames, candidateNames)) addId(candidate.id);
+        };
+
+        // 맛집 주소가 없으면 선형 경로와 같게 주소 없는 후보만 통과시킵니다.
+        if (lookupAddresses.size === 0) {
+            for (const index of addresslessIndices) considerCandidate(index);
+            return total;
+        }
+
+        for (const address of lookupAddresses) {
+            const bucket = addressBuckets.get(address);
+            if (!bucket) continue;
+            for (const index of bucket) considerCandidate(index);
+        }
+
+        return total;
+    };
+}
+
 // 후보의 주소 집합에 해당하는 승인 맛집 색인을 오름차순으로 하나씩 넘겨줍니다.
 // visit가 true를 돌려주면 순회를 멈춥니다. 각 주소 버킷은 색인 순서대로 쌓여 있어 정렬이 필요 없습니다.
 function forEachCandidateIndex(
