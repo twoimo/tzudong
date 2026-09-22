@@ -333,6 +333,92 @@ export function createRelatedRestaurantReviewIndex(
     };
 }
 
+// 사용자 리뷰가 있는 후보 맛집을 주소별로 한 번만 색인해 두고, 맛집마다 후보 전체를 다시 훑지 않고
+// 방문 여부만 판정합니다.
+//
+// hasRelatedVerifiedUserReview는 맛집 하나를 볼 때마다 후보 전체를 순회하므로 비용이 맛집 수 x 후보 수입니다
+// (승인 맛집 1,568개 x 후보 40개 = 62,720회). 후보를 주소로 색인해 두면 주소가 겹치지 않는 후보는 주소
+// 게이트에서 이미 탈락한 것과 같아, 실제로 검사하는 후보가 크게 줄어듭니다. 이름 게이트도 색인을 통과한
+// 후보에만 적용합니다.
+//
+// 판정 결과는 hasRelatedVerifiedUserReview와 같아야 하며, 두 경로의 동일성은
+// apps/web/tests-unit/restaurant-visit-matching-matcher.test.ts에서 확인합니다.
+export function createVisitedRestaurantMatcher(
+    candidates: ReviewLookupCandidate[],
+    visitedRestaurantIds: Set<string>
+): (restaurant: ReviewLookupRestaurant | null) => boolean {
+    const entries = (Array.isArray(candidates) ? candidates : []).filter(
+        (candidate): candidate is ReviewLookupCandidate => Boolean(candidate && candidate.id)
+    );
+    const addressBuckets = new Map<string, number[]>();
+    const addresslessIndices: number[] = [];
+
+    entries.forEach((candidate, index) => {
+        const addresses = prepareCandidateLookupAddresses(candidate).addresses;
+        if (addresses.size === 0) {
+            addresslessIndices.push(index);
+            return;
+        }
+
+        addresses.forEach((address) => {
+            const bucket = addressBuckets.get(address);
+            if (bucket) bucket.push(index);
+            else addressBuckets.set(address, [index]);
+        });
+    });
+
+    return (restaurant) => {
+        if (!restaurant || visitedRestaurantIds.size === 0) return false;
+
+        // 직접 ID(맛집 자신과 병합 레코드)가 방문 집합에 있으면 후보를 볼 필요가 없습니다.
+        if (visitedRestaurantIds.has(restaurant.id)) return true;
+        if (Array.isArray(restaurant.mergedRestaurants)) {
+            for (const mergedRestaurant of restaurant.mergedRestaurants) {
+                if (mergedRestaurant?.id && visitedRestaurantIds.has(mergedRestaurant.id)) return true;
+            }
+        }
+
+        if (entries.length === 0) return false;
+
+        const lookupAddresses = prepareRestaurantLookupAddresses(restaurant).addresses;
+        const lookupNames = prepareLookupNames(restaurant);
+        const hasLookupNames = lookupNames.names.length > 0;
+
+        const matchesCandidate = (index: number) => {
+            const candidate = entries[index];
+            reviewLookupPerfCounters.candidateVisits += 1;
+            // 선형 경로도 후보 id가 방문 집합에 있어야 방문으로 인정합니다.
+            if (!visitedRestaurantIds.has(candidate.id)) return false;
+            if (!hasLookupNames) return true;
+
+            // 후보마다 이름 집합이 다르므로 후보별로 준비합니다(준비 결과 자체는 후보 객체 단위로 캐시됩니다).
+            const candidateNames = prepareLookupNames(candidate);
+            if (candidateNames.names.length === 0) return true;
+
+            reviewLookupPerfCounters.nameGates += 1;
+            return hasCompatibleLookupName(lookupNames, candidateNames);
+        };
+
+        // 맛집 주소가 없으면 선형 경로와 같게 주소 없는 후보만 통과시킵니다.
+        if (lookupAddresses.size === 0) {
+            for (const index of addresslessIndices) {
+                if (matchesCandidate(index)) return true;
+            }
+            return false;
+        }
+
+        for (const address of lookupAddresses) {
+            const bucket = addressBuckets.get(address);
+            if (!bucket) continue;
+            for (const index of bucket) {
+                if (matchesCandidate(index)) return true;
+            }
+        }
+
+        return false;
+    };
+}
+
 // 후보의 주소 집합에 해당하는 승인 맛집 색인을 오름차순으로 하나씩 넘겨줍니다.
 // visit가 true를 돌려주면 순회를 멈춥니다. 각 주소 버킷은 색인 순서대로 쌓여 있어 정렬이 필요 없습니다.
 function forEachCandidateIndex(
