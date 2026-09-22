@@ -4,6 +4,7 @@ import {
   buildRestaurantRegionAddressOrFilter,
   excludeRestaurantsAlreadyShown,
   getRestaurantRegionAddressKeywords,
+  latestRestaurantSortTime,
   matchesRestaurantAddressContext,
 } from '@/lib/popular-restaurants';
 import type { Restaurant } from '@/types/restaurant';
@@ -95,6 +96,40 @@ describe('popular restaurant region filtering', () => {
     ]);
     expect(excludeRestaurantsAlreadyShown([garden, myeongdong, garden], new Set([garden.id]))).toEqual([
       myeongdong,
+    ]);
+  });
+});
+
+describe('latest restaurant recency', () => {
+  test('orders by the YouTube publish time instead of the row insert time', () => {
+    const olderVideoInsertedLater = restaurantWithAddress({});
+    olderVideoInsertedLater.created_at = '2026-08-23T16:39:25.083Z';
+    olderVideoInsertedLater.youtube_meta = { publishedAt: '2026-07-17T13:05:57Z' };
+
+    const newerVideo = restaurantWithAddress({});
+    newerVideo.created_at = '2026-08-06T00:00:00.000Z';
+    newerVideo.youtube_meta = { publishedAt: '2026-08-20T13:15:44Z' };
+
+    const undated = restaurantWithAddress({});
+    undated.created_at = '2026-09-01T00:00:00.000Z';
+    undated.youtube_meta = null;
+
+    const latestOrder = [olderVideoInsertedLater, newerVideo, undated].sort(
+      (a, b) => latestRestaurantSortTime(b, 'latest') - latestRestaurantSortTime(a, 'latest'),
+    );
+    expect(latestOrder.map((restaurant) => restaurant.youtube_meta?.publishedAt ?? 'undated')).toEqual([
+      '2026-08-20T13:15:44Z',
+      '2026-07-17T13:05:57Z',
+      'undated',
+    ]);
+
+    const oldestOrder = [olderVideoInsertedLater, newerVideo, undated].sort(
+      (a, b) => latestRestaurantSortTime(a, 'oldest') - latestRestaurantSortTime(b, 'oldest'),
+    );
+    expect(oldestOrder.map((restaurant) => restaurant.youtube_meta?.publishedAt ?? 'undated')).toEqual([
+      '2026-07-17T13:05:57Z',
+      '2026-08-20T13:15:44Z',
+      'undated',
     ]);
   });
 });

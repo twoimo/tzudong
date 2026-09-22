@@ -71,6 +71,25 @@ export const POPULAR_RESTAURANT_SELECT =
   'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count, reasoning_basis';
 
 export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular';
+
+export function latestRestaurantSortTime(
+  restaurant: Pick<Restaurant, 'created_at' | 'updated_at' | 'youtube_meta'>,
+  sort: LatestRestaurantSort,
+): number {
+  if (sort === 'popular') {
+    return Date.parse(restaurant.created_at ?? restaurant.updated_at ?? '') || 0;
+  }
+
+  const meta = restaurant.youtube_meta;
+  const publishedAt =
+    meta && typeof meta === 'object' && !Array.isArray(meta)
+      ? (meta as { publishedAt?: unknown }).publishedAt
+      : undefined;
+  const publishedTime =
+    typeof publishedAt === 'string' ? Date.parse(publishedAt) : Number.NaN;
+  if (Number.isFinite(publishedTime)) return publishedTime;
+  return sort === 'oldest' ? Number.POSITIVE_INFINITY : 0;
+}
 export type PopularRankTrendState = 'up' | 'down' | 'same' | 'new' | 'unknown';
 
 export type PopularRankTrend = {
@@ -540,7 +559,10 @@ export async function fetchLatestRestaurantPage({
       ? regionScopedQuery
           .order('weekly_search_count', { ascending: false })
           .order('created_at', { ascending: false })
-      : regionScopedQuery.order('created_at', { ascending: sort === 'oldest' });
+      : regionScopedQuery.order('youtube_meta->>publishedAt', {
+          ascending: sort === 'oldest',
+          nullsFirst: false,
+        });
   const { data, error } = await orderedQuery
     .range(
       pageOffset,
@@ -563,8 +585,8 @@ export async function fetchLatestRestaurantPage({
         if (popularityDelta !== 0) return popularityDelta;
       }
 
-      const bTime = Date.parse(b.created_at ?? b.updated_at ?? '') || 0;
-      const aTime = Date.parse(a.created_at ?? a.updated_at ?? '') || 0;
+      const bTime = latestRestaurantSortTime(b, sort);
+      const aTime = latestRestaurantSortTime(a, sort);
       return sort === 'oldest' ? aTime - bTime : bTime - aTime;
     });
   const hasMore = rawRestaurants.length === pageSize;
