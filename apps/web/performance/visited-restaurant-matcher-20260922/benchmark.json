@@ -1,0 +1,154 @@
+{
+  "generatedAt": "2026-09-22T02:52:31.229Z",
+  "baselineSource": {
+    "file": "apps/web/lib/restaurant-visit-matching.ts (hasRelatedVerifiedUserReview)",
+    "note": "기준 경로는 손으로 다시 쓴 근사가 아니라 이번 변경에서 무수정으로 남은 참조 구현입니다. 변경은 restaurant-review-lookup.ts에 추가만 했고(순수 추가), 판정 결과 동일성은 tests-unit/restaurant-visit-matching-matcher.test.ts가 확인합니다."
+  },
+  "workload": {
+    "mergedRows": 1500,
+    "reviewedCandidates": 40,
+    "matchingCandidates": 30,
+    "repetitions": 21,
+    "sampleLoops": 20
+  },
+  "budgets": {
+    "absolute": {
+      "pipelineMedianMsMax": 30,
+      "rule": "색인 경로의 목록 한 번 판정 중앙값이 30ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 3,
+      "degenerateMinMedianSpeedup": 1,
+      "rule": "unique-address는 선형 경로 대비 중앙값 3배 이상, 퇴화 모양(shared-address)은 색인이 줄일 여지가 없으므로 1배 이상(느려지지 않음)이면 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 경로의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "unique-address",
+      "description": "맛집마다 주소가 다른 실제 데이터 모양",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-linear",
+          "visitedCount": 30,
+          "fingerprint": "e36dd9a0"
+        },
+        {
+          "id": "S1-indexed",
+          "visitedCount": 30,
+          "fingerprint": "e36dd9a0"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-linear",
+          "candidateVisits": 60000,
+          "nameGates": 30,
+          "addressGates": 60000
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 30,
+          "nameGates": 30,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-linear",
+          "medianMs": 3.4000020500000003,
+          "p95Ms": 3.9850875,
+          "madRelative": 0.13712369673424063
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 0.3819291499999963,
+          "p95Ms": 0.47468545000000406,
+          "madRelative": 0.09414376985889714
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "requiredSpeedup": 3,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.23126746659313777,
+        "relativeImprovement": 8.902180024750752,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 8.902180024750752,
+        "speedupByP95": 8.39521729600089,
+        "candidateVisitReduction": 2000,
+        "nameGateReduction": 1
+      }
+    },
+    {
+      "id": "shared-address",
+      "description": "모든 맛집이 한 주소를 공유하는 퇴화 모양(색인이 줄일 수 없는 최악의 경우)",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-linear",
+          "visitedCount": 30,
+          "fingerprint": "e36dd9a0"
+        },
+        {
+          "id": "S1-indexed",
+          "visitedCount": 30,
+          "fingerprint": "e36dd9a0"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-linear",
+          "candidateVisits": 60000,
+          "nameGates": 45000,
+          "addressGates": 60000
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 44565,
+          "nameGates": 44565,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-linear",
+          "medianMs": 11.028577050000013,
+          "p95Ms": 15.123247949999996,
+          "madRelative": 0.08556426143842709
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 6.2008896000000275,
+          "p95Ms": 8.24296875,
+          "madRelative": 0.0812309495076277
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "requiredSpeedup": 1,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.1667952109460548,
+        "relativeImprovement": 1.7785475571117997,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 1.7785475571117997,
+        "speedupByP95": 1.834684615297128,
+        "candidateVisitReduction": 1.3463480309660047,
+        "nameGateReduction": 1.0097610232245036
+      }
+    }
+  ]
+}

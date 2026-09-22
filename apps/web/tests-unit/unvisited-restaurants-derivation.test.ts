@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { mergeRestaurants } from "../hooks/use-restaurants";
+import { createVisitedRestaurantMatcher } from "../lib/restaurant-review-lookup";
 import { hasRelatedVerifiedUserReview } from "../lib/restaurant-visit-matching";
 
 const source = (relativePath: string) =>
@@ -84,22 +85,19 @@ function referenceDerivation(rows: Row[], reviews: Review[]) {
   };
 }
 
-// 현재 구현: 방문 여부를 한 번만 계산해 미방문 목록과 방문 수를 함께 만든다.
+// 현재 구현: 후보를 주소로 한 번만 색인하고, 방문 여부를 한 번만 계산해 미방문 목록과 방문 수를 함께 만든다.
 function currentDerivation(rows: Row[], reviews: Review[]) {
   const reviewedRestaurantIds = new Set(reviews.map((review) => review.restaurant_id));
   const reviewedRestaurants = reviews
     .map((review) => review.restaurant)
     .filter((restaurant): restaurant is NonNullable<Review["restaurant"]> => Boolean(restaurant));
   const mergedRestaurants = mergeRestaurants(rows as never);
+  const isVisited = createVisitedRestaurantMatcher(reviewedRestaurants as never, reviewedRestaurantIds);
 
   const unvisitedIds: string[] = [];
   let visitedCount = 0;
   for (const restaurant of mergedRestaurants) {
-    if (hasRelatedVerifiedUserReview({
-      restaurant: restaurant as never,
-      reviewedRestaurantIds,
-      reviewedRestaurants: reviewedRestaurants as never,
-    })) {
+    if (isVisited(restaurant as never)) {
       visitedCount += 1;
     } else {
       unvisitedIds.push(restaurant.id);
@@ -190,6 +188,8 @@ describe("unvisited restaurants derivation", () => {
     expect(hookSource).toContain("}, [mergedRestaurants, userReviewData]);");
     expect(hookSource).toContain("mergeRestaurants(restaurantsData || [])");
     expect(hookSource).not.toContain("mergedRestaurants.filter");
-    expect(hookSource).toContain("hasRelatedVerifiedUserReview({");
+    // 맛집마다 후보 전체를 다시 훑지 않도록 색인 판정기를 쓰고, 선형 판정은 참조 구현으로만 남긴다.
+    expect(hookSource).toContain("createVisitedRestaurantMatcher(reviewedRestaurantCandidates, visitedRestaurantIds)");
+    expect(hookSource).not.toContain("hasRelatedVerifiedUserReview");
   });
 });

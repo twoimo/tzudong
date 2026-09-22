@@ -41,9 +41,9 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { REGIONS, extractRegion, extractYouTubeVideoId, parseCategory, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
 import { YoutubeThumbnail } from "@/components/ui/youtube-thumbnail";
-import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
 import {
     collectDirectRestaurantReviewIds,
+    createVisitedRestaurantMatcher,
     getRestaurantReviewLookupName,
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
@@ -309,13 +309,11 @@ export default function StampPage() {
 
     // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
     const isUserStampsReady = !user?.id || isUserStampsFetched;
-    const isVisited = useCallback((restaurant: Restaurant) => {
-        return hasRelatedVerifiedUserReview({
-            restaurant,
-            reviewedRestaurantIds: userReviews,
-            reviewedRestaurants: reviewedRestaurantCandidates,
-        });
-    }, [reviewedRestaurantCandidates, userReviews]);
+    // 후보(사용자 리뷰가 있는 맛집)를 주소로 한 번만 색인해, 맛집마다 후보 전체를 다시 훑지 않는다.
+    const isVisited = useMemo(
+        () => createVisitedRestaurantMatcher(reviewedRestaurantCandidates, userReviews),
+        [reviewedRestaurantCandidates, userReviews]
+    );
 
     // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)

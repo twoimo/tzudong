@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { mergeRestaurants, RESTAURANT_MERGE_SELECT } from "@/hooks/use-restaurants";
 import { Tables } from "@/integrations/supabase/types";
-import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
+import { createVisitedRestaurantMatcher } from "@/lib/restaurant-review-lookup";
 import type { Restaurant } from "@/types/restaurant";
 
 type ReviewedRestaurant = Pick<
@@ -99,15 +99,14 @@ export function useUnvisitedRestaurants() {
             .map((review) => review.restaurant)
             .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
 
+        // 후보(사용자 리뷰가 있는 맛집)를 주소로 한 번만 색인해 맛집마다 후보 전체를 다시 훑지 않는다.
+        const isVisited = createVisitedRestaurantMatcher(reviewedRestaurantCandidates, visitedRestaurantIds);
+
         // 방문 여부를 한 번만 계산해 미방문 목록과 방문 수를 함께 만든다(같은 목록을 두 번 순회하지 않는다).
         const unvisited: Restaurant[] = [];
         let visited = 0;
         for (const restaurant of mergedRestaurants) {
-            if (hasRelatedVerifiedUserReview({
-                restaurant,
-                reviewedRestaurantIds: visitedRestaurantIds,
-                reviewedRestaurants: reviewedRestaurantCandidates,
-            })) {
+            if (isVisited(restaurant)) {
                 visited += 1;
             } else {
                 unvisited.push(restaurant);
