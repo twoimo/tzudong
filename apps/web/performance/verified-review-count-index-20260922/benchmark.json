@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-09-22T03:07:02.370Z",
+  "baselineSource": {
+    "file": "apps/web/lib/restaurant-review-lookup.ts (selectRelatedRestaurantReviewIds + 합산)",
+    "note": "기준 경로는 손으로 다시 쓴 근사가 아니라 이번 변경에서 무수정으로 남은 참조 구현입니다. 변경은 색인 조회 함수 추가와 restaurant-review-counts.ts의 호출 교체뿐이며, 집계 값 동일성은 tests-unit/restaurant-review-counts-index.test.ts가 확인합니다."
+  },
+  "workload": {
+    "mergedRows": 1000,
+    "duplicateCandidates": 1000,
+    "unrelatedCandidates": 200,
+    "repetitions": 21,
+    "sampleLoops": 20
+  },
+  "budgets": {
+    "absolute": {
+      "realisticMedianMsMax": 40,
+      "degenerateMedianMsMax": 200,
+      "rule": "unique-address(실제 데이터 모양)의 목록 한 번 집계 중앙값은 40ms 이하, shared-address(퇴화 모양)는 후보 1000개가 한 주소에 몰려 색인이 줄일 여지가 없는 스트레스 모양이므로 별도로 200ms 이하를 기준으로 둡니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 3,
+      "degenerateMinMedianSpeedup": 1,
+      "rule": "unique-address는 선형 경로 대비 중앙값 3배 이상, 퇴화 모양(shared-address)은 색인이 줄일 여지가 없으므로 1배 이상(느려지지 않음)이면 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 경로의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "unique-address",
+      "description": "맛집마다 삭제 중복 후보가 같은 주소에 하나씩 있는 실제 데이터 모양",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-linear",
+          "countTotal": 1000,
+          "fingerprint": "dc299d00"
+        },
+        {
+          "id": "S1-indexed",
+          "countTotal": 1000,
+          "fingerprint": "dc299d00"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-linear",
+          "candidateVisits": 1200000,
+          "nameGates": 1000,
+          "addressGates": 1200000
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 1000,
+          "nameGates": 1000,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-linear",
+          "medianMs": 64.33251664999989,
+          "p95Ms": 77.26857499999997,
+          "madRelative": 0.050069709188033475
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 0.6572125000000597,
+          "p95Ms": 0.7783541500000866,
+          "madRelative": 0.05290648001995053
+        }
+      ],
+      "acceptance": {
+        "absoluteMedianMsMax": 40,
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "requiredSpeedup": 3,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.10297618920798401,
+        "relativeImprovement": 97.88693405860973,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 97.88693405860973,
+        "speedupByP95": 99.27174538735532,
+        "candidateVisitReduction": 1200,
+        "nameGateReduction": 1
+      }
+    },
+    {
+      "id": "shared-address",
+      "description": "모든 후보가 한 주소를 공유하는 퇴화 모양(색인이 줄일 수 없는 최악의 경우)",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-linear",
+          "countTotal": 2890,
+          "fingerprint": "a3855a2e"
+        },
+        {
+          "id": "S1-indexed",
+          "countTotal": 2890,
+          "fingerprint": "a3855a2e"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-linear",
+          "candidateVisits": 1200000,
+          "nameGates": 1000000,
+          "addressGates": 1200000
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 1000000,
+          "nameGates": 1000000,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-linear",
+          "medianMs": 173.66708335000004,
+          "p95Ms": 191.18077919999996,
+          "madRelative": 0.024079236659786382
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 155.84441249999946,
+          "p95Ms": 172.37111250000015,
+          "madRelative": 0.06950468403864354
+        }
+      ],
+      "acceptance": {
+        "absoluteMedianMsMax": 200,
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "requiredSpeedup": 1,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.09358392069842993,
+        "relativeImprovement": 1.114361949614335,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 1.114361949614335,
+        "speedupByP95": 1.1091230800056464,
+        "candidateVisitReduction": 1.2,
+        "nameGateReduction": 1
+      }
+    }
+  ]
+}
