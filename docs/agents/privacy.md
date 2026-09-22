@@ -2,7 +2,7 @@
 
 Read for auth, consent, location, retention/deletion, notifications, or personal-data changes. These requirements also govern backend and tooling work that handles such data.
 
-G010/G013/G014 source safeguards reduce risk but do not certify statutory compliance, policy publication, filing, deployment, or legal approval.
+G010/G013/G014 source safeguards reduce risk but do not certify statutory compliance, policy publication, filing, deployment, or legal approval. The release gates that required that evidence before deploy were parked on 2026-09-22 in [2026-09-22-parked-external-gates.md](../archive/release-gates/2026-09-22-parked-external-gates.md). The behavior below stays fail-closed until the operator restores those gates and changes the product on purpose.
 
 - Canonical privacy objects are `privacy_policy_versions`, `privacy_onboarding_challenges`, `privacy_age_profiles`, `privacy_guardian_verifications`, `privacy_consent_events`, the derived `privacy_consent_state` view, and append-only `privacy_audit_events`.
 - Canonical RPCs include `get_current_privacy_policy_version`, `create_privacy_onboarding_challenge`, `confirm_privacy_onboarding`, `submit_privacy_consent`, and `record_privacy_guardian_verification`. Do not add fallback aliases.

@@ -69,14 +69,6 @@ Report suspected personal-data exposure through the private vulnerability channe
 
 ## External production evidence
 
-Source safeguards do not prove statutory compliance, policy publication, a government filing, production deployment, legal approval, or hosted-state correctness. Release remains blocked pending external evidence of:
+The external evidence list for policy publication, retention, location filing, guardian verification, incident receipts, marketing-provider approval, schema, RLS, and hosted catalog readback was parked on 2026-09-22. It is not a release blocker. The text to restore later is `docs/archive/release-gates/2026-09-22-parked-external-gates.md`. Source safeguards still do not prove statutory compliance or hosted-state correctness, and this section does not turn those product features on.
 
-- exact policy publication/version/hash/locale/effective/published tuple and Korean legal/privacy-owner review;
-- location-business filing or documented non-applicability;
-- guardian/provider approval before enabling under-14 support;
-- named human incident submission and receipt;
-- operator-approved retention classes, legal basis, trigger, period, activation, hosted backup/PITR, and operator evidence;
-- approved HTTPS marketing provider, production secrets, and internal capability controls; and
-- hosted production migration, RLS/grant, RPC, generated type, catalog, key-management, and operator-access readback.
-
-The dirty original worktree remains immutable; use an isolated recovery candidate and never reset, stash, or clean. Serialized fresh-head content-patch PRs follow `develop -> data -> main` under branch protection. The repository owner is the only operator, so a second reviewer is not required. Before any Vercel action, verify the exact Git-integrated `tzudong` project; do not use a stale `web` project or mutate DNS. A release or rollback needs that operator's approval, branch-protection evidence, rollback planning, and deployment readback receipt. A web-only deploy that does not enable the privacy, retention, location, marketing, or under-14 programs follows `docs/agents/release.md`. No merge or deployment is claimed here.
+The dirty original worktree remains immutable; use an isolated recovery candidate and never reset, stash, or clean. Serialized fresh-head content-patch PRs follow `develop -> data -> main` under branch protection. The repository owner is the only operator, so a second reviewer is not required. Before any Vercel action, verify the exact Git-integrated `tzudong` project; do not use a stale `web` project or mutate DNS. A release or rollback needs that operator's approval, branch-protection evidence, rollback planning, and deployment readback receipt. Active rules are in `docs/agents/release.md`. No merge or deployment is claimed here.
