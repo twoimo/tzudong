@@ -34,8 +34,11 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 export TZUDONG_REPO_ROOT=$(printf '%q' "$REPO_ROOT")
 export TZUDONG_PIPELINE_SOURCE="mac"
 export G037_WRITE_FREEZE="${FREEZE_STATE}"
+export PYTHON_CMD=$(printf '%q' "$PYTHON")
+export TZUDONG_LAAJ_PROVIDER="opencode-go"
+export TZUDONG_HOSTED_DATA_PLANE_APPROVED="1"
 cd "\$TZUDONG_REPO_ROOT"
-exec $(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 1
+exec $(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 3
 EOF
 chmod 755 "$WRAPPER"
 cat > "$PLIST" <<EOF

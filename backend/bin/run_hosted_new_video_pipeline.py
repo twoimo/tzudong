@@ -2,6 +2,8 @@
 """One entry for Mac and GitHub Actions: evaluate new videos then pending-apply.
 
 Does not enable PIPELINE_HOSTED_APPLY_ENABLED. Does not auto-approve.
+G037_WRITE_FREEZE does not hold this path. Hosted inserts stay pending until
+an admin approves them.
 """
 
 from __future__ import annotations
@@ -95,9 +97,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     _load_backend_env(REPO_ROOT)
-    if not args.dry_run and os.environ.get("G037_WRITE_FREEZE") != "cleared":
-        print("pipeline=held_write_freeze")
-        return 0
     cadence_source_preflight(REPO_ROOT)
     env_contract_preflight("hosted-pending-apply")
     _apply_local_runtime_environment()

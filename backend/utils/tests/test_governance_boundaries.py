@@ -276,6 +276,8 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
         }
         for path in (DAILY_CRAWLER_WORKFLOW, GDRIVE_BACKFILL_WORKFLOW):
             for name, job in _load_workflow(path)["jobs"].items():
+                if name == "hosted-pending-apply":
+                    continue
                 for event in ("schedule", "workflow_dispatch", "workflow_run"):
                     for freeze in ("active", "cleared"):
                         with self.subTest(workflow=path.name, job=name, event=event, freeze=freeze):
@@ -288,6 +290,14 @@ class GovernanceWorkflowRefGuardTest(unittest.TestCase):
                             allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.NotEq, ast.Constant)
                             self.assertTrue(all(isinstance(node, allowed) for node in ast.walk(tree)))
                             self.assertIs(eval(compile(tree, "<workflow-condition>", "eval"), {"__builtins__": {}}, {}), freeze != "active")
+        pending = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["hosted-pending-apply"]["if"]
+        expression = " ".join(pending.split()).removeprefix("${{").removesuffix("}}").strip()
+        values = {**replacements, "vars.G037_WRITE_FREEZE": "active"}
+        for key in sorted(values, key=len, reverse=True):
+            expression = expression.replace(key, repr(values[key]))
+        expression = expression.replace("&&", "and")
+        tree = ast.parse(expression, mode="eval")
+        self.assertIs(eval(compile(tree, "<workflow-condition>", "eval"), {"__builtins__": {}}, {}), True)
 
     def test_public_repository_data_publication_requires_explicit_opt_in(self) -> None:
         condition = _load_workflow(DAILY_CRAWLER_WORKFLOW)["jobs"]["daily-publish"]["if"]
