@@ -314,22 +314,26 @@ export default function OverlayLayout({
     }
   };
 
-  const routeChrome = shouldRenderRouteOverlayChrome ? (
+  const routeChrome = (
     <>
-      <FloatingNavButtons
-        activePanel={activeOverlayPanel}
-        onPanelChange={handleOverlayPanelChange}
-        onReviewSelect={handleReviewSelect}
-        className="bottom-8 left-8"
-      />
-      <OverlayPagePanel
-        activePanel={activeOverlayPanel}
-        onClose={handleCloseOverlayPanel}
-        initialReviewId={targetReviewId}
-        onOpenAuth={handleOpenAuth}
-      />
+      {shouldRenderRouteOverlayChrome && (
+        <>
+          <FloatingNavButtons
+            activePanel={activeOverlayPanel}
+            onPanelChange={handleOverlayPanelChange}
+            onReviewSelect={handleReviewSelect}
+            className="bottom-8 left-8"
+          />
+          <OverlayPagePanel
+            activePanel={activeOverlayPanel}
+            onClose={handleCloseOverlayPanel}
+            initialReviewId={targetReviewId}
+            onOpenAuth={handleOpenAuth}
+          />
+        </>
+      )}
     </>
-  ) : null;
+  );
 
   const modals = (
     <>
