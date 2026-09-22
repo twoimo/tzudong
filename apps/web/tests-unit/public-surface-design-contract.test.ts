@@ -71,9 +71,10 @@ const PRESENT_AND_NULL_LOADING = [
   'app/mypage/loading.tsx',
   'app/user/[userId]/loading.tsx',
   'app/auth/reset-password/loading.tsx',
+  'app/stamp/loading.tsx',
 ] as const;
 
-const PRESENT_AND_SKELETON_LOADING = ['app/stamp/loading.tsx'] as const;
+const PRESENT_AND_SKELETON_LOADING = [] as const;
 
 const FAMILY_ERROR_FILES = [
   'app/error.tsx',
@@ -291,7 +292,7 @@ describe('public surface design contract', () => {
       expect(classifyLoading(readApp(relativePath))).toBe('present-and-null');
     }
 
-    expect(classifyLoading(readApp('app/stamp/loading.tsx'))).toBe('present-and-skeleton');
+    expect(classifyLoading(readApp('app/stamp/loading.tsx'))).toBe('present-and-null');
     expect(existsSync(join(appRoot, 'app/feed/loading.tsx'))).toBe(false);
     expect(existsSync(join(appRoot, 'app/home-frame/loading.tsx'))).toBe(false);
     expect(existsSync(join(appRoot, 'app/privacy/loading.tsx'))).toBe(false);

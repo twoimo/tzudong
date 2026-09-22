@@ -97,12 +97,15 @@ describe('home root runtime boundary', () => {
         expect(homeRuntimeShellSource).not.toContain('bg-[radial-gradient');
         expect(homeRuntimeShellSource).not.toContain('bg-[linear-gradient');
         expect(homeRuntimeShellSource).toContain('const OverlayLayout = lazy(');
-        expect(homeRuntimeShellSource).toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
+        expect(homeRuntimeShellSource).toContain('<OverlayLayout />');
+        expect(homeRuntimeShellSource).not.toContain('fallback={<HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>}');
+        expect(homeViewportModeSource).toContain('useLayoutEffect');
         expect(homeRuntimeShellSource).not.toContain('fallback={<div className="h-full w-full">{children}</div>}');
         expect(homeRuntimeShellSource).not.toContain('if (!hasMounted)');
         expect(homeRuntimeShellSource).not.toContain('setHasMounted');
-        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'pending')");
-        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'desktop')");
+        expect(homeRuntimeShellSource).toContain("if (viewportMode === 'mobileOrTablet')");
+        expect(homeRuntimeShellSource).toContain("viewportMode === 'desktop' && !isPublicRestrictedMode");
+        expect(homeRuntimeShellSource).not.toContain("if (viewportMode === 'pending')");
         expect(homeRuntimeShellSource).not.toContain("from '@/hooks/useDeviceType'");
         expect(homeViewportModeSource).toContain("export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop'");
         expect(homeViewportModeSource).toContain("const [mode, setMode] = useState<HomeViewportMode>('pending')");
@@ -180,15 +183,8 @@ describe('home root runtime boundary', () => {
     });
     test('bypasses the desktop overlay in public demo mode', () => {
         const homeRuntimeShellSource = source('app/home-runtime-shell.tsx');
-        const desktopBranch = homeRuntimeShellSource.slice(
-            homeRuntimeShellSource.indexOf("if (viewportMode === 'desktop')"),
-            homeRuntimeShellSource.indexOf("function HomeRuntimePendingShell"),
-        );
-
-        expect(desktopBranch).toContain('if (isPublicRestrictedMode)');
-        expect(desktopBranch).toContain(
-            'return <HomeRuntimePendingShell>{children}</HomeRuntimePendingShell>;',
-        );
-        expect(desktopBranch).toContain('<OverlayLayout>{children}</OverlayLayout>');
+        expect(homeRuntimeShellSource).toContain("viewportMode === 'desktop' && !isPublicRestrictedMode");
+        expect(homeRuntimeShellSource).toContain('<OverlayLayout />');
+        expect(homeRuntimeShellSource).not.toContain('<OverlayLayout>{children}</OverlayLayout>');
     });
 });
