@@ -118,6 +118,54 @@ class EvaluateNewYoutubeVideosTests(unittest.TestCase):
             code = module.main(["--channel", "tzuyang", "--limit", "1"])
         self.assertEqual(code, 0)
         self.assertTrue(any("08-chunk-multimodal-crawling.sh" in " ".join(call) for call in calls))
+
+    def test_shorts_do_not_block_evaluation_of_the_other_videos(self) -> None:
+        calls: list[list[str]] = []
+
+        def fake_run(argv: list[str], env: dict[str, str], *, required: bool = True) -> int:
+            calls.append(argv)
+            if "08-chunk-multimodal-crawling.sh" in " ".join(argv):
+                if required:
+                    raise SystemExit("chunk_failure_should_not_abort")
+                return 1
+            return 0
+
+        marked: list[str] = []
+
+        def mark(evaluation, video_id: str, reason: str) -> None:
+            marked.append(video_id)
+            self.assertEqual(reason, "shorts:is_shorts_le_180")
+
+        with patch.object(module, "assert_hosted_target"), patch.object(
+            module, "fetch_hosted_restaurant_snapshot", return_value=([], [])
+        ), patch.object(
+            module,
+            "_load_urls",
+            side_effect=[
+                [],
+                [
+                    "https://www.youtube.com/watch?v=aaaaaaaaaaa",
+                    "https://www.youtube.com/watch?v=bbbbbbbbbbb",
+                    "https://www.youtube.com/watch?v=ccccccccccc",
+                ],
+            ],
+        ), patch.object(module, "_write_urls"), patch.object(
+            module, "_locally_evaluated_ids", return_value=set()
+        ), patch.object(
+            module, "_is_short_video", side_effect=lambda _crawling, video_id: video_id == "aaaaaaaaaaa"
+        ), patch.object(
+            module, "_mark_crawl_not_selected", side_effect=mark
+        ), patch.object(module, "_run", side_effect=fake_run):
+            code = module.main(["--channel", "tzuyang", "--limit", "3"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(marked, ["aaaaaaaaaaa"])
+        evaluated = [
+            call[call.index("--video-id") + 1]
+            for call in calls
+            if "--video-id" in call and str(call[1]).endswith("09-target-selection.py")
+        ]
+        self.assertEqual(evaluated, ["bbbbbbbbbbb", "ccccccccccc"])
     def test_laaj_script_keeps_absolute_evaluation_path(self) -> None:
         script = (
             ROOT

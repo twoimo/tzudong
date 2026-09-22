@@ -207,31 +207,6 @@ def main(argv: list[str] | None = None) -> None:
                     print("[INFO] visual-location candidate attached", file=sys.stderr)
         except (OSError, json.JSONDecodeError):
             print("[WARN] op=visual_location_merge_skipped", file=sys.stderr)
-
-
-    visual_path = Path(args.visual_location) if args.visual_location else None
-    if visual_path and visual_path.is_file():
-        try:
-            last = None
-            for line in visual_path.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    last = json.loads(line)
-            if isinstance(last, dict) and last.get("origin_name"):
-                visual_row = {
-                    "origin_name": last.get("origin_name"),
-                    "address": last.get("address"),
-                    "address_status": last.get("address_status") or "unknown",
-                    "evidence": last.get("evidence")
-                    or {"visual": [], "caption": [], "external": []},
-                }
-                if not any(
-                    names_are_similar(existing.get("origin_name", ""), visual_row["origin_name"])
-                    for existing in merged
-                ):
-                    merged.append(visual_row)
-                    print("[INFO] visual-location candidate attached", file=sys.stderr)
-        except (OSError, json.JSONDecodeError):
-            print("[WARN] op=visual_location_merge_skipped", file=sys.stderr)
     result: Dict[str, Any] = {"restaurants": merged}
     if not merged and all_reasons:
         result["no_restaurant_reason"] = all_reasons[0]

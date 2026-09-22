@@ -8,6 +8,7 @@ scripts for those videos. Does not write to hosted Supabase.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -58,6 +59,41 @@ def _load_urls(path: Path) -> list[str]:
 def _write_urls(path: Path, urls: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(urls) + ("\n" if urls else ""), encoding="utf-8")
+
+
+def _is_short_video(crawling: Path, video_id: str) -> bool:
+    meta_path = crawling / "meta" / f"{video_id}.jsonl"
+    if not meta_path.is_file():
+        return False
+    try:
+        last = meta_path.read_text(encoding="utf-8").splitlines()[-1]
+        meta = json.loads(last)
+    except (OSError, IndexError, json.JSONDecodeError):
+        return False
+    if meta.get("is_shorts") is True:
+        return True
+    duration = meta.get("duration")
+    return isinstance(duration, (int, float)) and duration <= 180
+
+
+def _mark_crawl_not_selected(evaluation: Path, video_id: str, reason: str) -> None:
+    directory = evaluation / "evaluation" / "notSelection"
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{video_id}.jsonl"
+    if path.exists():
+        return
+    path.write_text(
+        json.dumps(
+            {
+                "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
+                "is_notSelected": True,
+                "notSelected_reason": reason,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _locally_evaluated_ids(evaluation: Path) -> set[str]:
@@ -131,62 +167,80 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     _write_urls(urls_path, new_urls)
-    new_ids = [extract_youtube_video_id(item) for item in new_urls]
-    primary_id = next((item for item in new_ids if item), "")
+    new_ids = [item for item in (extract_youtube_video_id(item) for item in new_urls) if item]
     try:
         _run([python, str(SCRIPTS["collect_meta"]), "--channel", args.channel], env)
-        _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
-        context_exit = _run(
-            [
-                python,
-                str(SCRIPTS["context"]),
-                "--max-videos",
-                str(args.limit),
-            ],
-            env,
-            required=False,
+        short_ids = [video_id for video_id in new_ids if _is_short_video(crawling, video_id)]
+        for video_id in short_ids:
+            _mark_crawl_not_selected(evaluation, video_id, "shorts:is_shorts_le_180")
+        evaluable_ids = [video_id for video_id in new_ids if video_id not in set(short_ids)]
+        _write_urls(
+            urls_path,
+            [f"https://www.youtube.com/watch?v={video_id}" for video_id in evaluable_ids],
         )
-        if context_exit != 0:
-            print(f"transcript_context=skipped exit={context_exit}")
-        else:
-            print("transcript_context=ok")
-        _run(["bash", str(SCRIPTS["chunk"]), "--channel", args.channel], env)
-        target_cmd = [
-            python,
-            str(SCRIPTS["target"]),
-            "--channel",
-            args.channel,
-            "--crawling-path",
-            str(crawling),
-            "--evaluation-path",
-            str(evaluation),
-        ]
-        rule_cmd = [
-            python,
-            str(SCRIPTS["rule"]),
-            "--channel",
-            args.channel,
-            "--evaluation-path",
-            str(evaluation),
-        ]
-        if primary_id:
-            target_cmd.extend(["--video-id", primary_id])
-            rule_cmd.extend(["--video-id", primary_id])
-        _run(target_cmd, env)
-        _run(rule_cmd, env)
-        laaj_cmd = [
-            "bash",
-            str(SCRIPTS["laaj"]),
-            "--channel",
-            args.channel,
-            "--crawling-path",
-            str(crawling),
-            "--evaluation-path",
-            str(evaluation),
-        ]
-        if primary_id:
-            laaj_cmd.extend(["--video-id", primary_id])
-        _run(laaj_cmd, env)
+        print(f"shortVideoIds={short_ids}")
+        print(f"evaluableVideoIds={evaluable_ids}")
+        if evaluable_ids:
+            _run(["node", str(SCRIPTS["transcript"]), "--channel", args.channel], env)
+            context_exit = _run(
+                [
+                    python,
+                    str(SCRIPTS["context"]),
+                    "--max-videos",
+                    str(len(evaluable_ids)),
+                ],
+                env,
+                required=False,
+            )
+            if context_exit != 0:
+                print(f"transcript_context=skipped exit={context_exit}")
+            else:
+                print("transcript_context=ok")
+            chunk_exit = _run(
+                ["bash", str(SCRIPTS["chunk"]), "--channel", args.channel],
+                env,
+                required=False,
+            )
+            if chunk_exit != 0:
+                print(f"chunk=continued exit={chunk_exit}")
+        for video_id in evaluable_ids:
+            for script_key in ("target", "rule"):
+                command = [
+                    python,
+                    str(SCRIPTS[script_key]),
+                    "--channel",
+                    args.channel,
+                    "--evaluation-path",
+                    str(evaluation),
+                    "--video-id",
+                    video_id,
+                ]
+                if script_key == "target":
+                    command[4:4] = ["--crawling-path", str(crawling)]
+                step_exit = _run(command, env, required=False)
+                if step_exit != 0:
+                    print(f"{script_key}=skipped video={video_id} exit={step_exit}")
+            if env.get("TZUDONG_LAAJ_PROVIDER") == "opencode-go":
+                print(f"laaj=deferred provider=opencode-go video={video_id}")
+            else:
+                laaj_exit = _run(
+                    [
+                        "bash",
+                        str(SCRIPTS["laaj"]),
+                        "--channel",
+                        args.channel,
+                        "--crawling-path",
+                        str(crawling),
+                        "--evaluation-path",
+                        str(evaluation),
+                        "--video-id",
+                        video_id,
+                    ],
+                    env,
+                    required=False,
+                )
+                if laaj_exit != 0:
+                    print(f"laaj=skipped video={video_id} exit={laaj_exit}")
         _run(
             [
                 python,
@@ -199,6 +253,7 @@ def main(argv: list[str] | None = None) -> int:
                 str(evaluation),
             ],
             env,
+            required=False,
         )
     finally:
         merged = list(new_urls)

@@ -69,7 +69,7 @@ class HostedDataPlaneTests(unittest.TestCase):
         }
         self.assertEqual(classify_evaluation_row(row, []), "skip_no_geocode")
 
-    def test_unconfirmed_map_row_is_not_applied(self) -> None:
+    def test_unconfirmed_map_row_stays_in_the_review_queue(self) -> None:
         row = {
             "youtube_link": "https://youtu.be/chainstore1",
             "geocoding_success": True,
@@ -84,7 +84,7 @@ class HostedDataPlaneTests(unittest.TestCase):
                 }
             },
         }
-        self.assertEqual(classify_evaluation_row(row, []), "skip_unconfirmed_map")
+        self.assertEqual(classify_evaluation_row(row, []), "apply_candidate_pending_review")
 
     def test_video_confirmed_unconfirmed_reason_can_apply(self) -> None:
         row = {
@@ -182,23 +182,50 @@ class HostedDataPlaneTests(unittest.TestCase):
             presented_preview_sha256=preview["previewSha256"],
         )
 
-    def test_active_missing_or_unknown_freeze_blocks_before_any_request(self) -> None:
-        preview = build_apply_preview(local_restaurant_ids=[], hosted_restaurant_ids=[],
-                                      hosted_youtube_ids=[], evaluation_rows=[])
-        for value in (None, "", "active", "inactive", "unknown"):
+    def test_freeze_state_does_not_block_pending_review_insert(self) -> None:
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[
+                {
+                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+                    "trace_id": "trace-new",
+                    "geocoding_success": True,
+                    "lat": 1,
+                    "lng": 2,
+                    "is_missing": False,
+                    "is_notSelected": False,
+                    "origin_name": "신규집",
+                }
+            ],
+        )
+        row = {
+            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+            "trace_id": "trace-new",
+            "geocoding_success": True,
+            "lat": 1,
+            "lng": 2,
+            "origin_name": "신규집",
+        }
+        for value in (None, "", "active", "inactive", "unknown", "cleared"):
             calls = []
             env = {APPROVAL_ENV: "1"}
             if value is not None:
                 env["G037_WRITE_FREEZE"] = value
-            with self.subTest(value=value), self.assertRaises(HostedDataPlaneError) as raised:
-                apply_pending_candidates(
-                    preview=preview, evaluation_rows=[], url=HOSTED_URL,
-                    service_role_key="", environment=env,
+            with self.subTest(value=value):
+                result = apply_pending_candidates(
+                    preview=preview,
+                    evaluation_rows=[row],
+                    url=HOSTED_URL,
+                    service_role_key="service-role",
+                    environment=env,
                     presented_preview_sha256=preview["previewSha256"],
-                    fetch=lambda *args, **kwargs: calls.append(True),
+                    fetch=lambda *args, **kwargs: calls.append(True) or (201, None),
                 )
-            self.assertEqual(str(raised.exception), "hosted_write_freeze_not_cleared")
-            self.assertEqual(calls, [])
+            self.assertEqual(result["insertedCount"], 1)
+            self.assertEqual(calls, [True])
+            self.assertEqual(result["insertedVideoIds"], ["newvideo111"])
 
     def test_pending_payload_never_stays_approved(self) -> None:
         payload = pending_insert_payload(

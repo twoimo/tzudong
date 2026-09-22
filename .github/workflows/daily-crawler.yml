@@ -915,7 +915,7 @@ jobs:
 
   hosted-pending-apply:
     needs: []
-    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.G037_WRITE_FREEZE == 'cleared' && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
+    if: ${{ github.repository == github.event.repository.full_name && github.ref_name == github.event.repository.default_branch && github.ref_protected && vars.TZUDONG_HOSTED_DATA_PLANE_APPROVED == '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 80
     permissions:
@@ -932,7 +932,7 @@ jobs:
       NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
       NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
       NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
-      LIVE_MAX_NEW_ITEMS: "1"
+      LIVE_MAX_NEW_ITEMS: "3"
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -962,5 +962,5 @@ jobs:
           mkdir -p backend/log/cron
           python3 backend/bin/run_hosted_new_video_pipeline.py \
             --channel tzuyang \
-            --limit 1 \
+            --limit 3 \
             --preview-out backend/log/cron/hosted-apply-preview.json
