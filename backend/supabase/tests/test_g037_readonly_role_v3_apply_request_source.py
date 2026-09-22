@@ -169,7 +169,7 @@ class G037ReadonlyRoleV3ApplyRequestSourceTests(unittest.TestCase):
         for task_id in (355, 356, 357, 358, 359):
             self.assertIn(f"- [x]! 7.{task_id} ", TASKS)
         self.assertIn("- [x] 7.364 ", TASKS)
-        self.assertIn("- [ ]! 7.365 ", TASKS)
+        self.assertIn("- [x]! 7.365 ", TASKS)
         request_sha = sha256(REQUEST_PATH)
         for source in (DESIGN, RUNBOOK):
             normalized = " ".join(source.split())

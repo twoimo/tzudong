@@ -40,18 +40,16 @@ class G037ReadonlyCredentialContractSourceTests(unittest.TestCase):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
         self.assertIn("- [x] 7.163 ", TASKS)
         self.assertIn("- [x]! 7.164 ", TASKS)
-        for completed_id in (165, 166, 167):
-            self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
-        for open_id in (168, 169):
-            self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
+        for completed_id in (165, 166, 167, 168, 169):
+            marker = "- [x]! " if completed_id in (168, 169) else "- [x] "
+            self.assertIn(f"{marker}7.{completed_id} ", TASKS)
         for completed_id in range(170, 186):
             self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
         self.assertIn("- [x]! 7.186 ", TASKS)
         self.assertIn("- [x]! 7.188 ", TASKS)
-        for completed_id in (187, *range(189, 195)):
-            self.assertIn(f"- [x] 7.{completed_id} ", TASKS)
-        for open_id in (195,):
-            self.assertIn(f"- [ ]! 7.{open_id} ", TASKS)
+        for completed_id in (187, *range(189, 196)):
+            marker = "- [x]! " if completed_id == 195 else "- [x] "
+            self.assertIn(f"{marker}7.{completed_id} ", TASKS)
         self.assertIn("- [x]* 7.196 ", TASKS)
         self.assertIn("owner privileges without recording its value or role name", TASKS)
         self.assertIn("prohibit fallback to `SUPABASE_DB_URL`", TASKS)
