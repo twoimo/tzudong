@@ -2039,13 +2039,13 @@ const NaverMapView = memo(({
         );
         return expandedClusterRetainIds.length;
     }, [expandedClusterRetainIds, mergedRestaurantById, restaurantById]);
-    const resolveMarkerRestaurant = (restaurantId: string | null | undefined) => resolveExpandedClusterRestaurant(
+    const resolveMarkerRestaurant = useCallback((restaurantId: string | null | undefined) => resolveExpandedClusterRestaurant(
         restaurantId,
         restaurantById,
         mergedRestaurantById,
         expandedClusterRestaurantSnapshotRef.current,
         expandedClusterRestaurantIds.length > 0,
-    );
+    ), [expandedClusterRestaurantIds, mergedRestaurantById, restaurantById]);
     const restaurantsForSwipe = useMemo(() => buildRestaurantsForSwipe({
         activeSearchedRestaurant: markerVisibleActiveSearchedRestaurant,
         selectedRestaurant: markerVisibleSelectedRestaurant,
@@ -2838,7 +2838,7 @@ const NaverMapView = memo(({
             }
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, activeSearchedRestaurant, displayRestaurants, displayRestaurantIds, expandedClusterRestaurantIds, markerKindSignature, markerRenderRetryTick, markerVisibleActiveSearchedRestaurant, markerVisibleSelectedRestaurant, restaurantById, mergedRestaurantById, restaurantsForSwipe, selectedRegion, selectedRestaurant, showUserSubmittedMarkers, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized, isMobileOrTablet, visibleMarkerReviewBubbles, activateNoncriticalMapEffects, fitIslandClusterViewport, jumpWithPanelOffset, onMarkerClick, onRestaurantSelect, onVisibleRestaurantsChange, onContextualRestaurantsChange, handleMarkerRestaurantSelection, resetMarkerRenderRetry, scheduleMarkerRenderRetry, resolveMarkerRestaurant]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
@@ -2984,7 +2984,7 @@ const NaverMapView = memo(({
         prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
         prevSelectedRestaurantIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
-    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, expandedClusterRestaurantIds, visibleMarkerReviewBubbles, isMobileOrTablet]);
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, expandedClusterRestaurantIds, visibleMarkerReviewBubbles, isMobileOrTablet, resolveMarkerRestaurant]);
 
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
