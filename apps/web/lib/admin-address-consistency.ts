@@ -75,7 +75,6 @@ const MATCH_STATUS_LABELS: Record<string, string> = {
 };
 
 export const ADDRESS_REVIEW_GEOCODE_RECOVERED_QUEUE = 'geocode_recovered_review';
-export const ADMIN_DERIVED_STATUS_ADDRESS_REVIEW_GEOCODE_RECOVERED = 'address_review_geocode_recovered';
 
 export interface AddressConsistencyReviewQueueInfo {
   queue: string;

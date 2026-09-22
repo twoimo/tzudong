@@ -139,9 +139,6 @@ const resolveRestaurantDerived = (restaurant: Restaurant): RestaurantDerivedEntr
 export const resolveHomeMapAddressText = (restaurant: Restaurant) =>
     resolveRestaurantDerived(restaurant).text;
 
-export const restaurantHasOverseasKeyword = (restaurant: Restaurant) =>
-    resolveRestaurantDerived(restaurant).hasOverseasKeyword;
-
 export const isOverseasCoordinate = (restaurant: Restaurant) =>
     resolveRestaurantDerived(restaurant).overseasByCoordinate;
 

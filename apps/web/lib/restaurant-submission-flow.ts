@@ -23,10 +23,6 @@ export const RESTAURANT_SUBMISSION_STEPS: Array<{
     { id: 3, title: '확인 후 제출', shortTitle: '확인' },
 ];
 
-export function isHttpUrl(value: string): boolean {
-    return /^https?:\/\//.test(value.trim());
-}
-
 function hasMeaningfulText(value: string): boolean {
     const compact = value.trim().replace(/\s+/g, '');
     if (!compact) return false;

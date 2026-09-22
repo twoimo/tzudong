@@ -38,21 +38,6 @@ export function isIdempotencyKey(value: string): boolean {
   return value.length >= 8 && value.length <= 128;
 }
 
-export function pickPipelineListJob(value: Record<string, unknown>): PipelineListJob {
-  return {
-    id: String(value.id ?? ""),
-    target: String(value.target ?? ""),
-    profile: String(value.profile ?? ""),
-    status: String(value.status ?? ""),
-    error_code: value.error_code == null ? null : String(value.error_code),
-    dry_run: Boolean(value.dry_run),
-    adapter_index:
-      typeof value.adapter_index === "number"
-        ? value.adapter_index
-        : Number(value.adapter_index ?? 0),
-  };
-}
-
 export function allowlistedPipelineJob(
   value: Record<string, unknown>,
 ): Record<PipelineListKey, unknown> {

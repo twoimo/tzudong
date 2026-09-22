@@ -146,11 +146,3 @@ export function decodeBasicHtmlEntities(value: string): string {
         .replace(/&gt;/g, "")
         .replace(/&amp;/g, "&");
 }
-
-export function hostnameOf(value: string): string | null {
-    try {
-        return new URL(value).hostname.toLowerCase();
-    } catch {
-        return null;
-    }
-}

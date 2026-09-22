@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 // 전역 hydration 상태 관리 (싱글톤)
 let isHydratedGlobal = false;
@@ -39,18 +39,4 @@ if (typeof window !== "undefined" && !isHydratedGlobal) {
  */
 export function useHydration(): boolean {
     return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-}
-
-/**
- * 간단한 버전의 useHydration (개별 컴포넌트용)
- * 컴포넌트별로 독립적인 hydration 상태가 필요한 경우 사용
- */
-export function useHydrationLocal(): boolean {
-    const [isHydrated, setIsHydrated] = useState(false);
-
-    useEffect(() => {
-        setIsHydrated(true);
-    }, []);
-
-    return isHydrated;
 }
