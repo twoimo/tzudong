@@ -1,0 +1,68 @@
+{
+  "generatedAt": "2026-09-22T04:21:06.174Z",
+  "claim": "local-microbenchmark",
+  "notG003": true,
+  "absoluteBudgetMs": 16,
+  "relativeNoiseBudget": 0.15,
+  "baseline": "frozen copy of the previous full sort that built a related-id set for every candidate",
+  "mismatches": 0,
+  "results": [
+    {
+      "size": 200,
+      "limit": 5,
+      "mismatches": 0,
+      "old": {
+        "medianMs": 0.0411,
+        "madMs": 0.0086,
+        "p95Ms": 0.1006
+      },
+      "new": {
+        "medianMs": 0.0222,
+        "madMs": 0.006,
+        "p95Ms": 0.051
+      },
+      "ratio": 1.85,
+      "combinedMadRelative": 0.4613,
+      "relatedIdSetsOld": 205,
+      "relatedIdSetsNew": 5
+    },
+    {
+      "size": 1000,
+      "limit": 5,
+      "mismatches": 0,
+      "old": {
+        "medianMs": 0.1492,
+        "madMs": 0.0157,
+        "p95Ms": 0.6105
+      },
+      "new": {
+        "medianMs": 0.0665,
+        "madMs": 0.008,
+        "p95Ms": 0.1212
+      },
+      "ratio": 2.24,
+      "combinedMadRelative": 0.2197,
+      "relatedIdSetsOld": 1005,
+      "relatedIdSetsNew": 5
+    },
+    {
+      "size": 4000,
+      "limit": 5,
+      "mismatches": 0,
+      "old": {
+        "medianMs": 0.845,
+        "madMs": 0.1587,
+        "p95Ms": 1.4378
+      },
+      "new": {
+        "medianMs": 0.2369,
+        "madMs": 0.0229,
+        "p95Ms": 0.4643
+      },
+      "ratio": 3.57,
+      "combinedMadRelative": 0.3357,
+      "relatedIdSetsOld": 4005,
+      "relatedIdSetsNew": 5
+    }
+  ]
+}
