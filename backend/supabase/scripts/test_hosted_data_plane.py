@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from backend.supabase.scripts.hosted_data_plane import (
     APPROVAL_ENV,
@@ -18,6 +19,8 @@ from backend.supabase.scripts.hosted_data_plane import (
     classify_local_docker_restaurants,
     pending_insert_payload,
     r2_public_object_url,
+    load_evaluation_rows,
+    _json_request,
 )
 
 
@@ -488,6 +491,121 @@ class HostedDataPlaneTests(unittest.TestCase):
         self.assertEqual(url, "https://pub-abc12345def.r2.dev/eval/foo.jsonl")
         with self.assertRaises(HostedDataPlaneError):
             r2_public_object_url("NOPE", "x")
+
+    def test_changing_candidate_ids_without_rehash_is_rejected(self) -> None:
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[
+                {
+                    "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+                    "trace_id": "trace-new",
+                    "geocoding_success": True,
+                    "lat": 1,
+                    "lng": 2,
+                    "origin_name": "신규집",
+                }
+            ],
+        )
+        preview["applyCandidateVideoIds"] = ["othervideo1"]
+        with self.assertRaises(HostedDataPlaneError) as raised:
+            assert_apply_authorized(
+                preview,
+                environment={APPROVAL_ENV: "1"},
+                presented_preview_sha256=preview["previewSha256"],
+            )
+        self.assertEqual(str(raised.exception), "preview_hash_mismatch")
+
+    def test_skip_row_sharing_a_candidate_video_is_not_posted(self) -> None:
+        candidate = {
+            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+            "trace_id": "trace-new",
+            "geocoding_success": True,
+            "lat": 1,
+            "lng": 2,
+            "origin_name": "신규집",
+            "evaluation_results": {"visit_authenticity": {"name": "신규집", "eval_value": 1}},
+        }
+        skipped = {
+            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+            "trace_id": "trace-skip",
+            "is_missing": True,
+            "origin_name": "빠진집",
+        }
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[candidate, skipped],
+        )
+        calls: list[dict] = []
+
+        def fake_fetch(url, *, key, method="GET", payload=None, extra_headers=None):
+            calls.append(payload)
+            return 201, None
+
+        apply_pending_candidates(
+            preview=preview,
+            evaluation_rows=[candidate, skipped],
+            url=HOSTED_URL,
+            service_role_key="service-role",
+            environment={APPROVAL_ENV: "1"},
+            presented_preview_sha256=preview["previewSha256"],
+            fetch=fake_fetch,
+        )
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0]["origin_name"], "신규집")
+        self.assertEqual(calls[0]["status"], "pending")
+        self.assertEqual(calls[0]["evaluation_results"]["visit_authenticity"]["eval_value"], 1)
+
+    def test_changed_row_content_is_rejected_before_post(self) -> None:
+        row = {
+            "youtube_link": "https://www.youtube.com/watch?v=newvideo111",
+            "trace_id": "trace-new",
+            "geocoding_success": True,
+            "lat": 1,
+            "lng": 2,
+            "origin_name": "신규집",
+        }
+        preview = build_apply_preview(
+            local_restaurant_ids=[],
+            hosted_restaurant_ids=[],
+            hosted_youtube_ids=[],
+            evaluation_rows=[row],
+        )
+        changed = dict(row)
+        changed["origin_name"] = "다른집"
+        with self.assertRaises(HostedDataPlaneError) as raised:
+            apply_pending_candidates(
+                preview=preview,
+                evaluation_rows=[changed],
+                url=HOSTED_URL,
+                service_role_key="service-role",
+                environment={APPROVAL_ENV: "1"},
+                presented_preview_sha256=preview["previewSha256"],
+                fetch=lambda *args, **kwargs: (201, None),
+            )
+        self.assertEqual(str(raised.exception), "apply_payload_mismatch")
+
+    def test_invalid_evaluation_json_fails_closed(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "rows.jsonl"
+            path.write_text("{not json}\n", encoding="utf-8")
+            with self.assertRaises(HostedDataPlaneError) as raised:
+                load_evaluation_rows(str(path))
+        self.assertEqual(str(raised.exception), "evaluation_row_invalid")
+
+    def test_network_failure_is_a_hosted_data_plane_error(self) -> None:
+        from urllib.error import URLError
+
+        with patch("urllib.request.urlopen", side_effect=URLError("down")):
+            with self.assertRaises(HostedDataPlaneError) as raised:
+                _json_request(HOSTED_URL + "/rest/v1/restaurants", key="service-role")
+        self.assertEqual(str(raised.exception), "hosted_request_failed")
 
 
 if __name__ == "__main__":
