@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-09-22T04:14:28.450Z",
+  "claim": "local-microbenchmark",
+  "notG003": true,
+  "absoluteBudgetMs": 16,
+  "relativeNoiseBudget": 0.15,
+  "baseline": "frozen copy of the previous Map clone that inserted every snapshot row into both render maps",
+  "workload": {
+    "currentCount": 4000,
+    "historicalExtras": [
+      0,
+      4000,
+      12000
+    ],
+    "expandedCount": 12,
+    "repetitions": 31,
+    "warmup": 3
+  },
+  "retainedMismatches": 0,
+  "forgottenStillResolved": 0,
+  "results": [
+    {
+      "currentCount": 4000,
+      "historicalExtra": 0,
+      "snapshotBefore": 4800,
+      "snapshotAfter": 4800,
+      "pruned": 0,
+      "oldEntries": 9600,
+      "newEntries": 4800,
+      "probes": 15,
+      "old": {
+        "medianMs": 0.361,
+        "madMs": 0.0625,
+        "p95Ms": 1.0162
+      },
+      "cold": {
+        "medianMs": 0.4827,
+        "madMs": 0.0482,
+        "p95Ms": 1.8128
+      },
+      "warm": {
+        "medianMs": 0.3079,
+        "madMs": 0.0514,
+        "p95Ms": 0.6729
+      },
+      "coldRatio": 0.75,
+      "warmRatio": 1.17,
+      "coldCombinedMadRelative": 0.2624,
+      "warmCombinedMadRelative": 0.3406
+    },
+    {
+      "currentCount": 4000,
+      "historicalExtra": 4000,
+      "snapshotBefore": 8800,
+      "snapshotAfter": 4813,
+      "pruned": 3987,
+      "oldEntries": 17600,
+      "newEntries": 4813,
+      "probes": 15,
+      "old": {
+        "medianMs": 0.4948,
+        "madMs": 0.1097,
+        "p95Ms": 1.2623
+      },
+      "cold": {
+        "medianMs": 0.5801,
+        "madMs": 0.0808,
+        "p95Ms": 1.2372
+      },
+      "warm": {
+        "medianMs": 0.3565,
+        "madMs": 0.0973,
+        "p95Ms": 1.0397
+      },
+      "coldRatio": 0.85,
+      "warmRatio": 1.39,
+      "coldCombinedMadRelative": 0.3545,
+      "warmCombinedMadRelative": 0.4863
+    },
+    {
+      "currentCount": 4000,
+      "historicalExtra": 12000,
+      "snapshotBefore": 16800,
+      "snapshotAfter": 4813,
+      "pruned": 11987,
+      "oldEntries": 33600,
+      "newEntries": 4813,
+      "probes": 15,
+      "old": {
+        "medianMs": 1.4557,
+        "madMs": 0.3146,
+        "p95Ms": 3.111
+      },
+      "cold": {
+        "medianMs": 1.0575,
+        "madMs": 0.1166,
+        "p95Ms": 2.4863
+      },
+      "warm": {
+        "medianMs": 0.5524,
+        "madMs": 0.1575,
+        "p95Ms": 1.0772
+      },
+      "coldRatio": 1.38,
+      "warmRatio": 2.64,
+      "coldCombinedMadRelative": 0.3431,
+      "warmCombinedMadRelative": 0.4702
+    }
+  ]
+}

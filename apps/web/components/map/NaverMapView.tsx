@@ -88,6 +88,10 @@ import {
     type MarkerRenderSignature,
 } from "@/lib/map-render-guard";
 import {
+    resolveExpandedClusterRestaurant,
+    retainExpandedClusterRestaurantSnapshot,
+} from "@/lib/expanded-cluster-restaurant-snapshot";
+import {
     buildRestaurantLookup,
     findMatchingRestaurantInList,
 } from "@/lib/map-restaurant-lookup";
@@ -1997,46 +2001,17 @@ const NaverMapView = memo(({
         [displayRestaurants],
     );
 
-    const expandedClusterRestaurantSnapshotRef = useRef(new Map<string, (typeof unfilteredDisplayRestaurants)[number]>());
-    const restaurantLookup = useMemo(() => {
-        const lookup = buildRestaurantLookup(unfilteredDisplayRestaurants);
-        lookup.byId.forEach((restaurant, id) => {
-            expandedClusterRestaurantSnapshotRef.current.set(id, restaurant);
-        });
-        lookup.mergedRestaurantById.forEach((restaurant, id) => {
-            if (!expandedClusterRestaurantSnapshotRef.current.has(id)) {
-                expandedClusterRestaurantSnapshotRef.current.set(id, restaurant);
-            }
-        });
-        return lookup;
-    }, [unfilteredDisplayRestaurants]);
+    const expandedClusterRestaurantSnapshotRef = useRef(new Map<string, Restaurant>());
+    const restaurantLookup = useMemo(
+        () => buildRestaurantLookup(unfilteredDisplayRestaurants),
+        [unfilteredDisplayRestaurants],
+    );
     const displayRestaurantLookup = useMemo(
         () => showUserSubmittedMarkers ? restaurantLookup : buildRestaurantLookup(displayRestaurants),
         [displayRestaurants, restaurantLookup, showUserSubmittedMarkers],
     );
     const { idSet: displayRestaurantIds, mergedRestaurantIds } = displayRestaurantLookup;
-    const restaurantById = useMemo(() => {
-        const next = new Map(restaurantLookup.byId);
-        if (expandedClusterRestaurantIds.length > 0) {
-            expandedClusterRestaurantSnapshotRef.current.forEach((restaurant, id) => {
-                if (!next.has(id)) {
-                    next.set(id, restaurant);
-                }
-            });
-        }
-        return next;
-    }, [restaurantLookup, expandedClusterRestaurantIds]);
-    const mergedRestaurantById = useMemo(() => {
-        const next = new Map(restaurantLookup.mergedRestaurantById);
-        if (expandedClusterRestaurantIds.length > 0) {
-            expandedClusterRestaurantSnapshotRef.current.forEach((restaurant, id) => {
-                if (!next.has(id)) {
-                    next.set(id, restaurant);
-                }
-            });
-        }
-        return next;
-    }, [restaurantLookup, expandedClusterRestaurantIds]);
+    const { byId: restaurantById, mergedRestaurantById } = restaurantLookup;
     const markerVisibleActiveSearchedRestaurant =
         showUserSubmittedMarkers || !isUserSubmittedRestaurant(activeSearchedRestaurant)
             ? activeSearchedRestaurant
@@ -2045,6 +2020,32 @@ const NaverMapView = memo(({
         showUserSubmittedMarkers || !isUserSubmittedRestaurant(selectedRestaurant)
             ? selectedRestaurant
             : null;
+    const expandedClusterRetainIds = useMemo(() => {
+        const ids: string[] = [];
+        for (const id of expandedClusterRestaurantIds) {
+            if (typeof id === 'string' && id.length > 0) ids.push(id);
+        }
+        for (const id of [selectedRestaurant?.id, gridSelectedRestaurant?.id, markerVisibleSelectedRestaurant?.id]) {
+            if (typeof id === 'string' && id.length > 0) ids.push(id);
+        }
+        return ids;
+    }, [expandedClusterRestaurantIds, gridSelectedRestaurant, markerVisibleSelectedRestaurant, selectedRestaurant]);
+    useMemo(() => {
+        retainExpandedClusterRestaurantSnapshot(
+            expandedClusterRestaurantSnapshotRef.current,
+            restaurantById,
+            mergedRestaurantById,
+            expandedClusterRetainIds,
+        );
+        return expandedClusterRetainIds.length;
+    }, [expandedClusterRetainIds, mergedRestaurantById, restaurantById]);
+    const resolveMarkerRestaurant = (restaurantId: string | null | undefined) => resolveExpandedClusterRestaurant(
+        restaurantId,
+        restaurantById,
+        mergedRestaurantById,
+        expandedClusterRestaurantSnapshotRef.current,
+        expandedClusterRestaurantIds.length > 0,
+    );
     const restaurantsForSwipe = useMemo(() => buildRestaurantsForSwipe({
         activeSearchedRestaurant: markerVisibleActiveSearchedRestaurant,
         selectedRestaurant: markerVisibleSelectedRestaurant,
@@ -2319,7 +2320,7 @@ const NaverMapView = memo(({
             if (visibleRestaurantIds.has(restaurantId)) return;
 
             const restaurant = normalizeNaverMarkerCoordinates(
-                restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId),
+                resolveMarkerRestaurant(restaurantId),
             );
             if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
 
@@ -2509,7 +2510,7 @@ const NaverMapView = memo(({
             if (expandedClusterRestaurantIds.length === 0) return;
             expandedClusterRestaurantIds.forEach((restaurantId) => {
                 const restaurant = normalizeNaverMarkerCoordinates(
-                    restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId),
+                    resolveMarkerRestaurant(restaurantId),
                 );
                 if (!restaurant || (!showUserSubmittedMarkers && isUserSubmittedRestaurant(restaurant))) return;
 
@@ -2729,7 +2730,7 @@ const NaverMapView = memo(({
                                     }
                                     const islandViewport = resolveNaverIslandClusterViewportForRestaurants(
                                         expandedRestaurantIds
-                                            .map((restaurantId) => restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId))
+                                            .map((restaurantId) => resolveMarkerRestaurant(restaurantId))
                                             .filter(Boolean) as Restaurant[],
                                     );
                                     if (fitIslandClusterViewport(islandViewport)) {
@@ -2751,7 +2752,7 @@ const NaverMapView = memo(({
                             activeIds.add(restaurantId);
                             const category = feature.properties.category;
                             const isSelected = selectedRestaurant?.id === restaurantId;
-                            const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                            const restaurant = resolveMarkerRestaurant(restaurantId);
                             const visual = getNaverIndividualMarkerVisual(restaurant ?? { categories: [], category }, isSelected);
                             const bubble = restaurant ? activeVisibleMarkerReviewBubbles[restaurant.id] : undefined;
                             const markerContent = wrapNaverMarkerContentWithReviewBubble(
@@ -2956,7 +2957,7 @@ const NaverMapView = memo(({
         styleUpdatePlan.updates.forEach(({ isSelected, restaurantId }) => {
             const marker = markerPool.get(restaurantId);
             if (marker) {
-                const restaurant = restaurantById.get(restaurantId) ?? mergedRestaurantById.get(restaurantId);
+                const restaurant = resolveMarkerRestaurant(restaurantId);
                 if (restaurant) {
                     const visual = getNaverIndividualMarkerVisual(restaurant, isSelected);
                     const bubble = selectedRestaurant ? undefined : visibleMarkerReviewBubbles[restaurant.id];
@@ -2983,7 +2984,7 @@ const NaverMapView = memo(({
         prevSelectedMarkerIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
         prevSelectedRestaurantIdRef.current = styleUpdatePlan.nextPreviousSelectedId;
 
-    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, visibleMarkerReviewBubbles, isMobileOrTablet]);
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants, restaurantById, mergedRestaurantById, expandedClusterRestaurantIds, visibleMarkerReviewBubbles, isMobileOrTablet]);
 
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체

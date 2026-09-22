@@ -3,6 +3,11 @@ import type { Restaurant } from '@/types/restaurant';
 
 const ADDRESS_FIELDS = ['road_address', 'jibun_address', 'english_address'] as const;
 
+/** PostgREST `or` treats parentheses and commas as syntax. Like wildcards are escaped first. */
+export function sanitizePostgrestOrTerm(term: string) {
+    return term.replace(/[%_]/g, (character) => `\\${character}`).replace(/[(),]/g, ' ').trim();
+}
+
 function uniqueTerms(terms: string[]) {
     return Array.from(new Set(terms.map((term) => term.trim()).filter(Boolean)));
 }
@@ -36,7 +41,11 @@ export function restaurantMatchesOverseasCountry(restaurant: Pick<Restaurant, 'r
 }
 
 export function buildOverseasCountryAddressOrFilter(country: string | null | undefined, wildcard: '%' | '*' = '%') {
-    const terms = getOverseasSearchTermsForCountry(country);
+    if (typeof country !== 'string') return null;
+
+    const terms = getOverseasSearchTermsForCountry(country)
+        .map((term) => sanitizePostgrestOrTerm(term))
+        .filter(Boolean);
     if (terms.length === 0) return null;
 
     return terms

@@ -81,33 +81,80 @@ export function truncateVisibleMarkerReviewBubbleText(value: string, maxLength: 
   return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 }
 
+type RankedReviewBubbleCandidate = {
+  restaurant: Restaurant;
+  rank: number;
+  index: number;
+};
+
+function insertRankedReviewBubbleCandidate(
+  selected: RankedReviewBubbleCandidate[],
+  candidate: RankedReviewBubbleCandidate,
+) {
+  let index = selected.length;
+  while (index > 0) {
+    const previous = selected[index - 1];
+    const previousComesFirst = previous.rank < candidate.rank
+      || (previous.rank === candidate.rank && previous.index < candidate.index);
+    if (previousComesFirst) break;
+    index -= 1;
+  }
+  selected.splice(index, 0, candidate);
+}
+
 export function selectVisibleMarkerReviewBubbleTargets(
   restaurants: Restaurant[],
   options: { limit: number; seed: string },
 ): VisibleMarkerReviewBubbleTarget[] {
-  if (options.limit <= 0) return [];
+  if (!Array.isArray(restaurants) || !options || typeof options !== 'object') {
+    console.warn('[visible-marker-review-bubbles] candidate selection rejected (invalid-input)');
+    return [];
+  }
 
-  const candidates = restaurants
-    .filter((restaurant): restaurant is Restaurant => Boolean(restaurant?.id))
-    .filter((restaurant) => getRelatedRestaurantIds(restaurant).length > 0);
-  const restaurantsWithKnownReviews = candidates.filter(
-    (restaurant) => getRestaurantReviewCount(restaurant as RestaurantWithVerifiedCount) > 0,
-  );
+  const rawLimit = options.limit;
+  if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit) || rawLimit <= 0) return [];
+
+  const candidates: Restaurant[] = [];
+  const restaurantsWithKnownReviews: Restaurant[] = [];
+  for (const restaurant of restaurants) {
+    if (!restaurant?.id) continue;
+    candidates.push(restaurant);
+    if (getRestaurantReviewCount(restaurant as RestaurantWithVerifiedCount) > 0) {
+      restaurantsWithKnownReviews.push(restaurant);
+    }
+  }
+
   const sourceRestaurants = restaurantsWithKnownReviews.length > 0
     ? restaurantsWithKnownReviews
     : candidates;
+  const limit = rawLimit === Number.POSITIVE_INFINITY ? sourceRestaurants.length : Math.trunc(rawLimit);
+  if (limit <= 0 || sourceRestaurants.length === 0) return [];
 
-  return sourceRestaurants
-    .map((restaurant) => ({
+  const selected: RankedReviewBubbleCandidate[] = [];
+  for (let index = 0; index < sourceRestaurants.length; index += 1) {
+    const restaurant = sourceRestaurants[index];
+    const candidate = {
       restaurant,
       rank: hashString(`${options.seed}:${restaurant.id}`),
-    }))
-    .sort((left, right) => left.rank - right.rank)
-    .slice(0, options.limit)
-    .map(({ restaurant }) => ({
-      restaurantId: restaurant.id,
-      relatedRestaurantIds: getRelatedRestaurantIds(restaurant),
-    }));
+      index,
+    };
+    if (selected.length < limit) {
+      insertRankedReviewBubbleCandidate(selected, candidate);
+      continue;
+    }
+
+    const worst = selected[selected.length - 1];
+    const replacesWorst = candidate.rank < worst.rank
+      || (candidate.rank === worst.rank && candidate.index < worst.index);
+    if (!replacesWorst) continue;
+    selected.pop();
+    insertRankedReviewBubbleCandidate(selected, candidate);
+  }
+
+  return selected.map(({ restaurant }) => ({
+    restaurantId: restaurant.id,
+    relatedRestaurantIds: getRelatedRestaurantIds(restaurant),
+  }));
 }
 
 export function buildVisibleMarkerReviewBubbleTargetSignature(targets: VisibleMarkerReviewBubbleTarget[]) {
