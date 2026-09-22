@@ -122,7 +122,7 @@ class G037ReadonlyRolePreviewApprovalSourceTests(unittest.TestCase):
             self.assertIn(f"- [x]{marker} 7.{task_id} ", TASKS)
         for task_id in (165, 166, 167, 187, *range(189, 195)):
             self.assertIn(f"- [x] 7.{task_id} ", TASKS)
-        self.assertIn("- [ ]! 7.195 ", TASKS)
+        self.assertIn("- [x]! 7.195 ", TASKS)
         self.assertIn("- [x]! 7.239 ", TASKS)
         self.assertIn("- [x]! 7.240 ", TASKS)
 
