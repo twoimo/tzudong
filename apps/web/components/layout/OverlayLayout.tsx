@@ -111,7 +111,7 @@ function buildDirectOverlayHref(
 export default function OverlayLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   const { user, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
@@ -314,51 +314,29 @@ export default function OverlayLayout({
     }
   };
 
-  return (
-    <div
-      className="flex min-h-0 min-w-0 flex-col overflow-hidden"
-      style={{ height: "var(--full-height, 100vh)" }}
-      data-layout-primitives="viewport-shell overlay-stack"
-    >
-      <a
-        href="#tzudong-map-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg focus:ring-2 focus:ring-primary"
-      >
-        {skipLinkLabel}
-      </a>
-
-      {/* Supabase 사용자 데이터 프리페처 */}
-      {user && <UserDataPrefetcher />}
-      {/* 메인 콘텐츠 - 지도 100% 너비 */}
-      <main
-        id="tzudong-map-main"
-        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
-        tabIndex={-1}
-        aria-label={mainContentLabel}
-      >
-        <div className="h-full min-h-0 min-w-0 w-full">{children}</div>
-
-        {shouldRenderRouteOverlayChrome && (
+  const routeChrome = (
+    <>
+      {shouldRenderRouteOverlayChrome && (
+        <>
           <FloatingNavButtons
             activePanel={activeOverlayPanel}
             onPanelChange={handleOverlayPanelChange}
             onReviewSelect={handleReviewSelect}
             className="bottom-8 left-8"
           />
-        )}
-
-        {/* 오버레이 페이지 패널 */}
-        {shouldRenderRouteOverlayChrome && (
           <OverlayPagePanel
             activePanel={activeOverlayPanel}
             onClose={handleCloseOverlayPanel}
             initialReviewId={targetReviewId}
             onOpenAuth={handleOpenAuth}
           />
-        )}
-      </main>
+        </>
+      )}
+    </>
+  );
 
-      {/* 모달들 */}
+  const modals = (
+    <>
       {isAuthModalOpen && (
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -386,6 +364,45 @@ export default function OverlayLayout({
       {canMountNoncriticalChrome && !shouldSuppressNoncriticalChrome && (
         <CombinedPopup />
       )}
+    </>
+  );
+
+  if (children == null) {
+    return (
+      <>
+        {user && <UserDataPrefetcher />}
+        {routeChrome}
+        {modals}
+      </>
+    );
+  }
+
+  return (
+    <div
+      className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+      style={{ height: "var(--full-height, 100vh)" }}
+      data-layout-primitives="viewport-shell overlay-stack"
+    >
+      <a
+        href="#tzudong-map-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:shadow-lg focus:ring-2 focus:ring-primary"
+      >
+        {skipLinkLabel}
+      </a>
+
+      {/* Supabase 사용자 데이터 프리페처 */}
+      {user && <UserDataPrefetcher />}
+      {/* 메인 콘텐츠 - 지도 100% 너비 */}
+      <main
+        id="tzudong-map-main"
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
+        tabIndex={-1}
+        aria-label={mainContentLabel}
+      >
+        <div className="h-full min-h-0 min-w-0 w-full">{children}</div>
+        {routeChrome}
+      </main>
+      {modals}
     </div>
   );
 }
