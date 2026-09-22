@@ -16,7 +16,7 @@ import { StampGridSkeleton } from "@/components/ui/skeleton-loaders";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { REGIONS, extractRegion, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
-import { hasRelatedVerifiedUserReview } from "@/lib/restaurant-visit-matching";
+import { createVisitedRestaurantMatcher } from "@/lib/restaurant-review-lookup";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import { compareStampRestaurants, createVisitedLookup } from "@/lib/stamp-restaurant-order";
 import { cn } from "@/lib/utils";
@@ -118,11 +118,11 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             .map((review) => (review as UserReviewWithRestaurant).restaurant)
             .filter((restaurant): restaurant is Restaurant => Boolean(restaurant));
     }, [userReviewData]);
-    const isVisited = useCallback((restaurant: Restaurant) => hasRelatedVerifiedUserReview({
-        restaurant,
-        reviewedRestaurantIds: userVisitedIds,
-        reviewedRestaurants: reviewedRestaurantCandidates,
-    }), [reviewedRestaurantCandidates, userVisitedIds]);
+    // 후보(사용자 리뷰가 있는 맛집)를 주소로 한 번만 색인해, 맛집마다 후보 전체를 다시 훑지 않는다.
+    const isVisited = useMemo(
+        () => createVisitedRestaurantMatcher(reviewedRestaurantCandidates, userVisitedIds),
+        [reviewedRestaurantCandidates, userVisitedIds]
+    );
     const isUserStampsReady = !user?.id || isUserStampsFetched;
     const shouldWaitForStampState = !!user?.id && !isUserStampsFetched;
     const shouldShowStampOverlaySkeleton =

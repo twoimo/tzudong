@@ -1,4 +1,4 @@
-import { selectRelatedRestaurantReviewIds } from '@/lib/restaurant-review-lookup';
+import { createRelatedVerifiedReviewCountLookup } from '@/lib/restaurant-review-lookup';
 import type { Restaurant } from '@/types/restaurant';
 
 type ReviewCountRestaurant = Pick<
@@ -26,9 +26,10 @@ export function buildRelatedVerifiedReviewCountMap(
         directCountMap.set(reviewRow.restaurant_id, (directCountMap.get(reviewRow.restaurant_id) ?? 0) + 1);
     });
 
+    // 후보를 주소로 한 번만 색인해 맛집마다 후보 전체를 다시 훑지 않는다(합산 결과는 같다).
+    const countRelated = createRelatedVerifiedReviewCountLookup(candidates);
+
     return new Map(restaurants.map((restaurant) => {
-        const relatedIds = selectRelatedRestaurantReviewIds(restaurant, candidates);
-        const count = relatedIds.reduce((sum, restaurantId) => sum + (directCountMap.get(restaurantId) ?? 0), 0);
-        return [restaurant.id, count];
+        return [restaurant.id, countRelated(restaurant, directCountMap)];
     }));
 }
