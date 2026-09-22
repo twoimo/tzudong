@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallback, useMemo } from "react";
 import type { Restaurant } from "@/types/restaurant";
-import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
 import {
     getRestaurantReviewLookupName,
     selectRelatedRestaurantReviewIds,
@@ -93,17 +93,18 @@ async function fetchApprovedCandidatesByRestaurantNames(restaurants: Restaurant[
     }));
 }
 
+type CanonicalBookmarkedRestaurantResolver = (
+    reviewedRestaurant: Restaurant | null,
+    reviewedRestaurantId: string
+) => Restaurant | null;
+
 function resolveCanonicalBookmarkedRestaurant(
     bookmarkedRestaurant: Restaurant,
-    approvedRestaurants: Restaurant[]
+    resolveCanonical: CanonicalBookmarkedRestaurantResolver
 ): Restaurant {
     if (bookmarkedRestaurant.status === 'approved') return bookmarkedRestaurant;
 
-    return (findCanonicalVisitedRestaurant({
-        reviewedRestaurant: bookmarkedRestaurant,
-        reviewedRestaurantId: bookmarkedRestaurant.id,
-        approvedRestaurants,
-    }) as Restaurant | null) ?? bookmarkedRestaurant;
+    return resolveCanonical(bookmarkedRestaurant, bookmarkedRestaurant.id) ?? bookmarkedRestaurant;
 }
 
 async function fetchRelatedBookmarkRestaurantIds(restaurantId: string): Promise<string[]> {
@@ -165,9 +166,11 @@ export function useBookmarks(options: UseBookmarksOptions = {}) {
             // 3. 데이터 병합
             const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
             const approvedRestaurants = await fetchApprovedCandidatesByRestaurantNames(bookmarkedRestaurants);
+            // 북마크 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+            const resolveCanonical = createCanonicalVisitedLookup(approvedRestaurants) as CanonicalBookmarkedRestaurantResolver;
             const restaurantsMap = new Map(bookmarkedRestaurants.map((restaurant) => [
                 restaurant.id,
-                resolveCanonicalBookmarkedRestaurant(restaurant, approvedRestaurants),
+                resolveCanonicalBookmarkedRestaurant(restaurant, resolveCanonical),
             ]));
 
             return (bookmarksData as BookmarkRow[])
@@ -251,8 +254,10 @@ export function useBookmarkIds() {
 
             const bookmarkedRestaurants = ((restaurantsData ?? []) as unknown as RestaurantRow[]).map(toRestaurant);
             const approvedRestaurants = await fetchApprovedCandidatesByRestaurantNames(bookmarkedRestaurants);
+            // 북마크 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+            const resolveCanonical = createCanonicalVisitedLookup(approvedRestaurants) as CanonicalBookmarkedRestaurantResolver;
             const canonicalIds = bookmarkedRestaurants
-                .map((restaurant) => resolveCanonicalBookmarkedRestaurant(restaurant, approvedRestaurants).id)
+                .map((restaurant) => resolveCanonicalBookmarkedRestaurant(restaurant, resolveCanonical).id)
                 .filter(Boolean);
 
             return [...new Set([...bookmarkedRestaurantIds, ...canonicalIds])];

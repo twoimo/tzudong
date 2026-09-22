@@ -16,7 +16,7 @@ import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewCard } from '@/components/reviews/ReviewCard';
 import { useMobileBottomNavAutoHide } from '@/hooks/use-mobile-bottom-nav-auto-hide';
-import { findCanonicalVisitedRestaurant } from '@/lib/restaurant-visit-matching';
+import { createCanonicalVisitedLookup } from '@/lib/restaurant-visit-matching';
 import { readPublicProfileSummariesLookup, resolvePublicReviewerDisplay } from '@/lib/public-profile-read';
 import { describeErrorCodeForLog } from '@/lib/debug-log';
 
@@ -316,15 +316,13 @@ export default function FeedContent({
             const approvedRestaurants = ((approvedRestaurantRowsRaw ?? []) as FeedRestaurantRecord[])
                 .map(normalizeFeedRestaurantRecord);
 
+            // 리뷰 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+            const resolveCanonicalFeedRestaurant = createCanonicalVisitedLookup(approvedRestaurants as never);
             const resolveFeedRestaurant = (reviewRow: FeedReviewRow) => {
                 const reviewedRestaurant = restaurantsMap.get(reviewRow.restaurant_id) ?? null;
                 if (reviewedRestaurant?.status === 'approved') return reviewedRestaurant;
 
-                return findCanonicalVisitedRestaurant({
-                    reviewedRestaurant: reviewedRestaurant as never,
-                    reviewedRestaurantId: reviewRow.restaurant_id,
-                    approvedRestaurants: approvedRestaurants as never,
-                }) as FeedRestaurantRecord | null ?? reviewedRestaurant;
+                return resolveCanonicalFeedRestaurant(reviewedRestaurant as never, reviewRow.restaurant_id) as FeedRestaurantRecord | null ?? reviewedRestaurant;
             };
 
             let userLikesMap = new Map<string, boolean>();
