@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { BREAKPOINTS } from '@/hooks/useDeviceType';
 
 export type HomeViewportMode = 'pending' | 'mobileOrTablet' | 'desktop';
@@ -11,6 +11,10 @@ function resolveHomeViewportMode(): Exclude<HomeViewportMode, 'pending'> {
 
 export function useHomeViewportMode(): HomeViewportMode {
     const [mode, setMode] = useState<HomeViewportMode>('pending');
+
+    useLayoutEffect(() => {
+        setMode(resolveHomeViewportMode());
+    }, []);
 
     useEffect(() => {
         let resizeRafId = 0;
@@ -25,7 +29,6 @@ export function useHomeViewportMode(): HomeViewportMode {
             });
         };
 
-        setMode(resolveHomeViewportMode());
         window.addEventListener('resize', updateMode, { passive: true });
         window.addEventListener('orientationchange', updateMode, { passive: true });
 
