@@ -1,6 +1,7 @@
 import { mergeRestaurants } from '@/hooks/use-restaurants';
 import { supabase } from '@/integrations/supabase/client';
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
+import { sanitizePostgrestOrTerm } from '@/lib/overseas-region-matching';
 import type { Restaurant } from '@/types/restaurant';
 
 export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
@@ -281,18 +282,12 @@ export const matchesRestaurantAddressContext = (
   );
 };
 
-const escapePostgrestLikePattern = (value: string) =>
-  value.replace(/[%_]/g, (character) => `\\${character}`);
-
-const normalizePostgrestOrTerm = (term: string) =>
-  escapePostgrestLikePattern(term).replace(/[(),]/g, ' ').trim();
-
 export function buildRestaurantRegionAddressOrFilter(
   selectedRegion: string | null | undefined,
   wildcard: '%' | '*' = '%',
 ) {
   const keywords = getRestaurantRegionAddressKeywords(selectedRegion)
-    .map(normalizePostgrestOrTerm)
+    .map(sanitizePostgrestOrTerm)
     .filter(Boolean);
 
   if (keywords.length === 0) return null;
