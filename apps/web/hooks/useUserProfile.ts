@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
-import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import { readPublicProfileSummaries } from "@/lib/public-profile-read";
 
@@ -156,22 +156,23 @@ async function fetchApprovedCanonicalRestaurantCandidates(reviewedRestaurants: R
     return ((data ?? []) as Restaurant[]).map(withRestaurantDisplayName);
 }
 
+type CanonicalVisitedRestaurantResolver = (
+    reviewedRestaurant: Restaurant | null,
+    reviewedRestaurantId: string
+) => Restaurant | null;
+
 function resolveCanonicalReviewedRestaurant({
     reviewedRestaurant,
     reviewedRestaurantId,
-    approvedRestaurants,
+    resolveCanonical,
 }: {
     reviewedRestaurant: Restaurant | null | undefined;
     reviewedRestaurantId: string;
-    approvedRestaurants: Restaurant[];
+    resolveCanonical: CanonicalVisitedRestaurantResolver;
 }): Restaurant | null {
     if (reviewedRestaurant?.status === 'approved') return reviewedRestaurant;
 
-    return (findCanonicalVisitedRestaurant({
-        reviewedRestaurant: reviewedRestaurant ?? null,
-        reviewedRestaurantId,
-        approvedRestaurants,
-    }) as Restaurant | null) ?? reviewedRestaurant ?? null;
+    return resolveCanonical(reviewedRestaurant ?? null, reviewedRestaurantId) ?? reviewedRestaurant ?? null;
 }
 
 // ============================================================================
@@ -347,6 +348,9 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 typedRestaurants as Restaurant[]
             );
 
+            // 리뷰 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+            const resolveCanonical = createCanonicalVisitedLookup(approvedRestaurants) as CanonicalVisitedRestaurantResolver;
+
             const userLikedMap = new Map<string, boolean>();
             ((viewerLikesResult.data ?? []) as ReviewLikeRow[]).forEach(l => {
                 userLikedMap.set(l.review_id, true);
@@ -363,7 +367,7 @@ export function useUserReviews(userId: string, viewerId?: string) {
                 const restaurant = resolveCanonicalReviewedRestaurant({
                     reviewedRestaurant,
                     reviewedRestaurantId: r.restaurant_id,
-                    approvedRestaurants,
+                    resolveCanonical,
                 });
 
                 return {
@@ -508,16 +512,15 @@ export function useUserStamps(userId: string) {
             const approvedRestaurants = ((approvedRestaurantRows ?? []) as Restaurant[])
                 .map(withRestaurantDisplayName);
 
+            // 리뷰 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+            const resolveCanonical = createCanonicalVisitedLookup(approvedRestaurants) as CanonicalVisitedRestaurantResolver;
+
             // 4. 데이터 병합
             return typedReviews.map((r) => {
                 const reviewedRestaurant = restaurantMap.get(r.restaurant_id);
                 const restaurant = reviewedRestaurant?.status === 'approved'
                     ? reviewedRestaurant
-                    : findCanonicalVisitedRestaurant({
-                        reviewedRestaurant: reviewedRestaurant ?? null,
-                        reviewedRestaurantId: r.restaurant_id,
-                        approvedRestaurants,
-                    }) ?? reviewedRestaurant;
+                    : resolveCanonical(reviewedRestaurant ?? null, r.restaurant_id) ?? reviewedRestaurant;
                 // 맛집 정보가 없으면 스킵되어야 하지만, 일단 타입 안전을 위해 빈 객체 또는 처리 필요
                 if (!restaurant) return null;
 

@@ -41,7 +41,7 @@ import {
   myPageListContentClass,
   myPageResponsiveListClass,
 } from "@/components/mypage/MyPageSectionFrame";
-import { findCanonicalVisitedRestaurant } from "@/lib/restaurant-visit-matching";
+import { createCanonicalVisitedLookup } from "@/lib/restaurant-visit-matching";
 import type { Restaurant } from "@/types/restaurant";
 
 const REVIEW_DELETE_CONFIRMATION = "리뷰삭제";
@@ -222,6 +222,11 @@ export default function ReviewsPage() {
             : { data: [] };
         const approvedRestaurants = approvedRestaurantRows || [];
 
+        // 리뷰 행마다 승인 맛집 목록을 다시 훑지 않도록 색인을 한 번만 만듭니다.
+        const resolveCanonicalRestaurant = createCanonicalVisitedLookup(
+          approvedRestaurants as Restaurant[],
+        );
+
         // 3. 리뷰 데이터 매핑
         const reviews: MyReview[] = reviewsData.map((review) => {
           const reviewedRestaurant =
@@ -229,11 +234,10 @@ export default function ReviewsPage() {
           const canonicalRestaurant =
             reviewedRestaurant?.status === "approved"
               ? reviewedRestaurant
-              : ((findCanonicalVisitedRestaurant({
-                  reviewedRestaurant: reviewedRestaurant as Restaurant | null,
-                  reviewedRestaurantId: review.restaurant_id,
-                  approvedRestaurants: approvedRestaurants as Restaurant[],
-                }) as RestaurantData | null) ?? reviewedRestaurant);
+              : ((resolveCanonicalRestaurant(
+                  reviewedRestaurant as Restaurant | null,
+                  review.restaurant_id,
+                ) as RestaurantData | null) ?? reviewedRestaurant);
 
           return {
             id: review.id,

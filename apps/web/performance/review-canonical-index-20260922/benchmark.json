@@ -1,0 +1,151 @@
+{
+  "generatedAt": "2026-09-22T01:25:30.514Z",
+  "baselineSource": {
+    "file": "apps/web/performance/review-canonical-index-20260922/restaurant-visit-matching.pre-index.ts",
+    "note": "이전 경로는 손으로 다시 쓴 근사가 아니라 색인 도입 직전 lib/restaurant-visit-matching.ts의 동결 사본입니다."
+  },
+  "workload": {
+    "approvedRestaurants": 1200,
+    "reviewRows": 400,
+    "resolvingRows": 300,
+    "repetitions": 21,
+    "sampleLoops": 5
+  },
+  "budgets": {
+    "absolute": {
+      "pipelineMedianMsMax": 60,
+      "rule": "색인 경로의 한 번의 파이프라인 실행 중앙값이 60ms 이하여야 합니다."
+    },
+    "relative": {
+      "minMedianSpeedup": 2,
+      "rule": "색인 이전 경로 대비 중앙값 2배 이상 빨라져야 개선으로 인정합니다."
+    },
+    "noise": {
+      "madRelativeMax": 0.15,
+      "repetitions": 21,
+      "rule": "각 경로의 반복 표본 MAD/중앙값이 15% 이내이고, 중앙값 개선폭이 양쪽 상대 노이즈 합보다 클 때만 개선으로 인정합니다."
+    }
+  },
+  "scenarios": [
+    {
+      "id": "unique-address",
+      "description": "맛집마다 주소가 다른 실제 데이터 모양",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-pre-index",
+          "resultCount": 400,
+          "fingerprint": "b2922e62"
+        },
+        {
+          "id": "S1-indexed",
+          "resultCount": 400,
+          "fingerprint": "b2922e62"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-pre-index",
+          "candidateVisits": 165150,
+          "nameGates": 300,
+          "addressGates": 165150
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 300,
+          "nameGates": 300,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-pre-index",
+          "medianMs": 48.107783399999974,
+          "p95Ms": 56.081066599999986,
+          "madRelative": 0.03941513962998435
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 0.42399999999997817,
+          "p95Ms": 0.5554165999999896,
+          "madRelative": 0.0966391509435694
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.13605429057355375,
+        "relativeImprovement": 113.46175330189257,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 113.46175330189257,
+        "speedupByP95": 100.9711747902404,
+        "candidateVisitReduction": 550.5,
+        "nameGateReduction": 1
+      }
+    },
+    {
+      "id": "shared-address",
+      "description": "승인 맛집 전부가 한 주소를 공유하는 퇴화 모양",
+      "equivalence": "identical",
+      "equivalenceDetail": [
+        {
+          "id": "S0-pre-index",
+          "resultCount": 400,
+          "fingerprint": "ed462b7b"
+        },
+        {
+          "id": "S1-indexed",
+          "resultCount": 400,
+          "fingerprint": "ed462b7b"
+        }
+      ],
+      "counters": [
+        {
+          "id": "S0-pre-index",
+          "candidateVisits": 121095,
+          "nameGates": 1095,
+          "addressGates": 121095
+        },
+        {
+          "id": "S1-indexed",
+          "candidateVisits": 1095,
+          "nameGates": 1095,
+          "addressGates": 0
+        }
+      ],
+      "measurements": [
+        {
+          "id": "S0-pre-index",
+          "medianMs": 43.22767500000009,
+          "p95Ms": 57.47733320000007,
+          "madRelative": 0.039227374592782985
+        },
+        {
+          "id": "S1-indexed",
+          "medianMs": 0.4520916000001307,
+          "p95Ms": 0.635716599999796,
+          "madRelative": 0.06106815521476455
+        }
+      ],
+      "acceptance": {
+        "absoluteBudgetMet": true,
+        "relativeBudgetMet": true,
+        "noiseWithinBudget": true,
+        "combinedRelativeNoise": 0.10029552980754754,
+        "relativeImprovement": 95.61707185001356,
+        "deltaExceedsNoise": true,
+        "accepted": true
+      },
+      "ratio": {
+        "speedupByMedian": 95.61707185001356,
+        "speedupByP95": 90.41345341622117,
+        "candidateVisitReduction": 110.58904109589041,
+        "nameGateReduction": 1
+      }
+    }
+  ]
+}
