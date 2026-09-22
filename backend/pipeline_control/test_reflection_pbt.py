@@ -20,6 +20,7 @@ from hypothesis import strategies as st
 from backend.supabase.scripts.hosted_data_plane import (
     HOSTED_URL,
     APPROVAL_ENV,
+    apply_payload_sha256,
     apply_pending_candidates,
     preview_hash,
 )
@@ -46,15 +47,38 @@ def _video_id_sets(min_size=1, max_size=8):
     return st.sets(_yt_id, min_size=min_size, max_size=max_size)
 
 
+def _rows_for(video_ids):
+    """One geocoded pending evaluation row per candidate identity.
+
+    ``row_youtube_id`` reads the id from ``youtube_meta``; ``trace_id`` carries
+    the stable identity so the in-memory store's unique constraint keys on the
+    same candidate identity the reflection accounts by. Coordinates keep the
+    row in the apply-candidate class that ``apply_pending_candidates`` posts.
+    """
+    return [
+        {
+            "trace_id": vid,
+            "origin_name": vid,
+            "youtube_meta": {"video_id": vid},
+            "youtube_link": f"https://www.youtube.com/watch?v={vid}",
+            "geocoding_success": True,
+            "lat": 37.5,
+            "lng": 127.0,
+        }
+        for vid in video_ids
+    ]
+
+
 def _build_preview(video_ids):
     """Build a valid, authorized apply preview for the given candidate ids.
 
     Mirrors ``build_apply_preview``'s output shape for the apply-candidate
     subset so ``assert_apply_authorized`` / ``apply_pending_candidates`` admit
-    it: pending insert status, overwrite guard set, matching preview hash, and
-    ``applyCandidateCount == len(applyCandidateVideoIds)``.
+    it: pending insert status, overwrite guard set, matching preview hash,
+    matching payload hash, and ``applyCandidateCount == len(applyCandidateVideoIds)``.
     """
     ids = sorted(set(video_ids))
+    rows = _rows_for(ids)
     payload = {
         "schemaVersion": 1,
         "hostedProjectRef": HOSTED_URL.split("//", 1)[1].split(".", 1)[0],
@@ -62,6 +86,7 @@ def _build_preview(video_ids):
         "dockerRestaurantApply": [],
         "applyCandidateVideoIds": ids,
         "applyCandidateCount": len(ids),
+        "applyPayloadSha256": apply_payload_sha256(rows, []),
         "insertStatus": "pending",
         "overwriteApprovedForbidden": True,
     }
@@ -69,23 +94,6 @@ def _build_preview(video_ids):
         {key: value for key, value in payload.items() if key != "previewSha256"}
     )
     return payload
-
-
-def _rows_for(video_ids):
-    """One evaluation row per candidate identity.
-
-    ``row_youtube_id`` reads the id from ``youtube_meta``; ``trace_id`` carries
-    the stable identity so the in-memory store's unique constraint keys on the
-    same candidate identity the reflection accounts by.
-    """
-    return [
-        {
-            "trace_id": vid,
-            "youtube_meta": {"video_id": vid},
-            "youtube_link": f"https://www.youtube.com/watch?v={vid}",
-        }
-        for vid in video_ids
-    ]
 
 
 class _InsertIfAbsentStore:
