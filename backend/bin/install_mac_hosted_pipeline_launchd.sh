@@ -38,7 +38,13 @@ export PYTHON_CMD=$(printf '%q' "$PYTHON")
 export TZUDONG_LAAJ_PROVIDER="opencode-go"
 export TZUDONG_HOSTED_DATA_PLANE_APPROVED="1"
 cd "\$TZUDONG_REPO_ROOT"
-exec $(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 3
+echo "\$(date -u +%Y-%m-%dT%H:%M:%SZ) start source=mac freeze=\${G037_WRITE_FREEZE} limit=3"
+set +e
+$(printf '%q' "$PYTHON") "\$TZUDONG_REPO_ROOT/backend/bin/run_hosted_new_video_pipeline.py" --channel tzuyang --limit 3
+pipeline_exit=\$?
+set -e
+echo "\$(date -u +%Y-%m-%dT%H:%M:%SZ) end exit=\${pipeline_exit}"
+exit "\${pipeline_exit}"
 EOF
 chmod 755 "$WRAPPER"
 cat > "$PLIST" <<EOF
