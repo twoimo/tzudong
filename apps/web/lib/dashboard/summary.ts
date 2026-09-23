@@ -57,11 +57,10 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
 }
 
 function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): T[] {
-    return [...items].sort((a, b) => {
-        const aMs = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-        const bMs = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        return bMs - aMs;
-    });
+    return items
+        .map((item) => ({ item, ms: item.updatedAt ? new Date(item.updatedAt).getTime() : 0 }))
+        .sort((left, right) => right.ms - left.ms)
+        .map((entry) => entry.item);
 }
 
 function updatedAtMs(value: string | null | undefined): number {
@@ -69,11 +68,10 @@ function updatedAtMs(value: string | null | undefined): number {
 }
 
 function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
-    return [...rows].sort((a, b) => {
-        const aMs = updatedAtMs(a.updated_at);
-        const bMs = updatedAtMs(b.updated_at);
-        return bMs - aMs;
-    });
+    return rows
+        .map((row) => ({ row, ms: updatedAtMs(row.updated_at) }))
+        .sort((left, right) => right.ms - left.ms)
+        .map((entry) => entry.row);
 }
 
 function buildDashboardSummaryChecksum(rows: DashboardRestaurantRow[]): string {

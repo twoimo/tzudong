@@ -103,6 +103,20 @@ describe('dashboard aggregations', () => {
         expect(result.freshness?.checksum).toMatch(/^[a-f0-9]{24}$/);
     });
 
+    test('keeps equal updated times in input order when paging restaurants', () => {
+        const rows = [
+            makeRow({ id: 'tie-a', name: '앞', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
+            makeRow({ id: 'newer', name: '최신', lat: 37, lng: 127, updated_at: '2026-03-01T00:00:00.000Z' }),
+            makeRow({ id: 'tie-b', name: '뒤', lat: 37, lng: 127, updated_at: '2026-02-01T00:00:00.000Z' }),
+            makeRow({ id: 'blank', name: '', lat: 37, lng: 127, youtube_link: null, updated_at: '2026-01-01T00:00:00.000Z' }),
+        ];
+
+        const page = buildDashboardRestaurantsFromRows(rows, { onlyWithCoordinates: true, limit: 10 }, new Date('2026-04-01T00:00:00.000Z'));
+        expect(page.items.map((item) => item.id)).toEqual(['newer', 'tie-a', 'tie-b', 'blank']);
+        expect(page.items[3]?.name).toBe('미승인 맛집');
+        expect(buildDashboardRestaurantsFromRows([], { onlyWithCoordinates: true }, new Date('2026-04-01T00:00:00.000Z')).items).toEqual([]);
+    });
+
     test('buildDashboardRestaurantsFromRows filters raw rows before paging and normalization', () => {
         const rows: DashboardRestaurantRow[] = [
             makeRow({
