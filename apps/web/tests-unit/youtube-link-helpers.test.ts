@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { canonicalizeYoutubeLink, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
+import { canonicalizeYoutubeLink, classifyDashboardVideoId, extractVideoIdFromYoutubeLink } from '@/lib/dashboard/helpers';
 import {
   getYoutubeThumbnailCandidates,
   getYoutubeThumbnailUrl,
@@ -13,6 +13,38 @@ const source = (relativePath: string) =>
   readFileSync(resolve(import.meta.dir, '..', relativePath), 'utf8');
 
 describe('YouTube link helpers', () => {
+  test('returns null for empty, non-string, and non-YouTube input', () => {
+    expect(extractVideoIdFromYoutubeLink(null)).toBeNull();
+    expect(extractVideoIdFromYoutubeLink(undefined)).toBeNull();
+    expect(extractVideoIdFromYoutubeLink('')).toBeNull();
+    expect(extractVideoIdFromYoutubeLink('   ')).toBeNull();
+    expect(extractVideoIdFromYoutubeLink('https://example.com/watch?v=abc123DEF45')).toBe('abc123DEF45');
+    expect(extractVideoIdFromYoutubeLink('not a url')).toBeNull();
+    expect(extractVideoIdFromYoutubeLink("' OR 1=1 --")).toBeNull();
+    expect(extractVideoIdFromYoutubeLink('<script>alert(1)</script>')).toBeNull();
+    expect(extractVideoIdFromYoutubeLink('https://youtu.be/short')).toBeNull();
+  });
+
+  test('reuses the same id for a repeated link', () => {
+    const link = 'https://www.youtube.com/embed/abc123DEF45?start=12';
+    expect(extractVideoIdFromYoutubeLink(link)).toBe('abc123DEF45');
+    expect(extractVideoIdFromYoutubeLink(link)).toBe('abc123DEF45');
+  });
+
+  test('classifies dashboard video ids before a row scan', () => {
+    expect(classifyDashboardVideoId(null)).toEqual({ status: 'required' });
+    expect(classifyDashboardVideoId(undefined)).toEqual({ status: 'required' });
+    expect(classifyDashboardVideoId('')).toEqual({ status: 'required' });
+    expect(classifyDashboardVideoId('   ')).toEqual({ status: 'required' });
+    expect(classifyDashboardVideoId('abc')).toEqual({ status: 'invalid', length: 3 });
+    expect(classifyDashboardVideoId('abc def')).toEqual({ status: 'invalid', length: 7 });
+    expect(classifyDashboardVideoId("' OR 1=1 --")).toMatchObject({ status: 'invalid' });
+    expect(classifyDashboardVideoId('<script>alert(1)</script>')).toMatchObject({ status: 'invalid' });
+    expect(classifyDashboardVideoId(`/${'a'.repeat(200)}`)).toMatchObject({ status: 'invalid' });
+    expect(classifyDashboardVideoId('a'.repeat(129))).toEqual({ status: 'invalid', length: 129 });
+    expect(classifyDashboardVideoId('  abc123DEF45  ')).toEqual({ status: 'ok', videoId: 'abc123DEF45' });
+  });
+
   test('extracts a video id from supported YouTube URLs', () => {
     expect(extractVideoIdFromYoutubeLink('https://www.youtube.com/watch?v=abc123DEF45&t=10')).toBe('abc123DEF45');
     expect(extractVideoIdFromYoutubeLink('https://youtu.be/abc123DEF45?feature=share')).toBe('abc123DEF45');

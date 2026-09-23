@@ -27,7 +27,9 @@ function collectRestaurantYoutubeLinks(restaurant: Restaurant): string[] {
     ].filter((link): link is string => typeof link === 'string' && link.trim().length > 0);
 }
 
-export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[]): string[] {
+export function collectHomeMapYoutubeVideoIds(restaurants: Restaurant[] | null | undefined): string[] {
+    if (!restaurants || restaurants.length === 0) return [];
+
     const videoIds = new Set<string>();
 
     for (const restaurant of restaurants) {
