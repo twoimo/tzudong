@@ -551,8 +551,10 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
             groupRestaurants.flatMap(r => r.categories || [])
         ));
 
-        // 최신 영상 순으로 정렬
-        const sortedByDate = [...groupRestaurants].sort((a, b) => {
+        // 최신 영상 순으로 정렬. 단독 행은 복사와 정렬을 생략한다.
+        const sortedByDate = groupRestaurants.length === 1
+            ? groupRestaurants
+            : [...groupRestaurants].sort((a, b) => {
             const dateA = (a.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
             const dateB = (b.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
             return dateB.localeCompare(dateA);

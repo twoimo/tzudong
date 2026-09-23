@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { DashboardRestaurantRow } from '../lib/dashboard/supabase';
-import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows } from '../lib/dashboard/summary';
+import { buildDashboardRestaurantsFromRows, buildDashboardSummaryFromRows, selectDashboardRowsForVideoId } from '../lib/dashboard/summary';
 import { buildDashboardFunnelFromRows, buildDashboardFailuresFromRows } from '../lib/dashboard/evaluation';
 import { buildDashboardQualityFromRows } from '../lib/dashboard/quality';
 
@@ -346,5 +346,46 @@ describe('dashboard aggregations', () => {
         expect(result.reviewFaithfulness.median).toBe(0.8);
         expect(result.reviewFaithfulness.min).toBe(0.8);
         expect(result.reviewFaithfulness.max).toBe(0.8);
+    });
+
+    test('selectDashboardRowsForVideoId keeps encounter order and rejects unsafe ids', () => {
+        const rows = [
+            makeRow({ id: 'first', youtube_link: 'https://youtu.be/vidAAA111' }),
+            makeRow({ id: 'other', youtube_link: 'https://www.youtube.com/watch?v=vidBBB222' }),
+            makeRow({ id: 'second', youtube_link: 'https://www.youtube.com/shorts/vidAAA111' }),
+            makeRow({ id: 'blank-name', name: '   ', youtube_link: 'https://youtu.be/vidAAA111' }),
+        ];
+
+        const selected = selectDashboardRowsForVideoId(rows, ' vidAAA111 ');
+        expect(selected.map((row) => row.id)).toEqual(['first', 'second', 'blank-name']);
+        expect(selectDashboardRowsForVideoId(rows, ' vidAAA111 ').map((row) => row.id)).toEqual([
+            'first',
+            'second',
+            'blank-name',
+        ]);
+        expect(selectDashboardRowsForVideoId(rows, 'missing999')).toEqual([]);
+        expect(selectDashboardRowsForVideoId([], 'vidAAA111')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '   ')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, "' OR 1=1 --")).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '<script>alert(1)</script>')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, '../etc/passwd')).toEqual([]);
+        expect(selectDashboardRowsForVideoId(rows, 'a'.repeat(129))).toEqual([]);
+
+        const named = buildDashboardRestaurantsFromRows(
+            [makeRow({ id: 'unnamed', name: '', youtube_link: 'https://youtu.be/vidAAA111' })],
+            { onlyWithCoordinates: false },
+            new Date('2026-02-10T00:00:00.000Z'),
+        );
+        expect(named.items[0]?.name).toBe('vidAAA111');
+        expect(named.items[0]?.videoId).toBe('vidAAA111');
+
+        const emptyName = buildDashboardRestaurantsFromRows(
+            [makeRow({ id: 'empty', name: '   ', youtube_link: null })],
+            { onlyWithCoordinates: false },
+            new Date('2026-02-10T00:00:00.000Z'),
+        );
+        expect(emptyName.items[0]?.name).toBe('미승인 맛집');
+        expect(emptyName.total).toBe(1);
     });
 });

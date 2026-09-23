@@ -6,7 +6,7 @@ import type {
     DashboardVideoDetailResponse,
     DashboardVideoSummary,
 } from '@/types/dashboard';
-import { extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
+import { classifyDashboardVideoId, extractVideoIdFromYoutubeLink, parseYoutubeMeta, toDisplayAddress, toFirstCategory } from './helpers';
 import {
     getDashboardRestaurantRowsPage,
     getRestaurantRows,
@@ -35,10 +35,8 @@ type RestaurantsFilter = {
 };
 
 function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaurantItem {
-    const normalizedName =
-        row.name?.trim() ||
-        extractVideoIdFromYoutubeLink(row.youtube_link) ||
-        '미승인 맛집';
+    const videoId = extractVideoIdFromYoutubeLink(row.youtube_link);
+    const normalizedName = row.name?.trim() || videoId || '미승인 맛집';
 
     return {
         id: row.id,
@@ -48,7 +46,7 @@ function normalizeRestaurantItem(row: DashboardRestaurantRow): DashboardRestaura
         lat: row.lat,
         lng: row.lng,
         youtubeLink: row.youtube_link,
-        videoId: extractVideoIdFromYoutubeLink(row.youtube_link),
+        videoId,
         sourceType: row.source_type,
         status: row.status,
         geocodingSuccess: row.geocoding_success,
@@ -66,10 +64,14 @@ function sortByUpdatedDesc<T extends { updatedAt: string | null }>(items: T[]): 
     });
 }
 
+function updatedAtMs(value: string | null | undefined): number {
+    return value ? new Date(value).getTime() : 0;
+}
+
 function sortRowsByUpdatedDesc(rows: DashboardRestaurantRow[]): DashboardRestaurantRow[] {
     return [...rows].sort((a, b) => {
-        const aMs = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-        const bMs = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        const aMs = updatedAtMs(a.updated_at);
+        const bMs = updatedAtMs(b.updated_at);
         return bMs - aMs;
     });
 }
@@ -257,6 +259,7 @@ export function buildDashboardSummaryFromRows(
 
     let withCoordinates = 0;
     let latestUpdatedAt: string | null = null;
+    let latestUpdatedMs = Number.NEGATIVE_INFINITY;
 
     for (const row of rows) {
         if (typeof row.lat === 'number' && typeof row.lng === 'number') {
@@ -272,7 +275,9 @@ export function buildDashboardSummaryFromRows(
         if (videoId) videoIds.add(videoId);
 
         if (row.updated_at) {
-            if (!latestUpdatedAt || new Date(row.updated_at).getTime() > new Date(latestUpdatedAt).getTime()) {
+            const updatedMs = updatedAtMs(row.updated_at);
+            if (latestUpdatedAt === null || updatedMs > latestUpdatedMs) {
+                latestUpdatedMs = updatedMs;
                 latestUpdatedAt = row.updated_at;
             }
         }
@@ -415,11 +420,42 @@ export function buildDashboardRestaurantsFromRows(
     return buildDashboardRestaurantsPageFromRows(paged, sortedRows.length, normalizedFilter, now);
 }
 
+const rowsByVideoId = new WeakMap<readonly DashboardRestaurantRow[], Map<string, DashboardRestaurantRow[]>>();
+
+export function selectDashboardRowsForVideoId(
+    rows: readonly DashboardRestaurantRow[],
+    videoId: string,
+): DashboardRestaurantRow[] {
+    const classified = classifyDashboardVideoId(videoId);
+    if (classified.status !== 'ok') return [];
+
+    let index = rowsByVideoId.get(rows);
+    if (!index) {
+        index = new Map();
+        for (const row of rows) {
+            const id = extractVideoIdFromYoutubeLink(row.youtube_link);
+            if (!id) continue;
+            const bucket = index.get(id);
+            if (bucket) {
+                bucket.push(row);
+            } else {
+                index.set(id, [row]);
+            }
+        }
+        rowsByVideoId.set(rows, index);
+    }
+
+    return index.get(classified.videoId) ?? [];
+}
+
 export async function getDashboardVideoDetail(
     videoId: string,
 ): Promise<DashboardVideoDetailResponse | null> {
+    const classified = classifyDashboardVideoId(videoId);
+    if (classified.status !== 'ok') return null;
+
     const rows = await getRestaurantRows(false, 'anon');
-    const targetRows = rows.filter((row) => extractVideoIdFromYoutubeLink(row.youtube_link) === videoId);
+    const targetRows = selectDashboardRowsForVideoId(rows, classified.videoId);
 
     if (targetRows.length === 0) return null;
 
