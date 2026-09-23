@@ -101,6 +101,46 @@ describe('buildRestaurantSelectFields', () => {
 });
 
 describe('mergeRestaurants', () => {
+    test('returns an empty list for empty input', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        expect(mergeRestaurants([])).toEqual([]);
+    });
+
+    test('projects one restaurant without merging and fills empty media', async () => {
+        const { mergeRestaurants } = await loadUseRestaurants();
+        const [merged] = mergeRestaurants([
+            makeRestaurant({
+                id: 'solo',
+                approved_name: '',
+                name: '',
+                lat: null,
+                lng: null,
+                categories: ['한식', '한식', '분식'],
+                youtube_link: '',
+                tzuyang_review: '',
+                youtube_meta: null,
+                review_count: null,
+                road_address: '',
+                jibun_address: '서울 중구 명동 1',
+            }),
+        ]) as Array<Record<string, unknown>>;
+
+        expect(merged.id).toBe('solo');
+        expect(merged.name).toBe('');
+        expect(merged.lat).toBe(0);
+        expect(merged.lng).toBe(0);
+        expect(merged.categories).toEqual(['한식', '분식']);
+        expect(merged.address).toBe('서울 중구 명동 1');
+        expect(merged.youtube_link).toBeNull();
+        expect(merged.tzuyang_review).toBeNull();
+        expect(merged.youtube_meta).toBeNull();
+        expect(merged.mergedYoutubeLinks).toEqual([]);
+        expect(merged.mergedTzuyangReviews).toEqual([]);
+        expect(merged.mergedYoutubeMetas).toEqual([]);
+        expect(merged.review_count).toBe(0);
+        expect(merged.mergedRestaurants).toHaveLength(1);
+    });
+
     test('retains every member of a large already-connected address group', async () => {
         const { mergeRestaurants } = await loadUseRestaurants();
         const rows = Array.from({ length: 12000 }, (_, index) => makeRestaurant({

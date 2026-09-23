@@ -1,6 +1,3 @@
-const SUPABASE_REST_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-const SUPABASE_PUBLIC_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-
 type SupabaseRestQuery = Array<[string, string | number | boolean]>;
 
 type SupabaseRestRpcResponse = Readonly<{
@@ -8,9 +5,27 @@ type SupabaseRestRpcResponse = Readonly<{
     error: null | Readonly<{ status: number }>;
 }>;
 
-function assertSupabaseRestConfig() {
-    if (!SUPABASE_REST_URL || !SUPABASE_PUBLIC_KEY) {
-        throw new Error('Supabase REST client requires NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+function readSupabaseRestConfig(): { url: string; key: string } {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
+    if (!url || !key) {
+        throw new Error('supabase_rest_config_missing');
+    }
+    return { url, key };
+}
+
+export function supabaseRestFailureCode(kind: 'rows' | 'count', status: number): string {
+    const safeStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? status : 0;
+    return kind === 'rows'
+        ? `supabase_rest_rows_failed:${safeStatus}`
+        : `supabase_rest_count_failed:${safeStatus}`;
+}
+
+async function discardResponseBody(response: Response) {
+    try {
+        await response.body?.cancel();
+    } catch {
+        // The status code is the trace. Body text stays out of logs and errors.
     }
 }
 
@@ -23,17 +38,17 @@ export function postgrestArrayOverlap(values: readonly string[]) {
 }
 
 export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQuery): Promise<T[]> {
-    assertSupabaseRestConfig();
+    const config = readSupabaseRestConfig();
 
-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
+    const url = new URL(`${config.url}/rest/v1/${table}`);
     for (const [key, value] of query) {
         url.searchParams.append(key, String(value));
     }
 
     const response = await fetch(url.toString(), {
         headers: {
-            apikey: SUPABASE_PUBLIC_KEY!,
-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+            apikey: config.key,
+            Authorization: `Bearer ${config.key}`,
         },
     });
 
@@ -42,10 +57,11 @@ export async function fetchSupabaseRows<T>(table: string, query: SupabaseRestQue
             (table === 'announcements' || table === 'ad_banners')
             && (response.status === 401 || response.status === 403)
         ) {
+            await discardResponseBody(response);
             return [];
         }
-        const body = await response.text().catch(() => '');
-        throw new Error(`Supabase REST ${table} failed: ${response.status} ${body}`.trim());
+        await discardResponseBody(response);
+        throw new Error(supabaseRestFailureCode('rows', response.status));
     }
 
     return response.json() as Promise<T[]>;
@@ -56,22 +72,23 @@ export const supabaseRestRpcClient = {
         functionName: string,
         args: Readonly<Record<string, unknown>>,
     ): Promise<SupabaseRestRpcResponse> {
-        assertSupabaseRestConfig();
+        const config = readSupabaseRestConfig();
 
         const url = new URL(
-            `${SUPABASE_REST_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
+            `${config.url}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
         );
         const response = await fetch(url.toString(), {
             method: 'POST',
             headers: {
-                apikey: SUPABASE_PUBLIC_KEY!,
-                Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+                apikey: config.key,
+                Authorization: `Bearer ${config.key}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(args),
         });
 
         if (!response.ok) {
+            await discardResponseBody(response);
             return { data: null, error: { status: response.status } };
         }
 
@@ -81,9 +98,9 @@ export const supabaseRestRpcClient = {
 };
 
 export async function fetchSupabaseExactCount(table: string, query: SupabaseRestQuery): Promise<number> {
-    assertSupabaseRestConfig();
+    const config = readSupabaseRestConfig();
 
-    const url = new URL(`${SUPABASE_REST_URL}/rest/v1/${table}`);
+    const url = new URL(`${config.url}/rest/v1/${table}`);
     for (const [key, value] of query) {
         url.searchParams.append(key, String(value));
     }
@@ -91,22 +108,22 @@ export async function fetchSupabaseExactCount(table: string, query: SupabaseRest
     const response = await fetch(url.toString(), {
         method: 'HEAD',
         headers: {
-            apikey: SUPABASE_PUBLIC_KEY!,
-            Authorization: `Bearer ${SUPABASE_PUBLIC_KEY!}`,
+            apikey: config.key,
+            Authorization: `Bearer ${config.key}`,
             Prefer: 'count=exact',
         },
     });
 
     if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        throw new Error(`Supabase REST ${table} count failed: ${response.status} ${body}`.trim());
+        await discardResponseBody(response);
+        throw new Error(supabaseRestFailureCode('count', response.status));
     }
 
     const range = response.headers.get('content-range');
     const total = range?.split('/').at(1);
     const count = total ? Number(total) : NaN;
     if (!Number.isFinite(count)) {
-        throw new Error(`Supabase REST ${table} count missing content-range.`);
+        throw new Error('supabase_rest_count_missing');
     }
 
     return count;

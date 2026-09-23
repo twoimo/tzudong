@@ -80,10 +80,9 @@ const CategoryFilter = ({
 
             try {
                 const data = await fetchSupabaseRows<Restaurant>('restaurants', params);
-                // 병합 로직 적용하여 중복 제거
                 return mergeRestaurants(data || []);
-            } catch (error) {
-                console.error('카테고리 데이터 조회 실패:');
+            } catch {
+                console.error('category_restaurant_query_failed');
                 return [];
             }
         },
