@@ -303,14 +303,30 @@ function buildRestaurantQueryKey(
     ];
 }
 
-function hydrateDbRestaurant(dbData: DBRestaurant): Restaurant {
+function projectSingletonRestaurant(restaurant: DBRestaurant): Restaurant {
+    const categories = Array.from(new Set(restaurant.categories || []));
+    const youtubeLink = restaurant.youtube_link || null;
+    const review = restaurant.tzuyang_review || null;
+    const meta = (restaurant.youtube_meta as YoutubeMeta | null) || null;
+
     return {
-        ...dbData,
-        address: dbData.road_address || dbData.jibun_address || '',
-        category: dbData.categories,
+        ...restaurant,
+        name: getRestaurantName(restaurant as RestaurantWithOptionalName),
+        lat: restaurant.lat || 0,
+        lng: restaurant.lng || 0,
+        categories,
+        address: restaurant.road_address || restaurant.jibun_address || '',
+        category: categories,
+        youtube_link: youtubeLink,
+        tzuyang_review: review,
+        youtube_meta: meta,
+        mergedYoutubeLinks: youtubeLink ? [youtubeLink] : [],
+        mergedTzuyangReviews: review ? [review] : [],
+        mergedYoutubeMetas: meta ? [meta] : [],
+        review_count: restaurant.review_count || 0,
+        mergedRestaurants: [restaurant],
     } as Restaurant;
 }
-
 
 function getUniqueRestaurantNames(restaurants: RestaurantWithOptionalName[]): string[] {
     return [...new Set(restaurants
@@ -529,6 +545,9 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
 
     const mergedResults: Restaurant[] = Array.from(groups.values()).map((indices) => {
         const groupRestaurants = indices.map(idx => restaurants[idx]);
+        if (groupRestaurants.length === 1) {
+            return projectSingletonRestaurant(groupRestaurants[0]);
+        }
 
         // 메인 레스토랑은 단일 패스 비교로 선택 (정렬 제거)
         let mainRestaurant = groupRestaurants[0];
@@ -678,22 +697,25 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     const config = OVERSEAS_REGIONS[normalizedRegion as keyof typeof OVERSEAS_REGIONS];
                     const conditions: string[] = [];
                     config.keywords.forEach((keyword: string) => {
-                        conditions.push(`road_address.ilike.*${keyword}*`);
-                        conditions.push(`jibun_address.ilike.*${keyword}*`);
-                        conditions.push(`english_address.ilike.*${keyword}*`);
+                        const term = sanitizePostgrestOrTerm(keyword);
+                        if (!term) return;
+                        conditions.push(`road_address.ilike.*${term}*`);
+                        conditions.push(`jibun_address.ilike.*${term}*`);
+                        conditions.push(`english_address.ilike.*${term}*`);
                     });
 
                     if (conditions.length > 0) {
                         query.push(['or', `(${conditions.join(',')})`]);
                     }
-                } else if (buildOverseasCountryAddressOrFilter(normalizedRegion, '*')) {
-                    query.push(['or', `(${buildOverseasCountryAddressOrFilter(normalizedRegion, '*')})`]);
                 } else {
-                    // address_elements의 SIDO에서 지역 필터링
-                    // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
-                    const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
-                    if (regionTerm) {
-                        query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
+                    const overseasAddressFilter = buildOverseasCountryAddressOrFilter(normalizedRegion, '*');
+                    if (overseasAddressFilter) {
+                        query.push(['or', `(${overseasAddressFilter})`]);
+                    } else {
+                        const regionTerm = sanitizePostgrestOrTerm(normalizedRegion);
+                        if (regionTerm) {
+                            query.push(['or', `(road_address.ilike.*${regionTerm}*,jibun_address.ilike.*${regionTerm}*)`]);
+                        }
                     }
                 }
             }
