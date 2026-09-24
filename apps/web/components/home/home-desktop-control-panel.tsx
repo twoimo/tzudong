@@ -466,7 +466,7 @@ function DesktopMapSettingsPanel({
     >
       <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-[0.12em] text-primary">
+          <p className="flex items-center gap-1.5 text-2xs font-bold tracking-[0.12em] text-primary">
             <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
             계정별 환경설정
           </p>
@@ -1703,7 +1703,7 @@ export default function HomeDesktopControlPanel({
               data-desktop-left-panel-search-bar="true"
               onClick={activateDesktopSearch}
             >
-              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0">
+              <div className="flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0">
                 <Image
                   src="/logo.webp"
                   alt="로고"

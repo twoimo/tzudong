@@ -411,7 +411,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <Badge
                     variant="destructive"
                     aria-hidden="true"
-                    className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white"
+                    className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
@@ -491,7 +491,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                               {notification.title}
                             </p>
                             {!notification.isRead && (
-                              <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">새 알림</span>
+                              <span className="shrink-0 rounded-full bg-red-800 px-1.5 py-0.5 text-2xs font-bold leading-none text-white">새 알림</span>
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground truncate">
@@ -608,7 +608,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
                   className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                 >
-                  <span className="text-[10px] text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
+                  <span className="text-2xs text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
                   {isBusinessInfoExpanded ? (
                     <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                   ) : (
@@ -616,7 +616,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   )}
                 </button>
                 {isBusinessInfoExpanded && (
-                  <div className="mt-1 pt-1 border-t border-border text-[9px] text-muted-foreground space-y-0.5 px-1">
+                  <div className="mt-1 pt-1 border-t border-border text-2xs text-muted-foreground space-y-0.5 px-1">
                     <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
                     <p>대표: {siteConfig.operator.representative}</p>
                     <p>사업자: {siteConfig.operator.businessRegistrationNumber}</p>

@@ -241,7 +241,8 @@ function MobileHomeLayout({ children }: { children: ReactNode }) {
                 <a href="#main-content" className="skip-link">
                     본문 바로가기
                 </a>
-                <main id="main-content" className="flex-1 relative overflow-hidden" aria-label="쯔동여지도 지도 본문">
+                <main id="main-content" className="relative flex-1 overflow-hidden" aria-label="쯔동여지도 지도 본문">
+                    <HomeStaticSkeleton />
                     <div className="h-full w-full">
                         {children}
                     </div>
@@ -317,13 +318,39 @@ function HomeLayoutContent({ children }: { children: ReactNode }) {
     );
 }
 
+function HomeStaticSkeleton() {
+    return (
+        <div
+            className="pointer-events-none absolute inset-0 z-[20]"
+            data-home-static-skeleton="true"
+            aria-hidden="true"
+        >
+            <div className="h-full max-xl:hidden">
+                <div className="h-full w-[min(392px,calc(100vw-32px))] border-r border-border bg-card p-4">
+                    <div className="h-11 animate-pulse rounded-full bg-muted" />
+                    <div className="mt-4 space-y-3">
+                        {Array.from({ length: 6 }, (_, index) => (
+                            <div key={index} className="h-16 animate-pulse rounded-xl bg-muted" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div className="xl:hidden">
+                <div className="mx-3 mt-[calc(env(safe-area-inset-top)+10px)] h-12 animate-pulse rounded-full border border-border bg-muted" />
+                <div className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] h-14 animate-pulse rounded-2xl bg-muted" />
+            </div>
+        </div>
+    );
+}
+
 function HomeRuntimePendingShell({ children }: { children: ReactNode }) {
     return (
         <div className="flex flex-col bg-background text-foreground" style={{ height: 'var(--full-height, 100vh)' }}>
             <a href="#main-content" className="skip-link">
                 본문 바로가기
             </a>
-            <main id="main-content" className="h-full min-h-0 w-full flex-1 bg-background" aria-label="쯔동여지도 지도 본문">
+            <main id="main-content" className="relative h-full min-h-0 w-full flex-1 bg-background" aria-label="쯔동여지도 지도 본문">
+                <HomeStaticSkeleton />
                 {children}
             </main>
         </div>

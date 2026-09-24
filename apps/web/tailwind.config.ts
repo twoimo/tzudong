@@ -7,6 +7,9 @@ const config: Config = {
       screens: {
         xs: "375px",
       },
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "0.875rem" }],
+      },
       fontFamily: {
         sans: [
           "var(--font-sans)",

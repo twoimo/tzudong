@@ -104,7 +104,7 @@ export default function MobileNotificationMenuButton({
             <Badge
               variant="destructive"
               aria-hidden="true"
-              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -212,7 +212,7 @@ export default function MobileNotificationMenuButton({
                     <p className="text-xs text-muted-foreground truncate">
                       {notification.message}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                    <p className="text-2xs text-muted-foreground/70 mt-0.5">
                       {formatDistanceToNow(notification.createdAt, {
                         addSuffix: true,
                         locale: ko,

@@ -123,7 +123,7 @@ function SummaryMetric({ label, value, tone = "default", isLoading = false }: { 
       )}
       data-admin-users-summary-metric={label}
     >
-      <p className="truncate text-[11px] font-medium leading-4 text-muted-foreground sm:text-xs">{label}</p>
+      <p className="truncate text-2xs font-medium leading-4 text-muted-foreground sm:text-xs">{label}</p>
       <p className="mt-0.5 text-lg font-bold leading-6 tracking-[-0.04em] text-foreground sm:text-xl">
         {isLoading ? <span className="inline-block h-5 w-10 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none sm:h-6 sm:w-12" aria-hidden="true" /> : value}
       </p>
@@ -384,7 +384,7 @@ export default function AdminUsersPanel() {
           </div>
           <div className="flex flex-wrap gap-1.5 sm:gap-2" aria-label="사용자 관리 안전 원칙" data-admin-module-actions="top-right">
             {['관리자 확인 필수', '자기 잠금 방지', '상태 재확인', '삭제 대신 비활성화'].map((label) => (
-              <Badge key={label} variant="outline" className="max-w-full rounded-full border-primary/25 bg-background px-2.5 text-[11px] text-primary sm:text-xs">{label}</Badge>
+              <Badge key={label} variant="outline" className="max-w-full rounded-full border-primary/25 bg-background px-2.5 text-2xs text-primary sm:text-xs">{label}</Badge>
             ))}
           </div>
         </div>

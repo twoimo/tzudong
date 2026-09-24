@@ -41,7 +41,7 @@ export const mobileSheetStyles = {
     footer: 'sticky bottom-0 z-10 border-t bg-background/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur',
     actionRow: 'flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center',
     primaryAction: 'bg-primary text-primary-foreground hover:bg-primary/90',
-    meta: 'text-[10px] leading-none text-muted-foreground',
+    meta: 'text-2xs leading-none text-muted-foreground',
 } as const;
 
 type MobileSheetHeaderProps = {
@@ -123,7 +123,7 @@ export function MobileSheetStepIndicator({ steps, currentStep, className }: Mobi
                     >
                         <span
                             className={cn(
-                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-2xs font-bold',
                                 isCurrent && 'bg-primary text-primary-foreground',
                                 isComplete && 'bg-green-600 text-white',
                                 !isCurrent && !isComplete && 'bg-background text-muted-foreground'

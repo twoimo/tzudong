@@ -425,7 +425,7 @@ function AnnouncementListItemSkeleton({ index }: { index: number }) {
                                                 </div>
                                             </div>
                                             {canManageInline && (
-                                                <div className="flex shrink-0 flex-col items-end gap-1 text-[10px] font-semibold">
+                                                <div className="flex shrink-0 flex-col items-end gap-1 text-2xs font-semibold">
                                                     <span className={`rounded-full px-2 py-0.5 ${announcement.isActive ? 'bg-emerald-50 text-emerald-800' : 'bg-muted text-muted-foreground'}`}>
                                                         {announcement.isActive ? '게시' : '비활성'}
                                                     </span>

@@ -171,6 +171,14 @@ All colors MUST be HSL.
 
 @layer base {
   @import "../styles/light-root-tokens.css";
+
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
 }
 
 @layer base {

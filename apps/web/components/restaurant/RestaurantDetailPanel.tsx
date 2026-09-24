@@ -1463,9 +1463,9 @@ export function RestaurantDetailPanel({
                                         <div className="flex-1 text-left">
                                             <div className="flex items-center gap-2 mb-0.5">
                                                 <span className="text-sm font-semibold">네이버 지도</span>
-                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[10px] px-1.5 py-0 border-0">추천</Badge>
+                                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-2xs px-1.5 py-0 border-0">추천</Badge>
                                             </div>
-                                            <p className="text-[11px] text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
+                                            <p className="text-2xs text-muted-foreground">국내 상세한 길안내 · 실시간 교통정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1484,7 +1484,7 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="kakao" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-semibold text-foreground mb-0.5">카카오맵</div>
-                                            <p className="text-[11px] text-muted-foreground">대중교통 · 주차 정보</p>
+                                            <p className="text-2xs text-muted-foreground">대중교통 · 주차 정보</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1503,7 +1503,7 @@ export function RestaurantDetailPanel({
                                         <MapProviderLogo provider="google" />
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-semibold text-foreground mb-0.5">구글 지도</div>
-                                            <p className="text-[11px] text-muted-foreground">글로벌 지도 · 위성 뷰</p>
+                                            <p className="text-2xs text-muted-foreground">글로벌 지도 · 위성 뷰</p>
                                         </div>
                                     </div>
                                 </Button>
@@ -1524,7 +1524,7 @@ export function RestaurantDetailPanel({
                                         variant="outline"
                                         size="sm"
                                         className={cn(
-                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-2xs font-semibold leading-tight",
                                             isMobile ? "rounded-lg" : "rounded-xl"
                                         )}
                                     >
@@ -1550,7 +1550,7 @@ export function RestaurantDetailPanel({
                                         variant="outline"
                                         size="sm"
                                         className={cn(
-                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-[11px] font-semibold leading-tight",
+                                            "h-14 min-w-0 flex-col gap-1 px-1.5 text-2xs font-semibold leading-tight",
                                             isMobile ? "rounded-lg" : "rounded-xl"
                                         )}
                                     >

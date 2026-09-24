@@ -29,7 +29,7 @@ const HOSTED_NIGHTLY_MODE = process.env.NIGHTLY_MODE === 'hosted';
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const LOCAL_APP_ORIGIN = (() => {
     try {
-        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8080');
+        const value = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
         if (
             (value.protocol === 'http:' || value.protocol === 'https:')
             && LOOPBACK_HOSTS.has(value.hostname)

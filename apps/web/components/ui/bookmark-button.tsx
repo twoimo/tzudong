@@ -67,7 +67,7 @@ const BookmarkButtonComponent = ({
             >
                 <Bookmark className={cn("h-4 w-4", isBookmarked && "fill-current")} />
                 {showCount && bookmarkCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-2xs font-bold bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                         {formatCount(bookmarkCount)}
                     </span>
                 )}

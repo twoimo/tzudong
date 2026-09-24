@@ -219,7 +219,7 @@ export function TrendProposalQueue() {
     >
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold tracking-[0.12em] text-primary">트렌드 제안</p>
+          <p className="text-2xs font-bold tracking-[0.12em] text-primary">트렌드 제안</p>
           <h3 className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">오버레이 제안 검토</h3>
         </div>
         <Badge variant="outline" className="shrink-0 rounded-full border-primary/25 text-primary">
@@ -249,11 +249,11 @@ export function TrendProposalQueue() {
                   <p className="break-words text-sm font-bold text-foreground [overflow-wrap:anywhere]">{proposal.label}</p>
                   <p className="mt-0.5 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{proposal.restaurant.name}</p>
                 </div>
-                <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
+                <Badge variant="outline" className="shrink-0 rounded-full text-2xs">
                   {formatScore(proposal.score)}
                 </Badge>
               </div>
-              <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-semibold text-muted-foreground">
+              <div className="mt-1 flex flex-wrap gap-1 text-2xs font-semibold text-muted-foreground">
                 <span className="max-w-full break-words rounded-full bg-primary/5 px-2 py-0.5 text-primary [overflow-wrap:anywhere]">{proposal.overlayType}</span>
                 <span className="max-w-full break-words rounded-full bg-muted px-2 py-0.5 [overflow-wrap:anywhere]">{formatWindow(proposal)}</span>
                 <span className="max-w-full break-words rounded-full bg-muted px-2 py-0.5 [overflow-wrap:anywhere]">근거 {proposal.evidenceSummary.observationCount}개</span>
@@ -270,7 +270,7 @@ export function TrendProposalQueue() {
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold tracking-[0.12em] text-muted-foreground">선택 제안</p>
+                  <p className="text-2xs font-bold tracking-[0.12em] text-muted-foreground">선택 제안</p>
                   <h4 className="break-words text-base font-bold text-foreground [overflow-wrap:anywhere]">{selectedProposal.label}</h4>
                 </div>
                 <Badge variant="outline" className="rounded-full">
@@ -278,7 +278,7 @@ export function TrendProposalQueue() {
                 </Badge>
               </div>
               <p className="break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">{selectedProposal.description ?? "설명 없음"}</p>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px] text-muted-foreground">
+              <div className="grid grid-cols-2 gap-1.5 text-2xs text-muted-foreground">
                 <div className="rounded-lg bg-muted/35 p-1.5">
                   <p className="font-bold text-foreground">근거 신선도</p>
                   <p>{selectedProposal.evidenceSummary.freshness}</p>
@@ -295,9 +295,9 @@ export function TrendProposalQueue() {
               >
                 <p className="text-xs font-bold text-primary">미리보기 해시</p>
                 {previewQuery.isFetching ? (
-                  <p className="mt-1 text-[11px] text-muted-foreground">오버레이 미리보기를 계산하는 중입니다.</p>
+                  <p className="mt-1 text-2xs text-muted-foreground">오버레이 미리보기를 계산하는 중입니다.</p>
                 ) : previewQuery.data ? (
-                  <dl className="mt-1 space-y-1 text-[11px] text-muted-foreground">
+                  <dl className="mt-1 space-y-1 text-2xs text-muted-foreground">
                     <div className="min-w-0">
                       <dt className="font-bold text-foreground">previewHash</dt>
                       <dd className="break-all font-mono">{previewQuery.data.confirmation.previewHash}</dd>
@@ -308,7 +308,7 @@ export function TrendProposalQueue() {
                     </div>
                   </dl>
                 ) : (
-                  <p className="mt-1 text-[11px] text-muted-foreground">미리보기 생성 실패 시 승인하지 않습니다.</p>
+                  <p className="mt-1 text-2xs text-muted-foreground">미리보기 생성 실패 시 승인하지 않습니다.</p>
                 )}
               </div>
 
@@ -366,16 +366,16 @@ export function TrendProposalQueue() {
                     제안 승인
                   </Button>
                 </div>
-                <p className="text-[11px] leading-4 text-muted-foreground">
+                <p className="text-2xs leading-4 text-muted-foreground">
                   승인하려면 정확히 “오버레이 적용”을 입력합니다. 승인은 오버레이 적용, 감사 이벤트, 제안 상태 변경을 하나의 원자 RPC로 처리합니다.
                 </p>
                 {rejectMutation.data ? (
-                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900">
+                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-2xs font-semibold text-emerald-900">
                     검토 이벤트 {rejectMutation.data.reviewEvent.eventId} 기록 완료 · {rejectMutation.data.status}
                   </p>
                 ) : null}
                 {approveMutation.data ? (
-                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-[11px] font-semibold text-emerald-900" data-trend-proposal-approval-readback="true">
+                  <p className="break-all rounded-lg bg-emerald-50 p-1.5 text-2xs font-semibold text-emerald-900" data-trend-proposal-approval-readback="true">
                     승인 감사 {approveMutation.data.proposal.overlayAuditId} 기록 완료 · {approveMutation.data.status}
                   </p>
                 ) : null}

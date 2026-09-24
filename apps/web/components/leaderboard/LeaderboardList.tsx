@@ -107,7 +107,7 @@ export function LeaderboardList({
                         <div
                             className={cn(
                                 "ml-auto flex min-w-max shrink-0 items-center gap-1.5 text-base tabular-nums sm:gap-3 sm:text-base md:gap-4",
-                                compactLeftPanel && "gap-1.5 text-[15px] sm:gap-2 md:gap-2",
+                                compactLeftPanel && "gap-1.5 text-sm sm:gap-2 md:gap-2",
                                 mobilePanel && "gap-1.5"
                             )}
                             data-leaderboard-mobile-stats="no-clip"

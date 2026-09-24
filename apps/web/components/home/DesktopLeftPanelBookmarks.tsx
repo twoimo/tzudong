@@ -54,7 +54,7 @@ export default function DesktopLeftPanelBookmarks({
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Badge
               variant="secondary"
-              className="rounded-full px-2 py-0.5 text-[11px]"
+              className="rounded-full px-2 py-0.5 text-2xs"
             >
               {isLoading ? "확인 중" : `${bookmarks.length}개`}
             </Badge>
@@ -157,7 +157,7 @@ export default function DesktopLeftPanelBookmarks({
                       {bookmark.restaurant.category?.[0] && (
                         <Badge
                           variant="secondary"
-                          className="h-5 shrink-0 px-1.5 text-[10px] font-normal"
+                          className="h-5 shrink-0 px-1.5 text-2xs font-normal"
                         >
                           {bookmark.restaurant.category[0]}
                         </Badge>
@@ -165,7 +165,7 @@ export default function DesktopLeftPanelBookmarks({
                     </span>
                   </span>
                 </button>
-                <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-2xs text-muted-foreground">
                   <span>리뷰 {bookmark.restaurant.review_count || 0}개</span>
                   <Button
                     type="button"
