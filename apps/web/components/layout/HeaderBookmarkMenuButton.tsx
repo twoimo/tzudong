@@ -40,7 +40,7 @@ export default function HeaderBookmarkMenuButton() {
           size="icon"
           type="button"
           aria-label={triggerBookmarkCount > 0 ? `북마크, 저장한 맛집 ${triggerBookmarkCount}개` : "북마크"}
-          className="relative h-11 w-11 rounded-xl !text-primary transition-colors hover:bg-primary/10 hover:!text-primary data-[state=open]:bg-primary/10 data-[state=open]:!text-primary focus-visible:ring-2 focus-visible:ring-primary touch-manipulation [&_svg]:!text-primary"
+          className="relative h-11 w-11 rounded-xl !text-primary hover:bg-primary/10 hover:!text-primary data-[state=open]:bg-primary/10 data-[state=open]:!text-primary focus-visible:ring-2 focus-visible:ring-primary touch-manipulation [&_svg]:!text-primary"
         >
           <Bookmark className="h-5 w-5 !text-primary" aria-hidden="true" />
           {triggerBookmarkCount > 0 && (

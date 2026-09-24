@@ -45,6 +45,23 @@ describe('same-origin mutation authorization', () => {
     }, 'http://127.0.0.1:18080/api/admin/map-overlays/preview'), localEnv)).toBe(false);
   });
 
+  test('trusts the live loopback server when the configured site URL uses another local port', () => {
+    const localEnv = {
+      NODE_ENV: 'development',
+      NEXT_PUBLIC_SITE_URL: 'http://localhost:8080',
+    } as NodeJS.ProcessEnv;
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'sb-local-auth-token=value',
+      origin: 'http://localhost:3000',
+      'sec-fetch-site': 'same-origin',
+    }, 'http://localhost:3000/api/auth/logout'), localEnv)).toBe(true);
+    expect(isTrustedSameOriginMutation(mutation({
+      cookie: 'sb-local-auth-token=value',
+      origin: 'http://localhost:9999',
+      'sec-fetch-site': 'same-site',
+    }, 'http://localhost:3000/api/auth/logout'), localEnv)).toBe(false);
+  });
+
   test('rejects cross-origin, same-site sibling, null, missing, and ambiguous origins', () => {
     for (const origin of [
       'https://attacker.example',

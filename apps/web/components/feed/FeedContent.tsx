@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { mapPanelIconButtonClass } from '@/components/home/map-panel-chrome';
 import { cn } from '@/lib/utils';
 import { FeedSkeleton } from "@/components/ui/skeleton-loaders";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
@@ -583,7 +584,7 @@ export default function FeedContent({
             )}>
                 {/* 헤더 */}
                 {showHeader && (
-                    <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
+                    <div className={cn("shrink-0 border-b border-border bg-background", isOverlay ? "px-4 py-3" : "px-3 py-3 sm:px-5 sm:py-4")}>
                         <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
                                 <h1 className={cn(
@@ -608,7 +609,7 @@ export default function FeedContent({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                        className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
                                         onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
                                         title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
                                         aria-label={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
@@ -624,7 +625,7 @@ export default function FeedContent({
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                    className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                    className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
                                     title="검색 필터"
                                     aria-label={isFilterExpanded ? "검색 필터 접기" : "검색 필터 펼치기"}
                                 >
@@ -635,7 +636,7 @@ export default function FeedContent({
                                         variant="ghost"
                                         size="icon"
                                         onClick={handleWriteReview}
-                                        className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                                        className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"}
                                         title="리뷰 작성"
                                         aria-label="리뷰 작성"
                                     >
@@ -643,7 +644,7 @@ export default function FeedContent({
                                     </Button>
                                 )}
                                 {isOverlay && onClose && (
-                                    <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="리뷰 패널 닫기">
+                                    <Button variant="ghost" size="icon" onClick={onClose} className={isOverlay ? mapPanelIconButtonClass : "h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"} aria-label="리뷰 패널 닫기">
                                         <X className="h-5 w-5" aria-hidden="true" />
                                     </Button>
                                 )}

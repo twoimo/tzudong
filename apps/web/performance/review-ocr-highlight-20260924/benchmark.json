@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-09-24T14:48:00.000Z",
+  "model": "The review form highlighted the restaurant field with transition-all for 500ms, which included padding and forced layout each frame. The AI analysis card also pinged and blurred a background that is already 95% opaque. The highlight, ping, and blur are gone. The spinner remains.",
+  "restaurantHighlightLayoutFrames": { "before": 30, "after": 1, "absolute": 29, "relative": 30 },
+  "pingFramesPerSecondWhileAnalyzing": { "before": 60, "after": 0, "absolute": 60 },
+  "analysisBackdropLayers": { "before": 1, "after": 0, "absolute": 1 },
+  "analysisBackdropSamplesPerSecond": { "before": 60, "after": 0, "absolute": 60 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "30 is round(500ms * 60 / 1000). Ping and blur are 60 samples per second at 60fps for one layer while analysis is visible. One of three form copies is mounted. Not a sampled compositor trace."
+  }
+}

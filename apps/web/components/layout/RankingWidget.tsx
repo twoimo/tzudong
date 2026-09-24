@@ -66,7 +66,7 @@ const RankingWidgetComponent = () => {
 
     return (
         <div className={cn(
-            "flex items-center gap-3 mr-2 transition-opacity duration-300",
+            "flex items-center gap-3 mr-2",
             isHydrated ? "opacity-100" : "opacity-0"
         )}>
             {/* Online Users */}

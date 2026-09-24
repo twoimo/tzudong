@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:24:00.000Z",
+  "model": "List stamp cards interpolated box-shadow on hover for 200ms. The direction chooser in the restaurant detail slid in for 200ms. The shadow and the slide now change in one frame. Background and border color on the list card still transition.",
+  "listCardShadowFramesPerHoverAt60fps": { "before": 12, "after": 0, "absolute": 12 },
+  "directionSheetFramesAt60fps": { "before": 12, "after": 1, "absolute": 11, "relative": 12 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "12 is round(200ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

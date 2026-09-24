@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T11:20:00.000Z",
+  "model": "The desktop map menu is not needed to draw the map or the restaurant list. Its menu library now loads as a separate chunk, while the menu button stays in the first paint.",
+  "chunk": "_app-pages-browser_components_home_home-desktop-control-panel_tsx.js",
+  "bytes": {
+    "before": 3317479,
+    "after": 2990795,
+    "absolute": 326684,
+    "relative": 1.109
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "One rebuild of the dev chunk. No repeated samples, so the median absolute deviation is not estimated."
+  }
+}

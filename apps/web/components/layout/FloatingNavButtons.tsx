@@ -89,7 +89,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
     return (
         <nav className={cn("fixed z-[92] flex flex-col items-start gap-2", className)} aria-label="지도 화면 보조 탐색">
             {/* 국내/해외 토글 - 모바일/태블릿과 동일한 디자인 */}
-            <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[clamp(84px,22vw,120px)]">
+            <div className="flex items-center gap-0.5 p-0.5 bg-background/95 rounded-full shadow-lg border border-border w-[clamp(84px,22vw,120px)]">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -97,7 +97,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                     aria-label="국내 지도 모드로 전환"
                     aria-pressed={mapMode === 'domestic'}
                     onClick={() => handleModeChange('domestic')}
-                    className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'domestic'
+                    className={`rounded-full min-h-11 px-2 text-xs font-medium flex-1 ${mapMode === 'domestic'
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                         }`}
@@ -111,7 +111,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                     aria-label="해외 지도 모드로 전환"
                     aria-pressed={mapMode === 'overseas'}
                     onClick={() => handleModeChange('overseas')}
-                    className={`rounded-full min-h-11 px-2 text-xs font-medium transition-all motion-reduce:transition-none flex-1 ${mapMode === 'overseas'
+                    className={`rounded-full min-h-11 px-2 text-xs font-medium flex-1 ${mapMode === 'overseas'
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
                         }`}
@@ -132,7 +132,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
                         aria-label={`${item.label} 패널 ${isActive ? '선택됨' : '열기'}`}
                         onClick={() => handlePanelClick(item.id)}
                         className={cn(
-                            'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
+                            'rounded-full shadow-lg bg-background/95 border border-border',
                             'hover:bg-secondary/80 w-[clamp(84px,22vw,120px)] min-h-11 px-2',
                             isActive && 'ring-2 ring-primary bg-primary/10',
                             item.adminOnly && 'border-orange-500/50'

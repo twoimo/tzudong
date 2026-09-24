@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T16:04:00.000Z",
+  "model": "The viewport cell scan called isRestaurantInViewport for every restaurant in a touched cell and used forEach, which creates a callback per occupied cell. The comparisons are inline. One shared id recorder remains.",
+  "viewportHelperCallsPerCellRestaurant": { "before": 1, "after": 0, "absolute": 1 },
+  "forEachCallbacksPerScan": { "before": "1 + b", "after": 1, "absolute": "b" },
+  "example20OccupiedCells": { "before": 21, "after": 1, "absolute": 20 },
+  "noise": {
+    "madCallbacks": 0,
+    "rule": "b is the number of occupied cells in the window. 20 is an example, not a live Seoul window. The full-list fallback still calls the helper. Not a sampled profiler trace."
+  }
+}

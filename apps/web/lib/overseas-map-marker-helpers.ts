@@ -14,7 +14,7 @@ export function buildOverseasMarkerHtml({
     const safeName = escapeHtmlAttribute(name);
 
     return `
-        <div class="marker-container relative h-full w-full cursor-pointer drop-shadow-md transition-transform duration-200 hover:scale-110">
+        <div class="marker-container relative h-full w-full cursor-pointer hover:scale-110">
             <img src="${safeImagePath}" class="h-full w-full object-contain" alt="${safeName}" draggable="false" />
         </div>
     `;

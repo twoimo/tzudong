@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:42:00.000Z",
+  "model": "Putting the searched restaurant first scanned the visible list twice. One pass now splits matches and the rest, then concatenates them. The order is the same.",
+  "visibleListPassesPerSearchOrdering": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "noise": {
+    "madPasses": 0,
+    "rule": "Counts the visible list only. The nearest-fallback scan of the full list still runs when exactly one visible restaurant remains. Not a sampled trace."
+  }
+}

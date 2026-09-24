@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T13:12:00.000Z",
+  "model": "A viewport query used to test every loaded restaurant. Restaurants now sit in 0.05 degree cells. A window tests only the cells it touches, then checks those restaurants against the exact bounds. A window wider than the list still scans the whole list. The same list reuses the cell index.",
+  "fixture": "1000 restaurants on a 0.1 degree lattice from latitude 33 and longitude 126. Window south 37.45, north 37.55, west 126.95, east 127.05.",
+  "examinations": { "before": 1000, "after": 2, "absolute": 998, "relative": 500 },
+  "matches": { "before": 1, "after": 1, "absolute": 0, "relative": 1 },
+  "noise": {
+    "madExaminations": 0,
+    "rule": "The fixture is uniform, not the live Seoul distribution. A city viewport examines every restaurant in the touched cells, which is more than 2 when many restaurants share a neighborhood. Not a field trace."
+  }
+}

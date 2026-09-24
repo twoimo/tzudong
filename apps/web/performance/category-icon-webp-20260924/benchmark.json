@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-09-24T10:48:00.000Z",
+  "model": "Detail icons and the Google and overseas maps requested category PNGs. Those files are 128px, the same pixel grid as the WebP files already used by the Naver marker. Bytes are the only change: PNG total / WebP total.",
+  "bytes": {
+    "png": 408367,
+    "webp": 76754,
+    "absolute": 331613,
+    "relative": 5.32
+  },
+  "pixels": { "before": 16384, "after": 16384, "ratio": 1 },
+  "noise": { "madBytes": 0, "rule": "File sizes are deterministic. Seasonal, trend, and user-submitted images are excluded because they were already served as small WebP on the Naver map." }
+}

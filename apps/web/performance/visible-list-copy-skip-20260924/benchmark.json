@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:14:00.000Z",
+  "model": "The marker render copied the visible restaurant list so expanded clusters could be appended. When nothing is expanded, the original list is used.",
+  "visibleListCopiesWhenNoneExpanded": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madCopies": 0,
+    "rule": "One copy of the visible list per marker render. An expanded cluster still copies. Not a sampled heap trace."
+  }
+}

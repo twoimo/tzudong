@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:40:00.000Z",
+  "model": "Each eligible marker render joined the bubble seed and the restaurant id signature into a new cache key, then built the seed again for selection. The two strings are compared on their own, and the seed is built once.",
+  "joinedKeysPerEligibleRender": { "before": 1, "after": 0, "absolute": 1 },
+  "seedBuildsPerEligibleRender": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "A moved viewport still builds one seed. A repeat of the same seed string does not allocate another. Not a sampled allocator trace."
+  }
+}

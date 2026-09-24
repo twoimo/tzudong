@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:08:00.000Z",
+  "model": "A marker render at the same zoom republished the swipe list and the contextual list even when both lists were the same objects. Those callbacks are skipped. An ineligible contextual list reuses one empty array instead of a new one.",
+  "listPublishesPerUnchangedRender": { "before": 2, "after": 0, "absolute": 2 },
+  "emptyContextualArraysPerIneligibleRender": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madPublishes": 0,
+    "rule": "A changed list, zoom, mode, or eligibility still publishes once. The parent still dedupes the first publish. Not a sampled profiler trace."
+  }
+}

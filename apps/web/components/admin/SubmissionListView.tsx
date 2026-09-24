@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
+import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -274,6 +275,7 @@ export function SubmissionListView({
 }: SubmissionListViewProps) {
     // 탭 상태 (초기 탭 지정 가능)
     const [activeTab, setActiveTab] = useState<SubmissionAdminTab>(initialTab);
+    const submissionListSkeleton = useFilledSkeletonCount(76, 4, 40);
     const isMobile = useIsMobile();
     const SUBMISSION_LIST_PAGE_SIZE = 10;
 
@@ -1099,9 +1101,9 @@ export function SubmissionListView({
             isMobile && "ml-0 min-w-[18px] px-1"
         );
     const renderListSkeletonCards = (label: string) => (
-        <div className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
+        <div ref={submissionListSkeleton.ref} className={listBodyClassName} role="status" aria-busy="true" aria-label={`${label} 목록 로딩 중`}>
             <Skeleton className="h-8 rounded-md motion-reduce:animate-none" aria-hidden="true" />
-            {Array.from({ length: 4 }).map((_, index) => (
+            {Array.from({ length: submissionListSkeleton.count }).map((_, index) => (
                 <Card key={index} className="rounded-lg border p-2">
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px] sm:items-center">
                         <div className="min-w-0 space-y-1.5">

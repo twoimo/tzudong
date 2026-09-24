@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:52:00.000Z",
+  "model": "Mobile startup polled the DOM every 100ms for up to 3s, then waited another 500ms before enabling the noncritical map work. That second wave is what popped markers and notices in after the shell. Activation is now the ready event, one immediate check, or the 3s fallback.",
+  "domPollWakeups": { "before": 30, "after": 0, "absolute": 30 },
+  "extraSettleDelayMs": { "before": 500, "after": 0, "absolute": 500 },
+  "noise": {
+    "madWakeups": 0,
+    "rule": "30 is 3000ms / 100ms. The ready event can fire sooner, so 30 is the ceiling when the nodes never appear. Not a sampled trace."
+  }
+}

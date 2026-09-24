@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:02:00.000Z",
+  "model": "The map user menu and mobile map controls kept a 95% opaque fill plus backdrop-filter. During a 60fps pan each of those layers resampled the map. The filter is removed from 4 menu buttons and 10 mobile controls.",
+  "backdropLayers": { "before": 14, "after": 0, "absolute": 14 },
+  "samplesPerSecondAt60fps": { "before": 840, "after": 0, "absolute": 840 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "840 is 14 layers times 60 frames. Not a sampled compositor trace."
+  }
+}

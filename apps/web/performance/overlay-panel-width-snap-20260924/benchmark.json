@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:06:00.000Z",
+  "model": "The overlay page animated its container, the main panel, and the side columns for 300ms. Those transitions included width. The panels now use their final size in one frame.",
+  "layoutFramesPerToggleAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000) for one panel. The container, main panel, and side column are separate elements. Not a sampled layout trace."
+  }
+}

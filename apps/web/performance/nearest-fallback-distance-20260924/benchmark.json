@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:44:00.000Z",
+  "model": "Finding the nearest swipe fallback recomputed the distance to the current winner for every later candidate. The winner distance is now kept, so each candidate is measured once.",
+  "distanceCalculationsPerCandidate": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "noise": {
+    "madCalculations": 0,
+    "rule": "The first candidate was already measured once. Later candidates were measured twice. The relative figure is the steady cost after a winner exists. Not a sampled trace."
+  }
+}

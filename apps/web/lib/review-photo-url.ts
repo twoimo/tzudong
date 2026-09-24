@@ -1,5 +1,4 @@
 import { resolveConfiguredSupabaseOrigin } from '@/lib/profile-avatar-url';
-import { supabase } from '@/integrations/supabase/client';
 
 const REVIEW_PHOTO_BUCKET = 'review-photos';
 const REVIEW_PHOTO_PUBLIC_PATH = `/storage/v1/object/public/${REVIEW_PHOTO_BUCKET}/`;
@@ -306,15 +305,11 @@ export function resolveReviewPhotoUrl(
     if (!objectPath || !configuredOrigin) return null;
 
     try {
-        const publicUrl = supabase.storage
-            .from(REVIEW_PHOTO_BUCKET)
-            .getPublicUrl(objectPath)
-            .data.publicUrl;
-        const url = new URL(publicUrl);
         const expectedPath = `${REVIEW_PHOTO_PUBLIC_PATH}${objectPath
             .split('/')
             .map(encodeURIComponent)
             .join('/')}`;
+        const url = new URL(expectedPath, configuredOrigin);
 
         // The configured origin is already constrained by
         // resolveConfiguredSupabaseOrigin (hosted https origin or an explicitly

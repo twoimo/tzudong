@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-09-24T10:42:00.000Z",
+  "model": "After the map list stopped carrying tzuyang_review, every detail open treated the review as missing and started a sibling lookup. The lookup now waits until the detail row actually contains the tzuyang_review field and that field is still short. Approved rows with a stored review: 741 of 763.",
+  "siblingLookupMs": {
+    "method": "youtube_link ilike video id",
+    "repetitions": 11,
+    "median": 88.2,
+    "mad": 2.9,
+    "equalityMedian": 101.9,
+    "equalityMad": 5.7
+  },
+  "commonPath": {
+    "beforeRequests": 1,
+    "afterRequests": 0,
+    "avoidedMedianMs": 88.2,
+    "noiseMadMs": 2.9,
+    "improvesBeyondNoise": true
+  }
+}

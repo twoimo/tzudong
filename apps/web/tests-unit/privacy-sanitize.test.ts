@@ -163,7 +163,8 @@ describe('privacy sanitizer', () => {
     expect(resetPasswordSource).not.toContain('console.error(');
     expect(resetPasswordSource).not.toContain('error instanceof Error');
     expect(resetPasswordSource).not.toContain('toast.error(errorMessage)');
-    expect(debugLogSource).toContain('sanitizePrivacyValue(metadata');
+    expect(debugLogSource).toContain('DEBUG_LOG_REASON_CODES.has(reason)');
+    expect(debugLogSource).not.toContain('sanitizePrivacyValue');
     expect(debugLogSource).toContain('DEBUG_LOG_EVENT.DEBUG_EVENT_REJECTED');
     expect(debugLogSource).not.toContain('console.log(...');
     expect(ocrExtractSource).toContain("const failureMetadata = { error_code: failureCode, provider: failureProvider }");

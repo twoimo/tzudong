@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T17:28:00.000Z",
+  "model": "Dropdown items, badges, and the mobile sheet step chips faded their colors for the default 150ms. The color now changes in one frame.",
+  "colorFramesPerHover": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). One item is hovered at a time. Not a sampled compositor trace."
+  }
+}

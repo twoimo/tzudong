@@ -20,7 +20,7 @@ type GeoJsonProperties = Record<string, unknown>;
  */
 export interface ClusterProperties extends GeoJsonProperties {
     restaurantId: string;
-    name: string;
+    name?: string;
     category: string;
     categories?: string[];
     address?: string | null;
@@ -125,12 +125,8 @@ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeatu
             type: 'Feature' as const,
             properties: {
                 restaurantId: r.id,
-                name: r.name,
                 category: (Array.isArray(r.categories) ? r.categories[0] : r.category || '기타') as string,
-                categories: r.categories || (r.category ? [r.category] : []),
-                // 추가 속성들
                 address: r.address,
-                reviewCount: r.review_count,
             },
             geometry: {
                 type: 'Point' as const,
@@ -216,10 +212,20 @@ export const expandCluster = (
  * @param clusterId 클러스터 ID
  * @returns 중복 제거된 카테고리 배열
  */
+const clusterCategoryCache = new WeakMap<Supercluster<ClusterProperties>, Map<number, string[]>>();
+
 export const getClusterCategories = (
     index: Supercluster<ClusterProperties>,
     clusterId: number
 ): string[] => {
+    let cache = clusterCategoryCache.get(index);
+    if (!cache) {
+        cache = new Map();
+        clusterCategoryCache.set(index, cache);
+    }
+    const cached = cache.get(clusterId);
+    if (cached) return cached;
+
     const leaves = index.getLeaves(clusterId, Infinity);
     const categoryCounts = new Map<string, number>();
 
@@ -230,10 +236,12 @@ export const getClusterCategories = (
         }
     });
 
-    return Array.from(categoryCounts.entries())
+    const categories = Array.from(categoryCounts.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
         .map((entry) => entry[0]);
+    cache.set(clusterId, categories);
+    return categories;
 };
 
 /**

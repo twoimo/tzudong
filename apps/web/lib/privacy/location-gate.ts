@@ -127,7 +127,10 @@ const isExactReadinessPayload = (payload: unknown): boolean => {
   return Object.hasOwn(readiness, "status")
     && Object.hasOwn(readiness, "reasonCode")
     && readiness.status === "available"
-    && readiness.reasonCode === "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED";
+    && (
+      readiness.reasonCode === "DEVICE_LOCATION_AVAILABLE"
+      || readiness.reasonCode === "DEVICE_LOCATION_OPERATOR_EVIDENCE_VERIFIED"
+    );
 };
 
 /**

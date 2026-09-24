@@ -240,10 +240,10 @@ const CarouselOverlayPrevious = React.forwardRef<HTMLButtonElement, React.Compon
         className={cn(
           "absolute left-2 top-1/2 -translate-y-1/2 z-20",
           "h-8 w-8 rounded-full",
-          "bg-black/30 hover:bg-black/50 backdrop-blur-sm",
+          "bg-black/30 hover:bg-black/50",
           "flex items-center justify-center",
           "text-white/90 hover:text-white",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+          "opacity-0 group-hover:opacity-100",
           "focus:outline-none focus:ring-2 focus:ring-white/50",
           className,
         )}
@@ -273,10 +273,10 @@ const CarouselOverlayNext = React.forwardRef<HTMLButtonElement, React.ComponentP
         className={cn(
           "absolute right-2 top-1/2 -translate-y-1/2 z-20",
           "h-8 w-8 rounded-full",
-          "bg-black/30 hover:bg-black/50 backdrop-blur-sm",
+          "bg-black/30 hover:bg-black/50",
           "flex items-center justify-center",
           "text-white/90 hover:text-white",
-          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+          "opacity-0 group-hover:opacity-100",
           "focus:outline-none focus:ring-2 focus:ring-white/50",
           className,
         )}

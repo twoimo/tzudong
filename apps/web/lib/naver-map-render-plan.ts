@@ -74,28 +74,186 @@ export function deriveClusterRenderPlan(
     };
 }
 
+const VIEWPORT_CELL_DEGREES = 0.05;
+const viewportIndexCache = new WeakMap<readonly Restaurant[], {
+    buckets: Map<number, Restaurant[]>;
+    always: Restaurant[];
+    byId: Map<string, Restaurant>;
+    order: Map<string, number>;
+}>();
+let lastViewportExaminationCount = 0;
+let lastVisibleSource: Restaurant[] | null = null;
+let lastVisibleResult: Restaurant[] = [];
+let lastVisibleIds: Set<string> | null = null;
+const visibleRestaurantScratchIds: string[] = [];
+
+function reuseVisibleRestaurantResult(source: Restaurant[], included: Set<string>, build: () => Restaurant[]) {
+    if (
+        lastVisibleSource === source &&
+        lastVisibleResult.length === included.size &&
+        lastVisibleResult.every((restaurant) => included.has(restaurant.id))
+    ) {
+        return lastVisibleResult;
+    }
+
+    const result = build();
+    lastVisibleSource = source;
+    lastVisibleResult = result;
+    lastVisibleIds = included;
+    return result;
+}
+
+export function getLastViewportExaminationCount() {
+    return lastViewportExaminationCount;
+}
+
+const VIEWPORT_CELL_LNG_STRIDE = 100000;
+
+function viewportCellKey(lat: number, lng: number) {
+    return Math.floor(lat / VIEWPORT_CELL_DEGREES) * VIEWPORT_CELL_LNG_STRIDE
+        + Math.floor(lng / VIEWPORT_CELL_DEGREES);
+}
+
+function viewportCellIndexKey(latCell: number, lngCell: number) {
+    return latCell * VIEWPORT_CELL_LNG_STRIDE + lngCell;
+}
+
+function getViewportIndex(restaurants: readonly Restaurant[]) {
+    const cached = viewportIndexCache.get(restaurants);
+    if (cached) return cached;
+
+    const buckets = new Map<number, Restaurant[]>();
+    const always: Restaurant[] = [];
+    const byId = new Map<string, Restaurant>();
+    const order = new Map<string, number>();
+    restaurants.forEach((restaurant, index) => {
+        byId.set(restaurant.id, restaurant);
+        order.set(restaurant.id, index);
+        if (!restaurant.lat || !restaurant.lng) {
+            always.push(restaurant);
+            return;
+        }
+        const key = viewportCellKey(restaurant.lat, restaurant.lng);
+        const bucket = buckets.get(key);
+        if (bucket) bucket.push(restaurant);
+        else buckets.set(key, [restaurant]);
+    });
+    const built = { buckets, always, byId, order };
+    viewportIndexCache.set(restaurants, built);
+    return built;
+}
+
 export function getVisibleRestaurantsForRender(
     restaurantsForSwipe: Restaurant[],
     selectedRestaurantId: string | null,
     extendedBounds: ExtendedBounds | null,
     viewportFilterEnabled: boolean,
 ) {
-    if (!viewportFilterEnabled) {
-        return restaurantsForSwipe;
+    if (!viewportFilterEnabled || !extendedBounds) {
+        lastViewportExaminationCount = restaurantsForSwipe.length;
+        return viewportFilterEnabled
+            ? restaurantsForSwipe.filter((restaurant) =>
+                (selectedRestaurantId != null && restaurant.id === selectedRestaurantId) ||
+                isRestaurantInViewport(restaurant, extendedBounds))
+            : restaurantsForSwipe;
     }
 
-    return restaurantsForSwipe.filter(
-        (restaurant) =>
+    const latStart = Math.floor(extendedBounds.south / VIEWPORT_CELL_DEGREES);
+    const latEnd = Math.floor(extendedBounds.north / VIEWPORT_CELL_DEGREES);
+    const lngStart = Math.floor(extendedBounds.west / VIEWPORT_CELL_DEGREES);
+    const lngEnd = Math.floor(extendedBounds.east / VIEWPORT_CELL_DEGREES);
+    const cellCount = (latEnd - latStart + 1) * (lngEnd - lngStart + 1);
+    if (cellCount > restaurantsForSwipe.length) {
+        lastViewportExaminationCount = restaurantsForSwipe.length;
+        return restaurantsForSwipe.filter((restaurant) =>
             (selectedRestaurantId != null && restaurant.id === selectedRestaurantId) ||
-            isRestaurantInViewport(restaurant, extendedBounds)
-    );
+            isRestaurantInViewport(restaurant, extendedBounds));
+    }
+
+    const index = getViewportIndex(restaurantsForSwipe);
+    const scratchIds = visibleRestaurantScratchIds;
+    scratchIds.length = 0;
+    let examined = 0;
+    let selectedCounted = false;
+    let same = lastVisibleSource === restaurantsForSwipe && lastVisibleIds !== null;
+    const rememberId = (id: string) => {
+        scratchIds.push(id);
+        if (id === selectedRestaurantId) selectedCounted = true;
+        if (same && !lastVisibleIds?.has(id)) same = false;
+    };
+    const always = index.always;
+    for (let indexInAlways = 0; indexInAlways < always.length; indexInAlways += 1) {
+        examined += 1;
+        rememberId(always[indexInAlways].id);
+    }
+    const south = extendedBounds.south;
+    const north = extendedBounds.north;
+    const west = extendedBounds.west;
+    const east = extendedBounds.east;
+    for (let latCell = latStart; latCell <= latEnd; latCell += 1) {
+        for (let lngCell = lngStart; lngCell <= lngEnd; lngCell += 1) {
+            const bucket = index.buckets.get(viewportCellIndexKey(latCell, lngCell));
+            if (!bucket) continue;
+            for (let indexInBucket = 0; indexInBucket < bucket.length; indexInBucket += 1) {
+                const restaurant = bucket[indexInBucket];
+                examined += 1;
+                if (
+                    restaurant.lat >= south &&
+                    restaurant.lat <= north &&
+                    restaurant.lng >= west &&
+                    restaurant.lng <= east
+                ) {
+                    rememberId(restaurant.id);
+                }
+            }
+        }
+    }
+    if (
+        selectedRestaurantId != null &&
+        !selectedCounted &&
+        index.byId.has(selectedRestaurantId)
+    ) {
+        examined += 1;
+        countId(selectedRestaurantId);
+    }
+    lastViewportExaminationCount = examined;
+    if (same && lastVisibleIds && scratchIds.length === lastVisibleIds.size) {
+        return lastVisibleResult;
+    }
+
+    const included = new Set(scratchIds);
+    return reuseVisibleRestaurantResult(restaurantsForSwipe, included, () => scratchIds
+        .map((id) => index.byId.get(id))
+        .filter((restaurant): restaurant is Restaurant => restaurant !== undefined)
+        .sort((left, right) => (index.order.get(left.id) ?? 0) - (index.order.get(right.id) ?? 0)));
+}
+
+const visibleIdSetCache = new WeakMap<Restaurant[], Set<string>>();
+
+export function getVisibleRestaurantIdSet(restaurants: Restaurant[]) {
+    const cached = visibleIdSetCache.get(restaurants);
+    if (cached) return cached;
+
+    const ids = new Set<string>();
+    for (let index = 0; index < restaurants.length; index += 1) {
+        ids.add(restaurants[index].id);
+    }
+    visibleIdSetCache.set(restaurants, ids);
+    return ids;
 }
 
 export function getRestaurantsWithRenderableCoordinates(restaurants: Restaurant[]) {
-    return restaurants.flatMap((restaurant) => {
-        const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
-        return normalizedRestaurant ? [normalizedRestaurant] : [];
-    });
+    for (let index = 0; index < restaurants.length; index += 1) {
+        if (normalizeNaverMarkerCoordinates(restaurants[index]) !== restaurants[index]) {
+            const next: Restaurant[] = [];
+            for (const restaurant of restaurants) {
+                const normalizedRestaurant = normalizeNaverMarkerCoordinates(restaurant);
+                if (normalizedRestaurant) next.push(normalizedRestaurant);
+            }
+            return next;
+        }
+    }
+    return restaurants;
 }
 
 export function getSeoulIndividualRestaurantsForRender({
@@ -117,6 +275,23 @@ export function getSeoulIndividualRestaurantsForRender({
         return normalizedRestaurant ? [normalizedRestaurant] : [];
     });
 }
+
+let lastRenderTargetIds: string[] | null = null;
+const lastRenderTargetKey = {
+    searchedId: '',
+    selectedId: '',
+    clusterMode: false,
+    regionalMode: false,
+    seoulMode: false,
+    displayRestaurants: null as Restaurant[] | null,
+    displayRestaurantIds: null as Set<string> | null,
+    clusters: null as unknown,
+    regionalClusters: null as RegionalCluster[] | null,
+    seoulClustersToRender: null as SeoulDistrictCluster[] | null,
+    seoulIndividualIds: null as string[] | null,
+    restaurantById: null as Map<string, Restaurant> | null,
+    mergedRestaurantById: null as Map<string, Restaurant> | null,
+};
 
 export function buildRenderTargetIdsForSignature({
     activeSearchedRestaurant,
@@ -147,6 +322,27 @@ export function buildRenderTargetIdsForSignature({
     seoulClustersToRender: SeoulDistrictCluster[];
     seoulIndividualIds: string[];
 }) {
+    const searchedId = activeSearchedRestaurant?.id ?? '';
+    const selectedId = selectedRestaurant?.id ?? '';
+    if (
+        lastRenderTargetIds &&
+        lastRenderTargetKey.searchedId === searchedId &&
+        lastRenderTargetKey.selectedId === selectedId &&
+        lastRenderTargetKey.clusterMode === nextIsClusterMode &&
+        lastRenderTargetKey.regionalMode === nextIsRegionalClusterMode &&
+        lastRenderTargetKey.seoulMode === nextIsSeoulDistrictMode &&
+        lastRenderTargetKey.displayRestaurants === displayRestaurants &&
+        lastRenderTargetKey.displayRestaurantIds === displayRestaurantIds &&
+        lastRenderTargetKey.clusters === clusters &&
+        lastRenderTargetKey.regionalClusters === regionalClusters &&
+        lastRenderTargetKey.seoulClustersToRender === seoulClustersToRender &&
+        lastRenderTargetKey.seoulIndividualIds === seoulIndividualIds &&
+        lastRenderTargetKey.restaurantById === restaurantById &&
+        lastRenderTargetKey.mergedRestaurantById === mergedRestaurantById
+    ) {
+        return lastRenderTargetIds;
+    }
+
     const renderTargetIdsForSignature: string[] = displayRestaurants.map((restaurant) =>
         toRestaurantRenderToken(restaurant)
     );
@@ -209,6 +405,20 @@ export function buildRenderTargetIdsForSignature({
         });
     }
 
+    lastRenderTargetIds = renderTargetIdsForSignature;
+    lastRenderTargetKey.searchedId = searchedId;
+    lastRenderTargetKey.selectedId = selectedId;
+    lastRenderTargetKey.clusterMode = nextIsClusterMode;
+    lastRenderTargetKey.regionalMode = nextIsRegionalClusterMode;
+    lastRenderTargetKey.seoulMode = nextIsSeoulDistrictMode;
+    lastRenderTargetKey.displayRestaurants = displayRestaurants;
+    lastRenderTargetKey.displayRestaurantIds = displayRestaurantIds;
+    lastRenderTargetKey.clusters = clusters;
+    lastRenderTargetKey.regionalClusters = regionalClusters;
+    lastRenderTargetKey.seoulClustersToRender = seoulClustersToRender;
+    lastRenderTargetKey.seoulIndividualIds = seoulIndividualIds;
+    lastRenderTargetKey.restaurantById = restaurantById;
+    lastRenderTargetKey.mergedRestaurantById = mergedRestaurantById;
     return renderTargetIdsForSignature;
 }
 

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:42:00.000Z",
+  "model": "Each cluster render split a string key into characters to hash it. The hash is stored on the string. A numeric key was already returned as itself.",
+  "characterArraysPerRepeatStringKey": { "before": 1, "after": 0, "absolute": 1 },
+  "example16RegionalStringKeys": { "before": 16, "after": 0, "absolute": 16 },
+  "noise": {
+    "madArrays": 0,
+    "rule": "16 is the regional cluster ceiling used earlier, not a live trace. The first use of a string key still splits it. Numeric cluster ids do not split."
+  }
+}

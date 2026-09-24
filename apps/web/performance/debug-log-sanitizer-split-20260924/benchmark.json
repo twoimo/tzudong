@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-09-24T11:18:00.000Z",
+  "model": "Development debug logs only keep an allowlisted reason code. They no longer import the full privacy sanitizer, which walked every nested value before discarding it.",
+  "chunks": {
+    "desktopPanel": {
+      "file": "_app-pages-browser_components_home_home-desktop-control-panel_tsx.js",
+      "before": 3442866,
+      "after": 3317479,
+      "absolute": 125387,
+      "relative": 1.038
+    },
+    "map": {
+      "file": "_app-pages-browser_components_map_NaverMapView_tsx.js",
+      "before": 2340462,
+      "after": 2215089,
+      "absolute": 125373,
+      "relative": 1.057
+    }
+  },
+  "bytes": {
+    "before": 5783328,
+    "after": 5532568,
+    "absolute": 250760,
+    "relative": 1.045
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "One rebuild of each dev chunk. No repeated samples, so the median absolute deviation is not estimated."
+  }
+}

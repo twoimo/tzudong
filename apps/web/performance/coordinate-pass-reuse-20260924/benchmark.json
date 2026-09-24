@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:16:00.000Z",
+  "model": "Individual marker mode normalized the visible restaurant coordinates twice in one render. The second pass now uses the list already built for the contextual payload.",
+  "coordinatePassesPerIndividualRender": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "noise": {
+    "madPasses": 0,
+    "rule": "Counts one individual-marker render. Cluster mode does not run the second pass. Not a sampled trace."
+  }
+}

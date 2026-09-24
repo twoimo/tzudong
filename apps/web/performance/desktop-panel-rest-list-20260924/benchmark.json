@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T11:15:00.000Z",
+  "model": "The desktop home panel imported the Supabase browser client to read the public popular and latest lists. Those reads now use the REST client, so auth, storage, and realtime code leave the first home chunk.",
+  "chunk": "_app-pages-browser_components_home_home-desktop-control-panel_tsx.js",
+  "bytes": {
+    "before": 6117687,
+    "after": 3441506,
+    "absolute": 2676181,
+    "relative": 1.777
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "One rebuild of the dev chunk. No repeated samples, so the median absolute deviation is not estimated."
+  }
+}

@@ -15,6 +15,10 @@ const DEFAULT_HEADER_HEIGHT = 56;
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
+export function snapHeaderHideProgress(progress: number) {
+    return clamp01(progress) >= 0.999 ? 1 : 0;
+}
+
 const parseCssNumber = (raw: string, fallback: number) => {
     const value = Number.parseFloat(raw);
     return Number.isFinite(value) ? value : fallback;
@@ -84,7 +88,7 @@ export const setMobileSheetLayoutState = ({
     if (typeof window === 'undefined') return;
 
     const root = ROOT();
-    const progress = clamp01(headerHideProgress);
+    const progress = snapHeaderHideProgress(headerHideProgress);
     const hideValue = hideBottomNav ? '1' : '0';
     const progressValue = progress.toFixed(4);
 

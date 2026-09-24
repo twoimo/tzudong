@@ -20,7 +20,7 @@ describe("mypage mobile cleanup source contracts", () => {
     const topActionsSource = source("components/mypage/MyPageTopActions.tsx");
     const mapUserMenuSource = source("components/home/HomeMapUserMenu.tsx");
     const mapUserButtonClass =
-      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
     const mapMenuItemClass =
       "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
     const mapMenuContentClass =
@@ -54,7 +54,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(topActionsSource).toContain('data-mypage-user-menu="true"');
     expect(mapUserMenuSource).toContain(mapUserButtonClass);
     expect(topActionsSource).toContain(
-      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+      "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
     );
     expect(mapUserMenuSource).toContain(mapMenuItemClass);
     expect(topActionsSource).toContain(mapMenuItemClass);
@@ -137,10 +137,7 @@ describe("mypage mobile cleanup source contracts", () => {
       'data-mypage-profile-identity="standard"',
     );
     expect(profileSource).toContain("rounded-full border-2 border-border shadow-sm");
-    expect(profileSource).toContain("transition-[border-color,box-shadow]");
-    expect(profileSource).toContain(
-      "border-2 border-border shadow-sm transition-[border-color,box-shadow]",
-    );
+    expect(profileSource).not.toContain("transition-[border-color,box-shadow]");
     expect(profileSource).toContain("grid w-full grid-cols-3 gap-2 pt-2");
     expect(profileSource).toContain("useUserProfile");
     expect(profileSource).toContain("userProfile?.tier");

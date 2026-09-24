@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T15:46:00.000Z",
+  "model": "A repeat cluster icon rebuilt its visual object and a new 24,24 anchor even though the HTML had not changed. The visual is stored on the category array for that count and index.",
+  "visualObjectsPerRepeatIcon": { "before": 1, "after": 0, "absolute": 1 },
+  "anchorObjectsPerRepeatIcon": { "before": 1, "after": 0, "absolute": 1 },
+  "example16RegionalClusters": { "before": 32, "after": 0, "absolute": 32 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "32 is 16 clusters times 2 objects. 16 is the regional ceiling used earlier, not a live trace. The render plan wrapper is still created. A new category array builds the visual once."
+  }
+}

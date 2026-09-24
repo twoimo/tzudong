@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:30:00.000Z",
+  "model": "Dragging the home sheet promoted a layer with will-change: height. Height changes are layout, so that hint does not move the work to the compositor. The promotion at drag start and the teardown at drag end are gone.",
+  "dragLayerPromotions": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madPromotions": 0,
+    "rule": "One promotion when a drag starts and one teardown when it ends. Not a sampled compositor trace."
+  }
+}

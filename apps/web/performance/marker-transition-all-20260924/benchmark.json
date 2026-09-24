@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T11:55:00.000Z",
+  "model": "Individual marker HTML used transition: all for 200ms. The style sets five animatable properties: width, height, transform, filter, and z-index. Width, height, and z-index now change in one frame. Transform and filter still ease for 200ms.",
+  "durationMs": 200,
+  "animatedProperties": { "before": 5, "after": 2, "absolute": 3, "relative": 2.5 },
+  "layoutInterpolationMs": { "before": 200, "after": 0, "absolute": 200 },
+  "noise": {
+    "madMs": 0,
+    "rule": "The 200ms duration and the five property names come from the marker style string. Not a sampled browser paint."
+  }
+}

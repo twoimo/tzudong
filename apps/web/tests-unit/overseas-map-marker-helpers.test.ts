@@ -20,7 +20,7 @@ describe('overseas map marker helpers', () => {
 
             expect(html).toContain(`src="${imagePath}"`);
             expect(html).toContain('alt="테스트 식당"');
-            expect(html).toContain('class="marker-container relative h-full w-full cursor-pointer drop-shadow-md transition-transform duration-200 hover:scale-110"');
+            expect(html).toContain('class="marker-container relative h-full w-full cursor-pointer hover:scale-110"');
             expect(html).toContain('class="h-full w-full object-contain"');
             expect(html).toContain('draggable="false"');
             expect(html).not.toContain('style=');

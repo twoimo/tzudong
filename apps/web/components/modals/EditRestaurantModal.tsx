@@ -867,7 +867,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         return (
             <section
                 ref={desktopEditPanelRef}
-                className="fixed bottom-24 right-6 top-6 z-[90] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                className="fixed bottom-24 right-6 top-6 z-[90] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
                 style={{ transform: `translate3d(${desktopEditPanelPosition.x}px, ${desktopEditPanelPosition.y}px, 0)` }}
                 data-desktop-map-edit-panel="true"
                 role="dialog"

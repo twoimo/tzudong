@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-09-24T10:50:00.000Z",
+  "model": "The page background used an SVG feTurbulence filter. A filter with 3 octaves is evaluated across the painted viewport. A 1920x1080 frame is 2,073,600 pixels. The replacement is one 64x64 tile, 4,096 pixels, decoded once and repeated. 2073600/4096 = 506.25.",
+  "tile": { "width": 64, "height": 64, "bytes": 3466 },
+  "pixelsPerFullHdFrame": { "before": 2073600, "after": 4096, "ratio": 506.25 },
+  "noise": { "madPixels": 0, "rule": "The pixel counts are exact. This does not time a browser paint sample." }
+}

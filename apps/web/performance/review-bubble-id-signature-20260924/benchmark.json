@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:00:00.000Z",
+  "model": "The review-bubble projection key joined every visible restaurant id on each marker render. The joined string is now stored on the list. A repeat render of the same list reuses it. A new list still joins once.",
+  "idJoinsPerRepeatRender": { "before": 1, "after": 0, "absolute": 1 },
+  "exampleCharactersFor80UuidIds": { "before": 2959, "after": 0, "absolute": 2959 },
+  "noise": {
+    "madJoins": 0,
+    "rule": "2959 is 80 * 36 + 79 separators. 80 is an example visible count, not a live Seoul sample. The first render of a new list still joins. Not a sampled allocator trace."
+  }
+}

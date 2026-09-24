@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, type MouseEvent as ReactMouseEvent } from "react";
-import { Bell, CheckCheck, MapPin, Trash2, X } from "lucide-react";
+import { CheckCheck, MapPin, Trash2 } from "lucide-react";
+import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -72,54 +73,27 @@ export default function DesktopLeftPanelNotifications({
       className="flex h-full min-h-0 flex-col bg-background"
       data-desktop-left-panel-view="notifications"
     >
-      <div className="border-b border-border bg-background px-3 py-3 sm:px-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0 flex-1 basis-[min(10rem,100%)]">
-            <h2 className="flex min-w-0 items-center gap-2 text-base font-bold leading-tight text-primary text-balance">
-              <Bell className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="min-w-0 truncate">알림</span>
-            </h2>
-            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground">
-              리뷰·맛집·공지 소식을 바로 확인해요.
-            </p>
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Badge
-              variant="secondary"
-              className="rounded-full px-2 py-0.5 text-2xs"
-            >
-              {isLoading ? "확인 중" : `${notifications.length}개`}
-            </Badge>
-            {unreadCount > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={markAllAsRead}
-                className="h-7 rounded-full px-2 text-2xs"
-                aria-label="모든 알림 읽음 처리"
-              >
-                <CheckCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                모두 읽음
-              </Button>
-            )}
-            {onClose && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="h-9 w-9 rounded-full hover:bg-muted"
-                aria-label="알림 패널 닫기"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <MapPanelHeader
+        title="알림"
+        description="리뷰, 맛집, 공지 소식을 확인해요"
+        count={isLoading ? undefined : notifications.length}
+        onClose={onClose}
+        closeLabel="알림 패널 닫기"
+        actions={unreadCount > 0 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={markAllAsRead}
+            className={mapPanelIconButtonClass}
+            aria-label="모든 알림 읽음 처리"
+          >
+            <CheckCheck className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : null}
+      />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-3">
         {isLoading ? (
           <div
             role="status"

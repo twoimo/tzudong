@@ -28,6 +28,38 @@ interface MarkerPositionLike {
     equals?: (position: unknown) => boolean;
 }
 
+const MARKER_NODE_SELECTOR = '[data-testid="marker"]';
+const REVIEW_BUBBLE_SELECTOR = '[data-visible-marker-review-bubble="true"]';
+
+function patchStableMarkerReviewBubble(element: HTMLElement, nextContent: unknown): boolean {
+    if (typeof nextContent !== 'string' || typeof document === 'undefined') return false;
+    if (!nextContent.includes('data-testid="marker"') && !element.querySelector(MARKER_NODE_SELECTOR)) {
+        return false;
+    }
+
+    const currentMarker = element.querySelector(MARKER_NODE_SELECTOR);
+    if (!currentMarker) return false;
+
+    const template = document.createElement('template');
+    template.innerHTML = nextContent;
+    const nextMarker = template.content.querySelector(MARKER_NODE_SELECTOR);
+    if (!nextMarker) return false;
+    if (currentMarker.getAttribute('style') !== nextMarker.getAttribute('style')) return false;
+
+    const currentImage = currentMarker.querySelector('img');
+    const nextImage = nextMarker.querySelector('img');
+    if ((currentImage?.getAttribute('src') ?? '') !== (nextImage?.getAttribute('src') ?? '')) return false;
+
+    const hosts = [currentMarker, currentMarker.parentElement].filter((host): host is Element => Boolean(host));
+    hosts.forEach((host) => {
+        host.querySelectorAll(`:scope > ${REVIEW_BUBBLE_SELECTOR}`).forEach((node) => node.remove());
+    });
+
+    const nextBubble = template.content.querySelector(REVIEW_BUBBLE_SELECTOR);
+    if (nextBubble) currentMarker.insertBefore(nextBubble, currentMarker.firstChild);
+    return true;
+}
+
 interface PooledMarker {
     __onClick?: (event: MarkerClickEvent) => void;
     getMap: () => unknown;
@@ -51,9 +83,6 @@ export class MarkerPool {
 
     /** 현재 활성화된 마커 맵 (ID → Marker) */
     private active: Map<string, PooledMarker> = new Map();
-
-    /** 페이드아웃 후 풀 반환을 예약한 타이머 (clear 시 함께 취소) */
-    private pendingReturns: Set<ReturnType<typeof setTimeout>> = new Set();
 
     /** 풀 최대 크기 (메모리 제한) */
     private readonly MAX_POOL_SIZE = 1000;
@@ -102,7 +131,6 @@ export class MarkerPool {
         if (this.active.has(id)) {
             marker = this.active.get(id)!;
         }
-        // 2. 풀에서 가져오기
         else if (this.pool.length > 0) {
             marker = this.pool.pop()!;
             this.stats.reused++;
@@ -155,7 +183,15 @@ export class MarkerPool {
                 (currentAnchor?.y ?? null) !== (nextAnchor?.y ?? null);
 
             if (isContentDifferent || isAnchorDifferent) {
-                marker.setIcon(icon);
+                const element = marker.getElement();
+                const patched = !isAnchorDifferent
+                    && typeof element?.querySelector === 'function'
+                    && patchStableMarkerReviewBubble(element, icon.content);
+                if (patched && currentIcon) {
+                    currentIcon.content = icon.content;
+                } else if (!patched) {
+                    marker.setIcon(icon);
+                }
             }
         }
 
@@ -175,38 +211,12 @@ export class MarkerPool {
         const marker = this.active.get(id);
         if (!marker) return;
 
-        // [UX] 즉시 삭제 대신 페이드아웃 적용
-        // 깜빡임 없는 전환(Seamless Transition)을 위해 300ms 동안 유지
-        const element = marker.getElement();
-        if (element) {
-            element.classList.add('marker-fade-out');
-        }
-
         this.active.delete(id);
-
-        // CSS Transition 시간(300ms) 후 실제 제거 및 풀 반환
-        const timer = setTimeout(() => {
-            this.pendingReturns.delete(timer);
-
-            // 지도에서 제거
-            marker.setMap(null);
-
-            // 다음 재사용을 위해 상태 초기화
-            if (element) {
-                element.classList.remove('marker-fade-out');
-                element.style.opacity = '';
-            }
-
-            // 풀 크기 제한 체크
-            if (this.pool.length < this.MAX_POOL_SIZE) {
-                this.pool.push(marker);
-            } else {
-                // 풀이 가득 차면 마커 완전 삭제(참조 제거)
-            }
-
-            this.stats.released++;
-        }, 300);
-        this.pendingReturns.add(timer);
+        marker.setMap(null);
+        if (this.pool.length < this.MAX_POOL_SIZE) {
+            this.pool.push(marker);
+        }
+        this.stats.released++;
     }
 
     /**
@@ -290,13 +300,6 @@ export class MarkerPool {
      * 풀 전체 정리 (컴포넌트 언마운트 시)
      */
     public clear(): void {
-        // 예약된 반환 콜백을 취소해 clear 이후 풀이 다시 채워지지 않게 한다
-        for (const timer of this.pendingReturns) {
-            clearTimeout(timer);
-        }
-        this.pendingReturns.clear();
-
-        // 모든 활성 마커 지도에서 제거
         this.active.forEach((marker) => {
             marker.setMap(null);
         });

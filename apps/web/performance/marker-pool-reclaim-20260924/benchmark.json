@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T11:48:00.000Z",
+  "model": "A released marker stays off the active map for 300ms while its opacity is forced to 0. Asking for the same id during that window used to construct a second marker, so the pin disappeared and a new one appeared.",
+  "fadeWindowMs": 300,
+  "markersCreatedForReclaim": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "opacityZeroMsOnSurvivingMarker": { "before": 300, "after": 0, "absolute": 300 },
+  "noise": {
+    "madCount": 0,
+    "rule": "The before path follows the pool's 300ms release timer and the acquire order. The after path is the unit test that reclaims the same marker and keeps its map. Not a sampled browser paint."
+  }
+}

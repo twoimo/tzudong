@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T11:56:00.000Z",
+  "model": "The map column animated width and margin for 300ms. At 60fps that is 18 resize frames, and each frame can ask the map for a new tile set. The size now changes in one frame.",
+  "resizeFrames": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "durationMs": { "before": 300, "after": 0, "absolute": 300 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 frames is round(300/16.7). Not a sampled browser paint of tile requests."
+  }
+}

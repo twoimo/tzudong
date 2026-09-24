@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:00:00.000Z",
+  "model": "Shared bottom sheets animated height for the base 235ms and faded the scrim for 200ms. Height now matches the snap state in one frame, and the scrim appears in one frame.",
+  "heightFramesAt60fps": { "before": 14, "after": 1, "absolute": 13, "relative": 14 },
+  "scrimFramesAt60fps": { "before": 12, "after": 1, "absolute": 11, "relative": 12 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "14 is round(235ms * 60fps / 1000). 12 is round(200ms * 60fps / 1000). Flick snaps used 175ms and long drags 295ms. Not a sampled frame trace."
+  }
+}

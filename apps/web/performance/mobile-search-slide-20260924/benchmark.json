@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:04:00.000Z",
+  "model": "The mobile search sheet slid in from the top for 300ms after the scrim appeared. That slide is a large layer moving over the map. The sheet now appears in one frame.",
+  "sheetFramesAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

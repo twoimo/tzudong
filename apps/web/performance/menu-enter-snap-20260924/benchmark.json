@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:54:00.000Z",
+  "model": "Popover, dropdown, select, and tooltip panels faded, scaled from 0.95, and slid 0.5rem. animate-in is 150ms. Those enter and exit animations are gone. The menus still open in place.",
+  "framesPerToggle": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). Open and close each pay that duration. One menu is open at a time. Not a sampled compositor trace."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:44:00.000Z",
+  "model": "Each bubble target rebuilt a set and an array of related restaurant ids. Those ids are stored on the restaurant. A later selection of the same restaurant reuses them.",
+  "relatedIdSetsPerRepeatTarget": { "before": 1, "after": 0, "absolute": 1 },
+  "relatedIdArraysPerRepeatTarget": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madSets": 0,
+    "rule": "The first selection of a restaurant still builds one set and one array. Bubble targets are capped at 5 on desktop and 3 on mobile. Not a sampled allocator trace."
+  }
+}

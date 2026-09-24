@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:36:00.000Z",
+  "model": "My page review cards transitioned every property for 500ms when a pin changed. Photo dots animated their width for the default 150ms. Both now change in one frame.",
+  "pinnedCardFramesAt60fps": { "before": 30, "after": 1, "absolute": 29, "relative": 30 },
+  "dotWidthFramesPerPhotoChangeAt60fps": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "30 is round(500ms * 60fps / 1000) for one card. 9 is round(150ms * 60fps / 1000) for one dot, and the active dot and the previous dot both change, so the before count is 18. Not a sampled layout trace."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:28:00.000Z",
+  "model": "The desktop submission, review, and edit panels blurred the map behind a panel that is already 95% opaque. One of those panels is open at a time. The blur is gone. The drag transform layer remains.",
+  "backdropSamplesPerSecondAt60fpsWhileOpen": { "before": 60, "after": 0, "absolute": 60 },
+  "panels": 4,
+  "noise": {
+    "madSamples": 0,
+    "rule": "60 is one backdrop layer times 60 frames. The four panels are not open together. Not a sampled compositor trace."
+  }
+}

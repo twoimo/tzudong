@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:28:00.000Z",
+  "model": "Stamp cards below the scrollport still built their text and thumbnail. content-visibility:auto skips that work until the card is near the viewport. The list card reserves 76px and the grid card reserves 148px so the scrollbar length stays stable.",
+  "offscreenCardPaints": { "before": "n - v", "after": 0 },
+  "example20Cards4Visible": { "before": 16, "after": 0, "absolute": 16 },
+  "noise": {
+    "madCards": 0,
+    "rule": "n is rendered cards and v is cards in the scrollport. 20 and 4 are an example, not a live panel count. The latest list starts at 3 cards, so this applies once the list grows. Not a sampled paint trace."
+  }
+}

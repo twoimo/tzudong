@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:50:00.000Z",
+  "model": "Dialog and alert dialog overlays faded while the panel scaled from 0.95 and slid into place. animate-in is 150ms in the app stylesheets. Those enter and exit animations are gone. The panel still sits at the center.",
+  "overlayFramesPerToggle": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "panelFramesPerToggle": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). The duration-200 class sets transition time and does not override animation-duration here, because tailwindcss-animate is not installed. Open and close each pay the same 9 frames. Not a sampled compositor trace."
+  }
+}

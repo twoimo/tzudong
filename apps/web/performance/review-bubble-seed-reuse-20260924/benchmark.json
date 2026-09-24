@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:18:00.000Z",
+  "model": "An eligible marker render built the review-bubble seed twice, each time from four toFixed strings and an array. The second call now reuses the string. Rounding uses integers instead of toFixed.",
+  "seedStringsPerEligibleRender": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "fixedDecimalStringsPerEligibleRender": { "before": 8, "after": 0, "absolute": 8 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "Rounding is Math.round(value * 1000), the same 3 decimal places as toFixed(3) for these positive coordinates. A moved viewport still builds one seed. Not a sampled allocator trace."
+  }
+}

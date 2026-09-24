@@ -4,6 +4,7 @@ import type { Restaurant } from '../types/restaurant';
 import { buildRestaurantDetailMediaCopy } from '../lib/restaurant-detail-media-copy';
 import {
     collectRestaurantMergedMedia,
+    collectTzuyangReviewEntries,
     hydrateRestaurantDetailWithMergeContext,
 } from '../lib/restaurant-merged-media';
 
@@ -147,5 +148,50 @@ describe('restaurant merged media helpers', () => {
         ]);
         expect(hydrated?.mergedTzuyangReviews).toEqual(['대표 리뷰', '병합 리뷰']);
         expect(hydrated?.mergedRestaurants?.map((restaurant) => restaurant.id)).toEqual(['primary', 'merged']);
+    });
+
+    test('keeps a known tzuyang review when the fetched row has an empty review', () => {
+        const hydrated = hydrateRestaurantDetailWithMergeContext(
+            makeRestaurant({
+                id: 'primary',
+                tzuyang_review: null,
+                youtube_link: 'https://www.youtube.com/watch?v=primary0001',
+            }),
+            makeRestaurant({
+                id: 'primary',
+                tzuyang_review: '지도에 있던 쯔양 리뷰',
+                youtube_link: 'https://www.youtube.com/watch?v=primary0001',
+            }),
+        );
+
+        expect(hydrated?.tzuyang_review).toBe('지도에 있던 쯔양 리뷰');
+        expect(hydrated?.mergedTzuyangReviews).toEqual(['지도에 있던 쯔양 리뷰']);
+    });
+
+    test('collects tzuyang reviews stored as arrays or review objects', () => {
+        const media = collectRestaurantMergedMedia(makeRestaurant({
+            tzuyang_review: null,
+            tzuyang_reviews: ['배열 리뷰', { review: '객체 리뷰' } as unknown as string],
+        }));
+
+        expect(media.tzuyangReviews).toEqual(['배열 리뷰', '객체 리뷰']);
+    });
+
+    test('pairs each tzuyang review with its video title and publish date', () => {
+        const entries = collectTzuyangReviewEntries(makeRestaurant({
+            tzuyang_review: '대표 리뷰',
+            youtube_meta: {
+                title: '대전 야시장 먹방',
+                publishedAt: '2024-03-02T00:00:00Z',
+            },
+        }));
+
+        expect(entries).toEqual([
+            {
+                text: '대표 리뷰',
+                title: '대전 야시장 먹방',
+                publishedAt: '2024-03-02T00:00:00Z',
+            },
+        ]);
     });
 });

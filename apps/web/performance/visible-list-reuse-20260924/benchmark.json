@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-24T14:58:00.000Z",
+  "model": "A pan that keeps the same restaurants still sorted a new visible list. The cell scan still runs. When the id set matches the previous result for the same source list, that result is returned.",
+  "resultAllocationsWhenMembershipIsUnchanged": { "before": 1, "after": 0, "absolute": 1 },
+  "sortComparisonsForKVisibleRestaurants": {
+    "before": "k * log2(k)",
+    "after": 0,
+    "membershipChecksAfter": "k"
+  },
+  "exampleK80": {
+    "sortComparisonsBefore": 504,
+    "membershipChecksAfter": 80,
+    "absolute": 424,
+    "relative": 6.3
+  },
+  "noise": {
+    "madAllocations": 0,
+    "rule": "504 is round(80 * log2(80)). 80 is an example visible count, not a live Seoul sample. The cell scan still examines every restaurant in the touched cells. Not a sampled profiler trace."
+  }
+}

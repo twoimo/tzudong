@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:06:00.000Z",
+  "model": "Dedupe copied the swipe list even when every row was already unique. It now returns that list. The id signature of a list is joined once and reused.",
+  "resultArraysWhenAlreadyUnique": { "before": 1, "after": 0, "absolute": 1 },
+  "idJoinsPerRepeatOfTheSameList": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madArrays": 0,
+    "rule": "A duplicate, a hole, or a new list still allocates one result and joins once. The id sets are still built on every dedupe. Not a sampled heap trace."
+  }
+}

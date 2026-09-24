@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:32:00.000Z",
+  "model": "Every marker render scheduled a frame to measure review bubbles, including renders with no bubbles. The measurement now runs only when a bubble is showing.",
+  "clampFramesPerMarkerRenderWithoutBubbles": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "The skipped frame used to query the document. With no bubbles that query finds nothing, so it was not a per-bubble layout read. A render with bubbles still measures each bubble once. Not a sampled layout trace."
+  }
+}
