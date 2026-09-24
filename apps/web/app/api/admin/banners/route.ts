@@ -25,15 +25,20 @@ export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
-  const supabase = createSupabaseServiceRoleClient();
-  const { data, error } = await supabase
-    .from("ad_banners")
-    .select(AD_BANNER_SELECT)
-    .order("priority", { ascending: false });
+  try {
+    const supabase = createSupabaseServiceRoleClient();
+    const { data, error } = await supabase
+      .from("ad_banners")
+      .select(AD_BANNER_SELECT)
+      .order("priority", { ascending: false });
 
-  if (error) {
+    if (error) {
+      return NextResponse.json({ code: "banner_read_failed" }, { status: 500 });
+    }
+
+    return NextResponse.json({ banners: data ?? [] });
+  } catch {
     return NextResponse.json({ code: "banner_read_failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ banners: data ?? [] });
 }
