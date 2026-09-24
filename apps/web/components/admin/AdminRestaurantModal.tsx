@@ -1137,7 +1137,7 @@ export function AdminRestaurantModal({
                     </p>
                     <div className="mt-3 flex flex-wrap gap-1.5" aria-label="맛집 수정 상태 요약">
                         {adminRestaurantStatusChips.map((chip) => (
-                            <Badge key={chip} variant="outline" className="rounded-full bg-background/70 text-[11px]">
+                            <Badge key={chip} variant="outline" className="rounded-full bg-background/70 text-2xs">
                                 {chip}
                             </Badge>
                         ))}
@@ -1151,7 +1151,7 @@ export function AdminRestaurantModal({
                 {adminRestaurantProgressSteps.map((step) => (
                     <div key={step.label} className="space-y-1">
                         <div className={cn("h-1.5 rounded-full", step.isComplete ? "bg-red-800" : "bg-muted")} />
-                        <span className={cn("block text-center text-[11px]", step.isComplete ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                        <span className={cn("block text-center text-2xs", step.isComplete ? "font-semibold text-foreground" : "text-muted-foreground")}>
                             {step.label}
                         </span>
                     </div>
@@ -1178,7 +1178,7 @@ export function AdminRestaurantModal({
                     <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
                 </div>
                 {badge && (
-                    <Badge variant="secondary" className="shrink-0 rounded-full text-[11px]">
+                    <Badge variant="secondary" className="shrink-0 rounded-full text-2xs">
                         {badge}
                     </Badge>
                 )}

@@ -183,7 +183,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).toContain('id="mypage-mobile-nickname"');
     expect(profileSource).toContain("handleMobileNicknameChange");
     expect(profileSource).toContain(
-      'className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"',
+      'className="h-7 rounded-full px-2 text-2xs text-muted-foreground"',
     );
     expect(profileSource).toContain('className="w-full space-y-2 md:hidden"');
     expect(profileSource).not.toContain("user.user_metadata?.full_name");
@@ -343,7 +343,7 @@ describe("mypage mobile cleanup source contracts", () => {
     expect(profileSource).not.toContain("안전한 비밀번호 기준");
     expect(profileSource).not.toContain("bg-amber-600 text-white");
     expect(profileSource).toContain("space-y-1 pt-2");
-    expect(profileSource).toContain('text-[11px] font-semibold text-amber-600');
+    expect(profileSource).toContain('text-2xs font-semibold text-amber-600');
     for (const tonalPanelClass of [
       "rounded-2xl bg-muted/40 px-3 py-2.5",
       "rounded-xl bg-muted/40 px-2.5 py-1.5",
@@ -716,10 +716,10 @@ describe("mypage mobile cleanup source contracts", () => {
     // The sidebar nickname edit control was the smallest button on desktop at
     // 35x28; it now matches the 32px touch rhythm used elsewhere.
     expect(sidebarSource).toContain(
-      'className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"',
+      'className="h-8 rounded-full px-2.5 text-2xs text-muted-foreground"',
     );
     expect(sidebarSource).not.toContain(
-      'className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"',
+      'className="h-7 rounded-full px-2 text-2xs text-muted-foreground"',
     );
   });
 });

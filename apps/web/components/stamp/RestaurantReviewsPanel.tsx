@@ -93,7 +93,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                     {restaurant.name}
                                 </h2>
                                 {category && (
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
+                                    <Badge variant="secondary" className="text-2xs px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
                                         {category}
                                     </Badge>
                                 )}

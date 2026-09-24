@@ -4,11 +4,13 @@ interface CategorySidebarProps {
   stats: CategoryStats;
   selectedStatuses: EvaluationRecordStatus[];
   onSelectStatuses: (statuses: EvaluationRecordStatus[]) => void;
+  showStatusChips?: boolean;
   children?: React.ReactNode;
 }
 
 export function CategorySidebar({
   stats,
+  showStatusChips = true,
   children,
 }: CategorySidebarProps) {
   // 그룹 1: 전체, 미처리, 승인됨, 삭제 (통계만 표시)
@@ -23,7 +25,7 @@ export function CategorySidebar({
   const statCategoriesGroup2 = [
     { label: '승인 대기', count: stats.ready_for_approval },
     { label: '미확정 좌표', count: stats.unconfirmed_map },
-    { label: 'Missing', count: stats.missing },
+    { label: '누락', count: stats.missing },
     { label: '평가 미대상', count: stats.not_selected },
   ];
   const statCategoriesDesktop = [...statCategoriesGroup1, ...statCategoriesGroup2];
@@ -46,11 +48,13 @@ export function CategorySidebar({
         </div>
       )}
 
-      <div className="hidden lg:flex lg:w-auto lg:items-center lg:justify-end lg:gap-2 lg:overflow-x-auto lg:pb-0">
-        {statCategoriesDesktop.map((category, index) =>
-          renderStatChip(category.label, category.count, `desktop-${index}`)
-        )}
-      </div>
+      {showStatusChips ? (
+        <div className="hidden lg:flex lg:w-auto lg:items-center lg:justify-end lg:gap-2 lg:overflow-x-auto lg:pb-0">
+          {statCategoriesDesktop.map((category, index) =>
+            renderStatChip(category.label, category.count, `desktop-${index}`)
+          )}
+        </div>
+      ) : null}
 
     </div>
   );

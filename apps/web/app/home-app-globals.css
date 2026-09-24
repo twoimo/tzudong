@@ -20,6 +20,10 @@
 @source "../lib/naver-map-overlay-position-helpers.ts";
 @source "../lib/naver-map-overlay-timings.ts";
 
+html[data-home-chrome-ready="true"] [data-home-static-skeleton] {
+  display: none;
+}
+
 @media (max-width: 1279px) {
   html[data-mobile-search-open] .mobile-map-status-badge {
     display: none;
@@ -171,6 +175,14 @@ All colors MUST be HSL.
 
 @layer base {
   @import "../styles/light-root-tokens.css";
+
+  *,
+  ::before,
+  ::after,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
 }
 
 @layer base {

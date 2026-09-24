@@ -259,6 +259,7 @@ export function MyPageSidebar() {
     <aside
       className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex"
       data-mypage-left-panel-expanded="true"
+      data-layout-primitives="sidebar"
     >
       <div className="flex flex-col items-center space-y-4 p-6 text-center">
         <div className="group relative h-20 w-20 shrink-0 rounded-full">
@@ -379,7 +380,7 @@ export function MyPageSidebar() {
                   취소
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 닉네임은 2-20자 사이로 입력해주세요
               </p>
             </div>
@@ -393,7 +394,7 @@ export function MyPageSidebar() {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-[10px]",
+                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
                     profile.tier.color,
                     profile.tier.bgColor,
                   )}
@@ -405,7 +406,7 @@ export function MyPageSidebar() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-8 rounded-full px-2.5 text-[11px] text-muted-foreground"
+                className="h-8 rounded-full px-2.5 text-2xs text-muted-foreground"
                 onClick={() => {
                   setNicknameInput(displayName);
                   setIsNicknameEditing(true);

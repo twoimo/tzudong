@@ -3004,7 +3004,7 @@ const adminDashboardFocusPalette = {
 const adminDashboardControlGroupClassName =
   "inline-flex h-7 shrink-0 items-center rounded-full border border-border bg-muted/25 p-0.5";
 const adminDashboardControlButtonClassName =
-  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[10px] font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+  "inline-flex h-6 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-2xs font-extrabold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 const adminDashboardFullscreenCardClassName =
   "fixed inset-2 z-[80] h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] overflow-auto scrollbar-hide rounded-3xl border-primary/35 bg-card p-4 shadow-2xl sm:inset-4 sm:h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-2rem)]";
 
@@ -3098,7 +3098,7 @@ function AdminDashboardTooltipPanel({
                 {row.value}
               </span>
               {row.note ? (
-                <span className="col-start-2 col-end-4 truncate text-[10px] font-semibold leading-3 text-muted-foreground">
+                <span className="col-start-2 col-end-4 truncate text-2xs font-semibold leading-3 text-muted-foreground">
                   {row.note}
                 </span>
               ) : null}
@@ -3107,7 +3107,7 @@ function AdminDashboardTooltipPanel({
         </div>
       ) : null}
       {footer ? (
-        <p className="border-t border-border/70 pt-0.5 text-[10px] font-semibold leading-3 text-muted-foreground [text-wrap:pretty]">
+        <p className="border-t border-border/70 pt-0.5 text-2xs font-semibold leading-3 text-muted-foreground [text-wrap:pretty]">
           {footer}
         </p>
       ) : null}
@@ -3360,7 +3360,7 @@ function AdminDashboardFullscreenButton({
 function AdminDashboardDiagnosisMeta({ periodLabel }: { periodLabel: string }) {
   return (
     <div
-      className="hidden min-w-0 max-w-[28rem] items-center justify-end gap-1.5 text-[11px] font-bold leading-none text-muted-foreground lg:flex"
+      className="hidden min-w-0 max-w-[28rem] items-center justify-end gap-1.5 text-2xs font-bold leading-none text-muted-foreground lg:flex"
       aria-label={`성과 진단 기준 ${periodLabel}, 비교 채널 평균`}
       data-admin-dashboard-diagnosis-meta="header-inline"
     >
@@ -3453,7 +3453,7 @@ function AdminDashboardImpactRankLegend() {
     <div
       className={cn(
         adminDashboardControlGroupClassName,
-        "gap-1 px-2 text-[10px] font-extrabold leading-none text-muted-foreground shadow-sm",
+        "gap-1 px-2 text-2xs font-extrabold leading-none text-muted-foreground shadow-sm",
       )}
       aria-label="상위 영상 영향도 색상 범례: 순위 구분"
       data-admin-dashboard-rank-legend="impact"
@@ -3519,7 +3519,7 @@ function AdminDashboardScrollTable<Row>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-[10px] font-extrabold text-muted-foreground",
+                  "min-w-0 border-b border-border/70 px-2.5 py-2 text-left text-2xs font-extrabold text-muted-foreground",
                   column.align === "right" && "text-right",
                   column.className,
                 )}
@@ -3550,7 +3550,7 @@ function AdminDashboardScrollTable<Row>({
         </tbody>
       </table>
       {hasMoreRows ? (
-        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-[11px] font-extrabold tabular-nums text-muted-foreground backdrop-blur">
+        <div className="sticky bottom-0 border-t border-border/70 bg-background/95 px-2.5 py-1.5 text-right text-2xs font-extrabold tabular-nums text-muted-foreground backdrop-blur">
           추가 행 표시 중 {formatNumber(rows.length)}/{formatNumber(totalRows)}
         </div>
       ) : null}
@@ -3829,7 +3829,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+              className="h-7 shrink-0 rounded-full px-2 text-2xs"
               disabled
             >
               카드 순서
@@ -3838,7 +3838,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+              className="h-7 shrink-0 rounded-full px-2 text-2xs"
               disabled
             >
               초기화
@@ -3852,7 +3852,7 @@ function AdminDashboardManagementSkeleton() {
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-bold"
+              className="h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-bold"
               disabled
             >
               <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3873,7 +3873,7 @@ function AdminDashboardManagementSkeleton() {
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-extrabold text-muted-foreground md:hidden"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-extrabold text-muted-foreground md:hidden"
             aria-label="대시보드 타임프레임 로딩 중: 1개월"
             disabled
           >
@@ -3890,7 +3890,7 @@ function AdminDashboardManagementSkeleton() {
                 type="button"
                 variant={option.value === "1M" ? "default" : "outline"}
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+                className="h-7 shrink-0 rounded-full px-2 text-2xs"
                 aria-pressed={option.value === "1M"}
                 disabled
               >
@@ -3901,7 +3901,7 @@ function AdminDashboardManagementSkeleton() {
         </div>
       </div>
       <p
-        className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
+        className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
         data-admin-dashboard-mobile-loading-prompt="true"
       >
         KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
@@ -4157,7 +4157,7 @@ function AdminDashboardCardTitle({
         data-admin-dashboard-card-title-row="single-line"
       >
         <div className="flex min-w-0 max-w-full flex-1 items-center gap-1.5">
-          <p className="truncate whitespace-nowrap text-[11px] font-extrabold leading-none text-foreground">
+          <p className="truncate whitespace-nowrap text-2xs font-extrabold leading-none text-foreground">
             {title}
             {metric ? (
               <span
@@ -4215,7 +4215,7 @@ function AdminDashboardQualityBadges({
           label={`${badge.label} 데이터 신호`}
           lines={[badge.description]}
           className={cn(
-            "inline-flex max-w-[7rem] items-center rounded-full border px-1.5 py-0.5 text-[10px] font-black leading-none outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            "inline-flex max-w-[7rem] items-center rounded-full border px-1.5 py-0.5 text-2xs font-black leading-none outline-none focus-visible:ring-2 focus-visible:ring-primary",
             toneClass[badge.severity],
           )}
         >
@@ -4326,7 +4326,7 @@ function AdminDashboardKpiCard({
           data-admin-dashboard-kpi-title-row="single-line"
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            <p className="truncate whitespace-nowrap text-[11px] font-extrabold tracking-[0.04em] text-muted-foreground">
+            <p className="truncate whitespace-nowrap text-2xs font-extrabold tracking-[0.04em] text-muted-foreground">
               {title}
             </p>
             {infoLines.length > 0 ? (
@@ -4356,7 +4356,7 @@ function AdminDashboardKpiCard({
                   "계산식: 기간 대비 = (현재값 - 이전값) / 이전값 × 100",
                 ]}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary dark:bg-muted/35",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full bg-muted/45 px-2 py-0.5 text-2xs font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary dark:bg-muted/35",
                   toneClass.text,
                 )}
               >
@@ -4385,7 +4385,7 @@ function AdminDashboardKpiCard({
               {value}
             </p>
             {caption ? (
-              <p className="mt-1.5 truncate text-[11px] font-semibold leading-none text-muted-foreground">
+              <p className="mt-1.5 line-clamp-2 text-2xs font-semibold leading-4 text-muted-foreground">
                 {caption}
               </p>
             ) : null}
@@ -4616,7 +4616,7 @@ function AdminDashboardOpsSummaryCard({
                             style={{ width: `${rowPercent}%` }}
                           />
                         </div>
-                        <span className="shrink-0 text-right text-[12px] font-extrabold tabular-nums text-foreground sm:text-[13px]">
+                        <span className="shrink-0 text-right text-[12px] font-extrabold tabular-nums text-foreground sm:text-sm">
                           {row.value}
                         </span>
                       </div>
@@ -5150,13 +5150,13 @@ function AdminDashboardGroupedBarChart({
               <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                 <span
                   className={cn(
-                    "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-black leading-none",
+                    "inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-black leading-none",
                     metric.labelClass,
                   )}
                 >
                   {metric.label}
                 </span>
-                <span className="max-w-full truncate text-[10px] font-black tabular-nums text-muted-foreground sm:shrink-0 sm:text-[11px]">
+                <span className="max-w-full truncate text-2xs font-black tabular-nums text-muted-foreground sm:shrink-0 sm:text-2xs">
                   합계 {formatCompactNumber(total)} · 전체 평균{" "}
                   {formatCompactNumber(average)}
                 </span>
@@ -5190,7 +5190,7 @@ function AdminDashboardGroupedBarChart({
                             ]
                       }
                       className={cn(
-                        "flex min-w-[8%] items-center justify-center px-0.5 text-[11px] font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                        "flex min-w-[8%] items-center justify-center px-0.5 text-2xs font-black leading-none tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary",
                         rankColors[index]?.barClass ??
                           "bg-muted-foreground/28 text-foreground dark:bg-muted-foreground/35 dark:text-foreground",
                       )}
@@ -5228,11 +5228,11 @@ function AdminDashboardGroupedBarChart({
                 )}
                 aria-hidden="true"
               />
-              <span className="shrink-0 text-[10px] font-black tabular-nums text-muted-foreground">
+              <span className="shrink-0 text-2xs font-black tabular-nums text-muted-foreground">
                 {index + 1}위
               </span>
               <span
-                className="min-w-0 truncate text-[11px] font-extrabold text-foreground"
+                className="min-w-0 truncate text-2xs font-extrabold text-foreground"
                 title={row.label}
               >
                 {row.label}
@@ -5241,7 +5241,7 @@ function AdminDashboardGroupedBarChart({
             <AdminDashboardInlineTooltip
               label={`${row.label} 성과 기여`}
               lines={row.viewBenchmarkTooltipLines}
-              className="mt-0.5 block truncate text-[10px] font-semibold tabular-nums text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="mt-0.5 block truncate text-2xs font-semibold tabular-nums text-foreground/70 outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               {formatDashboardContribution(row.performanceContributionPercent)} ·{" "}
               {row.viewTopPercentLabel}
@@ -5327,10 +5327,10 @@ function AdminDashboardDiagnosisBoard({
                   aria-label={tooltipLines.join(" ")}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[10px] font-black text-primary">
+                    <span className="truncate text-2xs font-black text-primary">
                       {insight.label}
                     </span>
-                    <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                    <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-2xs font-black text-muted-foreground">
                       {modeLabel}
                     </span>
                   </div>
@@ -5347,7 +5347,7 @@ function AdminDashboardDiagnosisBoard({
                       <AdminDashboardQualityBadges badges={insight.qualityBadges} />
                     </div>
                   </UiTooltipTrigger>
-                  <p className="mt-1 truncate text-[11px] font-semibold text-muted-foreground">
+                  <p className="mt-1 truncate text-2xs font-semibold text-muted-foreground">
                     {insight.description}
                   </p>
                   <div
@@ -5365,7 +5365,7 @@ function AdminDashboardDiagnosisBoard({
                         }}
                       />
                     </div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-black leading-none text-muted-foreground">
+                    <div className="flex items-center justify-between gap-2 text-2xs font-black leading-none text-muted-foreground">
                       <span>신호 강도</span>
                       <span className="min-w-0 truncate text-foreground">
                         {insight.scoreLabel}
@@ -5568,7 +5568,7 @@ function AdminDashboardPdfReportButton({ onExport }: { onExport: () => void }) {
       type="button"
       variant="outline"
       size="sm"
-      className="h-7 shrink-0 gap-1 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+      className="h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-bold text-muted-foreground hover:text-foreground"
       aria-label="KPI 대시보드를 PDF 보고서로 내보내기"
       data-admin-dashboard-kpi-pdf-export-trigger="true"
       onClick={onExport}
@@ -5607,7 +5607,7 @@ function AdminDashboardPeriodSelector({
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px] font-bold"
+              className="h-7 shrink-0 rounded-full px-2 text-2xs font-bold"
               aria-pressed={isSelected}
               data-admin-dashboard-period-option={option.value}
               onClick={() => onChange(option.value)}
@@ -5623,7 +5623,7 @@ function AdminDashboardPeriodSelector({
             type="button"
             variant="outline"
             size="sm"
-            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-[10px] font-extrabold text-muted-foreground hover:text-foreground md:hidden"
+            className="order-3 h-7 shrink-0 gap-1 rounded-full px-2 text-2xs font-extrabold text-muted-foreground hover:text-foreground md:hidden"
             aria-label={`대시보드 타임프레임 설정: ${selectedOption.label}`}
             data-admin-dashboard-period-select-trigger="true"
           >
@@ -5640,7 +5640,7 @@ function AdminDashboardPeriodSelector({
         >
           <div className="mb-2 px-1">
             <p className="text-xs font-bold text-foreground">기간 설정</p>
-            <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+            <p className="mt-0.5 text-2xs leading-4 text-muted-foreground">
               KPI와 차트에 적용할 조회 기간을 선택합니다.
             </p>
           </div>
@@ -5657,7 +5657,7 @@ function AdminDashboardPeriodSelector({
                   type="button"
                   variant={isSelected ? "default" : "ghost"}
                   size="sm"
-                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-[10px] font-bold"
+                  className="h-11 min-h-11 min-w-[44px] rounded-xl px-2 text-2xs font-bold"
                   style={{ minWidth: 44 }}
                   aria-pressed={isSelected}
                   data-admin-dashboard-period-option={option.value}
@@ -5704,14 +5704,14 @@ function AdminDashboardCollectionLogPopover({
     : "저장 확인 필요";
   const collectionStatusClassName = hasSavedSnapshot
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-950/40 dark:text-emerald-300"
-    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
+    : "border-border bg-secondary text-foreground";
   const workflowStatusLabel = !logs?.workflow.available
     ? "로그 권한 필요"
     : latestRun
       ? getCollectionLogStatusLabel(latestRun.status, latestRun.conclusion)
       : "실행 없음";
   const workflowStatusClassName = !logs?.workflow.available
-    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300"
+    ? "border-border bg-secondary text-foreground"
     : getCollectionLogStatusClassName(
         latestRun?.status ?? "completed",
         latestRun?.conclusion ?? (isWorkflowHealthy ? "success" : "failure"),
@@ -5745,7 +5745,7 @@ function AdminDashboardCollectionLogPopover({
             <p className="text-sm font-extrabold text-foreground">
               데이터 수집 상태
             </p>
-            <p className="mt-0.5 truncate text-[11px] font-semibold text-muted-foreground">
+            <p className="mt-0.5 truncate text-2xs font-semibold text-muted-foreground">
               Supabase 저장 기준 ·{" "}
               {logs?.workflow.workflowId ?? "youtube-kpi-snapshot.yml"}
             </p>
@@ -5754,7 +5754,7 @@ function AdminDashboardCollectionLogPopover({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-[11px] font-bold md:h-7 md:min-h-0 md:min-w-0"
+            className="h-11 min-h-11 min-w-[44px] shrink-0 rounded-full px-2 text-2xs font-bold md:h-7 md:min-h-0 md:min-w-0"
             disabled={isFetching}
             onClick={onRefresh}
           >
@@ -5795,7 +5795,7 @@ function AdminDashboardCollectionLogPopover({
                         ? "최근 스냅샷 저장됨"
                         : "저장된 스냅샷 없음"}
                     </p>
-                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                    <p className="mt-1 text-2xs leading-5 text-muted-foreground">
                       {hasSavedSnapshot
                         ? `마지막 저장: ${formatDashboardDateTime(snapshot?.fetchedAt)}`
                         : "수집 결과가 아직 저장되지 않았습니다."}
@@ -5804,7 +5804,7 @@ function AdminDashboardCollectionLogPopover({
                   <Badge
                     variant="outline"
                     className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[10px]",
+                      "shrink-0 rounded-full px-2 py-0.5 text-2xs",
                       collectionStatusClassName,
                     )}
                   >
@@ -5813,7 +5813,7 @@ function AdminDashboardCollectionLogPopover({
                 </div>
 
                 {hasSavedSnapshot ? (
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-2xs">
                     <div className="rounded-xl bg-background/70 px-2 py-1.5">
                       <span className="block text-muted-foreground">영상</span>
                       <span className="mt-0.5 block font-bold text-foreground">
@@ -5854,7 +5854,7 @@ function AdminDashboardCollectionLogPopover({
                     <p className="text-xs font-extrabold text-foreground">
                       GitHub Actions 로그
                     </p>
-                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                    <p className="mt-1 text-2xs leading-5 text-muted-foreground">
                       {logs?.workflow.available
                         ? latestRun
                           ? `최근 실행: #${latestRun.runNumber ?? "—"} · ${formatDashboardDateTime(latestRun.startedAt ?? latestRun.createdAt)}`
@@ -5866,7 +5866,7 @@ function AdminDashboardCollectionLogPopover({
                     <Badge
                       variant="outline"
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px]",
+                        "rounded-full px-2 py-0.5 text-2xs",
                         workflowStatusClassName,
                       )}
                     >
@@ -5890,7 +5890,7 @@ function AdminDashboardCollectionLogPopover({
                 </div>
 
                 {!logs?.workflow.available ? (
-                  <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-[10px] leading-4 text-muted-foreground">
+                  <p className="mt-2 rounded-xl bg-muted/40 px-2 py-1.5 text-2xs leading-4 text-muted-foreground">
                     서버 환경 변수에 GitHub 읽기 토큰이 없거나 권한이
                     부족합니다. GITHUB_ACTIONS_TOKEN 또는 GH_TOKEN을 설정하면
                     실행 로그도 표시됩니다.
@@ -5904,7 +5904,7 @@ function AdminDashboardCollectionLogPopover({
                       <span
                         key={job.id ?? job.name}
                         className={cn(
-                          "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                          "rounded-full border px-2 py-0.5 text-2xs font-bold",
                           getCollectionLogStatusClassName(
                             job.status,
                             job.conclusion,
@@ -5922,7 +5922,7 @@ function AdminDashboardCollectionLogPopover({
                 ) : null}
               </div>
 
-              <p className="text-[10px] leading-4 text-muted-foreground">
+              <p className="text-2xs leading-4 text-muted-foreground">
                 판정 기준: 최신 스냅샷이 저장되어 있으면 대시보드 데이터 수집은
                 정상으로 봅니다.
               </p>
@@ -6459,10 +6459,11 @@ function AdminDashboardManagementPanel({
     ],
   );
 
-  const videos = useMemo(
-    () => insightQuery.data?.videos ?? [],
-    [insightQuery.data?.videos],
-  );
+  const videos = useMemo(() => {
+    const cohortVideos = insightQuery.data?.videos ?? [];
+    if (cohortVideos.length > 0) return cohortVideos;
+    return growthInsightQuery.data?.videos ?? [];
+  }, [growthInsightQuery.data?.videos, insightQuery.data?.videos]);
   const growthVideos = useMemo(
     () => growthInsightQuery.data?.videos ?? [],
     [growthInsightQuery.data?.videos],
@@ -6489,27 +6490,6 @@ function AdminDashboardManagementPanel({
       }),
     [growthVideos],
   );
-  const hasPeriodGrowthComparison =
-    period !== "ALL" &&
-    hasDashboardSnapshotComparison(
-      growthVideos,
-      (video) => video.previousViewCount,
-    );
-  const videosByInsightScore = useMemo(() => {
-    if (!hasPeriodGrowthComparison) return videosByViews;
-
-    return [...videosByViews].sort(
-      (a, b) =>
-        getNonNegativeMetricDelta(getVideoViewDelta(b)) -
-        getNonNegativeMetricDelta(getVideoViewDelta(a)),
-    );
-  }, [hasPeriodGrowthComparison, videosByViews]);
-  const topContentVideosByInsightScore = hasPeriodGrowthComparison
-    ? videosByInsightScore.filter(
-        (video) => video.comparisonStatus !== "missing_previous",
-      )
-    : videosByInsightScore;
-  const topContentMetricMode = hasPeriodGrowthComparison ? "delta" : "current";
   const periodViewValue = getDashboardPeriodMetricValue(
     growthVideos,
     period,
@@ -6528,6 +6508,34 @@ function AdminDashboardManagementPanel({
     (video) => video.commentCount,
     (video) => video.previousCommentCount,
   );
+  const videoSnapshotComparisonAvailable =
+    period !== "ALL" &&
+    hasDashboardSnapshotComparison(
+      growthVideos,
+      (video) => video.previousViewCount,
+    );
+  const videoPeriodDeltasAreFlat =
+    videoSnapshotComparisonAvailable &&
+    periodViewValue === 0 &&
+    periodLikeValue === 0 &&
+    periodCommentValue === 0;
+  const hasPeriodGrowthComparison =
+    videoSnapshotComparisonAvailable && !videoPeriodDeltasAreFlat;
+  const videosByInsightScore = useMemo(() => {
+    if (!hasPeriodGrowthComparison) return videosByViews;
+
+    return [...videosByViews].sort(
+      (a, b) =>
+        getNonNegativeMetricDelta(getVideoViewDelta(b)) -
+        getNonNegativeMetricDelta(getVideoViewDelta(a)),
+    );
+  }, [hasPeriodGrowthComparison, videosByViews]);
+  const topContentVideosByInsightScore = hasPeriodGrowthComparison
+    ? videosByInsightScore.filter(
+        (video) => video.comparisonStatus !== "missing_previous",
+      )
+    : videosByInsightScore;
+  const topContentMetricMode = hasPeriodGrowthComparison ? "delta" : "current";
   const viewChange = calculateDashboardPeriodMetricChange(
     growthVideos,
     period,
@@ -6658,10 +6666,15 @@ function AdminDashboardManagementPanel({
     (sum, video) => sum + video.commentCount,
     0,
   );
-  const periodViewDisplayValue = periodViewValue ?? periodCohortViewValue;
-  const periodLikeDisplayValue = periodLikeValue ?? periodCohortLikeValue;
-  const periodCommentDisplayValue =
-    periodCommentValue ?? periodCohortCommentValue;
+  const periodViewDisplayValue = videoPeriodDeltasAreFlat
+    ? periodCohortViewValue
+    : (periodViewValue ?? periodCohortViewValue);
+  const periodLikeDisplayValue = videoPeriodDeltasAreFlat
+    ? periodCohortLikeValue
+    : (periodLikeValue ?? periodCohortLikeValue);
+  const periodCommentDisplayValue = videoPeriodDeltasAreFlat
+    ? periodCohortCommentValue
+    : (periodCommentValue ?? periodCohortCommentValue);
   const likeRate = getDashboardRatio(
     periodLikeDisplayValue,
     periodViewDisplayValue,
@@ -6718,6 +6731,25 @@ function AdminDashboardManagementPanel({
     ? "조회 증가 대비"
     : "조회수 대비";
   const channelStats = youtubeChannelQuery.data;
+  const channelViewDelta =
+    period !== "ALL" &&
+    typeof channelStats?.viewCount === "number" &&
+    typeof channelStats.previousViewCount === "number"
+      ? channelStats.viewCount - channelStats.previousViewCount
+      : null;
+  const viewCardValue =
+    videoPeriodDeltasAreFlat && channelViewDelta != null
+      ? channelViewDelta
+      : periodViewDisplayValue;
+  const viewCardChange =
+    videoPeriodDeltasAreFlat &&
+    typeof channelStats?.viewCount === "number" &&
+    typeof channelStats.previousViewCount === "number"
+      ? calculateDashboardChange(
+          channelStats.viewCount,
+          channelStats.previousViewCount,
+        )
+      : viewChange;
   const subscriberSparklinePoints = useMemo(
     () =>
       buildAdminDashboardChannelGrowthSparklinePoints(
@@ -7262,7 +7294,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant={isDashboardOrderEditorOpen ? "default" : "outline"}
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+              className="h-7 shrink-0 rounded-full px-2 text-2xs"
               aria-label="KPI 카드 직접 드래그 순서 설정"
               aria-pressed={isDashboardOrderEditorOpen}
               disabled={isDashboardOrderLoading}
@@ -7283,7 +7315,7 @@ function AdminDashboardManagementPanel({
               type="button"
               variant="outline"
               size="sm"
-              className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+              className="h-7 shrink-0 rounded-full px-2 text-2xs"
               disabled={
                 isDashboardOrderLoading ||
                 isDashboardOrderSaving ||
@@ -7324,7 +7356,7 @@ function AdminDashboardManagementPanel({
       </div>
       {shouldShowMobileDashboardLoadingPrompt ? (
         <p
-          className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-[11px] font-semibold leading-5 text-muted-foreground md:hidden"
+          className="mb-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-2xs font-semibold leading-5 text-muted-foreground md:hidden"
           data-admin-dashboard-mobile-loading-prompt="live"
         >
           KPI 데이터를 불러오는 중입니다. 모바일에서는 핵심 카드부터 순서대로 표시됩니다.
@@ -7333,7 +7365,7 @@ function AdminDashboardManagementPanel({
 
       {isDashboardOrderEditorOpen ? (
         <p
-          className="mb-2 shrink-0 text-[11px] font-semibold text-muted-foreground"
+          className="mb-2 shrink-0 text-2xs font-semibold text-muted-foreground"
           data-admin-dashboard-order-live-status="true"
         >
           {dashboardOrderMessage}
@@ -7392,11 +7424,11 @@ function AdminDashboardManagementPanel({
           )}
           style={getDashboardCardOrderStyle("views")}
           reorderProps={getDashboardCardReorderProps("views")}
-          value={isChartLoading ? "—" : formatNumber(periodViewDisplayValue)}
-          caption={`${periodMetricCaption} · 현재 전체 누적 ${formatNumber(cumulativeViewValue)}`}
-          delta={formatDashboardChangeLabel(viewChange)}
+          value={isChartLoading ? "—" : formatNumber(viewCardValue)}
+          caption={`${videoPeriodDeltasAreFlat ? `${selectedPeriodLabel} · 채널 조회 순증` : periodMetricCaption} · 현재 전체 누적 ${formatNumber(channelStats?.viewCount ?? cumulativeViewValue)}`}
+          delta={formatDashboardChangeLabel(viewCardChange)}
           deltaLabel="기간 대비"
-          progress={getDashboardChangeProgress(viewChange)}
+          progress={getDashboardChangeProgress(viewCardChange)}
           tone="sky"
           emphasis="primary"
           sparklineData={viewSparklineDisplayPoints}
@@ -8191,7 +8223,7 @@ function AdminSidebar({
         className={cn(
           "group relative flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
           isDropdown
-            ? "min-h-9 w-full rounded-lg px-2 py-1.5 text-[13px]"
+            ? "min-h-9 w-full rounded-lg px-2 py-1.5 text-sm"
             : "min-h-9 w-full rounded-lg px-2 py-1 text-sm",
           !isDropdown &&
             isCollapsed &&
@@ -8218,31 +8250,20 @@ function AdminSidebar({
         </span>
         <span
           className={cn(
-            "min-w-0 flex-1 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
+            "flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden whitespace-nowrap transition-opacity duration-100 motion-reduce:transition-none",
             !isDropdown &&
               (!showLabels || isCollapsed) &&
               "md:hidden md:w-0 md:flex-none md:opacity-0",
           )}
         >
-          <span className="block truncate font-semibold leading-5">
+          <span className="min-w-0 truncate font-semibold leading-5">
             {item.title}
           </span>
-          {item.badge && (
-            <span
-              className={cn(
-                "mt-0.5 block truncate text-[11px] font-semibold leading-4",
-                getSidebarBadgeClassName(section.label, isActive),
-              )}
-              data-admin-sidebar-badge-tone={section.label}
-            >
-              {item.badge}
-            </span>
-          )}
         </span>
         {itemStatus && (
           <span
             className={cn(
-              "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
+              "ml-auto shrink-0 rounded-full border px-2 py-0.5 text-2xs font-bold leading-4 transition-all duration-100 motion-reduce:transition-none",
               itemStatus.urgent
                 ? isActive
                   ? "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
@@ -8274,7 +8295,7 @@ function AdminSidebar({
               data-admin-sidebar-collapsed-tooltip="true"
             >
               <AdminDashboardTooltipLinesPanel
-                lines={item.badge ? [item.title, item.badge] : [item.title]}
+                lines={[item.title]}
                 dataAttribute="sidebar-collapsed"
                 className="max-w-[14rem]"
               />
@@ -8307,7 +8328,7 @@ function AdminSidebar({
             type="button"
             variant={isSidebarOrderEditMode ? "default" : "outline"}
             size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
+            className="h-6 shrink-0 rounded-full px-2 text-2xs font-bold"
             aria-pressed={isSidebarOrderEditMode}
             data-admin-sidebar-order-edit-toggle="true"
             onClick={() => {
@@ -8325,7 +8346,7 @@ function AdminSidebar({
             type="button"
             variant="outline"
             size="sm"
-            className="h-6 shrink-0 rounded-full px-2 text-[11px] font-bold"
+            className="h-6 shrink-0 rounded-full px-2 text-2xs font-bold"
             disabled={
               !isSidebarOrderEditMode ||
               !canLoadPreferences ||
@@ -8347,7 +8368,7 @@ function AdminSidebar({
 
       {!isSidebarOrderEditMode && (
         <p
-          className="mb-1.5 rounded-lg border border-dashed border-border bg-muted/25 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
+          className="mb-1.5 rounded-lg border border-dashed border-border bg-muted/25 px-2 py-1 text-2xs leading-5 text-muted-foreground"
           data-admin-sidebar-order-edit-lock-message="true"
         >
           순서 편집을 켜야 이동 버튼이 활성화됩니다.
@@ -8362,7 +8383,7 @@ function AdminSidebar({
             data-admin-sidebar-order-section="compact"
           >
             <div className="flex h-5 items-center justify-between gap-1.5 px-1">
-              <span className="truncate text-[11px] font-semibold text-muted-foreground">
+              <span className="truncate text-2xs font-semibold text-muted-foreground">
                 {section.label}
               </span>
               <div className="flex shrink-0 gap-1">
@@ -8370,7 +8391,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={`${section.label} 섹션 앞으로`}
                   disabled={
                     !canLoadPreferences ||
@@ -8392,7 +8413,7 @@ function AdminSidebar({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={`${section.label} 섹션 뒤로`}
                   disabled={
                     !canLoadPreferences ||
@@ -8428,7 +8449,7 @@ function AdminSidebar({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-background/80 hover:text-foreground"
                       aria-label={`${item.title} 메뉴 앞으로`}
                       disabled={
                         !canLoadPreferences ||
@@ -8455,7 +8476,7 @@ function AdminSidebar({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-[11px] text-muted-foreground hover:bg-background/80 hover:text-foreground"
+                      className="h-5 w-5 rounded-md border-0 bg-transparent p-0 text-2xs text-muted-foreground hover:bg-background/80 hover:text-foreground"
                       aria-label={`${item.title} 메뉴 뒤로`}
                       disabled={
                         !canLoadPreferences ||
@@ -8487,7 +8508,7 @@ function AdminSidebar({
       </div>
 
       <p
-        className="mt-2 rounded-lg bg-muted/30 px-2 py-1 text-[11px] leading-5 text-muted-foreground"
+        className="mt-2 rounded-lg bg-muted/30 px-2 py-1 text-2xs leading-5 text-muted-foreground"
         aria-live="polite"
       >
         {sidebarOrderMessage}
@@ -8533,7 +8554,7 @@ function AdminSidebar({
         </span>
         <span
           className={cn(
-            "ml-auto shrink-0 text-[10px] font-semibold text-muted-foreground",
+            "ml-auto shrink-0 text-2xs font-semibold text-muted-foreground",
             isCompactSidebar && "sr-only",
           )}
           aria-hidden="true"
@@ -8575,7 +8596,7 @@ function AdminSidebar({
           <p className="truncate text-sm font-extrabold text-foreground">
             관리자 콘솔
           </p>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          <p className="mt-0.5 truncate text-2xs text-muted-foreground">
             현재 화면 · {activeSidebarLabel}
           </p>
         </div>
@@ -8584,7 +8605,7 @@ function AdminSidebar({
       <nav className="grid gap-1.5" aria-label="관리자 통합 메뉴">
         {orderedSidebarSections.map((section) => (
           <div key={section.label} className="min-w-0 rounded-xl bg-background/45 p-1">
-            <p className="px-1.5 pb-1 text-[10px] font-extrabold tracking-[0.08em] text-muted-foreground">
+            <p className="px-1.5 pb-1 text-2xs font-extrabold tracking-[0.08em] text-muted-foreground">
               {section.label}
             </p>
             {section.items.map((item) =>
@@ -8628,14 +8649,14 @@ function AdminSidebar({
           <p className="truncate text-sm font-extrabold text-foreground">
             {accountDisplayName}
           </p>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+          <p className="mt-0.5 truncate text-2xs text-muted-foreground">
             {accountEmail}
           </p>
         </div>
       </div>
 
       <div className="space-y-2" data-admin-sidebar-account-theme-section="true">
-        <p className="px-1 text-[11px] font-bold tracking-[0.08em] text-muted-foreground">
+        <p className="px-1 text-2xs font-bold tracking-[0.08em] text-muted-foreground">
           표시 모드
         </p>
         {renderThemeControls("sidebar", { compact: false })}
@@ -8678,7 +8699,7 @@ function AdminSidebar({
             <span className="block truncate text-xs font-extrabold text-foreground">
               {accountDisplayName}
             </span>
-            <span className="block truncate text-[10px] font-semibold text-muted-foreground">
+            <span className="block truncate text-2xs font-semibold text-muted-foreground">
               계정·표시·메뉴 설정
             </span>
           </span>
@@ -8726,7 +8747,7 @@ function AdminSidebar({
             <p className="truncate text-sm font-extrabold text-foreground">
               관리자 콘솔
             </p>
-            <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+            <p className="mt-0.5 truncate text-2xs leading-4 text-muted-foreground">
               현재 화면 · {activeSidebarLabel}
             </p>
           </div>
@@ -8796,7 +8817,7 @@ function AdminSidebar({
             <h2 className="truncate whitespace-nowrap text-sm font-bold tracking-normal text-foreground text-pretty">
               관리자 콘솔
             </h2>
-            <p className="mt-0.5 whitespace-nowrap text-[11px] leading-4 text-muted-foreground">
+            <p className="mt-0.5 whitespace-nowrap text-2xs leading-4 text-muted-foreground">
               현재 화면 · {activeSidebarLabel}
             </p>
           </div>
@@ -8878,7 +8899,7 @@ function AdminSidebar({
               >
                 <p
                   className={cn(
-                    "px-2.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
+                    "px-2.5 text-2xs font-semibold tracking-[0.08em] text-muted-foreground transition-opacity duration-100 motion-reduce:transition-none",
                     (!showLabels || isCollapsed) &&
                       "md:h-px md:px-0 md:opacity-0",
                   )}
@@ -9041,7 +9062,7 @@ function getAdminAuditStatusClassName(status: string) {
     case "failed":
       return "border-destructive/20 bg-destructive/10 text-destructive";
     default:
-      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-950/40 dark:text-amber-300";
+      return "border-border bg-secondary text-foreground";
   }
 }
 
@@ -9205,14 +9226,14 @@ function AuditPlaceholder() {
                   <Badge
                     variant="outline"
                     className={cn(
-                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px]",
+                      "w-fit shrink-0 rounded-full px-2 py-0.5 text-2xs",
                       getAdminAuditStatusClassName(event.status),
                     )}
                   >
                     {event.status}
                   </Badge>
                 </div>
-                <dl className="mt-2 grid gap-1 text-[11px] leading-5 text-muted-foreground sm:grid-cols-2">
+                <dl className="mt-2 grid gap-1 text-2xs leading-5 text-muted-foreground sm:grid-cols-2">
                   <div>
                     <dt className="font-semibold text-foreground">감사 ID</dt>
                     <dd className="break-all font-mono">{event.id}</dd>
@@ -10258,7 +10279,7 @@ function AdminYoutubeThumbnailModuleLoadingSkeleton() {
               </CardTitle>
               <Badge
                 variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+                className="h-6 shrink-0 rounded-full px-2 text-2xs"
               >
                 준비 중
               </Badge>

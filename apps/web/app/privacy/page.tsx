@@ -14,7 +14,12 @@ export const metadata: Metadata = buildPublicMetadata({
 
 export default function PrivacyPage() {
   return (
-    <main className="min-h-screen min-w-0 overflow-x-hidden bg-muted/30 px-4 py-10 text-foreground" data-legal-page="true">
+    <main
+      className="min-h-screen min-w-0 overflow-x-hidden bg-muted/30 px-4 py-10 text-foreground"
+      data-legal-page="true"
+      data-layout-primitives="form-flow stack"
+      data-scroll-owner="privacy-document"
+    >
       <article className="mx-auto w-full min-w-0 max-w-3xl overflow-x-hidden rounded-2xl border border-border bg-background p-5 shadow-sm sm:p-8">
         <header className="mb-6 border-b pb-5">
           <p className="text-sm font-medium text-primary">{siteConfig.name}</p>

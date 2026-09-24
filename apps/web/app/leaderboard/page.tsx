@@ -106,6 +106,8 @@ export default function LeaderboardPage() {
             <div
                 ref={scrollRef}
                 className="h-full overflow-y-auto"
+                data-layout-primitives="stack"
+                data-scroll-owner="leaderboard-list"
                 onScroll={leaderboardBottomNavAutoHide.onScroll}
                 onTouchStart={leaderboardBottomNavAutoHide.onTouchStart}
                 onTouchMove={leaderboardBottomNavAutoHide.onTouchMove}

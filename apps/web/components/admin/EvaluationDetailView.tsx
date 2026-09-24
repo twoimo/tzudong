@@ -109,7 +109,7 @@ function NumberBadge({ index, tone }: { index: number; tone: EvaluationTone }) {
         <Badge
             variant="outline"
             className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg p-0 text-[11px] font-bold',
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg p-0 text-2xs font-bold',
                 evaluationToneClasses[tone].badge,
             )}
         >
@@ -163,7 +163,7 @@ function SourceNameRow({
         <div className="grid grid-cols-[86px_minmax(0,1fr)_auto] items-start gap-2 rounded-lg bg-muted/35 px-2 py-1.5">
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
             <span className={cn('min-w-0 overflow-wrap-anywhere text-xs font-bold text-foreground', valueClassName)}>{value}</span>
-            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px] text-muted-foreground">
+            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-2xs text-muted-foreground">
                 {provider}
             </Badge>
         </div>
@@ -185,21 +185,21 @@ function BooleanBadge({ value, rerunNeeded = false }: { value: boolean | null | 
     if (value === undefined || value === null) {
         if (!rerunNeeded) {
             return (
-                <Badge variant="outline" className="h-6 px-2 text-[11px] font-bold text-muted-foreground">
+                <Badge variant="outline" className="h-6 px-2 text-2xs font-bold text-muted-foreground">
                     -
                 </Badge>
             );
         }
 
         return (
-            <Badge variant="outline" className="h-6 px-2 text-[11px] font-bold text-muted-foreground">
+            <Badge variant="outline" className="h-6 px-2 text-2xs font-bold text-muted-foreground">
                 -
             </Badge>
         );
     }
 
     return (
-        <Badge className={cn('h-6 px-2 text-[11px] font-bold', value ? 'bg-emerald-600' : 'bg-destructive')}>
+        <Badge className={cn('h-6 px-2 text-2xs font-bold', value ? 'bg-emerald-600' : 'bg-destructive')}>
             {value ? '일치' : '불일치'}
         </Badge>
     );
@@ -208,7 +208,7 @@ function BooleanBadge({ value, rerunNeeded = false }: { value: boolean | null | 
 function InfoItem({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
     return (
         <div className={cn('min-w-0 rounded-xl border border-border/70 bg-background/70 px-3 py-2', className)}>
-            <dt className="text-[11px] font-semibold text-muted-foreground">{label}</dt>
+            <dt className="text-2xs font-semibold text-muted-foreground">{label}</dt>
             <dd className="mt-1 overflow-wrap-anywhere text-sm leading-5 text-foreground">{children}</dd>
         </div>
     );
@@ -389,7 +389,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
             <SectionPanel title="검수 결과" description="영상 근거와 상호·주소 근거를 기준으로 승인 전 확인해야 할 항목입니다.">
                 <div className="space-y-3">
-                    <EvalItem index={0} title="맛집명 검증" tone="pink" value={record.approved_name ? <Badge className="bg-emerald-600 text-[11px]">승인됨 · {record.approved_name}</Badge> : null}>
+                    <EvalItem index={0} title="맛집명 검증" tone="pink" value={record.approved_name ? <Badge className="bg-emerald-600 text-2xs">승인됨 · {record.approved_name}</Badge> : null}>
                         <div className="space-y-1.5">
                             <SourceNameRow
                                 label="원본 이름"
@@ -464,7 +464,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                         index={5}
                         title="주소 정합성"
                         tone="orange"
-                        value={<Badge className={cn('h-6 px-2 text-[11px] font-bold', getAddressConsistencyBadgeClass(record))}>{addressConsistency.label}</Badge>}
+                        value={<Badge className={cn('h-6 px-2 text-2xs font-bold', getAddressConsistencyBadgeClass(record))}>{addressConsistency.label}</Badge>}
                     >
                         <div className="space-y-2">
                             <p className="font-semibold text-foreground">{addressConsistency.headline}</p>
@@ -474,7 +474,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                     <span className="text-xs font-bold text-orange-950">운영 분류</span>
                                     <Badge
                                         variant="outline"
-                                        className={cn('h-6 px-2 text-[11px] font-bold', addressGuidanceToneClasses[addressGuidance.tone])}
+                                        className={cn('h-6 px-2 text-2xs font-bold', addressGuidanceToneClasses[addressGuidance.tone])}
                                     >
                                         {addressGuidance.label}
                                     </Badge>
@@ -491,7 +491,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                     <Badge
                                         variant="outline"
                                         className={cn(
-                                            'h-6 px-2 text-[11px] font-bold',
+                                            'h-6 px-2 text-2xs font-bold',
                                             addressAhp.score !== null && addressAhp.score >= 98
                                                 ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
                                                 : 'border-sky-300 bg-background/70 text-sky-700',
@@ -508,7 +508,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                 {addressAhp.evidenceFamilies.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-1.5">
                                         {addressAhp.evidenceFamilies.map((family) => (
-                                            <Badge key={`${record.id}-ahp-family-${family}`} variant="outline" className="bg-background/70 text-[10px]">
+                                            <Badge key={`${record.id}-ahp-family-${family}`} variant="outline" className="bg-background/70 text-2xs">
                                                 {family}
                                             </Badge>
                                         ))}
@@ -523,7 +523,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                                             <Badge
                                                 key={`${record.id}-address-signal-${signal.kind}`}
                                                 variant="outline"
-                                                className={cn('h-6 px-2 text-[11px] font-bold', addressGuidanceToneClasses[signal.tone])}
+                                                className={cn('h-6 px-2 text-2xs font-bold', addressGuidanceToneClasses[signal.tone])}
                                             >
                                                 {signal.label}
                                             </Badge>

@@ -69,7 +69,7 @@ function BannerListItemSkeleton({ index }: { index: number }) {
                         <p className="min-w-0 flex-1 truncate text-sm font-bold text-foreground">
                             <Skeleton className={cn("h-5 rounded-full motion-reduce:animate-none", index % 2 === 0 ? "w-32" : "w-24")} />
                         </p>
-                        <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
+                        <Badge variant="outline" className="shrink-0 rounded-full text-2xs">
                             <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
                         </Badge>
                     </div>
@@ -77,14 +77,14 @@ function BannerListItemSkeleton({ index }: { index: number }) {
                         <Skeleton className="h-4 w-4/5 rounded-full motion-reduce:animate-none" />
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="rounded-full text-[10px]">
+                        <Badge variant="secondary" className="rounded-full text-2xs">
                             <Skeleton className="h-3 w-14 rounded-full motion-reduce:animate-none" />
                         </Badge>
-                        <Badge variant="secondary" className="rounded-full text-[10px]">
+                        <Badge variant="secondary" className="rounded-full text-2xs">
                             <Skeleton className="h-3 w-12 rounded-full motion-reduce:animate-none" />
                         </Badge>
                         {index % 2 === 0 && (
-                            <span className="inline-flex items-center text-[10px] text-primary">
+                            <span className="inline-flex items-center text-2xs text-primary">
                                 <ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />
                                 <Skeleton className="h-3 w-6 rounded-full motion-reduce:animate-none" />
                             </span>
@@ -626,13 +626,13 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex min-w-0 items-start justify-between gap-2">
                                                     <p className="min-w-0 truncate text-sm font-bold text-foreground">{banner.title}</p>
-                                                    <Badge variant={banner.is_active ? "default" : "outline"} className="shrink-0 rounded-full text-[10px]">{banner.is_active ? '활성' : '비활성'}</Badge>
+                                                    <Badge variant={banner.is_active ? "default" : "outline"} className="shrink-0 rounded-full text-2xs">{banner.is_active ? '활성' : '비활성'}</Badge>
                                                 </div>
                                                 <p className="mt-0.5 truncate text-xs text-muted-foreground">{banner.description || '설명 없음'} · 우선순위 {banner.priority}</p>
                                                 <div className="mt-1 flex min-w-0 flex-nowrap gap-1 overflow-x-auto scrollbar-hide [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-                                                    {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">데스크톱 배너</Badge>}
-                                                    {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">모바일 팝업</Badge>}
-                                                    {resolvedUrls?.link_url && <span className="inline-flex shrink-0 items-center text-[10px] text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
+                                                    {banner.display_target.includes('sidebar') && <Badge variant="secondary" className="shrink-0 rounded-full text-2xs">데스크톱 배너</Badge>}
+                                                    {banner.display_target.includes('mobile_popup') && <Badge variant="secondary" className="shrink-0 rounded-full text-2xs">모바일 팝업</Badge>}
+                                                    {resolvedUrls?.link_url && <span className="inline-flex shrink-0 items-center text-2xs text-primary"><ExternalLink className="mr-0.5 h-3 w-3" aria-hidden="true" />링크</span>}
                                                 </div>
                                             </div>
                                         </div>

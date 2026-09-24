@@ -14,12 +14,12 @@
   - `apps/web/app/admin/evaluations/page.tsx`, `apps/web/app/admin/banners/page.tsx`, `apps/web/app/insights/insights-client.tsx`: canonical admin modules embedded into `/admin`; standalone routes must stay stable.
   - `apps/web/design/pencil/reports/admin-unified-console-design-brief-20260512T133359Z.md`: warm editorial operations hub, clear entry flows, status summaries, guarded destructive operations.
   - `apps/web/docs/pencil-storyboard-sync.md`, `apps/web/tests-unit/pencil-storyboard-contract.test.ts`: design artifacts should be reviewable, manifest-backed, and tied to repo source.
-  - `https://github.com/changeroa/StyleGallery/tree/775430bbaf4ee208a642220f440f6926d79c90a3`: unlicensed, immutable question checklist only; no upstream code, CSS, prose, names, tests, or assets are copied or translated.
+  - `https://github.com/changeroa/StyleGallery/tree/2a9ae14e1ed1e6ebc9ec525a7c305a7cc9830b34`: recipe and scroll-ownership checklist only; no upstream code, CSS, prose, names, tests, or assets are copied or translated.
   - `apps/web/stylegallery-adoption.v1.json`, `apps/web/components/home/home-map-container.tsx`, `apps/web/components/home/MobileControlOverlay.tsx`: Tzudong-owned layout vocabulary, scroll ownership, safe-area controls, and clean-room adoption evidence.
   - `apps/web/components/ui/table.tsx`, `apps/web/tests/responsive-overflow.spec.ts`: owner-gated horizontal-scroll policy via `data-horizontal-scroll-owner` and responsive overflow guard allowlisting.
   - `apps/web/performance/*`: canonical performance inputs, scorer/validator outputs, frozen-tree evidence, and artifact-map references only; the artifact-map SHA is recorded out of band.
   - `backend/naming-renames.v1.json`: bounded high-confidence taxonomy and rename evidence, not authorization for all-path naming churn.
-  - StyleGallery commit `775430bbaf4ee208a642220f440f6926d79c90a3` is unlicensed and question-only; `apps/web/stylegallery-adoption.v1.json` records clean-room, no-copy adoption. Neither reference implies affiliation.
+  - StyleGallery commit `2a9ae14e1ed1e6ebc9ec525a7c305a7cc9830b34` is used as a recipe and scroll-ownership checklist; `apps/web/stylegallery-adoption.v1.json` records clean-room, no-copy adoption. Neither reference implies affiliation.
 
 ## Brand
 - Personality: warm Korean food-map product, editorial, trustworthy, calm, operationally clear.
@@ -72,9 +72,10 @@
 
 ## Visual language
 - Color: warm ivory/off-white surfaces (`hsl(38 30% 98%)`), red primary (`hsl(0 74% 42%)`) for high-emphasis actions/active states, muted border/status colors for secondary information.
-- Typography: Pretendard for Korean UI/body density; Noto Serif KR remains the intentional display/editorial role. Compact strong headings are allowed, but avoid sterile enterprise typography and avoid global serif body text.
+- Typography: Pretendard for Korean UI/body density; Noto Serif KR remains the intentional display/editorial role. Compact strong headings are allowed, but avoid sterile enterprise typography and avoid global serif body text. Meta chips use `text-2xs` (11px). Readable copy uses `text-xs`, `text-sm`, or `text-base`. Do not introduce `text-[9px]` through `text-[15px]`.
+- Status surfaces use `bg-secondary text-foreground` with `border-border`. Photo indicators and Naver, Kakao, and Google brand marks keep their own colors.
 - Spacing/layout rhythm: full-width admin viewport, tight but readable operational density, `min-h-0` and layout-owned scroll containers.
-- Shape/radius/elevation: rounded cards/pills/sidebar controls (`rounded-xl`/`rounded-2xl`), subtle borders, soft shadow/glow only for hierarchy.
+- Shape/radius/elevation: controls use `rounded-md`, cards use `rounded-xl`, chips use `rounded-full`. Sidebar controls may use `rounded-2xl`. Subtle borders and soft shadow stay for hierarchy.
 - Motion: subtle transitions; collapse/expand should not show text squeezing or awkward reflow.
 - Imagery/iconography: lucide icons are supporting cues; text remains the source of meaning.
 
@@ -93,6 +94,10 @@
   - Mobile home theme filters are the only current home `reel cluster`; the approved horizontal owner is `mobile-theme-filter-reel`.
   - Admin KPI dashboard management uses the `command-surface` recipe for the order/report/period command row.
   - Shared table horizontal scrolling is owner-gated: `allowHorizontalScroll` may preserve visual overflow, but policy allowlisting requires an explicit `data-horizontal-scroll-owner` such as `stamp-restaurant-list-table` or `admin-evaluation-table`.
+  - My Page content scrolls at `mypage-content`; the sidebar does not.
+  - Stamp, leaderboard, and feed lists scroll at `stamp-list`, `leaderboard-list`, and `feed-list`.
+  - Insights keeps the metric grid and chart inside `insights-dashboard`.
+  - Submission, account, and privacy forms use `form-flow`; submit actions stay at the end of the form.
 
 ## Accessibility
 - Target standard: WCAG 2.2 AA for new UI and regressions; it is a target, not a certification claim.

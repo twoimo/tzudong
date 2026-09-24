@@ -217,7 +217,7 @@ export function MyPageTopActions() {
               onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
               className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {siteConfig.operator.copyrightLabel}
               </span>
               {isBusinessInfoExpanded ? (
@@ -235,7 +235,7 @@ export function MyPageTopActions() {
             {isBusinessInfoExpanded && (
               <div
                 id="desktop-map-business-info-content"
-                className="mt-1 space-y-0.5 border-t border-border px-1 pt-1 text-[9px] leading-4 text-muted-foreground whitespace-nowrap"
+                className="mt-1 space-y-0.5 border-t border-border px-1 pt-1 text-2xs leading-4 text-muted-foreground whitespace-nowrap"
               >
                 <p className="font-medium text-foreground">{siteConfig.operator.companyName}</p>
                 <p>대표: {siteConfig.operator.representative}</p>

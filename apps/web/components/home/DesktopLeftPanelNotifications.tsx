@@ -86,7 +86,7 @@ export default function DesktopLeftPanelNotifications({
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Badge
               variant="secondary"
-              className="rounded-full px-2 py-0.5 text-[11px]"
+              className="rounded-full px-2 py-0.5 text-2xs"
             >
               {isLoading ? "확인 중" : `${notifications.length}개`}
             </Badge>
@@ -96,7 +96,7 @@ export default function DesktopLeftPanelNotifications({
                 variant="outline"
                 size="sm"
                 onClick={markAllAsRead}
-                className="h-7 rounded-full px-2 text-[11px]"
+                className="h-7 rounded-full px-2 text-2xs"
                 aria-label="모든 알림 읽음 처리"
               >
                 <CheckCheck className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
@@ -200,7 +200,7 @@ export default function DesktopLeftPanelNotifications({
                       {!notification.isRead && (
                         <Badge
                           variant="secondary"
-                          className="h-5 shrink-0 px-1.5 text-[10px] font-normal"
+                          className="h-5 shrink-0 px-1.5 text-2xs font-normal"
                         >
                           새 알림
                         </Badge>
@@ -211,7 +211,7 @@ export default function DesktopLeftPanelNotifications({
                     </span>
                   </span>
                 </button>
-                <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-2xs text-muted-foreground">
                   <span>
                     {formatDistanceToNow(notification.createdAt, {
                       addSuffix: true,

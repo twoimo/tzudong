@@ -328,7 +328,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
                         >
                             <Filter className="h-4 w-4" aria-hidden="true" />
                             {activeFilterCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-2xs font-medium rounded-full flex items-center justify-center">
                                     {activeFilterCount}
                                 </span>
                             )}

@@ -173,14 +173,14 @@ export const StampCard = memo(function StampCard({
                 <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 pr-1">
                     <div className="flex min-w-0 items-start justify-between gap-2">
                         <div className="min-w-0">
-                            <h3 className="truncate text-[14px] font-semibold leading-5 text-foreground" title={restaurantDisplayName}>
+                            <h3 className="truncate text-sm font-semibold leading-5 text-foreground" title={restaurantDisplayName}>
                                 {restaurantDisplayName}
                             </h3>
-                            <div className="mt-0 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] leading-3.5 text-muted-foreground">
+                            <div className="mt-0 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-2xs leading-3.5 text-muted-foreground">
                                 {category && (
                                     <Badge
                                         variant="secondary"
-                                        className="h-4 shrink-0 border-transparent bg-secondary/50 px-1 text-[9px] font-normal text-secondary-foreground/90 hover:bg-secondary/60"
+                                        className="h-4 shrink-0 border-transparent bg-secondary/50 px-1 text-2xs font-normal text-secondary-foreground/90 hover:bg-secondary/60"
                                     >
                                         {category}
                                     </Badge>
@@ -190,13 +190,13 @@ export const StampCard = memo(function StampCard({
                         </div>
                     </div>
                     {showAddress && displayAddress && (
-                        <p className="flex min-w-0 items-center gap-1 text-[11px] leading-3.5 text-muted-foreground">
+                        <p className="flex min-w-0 items-center gap-1 text-2xs leading-3.5 text-muted-foreground">
                             <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                             <span className="truncate">{displayAddress}</span>
                         </p>
                     )}
                     {typedRestaurant.tzuyang_review && (
-                        <p className="truncate text-[11px] leading-3.5 text-muted-foreground">
+                        <p className="truncate text-2xs leading-3.5 text-muted-foreground">
                             “{typedRestaurant.tzuyang_review}”
                         </p>
                     )}
@@ -296,7 +296,7 @@ export const StampCard = memo(function StampCard({
                                     <span
                                         className={cn(
                                             "absolute top-2 left-2 z-10 leading-none rounded-full bg-black/65 text-white font-medium",
-                                            isCompact ? "text-[10px] px-2 py-1" : "text-xs px-2.5 py-1.5"
+                                            isCompact ? "text-2xs px-2 py-1" : "text-xs px-2.5 py-1.5"
                                         )}
                                         data-stamp-guide-badge="true"
                                     >
@@ -306,7 +306,7 @@ export const StampCard = memo(function StampCard({
                                 {isGuideCard && guideDescription && (
                                     <p className={cn(
                                         "absolute left-0 right-0 bottom-0 z-10 px-2 pb-2 pt-3 text-center bg-gradient-to-t from-black/80 via-black/55 to-transparent text-white/95 leading-snug pointer-events-none",
-                                        isCompact ? "text-[10px]" : "text-xs sm:text-sm"
+                                        isCompact ? "text-2xs" : "text-xs sm:text-sm"
                                     )}>
                                         {guideDescription}
                                     </p>
@@ -365,7 +365,7 @@ export const StampCard = memo(function StampCard({
                                     variant="secondary"
                                     className={cn(
                                         "font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60",
-                                        isCompact ? "text-[9px] px-1 h-4" : "text-[10px] px-1.5 h-5"
+                                        isCompact ? "text-2xs px-1 h-4" : "text-2xs px-1.5 h-5"
                                     )}
                                 >
                                     {category}
@@ -374,7 +374,7 @@ export const StampCard = memo(function StampCard({
                         </div>
                         <span className={cn(
                             "text-muted-foreground whitespace-nowrap shrink-0",
-                            isCompact ? "text-[11px]" : "text-xs"
+                            isCompact ? "text-2xs" : "text-xs"
                         )}>
                             리뷰 {reviewCount}
                         </span>
@@ -383,7 +383,7 @@ export const StampCard = memo(function StampCard({
                     <div className={cn("min-w-0", showAddress && displayAddress ? (isDense ? "space-y-0.5" : "space-y-1.5") : "")}>
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
-                                <h3 className={cn("font-medium truncate", isCompact ? (isDense ? "text-[13px]" : "text-xs") : "text-sm")} title={restaurantDisplayName}>
+                                <h3 className={cn("font-medium truncate", isCompact ? (isDense ? "text-sm" : "text-xs") : "text-sm")} title={restaurantDisplayName}>
                                     {restaurantDisplayName}
                                 </h3>
                                 {category && (
@@ -391,7 +391,7 @@ export const StampCard = memo(function StampCard({
                                         variant="secondary"
                                         className={cn(
                                             "font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60",
-                                            isCompact ? "text-[9px] px-1 h-4" : "text-[10px] px-1.5 h-5"
+                                            isCompact ? "text-2xs px-1 h-4" : "text-2xs px-1.5 h-5"
                                         )}
                                     >
                                         {category}
@@ -399,13 +399,13 @@ export const StampCard = memo(function StampCard({
                                 )}
                             </div>
                             {(!isCompact || showAddress) && (
-                                <span className={cn("text-muted-foreground whitespace-nowrap shrink-0", isDense ? "text-[11px]" : "text-xs")}>
+                                <span className={cn("text-muted-foreground whitespace-nowrap shrink-0", isDense ? "text-2xs" : "text-xs")}>
                                     리뷰 {reviewCount}
                                 </span>
                             )}
                         </div>
                         {showAddress && displayAddress && (
-                            <p className={cn("flex min-w-0 items-center gap-1 text-muted-foreground", isDense ? "text-[11px] leading-3.5" : "text-xs leading-4")}>
+                            <p className={cn("flex min-w-0 items-center gap-1 text-muted-foreground", isDense ? "text-2xs leading-3.5" : "text-xs leading-4")}>
                                 <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                                 <span className="truncate">{displayAddress}</span>
                             </p>

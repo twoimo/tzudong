@@ -312,7 +312,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                                 {review.userName}
                             </Link>
                             {review.isVerified && (
-                                <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                <Badge variant="default" className="h-4 px-1 text-2xs bg-green-600">
                                     <CheckCircle className="h-2 w-2 mr-0.5" />
                                     인증
                                 </Badge>
@@ -324,7 +324,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             aria-label={`${review.restaurantName} 맛집 상세 보기`}
                         >
                             <MapPin className="w-3 h-3" />
-                            <span className="text-[11px] leading-tight">{review.restaurantName}</span>
+                            <span className="text-2xs leading-tight">{review.restaurantName}</span>
                         </button>
                     </div>
                 </div>

@@ -679,7 +679,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                                 </Button>
                             )}
                         >
-                            <div className="mb-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <div className="mb-1 flex items-center gap-1 text-2xs text-muted-foreground">
                                 {lastSavedAt && (
                                     <>
                                         <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
@@ -1003,7 +1003,7 @@ export function ReviewEditModal({ isOpen, onClose, review, onSuccess }: ReviewEd
                     <div className="flex flex-col h-full max-h-[calc(100dvh-2rem)]">
                         <DialogHeader className="px-6 pt-6 pb-4 border-b relative shrink-0">
                             {/* 자동 저장 상태 표시 */}
-                            <div className="absolute top-1.5 left-6 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
                                 {lastSavedAt && (
                                     <>
                                         <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />

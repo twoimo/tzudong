@@ -409,7 +409,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const draftStatus = lastSavedAt && (
-        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-1 text-2xs text-muted-foreground">
             {isSaving ? (
                 <>
                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -534,7 +534,7 @@ export default function RestaurantSubmissionModal({
                 className="h-auto min-h-11 flex-col gap-0.5 whitespace-normal px-2 py-2"
             >
                 <span>쯔양이 다녀간 맛집</span>
-                <span className="text-[11px] font-normal opacity-80">영상 링크 필수</span>
+                <span className="text-2xs font-normal opacity-80">영상 링크 필수</span>
             </Button>
             <Button
                 type="button"
@@ -543,7 +543,7 @@ export default function RestaurantSubmissionModal({
                 className="h-auto min-h-11 flex-col gap-0.5 whitespace-normal px-2 py-2"
             >
                 <span>쯔양에게 맛집 제보</span>
-                <span className="text-[11px] font-normal opacity-80">추천 이유 필수</span>
+                <span className="text-2xs font-normal opacity-80">추천 이유 필수</span>
             </Button>
         </div>
     );
@@ -812,7 +812,7 @@ export default function RestaurantSubmissionModal({
     };
 
     const renderDesktopForm = () => (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-layout-primitives="form-flow stack">
             {draftRestorePrompt}
             {renderModeSelector()}
             {renderBasicFields()}
@@ -846,6 +846,7 @@ export default function RestaurantSubmissionModal({
             ref={mobileFormRef}
             onSubmit={handleSubmit}
             className={mobileSheetStyles.frame}
+            data-layout-primitives="form-flow sticky-footer stack"
         >
             <div
                 className={`${mobileSheetStyles.header}${shouldRenderMapPanel ? ' cursor-move select-none touch-none' : ''}`}
@@ -875,7 +876,7 @@ export default function RestaurantSubmissionModal({
                     {RESTAURANT_SUBMISSION_STEPS.map((step) => (
                         <div key={step.id} className="space-y-1">
                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
-                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                 {step.shortTitle}
                             </span>
                         </div>
@@ -888,7 +889,7 @@ export default function RestaurantSubmissionModal({
                 {renderMobileStepContent()}
             </div>
 
-            <div className={mobileSheetStyles.footer}>
+            <div className={mobileSheetStyles.footer} data-layout-primitives="sticky-footer">
                 {validationMessage && <div className="pb-2">{renderValidationMessage()}</div>}
                 <div className="flex gap-2">
                     {currentStep > 1 ? (
