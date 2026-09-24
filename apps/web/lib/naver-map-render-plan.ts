@@ -197,11 +197,15 @@ export function getVisibleRestaurantsForRender(
             for (let indexInBucket = 0; indexInBucket < bucket.length; indexInBucket += 1) {
                 const restaurant = bucket[indexInBucket];
                 examined += 1;
+                const lat = restaurant.lat;
+                const lng = restaurant.lng;
                 if (
-                    restaurant.lat >= south &&
-                    restaurant.lat <= north &&
-                    restaurant.lng >= west &&
-                    restaurant.lng <= east
+                    lat != null &&
+                    lng != null &&
+                    lat >= south &&
+                    lat <= north &&
+                    lng >= west &&
+                    lng <= east
                 ) {
                     rememberId(restaurant.id);
                 }
@@ -214,7 +218,7 @@ export function getVisibleRestaurantsForRender(
         index.byId.has(selectedRestaurantId)
     ) {
         examined += 1;
-        countId(selectedRestaurantId);
+        rememberId(selectedRestaurantId);
     }
     lastViewportExaminationCount = examined;
     if (same && lastVisibleIds && scratchIds.length === lastVisibleIds.size) {
