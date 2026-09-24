@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, type MouseEvent as ReactMouseEvent } from "react";
-import { CheckCheck, MapPin, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, MapPin, Trash2 } from "lucide-react";
 import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";

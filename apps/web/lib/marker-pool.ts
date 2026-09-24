@@ -26,6 +26,8 @@ interface MarkerIconLike {
 
 interface MarkerPositionLike {
     equals?: (position: unknown) => boolean;
+    lat?: () => number;
+    lng?: () => number;
 }
 
 const MARKER_NODE_SELECTOR = '[data-testid="marker"]';
