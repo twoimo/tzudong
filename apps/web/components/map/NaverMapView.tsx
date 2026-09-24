@@ -2969,6 +2969,7 @@ const NaverMapView = memo(({
                 // 아마도 네, 클러스터링을 강제하기 위해서입니다.
 
                 contextualRestaurants.forEach(restaurant => {
+                    if (restaurant.lat == null || restaurant.lng == null) return;
                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
                     if (shouldHideInSeoulDistrictMode({
                         address: restaurant.road_address || restaurant.jibun_address || '',
@@ -3036,12 +3037,12 @@ const NaverMapView = memo(({
                 marker: {
                     getElement?: () => HTMLElement | null;
                     getIcon: () => { content?: unknown; anchor?: { x?: number; y?: number } | null } | null;
-                    setIcon: (icon: unknown) => void;
+                    setIcon: (icon: { content?: unknown; anchor?: { x: number; y: number } | null }) => void;
                 },
                 iconPlan: { content: string; anchor: { x: number; y: number } },
             ) => {
                 const element = marker.getElement?.() ?? null;
-                const source = element?.querySelector("picture source");
+                const source = element?.querySelector("picture source") as HTMLElement | null;
                 const nextSource = iconPlan.content.match(/srcset="([^"]+)"/)?.[1];
                 if (source && nextSource) {
                     if (source.getAttribute("srcset") === nextSource) return;

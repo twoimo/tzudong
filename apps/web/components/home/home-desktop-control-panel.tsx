@@ -770,9 +770,7 @@ function buildOptimisticDetailRestaurant(
     youtube_meta: restaurant.youtube_meta ?? null,
     evaluation_results: restaurant.evaluation_results ?? null,
     reasoning_basis: restaurant.reasoning_basis ?? null,
-    ...("tzuyang_review" in restaurant
-      ? { tzuyang_review: restaurant.tzuyang_review ?? null }
-      : {}),
+    tzuyang_review: restaurant.tzuyang_review ?? null,
     trace_id: restaurant.trace_id ?? null,
     origin_address: restaurant.origin_address ?? null,
     road_address: restaurant.road_address ?? null,
