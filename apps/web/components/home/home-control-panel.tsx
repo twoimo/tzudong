@@ -152,6 +152,12 @@ function HomeControlPanelComponent({
     activeRightPanel = null,
     selectedAnnouncement = null,
 }: HomeControlPanelProps) {
+    useEffect(() => {
+        document.documentElement.dataset.homeChromeReady = "true";
+        return () => {
+            delete document.documentElement.dataset.homeChromeReady;
+        };
+    }, []);
     const { isMobileOrTablet } = useDeviceType();
     const shouldRenderMobile = isMobileOrTablet || (
         typeof window !== 'undefined' && window.innerWidth <= BREAKPOINTS.tabletMax
