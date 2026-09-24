@@ -64,7 +64,7 @@ const SlideIndicator = memo(({
                     <span
                         aria-hidden="true"
                         className={cn(
-                            "h-1.5 w-1.5 rounded-full transition-all",
+                            "h-1.5 w-1.5 rounded-full",
                             current === index
                                 ? "bg-white scale-110 shadow-md"
                                 : "bg-white/50"
@@ -162,7 +162,6 @@ const CombinedPopupComponent = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [trackSlide, setTrackSlide] = useState(0);
-    const [isLoopResetting, setIsLoopResetting] = useState(false);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
     const [canLoadBanners, setCanLoadBanners] = useState(false);
@@ -235,7 +234,6 @@ const CombinedPopupComponent = () => {
         trackSlideRef.current = initialTrackIndex;
         setCurrentSlide(0);
         setTrackSlide(initialTrackIndex);
-        setIsLoopResetting(false);
     }, [posterBanners.length, posterBannerSignature]);
 
     useEffect(() => {
@@ -244,7 +242,11 @@ const CombinedPopupComponent = () => {
 
     useEffect(() => {
         trackSlideRef.current = trackSlide;
-    }, [trackSlide]);
+        const resetIndex = getPopupBannerLoopResetIndex(trackSlide, posterBanners.length);
+        if (resetIndex === null) return;
+        trackSlideRef.current = resetIndex;
+        setTrackSlide(resetIndex);
+    }, [posterBanners.length, trackSlide]);
 
     useEffect(() => {
         return () => {
@@ -327,20 +329,6 @@ const CombinedPopupComponent = () => {
     const prevSlide = useCallback((options: { userInitiated?: boolean } = {}) => {
         moveByDirection(-1, options);
     }, [moveByDirection]);
-
-    const handleTrackTransitionEnd = useCallback(() => {
-        const resetIndex = getPopupBannerLoopResetIndex(trackSlide, posterBanners.length);
-        if (resetIndex === null) return;
-
-        setIsLoopResetting(true);
-        trackSlideRef.current = resetIndex;
-        setTrackSlide(resetIndex);
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                setIsLoopResetting(false);
-            });
-        });
-    }, [posterBanners.length, trackSlide]);
 
     // 배너 클릭
     const handleBannerClick = useCallback((destination: string | null) => {
@@ -440,12 +428,11 @@ const CombinedPopupComponent = () => {
     return (
         <div
             data-popup-overlay="true"
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 animate-in fade-in duration-300"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50"
         >
             <div
                 className={cn(
-                    "relative w-[min(320px,calc(100vw-2rem))] mx-auto rounded-lg overflow-hidden shadow-sm",
-                    "animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+                    "relative w-[min(320px,calc(100vw-2rem))] mx-auto rounded-lg overflow-hidden shadow-sm"
                 )}
                 style={{ backgroundColor: 'hsl(var(--background))' }}
             >
@@ -467,12 +454,10 @@ const CombinedPopupComponent = () => {
                     <div
                         className={cn(
                             "flex w-full h-full",
-                            isLoopResetting ? "transition-none" : "transition-transform duration-500 ease-out",
                             isDragging ? "cursor-grabbing" : currentBannerDestination ? "cursor-pointer" : "cursor-default"
                         )}
                         style={{ transform: `translateX(-${trackSlide * 100}%)` }}
                         ref={slideContainerRef}
-                        onTransitionEnd={handleTrackTransitionEnd}
                     >
                         {carouselSlides.map(({ banner, key }, index) => (
                             <BannerSlide
@@ -497,7 +482,7 @@ const CombinedPopupComponent = () => {
                                 type="button"
                                 aria-label="이전 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); prevSlide({ userInitiated: true }); }}
-                                className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                                className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 hover:bg-black/50"
                             >
                                 <ChevronLeft className="w-5 h-5" aria-hidden="true" />
                             </button>
@@ -505,7 +490,7 @@ const CombinedPopupComponent = () => {
                                 type="button"
                                 aria-label="다음 배너 보기"
                                 onClick={(e) => { e.stopPropagation(); nextSlide({ userInitiated: true }); }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 hover:bg-black/50"
                             >
                                 <ChevronRight className="w-5 h-5" aria-hidden="true" />
                             </button>
@@ -524,14 +509,14 @@ const CombinedPopupComponent = () => {
                 <div className="relative z-10 flex border-t border-border pointer-events-auto">
                     <button
                         onClick={(e) => handleDismissToday(e)}
-                        className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
+                        className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent"
                     >
                         오늘 하루 안 보기
                     </button>
                     <div className="w-px bg-border" />
                     <button
                         onClick={(e) => handleClose(e)}
-                        className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                        className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent"
                     >
                         닫기
                     </button>

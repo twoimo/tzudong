@@ -4,6 +4,9 @@ import {
     buildNaverOverlappingMarkerKey,
     buildNaverOverlappingMarkerOffsets,
     resolveNaverOverlappingMarkerPosition,
+    reuseMarkerLatLng,
+    reuseMarkerAnchor,
+    reuseProjectedLatLng,
 } from '../lib/naver-map-overlap-helpers';
 
 describe('naver map overlap helpers', () => {
@@ -71,5 +74,36 @@ describe('naver map overlap helpers', () => {
                 fromOffsetToCoord: (offset) => offset,
             },
         })).toBe(basePosition);
+    });
+
+    test('reuses a marker position when latitude and longitude are unchanged', () => {
+        const current = { lat: () => 37.5, lng: () => 127.1 };
+        expect(reuseMarkerLatLng(current, 37.5, 127.1, () => ({ created: true }))).toBe(current);
+        expect(reuseMarkerLatLng(current, 37.6, 127.1, () => ({ created: true }))).toEqual({ created: true });
+        expect(reuseMarkerLatLng(null, 37.5, 127.1, () => ({ created: true }))).toEqual({ created: true });
+        const anchor = { x: 16, y: 32 };
+        expect(reuseMarkerAnchor(anchor, 16, 32, () => ({ created: true }))).toBe(anchor);
+        expect(reuseMarkerAnchor(anchor, 16, 30, () => ({ created: true }))).toEqual({ created: true });
+    });
+
+    test('reuses a projected coordinate for the same restaurant and position', () => {
+        const restaurant = { id: 'a' };
+        let created = 0;
+        const first = reuseProjectedLatLng(restaurant, 37.5, 127.1, () => {
+            created += 1;
+            return { id: created };
+        });
+        const second = reuseProjectedLatLng(restaurant, 37.5, 127.1, () => {
+            created += 1;
+            return { id: created };
+        });
+        const moved = reuseProjectedLatLng(restaurant, 37.6, 127.1, () => {
+            created += 1;
+            return { id: created };
+        });
+
+        expect(second).toBe(first);
+        expect(moved).not.toBe(first);
+        expect(created).toBe(2);
     });
 });

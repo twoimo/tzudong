@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:42:00.000Z",
+  "model": "Mobile sheet headers and footers stayed sticky and blurred the scrolling content under a background that is already 95% opaque. The blur is gone.",
+  "backdropLayersPerOpenSheet": { "before": 2, "after": 0, "absolute": 2 },
+  "samplesPerSecondAt60fpsWhileScrolling": { "before": 120, "after": 0, "absolute": 120 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "120 is 2 sticky layers times 60 frames, counted while the sheet content scrolls. A sheet may omit the footer. Not a sampled compositor trace."
+  }
+}

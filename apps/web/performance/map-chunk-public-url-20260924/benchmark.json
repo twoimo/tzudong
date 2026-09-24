@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-09-24T11:12:00.000Z",
+  "model": "The map chunk imported the Supabase browser client only to build a public review-photo URL. That client pulls auth, WebAuthn, realtime, and PostgREST. The URL is now composed from the configured origin and the public object path.",
+  "chunk": "_app-pages-browser_components_map_NaverMapView_tsx.js",
+  "bytes": {
+    "before": 5063182,
+    "after": 2337918,
+    "absolute": 2725264,
+    "relative": 2.166
+  },
+  "browserTransfer": {
+    "before": 1214484,
+    "after": 586883,
+    "absolute": 627601,
+    "relative": 2.069,
+    "note": "Decoded sizes match the chunk files. The before transfer is the previous home load of this chunk."
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "One rebuild of the dev chunk. No repeated samples, so the median absolute deviation is not estimated."
+  }
+}

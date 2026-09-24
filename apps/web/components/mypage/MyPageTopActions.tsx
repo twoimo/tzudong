@@ -31,7 +31,7 @@ import { siteConfig } from "@/lib/site-config";
 import { resolveProfileAvatarUrl } from "@/lib/profile-avatar-url";
 
 const myPageTopActionButtonClass =
-  "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
+  "h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-lg hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2";
 const myPageUserMenuItemClass =
   "cursor-pointer rounded-xl px-3 py-2.5 text-sm font-medium text-foreground whitespace-nowrap focus:bg-accent focus:text-foreground";
 const myPageUserAvatarClass =

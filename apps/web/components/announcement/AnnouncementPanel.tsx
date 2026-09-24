@@ -99,7 +99,7 @@ export default function AnnouncementPanel({
 const ITEMS_PER_PAGE = 5;
 
 function InlineCountSkeleton() {
-    return <span className="inline-block h-3 w-6 rounded-full bg-muted/70 align-middle animate-pulse motion-reduce:animate-none" aria-hidden="true" />;
+    return <span className="inline-block h-3 w-6 rounded-full bg-muted/70 align-middle" aria-hidden="true" />;
 }
 
 function AnnouncementListItemSkeleton({ index }: { index: number }) {

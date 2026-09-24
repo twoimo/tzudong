@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:38:00.000Z",
+  "model": "Two home map buttons and the small status pill blurred the moving map behind backgrounds that are already 90–95% opaque. The blur is gone.",
+  "backdropLayersOverMap": { "before": 3, "after": 0, "absolute": 3 },
+  "samplesPerSecondAt60fpsWhilePanning": { "before": 180, "after": 0, "absolute": 180 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "180 is 3 layers times 60 frames. The status pill is not always mounted. Not a sampled compositor trace."
+  }
+}

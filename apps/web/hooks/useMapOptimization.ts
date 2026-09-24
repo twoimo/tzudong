@@ -108,8 +108,8 @@ type OptimizationPreset = Omit<MapOptimizationSettings, 'getClusterRadius'>;
 const OPTIMIZATION_PRESETS: Record<PerformanceTier, OptimizationPreset> = {
     HIGH: {
         clusterMinPoints: 5,
-        clusterAnimationEnabled: true,
-        clusterAnimationInterval: 5000,
+        clusterAnimationEnabled: false,
+        clusterAnimationInterval: 0,
         idleDebounceMs: 150,
         mapUpdateDebounceMs: 150,
         viewportFilterEnabled: true,

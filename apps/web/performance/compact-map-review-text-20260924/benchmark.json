@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-09-24T10:40:00.000Z",
+  "model": "The home map compact query returns every approved restaurant before markers render. Visit badges use max(unique youtube links, unique review texts). On the live approved set, dropping the review text left all 25 badges intact (0 lost). The detail query still selects tzuyang_review.",
+  "rows": 763,
+  "mergedGroups": 735,
+  "visitBadges": {
+    "withReviewText": 25,
+    "withoutReviewText": 25,
+    "lost": 0
+  },
+  "payloadBytes": {
+    "before": 782122,
+    "after": 348603,
+    "absolute": 433519,
+    "relative": 2.244
+  },
+  "jsonParseMs": {
+    "repetitions": 21,
+    "beforeMedian": 2.6716,
+    "beforeMad": 0.1048,
+    "afterMedian": 1.5079,
+    "afterMad": 0.0872,
+    "absoluteMedianDelta": 1.1637,
+    "relative": 1.772,
+    "noiseSumMad": 0.192,
+    "improvesBeyondNoise": true
+  }
+}

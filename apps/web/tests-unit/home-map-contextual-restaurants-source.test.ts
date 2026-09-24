@@ -184,7 +184,7 @@ describe('home map contextual visible-marker restaurants', () => {
     expect(mobileOverlaySource).toContain('aria-label="맛집 목록 다시 열기"');
     expect(mobileOverlaySource).toContain('title="맛집 목록 다시 열기"');
     expect(mobileOverlaySource).toContain('h-12 w-12 rounded-full shadow-sm');
-    expect(mobileOverlaySource).toContain('bg-background/95 hover:bg-secondary text-foreground border-border/70 backdrop-blur-sm');
+    expect(mobileOverlaySource).toContain('bg-background/95 hover:bg-secondary text-foreground border-border/70');
     expect(mobileOverlaySource).toContain('<List className="h-5 w-5" aria-hidden="true" />');
     expect(mobileOverlaySource).not.toContain('목록 보기 ·');
     expect(mobileOverlaySource).not.toContain('absolute -right-1 -top-1 rounded-full bg-primary');

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from 'react';
+import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
-import { Trophy, Info, X } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -90,16 +91,17 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                 className="h-full overflow-y-auto overflow-x-hidden overscroll-contain"
             >
                 {/* 헤더 - 모바일/태블릿 페이지와 동일 스타일 */}
-                <div className="border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                                    <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                    <span className="min-w-0 truncate">쯔동여지도 랭킹</span>
+                <MapPanelHeader
+                    title="랭킹"
+                    titleAs="h1"
+                    description="리뷰를 남기고 순위를 올려 보세요"
+                    closeLabel="랭킹 패널 닫기"
+                    onClose={onClose}
+                    actions={(
+                        <>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="hidden xs:inline-flex h-6 w-6 rounded-full hover:bg-muted shrink-0" title="랭킹 및 티어 산정 기준 보기" aria-label="랭킹 및 티어 산정 기준 보기">
+                                            <Button variant="ghost" size="icon" className={mapPanelIconButtonClass} title="랭킹 및 티어 산정 기준 보기" aria-label="랭킹 및 티어 산정 기준 보기">
                                                 <Info className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                                             </Button>
                                         </PopoverTrigger>
@@ -125,28 +127,15 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                                             </div>
                                         </PopoverContent>
                                     </Popover>
-                                </h1>
-                            </div>
-                            <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
-                                맛집 리뷰를 작성하고 랭킹을 올려보세요!
-                            </p>
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
                             <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
                                 <TabsList className="h-8">
-                                    <TabsTrigger value="all" className="text-xs px-2 sm:px-3">전체</TabsTrigger>
-                                    <TabsTrigger value="monthly" className="text-xs px-2 sm:px-3">월간</TabsTrigger>
+                                    <TabsTrigger value="all" className="px-2 text-xs">전체</TabsTrigger>
+                                    <TabsTrigger value="monthly" className="px-2 text-xs">월간</TabsTrigger>
                                 </TabsList>
                             </Tabs>
-
-                            {onClose && (
-                                <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full" aria-label="랭킹 패널 닫기">
-                                    <X className="h-5 w-5" aria-hidden="true" />
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                        </>
+                    )}
+                />
 
                 {/* 랭킹 목록 */}
                 <div>

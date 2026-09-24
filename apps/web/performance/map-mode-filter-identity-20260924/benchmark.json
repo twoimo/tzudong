@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:10:00.000Z",
+  "model": "The home map mode filter copied the restaurant list even when every row already belonged to the active mode. That list is now returned as-is. A dropped row still builds one new list.",
+  "resultArraysWhenEveryRowMatches": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madArrays": 0,
+    "rule": "The matching scan still visits every row. A mixed domestic and overseas list still allocates one result. Not a sampled heap trace."
+  }
+}

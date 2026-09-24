@@ -1701,7 +1701,7 @@ export function AdminRestaurantModal({
             <>
                 <section
                     ref={desktopAdminRestaurantPanelRef}
-                    className="fixed bottom-24 right-6 top-6 z-[95] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                    className="fixed bottom-24 right-6 top-6 z-[95] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
                     style={{ transform: `translate3d(${desktopAdminRestaurantPanelPosition.x}px, ${desktopAdminRestaurantPanelPosition.y}px, 0)` }}
                     data-desktop-map-admin-restaurant-panel="true"
                     role="dialog"

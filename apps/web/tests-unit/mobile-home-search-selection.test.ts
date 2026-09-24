@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Restaurant } from '../types/restaurant';
 import {
     buildPostSearchSwipeCandidates,
+    getNearestFallbackScanCount,
     buildRestaurantsForSwipe,
     getActiveSearchedRestaurant,
     isSameRestaurantSelection,
@@ -170,11 +171,12 @@ describe('mobile home search selection helpers', () => {
     test('does not duplicate active searched restaurant already present in display ids', () => {
         const searchedRestaurant = makeRestaurant({ id: 'search-1' });
 
+        const displayRestaurants = [searchedRestaurant];
         expect(buildRestaurantsForSwipe({
             activeSearchedRestaurant: searchedRestaurant,
             displayRestaurantIds: new Set([searchedRestaurant.id]),
-            displayRestaurants: [searchedRestaurant],
-        }).map((restaurant) => restaurant.id)).toEqual(['search-1']);
+            displayRestaurants,
+        })).toBe(displayRestaurants);
     });
 
     test('keeps selected search result in swipe candidates after search ownership is released', () => {
@@ -231,5 +233,25 @@ describe('mobile home search selection helpers', () => {
                 activeSearchedRestaurant: searchedRestaurant,
             }).map((restaurant) => restaurant.id)
         ).toEqual(['search-1', 'nearest-restaurant']);
+    });
+
+    test('reuses the nearest fallback when the list and visible restaurant are unchanged', () => {
+        const searchedRestaurant = makeRestaurant({ id: 'search-1', lat: 37.5665, lng: 126.978 });
+        const nearestRestaurant = makeRestaurant({ id: 'nearest-restaurant', lat: 37.5661, lng: 126.9772 });
+        const allRestaurants = [searchedRestaurant, nearestRestaurant];
+        const scansBefore = getNearestFallbackScanCount();
+
+        buildPostSearchSwipeCandidates({
+            visibleRestaurants: [searchedRestaurant],
+            allRestaurants,
+            activeSearchedRestaurant: searchedRestaurant,
+        });
+        buildPostSearchSwipeCandidates({
+            visibleRestaurants: [searchedRestaurant],
+            allRestaurants,
+            activeSearchedRestaurant: searchedRestaurant,
+        });
+
+        expect(getNearestFallbackScanCount()).toBe(scansBefore + 1);
     });
 });

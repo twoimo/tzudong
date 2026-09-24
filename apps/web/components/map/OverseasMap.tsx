@@ -169,10 +169,9 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
 
         if (shouldFocusDeviceLocation(lastFocusedDeviceLocationRequestRef.current, deviceLocation)) {
             lastFocusedDeviceLocationRequestRef.current = deviceLocation.focusRequestId;
-            currentMap.easeTo({
+            currentMap.jumpTo({
                 center: [deviceLocation.lng, deviceLocation.lat],
                 zoom: Math.max(currentZoom, 14),
-                duration: 550,
             });
         }
     }, [deviceLocation, isMapLoaded]);
@@ -333,7 +332,6 @@ const OverseasMap: React.FC<OverseasMapProps> = ({
                 el.style.width = `32px`;
                 el.style.height = `32px`;
                 el.style.cursor = 'pointer';
-                el.style.willChange = 'transform';
                 el.innerHTML = buildOverseasMarkerHtml({
                     imagePath,
                     name: restaurant.name,

@@ -1,4 +1,7 @@
+"use client";
+
 import { memo } from "react";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -7,8 +10,10 @@ const CONTAIN_STYLE = { contain: 'content' } as const;
 
 // ========== 리뷰 피드 스켈레톤 ==========
 function FeedSkeletonComponent({ count = 3, className }: { count?: number; className?: string }) {
+    const filled = useFilledSkeletonCount(280, count);
     return (
         <div
+            ref={filled.ref}
             className={cn("w-full max-w-2xl mx-auto p-4 space-y-4", className)}
             style={CONTAIN_STYLE}
             data-testid="feed-skeleton"
@@ -16,7 +21,7 @@ function FeedSkeletonComponent({ count = 3, className }: { count?: number; class
             aria-busy="true"
             aria-label="리뷰 피드를 불러오는 중"
         >
-            {Array.from({ length: count }, (_, i) => (
+            {Array.from({ length: filled.count }, (_, i) => (
                 <div key={i} className="space-y-3 p-4 rounded-lg border border-border/50">
                     <div className="flex items-center gap-3">
                         <Skeleton className="h-9 w-9 rounded-full" />
@@ -111,8 +116,10 @@ function LeaderboardSkeletonComponent({
     className?: string;
     compactLeftPanel?: boolean;
 }) {
+    const filled = useFilledSkeletonCount(compactLeftPanel ? 52 : 56, count);
     return (
         <div
+            ref={filled.ref}
             className={cn(
                 "w-full space-y-3",
                 compactLeftPanel ? "px-2 py-4" : "p-4",
@@ -121,7 +128,7 @@ function LeaderboardSkeletonComponent({
             style={CONTAIN_STYLE}
         >
             {showHeader && <Skeleton className="h-6 w-32" />}
-            {Array.from({ length: count }, (_, i) => (
+            {Array.from({ length: filled.count }, (_, i) => (
                 <div
                     key={i}
                     className={cn(

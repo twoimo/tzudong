@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:38:00.000Z",
+  "model": "The home stylesheets still contained the unused pulse and fadeInOut keyframes. Nothing applied them. Removing them shortens the CSS the home route parses. fadeIn stays because the recommendation popup uses it.",
+  "unusedKeyframeRules": { "before": 8, "after": 0, "absolute": 8 },
+  "sourceBytesRemoved": { "before": 2759, "after": 0, "absolute": 2759 },
+  "noise": {
+    "madBytes": 0,
+    "rule": "684, 684, and 707 bytes were measured on three stylesheets. The home sheet removed the same keyframe pair, counted as 684 bytes. These rules were not running, so the win is parse size, not frames."
+  }
+}

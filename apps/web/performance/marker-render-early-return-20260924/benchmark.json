@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:06:00.000Z",
+  "model": "The marker effect also reruns when a callback or mode flag changes but the zoom, bounds, restaurant list, and cluster arrays are the same. That repeat used to filter the loaded list and rebuild the marker plan. It now returns before that work. Array identity is compared directly so a new cluster result is not treated as the previous one.",
+  "loadedListFiltersPerUnchangedViewport": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madFilters": 0,
+    "rule": "Counts one repeat run whose zoom, rounded bounds, list, and cluster arrays are unchanged. A real pan or a new cluster array still filters once. Not a sampled trace."
+  }
+}

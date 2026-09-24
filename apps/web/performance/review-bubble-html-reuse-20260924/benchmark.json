@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:50:00.000Z",
+  "model": "Each marker render rebuilt the review-bubble HTML around the category icon, even when the bubble and the icon HTML were unchanged. The wrapped string is stored on the bubble.",
+  "wrappedHtmlStringsPerRepeatBubble": { "before": 1, "after": 0, "absolute": 1 },
+  "example5DesktopBubbles": { "before": 5, "after": 0, "absolute": 5 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "5 is the desktop bubble cap. A changed icon or a mobile switch still builds one string. Not a sampled allocator trace."
+  }
+}

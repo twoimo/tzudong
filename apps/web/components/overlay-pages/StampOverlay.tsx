@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback, useDeferredValue } from "react";
-import { AlertCircle, Search, Trophy, Eye, EyeOff, X, Filter } from "lucide-react";
+import { AlertCircle, Search, Trophy, Eye, EyeOff, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,6 +19,7 @@ import { StampCard } from "@/components/stamp/StampCard";
 import { createVisitedRestaurantMatcher } from "@/lib/restaurant-review-lookup";
 import { getRestaurantDisplayName, withRestaurantDisplayName } from "@/lib/restaurant-display-name";
 import { compareStampRestaurants, createVisitedLookup } from "@/lib/stamp-restaurant-order";
+import { MapPanelHeader, mapPanelIconButtonClass } from "@/components/home/map-panel-chrome";
 import { cn } from "@/lib/utils";
 
 const STAMP_PAGE_SIZE = 5;
@@ -290,56 +291,44 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail, singleCo
             data-stamp-scroll-container="true"
             data-desktop-left-panel-stamp-mobile-parity="true"
         >
-            {/* 헤더 */}
-            <div className="shrink-0 border-b border-border bg-background px-3 py-3 sm:px-5 sm:py-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 basis-[min(11rem,100%)]">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                            <h1 className="flex min-w-0 items-center gap-1.5 text-[1.0625rem] font-bold leading-tight text-primary text-balance xs:text-xl sm:gap-2 sm:text-2xl">
-                                <Trophy className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" aria-hidden="true" />
-                                <span className="min-w-0 truncate">쯔동여지도 도장</span>
-                            </h1>
-                            <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground xs:text-sm">
-                                ({allMergedRestaurants.length.toLocaleString()}개)
-                            </span>
-                        </div>
-                        <p className="mt-1 max-w-full text-pretty text-xs leading-5 text-muted-foreground xs:text-sm">
-                            맛집을 찾아 도장을 찍어보세요!
-                        </p>
-                    </div>
-                    <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <MapPanelHeader
+                title="도장"
+                titleAs="h1"
+                count={allMergedRestaurants.length}
+                description="맛집을 찾아 도장을 찍어보세요"
+                closeLabel="도장 패널 닫기"
+                onClose={onClose}
+                actions={(
+                    <>
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                            className={mapPanelIconButtonClass}
                             onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
                             title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
                             aria-label={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
                         >
-                            {filters.showUnvisitedOnly ? <EyeOff className="h-5 w-5 text-muted-foreground" aria-hidden="true" /> : <Eye className="h-5 w-5 text-muted-foreground" aria-hidden="true" />}
+                            {filters.showUnvisitedOnly ? <EyeOff className="h-4 w-4 text-muted-foreground" aria-hidden="true" /> : <Eye className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                            className="relative h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted"
+                            className={cn("relative", mapPanelIconButtonClass)}
                             title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
                             aria-label={isFilterExpanded ? "도장 필터 접기" : "도장 필터 펼치기"}
                         >
                             <Filter className="h-4 w-4" aria-hidden="true" />
                             {activeFilterCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-2xs font-medium rounded-full flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-2xs font-medium text-primary-foreground">
                                     {activeFilterCount}
                                 </span>
                             )}
                         </Button>
-                        {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/45 shadow-none hover:bg-muted" aria-label="도장 패널 닫기">
-                                <X className="h-5 w-5" aria-hidden="true" />
-                            </Button>
-                        )}
-                    </div>
-                </div>
+                    </>
+                )}
+            />
+            <div className="px-4">
 
                 {/* 필터 영역 */}
                 <div className={cn(

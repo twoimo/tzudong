@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T17:32:00.000Z",
+  "model": "The restaurant review list showed three pulsing cards while reviews loaded. Those cards now stay still.",
+  "opacityFramesPerSecond": { "before": 180, "after": 0, "absolute": 180, "relative": null },
+  "animatedCards": { "before": 3, "after": 0, "absolute": 3, "relative": null },
+  "noise": {
+    "madFrames": 0,
+    "rule": "180 is 3 cards times 60 frames per second. The pulse keyframe is a 2s opacity loop. Not a sampled compositor trace. Relative is unbounded because the after count is zero."
+  }
+}

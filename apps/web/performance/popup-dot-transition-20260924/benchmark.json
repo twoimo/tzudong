@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:28:00.000Z",
+  "model": "The home popup dots grew, shrank, and faded their shadow with transition-all for the default 150ms. The active dot still scales and keeps its shadow. The change is one frame. The previous and current dots both change.",
+  "framesPerChangedDot": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "framesPerDotChange": { "before": 18, "after": 2, "absolute": 16, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). transition-all includes transform and box-shadow. Two dots change together. Not a sampled compositor trace."
+  }
+}

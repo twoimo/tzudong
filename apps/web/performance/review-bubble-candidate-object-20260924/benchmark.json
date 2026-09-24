@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:46:00.000Z",
+  "model": "Bubble ranking built a candidate object for every restaurant, including ones that never entered the top list. The object is created only when a restaurant is inserted.",
+  "candidateObjectsThatMissTheTopList": { "before": "n - k", "after": 0, "absolute": "n - k" },
+  "example80CandidatesLimit5NoLaterReplacement": { "before": 80, "after": 5, "absolute": 75 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "k is the number of insertions. 80 and 5 assume the first five fill the list and no later candidate replaces them. A replacement still allocates one object. Not a sampled allocator trace."
+  }
+}

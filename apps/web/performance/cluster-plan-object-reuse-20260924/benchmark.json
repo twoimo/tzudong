@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:48:00.000Z",
+  "model": "Each cluster render wrapped the cached visual in a new plan object. The plan is stored on that visual and reused when the latitude and longitude are unchanged.",
+  "planObjectsPerRepeatIcon": { "before": 1, "after": 0, "absolute": 1 },
+  "example16RegionalClusters": { "before": 16, "after": 0, "absolute": 16 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "16 is the regional cluster ceiling used earlier, not a live trace. A moved cluster center still builds one plan."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:26:00.000Z",
+  "model": "The profile tier bar animated its width, which is layout, for the default 150ms. The chevron nudge and the open rotation used the same default transform transition. All three now change in one frame.",
+  "tierBarLayoutFrames": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "chevronFrames": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). The bar runs when the percent changes. The chevrons run on hover or open. Not a sampled layout trace."
+  }
+}

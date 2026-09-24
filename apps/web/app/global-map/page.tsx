@@ -533,7 +533,7 @@ export default function GlobalMapPage() {
         <>
             {/* 하단 컨트롤 패널 */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 w-[min(calc(100vw-1rem),72rem)] px-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_minmax(0,1fr)_auto] gap-2 lg:gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-2 lg:p-3 shadow-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_minmax(0,1fr)_auto] gap-2 lg:gap-3 bg-background/95 rounded-lg border border-border p-2 lg:p-3 shadow-lg">
                     {/* 국가 선택 */}
                     <Select
                         value={selectedCountry || "튀르키예"}
@@ -608,7 +608,7 @@ export default function GlobalMapPage() {
                             <Button
                                 variant="secondary"
                                 size="sm"
-                                className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm hover:bg-background text-sm font-semibold shadow z-10 h-auto py-1 px-2 text-foreground"
+                                className="absolute top-2 left-2 bg-background/95 hover:bg-background text-sm font-semibold shadow z-10 h-auto py-1 px-2 text-foreground"
                                 onClick={() => {
                                     setIsGridMode(false);
                                     setSelectedCountry(country);
@@ -652,7 +652,7 @@ export default function GlobalMapPage() {
 
                                 {shouldShowGoogleMapsFallback && (
                                     <Card
-                                        className="absolute left-3 top-3 z-20 max-h-[calc(100%-1.5rem)] w-[min(calc(100%-1.5rem),24rem)] overflow-hidden border-border bg-background/95 p-3 shadow-lg backdrop-blur"
+                                        className="absolute left-3 top-3 z-20 max-h-[calc(100%-1.5rem)] w-[min(calc(100%-1.5rem),24rem)] overflow-hidden border-border bg-background/95 p-3 shadow-lg"
                                         data-global-map-google-fallback="true"
                                         data-global-map-fallback-source="globalRestaurants"
                                     >

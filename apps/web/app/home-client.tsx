@@ -71,13 +71,13 @@ function HomeMapUserMenuPendingShell() {
     <div aria-hidden="true" data-desktop-map-user-menu-pending="true">
       <span
         data-desktop-map-fullscreen-toggle="true"
-        className="fixed right-20 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg backdrop-blur-sm"
+        className="fixed right-20 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 text-foreground shadow-lg"
       >
         <Maximize2 className="h-4 w-4" />
       </span>
       <span
         data-desktop-map-user-menu="true"
-        className="fixed right-6 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur-sm"
+        className="fixed right-6 top-4 z-[120] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background/95 p-0 shadow-lg"
       >
         <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-primary/10 text-primary">
           <UserRound className="h-4 w-4" />
@@ -153,7 +153,8 @@ const DEVICE_LOCATION_PERMISSION_DENIED_TOAST = "위치 권한이 거부됐어�
 const DEVICE_LOCATION_TIMEOUT_TOAST = "현재 위치를 찾는 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.";
 const DEVICE_LOCATION_UNAVAILABLE_TOAST = "현재 위치를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.";
 const DEVICE_LOCATION_READINESS_BLOCKED =
-  "현재 위치 기능은 운영자 위치 증빙 확인이 완료될 때까지 사용할 수 없어요.";
+  "현재 위치를 지금 표시하지 못했어요. 잠시 후 다시 시도해 주세요.";
+
 const DEVICE_LOCATION_DISCLOSURE =
   "현재 위치 좌표는 현재 React 메모리에만 보관되며 Tzudong에 저장되지 않습니다. 브라우저 지도 렌더링 및 화면 이동은 승인된 지도 제공자 경계를 통과할 수 있습니다. 브라우저 위치 권한을 요청할까요?";
 const DEVICE_LOCATION_DISCLOSURE_CANCELLED =
@@ -1257,7 +1258,7 @@ export default function HomeClient() {
       {isPublicRestrictedMode && (
         <>
           <div
-            className="pointer-events-none fixed left-1/2 top-3 z-[130] -translate-x-1/2 rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm"
+            className="pointer-events-none fixed left-1/2 top-3 z-[130] -translate-x-1/2 rounded-full border border-border bg-background/90 px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm"
             data-public-demo-mode="true"
             role="status"
           >

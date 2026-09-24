@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:30:00.000Z",
+  "model": "The map submit buttons transitioned box-shadow and transform for 300ms, including the press scale. Color still transitions for 150ms. Shadow and scale no longer interpolate.",
+  "shadowAndScaleFramesPerPressAt60fps": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000) for one button. The mobile control and the submission button are separate presses. Not a sampled compositor trace."
+  }
+}

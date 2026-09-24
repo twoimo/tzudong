@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:36:00.000Z",
+  "model": "Map notices stayed opaque for 85% of mapOverlayFade and then faded to opacity 0 while scaling to 0.95. The hide timer still removes them. The fade animation is gone, so the last 15% is no longer a transparent overlay on the map.",
+  "announcementFadeFramesAt60fps": { "before": 108, "after": 0, "absolute": 108 },
+  "restaurantCountFadeFramesAt60fps": { "before": 27, "after": 0, "absolute": 27 },
+  "onlineUsersFadeFramesAt60fps": { "before": 36, "after": 0, "absolute": 36 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "15% of 12s, 3s, and 4s, times 60fps. One notice is visible at a time, so these are separate shows, not a sum on one frame. Not a sampled compositor trace."
+  }
+}

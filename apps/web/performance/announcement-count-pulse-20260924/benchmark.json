@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T17:32:00.000Z",
+  "model": "The announcement count placeholder pulsed while the list loaded. It now stays still.",
+  "opacityFramesPerSecond": { "before": 60, "after": 0, "absolute": 60, "relative": null },
+  "noise": {
+    "madFrames": 0,
+    "rule": "60 is one placeholder times 60 frames per second. The pulse keyframe is a 2s opacity loop. Not a sampled compositor trace. Relative is unbounded because the after count is zero."
+  }
+}

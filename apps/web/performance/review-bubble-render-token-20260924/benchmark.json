@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T17:20:00.000Z",
+  "model": "Each marker pass serialized every visible review bubble into a signature string. The same bubble object now keeps that token while its id, name, text, photo, and mobile flag stay equal.",
+  "serializationsPerRepeatPass": {
+    "before": 5,
+    "after": 0,
+    "absolute": 5,
+    "relative": null,
+    "exampleBubbles": 5
+  },
+  "noise": {
+    "madSerializations": 0,
+    "rule": "5 is the desktop bubble limit. A changed field still serializes that bubble once. Not a sampled heap trace. Relative is unbounded because the after count is zero."
+  }
+}

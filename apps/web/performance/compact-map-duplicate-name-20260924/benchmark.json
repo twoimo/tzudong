@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-09-24T10:54:00.000Z",
+  "model": "PostgREST was returning the approved name twice, once as name and once as approved_name. Display code already reads name first. The compact map query now returns the alias only.",
+  "rows": 763,
+  "bytes": { "before": 371042, "after": 341736, "absolute": 29306, "relative": 1.086 },
+  "noise": { "madBytes": 0, "rule": "Payload byte counts are a single read of the live approved set. They are exact for that response, not a repeated-sample MAD." }
+}

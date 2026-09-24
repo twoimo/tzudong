@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:34:00.000Z",
+  "model": "A repeat marker render allocated a new key array just to see that the restaurant lists had not changed. The key now lives in one reused object, so a repeat render only compares fields.",
+  "keyArraysPerUnchangedRender": { "before": 1, "after": 0, "absolute": 1 },
+  "fieldComparisonsPerUnchangedRender": { "before": 13, "after": 13, "relative": 1 },
+  "noise": {
+    "madArrays": 0,
+    "rule": "13 is the number of key fields. A changed list still builds the token array. Not a sampled allocator trace."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:56:00.000Z",
+  "model": "Selecting a restaurant on the Google map called panTo, which animates the camera. The same center is now applied with setCenter, so the tiles are not resampled across the animation.",
+  "animatedSelectionPans": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madPans": 0,
+    "rule": "Counts one selection. The Maps API does not expose a fixed pan duration here, so this is not converted into frames. Not a sampled tile trace."
+  }
+}

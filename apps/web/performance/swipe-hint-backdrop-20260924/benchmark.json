@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:06:00.000Z",
+  "model": "The first mobile restaurant-detail visit covers the screen with a swipe hint. That hint used a full-viewport backdrop-filter plus a second blur on the label, and it stays until the first pointer. The dim scrim remains; the filters do not.",
+  "backdropLayersWhileHintVisible": { "before": 2, "after": 0, "absolute": 2 },
+  "fullViewportSamplesPerSecondAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "60 is one full-viewport layer times 60 frames. The label was a second layer. Not a sampled compositor trace. The hint duration depends on the first tap."
+  }
+}

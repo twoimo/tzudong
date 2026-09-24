@@ -48,7 +48,7 @@ function SidebarItem({ href, icon, label, isActive }: SidebarItemProps) {
       href={href}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+        "flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         isActive
           ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -266,7 +266,7 @@ export function MyPageSidebar() {
           <label
             htmlFor="mypage-sidebar-avatar-upload"
             aria-label="프로필 사진 변경"
-            className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm transition-all group-hover:ring-2 group-hover:ring-primary/30"
+            className="relative flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm group-hover:ring-2 group-hover:ring-primary/30"
             style={{
               width: "5rem",
               height: "5rem",
@@ -294,7 +294,7 @@ export function MyPageSidebar() {
             )}
 
             <span
-              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 active:opacity-100"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100"
               style={{ borderRadius: "9999px" }}
             >
               {avatarUploading ? (
@@ -320,7 +320,7 @@ export function MyPageSidebar() {
                 e.preventDefault();
                 handleAvatarDelete();
               }}
-              className="absolute -right-1 -top-1 z-20 rounded-full bg-destructive p-1 text-white opacity-0 transition-opacity hover:bg-destructive/90 group-hover:opacity-100"
+              className="absolute -right-1 -top-1 z-20 rounded-full bg-destructive p-1 text-white opacity-0 hover:bg-destructive/90 group-hover:opacity-100"
               title="사진 삭제"
               aria-label="프로필 사진 삭제"
             >
@@ -424,19 +424,19 @@ export function MyPageSidebar() {
         </div>
 
         <div className="grid w-full grid-cols-3 gap-2 pt-2">
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
+          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
             <span className="mb-1 text-xs text-muted-foreground">도장</span>
             <span className="text-sm font-bold">
               {profile?.verifiedReviewCount ?? 0}
             </span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
+          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
             <span className="mb-1 text-xs text-muted-foreground">리뷰</span>
             <span className="text-sm font-bold">
               {profile?.reviewCount ?? 0}
             </span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 transition-colors hover:bg-muted/60">
+          <div className="flex flex-col items-center rounded-lg bg-muted/40 p-2 hover:bg-muted/60">
             <span className="mb-1 text-xs text-muted-foreground">좋아요</span>
             <span className="text-sm font-bold">
               {profile?.totalLikes ?? 0}

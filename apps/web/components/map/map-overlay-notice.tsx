@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 export const MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME =
     '!border !border-border !bg-card/95 !text-foreground !rounded-2xl !px-3 !py-2';
 export const MAP_OVERLAY_NOTICE_CLASS_NAME =
-    `z-10 inline-flex min-h-8 w-fit max-w-[min(26rem,calc(100vw-2rem))] items-center justify-center ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} !text-sm !font-semibold !leading-4 shadow-sm backdrop-blur-sm sm:!rounded-full`;
+    `z-10 inline-flex min-h-8 w-fit max-w-[min(26rem,calc(100vw-2rem))] items-center justify-center ${MAP_OVERLAY_NOTICE_SURFACE_CLASS_NAME} !text-sm !font-semibold !leading-4 shadow-sm sm:!rounded-full`;
 export const MAP_OVERLAY_NOTICE_SINGLE_LINE_CLASS_NAME = 'map-overlay-notice-single-line';
 export const MAP_OVERLAY_TOAST_CLASS_NAME = MAP_OVERLAY_NOTICE_CLASS_NAME;
 export const MAP_OVERLAY_STATUS_DOT_CLASS_NAME = 'h-2 w-2 rounded-full bg-primary/80';

@@ -1,0 +1,38 @@
+{
+  "generatedAt": "2026-09-24T10:30:00.000Z",
+  "sample": {
+    "videoId": "DNGGl1-jFcU",
+    "note": "This file was the maxresdefault image observed on the production home document. Bytes are Content download sizes for that one video, not a 30-sample field p75."
+  },
+  "model": "Displayed CSS width w needs about 2w source pixels. maxresdefault is 1280px wide, sddefault 640px, hqdefault 480px. A 400px detail starts at sddefault. A 112px card starts at hqdefault. Pixel counts are 1280*720=921600, 640*480=307200, 480*360=172800.",
+  "bytes": {
+    "maxresdefault": 431886,
+    "sddefault": 144457,
+    "hqdefault": 35376,
+    "mqdefault": 22652
+  },
+  "detail400": {
+    "before": "maxresdefault",
+    "after": "sddefault",
+    "absoluteBytes": 287429,
+    "relative": 2.989,
+    "pixelRatio": 3.0
+  },
+  "card112": {
+    "before": "maxresdefault",
+    "after": "hqdefault",
+    "absoluteBytes": 396510,
+    "relative": 12.208,
+    "pixelRatio": 5.333
+  },
+  "probe": {
+    "beforeRequests": 2,
+    "afterRequestsForSdAndHq": 1,
+    "model": "maxresdefault still probes because YouTube can return a 120x90 placeholder. sddefault and hqdefault are real frames, so the extra Image() download is skipped. Saved bytes equal one full copy of the chosen file.",
+    "detail400SavedBytes": 144457,
+    "card112SavedBytes": 35376
+  },
+  "noise": {
+    "rule": "Single-object byte counts have no repeated-sample MAD. The ratios are exact for this video's files. Request count drops from 2 to 1 with no sample variance."
+  }
+}

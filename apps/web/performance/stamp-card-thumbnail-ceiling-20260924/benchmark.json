@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T11:05:00.000Z",
+  "model": "The stamp grid sizes string included media-query widths. The ceiling treated 1536px as the image slot, so the first request was maxresdefault (1280px). The slot is now at most 480 CSS px, which selects sddefault (640px).",
+  "videoId": "DNGGl1-jFcU",
+  "bytes": {
+    "before": 431886,
+    "after": 144457,
+    "absolute": 287429,
+    "relative": 2.989
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "Byte counts are one fetch of the same video's maxresdefault and sddefault files, reused from the thumbnail ceiling measurement."
+  }
+}

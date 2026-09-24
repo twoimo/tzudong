@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-09-24T10:35:00.000Z",
+  "file": "apps/web/app/fonts/pretendard/PretendardVariable.woff2",
+  "model": "Variable weight axis stays wght 45-930. Glyphs are limited to characters used by the current approved restaurant names, addresses, public review text, and app source, plus Latin, punctuation, arrows, and Hangul jamo. Unseen syllables fall back to Apple SD Gothic Neo or Malgun Gothic.",
+  "before": {
+    "bytes": 2057688,
+    "glyphs": 14757
+  },
+  "after": {
+    "bytes": 297492,
+    "glyphs": 2280
+  },
+  "absoluteBytes": 1760196,
+  "relative": 6.917,
+  "axis": {
+    "tag": "wght",
+    "min": 45,
+    "default": 400,
+    "max": 930
+  },
+  "glyphsLostThatExistedInTheOriginal": 0,
+  "noise": {
+    "madBytes": 0,
+    "rule": "Font file size is deterministic. There is no repeated-sample MAD."
+  }
+}

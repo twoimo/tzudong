@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -33,7 +34,6 @@ import {
   LayoutList,
   Info,
   Menu,
-  Layers3,
   Maximize2,
   Minimize2,
   Monitor,
@@ -132,7 +132,6 @@ import {
   getAdminModuleStateWarning,
   type AdminConsoleRouteModuleId,
 } from "@/lib/admin/admin-module-routing";
-import { TrendProposalQueue } from "@/components/admin/TrendProposalQueue";
 import { AdminEmbeddedModuleShell } from "@/components/admin/AdminEmbeddedModuleShell";
 import { AdminPipelineDashboard } from "@/components/admin/pipeline/AdminPipelineDashboard";
 
@@ -223,18 +222,6 @@ const consoleModules: ConsoleModule[] = [
     actionLabel: "스토리보드 만들기",
     priority: "urgent",
   },
-  {
-    id: "map-overlays",
-    title: "지도 오버레이",
-    description:
-      "수동 오버레이, 트렌드 제안, 트렌드 실행 상태를 한 작업대에서 확인합니다.",
-    href: "/admin?module=map-overlays",
-    icon: Layers3,
-    badge: "오버레이",
-    actionLabel: "지도 오버레이 관리",
-    priority: "urgent",
-  },
-
   {
     id: "banners",
     title: "배너 관리",
@@ -414,7 +401,7 @@ const sidebarSections: SidebarSection[] = [
   },
   {
     label: "운영",
-    items: getSidebarConsoleItems(["map-overlays", "users", "banners", "insights", "pipeline"]),
+    items: getSidebarConsoleItems(["users", "banners", "insights", "pipeline"]),
   },
   {
     label: "실험실",
@@ -726,6 +713,8 @@ function loadAdminRouteRecommendationModule() {
 const ADMIN_EVALUATION_STATIC_STATUS_FILTERS = ["전체", "미처리", "승인대기", "승인됨", "누락", "삭제됨"] as const;
 
 function AdminEvaluationModuleStaticShell() {
+  const mobileSkeleton = useFilledSkeletonCount(96, 4);
+  const desktopSkeleton = useFilledSkeletonCount(64, 6, 44);
   return (
     <div
       role="status"
@@ -805,8 +794,8 @@ function AdminEvaluationModuleStaticShell() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-          {Array.from({ length: 4 }).map((_, index) => (
+        <div ref={mobileSkeleton.ref} className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
+          {Array.from({ length: mobileSkeleton.count }).map((_, index) => (
             <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
               <div className="flex items-center gap-2">
                 <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
@@ -824,7 +813,7 @@ function AdminEvaluationModuleStaticShell() {
           ))}
         </div>
 
-        <div className="hidden min-h-0 overflow-hidden rounded-lg border bg-background lg:block">
+        <div ref={desktopSkeleton.ref} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
           <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className="px-2 py-2">
@@ -833,7 +822,7 @@ function AdminEvaluationModuleStaticShell() {
             ))}
           </div>
           <div className="divide-y divide-border">
-            {Array.from({ length: 6 }).map((_, rowIndex) => (
+            {Array.from({ length: desktopSkeleton.count }).map((_, rowIndex) => (
               <div
                 key={rowIndex}
                 className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
@@ -861,7 +850,7 @@ function AdminEvaluationModuleStaticShell() {
 
 const AdminEvaluationModule = dynamic(loadAdminEvaluationModule, {
   ssr: false,
-  loading: () => <AdminEvaluationModuleStaticShell />,
+  loading: () => null,
 });
 
 const AdminBannerModule = dynamic(loadAdminBannerModule, {
@@ -910,7 +899,6 @@ const AdminRouteRecommendationModule = dynamic(
 
 const ADMIN_CONSOLE_INLINE_MODULE_IDS = new Set<AdminModuleId>([
   "overview",
-  "map-overlays",
   "llm",
   "audit",
 ]);
@@ -920,7 +908,6 @@ function preloadAdminConsoleModule(moduleId: AdminModuleId): Promise<unknown> {
     case "overview":
     case "llm":
     case "audit":
-    case "map-overlays":
       return Promise.resolve();
     case "restaurants":
     case "submissions":
@@ -3579,14 +3566,16 @@ function AdminDashboardPanelBodySkeleton({
 }: {
   variant?: AdminDashboardSkeletonVariant;
 }) {
+  const tableSkeleton = useFilledSkeletonCount(28, 5);
   if (variant === "table") {
     return (
       <div
+        ref={tableSkeleton.ref}
         className="min-h-0 flex-1 space-y-2 overflow-hidden rounded-xl border border-border/70 bg-background p-3"
         data-admin-dashboard-dynamic-skeleton="table"
         aria-hidden="true"
       >
-        {Array.from({ length: 5 }).map((_, index) => (
+        {Array.from({ length: tableSkeleton.count }).map((_, index) => (
           <div
             key={index}
             className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] gap-3"
@@ -9274,153 +9263,14 @@ function AuditPlaceholder() {
   );
 }
 
-type AdminMapOverlayTabId = "manual" | "trend-proposals" | "trend-runs";
-
-const ADMIN_MAP_OVERLAY_TABS: Array<{
-  id: AdminMapOverlayTabId;
-  label: string;
-  description: string;
-}> = [
-  {
-    id: "manual",
-    label: "수동 오버레이",
-    description: "Preview → Confirm → Apply → Readback → Audit 수동 적용 흐름",
-  },
-  {
-    id: "trend-proposals",
-    label: "트렌드 제안",
-    description: "승인 대기 트렌드/시즌 제안 검토와 원자적 승인",
-  },
-  {
-    id: "trend-runs",
-    label: "트렌드 실행",
-    description: "백엔드 전용 실행 요청, 큐 상태, 취소/readback 확인",
-  },
-];
-
-function AdminMapOverlayOperationsModule() {
-  const [activeTab, setActiveTab] = useState<AdminMapOverlayTabId>("manual");
-  const activeTabConfig =
-    ADMIN_MAP_OVERLAY_TABS.find((tab) => tab.id === activeTab) ??
-    ADMIN_MAP_OVERLAY_TABS[0];
-
-  return (
-    <AdminEmbeddedModuleShell
-      moduleId="map-overlays"
-      titleId="admin-map-overlays-title"
-      title="지도 오버레이"
-      icon={Layers3}
-      summary={`${activeTabConfig.label} · readback/audit 확인 흐름`}
-      contentClassName="overflow-y-auto p-2 md:p-3"
-    >
-      <section
-        className="flex min-h-full min-w-0 flex-col gap-2 md:gap-3"
-        aria-label="지도 오버레이 작업"
-        data-admin-map-overlays-module="true"
-        data-layout-primitives="panel-layout list-detail step-nav stack"
-      >
-        <div className="space-y-2 md:space-y-3">
-          <Badge variant="outline" className="w-fit rounded-full">
-            승인 데이터: admin_restaurant_map_overlays
-          </Badge>
-          <div
-            role="tablist"
-            aria-label="지도 오버레이 작업 탭"
-            className="grid grid-cols-3 gap-1 rounded-xl bg-muted/35 p-1 md:gap-2 md:bg-transparent md:p-0"
-            data-admin-map-overlays-tabs="manual trend-proposals trend-runs"
-          >
-            {ADMIN_MAP_OVERLAY_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={cn(
-                  "min-w-0 rounded-lg border px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary md:rounded-xl md:p-3",
-                  activeTab === tab.id
-                    ? "border-primary/40 bg-primary/5 text-foreground"
-                    : "border-border bg-background/70 text-muted-foreground hover:bg-muted/60",
-                )}
-                data-admin-map-overlays-tab={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <span className="block truncate text-xs font-extrabold md:text-sm">{tab.label}</span>
-                <span className="mt-0.5 hidden text-xs leading-5 md:block">
-                  {tab.description}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div
-            className="min-w-0 rounded-xl bg-background/70 p-2 md:rounded-2xl md:border md:border-border/70 md:p-3"
-            data-admin-map-overlays-active-tab={activeTab}
-          >
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              {activeTabConfig.label}
-            </p>
-            {activeTab === "manual" ? (
-              <div className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-2">
-                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
-                  <p className="font-bold text-foreground">수동 적용 계약</p>
-                  <p className="mt-1">
-                    `/api/admin/map-overlays/preview`에서 해시와 readback을
-                    확인한 뒤 `/api/admin/map-overlays/apply`가 audit RPC로만
-                    승인 데이터를 변경합니다.
-                  </p>
-                </div>
-                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
-                  <p className="font-bold text-foreground">운영 순서</p>
-                  <p className="mt-1">
-                    Preview → Confirm → Apply → Readback → Audit. 공개 홈 지도는
-                    관리자 오버레이 API를 직접 호출하지 않습니다.
-                  </p>
-                </div>
-              </div>
-            ) : activeTab === "trend-proposals" ? (
-              <div className="mt-3" data-admin-map-overlays-trend-proposals="true">
-                <TrendProposalQueue />
-              </div>
-            ) : (
-              <div
-                className="mt-2 grid gap-2 text-sm leading-6 text-muted-foreground md:grid-cols-3"
-                data-admin-map-overlays-trend-runs="true"
-              >
-                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
-                  <p className="font-bold text-foreground">요청 생성</p>
-                  <p className="mt-1">
-                    `/api/admin/trend-job-requests`는 관리자 요청만 큐에 등록하고
-                    컬렉터/스코어러를 inline 실행하지 않습니다.
-                  </p>
-                </div>
-                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
-                  <p className="font-bold text-foreground">상태/취소</p>
-                  <p className="mt-1">
-                    상태 조회와 queued 취소는 owner-scoped readback으로 표시하며
-                    worker claim 이후에는 취소를 성공처럼 꾸미지 않습니다.
-                  </p>
-                </div>
-                <div className="rounded-lg bg-card/80 p-2 md:rounded-xl md:p-3">
-                  <p className="font-bold text-foreground">백엔드 경계</p>
-                  <p className="mt-1">
-                    트렌드 수집/평가는 backend worker와 RPC finalization 경로에서만
-                    진행됩니다.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-    </AdminEmbeddedModuleShell>
-  );
-}
 function InlineModulePanel({
   module,
   initialStoryboardResult,
+  onModuleContentReady,
 }: {
   module: ConsoleModule;
   initialStoryboardResult?: StoryboardInitialResult | null;
+  onModuleContentReady?: (moduleId: AdminModuleId) => void;
 }) {
   if (module.id === "audit") {
     return <AuditPlaceholder />;
@@ -9434,11 +9284,15 @@ function InlineModulePanel({
             key="restaurants"
             embedded
             initialView="evaluations"
+            onInitialContentReady={() => onModuleContentReady?.("restaurants")}
           />
         );
       case "restaurant-refresh-history":
         return (
-          <AdminRestaurantRefreshHistoryModule key="restaurant-refresh-history" />
+          <AdminRestaurantRefreshHistoryModule
+            key="restaurant-refresh-history"
+            onInitialContentReady={() => onModuleContentReady?.("restaurant-refresh-history")}
+          />
         );
       case "submissions":
         return (
@@ -9447,6 +9301,7 @@ function InlineModulePanel({
             embedded
             initialView="submissions"
             initialSubmissionTab="new"
+            onInitialContentReady={() => onModuleContentReady?.("submissions")}
           />
         );
       case "reviews":
@@ -9456,12 +9311,11 @@ function InlineModulePanel({
             embedded
             initialView="submissions"
             initialSubmissionTab="reviews"
+            onInitialContentReady={() => onModuleContentReady?.("reviews")}
           />
         );
-      case "map-overlays":
-        return <AdminMapOverlayOperationsModule key="admin-map-overlays" />;
       case "banners":
-        return <AdminBannerModule key="admin-banners" embedded />;
+        return <AdminBannerModule key="admin-banners" embedded onInitialContentReady={() => onModuleContentReady?.("banners")} />;
       case "storyboard":
         return (
           <AdminStoryboardGenerator
@@ -9474,7 +9328,7 @@ function InlineModulePanel({
           <AdminYoutubeThumbnailGenerator key="admin-youtube-thumbnail-generator" />
         );
       case "users":
-        return <AdminUsersModule key="admin-users" />;
+        return <AdminUsersModule key="admin-users" onInitialContentReady={() => onModuleContentReady?.("users")} />;
       case "insights":
         return <InsightsModule key="admin-insights" embedded />;
       case "pipeline":
@@ -9512,7 +9366,6 @@ type AdminConsoleCanvasSkeletonVariant =
   | "submission-queue"
   | "refresh-history"
   | "banner-editor"
-  | "overlay-workspace"
   | "user-table"
   | "insights-grid"
   | "route-map"
@@ -9554,6 +9407,10 @@ function getAdminConsoleModuleLoadingSkeleton(
   moduleId: AdminModuleId,
   title?: string,
 ) {
+  if (moduleId === "restaurants" || moduleId === "submissions" || moduleId === "reviews") {
+    return <AdminEvaluationModuleStaticShell />;
+  }
+
   if (moduleId === "overview") {
     return <AdminDashboardManagementSkeleton />;
   }
@@ -9608,14 +9465,6 @@ function getAdminConsoleCanvasSkeletonConfig({
         description: "최신화 후보 목록과 변경 이력 패널을 먼저 배치합니다.",
         icon: RefreshCw,
         variant: "refresh-history",
-      };
-    case "map-overlays":
-      return {
-        moduleId,
-        title: title ?? "지도 오버레이",
-        description: "수동 오버레이, 트렌드 제안, 트렌드 실행 탭을 준비합니다.",
-        icon: Layers3,
-        variant: "overlay-workspace",
       };
     case "banners":
       return {
@@ -10517,6 +10366,17 @@ export function AdminConsoleOverview({
   const [loadedModuleIds, setLoadedModuleIds] = useState<
     ReadonlySet<AdminModuleId>
   >(createInitialAdminConsoleLoadedModuleIds);
+  const [contentReadyModuleIds, setContentReadyModuleIds] = useState<
+    ReadonlySet<AdminModuleId>
+  >(() => new Set());
+  const markModuleContentReady = useCallback((moduleId: AdminModuleId) => {
+    setContentReadyModuleIds((currentModuleIds) => {
+      if (currentModuleIds.has(moduleId)) return currentModuleIds;
+      const nextModuleIds = new Set(currentModuleIds);
+      nextModuleIds.add(moduleId);
+      return nextModuleIds;
+    });
+  }, []);
 
   const userMetadataNickname =
     typeof user?.user_metadata?.nickname === "string"
@@ -10986,6 +10846,16 @@ export function AdminConsoleOverview({
 
   const isAdminCanvasBootstrapping =
     isShellBootstrapping || !loadedModuleIds.has(activeModuleId);
+  const moduleWaitsForContent =
+    activeModuleId === "restaurants" ||
+    activeModuleId === "submissions" ||
+    activeModuleId === "reviews" ||
+    activeModuleId === "users" ||
+    activeModuleId === "banners" ||
+    activeModuleId === "restaurant-refresh-history";
+  const showSingleModuleSkeleton =
+    isAdminCanvasBootstrapping ||
+    (moduleWaitsForContent && !contentReadyModuleIds.has(activeModuleId));
   const overviewModuleSummary = statsLoading
     ? "KPI 데이터를 불러오는 중입니다."
     : statsHasError
@@ -11056,8 +10926,12 @@ export function AdminConsoleOverview({
           <p className="sr-only" aria-live="polite">
             {activeModuleLabel} 작업 화면으로 전환됨
           </p>
+          {showSingleModuleSkeleton
+            ? getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
+            : null}
+          <div className={showSingleModuleSkeleton ? "hidden" : "h-full min-h-0"}>
           {isAdminCanvasBootstrapping ? (
-            getAdminConsoleModuleLoadingSkeleton(activeModuleId, activeModuleLabel)
+            null
           ) : activeModuleId === "overview" ? (
             <AdminEmbeddedModuleShell
               moduleId="overview"
@@ -11096,8 +10970,10 @@ export function AdminConsoleOverview({
             <InlineModulePanel
               module={activeModule}
               initialStoryboardResult={initialStoryboardResult}
+              onModuleContentReady={markModuleContentReady}
             />
           ) : null}
+          </div>
         </section>
       </div>
     </main>

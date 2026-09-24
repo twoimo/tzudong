@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:40:00.000Z",
+  "model": "Cluster marker HTML was already cached, but every render still joined the category names to build the cache key. The joined names are stored on the category array. A new array still joins once.",
+  "categoryJoinsPerRepeatIcon": { "before": 1, "after": 0, "absolute": 1 },
+  "example16RegionalClusters": { "before": 16, "after": 0, "absolute": 16 },
+  "noise": {
+    "madJoins": 0,
+    "rule": "16 is the regional cluster ceiling used earlier, not a live trace. The first render of a category array still joins. Latitude and longitude are not part of the HTML."
+  }
+}

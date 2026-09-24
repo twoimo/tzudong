@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T15:50:00.000Z",
+  "model": "A marker render that could be skipped still built a key object and a bounds string from four toFixed calls. The skip now compares rounded integers and returns before that object exists.",
+  "keyObjectsPerSkippedRender": { "before": 1, "after": 0, "absolute": 1 },
+  "boundsStringsPerSkippedRender": { "before": 1, "after": 0, "absolute": 1 },
+  "fixedDecimalStringsPerSkippedRender": { "before": 4, "after": 0, "absolute": 4 },
+  "noise": {
+    "madObjects": 0,
+    "rule": "Rounding is Math.round(value * 10000), the same 4 decimal places as toFixed(4) for these positive coordinates. A render that is not skipped still stores one key object. Not a sampled allocator trace."
+  }
+}

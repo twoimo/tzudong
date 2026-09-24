@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:12:00.000Z",
+  "model": "Every visible supercluster marker loaded all of its leaves on every render, only to see whether that cluster was already expanded. When nothing is expanded, that leaf read is skipped.",
+  "leafReadsPerVisibleClusterWhenNoneExpanded": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madReads": 0,
+    "rule": "Counts one visible cluster while the expanded set is empty. An expanded cluster still reads its leaves. Not a sampled trace."
+  }
+}

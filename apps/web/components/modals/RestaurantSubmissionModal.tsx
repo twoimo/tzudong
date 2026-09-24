@@ -940,7 +940,7 @@ export default function RestaurantSubmissionModal({
         return (
             <section
                 ref={desktopSubmissionPanelRef}
-                className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl backdrop-blur-sm will-change-transform"
+                className="fixed bottom-24 right-6 top-6 z-[85] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-border bg-background/95 shadow-2xl"
                 style={{ transform: `translate3d(${desktopSubmissionPanelPosition.x}px, ${desktopSubmissionPanelPosition.y}px, 0)` }}
                 data-desktop-map-submission-panel="true"
                 aria-labelledby={mobileTitleId}

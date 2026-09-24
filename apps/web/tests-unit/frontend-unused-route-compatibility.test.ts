@@ -171,7 +171,7 @@ describe('frontend unused route compatibility', () => {
         );
         expect(adminConsoleSource).toContain('return null;');
         expect(adminConsoleSource).not.toContain('<GlobalLoader');
-        expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded />');
+        expect(adminConsoleSource).toContain('<AdminBannerModule key="admin-banners" embedded');
         expect(adminConsoleSource).not.toContain('AdminAnnouncementModule');
         expect(adminConsoleSource).not.toContain('adminActionsMode="inline"');
         expect(adminConsoleSource).not.toContain('id: "announcements"');

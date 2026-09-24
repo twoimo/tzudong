@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:00:00.000Z",
+  "model": "Every marker render copied the loaded restaurant list, merged cluster points, grouped coordinates, and sorted each overlapping group. Overlap depends on the restaurant list, so pan and zoom now reuse the memoized offsets.",
+  "fullListGroupsPerPanOrZoom": { "before": 1, "after": 0, "absolute": 1 },
+  "loadedRestaurantCopiesPerPanOrZoom": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madGroups": 0,
+    "rule": "A list identity change still groups once. A pan that does not change the loaded list used to group once and now does not. Not a sampled trace."
+  }
+}

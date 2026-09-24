@@ -44,10 +44,10 @@ function NaverMapDetailPanelSkeleton() {
             className="flex h-full flex-col gap-3 bg-background p-4"
             data-map-detail-panel-skeleton="true"
         >
-            <div className="h-48 rounded-2xl bg-muted animate-pulse motion-reduce:animate-none" />
-            <div className="h-5 w-2/3 rounded bg-muted animate-pulse motion-reduce:animate-none" />
-            <div className="h-3 w-full rounded bg-muted animate-pulse motion-reduce:animate-none" />
-            <div className="h-3 w-1/2 rounded bg-muted animate-pulse motion-reduce:animate-none" />
+            <div className="h-48 rounded-2xl bg-muted" />
+            <div className="h-5 w-2/3 rounded bg-muted" />
+            <div className="h-3 w-full rounded bg-muted" />
+            <div className="h-3 w-1/2 rounded bg-muted" />
         </div>
     );
 }
@@ -81,8 +81,8 @@ export function NaverMapDetailPanelShell({
 
     return (
         <div
-            className={`h-full relative shadow-sm bg-background transition-[width] duration-300 ${internalPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
-            style={{ overflow: 'visible', transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
+            className={`h-full relative shadow-sm bg-background ${internalPanelOpen ? 'w-[min(400px,calc(100vw-1rem))]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+            style={{ overflow: 'visible' }}
             onMouseDownCapture={onMouseDownCapture}
             onFocusCapture={onFocusCapture}
         >

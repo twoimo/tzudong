@@ -68,7 +68,7 @@ const LikerItem = memo(function LikerItem({ liker, onUserClick }: LikerItemProps
         <Link
             href={`/user/${liker.userId}`}
             onClick={handleClick}
-            className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors w-full text-left"
+            className="flex items-center gap-3 p-4 hover:bg-muted/30 w-full text-left"
         >
             <div className="flex-1 min-w-0">
                 <span className="font-semibold truncate block">
@@ -101,7 +101,7 @@ const STAT_TONE_CLASS_NAMES = {
 
 const StatCard = memo(function StatCard({ icon, label, value, valueClassName, tone = 'neutral' }: StatCardProps) {
     return (
-        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/60 bg-card/80 px-2.5 py-2.5 text-left shadow-sm transition-colors hover:bg-card">
+        <div className="flex min-w-0 items-center gap-2 rounded-xl border border-border/60 bg-card/80 px-2.5 py-2.5 text-left shadow-sm hover:bg-card">
             <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", STAT_TONE_CLASS_NAMES[tone])}>
                 {icon}
             </div>
@@ -416,7 +416,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border/70 bg-background p-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-3 border-b border-border bg-background px-4 py-3">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
                         {showBackButton && !onClose && (
@@ -466,7 +466,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                             variant="ghost"
                             size="icon"
                             onClick={handleBack}
-                            className="flex-shrink-0 -mr-2 h-10 w-10"
+                            className="h-8 w-8 shrink-0 rounded-full border border-border bg-background shadow-none hover:bg-secondary"
                         >
                             <X className="h-5 w-5" />
                         </Button>
@@ -528,7 +528,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                     aria-controls={getProfileTabPanelId(tab.value)}
                                     onClick={() => handleTabChange(tab.value)}
                                     className={cn(
-                                        "flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm",
+                                        "flex min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border px-2 py-2.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:text-sm",
                                         isActive
                                             ? "border-border/70 bg-background text-foreground shadow-sm"
                                             : "border-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground"

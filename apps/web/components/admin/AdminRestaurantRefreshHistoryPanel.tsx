@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import {
   History,
   ListChecks,
@@ -219,15 +220,17 @@ function RefreshWorkflowSteps() {
 }
 
 function RefreshCandidateListSkeleton() {
+  const skeleton = useFilledSkeletonCount(92, 5);
   return (
     <div
-      className="space-y-2 p-2 xl:divide-y xl:divide-border xl:space-y-0 xl:p-0"
+      ref={skeleton.ref}
+      className="h-full min-h-0 flex-1 space-y-2 p-2 xl:divide-y xl:divide-border xl:space-y-0 xl:p-0"
       role="status"
       aria-busy="true"
       aria-label="맛집 최신화 이력 로딩 중"
     >
       <span className="sr-only">맛집 최신화 후보 목록을 불러오는 중입니다.</span>
-      {Array.from({ length: 5 }).map((_, rowIndex) => (
+      {Array.from({ length: skeleton.count }).map((_, rowIndex) => (
         <div
           key={rowIndex}
           className="grid gap-3 rounded-lg border border-border/70 bg-background/80 px-3 py-3 shadow-sm xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:shadow-none xl:grid-cols-[1.2fr_1fr_0.9fr_0.9fr_110px] xl:items-center"
@@ -622,13 +625,23 @@ function RefreshCandidateDetailPanel({
   );
 }
 
-export function AdminRestaurantRefreshHistoryPanel() {
+export function AdminRestaurantRefreshHistoryPanel({
+  onInitialContentReady,
+}: {
+  onInitialContentReady?: () => void;
+} = {}) {
   const [data, setData] = useState<RefreshHistoryResponse | null>(null);
   const [statusFilter, setStatusFilter] = useState<
     RefreshCandidateStatus | "all"
   >("all");
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const initialLoadPendingRef = useRef(true);
+  if (initialLoadPendingRef.current && !isLoading) initialLoadPendingRef.current = false;
+  useLayoutEffect(() => {
+    if (!onInitialContentReady || initialLoadPendingRef.current) return;
+    onInitialContentReady();
+  }, [isLoading, onInitialContentReady]);
   const [error, setError] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] =
     useState<RefreshCandidateRow | null>(null);

@@ -275,7 +275,7 @@ export const ReviewCard = React.memo(function ReviewCard({
     return (
         <div
             id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
-            className={`w-full rounded-xl border bg-card text-card-foreground overflow-hidden mb-4 max-w-full transition-all duration-500
+            className={`w-full rounded-xl border bg-card text-card-foreground overflow-hidden mb-4 max-w-full
                 ${review.isPinned ? "border-primary/50" : "border-border/40"}
                 ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
             `}
@@ -300,7 +300,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                         <div className="flex items-center gap-2">
                             <Link
                                 href={`/user/${review.userId}`}
-                                className="text-sm font-semibold hover:text-primary hover:underline transition-colors"
+                                className="text-sm font-semibold hover:text-primary hover:underline"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     if (onUserClick) {
@@ -381,7 +381,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                             fill={optimisticLike.isLiked ? LIKED_HEART_COLOR : "none"}
                             stroke={optimisticLike.isLiked ? LIKED_HEART_COLOR : "currentColor"}
                             className={cn(
-                                "h-5 w-5 transition-all group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
+                                "h-5 w-5 group-active:fill-red-500 group-active:text-red-500 group-active:[&_path]:fill-red-500 group-active:[&_path]:stroke-red-500",
                                 optimisticLike.isLiked
                                     ? "fill-red-500 text-red-500 scale-110 [&_path]:fill-red-500 [&_path]:stroke-red-500"
                                     : "text-muted-foreground group-hover:text-red-500 group-hover:[&_path]:stroke-red-500"
@@ -436,7 +436,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                                 {photoUrls.map((url, index) => (
                                     <div
                                         key={`${photoItemKeyPrefix}-dot-${index}`}
-                                        className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
+                                        className={`h-1.5 rounded-full ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
                                     ></div>
                                 ))}
                             </div>

@@ -213,7 +213,7 @@ export default function HomeMapUserMenu({
         size="icon"
         data-desktop-map-fullscreen-toggle="true"
         className={cn(
-          "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+          "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 text-foreground shadow-sm hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
           shouldOffsetForRightPanel ? "" : "right-20",
         )}
         style={fullscreenButtonStyle}
@@ -237,7 +237,7 @@ export default function HomeMapUserMenu({
               size="icon"
               data-desktop-map-user-menu="true"
               className={cn(
-                "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                 shouldOffsetForRightPanel ? "" : "right-6",
               )}
               style={userButtonStyle}
@@ -305,7 +305,7 @@ export default function HomeMapUserMenu({
                 aria-expanded={isBusinessInfoExpanded}
                 aria-controls="desktop-map-business-info-content"
                 onClick={() => setIsBusinessInfoExpanded((prev) => !prev)}
-                className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="flex w-max max-w-full items-center justify-between rounded-lg px-1 py-1 text-left whitespace-nowrap hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <span className="text-2xs text-muted-foreground">
                   {siteConfig.operator.copyrightLabel}
@@ -344,7 +344,7 @@ export default function HomeMapUserMenu({
           data-desktop-map-user-menu="true"
           data-auth-session-pending="true"
           className={cn(
-            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             shouldOffsetForRightPanel ? "" : "right-6",
           )}
           style={userButtonStyle}
@@ -360,7 +360,7 @@ export default function HomeMapUserMenu({
           size="icon"
           data-desktop-map-user-menu="true"
           className={cn(
-            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm backdrop-blur-sm transition-colors hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            "fixed top-4 z-[120] h-11 w-11 rounded-full border border-border bg-background/95 p-0 shadow-sm hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             shouldOffsetForRightPanel ? "" : "right-6",
           )}
           style={userButtonStyle}

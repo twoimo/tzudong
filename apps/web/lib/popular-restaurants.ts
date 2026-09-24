@@ -1,10 +1,11 @@
 import { mergeRestaurants } from '@/hooks/use-restaurants';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchSupabaseRows, postgrestIn } from '@/lib/supabase-rest-client';
+import { comparePopularRestaurants } from '@/lib/popular-restaurant-score';
 import { OVERSEAS_REGIONS } from '@/constants/overseas-regions';
 import { sanitizePostgrestOrTerm } from '@/lib/overseas-region-matching';
 import type { Restaurant } from '@/types/restaurant';
 
-export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-weekly'] as const;
+export const POPULAR_RESTAURANTS_QUERY_KEY = ['popular-searches-composite-v1'] as const;
 export const LATEST_RESTAURANTS_QUERY_KEY = ['latest-restaurants'] as const;
 export const POPULAR_RANK_SNAPSHOTS_QUERY_KEY = [
   'popular-rank-snapshots',
@@ -68,7 +69,7 @@ const KOREAN_RESTAURANT_ADDRESS_KEYWORDS = Array.from(
 );
 
 export const POPULAR_RESTAURANT_SELECT =
-  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count, reasoning_basis';
+  'id, name:approved_name, approved_name, lat, lng, road_address, jibun_address, english_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, status, created_at, updated_at, weekly_search_count';
 
 export type LatestRestaurantSort = 'latest' | 'oldest' | 'popular';
 
@@ -147,41 +148,6 @@ type PopularRankSnapshotResult = {
   snapshots: Map<string, PopularRankSnapshotRow>;
   hasSnapshotPeriod: boolean;
 };
-
-type SupabaseQueryError = {
-  message?: string;
-};
-
-type SupabaseQueryResult<T> = {
-  data: T | null;
-  error: SupabaseQueryError | null;
-};
-
-type PopularRankSnapshotQuery<T> = {
-  eq: (
-    column: string,
-    value: string | number | boolean | null,
-  ) => PopularRankSnapshotQuery<T>;
-  order: (
-    column: string,
-    options: { ascending: boolean },
-  ) => PopularRankSnapshotQuery<T>;
-  limit: (count: number) => PopularRankSnapshotQuery<T>;
-  maybeSingle: () => Promise<SupabaseQueryResult<T>>;
-  then: <TResult1 = SupabaseQueryResult<T[]>, TResult2 = never>(
-    onfulfilled?:
-      | ((value: SupabaseQueryResult<T[]>) => TResult1 | PromiseLike<TResult1>)
-      | null,
-    onrejected?:
-      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-      | null,
-  ) => PromiseLike<TResult1 | TResult2>;
-};
-
-type PopularRankSnapshotTable = {
-  select: <T>(columns: string) => PopularRankSnapshotQuery<T>;
-};
-
 
 type RestaurantListArgs = {
   limit: number;
@@ -320,53 +286,35 @@ export function buildRestaurantRegionAddressOrFilter(
     .join(',');
 }
 
-const applyRestaurantRegionAddressFilter = <T>(
-  query: T & { or: (filters: string) => T },
+type RestQuery = Array<[string, string | number | boolean]>;
+
+const applyRestaurantRegionAddressFilter = (
+  query: RestQuery,
   selectedRegion: string | null | undefined,
-) => {
+): RestQuery => {
   const regionAddressFilter =
     buildRestaurantRegionAddressOrFilter(selectedRegion);
 
-  return regionAddressFilter ? query.or(regionAddressFilter) : query;
+  return regionAddressFilter ? [...query, ['or', `(${regionAddressFilter})`]] : query;
 };
 
-const isPopularRankSnapshotsTable = (
-  value: unknown,
-): value is PopularRankSnapshotTable =>
-  typeof value === 'object'
-  && value !== null
-  && 'select' in value
-  && typeof value.select === 'function';
-
-const getPopularRankSnapshotsTable = (): PopularRankSnapshotTable => {
-  const client: { from?: unknown } = supabase;
-  if (typeof client.from !== 'function') {
-    throw new Error('POPULAR_RANK_SNAPSHOTS_UNAVAILABLE');
-  }
-
-  const table: unknown = client.from('restaurant_popular_rank_snapshots');
-  if (!isPopularRankSnapshotsTable(table)) {
-    throw new Error('POPULAR_RANK_SNAPSHOTS_UNAVAILABLE');
-  }
-
-  return table;
-};
+// Rank snapshots are a public read, so they use the REST client instead of the auth browser client.
 const fetchPopularRankSnapshots = async ({
   limit,
   selectedRegion,
   isKoreanOnly = false,
 }: RestaurantListArgs) => {
   const scopeKey = getPopularRankScopeKey({ selectedRegion, isKoreanOnly });
-  const table = getPopularRankSnapshotsTable();
-
-  const { data: latestPeriod, error: latestPeriodError } = await table
-    .select<PopularRankSnapshotPeriodRow>('period_start')
-    .eq('scope_key', scopeKey)
-    .order('period_start', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (latestPeriodError) throw latestPeriodError;
+  const periods = await fetchSupabaseRows<PopularRankSnapshotPeriodRow>(
+    'restaurant_popular_rank_snapshots',
+    [
+      ['select', 'period_start'],
+      ['scope_key', `eq.${scopeKey}`],
+      ['order', 'period_start.desc'],
+      ['limit', 1],
+    ],
+  );
+  const latestPeriod = periods[0];
   if (!latestPeriod?.period_start) {
     return {
       snapshots: new Map<string, PopularRankSnapshotRow>(),
@@ -374,20 +322,20 @@ const fetchPopularRankSnapshots = async ({
     } satisfies PopularRankSnapshotResult;
   }
 
-  const { data, error } = await table
-    .select<PopularRankSnapshotRow>(
-      'restaurant_id, rank, weekly_search_count, captured_at',
-    )
-    .eq('scope_key', scopeKey)
-    .eq('period_start', latestPeriod.period_start)
-    .order('rank', { ascending: true })
-    .limit(Math.max(limit * 4, 20));
-
-  if (error) throw error;
+  const data = await fetchSupabaseRows<PopularRankSnapshotRow>(
+    'restaurant_popular_rank_snapshots',
+    [
+      ['select', 'restaurant_id, rank, weekly_search_count, captured_at'],
+      ['scope_key', `eq.${scopeKey}`],
+      ['period_start', `eq.${latestPeriod.period_start}`],
+      ['order', 'rank.asc'],
+      ['limit', Math.max(limit * 4, 20)],
+    ],
+  );
 
   return {
     snapshots: new Map(
-      (data ?? []).map((snapshot) => [snapshot.restaurant_id, snapshot]),
+      data.map((snapshot) => [snapshot.restaurant_id, snapshot]),
     ),
     hasSnapshotPeriod: true,
   } satisfies PopularRankSnapshotResult;
@@ -435,6 +383,39 @@ export const attachPopularRankTrends = (
     };
   });
 
+async function attachPopularYouTubeMetrics(restaurants: Restaurant[]): Promise<Restaurant[]> {
+  try {
+    const { enrichRestaurantsWithYouTubeKpiMetrics } = await import('@/lib/home-map-youtube-kpi');
+    return await enrichRestaurantsWithYouTubeKpiMetrics(restaurants);
+  } catch {
+    return restaurants;
+  }
+}
+
+async function fetchReviewLikeTotals(restaurantIds: string[]): Promise<Map<string, number>> {
+  const totals = new Map<string, number>();
+  const ids = [...new Set(restaurantIds.filter(Boolean))];
+  if (ids.length === 0) return totals;
+
+  let data: Array<{ restaurant_id: string | null; like_count: number | null }>;
+  try {
+    data = await fetchSupabaseRows('reviews', [
+      ['select', 'restaurant_id, like_count'],
+      ['restaurant_id', postgrestIn(ids)],
+    ]);
+  } catch {
+    return totals;
+  }
+
+  for (const row of data) {
+    const restaurantId = row.restaurant_id;
+    if (!restaurantId) continue;
+    totals.set(restaurantId, (totals.get(restaurantId) ?? 0) + (row.like_count ?? 0));
+  }
+
+  return totals;
+}
+
 async function fetchRegionalPopularBackfillRestaurants({
   fetchLimit,
   selectedRegion,
@@ -445,21 +426,19 @@ async function fetchRegionalPopularBackfillRestaurants({
 >): Promise<Restaurant[]> {
   if (!selectedRegion) return [];
 
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved');
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
+  const data = await fetchSupabaseRows<Restaurant>(
+    'restaurants',
+    applyRestaurantRegionAddressFilter(
+      [
+        ['select', POPULAR_RESTAURANT_SELECT],
+        ['status', 'eq.approved'],
+        ['order', 'review_count.desc'],
+        ['order', 'created_at.desc'],
+        ['limit', fetchLimit ?? 20],
+      ],
+      selectedRegion,
+    ),
   );
-  const { data, error } = await regionScopedQuery
-    .order('review_count', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(fetchLimit ?? 20)
-    .overrideTypes<Restaurant[], { merge: false }>();
-
-  if (error) throw error;
 
   return mergeRestaurants(data ?? [])
     .filter(isApprovedRestaurant)
@@ -482,31 +461,32 @@ export async function fetchPopularRestaurants({
   selectedRegion,
   isKoreanOnly = false,
 }: RestaurantListArgs): Promise<PopularRestaurantWithTrend[]> {
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved')
-    .gt('weekly_search_count', 0);
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
+  const data = await fetchSupabaseRows<Restaurant>(
+    'restaurants',
+    applyRestaurantRegionAddressFilter(
+      [
+        ['select', POPULAR_RESTAURANT_SELECT],
+        ['status', 'eq.approved'],
+        ['weekly_search_count', 'gt.0'],
+        ['order', 'weekly_search_count.desc'],
+        ['limit', fetchLimit],
+      ],
+      selectedRegion,
+    ),
   );
-  const { data, error } = await regionScopedQuery
-    .order('weekly_search_count', { ascending: false })
-    .limit(fetchLimit)
-    .overrideTypes<Restaurant[], { merge: false }>();
 
-  if (error) throw error;
+  const restaurants = (await attachPopularYouTubeMetrics(
+    mergeRestaurants(data ?? [])
+      .filter(isApprovedRestaurant)
+      .filter((restaurant) =>
+        matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+      ),
+  ))
+    .sort((a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0));
 
-  const restaurants = mergeRestaurants(data ?? [])
-    .filter(isApprovedRestaurant)
-    .filter((restaurant) =>
-      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-    )
-    .sort(
-      (a, b) => (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0),
-    )
-    .slice(0, limit);
+  const reviewLikesById = await fetchReviewLikeTotals(restaurants.map((restaurant) => restaurant.id));
+  restaurants.sort((a, b) => comparePopularRestaurants(a, b, reviewLikesById));
+  restaurants.splice(limit);
 
   if (selectedRegion && restaurants.length < limit) {
     const existingIds = new Set(restaurants.map((restaurant) => restaurant.id));
@@ -546,43 +526,45 @@ export async function fetchLatestRestaurantPage({
 }: LatestRestaurantPageArgs): Promise<LatestRestaurantPage> {
   const pageSize = Math.max(1, fetchLimit);
   const pageOffset = Math.max(0, offset);
-  const query = supabase
-    .from('restaurants')
-    .select(POPULAR_RESTAURANT_SELECT)
-    .eq('status', 'approved');
-  const regionScopedQuery = applyRestaurantRegionAddressFilter(
-    query,
-    selectedRegion,
+  const data = await fetchSupabaseRows<Restaurant>(
+    'restaurants',
+    applyRestaurantRegionAddressFilter(
+      [
+        ['select', POPULAR_RESTAURANT_SELECT],
+        ['status', 'eq.approved'],
+        ...(sort === 'popular'
+          ? ([
+              ['order', 'weekly_search_count.desc'],
+              ['order', 'created_at.desc'],
+            ] as RestQuery)
+          : ([
+              [
+                'order',
+                `youtube_meta->>publishedAt.${sort === 'oldest' ? 'asc' : 'desc'}.nullslast`,
+              ],
+            ] as RestQuery)),
+        ['limit', pageSize],
+        ['offset', pageOffset],
+      ],
+      selectedRegion,
+    ),
   );
-  const orderedQuery =
-    sort === 'popular'
-      ? regionScopedQuery
-          .order('weekly_search_count', { ascending: false })
-          .order('created_at', { ascending: false })
-      : regionScopedQuery.order('youtube_meta->>publishedAt', {
-          ascending: sort === 'oldest',
-          nullsFirst: false,
-        });
-  const { data, error } = await orderedQuery
-    .range(
-      pageOffset,
-      pageOffset + pageSize - 1,
-    )
-    .overrideTypes<Restaurant[], { merge: false }>();
-
-  if (error) throw error;
 
   const rawRestaurants = data ?? [];
-  const restaurants = mergeRestaurants(rawRestaurants)
-    .filter(isApprovedRestaurant)
-    .filter((restaurant) =>
-      matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
-    )
+  const mergedRestaurants = await attachPopularYouTubeMetrics(
+    mergeRestaurants(rawRestaurants)
+      .filter(isApprovedRestaurant)
+      .filter((restaurant) =>
+        matchesRestaurantAddressContext(restaurant, selectedRegion, isKoreanOnly),
+      ),
+  );
+  const reviewLikesById = sort === 'popular'
+    ? await fetchReviewLikeTotals(mergedRestaurants.map((restaurant) => restaurant.id))
+    : new Map<string, number>();
+  const restaurants = mergedRestaurants
     .sort((a, b) => {
       if (sort === 'popular') {
-        const popularityDelta =
-          (b.weekly_search_count ?? 0) - (a.weekly_search_count ?? 0);
-        if (popularityDelta !== 0) return popularityDelta;
+        return comparePopularRestaurants(a, b, reviewLikesById);
       }
 
       const bTime = latestRestaurantSortTime(b, sort);

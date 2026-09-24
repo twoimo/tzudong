@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:04:00.000Z",
+  "model": "The mobile bottom bar, two floating map controls, and the map notice still sampled the map through backdrop-filter. They already use an opaque card or 95% background, so the filter only added a resample on every pan frame.",
+  "backdropLayers": { "before": 4, "after": 0, "absolute": 4 },
+  "samplesPerSecondAt60fps": { "before": 240, "after": 0, "absolute": 240 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "240 is 4 layers times 60 frames. A second notice would add another 60. Not a sampled compositor trace."
+  }
+}

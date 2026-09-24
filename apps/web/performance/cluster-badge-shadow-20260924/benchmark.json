@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:14:00.000Z",
+  "model": "Each cluster count badge painted a box-shadow on top of an already opaque background. The shadow is gone, so panning does not redraw it.",
+  "shadowPaintsPerBadgePerFrame": { "before": 1, "after": 0, "absolute": 1 },
+  "regionalCeilingShadowPaintsPerSecondAt60fps": { "before": 1080, "after": 0, "absolute": 1080 },
+  "noise": {
+    "madPaints": 0,
+    "rule": "1080 is 18 regional centers times 60 frames. Empty regions are not drawn, so a live frame is at or under that ceiling. Not a sampled paint trace."
+  }
+}

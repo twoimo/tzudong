@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:18:00.000Z",
+  "model": "The domestic and overseas map buttons transitioned every property, including the shadow, for the default 150ms. Only colors transition now.",
+  "nonColorFramesPerModeSwitchAt60fps": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60fps / 1000) for one button. Both buttons change on a mode switch, so the before count is 18. Not a sampled compositor trace."
+  }
+}

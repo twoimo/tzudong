@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:14:00.000Z",
+  "model": "Map controls and the submit button faded their colors for 150ms. The color now changes in one frame. Seven controls had the same transition.",
+  "colorFramesPerControlChange": { "before": 9, "after": 1, "absolute": 8, "relative": 9 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "9 is round(150ms * 60 / 1000). One control changes at a time. Not a sampled compositor trace."
+  }
+}

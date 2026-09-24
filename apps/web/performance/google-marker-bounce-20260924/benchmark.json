@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:24:00.000Z",
+  "model": "Google map markers used transition-all for 300ms and an infinite bounce while selected. The selected size remains. Hover scale changes in one frame, and the bounce does not run.",
+  "bounceFramesPerSecondWhileSelectedAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "transitionAllFramesPerInteractionAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "60 is the infinite bounce sampled for one second. 18 is round(300ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

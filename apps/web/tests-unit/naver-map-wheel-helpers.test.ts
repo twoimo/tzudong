@@ -8,6 +8,7 @@ import {
     buildNaverWheelViewportPlan,
     clearNaverPendingAnchorAdjustListener,
     flushQueuedNaverWheelInput,
+    hasNaverWheelProjectionUpdated,
     resolveNaverWheelCleanupState,
     resolveNaverWheelInputDispatch,
     resolveNaverWheelPostAdjustPlan,
@@ -219,6 +220,12 @@ describe('naver map wheel helpers', () => {
             nextPendingAnchorAdjustListener: null,
         });
         expect(removed).toEqual(['listener-1']);
+    });
+
+    test('treats an unchanged projection offset as not ready for same-turn correction', () => {
+        expect(hasNaverWheelProjectionUpdated({ x: 10, y: 20 }, { x: 10, y: 20 })).toBe(false);
+        expect(hasNaverWheelProjectionUpdated({ x: 10, y: 20 }, { x: 20, y: 20 })).toBe(true);
+        expect(hasNaverWheelProjectionUpdated(null, { x: 20, y: 20 })).toBe(false);
     });
 
     test('resolves cleanup state by resetting anchor-adjust and queue state', () => {

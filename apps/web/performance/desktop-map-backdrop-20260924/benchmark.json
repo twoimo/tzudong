@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:00:00.000Z",
+  "model": "Desktop map controls used a 95% opaque background plus backdrop-filter. While the map pans at 60fps, each backdrop layer resamples the map. Those six controls no longer create a backdrop layer.",
+  "backdropLayers": { "before": 6, "after": 0, "absolute": 6 },
+  "samplesPerSecondAt60fps": { "before": 360, "after": 0, "absolute": 360 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "360 is 6 layers times 60 frames. Not a sampled compositor trace."
+  }
+}

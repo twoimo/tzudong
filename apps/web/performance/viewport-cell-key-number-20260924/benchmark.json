@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T16:02:00.000Z",
+  "model": "Each touched viewport cell built a lat:lng string to find its restaurant bucket. The cell is now one integer, latCell * 100000 + lngCell. Earth longitude cells stay inside that stride.",
+  "cellKeyStringsPerScan": { "before": "c", "after": 0, "absolute": "c" },
+  "cellKeyStringsPerIndexBuild": { "before": "n", "after": 0, "absolute": "n" },
+  "example20Cells": { "before": 20, "after": 0, "absolute": 20 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "c is the number of touched cells and n is the number of restaurants in the indexed list. 20 is an example, not a live Seoul window. The restaurant index still stores the same buckets. Not a sampled allocator trace."
+  }
+}

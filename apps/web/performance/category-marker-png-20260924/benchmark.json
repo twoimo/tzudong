@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-24T10:46:00.000Z",
+  "model": "Category markers and detail icons draw at 32px to 42px. 42*3 = 126 device pixels, so 128px is enough. The previous category PNGs were 256px, which is (256/128)^2 = 4 times as many pixels. The detail panel and several map fallbacks request the PNG directly.",
+  "files": 18,
+  "pixels": { "before": 65536, "after": 16384, "ratio": 4 },
+  "bytes": { "before": 1601670, "after": 449833, "absolute": 1151837, "relative": 3.561 },
+  "noise": { "madBytes": 0, "rule": "File sizes are deterministic. Already-128px files were left unchanged and are included in both totals." }
+}

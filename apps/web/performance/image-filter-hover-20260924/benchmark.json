@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:22:00.000Z",
+  "model": "Hovering a stamp thumbnail applied brightness(), which is a CSS filter, for 300ms. The detail play button also blurred the hero image under it. Hover no longer filters the thumbnail, and the play button no longer blurs the hero.",
+  "stampHoverFilterFrames": { "before": 18, "after": 0, "absolute": 18 },
+  "detailPlayBackdropLayers": { "before": 2, "after": 0, "absolute": 2 },
+  "detailPlayBackdropSamplesPerSecondAt60fps": { "before": 120, "after": 0, "absolute": 120 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000) for one thumbnail. 120 is two play buttons times 60 frames, counted only while the hero image under them is changing. Not a sampled compositor trace. A visited stamp still uses grayscale."
+  }
+}

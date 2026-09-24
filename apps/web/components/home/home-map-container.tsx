@@ -112,23 +112,18 @@ const QUICK_GESTURE_DURATION_MS = 85;
 const DESKTOP_LEFT_PANEL_WIDTH_PX = 392;
 const DESKTOP_LEFT_PANEL_WIDTH_CSS = `min(${DESKTOP_LEFT_PANEL_WIDTH_PX}px, calc(100vw - 32px))`;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
-const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
-const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
 const DRAG_RENDER_EPSILON_PERCENT = 0.08;
-const SNAP_TRANSITION_BASE_MS = 235;
-const SNAP_TRANSITION_FAST_MS = 175;
-const SNAP_TRANSITION_SMOOTH_MS = 295;
-const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
-const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const SHEET_HEIGHT_CSS_VAR = '--home-sheet-height-px';
-type SheetSnapTransition = {
-    duration: number;
-    easing: string;
-};
 
-const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) =>
-    restaurants.map((restaurant) => restaurant.id).join('|');
+const swipeableRestaurantsSignatureCache = new WeakMap<Restaurant[], string>();
+
+const buildSwipeableRestaurantsSignature = (restaurants: Restaurant[]) => {
+    const cached = swipeableRestaurantsSignatureCache.get(restaurants);
+    if (cached !== undefined) return cached;
+    const signature = restaurants.map((restaurant) => restaurant.id).join('|');
+    swipeableRestaurantsSignatureCache.set(restaurants, signature);
+    return signature;
+};
 
 const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestaurantsPayload | null) => {
     if (!payload) return 'null';
@@ -140,7 +135,7 @@ const buildContextualRestaurantsSignature = (payload: HomeMapContextualRestauran
         payload.isEligible ? 'eligible' : 'ineligible',
         payload.ineligibilityReason ?? 'none',
         payload.totalVisibleCount,
-        payload.restaurants.map((restaurant) => restaurant.id).join('|'),
+        payload.restaurants.length > 0 ? buildSwipeableRestaurantsSignature(payload.restaurants) : '',
     ].join('::');
 };
 
@@ -239,10 +234,6 @@ function HomeMapContainerComponent({
     ));
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
-    const [sheetSnapTransition, setSheetSnapTransition] = useState<SheetSnapTransition>({
-        duration: SNAP_TRANSITION_BASE_MS,
-        easing: SNAP_EASING_BASE,
-    });
     const [swipeableRestaurantsByMode, setSwipeableRestaurantsByMode] = useState<{
         domestic: Restaurant[];
         overseas: Restaurant[];
@@ -329,29 +320,6 @@ function HomeMapContainerComponent({
         sheetHeightPxRef.current = nextHeightPx;
         sheetContainer.style.setProperty(SHEET_HEIGHT_CSS_VAR, `${nextHeightPx}px`);
     }, [percentToPx]);
-
-    const applySnapTransition = useCallback((isFlick: boolean, distancePx: number, isLongPress: boolean) => {
-        if (isFlick) {
-            setSheetSnapTransition({
-                duration: SNAP_TRANSITION_FAST_MS,
-                easing: SNAP_EASING_FAST,
-            });
-            return;
-        }
-
-        if (isLongPress || distancePx >= 80) {
-            setSheetSnapTransition({
-                duration: SNAP_TRANSITION_SMOOTH_MS,
-                easing: SNAP_EASING_SMOOTH,
-            });
-            return;
-        }
-
-        setSheetSnapTransition({
-            duration: SNAP_TRANSITION_BASE_MS,
-            easing: SNAP_EASING_BASE,
-        });
-    }, []);
 
     const getDetailScrollArea = useCallback(() => {
         const cachedScrollArea = detailScrollAreaRef.current;
@@ -586,10 +554,6 @@ function HomeMapContainerComponent({
         dragEndYRef.current = clientY;
         dragEndTimeRef.current = performance.now();
         velocityRef.current = 0;
-        setSheetSnapTransition({
-            duration: SNAP_TRANSITION_BASE_MS,
-            easing: SNAP_EASING_BASE,
-        });
 
         if (sheetContainerRef.current) {
             sheetContainerRef.current.style.transitionDuration = '0ms';
@@ -634,8 +598,6 @@ function HomeMapContainerComponent({
         const startedAtHalf = !startedAtPeek && startHeightRef.current <= HALF_SHEET_HEIGHT + 0.5;
         const startedAtFull = startHeightRef.current >= currentMaxHeight - 0.5;
         const isQuickGesture = elapsedMs <= QUICK_GESTURE_DURATION_MS;
-        const movementPx = Math.abs(movementPxFromStart);
-        const isLongPress = !isQuickGesture && elapsedMs >= LONG_PRESS_TRANSITION_THRESHOLD_MS;
         const peekToHalfDistancePercent = pxToPercent(
             HALF_TO_FULL_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
         );
@@ -647,15 +609,6 @@ function HomeMapContainerComponent({
         );
         const halfToPeekDistancePercent = pxToPercent(
             HALF_TO_PEEK_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
-        );
-        const shouldUseFastTransition = isSwipeUpStrong || isSwipeDownStrong;
-        const isQuickAndSmall = isQuickGesture && movementPx <= QUICK_GESTURE_SHORT_DISTANCE_PX;
-        const shouldUseSmoothTransition = isLongPress || (!isQuickAndSmall && movementPx > QUICK_GESTURE_SHORT_DISTANCE_PX) || dragDistancePx > HALF_TO_PEEK_DISTANCE_PX;
-
-        applySnapTransition(
-            shouldUseFastTransition,
-            movementPx,
-            shouldUseSmoothTransition
         );
         velocityRef.current = 0;
 
@@ -724,7 +677,6 @@ function HomeMapContainerComponent({
 
         setSheetHeightSafe(getNearestSnapHeight(currentHeight), true);
     }, [
-        applySnapTransition,
         getCurrentMaxHeight,
         getNearestSnapHeight,
         onPanelClose,
@@ -1422,7 +1374,7 @@ function HomeMapContainerComponent({
 
     return (
         <div
-            className="relative h-full min-h-0 min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-out motion-reduce:transition-none"
+            className="relative h-full min-h-0 min-w-0 w-full overflow-hidden"
             data-home-map-reserved-left-panel={shouldReserveDesktopLeftPanel ? "true" : "false"}
             data-home-map-reserved-right-panel={shouldReserveDesktopRightPanel ? "true" : "false"}
             data-home-map-panel-side={desktopPanelSide}
@@ -1498,7 +1450,6 @@ function HomeMapContainerComponent({
                                 className={cn(
                                     "fixed right-0 w-[min(400px,calc(100vw-1rem))] z-[95]",
                                     "bg-background border-l border-border shadow-sm",
-                                    "transform transition-transform duration-300 ease-out",
                                     isPanelOpen ? "translate-x-0" : "translate-x-full"
                                 )}
                                 style={{
@@ -1512,7 +1463,7 @@ function HomeMapContainerComponent({
                                 {/* 접기 버튼 */}
                                 <button
                                     onClick={onPanelClose}
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex h-12 w-11 items-center justify-center bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex h-12 w-11 items-center justify-center bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted motion-reduce:transition-none cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                     title="상세 패널 닫기"
                                     aria-label="상세 패널 닫기"
                                 >
@@ -1547,7 +1498,6 @@ function HomeMapContainerComponent({
                                     'bg-background shadow-sm',
                                     isSheetAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                                     'min-h-0 min-w-0 overflow-hidden flex flex-col',
-                                    isDragging ? '' : 'transition-[height,border-radius]',
                                     'pb-[env(safe-area-inset-bottom)]'
                                 )}
                                 data-sheet-state={isSheetAtFullHeight ? 'full' : 'partial'}
@@ -1557,9 +1507,6 @@ function HomeMapContainerComponent({
                                     [`${SHEET_HEIGHT_CSS_VAR}`]: `${viewportHeight * sheetHeight / 100}px`,
                                     height: `var(${SHEET_HEIGHT_CSS_VAR})`,
                                     maxHeight: '100%',
-                                    willChange: isDragging ? 'height' : undefined,
-                                    transitionDuration: isDragging ? '0ms' : `${sheetSnapTransition.duration}ms`,
-                                    transitionTimingFunction: isDragging ? undefined : sheetSnapTransition.easing,
                                 } as unknown as Record<string, string | number | undefined>}
                             >
                                 {!isSheetAtFullHeight && (

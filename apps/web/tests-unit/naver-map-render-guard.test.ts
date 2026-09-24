@@ -189,6 +189,25 @@ describe('naver map marker render guard', () => {
         expect(shouldSkipMarkerUpdate(previous, nextToggleChanged)).toBe(false);
     });
 
+    test('reuses the display id signature for the same id list', () => {
+        const displayRestaurantIds = ['r-2', 'r-1', 'r-2'];
+        const input = {
+            zoom: 12,
+            bounds: null,
+            displayRestaurantIds,
+            selectedRestaurantId: null,
+            searchedRestaurantId: null,
+            isClusterMode: false,
+            isRegionalClusterMode: false,
+            isSeoulDistrictMode: false,
+        };
+        const first = buildMarkerRenderSignature(input);
+        displayRestaurantIds.push('r-3');
+        const second = buildMarkerRenderSignature(input);
+        expect(second.displayRestaurantIdsSignature).toBe(first.displayRestaurantIdsSignature);
+        expect(first.displayRestaurantIdsSignature).toBe('r-1|r-2');
+    });
+
     test('keeps an empty desktop marker render from poisoning the render signature', () => {
         const source = readFileSync(join(process.cwd(), 'components/map/NaverMapView.tsx'), 'utf8');
 
@@ -197,7 +216,8 @@ describe('naver map marker render guard', () => {
         expect(source).toContain("window.requestIdleCallback(callback, { timeout: CLUSTER_INDEX_IDLE_TIMEOUT_MS })");
         expect(source).toContain('markerRenderSignatureRef.current = null;');
         expect(source).toContain('setMarkerRenderRetryTick((tick) => tick + 1)');
-        expect(source).toContain("document.querySelector('.cluster-marker-container')");
+        expect(source).toContain('markerPool.getStats().activeCount > 0');
+        expect(source).not.toContain("document.querySelector('.cluster-marker-container')");
         expect(source).toContain('activeIds.size === 0 && displayRestaurants.length > 0');
         expect(source).toContain('markerRenderRetryTick');
     });

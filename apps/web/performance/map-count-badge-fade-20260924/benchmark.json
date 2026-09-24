@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:54:00.000Z",
+  "model": "The Google map restaurant-count badge faded and zoomed in for 300ms. It now appears in one frame.",
+  "badgeFramesAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). Not a sampled compositor trace."
+  }
+}

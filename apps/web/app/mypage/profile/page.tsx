@@ -1009,7 +1009,7 @@ export default function ProfilePage() {
               <label
                 htmlFor="mypage-mobile-avatar-upload"
                 aria-label="프로필 사진 변경"
-                className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm transition-[border-color,box-shadow] group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
+                className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-sm group-hover:ring-2 group-hover:ring-primary/30 md:pointer-events-none"
                 style={{
                   width: "6rem",
                   height: "6rem",
@@ -1233,7 +1233,7 @@ export default function ProfilePage() {
                           {action.title}
                         </span>
                         <ChevronRight
-                          className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                          className="h-4 w-4 shrink-0 text-muted-foreground group-hover:translate-x-0.5"
                           aria-hidden="true"
                         />
                       </Link>
@@ -1289,7 +1289,7 @@ export default function ProfilePage() {
                 aria-valuemax={100}
               >
                 <div
-                  className="h-full rounded-full bg-primary transition-[width]"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${tierProgress.progressPercent}%` }}
                   aria-hidden="true"
                 />
@@ -1671,7 +1671,7 @@ export default function ProfilePage() {
               <summary className="flex min-h-10 cursor-pointer touch-manipulation list-none items-center justify-between gap-3 rounded-xl text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary lg:min-h-9">
                 <span>계정 삭제 옵션 보기</span>
                 <ChevronRight
-                  className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+                  className="h-4 w-4 shrink-0 text-muted-foreground group-open:rotate-90"
                   aria-hidden="true"
                 />
               </summary>

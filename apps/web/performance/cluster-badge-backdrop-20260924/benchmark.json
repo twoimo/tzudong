@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:12:00.000Z",
+  "model": "Each cluster count badge sampled the moving map through backdrop-filter: blur(2px). The badge stays opaque at rgba(0,0,0,0.75). The filter is gone, so pan no longer resamples the tiles under the badge.",
+  "backdropLayersPerBadge": { "before": 1, "after": 0, "absolute": 1 },
+  "regionalCeilingSamplesPerSecondAt60fps": { "before": 1080, "after": 0, "absolute": 1080 },
+  "seoulDistrictCeilingSamplesPerSecondAt60fps": { "before": 1500, "after": 0, "absolute": 1500 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "60 frames times the badge count. Regional centers are 18 and Seoul districts are 25; empty regions are not drawn, so a live frame is at or under that ceiling. Not a sampled compositor trace."
+  }
+}

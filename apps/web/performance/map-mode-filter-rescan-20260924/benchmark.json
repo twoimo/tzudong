@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:12:00.000Z",
+  "model": "A repeat pan of an unchanged list skips the mode classification. It still compares each restaurant's cached address fields so an in-place edit is picked up. A changed field rebuilds the list.",
+  "modeClassificationsPerUnchangedRepeat": { "before": "n", "after": 0, "absolute": "n" },
+  "noise": {
+    "madExaminations": 0,
+    "rule": "n is the list length. A repeat still compares cached address fields once per row. The first call and any changed field still classify every row. A selected overseas country does not use this list cache. Not a sampled profiler trace."
+  }
+}

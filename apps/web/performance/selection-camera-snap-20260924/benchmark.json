@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:48:00.000Z",
+  "model": "Mobile marker selection panned for 340ms and then fired a second map resize. Device-location focus morphed for 450ms. Both now set the center and zoom in one turn, and the delayed resize is gone.",
+  "mobileSelectionCameraFramesAt60fps": { "before": 20, "after": 1, "absolute": 19, "relative": 20 },
+  "delayedResizeAfterSelection": { "before": 1, "after": 0, "absolute": 1 },
+  "deviceLocationMorphFramesAt60fps": { "before": 27, "after": 1, "absolute": 26, "relative": 27 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "20 is round(340ms * 60fps / 1000). 27 is round(450ms * 60fps / 1000). Not a sampled tile trace."
+  }
+}

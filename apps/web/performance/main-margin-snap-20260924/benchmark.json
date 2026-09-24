@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:18:00.000Z",
+  "model": "The shared layout animated the main column's top margin for 300ms while the mobile sheet offset changed. The margin still follows the sheet, in one frame.",
+  "marginFramesPerOffsetChange": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60 / 1000). During a drag the offset changes every frame, so the old transition kept restarting. Not a sampled compositor trace."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:32:00.000Z",
+  "model": "The desktop submission, review, and edit panels kept will-change: transform for the whole time they were open, not only while dragging. The transform still updates during a drag. The permanent hint is gone.",
+  "permanentTransformLayersWhileOpen": { "before": 1, "after": 0, "absolute": 1 },
+  "panels": 4,
+  "noise": {
+    "madLayers": 0,
+    "rule": "One panel is open at a time. A drag can still promote a layer while the transform is changing. Not a sampled compositor trace."
+  }
+}

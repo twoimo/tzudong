@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:22:00.000Z",
+  "model": "The map injected unused marker-bounce and cluster-pulse keyframes into the document on startup. Nothing applied those classes. The style tags are no longer inserted.",
+  "injectedStyleElements": { "before": 2, "after": 0, "absolute": 2 },
+  "unusedKeyframeRules": { "before": 2, "after": 0, "absolute": 2 },
+  "noise": {
+    "madElements": 0,
+    "rule": "This is startup DOM and CSS text, not frames during a pan. The bounce animation was 1s if a marker had used the class. Not a sampled parse trace."
+  }
+}

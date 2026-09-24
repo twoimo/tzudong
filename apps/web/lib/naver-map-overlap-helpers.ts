@@ -120,3 +120,43 @@ export function resolveNaverOverlappingMarkerPosition({
         return basePosition;
     }
 }
+
+type MarkerLatLngLike = {
+    lat?: () => number;
+    lng?: () => number;
+};
+
+export function reuseMarkerLatLng<T>(
+    current: MarkerLatLngLike | null | undefined,
+    lat: number,
+    lng: number,
+    create: () => T,
+): MarkerLatLngLike | T {
+    if (current && current.lat?.() === lat && current.lng?.() === lng) return current;
+    return create();
+}
+
+const projectedLatLngCache = new WeakMap<object, { lat: number; lng: number; value: unknown }>();
+
+export function reuseProjectedLatLng<T>(
+    owner: object,
+    lat: number,
+    lng: number,
+    create: () => T,
+): T {
+    const cached = projectedLatLngCache.get(owner) as { lat: number; lng: number; value: T } | undefined;
+    if (cached && cached.lat === lat && cached.lng === lng) return cached.value;
+    const value = create();
+    projectedLatLngCache.set(owner, { lat, lng, value });
+    return value;
+}
+
+export function reuseMarkerAnchor<T>(
+    current: { x?: number; y?: number } | null | undefined,
+    x: number,
+    y: number,
+    create: () => T,
+): { x?: number; y?: number } | T {
+    if (current && current.x === x && current.y === y) return current;
+    return create();
+}

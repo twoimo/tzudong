@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T16:06:00.000Z",
+  "model": "Each marker render copied visible restaurant ids into a new array and a new set, even when the visible list was the same object. The set is stored on that list. An expanded cluster still copies, because those ids are added.",
+  "idArraysPerUnchangedVisibleList": { "before": 1, "after": 0, "absolute": 1 },
+  "idSetsPerUnchangedVisibleList": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madSets": 0,
+    "rule": "The first use of a list still builds one set. Expanded clusters still build a fresh set. Not a sampled allocator trace."
+  }
+}

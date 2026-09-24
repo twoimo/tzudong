@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T12:24:00.000Z",
+  "model": "Markers outside a 5% pad around the viewport were faded out. A short pan crossed that pad, so edge markers spent 300ms going transparent and then came back. The pad is now 25% on each side, so a pan up to a quarter of the viewport keeps those markers opaque.",
+  "panFractionThatStartsAnEdgeFade": { "before": 0.05, "after": 0.25, "absolute": 0.2, "relative": 5 },
+  "fadeStripFractionFor10PercentPan": { "before": 0.05, "after": 0, "absolute": 0.05 },
+  "keptAreaRelativeToViewport": { "before": 1.21, "after": 2.25, "absolute": 1.04, "relative": 1.86 },
+  "noise": {
+    "madFraction": 0,
+    "rule": "Area is (1 + 2*pad)^2. 1.21 is 1.1^2 and 2.25 is 1.5^2. The 10% fade strip is max(0, 0.10 - pad). Marker count scales with area only when restaurants are spread evenly. Not a sampled pan."
+  }
+}

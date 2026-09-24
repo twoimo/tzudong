@@ -22,13 +22,19 @@ export const isSameRestaurantSelection = (left: RestaurantMatch, right: Restaura
     if (!left || !right) return false;
     if (left.id === right.id) return true;
 
+    const leftMerged = left.mergedRestaurants;
+    const rightMerged = right.mergedRestaurants;
+    if ((!leftMerged || leftMerged.length === 0) && (!rightMerged || rightMerged.length === 0)) {
+        return hasSameNameAndCoordinate(left, right);
+    }
+
     const leftIds = new Set([
         left.id,
-        ...(left.mergedRestaurants?.map((restaurant) => restaurant.id) ?? []),
+        ...(leftMerged?.map((restaurant) => restaurant.id) ?? []),
     ]);
     const rightIds = [
         right.id,
-        ...(right.mergedRestaurants?.map((restaurant) => restaurant.id) ?? []),
+        ...(rightMerged?.map((restaurant) => restaurant.id) ?? []),
     ];
 
     if (rightIds.some((id) => leftIds.has(id))) {
@@ -136,12 +142,28 @@ export const resolveReleasedSearchSelectionResetPlan = ({
 };
 
 const dedupeRestaurants = (restaurants: Restaurant[]): Restaurant[] => {
+    const seenIds = new Set<string>();
+    const seenMergedIds = new Set<string>();
+    const restaurantsByName = new Map<string, Restaurant[]>();
     const uniqueRestaurants: Restaurant[] = [];
 
     restaurants.forEach((restaurant) => {
-        if (!uniqueRestaurants.some((candidate) => isSameRestaurantSelection(candidate, restaurant))) {
-            uniqueRestaurants.push(restaurant);
+        if (seenIds.has(restaurant.id) || seenMergedIds.has(restaurant.id)) return;
+
+        const sameNameRestaurants = restaurantsByName.get(restaurant.name);
+        if (sameNameRestaurants?.some((candidate) => hasSameNameAndCoordinate(candidate, restaurant))) return;
+
+        const mergedRestaurants = restaurant.mergedRestaurants;
+        if (mergedRestaurants?.some((mergedRestaurant) =>
+            seenIds.has(mergedRestaurant.id) || seenMergedIds.has(mergedRestaurant.id))) {
+            return;
         }
+
+        seenIds.add(restaurant.id);
+        mergedRestaurants?.forEach((mergedRestaurant) => seenMergedIds.add(mergedRestaurant.id));
+        uniqueRestaurants.push(restaurant);
+        if (sameNameRestaurants) sameNameRestaurants.push(restaurant);
+        else restaurantsByName.set(restaurant.name, [restaurant]);
     });
 
     return uniqueRestaurants;
@@ -167,7 +189,7 @@ const getApproximateRestaurantDistance = (
 
     const latDiffKm = (sourceLat - candidateLat) * 111;
     const lngDiffKm = (sourceLng - candidateLng) * 88;
-    return Math.sqrt(latDiffKm ** 2 + lngDiffKm ** 2);
+    return latDiffKm * latDiffKm + lngDiffKm * lngDiffKm;
 };
 
 type BuildPostSearchSwipeCandidatesInput = {
@@ -190,16 +212,24 @@ export const buildRestaurantsForSwipe = ({
     const pinnedRestaurants = [activeSearchedRestaurant, selectedRestaurant].filter(Boolean) as Restaurant[];
     if (pinnedRestaurants.length === 0) return displayRestaurants;
 
-    const restaurantsForSwipe = [...displayRestaurants];
+    const restaurantsToAdd: Restaurant[] = [];
     pinnedRestaurants.forEach((restaurant) => {
         if (displayRestaurantIds.has(restaurant.id)) return;
-        if (restaurantsForSwipe.some((candidate) => isSameRestaurantSelection(candidate, restaurant))) return;
-
-        restaurantsForSwipe.push(restaurant);
+        if (displayRestaurants.some((candidate) => isSameRestaurantSelection(candidate, restaurant))) return;
+        if (restaurantsToAdd.some((candidate) => isSameRestaurantSelection(candidate, restaurant))) return;
+        restaurantsToAdd.push(restaurant);
     });
+    if (restaurantsToAdd.length === 0) return displayRestaurants;
 
-    return restaurantsForSwipe;
+    return [...displayRestaurants, ...restaurantsToAdd];
 };
+
+const nearestSwipeFallbackCache = new WeakMap<readonly Restaurant[], Map<string, Restaurant | null>>();
+let nearestFallbackScanCount = 0;
+
+export function getNearestFallbackScanCount() {
+    return nearestFallbackScanCount;
+}
 
 export const buildPostSearchSwipeCandidates = ({
     visibleRestaurants,
@@ -207,48 +237,57 @@ export const buildPostSearchSwipeCandidates = ({
     activeSearchedRestaurant,
 }: BuildPostSearchSwipeCandidatesInput): Restaurant[] => {
     const dedupedVisibleRestaurants = dedupeRestaurants(visibleRestaurants);
-    const orderedVisibleRestaurants = activeSearchedRestaurant
-        ? [
-            ...dedupedVisibleRestaurants.filter((restaurant) =>
-                isSameRestaurantSelection(restaurant, activeSearchedRestaurant)
-            ),
-            ...dedupedVisibleRestaurants.filter((restaurant) =>
-                !isSameRestaurantSelection(restaurant, activeSearchedRestaurant)
-            ),
-        ]
-        : dedupedVisibleRestaurants;
+    let orderedVisibleRestaurants = dedupedVisibleRestaurants;
+    if (activeSearchedRestaurant) {
+        const matchedRestaurants: Restaurant[] = [];
+        const otherRestaurants: Restaurant[] = [];
+        dedupedVisibleRestaurants.forEach((restaurant) => {
+            if (isSameRestaurantSelection(restaurant, activeSearchedRestaurant)) {
+                matchedRestaurants.push(restaurant);
+            } else {
+                otherRestaurants.push(restaurant);
+            }
+        });
+        orderedVisibleRestaurants = matchedRestaurants.concat(otherRestaurants);
+    }
 
     if (!activeSearchedRestaurant || orderedVisibleRestaurants.length !== 1) {
         return orderedVisibleRestaurants;
     }
 
-    const nearestFallbackRestaurant = dedupeRestaurants(allRestaurants).reduce<Restaurant | null>(
-        (nearestRestaurant, candidateRestaurant) => {
-            if (orderedVisibleRestaurants.some((restaurant) => isSameRestaurantSelection(restaurant, candidateRestaurant))) {
-                return nearestRestaurant;
-            }
+    const visibleRestaurant = orderedVisibleRestaurants[0];
+    const cacheKey = `${activeSearchedRestaurant.id}:${visibleRestaurant.id}`;
+    let cachedFallbacks = nearestSwipeFallbackCache.get(allRestaurants);
+    if (!cachedFallbacks) {
+        cachedFallbacks = new Map();
+        nearestSwipeFallbackCache.set(allRestaurants, cachedFallbacks);
+    }
+    if (cachedFallbacks.has(cacheKey)) {
+        const cachedFallback = cachedFallbacks.get(cacheKey) ?? null;
+        return cachedFallback
+            ? [...orderedVisibleRestaurants, cachedFallback]
+            : orderedVisibleRestaurants;
+    }
 
-            const candidateDistance = getApproximateRestaurantDistance(
-                activeSearchedRestaurant,
-                candidateRestaurant,
-            );
-            if (!Number.isFinite(candidateDistance)) {
-                return nearestRestaurant;
-            }
+    nearestFallbackScanCount += 1;
+    const dedupedRestaurants = dedupeRestaurants(allRestaurants);
+    let nearestFallbackRestaurant: Restaurant | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < dedupedRestaurants.length; index += 1) {
+        const candidateRestaurant = dedupedRestaurants[index];
+        if (isSameRestaurantSelection(candidateRestaurant, orderedVisibleRestaurants[0])) continue;
 
-            if (!nearestRestaurant) {
-                return candidateRestaurant;
-            }
+        const candidateDistance = getApproximateRestaurantDistance(
+            activeSearchedRestaurant,
+            candidateRestaurant,
+        );
+        if (!Number.isFinite(candidateDistance) || candidateDistance >= nearestDistance) continue;
 
-            const nearestDistance = getApproximateRestaurantDistance(
-                activeSearchedRestaurant,
-                nearestRestaurant,
-            );
+        nearestFallbackRestaurant = candidateRestaurant;
+        nearestDistance = candidateDistance;
+    }
 
-            return candidateDistance < nearestDistance ? candidateRestaurant : nearestRestaurant;
-        },
-        null,
-    );
+    cachedFallbacks.set(cacheKey, nearestFallbackRestaurant);
 
     return nearestFallbackRestaurant
         ? [...orderedVisibleRestaurants, nearestFallbackRestaurant]

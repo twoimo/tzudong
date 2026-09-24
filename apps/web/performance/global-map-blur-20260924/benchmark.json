@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:40:00.000Z",
+  "model": "The global map toolbar, a corner button, and the side list blurred the moving map behind backgrounds that are already 95% opaque. The blur is gone.",
+  "backdropLayers": { "before": 3, "after": 0, "absolute": 3 },
+  "samplesPerSecondAt60fpsWhilePanning": { "before": 180, "after": 0, "absolute": 180 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "180 is 3 layers times 60 frames. The corner button and side list are not always mounted, so a live frame can be lower. Not a sampled compositor trace."
+  }
+}

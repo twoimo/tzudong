@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:44:00.000Z",
+  "model": "With category rotation off, each cluster icon still hashed its key and asked for an animation index. It now builds the still icon directly at index 0.",
+  "keyHashesPerClusterIcon": { "before": 1, "after": 0, "absolute": 1 },
+  "example16RegionalClusters": { "before": 16, "after": 0, "absolute": 16 },
+  "noise": {
+    "madHashes": 0,
+    "rule": "16 is the regional cluster ceiling used earlier, not a live trace. Turning rotation on hashes again. The HTML cache is unchanged."
+  }
+}
