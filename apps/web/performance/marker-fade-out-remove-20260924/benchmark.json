@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:40:00.000Z",
+  "model": "A released marker stayed on the map for 300ms while opacity transitioned to 0. It now leaves the map in the same turn and returns to the pool, so the transparent ghost is gone. The same node is still reused.",
+  "transparentFramesPerReleasedMarkerAt60fps": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). A zoom that releases V markers was 18V transparent frames. Not a sampled compositor trace."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T16:42:00.000Z",
+  "model": "Bubble ranking hashed a new seed:id string for every candidate. The seed and the separator are hashed once. Each candidate continues that hash with its id, so the rank stays the same without the joined string.",
+  "joinedRankStringsPerSelection": { "before": "n", "after": 0, "absolute": "n" },
+  "seedCharacterWalksPerSelection": { "before": "n", "after": 1, "absolute": "n - 1" },
+  "example80Candidates": { "before": 80, "after": 0, "absolute": 80 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "80 is an example candidate count, not a live Seoul count. Each id is still walked once. Not a sampled profiler trace."
+  }
+}

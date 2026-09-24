@@ -59,7 +59,7 @@ const BookmarkButtonComponent = ({
                 onClick={handleClick}
                 disabled={isLoading}
                 className={cn(
-                    "transition-colors relative",
+                    "relative",
                     isBookmarked && "bg-primary/10 border-primary text-primary hover:bg-primary/20",
                     className
                 )}

@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:16:00.000Z",
+  "model": "A review bubble used to replace the whole marker icon, which destroyed the category image node. When the marker style and image address stay the same, only the bubble node is inserted or removed.",
+  "categoryImageReplacementsPerDisjointRefresh": { "before": 10, "after": 0, "absolute": 10 },
+  "bubbleNodeUpdatesPerDisjointRefresh": { "before": 10, "after": 10, "absolute": 0, "relative": 1 },
+  "noise": {
+    "madCount": 0,
+    "rule": "Desktop shows at most 5 bubbles. A disjoint refresh removes 5 and adds 5. Overlap lowers the count. Not a sampled paint trace. A size or image change still replaces the icon."
+  }
+}

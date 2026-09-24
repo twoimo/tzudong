@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:34:00.000Z",
+  "model": "Review cards transitioned every property for 500ms when the pin or highlight changed. The border and ring now change in one frame.",
+  "cardFramesPerHighlightAt60fps": { "before": 30, "after": 1, "absolute": 29, "relative": 30 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "30 is round(500ms * 60fps / 1000) for one card. Not a sampled compositor trace."
+  }
+}

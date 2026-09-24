@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:32:00.000Z",
+  "model": "Every marker render constructed a new latitude-longitude object even when the marker was already at that coordinate. A repeat render now reuses the existing object. Markers that must be nudged because they overlap still construct a new one.",
+  "latLngAllocationsPerStationaryMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madAllocations": 0,
+    "rule": "Counts one non-overlapping marker whose coordinates did not change. A first appearance or a coordinate change still allocates. Not a sampled heap trace."
+  }
+}

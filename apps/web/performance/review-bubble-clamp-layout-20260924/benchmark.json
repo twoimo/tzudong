@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:32:00.000Z",
+  "model": "Each review bubble clamp set margin to 0 before reading its box, which forced a layout per bubble, then wrote the shift again. The natural position is now the measured box minus the margin already applied, and writes happen only after every bubble is measured.",
+  "forcedLayoutsPerDesktopClamp": { "before": 5, "after": 1, "absolute": 4, "relative": 5 },
+  "styleWritesWhenShiftUnchanged": { "before": 5, "after": 0, "absolute": 5 },
+  "noise": {
+    "madLayouts": 0,
+    "rule": "Desktop shows at most 5 bubbles. A write before each measurement invalidates layout, so the before count is one layout per bubble. Reads with no writes between them share one layout. Not a sampled trace."
+  }
+}

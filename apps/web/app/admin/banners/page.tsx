@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useMemo, Suspense, useEffect } from 'react';
+import { useState, useRef, useMemo, Suspense, useEffect, useLayoutEffect } from 'react';
+import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -120,13 +121,14 @@ const isNestedUploadInteractiveTarget = (target: EventTarget | null) => {
 
 type BannerManagementPageWrapperProps = {
     embedded?: boolean;
+    onInitialContentReady?: () => void;
 };
 
 // Suspense 래퍼
-function BannerManagementPageWrapper({ embedded = false }: BannerManagementPageWrapperProps = {}) {
+function BannerManagementPageWrapper({ embedded = false, onInitialContentReady }: BannerManagementPageWrapperProps = {}) {
     return (
         <Suspense fallback={null}>
-            <BannerManagementPage embedded={embedded} />
+            <BannerManagementPage embedded={embedded} onInitialContentReady={onInitialContentReady} />
         </Suspense>
     );
 }
@@ -140,12 +142,19 @@ BannerManagementRoutePage.Embedded = BannerManagementPageWrapper;
 export default BannerManagementRoutePage;
 
 
-function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapperProps>) {
+function BannerManagementPage({ embedded, onInitialContentReady }: BannerManagementPageWrapperProps & { embedded: boolean }) {
     const router = useRouter();
     const { user, isAdmin, isLoading: authLoading } = useAuth();
 
     // 배너 데이터
     const { data: banners = [], isLoading: bannersLoading } = useAdBannersAdmin();
+    const initialLoadPendingRef = useRef(true);
+    if (initialLoadPendingRef.current && !authLoading && !bannersLoading) initialLoadPendingRef.current = false;
+    useLayoutEffect(() => {
+        if (!onInitialContentReady || authLoading || initialLoadPendingRef.current) return;
+        onInitialContentReady();
+    }, [authLoading, bannersLoading, onInitialContentReady]);
+    const bannerListSkeleton = useFilledSkeletonCount(88, 5);
     const createBanner = useCreateAdBanner();
     const updateBanner = useUpdateAdBanner();
     const deleteBanner = useDeleteAdBanner();
@@ -547,7 +556,8 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                 <div
                     className="fixed inset-0 opacity-30 pointer-events-none z-0"
                     style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
+                        backgroundImage: 'url("/images/ui-noise.png")',
+                        backgroundRepeat: 'repeat',
                     }}
                 />
             )}
@@ -592,11 +602,11 @@ function BannerManagementPage({ embedded }: Required<BannerManagementPageWrapper
                             </div>
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
+                        <div ref={bannerListSkeleton.ref} className="min-h-0 flex-1 space-y-2 overflow-y-auto scrollbar-hide p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="list" aria-label="배너 목록">
                             {bannersLoading ? (
                                 <div className="space-y-2" role="status" aria-busy="true" aria-label="배너 목록 로딩 중">
                                     <span className="sr-only">배너 목록 데이터를 불러오는 중입니다.</span>
-                                    {Array.from({ length: 5 }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
+                                    {Array.from({ length: bannerListSkeleton.count }).map((_, index) => <BannerListItemSkeleton key={index} index={index} />)}
                                 </div>
                             ) : sortedBanners.length === 0 ? (
                                 <Card className="border-dashed border-border bg-background/70 p-4 text-center text-sm text-muted-foreground">

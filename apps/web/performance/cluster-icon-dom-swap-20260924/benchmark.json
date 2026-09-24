@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-09-24T11:44:00.000Z",
+  "model": "The category rotation replaced the whole cluster marker DOM every 5000ms. The count badge and frame are unchanged across that rotation, so only the picture URL needs to change. Live regional clustering of the approved set has 16 clusters, and a full category cycle has 48 distinct icon frames and 0 identical neighbors.",
+  "intervalMs": 5000,
+  "regionalClusters": 16,
+  "fullMarkerReplacementsPerMinute": { "before": 192, "after": 0, "absolute": 192 },
+  "pictureUrlUpdatesPerMinute": { "before": 0, "after": 192 },
+  "noise": {
+    "madCount": 0,
+    "rule": "12 ticks per minute at the 5000ms desktop interval, times 16 regional clusters. Identical-neighbor check was one pass over the live category lists. Not a sampled browser paint."
+  }
+}

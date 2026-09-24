@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T16:38:00.000Z",
+  "model": "A repeat render with the same bubble viewport hashed every candidate restaurant and rebuilt the target signature. Those results are stored with the viewport key. A new key still selects once.",
+  "candidateHashesPerRepeatViewport": { "before": "n", "after": 0, "absolute": "n" },
+  "targetSignatureJoinsPerRepeatViewport": { "before": 1, "after": 0, "absolute": 1 },
+  "example80Candidates": { "before": 80, "after": 0, "absolute": 80 },
+  "noise": {
+    "madHashes": 0,
+    "rule": "n is the candidate count after the viewport filter. 80 is an example, not a live Seoul count. A moved viewport still hashes once. Not a sampled profiler trace."
+  }
+}

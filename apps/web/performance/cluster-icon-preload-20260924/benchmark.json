@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T11:50:00.000Z",
+  "model": "Changing a cluster picture src immediately clears the current bitmap until the next file decodes. The next WebP is now loaded first, and the visible src changes only after that load event. At the 5000ms desktop interval, 16 regional clusters rotate 12 times a minute.",
+  "blankSrcSwapsPerMinute": { "before": 192, "after": 0, "absolute": 192 },
+  "pictureUrlUpdatesPerMinute": { "before": 192, "after": 192, "absolute": 0, "relative": 1 },
+  "noise": {
+    "madCount": 0,
+    "rule": "12 ticks per minute times 16 regional clusters from the live approved set. The blank interval itself was not timed in a browser."
+  }
+}

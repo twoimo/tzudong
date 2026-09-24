@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T15:08:00.000Z",
+  "model": "A swipe list that was already unique was scanned again on the next pan, building two id sets and a name map. A list that has been checked is remembered. The next call returns it without a scan.",
+  "examinationsPerRepeatList": { "before": "n", "after": 0, "absolute": "n" },
+  "setAllocationsPerRepeatList": { "before": 2, "after": 0, "absolute": 2 },
+  "nameMapAllocationsPerRepeatList": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madExaminations": 0,
+    "rule": "n is the list length. The first call still scans every row. A mutated list is not detected. Not a sampled profiler trace."
+  }
+}

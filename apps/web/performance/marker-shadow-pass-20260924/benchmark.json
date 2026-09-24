@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-24T10:52:00.000Z",
+  "model": "Each CSS drop-shadow is a separate filter pass on the marker. The previous HTML stacked two drop-shadows. One pass remains. For n visible markers the pass count goes from 2n to n.",
+  "filtersPerMarker": { "before": 2, "after": 1, "ratio": 2 },
+  "exampleVisibleMarkers": 100,
+  "filterPasses": { "before": 200, "after": 100, "absolute": 100 },
+  "noise": { "mad": 0, "rule": "The filter count is exact in the generated HTML. This is not a timed browser paint sample." }
+}

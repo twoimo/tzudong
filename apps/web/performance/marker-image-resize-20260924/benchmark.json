@@ -1,0 +1,24 @@
+{
+  "generatedAt": "2026-09-24T10:41:00.000Z",
+  "model": "Selected, trend, and user-submitted markers draw at 32px or 42px. A 128px image covers 42*3 device pixels. 1024px images decode 1024*1024/128*128 = 64 times as many pixels. The map requests the WebP source first.",
+  "pixels": { "before": 1048576, "after": 16384, "ratio": 64 },
+  "webpBytes": {
+    "seasonal": { "before": 63006, "after": 3232 },
+    "trend": { "before": 50206, "after": 2718 },
+    "userSubmitted": { "before": 46756, "after": 2698 },
+    "totalBefore": 159968,
+    "totalAfter": 8648,
+    "absolute": 151320,
+    "relative": 18.497
+  },
+  "pngFallbackBytes": {
+    "totalBefore": 1472293,
+    "totalAfter": 41466,
+    "absolute": 1430827,
+    "relative": 35.505
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "File sizes and pixel counts are deterministic."
+  }
+}

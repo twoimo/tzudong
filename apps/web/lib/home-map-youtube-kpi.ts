@@ -153,6 +153,26 @@ export function mergeHomeMapYoutubeKpiMetrics(
     });
 }
 
+export async function enrichRestaurantsWithYouTubeKpiMetrics(
+    restaurants: Restaurant[],
+): Promise<Restaurant[]> {
+    const videoIds = collectHomeMapYoutubeVideoIds(restaurants);
+    if (videoIds.length === 0) return restaurants;
+
+    try {
+        return mergeHomeMapYoutubeKpiMetrics(
+            restaurants,
+            await fetchHomeMapYoutubeKpiMetrics(videoIds),
+        );
+    } catch (error) {
+        const failureCode = error instanceof Error && /^home-youtube-kpi:\d{3}$/.test(error.message)
+            ? error.message
+            : (error instanceof SyntaxError ? 'invalid-response' : 'request-failed');
+        console.warn(`[home-map-youtube-kpi] metric enrichment failed (${failureCode})`);
+        return restaurants;
+    }
+}
+
 export async function enrichRestaurantsWithHomeMapYoutubeKpiMetrics(
     restaurants: Restaurant[],
     themeId: HomeMapThemeFilterId | null,

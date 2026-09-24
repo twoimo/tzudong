@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-09-24T13:52:00.000Z",
+  "model": "Deduping a swipe list compared every restaurant with every restaurant already kept. Identity now uses an id set, a merged-id set, and a bucket per name. Unique names do not scan the kept list.",
+  "keptListComparisonsForUniqueNames": {
+    "before": "v*(v-1)/2",
+    "after": 0,
+    "absolute": "v*(v-1)/2"
+  },
+  "noise": {
+    "madComparisons": 0,
+    "rule": "v is the list length. Restaurants that share a name still compare coordinates inside that name bucket. Merged ids still use the id sets. Not a sampled trace."
+  }
+}

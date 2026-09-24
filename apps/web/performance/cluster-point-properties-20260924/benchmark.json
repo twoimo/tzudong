@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:28:00.000Z",
+  "model": "Each cluster point copied the restaurant name, the categories array, and the review count even though marker rendering only reads the id, one category, and the address. Those three copies are no longer stored in the cluster index.",
+  "unusedPropertyWritesPerRestaurant": { "before": 3, "after": 0, "absolute": 3 },
+  "categoriesArrayCopiesPerRestaurant": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madWrites": 0,
+    "rule": "A list of n restaurants drops 3n property writes and n categories arrays. The index is cached for the same array. Not a sampled allocation trace."
+  }
+}

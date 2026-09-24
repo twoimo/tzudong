@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T16:10:00.000Z",
+  "model": "Each marker render built an array of review-bubble keys just to decide whether the signature id list must be copied. The check now stops at the first key and does not allocate that array.",
+  "keyArraysPerMarkerRender": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madArrays": 0,
+    "rule": "A render with bubbles still copies the signature list before appending. A render without bubbles or expanded clusters keeps the cached list. Not a sampled allocator trace."
+  }
+}

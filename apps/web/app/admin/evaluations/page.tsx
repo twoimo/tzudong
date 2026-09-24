@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, Suspense } from 'react';
+import { useFilledSkeletonCount } from '@/lib/use-filled-skeleton-count';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -1314,6 +1315,7 @@ type AdminEvaluationPageWrapperProps = {
   embedded?: boolean;
   initialView?: 'evaluations' | 'submissions';
   initialSubmissionTab?: 'new' | 'edit' | 'recommend' | 'reviews';
+  onInitialContentReady?: () => void;
 };
 
 // Suspense 래퍼 컴포넌트
@@ -1321,6 +1323,7 @@ function AdminEvaluationPageWrapper({
   embedded = false,
   initialView = 'evaluations',
   initialSubmissionTab,
+  onInitialContentReady,
 }: AdminEvaluationPageWrapperProps = {}) {
   return (
     <Suspense fallback={embedded ? null : <AdminEvaluationRouteSkeleton />}>
@@ -1328,6 +1331,7 @@ function AdminEvaluationPageWrapper({
         embedded={embedded}
         initialView={initialView}
         initialSubmissionTab={initialSubmissionTab}
+        onInitialContentReady={onInitialContentReady}
       />
     </Suspense>
   );
@@ -1402,10 +1406,10 @@ function AdminEvaluationStaticMobileLoadingControls() {
   );
 }
 
-function AdminEvaluationStaticCardSkeleton() {
+function AdminEvaluationStaticCardSkeleton({ count }: { count: number }) {
   return (
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
-      {Array.from({ length: 4 }).map((_, index) => (
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" aria-hidden="true">
+      {Array.from({ length: count }).map((_, index) => (
         <div key={index} className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm">
           <div className="flex items-center gap-2">
             <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" />
@@ -1425,6 +1429,22 @@ function AdminEvaluationStaticCardSkeleton() {
   );
 }
 function AdminEvaluationRouteSkeleton() {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const mobileCards = useFilledSkeletonCount(104, 4, 48);
+  const [rowCount, setRowCount] = useState(6);
+  useLayoutEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+    const update = () => {
+      const height = node.clientHeight;
+      if (height <= 0) return;
+      setRowCount(Math.max(6, Math.ceil((height - 44) / 64)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   return (
     <div
       role="status"
@@ -1457,10 +1477,10 @@ function AdminEvaluationRouteSkeleton() {
           </div>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-2">
+      <div ref={mobileCards.ref} className="flex min-h-0 flex-1 flex-col gap-3 p-2">
         <AdminEvaluationStaticMobileLoadingControls />
-        <AdminEvaluationStaticCardSkeleton />
-        <div className="hidden min-h-0 overflow-hidden rounded-lg border bg-background lg:block">
+        <AdminEvaluationStaticCardSkeleton count={mobileCards.count} />
+        <div ref={frameRef} className="hidden min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background lg:flex">
           <div className="border-b bg-muted/35 lg:grid lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
               <div key={index} className="px-2 py-2">
@@ -1469,7 +1489,7 @@ function AdminEvaluationRouteSkeleton() {
             ))}
           </div>
           <div className="divide-y divide-border">
-            {Array.from({ length: 6 }).map((_, rowIndex) => (
+            {Array.from({ length: rowCount }).map((_, rowIndex) => (
               <div
                 key={rowIndex}
                 className="grid items-center gap-2 p-2 lg:grid-cols-[40px_minmax(180px,1fr)_repeat(6,78px)_112px]"
@@ -1499,10 +1519,12 @@ function AdminEvaluationPage({
   embedded,
   initialView,
   initialSubmissionTab,
+  onInitialContentReady,
 }: {
   embedded: boolean;
   initialView: 'evaluations' | 'submissions';
   initialSubmissionTab?: 'new' | 'edit' | 'recommend' | 'reviews';
+  onInitialContentReady?: () => void;
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -3477,13 +3499,38 @@ function AdminEvaluationPage({
 	    },
 	  });
 
-  // 인증 게이트는 전체 화면으로 막되, 데이터 로딩은 아래 실제 화면 요소별 스켈레톤으로 처리합니다.
-  if (!embedded && authLoading) {
+  const initialContentLoading = initialView === 'submissions'
+    ? submissionsLoading || recommendationRequestsLoading || reviewsLoading
+    : loading;
+  const initialLoadPendingRef = useRef(true);
+  if (
+    initialLoadPendingRef.current
+    && !authLoading
+    && (hasE2EAdminShellBypass || (user && isAdmin))
+    && !initialContentLoading
+  ) {
+    initialLoadPendingRef.current = false;
+  }
+
+  useLayoutEffect(() => {
+    if (!onInitialContentReady || authLoading) return;
+    if (!hasE2EAdminShellBypass && (!user || !isAdmin)) {
+      onInitialContentReady();
+      return;
+    }
+    if (initialLoadPendingRef.current) return;
+    onInitialContentReady();
+  }, [initialContentLoading, authLoading, onInitialContentReady, user, isAdmin, hasE2EAdminShellBypass]);
+
+  if (!hasE2EAdminShellBypass && !authLoading && (!user || !isAdmin)) {
+    return null;
+  }
+
+  if (!embedded && initialLoadPendingRef.current && (authLoading || initialContentLoading)) {
     return <AdminEvaluationRouteSkeleton />;
   }
 
-  // 로그인하지 않았거나 관리자가 아닌 경우 (리다이렉트 전 화면 방지)
-  if (!hasE2EAdminShellBypass && !authLoading && (!user || !isAdmin)) {
+  if (embedded && initialLoadPendingRef.current && (authLoading || initialContentLoading)) {
     return null;
   }
 

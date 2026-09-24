@@ -5,6 +5,7 @@ import { OVERSEAS_REGIONS } from '../constants/overseas-regions';
 import type { Restaurant } from '../types/restaurant';
 import {
   filterHomeMapRestaurantsByMode,
+  getLastModeFilterExaminationCount,
   getOverseasCountryKeywords,
   isOverseasCoordinate,
   resolveHomeMapAddressText,
@@ -143,15 +144,18 @@ describe('home map mode filter', () => {
   });
 
   test('빈 목록과 빈 주소는 안전하게 처리한다', () => {
-    expect(filterHomeMapRestaurantsByMode([], 'domestic', null)).toEqual([]);
-    expect(filterHomeMapRestaurantsByMode([], 'overseas', null)).toEqual([]);
+    const empty: ReturnType<typeof asRestaurants> = [];
+    expect(filterHomeMapRestaurantsByMode(empty, 'domestic', null)).toBe(empty);
 
     const blank = asRestaurants([
       { id: 'blank', road_address: null, jibun_address: undefined, english_address: '' },
     ]);
 
     expect(resolveHomeMapAddressText(blank[0]!)).toBe('  ');
-    expect(filterHomeMapRestaurantsByMode(blank, 'domestic', null)).toHaveLength(1);
+    expect(filterHomeMapRestaurantsByMode(blank, 'domestic', null)).toBe(blank);
+    expect(getLastModeFilterExaminationCount()).toBe(1);
+    expect(filterHomeMapRestaurantsByMode(blank, 'domestic', null)).toBe(blank);
+    expect(getLastModeFilterExaminationCount()).toBe(0);
     expect(filterHomeMapRestaurantsByMode(blank, 'overseas', null)).toHaveLength(0);
   });
 
@@ -217,6 +221,11 @@ describe('home map mode filter', () => {
     expect(resolveHomeMapAddressText(restaurant)).toBe('bangkok 서울 ');
     expect(filterHomeMapRestaurantsByMode([restaurant], 'domestic', null)).toHaveLength(0);
     expect(filterHomeMapRestaurantsByMode([restaurant], 'overseas', null)).toHaveLength(1);
+    const sameList = [restaurant];
+    row.road_address = '서울';
+    expect(filterHomeMapRestaurantsByMode(sameList, 'domestic', null)).toHaveLength(1);
+    row.road_address = 'Bangkok';
+    expect(filterHomeMapRestaurantsByMode(sameList, 'domestic', null)).toHaveLength(0);
   });
 
   test('모드 분류는 컴포넌트 밖 헬퍼를 쓰고 식당별 키워드 includes 루프를 남기지 않는다', () => {

@@ -1,0 +1,43 @@
+{
+  "generatedAt": "2026-09-24T10:20:42.691Z",
+  "model": "Wake rate falls from 60/s to 1000/intervalMs. At 5000ms that is 300 callbacks per 5s versus 1. Work per wake stays the category-index increment.",
+  "windowMs": 5000,
+  "intervalMs": 5000,
+  "frames": 300,
+  "clusterCount": 40,
+  "repetitions": 200,
+  "wakes": {
+    "frameLoop": 300,
+    "intervalLoop": 1,
+    "reduction": 300
+  },
+  "updates": {
+    "frameLoop": 0,
+    "intervalLoop": 1
+  },
+  "time": {
+    "frameLoop": {
+      "medianMs": 0.0032,
+      "madMs": 0.0002
+    },
+    "intervalLoop": {
+      "medianMs": 0.0018,
+      "madMs": 0.0002
+    },
+    "absoluteMedianDeltaMs": 0.0014,
+    "medianSpeedup": 1.778,
+    "noiseSumMadMs": 0.0004,
+    "improvesBeyondNoise": true
+  },
+  "budgets": {
+    "absolute": {
+      "rule": "Five seconds of scheduler work should cost less than 1ms of JS."
+    },
+    "relative": {
+      "minWakeReduction": 60
+    },
+    "noise": {
+      "rule": "Median JS improvement must exceed the sum of both MADs."
+    }
+  }
+}

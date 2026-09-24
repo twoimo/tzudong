@@ -1,5 +1,3 @@
-import { sanitizePrivacyValue } from '@/lib/privacy/sanitize';
-
 export const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const DEBUG_LOG_EVENT = {
@@ -40,17 +38,11 @@ const DEBUG_LOG_EVENTS = new Set<string>(Object.values(DEBUG_LOG_EVENT));
 const DEBUG_LOG_REASON_CODES = new Set<string>(Object.values(DEBUG_LOG_REASON_CODE));
 
 const sanitizeDebugMetadata = (metadata: unknown): DebugLogMetadata | undefined => {
-    const { value } = sanitizePrivacyValue(metadata, {
-        maxDepth: 2,
-        maxEntries: 4,
-        maxStringLength: 64,
-    });
-
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
         return undefined;
     }
 
-    const reason = (value as Record<string, unknown>).reason;
+    const reason = (metadata as Record<string, unknown>).reason;
     if (typeof reason !== 'string' || !DEBUG_LOG_REASON_CODES.has(reason)) {
         return undefined;
     }

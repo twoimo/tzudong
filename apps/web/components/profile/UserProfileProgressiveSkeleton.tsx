@@ -1,4 +1,7 @@
+"use client";
+
 import { X } from "lucide-react";
+import { useFilledSkeletonCount } from "@/lib/use-filled-skeleton-count";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -66,8 +69,10 @@ export function UserProfileProgressiveSkeleton({
 }
 
 export function UserProfileTabSkeleton({ label, live = true }: { label: string; live?: boolean }) {
+    const filled = useFilledSkeletonCount(92, 3);
     return (
         <div
+            ref={filled.ref}
             role={live ? "status" : undefined}
             aria-live={live ? "polite" : undefined}
             aria-label={live ? label : undefined}
@@ -75,7 +80,7 @@ export function UserProfileTabSkeleton({ label, live = true }: { label: string; 
             className="space-y-3 p-4"
             data-user-profile-tab-skeleton="true"
         >
-            {[0, 1, 2].map((item) => (
+            {Array.from({ length: filled.count }, (_, item) => (
                 <div key={item} className="rounded-xl border border-border bg-card/80 p-3 shadow-sm">
                     <Skeleton className="h-4 w-2/3 rounded" />
                     <Skeleton className="mt-2 h-3 w-full rounded" />

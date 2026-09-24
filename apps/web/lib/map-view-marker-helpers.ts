@@ -41,7 +41,7 @@ export function buildMapViewMarkerHtml({
     const safeName = escapeHtmlAttribute(name);
 
     return `
-        <div class="relative ${markerSizeClasses.join(' ')} cursor-pointer transition-all duration-300 drop-shadow-md ${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+        <div class="relative ${markerSizeClasses.join(' ')} cursor-pointer hover:scale-125">
           <img src="${safeImagePath}" alt="${safeName}" class="h-full w-full object-contain" draggable="false" />
         </div>
       `;
@@ -65,10 +65,6 @@ export function applyMapViewMarkerSelectedState({
     innerDiv.classList.add(
         ...(isSelected ? MAP_VIEW_MARKER_SELECTED_SIZE_CLASSES : MAP_VIEW_MARKER_BASE_SIZE_CLASSES),
     );
-
-    if (isSelected) {
-        innerDiv.classList.add('animate-bounce');
-    }
 
     return true;
 }

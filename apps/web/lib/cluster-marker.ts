@@ -11,48 +11,34 @@ import { escapeHtmlAttribute } from './html-escape';
  */
 class ClusterAnimationManager {
   private categoryIndices: Map<number, number> = new Map();
-  private animationFrameId: number | null = null;
+  private timerId: ReturnType<typeof setTimeout> | null = null;
   private listeners: Set<() => void> = new Set();
-  private lastUpdateTime: number = 0;
 
   /**
-   * 애니메이션 시작 (requestAnimationFrame 사용)
-   *
-   * @param intervalMs 애니메이션 주기 (ms)
+   * 카테고리 순환은 프레임마다 돌 필요가 없다.
+   * 주기만큼만 한 번 깨우면 호출 횟수는 60 / (intervalMs/1000) 배 줄어든다.
    */
   public start(intervalMs: number = 1000): void {
-    if (this.animationFrameId) return;
+    if (this.timerId !== null || intervalMs <= 0) return;
 
-    const animate = (currentTime: number) => {
-      // 마지막 업데이트로부터 intervalMs가 경과했는지 확인
-      if (currentTime - this.lastUpdateTime >= intervalMs) {
-        // 모든 클러스터의 카테고리 인덱스 증가
-        this.categoryIndices.forEach((index, clusterId) => {
-          this.categoryIndices.set(clusterId, index + 1);
-        });
-
-        // 리스너들에게 업데이트 알림
-        this.listeners.forEach((listener) => listener());
-
-        this.lastUpdateTime = currentTime;
-      }
-
-      // 다음 프레임 예약
-      this.animationFrameId = requestAnimationFrame(animate);
+    const tick = () => {
+      this.categoryIndices.forEach((index, clusterId) => {
+        this.categoryIndices.set(clusterId, index + 1);
+      });
+      this.listeners.forEach((listener) => listener());
+      this.timerId = setTimeout(tick, intervalMs);
     };
 
-    // 첫 프레임 시작
-    this.lastUpdateTime = performance.now();
-    this.animationFrameId = requestAnimationFrame(animate);
+    this.timerId = setTimeout(tick, intervalMs);
   }
 
   /**
    * 애니메이션 정지
    */
   public stop(): void {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
+    if (this.timerId !== null) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
     }
   }
 
@@ -171,8 +157,7 @@ const createCategoryImageHTML = ({
               alt="${alt}"
               style="width: 100%; height: 100%; object-fit: contain;"
               draggable="false"
-              decoding="async"
-              fetchpriority="low"
+              decoding="sync"
           />
         </picture>
   `;
@@ -261,9 +246,7 @@ export const createClusterMarkerHTML = (
           border-radius: 12px;
           min-width: 18px;
           text-align: center;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
           z-index: ${zIndex + 1};
-          backdrop-filter: blur(2px);
           border: 1px solid rgba(255,255,255,0.2);
         "
       >${count >= 1000 ? '999+' : count}</div>
@@ -296,17 +279,11 @@ export const createIndividualMarkerHTML = (
   const displayVisitCount = normalizedVisitCount >= 100 ? '99+' : String(normalizedVisitCount);
   const safeRestaurantId = restaurantId ? escapeHtmlAttribute(restaurantId) : null;
 
-  const dropShadow = isSelected
-    ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 0 2px rgba(255, 255, 255, 0.9))'
-    : 'drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 1px rgba(255, 255, 255, 0.8))';
-
   const transform = isSelected ? 'scale(1.15) translateY(-5px)' : 'scale(1)';
-  const animationClass = isSelected ? 'marker-bounce' : '';
   const zIndex = isSelected ? '100' : '1';
 
   return `
     <div
-      class="${animationClass}"
       style="
         width: ${size}px;
         height: ${size}px;
@@ -314,9 +291,7 @@ export const createIndividualMarkerHTML = (
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         transform: ${transform};
-        filter: ${dropShadow};
         position: relative;
         z-index: ${zIndex};
         user-select: none;
@@ -343,7 +318,6 @@ export const createIndividualMarkerHTML = (
             background-color: #dc2626;
             color: #ffffff;
             border: 2px solid #ffffff;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -364,60 +338,7 @@ export const createIndividualMarkerHTML = (
  * 클러스터 마커 CSS 애니메이션 주입
  */
 export const injectClusterCSS = (): void => {
-  if (document.getElementById('cluster-marker-styles')) return;
-
-  const style = document.createElement('style');
-  style.id = 'cluster-marker-styles';
-  style.textContent = `
-    @keyframes cluster-pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    @keyframes cluster-fade {
-      0% {
-        opacity: 0;
-        transform: scale(0.8);
-      }
-      15% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      85% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(0.8);
-      }
-    }
-
-    @keyframes marker-bounce {
-      0%, 100% { transform: scale(1.15) translateY(0); }
-      50% { transform: scale(1.15) translateY(-4px); }
-    }
-
-    .marker-bounce {
-      animation: marker-bounce 1s ease-in-out infinite;
-    }
-
-    .cluster-icon {
-      animation: cluster-fade 6s ease-in-out infinite !important;
-    }
-
-    .cluster-marker-container:hover .cluster-circle {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.3);
-    }
-
-    .marker-fade-out {
-      opacity: 0 !important;
-      transition: opacity 0.3s ease-out !important;
-    }
-  `;
-
-  document.head.appendChild(style);
+  return;
 };
 
 /**

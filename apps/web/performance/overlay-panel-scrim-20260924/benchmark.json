@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T14:04:00.000Z",
+  "model": "The page overlay scrim blurred the whole screen while it was open. The dim layer remains. The blur does not, so the map underneath is not resampled every frame.",
+  "fullViewportSamplesPerSecondAt60fps": { "before": 60, "after": 0, "absolute": 60 },
+  "noise": {
+    "madSamples": 0,
+    "rule": "60 is one full-viewport backdrop layer times 60 frames, counted while the overlay is open. Not a sampled compositor trace."
+  }
+}

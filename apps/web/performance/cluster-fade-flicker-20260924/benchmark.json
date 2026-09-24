@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-09-24T11:40:00.000Z",
+  "model": "Cluster icons ran cluster-fade on a 6000ms infinite loop. Opacity is 0 at both ends and below 1 for the first and last 15% of each cycle, so each icon disappears once per cycle.",
+  "cycleMs": 6000,
+  "transparentFraction": { "before": 0.3, "after": 0 },
+  "fullHidesPerMinute": { "before": 10, "after": 0, "absolute": 10, "relative": null },
+  "partiallyTransparentMsPerMinute": { "before": 18000, "after": 0, "absolute": 18000 },
+  "noise": {
+    "madCount": 0,
+    "rule": "The counts follow from the keyframe fractions and the 6000ms period. They are not a sampled browser paint."
+  }
+}

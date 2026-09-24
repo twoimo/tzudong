@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-09-24T12:54:00.000Z",
+  "model": "Every marker render projected every visible restaurant to place at most 5 review bubbles. A later render with the same zoom, bounds, and restaurant ids now reuses that result.",
+  "projectionCallsPerUnchangedViewport": {
+    "before": "visibleRestaurantCount",
+    "after": 0,
+    "absolute": "visibleRestaurantCount"
+  },
+  "noise": {
+    "madCalls": 0,
+    "rule": "The repeat path still joins the visible ids into a cache key. It does not call the map projection. A zoom, pan, or list change still projects once. Not a sampled trace."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T16:20:00.000Z",
+  "model": "Visit badges, review bubbles, and hovered cluster circles painted blurred shadows on the map. The shadows are gone. The badge, bubble, and circle stay.",
+  "visitBadgeShadowPaintsPerMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "reviewBubbleShadowPaints": { "before": 1, "after": 0, "absolute": 1 },
+  "clusterHoverShadowPaints": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madPaints": 0,
+    "rule": "A visit badge exists only when the visit count is at least 2. Review bubbles are capped at 5 desktop and 3 mobile. The cluster shadow ran only while the pointer was over a cluster, and that hover scale is gone too. Not a sampled paint trace."
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T14:45:00.000Z",
+  "model": "The shared bottom sheet still stored a snap duration and easing on drag start and drag end, and flipped a resize flag for 140ms, even though the sheet no longer has a height transition. Those state updates are gone. Drag still writes height directly.",
+  "snapStateUpdatesPerGesture": { "before": 2, "after": 0, "absolute": 2 },
+  "viewportResizeFlagUpdatesPerBurst": { "before": 2, "after": 0, "absolute": 2 },
+  "resizeSettleDelayMs": { "before": 140, "after": 0, "absolute": 140 },
+  "noise": {
+    "madUpdates": 0,
+    "rule": "2 is one update on drag start and one on drag end. The resize pair is the flag turning on, then off after 140ms. Height still changes in one write. Not a sampled compositor trace."
+  }
+}

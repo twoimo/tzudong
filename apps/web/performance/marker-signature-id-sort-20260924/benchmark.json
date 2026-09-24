@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:04:00.000Z",
+  "model": "The marker signature sorted and joined the display id list on every render, including a pan that reused the same list. That sorted string is stored on the list. A new list still sorts once.",
+  "idSortsPerRepeatRender": { "before": 1, "after": 0, "absolute": 1 },
+  "exampleSortComparisonsFor200Ids": { "before": 1529, "after": 0, "absolute": 1529 },
+  "noise": {
+    "madSorts": 0,
+    "rule": "1529 is round(200 * log2(200)). 200 is an example, not a live Seoul sample. The first use of a list still builds a set, sorts, and joins. Not a sampled profiler trace."
+  }
+}

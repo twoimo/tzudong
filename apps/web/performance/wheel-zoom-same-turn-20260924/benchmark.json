@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:28:00.000Z",
+  "model": "Pointer-anchored wheel zoom changed the zoom, painted, then waited for the map idle event to move the center. When the projection offset changes inside that same call, the center correction now happens before the handler returns. If the projection is still on the old zoom, the idle correction remains.",
+  "cameraCorrectionsDeferredToIdle": { "before": 1, "after": 0, "absolute": 1 },
+  "paintedCameraStatesPerReadyWheelStep": { "before": 2, "after": 1, "absolute": 1, "relative": 2 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "Counts one wheel step whose projection offset changes immediately. The idle fallback is not included. Not a sampled frame trace."
+  }
+}

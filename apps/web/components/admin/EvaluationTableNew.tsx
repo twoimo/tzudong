@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import NextImage from 'next/image';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
@@ -592,6 +592,22 @@ export function EvaluationTable({
   const [isDesktopLayout, setIsDesktopLayout] = useState<boolean | null>(null);
   const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
+  const [desktopSkeletonCount, setDesktopSkeletonCount] = useState(6);
+  const [mobileSkeletonCount, setMobileSkeletonCount] = useState(4);
+  useLayoutEffect(() => {
+    const node = tableScrollContainerRef.current;
+    if (!node || !loading || records.length > 0) return;
+    const update = () => {
+      const height = node.clientHeight;
+      if (height <= 0) return;
+      setDesktopSkeletonCount(Math.max(6, Math.ceil((height - 48) / 72)));
+      setMobileSkeletonCount(Math.max(4, Math.ceil(height / 88)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, records.length]);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreObserverRef = useRef<IntersectionObserver | null>(null);
 
@@ -1062,7 +1078,7 @@ export function EvaluationTable({
   const loadMoreSentinel = hasMore && onLoadMore ? <div ref={loadMoreSentinelRef} className="h-8" /> : null;
   const mobileLoadingCards = (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:hidden" role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중">
-      {Array.from({ length: 4 }).map((_, index) => (
+      {Array.from({ length: mobileSkeletonCount }).map((_, index) => (
         <div key={index} className="rounded-lg border bg-card p-2">
           <div className="flex items-center gap-2">
             <Skeleton className="h-12 w-16 shrink-0 rounded-md motion-reduce:animate-none" aria-hidden="true" />
@@ -1080,7 +1096,7 @@ export function EvaluationTable({
       ))}
     </div>
   );
-  const desktopLoadingRows = Array.from({ length: 6 }).map((_, index) => (
+  const desktopLoadingRows = Array.from({ length: desktopSkeletonCount }).map((_, index) => (
     <TableRow key={`evaluation-loading-${index}`} aria-hidden="true">
       <TableCell className="sticky left-0 z-10 bg-background/95 px-2 sm:px-4">
         <Skeleton className="h-6 w-6 rounded-md motion-reduce:animate-none" aria-hidden="true" />
@@ -1442,7 +1458,7 @@ export function EvaluationTable({
         className={cn(
           shouldRenderMobile
             ? "flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain space-y-3 pb-[calc(var(--mobile-bottom-nav-height,60px)+env(safe-area-inset-bottom)+12px)]"
-            : "space-y-3"
+            : "flex h-full min-h-0 flex-1 flex-col space-y-3"
         )}
       >
         {shouldRenderMobile && (

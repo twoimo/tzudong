@@ -464,7 +464,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '<main id="main-content" tabIndex={-1} className="h-full min-h-0 min-w-0 w-full">',
     );
     expect(mainLayoutSource).toContain(
-      'className="relative min-h-0 min-w-0 flex-1 overflow-hidden transition-[margin] duration-300"',
+      'className="relative min-h-0 min-w-0 flex-1 overflow-hidden"',
     );
     expect(overlayLayoutSource).toContain(
       'data-layout-primitives="viewport-shell overlay-stack"',
@@ -605,7 +605,6 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     for (const moduleId of [
       "overview",
       "routes",
-      "map-overlays",
       "restaurants",
       "restaurant-refresh-history",
       "submissions",
@@ -998,7 +997,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       (consoleSource.match(/loading: \(\) => null/g) ?? []).length,
     ).toBeGreaterThanOrEqual(7);
     expect(consoleSource).toContain(
-      "loading: () => <AdminEvaluationModuleStaticShell />",
+      "<AdminEvaluationModuleStaticShell />",
     );
     expect(consoleSource).toContain(
       'data-admin-sidebar-module-loading-evaluation="viewport-table"',
@@ -1276,11 +1275,12 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(evaluationTableSource).toContain(
       'role="status" aria-busy="true" aria-label="맛집 검수 카드 로딩 중"',
     );
-    expect(evaluationTableSource).toContain("Array.from({ length: 4 }).map");
+    expect(evaluationTableSource).toContain("Array.from({ length: mobileSkeletonCount }).map");
     expect(evaluationTableSource).toContain(
-      "const desktopLoadingRows = Array.from({ length: 6 })",
+      "const desktopLoadingRows = Array.from({ length: desktopSkeletonCount })",
     );
-    expect(submissionListSource).toContain("Array.from({ length: 4 }).map");
+    expect(evaluationTableSource).toContain("Math.ceil((height - 48) / 72)");
+    expect(submissionListSource).toContain("Array.from({ length: submissionListSkeleton.count }).map");
     expect(submissionListSource).toContain(
       "grid gap-2 sm:grid-cols-[minmax(0,1fr)_80px_72px]",
     );
@@ -1449,7 +1449,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     );
     expect(homeSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).toContain(
-      'getSidebarConsoleItems(["map-overlays", "users", "banners", "insights", "pipeline"])',
+      'getSidebarConsoleItems(["users", "banners", "insights", "pipeline"])',
     );
     expect(opsSectionSource).not.toContain('id: "routes"');
     expect(opsSectionSource).not.toContain('"storyboard"');
@@ -3419,7 +3419,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
       '검수: ["restaurants", "restaurant-refresh-history", "submissions", "reviews"]',
     );
     expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
+      '운영: ["users", "banners", "insights", "pipeline"]',
     );
     expect(sidebarOrderSource).toContain(
       '실험실: ["youtube-thumbnail-generator", "storyboard", "routes", "llm", "audit"]',
@@ -8156,9 +8156,8 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(hydrationSmokeSource).toContain("/admin?module=routes");
     expect(hydrationSmokeSource).toContain("/admin?module=youtube-thumbnail-generator");
     expect(hydrationSmokeSource).toContain("/admin?module=audit");
-    expect(hydrationSmokeSource).toContain("/admin?module=map-overlays");
-    expect(hydrationSmokeSource).toContain("moduleId: 'map-overlays'");
-    expect(hydrationSmokeSource).toContain('data-admin-map-overlays-module="true"');
+    expect(hydrationSmokeSource).not.toContain("/admin?module=map-overlays");
+    expect(hydrationSmokeSource).not.toContain("moduleId: 'map-overlays'");
     expect(hydrationSmokeSource).toContain("minified react error");
     expect(hydrationSmokeSource).toContain("readySelector");
     expect(hydrationSmokeSource).toContain('data-admin-youtube-thumbnail-generator="true"');
@@ -8461,7 +8460,7 @@ describe("admin console beginner-friendly UI/UX source contract", () => {
     expect(preferenceRouteSource).toContain('from "@/lib/admin/sidebar-order"');
     expect(sidebarOrderSource).toContain("mergeSidebarItemsWithDefaultSlots");
     expect(sidebarOrderSource).toContain(
-      '운영: ["map-overlays", "users", "banners", "insights", "pipeline"]',
+      '운영: ["users", "banners", "insights", "pipeline"]',
     );
     expect(preferenceRouteSource).toContain("await requireAdmin()");
     expect(preferenceRouteSource.indexOf("await requireAdmin()")).toBeLessThan(

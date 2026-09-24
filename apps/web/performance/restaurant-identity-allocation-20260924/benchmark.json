@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T13:48:00.000Z",
+  "model": "Comparing two different restaurants allocated an id set and two id arrays even when neither restaurant had merged records. That comparison now checks the name and coordinate directly. Merged records still use the set.",
+  "setAllocationsPerUnmergedComparison": { "before": 1, "after": 0, "absolute": 1 },
+  "idArrayAllocationsPerUnmergedComparison": { "before": 2, "after": 0, "absolute": 2 },
+  "noise": {
+    "madAllocations": 0,
+    "rule": "Counts one comparison of two restaurants with different ids and no merged records. A nearest scan of n such restaurants used to allocate n sets. Not a sampled heap trace."
+  }
+}

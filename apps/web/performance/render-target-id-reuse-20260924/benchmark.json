@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T15:02:00.000Z",
+  "model": "Each marker render rebuilt a token for every displayed restaurant even when the lists and cluster mode were unchanged. Those tokens are reused. Bounds still go into the later signature. Extra bubble or expanded-cluster ids copy the cached list before appending.",
+  "tokenBuildsPerUnchangedList": { "before": "n", "after": 0, "absolute": "n" },
+  "exampleN200": { "before": 200, "after": 0, "absolute": 200 },
+  "noise": {
+    "madTokens": 0,
+    "rule": "n is the displayed restaurant count. 200 is an example, not a live Seoul sample. A changed list, cluster array, or selection still rebuilds. Not a sampled profiler trace."
+  }
+}

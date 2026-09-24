@@ -81,15 +81,7 @@ const HALF_TO_FULL_VELOCITY_FLOOR_PX_PER_MS = 0.16;
 const HALF_TO_FULL_QUICK_VELOCITY_FLOOR_PX_PER_MS = 0.19;
 const QUICK_GESTURE_DURATION_MS = 85;
 const QUICK_GESTURE_EXTRA_DISTANCE_PX = 2;
-const QUICK_GESTURE_SHORT_DISTANCE_PX = 25;
-const LONG_PRESS_TRANSITION_THRESHOLD_MS = 175;
 const DRAG_RENDER_EPSILON_PERCENT = 0.08;
-const SNAP_TRANSITION_BASE_MS = 235;
-const SNAP_TRANSITION_FAST_MS = 175;
-const SNAP_TRANSITION_SMOOTH_MS = 295;
-const SNAP_EASING_BASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-const SNAP_EASING_FAST = 'cubic-bezier(0.16, 1, 0.3, 1)';
-const SNAP_EASING_SMOOTH = 'cubic-bezier(0.34, 1.56, 0.64, 1)';
 const HORIZONTAL_SWIPE_THRESHOLD = 10;
 const HORIZONTAL_SWIPE_INTENT_RATIO = 0.85;
 const VERTICAL_DRAG_INTENT_RATIO = 1.25;
@@ -284,17 +276,12 @@ function BottomSheetComponent({
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
-    const [sheetSnapTransition, setSheetSnapTransition] = useState({
-        duration: SNAP_TRANSITION_BASE_MS,
-        easing: SNAP_EASING_BASE,
-    });
     const [viewportFrame, setViewportFrame] = useState(() => {
         const viewportHeight = typeof window !== 'undefined'
             ? (window.visualViewport?.height ?? window.innerHeight)
             : 800;
         return { height: viewportHeight, bottomOffset: 0 };
     });
-    const [isViewportResizing, setIsViewportResizing] = useState(false);
 
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(
@@ -399,29 +386,6 @@ function BottomSheetComponent({
             Math.abs(snap - currentHeight) < Math.abs(closest - currentHeight) ? snap : closest
         , snapPoints[0]);
     }, [getContentSnapPoints]);
-
-    const applySnapTransition = useCallback((isFlick: boolean, distancePx: number, isLongPress: boolean) => {
-        if (isFlick) {
-            setSheetSnapTransition({
-                duration: SNAP_TRANSITION_FAST_MS,
-                easing: SNAP_EASING_FAST,
-            });
-            return;
-        }
-
-        if (isLongPress || distancePx >= 80) {
-            setSheetSnapTransition({
-                duration: SNAP_TRANSITION_SMOOTH_MS,
-                easing: SNAP_EASING_SMOOTH,
-            });
-            return;
-        }
-
-        setSheetSnapTransition({
-            duration: SNAP_TRANSITION_BASE_MS,
-            easing: SNAP_EASING_BASE,
-        });
-    }, []);
 
     const syncMobileLayout = useCallback((heightPercent: number) => {
         if (!isOpen || !hideBottomNavWhenOpen || !isMobileOrTablet) {
@@ -584,18 +548,8 @@ function BottomSheetComponent({
         if (!viewport) return;
 
         let throttleTimer: number | null = null;
-        let resizeSettleTimer: number | null = null;
 
         const handleResize = () => {
-            setIsViewportResizing(true);
-            if (resizeSettleTimer !== null) {
-                window.clearTimeout(resizeSettleTimer);
-            }
-            resizeSettleTimer = window.setTimeout(() => {
-                setIsViewportResizing(false);
-                resizeSettleTimer = null;
-            }, 140);
-
             if (throttleTimer !== null) return;
 
             throttleTimer = requestAnimationFrame(() => {
@@ -622,8 +576,6 @@ function BottomSheetComponent({
             viewport.removeEventListener('resize', handleResize);
             viewport.removeEventListener('scroll', handleResize);
             if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
-            if (resizeSettleTimer !== null) window.clearTimeout(resizeSettleTimer);
-            setIsViewportResizing(false);
         };
     }, [isOpen, getCurrentMaxHeight, minHeight, syncMobileLayout, syncViewportMetrics]);
 
@@ -675,14 +627,6 @@ function BottomSheetComponent({
         dragEndYRef.current = clientY;
         dragEndTimeRef.current = performance.now();
         velocityRef.current = 0;
-        setSheetSnapTransition({
-            duration: SNAP_TRANSITION_BASE_MS,
-            easing: SNAP_EASING_BASE,
-        });
-
-        if (sheetRef.current) {
-            sheetRef.current.style.transitionDuration = '0ms';
-        }
         lockContentScrollDuringDrag();
         setIsDragging(true);
     }, [cancelPendingDragHeightRender, lockContentScrollDuringDrag]);
@@ -738,7 +682,6 @@ function BottomSheetComponent({
         const startedAtFull = startHeightRef.current >= currentMaxHeight - 0.5;
         const isQuickGesture = elapsedMs <= QUICK_GESTURE_DURATION_MS;
         const movementPx = Math.abs(movementPxFromStart);
-        const isLongPress = !isQuickGesture && elapsedMs >= LONG_PRESS_TRANSITION_THRESHOLD_MS;
         const peekToHalfDistancePercent = pxToPercent(
             HALF_TO_FULL_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
         );
@@ -751,11 +694,6 @@ function BottomSheetComponent({
         const halfToPeekDistancePercent = pxToPercent(
             HALF_TO_PEEK_DISTANCE_PX + (isQuickGesture ? QUICK_GESTURE_EXTRA_DISTANCE_PX : 0)
         );
-        const shouldUseFastTransition = isSwipeUpStrong || isSwipeDownStrong;
-        const isQuickAndSmall = isQuickGesture && movementPx <= QUICK_GESTURE_SHORT_DISTANCE_PX;
-        const shouldUseSmoothTransition = isLongPress || (!isQuickAndSmall && movementPx > QUICK_GESTURE_SHORT_DISTANCE_PX) || dragDistancePx > HALF_TO_PEEK_DISTANCE_PX;
-
-        applySnapTransition(shouldUseFastTransition, movementPx, shouldUseSmoothTransition);
         velocityRef.current = 0;
 
         const fullToHalfDistancePx =
@@ -833,7 +771,6 @@ function BottomSheetComponent({
             queueMicrotask(onClose);
         }
     }, [
-        applySnapTransition,
         cancelPendingDragHeightRender,
         defaultHeight,
         enablePeek,
@@ -1323,8 +1260,6 @@ function BottomSheetComponent({
             height: 'auto',
             maxHeight: 'calc(100dvh - 2rem)',
             transform: 'translate(-50%, -50%)',
-            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
-            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
         }
         : useStableKeyboardLayout
         ? {
@@ -1332,8 +1267,6 @@ function BottomSheetComponent({
             bottom: 0,
             height: 'auto',
             maxHeight: undefined,
-            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
-            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
         }
         : {
             // [FIX] Safari/삼성 인터넷 100vh 버그 수정 - HomeMapContainer 방식 적용
@@ -1342,8 +1275,6 @@ function BottomSheetComponent({
             bottom: viewportFrame.bottomOffset > 0 ? `${viewportFrame.bottomOffset}px` : undefined,
             // 헤더 오프셋이 있는 경우 최대 높이 제한 (CSS로도 이중 안전장치)
             maxHeight: headerOffset > 0 ? `calc(100% - ${headerOffset}px)` : `${maxHeight}%`,
-            transitionDuration: isDragging || isViewportResizing ? '0ms' : `${sheetSnapTransition.duration}ms`,
-            transitionTimingFunction: isDragging || isViewportResizing ? undefined : sheetSnapTransition.easing,
         };
 
     return (
@@ -1351,7 +1282,7 @@ function BottomSheetComponent({
             {/* 배경 오버레이 */}
             {showBackdrop && (
                 <div
-                    className="fixed inset-0 z-[94] bg-black/30 transition-opacity duration-200"
+                    className="fixed inset-0 z-[94] bg-black/30"
                     data-bottom-sheet-backdrop={layoutSource}
                     role="button"
                     tabIndex={-1}
@@ -1381,8 +1312,6 @@ function BottomSheetComponent({
                     'bg-background shadow-sm',
                     isCentered ? 'rounded-2xl' : isAtFullHeight ? 'rounded-none' : 'rounded-t-2xl',
                     'flex flex-col',
-                    // 드래그 중에는 트랜지션 제거
-                    isDragging || isViewportResizing ? '' : 'transition-[height,border-radius]',
                     className
                 )}
                 data-sheet-state={isAtFullHeight ? 'full' : 'partial'}

@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:36:00.000Z",
+  "model": "A pan that kept the same restaurants still built a new id set before noticing the previous result matched. That set is kept with the result. The next matching pan only counts ids.",
+  "idSetsWhenMembershipIsUnchanged": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madSets": 0,
+    "rule": "The cell scan still runs. A changed membership builds one set and scans the cells again. Not a sampled allocator trace."
+  }
+}

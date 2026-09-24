@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T15:56:00.000Z",
+  "model": "A marker click at the same camera still joined a new bounds string into the render signature. The string is reused when the four rounded coordinates match.",
+  "boundsStringsPerUnchangedCamera": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "roundCoord still runs. A camera move still builds one string. Not a sampled allocator trace."
+  }
+}

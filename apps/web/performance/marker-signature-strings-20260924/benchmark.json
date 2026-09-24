@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-09-24T15:58:00.000Z",
+  "model": "Each marker signature rebuilt a 3-bit mode string, an empty kind map, and a layer version string. The 8 mode strings are constants. An empty kind list returns immediately. The layer version string is reused while the kind signature is unchanged.",
+  "modeStringsPerSignature": { "before": 1, "after": 0, "absolute": 1 },
+  "emptyKindMapsPerSignature": { "before": 1, "after": 0, "absolute": 1 },
+  "layerVersionStringsPerUnchangedKind": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madStrings": 0,
+    "rule": "A kind list with entries still builds one map. A changed kind signature still builds one version string. Not a sampled allocator trace."
+  }
+}

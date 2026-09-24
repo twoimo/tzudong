@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-09-24T11:08:00.000Z",
+  "model": "The desktop home panel statically imported the restaurant detail module, so the first home script included it before any restaurant was opened. The panel now loads that module on open. Bytes are the unminified dev webpack chunk.",
+  "chunk": "_app-pages-browser_components_home_home-desktop-control-panel_tsx.js",
+  "bytes": {
+    "before": 10285442,
+    "after": 6117687,
+    "absolute": 4167755,
+    "relative": 1.681
+  },
+  "browserTransfer": {
+    "before": 2313470,
+    "after": 1441921,
+    "absolute": 871549,
+    "relative": 1.604,
+    "note": "The before transfer is the previous home load of the same chunk. The after transfer is this load, and the detail chunk was not requested."
+  },
+  "noise": {
+    "madBytes": 0,
+    "rule": "One rebuild of the dev chunk. No repeated samples, so the median absolute deviation is not estimated."
+  }
+}

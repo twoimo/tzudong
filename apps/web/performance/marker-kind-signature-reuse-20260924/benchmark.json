@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:58:00.000Z",
+  "model": "Each marker render mapped every loaded restaurant into a kind entry and sorted that list again. The same kind signature is already memoized, and the asset version is constant, so the render reuses that string.",
+  "kindEntryAllocationsPerMarkerRender": { "before": "loadedRestaurantCount", "after": 0, "absolute": "loadedRestaurantCount" },
+  "kindSortsPerMarkerRender": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madSorts": 0,
+    "rule": "One extra sort of the loaded list per marker render. The memoized signature still updates when the list identity changes. Not a sampled trace."
+  }
+}

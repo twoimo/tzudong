@@ -29,7 +29,7 @@ import { YouTubeIcon } from "@/components/icons/YouTubeIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
@@ -43,7 +43,7 @@ import {
     getRestaurantReviewLookupName,
     selectRelatedRestaurantReviewIds,
 } from "@/lib/restaurant-review-lookup";
-import { collectRestaurantMergedMedia } from "@/lib/restaurant-merged-media";
+import { collectRestaurantMergedMedia, collectTzuyangReviewEntries, type TzuyangReviewEntry } from "@/lib/restaurant-merged-media";
 import { buildRestaurantDetailMediaCopy } from "@/lib/restaurant-detail-media-copy";
 import { buildRestaurantAddressDisplayEntries, type RestaurantAddressEntryType } from "@/lib/restaurant-address-presenter";
 import {
@@ -179,6 +179,41 @@ interface Review {
     userAvatarUrl?: string | null;
 }
 
+function formatTzuyangReviewDate(value: string | null): string | null {
+    const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return null;
+    return `${match[1]}.${match[2]}.${match[3]}`;
+}
+
+function TzuyangReviewCard({
+    entry,
+    badge,
+}: {
+    entry: TzuyangReviewEntry;
+    badge: string | null;
+}) {
+    const publishedLabel = formatTzuyangReviewDate(entry.publishedAt);
+
+    return (
+        <div className="space-y-2 rounded-lg bg-muted/50 p-4">
+            {badge ? (
+                <Badge variant="outline" className="text-xs">
+                    {badge}
+                </Badge>
+            ) : null}
+            {publishedLabel || entry.title ? (
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    {publishedLabel ? <span className="shrink-0">{publishedLabel}</span> : null}
+                    {entry.title ? <span className="min-w-0 truncate font-medium text-foreground">{entry.title}</span> : null}
+                </div>
+            ) : null}
+            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
+                {entry.text}
+            </p>
+        </div>
+    );
+}
+
 export function RestaurantDetailPanel({
     restaurant,
     onClose,
@@ -248,15 +283,92 @@ export function RestaurantDetailPanel({
         }),
         [youtubeLinks],
     );
-    const tzuyangReviews = mergedMedia.tzuyangReviews;
+    const collectedTzuyangReviews = mergedMedia.tzuyangReviews;
+    const siblingTzuyangReviewQuery = useQuery({
+        queryKey: ['restaurant-tzuyang-review-siblings', restaurantId, youtubeLinks],
+        enabled: Boolean(restaurantId)
+            && restaurant != null
+            && Object.prototype.hasOwnProperty.call(restaurant, "tzuyang_review")
+            && (collectedTzuyangReviews.length === 0 || collectedTzuyangReviews.length < youtubeLinks.length),
+        queryFn: async () => {
+            if (!restaurant) return [] as string[];
+
+            const links = [...new Set(youtubeLinks.flatMap((link) => {
+                const canonical = buildCanonicalYouTubeWatchUrl(extractCanonicalYouTubeVideoId(link));
+                return canonical && canonical !== link ? [link, canonical] : [link];
+            }))];
+            const reviews: string[] = [];
+            const addReview = (value: string | null | undefined) => {
+                const trimmed = value?.trim();
+                if (trimmed && !reviews.includes(trimmed)) reviews.push(trimmed);
+            };
+
+            const videoIds = [...new Set(links
+                .map((link) => extractCanonicalYouTubeVideoId(link))
+                .filter((videoId): videoId is string => Boolean(videoId)))];
+            if (videoIds.length > 0) {
+                const { data } = await supabase
+                    .from('restaurants')
+                    .select('tzuyang_review')
+                    .or(videoIds.map((videoId) => `youtube_link.ilike.%${videoId}%`).join(','));
+                data?.forEach((row) => addReview(row.tzuyang_review));
+            } else if (links.length > 0) {
+                const { data } = await supabase
+                    .from('restaurants')
+                    .select('tzuyang_review')
+                    .in('youtube_link', links);
+                data?.forEach((row) => addReview(row.tzuyang_review));
+            }
+
+            const name = restaurant.approved_name || restaurant.name;
+            const address = restaurant.jibun_address || restaurant.road_address;
+            if (name && address && reviews.length < Math.max(links.length, 1)) {
+                const addressColumn = restaurant.jibun_address ? 'jibun_address' : 'road_address';
+                const { data } = await supabase
+                    .from('restaurants')
+                    .select('tzuyang_review')
+                    .eq('approved_name', name)
+                    .eq(addressColumn, address);
+                data?.forEach((row) => addReview(row.tzuyang_review));
+            }
+
+            if (reviews.length === 0 && name) {
+                const { data } = await supabase
+                    .from('restaurants')
+                    .select('tzuyang_review')
+                    .eq('approved_name', name)
+                    .not('tzuyang_review', 'is', null)
+                    .limit(8);
+                const sameNameReviews: string[] = [];
+                data?.forEach((row) => {
+                    const trimmed = row.tzuyang_review?.trim();
+                    if (trimmed && !sameNameReviews.includes(trimmed)) sameNameReviews.push(trimmed);
+                });
+                if (sameNameReviews.length === 1) addReview(sameNameReviews[0]);
+            }
+
+            return reviews;
+        },
+    });
+    const tzuyangReviewEntries = useMemo(() => {
+        const entries = collectTzuyangReviewEntries(restaurant);
+        const seen = new Set(entries.map((entry) => entry.text));
+        siblingTzuyangReviewQuery.data?.forEach((review) => {
+            const text = review.trim();
+            if (!text || seen.has(text)) return;
+            seen.add(text);
+            entries.push({ text, title: null, publishedAt: null });
+        });
+        return entries;
+    }, [restaurant, siblingTzuyangReviewQuery.data]);
     const youtubeMetas = mergedMedia.youtubeMetas;
     const youtubeCopy = useMemo(
         () => buildRestaurantDetailMediaCopy('youtube', youtubeVideos.length, isYoutubeExpanded),
         [isYoutubeExpanded, youtubeVideos.length],
     );
     const reviewCopy = useMemo(
-        () => buildRestaurantDetailMediaCopy('review', tzuyangReviews.length, isReviewExpanded),
-        [isReviewExpanded, tzuyangReviews.length],
+        () => buildRestaurantDetailMediaCopy('review', tzuyangReviewEntries.length, isReviewExpanded),
+        [isReviewExpanded, tzuyangReviewEntries.length],
     );
 
     // [최적 레코드 선택] 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
@@ -860,22 +972,22 @@ export function RestaurantDetailPanel({
      * 카테고리별 이미지 경로 매핑
      */
     const CATEGORY_IMAGES: Record<string, string> = {
-        '고기': '/images/maker-images/meat_bbq.png',
-        '치킨': '/images/maker-images/chicken.png',
-        '한식': '/images/maker-images/korean.png',
-        '중식': '/images/maker-images/chinese.png',
-        '일식': '/images/maker-images/cutlet_sashimi.png',
-        '양식': '/images/maker-images/western.png',
-        '분식': '/images/maker-images/snack_bar.png',
-        '카페·디저트': '/images/maker-images/cafe_dessert.png',
-        '아시안': '/images/maker-images/asian.png',
-        '패스트푸드': '/images/maker-images/fastfood.png',
-        '족발·보쌈': '/images/maker-images/pork_feet.png',
-        '돈까스·회': '/images/maker-images/cutlet_sashimi.png',
-        '피자': '/images/maker-images/pizza.png',
-        '찜·탕': '/images/maker-images/stew.png',
-        '야식': '/images/maker-images/late_night.png',
-        '도시락': '/images/maker-images/lunch_box.png',
+        '고기': '/images/maker-images/webp/meat_bbq.webp',
+        '치킨': '/images/maker-images/webp/chicken.webp',
+        '한식': '/images/maker-images/webp/korean.webp',
+        '중식': '/images/maker-images/webp/chinese.webp',
+        '일식': '/images/maker-images/webp/cutlet_sashimi.webp',
+        '양식': '/images/maker-images/webp/western.webp',
+        '분식': '/images/maker-images/webp/snack_bar.webp',
+        '카페·디저트': '/images/maker-images/webp/cafe_dessert.webp',
+        '아시안': '/images/maker-images/webp/asian.webp',
+        '패스트푸드': '/images/maker-images/webp/fastfood.webp',
+        '족발·보쌈': '/images/maker-images/webp/pork_feet.webp',
+        '돈까스·회': '/images/maker-images/webp/cutlet_sashimi.webp',
+        '피자': '/images/maker-images/webp/pizza.webp',
+        '찜·탕': '/images/maker-images/webp/stew.webp',
+        '야식': '/images/maker-images/webp/late_night.webp',
+        '도시락': '/images/maker-images/webp/lunch_box.webp',
     };
 
     /**
@@ -884,16 +996,16 @@ export function RestaurantDetailPanel({
      * @returns 이미지 경로
      */
     const getCategoryImagePath = (category: string): string => {
-        return CATEGORY_IMAGES[category] || '/images/maker-images/korean.png';
+        return CATEGORY_IMAGES[category] || '/images/maker-images/webp/korean.webp';
     };
 
     return (
         <>
             {isMobile && (onSwipeLeft || onSwipeRight) && showSwipeHint ? (
                 <div className="pointer-events-none fixed inset-0 z-[70]">
-                    <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+                    <div className="absolute inset-0 bg-black/20" />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="rounded-full border border-white/40 bg-black/40 px-3 py-2 text-xs text-white/90 backdrop-blur">
+                        <div className="rounded-full border border-white/40 bg-black/40 px-3 py-2 text-xs text-white/90">
                             좌우 스와이프 시 다음 맛집으로 이동
                         </div>
                     </div>
@@ -919,7 +1031,7 @@ export function RestaurantDetailPanel({
                 {onToggleCollapse && !isMobile && (
                     <button
                         onClick={onToggleCollapse}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted cursor-pointer group"
                         title={isPanelOpen ? "패널 접기" : "패널 펼치기"}
                         aria-label={isPanelOpen ? "패널 접기" : "패널 펼치기"}
                     >
@@ -1118,7 +1230,7 @@ export function RestaurantDetailPanel({
                                         <button
                                             type="button"
                                             key={`${entry.type}-${entry.address}`}
-                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group text-left"
+                                            className="flex w-full gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg group text-left"
                                             onClick={() => handleCopyAddress(entry.address, entry.type)}
                                             aria-label={`${entry.label} 복사`}
                                         >
@@ -1130,7 +1242,7 @@ export function RestaurantDetailPanel({
                                             {copiedAddress === entry.type ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                                             ) : (
-                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100" />
                                             )}
                                         </button>
                                     ))}
@@ -1195,7 +1307,7 @@ export function RestaurantDetailPanel({
                                                     </span>
                                                 )}
                                                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
+                                                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
                                                         <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                     </span>
                                                 </div>
@@ -1227,7 +1339,7 @@ export function RestaurantDetailPanel({
                                                                 {youtubeCopy.itemBadge(index + 2)}
                                                             </span>
                                                             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 backdrop-blur-[1px] transition-all duration-200 group-hover:bg-red-600">
+                                                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white shadow-sm ring-1 ring-white/40 group-hover:bg-red-600">
                                                                     <Play className="h-5 w-5 translate-x-[1px] fill-current" aria-hidden="true" />
                                                                 </span>
                                                             </div>
@@ -1241,7 +1353,7 @@ export function RestaurantDetailPanel({
                                 ) : null}
 
                                 {/* 쯔양 리뷰 섹션 */}
-                                {tzuyangReviews.length > 0 ? (
+                                {tzuyangReviewEntries.length > 0 ? (
                                     <>
                                     <Separator />
                                     <div className="space-y-3">
@@ -1249,13 +1361,13 @@ export function RestaurantDetailPanel({
                                             <h3 className="min-w-0 flex-1 font-semibold text-sm flex flex-wrap items-center gap-2">
                                                 <Quote className="h-4 w-4 text-muted-foreground" />
                                                 {reviewCopy.title}
-                                                {tzuyangReviews.length > 1 && (
+                                                {tzuyangReviewEntries.length > 1 && (
                                                     <Badge variant="outline" className="ml-1 text-xs">
                                                         {reviewCopy.countLabel}
                                                     </Badge>
                                                 )}
                                             </h3>
-                                            {tzuyangReviews.length > 1 && (
+                                            {tzuyangReviewEntries.length > 1 && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -1278,34 +1390,25 @@ export function RestaurantDetailPanel({
                                         </div>
 
                                         <div className="space-y-2">
-                                            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                                                {tzuyangReviews.length > 1 && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {reviewCopy.itemBadge(1)}
-                                                    </Badge>
-                                                )}
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                    {tzuyangReviews[0]}
-                                                </p>
-                                            </div>
+                                            <TzuyangReviewCard
+                                                entry={tzuyangReviewEntries[0]}
+                                                badge={tzuyangReviewEntries.length > 1 ? reviewCopy.itemBadge(1) : null}
+                                            />
 
-                                            {tzuyangReviews.length > 1 && !isReviewExpanded && (
+                                            {tzuyangReviewEntries.length > 1 && !isReviewExpanded && (
                                                 <p className="text-xs text-muted-foreground">
                                                     {reviewCopy.collapsedHint}
                                                 </p>
                                             )}
 
-                                            {tzuyangReviews.length > 1 && isReviewExpanded && (
+                                            {tzuyangReviewEntries.length > 1 && isReviewExpanded && (
                                                 <div className="space-y-2">
-                                                    {tzuyangReviews.slice(1).map((review, index) => (
-                                                        <div key={`${index}-${review}`} className="p-4 bg-muted/50 rounded-lg space-y-2">
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {reviewCopy.itemBadge(index + 2)}
-                                                            </Badge>
-                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                                {review}
-                                                            </p>
-                                                        </div>
+                                                    {tzuyangReviewEntries.slice(1).map((entry, index) => (
+                                                        <TzuyangReviewCard
+                                                            key={`${index}-${entry.text}`}
+                                                            entry={entry}
+                                                            badge={reviewCopy.itemBadge(index + 2)}
+                                                        />
                                                     ))}
                                                 </div>
                                             )}
@@ -1428,7 +1531,7 @@ export function RestaurantDetailPanel({
                         {isDirectionSheetOpen && mapDestinationUrls && (
                             <div
                                 className={cn(
-                                    "border-b border-border bg-muted/30 space-y-2 animate-in slide-in-from-bottom-2 duration-200",
+                                    "border-b border-border bg-muted/30 space-y-2",
                                     isMobile ? "p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]" : "p-4"
                                 )}
                             >

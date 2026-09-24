@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:08:00.000Z",
+  "model": "Category rotation updated both the WebP source and the PNG img src. Setting img.src starts a PNG load even when the picture element is showing the WebP, and that second bitmap can flash. The visible source srcset is now the only update.",
+  "pngSrcAssignmentsPerMinute": { "before": 192, "after": 0, "absolute": 192 },
+  "webpSrcsetUpdatesPerMinute": { "before": 192, "after": 192, "absolute": 0, "relative": 1 },
+  "noise": {
+    "madCount": 0,
+    "rule": "12 ticks per minute at 5000ms times 16 regional clusters. Not a sampled network trace; cached PNGs would still be assigned."
+  }
+}

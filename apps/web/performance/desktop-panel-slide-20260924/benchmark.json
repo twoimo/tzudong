@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:18:00.000Z",
+  "model": "The desktop list panel and the desktop detail panel each slid for 300ms. A sliding opaque panel still composites over the map for that whole interval. Both now change position in one frame.",
+  "framesPerPanelToggleAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000) for one panel. The two panels are separate toggles, not one combined animation. Not a sampled compositor trace."
+  }
+}

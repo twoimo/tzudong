@@ -85,7 +85,7 @@ const loadAnnouncementPanel = async () => {
 };
 
 const BANNER_ROTATION_INTERVAL = 5000;
-const HEADER_BANNER_FRAME_CLASS = "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md transition-all duration-300 relative z-10 flex-1 min-w-0";
+const HEADER_BANNER_FRAME_CLASS = "flex items-center gap-2 px-2 py-0.5 md:px-3 md:py-1 rounded-md relative z-10 flex-1 min-w-0";
 
 const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const isHydrated = useHydration();
@@ -268,7 +268,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   return (
     <header
       ref={headerRef}
-      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-[opacity,transform,background-color] duration-300 gap-1.5 sm:gap-3 h-12 px-2 md:h-14 md:px-3"
+      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative gap-1.5 sm:gap-3 h-12 px-2 md:h-14 md:px-3"
       style={{
         transform: 'translateY(calc(-1 * var(--mobile-sheet-header-offset, 0px)))',
         opacity: 'calc(1 - var(--mobile-sheet-header-progress, 0))',
@@ -276,8 +276,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     >
       {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div
-        className="absolute inset-0 opacity-30 dark:opacity-0 pointer-events-none transition-opacity"
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
+        className="absolute inset-0 opacity-30 dark:opacity-0 pointer-events-none"
+        style={{ backgroundImage: 'url("/images/ui-noise.png")', backgroundRepeat: 'repeat' }}
       />
 
       {/* 전통 문양 테두리 - 다크모드에서는 차분한 경계선으로 유지 */}
@@ -300,7 +300,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 좌측: 사이드바 토글 */}
       {!isMobileBannerOnlyHeader && !hideToggleSidebar && shouldShowHeaderIcons && (
         <div className={cn(
-          "flex items-center relative z-10 flex-shrink-0 transition-all duration-300",
+          "flex items-center relative z-10 flex-shrink-0",
           isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
         )}>
           <Button
@@ -309,7 +309,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="사이드바 토글"
             onClick={onToggleSidebar}
-            className="h-9 w-9 hover:bg-accent text-foreground font-sans transition-colors"
+            className="h-9 w-9 hover:bg-accent text-foreground font-sans"
           >
             <PanelLeft className="h-5 w-5" />
           </Button>
@@ -356,7 +356,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </Button>
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className="font-medium truncate group-hover:text-red-800 transition-colors text-foreground flex-1 min-w-0 text-xs md:text-sm">
+          <span className="font-medium truncate group-hover:text-red-800 text-foreground flex-1 min-w-0 text-xs md:text-sm">
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
@@ -379,7 +379,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       {/* 우측: 위젯 및 버튼들 */}
       {!isMobileBannerOnlyHeader && (
         <div className={cn(
-          "flex items-center gap-1 sm:gap-2 relative z-10 flex-shrink-0 transition-all duration-300",
+          "flex items-center gap-1 sm:gap-2 relative z-10 flex-shrink-0",
           isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
         )}>
         {/* 랭킹 및 접속자 위젯 - 데스크탑에서만 표시 */}
@@ -404,7 +404,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label={unreadCount > 0 ? `알림, 안 읽은 알림 ${unreadCount > 99 ? "99개 이상" : `${unreadCount}개`}` : "알림"}
-                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground relative transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground relative focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
               >
                 <Bell className="h-5 w-5" aria-hidden="true" />
                 {unreadCount > 0 && (
@@ -548,7 +548,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             type="button"
             aria-label="전체화면 토글"
             onClick={toggleFullscreen}
-            className="h-11 w-11 hidden md:flex rounded-xl hover:bg-accent text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+            className="h-11 w-11 hidden md:flex rounded-xl hover:bg-accent text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
           >
             <Maximize className="h-5 w-5" aria-hidden="true" />
           </Button>
@@ -566,7 +566,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 size="icon"
                 type="button"
                 aria-label="내 계정 메뉴"
-                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
+                className="h-11 w-11 rounded-xl hover:bg-accent text-foreground focus-visible:ring-2 focus-visible:ring-primary touch-manipulation"
               >
                 <User className="h-5 w-5" aria-hidden="true" />
               </Button>
@@ -606,7 +606,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   type="button"
                   aria-label="사업자 정보 펼치기/접기"
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
-                  className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
+                  className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5"
                 >
                   <span className="text-2xs text-muted-foreground">{siteConfig.operator.copyrightLabel}</span>
                   {isBusinessInfoExpanded ? (
@@ -636,7 +636,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               type="button"
               aria-label="로그인"
               className={cn(
-                "bg-red-800 hover:bg-red-900 text-white font-sans transition-colors shadow-md",
+                "bg-red-800 hover:bg-red-900 text-white font-sans shadow-md",
                 "h-8 px-4 text-xs md:h-9 md:px-4 md:text-sm"
               )}
             >

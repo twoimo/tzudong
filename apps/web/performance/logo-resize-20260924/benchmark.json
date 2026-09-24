@@ -1,0 +1,7 @@
+{
+  "generatedAt": "2026-09-24T10:44:00.000Z",
+  "model": "The logo is drawn at 24px, 26px, 28px, 32px, or 40px. 40*3 = 120 device pixels, so a 128px source covers the largest slot. The old file was 512px, which is (512/128)^2 = 16 times as many pixels.",
+  "pixels": { "before": 262144, "after": 16384, "ratio": 16 },
+  "bytes": { "before": 56644, "after": 5578, "absolute": 51066, "relative": 10.155 },
+  "noise": { "madBytes": 0, "rule": "File size is deterministic. The source test still requires the file to stay under 80KB." }
+}

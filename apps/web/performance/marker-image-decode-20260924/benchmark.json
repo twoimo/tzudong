@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T12:34:00.000Z",
+  "model": "Marker images decoded asynchronously and were fetched at low priority, so the first paint of a new marker could be an empty box. They now decode before that paint. Cluster icon swaps already wait for the next image to load.",
+  "blankDecodePaintsPerNewMarkerImage": { "before": 1, "after": 0, "absolute": 1 },
+  "regionalCeilingBlankPaints": { "before": 18, "after": 0, "absolute": 18 },
+  "noise": {
+    "madPaints": 0,
+    "rule": "18 is the number of regional centers. Empty regions are not drawn, so a live frame is at or under that ceiling. Sync decode removes the empty paint after bytes arrive; it does not hide network wait. Not a sampled paint trace."
+  }
+}

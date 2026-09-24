@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T13:34:00.000Z",
+  "model": "Every marker render constructed a new anchor point even when the anchor pixel had not changed. A repeat render now reuses the existing point. A size change, such as selection, still constructs one.",
+  "anchorAllocationsPerUnchangedMarker": { "before": 1, "after": 0, "absolute": 1 },
+  "noise": {
+    "madAllocations": 0,
+    "rule": "Counts one marker whose anchor x and y did not change. Not a sampled heap trace."
+  }
+}

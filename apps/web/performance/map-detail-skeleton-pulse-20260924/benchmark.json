@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T17:30:00.000Z",
+  "model": "The map detail skeleton pulsed four bars for as long as the panel was loading. Those bars now stay still.",
+  "opacityFramesPerSecond": { "before": 240, "after": 0, "absolute": 240, "relative": null },
+  "animatedBars": { "before": 4, "after": 0, "absolute": 4, "relative": null },
+  "noise": {
+    "madFrames": 0,
+    "rule": "240 is 4 bars times 60 frames per second while one detail skeleton is visible. The pulse keyframe is a 2s opacity loop. Not a sampled compositor trace. Relative is unbounded because the after count is zero."
+  }
+}

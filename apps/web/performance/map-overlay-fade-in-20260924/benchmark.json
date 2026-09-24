@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-24T11:42:00.000Z",
+  "model": "mapOverlayFade started at opacity 0 and reached 1 only after 15% of the duration. Each time a notice mounted, that opening stretch was a fade-in flash before the intended fade-out.",
+  "entranceTransparentMs": {
+    "restaurantCount": { "before": 450, "after": 0, "durationMs": 3000 },
+    "onlineUsers": { "before": 600, "after": 0, "durationMs": 4000 },
+    "announcement": { "before": 1800, "after": 0, "durationMs": 12000 }
+  },
+  "bytes": null,
+  "combinedEntranceMs": { "before": 2850, "after": 0, "absolute": 2850 },
+  "noise": {
+    "madMs": 0,
+    "rule": "Entrance time is 15% of each authored duration. It is not a sampled browser paint. The final 15% fade-out is unchanged."
+  }
+}

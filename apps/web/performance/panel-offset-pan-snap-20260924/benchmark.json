@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:46:00.000Z",
+  "model": "Opening or closing the in-map panel shifted the camera with a 300ms pan. The map resampled tiles on every frame of that pan. The same shift now happens with duration 0.",
+  "cameraFramesPerPanelOffsetChangeAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). Duration 0 is one camera commit. Not a sampled tile trace. Marker-selection pans still use their own duration."
+  }
+}

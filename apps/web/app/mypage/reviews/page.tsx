@@ -447,7 +447,7 @@ export default function ReviewsPage() {
               key={review.id}
               id={`review-${review.id}`}
               ref={index === filteredReviews.length - 1 ? loadMoreRef : null}
-              className={`${myPageListCardClass} transition-all duration-500 ${review.isPinned ? "border-primary border-2" : ""}`}
+              className={`${myPageListCardClass} ${review.isPinned ? "border-primary border-2" : ""}`}
             >
               <CardContent className={myPageListContentClass}>
                 {/* 헤더: 맛집명 + 상태 */}

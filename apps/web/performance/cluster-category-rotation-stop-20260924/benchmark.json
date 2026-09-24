@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:44:00.000Z",
+  "model": "The desktop high tier rotated each cluster's category image every 5000ms. That periodic swap is what read as marker flicker. The tier now keeps the top category still, matching the medium and low tiers.",
+  "pictureUpdatesPerMinuteAt16RegionalClusters": { "before": 192, "after": 0, "absolute": 192 },
+  "noise": {
+    "madCount": 0,
+    "rule": "12 ticks per minute times 16 regional clusters. Empty regions are not drawn, so a live map is at or under 192. Not a sampled paint trace."
+  }
+}

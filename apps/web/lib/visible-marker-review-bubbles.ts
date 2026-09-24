@@ -53,26 +53,36 @@ type RestaurantWithVerifiedCount = Restaurant & {
   verified_review_count?: number | null;
 };
 
-function hashString(input: string): number {
-  let hash = 2166136261;
+function mixHash(hash: number, input: string) {
   for (let index = 0; index < input.length; index += 1) {
     hash ^= input.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return hash >>> 0;
+  return hash;
+}
+
+function hashString(input: string): number {
+  return mixHash(2166136261, input) >>> 0;
 }
 
 function getRestaurantReviewCount(restaurant: RestaurantWithVerifiedCount) {
   return restaurant.verified_review_count ?? restaurant.review_count ?? 0;
 }
 
+const relatedRestaurantIdsCache = new WeakMap<Restaurant, string[]>();
+
 function getRelatedRestaurantIds(restaurant: Restaurant): string[] {
+  const cached = relatedRestaurantIdsCache.get(restaurant);
+  if (cached) return cached;
+
   const ids = new Set<string>();
   if (restaurant.id) ids.add(restaurant.id);
   restaurant.mergedRestaurants?.forEach((mergedRestaurant) => {
     if (mergedRestaurant.id) ids.add(mergedRestaurant.id);
   });
-  return [...ids];
+  const relatedIds = [...ids];
+  relatedRestaurantIdsCache.set(restaurant, relatedIds);
+  return relatedIds;
 }
 
 export function truncateVisibleMarkerReviewBubbleText(value: string, maxLength: number) {
@@ -114,47 +124,62 @@ export function selectVisibleMarkerReviewBubbleTargets(
   const rawLimit = options.limit;
   if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit) || rawLimit <= 0) return [];
 
-  const candidates: Restaurant[] = [];
+  let missingId = false;
   const restaurantsWithKnownReviews: Restaurant[] = [];
-  for (const restaurant of restaurants) {
-    if (!restaurant?.id) continue;
-    candidates.push(restaurant);
+  for (let index = 0; index < restaurants.length; index += 1) {
+    const restaurant = restaurants[index];
+    if (!restaurant?.id) {
+      missingId = true;
+      continue;
+    }
     if (getRestaurantReviewCount(restaurant as RestaurantWithVerifiedCount) > 0) {
       restaurantsWithKnownReviews.push(restaurant);
     }
   }
 
-  const sourceRestaurants = restaurantsWithKnownReviews.length > 0
-    ? restaurantsWithKnownReviews
-    : candidates;
+  let sourceRestaurants = restaurantsWithKnownReviews;
+  if (sourceRestaurants.length === 0) {
+    if (!missingId) {
+      sourceRestaurants = restaurants;
+    } else {
+      sourceRestaurants = [];
+      for (let index = 0; index < restaurants.length; index += 1) {
+        const restaurant = restaurants[index];
+        if (restaurant?.id) sourceRestaurants.push(restaurant);
+      }
+    }
+  }
   const limit = rawLimit === Number.POSITIVE_INFINITY ? sourceRestaurants.length : Math.trunc(rawLimit);
   if (limit <= 0 || sourceRestaurants.length === 0) return [];
 
+  const seededHash = mixHash(mixHash(2166136261, options.seed), ':');
   const selected: RankedReviewBubbleCandidate[] = [];
   for (let index = 0; index < sourceRestaurants.length; index += 1) {
     const restaurant = sourceRestaurants[index];
-    const candidate = {
-      restaurant,
-      rank: hashString(`${options.seed}:${restaurant.id}`),
-      index,
-    };
-    if (selected.length < limit) {
-      insertRankedReviewBubbleCandidate(selected, candidate);
-      continue;
+    const rank = mixHash(seededHash, restaurant.id) >>> 0;
+    if (selected.length >= limit) {
+      const worst = selected[selected.length - 1];
+      const replacesWorst = rank < worst.rank || (rank === worst.rank && index < worst.index);
+      if (!replacesWorst) continue;
+      selected.pop();
     }
-
-    const worst = selected[selected.length - 1];
-    const replacesWorst = candidate.rank < worst.rank
-      || (candidate.rank === worst.rank && candidate.index < worst.index);
-    if (!replacesWorst) continue;
-    selected.pop();
-    insertRankedReviewBubbleCandidate(selected, candidate);
+    insertRankedReviewBubbleCandidate(selected, { restaurant, rank, index });
   }
 
   return selected.map(({ restaurant }) => ({
     restaurantId: restaurant.id,
     relatedRestaurantIds: getRelatedRestaurantIds(restaurant),
   }));
+}
+
+const visibleRestaurantIdSignatureCache = new WeakMap<readonly { id: string }[], string>();
+
+export function buildVisibleRestaurantIdSignature(restaurants: readonly { id: string }[]) {
+  const cached = visibleRestaurantIdSignatureCache.get(restaurants);
+  if (cached !== undefined) return cached;
+  const signature = restaurants.map((restaurant) => restaurant.id).join('|');
+  visibleRestaurantIdSignatureCache.set(restaurants, signature);
+  return signature;
 }
 
 export function buildVisibleMarkerReviewBubbleTargetSignature(targets: VisibleMarkerReviewBubbleTarget[]) {
@@ -174,6 +199,50 @@ export function buildVisibleMarkerReviewBubbleMapSignature(bubbles: Record<strin
     ]))
     .sort()
     .join('|');
+}
+
+const reviewBubbleRenderTokenCache = new WeakMap<VisibleMarkerReviewBubble, {
+  restaurantId: string;
+  reviewId: string;
+  userName: string;
+  content: string;
+  photoUrl: string | null;
+  mobile: boolean;
+  token: string;
+}>();
+
+export function buildVisibleMarkerReviewBubbleRenderToken(
+  bubble: VisibleMarkerReviewBubble,
+  isMobile: boolean,
+) {
+  const cached = reviewBubbleRenderTokenCache.get(bubble);
+  if (
+    cached &&
+    cached.restaurantId === bubble.restaurantId &&
+    cached.reviewId === bubble.reviewId &&
+    cached.userName === bubble.userName &&
+    cached.content === bubble.content &&
+    cached.photoUrl === bubble.photoUrl &&
+    cached.mobile === isMobile
+  ) {
+    return cached.token;
+  }
+
+  const token = [
+    'review-bubble',
+    isMobile ? 'mobile' : 'desktop',
+    buildVisibleMarkerReviewBubbleMapSignature({ [bubble.restaurantId]: bubble }),
+  ].join(':');
+  reviewBubbleRenderTokenCache.set(bubble, {
+    restaurantId: bubble.restaurantId,
+    reviewId: bubble.reviewId,
+    userName: bubble.userName,
+    content: bubble.content,
+    photoUrl: bubble.photoUrl,
+    mobile: isMobile,
+    token,
+  });
+  return token;
 }
 
 function escapeHtml(value: string) {
@@ -219,7 +288,6 @@ export function buildVisibleMarkerReviewBubbleHtml(
         border-radius:16px;
         background:rgba(255,255,255,0.96);
         border:1px solid rgba(190,18,60,0.18);
-        box-shadow:0 10px 24px rgba(15,23,42,0.18);
         padding:7px;
         display:flex;
         align-items:center;

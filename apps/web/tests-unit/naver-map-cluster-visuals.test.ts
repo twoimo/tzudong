@@ -7,6 +7,7 @@ import {
     buildNaverClusterMarkerRenderPlan,
     getClusterVisualKey,
     getNaverClusterMarkerVisual,
+    shouldReplaceNaverMarkerIcon,
 } from '../lib/naver-map-cluster-visuals';
 
 describe('naver map cluster visuals', () => {
@@ -33,6 +34,21 @@ describe('naver map cluster visuals', () => {
         expect(html).toContain('/images/maker-images/webp/korean.webp');
         expect(html).toContain('/images/maker-images/korean.png');
         expect(html).toContain('type="image/webp"');
+        const categories = ['한식', '분식'];
+        const first = buildClusterMarkerContent({
+            categories,
+            count: 4,
+            currentIndex: 0,
+            lat: 37.5,
+            lng: 127.0,
+        });
+        expect(buildClusterMarkerContent({
+            categories,
+            count: 4,
+            currentIndex: 0,
+            lat: 37.51,
+            lng: 127.01,
+        })).toBe(first);
     });
 
     test('returns naver cluster marker visual payload', () => {
@@ -46,6 +62,21 @@ describe('naver map cluster visuals', () => {
         expect(visual.anchor).toEqual({ x: 24, y: 24 });
         expect(visual.content).toContain('/images/maker-images/webp/korean.webp');
         expect(visual.content).toContain('/images/maker-images/korean.png');
+        const categories = ['한식'];
+        const first = getNaverClusterMarkerVisual({
+            categories,
+            count: 3,
+            currentIndex: 0,
+            lat: 37.5,
+            lng: 127.0,
+        });
+        expect(getNaverClusterMarkerVisual({
+            categories,
+            count: 3,
+            currentIndex: 0,
+            lat: 37.6,
+            lng: 127.2,
+        })).toBe(first);
     });
 
     test('builds cluster marker render plan from position and current animation index', () => {
@@ -57,6 +88,19 @@ describe('naver map cluster visuals', () => {
         });
 
         expect(plan.position).toEqual({ lat: 37.6, lng: 127.1 });
+        const categories = ['분식'];
+        const first = buildNaverClusterMarkerRenderPlan({
+            categories,
+            count: 5,
+            currentIndex: 0,
+            position: { lat: 37.6, lng: 127.1 },
+        });
+        expect(buildNaverClusterMarkerRenderPlan({
+            categories,
+            count: 5,
+            currentIndex: 0,
+            position: { lat: 37.6, lng: 127.1 },
+        })).toBe(first);
         expect(plan.anchor).toEqual({ x: 24, y: 24 });
         expect(plan.content).toContain('5');
         expect(plan.content).toContain('/images/maker-images/webp/snack_bar.webp');
@@ -83,5 +127,12 @@ describe('naver map cluster visuals', () => {
         expect(plan.content).toContain('6');
         expect(plan.content).toContain('/images/maker-images/webp/korean.webp');
         expect(plan.content).toContain('/images/maker-images/korean.png');
+    });
+
+    test('skips a marker icon write when the content and anchor are unchanged', () => {
+        const icon = { content: '<div>same</div>', anchor: { x: 24, y: 24 } };
+        expect(shouldReplaceNaverMarkerIcon(icon, icon)).toBe(false);
+        expect(shouldReplaceNaverMarkerIcon(icon, { ...icon, content: '<div>next</div>' })).toBe(true);
+        expect(shouldReplaceNaverMarkerIcon(null, icon)).toBe(true);
     });
 });

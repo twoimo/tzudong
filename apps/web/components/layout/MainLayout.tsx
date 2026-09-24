@@ -261,10 +261,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
       <div
         className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300",
+          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
         )}
         style={{
-          transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
           paddingBottom: shouldRenderMobileBottomNav
             ? "calc(var(--mobile-bottom-nav-height, 60px) * (1 - var(--mobile-sheet-hide-bottom-nav, 0)))"
             : "0px",
@@ -275,7 +274,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="relative min-h-0 min-w-0 flex-1 overflow-hidden transition-[margin] duration-300"
+          className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
           style={{
             marginTop: "calc(-1 * var(--mobile-sheet-header-offset, 0px))",
           }}
@@ -292,15 +291,12 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             "min-[1600px]:hidden",
             // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
             isDesktop && "hidden",
-            "transition-transform duration-300",
           )}
         >
           <MobileBottomNav
-            className="transition-transform duration-300"
             style={{
               transform:
                 "translate3d(0, calc(var(--mobile-sheet-hide-bottom-nav, 0) * 120%), 0)",
-              willChange: "transform",
             }}
           />
         </div>

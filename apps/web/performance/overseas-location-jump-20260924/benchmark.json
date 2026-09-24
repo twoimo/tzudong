@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-09-24T12:50:00.000Z",
+  "model": "Overseas device-location focus eased the camera for 550ms. The map resampled tiles through that ease. It now jumps to the same center and zoom in one camera commit. Wheel zoom still eases for 200ms.",
+  "deviceLocationCameraFramesAt60fps": { "before": 33, "after": 1, "absolute": 32, "relative": 33 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "33 is round(550ms * 60fps / 1000). Not a sampled tile trace."
+  }
+}

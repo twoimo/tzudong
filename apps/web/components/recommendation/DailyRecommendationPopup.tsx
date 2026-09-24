@@ -208,19 +208,19 @@ export function DailyRecommendationPopup() {
             {/* 오버레이 (선택사항 - 클릭 시 닫기) */}
             <button
                 type="button"
-                className="absolute inset-0 bg-black/50 pointer-events-auto animate-in fade-in duration-300"
+                className="absolute inset-0 bg-black/50 pointer-events-auto"
                 onClick={handleClose}
                 aria-label="추천 팝업 닫기"
             />
 
             {/* 광고 팝업 스타일 */}
-            <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto max-md:opacity-0 max-md:animate-[fadeIn_0.5s_ease-out_forwards] md:animate-in md:slide-in-from-bottom-4 md:duration-500">
+            <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto">
                 <Card
                     className="w-[min(320px,calc(100vw-2rem))] overflow-hidden shadow-lg border border-border bg-background font-sans"
                 >
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">
-                        <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5 transition-colors">
+                        <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
                             <span className="font-medium tracking-wide">오늘의 추천</span>
                         </Badge>
@@ -229,7 +229,7 @@ export function DailyRecommendationPopup() {
                     {/* 클릭 가능 영역 */}
                     <button
                         type="button"
-                        className="w-full cursor-pointer text-left hover:opacity-95 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="w-full cursor-pointer text-left hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onClick={handleCardClick}
                         aria-label={`${selectedRestaurant.name} 상세 페이지로 이동`}
                     >
@@ -240,7 +240,7 @@ export function DailyRecommendationPopup() {
                                     videoId={thumbnailVideoId}
                                     alt={`${selectedRestaurant.name} 썸네일`}
                                     sizes="(max-width: 640px) 100vw, 320px"
-                                    className="object-cover transition-all group-hover:brightness-110"
+                                    className="object-cover"
                                 />
                             </div>
                         )}
@@ -267,7 +267,7 @@ export function DailyRecommendationPopup() {
                                 e.stopPropagation();
                                 handleDismissToday();
                             }}
-                            className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
+                            className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent"
                         >
                             오늘 하루 안 보기
                         </button>
@@ -277,7 +277,7 @@ export function DailyRecommendationPopup() {
                                 e.stopPropagation();
                                 handleClose();
                             }}
-                            className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                            className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent"
                         >
                             닫기
                         </button>

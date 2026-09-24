@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-09-24T14:08:00.000Z",
+  "model": "The home banner popup faded its full-screen scrim and zoomed the card in for 300ms. Both now appear in one frame. Banner slides inside the card still move.",
+  "scrimFramesAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "cardFramesAt60fps": { "before": 18, "after": 1, "absolute": 17, "relative": 18 },
+  "noise": {
+    "madFrames": 0,
+    "rule": "18 is round(300ms * 60fps / 1000). The scrim and card start together. Not a sampled compositor trace."
+  }
+}

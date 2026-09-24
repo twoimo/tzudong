@@ -170,7 +170,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
         <>
             {/* 배경 오버레이 - 하나만 */}
             <div
-                className="fixed inset-0 z-[97] bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+                className="fixed inset-0 z-[97] bg-black/40"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -179,8 +179,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
             <div
                 className={cn(
                     "fixed z-[98] flex min-h-0 min-w-0 max-w-[calc(100vw-1rem)] gap-2",
-                    "top-20 bottom-8 left-1/2 w-[calc(100vw-1rem)] -translate-x-1/2 lg:gap-4",
-                    "transition-all duration-300 ease-out"
+                    "top-20 bottom-8 left-1/2 w-[calc(100vw-1rem)] -translate-x-1/2 lg:gap-4"
                 )}
                 data-layout-primitives="overlay-stack list-detail frame stack"
                 data-scroll-owner="overlay-page-panel"
@@ -192,8 +191,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                         "flex flex-col overflow-hidden",
                         "w-full",
                         maxWidth,
-                        "rounded-2xl border border-border",
-                        "transition-all duration-300"
+                        "rounded-2xl border border-border"
                     )}
                 >
                     {activePanel === 'feed' && (
@@ -247,7 +245,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
                 {showUserProfile && (
                     <div className={cn(
-                        "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
+                        "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background xl:flex",
                         "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-sm overflow-hidden"
                     )}>
@@ -264,7 +262,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId, onOp
                 {/* 우측 사이드 패널 영역 - 맛집 상세 */}
                 {showRestaurantDetail && (
                     <div className={cn(
-                        "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background transition-[width] duration-300 ease-in-out xl:flex",
+                        "hidden min-w-0 flex-1 basis-[400px] flex-col bg-background xl:flex",
                         "w-[min(400px,calc(100vw-1rem))]",
                         "rounded-2xl border border-border shadow-sm overflow-hidden"
                     )}>

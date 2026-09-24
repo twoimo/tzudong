@@ -234,7 +234,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(adminOverviewSource).toContain('필터링: 집계 중 | 현 레코드 집계 중 | 삭제한 레코드 집계 중');
     expect(adminOverviewSource).not.toContain('필터링: <Skeleton');
     expect(adminOverviewSource).toContain('data-admin-evaluation-dynamic-loading-shell="true"');
-    expect(adminOverviewSource).toContain('loading: () => <AdminEvaluationModuleStaticShell />');
+    expect(adminOverviewSource).toContain('<AdminEvaluationModuleStaticShell />');
     expect(adminOverviewSource).toContain('정적인 관리자 데이터 검수 컨트롤은 바로 표시하고, 동적인 검수 데이터만 불러오는 중입니다.');
     expect(adminOverviewSource).toContain('data-admin-evaluation-static-loading-controls="true"');
     expect(pageSource).toContain("fetch('/api/admin/evaluations'");

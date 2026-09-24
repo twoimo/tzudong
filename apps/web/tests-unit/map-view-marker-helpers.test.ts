@@ -50,7 +50,7 @@ describe('map view marker helpers', () => {
 
             expect(html).toContain(`src="${imagePath}"`);
             expect(html).toContain('alt="테스트 식당"');
-            expect(html).toContain('class="relative h-[42px] w-[42px] cursor-pointer transition-all duration-300 drop-shadow-md animate-bounce hover:scale-125"');
+            expect(html).toContain('class="relative h-[42px] w-[42px] cursor-pointer hover:scale-125"');
             expect(html).toContain('class="h-full w-full object-contain"');
             expect(html).toContain('draggable="false"');
             expect(html).not.toContain('style=');
@@ -127,7 +127,7 @@ describe('map view marker helpers', () => {
         } as unknown as HTMLElement;
 
         expect(applyMapViewMarkerSelectedState({ isSelected: true, markerElement })).toBe(true);
-        expect([...classNames].sort()).toEqual(['animate-bounce', 'h-[42px]', 'w-[42px]']);
+        expect([...classNames].sort()).toEqual(['h-[42px]', 'w-[42px]']);
         expect('style' in innerDiv).toBe(false);
 
         expect(applyMapViewMarkerSelectedState({ isSelected: false, markerElement })).toBe(true);
