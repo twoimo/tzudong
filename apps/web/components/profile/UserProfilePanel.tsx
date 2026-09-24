@@ -106,7 +106,7 @@ const StatCard = memo(function StatCard({ icon, label, value, valueClassName, to
                 {icon}
             </div>
             <div className="min-w-0 flex-1">
-                <span className="block truncate text-[11px] font-medium leading-none text-muted-foreground">{label}</span>
+                <span className="block truncate text-2xs font-medium leading-none text-muted-foreground">{label}</span>
                 <span className={cn("mt-1 block max-w-full truncate text-base font-bold leading-none", valueClassName)}>{value}</span>
             </div>
         </div>
@@ -128,7 +128,7 @@ const ProfileSectionHeader = memo(function ProfileSectionHeader({ title, descrip
             </div>
             <Badge
                 variant="secondary"
-                className="shrink-0 rounded-full bg-background/80 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-sm"
+                className="shrink-0 rounded-full bg-background/80 px-2 py-0.5 text-2xs font-medium text-muted-foreground shadow-sm"
             >
                 {count}개
             </Badge>
@@ -446,7 +446,7 @@ const UserProfilePanel = memo(function UserProfilePanel({ userId, onClose, showB
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        "text-[10px] px-1.5 h-5 whitespace-nowrap flex-shrink-0",
+                                        "text-2xs px-1.5 h-5 whitespace-nowrap flex-shrink-0",
                                         profile.tier.bgColor,
                                         profile.tier.color,
                                         "border-current bg-background/80 shadow-sm"

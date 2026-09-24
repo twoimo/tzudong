@@ -25,7 +25,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(bookmarkSource).toContain('`북마크, 저장한 맛집 ${triggerBookmarkCount}개`');
     expect(bookmarkSource).toContain('hover:bg-primary/10 hover:!text-primary data-[state=open]:bg-primary/10 data-[state=open]:!text-primary');
     expect(bookmarkSource).toContain('[&_svg]:!text-primary');
-    expect(bookmarkSource).toContain('flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm');
+    expect(bookmarkSource).toContain('flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-primary-foreground shadow-sm');
     expect(bookmarkSource).toContain("triggerBookmarkCount > 99 ? '99+' : triggerBookmarkCount");
     expect(bookmarkSource).toContain('w-[min(calc(100vw-1rem),22rem)] rounded-2xl border-border bg-card p-2 font-sans shadow-primary');
     expect(bookmarkSource).toContain('flex items-start justify-between gap-3 px-1 py-1 text-foreground');
@@ -49,7 +49,7 @@ describe('header bookmark and notification UX source contracts', () => {
       'className="flex w-full items-start gap-3 rounded-t-xl p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
     );
     expect(leftPanelBookmarkSource).toContain(
-      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground"',
+      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-2xs text-muted-foreground"',
     );
     expect(leftPanelBookmarkSource).not.toContain(
       'className="group flex w-full items-start gap-3 rounded-xl border border-border bg-card p-3 text-left shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"',
@@ -63,7 +63,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(headerSource).toContain('isLoading: isNotificationsLoading');
     expect(headerSource).toContain('isError: isNotificationsError');
     expect(headerSource).toContain('aria-label={unreadCount > 0 ? `알림, 안 읽은 알림');
-    expect(headerSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white');
+    expect(headerSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white');
     expect(headerSource).toContain("unreadCount > 99 ? '99+' : unreadCount");
     expect(headerSource).toContain('aria-label="알림 목록 로딩 중"');
     expect(headerSource).toContain('알림을 불러오지 못했습니다');
@@ -99,7 +99,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelNotificationSource).toContain('text-pretty');
     expect(leftPanelNotificationSource).toContain('variant="secondary"');
     expect(leftPanelNotificationSource).toContain('{isLoading ? "확인 중" : `${notifications.length}개`}');
-    expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-[11px]"');
+    expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-2xs"');
     expect(leftPanelNotificationSource).toContain(
       '"group rounded-xl border border-border bg-card shadow-sm transition-colors hover:bg-accent"',
     );
@@ -112,10 +112,10 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(leftPanelNotificationSource).toContain(
       'className="mt-0.5 h-9 w-9 shrink-0 rounded-full bg-primary/10 p-2 text-primary"',
     );
-    expect(leftPanelNotificationSource).toContain('className="h-5 shrink-0 px-1.5 text-[10px] font-normal"');
+    expect(leftPanelNotificationSource).toContain('className="h-5 shrink-0 px-1.5 text-2xs font-normal"');
     expect(leftPanelNotificationSource).toContain('새 알림');
     expect(leftPanelNotificationSource).toContain(
-      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground"',
+      'className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2 text-2xs text-muted-foreground"',
     );
     expect(leftPanelNotificationSource).toContain('className="h-7 rounded-full px-2 text-muted-foreground hover:text-destructive"');
     expect(leftPanelNotificationSource).toContain('className="sr-only">삭제</span>');
@@ -141,7 +141,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileBookmarkSource).toContain('hover:border-primary/40 hover:bg-primary/10 hover:!text-primary');
     expect(mobileBookmarkSource).toContain('data-[state=open]:border-primary/50 data-[state=open]:bg-primary/10 data-[state=open]:!text-primary');
     expect(mobileBookmarkSource).toContain('[&_svg]:!text-primary');
-    expect(mobileBookmarkSource).toContain('flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm');
+    expect(mobileBookmarkSource).toContain('flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-primary-foreground shadow-sm');
     expect(mobileBookmarkSource).toContain("visibleBookmarkCount > 99 ? '99+' : visibleBookmarkCount");
     expect(mobileBookmarkSource).toContain('flex items-start justify-between gap-3 px-1 py-1 text-foreground');
     expect(mobileBookmarkSource).toContain('h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground');
@@ -181,7 +181,7 @@ describe('header bookmark and notification UX source contracts', () => {
     expect(mobileNotificationSource).toContain('h-8 shrink-0 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground');
     expect(mobileNotificationSource).not.toContain('rounded-xl bg-muted/40 px-3 py-2.5 text-foreground');
     expect(mobileNotificationSource).toContain('알림, 안 읽은 알림');
-    expect(mobileNotificationSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-white');
+    expect(mobileNotificationSource).toContain('absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-800 px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-white');
     expect(mobileNotificationSource).toContain('unreadCount > 99 ? "99+" : unreadCount');
     expect(mobileNotificationSource).toContain('aria-label="알림 목록 로딩 중"');
     expect(mobileNotificationSource).toContain('알림을 불러오지 못했습니다');

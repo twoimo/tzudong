@@ -2185,7 +2185,7 @@ function StoryboardThinkingTracePanel({
 
   return (
     <details
-      className="mt-2 rounded-xl border border-border/70 bg-muted/35 px-2.5 py-2 text-[11px]"
+      className="mt-2 rounded-xl border border-border/70 bg-muted/35 px-2.5 py-2 text-2xs"
       data-storyboard-thinking-trace="true"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold">
@@ -2224,7 +2224,7 @@ function StoryboardThinkingTracePanel({
                 <span className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">
                   {entry.label}
                 </span>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
+                <span className="shrink-0 text-2xs text-muted-foreground">
                   {statusText}
                 </span>
               </div>
@@ -2253,7 +2253,7 @@ function StoryboardImageGenerationProgressPanel({
 
   return (
     <div
-      className="mt-2 rounded-xl border border-border/70 bg-background/80 p-2 text-[11px] text-foreground shadow-sm dark:bg-slate-950/35"
+      className="mt-2 rounded-xl border border-border/70 bg-background/80 p-2 text-2xs text-foreground shadow-sm dark:bg-slate-950/35"
       data-storyboard-image-generation-progress="true"
       aria-label={`${progress.label} ${progress.completed}/${progress.total}컷 완료`}
     >
@@ -2298,7 +2298,7 @@ function StoryboardImageGenerationProgressPanel({
               <span className="font-medium">{cut.label}</span>
               <span
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-medium",
                   cut.status === "done" &&
                     "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
                   cut.status === "failed" &&
@@ -8198,7 +8198,7 @@ function LegacyAdminStoryboardGenerator({
                             <span>스토리보드 기록</span>
                             <Badge
                               variant="secondary"
-                              className="px-1.5 text-[10px]"
+                              className="px-1.5 text-2xs"
                               data-storyboard-history-status-label="true"
                             >
                               {storyboardHistoryStatus === "loading"
@@ -8210,7 +8210,7 @@ function LegacyAdminStoryboardGenerator({
                                     : "없음"}
                             </Badge>
                           </div>
-                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                          <p className="mt-0.5 truncate text-2xs text-muted-foreground">
                             이전에 만든 결과를 이 페이지에서 다시 불러옵니다.
                           </p>
                         </div>
@@ -8258,7 +8258,7 @@ function LegacyAdminStoryboardGenerator({
                       {storyboardHistoryError ? (
                         <div
                           className={cn(
-                            "rounded-xl px-2.5 py-2 text-[11px]",
+                            "rounded-xl px-2.5 py-2 text-2xs",
                             storyboardHistoryStatus === "stale"
                               ? "bg-amber-500/10 text-amber-800 dark:text-amber-200"
                               : "bg-destructive/10 text-destructive",
@@ -8279,7 +8279,7 @@ function LegacyAdminStoryboardGenerator({
 
                       {storyboardHistoryStatus === "empty" ? (
                         <div
-                          className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground"
+                          className="rounded-xl bg-muted/40 px-2.5 py-2 text-2xs text-muted-foreground"
                           data-storyboard-history-empty="true"
                         >
                           아직 저장된 실제 생성 기록이 없습니다. 채팅에서
@@ -8311,7 +8311,7 @@ function LegacyAdminStoryboardGenerator({
                               <div
                                 key={historyCase.id}
                                 className={cn(
-                                  "grid gap-2 rounded-xl p-2 text-[11px] sm:grid-cols-[72px_minmax(0,1fr)]",
+                                  "grid gap-2 rounded-xl p-2 text-2xs sm:grid-cols-[72px_minmax(0,1fr)]",
                                   isSelectedHistory
                                     ? "bg-primary/5 ring-1 ring-primary/30"
                                     : "bg-muted/35",
@@ -8335,7 +8335,7 @@ function LegacyAdminStoryboardGenerator({
                                       data-storyboard-history-preview-image="true"
                                     />
                                   ) : (
-                                    <div className="grid h-full place-items-center bg-muted/50 text-[10px] font-semibold text-muted-foreground">
+                                    <div className="grid h-full place-items-center bg-muted/50 text-2xs font-semibold text-muted-foreground">
                                       이미지 없음
                                     </div>
                                   )}
@@ -8362,7 +8362,7 @@ function LegacyAdminStoryboardGenerator({
                                           ? "secondary"
                                           : "outline"
                                       }
-                                      className="shrink-0 px-1.5 text-[10px]"
+                                      className="shrink-0 px-1.5 text-2xs"
                                       data-storyboard-history-source-label="true"
                                     >
                                       {historyTrace.mode === "actual"
@@ -8375,7 +8375,7 @@ function LegacyAdminStoryboardGenerator({
                                       type="button"
                                       variant="secondary"
                                       size="sm"
-                                      className="h-7 rounded-full px-2 text-[11px]"
+                                      className="h-7 rounded-full px-2 text-2xs"
                                       onClick={() => {
                                         void applyStoryboardHistoryResult(
                                           historyCase,
@@ -8415,7 +8415,7 @@ function LegacyAdminStoryboardGenerator({
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      className="h-7 rounded-full px-2 text-[11px]"
+                                      className="h-7 rounded-full px-2 text-2xs"
                                       disabled={proofSummaries.length === 0}
                                       onClick={() =>
                                         setOpenStoryboardHistoryProofId(
@@ -8431,20 +8431,20 @@ function LegacyAdminStoryboardGenerator({
                                   </div>
                                   {isProofOpen && proofSummaries.length ? (
                                     <div
-                                      className="rounded-lg border border-border/70 bg-background/80 p-2 text-[10px] leading-4"
+                                      className="rounded-lg border border-border/70 bg-background/80 p-2 text-2xs leading-4"
                                       data-storyboard-history-proof-panel="true"
                                     >
                                       <div className="flex flex-wrap items-center gap-1.5">
                                         <Badge
                                           variant="secondary"
-                                          className="px-1.5 text-[10px]"
+                                          className="px-1.5 text-2xs"
                                           data-storyboard-history-proof-provider="true"
                                         >
                                           이미지 확인 완료
                                         </Badge>
                                         <Badge
                                           variant="outline"
-                                          className="px-1.5 text-[10px]"
+                                          className="px-1.5 text-2xs"
                                           data-storyboard-history-proof-model="true"
                                         >
                                           안전 확인됨
@@ -8532,7 +8532,7 @@ function LegacyAdminStoryboardGenerator({
                           <p className="truncate text-sm font-bold">
                             이미지 설정
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-2xs text-muted-foreground">
                             기본 OAuth · 고급 로컬 · API Key 백업
                           </p>
                         </div>
@@ -8579,10 +8579,10 @@ function LegacyAdminStoryboardGenerator({
                           }
                           data-storyboard-api-router-oauth-transport="server"
                         >
-                          <span className="block text-[11px] font-bold">
+                          <span className="block text-2xs font-bold">
                             기본
                           </span>
-                          <span className="block text-[10px] opacity-80">
+                          <span className="block text-2xs opacity-80">
                             {storyboardImageProviderReadiness.status ===
                               "ready" &&
                             storyboardImageProviderReadiness.providerId ===
@@ -8620,10 +8620,10 @@ function LegacyAdminStoryboardGenerator({
                           }
                           data-storyboard-api-router-oauth-transport="local-bridge"
                         >
-                          <span className="block text-[11px] font-bold">
+                          <span className="block text-2xs font-bold">
                             고급 로컬
                           </span>
-                          <span className="block text-[10px] opacity-80">
+                          <span className="block text-2xs opacity-80">
                             {storyboardLocalBridgeStatus === "connected"
                               ? "연결됨"
                               : storyboardLocalBridgeStatus === "checking"
@@ -8650,13 +8650,13 @@ function LegacyAdminStoryboardGenerator({
                       >
                         <div className="min-w-0">
                           <p
-                            className="truncate text-[11px] font-semibold"
+                            className="truncate text-2xs font-semibold"
                             data-storyboard-api-router-status="true"
                           >
                             사용: {storyboardImageApiRouterView.label}
                           </p>
                           <p
-                            className="truncate text-[10px] text-muted-foreground"
+                            className="truncate text-2xs text-muted-foreground"
                             data-storyboard-api-router-summary="true"
                             data-storyboard-codex-oauth-copy="true"
                           >
@@ -8678,7 +8678,7 @@ function LegacyAdminStoryboardGenerator({
                         </div>
                         <Badge
                           variant="secondary"
-                          className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+                          className="h-6 shrink-0 rounded-full px-2 text-2xs"
                           data-storyboard-api-router-label="true"
                         >
                           gpt-image-2
@@ -8697,13 +8697,13 @@ function LegacyAdminStoryboardGenerator({
                         <div className="flex items-center justify-between gap-2">
                           <Label
                             htmlFor="storyboard-browser-openai-api-key"
-                            className="text-[11px] font-semibold"
+                            className="text-2xs font-semibold"
                           >
                             API Key 백업
                           </Label>
                           <button
                             type="button"
-                            className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition motion-reduce:transition-none ${
+                            className={`h-6 shrink-0 rounded-full px-2 text-2xs font-semibold transition motion-reduce:transition-none ${
                               storyboardImageRouteChoice ===
                               "browser-openai-api-key"
                                 ? "bg-primary text-primary-foreground"
@@ -8767,7 +8767,7 @@ function LegacyAdminStoryboardGenerator({
                               </Button>
                             </div>
                             <p
-                              className="text-[10px] leading-4 text-muted-foreground"
+                              className="text-2xs leading-4 text-muted-foreground"
                               data-storyboard-browser-api-key-memory-only-copy="true"
                               data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                             >
@@ -8776,7 +8776,7 @@ function LegacyAdminStoryboardGenerator({
                             </p>
                             <div className="flex flex-wrap items-center gap-2">
                               <p
-                                className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+                                className="min-w-0 flex-1 text-2xs text-muted-foreground"
                                 data-storyboard-browser-api-key-status={
                                   isStoryboardBrowserOpenAIApiKeyApplied
                                     ? "memory-active"
@@ -8798,7 +8798,7 @@ function LegacyAdminStoryboardGenerator({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                                  className="h-7 shrink-0 rounded-full px-2 text-2xs"
                                   onClick={handleClearStoryboardBrowserOpenAIApiKey}
                                   data-storyboard-browser-api-key-clear="true"
                                 >
@@ -8807,7 +8807,7 @@ function LegacyAdminStoryboardGenerator({
                               ) : null}
                               {storyboardBrowserOpenAIApiKeyError ? (
                                 <p
-                                  className="basis-full text-[11px] text-destructive"
+                                  className="basis-full text-2xs text-destructive"
                                   data-storyboard-browser-api-key-error="true"
                                 >
                                   {storyboardBrowserOpenAIApiKeyError}
@@ -8816,7 +8816,7 @@ function LegacyAdminStoryboardGenerator({
                               {storyboardBrowserOpenAIApiKeyMessage &&
                               !storyboardBrowserOpenAIApiKeyError ? (
                                 <p
-                                  className="basis-full text-[11px] text-muted-foreground"
+                                  className="basis-full text-2xs text-muted-foreground"
                                   data-storyboard-browser-api-key-message="true"
                                 >
                                   {storyboardBrowserOpenAIApiKeyMessage}
@@ -8826,7 +8826,7 @@ function LegacyAdminStoryboardGenerator({
                           </>
                         ) : (
                           <p
-                            className="text-[10px] leading-4 text-muted-foreground"
+                            className="text-2xs leading-4 text-muted-foreground"
                             data-storyboard-browser-api-key-memory-only-copy="true"
                             data-storyboard-browser-api-key-model-policy="gpt-image-2-only"
                           >
@@ -8847,13 +8847,13 @@ function LegacyAdminStoryboardGenerator({
                           <div className="flex items-center justify-between gap-2">
                             <Label
                               htmlFor="storyboard-local-bridge-url"
-                              className="text-[11px] font-semibold"
+                              className="text-2xs font-semibold"
                             >
                               고급 로컬 브릿지
                             </Label>
                             <Badge
                               variant="outline"
-                              className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                              className="h-5 shrink-0 rounded-full px-1.5 text-2xs"
                               data-storyboard-local-bridge-status={
                                 storyboardLocalBridgeStatus
                               }
@@ -8871,14 +8871,14 @@ function LegacyAdminStoryboardGenerator({
                             </Badge>
                           </div>
                           <p
-                            className="text-[10px] leading-4 text-muted-foreground"
+                            className="text-2xs leading-4 text-muted-foreground"
                             data-storyboard-local-bridge-guidance="true"
                           >
                             사용자 PC helper의 loopback 브릿지만 호출합니다.
                             토큰 입력값은 적용 직후 비우며 컴포넌트 ref에만 있고 Web Storage에 저장되지 않습니다. 페이지 전환·복원·닫기 때 제거됩니다.
                           </p>
                           <details
-                            className="rounded-lg bg-background/80 p-2 text-[10px] leading-4 text-foreground"
+                            className="rounded-lg bg-background/80 p-2 text-2xs leading-4 text-foreground"
                             data-storyboard-local-bridge-pairing-guide="true"
                           >
                             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
@@ -8887,7 +8887,7 @@ function LegacyAdminStoryboardGenerator({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+                                className="h-6 shrink-0 rounded-full px-2 text-2xs"
                                 onClick={(event) => {
                                   event.preventDefault();
                                   event.stopPropagation();
@@ -8899,7 +8899,7 @@ function LegacyAdminStoryboardGenerator({
                               </Button>
                             </summary>
                             <div
-                              className="mt-1 rounded-md bg-muted/45 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                              className="mt-1 rounded-md bg-muted/45 px-2 py-1 font-mono text-2xs text-muted-foreground"
                               data-storyboard-local-bridge-command="true"
                             >
                               {STORYBOARD_LOCAL_BRIDGE_TERMINAL_COMMAND}
@@ -8959,7 +8959,7 @@ function LegacyAdminStoryboardGenerator({
                             <Button
                               type="button"
                               size="sm"
-                              className="h-7 justify-center rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-2xs"
                               onClick={() =>
                                 void handleApplyStoryboardLocalBridge()
                               }
@@ -8971,7 +8971,7 @@ function LegacyAdminStoryboardGenerator({
                               type="button"
                               variant="secondary"
                               size="sm"
-                              className="h-7 justify-center rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-2xs"
                               onClick={() =>
                                 void handleAutoConnectStoryboardLocalBridge()
                               }
@@ -8983,7 +8983,7 @@ function LegacyAdminStoryboardGenerator({
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-7 justify-center rounded-full px-2 text-[11px]"
+                              className="h-7 justify-center rounded-full px-2 text-2xs"
                               onClick={() =>
                                 void handleConnectStoryboardLocalBridgeHelper()
                               }
@@ -8998,7 +8998,7 @@ function LegacyAdminStoryboardGenerator({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-7 justify-center rounded-full px-2 text-[11px]"
+                                className="h-7 justify-center rounded-full px-2 text-2xs"
                                 onClick={
                                   handleClearStoryboardLocalBridge
                                 }
@@ -9008,7 +9008,7 @@ function LegacyAdminStoryboardGenerator({
                               </Button>
                             ) : null}
                             <p
-                              className={`col-span-2 text-[11px] ${
+                              className={`col-span-2 text-2xs ${
                                 storyboardLocalBridgeError
                                   ? "text-destructive"
                                   : "text-muted-foreground"
@@ -9050,7 +9050,7 @@ function LegacyAdminStoryboardGenerator({
                       ? "destructive"
                       : "secondary"
                   }
-                  className="shrink-0 px-1.5 text-[10px]"
+                  className="shrink-0 px-1.5 text-2xs"
                   data-storyboard-job-readback-label="true"
                 >
                   {formatStoryboardJobStatusLabel(acceptedStoryboardJob.status)}
@@ -9157,7 +9157,7 @@ function LegacyAdminStoryboardGenerator({
                       >
                         {messageProgressLabel ? (
                           <div
-                            className="flex items-center gap-1.5 px-1 text-[10px] font-medium text-muted-foreground"
+                            className="flex items-center gap-1.5 px-1 text-2xs font-medium text-muted-foreground"
                             data-storyboard-chat-message-progress="outside-bubble"
                           >
                             {message.status === "streaming" ? (
@@ -9207,7 +9207,7 @@ function LegacyAdminStoryboardGenerator({
                                   무엇부터 만들까요?
                                 </h4>
                                 <p
-                                  className="mx-auto max-w-[17rem] text-[11px] leading-5 text-muted-foreground"
+                                  className="mx-auto max-w-[17rem] text-2xs leading-5 text-muted-foreground"
                                   data-storyboard-chat-starter-guide-copy="true"
                                 >
                                   <span className="block">
@@ -9246,14 +9246,14 @@ function LegacyAdminStoryboardGenerator({
                                       preset.id
                                     }
                                   >
-                                    <span className="block truncate text-[11px] font-semibold text-foreground">
+                                    <span className="block truncate text-2xs font-semibold text-foreground">
                                       {preset.label}
                                     </span>
-                                    <span className="mt-0.5 block text-[10px] font-medium text-primary">
+                                    <span className="mt-0.5 block text-2xs font-medium text-primary">
                                       {preset.segmentCount}컷 ·{" "}
                                       {preset.targetLengthMinutes}분
                                     </span>
-                                    <span className="mt-1 block line-clamp-2 text-[10px] leading-4 text-muted-foreground">
+                                    <span className="mt-1 block line-clamp-2 text-2xs leading-4 text-muted-foreground">
                                       {preset.description}
                                     </span>
                                   </button>
@@ -9289,7 +9289,7 @@ function LegacyAdminStoryboardGenerator({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 rounded-full px-3 text-[11px]"
+                                    className="h-8 rounded-full px-3 text-2xs"
                                     onClick={handleStoryboardUsageGuideClick}
                                     disabled={
                                       isGenerating ||
@@ -9305,7 +9305,7 @@ function LegacyAdminStoryboardGenerator({
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="h-8 rounded-full px-3 text-[11px]"
+                                    className="h-8 rounded-full px-3 text-2xs"
                                     onClick={() =>
                                       void handleStoryboardGuidedExampleGenerate()
                                     }
@@ -9362,7 +9362,7 @@ function LegacyAdminStoryboardGenerator({
                 />
                 {storyboardCanvasFocus ? (
                   <div
-                    className="flex min-h-8 items-center justify-between gap-2 rounded-2xl bg-muted/45 px-2.5 py-1.5 text-[11px]"
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-2xl bg-muted/45 px-2.5 py-1.5 text-2xs"
                     data-storyboard-chat-canvas-context="true"
                     data-storyboard-chat-canvas-context-kind={
                       storyboardCanvasFocus.kind
@@ -9378,7 +9378,7 @@ function LegacyAdminStoryboardGenerator({
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Badge
                         variant="outline"
-                        className="h-5 shrink-0 rounded-full border-primary/20 bg-background/70 px-2 text-[10px] text-primary"
+                        className="h-5 shrink-0 rounded-full border-primary/20 bg-background/70 px-2 text-2xs text-primary"
                         data-storyboard-canvas-focus-label="true"
                       >
                         {storyboardCanvasFocus.label}
@@ -9398,7 +9398,7 @@ function LegacyAdminStoryboardGenerator({
                       type="button"
                       size="sm"
                       variant="ghost"
-                      className="h-6 shrink-0 rounded-full px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                      className="h-6 shrink-0 rounded-full px-2 text-2xs text-muted-foreground hover:text-foreground"
                       onClick={() => setStoryboardCanvasFocus(null)}
                       data-storyboard-clear-canvas-context="true"
                     >
@@ -9436,7 +9436,7 @@ function LegacyAdminStoryboardGenerator({
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-7 shrink-0 rounded-full px-2 text-[10px]"
+                      className="h-7 shrink-0 rounded-full px-2 text-2xs"
                       onClick={() =>
                         void handleStoryboardGuidedExampleGenerate(preset)
                       }
@@ -9501,7 +9501,7 @@ function LegacyAdminStoryboardGenerator({
                             {attachment.name}
                           </span>
                           <span
-                            className="block text-[10px] text-muted-foreground"
+                            className="block text-2xs text-muted-foreground"
                             data-storyboard-chat-attachment-size="true"
                           >
                             {formatStoryboardChatAttachmentBytes(
@@ -9760,7 +9760,7 @@ function LegacyAdminStoryboardGenerator({
               </span>
               <Badge
                 variant="outline"
-                className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-6 shrink-0 rounded-full px-2 text-2xs"
                 data-storyboard-generated-image-count="title"
                 title={`현재 페이지 ${activePageGeneratedCount}/${activeStoryboardImageGenerationTargetScenes.length || storyboardFramePageSize} · 전체 ${generatedImageCount}/${totalCutCount}`}
               >
@@ -9790,7 +9790,7 @@ function LegacyAdminStoryboardGenerator({
                         ? "secondary"
                         : "ghost"
                     }
-                    className="h-6 shrink-0 rounded px-2 text-[11px]"
+                    className="h-6 shrink-0 rounded px-2 text-2xs"
                     onClick={() =>
                       handleStoryboardFramePageSizeChange(pageSize)
                     }
@@ -10058,7 +10058,7 @@ function LegacyAdminStoryboardGenerator({
                             }}
                           >
                             <Badge
-                              className="rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm"
+                              className="rounded-full px-2 py-0.5 text-2xs font-bold shadow-sm"
                               data-storyboard-cut-badge="true"
                               data-storyboard-cut-badge-background="visible"
                               style={{
@@ -10069,7 +10069,7 @@ function LegacyAdminStoryboardGenerator({
                               CUT {String(scene.sceneNo).padStart(2, "0")}
                             </Badge>
                             <Badge
-                              className="rounded-full px-2 py-0.5 text-[11px] font-bold shadow-sm"
+                              className="rounded-full px-2 py-0.5 text-2xs font-bold shadow-sm"
                               data-storyboard-cut-time-badge="true"
                               data-storyboard-cut-time-badge-background="visible"
                               style={{
@@ -10095,14 +10095,14 @@ function LegacyAdminStoryboardGenerator({
                           data-storyboard-frame-script-layout="stacked-rows"
                         >
                           <div
-                            className="grid min-w-0 items-start gap-2 rounded-lg bg-muted/15 px-2 py-0.5 text-[11px] leading-4"
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-muted/15 px-2 py-0.5 text-2xs leading-4"
                             data-storyboard-frame-audio="true"
                             data-storyboard-frame-audio-row="true"
                             style={{
                               gridTemplateColumns: "58px minmax(0, 1fr)",
                             }}
                           >
-                            <span className="rounded-full bg-muted/65 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                            <span className="rounded-full bg-muted/65 px-2 py-0.5 text-center text-2xs font-bold uppercase tracking-wide text-muted-foreground">
                               오디오
                             </span>
                             <span
@@ -10114,14 +10114,14 @@ function LegacyAdminStoryboardGenerator({
                             </span>
                           </div>
                           <div
-                            className="grid min-w-0 items-start gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5 text-[11px] leading-4"
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-rose-500/[0.045] px-2 py-0.5 text-2xs leading-4"
                             data-storyboard-frame-subtitle="true"
                             data-storyboard-frame-subtitle-row="true"
                             style={{
                               gridTemplateColumns: "58px minmax(0, 1fr)",
                             }}
                           >
-                            <span className="rounded-full bg-rose-100/70 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
+                            <span className="rounded-full bg-rose-100/70 px-2 py-0.5 text-center text-2xs font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">
                               자막
                             </span>
                             <span
@@ -10133,14 +10133,14 @@ function LegacyAdminStoryboardGenerator({
                             </span>
                           </div>
                           <div
-                            className="grid min-w-0 items-start gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5 text-[11px] leading-4"
+                            className="grid min-w-0 items-start gap-2 rounded-lg bg-amber-400/[0.10] px-2 py-0.5 text-2xs leading-4"
                             data-storyboard-frame-production-note="true"
                             data-storyboard-frame-production-note-row="true"
                             style={{
                               gridTemplateColumns: "58px minmax(0, 1fr)",
                             }}
                           >
-                            <span className="rounded-full bg-amber-100/75 px-2 py-0.5 text-center text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                            <span className="rounded-full bg-amber-100/75 px-2 py-0.5 text-center text-2xs font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
                               촬영
                             </span>
                             <span

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "source": {
     "repository": "changeroa/StyleGallery",
-    "commit": "775430bbaf4ee208a642220f440f6926d79c90a3",
-    "licenseStatus": "unlicensed",
-    "usageBoundary": "High-level spatial questions only; no upstream code, CSS, prose, names, tests, assets, screenshots, labels, or distinctive sequences copied or translated."
+    "commit": "2a9ae14e1ed1e6ebc9ec525a7c305a7cc9830b34",
+    "licenseStatus": "MIT source, CC-BY-4.0 documentation",
+    "usageBoundary": "Recipe and scroll-ownership questions only; no upstream code, CSS, prose, names, tests, assets, screenshots, labels, or distinctive sequences copied or translated."
   },
   "entries": [
     {

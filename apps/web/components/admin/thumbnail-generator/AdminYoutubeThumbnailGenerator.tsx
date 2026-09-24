@@ -5966,7 +5966,7 @@ export function AdminYoutubeThumbnailGenerator() {
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold">이미지 생성 설정</p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               기본 OAuth · 고급 로컬 · API Key 백업
             </p>
           </div>
@@ -6006,8 +6006,8 @@ export function AdminYoutubeThumbnailGenerator() {
             }
             data-thumbnail-api-router-oauth-transport="server"
           >
-            <span className="block text-[11px] font-bold">기본 OAuth</span>
-            <span className="block text-[10px] opacity-80">
+            <span className="block text-2xs font-bold">기본 OAuth</span>
+            <span className="block text-2xs opacity-80">
               {readiness?.providers.localCodex.available
                 ? "사용 가능"
                 : readiness
@@ -6030,8 +6030,8 @@ export function AdminYoutubeThumbnailGenerator() {
             }
             data-thumbnail-api-router-oauth-transport="local-bridge"
           >
-            <span className="block text-[11px] font-bold">고급 로컬</span>
-            <span className="block text-[10px] opacity-80">
+            <span className="block text-2xs font-bold">고급 로컬</span>
+            <span className="block text-2xs opacity-80">
               {formatThumbnailLocalBridgeStatusLabel(
                 thumbnailLocalBridgeStatus,
                 isThumbnailLocalBridgePaired,
@@ -6053,8 +6053,8 @@ export function AdminYoutubeThumbnailGenerator() {
             }
             data-thumbnail-api-router-fallback="browser-api-key"
           >
-            <span className="block text-[11px] font-bold">API Key</span>
-            <span className="block text-[10px] opacity-80">
+            <span className="block text-2xs font-bold">API Key</span>
+            <span className="block text-2xs opacity-80">
               {isBrowserOpenAIApiKeyApplied ? "이 탭 사용" : "키 필요"}
             </span>
           </button>
@@ -6070,13 +6070,13 @@ export function AdminYoutubeThumbnailGenerator() {
         >
           <div className="min-w-0">
             <p
-              className="truncate text-[11px] font-semibold"
+              className="truncate text-2xs font-semibold"
               data-thumbnail-api-router-status="true"
             >
               사용: {thumbnailImageApiRouterView.label}
             </p>
             <p
-              className="truncate text-[10px] text-muted-foreground"
+              className="truncate text-2xs text-muted-foreground"
               data-thumbnail-api-router-summary="true"
               data-thumbnail-codex-oauth-copy="true"
             >
@@ -6094,7 +6094,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </div>
           <Badge
             variant="secondary"
-            className="h-6 shrink-0 rounded-full px-2 text-[10px]"
+            className="h-6 shrink-0 rounded-full px-2 text-2xs"
             data-thumbnail-api-router-label="true"
           >
             gpt-image-2
@@ -6113,13 +6113,13 @@ export function AdminYoutubeThumbnailGenerator() {
           <div className="flex items-center justify-between gap-2">
             <Label
               htmlFor="thumbnail-browser-openai-api-key"
-              className="text-[11px] font-semibold"
+              className="text-2xs font-semibold"
             >
               API Key 백업
             </Label>
             <button
               type="button"
-              className={`h-6 shrink-0 rounded-full px-2 text-[10px] font-semibold transition ${
+              className={`h-6 shrink-0 rounded-full px-2 text-2xs font-semibold transition ${
                 thumbnailImageRouteChoice === "browser-openai-api-key"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -6166,7 +6166,7 @@ export function AdminYoutubeThumbnailGenerator() {
             </Button>
           </div>
           <p
-            className="text-[10px] leading-4 text-muted-foreground"
+            className="text-2xs leading-4 text-muted-foreground"
             data-thumbnail-api-key-memory-only-copy="true"
             data-thumbnail-browser-api-key-memory-only-copy="true"
             data-thumbnail-api-key-model-policy="gpt-image-2-only"
@@ -6176,7 +6176,7 @@ export function AdminYoutubeThumbnailGenerator() {
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <p
-              className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+              className="min-w-0 flex-1 text-2xs text-muted-foreground"
               data-thumbnail-api-key-session-status="true"
               data-thumbnail-browser-api-key-status={
                 isBrowserOpenAIApiKeyApplied ? "memory-active" : "empty"
@@ -6195,7 +6195,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-7 shrink-0 rounded-full px-2 text-2xs"
                 onClick={handleClearThumbnailBrowserOpenAIApiKey}
                 data-thumbnail-api-key-clear="true"
                 data-thumbnail-browser-api-key-clear="true"
@@ -6205,7 +6205,7 @@ export function AdminYoutubeThumbnailGenerator() {
             ) : null}
             {browserOpenAIApiKeyMessage ? (
               <p
-                className="basis-full text-[11px] text-muted-foreground"
+                className="basis-full text-2xs text-muted-foreground"
                 data-thumbnail-api-key-message="true"
                 data-thumbnail-browser-api-key-message="true"
               >
@@ -6228,13 +6228,13 @@ export function AdminYoutubeThumbnailGenerator() {
             <div className="flex items-center justify-between gap-2">
               <Label
                 htmlFor="thumbnail-local-bridge-url"
-                className="text-[11px] font-semibold"
+                className="text-2xs font-semibold"
               >
                 고급 로컬 브릿지
               </Label>
               <Badge
                 variant="outline"
-                className="h-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                className="h-5 shrink-0 rounded-full px-1.5 text-2xs"
                 data-thumbnail-local-bridge-status={thumbnailLocalBridgeStatus}
               >
                 {formatThumbnailLocalBridgeStatusLabel(
@@ -6244,7 +6244,7 @@ export function AdminYoutubeThumbnailGenerator() {
               </Badge>
             </div>
             <p
-              className="text-[10px] leading-4 text-muted-foreground"
+              className="text-2xs leading-4 text-muted-foreground"
               data-thumbnail-local-bridge-guidance="true"
             >
               pairing token은 이 화면 메모리에만 있고 Web Storage에 저장되지 않으며, 화면을 닫으면 제거됩니다. 실제 bridge 호출은 loopback helper 창에서 처리하며 앱 서버 relay는 사용하지 않습니다.
@@ -6287,7 +6287,7 @@ export function AdminYoutubeThumbnailGenerator() {
               <Button
                 type="button"
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-7 shrink-0 rounded-full px-2 text-2xs"
                 onClick={() => void handleApplyThumbnailLocalBridge()}
                 data-thumbnail-local-bridge-apply="true"
               >
@@ -6297,7 +6297,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                className="h-7 shrink-0 rounded-full px-2 text-2xs"
                 onClick={() => void handleConnectThumbnailLocalBridgeHelper()}
                 data-thumbnail-local-bridge-connect="true"
               >
@@ -6308,7 +6308,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-7 shrink-0 rounded-full px-2 text-[11px]"
+                  className="h-7 shrink-0 rounded-full px-2 text-2xs"
                   onClick={handleClearThumbnailLocalBridge}
                   data-thumbnail-local-bridge-clear="true"
                 >
@@ -6316,7 +6316,7 @@ export function AdminYoutubeThumbnailGenerator() {
                 </Button>
               ) : null}
               <p
-                className={`basis-full text-[11px] ${
+                className={`basis-full text-2xs ${
                   thumbnailLocalBridgeError ? "text-destructive" : "text-muted-foreground"
                 }`}
                 data-thumbnail-local-bridge-message="true"
@@ -6346,14 +6346,14 @@ export function AdminYoutubeThumbnailGenerator() {
             <div className="flex items-center gap-1.5 text-xs font-semibold">
               <History className="h-3.5 w-3.5" />
               <span>생성 히스토리</span>
-              <Badge variant="secondary" className="px-1.5 text-[10px]">
+              <Badge variant="secondary" className="px-1.5 text-2xs">
                 {historyStatus === "loading" ? "불러오는 중" : `${historyRuns.length}건`}
               </Badge>
-              <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-source-label="true">
+              <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-source-label="true">
                 {getThumbnailInitialPreviewSourceLabel(initialPreviewSource)}
               </Badge>
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            <p className="mt-0.5 truncate text-2xs text-muted-foreground">
               정적 HTML 대신 이 페이지에서 실제 생성 기록을 관리합니다.
             </p>
           </div>
@@ -6385,13 +6385,13 @@ export function AdminYoutubeThumbnailGenerator() {
         </div>
 
         {historyStatus === "error" ? (
-          <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-[11px] text-destructive" data-thumbnail-history-error="true">
+          <div className="rounded-xl bg-destructive/10 px-2.5 py-2 text-2xs text-destructive" data-thumbnail-history-error="true">
             히스토리를 불러오지 못했습니다. {historyError ?? "API 상태를 확인하세요."}
           </div>
         ) : null}
 
         {historyStatus === "empty" ? (
-          <div className="rounded-xl bg-muted/40 px-2.5 py-2 text-[11px] text-muted-foreground" data-thumbnail-history-empty="true">
+          <div className="rounded-xl bg-muted/40 px-2.5 py-2 text-2xs text-muted-foreground" data-thumbnail-history-empty="true">
             아직 저장된 실제 생성 기록이 없습니다. 생성 완료 후 다시 새로고침하세요.
           </div>
         ) : null}
@@ -6401,7 +6401,7 @@ export function AdminYoutubeThumbnailGenerator() {
             {historyRuns.map((run) => (
               <div
                 key={run.id ?? run.timestamp ?? run.imagePath}
-                className="grid gap-2 rounded-xl bg-muted/35 p-2 text-[11px] sm:grid-cols-[56px_minmax(0,1fr)]"
+                className="grid gap-2 rounded-xl bg-muted/35 p-2 text-2xs sm:grid-cols-[56px_minmax(0,1fr)]"
                 data-thumbnail-history-run="true"
               >
                 <div className="aspect-video overflow-hidden rounded-lg bg-background/80 ring-1 ring-border/60">
@@ -6422,10 +6422,10 @@ export function AdminYoutubeThumbnailGenerator() {
                       <p className="truncate text-muted-foreground">{run.topic || run.completedAt || run.timestamp || "주제 없음"}</p>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                      <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-source-label="true">
+                      <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-source-label="true">
                         {getThumbnailHistoryRunSourceLabel(run)}
                       </Badge>
-                      <Badge variant="outline" className="px-1.5 text-[10px]" data-thumbnail-history-provenance-label="true">
+                      <Badge variant="outline" className="px-1.5 text-2xs" data-thumbnail-history-provenance-label="true">
                         {formatThumbnailModelProvenance(run.modelProvenance)}
                       </Badge>
                     </div>
@@ -6435,7 +6435,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="secondary"
                       size="sm"
-                      className="h-7 rounded-full px-2 text-[11px]"
+                      className="h-7 rounded-full px-2 text-2xs"
                       onClick={() => {
                         applyThumbnailHistoryRun(run);
                         setIsHistoryPanelOpen(false);
@@ -6448,7 +6448,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 rounded-full px-2 text-[11px]"
+                      className="h-7 rounded-full px-2 text-2xs"
                       onClick={() => void copyThumbnailHistoryRun(run)}
                       data-thumbnail-history-copy-json={run.id ?? run.timestamp ?? "history-run"}
                     >
@@ -6514,7 +6514,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       ? "secondary"
                       : "outline"
                   }
-                  className="h-6 max-w-[6.5rem] shrink-0 truncate rounded-full px-2 text-[10px]"
+                  className="h-6 max-w-[6.5rem] shrink-0 truncate rounded-full px-2 text-2xs"
                   title={thumbnailChatStatusLabel}
                   data-thumbnail-chat-status-badge="true"
                   data-thumbnail-chat-status={thumbnailChatStatusState}
@@ -6640,7 +6640,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               무엇부터 만들까요?
                             </h4>
                             <p
-                              className="mx-auto max-w-[18rem] text-[11px] leading-5 text-muted-foreground"
+                              className="mx-auto max-w-[18rem] text-2xs leading-5 text-muted-foreground"
                               data-thumbnail-chat-starter-guide-copy="true"
                             >
                               <span className="block">
@@ -6669,13 +6669,13 @@ export function AdminYoutubeThumbnailGenerator() {
                                 data-thumbnail-chat-example-card="true"
                                 data-thumbnail-chat-example-headline={preset.headline}
                               >
-                                <span className="block truncate text-[11px] font-semibold text-foreground">
+                                <span className="block truncate text-2xs font-semibold text-foreground">
                                   {preset.headline}
                                 </span>
-                                <span className="mt-0.5 block truncate text-[10px] font-medium text-primary">
+                                <span className="mt-0.5 block truncate text-2xs font-medium text-primary">
                                   {preset.subHeadline}
                                 </span>
-                                <span className="mt-1 block line-clamp-2 text-[10px] leading-4 text-muted-foreground">
+                                <span className="mt-1 block line-clamp-2 text-2xs leading-4 text-muted-foreground">
                                   {preset.topic}
                                 </span>
                               </button>
@@ -6690,7 +6690,7 @@ export function AdminYoutubeThumbnailGenerator() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="h-7 rounded-full bg-background/80 px-2 text-[11px] shadow-sm"
+                              className="h-7 rounded-full bg-background/80 px-2 text-2xs shadow-sm"
                               onClick={handleThumbnailUsageGuideClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-button="true"
@@ -6701,7 +6701,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             <Button
                               type="button"
                               size="sm"
-                              className="h-7 rounded-full px-2 text-[11px] shadow-sm"
+                              className="h-7 rounded-full px-2 text-2xs shadow-sm"
                               onClick={handleThumbnailGuidedExampleClick}
                               disabled={isGenerating || isChatAgentStreaming}
                               data-thumbnail-chat-guide-example="true"
@@ -6728,7 +6728,7 @@ export function AdminYoutubeThumbnailGenerator() {
                             }`}
                           >
                             <div
-                              className={`text-[10px] font-medium uppercase tracking-wide ${
+                              className={`text-2xs font-medium uppercase tracking-wide ${
                                 message.role === "user"
                                   ? "text-primary"
                                   : "text-muted-foreground"
@@ -6787,7 +6787,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       {isChatAgentStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
                     </div>
                     <div className="max-w-[86%] space-y-1">
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
+                      <div className="text-2xs font-medium uppercase tracking-wide text-sky-700 dark:text-sky-200">
                         {currentThumbnailStreamingLabel}
                       </div>
                       <div className="rounded-2xl rounded-bl-md border border-dashed border-sky-400/70 bg-sky-500/10 px-3 py-2 text-xs leading-5 text-sky-950 shadow-sm whitespace-pre-wrap break-keep [overflow-wrap:anywhere] dark:text-sky-100">
@@ -6809,7 +6809,7 @@ export function AdminYoutubeThumbnailGenerator() {
 
                 {shouldShowThumbnailCanvasContext ? (
                   <div
-                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px]"
+                    className="flex min-h-8 items-center justify-between gap-2 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-2xs"
                     data-thumbnail-chat-canvas-context="true"
                     data-thumbnail-chat-canvas-context-state={canvasContextState}
                     data-thumbnail-chat-canvas-context-visibility="selected-only"
@@ -6817,7 +6817,7 @@ export function AdminYoutubeThumbnailGenerator() {
                     <div className="flex min-w-0 items-center gap-1.5">
                       <Badge
                         variant={canvasContextState === "editing" ? "secondary" : "outline"}
-                        className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                        className="h-6 shrink-0 rounded-full px-2 text-2xs"
                       >
                         {canvasContextState === "editing" ? "수정 중" : "선택됨"}
                       </Badge>
@@ -6843,7 +6843,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 shrink-0 rounded-full px-2 text-[11px]"
+                      className="h-6 shrink-0 rounded-full px-2 text-2xs"
                       onClick={useCanvasContextInChat}
                       data-thumbnail-chat-canvas-context-ask="true"
                     >
@@ -7008,7 +7008,7 @@ export function AdminYoutubeThumbnailGenerator() {
                   data-thumbnail-text-transform-metrics="visual-bounds"
                 >
                   <span
-                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-[11px] font-bold leading-none text-white shadow-sm"
+                    className="pointer-events-none absolute -top-7 left-0 rounded-md bg-slate-950/85 px-2 py-1 text-2xs font-bold leading-none text-white shadow-sm"
                     data-thumbnail-selected-text-transform-label="true"
                   >
                     {getTextLayerSelectionLabel(activeLayer)}
@@ -7123,7 +7123,7 @@ export function AdminYoutubeThumbnailGenerator() {
                       key={tool.id}
                       type="button"
                       variant="ghost"
-                      className="h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-[11px] leading-none shadow-sm hover:bg-background [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
+                      className="h-8 w-full min-w-0 gap-1 rounded-lg bg-background/80 px-1.5 text-2xs leading-none shadow-sm hover:bg-background [&_span]:min-w-0 [&_span]:truncate [&_svg]:h-3.5 [&_svg]:w-3.5"
                       onClick={() => applyThumbnailEditorTool(tool.id)}
                       title={tool.description}
                       data-thumbnail-editor-tool={tool.id}

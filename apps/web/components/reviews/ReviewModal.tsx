@@ -540,7 +540,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
     const renderAiFilledBadge = useCallback((field: ReviewOcrFieldKey) => (
         aiFilledFields.has(field) ? (
-            <Badge variant="secondary" className="h-5 rounded-full bg-primary/10 px-2 text-[10px] font-medium text-primary">
+            <Badge variant="secondary" className="h-5 rounded-full bg-primary/10 px-2 text-2xs font-medium text-primary">
                 AI 입력 · 확인 필요
             </Badge>
         ) : null
@@ -1598,7 +1598,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         const isTerminalError = ocrFallbackNotice.type === 'error';
 
         return (
-            <div className={`rounded-lg border px-3 py-2 text-xs ${isTerminalError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-amber-200 bg-amber-50 text-amber-700'}`} role="status" aria-live="polite">
+            <div className={`rounded-lg border px-3 py-2 text-xs ${isTerminalError ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-border bg-secondary text-foreground'}`} role="status" aria-live="polite">
                 <p className="font-semibold">{ocrFallbackNotice.message}</p>
                 {ocrFallbackNotice.detail ? <p className="mt-1 opacity-80">{ocrFallbackNotice.detail}</p> : null}
                 {isTerminalError ? (
@@ -1651,7 +1651,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         return (
             <button
                 type="button"
-                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${forceOcrRefresh
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs transition-colors ${forceOcrRefresh
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'}`}
                 onClick={() => setForceOcrRefresh(value => !value)}
@@ -1818,7 +1818,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 {/* 헤더 */}
                 <div className="px-6 pt-6 pb-4 border-b relative shrink-0">
                     {lastSavedAt && (
-                        <div className="absolute top-1.5 left-6 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
                             {isSaving ? (
                                 <>
                                     <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -2026,7 +2026,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 {OCR_PROGRESS_STEPS.map((step) => {
                                                     const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                     return (
-                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                        <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                             {step.label}
                                                         </div>
                                                     );
@@ -2034,10 +2034,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                             </div>
                                         ) : null}
                                         {ocrProgress?.model ? (
-                                            <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                            <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
                                         ) : null}
                                         {ocrProgress?.fallbackUsed ? (
-                                            <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                            <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
                                         ) : null}
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                             <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -2335,7 +2335,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                     {REVIEW_FORM_STEPS.map((step) => (
                                         <div key={step.id} className="space-y-1">
                                             <div className={`h-1.5 rounded-full ${step.id <= currentStep ? 'bg-red-800' : 'bg-muted'}`} />
-                                            <span className={`block text-center text-[11px] ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                                            <span className={`block text-center text-2xs ${step.id === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
                                                 {step.label}
                                             </span>
                                         </div>
@@ -2343,7 +2343,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 </div>
                                 <div className="mt-2 min-h-4">
                                     {lastSavedAt ? (
-                                        <div className="flex items-center gap-1 text-[10px] leading-none text-muted-foreground" aria-live="polite">
+                                        <div className="flex items-center gap-1 text-2xs leading-none text-muted-foreground" aria-live="polite">
                                             {isSaving ? (
                                                 <>
                                                     <div className="h-2.5 w-2.5 animate-spin rounded-full border border-primary border-t-transparent" />
@@ -2538,7 +2538,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         {OCR_PROGRESS_STEPS.map((step) => {
                                                             const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                             return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                                     {step.label}
                                                                 </div>
                                                             );
@@ -2546,10 +2546,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     </div>
                                                 ) : null}
                                                 {ocrProgress?.model ? (
-                                                    <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                                    <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
                                                 ) : null}
                                                 {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
                                                 ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -2913,7 +2913,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
-                                <div className="absolute top-1.5 left-6 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <div className="absolute top-1.5 left-6 flex items-center gap-1 text-2xs text-muted-foreground">
                                     {isSaving ? (
                                         <>
                                             <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -2947,7 +2947,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                 {REVIEW_FORM_STEPS.map((step) => (
                                     <div key={step.id} className="space-y-1">
                                         <div className="h-1.5 rounded-full bg-red-800" />
-                                        <span className="block text-center text-[11px] font-medium text-muted-foreground">
+                                        <span className="block text-center text-2xs font-medium text-muted-foreground">
                                             {step.label}
                                         </span>
                                     </div>
@@ -3131,7 +3131,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         {OCR_PROGRESS_STEPS.map((step) => {
                                                             const isDone = getOcrProgressRank(ocrProgress.stage) >= getOcrProgressRank(step.stage);
                                                             return (
-                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-[10px] font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                                                <div key={step.stage} className={`rounded-full px-2 py-1 text-2xs font-medium ${isDone ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                                                                     {step.label}
                                                                 </div>
                                                             );
@@ -3139,10 +3139,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     </div>
                                                 ) : null}
                                                 {ocrProgress?.model ? (
-                                                    <p className="mb-3 text-[10px] text-muted-foreground">분석 모델: {ocrProgress.model}</p>
+                                                    <p className="mb-3 text-2xs text-muted-foreground">분석 모델: {ocrProgress.model}</p>
                                                 ) : null}
                                                 {ocrProgress?.fallbackUsed ? (
-                                                    <p className="mb-3 rounded-md bg-amber-50 px-2 py-1 text-[10px] text-amber-700">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
+                                                    <p className="mb-3 rounded-md bg-secondary px-2 py-1 text-2xs text-foreground">실시간 연결 대신 일반 분석으로 계속 진행 중입니다.</p>
                                                 ) : null}
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />

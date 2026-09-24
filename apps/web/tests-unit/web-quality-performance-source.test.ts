@@ -1388,7 +1388,7 @@ describe("web quality performance source contracts", () => {
       "pointer-events-auto flex items-center gap-1.5 min-h-11 rounded-full shadow-sm bg-background/95 backdrop-blur-sm border border-border px-1.5",
     );
     expect(homeDesktopControlPanelSource).toContain(
-      "flex-1 h-9 rounded-full flex items-center gap-2 px-2 bg-secondary/40 min-w-0",
+      "flex-1 h-9 rounded-full flex items-center gap-2 px-2 min-w-0",
     );
     expect(homeDesktopControlPanelSource).toContain(
       "h-9 w-9 shrink-0 rounded-full border border-border bg-background hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary touch-manipulation",
@@ -1438,7 +1438,7 @@ describe("web quality performance source contracts", () => {
     expect(homeDesktopControlPanelSource).toContain(
       "text-sm text-foreground outline-none placeholder:text-foreground/70",
     );
-    expect(homeDesktopControlPanelSource).toContain("bg-secondary/40");
+    expect(homeDesktopControlPanelSource).not.toContain("bg-secondary/40");
     expect(homeDesktopControlPanelSource).toContain("hideSearchControls");
     expect(homeDesktopControlPanelSource).toContain(
       'className="h-full min-h-0 px-0 py-0"',
@@ -2685,10 +2685,10 @@ describe("web quality performance source contracts", () => {
       "aria-label={`좋아요 ${review.likeCount}개`}",
     );
     expect(reviewCardSource).not.toContain(
-      "absolute inset-0 flex items-center justify-center text-[9px]",
+      "absolute inset-0 flex items-center justify-center text-2xs",
     );
     expect(reviewCardSource).not.toContain(
-      "text-[10px] font-bold leading-none tabular-nums",
+      "text-2xs font-bold leading-none tabular-nums",
     );
     expect(feedContentSource).toContain(
       "onLike={(reviewId, currentIsLiked, currentCount) => toggleLike(reviewId, currentIsLiked, currentCount)}",

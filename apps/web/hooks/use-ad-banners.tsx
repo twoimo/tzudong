@@ -161,20 +161,23 @@ export function useAdBannersAdmin(enabled = true) {
     const { isAdmin } = useAuth();
 
     return useQuery({
-        queryKey: [...AD_BANNERS_QUERY_KEY, 'admin'],
+        queryKey: [...AD_BANNERS_QUERY_KEY, 'admin-api'],
         queryFn: async (): Promise<AdBanner[]> => {
-            const { data, error } = await supabase
-                .from('ad_banners')
-                .select(AD_BANNER_SELECT)
-                .order('priority', { ascending: false })
-                .overrideTypes<AdBannerDatabaseRow[], { merge: false }>();
+            const response = await fetch('/api/admin/banners', {
+                headers: { Accept: 'application/json' },
+                cache: 'no-store',
+            });
 
-            if (error) {
-                console.error('광고 배너 조회 실패:');
-                throw error;
+            if (!response.ok) {
+                throw new Error('admin-banners-failed');
             }
 
-            return mapAdBannerRows(data);
+            const payload = await response.json() as { banners?: unknown };
+            const rows = Array.isArray(payload.banners) ? payload.banners : [];
+            return rows.flatMap((row) => {
+                const banner = mapAdBannerRow(row);
+                return banner ? [banner] : [];
+            });
         },
         enabled: isAdmin && enabled,
         staleTime: 5 * 60 * 1000, // 5분

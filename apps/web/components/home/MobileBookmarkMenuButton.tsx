@@ -57,7 +57,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                         <Badge
                             variant="secondary"
                             aria-hidden="true"
-                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm"
+                            className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-primary/20 bg-primary px-1.5 py-0 text-2xs font-bold leading-none tabular-nums text-primary-foreground shadow-sm"
                         >
                             {visibleBookmarkCount > 99 ? '99+' : visibleBookmarkCount}
                         </Badge>
@@ -143,7 +143,7 @@ export default function MobileBookmarkMenuButton({ user, defaultOpen = false, op
                                                 {bookmark.restaurant.name}
                                             </span>
                                             {bookmark.restaurant.category?.[0] && (
-                                                <Badge variant="secondary" className="text-[10px] shrink-0 h-5 px-1.5 font-normal">
+                                                <Badge variant="secondary" className="text-2xs shrink-0 h-5 px-1.5 font-normal">
                                                     {bookmark.restaurant.category[0]}
                                                 </Badge>
                                             )}

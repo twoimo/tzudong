@@ -694,7 +694,7 @@ export default function GlobalMapPage() {
                                                                 {categories.length > 0 && (
                                                                     <span className="mt-2 flex flex-wrap gap-1">
                                                                         {categories.slice(0, 3).map((category) => (
-                                                                            <Badge key={category} variant="secondary" className="text-[10px]">
+                                                                            <Badge key={category} variant="secondary" className="text-2xs">
                                                                                 {category}
                                                                             </Badge>
                                                                         ))}

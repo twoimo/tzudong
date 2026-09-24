@@ -35,7 +35,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
       '삭제됨',
       '승인 대기',
       '미확정 좌표',
-      'Missing',
+      '누락',
       '평가 미대상',
     ]);
   });
@@ -210,7 +210,7 @@ describe('PRIMARY_STATUS_FILTER_OPTIONS', () => {
     expect(tableSource).toContain('data-layout-primitives="stack frame"');
     expect(tableSource).toContain('<article');
     expect(tableSource).toContain('flex min-w-max flex-nowrap gap-1.5');
-    expect(tableSource).toContain('rounded-xl bg-muted/35 p-2.5 text-[11px]');
+    expect(tableSource).toContain('rounded-xl bg-muted/35 p-2.5 text-2xs');
     expect(pageSource).toContain('data-admin-evaluation-view-actions="top-right"');
     expect(pageSource).toContain('data-admin-evaluation-title-icon="true"');
     expect(pageSource).toContain('inline-flex h-6 w-6 shrink-0 items-center justify-center text-primary');

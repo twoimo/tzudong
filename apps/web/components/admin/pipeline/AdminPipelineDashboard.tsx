@@ -195,7 +195,7 @@ export function AdminPipelineDashboard() {
           로컬 control-plane이 없으면 GitHub Actions 크롤러 최근 실행을 보여 줍니다. enqueue는 로컬 API가 있을 때만 동작합니다.
         </p>
       </header>
-      <div className="flex flex-wrap gap-2 text-[11px]">
+      <div className="flex flex-wrap gap-2 text-2xs">
         <span data-admin-pipeline-hardware={query.data?.hardware ?? "unknown"}>
           hardware: {query.data?.hardware ?? "unknown"}
         </span>

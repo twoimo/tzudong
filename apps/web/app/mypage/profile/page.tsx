@@ -1136,7 +1136,7 @@ export default function ProfilePage() {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-[10px]",
+                        "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
                         userProfile.tier.color,
                         userProfile.tier.bgColor,
                       )}
@@ -1148,7 +1148,7 @@ export default function ProfilePage() {
                     type="button"
                     size="sm"
                     variant="ghost"
-                    className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"
+                    className="h-7 rounded-full px-2 text-2xs text-muted-foreground"
                     onClick={() => {
                       setMobileNicknameInput(displayName);
                       setIsMobileNicknameEditing(true);
@@ -1253,7 +1253,7 @@ export default function ProfilePage() {
                 <Badge
                   variant="outline"
                   className={cn(
-                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-[10px]",
+                    "h-5 shrink-0 whitespace-nowrap border-0 px-1.5 py-0 text-2xs",
                     userProfile.tier.color,
                     userProfile.tier.bgColor,
                   )}
@@ -1275,7 +1275,7 @@ export default function ProfilePage() {
                 </p>
                 <p className="shrink-0 text-sm font-bold tabular-nums">
                   {(userProfile?.qualityScore ?? 0).toFixed(1)}
-                  <span className="ml-0.5 text-[11px] font-semibold text-muted-foreground">
+                  <span className="ml-0.5 text-2xs font-semibold text-muted-foreground">
                     점
                   </span>
                 </p>
@@ -1294,7 +1294,7 @@ export default function ProfilePage() {
                   aria-hidden="true"
                 />
               </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+              <div className="mt-1 flex items-center justify-between gap-3 text-2xs text-muted-foreground">
                 <span className="min-w-0 truncate">
                   현재 {currentTierName} · 남은 점수 {tierRemainingLabel}
                 </span>
@@ -1308,13 +1308,13 @@ export default function ProfilePage() {
               data-mypage-desktop-tier-action-guide="true"
             >
               <div className="min-w-0">
-                <dt className="text-[11px] text-muted-foreground">인증 리뷰</dt>
+                <dt className="text-2xs text-muted-foreground">인증 리뷰</dt>
                 <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier ? `${tierVerifiedReviewsNeeded}개 더 필요` : "목표 달성"}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="text-[11px] text-muted-foreground">받은 좋아요</dt>
+                <dt className="text-2xs text-muted-foreground">받은 좋아요</dt>
                 <dd className="truncate text-xs font-semibold">
                   {tierProgress.nextTier
                     ? hasVerifiedReviews && tierLikesNeeded !== null
@@ -1381,6 +1381,7 @@ export default function ProfilePage() {
             <form
               className="min-h-0 space-y-4 md:flex md:flex-1 md:flex-col lg:space-y-3"
               onSubmit={handlePasswordChange}
+              data-layout-primitives="form-flow stack"
             >
               <div className="space-y-1.5">
                 <Label htmlFor="current-password">현재 비밀번호</Label>
@@ -1550,7 +1551,7 @@ export default function ProfilePage() {
                 <h2 id="ordinary-marketing-consent-title" className="text-sm font-semibold">
                   일반 마케팅 수신
                 </h2>
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-2xs font-medium text-muted-foreground">
                   선택
                 </span>
               </div>
@@ -1606,7 +1607,7 @@ export default function ProfilePage() {
                 <h2 id="night-marketing-consent-title" className="text-sm font-semibold">
                   야간 마케팅 수신
                 </h2>
-                <span className="text-[11px] font-semibold text-amber-600">
+                <span className="text-2xs font-semibold text-amber-600">
                   별도 선택
                 </span>
               </div>
@@ -1659,6 +1660,7 @@ export default function ProfilePage() {
           id="account-deletion"
           className="min-w-0 rounded-2xl border-0 bg-muted/35 shadow-none md:order-4 md:flex md:flex-col lg:col-start-2 lg:row-start-2 lg:h-full lg:min-h-0 lg:overflow-hidden"
           data-mypage-danger-zone="true"
+          data-layout-primitives="form-flow stack"
           data-mypage-danger-zone-layout="matrix-bottom-right"
         >
           <CardContent className="min-h-0 p-3 md:flex md:flex-1 md:flex-col lg:p-3">
